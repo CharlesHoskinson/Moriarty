@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1677332,
+  "interruption_signal": null,
+  "elapsed_seconds": 30.33106548000069,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "0637c36103491190887ac326972382ea4b7c764a9aa0ba2b22de93ad1860ba01",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 4061,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "cdce3fefb01de1b01979552647ef8bdfbd8aa651bc0baa7e22eee1287b6543da",
+  "public_result": {
+    "text": "# Classification: ordinary host check (non-native), conditional\n\nThis is based only on the four supplied files. I ran nothing and verified no hashes.\n\n**Verdict:** Both commands fit ordinary host Rust checks. Nothing in the closure touches any of the excluded actions: SDK, relation/circuit, model, degree/k, VM, transcript, keygen/prove/native-verify, ledger, deploy, key, SRS or cache. Native authority stays zero, and this grants no new authority.\n\n## Basis\n\n**Compile step**\n- Plain `rustc --test` on a crate root that uses only std.\n- No `extern crate`, proc macros, `build.rs`, `include!`/`include_bytes!`, `env!`/`option_env!`, `#[path]`, or `unsafe`.\n- The derives are all built-in.\n- `mod reference;` and `mod reference_types;` resolve next to the root file in `crates/mori-core/src/sherlock/`. `reference_tests` is pulled in only under `cfg(test)`. So the four files are the complete closure.\n- No compile-time code execution beyond rustc and the libtest harness from the toolchain.\n\n**Run step**\n- The test builds an in-memory `Program`, calls `Machine::new`, then `step()`.\n- `step()` hits `unimplemented!(\"Sherlock reference transitions\")` and panics before any assertion runs.\n- There is no filesystem, network, process or environment access.\n- `PROFILE` and `K_SOURCE_SHA256` are inert string constants.\n\n**Expected result:** a RED failure for the intended reason. Expect a panic `not implemented: Sherlock reference transitions` and a nonzero test-binary exit (101), not a compile error or setup fault. A different failure (compile error, assertion mismatch, timeout) is not this RED result and needs re-review before it is interpreted.\n\n## Exact scope and conditions\n\n1. The file bytes match the stated SHA256 values exactly, and no other files exist in `crates/mori-core/src/sherlock/` that the closure would pull in. Only the declared `mod`s are loaded.\n2. The binary is the stated absolute-path 1.99.0 toolchain `rustc`, unmodified and invoked directly (no rustup proxy, wrapper or `RUSTC_WRAPPER`). No extra flags beyond those listed.\n3. The working directory is the repo root that contains `crates/mori-core/...`, and `RUNTIME` expands to `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015`.\n4. **Stale-binary guard:** run the second command only if the first exited 0 in this session. Alternatively, confirm `RUNTIME/red-reference-tests` did not exist before compiling. Otherwise a pre-existing, unreviewed binary could be executed.\n5. Run with `--exact reference_tests::literal_publishes_at_exact_zero_remaining_fuel --nocapture` only, with no other filters, `--include-ignored`, or harness flags. Use `timeout 60s` for each command separately.\n6. Outputs are written only to `RUNTIME/`. rustc may create temp files there. Nothing is written into the source tree or any cache.\n7. Compiler warnings such as `dead_code` are benign. Warnings promoted to errors would change the result and need re-review.\n\n## Not covered\n\n- Any byte change to these four files, including the future implementation of `step()`. Each change needs fresh source inspection before running.\n- Any added module, dependency, Cargo invocation, build script or external crate.\n- Future traces or `StepRecord` outputs. Whatever actually consumes them needs its own classification. This verdict does not extend to any consumer, comparison against K, or any native path.\n- Acceptance of the implementation or of the test's expected values (102/80 rule lines, charge semantics). This is a safety classification only, not a correctness review.\n\nNo campaign, counters or authority are created or changed.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 2,
+        "outputTokens": 2765,
+        "cacheReadInputTokens": 1568,
+        "cacheCreationInputTokens": 4177,
+        "webSearchRequests": 0,
+        "costUSD": 0.0890376,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 1443,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

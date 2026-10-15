@@ -1,0 +1,1604 @@
+{
+  "catalog_version": "sherlock-profile-catalog/1",
+  "status": "source-preparation-ready-to-integrate; not semantic freeze",
+  "baseline_commit": "f218a8d82566fcb99becf4f0dd80b23726334284",
+  "sources": [
+    {
+      "path": "models/sherlock/k/main.k",
+      "start_line": 1,
+      "end_line": 320,
+      "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+      "digest_scope": "whole-source-bytes"
+    },
+    {
+      "path": "models/sherlock/quint/universalMachine.qnt",
+      "start_line": 1,
+      "end_line": 269,
+      "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+      "digest_scope": "whole-source-bytes"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "sherlock-k-a/1",
+      "classification": "source_fact",
+      "grammar": "Generic UIExpr evaluator over immutable dedicated U128/Bool/list/tree values, named calls and shallow ordered patterns",
+      "rule_catalog": "rules.json#/k_rules",
+      "work": "37 machine rule cases cost1 each occurrence; 5 administration and 71 pure helper cases cost0; counts are source membership, not execution frequency",
+      "startup": "uiRun valid/invalid administration zero charge",
+      "terminal": "uiRet with empty stack and uiError publish at zero even with no fuel",
+      "zero_fuel": "Nonterminal UIControl -> uiExhausted at zero before any positive-fuel machine transition",
+      "frame_cap": "Positive-fuel uiPush accepts D<L; rejects error4 at D>=L and costs1 either case",
+      "scalar_domain": "0 <= n < 2^128",
+      "state_source": {
+        "path": "models/sherlock/k/main.k",
+        "start_line": 38,
+        "end_line": 71,
+        "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+        "digest_scope": "whole-source-bytes"
+      },
+      "raw_observations": [
+        "uiPending()",
+        "uiDone(UIValue)",
+        "uiRejected(Int)",
+        "uiExhausted()"
+      ]
+    },
+    {
+      "id": "sherlock-quint-a/1",
+      "classification": "source_fact",
+      "grammar": "Finite algorithm/control abstraction for Factorial/ListSum/TreeSum; not K expression evaluator",
+      "definition_catalog": "#/quint_definitions",
+      "event_catalog": "#/quint_events",
+      "constants": {
+        "MAX_SCALAR": 15,
+        "MAX_FRAMES": 8,
+        "HEAP_IDS": "0.to(7)",
+        "initial_budgets": [
+          2,
+          32
+        ]
+      },
+      "work": "Running tick with remaining>0 calls charged exactly once before evaluate/suspend/return/refuse; consumed+1 remaining-1 attempted+1. Exhaust tick consumed0 attempted+1. Observe/stutter0. Terminal return costs1.",
+      "source_function_name": "push",
+      "frame_cap": "push computes frames.length()+1 and refuses only depth>MAX_FRAMES; it adds no independent charge. applyTick already charged; cap refusal therefore retains that tick charge.",
+      "state_source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 3,
+        "end_line": 20,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "raw_observations": {
+        "phase": [
+          "Running",
+          "Waiting",
+          "Halted",
+          "Rejected",
+          "Exhausted"
+        ],
+        "control": [
+          "Evaluate",
+          "ReturnValue",
+          "Finished"
+        ],
+        "reason": [
+          "NoReason",
+          "ConstructorMismatch",
+          "ScalarBound",
+          "StackBound",
+          "MissingReference"
+        ],
+        "result": [
+          "NoResult",
+          "ResultValue(int)"
+        ]
+      },
+      "checkpoint_fields": [
+        "acc",
+        "frames",
+        "arg",
+        "cursor",
+        "consumed"
+      ],
+      "saved_pending_return": "PendingReturn(acc) plus full Machine remainder; observations do not reconstruct an environment",
+      "observations": "canObserve Waiting and (ready or observations==0); false once before a ready event in concrete demo; ready is modeled condition only",
+      "source_scope_limit": "No generic function/environment table, exact U128 domain, arbitrary UIExpr grammar, general declarations or financial semantics."
+    },
+    {
+      "id": "sherlock-helper-microstep/1",
+      "classification": "proposed_B_source_contract",
+      "source_interface": {
+        "path": "openspec/changes/sherlock-universal-interpreter-design/interfaces.md",
+        "start_line": 1,
+        "end_line": 313,
+        "sha256": "bee739da090c41230adc6ebd711075d842ef127d7fed8d54276e9fb484d19536",
+        "digest_scope": "whole-source-bytes"
+      },
+      "rule_catalog": "rules.json#/proposed_b",
+      "work": "One per helper event and one per separately completed legacy machine rule; startup/terminal/error publication0; accounting target conditional and unproved",
+      "status": "Normal proposed event inventory only; I shared schemas and S exact failure/allocation rows unresolved",
+      "capacity_choice": null,
+      "layout_choice": null
+    }
+  ],
+  "quint_definitions": [
+    {
+      "id": "q.definition.Phase",
+      "classification": "source_fact",
+      "source_name": "Phase",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 3,
+        "end_line": 3,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Phase = Running | Waiting | Halted | Rejected | Exhausted",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Program",
+      "classification": "source_fact",
+      "source_name": "Program",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Program = Factorial | ListSum | TreeSum",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Scenario",
+      "classification": "source_fact",
+      "source_name": "Scenario",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 5,
+        "end_line": 5,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Scenario = FactorialCase | ListCase | TreeCase | YieldCase | ExhaustCase | BoundCase",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Control",
+      "classification": "source_fact",
+      "source_name": "Control",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 6,
+        "end_line": 6,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Control = Evaluate | ReturnValue | Finished",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Node",
+      "classification": "source_fact",
+      "source_name": "Node",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 7,
+        "end_line": 7,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Node = Nil | Cons({head: int, tail: int}) | Leaf(int) | Branch({left: int, right: int})",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Frame",
+      "classification": "source_fact",
+      "source_name": "Frame",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 8,
+        "end_line": 8,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Frame = Multiply(int) | AddHead(int) | VisitRight(int) | AddLeft(int)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Pending",
+      "classification": "source_fact",
+      "source_name": "Pending",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 9,
+        "end_line": 9,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Pending = NoPending | PendingReturn(int)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Result",
+      "classification": "source_fact",
+      "source_name": "Result",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 10,
+        "end_line": 10,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Result = NoResult | ResultValue(int)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Reason",
+      "classification": "source_fact",
+      "source_name": "Reason",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 11,
+        "end_line": 11,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Reason = NoReason | ConstructorMismatch | ScalarBound | StackBound | MissingReference",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Snapshot",
+      "classification": "source_fact",
+      "source_name": "Snapshot",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 12,
+        "end_line": 12,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Snapshot = {acc: int, frames: List[Frame], arg: int, cursor: int, consumed: int}",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.Machine",
+      "classification": "source_fact",
+      "source_name": "Machine",
+      "kind": "type",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 13,
+        "end_line": 20,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  type Machine = {\n    phase: Phase, program: Program, control: Control,\n    arg: int, cursor: int, acc: int, frames: List[Frame], heap: int -> Node,\n    total: int, remaining: int, consumed: int, attempted: int,\n    yieldEnabled: bool, yielded: bool, pending: Pending,\n    observations: int, acceptedEvents: int, boundary: int, checkpoint: Snapshot,\n    result: Result, reason: Reason, maxDepth: int, visited: Set[int],\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.MAX_SCALAR",
+      "classification": "source_fact",
+      "source_name": "MAX_SCALAR",
+      "kind": "pure val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 22,
+        "end_line": 22,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure val MAX_SCALAR = 15",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.MAX_FRAMES",
+      "classification": "source_fact",
+      "source_name": "MAX_FRAMES",
+      "kind": "pure val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 23,
+        "end_line": 23,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure val MAX_FRAMES = 8",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.HEAP_IDS",
+      "classification": "source_fact",
+      "source_name": "HEAP_IDS",
+      "kind": "pure val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 24,
+        "end_line": 24,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure val HEAP_IDS = 0.to(7)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.SCENARIOS",
+      "classification": "source_fact",
+      "source_name": "SCENARIOS",
+      "kind": "pure val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 25,
+        "end_line": 25,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure val SCENARIOS = Set(FactorialCase, ListCase, TreeCase, YieldCase, ExhaustCase, BoundCase)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.machine",
+      "classification": "source_fact",
+      "source_name": "machine",
+      "kind": "var",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 26,
+        "end_line": 26,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  var machine: Machine",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.initialHeap",
+      "classification": "source_fact",
+      "source_name": "initialHeap",
+      "kind": "pure val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 28,
+        "end_line": 37,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure val initialHeap: int -> Node = Map(\n    0 -> Nil,\n    1 -> Cons({head: 3, tail: 0}),\n    2 -> Cons({head: 2, tail: 1}),\n    3 -> Cons({head: 1, tail: 2}),\n    4 -> Leaf(4),\n    5 -> Leaf(5),\n    6 -> Nil,\n    7 -> Branch({left: 4, right: 5})\n  )",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.initial",
+      "classification": "source_fact",
+      "source_name": "initial",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 39,
+        "end_line": 54,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def initial(sc: Scenario): Machine = {\n    val budget = if (sc == ExhaustCase) 2 else 32\n    {\n      phase: Running,\n      program: if (sc == ListCase) ListSum else if (sc == TreeCase) TreeSum else Factorial,\n      control: Evaluate,\n      arg: if (sc == BoundCase) 4 else 3,\n      cursor: if (sc == TreeCase) 7 else 3,\n      acc: 0, frames: List(), heap: initialHeap,\n      total: budget, remaining: budget, consumed: 0, attempted: 0,\n      yieldEnabled: sc == YieldCase, yielded: false, pending: NoPending,\n      observations: 0, acceptedEvents: 0, boundary: 0,\n      checkpoint: {acc: 0, frames: List(), arg: 0, cursor: 0, consumed: 0},\n      result: NoResult, reason: NoReason, maxDepth: 0, visited: Set(),\n    }\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.isTerminal",
+      "classification": "source_fact",
+      "source_name": "isTerminal",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 56,
+        "end_line": 57,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def isTerminal(s: Machine): bool =\n    Set(Halted, Rejected, Exhausted).contains(s.phase)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.inScalar",
+      "classification": "source_fact",
+      "source_name": "inScalar",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 59,
+        "end_line": 59,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def inScalar(n: int): bool = n >= 0 and n <= MAX_SCALAR",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.charged",
+      "classification": "source_fact",
+      "source_name": "charged",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 61,
+        "end_line": 64,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def charged(s: Machine): Machine = {\n    ...s, remaining: s.remaining - 1,\n    consumed: s.consumed + 1, attempted: s.attempted + 1,\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.refuse",
+      "classification": "source_fact",
+      "source_name": "refuse",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 66,
+        "end_line": 67,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def refuse(s: Machine, r: Reason): Machine =\n    {...s, phase: Rejected, control: Finished, result: NoResult, reason: r}",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.push",
+      "classification": "source_fact",
+      "source_name": "push",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 69,
+        "end_line": 76,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def push(s: Machine, f: Frame): Machine = {\n    val depth = s.frames.length() + 1\n    if (depth > MAX_FRAMES) refuse(s, StackBound)\n    else {\n      ...s, frames: List(f).concat(s.frames),\n      maxDepth: if (depth > s.maxDepth) depth else s.maxDepth,\n    }\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.evaluateFactorial",
+      "classification": "source_fact",
+      "source_name": "evaluateFactorial",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 78,
+        "end_line": 83,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def evaluateFactorial(s: Machine): Machine =\n    if (s.arg == 0) {...s, acc: 1, control: ReturnValue}\n    else {\n      val pushed = push(s, Multiply(s.arg))\n      {...pushed, arg: s.arg - 1}\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.evaluateListNode",
+      "classification": "source_fact",
+      "source_name": "evaluateListNode",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 85,
+        "end_line": 93,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def evaluateListNode(s: Machine, node: Node): Machine =\n    match node {\n      | Nil => {...s, acc: 0, control: ReturnValue}\n      | Cons(c) => {\n        val pushed = push(s, AddHead(c.head))\n        {...pushed, cursor: c.tail}\n      }\n      | _ => refuse(s, ConstructorMismatch)\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.evaluateTreeNode",
+      "classification": "source_fact",
+      "source_name": "evaluateTreeNode",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 95,
+        "end_line": 103,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def evaluateTreeNode(s: Machine, node: Node): Machine =\n    match node {\n      | Leaf(v) => {...s, acc: v, control: ReturnValue}\n      | Branch(b) => {\n        val pushed = push(s, VisitRight(b.right))\n        {...pushed, cursor: b.left}\n      }\n      | _ => refuse(s, ConstructorMismatch)\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.evaluateData",
+      "classification": "source_fact",
+      "source_name": "evaluateData",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 105,
+        "end_line": 112,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def evaluateData(s: Machine): Machine =\n    if (not(s.heap.keys().contains(s.cursor))) refuse(s, MissingReference)\n    else {\n      val marked = {...s, visited: s.visited.union(Set(s.cursor))}\n      val node = s.heap.get(s.cursor)\n      if (s.program == ListSum) evaluateListNode(marked, node)\n      else evaluateTreeNode(marked, node)\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.evaluate",
+      "classification": "source_fact",
+      "source_name": "evaluate",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 114,
+        "end_line": 115,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def evaluate(s: Machine): Machine =\n    if (s.program == Factorial) evaluateFactorial(s) else evaluateData(s)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.checkedAccumulator",
+      "classification": "source_fact",
+      "source_name": "checkedAccumulator",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 117,
+        "end_line": 119,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def checkedAccumulator(s: Machine, value: int): Machine =\n    if (inScalar(value)) {...s, acc: value}\n    else refuse(s, ScalarBound)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.applyFrame",
+      "classification": "source_fact",
+      "source_name": "applyFrame",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 121,
+        "end_line": 130,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def applyFrame(s: Machine, frame: Frame): Machine =\n    match frame {\n      | Multiply(n) => checkedAccumulator(s, n * s.acc)\n      | AddHead(n) => checkedAccumulator(s, n + s.acc)\n      | VisitRight(ref) => {\n        val pushed = push(s, AddLeft(s.acc))\n        {...pushed, cursor: ref, control: Evaluate}\n      }\n      | AddLeft(n) => checkedAccumulator(s, n + s.acc)\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.returnOne",
+      "classification": "source_fact",
+      "source_name": "returnOne",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 132,
+        "end_line": 139,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def returnOne(s: Machine): Machine =\n    if (s.frames.length() == 0)\n      {...s, phase: Halted, control: Finished, result: ResultValue(s.acc)}\n    else {\n      val frame = s.frames.head()\n      val popped = {...s, frames: s.frames.tail()}\n      applyFrame(popped, frame)\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.suspendReturn",
+      "classification": "source_fact",
+      "source_name": "suspendReturn",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 141,
+        "end_line": 148,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def suspendReturn(s: Machine): Machine = {\n    ...s, phase: Waiting, yielded: true, pending: PendingReturn(s.acc),\n    boundary: s.boundary + 1,\n    checkpoint: {\n      acc: s.acc, frames: s.frames, arg: s.arg,\n      cursor: s.cursor, consumed: s.consumed,\n    },\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.canTick",
+      "classification": "source_fact",
+      "source_name": "canTick",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 150,
+        "end_line": 150,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def canTick(s: Machine): bool = s.phase == Running",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.applyTick",
+      "classification": "source_fact",
+      "source_name": "applyTick",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 152,
+        "end_line": 164,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def applyTick(s: Machine): Machine =\n    if (s.remaining == 0)\n      {...s, phase: Exhausted, control: Finished, attempted: s.attempted + 1}\n    else {\n      val chargedMachine = charged(s)\n      if (s.control == Evaluate) evaluate(chargedMachine)\n      else if (s.control == ReturnValue) {\n        if (s.yieldEnabled and not(s.yielded) and s.frames.length() > 0)\n          suspendReturn(chargedMachine)\n        else returnOne(chargedMachine)\n      }\n      else refuse(chargedMachine, ConstructorMismatch)\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.canObserve",
+      "classification": "source_fact",
+      "source_name": "canObserve",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 167,
+        "end_line": 168,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def canObserve(s: Machine, ready: bool): bool =\n    s.phase == Waiting and (ready or s.observations == 0)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.resumePending",
+      "classification": "source_fact",
+      "source_name": "resumePending",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 170,
+        "end_line": 177,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def resumePending(s: Machine): Machine =\n    match s.pending {\n      | PendingReturn(value) => {\n        ...s, phase: Running, acc: value, pending: NoPending,\n        acceptedEvents: s.acceptedEvents + 1,\n      }\n      | NoPending => s\n    }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.applyObservation",
+      "classification": "source_fact",
+      "source_name": "applyObservation",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 180,
+        "end_line": 183,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def applyObservation(s: Machine, ready: bool): Machine = {\n    val observed = {...s, observations: s.observations + 1}\n    if (ready) resumePending(observed) else observed\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.initCase",
+      "classification": "source_fact",
+      "source_name": "initCase",
+      "kind": "action",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 185,
+        "end_line": 185,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  action initCase(sc: Scenario): bool = machine' = initial(sc)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.init",
+      "classification": "source_fact",
+      "source_name": "init",
+      "kind": "action",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 186,
+        "end_line": 189,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  action init = {\n    nondet sc = SCENARIOS.oneOf()\n    machine' = initial(sc)\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.tick",
+      "classification": "source_fact",
+      "source_name": "tick",
+      "kind": "action",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 190,
+        "end_line": 190,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  action tick = all {canTick(machine), machine' = applyTick(machine)}",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.observe",
+      "classification": "source_fact",
+      "source_name": "observe",
+      "kind": "action",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 191,
+        "end_line": 193,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  action observe(ready: bool): bool = all {\n    canObserve(machine, ready), machine' = applyObservation(machine, ready),\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.terminalStutter",
+      "classification": "source_fact",
+      "source_name": "terminalStutter",
+      "kind": "action",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 194,
+        "end_line": 194,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  action terminalStutter = all {isTerminal(machine), machine' = machine}",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.step",
+      "classification": "source_fact",
+      "source_name": "step",
+      "kind": "action",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 195,
+        "end_line": 195,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  action step = any {tick, observe(false), observe(true), terminalStutter}",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.frameValid",
+      "classification": "source_fact",
+      "source_name": "frameValid",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 197,
+        "end_line": 202,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def frameValid(frame: Frame): bool = match frame {\n    | Multiply(n) => n >= 1 and n <= 4\n    | AddHead(n) => inScalar(n)\n    | VisitRight(ref) => HEAP_IDS.contains(ref)\n    | AddLeft(n) => inScalar(n)\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.nodeValid",
+      "classification": "source_fact",
+      "source_name": "nodeValid",
+      "kind": "pure def",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 204,
+        "end_line": 212,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  pure def nodeValid(id: int, node: Node): bool = match node {\n    | Nil => true\n    | Cons(c) => inScalar(c.head) and HEAP_IDS.contains(c.tail) and c.tail < id\n    | Leaf(v) => inScalar(v)\n    | Branch(b) => and {\n      HEAP_IDS.contains(b.left), HEAP_IDS.contains(b.right),\n      b.left < id, b.right < id,\n    }\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.finiteStateInv",
+      "classification": "source_fact",
+      "source_name": "finiteStateInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 214,
+        "end_line": 222,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val finiteStateInv = and {\n    inScalar(machine.acc), machine.arg >= 0, machine.arg <= 4,\n    HEAP_IDS.contains(machine.cursor), machine.frames.length() <= MAX_FRAMES,\n    machine.maxDepth >= machine.frames.length(), machine.maxDepth <= MAX_FRAMES,\n    machine.observations >= 0, machine.observations <= 2,\n    machine.acceptedEvents >= 0, machine.acceptedEvents <= 1,\n    machine.boundary >= 0, machine.boundary <= 1,\n    machine.visited.forall(id => HEAP_IDS.contains(id)),\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.heapAndFramesInv",
+      "classification": "source_fact",
+      "source_name": "heapAndFramesInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 223,
+        "end_line": 227,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val heapAndFramesInv = and {\n    machine.heap == initialHeap, machine.heap.keys() == HEAP_IDS,\n    HEAP_IDS.forall(id => nodeValid(id, machine.heap.get(id))),\n    machine.frames.foldl(true, (ok, frame) => ok and frameValid(frame)),\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.workAccountingInv",
+      "classification": "source_fact",
+      "source_name": "workAccountingInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 228,
+        "end_line": 233,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val workAccountingInv = and {\n    Set(2, 32).contains(machine.total),\n    machine.remaining >= 0, machine.remaining <= machine.total,\n    machine.consumed + machine.remaining == machine.total,\n    machine.attempted == machine.consumed + (if (machine.phase == Exhausted) 1 else 0),\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.waitingInv",
+      "classification": "source_fact",
+      "source_name": "waitingInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 234,
+        "end_line": 241,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val waitingInv = if (machine.phase == Waiting) and {\n    machine.control == ReturnValue, machine.frames.length() > 0,\n    machine.pending == PendingReturn(machine.acc),\n    machine.checkpoint.frames == machine.frames,\n    machine.checkpoint.acc == machine.acc,\n    machine.checkpoint.consumed == machine.consumed,\n    machine.boundary == 1, machine.acceptedEvents == 0,\n  } else machine.pending == NoPending",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.terminalResultInv",
+      "classification": "source_fact",
+      "source_name": "terminalResultInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 242,
+        "end_line": 250,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val terminalResultInv = and {\n    (machine.phase == Halted) implies and {\n      machine.control == Finished, machine.frames.length() == 0,\n      machine.result == ResultValue(machine.acc), machine.reason == NoReason,\n    },\n    (machine.phase == Rejected) implies machine.reason != NoReason,\n    (machine.phase != Halted) implies machine.result == NoResult,\n    (machine.phase == Exhausted) implies machine.remaining == 0,\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.checkpointInv",
+      "classification": "source_fact",
+      "source_name": "checkpointInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 251,
+        "end_line": 256,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val checkpointInv = and {\n    machine.checkpoint.consumed >= 0,\n    machine.checkpoint.consumed <= machine.consumed,\n    (machine.boundary == 0) implies machine.checkpoint.consumed == 0,\n    (machine.boundary == 1) implies machine.yielded,\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.allInv",
+      "classification": "source_fact",
+      "source_name": "allInv",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 257,
+        "end_line": 260,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val allInv = and {\n    finiteStateInv, heapAndFramesInv, workAccountingInv,\n    waitingInv, terminalResultInv, checkpointInv,\n  }",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.recursiveWitness",
+      "classification": "source_fact",
+      "source_name": "recursiveWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 262,
+        "end_line": 262,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val recursiveWitness = machine.phase == Halted and machine.program == Factorial and machine.maxDepth >= 3",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.listWitness",
+      "classification": "source_fact",
+      "source_name": "listWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 263,
+        "end_line": 263,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val listWitness = machine.phase == Halted and machine.program == ListSum and machine.visited.size() == 4",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.treeWitness",
+      "classification": "source_fact",
+      "source_name": "treeWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 264,
+        "end_line": 264,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val treeWitness = machine.phase == Halted and machine.program == TreeSum and machine.visited == Set(4, 5, 7)",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.waitingWitness",
+      "classification": "source_fact",
+      "source_name": "waitingWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 265,
+        "end_line": 265,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val waitingWitness = machine.phase == Waiting and machine.frames.length() >= 3",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.resumedWitness",
+      "classification": "source_fact",
+      "source_name": "resumedWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 266,
+        "end_line": 266,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val resumedWitness = machine.phase == Halted and machine.acceptedEvents == 1 and machine.observations == 2",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.exhaustionWitness",
+      "classification": "source_fact",
+      "source_name": "exhaustionWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 267,
+        "end_line": 267,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val exhaustionWitness = machine.phase == Exhausted and machine.consumed > 0",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    },
+    {
+      "id": "q.definition.rejectionWitness",
+      "classification": "source_fact",
+      "source_name": "rejectionWitness",
+      "kind": "val",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 268,
+        "end_line": 268,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "source_text": "  val rejectionWitness = machine.phase == Rejected and machine.reason == ScalarBound",
+      "charge": "Definition/call is not independently metered; outer action/event schedule below determines charges."
+    }
+  ],
+  "quint_events": [
+    {
+      "id": "q.event.initialize",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 39,
+        "end_line": 54,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "initCase(sc) or init chooses actual SCENARIOS",
+      "consumed_delta": 0,
+      "remaining_delta": 0,
+      "attempted_delta": 0,
+      "updates": "Full initial fields from initial(sc); ExhaustCase budget2, otherwise32; BoundCase arg4 otherwise3; TreeCase cursor7 otherwise3.",
+      "source_function_names": [
+        "initial",
+        "initCase",
+        "init"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.exhaust",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 152,
+        "end_line": 155,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "phase Running and remaining==0",
+      "consumed_delta": 0,
+      "remaining_delta": 0,
+      "attempted_delta": 1,
+      "updates": "phase Exhausted, control Finished; no charged/evaluate/returnOne call.",
+      "source_function_names": [
+        "canTick",
+        "applyTick"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.factorial.zero",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 78,
+        "end_line": 83,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, Factorial, arg==0",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged then acc1 and ReturnValue.",
+      "source_function_names": [
+        "charged",
+        "evaluateFactorial"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.factorial.recurse",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 78,
+        "end_line": 83,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, Factorial, arg!=0",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged then push(Multiply(arg)); arg decremented even if pushed state refused.",
+      "source_function_names": [
+        "charged",
+        "evaluateFactorial",
+        "push"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.missing",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 105,
+        "end_line": 112,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, non-Factorial, cursor absent from heap keys",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged then refuse MissingReference.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "refuse"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.list.nil",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 85,
+        "end_line": 93,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, ListSum, heap cursor is Nil",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; mark cursor visited; acc0 ReturnValue.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "evaluateListNode"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.list.cons",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 85,
+        "end_line": 93,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, ListSum, Cons(c)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; mark visited; push AddHead(c.head); cursor c.tail even if pushed refused.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "evaluateListNode",
+        "push"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.list.other",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 85,
+        "end_line": 93,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, ListSum, non-Nil/non-Cons",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; mark visited; ConstructorMismatch.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "evaluateListNode",
+        "refuse"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.tree.leaf",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 95,
+        "end_line": 103,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, TreeSum, Leaf(v)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; mark visited; acc v ReturnValue.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "evaluateTreeNode"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.tree.branch",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 95,
+        "end_line": 103,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, TreeSum, Branch(b)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; mark visited; push VisitRight(b.right); cursor b.left even if pushed refused.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "evaluateTreeNode",
+        "push"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.evaluate.tree.other",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 95,
+        "end_line": 103,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, Evaluate, TreeSum, non-Leaf/non-Branch",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; mark visited; ConstructorMismatch.",
+      "source_function_names": [
+        "charged",
+        "evaluateData",
+        "evaluateTreeNode",
+        "refuse"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.return.suspend",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 141,
+        "end_line": 148,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, ReturnValue, yieldEnabled, !yielded, nonempty frames",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged then Waiting; yielded true; pending PendingReturn(acc); boundary+1; save acc/frames/arg/cursor/consumed from charged state.",
+      "source_function_names": [
+        "charged",
+        "suspendReturn"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.return.terminal",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 132,
+        "end_line": 139,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, ReturnValue, suspension condition false, empty frames",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged then Halted Finished ResultValue(acc). Exact remaining0 after charging still permits this tick; pre-tick remaining0 exhausts.",
+      "source_function_names": [
+        "charged",
+        "returnOne"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.return.multiply",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 121,
+        "end_line": 139,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, ReturnValue, no suspension, head Multiply(n)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; pop frame; checkedAccumulator(n*acc), ScalarBound on out-of-range.",
+      "source_function_names": [
+        "charged",
+        "returnOne",
+        "applyFrame",
+        "checkedAccumulator"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.return.addhead",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 121,
+        "end_line": 139,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, ReturnValue, no suspension, head AddHead(n)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; pop; checkedAccumulator(n+acc).",
+      "source_function_names": [
+        "charged",
+        "returnOne",
+        "applyFrame",
+        "checkedAccumulator"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.return.visitright",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 121,
+        "end_line": 139,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, ReturnValue, no suspension, head VisitRight(ref)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; pop; push AddLeft(acc); cursor ref and control Evaluate assigned after push.",
+      "source_function_names": [
+        "charged",
+        "returnOne",
+        "applyFrame",
+        "push"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.return.addleft",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 121,
+        "end_line": 139,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, ReturnValue, no suspension, head AddLeft(n)",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged; pop; checkedAccumulator(n+acc).",
+      "source_function_names": [
+        "charged",
+        "returnOne",
+        "applyFrame",
+        "checkedAccumulator"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.tick.control.other",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 152,
+        "end_line": 164,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Running, remaining>0, control neither Evaluate nor ReturnValue",
+      "consumed_delta": 1,
+      "remaining_delta": -1,
+      "attempted_delta": 1,
+      "updates": "charged then refuse ConstructorMismatch.",
+      "source_function_names": [
+        "charged",
+        "applyTick",
+        "refuse"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.observe.notready",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 166,
+        "end_line": 183,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Waiting, ready=false, observations==0",
+      "consumed_delta": 0,
+      "remaining_delta": 0,
+      "attempted_delta": 0,
+      "updates": "observations+1; pending/checkpoint/frames/work retained.",
+      "source_function_names": [
+        "canObserve",
+        "applyObservation"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.observe.ready.pending",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 166,
+        "end_line": 183,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Waiting, ready=true, pending PendingReturn(value)",
+      "consumed_delta": 0,
+      "remaining_delta": 0,
+      "attempted_delta": 0,
+      "updates": "observations+1; Running; acc=value; pending NoPending; acceptedEvents+1; checkpoint unchanged.",
+      "source_function_names": [
+        "canObserve",
+        "applyObservation",
+        "resumePending"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.observe.ready.nopending",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 166,
+        "end_line": 183,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "Waiting, ready=true, NoPending (function branch exists; waitingInv separately states PendingReturn)",
+      "consumed_delta": 0,
+      "remaining_delta": 0,
+      "attempted_delta": 0,
+      "updates": "observations+1; resumePending returns observed state unchanged otherwise. No reachability claim.",
+      "source_function_names": [
+        "canObserve",
+        "applyObservation",
+        "resumePending"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    },
+    {
+      "id": "q.event.terminal.stutter",
+      "classification": "source_fact",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 194,
+        "end_line": 195,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard_or_branch": "phase Halted/Rejected/Exhausted",
+      "consumed_delta": 0,
+      "remaining_delta": 0,
+      "attempted_delta": 0,
+      "updates": "Exact state unchanged.",
+      "source_function_names": [
+        "isTerminal",
+        "terminalStutter",
+        "step"
+      ],
+      "raw_outcome": "Retain actual phase/control/reason/result; no K numeric error-code coercion."
+    }
+  ],
+  "quint_push_cases": [
+    {
+      "id": "q.push.accept",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 69,
+        "end_line": 76,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard": "frames.length()+1 <= MAX_FRAMES",
+      "effect": "prepend frame; maxDepth=max(new depth,old maxDepth); no extra charged call",
+      "charge": "inherited from enclosing tick only"
+    },
+    {
+      "id": "q.push.refuse",
+      "source": {
+        "path": "models/sherlock/quint/universalMachine.qnt",
+        "start_line": 69,
+        "end_line": 76,
+        "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+        "digest_scope": "whole-source-bytes"
+      },
+      "guard": "frames.length()+1 > MAX_FRAMES",
+      "effect": "refuse(s,StackBound): Rejected,Finished,NoResult,StackBound; call sites may subsequently write arg/cursor/control as exact source text shows",
+      "charge": "inherited enclosing charged tick retained"
+    }
+  ],
+  "projection_boundaries": [
+    {
+      "field": "program",
+      "K": "ordered UIFuns plus arbitrary UIExpr entry",
+      "Quint": "Program enum selects three baked algorithms",
+      "status": "Requires specimen-specific common-domain adapter; no general refinement"
+    },
+    {
+      "field": "values",
+      "K": "U128/Bool/dedicated recursive list/tree terms",
+      "Quint": "integer acc; fixed heap IDs and Node; scalar bound15",
+      "status": "Bounded projection only"
+    },
+    {
+      "field": "frames",
+      "K": "nine frame constructors, head is top, complete saved Maps where present",
+      "Quint": "four arithmetic/traversal frame variants, head is top; no environment",
+      "status": "No lexical-env correspondence inferred"
+    },
+    {
+      "field": "work",
+      "K": "free final/error publication; explicit charged uiPush and primitive-result boundaries",
+      "Quint": "charged algorithm tick including final return; push nested within one tick",
+      "status": "Unequal schedules; no numeric work equality or same-fuel claim"
+    },
+    {
+      "field": "waiting",
+      "K": "no waiting/observation controls in main.k",
+      "Quint": "one modeled PendingReturn yield/resume path",
+      "status": "No K financial/suspension correspondence"
+    },
+    {
+      "field": "failure",
+      "K": "uiRejected codes1-11 and uiExhausted",
+      "Quint": "Rejected reason enum or Exhausted phase",
+      "status": "Raw outcomes retained; profile classifier and cap correspondence S-owned"
+    }
+  ],
+  "unresolved_s_owned": [
+    {
+      "id": "S-B-FAILURE-ROWS",
+      "owner": "Opus 5.5 (S)",
+      "status": "unresolved-per-rule",
+      "scope": "Exact charge/allocation/output rows for helper failure, legacy failed completion and resource/cap refusal, including precedence inside a single bounded event. Existing interface dispositions are referenced, not reassessed."
+    },
+    {
+      "id": "S-B-CAP-ROWS",
+      "owner": "Opus 5.5 (S), I encodes",
+      "status": "unresolved-per-rule",
+      "scope": "Exact data-node/data-field/environment-cell/helper-task/helper-work/serialization cap checks, allocation increments and pre-update boundaries; no numeric capacity selected."
+    },
+    {
+      "id": "S-B-PROFILE-ADMISSION",
+      "owner": "Opus 5.5 (S)",
+      "status": "pending-adoption/review",
+      "scope": "Existing A1/A2 profile classifier, Bounds.stepCap/counter admission and completed-interval resource premises; catalog supplies no new policy or acceptance."
+    },
+    {
+      "id": "S-B-REPRESENTATION",
+      "owner": "Opus 5.5 (S), I schemas",
+      "status": "unresolved",
+      "scope": "Exact StepInv, codec/project, physical/logical allocation and frame/helper slot lifecycle obligations and applicable Opus-owned B001\u2013B009 gates."
+    },
+    {
+      "id": "S-B-SECURITY-ACCEPTANCE",
+      "owner": "Opus 5.5 (S)",
+      "status": "not-requested-from-R",
+      "scope": "All security requirements, hostile tests, theorems, analysis and judgments remain exclusively S-owned; this package supplies none."
+    }
+  ],
+  "evidence": {
+    "class": "source-inspected",
+    "execution_claims": [],
+    "parent_exits_closed": []
+  }
+}
