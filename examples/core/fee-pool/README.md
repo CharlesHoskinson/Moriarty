@@ -99,7 +99,7 @@ The mapped mode uses these distinct public artifact identities:
 | Artifact | Profile or format | Qualification |
 | --- | --- | --- |
 | Bundle | `moriarty-mapped-role-source-static-bundle/1` | `source-static-mapped-roles-unproven-uninstalled-unauthenticated` |
-| Per-action relation | `moriarty-mapped-role-source-static-relation/1` | `source-static-mapped-debits-unauthenticated` |
+| Per-action relation | `moriarty-mapped-role-source-static-relation/2` | `source-static-mapped-debits-unauthenticated` |
 
 Mapped export status uses the bundle qualification. Mapped inspect status starts
 with `source-static-recompile-admitted` and includes that same qualification.
