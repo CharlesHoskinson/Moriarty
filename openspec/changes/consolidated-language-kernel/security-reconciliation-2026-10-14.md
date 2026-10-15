@@ -193,7 +193,7 @@ When a signed cap names an asset:
 **Maps to:** M5, U1, MPLR-021, MC05 "Oversized verification input". **Source:** SEC-13, SEC-14.
 
 - When keys are generated through any public API, the API SHALL enforce the pinned parameter digests and the declared degree ceiling, or label its output unpinned.
-- When M5 is claimed, the encoded-transaction ceiling and the fraud-circuit k SHALL be measured on the claimed target.
+- When M5 is claimed, the encoded transaction SHALL be at most 64 KB, every fraud circuit SHALL have k ≤ 19, and each contract SHALL declare and stay within its replay budget, each measured on the claimed target. Measurement supplies evidence; it SHALL NOT relax these M5 thresholds.
 
 #### Scenario: Unpinned parameters
 - **WHEN** caller-supplied parameters reach `generate_call_keys`
@@ -202,9 +202,9 @@ When a signed cap names an asset:
 - SRS trust rests on the SDK digest table, not on a ceremony audit.
 
 #### Scenario: Oversized transaction
-- **WHEN** an encoded transaction exceeds the encoded-transaction ceiling measured for the claimed target
+- **WHEN** an encoded transaction exceeds 64 KB (M5), or a lower ceiling measured for the claimed target
 - **THEN** it SHALL be refused before submission.
-- Evidence: no current-local control exists. SEC-14 found no encoded-transaction ceiling; the existing 64 KiB bounds cover JSON, envelope and source only. The ceiling needs `native-local` measurement, then `target-observed` (blocked-external).
+- Evidence: no current-local control exists. SEC-14 found no encoded-transaction ceiling; the existing 64 KiB bounds cover JSON, envelope and source only. The ceiling needs `native-local` measurement, then `target-observed` (blocked-external). The existing 64 KiB JSON, envelope and source bounds do not implement this requirement, and their existence does not loosen it.
 
 ### Requirement: OSR-1014-12 In-circuit Schnorr audit statement
 **Maps to:** M8, U1. **Source:** SEC-17 (HYP); SEC-04 only for the compiled-key premise (its authority predicates belong to OSR-1014-04).
