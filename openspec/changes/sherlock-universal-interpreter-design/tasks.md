@@ -1,8 +1,28 @@
 # Sherlock Candidate B tasks
 
-Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../../../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+Routing for new work: [AGENTS.md](../../../AGENTS.md) records restored Opus 5.5 high availability and security ownership. GPT-6.1 Sol high implements nonsecurity work; fresh non-author Muse Wonder1.0 high audits it. Historical Argon/Opus assignments and frozen gates retain their recorded identities and scope.
 
 FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY. Checked boxes refer only to their linked source/model evidence. Other implementation and acceptance tasks remain open; a source file does not complete them. Root owns registration, integration and review. No task authorizes K/Quint/native execution, a new campaign or counter reset.
+
+## Scoped host deliveries
+
+The following source and captured normal observations are available. Every B
+acceptance task below retains its full predicate; these observations do not
+check off a complete B task or replace Clean/native/target evidence.
+
+| Existing task | Delivered child capability | Retained gap |
+|---|---|---|
+| B-T02 | Indexed program tables, a flat expression-ID interpreter and causal source/frame origins; [normal evidence](../../../docs/audits/2026-10-15/sherlock-source-origin-normal/README.md) | Complete preparation/admission domain, capacities and B realization |
+| B-T02 | Core scalar source preparation with actual library compilation and six tests over two handwritten AST specimens; [projection evidence](../../../docs/audits/2026-10-15/sherlock-source-projection/README.md) | Generated-function execution, backend/CLI build and publication, recursive/general source grammar and full B realization |
+| B-T03 | Finite call lookup/binding and actual retained call-context adapter | Remaining helper families, full B schedule and counters |
+| B-T04 | Full host snapshot rows and owned in-memory image/helper checkpoints | Fixed-capacity encoding, canonical serialization and B representation |
+| B-T08 | A-event slices at widths 1/2/4/8 and saved pending-return/helper cuts; [checkpoint evidence](../../../docs/audits/2026-10-15/sherlock-host-checkpoint-normal/README.md) | B helper boundaries, financial continuation and constrained execution |
+
+The latest linked checkpoint capture contains 86 host checks over eight programs
+and 216 frozen prefixes. This is a captured scoped result, not a whole-crate
+Cargo result or general source/compiler/native acceptance. The root
+[reference status](../../../docs/SHERLOCK-REFERENCE-STATUS.md) retains the earlier
+captures and their limitations. All B-T01–B-T14 parent tasks remain open.
 
 ## Reconcile and freeze the candidate
 
