@@ -1,0 +1,1688 @@
+{
+  "format": "sherlock-source-schema-candidate/1",
+  "status": "SOURCE PREPARATION; not a B schema freeze, implementation or acceptance result",
+  "baseline_commit": "f218a8d82566fcb99becf4f0dd80b23726334284",
+  "source_membership": {
+    "models/sherlock/k/main.k": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+    "models/sherlock/quint/universalMachine.qnt": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506",
+    "openspec/changes/sherlock-universal-interpreter-design/interfaces.md": "bee739da090c41230adc6ebd711075d842ef127d7fed8d54276e9fb484d19536"
+  },
+  "ownership": "Integrator owns shared schema; source rule catalog and independent oracles have separate authors; security invariants/policies/gates exclusively Opus",
+  "scope": {
+    "frozen_A": "Source adapter only; no new A capacity, charge or result",
+    "proposed_B": "Strict first-order named self/mutual recursion; closed monomorphic nominal recursive groups; full language and financial extensions remain required",
+    "financial_state_extension": "Committed/tentative state, ordered effects, duties, pending operations and bound external observations are a separately required extension, not implemented by pure rows",
+    "native_field": "Separately qualified; no Midnight compatibility or native commitment selected"
+  },
+  "layout_contract": {
+    "unbounded_semantic_types": [
+      "SemanticValue",
+      "Environment",
+      "Frame",
+      "LegacyControl",
+      "Control",
+      "ReferenceState",
+      "StepRecord"
+    ],
+    "bounded_image": "MachineImage tables use fixed declared capacities; no recursive semantic object is a circuit payload",
+    "index_encoding": "Each table defines width and optional-index convention in its reviewed LayoutSchema; no host u32/u64 limit is implicit in this source contract",
+    "tag_encoding": "LayoutSchema must assign fixed tags and zero padding for every listed variant; no tag ABI is frozen by this file",
+    "scalar_baseline": "UInt128 sixteen little-endian bytes, each in [0,255]; embedding into F and constraints are separately implemented/qualified",
+    "remaining_layout_inputs": [
+      "Names dictionary and all source maps are host metadata; native rows carry bounded NameId indices",
+      "Exact controls/valueSlots and per-case payload widths must be supplied before layout/encoding implementation",
+      "Physical row allocation/reuse and all failure charges consume the Opus Phase0 policy, never generated from this schema",
+      "RuleId, OccurrenceId and ReasonId dictionaries and fixed digest format/width are required layout inputs; no unbounded strings are in native rows."
+    ],
+    "host_metadata_types": [
+      "MachineIdentity",
+      "SourceOccurrence",
+      "Name",
+      "Digest",
+      "Text"
+    ],
+    "identity_encoding": "NativeIdentity carries fixed-layout digest elements and profile tags; full source names/field/layout descriptions remain host metadata bound by separately qualified statements."
+  },
+  "type_table": {
+    "Nat": {
+      "primitive": "arbitrary mathematical natural; no implicit host u32/u64 limit"
+    },
+    "SignedName": {
+      "primitive": "lossless source identifier; K adapter uses canonical signed decimal Int with a K namespace"
+    },
+    "Digest": {
+      "primitive": "exact membership digest plus declared format/domain; not a selected native commitment"
+    },
+    "Bool": {
+      "primitive": "Boolean, separate from UInt128"
+    },
+    "Byte": {
+      "primitive": "integer in [0,255]"
+    },
+    "F": {
+      "primitive": "element of the separately bound field"
+    },
+    "Text": {
+      "primitive": "UTF-8 host metadata, never an unbounded circuit field"
+    },
+    "ExprId": {
+      "index": "expressions",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "FunctionRowId": {
+      "index": "functions",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "NameId": {
+      "index": "names",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "TypeId": {
+      "index": "types",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "CtorId": {
+      "index": "constructors",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "PatternId": {
+      "index": "patterns",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "ArmId": {
+      "index": "arms",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "PlanNodeId": {
+      "index": "matchPlanNodes",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "ConstId": {
+      "index": "constants",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "DataId": {
+      "index": "data",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "EnvId": {
+      "index": "environment",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "FrameId": {
+      "index": "frames",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "TaskId": {
+      "index": "helperTasks",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "ResumeId": {
+      "index": "helperResumes",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "ControlId": {
+      "index": "controls",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "FieldSlotId": {
+      "index": "dataFields",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "ValueSlotId": {
+      "index": "valueSlots",
+      "domain": "mathematical Nat before layout; width selected from table capacity"
+    },
+    "ProfileId": {
+      "enum": [
+        "sherlock-k-a/1",
+        "sherlock-quint-a/1",
+        "sherlock-helper-microstep/1"
+      ]
+    },
+    "BinaryOp": {
+      "enum": [
+        "Add",
+        "Sub",
+        "Mul",
+        "Eq",
+        "Lt",
+        "Cons",
+        "Branch"
+      ]
+    },
+    "UnaryOp": {
+      "enum": [
+        "Leaf",
+        "Not"
+      ]
+    },
+    "UInt128": {
+      "record": {
+        "littleEndianBytes": {
+          "array": {
+            "ref": "Byte"
+          },
+          "length": 16
+        }
+      }
+    },
+    "SourceOccurrence": {
+      "record": {
+        "programSource": {
+          "ref": "Digest"
+        },
+        "owner": {
+          "variant": {
+            "Entry": {},
+            "Function": {
+              "sourceTableIndex": {
+                "ref": "Nat"
+              }
+            }
+          }
+        },
+        "astPath": {
+          "array": {
+            "ref": "Nat"
+          },
+          "domain": "finite semantic sequence"
+        }
+      }
+    },
+    "Name": {
+      "record": {
+        "namespace": {
+          "ref": "Text"
+        },
+        "sourceSpelling": {
+          "ref": "SignedName"
+        },
+        "firstOccurrence": {
+          "ref": "SourceOccurrence"
+        }
+      }
+    },
+    "Parameter": {
+      "record": {
+        "name": {
+          "ref": "NameId"
+        },
+        "type": {
+          "ref": "TypeId"
+        },
+        "occurrence": {
+          "ref": "SourceOccurrence"
+        }
+      }
+    },
+    "FieldDecl": {
+      "record": {
+        "name": {
+          "ref": "NameId"
+        },
+        "type": {
+          "ref": "TypeId"
+        },
+        "sourceOrder": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "ConstructorDecl": {
+      "record": {
+        "id": {
+          "ref": "CtorId"
+        },
+        "type": {
+          "ref": "TypeId"
+        },
+        "name": {
+          "ref": "NameId"
+        },
+        "fields": {
+          "array": {
+            "ref": "FieldDecl"
+          },
+          "domain": "finite semantic sequence"
+        },
+        "sourceOrder": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "TypeDecl": {
+      "record": {
+        "id": {
+          "ref": "TypeId"
+        },
+        "name": {
+          "ref": "NameId"
+        },
+        "recursiveGroup": {
+          "ref": "Nat"
+        },
+        "constructors": {
+          "array": {
+            "ref": "CtorId"
+          },
+          "domain": "finite semantic sequence"
+        },
+        "sourceOrder": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "SemanticValue": {
+      "variant": {
+        "UInt128": {
+          "value": {
+            "ref": "UInt128"
+          }
+        },
+        "Bool": {
+          "value": {
+            "ref": "Bool"
+          }
+        },
+        "Constructor": {
+          "type": {
+            "ref": "TypeId"
+          },
+          "constructor": {
+            "ref": "CtorId"
+          },
+          "fields": {
+            "array": {
+              "ref": "SemanticValue"
+            },
+            "domain": "finite semantic sequence"
+          }
+        }
+      }
+    },
+    "Function": {
+      "record": {
+        "id": {
+          "ref": "FunctionRowId"
+        },
+        "name": {
+          "ref": "NameId"
+        },
+        "sourceTableIndex": {
+          "ref": "Nat"
+        },
+        "parameters": {
+          "array": {
+            "ref": "Parameter"
+          },
+          "domain": "finite semantic sequence"
+        },
+        "returnType": {
+          "ref": "TypeId"
+        },
+        "body": {
+          "ref": "ExprId"
+        }
+      }
+    },
+    "Arm": {
+      "record": {
+        "id": {
+          "ref": "ArmId"
+        },
+        "pattern": {
+          "ref": "PatternId"
+        },
+        "body": {
+          "ref": "ExprId"
+        },
+        "sourceArmIndex": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "ExprRow": {
+      "variant": {
+        "Literal": {
+          "constant": {
+            "ref": "ConstId"
+          }
+        },
+        "Variable": {
+          "name": {
+            "ref": "NameId"
+          }
+        },
+        "Let": {
+          "name": {
+            "ref": "NameId"
+          },
+          "value": {
+            "ref": "ExprId"
+          },
+          "body": {
+            "ref": "ExprId"
+          }
+        },
+        "Binary": {
+          "op": {
+            "ref": "BinaryOp"
+          },
+          "left": {
+            "ref": "ExprId"
+          },
+          "right": {
+            "ref": "ExprId"
+          }
+        },
+        "Unary": {
+          "op": {
+            "ref": "UnaryOp"
+          },
+          "operand": {
+            "ref": "ExprId"
+          }
+        },
+        "If": {
+          "condition": {
+            "ref": "ExprId"
+          },
+          "then": {
+            "ref": "ExprId"
+          },
+          "else": {
+            "ref": "ExprId"
+          }
+        },
+        "Call": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "arguments": {
+            "array": {
+              "ref": "ExprId"
+            },
+            "capacity": "bounds.maxArity"
+          }
+        },
+        "Construct": {
+          "type": {
+            "ref": "TypeId"
+          },
+          "constructor": {
+            "ref": "CtorId"
+          },
+          "fields": {
+            "array": {
+              "ref": "ExprId"
+            },
+            "capacity": "bounds.maxArity"
+          }
+        },
+        "Match": {
+          "scrutinee": {
+            "ref": "ExprId"
+          },
+          "arms": {
+            "array": {
+              "ref": "ArmId"
+            },
+            "capacity": "bounds.matchArmRows"
+          }
+        }
+      }
+    },
+    "PatternRow": {
+      "variant": {
+        "Bind": {
+          "name": {
+            "ref": "NameId"
+          }
+        },
+        "Wildcard": {},
+        "Constructor": {
+          "type": {
+            "ref": "TypeId"
+          },
+          "constructor": {
+            "ref": "CtorId"
+          },
+          "fields": {
+            "array": {
+              "ref": "PatternId"
+            },
+            "capacity": "bounds.maxArity"
+          }
+        }
+      }
+    },
+    "Binding": {
+      "record": {
+        "name": {
+          "ref": "NameId"
+        },
+        "value": {
+          "ref": "SemanticValue"
+        }
+      }
+    },
+    "Environment": {
+      "record": {
+        "bindings": {
+          "array": {
+            "ref": "Binding"
+          },
+          "domain": "finite semantic sequence"
+        }
+      }
+    },
+    "Frame": {
+      "variant": {
+        "Let": {
+          "name": {
+            "ref": "NameId"
+          },
+          "body": {
+            "ref": "ExprId"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "Left": {
+          "op": {
+            "ref": "BinaryOp"
+          },
+          "right": {
+            "ref": "ExprId"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "Right": {
+          "op": {
+            "ref": "BinaryOp"
+          },
+          "left": {
+            "ref": "SemanticValue"
+          }
+        },
+        "Unary": {
+          "op": {
+            "ref": "UnaryOp"
+          }
+        },
+        "If": {
+          "then": {
+            "ref": "ExprId"
+          },
+          "else": {
+            "ref": "ExprId"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "Match": {
+          "arms": {
+            "array": {
+              "ref": "ArmId"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "Arguments": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "completed": {
+            "array": {
+              "ref": "SemanticValue"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "remaining": {
+            "array": {
+              "ref": "ExprId"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "ConstructorFields": {
+          "type": {
+            "ref": "TypeId"
+          },
+          "constructor": {
+            "ref": "CtorId"
+          },
+          "completed": {
+            "array": {
+              "ref": "SemanticValue"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "remaining": {
+            "array": {
+              "ref": "ExprId"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "ReturnToCaller": {
+          "expectedType": {
+            "ref": "TypeId"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "Scope": {
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        }
+      }
+    },
+    "LegacyControl": {
+      "variant": {
+        "Eval": {
+          "expression": {
+            "ref": "ExprId"
+          }
+        },
+        "Return": {
+          "value": {
+            "ref": "SemanticValue"
+          }
+        },
+        "ScheduleNext": {
+          "frame": {
+            "ref": "Frame"
+          },
+          "next": {
+            "ref": "LegacyControl"
+          },
+          "environment": {
+            "ref": "Environment"
+          }
+        },
+        "Invoke": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "arguments": {
+            "array": {
+              "ref": "SemanticValue"
+            },
+            "domain": "finite semantic sequence"
+          }
+        },
+        "Enter": {
+          "function": {
+            "option": {
+              "ref": "FunctionRowId"
+            }
+          },
+          "arguments": {
+            "array": {
+              "ref": "SemanticValue"
+            },
+            "domain": "finite semantic sequence"
+          }
+        },
+        "Bound": {
+          "bindings": {
+            "option": {
+              "ref": "Environment"
+            }
+          },
+          "expectedType": {
+            "ref": "TypeId"
+          },
+          "body": {
+            "ref": "ExprId"
+          }
+        },
+        "Cases": {
+          "value": {
+            "ref": "SemanticValue"
+          },
+          "arms": {
+            "array": {
+              "ref": "ArmId"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "CaseResult": {
+          "bindings": {
+            "option": {
+              "ref": "Environment"
+            }
+          },
+          "value": {
+            "ref": "SemanticValue"
+          },
+          "body": {
+            "ref": "ExprId"
+          },
+          "remainingArms": {
+            "array": {
+              "ref": "ArmId"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          }
+        },
+        "PrimitiveResult": {
+          "value": {
+            "option": {
+              "ref": "SemanticValue"
+            }
+          },
+          "errorCode": {
+            "option": {
+              "ref": "Nat"
+            }
+          }
+        },
+        "Error": {
+          "errorCode": {
+            "ref": "Nat"
+          }
+        }
+      }
+    },
+    "HelperResume": {
+      "record": {
+        "originRule": {
+          "ref": "Text"
+        },
+        "originOccurrence": {
+          "ref": "SourceOccurrence"
+        },
+        "originReferenceCursor": {
+          "ref": "Nat"
+        },
+        "savedControl": {
+          "ref": "LegacyControl"
+        },
+        "savedEnvironment": {
+          "ref": "Environment"
+        },
+        "phase": {
+          "ref": "Nat"
+        },
+        "resultSlot": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "HelperControl": {
+      "variant": {
+        "Find": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "rowCursor": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "EnvGet": {
+          "name": {
+            "ref": "NameId"
+          },
+          "cellCursor": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "EnvPut": {
+          "name": {
+            "ref": "NameId"
+          },
+          "value": {
+            "ref": "SemanticValue"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "Bind": {
+          "parameterCursor": {
+            "ref": "Nat"
+          },
+          "argumentCursor": {
+            "ref": "Nat"
+          },
+          "partial": {
+            "ref": "Environment"
+          },
+          "phase": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "Append": {
+          "sourceCursor": {
+            "ref": "Nat"
+          },
+          "destinationCursor": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "Validate": {
+          "tasks": {
+            "array": {
+              "ref": "ValidationTask"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "Equal": {
+          "tasks": {
+            "array": {
+              "ref": "EqualityTask"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        },
+        "Match": {
+          "armCursor": {
+            "ref": "Nat"
+          },
+          "tasks": {
+            "array": {
+              "ref": "PatternTask"
+            },
+            "domain": "finite semantic sequence"
+          },
+          "partial": {
+            "ref": "Environment"
+          },
+          "savedEnvironment": {
+            "ref": "Environment"
+          },
+          "resume": {
+            "ref": "HelperResume"
+          }
+        }
+      }
+    },
+    "ValidationTask": {
+      "record": {
+        "value": {
+          "ref": "SemanticValue"
+        },
+        "expectedType": {
+          "ref": "TypeId"
+        },
+        "fieldCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "EqualityTask": {
+      "record": {
+        "left": {
+          "ref": "SemanticValue"
+        },
+        "right": {
+          "ref": "SemanticValue"
+        },
+        "fieldCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "PatternTask": {
+      "record": {
+        "pattern": {
+          "ref": "PatternId"
+        },
+        "value": {
+          "ref": "SemanticValue"
+        },
+        "fieldCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "Control": {
+      "variant": {
+        "Legacy": {
+          "value": {
+            "ref": "LegacyControl"
+          }
+        },
+        "Helper": {
+          "value": {
+            "ref": "HelperControl"
+          }
+        }
+      }
+    },
+    "CapacityReason": {
+      "record": {
+        "profile": {
+          "ref": "ProfileId"
+        },
+        "catalogReason": {
+          "ref": "Text"
+        }
+      }
+    },
+    "Outcome": {
+      "variant": {
+        "Running": {},
+        "Halted": {
+          "value": {
+            "ref": "SemanticValue"
+          }
+        },
+        "Rejected": {
+          "legacyErrorCode": {
+            "ref": "Nat"
+          }
+        },
+        "Exhausted": {
+          "reason": {
+            "ref": "CapacityReason"
+          }
+        }
+      }
+    },
+    "LogicalAllocations": {
+      "record": {
+        "dataNodes": {
+          "ref": "Nat"
+        },
+        "dataFields": {
+          "ref": "Nat"
+        },
+        "environmentCells": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "ReferenceState": {
+      "record": {
+        "programSource": {
+          "ref": "Digest"
+        },
+        "profile": {
+          "ref": "ProfileId"
+        },
+        "control": {
+          "ref": "Control"
+        },
+        "controlOrigin": {
+          "ref": "ExprId"
+        },
+        "environment": {
+          "ref": "Environment"
+        },
+        "frames": {
+          "array": {
+            "ref": "Frame"
+          },
+          "domain": "finite semantic sequence"
+        },
+        "outcome": {
+          "ref": "Outcome"
+        },
+        "remainingWork": {
+          "ref": "Nat"
+        },
+        "consumedWork": {
+          "ref": "Nat"
+        },
+        "helperWork": {
+          "ref": "Nat"
+        },
+        "allocation": {
+          "ref": "LogicalAllocations"
+        },
+        "referenceCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "StepRecord": {
+      "record": {
+        "expandedOrdinal": {
+          "ref": "Nat"
+        },
+        "sourceOccurrence": {
+          "ref": "SourceOccurrence"
+        },
+        "catalogRule": {
+          "ref": "Text"
+        },
+        "profile": {
+          "ref": "ProfileId"
+        },
+        "pre": {
+          "ref": "ReferenceState"
+        },
+        "post": {
+          "ref": "ReferenceState"
+        },
+        "workDelta": {
+          "ref": "Nat"
+        },
+        "helperVisits": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "ValueRef": {
+      "variant": {
+        "Constant": {
+          "id": {
+            "ref": "ConstId"
+          }
+        },
+        "Runtime": {
+          "id": {
+            "ref": "DataId"
+          }
+        }
+      }
+    },
+    "ValueSlice": {
+      "record": {
+        "start": {
+          "ref": "ValueSlotId"
+        },
+        "length": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "ExprSlice": {
+      "record": {
+        "start": {
+          "ref": "Nat"
+        },
+        "length": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "PatternSlice": {
+      "record": {
+        "start": {
+          "ref": "Nat"
+        },
+        "length": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "ValueNode": {
+      "variant": {
+        "UInt128": {
+          "bytes": {
+            "ref": "UInt128"
+          }
+        },
+        "Bool": {
+          "value": {
+            "ref": "Bool"
+          }
+        },
+        "Constructor": {
+          "type": {
+            "ref": "TypeId"
+          },
+          "constructor": {
+            "ref": "CtorId"
+          },
+          "fields": {
+            "ref": "ValueSlice"
+          }
+        }
+      }
+    },
+    "EnvCell": {
+      "record": {
+        "name": {
+          "ref": "NameId"
+        },
+        "value": {
+          "ref": "ValueRef"
+        },
+        "previous": {
+          "option": {
+            "ref": "EnvId"
+          }
+        }
+      }
+    },
+    "EnvRoot": {
+      "record": {
+        "head": {
+          "option": {
+            "ref": "EnvId"
+          }
+        }
+      }
+    },
+    "FrameRow": {
+      "variant": {
+        "Let": {
+          "name": {
+            "ref": "NameId"
+          },
+          "body": {
+            "ref": "ExprId"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "Left": {
+          "op": {
+            "ref": "BinaryOp"
+          },
+          "right": {
+            "ref": "ExprId"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "Right": {
+          "op": {
+            "ref": "BinaryOp"
+          },
+          "left": {
+            "ref": "ValueRef"
+          }
+        },
+        "Unary": {
+          "op": {
+            "ref": "UnaryOp"
+          }
+        },
+        "If": {
+          "then": {
+            "ref": "ExprId"
+          },
+          "else": {
+            "ref": "ExprId"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "Match": {
+          "arms": {
+            "slice": {
+              "ref": "ArmId"
+            },
+            "table": "arms",
+            "capacity": "bounds.matchArmRows"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "Arguments": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "completed": {
+            "ref": "ValueSlice"
+          },
+          "remaining": {
+            "ref": "ExprSlice"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "ConstructorFields": {
+          "type": {
+            "ref": "TypeId"
+          },
+          "constructor": {
+            "ref": "CtorId"
+          },
+          "completed": {
+            "ref": "ValueSlice"
+          },
+          "remaining": {
+            "ref": "ExprSlice"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "ReturnToCaller": {
+          "expectedType": {
+            "ref": "TypeId"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "Scope": {
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        }
+      }
+    },
+    "ControlRow": {
+      "variant": {
+        "Eval": {
+          "expression": {
+            "ref": "ExprId"
+          }
+        },
+        "Return": {
+          "value": {
+            "ref": "ValueRef"
+          }
+        },
+        "ScheduleNext": {
+          "frame": {
+            "ref": "FrameRow"
+          },
+          "next": {
+            "ref": "ControlId"
+          },
+          "environment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "Invoke": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "arguments": {
+            "ref": "ValueSlice"
+          }
+        },
+        "Enter": {
+          "function": {
+            "option": {
+              "ref": "FunctionRowId"
+            }
+          },
+          "arguments": {
+            "ref": "ValueSlice"
+          }
+        },
+        "Bound": {
+          "bindings": {
+            "option": {
+              "ref": "EnvRoot"
+            }
+          },
+          "expectedType": {
+            "ref": "TypeId"
+          },
+          "body": {
+            "ref": "ExprId"
+          }
+        },
+        "Cases": {
+          "value": {
+            "ref": "ValueRef"
+          },
+          "arms": {
+            "slice": {
+              "ref": "ArmId"
+            },
+            "table": "arms",
+            "capacity": "bounds.matchArmRows"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "CaseResult": {
+          "bindings": {
+            "option": {
+              "ref": "EnvRoot"
+            }
+          },
+          "value": {
+            "ref": "ValueRef"
+          },
+          "body": {
+            "ref": "ExprId"
+          },
+          "remainingArms": {
+            "slice": {
+              "ref": "ArmId"
+            },
+            "table": "arms",
+            "capacity": "bounds.matchArmRows"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          }
+        },
+        "PrimitiveResult": {
+          "value": {
+            "option": {
+              "ref": "ValueRef"
+            }
+          },
+          "errorCode": {
+            "option": {
+              "ref": "Nat"
+            }
+          }
+        },
+        "Error": {
+          "errorCode": {
+            "ref": "Nat"
+          }
+        }
+      }
+    },
+    "ResumeRow": {
+      "record": {
+        "originRule": {
+          "ref": "RuleId"
+        },
+        "originOccurrence": {
+          "ref": "OccurrenceId"
+        },
+        "originReferenceCursor": {
+          "ref": "Nat"
+        },
+        "savedControl": {
+          "ref": "ControlId"
+        },
+        "savedEnvironment": {
+          "ref": "EnvRoot"
+        },
+        "phase": {
+          "ref": "Nat"
+        },
+        "resultSlot": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "HelperControlRow": {
+      "variant": {
+        "Find": {
+          "functionName": {
+            "ref": "NameId"
+          },
+          "rowCursor": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "EnvGet": {
+          "name": {
+            "ref": "NameId"
+          },
+          "cellCursor": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "EnvPut": {
+          "name": {
+            "ref": "NameId"
+          },
+          "value": {
+            "ref": "ValueRef"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "Bind": {
+          "parameterCursor": {
+            "ref": "Nat"
+          },
+          "argumentCursor": {
+            "ref": "Nat"
+          },
+          "partial": {
+            "ref": "EnvRoot"
+          },
+          "phase": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "Append": {
+          "sourceCursor": {
+            "ref": "Nat"
+          },
+          "destinationCursor": {
+            "ref": "Nat"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "Validate": {
+          "tasks": {
+            "slice": {
+              "ref": "ValidationTaskRow"
+            },
+            "table": "helperTasks",
+            "capacity": "bounds.helperTasks"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "Equal": {
+          "tasks": {
+            "slice": {
+              "ref": "EqualityTaskRow"
+            },
+            "table": "helperTasks",
+            "capacity": "bounds.helperTasks"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        },
+        "Match": {
+          "armCursor": {
+            "ref": "Nat"
+          },
+          "tasks": {
+            "slice": {
+              "ref": "PatternTaskRow"
+            },
+            "table": "helperTasks",
+            "capacity": "bounds.helperTasks"
+          },
+          "partial": {
+            "ref": "EnvRoot"
+          },
+          "savedEnvironment": {
+            "ref": "EnvRoot"
+          },
+          "resume": {
+            "ref": "ResumeId"
+          }
+        }
+      }
+    },
+    "ValidationTaskRow": {
+      "record": {
+        "value": {
+          "ref": "ValueRef"
+        },
+        "expectedType": {
+          "ref": "TypeId"
+        },
+        "fieldCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "EqualityTaskRow": {
+      "record": {
+        "left": {
+          "ref": "ValueRef"
+        },
+        "right": {
+          "ref": "ValueRef"
+        },
+        "fieldCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "PatternTaskRow": {
+      "record": {
+        "pattern": {
+          "ref": "PatternId"
+        },
+        "value": {
+          "ref": "ValueRef"
+        },
+        "fieldCursor": {
+          "ref": "Nat"
+        }
+      }
+    },
+    "MachineIdentity": {
+      "record": {
+        "programSource": {
+          "ref": "Digest"
+        },
+        "profile": {
+          "ref": "ProfileId"
+        },
+        "layoutVersion": {
+          "ref": "Text"
+        },
+        "boundsIdentity": {
+          "ref": "Digest"
+        },
+        "fieldIdentity": {
+          "ref": "Text"
+        }
+      }
+    },
+    "MachineImage": {
+      "record": {
+        "identity": {
+          "ref": "NativeIdentity"
+        },
+        "rootControl": {
+          "ref": "ControlId"
+        },
+        "environmentRoot": {
+          "ref": "EnvRoot"
+        },
+        "physicalActiveLengths": {
+          "map": "table name -> Nat"
+        },
+        "logicalAllocations": {
+          "ref": "LogicalAllocations"
+        },
+        "remainingWork": {
+          "ref": "Nat"
+        },
+        "consumedWork": {
+          "ref": "Nat"
+        },
+        "helperWork": {
+          "ref": "Nat"
+        },
+        "referenceCursor": {
+          "ref": "Nat"
+        },
+        "controls": {
+          "array": {
+            "ref": "ControlRow"
+          },
+          "capacity": "layout.controls"
+        },
+        "data": {
+          "array": {
+            "ref": "ValueNode"
+          },
+          "capacity": "bounds.dataNodes"
+        },
+        "dataFields": {
+          "array": {
+            "ref": "ValueRef"
+          },
+          "capacity": "bounds.dataFieldSlots"
+        },
+        "environment": {
+          "array": {
+            "ref": "EnvCell"
+          },
+          "capacity": "bounds.environmentCells"
+        },
+        "frames": {
+          "array": {
+            "ref": "FrameRow"
+          },
+          "capacity": "bounds.frames"
+        },
+        "helperControls": {
+          "array": {
+            "ref": "HelperControlRow"
+          },
+          "capacity": "bounds.helperTasks"
+        },
+        "helperResumes": {
+          "array": {
+            "ref": "ResumeRow"
+          },
+          "capacity": "bounds.helperTasks"
+        },
+        "validationTasks": {
+          "array": {
+            "ref": "ValidationTaskRow"
+          },
+          "capacity": "bounds.helperTasks"
+        },
+        "equalityTasks": {
+          "array": {
+            "ref": "EqualityTaskRow"
+          },
+          "capacity": "bounds.helperTasks"
+        },
+        "patternTasks": {
+          "array": {
+            "ref": "PatternTaskRow"
+          },
+          "capacity": "bounds.helperTasks"
+        },
+        "valueSlots": {
+          "array": {
+            "ref": "ValueRef"
+          },
+          "capacity": "layout.valueSlots"
+        },
+        "outcome": {
+          "variant": {
+            "Running": {},
+            "Halted": {
+              "value": {
+                "ref": "ValueRef"
+              }
+            },
+            "Rejected": {
+              "code": {
+                "ref": "Nat"
+              }
+            },
+            "Exhausted": {
+              "reason": {
+                "ref": "ReasonId"
+              }
+            }
+          }
+        }
+      }
+    },
+    "RuleId": {
+      "index": "profile rule table",
+      "domain": "bounded layout index; source dictionary is host metadata"
+    },
+    "OccurrenceId": {
+      "index": "source occurrence map",
+      "domain": "bounded layout index; source dictionary is host metadata"
+    },
+    "ReasonId": {
+      "index": "profile capacity/outcome table",
+      "domain": "bounded layout index; source dictionary is host metadata"
+    },
+    "NativeDigest": {
+      "array": {
+        "ref": "F"
+      },
+      "capacity": "layout.digestCells",
+      "meaning": "Declared fixed format/width; no digest algorithm or native binding correctness selected"
+    },
+    "NativeIdentity": {
+      "record": {
+        "programBinding": {
+          "ref": "NativeDigest"
+        },
+        "profile": {
+          "ref": "ProfileId"
+        },
+        "layoutBinding": {
+          "ref": "NativeDigest"
+        },
+        "boundsBinding": {
+          "ref": "NativeDigest"
+        }
+      }
+    }
+  },
+  "consumers": {
+    "current_source": [
+      "crates/mori-core/src/ir.rs",
+      "crates/mori-core/src/parser.rs",
+      "crates/mori-core/src/runtime.rs",
+      "crates/mori/src/commands/compile.rs",
+      "crates/mori/src/commands/simulate.rs"
+    ],
+    "required_future_integration": "Extend the existing parser/IR/consumer through an explicit draft adapter; these schema types are source preparation only and create no alternate application-specific compiler or public source profile",
+    "stable_profiles_unchanged": [
+      "moriarty/1",
+      "moriarty/2"
+    ]
+  },
+  "unresolved_before_freeze": [
+    "Exact helper event/rule inventory and semantic continuation/result-slot variants",
+    "Exact tag ABI, native row widths/capacities and source-to-index adapters",
+    "Opus-owned N1\u2013N6 policies and hostile gate dispositions",
+    "Full error/classifier and failure charge/allocation rows",
+    "Independent complete B expected prefixes and retained complete grammar coverage"
+  ]
+}

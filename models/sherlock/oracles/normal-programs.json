@@ -1,0 +1,191 @@
+{
+  "format": "sherlock-literal-normal-inputs/1",
+  "status": "hand-authored source preparation; specified-only/unexecuted",
+  "profile": "sherlock-k-a/1",
+  "baseline_commit": "f218a8d82566fcb99becf4f0dd80b23726334284",
+  "source": {
+    "path": "models/sherlock/k/main.k",
+    "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41"
+  },
+  "programs": [
+    {
+      "case_id": "N01",
+      "code_k": "uiNoFuns()",
+      "entry_k": "uiLiteral(uiU(7))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 1,
+      "input_sha256": "af9a4ec0c68ad37fd5f077105eb8e1a45a00238303d23eb489e3eaf3240ceab9",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Literal UInt128 seven",
+      "expected_value_k": "uiU(7)",
+      "derivation": "Valid literal 7 is returned by rule102; rule80 publishes at remaining zero. No frames are pushed."
+    },
+    {
+      "case_id": "N02",
+      "code_k": "uiNoFuns()",
+      "entry_k": "uiBinary(uiAdd(), uiLiteral(uiU(2)), uiLiteral(uiU(3)))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 7,
+      "input_sha256": "5e34d163c4e0d2ad42f602eb8c3f7c5facba4c1a027ae756d7ec2377d29baf27",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Checked UInt128 add in source order",
+      "expected_value_k": "uiU(5)",
+      "derivation": "Rules117/135 schedule/push separately, left literal precedes right literal. At rule153, pure helpers254/250 normalize 2+3=5 without extra A fuel. rule223 returns the primitive value."
+    },
+    {
+      "case_id": "N03",
+      "code_k": "uiNoFuns()",
+      "entry_k": "uiIf(uiUnary(uiNotOp(), uiLiteral(uiB(false))), uiLiteral(uiU(9)), uiLiteral(uiU(4)))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 9,
+      "input_sha256": "70bcd75c6397a1d1520c7446853179dc4e560effe274f5b65647b58e65da9f91",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Not selects only the true conditional arm",
+      "expected_value_k": "uiU(9)",
+      "derivation": "Pure helper274 computes not false=true during charged unary completion157. Rule161 selects9; no uiEval of the else literal4 occurs."
+    },
+    {
+      "case_id": "N04",
+      "code_k": "uiNoFuns()",
+      "entry_k": "uiLet(0, uiLiteral(uiU(7)), uiBinary(uiAdd(), uiLet(0, uiLiteral(uiU(4)), uiVar(0)), uiVar(0)))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 17,
+      "input_sha256": "bfb47c2443420b62fdb74858bd4c89ac9a769dbd1a918149277f9fda3e2df251",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "D22 nested shadowing and lexical restoration",
+      "expected_value_k": "uiU(11)",
+      "derivation": "Rule145 replaces each let frame by a scope frame without changing depth. At state12 inner scope restores x=7 before right operand. 4+7=11; outer scope restores empty map at state17. This is D22, not a replacement for historical caller-local12."
+    },
+    {
+      "case_id": "N05",
+      "code_k": "uiFunction(uiFun(11, uiParam(0, uiBoolT(), uiNoParams()), uiUIntT(), uiIf(uiVar(0), uiCall(11, uiExpr(uiLiteral(uiB(false)), uiNoExprs())), uiLiteral(uiU(6)))), uiNoFuns())",
+      "entry_k": "uiCall(11, uiExpr(uiLiteral(uiB(true)), uiNoExprs()))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 27,
+      "input_sha256": "15a5d38c1eb1b71462b1ca2250fc409984765f1a11006c9d94afc922bd9809c8",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Named call and actual one-step self recursion",
+      "expected_value_k": "uiU(6)",
+      "derivation": "One immutable function11 calls function11 once on false. Rules200/204 use pure lookup282, append286, bind290/291/294 and type239. Both invocations have ordinary return frames. Inner return restores true at26; outer return restores empty at27. No recursive source expansion or implementation output was used."
+    },
+    {
+      "case_id": "N06",
+      "code_k": "uiNoFuns()",
+      "entry_k": "uiMatch(uiLiteral(uiCons(uiU(4), uiNil())), uiCase(uiPNil(), uiLiteral(uiU(0)), uiCase(uiPCons(1, 2), uiMatch(uiLiteral(uiLeaf(uiU(9))), uiCase(uiPVar(3), uiVar(1), uiCase(uiPLeaf(4), uiLiteral(uiU(99)), uiNoCases()))), uiNoCases())))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 19,
+      "input_sha256": "5518fd1af780813aa97c188a76b1d55e7fdba613ba5021b438fe161e1949003d",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Ordered list then tree match, first source arm wins",
+      "expected_value_k": "uiU(4)",
+      "derivation": "List Nil arm ordinarily does not match a Cons (helper307); Cons binds head4/tailNil via302. Inner tree scrutinee is evaluated once. Its first PVar arm binds whole Leaf9 via300, wins before later PLeaf arm, and reads retained list head4. Literal99 is unselected. Two scope pops restore list bindings then empty map."
+    }
+  ],
+  "scope": {
+    "full_fixture_obligations": [
+      {
+        "path": "models/sherlock/k/fixtures/uiBoolLetOrder.ui",
+        "sha256": "ecb5743d4047b89fbc01f1b5ed8b73717953eacc5aa7ff1a4d776fe1845cbd7a",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiCallerLocal.ui",
+        "sha256": "074815b24122a529fe76f4e278798cbf0cfb4b6fb03738b946fbc6ca5f812dc3",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiConstructList.ui",
+        "sha256": "e9391d748b80e8b47109b3d8b2198ae1b6fc258127a81d854a1de9730feffc64",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiFactorial3.ui",
+        "sha256": "0622e01b0b7ba1ee588ff648a9299840fd97e64375fd5aad3d6393ed349b6592",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiListsum123.ui",
+        "sha256": "e08da8ed9afb166899de72c8dccf85f63f67325936e83ad805d58dedff9bf440",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiMutualEven4.ui",
+        "sha256": "4de8f5a9b05cf6a19ec07497513555c8b333f02b26572a1f752595a6756bfe16",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiSum3.ui",
+        "sha256": "661bd0d819885de654e5605635e10231bd587c4113547db696f4aaabd67ec351",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      },
+      {
+        "path": "models/sherlock/k/fixtures/uiTreesum45.ui",
+        "sha256": "addb55d31d554e626f6c6f52ea7225d69b94ee48d75656495ef6e5eaf2c0b4b3",
+        "coverage_status": "retained frozen source; full literal intermediate trace still required"
+      }
+    ],
+    "full_demonstrator_obligations": [
+      "D01",
+      "D02",
+      "D03",
+      "D04",
+      "D05",
+      "D06",
+      "D07",
+      "D08",
+      "D09",
+      "D10",
+      "D11",
+      "D12",
+      "D13",
+      "D14",
+      "D15",
+      "D16",
+      "D17",
+      "D18",
+      "D19",
+      "D20",
+      "D21",
+      "D22",
+      "D23",
+      "D24",
+      "D25",
+      "D26",
+      "D27",
+      "D28",
+      "D29",
+      "D30",
+      "D31",
+      "D32",
+      "D33",
+      "D34",
+      "D35",
+      "D36"
+    ],
+    "coverage_status": "All D01–D36 retained. Six short A cases are a source baseline only; no complete phase0, whole-grammar, Candidate B or fixture-suite acceptance.",
+    "retained_exits": "U0–U7, M1–M17, MC/SP/G, ZR/MNR/OSR and ACTUS/DeFi/composition remain open. ACTUS277/18 executable types/32 taxonomy/DS01–07; DeFi72/DA01–24/supplements/3 heldouts/8 intents/8 regressions; sequential/disjoint-parallel/shared-state-interleaving/atomic/asynchronous composition retained.",
+    "future_b": {
+      "profile": "sherlock-helper-microstep/1",
+      "status": "unselected rule/helper inventory; exact normal B fuel and helper/frame/data/env/task capacities unresolved",
+      "exact_fuel": null,
+      "exact_helper_work": null,
+      "missing_obligations": [
+        "Freeze helper entry/visit/exit/completion events and normal allocation rows before literal B counters.",
+        "Derive independent B full states and prefixes, including binding/lookup/append/validation/matching/equality cursors.",
+        "Retain W_B=W_A+H_B as proposed equation requiring correspondence evidence, not an observed fact."
+      ]
+    },
+    "remaining_normal_coverage": [
+      "Full traces for all eight frozen fixtures and remaining D01–D36 inputs.",
+      "Checked sub/mul/lt/structural equality, constructors, multi-argument order and mutual recursion beyond these six cases.",
+      "General declaration-driven ADTs including Schedule and nested lists require new source profile.",
+      "Image round-trip/resume, slices, residualization, witness DAG, arithmetic layouts, compiler/native/target mapping require separate evidence."
+    ]
+  }
+}

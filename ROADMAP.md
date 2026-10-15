@@ -40,6 +40,12 @@ step circuit, correspondence and Midnight exporter remain open. The
 [Candidate B implementation plan](docs/SHERLOCK-IMPLEMENTATION-PLAN.md) maps the
 research into parallel source components; its proposed design awaits fresh audits.
 
+The [typed A-profile host component](docs/SHERLOCK-REFERENCE-STATUS.md) adds an
+executable public library API and complete-state comparison against six
+independent normal programs and 92 fuel prefixes. This child result does not
+implement B's bounded helpers, general ADTs, source compiler adapter or circuit.
+Its exact evidence and limitations are separate from the design proposal.
+
 The user's demonstrated ledger-9 recursion route does not require VerifyProof.
 The older March 2027 planning assumption below is historical context, not a
 prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full
