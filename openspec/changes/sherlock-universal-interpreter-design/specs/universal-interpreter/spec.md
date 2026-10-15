@@ -1,5 +1,7 @@
 ## ADDED Requirements
 
+Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../../../../../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+
 Status: FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY; pending fresh independent Muse nonsecurity and Opus security reviews and the existing decision rule. These are Sherlock nonsecurity functional clauses. All scenarios are specified and unexecuted. The unchanged Opus UISEC draft is referenced separately in README; these clauses do not replace it. UIREQ-001–026 retain their IDs; UIREQ-027–035 add missing atomic functional obligations. All 35 clauses and their scenarios are unexecuted Candidate B acceptance. Shared record/signature definitions are in [interfaces.md](../../interfaces.md). The canonical 160-clause language index and all inherited exits remain separate.
 
 ### Requirement: UIREQ-001 Fixed interpreter relation
@@ -183,6 +185,10 @@ WHEN Sherlock's reference execution design is prepared for compiler/native integ
 #### Scenario: Recursive semantics and bounded step circuit
 - **WHEN** The K reference fragment and Quint bounded abstraction are handed to the compiler/native design work.
 - **THEN** The package includes recursive inductive Lean semantic-value definitions as a required task, a fuel-based step/run relation, a separate fixed-capacity Clean encoding/step-circuit task, source-pinned public reuse inventory, a privately retained Fenrir integration pin/evidence record and named unproved correspondence/backend gaps. The existing pure Lean reference source and its eight normal plus exact-remaining-zero publication checks are historical narrow evidence; they do not implement B bounded images, Clean transition circuits, correspondence or exporters. The public package includes no private paths/code; no Midnight exporter is claimed.
+
+#### Scenario: Iterate reference models and handwritten circuits
+- **WHEN** A Sherlock transition slice or circuit optimization changes.
+- **THEN** Its comparison package follows the [correctness loop](../../../../../docs/SHERLOCK-CORRECTNESS-LOOP.md), identifies K/Quint projections, Lean/Clean and handwritten component membership, independent complete-state/prefix expectations, first divergences and each missing/unrun layer. Observed model agreement does not supply constraint, theorem or native evidence; the workflow grants no execution authority.
 
 ### Requirement: UIREQ-027 Indexed program-image provenance
 WHEN preparation indexes a supported source program, it SHALL produce a ProgramImage preserving source membership, original function-table order and SourceOccurrenceId provenance.

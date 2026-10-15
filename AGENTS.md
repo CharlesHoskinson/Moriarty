@@ -88,6 +88,10 @@ Luna supplies advisory context, not product certification.
 Preserve frozen native gates, resource limits and objective acceptance requirements.
 This workflow creates no public developer permission requirement.
 
+## Sherlock correctness iteration
+
+For Sherlock transition and circuit work, use the [correctness loop](docs/SHERLOCK-CORRECTNESS-LOOP.md). Iterate K, the explicit finite Quint projection, Lean/Clean and handwritten circuits on the same independently specified transition slices. Keep complete-state/prefix comparisons and per-layer gaps current; model observations, circuit checks, proofs and native results remain separate. This instruction adds no execution authority.
+
 ## Prevent orchestration displacement
 
 Before recovery or dispatch, apply [the orchestration stop rules](docs/FOOTGUNS.md#orchestration-stop-rules).
