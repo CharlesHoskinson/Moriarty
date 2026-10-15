@@ -27,11 +27,11 @@ mod compare_tests;
 
 // Host-only image proposal: exercised here without exporting a public runtime API.
 #[cfg(test)]
-mod program_image;
+pub(crate) mod program_image;
 
 // Private flat-table consumer proposal, normal-oracle comparisons only.
 #[cfg(test)]
-mod image_reference;
+pub(crate) mod image_reference;
 
 // Host-only event grouping; every internal reference record stays observable.
 #[cfg(test)]

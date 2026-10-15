@@ -193,3 +193,11 @@ checks actual image/helper cut/resume against selected complete frozen boundarie
 including pending returns/cursors and retained origins (86 host checks total).
 Internal event equality is supplemental; no canonical serialization, B/native or
 financial continuation result is inferred.
+
+The [private draft source capture](audits/2026-10-15/sherlock-draft-source/README.md)
+adds the lexer (cached rlib; source correspondence unproven)/parser/checker-to-image path. Eleven new host tests pass,
+including factorial(4) = 24 and tree folding = 7 through both actual interpreters.
+The 86 older tests compiled but were filtered out and were not rerun. These
+literal AST/value comparisons supply no new complete-prefix, K/Quint/Lean,
+constraint or target correspondence. The draft envelope remains unregistered
+and private test-only preparation. All missing layers above retain their gaps.

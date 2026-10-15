@@ -14,6 +14,7 @@ check off a complete B task or replace Clean/native/target evidence.
 |---|---|---|
 | B-T02 | Indexed program tables, a flat expression-ID interpreter and causal source/frame origins; [normal evidence](../../../docs/audits/2026-10-15/sherlock-source-origin-normal/README.md) | Complete preparation/admission domain, capacities and B realization |
 | B-T02 | Core scalar source preparation with actual library compilation and six tests over two handwritten AST specimens; [projection evidence](../../../docs/audits/2026-10-15/sherlock-source-projection/README.md) | Generated-function execution, backend/CLI build and publication, recursive/general source grammar and full B realization |
+| B-T02 | Private draft source parser/checker and actual indexed-image bridge, with eleven passing new checks including factorial(4) = 24 and tree folding = 7 through both host interpreters; [draft evidence](../../../docs/audits/2026-10-15/sherlock-draft-source/README.md) | Unregistered test-only envelope, public compiler integration, full grammar, bounded B realization and cross-layer/native correspondence |
 | B-T03 | Finite call lookup/binding and actual retained call-context adapter | Remaining helper families, full B schedule and counters |
 | B-T04 | Full host snapshot rows and owned in-memory image/helper checkpoints | Fixed-capacity encoding, canonical serialization and B representation |
 | B-T08 | A-event slices at widths 1/2/4/8 and saved pending-return/helper cuts; [checkpoint evidence](../../../docs/audits/2026-10-15/sherlock-host-checkpoint-normal/README.md) | B helper boundaries, financial continuation and constrained execution |
@@ -23,6 +24,11 @@ and 216 frozen prefixes. This is a captured scoped result, not a whole-crate
 Cargo result or general source/compiler/native acceptance. The root
 [reference status](../../../docs/SHERLOCK-REFERENCE-STATUS.md) retains the earlier
 captures and their limitations. All B-T01–B-T14 parent tasks remain open.
+
+The separate draft-source capture ran eleven new checks and filtered out 86
+earlier tests after compiling their module graph. It did not build Core library
+or whole-crate Cargo integration. This child evidence does not complete the
+compiler/representation tasks or any Candidate B acceptance scenario below.
 
 ## Reconcile and freeze the candidate
 

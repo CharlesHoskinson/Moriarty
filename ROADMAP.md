@@ -82,6 +82,14 @@ pending state and source origins. All 86 host checks pass; eleven image cuts and
 37 helper cut positions compare against selected frozen normal boundaries.
 Canonical serialized checkpoints, B and financial/native acceptance remain open.
 
+The [private draft source frontend](docs/audits/2026-10-15/sherlock-draft-source/README.md)
+now parses and checks source functions with the lexer (cached rlib; source correspondence unproven), then prepares the
+actual indexed image. Factorial(4) returns 24 and tree folding returns 7 through
+both host interpreters. Its eleven new tests pass; the 86 older tests compiled
+but were filtered out and were not rerun. This unregistered test-only envelope
+does not add a public compiler profile, general ADTs, bounded B realization,
+circuit correspondence or native/stagenet qualification. All parent exits remain open.
+
 The user's demonstrated ledger-9 recursion route does not require VerifyProof.
 The older March 2027 planning assumption below is historical context, not a
 prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full
