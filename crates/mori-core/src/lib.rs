@@ -1,4 +1,5 @@
 //! Bounded composable Moriarty language and deterministic local semantics.
+mod export;
 pub mod intent;
 mod ir;
 pub mod json;
@@ -8,6 +9,7 @@ pub mod policy;
 mod replay;
 mod runtime;
 mod source_sponsor;
+pub use export::{CoreSourceExportV1, export_source};
 pub use ir::*;
 pub use logical_cost::*;
 pub use parser::parse;
