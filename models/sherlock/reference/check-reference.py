@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare production Sherlock against six frozen normal-program trace oracles.
+"""Compare production Sherlock against eight frozen normal-program trace oracles.
 
 Only Python's standard library and the explicitly selected rustc are used. This script
 verifies committed Rust constants are the exact transcription of existing JSON
@@ -25,6 +25,14 @@ FROZEN = {
         "dca67b553d7483fdf7d9148e7f4bf1a6022b42b8843635f33f23c58a2415d56d",
     "models/sherlock/k/main.k":
         "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+    "models/sherlock/oracles/extra-normal-programs.json":
+        "dd85e5d400f24e9be5e2ff017f4b8c141a0bf6e4270053917b735cbe5153f153",
+    "models/sherlock/oracles/extra-normal-prefixes.json":
+        "acf460094b258910bad0499fb8feda0cd85b680023939800ad714d2cb71bee16",
+    "models/sherlock/oracles/EXTRA-NORMAL-DERIVATION.md":
+        "72edaf6d2dc93c91569833bad360d7601b51c1dfa3949c8f68a2bc654f0a8935",
+    "models/sherlock/oracles/build-extra-normal-literals.py":
+        "3dc30c55e1fecdadadc95f1945a5475144d31a6f9389a9bc7f8f368eb09149ba",
 }
 SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/mod.rs",
@@ -37,6 +45,8 @@ SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/resource_tests.rs",
     "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
     "crates/mori-core/src/sherlock/normal_oracles.rs",
+    "crates/mori-core/src/sherlock/extra_normal_oracles.rs",
+    "crates/mori-core/src/sherlock/extra_oracle_programs.rs",
     "models/sherlock/reference/check-reference.py",
 )
 
@@ -68,7 +78,9 @@ def field(name, value):
     return f"{name}: {value},"
 
 
-def serialize_oracles(programs, prefixes):
+def serialize_oracles(programs, prefixes, *,
+                      case_ids=("N01", "N02", "N03", "N04", "N05", "N06"),
+                      programs_file="normal-programs.json", constant_prefix=""):
     """Serialize supplied literals; no evaluator or expected-work derivation."""
     if programs["profile"] != prefixes["profile"]:
         raise ValueError("oracle profile mismatch")
@@ -76,15 +88,15 @@ def serialize_oracles(programs, prefixes):
         raise ValueError("oracle source mismatch")
     inputs = {program["case_id"]: program for program in programs["programs"]}
     traces = prefixes["traces"]
-    if list(inputs) != ["N01", "N02", "N03", "N04", "N05", "N06"]:
+    if list(inputs) != list(case_ids):
         raise ValueError("frozen normal-program membership mismatch")
     if [trace["case_id"] for trace in traces] != list(inputs):
         raise ValueError("trace membership mismatch")
     lines = [
         "// Mechanical transcription of the frozen JSON literals; do not edit.",
-        f"const ORACLE_PROFILE: &str = {rust_string(programs['profile'])};",
-        f"const ORACLE_SOURCE_SHA256: &str = {rust_string(programs['source']['sha256'])};",
-        "static CASES: &[ExpectedCase] = &[",
+        f"const {constant_prefix}ORACLE_PROFILE: &str = {rust_string(programs['profile'])};",
+        f"const {constant_prefix}ORACLE_SOURCE_SHA256: &str = {rust_string(programs['source']['sha256'])};",
+        f"static {constant_prefix}CASES: &[ExpectedCase] = &[",
     ]
     for trace in traces:
         source = inputs[trace["case_id"]]
@@ -93,7 +105,7 @@ def serialize_oracles(programs, prefixes):
         if (trace["input_sha256"] != source["input_sha256"]
                 or code_ref["input_sha256"] != source["input_sha256"]
                 or code_ref["case_id"] != source["case_id"]
-                or code_ref["file"] != "normal-programs.json"):
+                or code_ref["file"] != programs_file):
             raise ValueError("immutable source reference mismatch")
         if fixed["initial_fuel"] != source["exact_completion_fuel"]:
             raise ValueError("literal completion fuel mismatch")
@@ -181,7 +193,7 @@ def main():
     hashes = {relative: digest(repo / relative) for relative in (*FROZEN, *SOURCE_PATHS)}
     hashes["rustc"] = digest(args.rustc)
     emit({"event": "inputs", "sha256": hashes,
-          "scope": "six normal A-profile programs; no native/model execution or refinement claim"})
+          "scope": "eight normal A-profile programs; no native/model execution or refinement claim"})
     programs = json.loads((repo / "models/sherlock/oracles/normal-programs.json").read_text())
     prefixes = json.loads((repo / "models/sherlock/oracles/normal-prefixes.json").read_text())
     generated = serialize_oracles(programs, prefixes)
@@ -190,6 +202,18 @@ def main():
         raise ValueError("committed normal oracle constants differ from frozen JSON transcription")
     emit({"event": "oracle_transcription", "path": str(constants),
           "sha256": digest(constants), "exact_match": True})
+    extra_programs = json.loads(
+        (repo / "models/sherlock/oracles/extra-normal-programs.json").read_text())
+    extra_prefixes = json.loads(
+        (repo / "models/sherlock/oracles/extra-normal-prefixes.json").read_text())
+    extra_generated = serialize_oracles(
+        extra_programs, extra_prefixes, case_ids=("N07", "N08"),
+        programs_file="extra-normal-programs.json", constant_prefix="EXTRA_")
+    extra_constants = repo / "crates/mori-core/src/sherlock/extra_normal_oracles.rs"
+    if extra_constants.read_bytes() != extra_generated.encode("utf-8"):
+        raise ValueError("extra normal oracle constants differ from frozen JSON transcription")
+    emit({"event": "oracle_transcription", "path": str(extra_constants),
+          "sha256": digest(extra_constants), "exact_match": True})
     with tempfile.TemporaryDirectory(prefix="sherlock-reference-") as temporary:
         temporary = Path(temporary)
         executable = temporary / "reference_check"
@@ -206,7 +230,7 @@ def main():
         if after != {relative: hashes[relative] for relative in after}:
             raise ValueError("source bytes changed during comparison; result is not a frozen candidate")
         emit({"event": "comparison", "exit_code": result,
-              "normal_programs": 6, "literal_prefixes": 92,
+              "normal_programs": 8, "literal_prefixes": 216,
               "qualification": "finite normal reference comparison only"})
         return result
 
