@@ -62,6 +62,13 @@ independent normal programs and 216 fuel prefixes. A [private test-only flat ima
 implement B's bounded helpers, general ADTs, source compiler adapter or circuit.
 Its exact evidence and limitations are separate from the design proposal.
 
+An [unadopted finite call-helper proposal](docs/audits/2026-10-15/sherlock-call-helper-normal/README.md)
+adds cursor-based lookup/binding and a real program/value/Snapshot adapter.
+Its 79-test host closure includes 12 call-completion boundaries against unchanged
+independent literals, plus separate List/Tree observations. Helper work is
+reported separately from A fuel. Full B budget/schema semantics, source-origin
+propagation, other helper families, circuit/proof and target acceptance remain open.
+
 The user's demonstrated ledger-9 recursion route does not require VerifyProof.
 The older March 2027 planning assumption below is historical context, not a
 prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full
