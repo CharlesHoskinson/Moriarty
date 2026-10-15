@@ -246,3 +246,45 @@ fn fee_pool_positive_aggregate_retains_frozen_financial_outcomes() {
         assert!(!execution["steps"].as_array().unwrap().is_empty());
     }
 }
+
+const HOSTILE: &str = "x\n}\"\\\r\u{1b}[31m\u{7f}\u{85}\u{202e}\u{1f9ea}";
+
+fn rename(project: &Project, index: usize, name: Value) {
+    let path = project.0.join("mori-tests.json");
+    let mut manifest: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    manifest["cases"][index]["name"] = name;
+    project.write_json("mori-tests.json", &manifest);
+}
+
+#[test]
+fn large_report_escapes_hostile_case_name_once() {
+    let project = Project::normal(256, false);
+    rename(&project, 128, json!(HOSTILE));
+    let output = run(&project);
+    let report = check_output(&output, 0, 256, 0);
+    assert!(output.stdout.len() > 1_048_576);
+    assert!(
+        output
+            .stdout
+            .iter()
+            .all(|&b| b == b'\n' || (b.is_ascii() && !b.is_ascii_control()))
+    );
+    let mut expected = expected_report(256, false);
+    expected["cases"][128]["name"] = json!(HOSTILE);
+    assert_eq!(report, expected);
+}
+
+#[test]
+fn unexportable_final_case_publishes_no_partial_report() {
+    // 350,000 raw UTF-8 bytes keep the manifest under 1 MiB; each U+0085
+    // exports as six ASCII bytes, so only the final case exceeds its cap.
+    let project = Project::normal(128, false);
+    rename(&project, 127, json!("\u{85}".repeat(175_000)));
+    let output = run(&project);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("128 passed; 0 failed"), "{stderr}");
+    assert!(stderr.contains("mori::core::json"), "{stderr}");
+    assert!(!stderr.contains('\u{85}'));
+    assert!(output.stdout.is_empty());
+}

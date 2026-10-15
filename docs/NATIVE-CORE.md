@@ -221,9 +221,12 @@ case supplies a source, scenario, action and either exact accepted poststate
 and complete effects or an exact rejection code. Empty manifests refuse.
 The JSON report retains every case in manifest order, including its full actual
 execution or error. An execution includes the prestate, poststate, every step
-and ordered effects. Expectation mismatches retain all results and produce
-`status: "failed"` with exit 1; a matching suite produces `status: "passed"`
+and ordered effects. When every case report is exportable, expectation mismatches
+retain all results and produce `status: "failed"` with exit 1; a matching suite produces `status: "passed"`
 with exit 0. Small reports retain their existing pretty JSON format.
+The report is ASCII with every string escaped, but it is not a bounded
+`mori_core::json` reader-profile document: it may exceed 1 MiB, depth 32 or
+65,536 nodes. Each case is exported and bounded individually.
 The batch example has hand-authored expected effects for one uniform price,
 per-party fees and stale-observation refusal. Oracle authenticity remains
 an external premise; supplying an input called `oracle` is not authentication.
