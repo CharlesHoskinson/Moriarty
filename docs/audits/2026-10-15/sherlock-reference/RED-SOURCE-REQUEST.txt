@@ -1,0 +1,200 @@
+You are Opus 5.5, sole security owner. Independently classify this exact initial bounded HOST Rust test command under existing authority. Native authority is ZERO. No SDK/relation/circuit/model/degree/k/VM/transcript/keygen/prove/nativeverify/ledger/deploy/privatekey/PK/SRS/cache actions. Do not change those limits. No tools or execution yourself. Need source-inspected ordinary/non-native classification only, not implementation acceptance. Command: /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc --edition=2024 --test --crate-name sherlock_reference crates/mori-core/src/sherlock/mod.rs -o RUNTIME/red-reference-tests ; then RUNTIME/red-reference-tests --exact reference_tests::literal_publishes_at_exact_zero_remaining_fuel --nocapture, separate commands under timeout 60s each. RUNTIME=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015. The initial step is an unimplemented stub; test is supposed to fail for missing behavior before implementation. No Cargo, dependency/build scripts or external crates. Full supplied source transitive closure is four files below, std only. Does this fit ordinary host checks? State exact scope/conditions. Future implementation byte changes must remain source-inspected, and future traces need separate classification of actual consumer. Do not classify unseen changes. No new authority, campaign or counters. Keep response under500words.
+
+### crates/mori-core/src/sherlock/mod.rs SHA256 fbd51fc876ddf3fde2261b8a88ee5be5e30c1db7bc4113ba2977de41affc04c6
+//! Sherlock's `sherlock-k-a/1` host reference component.
+//!
+//! This typed API represents the valid-UInt128, nonnegative-budget common
+//! domain of the frozen K reference. It does not change Moriarty source `/1`
+//! or `/2`, implement the proposed B helper schedule, or produce constraints.
+//! Pure helpers and host allocation remain unmetered in this A profile.
+
+mod reference;
+mod reference_types;
+
+pub use reference::Machine;
+pub use reference_types::*;
+
+#[cfg(test)]
+mod reference_tests;
+
+### crates/mori-core/src/sherlock/reference_types.rs SHA256 88d45af93f54b4668ccc1d2fbf80a0eac84c753b07033948adac849f23cd9e67
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+pub const PROFILE: &str = "sherlock-k-a/1";
+pub const K_SOURCE_SHA256: &str =
+    "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41";
+
+/// Opaque source symbol. K comparisons use canonical signed-decimal names.
+/// Other spellings belong to the typed host API, outside that common domain.
+pub type Name = String;
+pub type Environment = BTreeMap<Name, Value>;
+pub type ExprRef = Arc<Expr>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Tree {
+    Leaf(u128),
+    Branch(Arc<Tree>, Arc<Tree>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Value {
+    UInt(u128),
+    Bool(bool),
+    List(Vec<u128>),
+    Tree(Tree),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Type { UInt, Bool, List, Tree }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinaryOp { Add, Sub, Mul, Eq, Lt, Cons, Branch }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UnaryOp { Leaf, Not }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Pattern {
+    Var(Name), Nil, Cons(Name, Name), Leaf(Name), Branch(Name, Name),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Arm { pub pattern: Pattern, pub body: ExprRef }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Expr {
+    Literal(Value),
+    Var(Name),
+    Let(Name, ExprRef, ExprRef),
+    Binary(BinaryOp, ExprRef, ExprRef),
+    Unary(UnaryOp, ExprRef),
+    If(ExprRef, ExprRef, ExprRef),
+    Call(Name, Vec<ExprRef>),
+    Match(ExprRef, Vec<Arm>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Parameter { pub name: Name, pub ty: Type }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Function {
+    pub name: Name,
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
+    pub body: ExprRef,
+}
+
+/// Function order is significant: lookup takes the first matching name.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Program { pub functions: Vec<Function>, pub entry: ExprRef }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Frame {
+    Let(Name, ExprRef, Environment),
+    Left(BinaryOp, ExprRef, Environment),
+    Right(BinaryOp, Value),
+    Unary(UnaryOp),
+    If(ExprRef, ExprRef, Environment),
+    Match(Vec<Arm>, Environment),
+    Args(Name, Vec<Value>, Vec<ExprRef>, Environment),
+    Return(Type, Environment),
+    Scope(Environment),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Control {
+    Eval(ExprRef),
+    Return(Value),
+    Push(Frame, Box<Control>, Environment),
+    Invoke(Name, Vec<Value>),
+    Enter(Option<Function>, Vec<Value>),
+    Bound(Option<Environment>, Type, ExprRef),
+    Cases(Value, Vec<Arm>, Environment),
+    CaseResult(Option<Environment>, Value, ExprRef, Vec<Arm>, Environment),
+    PrimitiveResult(Result<Value, u8>),
+    Error(u8),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Outcome { Pending, Done(Value), Rejected(u8), Exhausted }
+
+/// Complete post-startup K boundary state on the typed host common domain.
+/// Frames are stored top first. `None` control represents K's `.K`.
+/// Snapshots are observations; no arbitrary-state import is exposed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Snapshot {
+    pub program: Arc<Program>,
+    pub control: Option<Control>,
+    pub environment: Environment,
+    pub frames: Vec<Frame>,
+    pub stack_limit: usize,
+    pub remaining_fuel: u128,
+    pub initial_fuel: u128,
+    pub outcome: Outcome,
+}
+
+impl Snapshot {
+    pub fn depth(&self) -> usize { self.frames.len() }
+    pub fn charged_steps(&self) -> u128 { self.initial_fuel - self.remaining_fuel }
+}
+
+/// A source rule transition, including free terminal publication.
+/// Line numbers refer only to `K_SOURCE_SHA256`, not to executed K rules.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StepRecord {
+    pub rule_start_line: usize,
+    pub charge: u8,
+    pub before: Snapshot,
+    pub after: Snapshot,
+}
+
+### crates/mori-core/src/sherlock/reference.rs SHA256 c60d8fe3898c7c54d90dff962008ddecd47e7c5b6bf4d9e70220e7341e17f7c0
+use super::reference_types::*;
+use std::sync::Arc;
+
+pub struct Machine { pub(super) state: Snapshot }
+
+impl Machine {
+    pub fn new(program: Arc<Program>, fuel: u128, stack_limit: usize) -> Self {
+        Self { state: Snapshot {
+            control: Some(Control::Eval(program.entry.clone())), program,
+            environment: Environment::new(), frames: vec![], stack_limit,
+            remaining_fuel: fuel, initial_fuel: fuel, outcome: Outcome::Pending,
+        } }
+    }
+
+    pub fn snapshot(&self) -> Snapshot { self.state.clone() }
+
+    pub fn step(&mut self) -> Option<StepRecord> {
+        unimplemented!("Sherlock reference transitions")
+    }
+
+    pub fn run(&mut self) -> Snapshot {
+        while self.step().is_some() {}
+        self.snapshot()
+    }
+}
+
+### crates/mori-core/src/sherlock/reference_tests.rs SHA256 a1989a783a1ecf3c378deee77a03ecc5484b5a5040b788375ba0c29543660330
+use super::*;
+use std::sync::Arc;
+
+#[test]
+fn literal_publishes_at_exact_zero_remaining_fuel() {
+    let program = Arc::new(Program {
+        functions: vec![],
+        entry: Arc::new(Expr::Literal(Value::UInt(7))),
+    });
+    let mut machine = Machine::new(program, 1, 8);
+    let evaluated = machine.step().expect("literal step");
+    assert_eq!(evaluated.rule_start_line, 102);
+    assert_eq!(evaluated.charge, 1);
+    assert_eq!(evaluated.after.remaining_fuel, 0);
+    assert_eq!(evaluated.after.control, Some(Control::Return(Value::UInt(7))));
+    let published = machine.step().expect("free publication");
+    assert_eq!(published.rule_start_line, 80);
+    assert_eq!(published.charge, 0);
+    assert_eq!(published.after.outcome, Outcome::Done(Value::UInt(7)));
+    assert!(machine.step().is_none());
+}
