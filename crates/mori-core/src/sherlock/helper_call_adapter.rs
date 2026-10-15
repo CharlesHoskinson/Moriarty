@@ -26,6 +26,7 @@ pub(super) struct AdapterEvent {
 /// All helper handles are indices into this retained context. Distinct handle
 /// namespaces each have one real program/image/origin/caller-environment slot;
 /// frames and values are real retained sequences. No usize invents an object.
+#[derive(Clone)]
 pub(super) struct CallContext {
     original: Snapshot,
     image: Arc<ProgramImageDraft>,
@@ -44,7 +45,23 @@ pub(super) struct CallContext {
     state: helper::CallHelper,
 }
 
+/// Owned typed helper cut: includes retained objects and the complete actual
+/// helper cursor, scratch, resume and result-slot state. No wire format exists.
+pub(super) struct CallCheckpoint {
+    context: CallContext,
+}
+
 impl CallContext {
+    /// Unmetered host cloning; no A completion, H event or source boundary.
+    pub(super) fn checkpoint(&self) -> CallCheckpoint {
+        CallCheckpoint { context: self.clone() }
+    }
+
+    /// Continue the exact saved helper phase without restarting Find or Bind.
+    pub(super) fn resume(checkpoint: CallCheckpoint) -> Self {
+        checkpoint.context
+    }
+
     /// Capture the image, boundary and causal Call occurrence from one real
     /// immutable machine borrow. No caller-selected occurrence or name/value
     /// search establishes this origin. Existing host association/domain checks
