@@ -1,11 +1,13 @@
 # Sherlock universal interpreter: design and evidence
 
+Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../../../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+
 **Final design Candidate B — proposed, specified-only.** This integrates the research into a reviewable engineering design. Independent full-candidate audits and the recorded decision rule are required before adoption. A design approval does not establish implementation, correspondence, native acceptance or release readiness.
 
 - [Proposal](proposal.md), [architecture](design.md) and [shared interfaces](interfaces.md).
 - [35 nonsecurity EARS requirements and scenarios](specs/universal-interpreter/spec.md), [index](requirements.md) and [traceability](traceability.md).
 - [36 independent normal demonstration contracts](demonstrators.md); these are proposed expectations, not executed results.
-- [Required Lean/Clean stage](clean-stage.md) and [public API inventory](public-clean-api-inventory.json).
+- [Required Lean/Clean stage](clean-stage.md), [public API inventory](public-clean-api-inventory.json) and [continuous K/Quint/Clean/handwritten-circuit correctness loop](../../../docs/SHERLOCK-CORRECTNESS-LOOP.md).
 - Opus-owned [original security draft](security-requirements.md) and [Candidate B delta](security-candidate-b.md); the Opus-owned A1–A4 amendments govern the proposed profile and codec dispositions.
 - [Implementation plan](../../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md), [concept adoption matrix](../../../docs/research/sherlock/CONCEPT-ADOPTION.md) and [unchecked implementation tasks](tasks.md).
 - [Ten online academic/project studies](../../../docs/research/sherlock/papers/README.md), following [ten optimization studies](../../../docs/research/sherlock/optimization/README.md).

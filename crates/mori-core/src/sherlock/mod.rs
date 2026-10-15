@@ -14,3 +14,9 @@ pub use reference_types::*;
 
 #[cfg(test)]
 mod reference_tests;
+
+#[cfg(test)]
+mod reference_oracles_tests;
+
+#[cfg(test)]
+mod resource_tests;

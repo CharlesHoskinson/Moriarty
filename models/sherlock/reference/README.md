@@ -84,12 +84,14 @@ outside that domain have no asserted K correspondence. Snapshot frames are top
 first, following K, rather than B's proposed bottom-first frame array. A-profile
 helper work, cloning, equality, formatting and host allocation remain unmetered.
 
-[`check-reference.py`](check-reference.py) transcribes the independent JSON
-literals into temporary Rust constants and compiles the actual production
-modules with a supplied pinned `rustc`, without Cargo or SDK dependencies:
+[`check-reference.py`](check-reference.py) verifies that the committed Rust
+constants exactly transcribe the independent JSON literals, then compiles the
+actual production module graph with a supplied pinned `rustc`, without Cargo
+or SDK dependencies. The oracle tests are also declared in the crate's normal
+test module graph:
 
 ```sh
-python3 -B models/sherlock/reference/check-reference.py \
+python3 -I -B models/sherlock/reference/check-reference.py \
   --rustc /absolute/path/to/pinned/rustc --timeout-seconds 30
 ```
 
