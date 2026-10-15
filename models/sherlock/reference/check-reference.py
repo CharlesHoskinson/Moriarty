@@ -54,6 +54,8 @@ SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/image_reference_tests.rs",
     "crates/mori-core/src/sherlock/reference_slice.rs",
     "crates/mori-core/src/sherlock/reference_slice_tests.rs",
+    "crates/mori-core/src/sherlock/machine_image.rs",
+    "crates/mori-core/src/sherlock/machine_image_tests.rs",
     "models/sherlock/reference/check-reference.py",
 )
 
