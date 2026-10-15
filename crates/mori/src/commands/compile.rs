@@ -37,11 +37,13 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let target: mori_backend::Target = core_io::read_json(&args.target)?;
     // The trusted Target selects the mode explicitly; a signed Target never
     // reaches the unsigned compiler.
-    let artifact = if target.signed_policy.is_some() {
-        mori_backend::compile_signed(&program, &target)
-    } else {
-        mori_backend::compile(&program, &target)
-    }
+    let reported = mori_backend::source_projection::compile_reported(&program, &target)
+        .map_err(core_io::operation)?;
+    let artifact = reported.artifact;
+    let projection = serde_json::to_string_pretty(&serde_json::json!({
+        "source_hash": mori_core::intent::hash_bytes(source.as_bytes()),
+        "compilation": reported.source_projection,
+    }))
     .map_err(core_io::operation)?;
     // Compile and serialize fully before touching the destination.
     let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;
@@ -49,6 +51,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         path: args.out.clone(),
         source,
     })?;
+    super::proof_io::publish_new(&args.out.join("source-projection.json"), projection.as_bytes())?;
     publish_artifact(&artifact, &manifest, &args.out)?;
     shell.status(
         "Compiled",

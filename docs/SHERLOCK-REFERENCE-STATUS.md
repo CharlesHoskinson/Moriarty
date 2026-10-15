@@ -54,6 +54,42 @@ complete-state expectations. Public API exports are unchanged. Arbitrary image
 admission, bounded native representation and all B/circuit/target acceptance
 remain open. The older observations below retain their original scopes.
 
+## Indexed calls and retained checkpoints
+
+Subsequent scoped deliveries add full snapshot rows, causal expression/frame
+origins, finite call-helper contexts and owned in-memory checkpoints. The
+[indexed interpreter](../crates/mori-core/src/sherlock/image_reference.rs) retains
+occurrence IDs while the [call adapter](../crates/mori-core/src/sherlock/helper_call_adapter.rs)
+retains the actual callee, arguments, caller and pending return state.
+Checkpoint restoration consumes the saved machine or helper context directly.
+It does not reconstruct a state from a display snapshot or replay earlier steps.
+
+The [checkpoint evidence](audits/2026-10-15/sherlock-host-checkpoint-normal/README.md)
+records **86 passing host checks** for its captured source, eight programs and
+216 frozen fuel prefixes. Its new observations cover 11 image cuts, 37 helper
+positions, an exhausted helper prefix and a retained arithmetic error. The
+[origin evidence](audits/2026-10-15/sherlock-source-origin-normal/README.md)
+separately checks distinct same-name call sites and repeated recursive bodies.
+These are private test-module consumers; no public CLI source execution is added.
+
+[Reference slices](../crates/mori-core/src/sherlock/reference_slice.rs) group the
+same A events at widths 1, 2, 4 and 8. All internal records, charges and earliest
+stops remain observable. These finite comparisons do not freeze or implement
+the complete B helper schedule, canonical checkpoint codec, fixed-capacity
+image, financial suspension, constrained step or target relation.
+
+## Core source projection
+
+The [source projection evidence](audits/2026-10-15/sherlock-source-projection/README.md)
+records actual Core library compilation and six passing tests against that
+library. Two stateless `/1` specimens check handwritten Sherlock ASTs and
+complete source occurrence paths. The preparation API does not execute their
+generated functions; source-to-machine values and prefixes remain unobserved.
+The source-reviewed backend/CLI wrapper adds separate projection metadata while
+preserving artifact selection. Its build, SDK-backed tests and publication
+execution are not established by the six Core tests. Recursive source grammar,
+financial effects, bounded B representation and target acceptance remain open.
+
 ## Observed comparison
 
 The [dedicated consumer](../models/sherlock/reference/check-reference.py) compiled
@@ -88,8 +124,9 @@ from this combined tree. The error/cap tests are finite observations; full host
 resource admission remains open and untrusted consumers remain excluded.
 
 These are finite host observations. The full `mori-core` Cargo build and public
-CLI were not exercised, and the source `/1` and `/2` parsers/compilers do not yet
-lower to this reference API. This is not observed K execution, K/Lean
+CLI were not exercised. The separate `/1` preparation API above projects a
+scalar subset; general `/1` and `/2` compiler lowering and execution through
+this reference API remain open. This is not observed K execution, K/Lean
 correspondence, B helper metering, bounded circuit behavior or native acceptance.
 
 ## Prepared design inputs and remaining work
