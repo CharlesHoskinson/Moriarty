@@ -46,3 +46,9 @@ The current six CLI/four unit results include Opus-authored tests for hostile ca
 The refreshed [capture](actual-r2/SUMMARY.json) binds the updated complete source/test hashes. The compiled public executable remains byte-identical to the initial captured image. [Output equality](final-normal-output-equality.json) confirms exact repeated normal outputs, with no expected-value changes. Repeated captures add provenance, not new financial-family coverage. The initial `actual/` evidence remains unchanged.
 
 The initial Opus memory summary is superseded by F2 and residual R2 in its later review. That is an Opus source analysis, not an observed heap benchmark. Its result review used a supplied-source snapshot and did not recompute repository hashes; Muse's read-only review and root's publication checks record those separate checks. Two positive red tests explicitly print the JSON-size error; the mixed red specifically fails on missing stdout, after exit/count assertions.
+
+## Final source and result reviews
+
+Fresh [Muse nonsecurity review](MUSE-FINAL-REVIEW-R2.md) and [Opus security review](OPUS-FINAL-REVIEW-R2.md) both approve source and recorded results for `95df73558ab4fb0b6d80618a76e88c3a52c38888` within their stated scopes. [Binding and identities](FINAL-REVIEW-BINDING.json) retain the exact seven-file source projection. Publication adds only review/delivery evidence; product source is unchanged.
+
+Opus retains nonblocking N1, D1 and S1-S3 and the documented residuals. `AUTHOR-OPUS-ADDITIONS.json` is a pre-qualifier, pre-execution author receipt; current source hashes and actual executions supersede that temporary state without rewriting it. No missing test, native/target result or parent exit is promoted to a pass.
