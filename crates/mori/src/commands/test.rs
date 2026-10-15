@@ -178,4 +178,23 @@ mod report_tests {
             assert!(aggregate_report(true, cases).is_err());
         }
     }
+
+    #[test]
+    fn per_case_depth_limit_applies_and_aggregate_is_not_reader_profile() {
+        // Case root is depth 0 under export, so the innermost scalar of
+        // `actual` sits at nested + 1 and the reader accepts depth 32.
+        let deep = |nested: usize| {
+            let actual = (0..nested).fold(json!(0), |inner, _| json!([inner]));
+            vec![json!({"name": "deep", "passed": true, "actual": actual})]
+        };
+        let cases = deep(31);
+        assert!(mori_core::json::export(&whole(true, &cases)).is_err());
+        let text = aggregate_report(true, cases.clone()).unwrap();
+        assert!(mori_core::json::parse(&text).is_err());
+        assert_eq!(
+            serde_json::from_str::<Value>(&text).unwrap(),
+            whole(true, &cases)
+        );
+        assert!(aggregate_report(true, deep(32)).is_err());
+    }
 }

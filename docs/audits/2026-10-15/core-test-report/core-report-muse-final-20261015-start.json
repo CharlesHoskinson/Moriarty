@@ -1,0 +1,23 @@
+{
+  "config": {
+    "prefix": "core-report-muse-final-20261015",
+    "seconds": 700,
+    "report": "/home/charl/Moriarty/.moriarty-dev/runtime/core-test-report-20261015/MUSE-FINAL-REVIEW.md",
+    "requested_model": "muse-wonder-1.0",
+    "requested_effort": "high",
+    "candidate_commit": "69f3258db08c5949d9a643828b5cebf8453e2591",
+    "command": [
+      "/bin/bash",
+      "-o",
+      "pipefail",
+      "-c",
+      "/home/charl/.local/bin/muse exec --provider meta --model muse-wonder-1.0 --reasoning-effort high --contributor-mode off --workspace /home/charl/Moriarty/.worktrees/core-test-report-20261015 --trust-workspace --disable-sandbox --approval-mode never --disable-web-tools --disable-reminders --no-foreign-personal-context --no-session-log --max-model-steps 150 --json --prompt-file /home/charl/Moriarty/.moriarty-dev/runtime/core-test-report-20261015/muse-final-prompt.txt | /usr/bin/python3 -c 'import sys,json\nmodels={};terminal={}\nfor line in sys.stdin:\n try:e=json.loads(line)\n except ValueError:continue\n p=e.get(\"payload\",{})\n if e.get(\"payload_type\")==\"task.lifecycle.status\":\n  for f in p.get(\"event\",{}).get(\"details\",{}).get(\"facets\",[]):\n   d=f.get(\"detail\",{})\n   if f.get(\"kind\")==\"producer\" and d.get(\"model\"):\n    models[d[\"model\"]]={k:d[k] for k in (\"model\",\"provider\",\"request_id\",\"response_id\") if k in d}\n if e.get(\"payload_type\")==\"run.terminal.completed\":terminal=p\nprint(json.dumps({\"modelUsage\":models,\"text\":terminal.get(\"text\"),\"stopReason\":terminal.get(\"terminal\"),\"isError\":terminal.get(\"terminal\") not in (\"completed\",)}))\n'"
+    ],
+    "native_execution": 0,
+    "automatic_retry": false
+  },
+  "controller_pid": 405645,
+  "started_utc": "2026-10-15T01:13:30.919144+00:00",
+  "started_monotonic": 2952.672885376,
+  "deadline_monotonic": 3652.672885376
+}
