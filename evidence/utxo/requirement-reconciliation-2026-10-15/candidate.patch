@@ -1,0 +1,2936 @@
+--- a/openspec/sprints/verify.py
++++ b/openspec/sprints/verify.py
+@@ -128,7 +128,117 @@
+ LINEAGE_HELD_SHA256 = '2228369c38840d22c02ad58b45d9158f32020b156b7d803491270e29a24ce981'
+ held_identity = sorted([r['spec'], r['requirement'], r['clauseSha256'], r['disposition']] for r in lineage['requirements'])
+ require(len(held_identity) == 196 and hashlib.sha256(json.dumps(held_identity, separators=(',', ':')).encode()).hexdigest() == LINEAGE_HELD_SHA256, 'Lineage-held requirement set changed')
+-current_actual = actual - set(held)
++def verify_separate_functional_requirements(root, actual_clauses, current_rows, held):
++    """Validate Sherlock's distinct mandatory inventory; grant no acceptance."""
++    registry_path = root / 'openspec/sherlock-requirement-crosswalk.json'
++    require(registry_path.is_file(), 'Missing separate functional requirement registry')
++    registry_bytes = registry_path.read_bytes()
++
++    def unique_object(pairs):
++        result = {}
++        for key, value in pairs:
++            require(key not in result, f'Duplicate separate registry JSON key: {key}')
++            result[key] = value
++        return result
++
++    registry = json.loads(registry_bytes, object_pairs_hook=unique_object)
++    spec = 'openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md'
++    require(registry['schema'] == 'moriarty.separate-functional-requirements/1' and registry['spec'] == spec,
++            'Invalid separate functional registry scope')
++    require(registry['acceptance'] == 'open' and registry['securityDecision'] == 'PENDING_OPUS',
++            'Separate functional registry claims acceptance or security disposition')
++    versions = {version['sourceRevision']: version for version in registry['versions']}
++    require(len(versions) == len(registry['versions']) == 3, 'Duplicate or missing separate source version')
++    require(registry['integratedVersion'] in versions, 'Unknown separate integrated source version')
++    selected = versions[registry['integratedVersion']]
++    require(selected['disposition'] == 'integrated-source', 'Separate integrated source disposition differs')
++    require(all(version['disposition'] == 'observed-upstream-pending-integration'
++                for revision, version in versions.items() if revision != registry['integratedVersion']),
++            'Separate upstream source claims integration')
++    route = registry['uRoutingSource']
++    require(route['path'] == 'openspec/changes/sherlock-universal-interpreter-design/traceability.md',
++            'Separate U routing source differs')
++    route_bytes = (root / route['path']).read_bytes()
++    require(hashlib.sha256(route_bytes).hexdigest() == route['sha256'], 'Separate U routing source changed')
++    source_routes = {}
++    declarations = []
++    for line in route_bytes.decode('utf-8').splitlines():
++        if not re.match(r'^\| U[0-7] \|', line):
++            continue
++        declarations.append(line)
++        cells = [cell.strip() for cell in line.strip('|').split('|')]
++        require(len(cells) == 3, 'Separate U routing table shape differs')
++        for first, last in re.findall(r'(?<!\d)(\d{3})(?:[–-](\d{3}))?', cells[2]):
++            for number in range(int(first), int(last or first) + 1):
++                evidence = {'uOwner': cells[0], 'sourceLine': line}
++                require(evidence not in source_routes.setdefault(number, []), 'Duplicate separate U routing')
++                source_routes[number].append(evidence)
++    require(route['declarations'] == declarations, 'Separate U declarations differ from source')
++    ids = [f'UIREQ-{i:03d}' for i in range(1, 36)]
++    for version in versions.values():
++        rows = version['requirements']
++        require([row['id'] for row in rows] == ids, 'Separate requirement identities differ: missing, duplicate or reordered')
++        keys = [(row['spec'], row['requirement']) for row in rows]
++        require(len(set(keys)) == len(keys), 'Duplicate separate requirement key')
++        for number, row in enumerate(rows, 1):
++            require(row['spec'] == spec and row['requirement'].startswith(row['id'] + ' '),
++                    'Separate requirement key differs')
++            require(row['acceptance'] == 'open' and row['scenarioEvidence'] == 'specified-unexecuted'
++                    and row['implementation'] == 'not-assessed-by-this-registry'
++                    and row['disposition'] == 'mandatory-separate-functional-clause',
++                    'Separate requirement claims acceptance or implementation')
++            require(row['uOwners'] == [evidence['uOwner'] for evidence in source_routes.get(number, [])]
++                    and row['uOwnerDisposition'] == ('source-declared' if number in source_routes else 'unresolved'),
++                    'Separate U owner lacks exact source declaration')
++            scenarios = row['scenarios']
++            names = [scenario['heading'] for scenario in scenarios]
++            require(names and all(names) and len(names) == len(set(names)),
++                    'Missing or duplicate separate scenario identity')
++
++    rows = selected['requirements']
++    separate = {(row['spec'], row['requirement']) for row in rows}
++    require(separate.isdisjoint(current_rows) and separate.isdisjoint(held), 'Separate requirement overlaps existing inventory')
++    actual = {key for key in actual_clauses if key[0] == spec}
++    require(actual == separate, 'Separate requirement headings differ: missing or unregistered')
++    blob = (root / spec).read_bytes()
++    headings = list(re.finditer(rb'^### Requirement: ([^\r\n]+)$', blob, re.MULTILINE))
++    require(len(headings) == len(rows), 'Separate source heading count differs: missing or duplicate')
++    for index, (heading, row) in enumerate(zip(headings, rows)):
++        end = headings[index + 1].start() if index + 1 < len(headings) else len(blob)
++        block = blob[heading.start():end]
++        key = (spec, heading[1].decode('utf-8'))
++        require(key == (row['spec'], row['requirement']), 'Separate source heading order differs')
++        require(blob[:heading.start()].count(b'\n') + 1 == row['line'], 'Separate source line differs')
++        require(hashlib.sha256(block).hexdigest() == row['fullBlockSha256']
++                and len(block) == row['fullBlockBytes']
++                and actual_clauses[key] == row['fullBlockSha256'],
++                f'Separate requirement clause differs: {key}')
++        scenarios = list(re.finditer(rb'^#### Scenario: ([^\r\n]+)$', block, re.MULTILINE))
++        require([scenario[1].decode('utf-8') for scenario in scenarios]
++                == [scenario['heading'] for scenario in row['scenarios']],
++                f'Separate scenario membership differs: {key}')
++        for scenario_index, (scenario, record) in enumerate(zip(scenarios, row['scenarios'])):
++            scenario_end = scenarios[scenario_index + 1].start() if scenario_index + 1 < len(scenarios) else len(block)
++            scenario_block = block[scenario.start():scenario_end]
++            require(hashlib.sha256(scenario_block).hexdigest() == record['fullBlockSha256']
++                    and len(scenario_block) == record['fullBlockBytes'], f'Separate scenario differs: {key}')
++    require(hashlib.sha256(blob).hexdigest() == selected['sourceSpecSha256'], 'Separate source version digest differs')
++    # The fixed digest retains every observed historical version and all metadata.
++    # A reviewed registry update changes this anchor explicitly; source edits alone
++    # cannot silently adopt a new version or drop a historical clause/scenario.
++    require(hashlib.sha256(registry_bytes).hexdigest() == 'c147b5d0ed15b61a140ff63f1bb4def897421d171d066edc57bef8d85be9da0a',
++            'Separate functional registry history or metadata changed')
++    return separate, {
++        'mandatory': True, 'requirements': len(rows),
++        'scenarios': sum(len(row['scenarios']) for row in rows),
++        'integratedVersion': registry['integratedVersion'],
++        'observedUpstreamVersions': [revision for revision in versions if revision != registry['integratedVersion']],
++        'acceptance': 'open', 'evidence': 'source-metadata-validated-only',
++        'securityDecision': 'PENDING_OPUS',
++    }
++
++separate_keys, separate_report = verify_separate_functional_requirements(ROOT, actual_clauses, current_rows, held)
++current_actual = actual - set(held) - separate_keys
+ require(set(current_rows) == current_actual, f'Current requirement crosswalk differs: {set(current_rows) ^ current_actual}')
+ for key, row in current_rows.items():
+     require(row['uOwners'] and set(row['uOwners']) <= {f'U{i}' for i in range(8)}, f'Invalid U owner: {key}')
+@@ -256,4 +366,4 @@
+ for row in pcd['lockedTasks']:
+     require((row['package'], row['taskId']) in mapped and set(row['governing']) <= pcd_requirements, f'Unknown PCD crosswalk reference: {row["package"]} {row["taskId"]}')
+ 
+-print(json.dumps({'status': 'pass', 'scope': 'planning structure only; no implementation or dispatch acceptance', 'sprints': len(sprints), 'requirements': len(actual), 'stages': len(stages), 'originalTasks': len(mapped), 'sprintTasks': len(task_paths), 'reportLessons': len(reports['lessons']), 'modeledRegressions': len(expected_tests), 'comparativeCases': len(atlas_cases), 'legacyGates': len(gate_rows)}, indent=2))
++print(json.dumps({'status': 'pass', 'scope': 'planning structure only; no implementation or dispatch acceptance', 'sprints': len(sprints), 'requirements': len(actual), 'requirementCountQualification': 'Raw heading cardinalities only; no atomic acceptance denominator or completion fraction', 'canonicalRequirements': len(current_rows), 'lineageHeldRequirements': len(held), 'separateFunctionalRequirements': separate_report, 'stages': len(stages), 'originalTasks': len(mapped), 'sprintTasks': len(task_paths), 'reportLessons': len(reports['lessons']), 'modeledRegressions': len(expected_tests), 'comparativeCases': len(atlas_cases), 'legacyGates': len(gate_rows)}, indent=2))
+--- a/openspec/sprints/README.md
++++ b/openspec/sprints/README.md
+@@ -130,6 +130,9 @@
+ 
+ Language completion requires the full lexer/grammar/static contract, implementation, K semantics and required semantic/compiler/acceptance correspondence. Product completion also requires actual native recursion, mandatory ledger PCD, full financial qualification, private composition and the developer workflow. A small supported profile must be described as such. Production deployment, licensing, baselines and other G01-G24 obligations remain explicit where unperformed.
+ 
++
++The mandatory [Sherlock functional registry](../sherlock-requirement-crosswalk.json) is validated separately: all 35 UIREQ clauses, their full-block and scenario digests, version pins and explicit source U routes remain tracked alongside the canonical 160 and held 196 inventories. The guard reports the selected integrated source version and observed upstream versions separately. Missing, changed, duplicate or unregistered Sherlock headings fail validation. These heading counts are not an atomic acceptance denominator; all acceptance remains open and existing U/M/MC/SP/G/ZR/MNR and ACTUS/DeFi obligations retain their source scope.
++
+ ## Plan checks
+ 
+ Run `python3 openspec/sprints/verify.py` and `openspec validate --all --strict`. These check navigation, dependency structure and requirement coverage. They do not execute a sprint or certify language behavior.
+--- /dev/null
++++ b/openspec/sherlock-requirement-crosswalk.json
+@@ -0,0 +1,2794 @@
++{
++  "schema": "moriarty.separate-functional-requirements/1",
++  "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++  "integratedVersion": "ba12e4731b0d28dcdf87dc7f11c852511abbab64",
++  "qualification": "Mandatory distinct functional inventory; canonical160 and held196 remain unchanged. Counts are heading inventories, never atomic acceptance denominators or percentages.",
++  "acceptance": "open",
++  "adoption": "pending-fresh-Muse-and-applicable-Opus-review",
++  "securityDecision": "PENDING_OPUS",
++  "securityScope": "Source-attributed metadata only; no security clause interpretation, replacement or owner assignment.",
++  "uRoutingSource": {
++    "path": "openspec/changes/sherlock-universal-interpreter-design/traceability.md",
++    "sha256": "f6b0fd509e332470935a91c164a56051c0ee581c3dd5fb945f651fba48fd3160",
++    "section": "Existing U owners",
++    "declarations": [
++      "| U0 | Profile, semantics and target reconciliation | 001–035 |",
++      "| U1 | Semantic basis, bounds, primitive/representation contracts | 003–013,024,026–035 |",
++      "| U2 | General source-to-target compiler and developer consumers | 001–011,017–023,025–035 |",
++      "| U3 | Await, partial effects, duties, recovery and cost lifetime | 012–020,029,032 |",
++      "| U4 | Native recursion, composition and private-history scope | 014–016,021–035; existing Opus requirements unchanged |",
++      "| U5 | Optional services, federation and cost planes | 013,017,020,025,031,035 as interface inputs only |",
++      "| U6 | Full ACTUS/DeFi conformance | Demonstrators are small additions; no replacement coverage |",
++      "| U7 | Public developer tooling and release evidence | 001,002,022,025–035 |"
++    ],
++    "qualification": "Exact explicit draft-clause routes only; U6 retains full conformance without assigning numbered UIREQ owners."
++  },
++  "retainedScopeSource": {
++    "path": "openspec/changes/sherlock-universal-interpreter-design/traceability.md",
++    "sha256": "f6b0fd509e332470935a91c164a56051c0ee581c3dd5fb945f651fba48fd3160",
++    "sections": [
++      "M1–M17 retained capability crosswalk",
++      "MC, SP and release lineage",
++      "ZR/MNR lineage, referenced without new security judgments",
++      "Retained acceptance denominator and open decisions"
++    ]
++  },
++  "versions": [
++    {
++      "sourceRevision": "ba12e4731b0d28dcdf87dc7f11c852511abbab64",
++      "sourceSpecSha256": "8caadfc9e4c667d96eecd2039831732199098c8aefc519f326749ce5cd048613",
++      "disposition": "integrated-source",
++      "requirements": [
++        {
++          "id": "UIREQ-001",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-001 Fixed interpreter relation",
++          "line": 5,
++          "fullBlockSha256": "81ea48dcded3f2bc0930fe4756bf52d052747e8bbd8e0a18bd8e043b28356413",
++          "fullBlockBytes": 437,
++          "scenarios": [
++            {
++              "heading": "Two distinct programs",
++              "fullBlockSha256": "59c189cb2d33fc20fe8f765ce8c5c641fde741004bc4a16b59cf5a284b05efa1",
++              "fullBlockBytes": 224
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-002",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-002 Explicit supported profile",
++          "line": 12,
++          "fullBlockSha256": "01ef2451f650b415912594be8c2820bc80fe2d5023084123b44acea3db55726a",
++          "fullBlockBytes": 645,
++          "scenarios": [
++            {
++              "heading": "First-order fragment",
++              "fullBlockSha256": "d3288545bac6d2167d3d8f9821a2ce2e2159fd178616ae5a615098f6566eb51a",
++              "fullBlockBytes": 480
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-003",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-003 Lexical call scope",
++          "line": 19,
++          "fullBlockSha256": "583455720050c89b7a3daf48a5e081b9a4d4b579fef2ee8f44e3083b93dee762",
++          "fullBlockBytes": 366,
++          "scenarios": [
++            {
++              "heading": "Caller-local preservation",
++              "fullBlockSha256": "f06bc9194c71fe37fc6d0e2796088055c4500deb3c1930d9340b5578a9e53e25",
++              "fullBlockBytes": 185
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-004",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-004 Strict evaluation order",
++          "line": 26,
++          "fullBlockSha256": "a14480657a30a3558c0cdbb473d75ce146f66538dcd36557d3ea3437dc9e82a5",
++          "fullBlockBytes": 345,
++          "scenarios": [
++            {
++              "heading": "Nested arguments",
++              "fullBlockSha256": "720fe03876ff7fbab00fe418cf01fc8196fd095c4711e15c863adcdce57cf416",
++              "fullBlockBytes": 165
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-005",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-005 Named recursive calls",
++          "line": 33,
++          "fullBlockSha256": "1bb5e3c089087dba1d1d6a10415ccd941406e25b964bf540a11209a7f56b4f79",
++          "fullBlockBytes": 374,
++          "scenarios": [
++            {
++              "heading": "Self and mutual recursion",
++              "fullBlockSha256": "2f520df39f2365b923ba0acef7a25c4118c6e0105c3f18b3d76246fb4bd03e6f",
++              "fullBlockBytes": 199
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-006",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-006 Exact scalar arithmetic",
++          "line": 40,
++          "fullBlockSha256": "1706f9ed9008f0b4f1eaf2331010ce61e853ce948ed009b14bfba1613a33f5f5",
++          "fullBlockBytes": 342,
++          "scenarios": [
++            {
++              "heading": "Normal arithmetic",
++              "fullBlockSha256": "8b1bb52c93d4d415b01914effad08dc34ec867e22dce6c4b8fb9cf3b573f8e9b",
++              "fullBlockBytes": 180
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-007",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-007 Typed inductive values",
++          "line": 47,
++          "fullBlockSha256": "d95f1b448b6d3cc988782f2205871235212baa7c92e1b3f0afa367d2300c41f8",
++          "fullBlockBytes": 364,
++          "scenarios": [
++            {
++              "heading": "Recursive list value",
++              "fullBlockSha256": "f281a3cef4639cc14f9c5e5f4e2d68926956ba87e58f86ad4cff9578718b4cf0",
++              "fullBlockBytes": 186
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-008",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-008 Selected match branch",
++          "line": 54,
++          "fullBlockSha256": "e6b6a10904937cd18fbb262a1bb5a0881ef8eb2ca033844d939e5c5823a5a96c",
++          "fullBlockBytes": 438,
++          "scenarios": [
++            {
++              "heading": "Tree fold",
++              "fullBlockSha256": "a292694f41db2709d81f5209a930c5ce92aa0bdd31df485776c1c139f56a16c8",
++              "fullBlockBytes": 233
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-009",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-009 Structural value meaning",
++          "line": 61,
++          "fullBlockSha256": "fc90db569fea721a4206d673e6565023066d8bc207dc88c5c785ce607c5db1e6",
++          "fullBlockBytes": 445,
++          "scenarios": [
++            {
++              "heading": "Repeated subtree",
++              "fullBlockSha256": "f45474b2725c531d27c8d737517d05da28bbcb53f7753fef8474132ac8ee0140",
++              "fullBlockBytes": 234
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-010",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-010 Explicit pending return",
++          "line": 68,
++          "fullBlockSha256": "004eab238f2eeb29258e4eccff7d2980903f94bac9e2c5d27515a1e1b0afab84",
++          "fullBlockBytes": 340,
++          "scenarios": [
++            {
++              "heading": "Factorial multiplication",
++              "fullBlockSha256": "2cd9bbaa7322d5b482f5a092a4e8174c5ea8e0032a5391ff072a01a0dea55efd",
++              "fullBlockBytes": 175
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-011",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-011 Complete pure result",
++          "line": 75,
++          "fullBlockSha256": "972a316bcd19df39c246705ca3def8442093901dfc02cca275cabd8d19fc0027",
++          "fullBlockBytes": 384,
++          "scenarios": [
++            {
++              "heading": "Completed versus pending",
++              "fullBlockSha256": "ef623e6f5594f6998ec5c6f1027653d031bf4cb6bc66f23a032502654e5af214",
++              "fullBlockBytes": 215
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-012",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-012 Explicit bounded outcome",
++          "line": 82,
++          "fullBlockSha256": "0c36debc805b1b95df943152c40839a22cd8ac5d89a71d83cfb8b594aad5d870",
++          "fullBlockBytes": 784,
++          "scenarios": [
++            {
++              "heading": "Finite recursive attempt",
++              "fullBlockSha256": "00011df34f31a9c56d41926e189a67f2ff13539f2a7d1d394f0fdf11e8f16986",
++              "fullBlockBytes": 562
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-013",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-013 Versioned work observations",
++          "line": 89,
++          "fullBlockSha256": "f6fdf99a86fab0ba37373e7fa29ca0d047eaad6e07d7c9cbfabc1f49b6ab6fc2",
++          "fullBlockBytes": 823,
++          "scenarios": [
++            {
++              "heading": "Same computation in chunks",
++              "fullBlockSha256": "3260727eafe6895529e9ac6c2b6490a147a1c3de90a91d807e7a9afa2ced9f56",
++              "fullBlockBytes": 631
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-014",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-014 Complete checkpoint representation",
++          "line": 96,
++          "fullBlockSha256": "63fc75392afe9ba383ea501dd613678c82dc5dde5c34445a294faca6b41eb2db",
++          "fullBlockBytes": 465,
++          "scenarios": [
++            {
++              "heading": "Pending callee snapshot",
++              "fullBlockSha256": "2be1cc7bb12ffed26abc679c9fda581128e941aac45792849cfbf9078a3ecab3",
++              "fullBlockBytes": 271
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-015",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-015 Pending-return resumption",
++          "line": 103,
++          "fullBlockSha256": "38e138918bebcfbf94c64de17a60c25d6477f805933c8bcc489902ba210960c7",
++          "fullBlockBytes": 415,
++          "scenarios": [
++            {
++              "heading": "Resume inner call",
++              "fullBlockSha256": "55b4be2bd59383a7bbe83486a1b1af84eaaaa0bd67b52d0bf98d396d7128944a",
++              "fullBlockBytes": 231
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-016",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-016 Chunk transparency",
++          "line": 110,
++          "fullBlockSha256": "8d5141d1426fcdb50ce5f0b806a91dbec2658c5b893384f27ae7409547370200",
++          "fullBlockBytes": 428,
++          "scenarios": [
++            {
++              "heading": "Boundary before return",
++              "fullBlockSha256": "481d9a32bfad6c3191b3ee3b584f8f13996779d1d0019dc448786b150f53ee28",
++              "fullBlockBytes": 255
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-017",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-017 Complete financial observation",
++          "line": 117,
++          "fullBlockSha256": "5204cb4f5b25080b8eae63c4ec2496a80002ce1b8a1f7d0780899c77caaf4a87",
++          "fullBlockBytes": 483,
++          "scenarios": [
++            {
++              "heading": "First paid prefix",
++              "fullBlockSha256": "860ac48fd1d0769369b2acfcb6e418ab2c3defceb36df0e68a2021c1fd1ca96b",
++              "fullBlockBytes": 278
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-018",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-018 Existing await-prefix preservation",
++          "line": 124,
++          "fullBlockSha256": "88e9e30ee3adbf89ddba1e7a0e227c19975c85a0ebe997c2f4e2a9573afd73b2",
++          "fullBlockBytes": 493,
++          "scenarios": [
++            {
++              "heading": "Await after partial payment",
++              "fullBlockSha256": "3bc052f9fdadfe2248eacfd64fbb30a7965f2c6cf71e764f407b0ed39a80686f",
++              "fullBlockBytes": 260
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-019",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-019 Local segment failure outcome",
++          "line": 131,
++          "fullBlockSha256": "2d5893a62de800ba9364815dfc2527919884591ef8a824a05cd51bd9a5b1ec1f",
++          "fullBlockBytes": 536,
++          "scenarios": [
++            {
++              "heading": "Second segment fails before commit",
++              "fullBlockSha256": "5b8eb77382f17da4e14b7984fa7ec5fb7921bb9ee7ad5b674ec6367f50db3e61",
++              "fullBlockBytes": 300
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-020",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-020 Target phase mapping",
++          "line": 138,
++          "fullBlockSha256": "07b04c4683b4f8e2df88a66a582eb1a020e63b2ef6db553764bd2707dfb96f73",
++          "fullBlockBytes": 523,
++          "scenarios": [
++            {
++              "heading": "Permitted retained fee",
++              "fullBlockSha256": "0a795bc8a45f1e06c17315853e998d0c05c8aa43373ecc09c5400d5fccf1af59",
++              "fullBlockBytes": 308
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-021",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-021 Declared model projection",
++          "line": 145,
++          "fullBlockSha256": "547dc499c5a315667354177184d716ac40dc58491a95f559b69aa3338c3fab6f",
++          "fullBlockBytes": 480,
++          "scenarios": [
++            {
++              "heading": "Finite call-return comparison",
++              "fullBlockSha256": "f61a85b4b35cff2225e063a6dfaee9cf3e42c15e48c010f8240d36b573a86020",
++              "fullBlockBytes": 311
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-022",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-022 Compiler semantic mapping",
++          "line": 152,
++          "fullBlockSha256": "e8029a82956ae9d6692bafb2a223e2fcb4db15a0413acacc43a4d51567b434e3",
++          "fullBlockBytes": 475,
++          "scenarios": [
++            {
++              "heading": "New supported program",
++              "fullBlockSha256": "6fbad471eb12d8244839d83e655d1f0ebbba03cef3e81544faa6ded3ffa51022",
++              "fullBlockBytes": 304
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-023",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-023 Native relation inventory",
++          "line": 159,
++          "fullBlockSha256": "392a431777f47c274b54383f4225884d1caaa8dad0d00193e9cd4a8b4edc8428",
++          "fullBlockBytes": 769,
++          "scenarios": [
++            {
++              "heading": "Fixed relation across programs",
++              "fullBlockSha256": "a8f528ccf8a6dcc9023abcbdc9f183f3f1c17f8702d84c9f8123587219d8d373",
++              "fullBlockBytes": 567
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-024",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-024 Optimization preservation",
++          "line": 166,
++          "fullBlockSha256": "b9793029c76ff62984452782ed19bc1bc59b3a8f8b1201b01aa62aa7f735bd7d",
++          "fullBlockBytes": 511,
++          "scenarios": [
++            {
++              "heading": "Frame or sharing optimization",
++              "fullBlockSha256": "430313dc67d6cf0503f5b0c54c081ad65c19834351ca1f8bc67e1000346ec6ed",
++              "fullBlockBytes": 294
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-025",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-025 Evidence-class report",
++          "line": 173,
++          "fullBlockSha256": "cca95c39c62bc07107653955c8825bc36f47bcdcce6583392b995d3e27012882",
++          "fullBlockBytes": 703,
++          "scenarios": [
++            {
++              "heading": "Pure models only",
++              "fullBlockSha256": "5b0a45a53cced7159a426f306ffac33e5574cb9a797086dd9565796a6715ae2d",
++              "fullBlockBytes": 496
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-026",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-026 Required Clean correspondence stage",
++          "line": 180,
++          "fullBlockSha256": "c870125e8fe9ba3473663177771d3fdc12196e12b2c83034d0d663fbe891c9a8",
++          "fullBlockBytes": 1099,
++          "scenarios": [
++            {
++              "heading": "Recursive semantics and bounded step circuit",
++              "fullBlockSha256": "60f20e46768f1be3e785615e74cd1f360eca4338cf8c4d5783af76e5292233b4",
++              "fullBlockBytes": 834
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-027",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-027 Indexed program-image provenance",
++          "line": 187,
++          "fullBlockSha256": "5000a0ef55d779a16f728ac10086730f9b6b5b11d0eadb74399215a800510376",
++          "fullBlockBytes": 788,
++          "scenarios": [
++            {
++              "heading": "Distinct occurrences and recursive references",
++              "fullBlockSha256": "107df6921140428b3246d550b59cbc37ee1f5547df093d8e27ba8ac16ee8b22d",
++              "fullBlockBytes": 547
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-028",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-028 Bounded helper microsteps",
++          "line": 194,
++          "fullBlockSha256": "a69124a912dcbf9bc5c0121dc3fb44bec1d389a81fdbc35dbc129064b91e2186",
++          "fullBlockBytes": 1032,
++          "scenarios": [
++            {
++              "heading": "Lookup and equality cursors",
++              "fullBlockSha256": "1385f656eff950586f842967255d13ec35db6673f596b7cdcaf4f9abb44b8647",
++              "fullBlockBytes": 807
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-029",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-029 Bounded representation domain",
++          "line": 201,
++          "fullBlockSha256": "09972264087747a9299ef08000c6e80976a208500212fe759a13345a2157111f",
++          "fullBlockBytes": 845,
++          "scenarios": [
++            {
++              "heading": "Complete pending-state encoding",
++              "fullBlockSha256": "8db7ab6870610359654b50cd9abd95a0b020191a5ff06c3e71c10bb677e153e4",
++              "fullBlockBytes": 604
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U3",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-030",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-030 Typed arithmetic component API",
++          "line": 208,
++          "fullBlockSha256": "ed95f8b1ba6e2f0e7edb39ce9b3c45c279619c36fb492af909d64965f9b4e1cc",
++          "fullBlockBytes": 859,
++          "scenarios": [
++            {
++              "heading": "Carry, borrow and full product",
++              "fullBlockSha256": "d0a7e02aefc5cede5c1010d73395b5243afb737b3d40e1905683da0ce14b04ae",
++              "fullBlockBytes": 658
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-031",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-031 Separate compilation/export plans",
++          "line": 215,
++          "fullBlockSha256": "deeae3f04ca308eef0bc8b52d50d9a3da21fe4c36ba6987dcfc6b75899f30c02",
++          "fullBlockBytes": 867,
++          "scenarios": [
++            {
++              "heading": "Structured witness export and unsupported features",
++              "fullBlockSha256": "c547c1f7ad3708b4ef9c3c2cfb40c7d34bd1aaeeb714b3e76d280d340694754d",
++              "fullBlockBytes": 643
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-032",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-032 Earliest-stop reference slices",
++          "line": 222,
++          "fullBlockSha256": "abdcccc5cc255e0b5755a092461ba6dff8b6986bba09d853a87270df64ece3fb",
++          "fullBlockBytes": 804,
++          "scenarios": [
++            {
++              "heading": "Grouped pending return",
++              "fullBlockSha256": "5ccb438534236baa73c94b79e6be3340d9e26f1361f32ee517590461b42069ee",
++              "fullBlockBytes": 579
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U3",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-033",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-033 Bounded static residualization",
++          "line": 229,
++          "fullBlockSha256": "d9345747dead851f55f159a46055caeed77a97f0245a4d65a950bd3230266411",
++          "fullBlockBytes": 845,
++          "scenarios": [
++            {
++              "heading": "Three realization masks",
++              "fullBlockSha256": "0f6f4101982e7eb5c7ed7bf542459f94813c13ae1388303310b41e61e09bf39b",
++              "fullBlockBytes": 650
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-034",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-034 Declaration-driven ordered matching",
++          "line": 236,
++          "fullBlockSha256": "b5659f2f011120a51e03fd6c6b309a48a5af03126493f054d9895e9f2c24b998",
++          "fullBlockBytes": 1030,
++          "scenarios": [
++            {
++              "heading": "New recursive Schedule declaration",
++              "fullBlockSha256": "45fa7aba67b693baff2e5ddc6b3d0987431fe2f5f9bf04e9d5902789ffbcf98a",
++              "fullBlockBytes": 780
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-035",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-035 Deterministic witness dataflow",
++          "line": 243,
++          "fullBlockSha256": "df589798980d21cb5490db8a694a9bb644ee9daf2900be17f2b3d2e840f226e1",
++          "fullBlockBytes": 950,
++          "scenarios": [
++            {
++              "heading": "Independent normal comparison baseline",
++              "fullBlockSha256": "38041b8dafa8fe314c07802c3c35001dede2fd6dcca8a1cdac91a98238211bb2",
++              "fullBlockBytes": 737
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        }
++      ]
++    },
++    {
++      "sourceRevision": "9effcd8e6f786dbea9d735da8b5f11cbcce88169",
++      "sourceSpecSha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b",
++      "disposition": "observed-upstream-pending-integration",
++      "requirements": [
++        {
++          "id": "UIREQ-001",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-001 Fixed interpreter relation",
++          "line": 7,
++          "fullBlockSha256": "81ea48dcded3f2bc0930fe4756bf52d052747e8bbd8e0a18bd8e043b28356413",
++          "fullBlockBytes": 437,
++          "scenarios": [
++            {
++              "heading": "Two distinct programs",
++              "fullBlockSha256": "59c189cb2d33fc20fe8f765ce8c5c641fde741004bc4a16b59cf5a284b05efa1",
++              "fullBlockBytes": 224
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-002",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-002 Explicit supported profile",
++          "line": 14,
++          "fullBlockSha256": "01ef2451f650b415912594be8c2820bc80fe2d5023084123b44acea3db55726a",
++          "fullBlockBytes": 645,
++          "scenarios": [
++            {
++              "heading": "First-order fragment",
++              "fullBlockSha256": "d3288545bac6d2167d3d8f9821a2ce2e2159fd178616ae5a615098f6566eb51a",
++              "fullBlockBytes": 480
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-003",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-003 Lexical call scope",
++          "line": 21,
++          "fullBlockSha256": "583455720050c89b7a3daf48a5e081b9a4d4b579fef2ee8f44e3083b93dee762",
++          "fullBlockBytes": 366,
++          "scenarios": [
++            {
++              "heading": "Caller-local preservation",
++              "fullBlockSha256": "f06bc9194c71fe37fc6d0e2796088055c4500deb3c1930d9340b5578a9e53e25",
++              "fullBlockBytes": 185
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-004",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-004 Strict evaluation order",
++          "line": 28,
++          "fullBlockSha256": "a14480657a30a3558c0cdbb473d75ce146f66538dcd36557d3ea3437dc9e82a5",
++          "fullBlockBytes": 345,
++          "scenarios": [
++            {
++              "heading": "Nested arguments",
++              "fullBlockSha256": "720fe03876ff7fbab00fe418cf01fc8196fd095c4711e15c863adcdce57cf416",
++              "fullBlockBytes": 165
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-005",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-005 Named recursive calls",
++          "line": 35,
++          "fullBlockSha256": "1bb5e3c089087dba1d1d6a10415ccd941406e25b964bf540a11209a7f56b4f79",
++          "fullBlockBytes": 374,
++          "scenarios": [
++            {
++              "heading": "Self and mutual recursion",
++              "fullBlockSha256": "2f520df39f2365b923ba0acef7a25c4118c6e0105c3f18b3d76246fb4bd03e6f",
++              "fullBlockBytes": 199
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-006",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-006 Exact scalar arithmetic",
++          "line": 42,
++          "fullBlockSha256": "1706f9ed9008f0b4f1eaf2331010ce61e853ce948ed009b14bfba1613a33f5f5",
++          "fullBlockBytes": 342,
++          "scenarios": [
++            {
++              "heading": "Normal arithmetic",
++              "fullBlockSha256": "8b1bb52c93d4d415b01914effad08dc34ec867e22dce6c4b8fb9cf3b573f8e9b",
++              "fullBlockBytes": 180
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-007",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-007 Typed inductive values",
++          "line": 49,
++          "fullBlockSha256": "d95f1b448b6d3cc988782f2205871235212baa7c92e1b3f0afa367d2300c41f8",
++          "fullBlockBytes": 364,
++          "scenarios": [
++            {
++              "heading": "Recursive list value",
++              "fullBlockSha256": "f281a3cef4639cc14f9c5e5f4e2d68926956ba87e58f86ad4cff9578718b4cf0",
++              "fullBlockBytes": 186
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-008",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-008 Selected match branch",
++          "line": 56,
++          "fullBlockSha256": "e6b6a10904937cd18fbb262a1bb5a0881ef8eb2ca033844d939e5c5823a5a96c",
++          "fullBlockBytes": 438,
++          "scenarios": [
++            {
++              "heading": "Tree fold",
++              "fullBlockSha256": "a292694f41db2709d81f5209a930c5ce92aa0bdd31df485776c1c139f56a16c8",
++              "fullBlockBytes": 233
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-009",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-009 Structural value meaning",
++          "line": 63,
++          "fullBlockSha256": "fc90db569fea721a4206d673e6565023066d8bc207dc88c5c785ce607c5db1e6",
++          "fullBlockBytes": 445,
++          "scenarios": [
++            {
++              "heading": "Repeated subtree",
++              "fullBlockSha256": "f45474b2725c531d27c8d737517d05da28bbcb53f7753fef8474132ac8ee0140",
++              "fullBlockBytes": 234
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-010",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-010 Explicit pending return",
++          "line": 70,
++          "fullBlockSha256": "004eab238f2eeb29258e4eccff7d2980903f94bac9e2c5d27515a1e1b0afab84",
++          "fullBlockBytes": 340,
++          "scenarios": [
++            {
++              "heading": "Factorial multiplication",
++              "fullBlockSha256": "2cd9bbaa7322d5b482f5a092a4e8174c5ea8e0032a5391ff072a01a0dea55efd",
++              "fullBlockBytes": 175
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-011",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-011 Complete pure result",
++          "line": 77,
++          "fullBlockSha256": "972a316bcd19df39c246705ca3def8442093901dfc02cca275cabd8d19fc0027",
++          "fullBlockBytes": 384,
++          "scenarios": [
++            {
++              "heading": "Completed versus pending",
++              "fullBlockSha256": "ef623e6f5594f6998ec5c6f1027653d031bf4cb6bc66f23a032502654e5af214",
++              "fullBlockBytes": 215
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-012",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-012 Explicit bounded outcome",
++          "line": 84,
++          "fullBlockSha256": "0c36debc805b1b95df943152c40839a22cd8ac5d89a71d83cfb8b594aad5d870",
++          "fullBlockBytes": 784,
++          "scenarios": [
++            {
++              "heading": "Finite recursive attempt",
++              "fullBlockSha256": "00011df34f31a9c56d41926e189a67f2ff13539f2a7d1d394f0fdf11e8f16986",
++              "fullBlockBytes": 562
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-013",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-013 Versioned work observations",
++          "line": 91,
++          "fullBlockSha256": "f6fdf99a86fab0ba37373e7fa29ca0d047eaad6e07d7c9cbfabc1f49b6ab6fc2",
++          "fullBlockBytes": 823,
++          "scenarios": [
++            {
++              "heading": "Same computation in chunks",
++              "fullBlockSha256": "3260727eafe6895529e9ac6c2b6490a147a1c3de90a91d807e7a9afa2ced9f56",
++              "fullBlockBytes": 631
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-014",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-014 Complete checkpoint representation",
++          "line": 98,
++          "fullBlockSha256": "63fc75392afe9ba383ea501dd613678c82dc5dde5c34445a294faca6b41eb2db",
++          "fullBlockBytes": 465,
++          "scenarios": [
++            {
++              "heading": "Pending callee snapshot",
++              "fullBlockSha256": "2be1cc7bb12ffed26abc679c9fda581128e941aac45792849cfbf9078a3ecab3",
++              "fullBlockBytes": 271
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-015",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-015 Pending-return resumption",
++          "line": 105,
++          "fullBlockSha256": "38e138918bebcfbf94c64de17a60c25d6477f805933c8bcc489902ba210960c7",
++          "fullBlockBytes": 415,
++          "scenarios": [
++            {
++              "heading": "Resume inner call",
++              "fullBlockSha256": "55b4be2bd59383a7bbe83486a1b1af84eaaaa0bd67b52d0bf98d396d7128944a",
++              "fullBlockBytes": 231
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-016",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-016 Chunk transparency",
++          "line": 112,
++          "fullBlockSha256": "8d5141d1426fcdb50ce5f0b806a91dbec2658c5b893384f27ae7409547370200",
++          "fullBlockBytes": 428,
++          "scenarios": [
++            {
++              "heading": "Boundary before return",
++              "fullBlockSha256": "481d9a32bfad6c3191b3ee3b584f8f13996779d1d0019dc448786b150f53ee28",
++              "fullBlockBytes": 255
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-017",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-017 Complete financial observation",
++          "line": 119,
++          "fullBlockSha256": "5204cb4f5b25080b8eae63c4ec2496a80002ce1b8a1f7d0780899c77caaf4a87",
++          "fullBlockBytes": 483,
++          "scenarios": [
++            {
++              "heading": "First paid prefix",
++              "fullBlockSha256": "860ac48fd1d0769369b2acfcb6e418ab2c3defceb36df0e68a2021c1fd1ca96b",
++              "fullBlockBytes": 278
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-018",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-018 Existing await-prefix preservation",
++          "line": 126,
++          "fullBlockSha256": "88e9e30ee3adbf89ddba1e7a0e227c19975c85a0ebe997c2f4e2a9573afd73b2",
++          "fullBlockBytes": 493,
++          "scenarios": [
++            {
++              "heading": "Await after partial payment",
++              "fullBlockSha256": "3bc052f9fdadfe2248eacfd64fbb30a7965f2c6cf71e764f407b0ed39a80686f",
++              "fullBlockBytes": 260
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-019",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-019 Local segment failure outcome",
++          "line": 133,
++          "fullBlockSha256": "2d5893a62de800ba9364815dfc2527919884591ef8a824a05cd51bd9a5b1ec1f",
++          "fullBlockBytes": 536,
++          "scenarios": [
++            {
++              "heading": "Second segment fails before commit",
++              "fullBlockSha256": "5b8eb77382f17da4e14b7984fa7ec5fb7921bb9ee7ad5b674ec6367f50db3e61",
++              "fullBlockBytes": 300
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-020",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-020 Target phase mapping",
++          "line": 140,
++          "fullBlockSha256": "07b04c4683b4f8e2df88a66a582eb1a020e63b2ef6db553764bd2707dfb96f73",
++          "fullBlockBytes": 523,
++          "scenarios": [
++            {
++              "heading": "Permitted retained fee",
++              "fullBlockSha256": "0a795bc8a45f1e06c17315853e998d0c05c8aa43373ecc09c5400d5fccf1af59",
++              "fullBlockBytes": 308
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-021",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-021 Declared model projection",
++          "line": 147,
++          "fullBlockSha256": "547dc499c5a315667354177184d716ac40dc58491a95f559b69aa3338c3fab6f",
++          "fullBlockBytes": 480,
++          "scenarios": [
++            {
++              "heading": "Finite call-return comparison",
++              "fullBlockSha256": "f61a85b4b35cff2225e063a6dfaee9cf3e42c15e48c010f8240d36b573a86020",
++              "fullBlockBytes": 311
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-022",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-022 Compiler semantic mapping",
++          "line": 154,
++          "fullBlockSha256": "e8029a82956ae9d6692bafb2a223e2fcb4db15a0413acacc43a4d51567b434e3",
++          "fullBlockBytes": 475,
++          "scenarios": [
++            {
++              "heading": "New supported program",
++              "fullBlockSha256": "6fbad471eb12d8244839d83e655d1f0ebbba03cef3e81544faa6ded3ffa51022",
++              "fullBlockBytes": 304
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-023",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-023 Native relation inventory",
++          "line": 161,
++          "fullBlockSha256": "d5c1875464acd3a04cb161464ee11ef8c1a555b275f2f01db5095362a37cd492",
++          "fullBlockBytes": 1303,
++          "scenarios": [
++            {
++              "heading": "Fixed relation across programs",
++              "fullBlockSha256": "a8f528ccf8a6dcc9023abcbdc9f183f3f1c17f8702d84c9f8123587219d8d373",
++              "fullBlockBytes": 567
++            },
++            {
++              "heading": "Midnight stagenet end-to-end qualification",
++              "fullBlockSha256": "bd00e89ca9085569fbdb8029560aa005ab6a8daaef218af1f409de47915edf9d",
++              "fullBlockBytes": 534
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-024",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-024 Optimization preservation",
++          "line": 172,
++          "fullBlockSha256": "b9793029c76ff62984452782ed19bc1bc59b3a8f8b1201b01aa62aa7f735bd7d",
++          "fullBlockBytes": 511,
++          "scenarios": [
++            {
++              "heading": "Frame or sharing optimization",
++              "fullBlockSha256": "430313dc67d6cf0503f5b0c54c081ad65c19834351ca1f8bc67e1000346ec6ed",
++              "fullBlockBytes": 294
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-025",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-025 Evidence-class report",
++          "line": 179,
++          "fullBlockSha256": "cca95c39c62bc07107653955c8825bc36f47bcdcce6583392b995d3e27012882",
++          "fullBlockBytes": 703,
++          "scenarios": [
++            {
++              "heading": "Pure models only",
++              "fullBlockSha256": "5b0a45a53cced7159a426f306ffac33e5574cb9a797086dd9565796a6715ae2d",
++              "fullBlockBytes": 496
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-026",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-026 Required Clean correspondence stage",
++          "line": 186,
++          "fullBlockSha256": "c8596d255575014fdf602cf636884384ad14dc00c9715c9078eeb2e039b36778",
++          "fullBlockBytes": 1655,
++          "scenarios": [
++            {
++              "heading": "Recursive semantics and bounded step circuit",
++              "fullBlockSha256": "60f20e46768f1be3e785615e74cd1f360eca4338cf8c4d5783af76e5292233b4",
++              "fullBlockBytes": 834
++            },
++            {
++              "heading": "Iterate reference models and handwritten circuits",
++              "fullBlockSha256": "0332c4c0b5a4d5ce47ad34bf383a81b2fed31178e1dcab15ca73f574a71a763a",
++              "fullBlockBytes": 556
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-027",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-027 Indexed program-image provenance",
++          "line": 197,
++          "fullBlockSha256": "5000a0ef55d779a16f728ac10086730f9b6b5b11d0eadb74399215a800510376",
++          "fullBlockBytes": 788,
++          "scenarios": [
++            {
++              "heading": "Distinct occurrences and recursive references",
++              "fullBlockSha256": "107df6921140428b3246d550b59cbc37ee1f5547df093d8e27ba8ac16ee8b22d",
++              "fullBlockBytes": 547
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-028",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-028 Bounded helper microsteps",
++          "line": 204,
++          "fullBlockSha256": "a69124a912dcbf9bc5c0121dc3fb44bec1d389a81fdbc35dbc129064b91e2186",
++          "fullBlockBytes": 1032,
++          "scenarios": [
++            {
++              "heading": "Lookup and equality cursors",
++              "fullBlockSha256": "1385f656eff950586f842967255d13ec35db6673f596b7cdcaf4f9abb44b8647",
++              "fullBlockBytes": 807
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-029",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-029 Bounded representation domain",
++          "line": 211,
++          "fullBlockSha256": "09972264087747a9299ef08000c6e80976a208500212fe759a13345a2157111f",
++          "fullBlockBytes": 845,
++          "scenarios": [
++            {
++              "heading": "Complete pending-state encoding",
++              "fullBlockSha256": "8db7ab6870610359654b50cd9abd95a0b020191a5ff06c3e71c10bb677e153e4",
++              "fullBlockBytes": 604
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U3",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-030",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-030 Typed arithmetic component API",
++          "line": 218,
++          "fullBlockSha256": "ed95f8b1ba6e2f0e7edb39ce9b3c45c279619c36fb492af909d64965f9b4e1cc",
++          "fullBlockBytes": 859,
++          "scenarios": [
++            {
++              "heading": "Carry, borrow and full product",
++              "fullBlockSha256": "d0a7e02aefc5cede5c1010d73395b5243afb737b3d40e1905683da0ce14b04ae",
++              "fullBlockBytes": 658
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-031",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-031 Separate compilation/export plans",
++          "line": 225,
++          "fullBlockSha256": "deeae3f04ca308eef0bc8b52d50d9a3da21fe4c36ba6987dcfc6b75899f30c02",
++          "fullBlockBytes": 867,
++          "scenarios": [
++            {
++              "heading": "Structured witness export and unsupported features",
++              "fullBlockSha256": "c547c1f7ad3708b4ef9c3c2cfb40c7d34bd1aaeeb714b3e76d280d340694754d",
++              "fullBlockBytes": 643
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-032",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-032 Earliest-stop reference slices",
++          "line": 232,
++          "fullBlockSha256": "abdcccc5cc255e0b5755a092461ba6dff8b6986bba09d853a87270df64ece3fb",
++          "fullBlockBytes": 804,
++          "scenarios": [
++            {
++              "heading": "Grouped pending return",
++              "fullBlockSha256": "5ccb438534236baa73c94b79e6be3340d9e26f1361f32ee517590461b42069ee",
++              "fullBlockBytes": 579
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U3",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-033",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-033 Bounded static residualization",
++          "line": 239,
++          "fullBlockSha256": "d9345747dead851f55f159a46055caeed77a97f0245a4d65a950bd3230266411",
++          "fullBlockBytes": 845,
++          "scenarios": [
++            {
++              "heading": "Three realization masks",
++              "fullBlockSha256": "0f6f4101982e7eb5c7ed7bf542459f94813c13ae1388303310b41e61e09bf39b",
++              "fullBlockBytes": 650
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-034",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-034 Declaration-driven ordered matching",
++          "line": 246,
++          "fullBlockSha256": "b5659f2f011120a51e03fd6c6b309a48a5af03126493f054d9895e9f2c24b998",
++          "fullBlockBytes": 1030,
++          "scenarios": [
++            {
++              "heading": "New recursive Schedule declaration",
++              "fullBlockSha256": "45fa7aba67b693baff2e5ddc6b3d0987431fe2f5f9bf04e9d5902789ffbcf98a",
++              "fullBlockBytes": 780
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-035",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-035 Deterministic witness dataflow",
++          "line": 253,
++          "fullBlockSha256": "df589798980d21cb5490db8a694a9bb644ee9daf2900be17f2b3d2e840f226e1",
++          "fullBlockBytes": 950,
++          "scenarios": [
++            {
++              "heading": "Independent normal comparison baseline",
++              "fullBlockSha256": "38041b8dafa8fe314c07802c3c35001dede2fd6dcca8a1cdac91a98238211bb2",
++              "fullBlockBytes": 737
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        }
++      ]
++    },
++    {
++      "sourceRevision": "30b65d925d1fc8210cb3521e7091aba787a69141",
++      "sourceSpecSha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b",
++      "disposition": "observed-upstream-pending-integration",
++      "requirements": [
++        {
++          "id": "UIREQ-001",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-001 Fixed interpreter relation",
++          "line": 7,
++          "fullBlockSha256": "81ea48dcded3f2bc0930fe4756bf52d052747e8bbd8e0a18bd8e043b28356413",
++          "fullBlockBytes": 437,
++          "scenarios": [
++            {
++              "heading": "Two distinct programs",
++              "fullBlockSha256": "59c189cb2d33fc20fe8f765ce8c5c641fde741004bc4a16b59cf5a284b05efa1",
++              "fullBlockBytes": 224
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-002",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-002 Explicit supported profile",
++          "line": 14,
++          "fullBlockSha256": "01ef2451f650b415912594be8c2820bc80fe2d5023084123b44acea3db55726a",
++          "fullBlockBytes": 645,
++          "scenarios": [
++            {
++              "heading": "First-order fragment",
++              "fullBlockSha256": "d3288545bac6d2167d3d8f9821a2ce2e2159fd178616ae5a615098f6566eb51a",
++              "fullBlockBytes": 480
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-003",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-003 Lexical call scope",
++          "line": 21,
++          "fullBlockSha256": "583455720050c89b7a3daf48a5e081b9a4d4b579fef2ee8f44e3083b93dee762",
++          "fullBlockBytes": 366,
++          "scenarios": [
++            {
++              "heading": "Caller-local preservation",
++              "fullBlockSha256": "f06bc9194c71fe37fc6d0e2796088055c4500deb3c1930d9340b5578a9e53e25",
++              "fullBlockBytes": 185
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-004",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-004 Strict evaluation order",
++          "line": 28,
++          "fullBlockSha256": "a14480657a30a3558c0cdbb473d75ce146f66538dcd36557d3ea3437dc9e82a5",
++          "fullBlockBytes": 345,
++          "scenarios": [
++            {
++              "heading": "Nested arguments",
++              "fullBlockSha256": "720fe03876ff7fbab00fe418cf01fc8196fd095c4711e15c863adcdce57cf416",
++              "fullBlockBytes": 165
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-005",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-005 Named recursive calls",
++          "line": 35,
++          "fullBlockSha256": "1bb5e3c089087dba1d1d6a10415ccd941406e25b964bf540a11209a7f56b4f79",
++          "fullBlockBytes": 374,
++          "scenarios": [
++            {
++              "heading": "Self and mutual recursion",
++              "fullBlockSha256": "2f520df39f2365b923ba0acef7a25c4118c6e0105c3f18b3d76246fb4bd03e6f",
++              "fullBlockBytes": 199
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-006",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-006 Exact scalar arithmetic",
++          "line": 42,
++          "fullBlockSha256": "1706f9ed9008f0b4f1eaf2331010ce61e853ce948ed009b14bfba1613a33f5f5",
++          "fullBlockBytes": 342,
++          "scenarios": [
++            {
++              "heading": "Normal arithmetic",
++              "fullBlockSha256": "8b1bb52c93d4d415b01914effad08dc34ec867e22dce6c4b8fb9cf3b573f8e9b",
++              "fullBlockBytes": 180
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-007",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-007 Typed inductive values",
++          "line": 49,
++          "fullBlockSha256": "d95f1b448b6d3cc988782f2205871235212baa7c92e1b3f0afa367d2300c41f8",
++          "fullBlockBytes": 364,
++          "scenarios": [
++            {
++              "heading": "Recursive list value",
++              "fullBlockSha256": "f281a3cef4639cc14f9c5e5f4e2d68926956ba87e58f86ad4cff9578718b4cf0",
++              "fullBlockBytes": 186
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-008",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-008 Selected match branch",
++          "line": 56,
++          "fullBlockSha256": "e6b6a10904937cd18fbb262a1bb5a0881ef8eb2ca033844d939e5c5823a5a96c",
++          "fullBlockBytes": 438,
++          "scenarios": [
++            {
++              "heading": "Tree fold",
++              "fullBlockSha256": "a292694f41db2709d81f5209a930c5ce92aa0bdd31df485776c1c139f56a16c8",
++              "fullBlockBytes": 233
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-009",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-009 Structural value meaning",
++          "line": 63,
++          "fullBlockSha256": "fc90db569fea721a4206d673e6565023066d8bc207dc88c5c785ce607c5db1e6",
++          "fullBlockBytes": 445,
++          "scenarios": [
++            {
++              "heading": "Repeated subtree",
++              "fullBlockSha256": "f45474b2725c531d27c8d737517d05da28bbcb53f7753fef8474132ac8ee0140",
++              "fullBlockBytes": 234
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-010",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-010 Explicit pending return",
++          "line": 70,
++          "fullBlockSha256": "004eab238f2eeb29258e4eccff7d2980903f94bac9e2c5d27515a1e1b0afab84",
++          "fullBlockBytes": 340,
++          "scenarios": [
++            {
++              "heading": "Factorial multiplication",
++              "fullBlockSha256": "2cd9bbaa7322d5b482f5a092a4e8174c5ea8e0032a5391ff072a01a0dea55efd",
++              "fullBlockBytes": 175
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-011",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-011 Complete pure result",
++          "line": 77,
++          "fullBlockSha256": "972a316bcd19df39c246705ca3def8442093901dfc02cca275cabd8d19fc0027",
++          "fullBlockBytes": 384,
++          "scenarios": [
++            {
++              "heading": "Completed versus pending",
++              "fullBlockSha256": "ef623e6f5594f6998ec5c6f1027653d031bf4cb6bc66f23a032502654e5af214",
++              "fullBlockBytes": 215
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-012",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-012 Explicit bounded outcome",
++          "line": 84,
++          "fullBlockSha256": "0c36debc805b1b95df943152c40839a22cd8ac5d89a71d83cfb8b594aad5d870",
++          "fullBlockBytes": 784,
++          "scenarios": [
++            {
++              "heading": "Finite recursive attempt",
++              "fullBlockSha256": "00011df34f31a9c56d41926e189a67f2ff13539f2a7d1d394f0fdf11e8f16986",
++              "fullBlockBytes": 562
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-013",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-013 Versioned work observations",
++          "line": 91,
++          "fullBlockSha256": "f6fdf99a86fab0ba37373e7fa29ca0d047eaad6e07d7c9cbfabc1f49b6ab6fc2",
++          "fullBlockBytes": 823,
++          "scenarios": [
++            {
++              "heading": "Same computation in chunks",
++              "fullBlockSha256": "3260727eafe6895529e9ac6c2b6490a147a1c3de90a91d807e7a9afa2ced9f56",
++              "fullBlockBytes": 631
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-014",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-014 Complete checkpoint representation",
++          "line": 98,
++          "fullBlockSha256": "63fc75392afe9ba383ea501dd613678c82dc5dde5c34445a294faca6b41eb2db",
++          "fullBlockBytes": 465,
++          "scenarios": [
++            {
++              "heading": "Pending callee snapshot",
++              "fullBlockSha256": "2be1cc7bb12ffed26abc679c9fda581128e941aac45792849cfbf9078a3ecab3",
++              "fullBlockBytes": 271
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-015",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-015 Pending-return resumption",
++          "line": 105,
++          "fullBlockSha256": "38e138918bebcfbf94c64de17a60c25d6477f805933c8bcc489902ba210960c7",
++          "fullBlockBytes": 415,
++          "scenarios": [
++            {
++              "heading": "Resume inner call",
++              "fullBlockSha256": "55b4be2bd59383a7bbe83486a1b1af84eaaaa0bd67b52d0bf98d396d7128944a",
++              "fullBlockBytes": 231
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-016",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-016 Chunk transparency",
++          "line": 112,
++          "fullBlockSha256": "8d5141d1426fcdb50ce5f0b806a91dbec2658c5b893384f27ae7409547370200",
++          "fullBlockBytes": 428,
++          "scenarios": [
++            {
++              "heading": "Boundary before return",
++              "fullBlockSha256": "481d9a32bfad6c3191b3ee3b584f8f13996779d1d0019dc448786b150f53ee28",
++              "fullBlockBytes": 255
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U3",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-017",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-017 Complete financial observation",
++          "line": 119,
++          "fullBlockSha256": "5204cb4f5b25080b8eae63c4ec2496a80002ce1b8a1f7d0780899c77caaf4a87",
++          "fullBlockBytes": 483,
++          "scenarios": [
++            {
++              "heading": "First paid prefix",
++              "fullBlockSha256": "860ac48fd1d0769369b2acfcb6e418ab2c3defceb36df0e68a2021c1fd1ca96b",
++              "fullBlockBytes": 278
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-018",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-018 Existing await-prefix preservation",
++          "line": 126,
++          "fullBlockSha256": "88e9e30ee3adbf89ddba1e7a0e227c19975c85a0ebe997c2f4e2a9573afd73b2",
++          "fullBlockBytes": 493,
++          "scenarios": [
++            {
++              "heading": "Await after partial payment",
++              "fullBlockSha256": "3bc052f9fdadfe2248eacfd64fbb30a7965f2c6cf71e764f407b0ed39a80686f",
++              "fullBlockBytes": 260
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-019",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-019 Local segment failure outcome",
++          "line": 133,
++          "fullBlockSha256": "2d5893a62de800ba9364815dfc2527919884591ef8a824a05cd51bd9a5b1ec1f",
++          "fullBlockBytes": 536,
++          "scenarios": [
++            {
++              "heading": "Second segment fails before commit",
++              "fullBlockSha256": "5b8eb77382f17da4e14b7984fa7ec5fb7921bb9ee7ad5b674ec6367f50db3e61",
++              "fullBlockBytes": 300
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-020",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-020 Target phase mapping",
++          "line": 140,
++          "fullBlockSha256": "07b04c4683b4f8e2df88a66a582eb1a020e63b2ef6db553764bd2707dfb96f73",
++          "fullBlockBytes": 523,
++          "scenarios": [
++            {
++              "heading": "Permitted retained fee",
++              "fullBlockSha256": "0a795bc8a45f1e06c17315853e998d0c05c8aa43373ecc09c5400d5fccf1af59",
++              "fullBlockBytes": 308
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U3",
++            "U5"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-021",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-021 Declared model projection",
++          "line": 147,
++          "fullBlockSha256": "547dc499c5a315667354177184d716ac40dc58491a95f559b69aa3338c3fab6f",
++          "fullBlockBytes": 480,
++          "scenarios": [
++            {
++              "heading": "Finite call-return comparison",
++              "fullBlockSha256": "f61a85b4b35cff2225e063a6dfaee9cf3e42c15e48c010f8240d36b573a86020",
++              "fullBlockBytes": 311
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-022",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-022 Compiler semantic mapping",
++          "line": 154,
++          "fullBlockSha256": "e8029a82956ae9d6692bafb2a223e2fcb4db15a0413acacc43a4d51567b434e3",
++          "fullBlockBytes": 475,
++          "scenarios": [
++            {
++              "heading": "New supported program",
++              "fullBlockSha256": "6fbad471eb12d8244839d83e655d1f0ebbba03cef3e81544faa6ded3ffa51022",
++              "fullBlockBytes": 304
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-023",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-023 Native relation inventory",
++          "line": 161,
++          "fullBlockSha256": "d5c1875464acd3a04cb161464ee11ef8c1a555b275f2f01db5095362a37cd492",
++          "fullBlockBytes": 1303,
++          "scenarios": [
++            {
++              "heading": "Fixed relation across programs",
++              "fullBlockSha256": "a8f528ccf8a6dcc9023abcbdc9f183f3f1c17f8702d84c9f8123587219d8d373",
++              "fullBlockBytes": 567
++            },
++            {
++              "heading": "Midnight stagenet end-to-end qualification",
++              "fullBlockSha256": "bd00e89ca9085569fbdb8029560aa005ab6a8daaef218af1f409de47915edf9d",
++              "fullBlockBytes": 534
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-024",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-024 Optimization preservation",
++          "line": 172,
++          "fullBlockSha256": "b9793029c76ff62984452782ed19bc1bc59b3a8f8b1201b01aa62aa7f735bd7d",
++          "fullBlockBytes": 511,
++          "scenarios": [
++            {
++              "heading": "Frame or sharing optimization",
++              "fullBlockSha256": "430313dc67d6cf0503f5b0c54c081ad65c19834351ca1f8bc67e1000346ec6ed",
++              "fullBlockBytes": 294
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U4"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-025",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-025 Evidence-class report",
++          "line": 179,
++          "fullBlockSha256": "cca95c39c62bc07107653955c8825bc36f47bcdcce6583392b995d3e27012882",
++          "fullBlockBytes": 703,
++          "scenarios": [
++            {
++              "heading": "Pure models only",
++              "fullBlockSha256": "5b0a45a53cced7159a426f306ffac33e5574cb9a797086dd9565796a6715ae2d",
++              "fullBlockBytes": 496
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-026",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-026 Required Clean correspondence stage",
++          "line": 186,
++          "fullBlockSha256": "c8596d255575014fdf602cf636884384ad14dc00c9715c9078eeb2e039b36778",
++          "fullBlockBytes": 1655,
++          "scenarios": [
++            {
++              "heading": "Recursive semantics and bounded step circuit",
++              "fullBlockSha256": "60f20e46768f1be3e785615e74cd1f360eca4338cf8c4d5783af76e5292233b4",
++              "fullBlockBytes": 834
++            },
++            {
++              "heading": "Iterate reference models and handwritten circuits",
++              "fullBlockSha256": "0332c4c0b5a4d5ce47ad34bf383a81b2fed31178e1dcab15ca73f574a71a763a",
++              "fullBlockBytes": 556
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-027",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-027 Indexed program-image provenance",
++          "line": 197,
++          "fullBlockSha256": "5000a0ef55d779a16f728ac10086730f9b6b5b11d0eadb74399215a800510376",
++          "fullBlockBytes": 788,
++          "scenarios": [
++            {
++              "heading": "Distinct occurrences and recursive references",
++              "fullBlockSha256": "107df6921140428b3246d550b59cbc37ee1f5547df093d8e27ba8ac16ee8b22d",
++              "fullBlockBytes": 547
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-028",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-028 Bounded helper microsteps",
++          "line": 204,
++          "fullBlockSha256": "a69124a912dcbf9bc5c0121dc3fb44bec1d389a81fdbc35dbc129064b91e2186",
++          "fullBlockBytes": 1032,
++          "scenarios": [
++            {
++              "heading": "Lookup and equality cursors",
++              "fullBlockSha256": "1385f656eff950586f842967255d13ec35db6673f596b7cdcaf4f9abb44b8647",
++              "fullBlockBytes": 807
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-029",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-029 Bounded representation domain",
++          "line": 211,
++          "fullBlockSha256": "09972264087747a9299ef08000c6e80976a208500212fe759a13345a2157111f",
++          "fullBlockBytes": 845,
++          "scenarios": [
++            {
++              "heading": "Complete pending-state encoding",
++              "fullBlockSha256": "8db7ab6870610359654b50cd9abd95a0b020191a5ff06c3e71c10bb677e153e4",
++              "fullBlockBytes": 604
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U3",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-030",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-030 Typed arithmetic component API",
++          "line": 218,
++          "fullBlockSha256": "ed95f8b1ba6e2f0e7edb39ce9b3c45c279619c36fb492af909d64965f9b4e1cc",
++          "fullBlockBytes": 859,
++          "scenarios": [
++            {
++              "heading": "Carry, borrow and full product",
++              "fullBlockSha256": "d0a7e02aefc5cede5c1010d73395b5243afb737b3d40e1905683da0ce14b04ae",
++              "fullBlockBytes": 658
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-031",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-031 Separate compilation/export plans",
++          "line": 225,
++          "fullBlockSha256": "deeae3f04ca308eef0bc8b52d50d9a3da21fe4c36ba6987dcfc6b75899f30c02",
++          "fullBlockBytes": 867,
++          "scenarios": [
++            {
++              "heading": "Structured witness export and unsupported features",
++              "fullBlockSha256": "c547c1f7ad3708b4ef9c3c2cfb40c7d34bd1aaeeb714b3e76d280d340694754d",
++              "fullBlockBytes": 643
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-032",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-032 Earliest-stop reference slices",
++          "line": 232,
++          "fullBlockSha256": "abdcccc5cc255e0b5755a092461ba6dff8b6986bba09d853a87270df64ece3fb",
++          "fullBlockBytes": 804,
++          "scenarios": [
++            {
++              "heading": "Grouped pending return",
++              "fullBlockSha256": "5ccb438534236baa73c94b79e6be3340d9e26f1361f32ee517590461b42069ee",
++              "fullBlockBytes": 579
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U3",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-033",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-033 Bounded static residualization",
++          "line": 239,
++          "fullBlockSha256": "d9345747dead851f55f159a46055caeed77a97f0245a4d65a950bd3230266411",
++          "fullBlockBytes": 845,
++          "scenarios": [
++            {
++              "heading": "Three realization masks",
++              "fullBlockSha256": "0f6f4101982e7eb5c7ed7bf542459f94813c13ae1388303310b41e61e09bf39b",
++              "fullBlockBytes": 650
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-034",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-034 Declaration-driven ordered matching",
++          "line": 246,
++          "fullBlockSha256": "b5659f2f011120a51e03fd6c6b309a48a5af03126493f054d9895e9f2c24b998",
++          "fullBlockBytes": 1030,
++          "scenarios": [
++            {
++              "heading": "New recursive Schedule declaration",
++              "fullBlockSha256": "45fa7aba67b693baff2e5ddc6b3d0987431fe2f5f9bf04e9d5902789ffbcf98a",
++              "fullBlockBytes": 780
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        },
++        {
++          "id": "UIREQ-035",
++          "spec": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
++          "requirement": "UIREQ-035 Deterministic witness dataflow",
++          "line": 253,
++          "fullBlockSha256": "df589798980d21cb5490db8a694a9bb644ee9daf2900be17f2b3d2e840f226e1",
++          "fullBlockBytes": 950,
++          "scenarios": [
++            {
++              "heading": "Independent normal comparison baseline",
++              "fullBlockSha256": "38041b8dafa8fe314c07802c3c35001dede2fd6dcca8a1cdac91a98238211bb2",
++              "fullBlockBytes": 737
++            }
++          ],
++          "acceptance": "open",
++          "scenarioEvidence": "specified-unexecuted",
++          "implementation": "not-assessed-by-this-registry",
++          "disposition": "mandatory-separate-functional-clause",
++          "uOwners": [
++            "U0",
++            "U1",
++            "U2",
++            "U4",
++            "U5",
++            "U7"
++          ],
++          "uOwnerDisposition": "source-declared"
++        }
++      ]
++    }
++  ]
++}
