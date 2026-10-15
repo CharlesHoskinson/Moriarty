@@ -1,0 +1,11 @@
+# Source-origin normal host comparison
+
+The private image-machine consumer now retains the current scheduling ExprId and an owner ExprId for every pending frame. Child evaluation adopts its actual row ID; frame consumption restores the scheduling owner. Replacements preserve owners; returns restore call sites. Free publication retains the final origin. The unchanged A Snapshot, rule and fuel fields still determine all existing comparisons.
+
+`CallContext::from_image_machine` captures the actual image, snapshot, source occurrence and saved frame owners from one immutable machine borrow. The old explicit-origin constructor remains for frozen boundary comparisons and reports absent frame-owner metadata. No name/value search selects an occurrence during execution. Host metadata allocation and preparation remain unmetered.
+
+The inspected pure-std standalone checker compiled the actual module and passed all 82 checks, including three source-first normal metadata tests: two distinct same-name calls, repeated recursive source occurrence with distinct execution cursors and pending caller environments, and ordinary subtraction underflow retaining its pending let. The unchanged eight frozen programs and all 216 literal fuel prefixes still compare exactly. stderr was empty and input membership remained unchanged. Source-path/cursor expectations are manually transcribed from the written programs and K-A rule boundaries; the implementation author also wrote these three tests, so they require independent review. No K executor ran.
+
+The machine and adapter remain private `cfg(test)` proposals. These are image-local host positions under the unchanged builder-produced-image premise. Program/image digest binding, arbitrary-image admission, canonical B schema, all other helpers, B budgeting, general ADTs, compiler integration, circuit/refinement/native correspondence and Midnight stagenet acceptance remain open. This normal result supplies no security judgment or roadmap acceptance.
+
+`BINDING.json` binds the raw checker output, exact argv and source membership. Fresh full-source and actual-result Muse review is recorded separately. The resource envelope was unchanged: 4 GiB, no swap, 256 tasks, isolated network, read-only inputs, fresh scratch and the existing 90-second outer/30-second compile-test limits.
