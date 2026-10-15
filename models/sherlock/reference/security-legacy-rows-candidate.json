@@ -1,0 +1,412 @@
+{
+  "status": "CANDIDATE_PROPOSAL_ONLY_NOT_ADOPTED_OR_FROZEN",
+  "author": "Gemini4Argonhigh",
+  "governance": {
+    "authority": 0,
+    "vote_or_approval": false,
+    "new_theorem_or_native_claim": false,
+    "schedules_and_gates": "A/Quint schedules and historical Opus policies/gates unchanged; helper microsteps (uiValid, uiHasType, uiAppend, uiFind, uiBind, uiMatching, uiBinaryResult, uiUnaryResult) are NOT folded as extra charges into profile sherlock-k-a/1 and any charge/failure allocation beyond observed K rules remains a separate proposal."
+  },
+  "stackLimit_and_frame_layout_policy": {
+    "source_cells_baseline_K": {
+      "stack_order": "top-first cons list: uiFrame(topFrame, S) with base uiNoFrames()",
+      "depth_cell": "<depth> D </depth> tracks logical frame count (initialized to 0; +1 only on k.machine.push.accept; -1 only on the 8 popping return rules)",
+      "stackLimit_cell": "<stackLimit> L </stackLimit> configured per run by k.admin.startup.valid from uiRun(P,E,F,L) when F>=0 && L>=0",
+      "dynamic_overflow_guard": "k.machine.push.accept requires D < L; k.machine.push.refuse fires when D >= L producing uiError(4)"
+    },
+    "proposed_B_physical_mapping": {
+      "frame_array_order": "bottom-first indexed array frames[0..D-1] where frames[0] is bottom/oldest frame and frames[D-1] is current top frame (corresponding to head Fr in K uiFrame(Fr,S))",
+      "logical_depth_bijection": "state.logicalDepth == D == len(active_frames); all stack-depth guards and observations compare D against runConfig.stackLimit (L), NEVER against physicalBounds.frames",
+      "top_frame_operations": {
+        "push_delta_plus_1": "Write frames[D] := Fr; increment D := D + 1 (only in k.machine.push.accept when D < L)",
+        "replace_in_place_delta_0": "Overwrite frames[D-1] := Fr_new with D unchanged (k.machine.return.let, k.machine.return.left, k.machine.return.arguments.next)",
+        "peek_on_error_delta_0": "Read/match frames[D-1] in place with frames and D unchanged (k.machine.return.if.invalid, k.machine.return.call.invalid)",
+        "pop_delta_minus_1": "Read frames[D-1], decrement D := D - 1 (k.machine.return.right, k.machine.return.unary, k.machine.return.if.true, k.machine.return.if.false, k.machine.return.match, k.machine.return.arguments.final, k.machine.return.call.valid, k.machine.return.scope)"
+      },
+      "saved_caller_env_preservation": "Frames carrying saved caller env Rho (uiLetF, uiLeftF, uiIfF, uiMatchF, uiArgsF, uiReturnF, uiScopeF) preserve exact K capture/restore lifetime; staging rules (eval.*, bound.valid, cases.hit) do not mutate <env> or <stack> until k.machine.push.accept succeeds",
+      "representability_admission_note": "Any requirement that runConfig.stackLimit L <= physicalBounds.frames is an explicit consequential representability admission restriction candidate requiring independent votes; no arbitrary new numeric capacity or backend is introduced, and within any admitted run (0 <= L <= physicalBounds.frames) the K invariant 0 <= D <= L guarantees physical bounds are never hit prior to D >= L (uiError(4))."
+    }
+  },
+  "administrative_5_rows_separate_cost_0": [
+    {
+      "id": "k.admin.startup.valid",
+      "charge": 0,
+      "guard": "k == uiRun(P,E,F,L) && F >= 0 && L >= 0",
+      "effect": "k=>uiEval(E), code=>P, fuel=>F, initialFuel=>F, stackLimit=>L; stack=uiNoFrames(), depth=0, env unchanged"
+    },
+    {
+      "id": "k.admin.startup.invalid",
+      "charge": 0,
+      "guard": "k == uiRun(_,_,F,L) && (F < 0 || L < 0)",
+      "effect": "k=>uiError(1); literal_failure_codes=[1]; code/fuel/initialFuel/stackLimit/stack/depth/env unchanged"
+    },
+    {
+      "id": "k.admin.publish.value",
+      "charge": 0,
+      "guard": "k == uiRet(V) && stack == uiNoFrames() && out == uiPending()",
+      "effect": "k=>.K, out=>uiDone(V); requires empty stack (D == 0)"
+    },
+    {
+      "id": "k.admin.publish.error",
+      "charge": 0,
+      "guard": "k == uiError(C) && out == uiPending()",
+      "effect": "k=>.K, out=>uiRejected(C); propagates failure code C regardless of stack S or fuel F"
+    },
+    {
+      "id": "k.admin.publish.exhausted",
+      "charge": 0,
+      "guard": "k == C:UIControl && fuel == 0 && out == uiPending() && !uiTerminal(C,S)",
+      "effect": "k=>.K, out=>uiExhausted(); stack S, depth D, env Rho preserved"
+    }
+  ],
+  "preserved_failure_state_counter_cap_mapping": {
+    "fuel_vs_error_precedence": "All 37 machine rules require F > 0 and decrement F => F - 1. If F == 0 at any non-terminal state (including before an impending raw error 2..9 or at uiPrimResult(uiPrimError(C)) before k.machine.primitive.error), k.admin.publish.exhausted fires at cost 0 producing uiExhausted(). If a rule fires with F == 1 and produces uiError(C), F becomes 0 but uiTerminal(uiError(C),S) holds, so k.admin.publish.error fires at cost 0 producing uiRejected(C).",
+    "failure_code_catalog_and_state_invariants": {
+      "1": "k.admin.startup.invalid (cost 0, F<0||L<0): k=>uiError(1)->uiRejected(1); no cells initialized.",
+      "2": "k.machine.eval.literal.invalid (cost 1, F>0&&!uiValid(V)): F=>F-1, D/stack/env unchanged.",
+      "3": "k.machine.eval.variable.absent (cost 1, F>0&&!(X in_keys(Rho))): F=>F-1, D/stack/env unchanged.",
+      "4": "k.machine.push.refuse (cost 1, F>0&&D>=L): F=>F-1, candidate frame Fr discarded, D==L and stack S unchanged, caller/current env preserved (target Rho discarded).",
+      "5": "k.machine.return.if.invalid (cost 1, F>0&&!uiHasType(V,uiBoolT())): F=>F-1, top frame uiIfF(_,_,_) retained on stack (NOT popped), D unchanged, env NOT restored.",
+      "6": "k.machine.return.call.invalid (cost 1, F>0&&!uiHasType(V,T)): F=>F-1, top frame uiReturnF(T,_) retained on stack (NOT popped), D unchanged, caller env NOT restored.",
+      "7": "k.machine.enter.missing (cost 1, F>0): F=>F-1, D/stack/env unchanged.",
+      "8": "k.machine.bound.invalid (cost 1, F>0): F=>F-1, D/stack/env unchanged (uiReturnF not staged).",
+      "9": "k.machine.cases.empty (cost 1, F>0): F=>F-1, D/stack/env unchanged (note: k.machine.return.match already popped uiMatchF and restored Rho in prior step).",
+      "propagated_C_including_10_11": "k.machine.primitive.error (cost 1, F>0): propagates C from uiPrimResult(uiPrimError(C))=>uiError(C) (including primitive errors such as 10, 11 from uiBinaryResult/uiUnaryResult); D/stack/env unchanged in this step (uiRightF/uiUnaryF was popped in preceding return.right/return.unary step)."
+    }
+  },
+  "exact37rows": [
+    {
+      "id": "k.machine.eval.literal.valid",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiLiteral(V)) && F > 0 && uiValid(V)",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.literal.invalid",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "uiError(2)",
+      "guard_or_condition": "k == uiEval(uiLiteral(V)) && F > 0 && !uiValid(V)",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.variable.present",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "read_lookup(X |-> V in Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiVar(X)) && F > 0 && X in_keys(Rho)",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.variable.absent",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "read_only(Rho)",
+      "raw_error_or_none": "uiError(3)",
+      "guard_or_condition": "k == uiEval(uiVar(X)) && F > 0 && !(X in_keys(Rho))",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.let",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiLetF(X,B,Rho), uiEval(A), Rho))",
+      "env_action": "read_capture(Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiLet(X,A,B)) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.binary",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiLeftF(Op,B,Rho), uiEval(A), Rho))",
+      "env_action": "read_capture(Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiBinary(Op,A,B)) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.unary",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiUnaryF(Op), uiEval(A), Rho))",
+      "env_action": "read_pass(Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiUnary(Op,A)) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.if",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiIfF(A,B,Rho), uiEval(C), Rho))",
+      "env_action": "read_capture(Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiIf(C,A,B)) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.match",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiMatchF(Cs,Rho), uiEval(E), Rho))",
+      "env_action": "read_capture(Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiMatch(E,Cs)) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.call.empty",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiCall(N,uiNoExprs())) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.eval.call.arguments",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiArgsF(N,uiNoValues(),Rest,Rho), uiEval(A), Rho))",
+      "env_action": "read_capture(Rho)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEval(uiCall(N,uiExpr(A,Rest))) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.push.accept",
+      "frame_delta": 1,
+      "frame_write_action": "push_top(Fr): K S=>uiFrame(Fr,S); B frames[D]:=Fr, D:=D+1",
+      "env_action": "write(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiPush(Fr,C,Rho) && F > 0 && D < L",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.push.refuse",
+      "frame_delta": 0,
+      "frame_write_action": "none (preserve S and D)",
+      "env_action": "none (preserve current env; discard Rho)",
+      "raw_error_or_none": "uiError(4)",
+      "guard_or_condition": "k == uiPush(_,_,_) && F > 0 && D >= L",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.let",
+      "frame_delta": 0,
+      "frame_write_action": "replace_top_in_place(uiLetF(X,B,Rho)=>uiScopeF(Rho)): B frames[D-1]:=uiScopeF(Rho), D unchanged",
+      "env_action": "write(Rho[X <- V])",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiLetF(X,B,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.left",
+      "frame_delta": 0,
+      "frame_write_action": "replace_top_in_place(uiLeftF(Op,B,Rho)=>uiRightF(Op,V)): B frames[D-1]:=uiRightF(Op,V), D unchanged",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiLeftF(Op,B,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.right",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiRightF(Op,A)): K uiFrame(uiRightF(Op,A),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "none",
+      "raw_error_or_none": "none (stages uiPrimResult(uiBinaryResult(Op,A,V)))",
+      "guard_or_condition": "k == uiRet(V) && top == uiRightF(Op,A) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.unary",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiUnaryF(Op)): K uiFrame(uiUnaryF(Op),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "none",
+      "raw_error_or_none": "none (stages uiPrimResult(uiUnaryResult(Op,V)))",
+      "guard_or_condition": "k == uiRet(V) && top == uiUnaryF(Op) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.if.true",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiIfF(A,_,Rho)): K uiFrame(uiIfF(A,_,Rho),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(uiB(true)) && top == uiIfF(A,_,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.if.false",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiIfF(_,B,Rho)): K uiFrame(uiIfF(_,B,Rho),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(uiB(false)) && top == uiIfF(_,B,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.if.invalid",
+      "frame_delta": 0,
+      "frame_write_action": "none (peek/preserve top uiIfF(_,_,_); do NOT pop; D unchanged)",
+      "env_action": "none (do NOT restore Rho)",
+      "raw_error_or_none": "uiError(5)",
+      "guard_or_condition": "k == uiRet(V) && top == uiIfF(_,_,_) && F > 0 && !uiHasType(V,uiBoolT())",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.match",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiMatchF(Cs,Rho)): K uiFrame(uiMatchF(Cs,Rho),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiMatchF(Cs,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.arguments.next",
+      "frame_delta": 0,
+      "frame_write_action": "replace_top_in_place(uiArgsF(N,Vs,uiExpr(A,Rest),Rho)=>uiArgsF(N,uiAppend(Vs,V),Rest,Rho)): B frames[D-1] updated, D unchanged",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiArgsF(N,Vs,uiExpr(A,Rest),Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.arguments.final",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiArgsF(N,Vs,uiNoExprs(),Rho)): K uiFrame(uiArgsF(...),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiArgsF(N,Vs,uiNoExprs(),Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.call.valid",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiReturnF(T,Rho)): K uiFrame(uiReturnF(T,Rho),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiReturnF(T,Rho) && F > 0 && uiHasType(V,T)",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.call.invalid",
+      "frame_delta": 0,
+      "frame_write_action": "none (peek/preserve top uiReturnF(T,_); do NOT pop; D unchanged)",
+      "env_action": "none (do NOT restore caller Rho)",
+      "raw_error_or_none": "uiError(6)",
+      "guard_or_condition": "k == uiRet(V) && top == uiReturnF(T,_) && F > 0 && !uiHasType(V,T)",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.return.scope",
+      "frame_delta": -1,
+      "frame_write_action": "pop_top(uiScopeF(Rho)): K uiFrame(uiScopeF(Rho),S)=>S; B pop frames[D-1], D:=D-1",
+      "env_action": "restore(Rho): _=>Rho",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiRet(V) && top == uiScopeF(Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.invoke.find",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none (reads <code> P)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiInvoke(N,Vs) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.enter.missing",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "uiError(7)",
+      "guard_or_condition": "k == uiEnter(uiMissingFun(),_) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.enter.bind",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiEnter(uiFun(_,Ps,T,E),Vs) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.bound.invalid",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "uiError(8)",
+      "guard_or_condition": "k == uiBound(uiBadBinding(),_,_) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.bound.valid",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiReturnF(T,Old), uiEval(E), New))",
+      "env_action": "read_capture(Old) (New deferred to push.accept)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiBound(uiBindings(New),T,E) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.cases.empty",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "uiError(9)",
+      "guard_or_condition": "k == uiCases(_,uiNoCases(),_) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.cases.try",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none (uses Rho carried in uiCases term)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiCases(V,uiCase(P,E,Rest),Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.cases.miss",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiCaseResult(uiNoMatch(),V,_,Rest,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.cases.hit",
+      "frame_delta": 0,
+      "frame_write_action": "none (stage uiPush(uiScopeF(Rho), uiEval(E), Bs))",
+      "env_action": "none (Rho from term; Bs deferred to push.accept)",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiCaseResult(uiMatched(Bs),_,E,_,Rho) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.primitive.value",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "none",
+      "guard_or_condition": "k == uiPrimResult(uiPrimValue(V)) && F > 0",
+      "charge": 1
+    },
+    {
+      "id": "k.machine.primitive.error",
+      "frame_delta": 0,
+      "frame_write_action": "none",
+      "env_action": "none",
+      "raw_error_or_none": "propagate_error(uiError(C)) (from uiPrimError(C), incl. C=10,11)",
+      "guard_or_condition": "k == uiPrimResult(uiPrimError(C)) && F > 0",
+      "charge": 1
+    }
+  ]
+}
