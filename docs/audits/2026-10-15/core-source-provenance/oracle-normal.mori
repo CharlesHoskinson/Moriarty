@@ -1,0 +1,12 @@
+language "moriarty/1";
+agreement SourceMapOracle {
+  state base: UInt = 3;
+  asset PAY = { network: "local", issuer: "independent-static", reference: "PAY", scale: 0 };
+  action mapped(amount: UInt) {
+    transfer(PAY, "alice", "treasury", 2);
+    fee(PAY, "alice", "treasury", amount);
+    let local = base + 1;
+    transfer(PAY, "alice", "treasury", local);
+    fee(PAY, "bob", "treasury", 2);
+  }
+}

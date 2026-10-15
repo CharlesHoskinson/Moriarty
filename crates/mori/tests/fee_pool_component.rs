@@ -518,7 +518,7 @@ fn public_source_static_all_actions_and_separate_process_reopen_both_programs() 
         let mut max_public = 0usize;
         for i in 0..count {
             let m = read(out.join(format!("action-{i:06}.manifest.json")));
-            assert_eq!(m["format"], "moriarty-mapped-role-source-static-relation/1");
+            assert_eq!(m["format"], "moriarty-mapped-role-source-static-relation/2");
             assert_eq!(
                 m["qualification"],
                 "source-static-mapped-debits-unauthenticated"
