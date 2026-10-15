@@ -119,3 +119,20 @@ no K/Quint/Lean or SDK/native execution is involved. Existing model,
 fixture, expected-result and observation bytes are preserved. Fresh integrated
 Muse nonsecurity and applicable Opus reviews remain separate work. The full
 U0–U7, M1–M17, MC/SP/G/ZR/MNR/OSR, ACTUS, DeFi and composition exits stay open.
+
+## Security-owner legacy-row candidate
+
+[`security-legacy-rows-candidate.json`](security-legacy-rows-candidate.json) is a
+separate Gemini4Argon high author proposal for all 37 exact legacy machine rule
+IDs and five administrative IDs. The root integration changes only formatting
+and attaches source membership; it supplies no new security policy or judgment.
+The [author record](../../../docs/audits/2026-10-15/sherlock-phase0-legacy-rows/README.md)
+retains actual requested/returned identity limits, source packet and report.
+
+The candidate distinguishes the run's logical stack limit from physical frame
+capacity and records per-rule replacement, pop and retained-error-frame behavior.
+Its proposed bounded mapping/admission restriction needs independent substantive
+decision reviews. It is not adopted, frozen, executable, a proof, a circuit
+component or a completed Phase 0 policy. Other ownership, helper, charge, codec,
+security and correspondence rows remain open. No A rule, normal expectation,
+compiled host module, resource limit or native authority changes here.

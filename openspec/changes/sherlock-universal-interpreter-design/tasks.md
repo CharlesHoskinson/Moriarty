@@ -19,6 +19,8 @@ FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY. Checked boxes refer only to their lin
 - [ ] Implement the paired Clean/handwritten-step projection comparison through the actual component consumers; record shared dependencies, first divergence and every missing/unrun layer.
 - [ ] Retain an exact-source evidence matrix and regressions for each slice/optimization; obtain separately admitted executions and required reviews without substituting normal comparisons for security/theorem/native evidence.
 
+- [ ] Independently review the [security-owner legacy-row candidate](../../../models/sherlock/reference/security-legacy-rows-candidate.json) and reconcile its proposed mapping with every remaining Phase 0 row before any adoption/freeze. Source membership is not a decision vote.
+
 ## Models and correspondence
 
 - [ ] Extend/reconcile pure K dedicated data sorts, missing generic grammar, helper cost accounting and input-size bounds. Frame-cap overflow: error4 (K-a, B); StackBound (Quint-a, frozen); resourceLimit per A1 table.
