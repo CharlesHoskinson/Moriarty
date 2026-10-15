@@ -10,7 +10,7 @@
 
 ## Concrete circuit and code inventory
 
-**Source fact:** freshly captured Midnight `IvcTransition` separates native `transition` from `circuit_transition`; `IvcIO` supplies assignment and public-input formatting; `IvcState` separates native data from constant-size assigned summaries. Its `decider` is documented as off-circuit. `VerifierGadget::prepare` returns an assigned accumulator. 
+**Source fact:** freshly captured Midnight `IvcTransition` separates native `transition` from `circuit_transition`; `IvcIO` supplies assignment and public-input formatting; `IvcState` separates native data from constant-size assigned summaries. Its `decider` is documented as off-circuit. `VerifierGadget::prepare` returns an assigned accumulator.
 
 **New lowering:** lower typed Moriarty programs into a frozen instruction table with explicit widths, evaluation order, constructors, frame actions and ordered effects. Supply a program-table opening plus selected instruction operands to `universalMoriartyStep(ctx, preState, witness) -> postState`; the circuit owns instruction selection and its semantic transition. Host execution produces openings, traces and frame/data preimages; it does not replace circuit transition ownership with an evaluator result flag.
 
