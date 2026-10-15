@@ -5,8 +5,8 @@ captures (CLI 12, compatibility 5), and 71 unchanged selected functions retain
 their prior captures. Separately, the first Quint increment has
 two normal tests/four one-transition samples, and the lifecycle increment has nine
 normal tests/32 sampled traces. This is scoped local evidence for `moriarty/2`,
-`moriarty-core/2`, and unsigned static `/4` artifacts. Fresh last-closure source, actual-result and documentation Muse and integrated
-independent Opus reviews are **PENDING**. All U0–U7, M1–M17, MC/SP/G,
+`moriarty-core/2`, and unsigned static `/4` artifacts. Fresh independent Muse and Opus closure reviews are completed with qualified
+local-child-feature approval, as recorded in [FINAL-REVIEW-BINDING.json](FINAL-REVIEW-BINDING.json). All U0–U7, M1–M17, MC/SP/G,
 and native/target acceptance gates remain open.
 
 The implementation baseline is
@@ -277,8 +277,8 @@ unchanged pins and no public fixture leftovers. Expected literals were not
 regenerated from candidate output. Authorship/classification and passing captures
 are not independent closure acceptance.
 
-[REVIEW-STATUS.json](REVIEW-STATUS.json) keeps fresh closure Muse and integrated
-independent Opus source/results/docs reviews **PENDING**. No earlier report's
+[REVIEW-STATUS.json](REVIEW-STATUS.json) records completed independent closure
+reviews; exact dispositions and limits remain in the verbatim reports. No earlier report's
 disposition is silently upgraded. The objective
 [plain-capture count correction](execution-inputs/PUBLIC-CAPTURE-COUNT-CORRECTION.json)
 retains the historical 108 files/27 captures while preserving B's 100/25 statement
@@ -298,3 +298,7 @@ requires all ten `/4` gates to remain `unperformed`. This dossier supplies no
 substitute security judgment. Native authority remains zero; all full U0–U7,
 M1–M17 and MC/SP/G gates remain open. No native proof, ledger/target qualification,
 release, merge or whole-language acceptance is asserted.
+
+## Final closure review publication
+
+The reviewed source is `0e42392d691d474e5a343765fba318b621f4b2bc`, tree `7cccf9c45a7a446e18bd5237cdf2aad6436176ca`. The [Muse report](reviews/MUSE-CLOSURE.md) and [Opus report](reviews/OPUS-CLOSURE.md), canonical identities and completed terminal receipts are copied verbatim. Root confirmed their qualified closure approval before this mechanical metadata append. This publication changes only review records, maintained dossier status, the external source binding, inventory and checksums. Frozen source/observation snapshots remain byte-identical. The metadata commit is bound externally after creation; no source self-reference is inserted. No new product execution, native/target qualification or parent exit is claimed.
