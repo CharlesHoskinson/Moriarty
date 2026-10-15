@@ -23,6 +23,19 @@ qualification and every existing parent exit remain open.
 
 The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provenance/README.md) records compiler-produced statement/expression-to-field metadata, public export/reopen, byte-identical IR for one independent specimen and ten passing focused tests. Full source/result audits remain pending. This is source-static correspondence support; all U0/U2 and other parent exits remain open.
 
+## Latest Core continuation observation — 2026-10-15
+
+The [final observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
+and [source scope](docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json)
+cover 86 distinct focused Rust test functions: 24 passed in the final
+test/documentation-repair captures (backend relation 10, public CLI 11 and ledger
+profile refusals 3), while 62 are retained on unchanged selected call paths.
+This is not a fresh rerun of all 86. Separate Quint QA remains 11 normal tests,
+without established Rust correspondence. The candidate remains local, unpublished
+and unmerged; final successor Muse and Opus reviews are pending. No native
+qualification or full U0–U7, M1–M17 or MC/SP/G exit is closed. The 78- and 58-test
+observations below retain their historical scope.
+
 ## Core continuation successor observation — 2026-10-15
 
 The [current observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json)

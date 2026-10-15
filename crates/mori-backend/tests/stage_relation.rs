@@ -451,3 +451,33 @@ fn decoder_refusals_name_the_targeted_predicate() {
         assert!(message.contains(expected.as_str()), "{name}: {message}");
     }
 }
+
+/// H20 in the other direction: the `/3` decoder refuses a serialized `/4`
+/// artifact at its first `/3` version key. Artifact bytes keep serialization
+/// order, so `format` refuses first. A `serde_json::Value` map is key-sorted
+/// here (the lockfile has no `preserve_order`), so `abi` refuses first.
+#[test]
+fn legacy_decoder_refuses_staged_artifacts() {
+    assert_eq!(ARTIFACT_FORMAT, "moriarty-zkir-artifact/3");
+    assert_eq!(PUBLIC_ABI_VERSION, "moriarty-public-abi/3");
+    let artifact = compile(MIXED);
+    let honest = serde_json::to_value(&artifact).unwrap();
+    decode(&honest).unwrap();
+    assert_eq!(honest["format"], "moriarty-zkir-artifact/4");
+    assert_eq!(honest["abi"], "moriarty-public-abi/4");
+    let bytes = serde_json::to_vec_pretty(&artifact).unwrap();
+    assert!(bytes.starts_with(b"{\n  \"format\": "));
+    let e = serde_json::from_slice::<mori_backend::Artifact>(&bytes).unwrap_err();
+    assert!(e.is_data(), "{e}");
+    let at = format!(" at line {} column {}", e.line(), e.column());
+    assert_eq!(
+        e.to_string().strip_suffix(at.as_str()),
+        Some("Expected moriarty-zkir-artifact/3; recompile for this backend revision.")
+    );
+    let e = serde_json::from_value::<mori_backend::Artifact>(honest).unwrap_err();
+    assert!(e.is_data(), "{e}");
+    assert_eq!(
+        e.to_string(),
+        "Expected moriarty-public-abi/3; recompile for this backend revision."
+    );
+}

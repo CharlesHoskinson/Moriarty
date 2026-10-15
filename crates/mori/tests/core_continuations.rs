@@ -1,5 +1,6 @@
 //! Public reference-stage consumers against literals frozen before implementation.
-//! No test in this file requests native, proof, replay, or ledger execution.
+//! No test in this file reaches native, proof, replay, or ledger execution; the
+//! H16/H19 `--trace` and `compile-call` requests are refused at the profile first.
 use serde_json::{Value, json};
 use std::{path::PathBuf, process::{Command, Output}, sync::atomic::{AtomicUsize, Ordering}};
 
@@ -213,4 +214,63 @@ fn core_one_keeps_atomic_behavior_and_existing_stdout_envelope() {
     for key in ["pre","post"] { assert_eq!(r["execution"][key], expected[key]); }
     assert_eq!(r["execution"]["effects"], expected["ordered_effects"]);
     assert_eq!(ordinary.stdout, f.start("deliver", &e["true_scenario"], None).stdout);
+}
+// H16/H19 profile refusals. Expected identities are the frozen typed errors,
+// written out here rather than read from the callee.
+const STAGE_LABELS: [(&str, &str); 3] =
+    [("qualification", "local-reference-stage"), ("authentication", "none"), ("consumption", "untracked")];
+/// Rendered stderr without the diagnostic gutter glyphs or the 80-column wrap.
+fn diagnostic(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).split_whitespace().filter(|w| !matches!(*w, "×" | "│")).collect::<Vec<_>>().join(" ")
+}
+#[test]
+fn h16_core_one_resume_is_labelled_profile_rejection_before_continuation_or_event_read() {
+    let f = Files::new(LEGACY);
+    let (continuation, event) = (f.path("absent-continuation.json"), f.path("absent-event.json"));
+    let output = f.command("simulate").arg("--resume").arg(&continuation).arg("--event").arg(&event).output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stderr.is_empty(), "{}", String::from_utf8_lossy(&output.stderr));
+    let r = report(&output);
+    let keys: std::collections::BTreeSet<&str> = r.as_object().unwrap().keys().map(String::as_str).collect();
+    assert_eq!(keys, ["attempted","authentication","committed","consumption","error","qualification","status"].into());
+    assert_eq!(r["status"], "rejected"); assert_eq!(r["attempted"], "0"); assert_eq!(r["committed"], "0");
+    assert_eq!(r["error"], json!({"code":"mori::core::profile","message":"Expected language \"moriarty/2\"; found \"moriarty/1\".","offset":21,"step":null}));
+    for (key, value) in STAGE_LABELS { assert_eq!(r[key], value, "{key}"); }
+    assert!(!continuation.exists() && !event.exists());
+}
+#[test]
+fn h16_core_two_trace_target_prints_backend_program_profile_rejection_before_reconstruction() {
+    let o = oracle(); let f = Files::new(DELIVERY);
+    f.write("target.json", serde_json::to_vec(&mori_backend::Target::ledger9("local", "continuations")).unwrap());
+    f.json("scenario.json", &o["escrow"]["opening"]);
+    let output = f.command("simulate").args(["--action", "deliver", "--scenario"]).arg(f.path("scenario.json"))
+        .arg("--trace").arg("--target").arg(f.path("target.json")).output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stderr.is_empty(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(report(&output), json!({
+        "status":"rejected", "qualification":"local-reference-replay",
+        "error":{"code":"mori::backend::program","message":"mori::core::profile: Expected language \"moriarty/1\"; found \"moriarty/2\"."}
+    }));
+    assert_eq!(std::fs::read_dir(&f.0).unwrap().count(), 3);
+}
+#[test]
+fn h16_core_two_inspect_target_refuses_with_core_profile_before_target_read() {
+    let f = Files::new(DELIVERY);
+    let target = f.path("absent-target.json");
+    let output = f.command("inspect").arg("--target").arg(&target).output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(diagnostic(&output), "mori::command: mori::core::profile: Unsupported language or semantics identity.");
+    assert!(!target.exists());
+}
+#[test]
+fn h19_core_two_compile_call_refuses_before_deployment_read_or_emission() {
+    let f = Files::new(DELIVERY);
+    let (deployment, out) = (f.path("absent-deployment.json"), f.path("out"));
+    let output = f.command("compile-call").args(["--action", "deliver", "--deployment"]).arg(&deployment)
+        .arg("--out").arg(&out).output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(diagnostic(&output), "mori::command: mori::core::profile: Expected language \"moriarty/1\"; found \"moriarty/2\".");
+    assert!(!out.exists() && !deployment.exists());
 }

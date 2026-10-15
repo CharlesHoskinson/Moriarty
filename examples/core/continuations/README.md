@@ -1,18 +1,20 @@
 # Core continuation examples
 
 These examples have been executed through the local Core and public CLI suites.
-Current successor evidence covers 78 distinct focused Rust test functions:
-49 affected functions passed in fresh post-repair captures, while 29 unchanged
-functions are carried forward from earlier captures by source and call-path
-projections. This is not a full post-repair rerun of all 78. Separate Quint QA has
-11 normal tests and is excluded from the Rust total. The earlier 58-test
-candidate remains a historical observation. These examples use `moriarty/2`,
+Current selected evidence covers 86 distinct focused Rust test functions:
+24 passed in the final test/documentation-repair captures (10 backend relation,
+11 public CLI and 3 ledger profile-refusal cases), while 62 are retained on
+unchanged selected call paths. This is not a fresh rerun of all 86. Separate
+Quint QA has 11 normal tests and is excluded from the Rust total. The earlier
+78-test (49 fresh plus 29 carried forward) and 58-test candidates retain their
+historical scope. These examples use `moriarty/2`,
 `moriarty-core/2`, and the local reference-stage consumer. See the
 [developer guide](../../../docs/CORE-CONTINUATIONS.md) and
 [evidence dossier](../../../docs/audits/2026-10-15/core-continuations/README.md)
 for the captured scope and its
-[current selections](../../../docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json).
-The successor is local and unmerged; fresh successor Muse and Opus reviews
+[final selections](../../../docs/audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
+and [source scope](../../../docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json).
+The successor is local and unmerged; final successor Muse and Opus reviews
 remain pending. All U0–U7, M1–M17, and MC/SP/G acceptance exits remain open.
 
 `delivery.mori` suspends after moving 10 units into escrow and creating a
@@ -50,6 +52,15 @@ evaluator is a pure function of untrusted files.” These examples do not claim
 conditional settlement, local consumption, native proof acceptance, or ledger
 acceptance. The compiler's static `/4` artifacts retain their separate
 unperformed qualification gates.
+
+The `cap` stored in `continuation.json` under `logical` is outside both
+continuation digests, `program_hash` and `plan_hash`. Anyone holding the file
+can edit, remove or raise it without detection, so it is a local advisory
+ceiling and not an authenticated lifetime work budget. Resume still checks
+`committed` against the planned prefix work for the stored `site`. It refuses
+a resume `--logical-cap` above a present stored cap, and the flag (or else the
+stored cap) must cover `committed` plus the next segment. These checks neither
+authenticate the file nor record its use.
 
 `normal-oracle.json` is a byte-for-byte copy of the independently authored
 2026-10-15 oracle, SHA-256
