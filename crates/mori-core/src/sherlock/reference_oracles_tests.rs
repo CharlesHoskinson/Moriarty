@@ -6,6 +6,9 @@
 #[path = "helper_call_adapter_tests.rs"]
 mod helper_call_adapter_tests;
 
+#[path = "checkpoint_normal_tests.rs"]
+mod checkpoint_normal_tests;
+
 use super::reference_display::{KDisplay, environment_to_k};
 use super::*;
 use std::sync::Arc;
