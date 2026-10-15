@@ -508,8 +508,10 @@ The ordinary and signed manifest schemas remain unchanged, but source-closure
 changes update their compiler hashes and manifest bytes, plus static bundle
 build identities. Old bundles require re-export for the new build; earlier
 ordinary artifacts require regenerated manifests. Future native requalification
-is separate and unperformed. Local execution checks for this addition have not
-yet run; these source observations close no U0/U2 or other parent exit.
+is separate and unperformed. The [2026-10-15 evidence](audits/2026-10-15/core-source-provenance/README.md)
+records ten passing focused checks, including public export/reopen and actual
+IR field positions. Full source/result reviews are recorded in that dossier;
+these source-static observations close no U0/U2 or other parent exit.
 
 
 ## Metered local owner-intent verification
