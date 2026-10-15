@@ -24,7 +24,7 @@ Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AG
 
 ## Correctness loop within every phase
 
-Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the temporary override in [AGENTS.md](../AGENTS.md); historical Opus-authored requirements and gates retain their identities and scope.
+Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the restored Opus 5.5 high assignment in [AGENTS.md](../AGENTS.md#security-ownership-restored--october-15). GPT-6.1 Sol high implements nonsecurity work, and fresh Muse Wonder1.0 high reviews it. Historical Argon and Opus records retain their actual identities and scopes.
 
 ## File and ownership map
 
