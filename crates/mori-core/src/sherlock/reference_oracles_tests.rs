@@ -457,3 +457,111 @@ fn image_n07_three_ordered_arguments() {
 fn image_n08_recursive_factorial() {
     compare_image_case("N08");
 }
+
+// Compare retained grouped records directly with the frozen literals. This does
+// not use an ungrouped execution or either evaluator to derive expectations.
+fn compare_grouped_case(case_id: &str) {
+    use super::reference_slice::{advance_m, SliceBoundary, SliceBoundaryKind, SliceStop};
+    let case = CASES.iter().chain(EXTRA_CASES.iter())
+        .find(|case| case.case_id == case_id).expect("frozen normal case");
+    for m in [1, 2, 4, 8] {
+        for prefix in case.prefixes {
+            let context = format!("{case_id}, group {m}, fuel {}", prefix.initial_fuel);
+            let mut machine = Machine::new(normal_program(case_id), prefix.initial_fuel, case.stack_limit);
+            let mut prior = machine.snapshot();
+            let initial = &case.states[0];
+            compare_snapshot(&prior, case, initial, prefix.initial_fuel,
+                prefix.initial_fuel, initial.control, case.pending_output, &context);
+            let mut charged = 0;
+            let mut published = false;
+            while !published {
+                let slice = advance_m(&mut machine, m);
+                assert_eq!(slice.profile_id, PROFILE, "{context}: profile");
+                assert_eq!(slice.start, prior, "{context}: complete group start");
+                assert!(!slice.records.is_empty(), "{context}: pending execution must retain its next event");
+                assert!(slice.records.len() <= m, "{context}: event budget");
+                assert_eq!(slice.prefix_work.len(), slice.records.len() + 1);
+                assert_eq!(slice.prefix_work[0], 0);
+                let mut group_work = 0;
+                for (position, record) in slice.records.iter().enumerate() {
+                    assert!(!published, "{context}: no event after publication");
+                    assert_eq!(record.before, prior, "{context}: complete internal pre-state");
+                    if charged < prefix.boundary_state_index {
+                        charged += 1;
+                        let expected = &case.states[charged];
+                        assert_eq!(record.charge, 1, "{context}: internal charged event");
+                        assert_eq!(Some(record.rule_start_line), expected.via_rule_start_line);
+                        compare_snapshot(&record.after, case, expected, prefix.initial_fuel,
+                            prefix.initial_fuel - expected.charged_steps,
+                            expected.control, case.pending_output, &context);
+                    } else {
+                        assert_eq!(record.charge, 0, "{context}: free publication");
+                        assert_eq!(record.rule_start_line, prefix.publication_rule_start_line);
+                        let boundary = &case.states[prefix.boundary_state_index];
+                        compare_snapshot(&record.after, case, boundary, prefix.initial_fuel,
+                            prefix.remaining_fuel, ".K", prefix.output, &context);
+                        published = true;
+                    }
+                    group_work += u128::from(record.charge);
+                    assert_eq!(slice.prefix_work[position + 1], group_work);
+                    prior = record.after.clone();
+                }
+                assert_eq!(slice.end, prior, "{context}: complete group end");
+                assert_eq!(machine.snapshot(), prior, "{context}: live machine end");
+                let kind = if published { SliceBoundaryKind::Terminal }
+                    else { SliceBoundaryKind::TechnicalCut };
+                assert_eq!(slice.boundaries, vec![SliceBoundary { position: slice.records.len(), kind }]);
+                assert_eq!(slice.stop, if published { SliceStop::Outcome(prior.outcome.clone()) }
+                    else { SliceStop::TechnicalCut });
+            }
+            assert_eq!(charged, prefix.boundary_state_index);
+            let terminal = advance_m(&mut machine, m);
+            assert_eq!(terminal.start, prior);
+            assert_eq!(terminal.end, prior);
+            assert!(terminal.records.is_empty());
+            assert_eq!(terminal.prefix_work, vec![0]);
+            assert_eq!(terminal.stop, SliceStop::Outcome(prior.outcome.clone()));
+            assert_eq!(terminal.boundaries, vec![SliceBoundary { position: 0, kind: SliceBoundaryKind::Terminal }]);
+        }
+    }
+}
+
+#[test]
+fn grouped_n01_literal() {
+    compare_grouped_case("N01");
+}
+
+#[test]
+fn grouped_n02_addition() {
+    compare_grouped_case("N02");
+}
+
+#[test]
+fn grouped_n03_conditional() {
+    compare_grouped_case("N03");
+}
+
+#[test]
+fn grouped_n04_lexical_restoration() {
+    compare_grouped_case("N04");
+}
+
+#[test]
+fn grouped_n05_named_recursion() {
+    compare_grouped_case("N05");
+}
+
+#[test]
+fn grouped_n06_ordered_list_tree_match() {
+    compare_grouped_case("N06");
+}
+
+#[test]
+fn grouped_n07_three_ordered_arguments() {
+    compare_grouped_case("N07");
+}
+
+#[test]
+fn grouped_n08_recursive_factorial() {
+    compare_grouped_case("N08");
+}
