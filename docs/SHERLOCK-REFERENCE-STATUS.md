@@ -30,6 +30,19 @@ outside it have no K correspondence claim. Dedicated lists/trees are not yet
 general declaration-driven ADTs. Helpers, copying, structural equality and host
 allocation remain unmetered under `sherlock-k-a/1`.
 
+## Complete typed observation comparison
+
+The new [`sherlock::compare`](../crates/mori-core/src/sherlock/compare.rs) API
+returns the first identity/state/record/prefix difference between two supplied
+A traces. It covers every Snapshot field, typed structural program/frame/value
+meaning, rule and charge, with deterministic ordering and raw values retained in
+the borrowed inputs. It neither validates a trace nor supplies missing model or
+circuit adapters. The [RED/GREEN evidence](audits/2026-10-15/sherlock-trace-comparison/README.md)
+records the actual29-test host run including16 new normal comparison functions;
+all original expectations and92 fuel-prefix checks are unchanged. The existing
+H1 untrusted-input restriction remains in force. Independent source audits and
+full cross-layer/native/stagenet acceptance remain separate.
+
 ## Observed comparison
 
 The [dedicated consumer](../models/sherlock/reference/check-reference.py) compiled
