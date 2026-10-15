@@ -1,0 +1,916 @@
+{
+  "schema": "sherlock.academic-research.lane.v1",
+  "lane": "04",
+  "topic": "Verified circuit DSL/compiler architectures and export boundaries",
+  "status": "draft-only nonsecurity source research; specified-only proposals; no architecture adoption",
+  "created_at": "2026-10-15T08:31:27.682046+00:00",
+  "baseline": {
+    "candidate_a_freeze_sha256": "57d830f46fee57c56ed8b854d21f5dd7a695d2977d061b1ef6905eaecd7de30e",
+    "old_capture_reuse": "None: baseline facts read for comparison; all source receipts in this lane freshly acquired",
+    "required_inputs": [
+      "spec-package/clean-stage.md",
+      "spec-package/model-coverage.md",
+      "spec-package/candidate-a-content-freeze.json",
+      "optimization/07/proposal.md",
+      "optimization/09/proposal.md",
+      "optimization/10/proposal.md"
+    ],
+    "startup_checkout": "isolated Moriarty design checkout",
+    "startup_status": "Read-only status inspected; historical blockers retained; no execution selected",
+    "old_comparison_pin_status": "Earlier local comparison identifier was not a verified public upstream pin; omitted from public transport."
+  },
+  "material_sources": [
+    {
+      "id": "CLEAN",
+      "kind": "official project source",
+      "title": "Clean Lean circuit DSL",
+      "publisher": "Verified-zkEVM / zkSecurity",
+      "independence_key": "verified-zkevm-clean",
+      "authority": "public upstream source at pinned HEAD",
+      "url": "https://github.com/Verified-zkEVM/clean",
+      "publication_date": "ongoing project; HEAD date in repository record",
+      "evidence_locators": [
+        "Clean/Circuit/Provable.lean:16-19,319,762",
+        "Clean/Circuit/Formal.lean:36-40",
+        "Clean/Table/Inductive.lean:58-63",
+        "Clean/Circuit/Json.lean:53-59",
+        "Clean/Circuit/WitnessExport.lean:136-175",
+        "Clean/Circuit/WitnessIR.lean:19-33,347-357",
+        "Clean/Backends/Circom/R1CS.lean:80-81",
+        "README.md:55-85"
+      ],
+      "claims": [
+        "Fixed-size field representation APIs",
+        "Basic JSON drops witness code; separate witness JSON serializes IR and rejects native closures",
+        "Circom R1CS refuses lookup/interact",
+        "Generalized tables in Plonky3 and PLONK custom gates remain listed work"
+      ],
+      "coverage_limits": [
+        "No Sherlock circuit or target exporter assessed",
+        "Public upstream pin is not the actual private integration record",
+        "No builds or source-level theorem assessment"
+      ]
+    },
+    {
+      "id": "CLAP-PAPER",
+      "kind": "primary paper",
+      "title": "Clap: a Semantic-Preserving Optimizing eDSL for Plonkish Proof Systems",
+      "authors": [
+        "Marco Stronati",
+        "Denis Firsov",
+        "Antonio Locascio",
+        "Benjamin Livshits"
+      ],
+      "publisher": "arXiv",
+      "publication_date": "2024-07-11 v2; initial 2024-05-20",
+      "url": "https://arxiv.org/html/2405.12115v2",
+      "metadata_url": "https://arxiv.org/abs/2405.12115",
+      "independence_key": "clap-research-family",
+      "evidence_locators": [
+        "Section II, Figures 2 and 3",
+        "Section V-C Agda Model",
+        "Section VI-A/B arithmetic inlining/gate conversion",
+        "Section VII evaluation"
+      ],
+      "claims": [
+        "Separate trace generation, constraint generation and tabulation APIs",
+        "Compiler/gate optimization design patterns"
+      ],
+      "attributed_theorem": "Authors report a compositional Agda-model result conditional on individual component properties; this lane neither assesses it nor transfers it to Sherlock",
+      "license_observed": "CC BY 4.0 displayed on arXiv HTML",
+      "coverage_limits": [
+        "Rust/Agda research model, distinct from current clap-lean",
+        "No reproduction; paper performance configuration is not Sherlock",
+        "Old Rust/Agda repository referenced but not pinned or inspected; no code reuse recommendation for it"
+      ]
+    },
+    {
+      "id": "CLAP-LEAN",
+      "kind": "official project source",
+      "title": "Clap-lean",
+      "publisher": "Clap-lang",
+      "independence_key": "clap-research-family",
+      "url": "https://github.com/Clap-lang/clap-lean",
+      "publication_date": "ongoing project; HEAD date in repository record",
+      "evidence_locators": [
+        "README.md:3-20",
+        "Clap/Compilation.lean:308-370",
+        "Clap/Compiler/Basic.lean:92-107,174-231",
+        "R1Serialize/R1CS.lean:113-128,238-263"
+      ],
+      "claims": [
+        "Current Lean compiler explicitly distinguishes old Rust paper work",
+        "Separate Circuit.toCs, Circuit.toWg, Wg.run",
+        "R1CS and witness serialization source exists"
+      ],
+      "coverage_limits": [
+        "README work-in-progress status retained",
+        "No assumption that 2024 Plonkish custom-gate machinery is this serializer",
+        "Subset source support not exhaustively inspected or executed"
+      ]
+    },
+    {
+      "id": "ZKLEAN",
+      "kind": "official project source",
+      "title": "zkLean",
+      "publisher": "Galois, Inc.",
+      "independence_key": "galois-zklean",
+      "url": "https://github.com/GaloisInc/zkLean",
+      "publication_date": "ongoing project; HEAD date in repository record",
+      "evidence_locators": [
+        "README.md:33-61",
+        "zkLean/zkLean/Builder.lean:24-43",
+        "zkLean/zkLean/Semantics.lean:35-105",
+        "zkLean/zkLean/AST.lean:8-30"
+      ],
+      "claims": [
+        "Free-monad primitive builder with R1CS, lookup variants and RAM",
+        "Supplied-witness interpreter separate from DSL construction",
+        "README documents Jolt extraction and LLZK interchange, and Spec/Circuit/Proof module separation"
+      ],
+      "coverage_limits": [
+        "Importer and LLZK concrete revisions not independently pinned",
+        "README warns binary-operation components are in another fork",
+        "No target exporter or Midnight capability inferred"
+      ]
+    }
+  ],
+  "supplementary_primary_sources": [
+    {
+      "id": "CLEAN-BLOG",
+      "url": "https://blog.zksecurity.xyz/posts/clean/",
+      "title": "Introducing clean, a formal verification DSL for ZK circuits in Lean4",
+      "author": "Giorgio Dell\u2019Immagine",
+      "publication_date": "2025-03-27",
+      "independence_key": "verified-zkevm-clean",
+      "role": "historical design rationale; current API facts use fresh pinned source"
+    },
+    {
+      "id": "ZKLEAN-BLOG",
+      "url": "https://www.galois.com/articles/zklean-a-dsl-for-zk-statement-verification",
+      "title": "zkLean: A DSL for ZK statement verification",
+      "author": "James Parker",
+      "publication_date": "2026-03-16",
+      "independence_key": "galois-zklean",
+      "role": "primary project explanation; current primitives checked against fresh pinned source"
+    }
+  ],
+  "repositories": [
+    {
+      "id": "CLEAN",
+      "full_name": "Verified-zkEVM/clean",
+      "url": "https://github.com/Verified-zkEVM/clean",
+      "remote_url": "https://github.com/Verified-zkEVM/clean.git",
+      "default_branch": "main",
+      "head_sha": "1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "head_committer_date": "2026-10-13T20:32:37Z",
+      "license_observed": "MIT",
+      "license_path": "LICENSE",
+      "license_capture": "captures/Verified-zkEVM--clean--LICENSE",
+      "license_sha256": "d4a899a5a1472708f7112c46f9530805f726523e016e976418d9614ba6756e94",
+      "acquisition_method": "GitHub structured REST API metadata, commits/HEAD, license, recursive tree, then contents at exact SHA",
+      "source_files": [
+        {
+          "path": "captures/Verified-zkEVM--clean--README.md",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/README.md?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/README.md?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:16.085175+00:00",
+          "sha256": "aadf348f554e775b86d2e392650abb40de06319faf160d1ad250fa15c29d503c",
+          "bytes": 3892,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Provable.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Provable.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Provable.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:16.755400+00:00",
+          "sha256": "b08c6f21bcfe48875d162756d0f93230c3b95b654e4646e3bf9c495b405ce31b",
+          "bytes": 45290,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Basic.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Basic.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Basic.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:17.487308+00:00",
+          "sha256": "960def749b95f1f3ea0401d3bbfffb4ab266e35b1444d607107dc8a8ad8df3ce",
+          "bytes": 28431,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Circuit--WitnessIR.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessIR.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessIR.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:18.239930+00:00",
+          "sha256": "0a6e6820be7e5e9b22a8d2f157105164a104b5aef77378c370f38dc7b90b36c3",
+          "bytes": 34186,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Circuit--WitnessExport.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessExport.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessExport.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:18.834472+00:00",
+          "sha256": "b822b965a82171c2daf05805bbe5a917f3fb68b824a038921d82e3620c0c1549",
+          "bytes": 10239,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Backends--Circom--R1CS.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Backends/Circom/R1CS.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Backends/Circom/R1CS.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:19.466811+00:00",
+          "sha256": "f5e17f4f99570731aa11a13b784501e90aa4222a3af2795e09559b4e9eaa948e",
+          "bytes": 11204,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Formal.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Formal.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Formal.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:20.099079+00:00",
+          "sha256": "ede4263cc1f369f8a92f539ec6cdc084ff2fd7d59770df38af417cf1e19695a8",
+          "bytes": 23817,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Table--Inductive.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Table/Inductive.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Table/Inductive.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:20.710948+00:00",
+          "sha256": "5898dd08062329973a3a63891d6825ac7f77bbd0e7da93bd869168938824fc32",
+          "bytes": 21270,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Json.lean",
+          "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Json.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Json.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:21.294708+00:00",
+          "sha256": "4e306171fa372f6816b9babefe28388b63b256eb08c06765ae2b9fa1345d479e",
+          "bytes": 2449,
+          "kind": "github_contents_decoded"
+        }
+      ]
+    },
+    {
+      "id": "CLAP-LEAN",
+      "full_name": "Clap-lang/clap-lean",
+      "url": "https://github.com/Clap-lang/clap-lean",
+      "remote_url": "https://github.com/Clap-lang/clap-lean.git",
+      "default_branch": "main",
+      "head_sha": "c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "head_committer_date": "2026-06-11T12:57:36Z",
+      "license_observed": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_capture": "captures/Clap-lang--clap-lean--LICENSE",
+      "license_sha256": "ef51145bc0a633ec6bd3f1bddd3dcacfc2939c743b692d7b633bc216d9c410fa",
+      "acquisition_method": "GitHub structured REST API metadata, commits/HEAD, license, recursive tree, then contents at exact SHA",
+      "source_files": [
+        {
+          "path": "captures/Clap-lang--clap-lean--README.md",
+          "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/README.md?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/README.md?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:21.823829+00:00",
+          "sha256": "6a7fa71979a803389ed895814c013a1aaf86c0117d46149eab3a32bb0a945805",
+          "bytes": 1174,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Clap-lang--clap-lean--Clap--Circuit.lean",
+          "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Circuit.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Circuit.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:22.427195+00:00",
+          "sha256": "d12f1eba6ea1bf0141b7c740e205650caa1449567b294951d356d4abd7596c2a",
+          "bytes": 9397,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Clap-lang--clap-lean--Clap--Compilation.lean",
+          "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compilation.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compilation.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:23.023523+00:00",
+          "sha256": "75e7894512d6c8cd89b46e56e57e9f91dcdac5a7ff86aae762c0114ff94b0082",
+          "bytes": 18185,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Clap-lang--clap-lean--Clap--Compiler--Basic.lean",
+          "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compiler/Basic.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compiler/Basic.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:23.639283+00:00",
+          "sha256": "95251aafdc5a83cd8704227a50a619c3a7e1c5e00429f8a6a79a5685f15e9199",
+          "bytes": 10980,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/Clap-lang--clap-lean--R1Serialize--R1CS.lean",
+          "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/R1Serialize/R1CS.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/R1Serialize/R1CS.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:24.206975+00:00",
+          "sha256": "20867d3c4aacd7b713158a76faa1d68c283b46d2cd1cbaae20fe7e95f917f8d4",
+          "bytes": 8869,
+          "kind": "github_contents_decoded"
+        }
+      ]
+    },
+    {
+      "id": "ZKLEAN",
+      "full_name": "GaloisInc/zkLean",
+      "url": "https://github.com/GaloisInc/zkLean",
+      "remote_url": "https://github.com/GaloisInc/zkLean.git",
+      "default_branch": "main",
+      "head_sha": "014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "head_committer_date": "2026-05-04T20:23:42Z",
+      "license_observed": "BSD-3-Clause",
+      "license_path": "LICENSE",
+      "license_capture": "captures/GaloisInc--zk-lean--LICENSE",
+      "license_sha256": "b491d782bc10c3039c05dec78c1ff1bb7ed6635e0552075f6877a400a121461c",
+      "acquisition_method": "GitHub structured REST API metadata, commits/HEAD, license, recursive tree, then contents at exact SHA",
+      "source_files": [
+        {
+          "path": "captures/GaloisInc--zk-lean--README.md",
+          "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/README.md?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "canonical_url": "https://api.github.com/repositories/905340682/contents/README.md?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:25.409691+00:00",
+          "sha256": "3a5ae06320ad6230d617179b49aad4ed4862259305cd6fae66c2f784f75f3178",
+          "bytes": 4430,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--AST.lean",
+          "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/AST.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/AST.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:26.512207+00:00",
+          "sha256": "b8aadc98a4ad00379314b5437fc94db79d33d7df6878cdee25447af053fb6ddd",
+          "bytes": 1469,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--Semantics.lean",
+          "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/Semantics.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/Semantics.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:27.571005+00:00",
+          "sha256": "f979da320a35c90d34fc07df37649b556da4bd4482a255a513617026e2db90d1",
+          "bytes": 4162,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--Builder.lean",
+          "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/Builder.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/Builder.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:28.731827+00:00",
+          "sha256": "27b5e22b77dba4a3161a5e9870726a3351714f22aace8c7002bd26e1e55450f1",
+          "bytes": 5346,
+          "kind": "github_contents_decoded"
+        },
+        {
+          "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--LookupTable.lean",
+          "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/LookupTable.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/LookupTable.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+          "status": 200,
+          "retrieved_at": "2026-10-15T08:28:29.799007+00:00",
+          "sha256": "a287ee662a9cfca7d4605a647eb5927e091ba086539681c07200b48f0a8a8202",
+          "bytes": 3317,
+          "kind": "github_contents_decoded"
+        }
+      ]
+    }
+  ],
+  "idea_mapping": [
+    {
+      "priority": "P0",
+      "idea": "Split constraint and witness plans and record backend feature coverage",
+      "optimization_ids": [
+        "07",
+        "09",
+        "10"
+      ],
+      "uireq": [
+        "022",
+        "023",
+        "025",
+        "026"
+      ],
+      "evidence": [
+        "CLEAN",
+        "CLAP-PAPER",
+        "CLAP-LEAN"
+      ],
+      "api": "compileStep(layout,component) -> ConstraintPlan \u00d7 WitnessPlan; emit(backend,plans) -> ArtifactBundle | UnsupportedFeature"
+    },
+    {
+      "priority": "P1",
+      "idea": "Separate recursive semantic state from fixed-capacity provable machine image",
+      "optimization_ids": [
+        "09",
+        "10"
+      ],
+      "uireq": [
+        "001",
+        "006",
+        "007",
+        "009",
+        "010",
+        "012",
+        "013",
+        "026"
+      ],
+      "evidence": [
+        "CLEAN",
+        "ZKLEAN"
+      ],
+      "api": "encode : SemanticState -> Option MachineImage; decode : MachineImage -> Option SemanticState"
+    },
+    {
+      "priority": "P2",
+      "idea": "Evaluate narrow import/interchange boundary rather than replacing required Clean stage",
+      "optimization_ids": [
+        "07",
+        "09",
+        "10"
+      ],
+      "uireq": [
+        "022",
+        "023",
+        "024",
+        "026"
+      ],
+      "evidence": [
+        "CLAP-PAPER",
+        "CLAP-LEAN",
+        "ZKLEAN"
+      ],
+      "measurement_predicate": "Complete decoded observations and exact A work agree on same fixed normal states; separately report feature coverage, conversion/preparation, bytes, rows/degree, padding and witness time; no measurements performed"
+    }
+  ],
+  "pixelrag_nomination": {
+    "source_id": "CLAP-PAPER",
+    "figure": "Figure 2; From programs to proofs",
+    "page_or_anchor": "https://arxiv.org/html/2405.12115v2#S2.F2",
+    "figure_image_url": "https://arxiv.org/html/2405.12115v2/2405.12115v2/img/schema.png",
+    "design_question": "Where must Sherlock retain separately reviewable semantic, circuit, witness, constraint and tabulation/export records?",
+    "status": "nominated to root; no PixelRAG result claimed"
+  },
+  "counterargument": "Another IR/importer duplicates required Clean work and adds conversion/maintenance cost; prefer direct components until a measured need justifies interchange.",
+  "acquisition": [
+    {
+      "path": "captures/clap-paper-abs.html",
+      "requested_url": "https://arxiv.org/abs/2405.12115",
+      "canonical_url": "https://arxiv.org/abs/2405.12115",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:18.323495+00:00",
+      "sha256": "907fceeb32c3259e23a6bdfa355a16544500fe36575cdc2cd3e539cd407f4b50",
+      "bytes": 41200,
+      "kind": "scrapling_raw"
+    },
+    {
+      "requested_url": "https://arxiv.org/abs/2405.12115",
+      "status": "failed",
+      "error": "'Selectors' object has no attribute 'get_all_text'",
+      "retrieved_at": "2026-10-15T08:27:18.323854+00:00"
+    },
+    {
+      "path": "captures/clean-blog.html",
+      "requested_url": "https://blog.zksecurity.xyz/posts/clean/",
+      "canonical_url": "https://blog.zksecurity.xyz/posts/clean/",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:19.818930+00:00",
+      "sha256": "bdd742c1678e4505892d47ce5df58034ce42724d0536affcfc5a445d06cdef8b",
+      "bytes": 59039,
+      "kind": "scrapling_raw"
+    },
+    {
+      "requested_url": "https://blog.zksecurity.xyz/posts/clean/",
+      "status": "failed",
+      "error": "'Selectors' object has no attribute 'get_all_text'",
+      "retrieved_at": "2026-10-15T08:27:19.819146+00:00"
+    },
+    {
+      "path": "captures/zklean-blog.html",
+      "requested_url": "https://www.galois.com/articles/zklean-a-dsl-for-zk-statement-verification",
+      "canonical_url": "https://www.galois.com/articles/zklean-a-dsl-for-zk-statement-verification",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:21.416058+00:00",
+      "sha256": "b391eb0fbe5cdc6608cf596b93b1662537ec02cde3f7b45525b8a5168b2bd195",
+      "bytes": 104844,
+      "kind": "scrapling_raw"
+    },
+    {
+      "requested_url": "https://www.galois.com/articles/zklean-a-dsl-for-zk-statement-verification",
+      "status": "failed",
+      "error": "'Selectors' object has no attribute 'get_all_text'",
+      "retrieved_at": "2026-10-15T08:27:21.416295+00:00"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean-metadata.json",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:23.008101+00:00",
+      "sha256": "f2ca0d8cc6418aa71f078b5f8e8a3d7cd20b08d9eabfef9ab8358ec7fe675217",
+      "bytes": 6387,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean-head.json",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/commits/HEAD",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/commits/HEAD",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:23.694142+00:00",
+      "sha256": "25e69f4b221807c05e2504d5d261134fc46ec1ed1a4dc02c5dd2cc4b5f1bbc23",
+      "bytes": 5750,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean-license.json",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/license",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:24.310052+00:00",
+      "sha256": "95c4407f402d4febce62562ff5796a05b595660cb725bce476c062b58bc0bdd4",
+      "bytes": 2386,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean-tree.json",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/git/trees/HEAD?recursive=1",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/git/trees/HEAD?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:25.137380+00:00",
+      "sha256": "ae658687d74a044ac4760aed7b0861949e9d1b8ef165b20e305dde4bafc8c55e",
+      "bytes": 74194,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean-metadata.json",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:26.834721+00:00",
+      "sha256": "e00f9714156f929ea26c0c5f32b482964277e154d6be882f8e54be750f4a2617",
+      "bytes": 6289,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean-head.json",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/commits/HEAD",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/commits/HEAD",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:28.052657+00:00",
+      "sha256": "8f2119e4265a795b6040f0e1ec957fc77a30f561693c2a0bea0fca153bcec376",
+      "bytes": 185465,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean-license.json",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/license",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:28.775440+00:00",
+      "sha256": "f4145daa2e5c5abb631b730384baba2cc2bae670a41f39e776b57f65971de8c2",
+      "bytes": 16558,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean-tree.json",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/git/trees/HEAD?recursive=1",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/git/trees/HEAD?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:29.458608+00:00",
+      "sha256": "b16bd14bfcd1e6e6677f84fb97a83310fa26717a934773301736deb1243a8841",
+      "bytes": 18572,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean-metadata.json",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean",
+      "canonical_url": "https://api.github.com/repositories/905340682",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:31.747384+00:00",
+      "sha256": "ad7a8b3bfac10da245a11dc83d594546870382a1234b48b116e16d1f77d83bad",
+      "bytes": 6226,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean-head.json",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/commits/HEAD",
+      "canonical_url": "https://api.github.com/repositories/905340682/commits/HEAD",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:32.959489+00:00",
+      "sha256": "8c744bd9d529d8672079390766687a6af0d710735e0d6da65530128365ddb069",
+      "bytes": 6299,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean-license.json",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/license",
+      "canonical_url": "https://api.github.com/repositories/905340682/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:34.153940+00:00",
+      "sha256": "117c51358d9f6d739acb0e0f482448e8743b90399096ae5a977059e0c79574c1",
+      "bytes": 3001,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean-tree.json",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/git/trees/HEAD?recursive=1",
+      "canonical_url": "https://api.github.com/repositories/905340682/git/trees/HEAD?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:27:35.447824+00:00",
+      "sha256": "42cdff43efec5cac1e949e7a66a82c783dfb62df21dc363cc70eea0aaf8b79ab",
+      "bytes": 16420,
+      "kind": "github_structured_api"
+    },
+    {
+      "path": "captures/clap-paper-abs.txt",
+      "requested_url": "https://arxiv.org/abs/2405.12115",
+      "canonical_url": "https://arxiv.org/abs/2405.12115",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:14.793103+00:00",
+      "sha256": "2a27c3be0d894e13de1a081457edd906d94e2e5edeeda68593a451cf3657c347",
+      "bytes": 4132,
+      "kind": "scrapling_parse_existing_capture"
+    },
+    {
+      "path": "captures/zklean-blog.txt",
+      "requested_url": "https://www.galois.com/articles/zklean-a-dsl-for-zk-statement-verification",
+      "canonical_url": "https://www.galois.com/articles/zklean-a-dsl-for-zk-statement-verification",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:14.794479+00:00",
+      "sha256": "a8d3981b6cc99e012554ed37dc3f822bf5743746a2ed864402595f560751640e",
+      "bytes": 11721,
+      "kind": "scrapling_parse_existing_capture"
+    },
+    {
+      "path": "captures/clean-blog.txt",
+      "requested_url": "https://blog.zksecurity.xyz/posts/clean/",
+      "canonical_url": "https://blog.zksecurity.xyz/posts/clean/",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:14.796301+00:00",
+      "sha256": "a057181bddaeaf1fb6ce8b28ac6f7ec24185fe6403ec8527abf1099f1150cf16",
+      "bytes": 13602,
+      "kind": "scrapling_parse_existing_capture"
+    },
+    {
+      "path": "captures/clap-paper.html",
+      "requested_url": "https://arxiv.org/html/2405.12115v2",
+      "canonical_url": "https://arxiv.org/html/2405.12115v2",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:15.523720+00:00",
+      "sha256": "d62aa3633a17ac9678612beea5692b44fa000c265c842bc4a9dba93fd9a89bd0",
+      "bytes": 552414,
+      "kind": "scrapling_raw"
+    },
+    {
+      "path": "captures/clap-paper.txt",
+      "requested_url": "https://arxiv.org/html/2405.12115v2",
+      "canonical_url": "https://arxiv.org/html/2405.12115v2",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:15.532318+00:00",
+      "sha256": "477afa3818386f40c53c7b4f337ddd2200f606c71b4f0e3a088b46269bf64d95",
+      "bytes": 85397,
+      "kind": "scrapling_extracted"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--README.md",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/README.md?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/README.md?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:16.085175+00:00",
+      "sha256": "aadf348f554e775b86d2e392650abb40de06319faf160d1ad250fa15c29d503c",
+      "bytes": 3892,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Provable.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Provable.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Provable.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:16.755400+00:00",
+      "sha256": "b08c6f21bcfe48875d162756d0f93230c3b95b654e4646e3bf9c495b405ce31b",
+      "bytes": 45290,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Basic.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Basic.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Basic.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:17.487308+00:00",
+      "sha256": "960def749b95f1f3ea0401d3bbfffb4ab266e35b1444d607107dc8a8ad8df3ce",
+      "bytes": 28431,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Circuit--WitnessIR.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessIR.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessIR.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:18.239930+00:00",
+      "sha256": "0a6e6820be7e5e9b22a8d2f157105164a104b5aef77378c370f38dc7b90b36c3",
+      "bytes": 34186,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Circuit--WitnessExport.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessExport.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/WitnessExport.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:18.834472+00:00",
+      "sha256": "b822b965a82171c2daf05805bbe5a917f3fb68b824a038921d82e3620c0c1549",
+      "bytes": 10239,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Backends--Circom--R1CS.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Backends/Circom/R1CS.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Backends/Circom/R1CS.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:19.466811+00:00",
+      "sha256": "f5e17f4f99570731aa11a13b784501e90aa4222a3af2795e09559b4e9eaa948e",
+      "bytes": 11204,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Formal.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Formal.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Formal.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:20.099079+00:00",
+      "sha256": "ede4263cc1f369f8a92f539ec6cdc084ff2fd7d59770df38af417cf1e19695a8",
+      "bytes": 23817,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Table--Inductive.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Table/Inductive.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Table/Inductive.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:20.710948+00:00",
+      "sha256": "5898dd08062329973a3a63891d6825ac7f77bbd0e7da93bd869168938824fc32",
+      "bytes": 21270,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Verified-zkEVM--clean--Clean--Circuit--Json.lean",
+      "requested_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Json.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "canonical_url": "https://api.github.com/repos/Verified-zkEVM/clean/contents/Clean/Circuit/Json.lean?ref=1a6c28426372bb99af79e533aa7b9a0788eff0d7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:21.294708+00:00",
+      "sha256": "4e306171fa372f6816b9babefe28388b63b256eb08c06765ae2b9fa1345d479e",
+      "bytes": 2449,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean--README.md",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/README.md?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/README.md?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:21.823829+00:00",
+      "sha256": "6a7fa71979a803389ed895814c013a1aaf86c0117d46149eab3a32bb0a945805",
+      "bytes": 1174,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean--Clap--Circuit.lean",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Circuit.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Circuit.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:22.427195+00:00",
+      "sha256": "d12f1eba6ea1bf0141b7c740e205650caa1449567b294951d356d4abd7596c2a",
+      "bytes": 9397,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean--Clap--Compilation.lean",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compilation.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compilation.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:23.023523+00:00",
+      "sha256": "75e7894512d6c8cd89b46e56e57e9f91dcdac5a7ff86aae762c0114ff94b0082",
+      "bytes": 18185,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean--Clap--Compiler--Basic.lean",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compiler/Basic.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/Clap/Compiler/Basic.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:23.639283+00:00",
+      "sha256": "95251aafdc5a83cd8704227a50a619c3a7e1c5e00429f8a6a79a5685f15e9199",
+      "bytes": 10980,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/Clap-lang--clap-lean--R1Serialize--R1CS.lean",
+      "requested_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/R1Serialize/R1CS.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "canonical_url": "https://api.github.com/repos/Clap-lang/clap-lean/contents/R1Serialize/R1CS.lean?ref=c1a92e7877bb037d1e3cce802dc5c84007bbcc35",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:24.206975+00:00",
+      "sha256": "20867d3c4aacd7b713158a76faa1d68c283b46d2cd1cbaae20fe7e95f917f8d4",
+      "bytes": 8869,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean--README.md",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/README.md?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "canonical_url": "https://api.github.com/repositories/905340682/contents/README.md?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:25.409691+00:00",
+      "sha256": "3a5ae06320ad6230d617179b49aad4ed4862259305cd6fae66c2f784f75f3178",
+      "bytes": 4430,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--AST.lean",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/AST.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/AST.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:26.512207+00:00",
+      "sha256": "b8aadc98a4ad00379314b5437fc94db79d33d7df6878cdee25447af053fb6ddd",
+      "bytes": 1469,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--Semantics.lean",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/Semantics.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/Semantics.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:27.571005+00:00",
+      "sha256": "f979da320a35c90d34fc07df37649b556da4bd4482a255a513617026e2db90d1",
+      "bytes": 4162,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--Builder.lean",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/Builder.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/Builder.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:28.731827+00:00",
+      "sha256": "27b5e22b77dba4a3161a5e9870726a3351714f22aace8c7002bd26e1e55450f1",
+      "bytes": 5346,
+      "kind": "github_contents_decoded"
+    },
+    {
+      "path": "captures/GaloisInc--zk-lean--zkLean--zkLean--LookupTable.lean",
+      "requested_url": "https://api.github.com/repos/GaloisInc/zk-lean/contents/zkLean/zkLean/LookupTable.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "canonical_url": "https://api.github.com/repositories/905340682/contents/zkLean/zkLean/LookupTable.lean?ref=014fa397fa30e60964310dc2ff5d70aeed3c8022",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:28:29.799007+00:00",
+      "sha256": "a287ee662a9cfca7d4605a647eb5927e091ba086539681c07200b48f0a8a8202",
+      "bytes": 3317,
+      "kind": "github_contents_decoded"
+    }
+  ],
+  "acquisition_accounting": {
+    "public_html_pages": 4,
+    "github_metadata_api_requests": 12,
+    "github_pinned_source_file_requests": 19,
+    "families": 3,
+    "material_source_records": 4,
+    "extraction_failures": 3,
+    "failure_disposition": "Initial Selectors.get_all_text extraction API misuse preserved; repaired by iterating Selector nodes over retained raw captures, without re-fetch. No access failure or bypass.",
+    "scrapling_version": "0.4.15",
+    "version_observation": "Installed version inspected with python3; no install/upgrade performed",
+    "site_pattern_review": "Existing arXiv/static-HTML/GitHub API patterns sufficient; no cookies persisted and no new site pattern required"
+  },
+  "boundaries": {
+    "no_private_egress": true,
+    "no_private_queries": true,
+    "no_project_execution": true,
+    "no_security_assessment": true,
+    "no_canonical_vault_merge": true,
+    "no_subagents": true,
+    "writes_confined_to_lane": true
+  },
+  "open_questions": [
+    "Which exact backend operations are realized by the actual private integration?",
+    "What capacities/scalar layout will Sherlock choose?",
+    "Will any interchange path improve total conversion/witness/export cost?",
+    "Which target-specific lowering corresponds to emitted constraints?"
+  ],
+  "proposal": {
+    "path": "proposal.md",
+    "sha256": "dc3fb8dfd4053bb4862e8ae337f62f66c1e0c5189ab6ad251846f1bb80b8b137",
+    "word_count": 739
+  }
+}

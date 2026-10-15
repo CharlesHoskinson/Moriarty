@@ -1,14 +1,19 @@
 # Sherlock
 
 Sherlock is the proposed universal interpreter for Moriarty. The user named it
-on 2026-10-15. This directory contains design models, not a production compiler
-backend or a released language profile.
+on 2026-10-15. The [Candidate B design](../../openspec/changes/sherlock-universal-interpreter-design/design.md)
+integrates the research into a final-design candidate awaiting fresh independent
+review. This directory's existing executable model sources and recorded
+observations remain Candidate A scope; they do not implement or validate B.
+No production compiler backend or released Sherlock profile is supplied here.
 
 The proposed reference machine evaluates different supported programs using
 unchanged transition rules. It makes calls, saved environments, return frames,
 recursive immutable values and execution budgets explicit. First-order named
 self-recursion and mutual recursion are the initial fragment; higher-order
-closures and general nominal datatypes remain extensions.
+closures remain an explicit extension. Candidate B specifies declaration-driven
+nominal datatypes and ordered match plans as required implementation work;
+the current K/Quint models retain their narrower concrete data forms.
 
 | Artifact | Actual scope | Remaining work |
 |---|---|---|
@@ -26,7 +31,12 @@ syntax Kore and compiled text; no runtime `definition.kore` or rule execution
 was observed. All seven Quint witnesses occurred. These results concern the
 exact recorded model sources and do not establish cross-model refinement.
 
-K's structural helper rewrites are outside its semantic fuel schedule. A bounded
+K's structural helper rewrites are outside its semantic fuel schedule. Candidate B
+names the unchanged schedule `sherlock-k-a/1`, the companion's distinct schedule
+`sherlock-quint-a/1`, and a proposed new `sherlock-helper-microstep/1` with explicit
+lookup/bind/validation/equality controls. Same-fuel correspondence between those
+profiles is not established. K's stack-limit breach remains Rejected(error4),
+and terminal publication remains uncharged in its A schedule. A bounded
 machine step does not yet imply bounded helper work or circuit cost. The Quint
 companion uses scalars 0–15, eight fixed immutable node slots, at most eight
 frames and six concrete initial scenarios. It is an algorithm abstraction,
@@ -51,9 +61,34 @@ A Lean inductive semantic datatype and a bounded circuit encoding serve
 different purposes. Fuel bounds attempted runs without requiring every user
 function to pass Lean's structural termination checker. Existing Clean APIs,
 witness-generation support and backend gaps require a pinned reuse inventory.
-No Sherlock circuit, correspondence theorem or Midnight exporter is supplied
-by this draft.
+The existing private Fenrir integration has merged a generic pure Lean reference
+foundation with eight normal and exact-remaining-zero publication checks and
+scoped independent source approval. That child implementation does not establish
+a Clean step circuit, K/Lean refinement, soundness/completeness, Midnight exporter,
+native proof or financial acceptance. Actual Clean implementation stays in that
+existing private fork; private source, paths and pins are excluded here.
+
+The [implementation plan](../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md) sequences
+the rule/cost inventory, immutable indexed `ProgramImage`, deterministic complete
+`StepRecord` consumer, reference reconciliation, bounded `MachineImage`, generic
+ADT/frame/arithmetic components, separate `ConstraintPlan` and `WitnessPlan`,
+export capability inventory, resource reporting, ordered `ReferenceSlice`
+batching and bounded static residualization. The [concept matrix](../../docs/research/sherlock/CONCEPT-ADOPTION.md)
+maps all ten primary-source studies to independent rebuilds, components,
+comparison evidence and priorities. No donor code/dependency or foreign proof
+backend is selected; no representation or realization has a measured cost win.
+
+The shared [interface contract](../../openspec/changes/sherlock-universal-interpreter-design/interfaces.md)
+separates bounded circuit `StepInput`/`StepOutput` from host-decoded reference
+records. New code/data/frame/environment/serialization/helper limits and admission
+rules require explicit supported/rejected/exhausted/unsupported dispositions.
+Closed-body/unique-function admission, full generic model/compiler coverage and
+cross-layer correspondence remain implementation tasks. Independent normal
+oracles precede execution; all security analysis, requirements, hostile tests,
+theorems and judgments remain Opus 5.5-owned.
 
 All U0–U7, M1–M17 and MC/SP/G acceptance exits remain unchanged. Model frontend
 checks, concrete executions, sampled invariants, correspondence proofs, native
 proof verification and target ledger observations are separate evidence.
+The first useful passing slice supplies scoped evidence while every retained
+financial, composition, conformance and release requirement stays in force.

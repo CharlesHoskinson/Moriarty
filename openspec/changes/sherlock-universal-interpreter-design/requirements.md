@@ -1,6 +1,6 @@
 # Sherlock EARS requirements
 
-DRAFT / SPECIFIED-ONLY. The 26 atomic clauses and WHEN/THEN scenarios are normative within this proposed package at [spec.md](specs/universal-interpreter/spec.md). This index does not duplicate or weaken their wording. All are unexecuted; financial/lifecycle extensions remain pending where stated. Existing UNI/MOR/MPLR/AEO/ZR/MNR and Opus-owned security clauses remain unchanged.
+FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY; pending fresh independent reviews and the existing decision rule. The 35 atomic clauses and WHEN/THEN scenarios are normative within this proposed package at [spec.md](specs/universal-interpreter/spec.md). This index does not duplicate or weaken their wording. All are unexecuted; financial/lifecycle extensions remain pending where stated. Existing UNI/MOR/MPLR/AEO/ZR/MNR and Opus-owned security clauses remain unchanged.
 
 | ID | Behavior | Scenario |
 |---|---|---|
@@ -30,5 +30,16 @@ DRAFT / SPECIFIED-ONLY. The 26 atomic clauses and WHEN/THEN scenarios are normat
 | [UIREQ-024](specs/universal-interpreter/spec.md#requirement-uireq-024-optimization-preservation) | Optimization preservation | Frame or sharing optimization |
 | [UIREQ-025](specs/universal-interpreter/spec.md#requirement-uireq-025-evidence-class-report) | Evidence-class report | Pure models only |
 | [UIREQ-026](specs/universal-interpreter/spec.md#requirement-uireq-026-required-clean-correspondence-stage) | Required Clean correspondence stage | Recursive semantics and bounded step circuit |
+| [UIREQ-027](specs/universal-interpreter/spec.md#requirement-uireq-027-indexed-program-image-provenance) | Indexed program-image provenance | Distinct occurrences and recursive references |
+| [UIREQ-028](specs/universal-interpreter/spec.md#requirement-uireq-028-bounded-helper-microsteps) | Bounded helper microsteps | Lookup and equality cursors |
+| [UIREQ-029](specs/universal-interpreter/spec.md#requirement-uireq-029-bounded-representation-domain) | Bounded representation domain | Complete pending-state encoding |
+| [UIREQ-030](specs/universal-interpreter/spec.md#requirement-uireq-030-typed-arithmetic-component-api) | Typed arithmetic component API | Carry, borrow and full product |
+| [UIREQ-031](specs/universal-interpreter/spec.md#requirement-uireq-031-separate-compilationexport-plans) | Separate compilation/export plans | Structured witness export and unsupported features |
+| [UIREQ-032](specs/universal-interpreter/spec.md#requirement-uireq-032-earliest-stop-reference-slices) | Earliest-stop reference slices | Grouped pending return |
+| [UIREQ-033](specs/universal-interpreter/spec.md#requirement-uireq-033-bounded-static-residualization) | Bounded static residualization | Three realization masks |
+| [UIREQ-034](specs/universal-interpreter/spec.md#requirement-uireq-034-declaration-driven-ordered-matching) | Declaration-driven ordered matching | New recursive Schedule declaration |
+| [UIREQ-035](specs/universal-interpreter/spec.md#requirement-uireq-035-deterministic-witness-dataflow) | Deterministic witness dataflow | Independent normal comparison baseline |
 
-Component/model scope and evidence gaps are in [traceability.md](traceability.md). The first twenty normal demonstration contracts are in [demonstrators.md](demonstrators.md). No task, trace, theorem or native result is marked passed.
+UIREQ-001–026 retain their IDs. The nine additions are functional requirements for Candidate B interfaces defined in [interfaces.md](interfaces.md); they do not add security clauses or establish implementation. The pre-existing canonical 160-clause language index and all ZR01–16/MNR01–08 obligations remain separate and unchanged.
+
+Component/model scope and evidence gaps are in [traceability.md](traceability.md). The first twenty and sixteen additional normal demonstration contracts are in [demonstrators.md](demonstrators.md). No B acceptance task, trace, theorem or native result is marked passed; the three checked preparation tasks retain only their historical linked evidence.

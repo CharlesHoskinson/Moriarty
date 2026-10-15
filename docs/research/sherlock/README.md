@@ -17,3 +17,5 @@ Raw public captures remain separately retained. A paper's reported experiment
 does not measure Sherlock. Public source metadata does not establish compiler,
 circuit or native correspondence. Private Fenrir implementation inventories
 and extension source are excluded from this public package.
+
+The [ten fresh academic/project studies](papers/README.md) follow the concrete design and optimization wave. Their [concept adoption matrix](CONCEPT-ADOPTION.md) and [implementation plan](../../SHERLOCK-IMPLEMENTATION-PLAN.md) feed Candidate B. Algorithms and representations may be independently rebuilt; no external code import is selected.

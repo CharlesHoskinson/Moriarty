@@ -1,6 +1,6 @@
 # Sherlock concrete model source inventory
 
-Status: SOURCE-INSPECTED / UNEXECUTED. This inventory reconciles the actual K README/manifest and Quint README/sources at the hashes in inputs.json. Source membership and hand-derived expectations are evidence of a reviewable draft. No K/Quint parser, evaluator, test, simulation or prover has run for this inventory. No interpreter correctness or cross-layer correspondence is claimed.
+Status: SOURCE-INSPECTED, with separately captured SOURCE-SPECIFIC MODEL OBSERVATIONS. The immutable Candidate A snapshot and current repaired Quint source have distinct membership. [observations.json](../../../models/sherlock/observations.json) records the actual commands, hashes, repair lineage and results. No model/build/native execution is performed for Candidate B integration. Existing passes do not validate B interfaces, establish interpreter correctness, or supply cross-layer correspondence.
 
 ## K: generic first-order function-table evaluator, restricted recursive values
 
@@ -10,7 +10,7 @@ The function table is an input to `uiRun(code,expression,fuel,stackLimit)`. The 
 
 The value sorts are UInt128, Bool, UInt128 lists and binary trees with UInt128 leaves. Recursive types are supported through these dedicated sorts. Generic nominal ADT tables, records, arbitrary nesting of lists, polymorphism, higher-order closures and letrec are not modeled. Equality is structural over the value sum, with unequal variants false; helper traversal cost is not individually metered.
 
-All eight direct-term fixtures supply fuel1000/stackLimit64 and have independently frozen, unexecuted expectations:
+All eight direct-term K fixtures supply fuel1000/stackLimit64 and have independently frozen expectations; K rule execution remains unobserved:
 
 | Fixture | Literal expected output | Source scope |
 |---|---|---|
@@ -35,7 +35,7 @@ Source: [Quint README](../../../models/sherlock/quint/README.md), [source manife
 
 Concrete instance: scalar0–15, argument0–4, eight immutable node slots0–7, eight frames, fuel2 or32, six initial scenarios, at most one suspension, one false observation and one accepted event. Nil at reference0 is a real node. The fixed arena holds [1,2,3] at reference3 and Node(Leaf4,Leaf5) at reference7; no generic ADT allocation is modeled. Scalar15 replaces the earlier research proposal's scalar7. Values8,9,12 fit this domain, but arbitrary expressions producing them are still outside this algorithm-only companion.
 
-Eight unexecuted `Test` scenarios specify factorial3=6, list123=6, tree45=9, yield with pending factorial frames/resume, exhaustion after progress, ordinary factorial4 scalar-bound refusal, terminal stutter and concrete bounds. Hand-traced counts are factorial/list8 ticks and tree6 ticks, with no assertion that they equal K fuel. Each positive-fuel tick charges one unit, including its terminal-return tick; zero-fuel attempt adds attempted work without consumed work. Ready/not-ready observations and terminal stutters charge no logical work. Unlike K's publication rule, this terminal-return tick is charged: a cost/step adapter is required.
+Eight `Test` scenarios, subsequently observed passing on the repaired source in observations.json, specify factorial3=6, list123=6, tree45=9, yield with pending factorial frames/resume, exhaustion after progress, ordinary factorial4 scalar-bound refusal, terminal stutter and concrete bounds. Hand-traced counts are factorial/list8 ticks and tree6 ticks, with no assertion that they equal K fuel. Each positive-fuel tick charges one unit, including its terminal-return tick; zero-fuel attempt adds attempted work without consumed work. Ready/not-ready observations and terminal stutters charge no logical work. Unlike K's publication rule, this terminal-return tick is charged: a cost/step adapter is required.
 
 The yield scenario waits at accumulator1 with three pending factorial frames and consumedWork5. A false observation increments observation diagnostics while preserving control/frames/snapshot/fuel; it does not leave the entire Machine record byte-identical. A ready event resumes the pending value. This abstract checkpoint has no durable serialization, caller environment, financial state, duties or commit operation. `boundary` is a local interpreter suspension boundary, never a financial commit or proof chunk. Existing Core/2 successful-prefix semantics and exact future Commit/Yield design remain unchanged/open.
 
@@ -43,8 +43,38 @@ The yield scenario waits at accumulator1 with three pending factorial frames and
 
 A future projection must relate K structural terms to the fixed arena, general K contexts to algorithm-specific frames, and unequal step/cost schedules on a named common subset. K has no Waiting state, so Quint's checkpoint extension has no present K counterpart. No simulation/refinement follows from coincident expected terminal values. There is no compiler, circuit/native or ledger correspondence result.
 
-These source drafts retain all twenty demonstrator obligations. D17's nested lists need a new K value/type extension; D19 is not the concrete Quint yield specimen; D20 finance is absent in both. Exact model source checking, execution, traces and any theorem remain separate pending work.
+These model sources retain all twenty demonstrator obligations. D17's nested lists need a new K value/type extension; D19 is not the concrete Quint yield specimen; D20 finance is absent in both. Exact model source checking, execution, traces and any theorem remain separate pending work.
 
-## Required next Lean/Clean stage
+## Actual observations and Candidate B coverage
 
-[UIREQ-026](specs/universal-interpreter/spec.md) requires Lean semantic/representation definitions and a separately bounded Clean step circuit after K/Quint design validation. These are new required tasks; no Sherlock Lean/Clean source or proof is delivered by the current model inventory. Recursive inductive semantic values and fuel-based calls/runs remain separate from fixed-capacity circuit encoding.
+The existing [observation record](../../../models/sherlock/observations.json) names K source SHA256 `b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41` and repaired Quint main source SHA256 `b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506`. These are exact-source observations, not executions of this new design.
+
+| Captured check | Actual observation | Limit |
+|---|---|---|
+| K frontend | Exit0; syntax Kore and compiled text produced | No runtime `definition.kore`; no rule rewriting, fixture run or semantic metatheory observed |
+| Quint typecheck | Repaired test module typechecked | Parser/source acceptance only |
+| Quint concrete tests | All eight passed | Finite algorithm-specific model, not a general code interpreter |
+| Quint sampled run | 32 traces, max32 steps, seed1, no observed `allInv` violation | Sampled, not exhaustive or inductive verification |
+| Quint witnesses | All seven named witnesses occurred | Reachability within this source/model instance, not correspondence |
+
+The two Quint repairs added Boolean action-return annotations and then renamed builtin-colliding `next` to `chargedMachine`. The original frozen source and repair lineage remain retained. No model or expected-oracle bytes change for this design edit. K's free terminal publication, stack error4 and unmetered helpers remain actual source properties; Quint's terminal charge and finite Waiting abstraction remain distinct.
+
+| Candidate B contract | Current model coverage | New work before corresponding claim |
+|---|---|---|
+| ProgramImage/SourceOccurrenceId | K input function order exists; neither model has the proposed indexed image/provenance API | Full admission/preparation/occurrence mapping and two-program comparison consumer |
+| Explicit helper microsteps | K pure helper recursion unmetered; Quint is algorithm-specific | Full bounded helper controls/rules and new `sherlock-helper-microstep/1` schedule |
+| MachineImage/RepresentationRelation | Quint has its separate fixed scalar15 arena/frames; K structural terms | Partial codec, shared bounded state and complete environment/frame correspondence |
+| Named carry/borrow/full-product API | K mathematical UInt128 source; Quint scalar15 | Exact component implementations, layout mapping and cross-limb expectations |
+| WitnessPlan/ConstraintPlan/capabilities | Absent | Separate actual operation, dependency and export coverage |
+| ReferenceSlice/earliest stop | Individual legacy K rules and separate Quint ticks | Ordered prefix materialization, exact-schedule adapters and cut/resume mapping |
+| ResidualStepIR | Absent | Finite static worklist, fallback and unchanged dynamic checks |
+| TypeDecl/CtorLayout/MatchPlan | Dedicated K list/tree patterns; fixed Quint node kinds | Declaration/type/ordered-match adapter, including nested/mutual groups |
+| Financial/await extension | Pure K absent; Quint has unmatched nonfinancial Waiting | Existing Core/2 successful-prefix/effects/duties adapter and exact opcode/phase policy |
+
+`interfaces.md` defines three distinct identities: `sherlock-k-a/1`, `sherlock-quint-a/1`, and proposed `sherlock-helper-microstep/1`. Naming them does not change model bytes or establish refinement. Identical final literals are insufficient: comparisons require decoded control, lexical maps, ordered frames, structural occurrences, outcome/reason and work/fuel/caps at each mapped boundary. Existing tests/sampling do not implement these mappings.
+
+## Required Lean/Clean stage and separate implementation evidence
+
+[UIREQ-026](specs/universal-interpreter/spec.md) retains Lean semantic/representation definitions and a separately bounded Clean step circuit. The existing Fenrir fork separately delivered a merged pure first-order Lean reference foundation with independent source reviews and eight normal plus exact-remaining-zero publication checks. Its source and private pins are not copied here, and this report does not freshly rerun those checks. That child evidence supplies no K/Lean refinement, B helper/image/ADT correspondence, Clean step circuit, exporter/native or financial acceptance.
+
+Recursive inductive semantic values and finite fuel-runs remain separate from fixed-capacity `MachineImage Bounds F`. [clean-stage.md](clean-stage.md) records the current public API pin and remaining codec/component/export tasks. All existing model, Lean, circuit/native and target evidence classes stay separate. No full U0–U7, M1–M17, MC/SP/G or ZR/MNR exit is completed by this integration.

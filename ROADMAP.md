@@ -34,8 +34,11 @@ correspondence remain open.
 
 The design includes a required Lean/Clean stage for semantic definitions,
 bounded representations, a transition circuit and correspondence obligations.
-Implementation in the existing Fenrir Clean fork is a separate repository
-deliverable. No existing Sherlock theorem or Midnight exporter is assumed.
+A generic pure Lean reference foundation and normal examples have merged in the
+existing private Fenrir fork. B helper/representation reconciliation, the Clean
+step circuit, correspondence and Midnight exporter remain open. The
+[Candidate B implementation plan](docs/SHERLOCK-IMPLEMENTATION-PLAN.md) maps the
+research into parallel source components; its proposed design awaits fresh audits.
 
 The user's demonstrated ledger-9 recursion route does not require VerifyProof.
 The older March 2027 planning assumption below is historical context, not a
