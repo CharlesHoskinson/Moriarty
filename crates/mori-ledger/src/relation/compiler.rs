@@ -509,6 +509,7 @@ impl Compiler<'_> {
             | Statement::Fee { amount, .. }
             | Statement::Liability { amount, .. }
             | Statement::Discharge { amount, .. } => *amount,
+            Statement::Await { .. } => return Err(layout::core1_refusal()),
         };
         let mut names = BTreeSet::new();
         self.names(id, &mut names, &mut BTreeSet::new())?;
@@ -517,6 +518,7 @@ impl Compiler<'_> {
         }
         let value = self.expr(id, &mut BTreeMap::new())?;
         match s {
+            Statement::Await { .. } => return Err(layout::core1_refusal()),
             Statement::Let { name, .. } => {
                 self.env.insert(name.clone(), value);
             }

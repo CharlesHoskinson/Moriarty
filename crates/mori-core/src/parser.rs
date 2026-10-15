@@ -3,6 +3,15 @@ use mori_lexer::{TokenIdx, TokenKind};
 
 /// Parses the explicitly versioned core profile; beta grammar is untouched.
 pub fn parse(source: &str) -> Result<Program, Error> {
+    parse_profile(source, false)
+}
+
+/// Syntax-only parser; only stage::load admits the resulting source.
+pub(crate) fn parse_v2(source: &str) -> Result<Program, Error> {
+    parse_profile(source, true)
+}
+
+fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
     let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
     let tokens = (0..lexed.len())
         .map(|i| {
@@ -25,8 +34,8 @@ pub fn parse(source: &str) -> Result<Program, Error> {
         tokens,
         pos: 0,
         program: Program {
-            language: LANGUAGE.into(),
-            semantics: SEMANTICS.into(),
+            language: if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE }.into(),
+            semantics: if staged { crate::stage::SEMANTICS_2 } else { SEMANTICS }.into(),
             name: String::new(),
             states: vec![],
             assets: vec![],
@@ -36,10 +45,11 @@ pub fn parse(source: &str) -> Result<Program, Error> {
     };
     parser.expect("language")?;
     let profile = parser.string()?;
-    if profile != LANGUAGE {
+    let expected_language = if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE };
+    if profile != expected_language {
         return Err(parser.error(
             "profile",
-            format!("Expected language \"{LANGUAGE}\"; found {profile:?}."),
+            format!("Expected language \"{expected_language}\"; found {profile:?}."),
         ));
     }
     parser.expect(";")?;
@@ -144,7 +154,9 @@ pub fn parse(source: &str) -> Result<Program, Error> {
     if parser.peek().kind != TokenKind::Eof {
         return Err(parser.error("syntax", "Unexpected content after agreement."));
     }
-    validate(&parser.program)?;
+    if !staged {
+        validate(&parser.program)?;
+    }
     Ok(parser.program)
 }
 struct Tok {
@@ -304,6 +316,23 @@ impl Parser {
     fn statement(&mut self) -> Result<Statement, Error> {
         let keyword = self.word()?;
         let s=match keyword.as_str() {
+            "await" if self.program.language == crate::stage::LANGUAGE_2 => {
+                let label = self.word()?;
+                self.expect("(")?;
+                let mut binders = Vec::new();
+                if !self.eat(")") {
+                    loop {
+                        let name = self.word()?;
+                        self.expect(":")?;
+                        let ty = self.ty()?;
+                        binders.push(InputDecl { name, ty });
+                        if self.eat(")") { break; }
+                        self.expect(",")?;
+                    }
+                }
+                self.expect("when")?;
+                Statement::Await { label, binders, guard: self.expr(0, 0)? }
+            },
             "let"=>{let name=self.word()?;self.expect("=")?;Statement::Let{name,value:self.expr(0,0)?}},
             "next"=>{let state=self.word()?;self.expect("=")?;Statement::Next{state,value:self.expr(0,0)?}},
             "requires"=>Statement::Requires{predicate:self.expr(0,0)?},
@@ -316,5 +345,33 @@ impl Parser {
         };
         self.expect(";")?;
         Ok(s)
+    }
+}
+
+/// Read the explicit source profile for CLI routing; this does not admit a program.
+pub fn language(source: &str) -> Result<&'static str, Error> {
+    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let mut tokens = Vec::new();
+    for i in 0..lexed.len() {
+        let idx = TokenIdx::new(i);
+        let span = lexed.span(idx, source);
+        let raw = &source[span.start as usize..span.end as usize];
+        let kind = lexed.kind(idx);
+        tokens.push(Tok {
+            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },
+            kind,
+            start: span.start,
+        });
+    }
+    let mut parser = Parser { tokens, pos: 0, program: Program {
+        language: LANGUAGE.into(), semantics: SEMANTICS.into(), name: String::new(),
+        states: vec![], assets: vec![], expressions: vec![], actions: vec![],
+    }};
+    parser.expect("language")?;
+    let profile = parser.string()?;
+    match profile.as_str() {
+        LANGUAGE => Ok(LANGUAGE),
+        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),
+        _ => Err(parser.error("profile", format!("Expected language \"{LANGUAGE}\"; found {profile:?}."))),
     }
 }

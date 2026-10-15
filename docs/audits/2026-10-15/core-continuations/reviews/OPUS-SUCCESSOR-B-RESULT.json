@@ -1,0 +1,25 @@
+{
+  "report_kind": "opus-independent-security-review",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 82,
+      "outputTokens": 22590,
+      "cacheReadInputTokens": 3378924,
+      "cacheCreationInputTokens": 133399,
+      "webSearchRequests": 0,
+      "costUSD": 2.1951048000000006,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 5977,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "candidate_commit": "7d6c3965b89d713575ade6a8dddc4f1780b3fdd3",
+  "baseline_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "The scope-B review is **incomplete overall**. I accept the backend source and the backend capture results, but six required coverage areas went unread, so this is not an approval of the whole feature or anything native. The report is at `R/OPUS-SUCCESSOR-B.md`. I'm a fresh Opus 5.5 reviewer (`claude-opus-5-5`, high effort) and I wrote none of the reviewed work. I ran only the guarded status startup and nothing was built, run or changed. Authority stays 0, counters are unchanged, and all ten `/4` gates remain unperformed.\n\n**SOURCE: ACCEPT (scope B, local source-static `/2` only).**\n- **What I read in full:** all five backend stage modules, the entire `lower_action_segment` in `lib.rs` (lines 777\u20131228) plus the Builder, public-input and range-check helpers it reaches, the proving and signed-relation refusal changes, every test body in `stages.rs` and `stage_relation.rs`, and the six frame unit tests.\n- **Matches the frozen design:** role positions, padding, typed wires, effect ordinals, N+1 circuits, the zero-await `null` case, the 29-element domain-separated context, and decoder rules 1\u20138.\n- **F1 closed:** fresh output is now validated at the byte-count fixed point before it is returned (`lower.rs:125-128`).\n- **T1 closed:** a signed Target is refused before the source is loaded, with an exact message (`lower.rs:23-28`). The context-perturbation and domain-separation tests are in place.\n- **T2 closed, with a caveat:** I couldn't find the prior B report that defines T2, so I took it to be the 14 exact-diagnostic forgeries. I traced each one through the decoder's check order and each hits its own refusal.\n- **Optional findings only, no required ones:**\n  - B-O1 (Low): the `/4` decoder doesn't range-check or role-check the effect, balance and liability descriptor positions; it only checks they don't overlap the pending positions.\n  - B-O2 (Info): no event or provenance binding; this is the stated limit and those gates remain unperformed.\n  - B-O3 (Info): the context-perturbation test doesn't cover every Target field or frame term.\n\n**ACTUAL-RESULTS: ACCEPT for the backend captures, subject to gap G1.**\n- **Fresh runs:** backend-normal-03 is 5 passed and 1 ignored; backend-relation-02 is 9 passed.\n- **Carried forward:** backend-frame-01 (6) and legacy-byte-comparator-01 (1) don't need reruns. Each lists four changed pins, and none is on their call paths:\n  - the `lower.rs` change sits inside the staged compiler, which neither test calls;\n  - `stage_relation.rs` and `stage_hostile.rs` are separate test binaries;\n  - the README is documentation.\n- **Hashes:** all 417 SHA256SUMS entries verify, and the current backend file hashes match the current scope file and the fresh captures' start pins.\n\n**DOCS: INCOMPLETE, not reviewed.**\n\n**Unread coverage, listed in the report:**\n- **G1:** the harness blocked decompressing the retained `.gz` captures. I read the raw runtime copies instead and bound them only by stream hashes plus the SHA256SUMS check.\n- **G2:** legacy baseline manifest, postcheck, export capture and the `95df\u2026eb2577` projection.\n- **G3:** all Quint prefix and lifecycle material.\n- **G4:** OBSERVATIONS-CURRENT, the README and all normative docs, and the 84-path manifest count.\n- **G5:** a test-by-test check against the full hostile-test list in the earlier design documents.\n- **G6:** the other eight capture-pin rows.\n\nScope A (Core/CLI internals) is excluded."
+}

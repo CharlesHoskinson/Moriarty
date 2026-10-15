@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1236928,
+  "interruption_signal": null,
+  "elapsed_seconds": 80.59595011599959,
+  "first_stdout_seconds": 80.59532318099991,
+  "last_stdout_seconds": 80.59532445700097,
+  "stdout_sha256": "dcba78b354256f1fbe3cc3aed7c8c82303874a84c2c665c12c5d3d728e195fcd",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 2950,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "35593dd5dbce4e853ec761db422a547236964ec16c7a623f908dbf0bb9ff336a",
+  "public_result": {
+    "text": "I approved all four proposed lifecycle commands as **APPROVE_ORDINARY**. I wrote the verdicts to `R/OPUS-QUINT-LIFECYCLE-CLASSIFICATION.md`, which is the only file I wrote. I ran no Quint, Node, Cargo or any other tool command, and native authority is still 0.\n\n**What I checked**\n- **Pins:** I re-hashed every file pinned in `LIFECYCLE-INPUTS.json` and all match: the oracle files, the first six files (unchanged), both new `.qnt` files, `LIFECYCLE.md` and `PROPOSED-LIFECYCLE-CHECKS.json`.\n- **New pins:** two files can't be listed in their own manifest, so I recorded their hashes here:\n  - `LIFECYCLE-INPUTS.json`: `33c574e4\u2026847e`\n  - `QUINT-EXECUTION-PINS.json`: `488f2615\u2026bb38`\n- **Imports:** both files use only relative imports. The lifecycle module takes six names from the first prefix: types, constructors and pure functions, not the prefix's state variable, init or actions. The test imports only the lifecycle module. Nothing touches remote sources, file reads, the SDK, Midnight or the Rust candidate.\n- **Tool path:** the commands use the same subcommands, Node binary and Quint entry point as the four approved prefix commands that passed. With the explicit TypeScript backend they never reach the Rust evaluator download or `~/.quint`, and none of them writes an output file. The 30-second outer timeout is the only time limit.\n\n**Preconditions for the root run:** clear `NODE_OPTIONS`, `NODE_PATH` and every `QUINT_*` variable; keep HOME and CODEX_HOME; leave TMPDIR at its default. Re-check all pins, the dependency tree digest and the Node binary hash before and after each command. Use the absolute paths, write captures only to `R/checks/quint-lifecycle-01..04`, check that the source file listing and `~/.quint` are unchanged, and deny network if possible.\n\n**Two likely ordinary failures (not safety issues):**\n1. **Command 3 may fail to typecheck.** Quint does not pass imported names on unless they are marked `export`, so the test may not find `Escrow` and `Reserve`. I did not fix this. A source fix needs new pins and a new classification.\n2. **Command 2's exit status is uncertain.** Once a trace completes, no `resume` step is enabled. I don't know whether the TypeScript simulator just ends such a trace early or reports it as a deadlock.\n\nThese verdicts don't establish model correctness, a match with the Rust code, or security acceptance. The model uses plain integers, not UInt128, and the adapter's limitations still apply. The full Muse and Opus feature audits are still owed.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 14,
+        "outputTokens": 7319,
+        "cacheReadInputTokens": 134952,
+        "cacheCreationInputTokens": 38066,
+        "webSearchRequests": 0,
+        "costUSD": 0.4779544,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 1783,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

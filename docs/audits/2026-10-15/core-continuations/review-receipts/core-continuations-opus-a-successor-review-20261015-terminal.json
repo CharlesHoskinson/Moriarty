@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1296760,
+  "interruption_signal": null,
+  "elapsed_seconds": 143.4118885349999,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "0bc122350dcfe4f6995fe163630f5da33523e0f1db82c8f3624d3ad3cbaf3022",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 3882,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "7a83d9bc8de8cc2dc4cad6e3ac5eee355ecf14cbad2e0b43340c350169831a90",
+  "public_result": {
+    "text": "I couldn't approve scope A for source, actual results or docs. All three are **INCOMPLETE**: I ran out of the time budget, and the permission layer refused to let me decompress the retained captures (`zcat` and `gzip -dc`). The report is at `R/OPUS-SUCCESSOR-A.md`, and it does not claim the whole feature is approved.\n\n**Source (Core):** I read all 8 Core stage modules, the runtime/parser/json/lib/logical-cost diffs and the helpers they reach, and I found no required defect. The main security properties hold in source:\n- `/2` programs can't reach the `/1` entry points, and `/1` programs are refused on resume.\n- Resume checks run in order (R0 to R7), and a rejection leaves the caller's input untouched.\n- The continuation is bound to its program and plan by exact digest.\n- Captures and events must match the pending site exactly by name, order and type.\n- Committed work must match the plan, and the invocation cap can never raise the stored cap.\n- The resumed boundary is checked as written, never re-sorted.\n- Input files are size-capped before parsing, and duplicate keys and non-canonical numbers are refused.\n- The three labels are inserted verbatim. H14 (tampered capture accepted) is correctly framed as a known limitation of unauthenticated input, not as protection.\n- Optional F2 (typed inputs, typed states and liability order) is enforced in source.\n\n**Evidence:** `sha256sum -c` passes for all 417 entries in `SHA256SUMS`, and the oracle hash matches `76075b63\u20269640`. I confirmed `stage_hostile.rs` has 22 tests. I read the H6, H7, H9, H10 and H14 tests and the file-size test in full, but only the opening of H11.\n\n**Findings (none required):**\n- **A-1 (low):** at `stage_hostile.rs:413-414` the comment says the case uses a JSON escape, but the payload has none, so a duplicate key written with an escape is untested.\n- **A-2 (info):** at `stage_hostile.rs:425-426` one H6 case is listed twice and adds nothing.\n- **A-3 (info):** the stored cap can be changed by the caller, which fits \"authentication: none\". The docs should say it is advisory; I didn't check that.\n- **A-4 (info):** at `decode.rs:122` the `captures` parameter is deliberately unused, which could mislead readers.\n\n**Unread required coverage (listed in the report):**\n- **Public CLI:** the source (`simulate`, `inspect`, `compile`, `check`, `core_io`, `proof_io`, `cli.rs`) and its 7 tests.\n- **Trace-path bodies:** `public_field`, `authorization_rule`, `unknown_premises`, and `signed_relation::reconstruct`/`accept`.\n- **Ledger:** the changed entry guards, plus the source-closure test (48 files, 3 exclusions) and its 6 tests.\n- **Other Core tests:** the normal (5), compat (4) and static-cost (13) tests, the rest of the hostile bodies, and the temp-file helper.\n- **Actual results:**\n  - All decompressed captures and the 57/78 totals.\n  - `CAPTURE-PIN-COMPARISON-CURRENT.json` and its deltas.\n  - The 84-path current manifest, which is separate from `SHA256SUMS`.\n  - `SOURCE-SCOPE-CURRENT.json` and `OBSERVATIONS-CURRENT.json`.\n- **Normative docs:** all of them, so I haven't checked the frozen H1\u2013H28 list against the tests. H15\u2013H23, H27 and H28 aren't named in `stage_hostile.rs`.\n- **Quint and `/1` comparator:** the Quint runs, and the checks that the `/1` comparator is unchanged and `lower.rs` is not called.\n\nA follow-up pass would need permission to read the `.gz` captures, plus time for the unread items.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 40,
+        "outputTokens": 12900,
+        "cacheReadInputTokens": 946748,
+        "cacheCreationInputTokens": 73140,
+        "webSearchRequests": 0,
+        "costUSD": 1.0326296000000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 2413,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

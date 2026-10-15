@@ -58,6 +58,14 @@ fn identity(code: &'static str) -> Error {
 fn layout_error(code: &'static str) -> Error {
     Error::new("source-profile", code)
 }
+/// Typed `/1` refusal for an Await reaching a legacy ledger statement match.
+pub(crate) fn core1_refusal() -> Error {
+    Error::new("profile", "core1-required")
+}
+/// Required at every ledger `/1` entry point before evaluation or layout.
+pub(crate) fn require_core1(p: &Program) -> Result<()> {
+    mori_core::stage::require_core1(p).map_err(|_| core1_refusal())
+}
 pub fn digest(domain: &str, parts: &[&[u8]]) -> [u8; 32] {
     let mut bytes = Vec::new();
     bytes.extend((domain.len() as u32).to_le_bytes());
@@ -147,6 +155,7 @@ enum DebitRule {
     MappedRoles,
 }
 fn admit_bindings_inner(p: &Program, d: &StaticBindings, debits: DebitRule) -> Result<LedgerAbi> {
+    require_core1(p)?;
     mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
     if d.toolchain != Toolchain::pinned() || d.limits != Limits::supported() {
         return Err(identity("toolchain-or-limits"));
@@ -249,6 +258,7 @@ fn admit_bindings_inner(p: &Program, d: &StaticBindings, debits: DebitRule) -> R
                         return Err(layout_error("undeclared-duty-asset"));
                     }
                 }
+                Statement::Await { .. } => return Err(core1_refusal()),
                 _ => {}
             }
         }

@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1212034,
+  "interruption_signal": null,
+  "elapsed_seconds": 114.61605659899942,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "34b32dfced9f5ad079817cd67de04e947178154764e5bc2e2997bf7828679fa1",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 3201,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "1420e6b6bdf4b9033b0b664e0962aaca10f1c0a27104e7c7c70863286c5afc67",
+  "public_result": {
+    "text": "I wrote the patch and the handoff, but nothing was built, tested or applied. The sandbox needed approval for `git apply --check` and it wasn't granted, so I checked the hunk headers by hand.\n\n**Files written (no source changed):**\n- `R/OPUS-STATEMENT-ROOT-FIX.patch`, sha256 `3a3a942c131a3d1fbe51dd2b456228ab748133d8b42ff85046579bbe5eac8dc0`\n- `R/OPUS-STATEMENT-ROOT-FIX.md`, the handoff\n\n**Fix:** The patch applies to `crates/mori-ledger/src/relation/mod.rs` as it stands now, sha256 `19f7c4cb\u2026`, which matches the current CLI pin.\n- `statement_root` now returns `Result<ExprId>`.\n- `Await` returns `layout::core1_refusal()`, the same typed refusal used by the compiler's `Await` arms (`compiler.rs:512,521`) and the entry guard. No new refusal class, no panic or `todo!`, no made-up expression.\n- The only caller, `validate_statement_emissions`, now uses `statement_root(s)?`. The refusal goes out through its existing `Result`, before any artifact is built or the SDK is called.\n- For every non-`Await` statement the comparison gives the same result in the same order, so /1 provenance bytes can't change.\n- Programs containing `Await` are already refused by `require_core1` at line 360, before this helper runs. The change just makes the helper handle every case.\n\n**Rerun classification: APPROVE_ORDINARY** for the exact `CLI-PROPOSED-CHECKS.json` command. This covers the call path only, not candidate acceptance. Conditions:\n- **D1:** apply only this patch, byte for byte. The only pin you refresh is `relation/mod.rs`, to the new hash. I couldn't compute that hash, so you need to record it after applying. The other 112 pins and the `fe01bc8b` baseline must match before and after the run.\n- **D2:** C1\u2013C6 and all earlier residual caveats stay as they were.\n- **D3:** if the build fails again, stop and diagnose; don't retry.\n\nIt's ordinary because the change adds no I/O, environment reads, processes, SDK, proving, key or ledger calls. The 7 CLI tests go through `compile_staged` in the backend and never reach this helper.\n\n**What should happen:** the E0004 error goes away and `mori-ledger` compiles. Crates further down (the `mori` binary and the test crate) haven't been compiled yet, so they could still fail on their own errors. That would need a separate diagnosis.\n\n**Not done:**\n- No cargo, `git apply` or hash of the patched file.\n- No search of the wider source for other incomplete `Statement` matches; I only grepped for this helper.\n- No test added: the path can't be reached past `require_core1`, and a test would need a new classification.\n- No core changes, so the 32 core passes keep their scope.\n- Fresh full Muse and Opus code and results reviews are still owed.\n- I probably went over the 220-second time limit.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 32,
+        "outputTokens": 11021,
+        "cacheReadInputTokens": 357541,
+        "cacheCreationInputTokens": 30980,
+        "webSearchRequests": 0,
+        "costUSD": 0.5398961999999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 2256,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

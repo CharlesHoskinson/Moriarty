@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1246526,
+  "interruption_signal": null,
+  "elapsed_seconds": 139.71460342499813,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "8a8e4dcc0366876338fea1ae0df2dc8ea3558e73bbb269b7ceaccc6c7f08d30c",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 4112,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "85b97bc0612d0b2e873efc0cab1d08ca20088fc7857698aa7ffe65b6e315ba42",
+  "public_result": {
+    "text": "The Scope B verdict is **INCOMPLETE**, not approved. There's one required source fix, two required test gaps, and some named evidence I didn't read. The report is at `R/OPUS-COMPLETION-BACKEND.md`. I ran no Cargo, build, test, SDK or native commands, wrote no file other than the report, and changed no code.\n\n**Required changes:**\n- **F1 (medium):** `crates/mori-backend/src/stage/lower.rs:112-126` returns the newly compiled `/4` artifact without calling `artifact.validate()`. The comment at `artifact.rs:177` says that check also runs on fresh output, but it doesn't. The CLI then writes the unchecked artifact to disk. The fix I recommend is one line: call `artifact.validate()?` before returning.\n- **T1:** no backend test covers two security controls:\n  - `compile_staged` refusing a signed Target;\n  - the context hash changing when a single field changes (this would show it is domain-separated from `/3` and tied to each segment).\n- **T2:** the decoder forgery test (`stage_relation.rs:151-173`) has only six cases, and each only checks that decoding fails, not why. It doesn't cover:\n  - capture continuity between segments;\n  - `input` positions in advance segments;\n  - events in segment 0;\n  - pending positions overlapping effect, balance or liability positions;\n  - a pending block moved off its insertion point;\n  - tampered logical totals;\n  - changed labels;\n  - a wrong `artifact_bytes`.\n\n**What checked out in source:** I compared the backend against the predicates listed for Scope B and found no defect against the frozen design. This is a local static reading only, with no claim about native circuit soundness. Specifically:\n- The `/4` context has exactly 29 elements and a domain prefix separate from `/3`.\n- Signed Targets are refused.\n- Frame bindings are typed and inserted in the right order.\n- Padding slots are constrained to zero.\n- Post captures are tied to the wires the segment actually computed.\n- The guard is a real `Assert` on a Bool.\n- The full liability registry appears in every segment.\n- Roles don't overlap, and `pending_positions` is null exactly for zero-await actions.\n- Each action gets N+1 circuits, and original statement ordinals are kept.\n- The decoder enforces the three labels and the ten unperformed gates in order.\n- The byte-count fixed point matches `/3`.\n- `/1` refusal guards cover every legacy entry point, and `/3` lowering is unchanged when there is no stage.\n\n**Captured results I read** (stdout only):\n\n| Capture | Result |\n|---|---|\n| frame-01 | 6 passed |\n| relation-01 | 4 passed |\n| normal-02 | 5 passed, 1 ignored |\n| legacy-byte-comparator-01 | 1 passed |\n\n**Optional notes:** the `_out` parameter is unused, which needs a doc note. The decoder only checks that the three hashes look like digests; it doesn't recompute them, so a decoded artifact is well-formed but not proven to come from the stated program.\n\n**Not read, so approval is blocked:**\n- `stages.rs` lines 1\u201344 and 114\u2013160 (bodies).\n- The legacy byte manifest, postcheck and export capture, including their file hashes.\n- `CANDIDATE-CAPTURE-BINDING.json` and `CANDIDATE-CODE-CHECKSUMS.txt` (I didn't run `sha256sum --check`).\n- The capture `start` and `result` files, so I haven't confirmed exit codes or command pins myself.\n- `lib.rs` lowering past about line 900, which I saw only through the diff.\n- The frozen design's full list of hostile test families.\n\nI didn't review the CLI, ledger or Core stage modules. I assumed only the shared typed interface between them and the backend.\n\nThis verdict covers Scope B only. The whole feature still needs the final integrated Opus review after A, B and C.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 28,
+        "outputTokens": 13347,
+        "cacheReadInputTokens": 726403,
+        "cacheCreationInputTokens": 81811,
+        "webSearchRequests": 0,
+        "costUSD": 1.0668206,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 4040,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1246522,
+  "interruption_signal": null,
+  "elapsed_seconds": 278.35573090300204,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "46bba5ad8bf563878aa28d5124799a08b5ba2e2b60b4f3163c2ca7978a879f58",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 3808,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "b5079c87889fd1bc6b8b6e535e90b31f96d248da7c735d46e83a2fe699a0a81c",
+  "public_result": {
+    "text": "**Verdict: NEEDS_CHANGES, for missing tests only.** I found no bug in the Core source, but eight hostile tests the frozen design requires were never written or run. The report is at `R/OPUS-COMPLETION-CORE.md`, and it was my only write.\n\n**What I read:**\n- **Source:** all eight Core stage modules in full, the complete ir/parser/json/lib/logical_cost/runtime diffs, and the runtime functions you named (`scenario_snapshot`, `execute_statement`, `run_segment`, the evaluator and the shared meter). The `sha256sum --check` of the candidate checksums passed.\n- **Tests:** the four Core test files in full.\n- **Results:** stdout, stderr, result and start files for all four Core checks. They show 32 passes and 0 failures, every stdout hash matches, and every start file pins the current sources, the tests and the oracle (`76075b63\u2026`). The oracle fixture is byte-identical to the independent oracle. I recounted the escrow costs (5, 6, and 2 for a false guard) and they match. I did not read the 4,488-line oracle fixture line by line; I relied on the hash match.\n- **Unread within scope:** nothing. Backend, CLI and ledger code were out of scope, and I make no security claim about them.\n\n**The two open items from the first pass are resolved; neither is a bug:**\n- **Wrong-typed start inputs:** `runtime.rs:572-585` enforces the exact input count and types, and `admit.rs:236` runs that check before any work, so a bad input is refused with zero work done.\n- **Let/state shadowing:** the static checks at `validate.rs:154/189/206/397` plus the exact capture and event matching at resume mean the runtime overlay can never shadow a state.\n\n**Also confirmed in source:** a single shared evaluator with no second semantics, frozen `/1` serde with Await refused, unchanged strict-JSON limits, the resume checks running in design order, exact static cost enforcement, the cap never being raised, and strict boundary ordering. The ordering matters: liability reads use a binary search, so they are only correct because unsorted boundaries are refused.\n\n**Findings:**\n- **F1 (Medium, required):** these design hostile cases have no test in any Core suite, and grep finds none in the CLI tests either:\n  - H6: duplicate JSON keys\n  - H7: non-canonical number `\"010\"`\n  - H9: unsorted or duplicate boundary balances\n  - H10: tampered liability identity\n  - H11: emptied escrow balance\n  - H12: removed liability\n  - H14: tampered capture accepted (characterization)\n  - H24: oversized continuation (4 MiB+1) and event (65,537 bytes)\n\n  From the code, I expect all of them to pass. Fixing this needs only new tests, an executed and classified run, and a fresh Opus pass on that change.\n- **F2 (optional):** no tests for bad start inputs through `stage::start`, missing or extra states in a resumed boundary, or liabilities out of order.\n- **F3 (optional):** the unit tests inside `cost.rs` are not among the four captured test runs.\n- **F4 (info):** a boundary with several defects can report a different first error than the legacy check would. No security impact.\n\n**README change:** acceptable. It matches the 32 Core passes I verified; I did not verify the \"58 checks\" total or the CLI runs. Its word \"exercised\" does not cover the hostile cases in F1.\n\nThis verdict covers subscope A only. The final integrated review of the whole feature is still required.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 54,
+        "outputTokens": 21368,
+        "cacheReadInputTokens": 2118083,
+        "cacheCreationInputTokens": 126064,
+        "webSearchRequests": 0,
+        "costUSD": 1.8597046,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 8292,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

@@ -266,16 +266,17 @@ impl SourceStaticArtifact {
         crate::call_artifacts::json_bytes(&self.manifest, codec::OUTPUT_BYTES as u64)
     }
 }
-fn statement_root(s: &mori_core::Statement) -> ExprId {
+fn statement_root(s: &mori_core::Statement) -> Result<ExprId> {
     use mori_core::Statement as S;
-    match s {
+    Ok(match s {
+        S::Await { .. } => return Err(layout::core1_refusal()),
         S::Let { value, .. } | S::Next { value, .. } | S::Emit { value, .. } => *value,
         S::Requires { predicate } | S::Ensures { predicate } => *predicate,
         S::Transfer { amount, .. }
         | S::Fee { amount, .. }
         | S::Liability { amount, .. }
         | S::Discharge { amount, .. } => *amount,
-    }
+    })
 }
 /// Emission bookkeeping closure only. Entries partition the body between the
 /// ABI-root prologue and the final Output; group k is the k-th Impact; every
@@ -317,7 +318,7 @@ fn validate_statement_emissions(
     let mut listed: Vec<(usize, usize)> = Vec::new();
     for (index, (e, s)) in emissions.iter().zip(statements).enumerate() {
         if e.statement != index
-            || e.expression != statement_root(s)
+            || e.expression != statement_root(s)?
             || e.instruction_start != instruction
             || e.group_start != group
             || e.instruction_end < e.instruction_start
@@ -357,6 +358,7 @@ pub(crate) fn compile_source_static_roles(
     validated: &layout::ValidatedSourceStaticBindings<'_>,
     action: &str,
 ) -> Result<SourceStaticArtifact> {
+    layout::require_core1(validated.program())?;
     let (ir, groups, input_count, statement_emissions) =
         compiler::compile_source_static_roles(validated, action)?;
     let p = validated.program();

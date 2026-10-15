@@ -329,6 +329,7 @@ fn lower_ops_inner(
             Statement::Requires { predicate } | Statement::Ensures { predicate } => {
                 Some(*predicate)
             }
+            Statement::Await { .. } => return Err(crate::layout::core1_refusal()),
         };
         let mut names = std::collections::BTreeSet::new();
         let mut duty_reads = Vec::new();
