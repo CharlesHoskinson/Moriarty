@@ -44,6 +44,10 @@ struct ExpectedCase {
 }
 
 include!("normal_oracles.rs");
+include!("extra_normal_oracles.rs");
+
+#[path = "extra_oracle_programs.rs"]
+mod extra_oracle_programs;
 
 fn expr(expression: Expr) -> ExprRef {
     Arc::new(expression)
@@ -127,7 +131,10 @@ fn normal_program(case_id: &str) -> Arc<Program> {
                 },
             ],
         ))),
-        _ => panic!("unknown literal input {case_id}"),
+        _ => Arc::new(
+            extra_oracle_programs::extra_program(case_id)
+                .unwrap_or_else(|| panic!("unknown literal input {case_id}")),
+        ),
     }
 }
 
@@ -184,11 +191,14 @@ fn compare_snapshot(
 fn compare_case(case_id: &str) {
     let case = CASES
         .iter()
+        .chain(EXTRA_CASES.iter())
         .find(|case| case.case_id == case_id)
         .expect("frozen case");
     let program = normal_program(case_id);
     assert_eq!(PROFILE, ORACLE_PROFILE);
     assert_eq!(K_SOURCE_SHA256, ORACLE_SOURCE_SHA256);
+    assert_eq!(PROFILE, EXTRA_ORACLE_PROFILE);
+    assert_eq!(K_SOURCE_SHA256, EXTRA_ORACLE_SOURCE_SHA256);
     assert_eq!(program.to_k(), case.code, "{case_id}: source code term");
     assert_eq!(
         program.entry.to_k(),
@@ -351,6 +361,16 @@ fn normal_n05_named_recursion() {
 #[test]
 fn normal_n06_ordered_list_tree_match() {
     compare_case("N06");
+}
+
+#[test]
+fn normal_n07_three_ordered_arguments() {
+    compare_case("N07");
+}
+
+#[test]
+fn normal_n08_recursive_factorial() {
+    compare_case("N08");
 }
 
 #[test]
