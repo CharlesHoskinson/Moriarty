@@ -5,7 +5,23 @@ return a local prefix and a continuation, then evaluate its remaining statements
 when supplied a typed event. Existing `moriarty/1` programs retain their atomic
 semantics, JSON and logical-cost profile.
 
-Current evidence: **58 focused Rust tests passed**: 32 Core tests (5 normal,
+Current successor evidence covers **78 distinct focused Rust test functions**:
+49 affected functions passed in fresh post-repair captures, and 29 unchanged
+functions are carried forward from earlier captures using source and call-path
+projections. The fresh captures cover 22 Core hostile cases, 5 backend normal
+cases, 9 backend relation cases, 7 public CLI cases and 6 ledger closure cases.
+This is not a rerun of all 78 functions after the repairs. See
+[current observations](audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json)
+and [current source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-CURRENT.json)
+for the exact selections and carry-forward basis. The candidate remains local
+and unmerged; fresh successor Muse and Opus source/result reviews are pending.
+
+Separate Quint QA totals 11 normal tests: 2 prefix tests and 9 lifecycle tests,
+with 4 prefix one-transition samples and 32 sampled lifecycle traces. These
+model results are excluded from the Rust total; Rust correspondence remains
+unestablished.
+
+Historical candidate `e9a2b80b` recorded **58 focused Rust tests passed**: 32 Core tests (5 normal,
 4 compatibility, 13 static-cost and 10 hostile), 7 public CLI tests, 5 backend
 normal tests, 4 backend relation tests, 6 backend frame tests, 3 ledger closure
 tests and 1 baseline byte-comparison test. The CLI tests include compilation,
@@ -101,7 +117,7 @@ status 1. A rejected suffix
 returns its error and attempted work, with no segment or replacement
 continuation; the prior local prefix and input continuation remain available.
 
-Every staged result carries the Opus-authored labels exactly:
+Every staged JSON report and `/4` manifest carries the Opus-authored labels exactly:
 
 ```json
 {"qualification":"local-reference-stage","authentication":"none","consumption":"untracked"}

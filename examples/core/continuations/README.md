@@ -1,8 +1,19 @@
 # Core continuation examples
 
-Source candidate; these examples and tests have not been executed. They use
-`moriarty/2`, `moriarty-core/2`, and the local reference-stage consumer.
-All U0–U7, M1–M17, and MC/SP/G acceptance exits remain open.
+These examples have been executed through the local Core and public CLI suites.
+Current successor evidence covers 78 distinct focused Rust test functions:
+49 affected functions passed in fresh post-repair captures, while 29 unchanged
+functions are carried forward from earlier captures by source and call-path
+projections. This is not a full post-repair rerun of all 78. Separate Quint QA has
+11 normal tests and is excluded from the Rust total. The earlier 58-test
+candidate remains a historical observation. These examples use `moriarty/2`,
+`moriarty-core/2`, and the local reference-stage consumer. See the
+[developer guide](../../../docs/CORE-CONTINUATIONS.md) and
+[evidence dossier](../../../docs/audits/2026-10-15/core-continuations/README.md)
+for the captured scope and its
+[current selections](../../../docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json).
+The successor is local and unmerged; fresh successor Muse and Opus reviews
+remain pending. All U0–U7, M1–M17, and MC/SP/G acceptance exits remain open.
 
 `delivery.mori` suspends after moving 10 units into escrow and creating a
 10-unit release duty. A false `ready` observation leaves its continuation
@@ -46,8 +57,10 @@ unperformed qualification gates.
 The `.mori`, scenario, and event files contain its frozen literals. Normal CLI
 tests compare complete financial snapshots, ordered effects, original step
 indices, observed values, captures, and attempted/committed work against those
-literals. The oracle was prepared before implementation and remains
-specified-only until separately authorized execution and result review.
+literals. The oracle was prepared before implementation; those frozen
+assertions have now been exercised in the captured local Core and CLI runs.
+The independent oracle bytes remain unchanged. These observations do not
+establish native proof or ledger acceptance.
 
 `atomic-compatibility.mori` retains the `/1` atomic predicate behavior for
 comparison. A false predicate rejects the complete invocation; a true

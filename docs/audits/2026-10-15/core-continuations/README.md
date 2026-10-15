@@ -1,19 +1,23 @@
 # Core continuations: local reference and static compiler evidence
 
-The selected captured runs contain **58 passing Rust tests**, plus a separate
-first Quint model increment with two normal example tests and four sampled
-one-transition traces. This is scoped local evidence for `moriarty/2`,
+The selected captured runs contain **78 distinct selected passing Rust tests**: 49 affected test
+functions have new post-repair captures, and 29 unchanged test functions carry
+forward their earlier scoped captures. Separately, the first Quint increment has
+two normal tests/four one-transition samples, and the lifecycle increment has nine
+normal tests/32 sampled traces. This is scoped local evidence for `moriarty/2`,
 `moriarty-core/2`, and unsigned static `/4` artifacts. Fresh full-candidate and
 actual-result Muse and Opus reviews are **PENDING**. All U0–U7, M1–M17, MC/SP/G,
 and native/target acceptance gates remain open.
 
 The implementation baseline is
 `fe01bc8b7d889427192c304b0e75d0ec719f63db`.
-[SOURCE-SCOPE.json](SOURCE-SCOPE.json) records relative paths and current hashes;
+[SOURCE-SCOPE.json](SOURCE-SCOPE.json) and [OBSERVATIONS.json](OBSERVATIONS.json)
+remain unchanged historical snapshots of candidate `e9a2b80b3cdf5bc94b11dd4b7a12a0b0c9810629`.
+[SOURCE-SCOPE-CURRENT.json](SOURCE-SCOPE-CURRENT.json) records current relative paths and hashes;
 each captured command's `start.json.gz` retains its own actual source/input pins.
 A current source snapshot does not replace those historical command pins.
-[OBSERVATIONS.json](OBSERVATIONS.json) binds the selected counts to their exact
-result receipts. [EVIDENCE-INVENTORY.json](EVIDENCE-INVENTORY.json) records every
+[OBSERVATIONS-CURRENT.json](OBSERVATIONS-CURRENT.json) binds the current selected
+counts to exact result receipts and explicitly records carried-forward coverage. [EVIDENCE-INVENTORY.json](EVIDENCE-INVENTORY.json) records every
 copied artifact's original and stored hashes. Gzip files decompress to the exact
 original bytes; nothing in this dossier reruns the product.
 
@@ -43,7 +47,7 @@ The oracle was frozen before implementation. Its unchanged SHA-256 is
 The exact [oracle JSON](oracle/ORACLE-CONTINUATIONS.json),
 [manual derivations](oracle/ORACLE-CONTINUATIONS.md), and three source specimens
 are retained. The expectation tables below come from that oracle. The
-`core-normal-01` and `cli-normal-02` captures report passing comparisons.
+`core-normal-01` and `cli-normal-03` captures report passing comparisons.
 
 | Delivery invocation | Frozen financial/frame expectation matched by normal assertions | Attempted / committed |
 |---|---|---|
@@ -86,30 +90,34 @@ logical work 6, and completes with work 10 for true input.
 
 ## Exact Rust counts and retained failures
 
-| Capture | Selected target | Passed |
-|---|---|---:|
-| `core-normal-01` | Core normal continuations | 5 |
-| `core-compat-01` | Frozen `/1` wire compatibility | 4 |
-| `core-static-cost-01` | Opus-authored static cost tests | 13 |
-| `core-hostile-01` | Opus-authored stage tests | 10 |
-| `cli-normal-02` | Public CLI normal continuations | 7 |
-| `backend-normal-02` | Static compiler structure; one comparator ignored in this run | 5 |
-| `backend-relation-01` | Opus-authored relation tests | 4 |
-| `ledger-source-closure-01` | Source-closure membership tests | 3 |
-| `legacy-byte-comparator-01` | Explicitly selected baseline byte comparator | 1 |
-| `backend-frame-01` | Six selected Opus-authored frame unit tests; 17 other tests filtered out | 6 |
-| **Total selected successful Rust tests** | | **58** |
+| Current capture | Selected target | Passed | Evidence selection |
+|---|---|---:|---|
+| `core-normal-01` | Core normal continuations | 5 | Unchanged, carried forward |
+| `core-compat-01` | Frozen `/1` wire compatibility | 4 | Unchanged, carried forward |
+| `core-static-cost-01` | Opus-authored static cost tests | 13 | Unchanged, carried forward |
+| `core-hostile-02` | Expanded Opus-authored stage tests | 22 | New post-repair capture |
+| `cli-normal-03` | Public CLI normal continuations | 7 | New post-repair capture |
+| `backend-normal-03` | Static compiler structure; comparator ignored in this run | 5 | New post-repair capture |
+| `backend-relation-02` | Expanded Opus-authored relation tests | 9 | New post-repair capture |
+| `ledger-source-closure-02` | Expanded source-closure membership tests | 6 | New post-repair capture |
+| `backend-frame-01` | Six selected frame units; 17 others filtered out | 6 | Unchanged frame call path, carried forward |
+| `legacy-byte-comparator-01` | Explicitly selected baseline byte comparator | 1 | Unchanged `/1` code path, carried forward |
+| **Total distinct selected Rust test functions** | | **78** | **49 newly captured + 29 carried forward** |
 
-The final `backend-frame-01` capture passed all six exact
-`stage::frame::tests::` tests, with 0 failed, 0 ignored and 17 filtered out. Its
-result receipt records elapsed time 10.72677956699954 seconds, unchanged source
-pins and native-execution directory entries, and native actions requested 0.
-The [frame postcheck](execution-inputs/FRAME-POSTCHECK.json) also records unchanged
-embedded fixtures and baseline dependencies, absent Cargo configuration and no
-Core property seed files. The prior selected total was 52 before this separate
-check; all original captures are retained unchanged. The earlier Core-only summary is retained as a historical 32-test record; its then-current
-“backend_cli_execution: not performed” field is superseded by the later captures,
-not edited. Property-generated cases are not counted as additional Rust tests.
+The earlier 58-test selection remains immutable in `OBSERVATIONS.json`. Affected
+targets replace their earlier counts; repeated passes are not added. The original
+Core-only 32-test summary and all earlier successful/failed captures remain
+historical evidence. Property-generated cases are not additional Rust tests.
+Carried-forward evidence is root source/hash/call-path projection, not a fresh
+rerun or a substitute for successor review.
+
+The `backend-frame-01` result records six passes, no failures/ignores, 17 filtered
+out and 10.72677956699954 seconds elapsed. The [frame postcheck](execution-inputs/FRAME-POSTCHECK.json)
+retains unchanged inputs and zero native actions requested. The
+[backend repair report](reviews/OPUS-BACKEND-REPAIR-RESULT.md) explicitly retains
+the prior frame classification because its call path does not reach the repaired
+lowerer. The earlier legacy comparator is carried forward only for its unchanged
+`/1` path.
 
 - `cli-normal-01` exited 101 during compilation with an unhandled
   `Statement::Await` match in ledger `relation/mod.rs`. It executed zero tests.
@@ -144,66 +152,87 @@ after the candidate comparator. The one selected comparator passed byte equality
 for this artifact and its IR. This is bounded specimen evidence, not a claim that
 the entire legacy corpus or all historical CLI usage bytes were compared.
 
-## First Quint increment, separately counted
+## Two Quint increments, separately counted
 
-The six original draft files are copied unchanged under [quint-prefix](quint-prefix).
-Their historical “unexecuted” labels describe their creation time. The four
-`quint-prefix-01` through `-04` captures record the subsequent successful model
-typecheck, TypeScript run, test typecheck and TypeScript test. The run used
-`--max-steps=1 --max-samples=4 --seed=20261015`: `firstBoundaryReached` was witnessed
-in four of four sampled traces. The two explicit tests passed one escrow prefix
-and one reserve prefix example. Two tests and four witnesses are separate from
-the 58 Rust tests, and are not an exhaustive model-checking result.
+The six original prefix draft files remain byte-identical under
+[quint-prefix](quint-prefix). Their historical unexecuted labels describe source
+preparation time. Captures `quint-prefix-01..04` record both typechecks, the
+TypeScript run with four one-transition samples and witness 4/4, and the two
+explicit normal example tests. These are unchanged first-increment observations.
 
-The [tree digest summary](quint-prefix/EXECUTION-TREE-DIGESTS.json) retains the
-original full inventory hash, Node hash, package-tree digests and file counts;
-the 488 KB package-member path inventory and package/cache contents are omitted.
-Per-command result receipts record tool/input/cache/directory postchecks. The
+The [lifecycle appendix](quint-lifecycle/README.md) now retains standalone relative
+imports, the second model, nine corrected normal example tests, exact original
+input manifests, old failed test bytes and the two-line pure constructor import
+patch. Its `quint-lifecycle-01` model typecheck and `-02` TypeScript run passed.
+The run sampled 32 traces with at most four resume steps (lengths min 2/max 5),
+with witnesses resume 32, false observation 21, completion 19 and business
+rejection 10. The original test typecheck `-03` failed QNT404; `-03b` passed after
+two direct imports, and `-04` passed nine tests once each. The passed model
+run/typecheck were not repeated. The failed original command is retained and is
+not counted as a pass.
+
+Model counts are separate from the 78 Rust functions and from each other.
+Sampled witnesses are not exhaustive checking or Rust/compiler correspondence.
+The [tree summary](quint-prefix/EXECUTION-TREE-DIGESTS.json) and per-command receipts
+retain pinned tools and unchanged-directory observations without copying the
+488 KB package path list, Node binary, package tree or cache contents. The
 [Opus classification](reviews/OPUS-QUINT-CHECK-CLASSIFICATION.md) states:
 “The model uses mathematical `int`. It does not model UInt128, serialization,
-ledger state, proofs or adversaries.” A later lifecycle increment remains draft
-outside this dossier and is not included as completed evidence.
+ledger state, proofs or adversaries.”
 
-## Reviews and qualification limits
+## Repairs, review history and qualification limits
 
-The frozen design precedence, Sol adoption and final Muse design approval are
-retained under [design](design). Completed Opus source/check-classification reports,
-model-identity JSON, adapters/configurations and exact start/terminal receipts are
-retained under [reviews](reviews), [review-adapters](review-adapters), and
-[review-receipts](review-receipts). These preserve each report's stated scope,
-missing reads/pins, sandbox restrictions and any missing guarded startup. For
-example, the [delta result](reviews/OPUS-CHECK-DELTAS-RESULT.md) states that the
-permission layer refused its `status --json` refresh. A terminal timeout is not a
-completed review: the core-foundation, core-admit, backend-source and inspect
-source jobs' timeout receipts remain visible. Files left by those jobs do not
-supply returned model identity or approval.
+The original full and completion reports are copied unchanged under
+[reviews](reviews), with exact requested configurations, canonical returned model
+usage and terminal/start/owner receipts. Their findings remain historical, with
+no automatic approval upgrade:
 
-Opus's [CLI classification](reviews/OPUS-CLI-CHECK-CLASSIFICATION.md) says that its
-verdict “is not candidate acceptance”; the source/lowering bodies were not all
-read line by line. Its [Core classification](reviews/OPUS-CORE-CHECK-CLASSIFICATION.md)
-likewise distinguishes effects from correctness. The retained classifications
-and delta reports apply only to their exact commands and premises. The
-[frame classification](reviews/OPUS-FRAME-CHECK-CLASSIFICATION-RESULT.md) preserves
-its missing startup: “I couldn't load the develop/AGENTS status because the shell
-refused the combined command.” It also states that the six tests are
-“structural checks I wrote, with no independent oracle, so a pass doesn't show
-the frames are sound.” The exact proposed argv, classification, returned identity,
-terminal/start/owner metadata, run captures and postcheck are retained. This dossier
-adds no security interpretation or substitute approval.
+| Review of frozen `e9a2b80b` | Original disposition retained |
+|---|---|
+| [Muse full source/results](reviews/MUSE-FULL-CANDIDATE-REVIEW.md) | SOURCE APPROVE and ACTUAL-RESULTS APPROVE within its nonsecurity scope; DOCS F1 NEEDS_CHANGES |
+| [Initial full Opus](reviews/OPUS-FULL-CANDIDATE-REVIEW.md) | Source and actual results NOT APPROVED; incomplete |
+| [Opus completion A, Core](reviews/OPUS-COMPLETION-CORE.md) | NEEDS_CHANGES, test-only coverage |
+| [Opus completion B, backend](reviews/OPUS-COMPLETION-BACKEND.md) | INCOMPLETE; source F1 and T1/T2 coverage |
+| [Opus completion C, consumers](reviews/OPUS-COMPLETION-CONSUMERS.md) | NEEDS_CHANGES; coverage test F1 and remaining gaps |
 
-The [frozen Opus contract](design/DESIGN-OPUS.md) requires these output labels:
+The [backend repair integration](execution-inputs/BACKEND-REPAIR-INTEGRATION.json)
+records exact Opus payload copies for the lowerer and relation tests without
+adaptation. The [backend author report](reviews/OPUS-BACKEND-REPAIR-RESULT.md)
+states that freshly compiled artifacts now pass the existing shape validator
+before return, and supplies five additional relation tests. Its new captures are
+5 backend normal passes, 9 relation passes and 7 CLI passes. The
+[ledger coverage author report](reviews/OPUS-LEDGER-COVERAGE-REPAIR-RESULT.md)
+describes expansion of the source-directory coverage test; its capture passes 6.
+These reports and captures are evidence of work performed, not final security
+acceptance.
+
+The initial Core hostile-test source job timed out at 410 seconds, with no report
+or returned identity. Its exact terminal receipt is retained. The completed
+[Core finisher/adoption report](reviews/OPUS-CORE-HOSTILE-FINISH-RESULT.md) identifies
+Opus 5.5 as **author-finisher and classifier, not independent reviewer**, and
+adopts test hash `e8d3af1257d447aad9f14b566b6eb9b3005a929f26887cbe3863a546f93054a7`.
+The adapter's generic `opus-independent-security-review` report tag does not
+change that stated role. `core-hostile-02` captured 22 passes. Before its child
+was launched, an initial precheck stopped on only an auxiliary examples README
+pin; no product test ran in that precheck. The successful start metadata retains
+`auxiliary_doc_delta`; this is not another product failure or extra test run.
+
+The examples README and developer-guide wording corrections are present in the
+successor source/doc snapshot. Their findings are still awaiting fresh review.
+[REVIEW-STATUS.json](REVIEW-STATUS.json) explicitly keeps fresh successor source
+and actual-results Muse review and integrated independent Opus review **PENDING**.
+Prior classifications apply only to exact commands and premises. All original
+report limitations, denied reads, missing startup and timeouts are retained.
+For example the [frame result](reviews/OPUS-FRAME-CHECK-CLASSIFICATION-RESULT.md)
+states that its startup command was refused and calls its tests “structural checks
+I wrote, with no independent oracle, so a pass doesn't show the frames are sound.”
+
+The [frozen Opus contract](design/DESIGN-OPUS.md) requires output labels
 `qualification: local-reference-stage`, `authentication: none`,
-`consumption: untracked`. Its P1 states: “Unsigned `/2` stages do not authenticate
-event origin, correlation, finality or the resumer.” Its P3 states: “The local
+`consumption: untracked`. P1 states: “Unsigned `/2` stages do not authenticate
+event origin, correlation, finality or the resumer.” P3 states: “The local
 evaluator is a pure function of untrusted files.” The [A1 amendment](design/DESIGN-OPUS-FINAL.md)
-requires all ten `/4` gates to remain `unperformed`. Those are the controlling
-qualified limitations; static outputs and sampled models establish no native
-constraint soundness, ledger settlement, authority, confidentiality or consumption
-acceptance. Native authority remains zero.
-
-Required evidence still absent: fresh full-candidate Muse nonsecurity audit,
-fresh actual-results Muse audit, and Opus review of the full integrated source,
-tests and observed results. Later lifecycle-model draft coverage,
-full legacy usage-byte comparison, general native proof/target
-correspondence and every retained full parent exit remain open. No commit, merge,
-release or parent acceptance is asserted by this dossier.
+requires all ten `/4` gates to remain `unperformed`. This dossier supplies no
+substitute security judgment. Native authority remains zero; all full U0–U7,
+M1–M17 and MC/SP/G gates remain open. No native proof, ledger/target qualification,
+release, merge or whole-language acceptance is asserted.
