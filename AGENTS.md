@@ -1,5 +1,15 @@
 # Moriarty repository instructions
 
+## Security ownership restored — October 15
+
+A fresh substantive Opus 5.5 high request completed with its returned canonical
+identity. The temporary Argon substitution below has ended for new assignments.
+Use Opus 5.5 high for new security work; preserve actual Argon identities on
+historical results and any already assigned task. GPT-6.1 Sol high implementation
+and fresh Muse Wonder1.0 high nonsecurity audits continue. See the
+[restoration record](raw/assignments/moriarty-opus-security-restored-2026-10-15.md).
+Native authority, resource limits and acceptance gates are unchanged.
+
 ## Temporary security routing — October 15
 
 The user's latest override assigns work otherwise owned by Opus 5.5 to
