@@ -18,7 +18,7 @@ Read `AGENTS.md`, then the user's current request and these current checkout doc
 - `wiki/index.md` and `wiki/workflow.md`: existing evidence, contradictions, provenance and canonical transaction procedure.
 - `wiki-llm/README.md` and `wiki-llm/RECONCILIATION-2026-10-14.md`: current research navigation, profile/consumer distinctions and dated evidence qualification.
 - `openspec/current-requirement-crosswalk.json` and `openspec/changes/consolidated-language-kernel/reconciliation-2026-10-14.md`: current requirement dispositions and reconciliation against the retained exits.
-- `wiki-llm/SECURITY-CURRENTNESS-2026-10-14.md` and `openspec/changes/consolidated-language-kernel/security-reconciliation-2026-10-14.md`: Opus-authored security addenda; consult as source references and route their interpretation or changes to Opus.
+- `wiki-llm/SECURITY-CURRENTNESS-2026-10-14.md` and `openspec/changes/consolidated-language-kernel/security-reconciliation-2026-10-14.md`: Opus-authored security addenda; consult as source references and route new interpretation or changes to the current designated security owner (temporarily AGY Argon until Opus availability is observed).
 - `docs/PARALLEL-DEVELOPMENT.md` and `openspec/parallel-language-workflow.json`: existing disjoint task ownership and shared-interface integration. Refresh task status; this historical task list is not automatic dispatch authority.
 
 Current nonsecurity authoring is `gpt-6.1-sol`; independent non-author audit is `muse-wonder-1.0`, both at high effort. Apply later explicit user steering within its scope. Preserve frozen contracts and historical audit identities; the October 13 Sol/Grok pair and September task rosters remain evidence for their original candidates. They do not mandate extra obsolete seats for new work. Consequential decisions retain the existing two agreeing substantive votes.
@@ -59,11 +59,11 @@ Preview observations qualify only Preview. Fenrir network ID, Anchor, committee/
 
 ## Opus-owned execution boundary
 
-Read checkout `docs/audits/2026-10-14/SECURITY-ROUTING.md` and `docs/audits/2026-10-14/SECURITY-REVIEW.md`; these record Opus ownership of security analysis, hostile tests, recommendations and judgments. Route all security work to Opus 5.5. Nonsecurity authors preserve and report that boundary without supplying substitute security conclusions.
+Read checkout `docs/audits/2026-10-14/SECURITY-ROUTING.md` and `docs/audits/2026-10-14/SECURITY-REVIEW.md`; these record Opus ownership of security analysis, hostile tests, recommendations and judgments. For new work, the October 15 AGY Argon assignment temporarily supersedes standing Opus 5.5 routing until Opus availability is observed. The execution boundary remains Opus-authored and unchanged; historical/frozen records keep their original rosters. Nonsecurity authors preserve and report that boundary without supplying substitute security conclusions.
 
 As recorded by those documents, current native authority is zero. No SDK relation/circuit checks, model/degree/k queries, VM/transcript execution, key generation, proving, native verification, deploy/ledger actions or private-key/PK/SRS/cache actions are authorized by this guidance. `prepare-call`, `prepare-signed-call`, signed `verify-intent --profile`, `simulate --trace --target` and the replay generator may invoke blocked SDK operations; names such as check, static or test do not establish an ordinary path. Inspect actual side effects before any ordinary command; broad native suites remain blocked. Source-static public IR work has its existing bounded scope only.
 
-Keep native gates, resource limits, historical counters, receipt authentication and public-transaction delivery controls intact. Route any proposed changes or security test design to Opus. Missing evidence is an acceptance blocker, not permission to launch a retry. No new campaign, budget reset or native probe is created here.
+Keep native gates, resource limits, historical counters, receipt authentication and public-transaction delivery controls intact. Route any new proposed changes or security test design to the current designated security owner (temporarily AGY Argon until Opus availability is observed). Missing evidence is an acceptance blocker, not permission to launch a retry. No new campaign, budget reset or native probe is created here.
 
 ## Pressure checks before reporting
 

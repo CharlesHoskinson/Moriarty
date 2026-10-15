@@ -1,5 +1,6 @@
 //! Normal-program comparisons against frozen, independently authored literals.
-//! `check-reference.py` only transcribes JSON; none of these expectations use
+//! `check-reference.py` verifies literal JSON transcription before compiling/running;
+//! none of these expectations use
 //! the machine, a second evaluator, or a compiler to calculate an answer.
 
 use super::reference_display::{KDisplay, environment_to_k};
