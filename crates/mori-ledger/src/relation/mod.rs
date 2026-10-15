@@ -8,8 +8,8 @@ use crate::{
     profile::{Deployment, StaticBindings},
 };
 use midnight_transient_crypto::proofs::ProofPreimage;
-use midnight_zkir_v3::IrSource;
-use mori_core::Program;
+use midnight_zkir_v3::{Instruction, IrSource, ir::Operand};
+use mori_core::{ExprId, Program};
 pub use process::{ProcessedOps, process};
 use serde::{Deserialize, Serialize};
 
@@ -211,8 +211,23 @@ pub fn admit(
     Ok(a)
 }
 
-pub(crate) const SOURCE_STATIC_FORMAT: &str = "moriarty-mapped-role-source-static-relation/1";
+pub(crate) const SOURCE_STATIC_FORMAT: &str = "moriarty-mapped-role-source-static-relation/2";
 pub(crate) const SOURCE_STATIC_QUALIFICATION: &str = "source-static-mapped-debits-unauthenticated";
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct DynamicField {
+    pub(crate) group: usize,
+    pub(crate) offset: usize,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct StatementEmission {
+    pub(crate) statement: usize,
+    pub(crate) expression: ExprId,
+    pub(crate) instruction_start: usize,
+    pub(crate) instruction_end: usize,
+    pub(crate) group_start: usize,
+    pub(crate) group_end: usize,
+    pub(crate) dynamic_fields: Vec<DynamicField>,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct SourceStaticManifest {
     pub(crate) format: String,
@@ -227,6 +242,7 @@ pub(crate) struct SourceStaticManifest {
     pub(crate) compiler_hash: String,
     pub(crate) open_predicates: Vec<String>,
     pub(crate) debit_sources: Vec<crate::profile::RoleBinding>,
+    pub(crate) statement_emissions: Vec<StatementEmission>,
 }
 /// Export bytes only; cannot construct a native relation artifact or key capability.
 /// ```compile_fail
@@ -250,11 +266,99 @@ impl SourceStaticArtifact {
         crate::call_artifacts::json_bytes(&self.manifest, codec::OUTPUT_BYTES as u64)
     }
 }
+fn statement_root(s: &mori_core::Statement) -> ExprId {
+    use mori_core::Statement as S;
+    match s {
+        S::Let { value, .. } | S::Next { value, .. } | S::Emit { value, .. } => *value,
+        S::Requires { predicate } | S::Ensures { predicate } => *predicate,
+        S::Transfer { amount, .. }
+        | S::Fee { amount, .. }
+        | S::Liability { amount, .. }
+        | S::Discharge { amount, .. } => *amount,
+    }
+}
+/// Emission bookkeeping closure only. Entries partition the body between the
+/// ABI-root prologue and the final Output; group k is the k-th Impact; every
+/// Variable Impact input is a listed replacement. A listed replacement may
+/// still be Immediate. Activity, values, kind, payer and debits are not bound.
+fn validate_statement_emissions(
+    statements: &[mori_core::Statement],
+    instructions: &[Instruction],
+    groups: &[Group],
+    emissions: &[StatementEmission],
+) -> Result<()> {
+    let refuse = || refusal("source-static-emission");
+    let body_end = match instructions.split_last() {
+        Some((Instruction::Output { .. }, body)) => body.len(),
+        _ => return Err(refuse()),
+    };
+    let impacts = instructions
+        .iter()
+        .enumerate()
+        .filter_map(|(i, instruction)| match instruction {
+            Instruction::Impact { inputs, .. } => Some((i, inputs)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let prologue = groups.iter().take_while(|g| g.origin == "abi-root").count();
+    if emissions.len() != statements.len()
+        || impacts.len() != groups.len()
+        || impacts
+            .iter()
+            .zip(groups)
+            .any(|((_, inputs), g)| inputs.len() != g.field_count)
+        || groups[prologue..].iter().any(|g| g.origin == "abi-root")
+    {
+        return Err(refuse());
+    }
+    let groups_before = |instruction: usize| impacts.partition_point(|(i, _)| *i < instruction);
+    let mut instruction = impacts[..prologue].last().map_or(0, |(i, _)| i + 1);
+    let mut group = prologue;
+    let mut listed: Vec<(usize, usize)> = Vec::new();
+    for (index, (e, s)) in emissions.iter().zip(statements).enumerate() {
+        if e.statement != index
+            || e.expression != statement_root(s)
+            || e.instruction_start != instruction
+            || e.group_start != group
+            || e.instruction_end < e.instruction_start
+            || e.instruction_end > body_end
+            || groups_before(e.instruction_start) != e.group_start
+            || groups_before(e.instruction_end) != e.group_end
+        {
+            return Err(refuse());
+        }
+        for f in &e.dynamic_fields {
+            if !(e.group_start..e.group_end).contains(&f.group)
+                || f.offset >= groups[f.group].field_count
+                || listed
+                    .last()
+                    .is_some_and(|last| *last >= (f.group, f.offset))
+            {
+                return Err(refuse());
+            }
+            listed.push((f.group, f.offset));
+        }
+        instruction = e.instruction_end;
+        group = e.group_end;
+    }
+    if instruction != body_end
+        || group != groups.len()
+        || impacts.iter().enumerate().any(|(k, (_, inputs))| {
+            inputs.iter().enumerate().any(|(j, v)| {
+                matches!(v, Operand::Variable(_)) && listed.binary_search(&(k, j)).is_err()
+            })
+        })
+    {
+        return Err(refuse());
+    }
+    Ok(())
+}
 pub(crate) fn compile_source_static_roles(
     validated: &layout::ValidatedSourceStaticBindings<'_>,
     action: &str,
 ) -> Result<SourceStaticArtifact> {
-    let (ir, groups, input_count) = compiler::compile_source_static_roles(validated, action)?;
+    let (ir, groups, input_count, statement_emissions) =
+        compiler::compile_source_static_roles(validated, action)?;
     let p = validated.program();
     let bindings = validated.bindings();
     let source_action = p
@@ -262,6 +366,12 @@ pub(crate) fn compile_source_static_roles(
         .iter()
         .find(|a| a.name == action)
         .ok_or(refusal("action"))?;
+    validate_statement_emissions(
+        &source_action.statements,
+        ir.instructions.as_slice(),
+        &groups,
+        &statement_emissions,
+    )?;
     let names = source_action
         .statements
         .iter()
@@ -306,6 +416,7 @@ pub(crate) fn compile_source_static_roles(
             .map(String::from)
             .collect(),
             debit_sources,
+            statement_emissions,
         },
         ir,
     };
@@ -318,4 +429,228 @@ pub(crate) fn compile_source_static_roles(
         return Err(refusal("artifact-size"));
     }
     Ok(artifact)
+}
+
+#[cfg(test)]
+mod emission_tests {
+    use super::{arithmetic::imm, *};
+    use midnight_zkir_v3::Identifier;
+    use mori_core::Statement;
+
+    struct Specimen {
+        statements: Vec<Statement>,
+        instructions: Vec<Instruction>,
+        groups: Vec<Group>,
+        emissions: Vec<StatementEmission>,
+    }
+    impl Specimen {
+        fn validate(&self) -> Result<()> {
+            validate_statement_emissions(
+                &self.statements,
+                &self.instructions,
+                &self.groups,
+                &self.emissions,
+            )
+        }
+    }
+    fn var(name: &str) -> Operand {
+        Operand::Variable(Identifier(name.into()))
+    }
+    fn impact(inputs: Vec<Operand>) -> Instruction {
+        Instruction::Impact {
+            guard: imm(1),
+            inputs,
+        }
+    }
+    fn group(field_count: usize, origin: &str) -> Group {
+        Group {
+            field_count,
+            origin: origin.into(),
+        }
+    }
+    fn entry(
+        statement: usize,
+        expression: ExprId,
+        instructions: (usize, usize),
+        groups: (usize, usize),
+        dynamic: &[(usize, usize)],
+    ) -> StatementEmission {
+        StatementEmission {
+            statement,
+            expression,
+            instruction_start: instructions.0,
+            instruction_end: instructions.1,
+            group_start: groups.0,
+            group_end: groups.1,
+            dynamic_fields: dynamic
+                .iter()
+                .map(|&(group, offset)| DynamicField { group, offset })
+                .collect(),
+        }
+    }
+    /// Hand-built layout, not compiler output: one ABI-root group, a transfer
+    /// with one Variable replacement and one constant group, a groupless Let.
+    fn specimen() -> Specimen {
+        Specimen {
+            statements: vec![
+                Statement::Transfer {
+                    asset: "PAY".into(),
+                    from: "alice".into(),
+                    to: "treasury".into(),
+                    amount: 0,
+                },
+                Statement::Let {
+                    name: "local".into(),
+                    value: 2,
+                },
+            ],
+            instructions: vec![
+                Instruction::ConstrainBits {
+                    val: var("%input.0"),
+                    bits: 128,
+                },
+                impact(vec![imm(1), imm(2)]),
+                Instruction::Assert { cond: imm(1) },
+                impact(vec![imm(3), var("%native.0")]),
+                impact(vec![imm(4), imm(5), imm(6)]),
+                Instruction::Assert { cond: imm(1) },
+                Instruction::Output { vals: vec![] },
+            ],
+            groups: vec![
+                group(2, "abi-root"),
+                group(2, "source-claim"),
+                group(3, "source-claim"),
+            ],
+            emissions: vec![
+                entry(0, 0, (2, 5), (1, 3), &[(1, 1)]),
+                entry(1, 2, (5, 6), (3, 3), &[]),
+            ],
+        }
+    }
+    fn refuses(label: &str, mutate: impl FnOnce(&mut Specimen)) {
+        let mut s = specimen();
+        mutate(&mut s);
+        let error = s.validate().err().unwrap_or_else(|| panic!("{label}"));
+        assert_eq!(
+            (error.layer, error.code),
+            ("native-relation", "source-static-emission"),
+            "{label}"
+        );
+    }
+
+    #[test]
+    fn exact_emission_partition_is_admitted() {
+        specimen().validate().unwrap();
+    }
+
+    #[test]
+    fn constant_replacement_may_be_listed() {
+        // A literal `next s = 5` replaces a template slot with an Immediate.
+        let mut s = specimen();
+        s.emissions[0].dynamic_fields.push(DynamicField {
+            group: 2,
+            offset: 0,
+        });
+        s.validate().unwrap();
+    }
+
+    #[test]
+    fn statement_kind_and_payer_are_not_bound_by_emission_check() {
+        let mut s = specimen();
+        s.statements[0] = Statement::Fee {
+            asset: "PAY".into(),
+            from: "bob".into(),
+            to: "treasury".into(),
+            amount: 0,
+        };
+        s.validate().unwrap();
+    }
+
+    #[test]
+    fn statementless_action_has_only_prologue_groups() {
+        let mut s = Specimen {
+            statements: vec![],
+            instructions: vec![impact(vec![imm(1)]), Instruction::Output { vals: vec![] }],
+            groups: vec![group(1, "abi-root")],
+            emissions: vec![],
+        };
+        s.validate().unwrap();
+        s.groups[0].origin = "source-claim".into();
+        let error = s.validate().err().unwrap();
+        assert_eq!(error.code, "source-static-emission");
+    }
+
+    #[test]
+    fn assembly_violations_refuse() {
+        refuses("missing entry", |s| {
+            s.emissions.pop();
+        });
+        refuses("extra entry", |s| {
+            let extra = s.emissions[1].clone();
+            s.emissions.push(extra);
+        });
+        refuses("entries reordered", |s| s.emissions.swap(0, 1));
+        refuses("statement index", |s| s.emissions[1].statement = 0);
+        refuses("root expression", |s| s.emissions[0].expression = 1);
+        refuses("prologue attributed to statement", |s| {
+            s.emissions[0].instruction_start = 1;
+            s.emissions[0].group_start = 0;
+        });
+        refuses("statement instruction left in prologue", |s| {
+            s.emissions[0].instruction_start = 3;
+        });
+        refuses("instruction gap", |s| s.emissions[1].instruction_start = 6);
+        refuses("group range detached from Impact", |s| {
+            s.emissions[0].group_end = 2;
+            s.emissions[1].group_start = 2;
+        });
+        refuses("reversed range", |s| s.emissions[1].instruction_end = 4);
+        refuses("entry stops before Output", |s| {
+            s.emissions[1].instruction_end = 5;
+        });
+        refuses("entry covers Output", |s| {
+            s.emissions[1].instruction_end = 7
+        });
+        refuses("missing Output", |s| {
+            s.instructions.pop();
+        });
+        refuses("Impact without group", |s| {
+            s.instructions.insert(5, impact(vec![imm(7)]));
+        });
+        refuses("width differs from Impact", |s| s.groups[2].field_count = 4);
+        refuses("abi-root origin in body", |s| {
+            s.groups[2].origin = "abi-root".into()
+        });
+        refuses("field in another entry", |s| {
+            s.emissions[0].dynamic_fields.clear();
+            s.emissions[1].dynamic_fields.push(DynamicField {
+                group: 1,
+                offset: 1,
+            });
+        });
+        refuses("offset beyond width", |s| {
+            s.emissions[0].dynamic_fields[0].offset = 2;
+        });
+        refuses("duplicate field", |s| {
+            s.emissions[0].dynamic_fields.push(DynamicField {
+                group: 1,
+                offset: 1,
+            });
+        });
+        refuses("descending fields", |s| {
+            s.emissions[0].dynamic_fields.insert(
+                0,
+                DynamicField {
+                    group: 2,
+                    offset: 0,
+                },
+            );
+        });
+        refuses("Variable replacement omitted", |s| {
+            s.emissions[0].dynamic_fields.clear();
+        });
+        refuses("Variable in unlisted slot", |s| {
+            s.instructions[4] = impact(vec![imm(4), var("%native.1"), imm(6)]);
+        });
+    }
 }

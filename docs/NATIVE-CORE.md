@@ -477,6 +477,40 @@ parameters or SRS. M1/M2/U2, native soundness, full semantic correspondence,
 64 KiB transaction/k19 qualification, funding/state/history authentication, PCD
 and financial ledger settlement remain open.
 
+### Mapped-role statement provenance
+
+`--authorization unsigned-mapped-roles` exports each action with
+`statement_emissions`, one entry per source statement in source order. Each
+entry contains `statement`, `expression`, `instruction_start`, `instruction_end`,
+`group_start`, `group_end` and `dynamic_fields`.
+
+`statement` indexes the action's statements in `abi.actions`. `expression` is
+that statement's root Core expression ID, rather than a recursive dependency
+map. Instruction and group ranges are zero-based, half-open `[start, end)`
+ranges local to the action's IR and manifest. Groups count only `Impact`
+instructions. Prelude and epilogue positions remain outside source statement
+ranges; a statement with no groups still has an entry.
+
+Each `dynamic_fields` element is `{group, offset}`: an absolute action-local
+group index and a zero-based offset into that Impact's input fields. It records
+an actual template replacement, including when the replacement operand is an
+`Immediate`. These are replacement positions, rather than a variable-only list.
+Kind, asset, `from` and `to` resolve through the indexed ABI statement.
+As Opus's design review
+states, "The map is emission provenance, not semantics." It records neither
+dependencies nor group activity and does not establish value equivalence or
+debit binding.
+
+Opus's compatibility disposition changes the mapped relation leaf format to
+`moriarty-mapped-role-source-static-relation/2`, while retaining bundle profile
+`moriarty-mapped-role-source-static-bundle/1` and both existing qualifications.
+The ordinary and signed manifest schemas remain unchanged, but source-closure
+changes update their compiler hashes and manifest bytes, plus static bundle
+build identities. Old bundles require re-export for the new build; earlier
+ordinary artifacts require regenerated manifests. Future native requalification
+is separate and unperformed. Local execution checks for this addition have not
+yet run; these source observations close no U0/U2 or other parent exit.
+
 
 ## Metered local owner-intent verification
 

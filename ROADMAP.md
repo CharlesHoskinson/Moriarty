@@ -19,6 +19,16 @@ mismatches and failure exit, and the 87 accepted FeePool financial cases in one
 aggregate report. This is local Rust Core reporting evidence. Full M10/U7/MC08
 qualification and every existing parent exit remain open.
 
+The [mapped-role source-provenance evidence](docs/audits/2026-10-15/core-source-provenance/README.md)
+records local static export/reopen and actual IR field-location checks against an
+independent five-statement oracle, including unchanged IR against a pinned
+prechange executable. Full source/result audits, U0/U2 and all parent exits
+remain open.
+
+## Compiler provenance observation — 2026-10-15
+
+The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provenance/README.md) records compiler-produced statement/expression-to-field metadata, public export/reopen, byte-identical IR for one independent specimen and ten passing focused tests. Full source/result audits remain pending. This is source-static correspondence support; all U0/U2 and other parent exits remain open.
+
 ## Current delivery observation — 2026-10-14
 
 The [mid-roadmap review](docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) and
