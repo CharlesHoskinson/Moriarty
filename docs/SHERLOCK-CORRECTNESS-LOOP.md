@@ -181,3 +181,9 @@ SDK relation checks and native actions retain their existing command-specific
 limits. Frontend checks, source inspection and host tests must be reported at
 their actual evidence class. Neither this loop nor a passing finite corpus is a
 soundness, completeness, correspondence or release proof.
+
+The [source-origin normal comparison](audits/2026-10-15/sherlock-source-origin-normal/README.md)
+adds actual image-machine occurrence/frame-owner metadata and real call-helper
+capture. Three new literal source-path/cursor cases pass alongside the unchanged
+eight programs/216 prefixes (82 checks total). This does not adopt B, bind a
+program digest or establish circuit/native correspondence.

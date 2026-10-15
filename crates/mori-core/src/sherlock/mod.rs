@@ -48,3 +48,7 @@ mod helper_schedule;
 // Host projection of helper completions to the unchanged A reference boundary.
 #[cfg(test)]
 mod helper_call_adapter;
+
+// Causal occurrence metadata on the private image execution path.
+#[cfg(test)]
+mod source_origin_normal_tests;

@@ -48,8 +48,12 @@ pub(super) struct ImageMachine {
     constants: Vec<Value>,
     observations: SourceObservations,
     control: Option<ImageControl>,
+    // Causal host metadata, deliberately absent from frozen A Snapshots.
+    control_origin: ExprId,
     environment: Environment,
     frames: Vec<ImageFrame>,
+    // Top first, aligned with frames. Replacement preserves the owner's ID.
+    frame_origins: Vec<ExprId>,
     stack_limit: usize,
     remaining_fuel: u128,
     initial_fuel: u128,
@@ -64,11 +68,13 @@ impl ImageMachine {
         let observations = SourceObservations::new(&image, &constants);
         Self {
             control: Some(ImageControl::Eval(image.entry)),
+            control_origin: image.entry,
             image,
             constants,
             observations,
             environment: Environment::new(),
             frames: Vec::new(),
+            frame_origins: Vec::new(),
             stack_limit,
             remaining_fuel: fuel,
             initial_fuel: fuel,
@@ -88,6 +94,16 @@ impl ImageMachine {
             outcome: self.outcome.clone(),
         }
     }
+
+    /// Current scheduling occurrence, retained even after terminal publication.
+    /// This is an image-local source position, not authenticated program identity.
+    pub(super) fn control_origin(&self) -> ExprId { self.control_origin }
+
+    /// Owners of pending frames in the same top-first order as snapshot().frames.
+    pub(super) fn frame_origins(&self) -> &[ExprId] { &self.frame_origins }
+
+    /// The immutable image actually used for row fetches by this machine.
+    pub(super) fn program_image(&self) -> &Arc<ProgramImageDraft> { &self.image }
 
     /// One charged K-A rule, or free terminal publication. Snapshot conversion
     /// and cloning are unmetered host work, as in the existing A reference.
@@ -115,6 +131,9 @@ impl ImageMachine {
             }
             control => {
                 let (line, next) = self.transition(control);
+                // Generated controls retain their scheduler. Only an actual
+                // next Eval selects a new source occurrence from its row ID.
+                if let ImageControl::Eval(id) = &next { self.control_origin = *id; }
                 self.control = Some(next);
                 self.remaining_fuel -= 1;
                 (line, 1)
@@ -135,6 +154,7 @@ impl ImageMachine {
             ImageControl::Push(frame, next, environment) => {
                 if self.frames.len() < self.stack_limit {
                     self.frames.insert(0, frame);
+                    self.frame_origins.insert(0, self.control_origin);
                     self.environment = environment;
                     (135, *next)
                 } else {
@@ -219,6 +239,9 @@ impl ImageMachine {
     fn return_value(&mut self, value: Value) -> (usize, ImageControl) {
         // Frames remain top first. Replacement rules keep their logical depth;
         // failing if/return type tests keep every frame and saved environment.
+        // The consumed/replaced continuation owns this operation, including
+        // failed type checks which leave the logical frame in place.
+        self.control_origin = self.frame_origins[0];
         match self.frames[0].clone() {
             ImageFrame::Let(name, body, environment) => {
                 self.frames[0] = ImageFrame::Scope(environment.clone());
@@ -232,16 +255,16 @@ impl ImageMachine {
                 (149, ImageControl::Eval(right))
             }
             ImageFrame::Right(op, left) => {
-                self.frames.remove(0);
+                self.remove_top_frame();
                 (153, ImageControl::PrimitiveResult(binary_result(op, left, value)))
             }
             ImageFrame::Unary(op) => {
-                self.frames.remove(0);
+                self.remove_top_frame();
                 (157, ImageControl::PrimitiveResult(unary_result(op, value)))
             }
             ImageFrame::If(yes, no, environment) => match value {
                 Value::Bool(condition) => {
-                    self.frames.remove(0);
+                    self.remove_top_frame();
                     self.environment = environment;
                     if condition { (161, ImageControl::Eval(yes)) }
                     else { (165, ImageControl::Eval(no)) }
@@ -249,7 +272,7 @@ impl ImageMachine {
                 _ => (169, ImageControl::Error(5)),
             },
             ImageFrame::Match(arms, environment) => {
-                self.frames.remove(0);
+                self.remove_top_frame();
                 self.environment = environment.clone();
                 (173, ImageControl::Cases(value, arms, environment))
             }
@@ -257,7 +280,7 @@ impl ImageMachine {
                 values.push(value);
                 self.environment = environment.clone();
                 if rest.len == 0 {
-                    self.frames.remove(0);
+                    self.remove_top_frame();
                     (181, ImageControl::Invoke(name, values))
                 } else {
                     let next = self.image.ordered_children[rest.start];
@@ -267,7 +290,7 @@ impl ImageMachine {
             }
             ImageFrame::Return(ty, environment) => {
                 if has_type(&value, ty) {
-                    self.frames.remove(0);
+                    self.remove_top_frame();
                     self.environment = environment;
                     (185, ImageControl::Return(value))
                 } else {
@@ -275,11 +298,16 @@ impl ImageMachine {
                 }
             }
             ImageFrame::Scope(environment) => {
-                self.frames.remove(0);
+                self.remove_top_frame();
                 self.environment = environment;
                 (195, ImageControl::Return(value))
             }
         }
+    }
+
+    fn remove_top_frame(&mut self) {
+        self.frames.remove(0);
+        self.frame_origins.remove(0);
     }
 
     fn observe_frame(&self, frame: &ImageFrame) -> Frame {
