@@ -73,8 +73,12 @@ implements the typed host common domain of `sherlock-k-a/1`. It uses the actual
 ordered function table, explicit control and nine frame forms. Source recursion
 uses named calls; it is not unrolled. The public library API is consumed by the
 [mutual-recursion example](../../../crates/mori-core/examples/sherlock_reference.rs)
-and the independent normal comparison consumer below. This is not yet a source
-parser/compiler adapter or the new B profile.
+and the independent normal comparison consumer below. This public API consumes
+typed programs. A separate [private draft source frontend](../../../docs/audits/2026-10-15/sherlock-draft-source/README.md)
+now connects the real lexer/parser/checker and image builder to both host
+interpreters. Its eleven new checks pass; the 86 earlier tests compiled but were
+filtered out and were not rerun. The draft envelope remains unregistered and
+test-only. It does not implement the new B profile or public compiler integration.
 
 The API starts at K's valid post-startup boundary. Its `u128` values and
 nonnegative budgets exclude K's negative startup and out-of-range literals;
