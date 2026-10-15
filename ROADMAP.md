@@ -69,6 +69,13 @@ independent literals, plus separate List/Tree observations. Helper work is
 reported separately from A fuel. Full B budget/schema semantics, source-origin
 propagation, other helper families, circuit/proof and target acceptance remain open.
 
+[Source-origin propagation](docs/audits/2026-10-15/sherlock-source-origin-normal/README.md)
+now retains actual scheduling occurrences and saved frame owners in the private
+image-machine consumer. Its call-helper capture reads that real execution state.
+All 82 host checks pass, including the unchanged eight-program/216-prefix
+comparisons. Image/digest binding, B adoption and circuit/native/target acceptance
+remain open.
+
 The user's demonstrated ledger-9 recursion route does not require VerifyProof.
 The older March 2027 planning assumption below is historical context, not a
 prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full

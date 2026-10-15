@@ -30,6 +30,9 @@ pub(super) struct CallContext {
     original: Snapshot,
     image: Arc<ProgramImageDraft>,
     origin: (ExprId, SourceLocator),
+    // Real machine captures retain the owners of every pending saved frame.
+    // The frozen explicit-origin constructor cannot derive those owners.
+    frame_origins: Option<Vec<ExprId>>,
     names: Vec<Name>,
     functions: Vec<helper::FunctionRow>,
     parameters: Vec<helper::Parameter>,
@@ -42,6 +45,19 @@ pub(super) struct CallContext {
 }
 
 impl CallContext {
+    /// Capture the image, boundary and causal Call occurrence from one real
+    /// immutable machine borrow. No caller-selected occurrence or name/value
+    /// search establishes this origin. Existing host association/domain checks
+    /// remain in new(); this supplies no authentication or digest binding.
+    pub(super) fn from_image_machine(machine: &super::image_reference::ImageMachine)
+        -> Result<Self, Gap>
+    {
+        let mut context = Self::new(
+            machine.program_image().clone(), machine.snapshot(), machine.control_origin())?;
+        context.frame_origins = Some(machine.frame_origins().to_vec());
+        Ok(context)
+    }
+
     /// Domain: an unchanged builder-produced image of `snapshot.program`, a
     /// real pending Invoke boundary, and its explicitly supplied source Call ID.
     /// Snapshot currently has no occurrence field; this API does not infer one
@@ -109,12 +125,18 @@ impl CallContext {
         };
         let state = helper::CallHelper::begin(boundary, reference_cursor, 0).map_err(Gap::Helper)?;
         let scratch_len = values.len();
-        Ok(Self { original: snapshot, image, origin: (origin, locator), names, functions,
+        Ok(Self { original: snapshot, image, origin: (origin, locator), frame_origins: None,
+            names, functions,
             parameters, arguments, values, pairs: vec![None; scratch_len],
             cells: vec![None; scratch_len], result_slots: [None], state })
     }
 
     pub(super) fn work(&self) -> helper::Work { self.state.work }
+    /// None only for the legacy explicit-origin constructor, whose Snapshot
+    /// contains no frame-owner metadata. Actual machine captures retain all owners.
+    pub(super) fn saved_frame_origins(&self) -> Option<&[ExprId]> {
+        self.frame_origins.as_deref()
+    }
     pub(super) fn proposed_profile(&self) -> &'static str { helper::PROPOSED_PROFILE }
     pub(super) fn resolve_program(&self, handle: usize) -> Result<&Arc<Program>, Gap> {
         if handle == 0 { Ok(&self.original.program) } else { Err(Gap::MissingRetainedHandle) }
