@@ -1,0 +1,21 @@
+language "moriarty/1";
+agreement HoldoutAccrual {
+  state periods: UInt = 0;
+  state frozen: Bool = false;
+  asset CRD = { network: "holdout-net", issuer: "holdout-bank", reference: "credit", scale: 2 };
+  action accrue(rate: UInt, units: UInt) {
+    requires not frozen;
+    let due = rate * units;
+    liability("loan", CRD, "borrower", "lender", due);
+    requires liability_amount("loan") <= 50000;
+    next periods = periods + 1;
+  }
+  action repay(pay: UInt, stop: Bool) {
+    requires liability_present("loan");
+    transfer(CRD, "borrower", "lender", pay);
+    discharge("loan", pay);
+    ensures liability_amount("loan") not= 0 or liability_present("loan");
+    fee(CRD, "borrower", "borrower", 1);
+    next frozen = stop;
+  }
+}

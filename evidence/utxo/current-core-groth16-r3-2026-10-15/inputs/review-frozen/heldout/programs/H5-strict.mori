@@ -1,0 +1,12 @@
+language "moriarty/1";
+agreement HoldoutStrict {
+  state hits: UInt = 0;
+  action probeOr(a: UInt, b: UInt, skip: Bool) {
+    requires skip or a - b >= 0;
+    next hits = hits + 1;
+  }
+  action probeAnd(a: UInt, b: UInt, run: Bool) {
+    requires not (run and a * b >= 0) or run;
+    next hits = hits + 1;
+  }
+}

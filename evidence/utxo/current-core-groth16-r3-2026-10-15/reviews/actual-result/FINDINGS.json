@@ -1,0 +1,158 @@
+{
+ "format": "r3-independent-result-review-findings/1",
+ "reviewer": "claude-opus-5-5, fresh non-author security/crypto actual-result reviewer, requested effort high (actual effort not observable), no subagents, Read/Write only. Every seat in this lineage is the same model; independence is context-only.",
+ "date": "2026-10-15",
+ "reviewed": {
+  "result_manifest_sha256": "542ddb755a970f3c3c12731a4ec5a7e69cc12e3f5eda71f77fe2221976c71fbb (root-quoted)",
+  "result_json_sha256": "babddadeefba0831d1e06e94de2f0c741b3584d3d2abc8e58b60346578e09581",
+  "observations_sha256": "d99db996018b661a2e6d6545c9704993c494c7f517972bfe9bbc2adc0e1148e8 (root-quoted)",
+  "authorization_sha256": "aa551eb7c677c4babe25d699a0a225e84df6f91c49cb853ec066d5ebf83d74aa (root-quoted)",
+  "pre_launch_sha256": "3eccd3a956a437ddf3cdb50a0b1858b7c16cbee1f4e0a205be9f78f67ab1dc20 (root-quoted)",
+  "analysis_sha256": "0a51620f9fdf04ab6105f8c03c841f49ef1870779f0a6e6530663ce4e5576dfa",
+  "candidate": "SOURCE d3bdd500... BUILD edbe3193... Core closure f47318a2... (70 files at 6c7b1fda), R3-MANIFEST 64067829..., harness heldout.rs c2a1d165...",
+  "trust_boundary": "I have no hashing ability. Every digest is quoted from root records or the run's own records. My consistency checks are equality between records (RESULT step hashes vs RESULT-MANIFEST, FREEZE vs RESULT freeze_records vs PRE-LAUNCH copies vs P-AST rows, analysis inputs vs RESULT) and byte arithmetic on recorded sizes."
+ },
+ "verdict_axes": {
+  "OBSERVED_TESTS": "MATCH. 3 controls met their exact frozen A-3 outcomes; 13 steps exit 0; 41/41 E4 and 14/14 E5-r3 named tests ok; 574 rows = 503 OK / 0 FAIL / 71 OPEN, re-derived by me from raw E5-r3.stdout per table; printed summaries equal parsed counts; three identity lines equal E0r3 and the predicted compiler_build_digest 0b896adb...",
+  "EXPECTATIONS": "MATCH-QUALIFIED. Every executed frozen row has its frozen outcome. M-10's frozen parenthetical mechanism '(booleanity)' is not what refused the frozen edit (RR-02). M-11b stays OPEN CONTRADICTION. M-14 SAT is the frozen documented F-04 gap, counted OK by design. No refit, no new id.",
+  "EFFECTS": "WITHIN AUTHORIZATION, ONE PRESERVED DELTA. 17 spawns as authorized, no stop/skip/exception/postcheck error, limits per step as frozen, toolchain/rustup/~/.cargo listing equal, task files equal FREEZE, raw logs equal their RESULT hashes. BASE top-level gained one entry outside every authorized path (RR-07).",
+  "COVERAGE": "UNIT, constraint-level, captured-local. 503 OK = 256 independent pre-freeze reviewer rows + 53 post-freeze reviewer rows + 150 author-derived (AUTH) rows + 41 observations + 3 honest controls (RR-11). Adversarial internal witnesses appear in E5 only on two entry Bool wires.",
+  "ADOPTION": "ADOPT-QUALIFIED as limited UNIT evidence per ADOPTION-RECOMMENDATION.json. Not a product, soundness, proof, VK, ledger or Preprod pass.",
+  "ACCEPTANCE": "None. Every U0-U7, M1-M17, MC, SP and G exit stays open."
+ },
+ "findings": [
+  {
+   "id": "RR-01",
+   "severity": "Medium (evidence-class labelling)",
+   "area": "grossfees table (AUTH)",
+   "finding": "20 of the 31 GrossDebitAndFees relations have zero debit cells ('0 debit cell(s)' rows: H2-P1, H2-P2, H5-P1, H5-P2, H6-A1, H6-S1, H6-S3, H6-M2, H6-M3, H6-M6, H6-C1, H6-C3, H6-B1..B4, H3-P1, H3-P4, H3-P5, H4-P1). For these actions the probe shows identical constraint and witness counts with and without GrossDebitAndFees, so the binding adds no accounting constraint and the SAT/BOUND-SUMS rows are vacuous. The non-vacuous evidence is 11 relations (H1-P1..P5, H2-P3, H2-P4, H3-P2, H3-P3, W-1, H1-P1/frame) covering 15 debit cells, plus 30 '+1' public-slot edits refused by the binding equality. No row tampers an internal sum wire.",
+   "effect": "'93 grossfees OK' overstates accounting-relation coverage roughly threefold if quoted as a count.",
+   "disposition": "Quote as: honest in-circuit gross/fee sums equal frozen values on 15 debit cells in 11 relations; public sum slots are bound (30 binding refusals); no internal-gadget claim."
+  },
+  {
+   "id": "RR-02",
+   "severity": "Low (frozen mechanism vs observed mechanism)",
+   "area": "mutations M-10 (frozen post-freeze reviewer row)",
+   "finding": "Frozen M-10 reads 'public slot input.v = 2 (non-Bool)', required 'UNSATISFIABLE (booleanity)'. The run is UNSAT, but first_unsatisfied = \"274\" with entry_region_constraints = 259 and overrides_used = 0, so the binding equality refused it, not booleanity. Booleanity is shown only by the AUTH row M-10/wire (entry wire and public field both 2, refused at constraint \"0\", 1 override).",
+   "effect": "The outcome matches the frozen row. The parenthetical mechanism is supported only by an author-derived row.",
+   "disposition": "No refit. Record M-10 as frozen outcome met by binding refusal; the booleanity mechanism is AUTH evidence on one entry wire."
+  },
+  {
+   "id": "RR-03",
+   "severity": "Info (closes IR-04 for this exact library version)",
+   "area": "which_is_unsatisfied() == Some(\"0\") in M-10/wire and HW-23-r3/H6-B1/wire-two",
+   "finding": "ark-relations 0.4.0 src/r1cs/constraint_system.rs lines 589-624 (the copy cargo extracted into the run's scratch cargo-home) returns format!(\"{}\", i), the 0-based index of the first unsatisfied constraint, when the std feature is off. With std on and no ConstraintLayer it prints a warning to stderr and returns the same decimal index. std requires tracing-subscriber, which is absent from the E2 dependency tree, and E5-r3.stderr carries no ConstraintLayer warning. is_satisfied() is which_is_unsatisfied().is_none(). Candidate circuit.rs documents entry wires synthesized first, and gadgets::alloc_bool emits b*b=b as its single constraint.",
+   "effect": "The decimal-index format is now source-read and observed. Index 0 identifies input-0 booleanity only through synthesis order; it is not a refusal code and changes with any reordering.",
+   "disposition": "IR-04 UNVERIFIED-LIB becomes VERIFIED for ark-relations 0.4.0 at the bytes compiled here (extraction equality to the checksummed .crate is a cargo/root trust boundary). Keep the synthesis-order qualification."
+  },
+  {
+   "id": "RR-04",
+   "severity": "Position (Q-2)",
+   "area": "HW-24 class in HW-TRACEABILITY-2 (frozen RELATION-EXECUTED)",
+   "finding": "Frozen HW-24 text: base H3-P4, 'in poly_b, treat v as UInt with value 2 (non-Bool) to satisfy Eq(v,v)', required unsatisfiable. Its refs execute both halves of the only two ways a witness could carry v = 2: M-10 (public v = 2, honest wire) is refused by the binding equality; M-10/wire (wire and public v = 2) is refused at booleanity constraint 0. By source (binding equates the public slot with the entry wire; alloc_bool constrains that wire) no assignment with public v = 2 satisfies the relation. Unlike HW-23, HW-24 names one entry wire and no computed internal Bool wire.",
+   "effect": "RELATION-EXECUTED is accurate for HW-24's frozen scope.",
+   "disposition": "My vote: CONFIRM HW-24 as RELATION-EXECUTED, scoped to the H3 poly_b entry Bool input v with value 2. Root tallies whether this joins the existing single position."
+  },
+  {
+   "id": "RR-05",
+   "severity": "Agreement (Q-1)",
+   "area": "HW-06, HW-07, HW-23",
+   "finding": "Against the frozen proposal texts: HW-06/07 require refusing a witness whose rhs wires are garbage, but their refs run Tamper::none (honest completion). HW-23 covers any Bool wire at 2 or p-1; only entry wires at 2 are tampered and p-1 is a public-field edit. The analysis hw block still prints RELATION-EXECUTED for these three, correctly unmodified by the operator.",
+   "effect": "After applying the qualification: RELATION-EXECUTED 11 (HW-08, 10, 11, 12, 14, 16, 17, 18, 19, 22, 24), RELATION-PARTIAL 11 (HW-01..07, 09, 15, 23, 26), ENCODER-ONLY 1 (HW-13), CORE-AND-PREMISE 2 (HW-21, 25), STRUCTURAL-SOURCE 1 (HW-20). All 26 stay OPEN rows.",
+   "disposition": "AGREE with Q-1."
+  },
+  {
+   "id": "RR-06",
+   "severity": "Low (reading rule)",
+   "area": "claim-level RELATION-EXECUTED entries",
+   "finding": "HW-08, 10, 11, 12, 16, 17, 19 and 22 are claim mutations executed as public claims with honest completion. 'Executed' means the frozen claim ran through the constraint system and was refused. That no other witness satisfies it rests on the source argument that every gadget is functional in claimed inputs and pre-state. HW-14 runs only its 'program-identity public input' alternative; its 'H1 key/VK' alternative cannot run because no setup exists.",
+   "effect": "None on outcomes. It prevents ALL-REFS-OK being read as arbitrary-witness evidence.",
+   "disposition": "Carry with the Q-1 travel rule."
+  },
+  {
+   "id": "RR-07",
+   "severity": "Low (effects; preserved delta)",
+   "area": "BASE top-level listing",
+   "finding": "task_toplevel listing: 1498 entries / 59,098 bytes before E1, 1499 / 59,150 after E5-r3. The 52-byte difference equals exactly one line 'sol-p3-r1-aiken-package-placement-source-20261015\\td\\n', matching the operator diff (added 1, removed 0). The path is outside <task>, <root>, the five input directories, ~/.cargo and the toolchain. Root attributes it to a separately authorized disjoint Sol source writer. ELIGIBILITY C.2 as worded (no other writer to the named paths) is not shown violated, but the run did not hold a strict no-other-writer filesystem at BASE level. Monitoring is top-level d_type names plus a name/type/size ~/.cargo listing, with no read or syscall trace (R-05). Frozen-packet files in the scratch were hash-verified at E0r3 copy time and not re-hashed before E5 compile, except the HW trace re-hashed before ANALYZE. E5's identity recomputation covers the 16 build and 70 Core files at E5 read time.",
+   "effect": "No observed effect on run inputs or outputs. There is a residual unobservable window for writes inside the scratch between E0r3 and E5 compile.",
+   "disposition": "Preserve the delta as recorded. Do not hide it and do not rerun. Recommended, non-blocking: root attaches the Sol lane's own output manifest showing its writes stayed inside its directory."
+  },
+  {
+   "id": "RR-08",
+   "severity": "Info (lock provenance)",
+   "area": "E1, E1h-r3",
+   "finding": "Both Cargo.lock files are generated during the run (98 and 95 packages), so their bytes were not pinned in advance. Cargo chose generic-array 0.14.7 and serde_json 1.0.151 with newer versions available offline. The gates bound them: E1v PASS, E1v+ registry subset a53ee0f6... (93 rows), E1hv-r3.subset ee610d19... (89 rows), pair SAME on 81 shared names with only ark-crypto-primitives, ark-groth16, ark-snark and blake2 candidate-only. The subset digests and counts equal those the prior result review recorded for the executed r2 locks.",
+   "effect": "Same registry content as the executed r2 run; no midnight or git source.",
+   "disposition": "None."
+  },
+  {
+   "id": "RR-09",
+   "severity": "Info (coverage)",
+   "area": "groth16 feature",
+   "finding": "E3c compiles mori-r1cs with --features groth16 (ark-groth16 0.4.0 and friends). E4 runs without the feature and the harness does not enable it. The verify glue is compile-only. No setup, key, prove or verify ran.",
+   "effect": "No runtime evidence about groth16.rs.",
+   "disposition": "None; consistent with the never list."
+  },
+  {
+   "id": "RR-10",
+   "severity": "Info (resources)",
+   "area": "per-step limits",
+   "finding": "Peak RSS 421,984 KiB (E3b), which is about 412 MiB or 432 MB, not '~422 MiB'. Longest wall 15.01 s (E3a). Run start 20:17:15.50Z, RESULT 20:18:05.16Z, POST 20:18:05.41Z. Disk 59.77 to 58.91 GiB. No timeout, signal or limit hit. CPU limit 60 s (controls, E0r3, E1 family, E2, ANALYZE) or 900 s (E3a-E5-r3), AS 8 GiB, CORE 0, nice 10, jobs 2, wall 1800 s, all as frozen.",
+   "effect": "None.",
+   "disposition": "Use the KiB figure in records."
+  },
+  {
+   "id": "RR-11",
+   "severity": "Medium (adoption-quoting risk)",
+   "area": "composition of the 503 OK rows",
+   "finding": "My classification of the 503 OK rows: (a) 256 independent pre-freeze reviewer rows: heldout 121 (61 Core differential, 30 W, 30 honest SAT), accounting 60 (30 core + 30 statement), held-out rejected phase 31 + work 31, static S-1..S-8 13. (b) 53 post-freeze reviewer rows: hostile 27 UNSAT + 1 COVERAGE, 15 frozen mutations (M-01, 02, 03, 04, 05, 06/encoder, 08, 09, 10, 11a, 12, 13x3, 14), addendum2 8, H8-R1 phase/work 2. (c) 150 AUTH rows: addendum3 4, addendum4 11, grossfees 93, S-9 5, hw25 2, METHOD-CONTROL 31, M-10/wire and HW-23-r3 2, hwtrace TRACE-FORM 2. (d) 41 probe observations, which assert only build-digest equality and nonzero values. (e) 3 honest controls (M-05-honest, M-10-honest, M-11-honest). Frozen relation-level refusals are 27 hostile + 12 mutation UNSAT + H8-R1 = 40. M-14 OK documents a satisfiable gap (F-04).",
+   "effect": "'503 OK' is not a security count.",
+   "disposition": "Any adoption text quotes the graded table, never the bare total."
+  },
+  {
+   "id": "RR-12",
+   "severity": "Info (observation)",
+   "area": "probe table",
+   "finding": "For all 41 configurations instance_variables = statement_fields + 1. Where GrossDebitAndFees adds no constraint, r1cs_sha256, shape_digest and relation_identity still differ from the NotBound relation, so the binding mode is committed in the identity. H1 and H1' (usdy) have equal counts and distinct program_hash, shape and r1cs digests. The matrix digest is computed under OptimizationGoal::Constraints, which circuit.rs marks UNVERIFIED-LIB as matching ark-groth16 0.4 setup.",
+   "effect": "First observed matrix identities (closes N-07 as an observation). They are not setup transcripts or VKs.",
+   "disposition": "Usable as recorded identities for build 0b896adb only."
+  },
+  {
+   "id": "RR-13",
+   "severity": "Info (currentness)",
+   "area": "Core closure vs public main",
+   "finding": "CORE-COMPARISON (8cede5a0 vs 4d969554): 70 frozen paths unchanged between the two mains. crates/mori-core/src/lib.rs differs from the frozen closure (main 801151ef..., frozen 9d920393...). New Sherlock files lie outside the 70 paths.",
+   "effect": "The r3 result describes the 6c7b1fda closure only. It says nothing about main, Sherlock helpers or staged /2.",
+   "disposition": "A main-closure lane needs its own closure pin, review and run."
+  },
+  {
+   "id": "RR-14",
+   "severity": "Info (record integrity)",
+   "area": "RESULT.json first-read items (XR-07)",
+   "finding": "stops [], skipped {}, prestart_ok true, no operator_exception, parse_errors or postcheck_errors keys, every task_files_at_finish equal_to_freeze, toolchain_before_E1 = toolchain_after, rustup_settings_unchanged, home_cargo_diff empty, option_a 194 files / bd3a659d... / no stops. Every run log hash recorded in RESULT.json equals the root RESULT-MANIFEST hash, so no XR-02 surviving-child write occurred after RESULT.json. Operator exit 0 and ANALYZE exit 0 are not PASS by themselves.",
+   "effect": "The raw record is consistent and immutable as far as root hashes show.",
+   "disposition": "None."
+  }
+ ],
+ "open_rows_71": {
+  "accounting": {"NOT-REPRESENTED planes": 30, "NOT-IN-STATEMENT": 3, "NO-FROZEN-ACCOUNTING (H8-P1, H8-P2)": 2},
+  "hwtrace": {"HW-01..26 (row status only)": 26},
+  "hostile": {"PREMISE (H1-R6, H1-R7)": 2, "NOT-DECODABLE (H1-R11, H2-R5)": 2},
+  "mutations": {"M-06/relation TARGET-OBLIGATION": 1, "M-07 TARGET-GAP (F-05)": 1, "M-11b CONTRADICTION": 1},
+  "hw25": {"TARGET-PREMISE": 1, "encoder observed-not-asserted": 1},
+  "addendum4": {"HW-26-r3/padding NOT-APPLICABLE": 1},
+  "total": 71,
+  "rule": "Never counted as passes. A green suite does not close any of them."
+ },
+ "carried_open": [
+  "M-11b frozen contradiction (no-modular-alias intent re-homed to ABI_V1 byte-image mapping; no M-11c row exists)",
+  "F-02 external duties, F-03 conservative bound, F-04 balance-row presence (M-14 SAT), F-05 duty frame (M-06 relation half, M-07), F-08/P-5 caller-supplied CompilerBuild, F-10 Emit policy unwired, F-14 rejection relation",
+  "HW-01..07 and HW-23 computed internal Bool wires: no adversarial internal witness on held-out programs",
+  "HW-20 source-only; HW-26 padding; HW-25 pre-state authenticity",
+  "IR-02 (S-9 cells/duties shared message), IR-05 (S-2..S-8 accept any Core error), IR-06 (phase is Core-local, not ledger phase)",
+  "R-05 build-script/proc-macro filesystem exposure; metadata-only listings; no syscall trace; OR-08 re-hash-to-spawn window; IR-09b; R-B.3; IR-10",
+  "W-OR-01 DISSENT (unrepaired operator never run) preserved",
+  "DirectFieldV0 test-only; no ABI v1 mapping; staged /2 lowering; authority, signed intent, debit authority; physical P3 settlement",
+  "Groth16 setup, keys, VK, proof, verification, ledger, Preprod: NOT RUN"
+ ]
+}

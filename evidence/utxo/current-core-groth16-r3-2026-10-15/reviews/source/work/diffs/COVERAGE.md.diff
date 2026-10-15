@@ -1,0 +1,27 @@
+--- old
++++ new
+@@ -75,7 +75,7 @@
+ | Any `moriarty/2` source | `StagedNotLowered(plan)` | Staged segment relations are not written yet; the plan from the real `StagePlan` is returned |
+ | Duty touched or read with no source `Liability` anywhere (external duty) | `Unsupported{"external duty"}` | Its identity would be prover data; the first slice fixes identities at compile time |
+ | Action that can never succeed (constant false predicate, constant overflow or underflow, conflicting source identities) | `StaticFailure` | No success relation exists |
+-| Represented snapshot above Core bounds (4,096 balances, 1,024 liabilities, 65,536 trace cells) | `Bound` | Conservative bound: every registry duty is counted as present |
++| Represented snapshot above Core bounds (4,096 balances, 1,024 liabilities, 65,536 trace cells) | `Bound` | Conservative over the represented snapshot only: every registry duty is counted as present. Unrepresented scenario rows are a target premise (see below) |
+ | Unknown action, unknown frame asset, bad frame account | `UnknownAction` / `Option` | — |
+ | Scalar field under 198 bits; a circuit over another field | `Field` | The exact-integer arguments need `r > 2^195` |
+ | All-zero compiler build or Core closure digest | `Identity` | The build identity is mandatory |
+@@ -86,9 +86,13 @@
+ 
+ ## Refusal semantics on the success path (declared, not proven)
+ 
+-Every Core refusal reachable for an admitted `/1` action has no satisfying success assignment, **except one premise row**. The excluded cases: overflow (Add, Mul, credit, accrual), underflow (Sub), insufficient balance (self-transfer included), false `requires`/`ensures`, unknown residual liability, discharge exceeding the residual, and meter exhaustion with a bound cap. Admission and scenario refusals are compile-time facts or slot typing.
++Relative to the represented snapshot, every Core refusal reachable for an admitted `/1` action has no satisfying success assignment, except the cases below that the statement cannot express. `mori::core::balance` for a missing balance row is not excluded at all (F-04, `TargetPremise`; M-14 SATISFIABLE). Scenario-level refusals over rows the statement does not carry (`bound` over all scenario rows, undeclared assets, invalid or duplicate rows) and registry duty-identity mismatch are excluded only under the target obligations of pre-state authenticity and frame completeness (`TARGET_OBLIGATIONS`); the relation itself does not refuse them.
+ 
+-The exception is `mori::core::balance` for a **missing explicit balance row** (`runtime.rs:609-627`). Its status is `TargetPremise`, not `Constant`: the layout has no balance presence bit, so a prover can claim a pre-balance of 0 for a row that the Core scenario lacks, and the relation is satisfiable (review F-04; reviewer mutation M-14 is expected SATISFIABLE). A target must authenticate row existence, or a reviewed presence bit must be added. The full list is `coverage::REFUSALS`. A separate rejection relation (code and step) is future work.
++The relation-excluded cases: overflow (Add, Mul, credit, accrual), underflow (Sub), insufficient balance (self-transfer included), false `requires`/`ensures`, unknown residual liability, discharge exceeding the residual, and meter exhaustion with a bound cap. Program admission refusals are compile-time facts, and scenario state/input typing is fixed by the slot types.
++
++The first exception is `mori::core::balance` for a **missing explicit balance row** (`runtime.rs:609-627`). Its status is `TargetPremise`, not `Constant`: the layout has no balance presence bit, so a prover can claim a pre-balance of 0 for a row that the Core scenario lacks, and the relation is satisfiable (review F-04; reviewer mutation M-14 is expected SATISFIABLE). A target must authenticate row existence, or a reviewed presence bit must be added.
++
++The other exceptions are also `TargetPremise` rows (evidence repair, result review R-01). `mori::core::bound`: the compiler refuses (`Bound`) only a represented snapshot that alone exceeds Core's bounds, while Core counts every scenario row. Scenario rows with an undeclared asset, or an invalid or duplicate balance or liability row: the layout has one slot per represented cell and registry duty, so such rows are not in the statement. `mori::core::liability` for a scenario duty whose identity differs from the source registry: the identity is a relation constant and the cell carries only `(present, amount)`. The encoder refuses that record, but a claimant does not have to use the encoder. Unknown or outside-frame rows are not excluded by the relation. The full list is `coverage::REFUSALS`. A separate rejection relation (code and step) is future work.
+ 
+ ## Target obligations outside the transition relation
+ 

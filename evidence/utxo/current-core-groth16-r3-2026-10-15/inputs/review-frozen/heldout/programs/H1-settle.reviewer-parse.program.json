@@ -1,0 +1,343 @@
+{
+  "actions": [
+    {
+      "inputs": [
+        {
+          "name": "gross",
+          "ty": "UInt"
+        },
+        {
+          "name": "cut",
+          "ty": "UInt"
+        },
+        {
+          "name": "hold",
+          "ty": "UInt"
+        },
+        {
+          "name": "last",
+          "ty": "Bool"
+        }
+      ],
+      "name": "settle",
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 4
+        },
+        {
+          "kind": "Let",
+          "name": "net",
+          "value": 7
+        },
+        {
+          "amount": 8,
+          "asset": "USDX",
+          "from": "buyer",
+          "kind": "Transfer",
+          "to": "seller"
+        },
+        {
+          "amount": 9,
+          "asset": "USDX",
+          "from": "buyer",
+          "kind": "Fee",
+          "to": "operator"
+        },
+        {
+          "amount": 10,
+          "asset": "PTS",
+          "from": "seller",
+          "kind": "Transfer",
+          "to": "seller"
+        },
+        {
+          "amount": 11,
+          "asset": "USDX",
+          "creditor": "buyer",
+          "debtor": "seller",
+          "kind": "Liability",
+          "name": "warranty"
+        },
+        {
+          "kind": "Next",
+          "state": "released",
+          "value": 14
+        },
+        {
+          "kind": "Next",
+          "state": "rounds",
+          "value": 17
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 23
+        },
+        {
+          "kind": "Next",
+          "state": "open",
+          "value": 25
+        }
+      ]
+    },
+    {
+      "inputs": [
+        {
+          "name": "pay",
+          "ty": "UInt"
+        },
+        {
+          "name": "left",
+          "ty": "UInt"
+        }
+      ],
+      "name": "close",
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 26
+        },
+        {
+          "amount": 27,
+          "asset": "USDX",
+          "from": "seller",
+          "kind": "Transfer",
+          "to": "buyer"
+        },
+        {
+          "amount": 28,
+          "kind": "Discharge",
+          "name": "warranty"
+        },
+        {
+          "kind": "Requires",
+          "predicate": 31
+        },
+        {
+          "kind": "Requires",
+          "predicate": 32
+        },
+        {
+          "kind": "Next",
+          "state": "open",
+          "value": 33
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "holdout-issuer",
+        "network": "holdout-net",
+        "reference": "usdx",
+        "scale": 6
+      },
+      "name": "USDX"
+    },
+    {
+      "identity": {
+        "issuer": "holdout-issuer",
+        "network": "holdout-net",
+        "reference": "pts",
+        "scale": 0
+      },
+      "name": "PTS"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "open"
+    },
+    {
+      "kind": "Name",
+      "name": "gross"
+    },
+    {
+      "kind": "Name",
+      "name": "cut"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 1,
+      "op": "Gt",
+      "rhs": 2
+    },
+    {
+      "kind": "Binary",
+      "lhs": 0,
+      "op": "And",
+      "rhs": 3
+    },
+    {
+      "kind": "Name",
+      "name": "gross"
+    },
+    {
+      "kind": "Name",
+      "name": "cut"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 5,
+      "op": "Sub",
+      "rhs": 6
+    },
+    {
+      "kind": "Name",
+      "name": "net"
+    },
+    {
+      "kind": "Name",
+      "name": "cut"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "5"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "hold"
+    },
+    {
+      "kind": "Name",
+      "name": "released"
+    },
+    {
+      "kind": "Name",
+      "name": "net"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 12,
+      "op": "Add",
+      "rhs": 13
+    },
+    {
+      "kind": "Name",
+      "name": "rounds"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 15,
+      "op": "Add",
+      "rhs": 16
+    },
+    {
+      "kind": "Name",
+      "name": "released"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1000000"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 18,
+      "op": "Le",
+      "rhs": 19
+    },
+    {
+      "kind": "Name",
+      "name": "last"
+    },
+    {
+      "kind": "Not",
+      "value": 21
+    },
+    {
+      "kind": "Binary",
+      "lhs": 20,
+      "op": "Or",
+      "rhs": 22
+    },
+    {
+      "kind": "Name",
+      "name": "last"
+    },
+    {
+      "kind": "Not",
+      "value": 24
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "warranty"
+    },
+    {
+      "kind": "Name",
+      "name": "pay"
+    },
+    {
+      "kind": "Name",
+      "name": "pay"
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "warranty"
+    },
+    {
+      "kind": "Name",
+      "name": "left"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 29,
+      "op": "Eq",
+      "rhs": 30
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "warranty"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "Bool",
+        "value": false
+      }
+    }
+  ],
+  "language": "moriarty/1",
+  "name": "HoldoutSettle",
+  "semantics": "moriarty-core/1",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "released",
+      "ty": "UInt"
+    },
+    {
+      "initial": {
+        "type": "Bool",
+        "value": true
+      },
+      "name": "open",
+      "ty": "Bool"
+    },
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "rounds",
+      "ty": "UInt"
+    }
+  ]
+}

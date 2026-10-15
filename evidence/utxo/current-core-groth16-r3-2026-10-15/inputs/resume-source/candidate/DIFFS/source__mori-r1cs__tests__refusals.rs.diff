@@ -1,0 +1,14 @@
+--- origin-r2/source/mori-r1cs/tests/refusals.rs
++++ successor/source/mori-r1cs/tests/refusals.rs
+@@ -128,9 +128,9 @@
+ fn emit_is_lowered_but_refused_whole_program_by_the_initial_ledger_target() {
+     // The relation lowers Emit (payroll pay/settle emit); the target policy refuses the
+     // whole program, including its actions that do not emit.
+-    let pay = compile(PAYROLL, options("pay", CapBinding::NotBound));
++    let pay = compile_ok(PAYROLL, options("pay", CapBinding::NotBound));
+     assert!(matches!(initial_ledger_target_admits(pay.program()), Err(AdapterError::TargetRefusal(_))));
+-    let invoice = compile(INVOICE, options("open", CapBinding::NotBound));
++    let invoice = compile_ok(INVOICE, options("open", CapBinding::NotBound));
+     assert!(initial_ledger_target_admits(invoice.program()).is_ok());
+ }
+ 

@@ -1,0 +1,440 @@
+{
+ "cases": [
+  {
+   "id": "C1-inline-first-line",
+   "observed": {
+    "anomalies": [],
+    "format": "libtest-rows-result/1",
+    "identity_lines": [
+     "identity build_manifest_sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (16 entries equal to the compiled crate bytes)",
+     "identity core_closure_sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb (70 files recomputed from <root>/moriarty)",
+     "identity compiler_build_digest cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "outcomes": {
+     "build_identity_is_recomputed_from_the_copied_bytes": [
+      "ok"
+     ],
+     "heldout_vectors_core_and_relation": [
+      "ok"
+     ]
+    },
+    "summaries": [
+     "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+     "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.31s"
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "C1-r2-rows",
+   "observed": {
+    "classes": {},
+    "distinct_ids": 2,
+    "ids": {
+     "H1-P1": [
+      "OK",
+      "OK"
+     ],
+     "H1-R1": [
+      "OK"
+     ]
+    },
+    "rows": 3,
+    "tags": {
+     "OK": 3
+    }
+   },
+   "ok": true
+  },
+  {
+   "id": "C2-legacy-defect-reproduced",
+   "observed": {
+    "legacy_identity_lines": [
+     "identity core_closure_sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb (70 files recomputed from <root>/moriarty)",
+     "identity compiler_build_digest cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "legacy_outcomes": {
+     "build_identity_is_recomputed_from_the_copied_bytes": [
+      "identity build_manifest_sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (16 entries equal to the compiled crate bytes)"
+     ],
+     "heldout_vectors_core_and_relation": [
+      "heldout OK   H1-P1: Core reference equals reviewer oracle"
+     ]
+    }
+   },
+   "ok": true
+  },
+  {
+   "id": "C3-typed-rows",
+   "observed": {
+    "anomalies": [],
+    "checks": [
+     {
+      "classes_equal": true,
+      "equal": true,
+      "parsed": {
+       "fail": 1,
+       "ok": 2,
+       "open": 1
+      },
+      "printed": {
+       "fail": 1,
+       "ok": 2,
+       "open": 1
+      },
+      "table": "mutations"
+     },
+     {
+      "classes_equal": false,
+      "equal": false,
+      "parsed": {
+       "fail": 1,
+       "ok": 2,
+       "open": 1
+      },
+      "printed": {
+       "fail": 0,
+       "ok": 3,
+       "open": 1
+      },
+      "table": "mutations"
+     }
+    ],
+    "table": {
+     "classes": {
+      "CORE-REFUSED": 1,
+      "TARGET-GAP": 1,
+      "UNSAT": 2
+     },
+     "distinct_ids": 4,
+     "ids": {
+      "M-01": [
+       "OK"
+      ],
+      "M-07": [
+       "OPEN"
+      ],
+      "M-13/program_hash": [
+       "OK"
+      ],
+      "M-14": [
+       "FAIL"
+      ]
+     },
+     "rows": 4,
+     "tags": {
+      "FAIL": 1,
+      "OK": 2,
+      "OPEN": 1
+     }
+    }
+   },
+   "ok": true
+  },
+  {
+   "id": "C4-failed-nocapture",
+   "observed": {
+    "anomalies": [],
+    "binaries": [
+     {
+      "running": 1,
+      "summary": {
+       "failed": 1,
+       "filtered_out": 0,
+       "ignored": 0,
+       "line": "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+       "measured": 0,
+       "passed": 0,
+       "result": "FAILED"
+      },
+      "tests": [
+       {
+        "captured": [
+         "static OK   S-1: [REFUSED] x",
+         "static FAIL S-9/states: [BOUND] y"
+        ],
+        "inline_first_line": true,
+        "line": 2,
+        "name": "static_refusals",
+        "outcome": "FAILED"
+       }
+      ]
+     }
+    ],
+    "failure_sections": {},
+    "format": "libtest-rows/1"
+   },
+   "ok": true
+  },
+  {
+   "id": "C5-capture-failures-section",
+   "observed": {
+    "anomalies": [],
+    "binaries": [
+     {
+      "running": 2,
+      "summary": {
+       "failed": 1,
+       "filtered_out": 0,
+       "ignored": 0,
+       "line": "test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+       "measured": 0,
+       "passed": 1,
+       "result": "FAILED"
+      },
+      "tests": [
+       {
+        "captured": [],
+        "inline_first_line": false,
+        "line": 3,
+        "name": "a_test",
+        "outcome": "ok"
+       },
+       {
+        "captured": [],
+        "inline_first_line": false,
+        "line": 4,
+        "name": "b_test",
+        "outcome": "FAILED"
+       }
+      ]
+     }
+    ],
+    "failure_sections": {
+     "b_test": [
+      "some captured line",
+      "test lookalike ... not a header inside a failure section"
+     ]
+    },
+    "format": "libtest-rows/1"
+   },
+   "ok": true
+  },
+  {
+   "id": "C6-anomalies",
+   "observed": [
+    {
+     "kind": "new test header while a test was open",
+     "line": 3,
+     "test": "x"
+    },
+    {
+     "kind": "stream ended with an open test",
+     "line": null,
+     "test": "z"
+    }
+   ],
+   "ok": true
+  },
+  {
+   "id": "C6-running-count-mismatch",
+   "observed": [
+    {
+     "kind": "running count differs from parsed tests",
+     "parsed": 1,
+     "running": 2
+    }
+   ],
+   "ok": true
+  },
+  {
+   "id": "C7-ignored-with-reason",
+   "observed": {
+    "anomalies": [],
+    "binaries": [
+     {
+      "running": 1,
+      "summary": {
+       "failed": 0,
+       "filtered_out": 0,
+       "ignored": 1,
+       "line": "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out",
+       "measured": 0,
+       "passed": 0,
+       "result": "ok"
+      },
+      "tests": [
+       {
+        "captured": [],
+        "inline_first_line": false,
+        "line": 2,
+        "name": "c",
+        "outcome": "ignored, slow"
+       }
+      ]
+     }
+    ],
+    "failure_sections": {},
+    "format": "libtest-rows/1"
+   },
+   "ok": true
+  },
+  {
+   "id": "C8-hw-resolution",
+   "observed": {
+    "HW-A": {
+     "class": "RELATION-EXECUTED",
+     "e4": [
+      {
+       "outcomes": [
+        "ok"
+       ],
+       "test": "e4_ok"
+      }
+     ],
+     "id": "HW-A",
+     "note": "row status only; a class other than RELATION-EXECUTED is never upgraded by OK refs",
+     "overall": "ALL-REFS-OK",
+     "refs": [
+      {
+       "row": "M-01",
+       "status": "OK",
+       "table": "mutations",
+       "tags": [
+        "OK"
+       ]
+      }
+     ]
+    },
+    "HW-B": {
+     "class": "RELATION-EXECUTED",
+     "e4": [],
+     "id": "HW-B",
+     "note": "row status only; a class other than RELATION-EXECUTED is never upgraded by OK refs",
+     "overall": "FAIL-OR-MISSING",
+     "refs": [
+      {
+       "row": "M-14",
+       "status": "FAIL",
+       "table": "mutations",
+       "tags": [
+        "FAIL"
+       ]
+      }
+     ]
+    },
+    "HW-C": {
+     "class": "RELATION-PARTIAL",
+     "e4": [
+      {
+       "outcomes": [
+        "MISSING"
+       ],
+       "test": "e4_missing"
+      }
+     ],
+     "id": "HW-C",
+     "note": "row status only; a class other than RELATION-EXECUTED is never upgraded by OK refs",
+     "overall": "FAIL-OR-MISSING",
+     "refs": [
+      {
+       "row": "M-99",
+       "status": "MISSING",
+       "table": "mutations",
+       "tags": []
+      }
+     ]
+    },
+    "HW-D": {
+     "class": "TARGET-GAP",
+     "e4": [],
+     "id": "HW-D",
+     "note": "row status only; a class other than RELATION-EXECUTED is never upgraded by OK refs",
+     "overall": "SOME-REFS-OPEN",
+     "refs": [
+      {
+       "row": "M-07",
+       "status": "OPEN",
+       "table": "mutations",
+       "tags": [
+        "OPEN"
+       ]
+      }
+     ]
+    },
+    "HW-E": {
+     "class": "STRUCTURAL-SOURCE",
+     "e4": [],
+     "id": "HW-E",
+     "note": "row status only; a class other than RELATION-EXECUTED is never upgraded by OK refs",
+     "overall": "NO-EXECUTABLE-REF",
+     "refs": []
+    }
+   },
+   "ok": true
+  },
+  {
+   "id": "C9-analyze-two-dated-files",
+   "observed": {
+    "files": [
+     "ANALYSIS-20261015T182307.505914Z.json",
+     "ANALYSIS-20261015T182307.506625Z.json",
+     "ANALYSIS-INDEX.jsonl"
+    ],
+    "identity_equals_E0": {
+     "build_manifest_sha256": true,
+     "compiler_build_digest_vs_predicted": true,
+     "core_closure_sha256": true
+    },
+    "index_lines": 2,
+    "rc": [
+     0,
+     0
+    ],
+    "result_json_consistency": {
+     "E4": {
+      "outcome_differences": {},
+      "recorded_by": "legacy tests_of (inline-first-line defect)"
+     },
+     "E5-r3": {
+      "outcome_differences": {
+       "build_identity_is_recomputed_from_the_copied_bytes": {
+        "legacy": [
+         "identity build_manifest_sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (16 entries equal to the compiled crate bytes)"
+        ],
+        "parsed": "ok"
+       },
+       "heldout_vectors_core_and_relation": {
+        "legacy": [
+         "heldout OK   H1-P1: Core reference equals reviewer oracle"
+        ],
+        "parsed": "ok"
+       }
+      },
+      "recorded_by": "legacy tests_of (inline-first-line defect)"
+     }
+    }
+   },
+   "ok": true
+  },
+  {
+   "id": "C9-out-dir-inside-run-refused",
+   "observed": {
+    "rc": 2,
+    "run_files": [
+     "E4.stdout",
+     "E5-r3.stdout",
+     "RESULT.json"
+    ]
+   },
+   "ok": true
+  },
+  {
+   "id": "C9-error-artifact",
+   "observed": {
+    "errors": [
+     "ANALYSIS-20261015T182307.506996Z.error.json"
+    ],
+    "rc": 3
+   },
+   "ok": true
+  }
+ ],
+ "failed": [],
+ "format": "evidence-repair-resume-parser-check/1",
+ "helper": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-core-groth16-evidence-repair-resume-source-20261015/operator-proposals/libtest_rows.py",
+ "helper_sha256": "466aeb8ae33d1f6de9ad86a7cae864e2ba691d60583b1e65f942a3ebd73093fc",
+ "passed": 13,
+ "scope": "records/PARSER-CHECK-SCOPE.md",
+ "synthetic_only": true
+}

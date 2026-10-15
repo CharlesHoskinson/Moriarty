@@ -1,0 +1,27 @@
+--- origin-r2/source/mori-r1cs/src/adapter.rs
++++ successor/source/mori-r1cs/src/adapter.rs
+@@ -76,9 +76,10 @@
+ /// Obligations a pure transition proof does not discharge, whatever the adapter.
+ pub const TARGET_OBLIGATIONS: &[&str] = &[
+     "Pre-state authenticity: pre states, cells and duties are statement inputs; a target must bind them to the consumed datum/UTxO (ScriptCustodied) or label them unauthenticated premises (KeyHeldExternal, projection.rs:415-430).",
+-    "Frame completeness: rows outside the represented cells are not in the statement; a target must represent them (FrameCells::Include) or establish that none exist, because Core's 65,536 trace bound counts every scenario row (runtime.rs:540-547).",
++    "Balance-row existence (premise, review F-04): Core refuses a scenario that lacks an explicit balance row for a touched account (runtime.rs:609-627), but the layout has no balance presence bit, so a claimed pre-balance of 0 for a missing row satisfies the relation. A target must authenticate the existence of every represented balance row, or a reviewed presence bit must be added; until then this is an unauthenticated premise, not a relation constant.",
++    "Frame completeness: rows outside the represented cells are not in the statement; a target must represent them (FrameCells::Include) or establish that none exist, because Core's 65,536 trace bound counts every scenario row (runtime.rs:540-547). FrameCells::Include covers balance cells only: an unregistered incoming duty (no source Liability) cannot be represented at all (review F-05), so duty-frame completeness rests entirely on the target until a reviewed duty-frame option exists. No P3 or ABI mapping may claim a complete frame before then.",
+     "Physical asset delta: Transfer/Fee effects are bookkeeping; payouts, deposits, custody totals, conservation and tagged outputs are separate target relations (ABI-V1 VOTES.md P3).",
+-    "Debit authority: the signer of each debited external account (KeyHeldExternal) and owner intent limits (intent::check_effects) are separate checks; the accounting summary only exposes gross debit and fees.",
++    "Debit authority: authority for debited accounts and owner intent limits (intent::check_effects) are separate checks; the accounting summary only exposes gross debit and fees. The P3-7 scope is disputed and unreconciled: the later ABI review (f3ae8556, V6) requires authority for every debited account including custody-held balances, thread-advance authority and a signed intent in the statement, not only external (KeyHeldExternal) signers.",
+     "Replay and consumption: one-time use of the consumed thread/claim, nonce and predecessor history.",
+     "Ledger phases and failure outcomes: rejected executions have no success proof here; any charged failure transition needs its own relation.",
+     "Setup provenance: the R1CS digest names the matrices; a VK is trusted only with a reviewed setup transcript over exactly those matrices.",
+@@ -189,6 +190,11 @@
+ /// target policy, not a compiler restriction: the relation itself lowers Emit and the
+ /// current staged UNIT codec admits it (`staged_projection.rs:192-232`); full Emit
+ /// remains a required future track.
++///
++/// Not called by [`crate::compile`], by [`StatementAdapter::admits`] or by any other
++/// path in this crate (review F-10). A future target adapter must call it before
++/// mapping a relation, and that wiring needs its own review; until then the policy is
++/// declared, not enforced.
+ pub fn initial_ledger_target_admits(program: &Program) -> Result<(), AdapterError> {
+     for action in &program.actions {
+         for (ordinal, statement) in action.statements.iter().enumerate() {

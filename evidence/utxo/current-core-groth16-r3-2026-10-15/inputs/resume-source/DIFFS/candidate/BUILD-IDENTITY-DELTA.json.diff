@@ -1,0 +1,29 @@
+--- parent-a6e17efd/BUILD-IDENTITY-DELTA.json
++++ resume-candidate/BUILD-IDENTITY-DELTA.json
+@@ -30,5 +30,26 @@
+     "file": "current-core-groth16-compiler-independent-source-review-20261015/proposals/heldout-harness/tests/heldout.rs (sha256 4851a1a1d2a823cf5b933e95c6ee909983a97a9b9ca16a50877dc2ec3195f600; not edited)",
+     "fact": "It hard-codes BUILD_MANIFEST_SHA256 = 2c943b51... as its caller-supplied CompilerBuild input.",
+     "effect": "Against the successor bytes that constant is stale. It cannot change any satisfiable / unsatisfiable / not-encodable / refused outcome in the harness, because both the claimant encoding (StatementLayout::encode) and the circuit read the same supplied header constant. It does make every relation identity and r1cs digest produced by E5 name the origin build, so E5 output is not build-identity evidence for the successor. This is the F-08 gap observed concretely; only the reviewer may revise the harness."
++  },
++  "r04_disclosure": {
++    "added_by": "claude-opus-5-5, evidence-repair source author, 2026-10-15 (result review R-04 / FIX-PROPOSALS P-2, disclosure option; SOURCEONLY)",
++    "fact": "compiler_source_manifest_sha256 is the SHA-256 of the whole BUILD-MANIFEST.json file. That file carries annotation bytes besides the 16 {path, sha256, bytes} entries: format, rule, origin_build_manifest_sha256 and a per-entry vs_origin_r2 label. compiler_build_digest = SHA-256(intent::canonical(CompilerBuild { compiler_source_manifest_sha256, core_closure_sha256 })), so a change to any annotation byte (for example re-pointing origin_build_manifest_sha256 or relabelling vs_origin_r2) changes compiler_build_digest, its header constant, the constant (Variable::One) coefficients of the header binding constraints of every relation and therefore every r1cs_sha256, with no compiled-code change.",
++    "format_unchanged": "mori-r1cs-build-manifest/1 is kept exactly (same keys, same rule text, same annotation meaning: origin_build_manifest_sha256 = origin-r2 2c943b51..., vs_origin_r2 compared with the origin-r2 SOURCE-MANIFEST pins). Defining mori-r1cs-build-manifest/2 with {path, sha256, bytes} entries only is the other P-2 option; it is NOT done in this repair.",
++    "what_byte_identity_establishes": "Which exact bytes were named. It establishes no source provenance, no build provenance (F-08: both CompilerBuild inputs remain caller-supplied), no semantic equivalence between builds and no security or funds-safety property. Equal digests are not acceptance; different digests are not a semantic change."
++  },
++  "evidence_repair_successor": {
++    "parent_build_manifest_sha256": "4e3ba2e2796b425598b9b2abc022c4d6782bf032044aa53e124af4946c543b47",
++    "parent_bytes_kept_at": "current-core-groth16-compiler-review-repair-source-20261015/BUILD-MANIFEST.json (immutable parent; not copied over)",
++    "successor_build_manifest_sha256": "edbe3193c8eabc51a1d5595757c69c0bbe2caeb89e53cc3dc25564cead44b41a",
++    "changed_files_vs_parent": {
++      "source/mori-r1cs/src/coverage.rs": "R-01 data only: REFUSALS rows mori::core::bound and mori::core::liability (scenario identity differs) move from Support::Constant to Support::TargetPremise with represented-snapshot / target-premise wording naming pre-state authenticity and frame completeness; one new TargetPremise row for scenario-level asset/balance/liability row refusals; the REFUSALS doc comment names the represented snapshot. No function body, no constraint-generating code and no other src file changed."
++    },
++    "core_closure_sha256": "f47318a26a4df0477e89962a9de0e9b48f12d01d0e9b4a8f5e74603beaa235ed (unchanged, 70 files at 6c7b1fda)",
++    "compiler_build_digest": {
++      "parent_observed_in_actual_run": "a6911ddd6b3883dedfa4c155e4924d98fc645d41d72806d4d6bcd0c398366d44 (E5-r2 identity line; result review recomputation equal)",
++      "successor_predicted_by_stdlib_arithmetic": "0b896adbe183b79d82455fde7b2c5e988b166a63a5fde972d3621eb7ad98bf19",
++      "status": "Prediction of an arithmetic identity only, by tools/candidate_manifests.py digest (method reproduces the parent's observed value). Evidence only when an authorized run of the reviewed harness prints it from the copied bytes."
++    },
++    "consequence": "Every relation identity, compiler_build_digest and r1cs_sha256 of the successor differs from those of the parent although no constraint-generating code changed. The parent's actual run (BUILD 4e3ba2e2, compiler_build_digest a6911ddd) remains evidence for the parent bytes only and is not relabelled; this successor has no actual result."
+   }
+ }

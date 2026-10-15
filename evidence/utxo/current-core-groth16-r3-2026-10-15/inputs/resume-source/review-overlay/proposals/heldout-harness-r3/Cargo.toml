@@ -1,0 +1,22 @@
+[package]
+name = "mori-r1cs-heldout-r3"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "PROPOSED, UNCOMPILED evidence-repair harness r3 (claude-opus-5-5, 2026-10-15, resumed after a provider session limit). Sibling of heldout-harness-r2; reads the frozen packet unchanged plus the dated post-freeze AUTH addenda 3 and 4. Never built or run by its author."
+
+# Standalone root, like the candidate, the frozen harness and r2.
+[workspace]
+
+# Paths assume the isolated layout of EXECUTION-PROPOSAL.json (same relative layout as r2):
+#   <root>/moriarty/  pinned Core closure copy (70 files, f47318a2...)
+#   <root>/r1cs/      evidence-repair successor candidate copy (candidate/ of the resume lane, SOURCE-MANIFEST d3bdd500...)
+#   <root>/review/    frozen packet (REVIEW-MANIFEST 757ed0bf...) + r2 overlay + this r3 overlay (R3-MANIFEST.json)
+# Dependency set and versions are identical to heldout-harness-r2/Cargo.toml.
+[dev-dependencies]
+mori-r1cs = { path = "../../../r1cs/source/mori-r1cs" }
+mori-core = { path = "../../../moriarty/crates/mori-core" }
+ark-bls12-381 = { version = "=0.4.0", default-features = false, features = ["curve"] }
+ark-relations = { version = "=0.4.0", default-features = false }
+serde_json = "=1.0.151"
