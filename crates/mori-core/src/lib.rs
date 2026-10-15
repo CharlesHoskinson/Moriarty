@@ -24,6 +24,8 @@ mod sherlock_draft_image;
 #[cfg(test)]
 #[path = "sherlock/draft_image_bridge_tests.rs"]
 mod sherlock_draft_image_tests;
+#[path = "sherlock/source_adapter.rs"]
+pub mod sherlock_source;
 pub mod stage;
 mod replay;
 mod runtime;
