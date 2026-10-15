@@ -140,6 +140,13 @@ traces and 92 published fuel prefixes, using Quint 0.32.0's TypeScript engine,
 seed 1 and one sample per test. These are captured local results, not a fresh
 run for this document. The [exact-source reviews](audits/2026-10-15/sherlock-k-profile-quint/reviews/README.md)
 record completed Muse and Opus reviews and retain their limitations.
+A [separate 126-test addition](audits/2026-10-15/sherlock-extra-normal-quint/README.md)
+checks N07/N08 complete traces and 124 prefixes against the unchanged model.
+The old 98 checks were not rerun as part of that addition. The [flat image and
+ID interpreter](audits/2026-10-15/sherlock-program-image-normal/README.md) have
+captured 46-test host evidence on all eight normal programs and 216 prefixes.
+These modules are private test-only preparation, with no bounded-image or
+circuit acceptance claim.
 K runtime execution, full K/Quint refinement, canonical state serialization,
 B schema/helper work, field/constraint correspondence and full grammar coverage
 remain open. The pure Lean foundation has its separately recorded narrow scope.

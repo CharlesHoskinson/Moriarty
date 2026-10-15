@@ -1,0 +1,13 @@
+APPROVE_SCOPED_NORMAL_IMAGE_SOURCE_AND_RESULTS
+
+**Scope of approval.** This approval covers only the host-only, `#[cfg(test)]`-wired `ProgramImageDraft` source and its ordinary std-Rust test results. It is not a production API, native image, admission policy, digest/layout/capacity decision, B-schema approval, or security judgment. B remains unfrozen, and the separately untracked/unwired `image_reference` files are excluded.
+
+**Source assessment.** I found no blocking nonsecurity defect in the shown builder. `prepare_program_image` traverses the entry first and then function bodies in original table order. Its explicit stack produces source-child preorder, reserves each parent’s complete child slice before descending, assigns distinct rows to repeated or physically shared occurrences, retains named calls without expanding them, and covers all shown expression, pattern, value, and tree forms. Function names, source indices, ordered parameters, return types, match patterns in source order, constants, constant field paths, entry ID, profile ID, and per-expression source locators are retained. No evaluator or call-unrolling path is present in the builder.
+
+The builder remains private to the test configuration: [mod.rs](../../../../crates/mori-core/src/sherlock/mod.rs) declares it under `#[cfg(test)]` and adds no production export. In that context, “unwired” is accurate only as “not exported as a public runtime API,” not as “never invoked”; the supplied tests do invoke it.
+
+**Oracle and evidence assessment.** The independent-oracle provenance is adequate for this scoped normal-source approval: the expectations were authored from declaration-only inputs, independently typed, frozen before first subject execution, and contain literal complete images rather than builder-derived expectations. The RED record proves falsifiability only for the first failing case, N07, against the deliberately empty builder; it does not establish individual RED status for N08, the shared-Arc tree, or unused-function ordering. The GREEN record shows 35 passing tests: the prior 31 plus four new program-image tests. One of those tests loops over all four independently frozen complete images and compares the whole `ProgramImageDraft`, including profile, tables, slices, constants, locators, functions, parameters, arms, and entry.
+
+No Cargo, SDK, or native execution evidence is included or approved. The original `Machine` and normal-oracle behavior are recorded as unchanged. Publication may therefore state only that this test-only host draft matched the four frozen normal images in the supplied ordinary Rust test run.
+
+END_PROGRAM_IMAGE_NORMAL_RESULT_MUSE
