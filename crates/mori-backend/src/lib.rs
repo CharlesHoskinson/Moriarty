@@ -19,6 +19,7 @@ pub mod replay;
 pub mod schnorr;
 pub mod signed_relation;
 pub mod stage;
+pub mod source_projection;
 
 mod liabilities;
 pub use liabilities::{
