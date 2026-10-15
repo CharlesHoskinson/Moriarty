@@ -85,9 +85,17 @@ pub fn deserialize_strict<'de, D: serde::Deserializer<'de>>(decoder: D) -> Resul
     .deserialize(decoder)
 }
 pub fn parse(text: &str) -> Result<Value, Error> {
+    parse_inner(text, MAX_BYTES, "JSON exceeds 1 MiB")
+}
+/// The same strict parser under a caller-selected byte ceiling. Duplicate-key,
+/// depth (32) and node (65,536) limits are unchanged; `/2` stage files use it.
+pub fn parse_limited(text: &str, max: usize, too_large: &'static str) -> Result<Value, Error> {
+    parse_inner(text, max, too_large)
+}
+fn parse_inner(text: &str, max: usize, too_large: &'static str) -> Result<Value, Error> {
     use serde::de::DeserializeSeed;
-    if text.len() > MAX_BYTES {
-        return Err(Error::new("json", "JSON exceeds 1 MiB"));
+    if text.len() > max {
+        return Err(Error::new("json", too_large));
     }
     let nodes = Cell::new(0);
     let mut decoder = serde_json::Deserializer::from_str(text);

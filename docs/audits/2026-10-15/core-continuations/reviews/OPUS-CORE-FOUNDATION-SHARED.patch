@@ -1,0 +1,37 @@
+Opus core foundation shared hunks (visibility only; no logic, bytes or messages change).
+Apply verbatim with `git apply` from the worktree root. Context is runtime.rs as of
+the Sol working tree read on 2026-10-14 (line numbers may shift; context is unique).
+Purpose: stage/validate.rs reuses these legacy scalar helpers so `/2` validation keeps
+identical constraints, codes and messages instead of a drifting copy.
+
+--- a/crates/mori-core/src/runtime.rs
++++ b/crates/mori-core/src/runtime.rs
+@@ -317,7 +317,7 @@
+ }
+ // New reads require a source-fixed identity. Legacy Core external duties and
+ // discharge-only programs keep their existing validation rules.
+-fn validate_liability_reads(p: &Program) -> Result<(), Error> {
++pub(crate) fn validate_liability_reads(p: &Program) -> Result<(), Error> {
+     let mut reads = BTreeMap::new();
+     for expr in &p.expressions {
+         if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expr {
+@@ -366,17 +366,17 @@
+     Ok(())
+ }
+
+-fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result<(), Error> {
++pub(crate) fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result<(), Error> {
+     if expr_type(p, id, env, 0)? != Type::UInt {
+         Err(failure(
+             "type",
+             "Financial amount requires UInt atomic units.",
+         ))
+     } else {
+         Ok(())
+     }
+ }
+-fn validate_asset<'a>(p: &'a Program, name: &str) -> Result<&'a AssetId, Error> {
++pub(crate) fn validate_asset<'a>(p: &'a Program, name: &str) -> Result<&'a AssetId, Error> {
+     p.assets
+         .iter()
+         .find(|a| a.name == name)

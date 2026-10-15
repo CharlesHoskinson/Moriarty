@@ -1,0 +1,24 @@
+--- a/crates/mori-backend/src/signed_relation.rs
++++ b/crates/mori-backend/src/signed_relation.rs
+@@ -140,10 +140,10 @@
+ #[derive(Serialize)]
+-struct Projection<'a> {
+-    position: u32,
+-    role: &'a str,
+-    name: &'a str,
+-    ty: Type,
+-    asset: &'a Option<AssetId>,
++pub(crate) struct Projection<'a> {
++    pub(crate) position: u32,
++    pub(crate) role: &'a str,
++    pub(crate) name: &'a str,
++    pub(crate) ty: Type,
++    pub(crate) asset: &'a Option<AssetId>,
+ }
+
+ /// SHA256 of the canonical 18-element context array. The projection excludes
+@@ -195,3 +195,3 @@
+ }
+-fn json<T: Serialize + ?Sized>(value: &T) -> Result<serde_json::Value, Error> {
++pub(crate) fn json<T: Serialize + ?Sized>(value: &T) -> Result<serde_json::Value, Error> {
+     serde_json::to_value(value).map_err(|e| error("serialization", e.to_string()))

@@ -5,6 +5,7 @@ use crate::{DetailedReplayError, Error, Execution, Program, Scenario, UInt, comp
 use serde::Serialize;
 
 pub const LOGICAL_COST_PROFILE: &str = "moriarty-reference-logical-cost/1";
+pub const LOGICAL_COST_PROFILE_2: &str = "moriarty-reference-logical-cost/2";
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct CostReport {

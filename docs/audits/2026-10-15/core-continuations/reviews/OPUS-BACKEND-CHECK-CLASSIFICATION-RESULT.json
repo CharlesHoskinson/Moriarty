@@ -1,0 +1,24 @@
+{
+  "report_kind": "opus-authored-stage-security-source",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 92,
+      "outputTokens": 29000,
+      "cacheReadInputTokens": 3465015,
+      "cacheCreationInputTokens": 128087,
+      "webSearchRequests": 0,
+      "costUSD": 2.298067,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 10700,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "source_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "Both commands are **APPROVE_ORDINARY**, but only if root meets the preconditions in the report. I wrote the report to `R/OPUS-BACKEND-CHECK-CLASSIFICATION.md` (1,315 words). I ran neither command, and no source file changed.\n\n| Command | Verdict |\n|---|---|\n| `--test stages` | APPROVE_ORDINARY. 6 tests: **5 run, 1 ignored** (the baseline comparator) |\n| `--test stage_relation` | APPROVE_ORDINARY. 4 tests, 0 ignored |\n\n**What the tests actually do:**\n- **Staged compile:** Core `stage::load` (the same pinned pure path as the CORE classification) builds the IR. It is then serialized and reloaded through the public SDK parser `IrSource::load`, which is plain JSON parsing plus field-element encoding.\n- **Not reachable:** nothing on these paths calls SDK check/model, the VM, keygen, prove, the verifier parameters, the prover-key cache or parameter fetching.\n- **Legacy refusal:** `legacy_compilers_refuse_staged_programs` is refused by the first statement of `compile` (`lib.rs:366`), before any SDK call.\n- **No file writes from the tests:** the output path argument is unused, and proptest/insta aren't used, so no regression or snapshot files get written.\n- **No native test code compiled:** `task4_native_driver` and the library's test modules are `#[cfg(test)]`, so `--test` never compiles them.\n\n**Things root needs to act on:**\n1. **The argv doesn't clean the environment enough.** It only unsets `RUSTFLAGS` and `MORI_FEE_POOL_CAPTURE_DIR`. Root has to launch from a cleaned environment, clearing `MORI_*`, `MORIARTY_*`, `PROPTEST_*`, `CARGO_*` (except the target dir), the rustc/wrapper overrides and the C-compiler variables. The report lists every variable. `HOME` and `CODEX_HOME` stay unchanged.\n2. **Six files need pins** (hashes are in the report): `counter.mori`, `payment.mori`, the two `.snap` files, `mori-lexer/Cargo.toml` and `rust-toolchain.toml`. Root should also run `git diff --quiet fe01bc8b` over lexer/diagnostics/span and the backend fixtures. My own run of that was blocked by the permission layer; an earlier diff showed the fixtures unchanged.\n3. **The earlier CORE \"SDK never linked\" premise doesn't carry over.** mori-backend does link the SDK. One consequence: when the SDK compiles, rustc embeds the public verifier SRS file (`bls_midnight_2p14`) into the build. It is only decoded on verify paths, which these tests can't reach. I count this as ordinary. If you treat any compile-time embedding as an SRS action, both verdicts become DENY.\n4. **Stop conditions:** the run must end with exactly `5 passed; 1 ignored` and `4 passed; 0 ignored`. Never pass `--ignored` or `--include-ignored`.\n\nThe other residuals (blst/aws-lc C build scripts, SDK networking code that is linked but never called, cargo-home lock writes) are listed in the report.\n\nOn model identity: this session produced no adapter report. My runtime says I'm `claude-opus-5-5`, but root should record whatever identity its own adapter returned.\n\nNone of this accepts the feature as correct or secure. The full candidate/result reviews by Muse and Opus are still owed, and native authority stays at zero."
+}

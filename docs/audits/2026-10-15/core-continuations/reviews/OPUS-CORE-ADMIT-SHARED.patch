@@ -1,0 +1,30 @@
+Opus core admit/decode shared hunk (A4). Apply verbatim; do not edit.
+Target: crates/mori-core/src/json.rs, authored against sha256
+941aa74b7e54c5b98f8a0bc58cd2d02bce41addaa07cf90da90d42b78f35645b.
+The legacy `parse` body moves into `parse_inner` with only the size test
+parameterised; `parse` still reports "JSON exceeds 1 MiB" with code
+mori::core::json. Depth (32), node (65,536) and duplicate-key rules are untouched.
+
+--- a/crates/mori-core/src/json.rs
++++ b/crates/mori-core/src/json.rs
+@@ -84,10 +84,18 @@
+     }
+     .deserialize(decoder)
+ }
+ pub fn parse(text: &str) -> Result<Value, Error> {
++    parse_inner(text, MAX_BYTES, "JSON exceeds 1 MiB")
++}
++/// The same strict parser under a caller-selected byte ceiling. Duplicate-key,
++/// depth (32) and node (65,536) limits are unchanged; `/2` stage files use it.
++pub fn parse_limited(text: &str, max: usize, too_large: &'static str) -> Result<Value, Error> {
++    parse_inner(text, max, too_large)
++}
++fn parse_inner(text: &str, max: usize, too_large: &'static str) -> Result<Value, Error> {
+     use serde::de::DeserializeSeed;
+-    if text.len() > MAX_BYTES {
+-        return Err(Error::new("json", "JSON exceeds 1 MiB"));
++    if text.len() > max {
++        return Err(Error::new("json", too_large));
+     }
+     let nodes = Cell::new(0);
+     let mut decoder = serde_json::Deserializer::from_str(text);

@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1159396,
+  "interruption_signal": null,
+  "elapsed_seconds": 221.25809379899874,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "28a14814bc0441b8efee16360f64c2f0dcda7040ca92e3ba997c60763ade218d",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 2856,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "cc68556bb312c0f3e5e5873a60739f67b2972a012b5448e57d2b2fdda8d8cc87",
+  "public_result": {
+    "text": "I've written the `/1` wire patch, the compat test and the detail report. Nothing has been built, tested or applied, and the applicability check didn't run.\n\n**SOURCE_WRITTEN** \u2014 `R/OPUS-V1-WIRE.patch`, sha256 `80c19e9f83b9b99c91da23d7942921d7750e773ca4b30e1166adb29e308bcb47`.\n\n**Patch size:** 2 files, 206 lines added and 5 removed, in 6 hunks (5 in `ir.rs`, 1 in `runtime.rs`).\n\n**What the patch does:**\n- **`ir.rs`:**\n  - `Statement`, `Action`, `Program`, `Step` and `Execution` no longer derive `Deserialize`. Their `Serialize` derive and serde attributes are unchanged, so output for everything except `Await` stays the same and `program_hash` shouldn't move. `Await` is serialize-only, for in-memory and source `/2` use.\n  - A new inline `pub mod v1` holds the five baseline types, copied from `git show fe01bc8b`. They keep the same names, so serde's error text and the unknown-variant list stay identical to baseline.\n  - Each of the five gets a `From` conversion and a hand-written `Deserialize` (via the `decode_via_v1!` macro) that goes through `v1`. Every direct, nested or generic decode uses the wire, so decode sites don't need editing one by one.\n- **`runtime.rs` `validate`:** adds an `Await` arm returning `profile` / \"Await requires moriarty-core/2.\", the same error as `require_core1`. No other validate code or messages change.\n- No ledger, CLI or backend hunks.\n\n**Applicability:** I built the patch with `diff -u` against copies of the current worktree `ir.rs` and `runtime.rs`, with the foundation and helper hunks already in. It should apply cleanly if those files haven't changed since. `git apply --check` was blocked pending your approval, so this is unconfirmed. No shared file was changed.\n\n**Test:** `crates/mori-core/tests/compat_v1.rs`, with inline fixtures and no new fixture files. It only works once the patch is applied.\n- **H23:** a well-formed Await, a malformed Await and an unknown `Foo` each give the exact baseline error text. This is checked on a direct Program decode, through `json::parse`, and on nested Statement, Step and Execution decodes.\n- **Round trip:** decoding and re-encoding a Program and an Execution without Await gives the same JSON.\n- **C7:** an in-memory `/1` program containing Await is refused by `validate` with `mori::core::profile`.\n\n**Detail report:** `R/OPUS-V1-WIRE-DETAIL.md`.\n\nThe full U/M/MC/SP/G set and H1\u2013H28 are still open.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 52,
+        "outputTokens": 21768,
+        "cacheReadInputTokens": 761545,
+        "cacheCreationInputTokens": 41284,
+        "webSearchRequests": 0,
+        "costUSD": 0.9181490000000001,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 5874,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

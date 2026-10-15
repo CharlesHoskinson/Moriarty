@@ -210,7 +210,15 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-lexer/src/token.rs"),
             include_str!("../../mori-lexer/src/string.rs"),
             include_str!("../../mori-lexer/src/number.rs"),
-            include_str!("../../mori-lexer/src/diagnostics.rs")
+            include_str!("../../mori-lexer/src/diagnostics.rs"),
+            include_str!("../../mori-core/src/stage/admit.rs"),
+            include_str!("../../mori-core/src/stage/cost.rs"),
+            include_str!("../../mori-core/src/stage/decode.rs"),
+            include_str!("../../mori-core/src/stage/digest.rs"),
+            include_str!("../../mori-core/src/stage/mod.rs"),
+            include_str!("../../mori-core/src/stage/plan.rs"),
+            include_str!("../../mori-core/src/stage/profile.rs"),
+            include_str!("../../mori-core/src/stage/validate.rs")
         )
         .as_bytes(),
     )

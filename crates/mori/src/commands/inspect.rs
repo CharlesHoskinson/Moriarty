@@ -16,7 +16,38 @@ pub struct Args {
 }
 
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
-    let (source, program) = super::core_io::program(&args.file)?;
+    let source = super::core_io::read_source(&args.file)?;
+    if args.target.is_none()
+        && mori_core::language(&source).is_ok_and(|language| language == "moriarty/2")
+    {
+        let staged = match mori_core::stage::load(&source) {
+            Ok(staged) => staged,
+            Err(error) => {
+                super::simulate::print_stage_report(json!({"status":"rejected", "error":error}))?;
+                return Ok(ExitCode::FAILURE);
+            }
+        };
+        let program = staged.program();
+        super::simulate::print_stage_report(json!({
+            "status": "accepted", "language": program.language, "semantics": program.semantics,
+            "agreement": program.name, "states": program.states, "assets": program.assets,
+            "actions": program.actions, "expressions": program.expressions,
+            "stage_plan": staged.plan(), "enforcement_report": null
+        }))?;
+        return Ok(ExitCode::SUCCESS);
+    }
+    if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
+        // The enforcement map reports the /3 relation. A Core2 --target refuses
+        // with Core's typed profile error before reading the target, backend
+        // layout or any output; source-only Core2 inspect is handled above.
+        let staged = mori_core::stage::load(&source).map_err(super::core_io::operation)?;
+        let refusal = match mori_core::stage::require_core1(staged.program()) {
+            Err(error) => error,
+            Ok(()) => core1_refusal(),
+        };
+        return Err(super::core_io::operation(refusal));
+    }
+    let program = mori_core::parse(&source).map_err(super::core_io::operation)?;
     let enforcement = match args.target {
         Some(path) => {
             let target: mori_backend::Target = super::core_io::read_json(&path)?;
@@ -28,7 +59,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
                 mori_backend::compile(&program, &target)
             }
             .map_err(super::core_io::operation)?;
-            enforcement_report(&source, &program, &artifact)
+            enforcement_report(&source, &program, &artifact)?
         }
         None => Value::Null,
     };
@@ -64,14 +95,14 @@ fn reference(predicates: &[&str]) -> Value {
     json!({"status": "available-not-executed", "predicates": predicates})
 }
 
-fn enforcement_report(source: &str, program: &Program, artifact: &Artifact) -> Value {
-    let actions: Vec<_> = program
+fn enforcement_report(source: &str, program: &Program, artifact: &Artifact) -> super::Result<Value> {
+    let actions = program
         .actions
         .iter()
         .zip(&artifact.circuits)
         .map(|(action, circuit)| action_report(program, action, circuit))
-        .collect();
-    json!({
+        .collect::<super::Result<Vec<_>>>()?;
+    Ok(json!({
         "scope": "source-derived-public-transition-relation",
         "identity": {
             "source_hash": mori_core::intent::hash_bytes(source.as_bytes()),
@@ -108,10 +139,10 @@ fn enforcement_report(source: &str, program: &Program, artifact: &Artifact) -> V
         "gates": artifact.gates,
         "actions": actions,
         "unknown": unknown_premises()
-    })
+    }))
 }
 
-fn action_report(program: &Program, action: &Action, circuit: &CircuitArtifact) -> Value {
+fn action_report(program: &Program, action: &Action, circuit: &CircuitArtifact) -> super::Result<Value> {
     let fields: Vec<_> = circuit
         .public_inputs
         .iter()
@@ -128,13 +159,13 @@ fn action_report(program: &Program, action: &Action, circuit: &CircuitArtifact) 
             "unknown": ["owner-key-authority", "history-replay-revocation", "clock-and-external-inputs", "host-commitment-reconstruction", "native-proof-soundness", "compiler-correspondence"]
         })
     }).collect();
-    let statements: Vec<_> = action.statements.iter().enumerate().map(|(step, statement)| {
-        let rule = statement_rule(statement);
-        json!({"step": step, "source": statement, "reference": reference(&[rule]), "constraint": encoded(&[rule]),
+    let statements = action.statements.iter().enumerate().map(|(step, statement)| {
+        let rule = statement_rule(statement)?;
+        Ok(json!({"step": step, "source": statement, "reference": reference(&[rule]), "constraint": encoded(&[rule]),
             "state": {"status": "computed-unqualified", "predicate": "ordered local transition on supplied pre-state; no ledger acceptance"},
-            "unknown": ["ledger-authentication", "native-proof-soundness", "compiler-correspondence"]})
-    }).collect();
-    json!({
+            "unknown": ["ledger-authentication", "native-proof-soundness", "compiler-correspondence"]}))
+    }).collect::<super::Result<Vec<_>>>()?;
+    Ok(json!({
         "action": circuit.action, "context_hash": circuit.context_hash,
         "instruction_count": circuit.instruction_count, "replay_steps": circuit.replay_steps,
         "fields": fields, "authorization_fields": authorization_fields,
@@ -153,11 +184,11 @@ fn action_report(program: &Program, action: &Action, circuit: &CircuitArtifact) 
             ])
         },
         "statements": statements,
-        "expression_constraints": expression_constraints(program, action),
+        "expression_constraints": expression_constraints(program, action)?,
         "effect_frame": circuit.effect_frame, "balance_frame": circuit.balance_frame,
         "liability_frame": circuit.liability_frame,
         "frame_scope": "all declared states, touched balances and the program-wide source duty registry; preservation of other ledger accounts/duties requires the authenticated adapter"
-    })
+    }))
 }
 
 fn public_field(position: usize, binding: &PublicBinding) -> Value {
@@ -242,8 +273,20 @@ fn authorization_rule(name: &str) -> &'static str {
     }
 }
 
-fn statement_rule(statement: &Statement) -> &'static str {
-    match statement {
+/// Legacy enforcement-map helpers are `/1`-only. An Await reaching them gets
+/// Core's typed `/1` profile refusal, never a panic or an omitted statement.
+fn core1_refusal() -> mori_core::Error {
+    mori_core::Error {
+        code: "mori::core::profile".into(),
+        message: "Await requires moriarty-core/2.".into(),
+        offset: None,
+        step: None,
+    }
+}
+
+fn statement_rule(statement: &Statement) -> super::Result<&'static str> {
+    Ok(match statement {
+        Statement::Await { .. } => return Err(super::core_io::operation(core1_refusal())),
         Statement::Let { .. } => {
             "evaluate the expression and bind a typed local name for subsequent statements"
         }
@@ -263,26 +306,27 @@ fn statement_rule(statement: &Statement) -> &'static str {
         Statement::Discharge { .. } => {
             "require opening duty presence; checked opening amount minus discharge; retain presence even at zero"
         }
-    }
+    })
 }
 
-fn expression_constraints(program: &Program, action: &Action) -> Vec<Value> {
+fn expression_constraints(program: &Program, action: &Action) -> super::Result<Vec<Value>> {
     // Report only reachable expression nodes. Some nodes are shared by a
     // statement's DAG; iterating the sorted set is bounded and deterministic.
     let mut pending: Vec<ExprId> = action
         .statements
         .iter()
         .map(|s| match s {
-            Statement::Requires { predicate } | Statement::Ensures { predicate } => *predicate,
+            Statement::Await { .. } => Err(super::core_io::operation(core1_refusal())),
+            Statement::Requires { predicate } | Statement::Ensures { predicate } => Ok(*predicate),
             Statement::Let { value, .. }
             | Statement::Next { value, .. }
-            | Statement::Emit { value, .. } => *value,
+            | Statement::Emit { value, .. } => Ok(*value),
             Statement::Transfer { amount, .. }
             | Statement::Fee { amount, .. }
             | Statement::Liability { amount, .. }
-            | Statement::Discharge { amount, .. } => *amount,
+            | Statement::Discharge { amount, .. } => Ok(*amount),
         })
-        .collect();
+        .collect::<super::Result<Vec<_>>>()?;
     let mut reachable = BTreeSet::new();
     while let Some(id) = pending.pop() {
         if !reachable.insert(id) {
@@ -294,7 +338,7 @@ fn expression_constraints(program: &Program, action: &Action) -> Vec<Value> {
             _ => {}
         }
     }
-    reachable.into_iter().map(|id| {
+    Ok(reachable.into_iter().map(|id| {
         let node = &program.expressions[id as usize];
         let rule = match node {
             Expr::LiabilityPresent { .. } => "read current duty presence under its source-fixed identity",
@@ -313,7 +357,7 @@ fn expression_constraints(program: &Program, action: &Action) -> Vec<Value> {
         };
         json!({"expression": id, "source": node, "reference": reference(&[rule]), "constraint": encoded(&[rule]),
             "unknown": ["native-proof-soundness", "compiler-correspondence"]})
-    }).collect()
+    }).collect())
 }
 
 fn unknown_premises() -> Vec<Value> {
