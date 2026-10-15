@@ -176,7 +176,7 @@ source/evidence distinctions, disagreements and the remaining audit.
 | M7 | U1, U2 | MC05 | Signed intents bound to network ID and Anchor | Local domain/context paths exist; authentic target binding open; Opus security review |
 | M8 | U1 | MC05 | Audited in-circuit JubJub Schnorr primitive/splice | Scoped source/native precursors; required audit/correspondence open and Opus-owned |
 | M9 | U2 | MC05; L3 | Asset identity: network, issuer, reference | Core identity fields exist; complete target binding/readback open |
-| M10 | U2, U7 | MC08 | Working simulate, test and verify-intent | Supported local command consumers exist; complete developer/release qualification open |
+| M10 | U2, U7 | MC08 | Working simulate, test and verify-intent | Supported local command consumers and [complete aggregate test report local evidence](../../../docs/audits/2026-10-15/core-test-report/README.md) exist; full M10/U7/MC08 developer/release qualification open |
 | M11 | U2, U3 | MC04, MC05; L7, L8 | FeePool and Capacity Exchange L2 contracts | Finite FeePool local/static component delivered; full exchange/target contract open |
 | M12 | U2 | MC01, MC04 | Every-block-anchored Midnight Express Bus Registry | Required language/interface and authoritative anchoring evidence open |
 | M13 | U3 | MC05, MC06; L1, L2, L4, L5 | Pending state, recovery, liability caps and scoped calls | Local lifecycle/policy/duty precursors; full authenticated coordinator behavior open |

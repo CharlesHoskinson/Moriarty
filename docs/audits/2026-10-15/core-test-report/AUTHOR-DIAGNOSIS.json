@@ -1,0 +1,106 @@
+{
+  "status": "source-inspected; proposed-only; awaiting root GO",
+  "author": {
+    "requested_model": "gpt-6.1-sol",
+    "effort": "high",
+    "scope": "nonsecurity diagnosis and functional design"
+  },
+  "base_commit": "9dffbb0a3f6996dbdae5030ed9bb0a5193d39d73",
+  "branch": "fix/core-test-report-20261015",
+  "requirements": [
+    "U7",
+    "M10",
+    "MC08",
+    "UNI-024"
+  ],
+  "predicate": "An admitted aggregate with individually exportable case results and output >1 MiB emits one complete ordered JSON report; status/count/exit retain existing comparison semantics.",
+  "cause": {
+    "call_path": [
+      "main::main",
+      "Cli::parse -> Command::Test",
+      "commands::run -> test::run",
+      "core_io::read_json/read_source",
+      "mori_core::parse -> mori_core::simulate",
+      "collect full ordered Result reports",
+      "Shell::status",
+      "core_io::print aggregate",
+      "mori_core::json::export aggregate -> bounded parse"
+    ],
+    "source_locations": [
+      "crates/mori/src/commands/test.rs:38",
+      "crates/mori/src/commands/test.rs:58",
+      "crates/mori/src/commands/test.rs:70",
+      "crates/mori/src/commands/test.rs:76",
+      "crates/mori-core/src/json.rs:109"
+    ],
+    "defect": "Aggregate uses the shared single-document bounded exporter after all cases have executed, so complete individually successful reports can produce export error and process exit 1.",
+    "reproduction": "not executed; historical failure documented in examples/core/fee-pool/cases/COVERAGE.md"
+  },
+  "proposal": {
+    "approach": "private test.rs report-specific composition; unchanged bounded export per complete case; all preflighted before stdout; fixed JSON framing; full ordered actuals preserved; exact buffering and byte accounting pending Opus constraints",
+    "source_write_set": [
+      "crates/mori/src/commands/test.rs",
+      "crates/mori/tests/core_test_report.rs"
+    ],
+    "optional_helper": "core_io.rs unnecessary for current one-consumer design",
+    "forbidden_changes": [
+      "crates/mori-core/src/json.rs",
+      "Cargo graph",
+      "signing",
+      "native pipeline",
+      "other command serialization"
+    ],
+    "single_case_oversize_behavior": "pending explicit Opus/root constraint; no silent bound increase"
+  },
+  "functional_tests_proposed": [
+    "actual public CLI: one compact 87-accepted-case FeePool aggregate, >1MiB stdout, full ordered post/effects from frozen independent fixture",
+    "actual public CLI: lawful root-frozen literal full financial Execution repeated under256 unique names, aggregate >1MiB, full trace equality",
+    "same lawful aggregate with one wrong financial expectation: complete failed report, exactly one failed flag, exit1",
+    "small report shape/content/count/exit compatibility"
+  ],
+  "fixture_source_observations": {
+    "expected_pretty_bytes": 1069885,
+    "all_cases": 162,
+    "all_cases_compact_bytes": 474817,
+    "all_cases_value_nodes": 31155,
+    "accepted_cases": 87,
+    "accepted_compact_bytes": 460517,
+    "accepted_value_nodes": 30555,
+    "method": "ordinary Python read of checked-in public source fixtures, not product evaluation",
+    "caveat": "temporary absolute-path rewriting changes manifest size; measure final manifest"
+  },
+  "cargo_graph_observation": "mori integration target builds normal mori-core/backend/ledger and Midnight graph; no split manifests/synthetic compiler; no repository build.rs found; third-party build scripts not inspected/executed",
+  "verification_commands_proposed_only": [
+    "rustfmt +1.99.0 --edition 2024 --check crates/mori/src/commands/test.rs crates/mori/tests/core_test_report.rs",
+    "cargo +1.99.0 --offline --locked test -p mori --test core_test_report -j2 -- --test-threads=1",
+    "cargo +1.99.0 --offline --locked test -p mori --test init -j2 both_starters_check_simulate_and_test_with_complete_literal_expectations -- --exact --test-threads=1",
+    "git diff --check"
+  ],
+  "executed": {
+    "plugin_status_json": true,
+    "ordinary_source_git_reads": true,
+    "ordinary_fixture_json_inspection": true,
+    "product_commands": false,
+    "cargo_build_or_test": false,
+    "native_operations": false,
+    "private_material_access": false,
+    "source_edits": false,
+    "stage_or_commit": false
+  },
+  "security_owner": "Opus5.5 owns all security design/tests/analysis/judgments; no author substitute judgment",
+  "questions_for_opus": [
+    "Composition buffering/output-error contract and optional exact old pretty formatting",
+    "Per-case bound and report aggregate accounting",
+    "Escaping/security constraints and tests",
+    "Exact permitted ordinary commands given Cargo graph"
+  ],
+  "questions_for_root": [
+    "Freeze independent lawful256-case complete financial oracle",
+    "Approve design and issue explicit GO before source edits/tests"
+  ],
+  "implementation": "not begun",
+  "runtime_evidence": "not executed",
+  "independent_audits": "pending",
+  "acceptance": "U0-U7/M1-M17/MC/SP/G exits unchanged and open",
+  "detail_file": "AUTHOR-DIAGNOSIS.md"
+}
