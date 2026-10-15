@@ -27,7 +27,12 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     }
     let started = Instant::now();
     if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
-        let result = mori_core::parse(&source);
+        let staged = mori_core::language(&source).is_ok_and(|language| language == "moriarty/2");
+        let result = if staged {
+            mori_core::stage::load(&source).map(|program| program.program().clone())
+        } else {
+            mori_core::parse(&source)
+        };
         if args.json {
             let report = match &result {
                 Ok(program) => {
@@ -37,7 +42,11 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
                     serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
                 }
             };
-            super::core_io::print(&report)?;
+            if staged {
+                super::simulate::print_stage_report(report)?;
+            } else {
+                super::core_io::print(&report)?;
+            }
         } else {
             match &result {
                 Ok(_) => shell.status("Finished", "bounded core check"),

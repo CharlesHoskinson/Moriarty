@@ -16,7 +16,24 @@ pub struct Args {
     pub out: PathBuf,
 }
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
-    let (_, program) = core_io::program(&args.file)?;
+    let source = core_io::read_source(&args.file)?;
+    if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
+        let target: mori_backend::Target = core_io::read_json(&args.target)?;
+        let artifact = mori_backend::stage::compile_staged(&source, &target, &args.out)
+            .map_err(core_io::operation)?;
+        let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;
+        std::fs::create_dir(&args.out).map_err(|source| CliError::Write {
+            path: args.out.clone(),
+            source,
+        })?;
+        publish_staged_artifact(&artifact, &manifest, &args.out)?;
+        shell.status(
+            "Compiled",
+            format!("{} circuits into {}", artifact.circuits.len(), args.out.display()),
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+    let program = mori_core::parse(&source).map_err(core_io::operation)?;
     let target: mori_backend::Target = core_io::read_json(&args.target)?;
     // The trusted Target selects the mode explicitly; a signed Target never
     // reaches the unsigned compiler.
@@ -57,6 +74,21 @@ fn publish_artifact(
     let path = out.join("artifact.json");
     // The manifest is the completion marker; publish it after every circuit.
     super::proof_io::publish_new(&path, manifest.as_bytes())?;
+    Ok(())
+}
+
+// The staged compiler returns the real artifact; publication stays in the CLI.
+fn publish_staged_artifact(
+    artifact: &mori_backend::stage::StagedArtifact,
+    manifest: &str,
+    out: &Path,
+) -> super::Result<()> {
+    for (index, circuit) in artifact.circuits.iter().enumerate() {
+        let path = out.join(format!("{index:03}-{}.s{}.zkir", circuit.action, circuit.segment));
+        super::proof_io::publish_new(&path, circuit.zkir.as_bytes())?;
+    }
+    // As in publish_artifact, the manifest is the completion marker.
+    super::proof_io::publish_new(&out.join("artifact.json"), manifest.as_bytes())?;
     Ok(())
 }
 

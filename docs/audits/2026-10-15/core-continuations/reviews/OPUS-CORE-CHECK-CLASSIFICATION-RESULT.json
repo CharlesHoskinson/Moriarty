@@ -1,0 +1,24 @@
+{
+  "report_kind": "opus-authored-stage-security-source",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 54,
+      "outputTokens": 25104,
+      "cacheReadInputTokens": 1936561,
+      "cacheCreationInputTokens": 112505,
+      "webSearchRequests": 0,
+      "costUSD": 1.7896481999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 10907,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "source_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "All four commands are **APPROVE_ORDINARY**, subject to seven premises (P1\u2013P7). I didn't run anything. Native authority stays at 0, and this is not acceptance of the feature. The report is at `R/OPUS-CORE-CHECK-CLASSIFICATION.md`.\n\n**Model identity:** Claude Opus 5.5 (`claude-opus-5-5`), high effort, completed.\n\n**Pins:** all 25 entries match the worktree, including the oracle (`76075b63\u20269640`). Two files compiled into the tests through `include_str!` are not pinned. Add these before running:\n- `examples/core/continuations/escrow.mori`: `2eb952dd267922c968764154e9d29fbc17f40f5e45fe8b5dac74d229f3d5d60a`\n- `examples/core/continuations/reserve.mori`: `260f50443d31e58f62d83c8f7f00f3c110e3c116d216feb93f680f0b92224530`\n\nAlso check that `git diff fe01bc8b` is clean for mori-lexer, mori-diagnostics and mori-span. The parser calls the lexer, and those crates are unpinned.\n\n**Two corrections to the request:**\n1. `stage_static_cost` sets 64 proptest cases per property, not 32 (3 properties \u00d7 64). `stage_hostile` does use 32.\n2. A failing proptest writes a seed file inside the worktree, not outside it. Proptest finds no `lib.rs` above `tests/`, so it falls back to `crates/mori-core/tests/<target>.proptest-regressions`. Neither file exists today. I classed it as an ordinary public artifact that appears only on failure. It should be reported, kept untracked, and neither committed nor deleted silently. If one exists before the run, it changes the test inputs and needs a recheck.\n\n**Build effects:**\n- The two Midnight SDK dev-dependencies (`midnight-base-crypto`, `midnight-serialize`) get compiled. That pulls in reqwest/rustls, aws-lc-sys and ring (C builds), plus their build scripts and proc macros. These are ordinary local, offline compile effects.\n- None of the four test files references the SDK crates, so they are never linked or executed. No parameter fetching, data provider or file-writing SDK code runs.\n- k256 is linked as part of mori-core, but only the intent signature functions reach it, and no selected test calls them.\n- The only filesystem call in mori-core is `decode::read_bounded`, and none of these tests reaches it.\n\n**Call chains:**\n- **continuations, stage_static_cost, stage_hostile:** `stage::load` (parse, validate, plan, cost, then SHA-256 over canonical JSON), then `start`/`resume`, which run checks R0\u2013R7 and the single shared evaluator, `runtime::run_segment`.\n- **compat_v1:** only the v1 wire deserializers, the strict `json::parse`, the legacy `simulate`, and `validate`. No stage code.\n\nThe full chains are in the report.\n\n**Premises:**\n- **P1:** all pins, including the two new `.mori` pins and the clean lexer diff, still match when the commands run.\n- **P2:** exactly these four commands run, in order, stopping at the first failure.\n- **P3:** the child has no `PROPTEST_*` or extra `CARGO_*`/`RUSTC_WRAPPER` variables. I recommend unsetting `PROPTEST_*` by name, because `PROPTEST_FORK` or `PROPTEST_TIMEOUT` would re-run the test binary as a child process.\n- **P4:** the SDK crates stay unreferenced in all four test files.\n- **P5:** no Cargo config in `/home` or `/` (none in the worktree or home directory), and the installed 1.99.0 toolchain is used.\n- **P6:** no seed file exists before the run.\n- **P7:** the shared target directory holds only public compiled objects.\n\n**Not inspected:** I didn't read the bodies of the evaluator, plan, cost and validate modules line by line. Their effect classification rests on a pattern search of the whole source, not a correctness audit. I also didn't inspect the third-party build scripts, the C sources, or the rest of the SDK source; P4 makes those compile-only. The Muse and Opus reviews of the candidate and actual results are still owed."
+}

@@ -367,6 +367,7 @@ pub fn compile(
     authorization: &StaticAuthorization,
     limits: &NativeWorkLimits,
 ) -> Result<StaticBundle> {
+    crate::layout::require_core1(program)?;
     check_input_budget(source.len(), bindings, authorization, limits, 0, 0, 0)?;
     if program.actions.is_empty()
         || program.actions.len() > NativeWorkLimits::cap(limits.max_actions)?

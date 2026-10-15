@@ -1,0 +1,24 @@
+{
+  "report_kind": "opus-authored-stage-security-source",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 26,
+      "outputTokens": 10520,
+      "cacheReadInputTokens": 435539,
+      "cacheCreationInputTokens": 63848,
+      "webSearchRequests": 0,
+      "costUSD": 0.8083958,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2450,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "source_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "All four proposed Quint commands are approved as ordinary (**APPROVE_ORDINARY**), provided ROOT meets the prerequisites below first. The approval covers only that the commands run in a bounded, ordinary way. It says nothing about whether the model is correct, matches the Rust code, or is secure. Nothing was executed; the only file written is `R/OPUS-QUINT-CHECK-CLASSIFICATION.md`.\n\n**Per command** (cwd `R/quint-continuations`, run in order, stop at the first failure):\n1. `typecheck continuation_prefix.qnt` is approved.\n2. The `run` with `--backend=typescript`, 1 step, 4 samples and the seed is approved.\n3. `typecheck continuation_prefix_test.qnt` is approved.\n4. The `test` with `--backend=typescript`, the two-test `--match` and 1 sample is approved.\n\n**What the source shows:**\n- **Pins:** I re-hashed the oracle JSON (`76075b63\u2026`), the oracle `.md`, both `.mori` files and both model files. All six match `INPUTS.json`.\n- **Model files:** they import only `./continuation_prefix`. Nothing from the Rust or candidate code is imported or invoked.\n- **Backend:** Quint's default backend is `rust`. Only that path reaches the code that downloads an evaluator from GitHub into `~/.quint` and spawns it (`cliCommands.js:231` and `:306`). The explicit `--backend=typescript` in commands 2 and 4 keeps everything in-process.\n- **Network:** the Apalache/gRPC code is only reached by `verify` or `compile`.\n- **Writes:** Quint only writes files when given `--out`, `--out-itf` or `--source-map`, and none of these commands pass them.\n- **Reads:** the input file, files it imports relative to its own directory, and `builtin.qnt`. No SRS files or keys.\n- **Environment:** Quint itself reads `QUINT_HOME` and `QUINT_RETRY_NONDET_SMALLER_THAN`; the second one changes sampling. Node reads `NODE_OPTIONS` and `NODE_PATH`.\n- **Time limit:** Quint has no internal timeout, so the outer `timeout 30s` is the only bound.\n\n**Prerequisites for ROOT:**\n- Clear `NODE_OPTIONS`, `NODE_PATH` and all `QUINT_*` variables without logging them.\n- Re-hash the four tool pins. My sandbox blocked hashing under `~/.npm-global`, so those pins are recorded but I could not verify them.\n- Record before/after tree digests of Quint's `dist/src` and `node_modules`, plus a hash of the Node binary.\n- Use the absolute Node path and the exact cwd.\n- Capture stdout and stderr to `R/checks/` only.\n- Fail the run if any new file appears in the model directory or `~/.quint` changes.\n- Deny network if the host allows it.\n\n**Residuals:**\n- The JS dependency code is covered only by digest; I didn't read it.\n- The Node version is unverified, since I didn't run it.\n- Four samples don't guarantee both specimens appear; the two explicit tests cover both.\n- The model uses mathematical `int`, not UInt128, so passing runs can't establish Rust correspondence.\n- The full Muse and Opus reviews are still owed, and no exit is closed.\n\nNo missing file blocks these commands. Before the next increment, add the dependency-tree and Node digests to `INPUTS.json`.\n\nI didn't run the guarded `status --json` CLI or `git status`: the git call needed approval, and I kept to read-only file inspection."
+}

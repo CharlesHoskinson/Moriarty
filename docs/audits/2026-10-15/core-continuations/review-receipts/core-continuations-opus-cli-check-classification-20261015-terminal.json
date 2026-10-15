@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1201156,
+  "interruption_signal": null,
+  "elapsed_seconds": 247.49431455000013,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "99770fdca6eecfdb5a587a518f147ca1b3210b4b6e2449d31e0031aa08827d78",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 4061,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "ea9c344fa37b294a1a8deedde7cad572ccc41795c2cd3440ba15f988a07826a5",
+  "public_result": {
+    "text": "**APPROVE_ORDINARY**, as long as prerequisites C1\u2013C6 hold. The full report is in `R/OPUS-CLI-CHECK-CLASSIFICATION.md`. I didn't run the command, and this classifies only what it executes; it is not candidate acceptance. Native authority stays at 0. I almost certainly went past the 400s target.\n\n**Pins:** I checked only 9 of the 113 pins myself, and all 9 match, including `inspect.rs` = `5cef6e03\u2026adebef`. The sandbox blocked both the scripted full check and my `git diff`, so root has to verify all 113 before and after the run.\n\n**Missing pins (don't block the verdict):**\n- `crates/{mori-core,mori-backend,mori-ledger}/Cargo.toml`\n- `rust-toolchain.toml`\n- a `git diff --quiet fe01bc8b` baseline over the unpinned lexer, diagnostics, span, ast, parser, checker and fmt crates. All of them are linked into the `mori` binary.\n\n**What the command runs:**\n- **Startup:** the program parses arguments, builds the output shell and runs a single explicit command `match`. There's no logger, panic hook, clap `env=` attribute or code that runs before `main`. The only env reads in workspace source are in `cfg(test)` code or the undeclared `task4_native_driver.rs`.\n- **`check --json`, `inspect` (no `--target`) and `simulate` start/resume:** core `stage::load`, `start` and `resume` only, plus size-limited reads of the input files. `--trace`, replay and the authorization paths can't be reached.\n- **`compile` (/2 source):** `compile_staged` with no signed policy builds the circuits with the backend Builder, then round-trips them through `IrSource::load`. That call is in-memory serde JSON parsing only. The CLI then writes each file to a staging file and hard-links it into place, manifest last.\n- **SDK check:** `IrSource::check` is the only blocked SDK path in reach of this code. It sits in `signed_relation::check_relation`, which is called only from `accept_intent` (verify-intent) and `proving.rs:265`. None of the seven tests reaches either.\n- **Build scripts:** the only one in the `04c9c5d` checkout, `onchain-runtime/build.rs`, spawns `scheme` only when the `vendored` feature is off. `vendored` is on by default, so it won't run.\n\n**Prerequisites:**\n- **C1:** root verifies all pins and the baseline diff before and after the run, and stops on any mismatch.\n- **C2:** the proposed argv only unsets `RUSTFLAGS` and `MORI_FEE_POOL_CAPTURE_DIR`. Root must also unset these by name:\n  - all `MORI_*`, `MORIARTY_*` and `PROPTEST_*` variables\n  - every `CARGO_*` except the argv `CARGO_TARGET_DIR`\n  - `RUSTC`, `RUSTDOC`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, `RUSTDOCFLAGS` and `RUSTUP_TOOLCHAIN`\n\n  `HOME`, `CODEX_HOME` and `RUSTUP_HOME` stay as they are.\n- **C3:** `TMPDIR` is unset or points at the OS temp directory.\n- **C4:** the exact argv runs once and serially (`-j2`, `--test-threads=1`), with no retry.\n- **C5:** reuses only P5 (no cargo config, installed 1.99.0) and P7 (public target directory) from the prior core classification.\n- **C6:** if the 300s timeout kills the run, cleanup of the temp fixture dirs is skipped. Root checks for leftover `mori-core-continuations-*` dirs, looks at them, then removes them.\n\n**Limits:**\n- I didn't enumerate every registry build script in the full `mori` dependency graph individually.\n- I read the lowering bodies (`lower_action_segment`, `frame.rs`, `context.rs`) only through grep, not line by line.\n- The inspect patch hasn't been reviewed for correctness. Neither it, the 32 passing core tests, nor this command's results count as acceptance evidence.\n- The Muse and Opus audits of the full source and results are still owed.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 58,
+        "outputTokens": 21436,
+        "cacheReadInputTokens": 2014482,
+        "cacheCreationInputTokens": 103549,
+        "webSearchRequests": 0,
+        "costUSD": 1.6602403999999997,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 6270,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}
