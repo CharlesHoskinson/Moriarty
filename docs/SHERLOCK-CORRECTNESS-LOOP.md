@@ -67,19 +67,26 @@ Diagnostic formatting is not a canonical state codec.
 Do not compare raw step numbers across `sherlock-k-a/1`,
 `sherlock-quint-a/1` and proposed `sherlock-helper-microstep/1`.
 Declare a rule/action map and observable boundaries, account for all intervening
-steps, and retain each profile's raw charge/outcome. In particular, K publication
-is free, Quint terminal return is charged, and A's unmetered helpers are not B
-microsteps. Preserve existing frame-cap spellings and precedence under their
+steps, and retain each profile's raw charge/outcome. The historical scalar15
+`universalMachine.qnt` uses `sherlock-quint-a/1` with charged terminal return.
+The new generic [K-A Quint counterpart](../models/sherlock/quint/K-PROFILE-README.md)
+uses `sherlock-k-a/1`: exact charged K rules and free return/error publication
+before exhaustion. A's unmetered helpers are not B microsteps.
+Preserve existing frame-cap spellings and precedence under their
 owned policies. Missing mappings remain gaps, not skipped passing comparisons.
 For batching, sharing, residualization and caches, compare every declared internal
 prefix and earliest stop against the uncached baseline, not just the last value.
 
 Begin with the existing K fixtures, committed normal program/prefix corpus and
-finite Quint arithmetic/list/tree instance, restricted to their explicit common
-domain. Preserve mutual recursion, caller restoration, argument order, pending
-tree traversal and occurrence accounting as coverage rows. The finite scalar15
-instance cannot validate full UInt128 or arbitrary program loading. General ADTs,
-B helpers and financial continuation need their own model extensions and cases.
+generic finite K-A Quint counterpart, restricted to their explicit common
+domain. It interprets immutable `ExprId -> Expr` syntax and source-ordered
+function tables, retains nine frame forms and lexical restoration, and evaluates
+named-call arguments in source order. Its exact UInt128 bounds do not
+establish exhaustive numeric or target-field coverage. The historical scalar15
+algorithm instance and its eight normal tests/32 sampled seed-1 traces retain
+their separate scope. Preserve mutual recursion, caller restoration, argument
+order, pending tree traversal and occurrence accounting as coverage rows.
+General ADTs, B helpers and financial continuation need their own model extensions and cases.
 Existing security-owner resource tests and B001–B009/A4/B002 cases retain their
 original scope; this document neither authors substitute hostile tests nor claims
 that normal trace agreement satisfies them.
@@ -126,18 +133,27 @@ resource limits; this document supplies no new configuration or execution grant.
 
 ## Current gaps and execution boundary
 
-The typed A host component and independent normal test consumer exist. K runtime
-execution and the generic K/Quint projection remain open. The pure Lean foundation
-has its separately recorded narrow scope. The typed A [first-difference comparator](../crates/mori-core/src/sherlock/compare.rs)
+The typed A host component, independent normal test consumer and generic finite
+K-A Quint projection exist. The [recorded model evidence](audits/2026-10-15/sherlock-k-profile-quint/README.md)
+binds typecheck exit 0 and 98 passing deterministic normal tests: six complete
+traces and 92 published fuel prefixes, using Quint 0.32.0's TypeScript engine,
+seed 1 and one sample per test. These are captured local results, not a fresh
+run for this document. The [exact-source reviews](audits/2026-10-15/sherlock-k-profile-quint/reviews/README.md)
+record completed Muse and Opus reviews and retain their limitations.
+K runtime execution, full K/Quint refinement, canonical state serialization,
+B schema/helper work, field/constraint correspondence and full grammar coverage
+remain open. The pure Lean foundation has its separately recorded narrow scope.
+The typed A [first-difference comparator](../crates/mori-core/src/sherlock/compare.rs)
 now supplies the shared observation comparison primitive, with its own
 [normal RED/GREEN evidence](audits/2026-10-15/sherlock-trace-comparison/README.md).
 A Sherlock bounded Clean step circuit, paired handwritten-step comparison adapter
 and complete cross-layer runner are not yet delivered; those implementation
 tasks remain unchecked.
 
-Use the current AGENTS.md routing for authors and independent reviews, including
-the temporary AGY Argon security assignment. Security requirements, hostile cases,
-theorem statements and judgments stay with the designated security owner.
+Use the current [AGENTS.md routing](../AGENTS.md#security-ownership-restored--october-15)
+for authors and independent reviews, with Opus 5.5 high restored for new security
+work; historical Argon results keep their actual identities. Security requirements,
+hostile cases, theorem statements and judgments stay with the designated security owner.
 This workflow grants no execution authority: K executors, model checks, Clean/
 SDK relation checks and native actions retain their existing command-specific
 limits. Frontend checks, source inspection and host tests must be reported at
