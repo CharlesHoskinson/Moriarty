@@ -5,16 +5,22 @@ return a local prefix and a continuation, then evaluate its remaining statements
 when supplied a typed event. Existing `moriarty/1` programs retain their atomic
 semantics, JSON and logical-cost profile.
 
-Current selected evidence covers **86 distinct focused Rust test functions**:
-24 functions passed in the final test/documentation-repair captures (10 backend
-relation, 11 public CLI and 3 ledger profile-refusal cases). Another 62 functions
-are retained on unchanged selected call paths: 44 Core, 5 backend normal,
-6 ledger closure, 6 backend frame and 1 legacy byte-comparison case. This is not
-a fresh rerun of all 86 functions. See
-[final observations](audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
-and [final source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json)
+Current selected evidence covers **88 distinct focused Rust test functions**:
+17 functions passed in the last closure captures (12 public CLI and 5 Core
+compatibility cases). Another 71 functions are retained on unchanged selected
+call paths: 40 other Core, 15 backend normal/relation, 9 ledger closure/profile,
+6 backend frame and 1 legacy byte-comparison case. This is not a fresh rerun of
+all 88 functions. See
+[closure observations](audits/2026-10-15/core-continuations/OBSERVATIONS-CLOSURE.json)
+and [closure source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-CLOSURE.json)
 for the selections and retained-evidence basis. The candidate remains local and
-unmerged; final successor Muse and Opus source/result reviews are pending.
+unmerged; final closure Muse and Opus source/result reviews are pending.
+
+Historical candidate `dd4` covered 86 distinct functions: 24 freshly captured
+and 62 retained. Its
+[observations](audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
+and [source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json)
+retain that earlier scope.
 
 Historical successor `7d6c3965` covered 78 distinct functions: 49 freshly captured
 and 29 carried forward. Its

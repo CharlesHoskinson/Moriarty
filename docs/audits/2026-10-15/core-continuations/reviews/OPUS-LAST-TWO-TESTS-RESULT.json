@@ -1,0 +1,25 @@
+{
+  "report_kind": "opus-independent-security-review",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 84,
+      "outputTokens": 32946,
+      "cacheReadInputTokens": 2352689,
+      "cacheCreationInputTokens": 84464,
+      "webSearchRequests": 0,
+      "costUSD": 1.8055058000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 9306,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "candidate_commit": "dd4e4298322666c140c74343a7827000f578c848",
+  "baseline_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "I've written the two proposed tests and the two JSON fixtures. Nothing has been run: no build, no tests, no tools that generate output. I wrote only under `R/opus-last-two-tests/` and `R/OPUS-LAST-TWO-TESTS.md`. The repo is still clean at `dd4e4298`, and this is author/classifier work, not approval. I finished in about 315 s.\n\n## Payload\n\n| Path | Pre sha256 | Post sha256 |\n|---|---|---|\n| `crates/mori/tests/core_continuations.rs` | `816a4320\u2026` | `7a93fd08\u2026f277c6d9` (+18 lines) |\n| `crates/mori-core/tests/compat_v1.rs` | `c1f75cf8\u2026` | `1a8d5de4\u20262b119559` (+22 lines) |\n| `\u2026/fixtures/compat_v1_identifiers/program.json` | absent | `27f77197\u20263f594699` (881 B) |\n| `\u2026/fixtures/compat_v1_identifiers/execution.json` | absent | `88315015\u202606367d7d` (2092 B) |\n\n- **Additions only.** The original 11 CLI tests and 4 compat tests are unchanged byte for byte (checked with `cmp -n`), and no imports were added. Both `.additions.patch` files contain only added lines.\n- **Pins unchanged:** the oracle `76075b63\u2026`, `Cargo.lock`, `compile.rs`, `lower.rs` and `json.rs`.\n\n## F-1: H18, `mori compile` with a signed Target\n\n- **Setup:** `delivery.mori` (`/2`) with `SIGNED_TARGET`, a literal copy of the public `target_canonical_utf8`. I embedded it as a literal rather than reading `golden-vector.json`, because that file also contains `seed` and `private_witness` fields. A grep confirmed the literal matches the golden target exactly.\n- **Asserts:**\n  - exit 1 and empty stdout;\n  - the exact `mori::command: mori::backend::unsupported: Staged moriarty/2 relations are unsigned; a signed Target is refused.` diagnostic;\n  - `!out.exists()`;\n  - exactly 2 files left in the temp directory.\n- **Guard order:** `compile.rs:19-22` reads the source, checks the language, and reads the Target the same way `Target::from_json` does. `lower.rs:23` then refuses the signed Target before load, validation, lowering, or the `create_dir` at `:25`.\n\n## F-2: H15, `await` and `when` as `/1` identifiers\n\n- **Asserts:** the `json::export` output of `parse(src)` and of `simulate(\u2026, \"run\", default scenario)`, each plus one `\\n` (matching the CLI's `println!`), must equal the two fixtures byte for byte. Decoded equality is checked as well.\n- **Freeze:** I typed both fixtures by hand from the `fe01bc8b` `ir.rs`, `parser.rs`, `runtime.rs` and `json.rs` definitions. I froze them at 06:43:12Z, before writing any assertions (`test_source_exists_at_freeze: false`); details are in `ORACLE-FREEZE-NOTE.md`.\n- **Not done:** a Python check of the fixture formatting was declined by the permission prompt and is recorded as not done. So the only check of the hand-typed formatting will be the test run itself.\n\n## Classification (conditional ordinary, assuming the existing flock/timeout/envscrub wrapper and before/after pins)\n\n1. **`cargo +1.99.0 --offline --locked test -p mori --test core_continuations -j2 -- --test-threads=1`** \u2192 ORDINARY, 12 tests expected.\n   - The old 11 keep their previous classifications. The `--trace` and `compile-call` cases remain the source-profile-first exceptions from OPUS-FINAL-A-REPAIR, not broadened to native commands in general.\n   - The new test only reads the source and a public Target, then refuses before anything is written.\n   - The SDK compile-time public-verifier embedding is still a residual.\n2. **`cargo +1.99.0 --offline --locked test -p mori-core --test compat_v1 -j2 -- --test-threads=1`** \u2192 ORDINARY, 5 tests expected.\n   - These are pure legacy serde, parser and interpreter tests with no I/O and no SDK at runtime.\n   - The `midnight-*` dev-dependencies still compile into the test target, as in the existing compat capture, but are unused.\n\nIf both commands pass later, the new 12 + 5 replace the old 11 + 4, for 88 distinct tests (reruns not counted twice). Captures and a fresh non-author review are still required."
+}
