@@ -25,6 +25,8 @@ The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provena
 
 ## Sherlock source status — 2026-10-16
 
+The [complete CandidateA P3 arena source design](models/sherlock/machine-circuit/arena-policy-source-20261016/README.md) is conditionally adopted with fresh Opus and Muse source reviews and their binding errata. It specifies the append catalog and four auxiliary records, with symbolic equality-trace capacity. Model correspondence, arithmetic/fuel witness placement, circuit compilation and Midnight stagenet validation remain open; this closes no roadmap exit.
+
 PR #95 registers the A102 source APIs `literal_schema` and `emit_literal_step`
 ([literal-fragment mapping](models/sherlock/literal-step/MAPPING.md)). The machine
 module has 16 authored and registered Rust tests, all UNRUN. The
