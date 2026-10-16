@@ -88,3 +88,9 @@ any executable result pass. Native authority remains zero.
 The [arena source publication](../../../models/sherlock/machine-circuit/arena-policy-source-20261016/README.md) records conditional source adoption of the complete CandidateA P3 proposal. The unchanged design, JSON catalog, Root adoption and exact fresh Opus/Muse captures must be read together. The binding errata and conditions remain mandatory.
 
 This is source-only evidence. The four auxiliary records do not provide arithmetic or fuel-borrow witness placement. Complete-relation K/Quint/Clean correspondence, G4/P4/P5/F4/MD2, StepInv and chaining, Constant typing, D-NAMES, O-ARITH, L04 statement/profile binding and L05 numeric admission remain open. C4, native authority zero, existing limits and terminal failures are unchanged. No U/M/MC/SP/G or Midnight stagenet exit is closed.
+
+## Append-model source and finite QA
+
+The [append-model evidence](../../../models/sherlock/machine-circuit/append-model-review-20261016/README.md) distinguishes Quint r3 captured model-root typechecking, eight passing tests and a bounded seeded simulation from the K projection's source-only nine-case packet. The configured 32-sample count is inferred from pinned consumer control flow and printed timing/rate. The observation preserves prior failures, the false monitor stop, the unchanged attempt and the disclosed command gap.
+
+These models project the append relation. Full P3/A177/A181/StepInv correspondence, native witness binding, circuit compilation, financial behavior and Midnight stagenet validation remain open. All existing admission, resource and roadmap gates are retained.
