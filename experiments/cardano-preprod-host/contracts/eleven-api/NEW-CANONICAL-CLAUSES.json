@@ -1,0 +1,224 @@
+[
+  {
+    "clauseId": "SH-01-SCOPE-APPEND",
+    "clause": "Increment scope: append exactly three public functions, parse_statement_header(statement) -> dict, statement_digest_hex(statement) -> str and statement_public_inputs(statement) -> tuple[str, str], plus private helpers and one appended module-level import hashlib, after the last byte of the existing host_codec.py. The existing 16134-byte prefix (SHA-256 8e15bc783afc7c8c96268ea1ade0f881e631d9397a59d9642d4b2a1bbc62a838) and its four APIs stay byte-for-byte unchanged. No other module, API, statement body generator, compiler substitute, application IR, proof, signature, key, network or ledger action is introduced.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The next host handoff names exactly these three old-index APIs. Append-only placement keeps the recorded 31/31 and 19/19 ordinary results and the narrow Opus A1-A9 agreement attached to unchanged bytes, and the prefix pin test enforces it. The import is allowed for this increment only after a fresh full import and effect audit."
+  },
+  {
+    "clauseId": "SH-02-TAG-FAMILY",
+    "clause": "Source profile constants: bytes [0,16) must equal the 16 ASCII bytes MRG16-PVC-STMT-2 (hex 4d524731362d5056432d53544d542d32) and bytes [16,48) must equal the 32 ASCII bytes MRG16-PVC-FAM2-G16-BLS-ARK04-HL2 (hex 4d524731362d5056432d46414d322d4731362d424c532d41524b30342d484c32). Neither constant is padded, NUL-terminated, trimmed or case-folded; comparison is exact byte equality.",
+    "position": "AUTHOR_FOR",
+    "rationale": "abi2.rs STMT_TAG and FAMILY_V2 are fixed-size byte-string literals of exactly these lengths; claim.rs parse_statement compares s[..16] and s[16..48] for exact equality; core.ak stmt_tag and family_v2 carry the same strings; the K6 statement header and envV2.familyId carry exactly these bytes."
+  },
+  {
+    "clauseId": "SH-03-HEADER-OFFSETS",
+    "clause": "Source profile fixed header (zero-based offset/width): predicateDigest 48/32, shapeDigest 80/32, vkDigest 112/32, claimantVkh 144/28, networkId 172/1 unsigned, settleHash 173/28, threadId 201/32, consumedTxid 233/32, consumedIx 265/2 unsigned big-endian, seq 267/8 unsigned big-endian, catalogueDigest 275/32, intentsDigest 307/32, bodyLen 339/4 unsigned big-endian. The header is exactly 343 bytes and the body starts at offset 343.",
+    "position": "AUTHOR_FOR",
+    "rationale": "claim.rs offsets module and parse_statement (u16, u64, u32 from_be_bytes), abi2.rs ContextV2::bytes and statement_bytes (to_be_bytes, HEADER_LEN 343) and core.ak statement (bytes.u8, u16, u64, u32) agree. The table is contiguous, and author manual hex reading of the K6 header matches every fixture context literal and bodyLen 0x0000017a = 378; the frozen tests recheck this mechanically."
+  },
+  {
+    "clauseId": "SH-04-LENGTH-FRAMING",
+    "clause": "Length admission: a statement is admitted only if 343 <= len(statement) <= 262144 and len(statement) == 343 + bodyLen. A 343-byte statement with bodyLen 0 is structurally admitted; a 262144-byte statement with consistent bodyLen is admitted; a 262145-byte statement is refused even with consistent bodyLen. Under SH-02 to SH-04 the host admission set over exact bytes equals the claim.rs parse_statement admission set by source inspection.",
+    "position": "AUTHOR_FOR",
+    "rationale": "claim.rs parse_statement refuses lengths outside [HEADER_LEN, MAX_STATEMENT_BYTES] and requires 343 + body_len to equal the length; its re-encoding through abi2::statement_bytes refuses nothing further for such input because statement_bytes only rechecks body length. MAX_STATEMENT_BYTES = 262144 is the actual Rust parse limit; the Aiken consumer applies no such cap, so the cap is host parity with the Rust driver, not on-chain law."
+  },
+  {
+    "clauseId": "SH-05-EXACT-BYTES-DESIGN",
+    "clause": "DESIGN (host restriction beyond source): each of the three functions first checks type(statement) is bytes and otherwise raises ValueError, before calling len, indexing, slicing, comparing, copying, converting or hashing. bytearray, memoryview, str including hex text, bytes subclasses, None, bool, int, list and tuple are refused. No copy or buffer conversion is made and no caller-defined method or hook of the argument is invoked.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Rust takes an immutable &[u8] borrow; Python offers no equivalent for mutable buffers. Exact builtin bytes is immutable, so validation and hashing see identical bytes without a copy, and refusing subclasses removes caller-controlled __len__, __getitem__, __eq__ and __buffer__ hooks. Callers convert explicitly. Chosen over copy-on-entry because copying would need a pre-copy bound and would still invoke caller conversion hooks."
+  },
+  {
+    "clauseId": "SH-06-ORDER-ERRORS-DESIGN",
+    "clause": "DESIGN: after the type check the order is length bounds, tag, family, then bodyLen equality, and the length bounds precede any slicing, copying or hashing. Every ordinary refusal raises exactly ValueError, not a subclass and not TypeError, IndexError, AttributeError, OverflowError or UnicodeError. Environmental failures such as MemoryError or KeyboardInterrupt propagate unconverted and no behaviour under them is claimed. Error message text is not frozen.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The order mirrors claim.rs parse_statement. Exact ValueError matches the existing host convention for encode_data and the wire DTO APIs and the delegated rule that ordinary refusals are ValueError and environmental failures stay unclaimed. Bounds-first keeps oversized input free of copy and digest work."
+  },
+  {
+    "clauseId": "SH-07-RETURN-DICT",
+    "clause": "parse_statement_header returns a fresh exact dict with exactly 14 keys: predicateDigest, shapeDigest, vkDigest, threadId, consumedTxid, catalogueDigest and intentsDigest as exact str of 64 lowercase hex characters; claimantVkh and settleHash as exact str of 56 lowercase hex characters; networkId, consumedIx, seq and bodyLen as exact int (never bool) in their unsigned width ranges; and body as exact bytes equal to statement[343:]. Tag and family are validated but not returned, and no label or derived value is added.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The ten context names follow export.rs ContextExport camelCase and predicateDigest follows ProofExport; shapeDigest follows StatementView shape_digest and catalogueActionEntry.shapeDigest, where ProofExport says abi2ShapeDigest. Lowercase hex and int types allow direct equality with an exported context object and match the existing host lowercase-hex convention. Returning body supports opaque handoff without reslicing."
+  },
+  {
+    "clauseId": "SH-08-OPAQUE-BODY",
+    "clause": "The body is opaque. The host checks only that its length equals bodyLen. It decodes no slot, UInt, Bool or Wide width, layout, accounting row or Bool byte value, and checks no program, descriptor, predicate, shape, VK or body_len pin. A header-valid statement is not thereby a valid statement of any compiled relation, and no host name or document says otherwise.",
+    "position": "AUTHOR_FOR",
+    "rationale": "abi2.rs body bytes are program-dependent (StatementLayout order and widths), and claim.rs check_statement_against plus compiler re-encoding are relation-bound checks the host cannot replicate without the compiler. The tests accept all-0x00 and all-0xff bodies to fix this non-claim."
+  },
+  {
+    "clauseId": "SH-09-HEADER-RECONSTRUCTION",
+    "clause": "Fixed-header parity obligation: concatenating the literal tag, the literal family and the returned fields at the SH-03 widths with big-endian integers reproduces statement[0:343] exactly, and appending body reproduces the whole statement. This is not the Rust compiler re-encoding check and establishes no compiled or native correspondence.",
+    "position": "AUTHOR_FOR",
+    "rationale": "claim.rs parse_statement re-encodes through abi2::statement_bytes to catch offset drift. The host analogue is a test-side reconstruction against the genuine K6 bytes, which checks offsets and endianness without claiming compiler behaviour."
+  },
+  {
+    "clauseId": "SH-10-CONTEXT-UNAUTHENTICATED",
+    "clause": "Parsed context fields vkDigest through intentsDigest are caller-declared premises. The host authenticates none of them and compares none of them, or predicateDigest and shapeDigest, with any ledger state, ScriptContext, catalogue, descriptor, setup record or VK. Statements with edited context or relation bytes parse with the edited values reported.",
+    "position": "AUTHOR_FOR",
+    "rationale": "export.rs PREMISES[1] states context bytes are bound by the proof but not authenticated by it and that S2 recomputes them; the existing host labels context CALLER_SUPPLIED_UNAUTHENTICATED. The parser adds no authentication and the tests fix that edited fields are reported, not judged."
+  },
+  {
+    "clauseId": "SH-11-DIGEST",
+    "clause": "statement_digest_hex returns an exact str of 64 lowercase hex characters equal to unkeyed BLAKE2b with a 32-byte digest (hashlib.blake2b with digest_size=32 and no key, salt or person) over the entire admitted statement, header and body.",
+    "position": "AUTHOR_FOR",
+    "rationale": "claim.rs claim_from_values and export.rs check_export hash the full statement with mori_r1cs::blake2b::blake2b256, and abi2.rs public_inputs hashes the full statement. blake2b.rs is unread, so parameter equivalence with hashlib is checked only by the published K6 digest literal."
+  },
+  {
+    "clauseId": "SH-12-VALIDATE-BEFORE-HASH-DESIGN",
+    "clause": "DESIGN: statement_digest_hex and statement_public_inputs apply exactly the parse_statement_header admission of SH-04 to SH-06 before any hashing and refuse exactly the inputs it refuses. Neither function hashes arbitrary bytes.",
+    "position": "AUTHOR_FOR",
+    "rationale": "abi2.rs public_inputs hashes any slice without validation, while export.rs check_export parses before hashing and claim.rs says larger statements are refused before hashing. Validation-before-hash is therefore a host design, not Rust law. It prevents a host digest for bytes that are not a framed ABI v2 statement and bounds hash work to 262144 bytes."
+  },
+  {
+    "clauseId": "SH-13-PUBLIC-INPUTS",
+    "clause": "statement_public_inputs returns an exact tuple of exactly two exact str values (x1, x2): canonical ASCII decimal, no sign and no leading zero except for 0, of the unsigned big-endian integers of digest bytes [0,16) and [16,32). Each is below 2**128. There is no field reduction, curve arithmetic or scalar encoding.",
+    "position": "AUTHOR_FOR",
+    "rationale": "claim.rs digest_halves (u128::from_be_bytes of d[..16] and d[16..]), abi2.rs public_inputs and export.rs PublicInputsExport (canonical decimal x1, x2) agree. K6 literals: x1 268418678883876601707409168117995592842 and x2 8714689549842776844379904284721120460."
+  },
+  {
+    "clauseId": "SH-14-PURE-DETACHED",
+    "clause": "All three functions are pure and deterministic: no I/O, environment, clock, randomness, global mutable state, logging or caching. Each parse call returns a new dict; mutating a returned dict does not affect later calls; the input is never mutated.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Matches the existing host purity profile and lets the handoff use results as detached values. Tested by repeated calls and mutation of a returned dict."
+  },
+  {
+    "clauseId": "SH-15-K6-FIXTURE",
+    "clause": "The retained public K6 invoice-partial.proof.json (5800 bytes, SHA-256 930198631617f1f931aa93e836b32ffa8acadedadafe3b3d90081ff629e9ba5b), staged as sibling K6-PUBLIC-PROOF.json, is only a public parser and digest test vector: its 721-byte statementHex, statementDigestBlake2b256 c9ef8ea00a7f7b71fc1e049bd956dc8a068e635e31306aca88210711282384cc, x1, x2 and context literals. Its context is caller-declared, not Preprod ledger state; its setup is a single-party test setup forgeable by the setup owner; compiler-to-matrix and VK correspondence is not proved. Parsing or hashing it verifies no proof, signature or ledger truth, and proofHex is never parsed.",
+    "position": "AUTHOR_FOR",
+    "rationale": "A genuine Rust-emitted statement gives non-fabricated literals for fields, endianness, digest and halves. Its published premises and trust profile forbid relabelling it as on-chain context or proof evidence."
+  },
+  {
+    "clauseId": "SH-16-STRUCTURAL-DATA",
+    "clause": "Edited copies of the genuine statement (tag, family, context, relation fields, lengths, bodyLen, all-0x00 and all-0xff bodies, header-only, and 262144-byte and 262145-byte framings built from the genuine header and repeated genuine body bytes) are structural boundary test data only. They are not programs, ledger statements or proof experiments and carry no financial interpretation.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Boundary and refusal behaviour needs variants the genuine fixture cannot supply, and labelling them prevents any reading of them as semantic or ledger evidence."
+  },
+  {
+    "clauseId": "SH-17-TEST-HARNESS",
+    "clause": "test_statement_host.py is stdlib only (hashlib, importlib.util, json, os, stat, sys, types, unittest). It reads only sibling K6-PUBLIC-PROOF.json and sibling host_codec.py, each checked as a regular non-symlink file and read with O_NOFOLLOW, loads host_codec.py by importlib file-location loading with bytecode writing disabled, uses SHA-256 only for provenance pins, never computes BLAKE2b, and has no network, subprocess, writes, string eval or exec, RNG, SDK or VM. A missing host file or API fails with an ordinary assertion containing 'missing implementation' before any API call; there are no skips, xfails or fallbacks. Expected values are literals from the fixture and source, never derived by the host under test.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Root will inspect and run the frozen source first against the existing host and later against the implementation in a minimal 10 s, 512 MiB environment containing only the two Python files and the fixture."
+  },
+  {
+    "clauseId": "SH-18-PREFIX-PIN",
+    "clause": "test_host_prefix_preserved_byte_for_byte requires host_codec.py to be at least 16134 bytes with SHA-256 of its first 16134 bytes equal to 8e15bc783afc7c8c96268ea1ade0f881e631d9397a59d9642d4b2a1bbc62a838. Other appended increments, such as the separate four Data factory functions, remain compatible.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Encodes the append-only rule as an ordinary check instead of a review-only promise."
+  },
+  {
+    "clauseId": "SH-19-RED-EXPECTATION",
+    "clause": "Expected and unobserved: against the existing 16134-byte host the 19 test methods give 2 passes (fixture pin and literal consistency; prefix pin) and 17 failures whose assertion contains 'missing implementation'. The author ran neither RED nor GREEN; any other RED observation stops the step for review.",
+    "position": "AUTHOR_FOR",
+    "rationale": "A frozen, falsifiable RED prediction lets root detect harness or fixture-staging defects before implementation exists."
+  },
+  {
+    "clauseId": "SH-20-PARITY-SCOPE",
+    "clause": "Source-inspected parity only: the contract and tests compare host behaviour with inspected Rust and Aiken source and one public fixture. They establish no compiled Rust, native, VM, compiled Aiken or ledger correspondence, no VK identity, no raw-source binding and no regression coverage.",
+    "position": "AUTHOR_FOR",
+    "rationale": "No compilation or execution occurred; abi2.rs even carries a PROPOSED never-compiled header comment that this task cannot reconcile with the K6 run."
+  },
+  {
+    "clauseId": "SH-21-FUTURE-ROUTING",
+    "clause": "Because digest and public-input derivation is cryptographic, the implementation goes to Opus under current routing, followed by one fresh non-author Opus actual combined audit, with same-provider independence disclosed, covering these SH clauses and the separate four Data factory clauses in a single review without duplicated full auditors. The Sol Data factory portion separately requires the Muse audit; a missing Muse audit is neither approval nor replaceable by the Opus review.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Follows the delegated routing for cryptographic host code and keeps the non-security Sol increment under its own required auditor."
+  },
+  {
+    "clauseId": "SH-22-AUTHORITY-OPEN",
+    "clause": "All native, operator, signing, proving, key, ledger and publication authority stays zero. Still open: all 20 UTxO families, current Rust acceptance, compiler and VK matrix correspondence, authenticated ledger context, the catalogue 42 provenance gap, ACTUS 277/18/32 and DS01-07, DeFi 72 with DA01-24, held-out intent regressions, KQuint, recursion, private handoff, multi-parent, universal and Preprod.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Nothing in a pure header parser or digest helper closes any of these; stating them prevents scope inflation."
+  },
+  {
+    "clauseId": "DF-01",
+    "clause": "host_codec.py keeps its current 19096 bytes (SHA-256 8f59b28f8307c789dc1f4abe7251b0de661156af130650e9b358bceb668df377) as an exact byte prefix, and the existing first-16134-byte preservation pin stays authoritative. build_value_data, build_output_reference, build_env_data and build_c2_mint_data are added only in an appended suffix, giving eleven public APIs. The suffix must not rebind, wrap, shadow or alter any top-level name of the prefix; the seven existing APIs keep their code and behaviour.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Protects the provisional seven-API host and its narrow passes; makes the increment auditable as a pure suffix."
+  },
+  {
+    "clauseId": "DF-02",
+    "clause": "Each factory is pure and deterministic: no I/O, environment, clock, randomness, global or cached mutable state, argument mutation, subprocess, network, SDK or native call, and no call to encode_data, hashing or the statement helpers. In this increment the suffix adds no import and uses no eval, exec, compile, open, __import__, breakpoint, input, globals, locals, vars, getattr, setattr, delattr, __builtins__, global, nonlocal or dunder attribute access. A later increment may replace this phase gate only through a fresh audit of the actual combined candidate.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Building tuples needs no imports or effects; the gate is scoped to this phase so it does not permanently forbid future APIs or imports."
+  },
+  {
+    "clauseId": "DF-03",
+    "clause": "Each factory returns a Data node in the lowercase tagged-tuple algebra admitted by encode_data: ('int', int), ('bytes', bytes), ('list', list), ('map', list of 2-tuples), ('constr', index, list). Every node and map pair is an exact tuple; every container is an exact list created by that call and shared with no argument and no other call; every integer is an exact int; every bytes leaf is exact bytes equal to the caller's value. The build_inputs.py uppercase tuples ('I', 'B', 'Constr', 'List', 'Map') and UPLC text are not outputs.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Matches the reviewed encoder's admission rule A1 and prevents aliasing or cache-poisoning between callers."
+  },
+  {
+    "clauseId": "DF-04",
+    "clause": "Exact type means type(x) is T. An int parameter refuses bool and int subclasses; a bytes parameter refuses bytearray, memoryview, str (including hex text) and bytes subclasses; list, tuple and str parameters refuse subclasses. None is accepted only where a clause names it. Nothing is coerced, sorted, truncated, padded or defaulted.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Subclasses can override comparison and length; coercion like build_inputs.py int(i)/list(f) hides caller errors."
+  },
+  {
+    "clauseId": "DF-05",
+    "clause": "Every refusal raises ValueError (a private subclass is allowed) and returns nothing. The message is fixed text beginning with the refusal prefix of the failing check (a parameter or element path followed by a colon) and never contains or formats an argument value. Checks run in parameter order and, within a parameter, in the listed order; the first failing check decides the error. No argument value may cause TypeError, OverflowError, RecursionError or any other exception class; Python call-protocol errors (missing or unknown parameters) are outside this clause.",
+    "position": "AUTHOR_FOR",
+    "rationale": "A deterministic, testable refusal order that does not leak inputs, consistent with the host's path-prefixed ValueError style."
+  },
+  {
+    "clauseId": "DF-06",
+    "clause": "build_output_reference(transaction_id, output_index) returns ('constr', 0, [('bytes', transaction_id), ('int', output_index)]). transaction_id is exact bytes of length 32, else transaction_id:; output_index is an exact int in 0..65535, else output_index:. SOURCE: transaction.ak OutputReference single constructor and field order; claim.ak well_formed 32-byte id and 0 <= index < 65536 for settle_outref. DESIGN: applying the 16-bit bound to every reference this factory builds.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Direct from the primary Aiken declaration and the C2 well_formed bounds; the generalised bound is disclosed as design."
+  },
+  {
+    "clauseId": "DF-07",
+    "clause": "build_value_data(lovelace, tokens) returns ('map', entries). If lovelace is an int, the first entry is (('bytes', b''), ('map', [(('bytes', b''), ('int', lovelace))])), also when lovelace is 0; if lovelace is None there is no ada entry. Each maximal run of consecutive tokens with the same policy then yields one entry (('bytes', policy), ('map', [(('bytes', name), ('int', quantity)), ...])) in input order. None with [] yields ('map', []). SOURCE (consumer only): the map-of-maps shape, ada under the empty policy and empty name, and the empty mint map follow build_inputs.py value(), thread_value and value([]). DESIGN: the None/0 lovelace convention.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Covers output values with ada and mint values without ada while staying honest that assets.ak is unread."
+  },
+  {
+    "clauseId": "DF-08",
+    "clause": "lovelace is None or an exact int in 0..2^64-1, else lovelace:. tokens is an exact list of at most 256 elements, else tokens:. Elements are then checked one at a time in index order, each completely before the next: an exact tuple of length 3, else tokens[]:; policy exact bytes of length 28, else tokens[].policy:; name exact bytes of length 0..32, else tokens[].name:; quantity an exact nonzero int in -(2^64-1)..2^64-1, else tokens[].quantity:; and, after the first element, (policy, name) strictly greater than the previous pair under bytewise unsigned lexicographic order, else tokens.order:. The factory never sorts, merges or drops entries. These bounds and the ordering rule are DESIGN, not ledger or Aiken law.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Refusing instead of normalising keeps the caller's order visible; the bounds keep the encoding within CBOR major types 0/1 and the encoder bounds; nothing is promoted to ledger law."
+  },
+  {
+    "clauseId": "DF-09",
+    "clause": "build_env_data(predicate_digest, vk_digest, claimant_vkh, settle_transaction_id, settle_output_index, statement_digest, expiry) returns ('constr', 0, [('int', 2), ('int', 0), ('bytes', b'MRG16-PVC-FAM2-G16-BLS-ARK04-HL2'), ('bytes', predicate_digest), ('bytes', vk_digest), ('bytes', claimant_vkh), ('constr', 0, [('bytes', settle_transaction_id), ('int', settle_output_index)]), ('bytes', statement_digest), ('int', expiry)]). predicate_digest, vk_digest, settle_transaction_id and statement_digest are exact bytes of length 32; claimant_vkh is exact bytes of length 28; settle_output_index is an exact int in 0..65535; expiry is an exact int in 0..2^64-1. Each refusal prefix is the parameter name followed by a colon. SOURCE: types.ak EnvV2 field order; claim.ak well_formed version 2, claim_kind 0, family_id core.family_v2, lengths and index bounds; core.ak family_v2. DESIGN: fixing the three constants and the expiry range.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The factory can only emit envelopes whose fixed fields satisfy well_formed; malformed-envelope negative fixtures stay explicit hand-written Data."
+  },
+  {
+    "clauseId": "DF-10",
+    "clause": "build_c2_mint_data(kind, vk=None, proof=None): kind is the exact str 'Issue' or 'Burn', else kind:. For 'Issue', vk and then proof must each be exact bytes of length 1..65536, else vk: or proof:, and the result is ('constr', 0, [('bytes', vk), ('bytes', proof)]). For 'Burn', vk and then proof must each be None, else vk: or proof:, and the result is ('constr', 1, []). SOURCE: types.ak C2Mint { Issue { vk, proof }, Burn } declaration and field order. DESIGN: the selector strings, the length bounds and refusing payloads for Burn.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The redeemer shape comes from source; payloads are opaque public bytes; refusing a Burn payload avoids silently dropping it."
+  },
+  {
+    "clauseId": "DF-11",
+    "clause": "Factories check structure only. They do not check that vk_digest equals blake2b_256(vk), that statement_digest matches any statement, that a VK or proof is a valid Groth16 or curve encoding, or that any key hash, policy, transaction id, index or expiry exists, is authentic or is current. They compute no envelope token name, build no transaction and evaluate no validator. All arguments are caller-supplied and unauthenticated; outputs are local Data fixtures, not ledger evidence.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Keeps semantic, cryptographic and ledger checks with claim.ak, groth16 and Core/Rust, and prevents overclaiming."
+  },
+  {
+    "clauseId": "DF-12",
+    "clause": "Every factory output is admitted by the prefix encode_data: depth at most 3, at most 1029 expanded nodes, bytes leaves of at most 65536 bytes and integers within CBOR major types 0 and 1, so no bignum or tag-102 form arises; constructor indices are only 0 and 1 (tags 121 and 122).",
+    "position": "AUTHOR_FOR",
+    "rationale": "Guarantees composition with the reviewed encoder; avoids the X2 tag-102 round-trip gap."
+  },
+  {
+    "clauseId": "DF-13",
+    "clause": "UNVERIFIED and not claimed: stdlib cardano/assets.ak and aiken/collection/dict.ak (Value representation, key order, zero-quantity and ada-entry conventions), pvc2/groth16.ak (VK and proof sizes), the ledger ScriptContext builder, and equality of the Sol-capture types.ak with the utxo-worktree types.ak used by core.ak and claim.ak. The Value shape rests only on the build_inputs.py consumer; DF-07 and DF-08 choices are API conventions. No compiled-validator, VM, ledger or Preprod correspondence is claimed.",
+    "position": "AUTHOR_FOR",
+    "rationale": "States the honest limits of the current source."
+  },
+  {
+    "clauseId": "DF-14",
+    "clause": "test_data_factories.py has 13 test methods: test_00 pins the 19096-byte prefix and its SHA-256 and inspects the suffix best-effort; test_01..test_12 compare factory outputs with literal Data and literal CBOR bytes and check refusals. Before the factories exist test_00 passes and each of test_01..test_12 fails with an AssertionError containing 'missing implementation', with no error, skip or expected failure. The test reads only the regular non-symlink sibling host_codec.py (lstat, O_NOFOLLOW, 2 MiB cap), executes exactly the pinned bytes it inspected, writes nothing and uses no network, subprocess, RNG, VM, proof, SDK or private material. Root runs it only after full human source and effect inspection of both files, as python3 -I -B /abs/dir/test_data_factories.py in a dedicated directory holding only the two files, with wall 10 s, CPU 10 s, address space 512 MiB, file size 2 MiB, core 0 and a minimal secret-free environment.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Gives a RED baseline that cannot be satisfied by a fallback; expected values never come from code under test."
+  },
+  {
+    "clauseId": "DF-15",
+    "clause": "This is an author proposal by claude-opus-5-5 with tools off and nothing executed. Sol HIGH implements; a fresh Muse audits that implementation; a fresh non-author Opus later audits the actual combined host plus statement increment, preserving these literal clauses (same provider; independence is context only). Passing tests are narrow local host Data checks, not Rust, VM, ledger, security, financial or Preprod acceptance, and every operational and native authority stays closed.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Separates author, implementer and auditors, and stops passes being promoted beyond their scope."
+  }
+]

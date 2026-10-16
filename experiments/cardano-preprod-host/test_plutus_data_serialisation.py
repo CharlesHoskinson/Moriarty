@@ -43,8 +43,13 @@ def load_host_codec(case):
     source = TARGET.read_bytes()
     for node in ast.walk(ast.parse(source, filename=str(TARGET))):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
+            # Phase gate (I1-SCOPE-R2): __future__, or exactly `import hashlib` for the
+            # statement digest APIs of host_codec.py; every other import is refused.
             case.assertTrue(
-                isinstance(node, ast.ImportFrom) and node.module == '__future__',
+                (isinstance(node, ast.ImportFrom) and node.module == '__future__')
+                or (isinstance(node, ast.Import) and len(node.names) == 1
+                    and node.names[0].name == 'hashlib'
+                    and node.names[0].asname is None),
                 'import audit: host_codec.py line %d imports a module' % node.lineno)
         elif isinstance(node, ast.Name):
             case.assertNotIn(node.id, FORBIDDEN_NAMES, 'import audit: forbidden name')
