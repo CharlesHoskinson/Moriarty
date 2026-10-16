@@ -33,6 +33,8 @@ INITIAL_FIELDS = ('control_k', 'environment_k', 'frames_top_first_k', 'depth',
                   'stack_limit', 'code_k', 'remaining_fuel', 'initial_fuel',
                   'output_k', 'charged_steps')
 LAYER_ARTIFACTS = {
+    'k': ('sherlock-k-normal-observations/1', 'sherlock-k-reference',
+          ('raw_runs', 'evidence', 'comparison_ready')),
     'lean': ('sherlock-lean-normal-observations/1', 'sherlock-lean-reference', ('raw_runs',)),
     'quint': ('sherlock-quint-itf-observations/1', 'sherlock-quint-k-profile',
               ('raw_traces', 'raw_trace_references', 'evidence')),
@@ -353,6 +355,50 @@ def layer_raw_context(artifact, difference):
     states. A reference or raw Repr/ITF value is not an execution receipt.
     """
     case, fuel = difference.get('case_id'), difference.get('initial_fuel')
+    if artifact.get('format') == 'sherlock-k-normal-observations/1':
+        # Select by the expected run's case and exact int fuel only: a supplied
+        # bool or float fuel never aliases an int, as in state_at. Cell and log
+        # text is retained as supplied, never decoded or treated as a receipt.
+        rows = artifact.get('raw_runs')
+        candidates = []
+        if type(rows) is list and type(case) is str and type(fuel) is int:
+            for index, row in enumerate(rows):
+                if type(row) is not dict or type(row.get('observation')) is not dict:
+                    continue
+                observed = row['observation']
+                initial = observed.get('initial')
+                if (observed.get('case_id') == case and type(initial) is dict
+                        and type(initial.get('initial_fuel')) is int
+                        and initial['initial_fuel'] == fuel):
+                    candidates.append(index)
+        if len(candidates) != 1:
+            return dict(raw_context_status='multiple' if candidates else 'unavailable',
+                        raw_run_candidate_indices=candidates, case_id=case, initial_fuel=fuel)
+        index = candidates[0]
+        row = rows[index]
+        context = dict(raw_context_status='available', raw_run_index=index,
+                       case_id=case, initial_fuel=fuel, raw_run=row)
+        for key in ('raw_startup_probe', 'raw_terminal_probe'):
+            if key in row:
+                context[key] = row[key]
+        captures = row.get('raw_captures')
+        parts = difference.get('path', '').split('/')
+        field = parts[3] if len(parts) > 3 and parts[1] == 'runs' else None
+        record = difference.get('record_index')
+        if (field == 'records' and type(record) is int and type(captures) is list
+                and 0 <= record < len(captures) - 1):
+            context.update(raw_before_capture=captures[record],
+                           raw_after_capture=captures[record + 1])
+            logs = row.get('decoded_incoming_logs')
+            if type(logs) is list and record < len(logs):
+                context.update(incoming_rule_log=logs[record], incoming_rule_log_status='available')
+            else:
+                context['incoming_rule_log_status'] = 'unavailable'
+        elif field in ('initial', 'terminal') and type(captures) is list and captures:
+            context['raw_capture'] = captures[0 if field == 'initial' else -1]
+        else:
+            context['raw_state_status'] = 'unavailable'
+        return context
     if artifact.get('format') == 'sherlock-quint-itf-observations/1':
         # Inspect only the existing ITF Snapshot fields. No model execution or
         # projection recomputation participates in this diagnostic lookup.
@@ -471,7 +517,7 @@ def compare_supplied_observations(artifact, families, *, layer):
 
 
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
-        lean_observations=None, quint_observations=None, image_observations=None):
+        lean_observations=None, quint_observations=None, image_observations=None, k_observations=None):
     repo = Path(repo)
     files = []
     totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
@@ -498,7 +544,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
     require((observed_programs is None) == (observed_prefixes is None),
             'observed-programs and observed-prefixes must be supplied together')
     supplied_paths = dict(host=host_observations, lean=lean_observations,
-                          quint=quint_observations, image=image_observations)
+                          quint=quint_observations, image=image_observations, k=k_observations)
     require(sum(path is not None for path in supplied_paths.values()) <= 1,
             'supplied layer observations are mutually exclusive comparison modes')
     require(not any(path is not None for path in supplied_paths.values()) or observed_programs is None,
@@ -541,8 +587,10 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                 rust_literal_transcriptions=transcriptions, observed_files=observed_files,
                 supplied_observation_status=('mismatch' if difference else 'match') if observed_files else 'not-supplied',
                 supplied_observation_family=family if observed_files else None,
-                supplied_comparison_gaps={'K': dict(status='unsupported',
-                    reason='K configuration decoding exists; complete corpus observations, actual rule labels and terminal next-step observations remain unavailable.')},
+                supplied_comparison_gaps={'K': dict(
+                    status='supplied-comparison-only' if k_observations is not None else 'unsupported',
+                    reason='Supplied K cells, rule labels and terminal probes are diagnostic declarations; '
+                           'no K executor or receipt authentication is invoked by this consumer.')},
                 first_difference=difference,
                 execution_layers=[dict(layer=layer, status='not-run', reason='No executable adapter invoked by this SDK-free QA consumer')
                                   for layer in ('K', 'Quint', 'Lean', 'Clean', 'handwritten-circuit', 'Rust-host', 'native-ledger')],
@@ -574,7 +622,8 @@ def main(argv=None):
         report = run(args.repo, observed_programs=args.observed_programs,
                      observed_prefixes=args.observed_prefixes, family=args.family,
                      host_observations=args.host_observations, lean_observations=args.lean_observations,
-                     quint_observations=args.quint_observations, image_observations=args.image_observations)
+                     quint_observations=args.quint_observations, image_observations=args.image_observations,
+                     k_observations=args.k_observations)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')
