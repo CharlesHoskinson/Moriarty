@@ -1,0 +1,146 @@
+{
+  "format": "root-ordinary-public-parser-checks/1",
+  "at": "2026-10-16T14:38:24.835673+00:00",
+  "source": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-public-observer-r2-source-candidate-20261016/runner/observe.py",
+  "sourceSha256": "ef54a814d99b52409bf6699ff724c950719c1a2cbc3e0f259391d0699661d352",
+  "sourceUnchanged": true,
+  "frozenExpectationsSha256": "8f759f7a365bc6cc972f88060e67099d90f59f163f1e1cd4c20a7a8478345818",
+  "selectedAstNodes": 6,
+  "scope": "Only empty Abort class, CR_RE regex and four pure functions; stdlib json/math/re globals. No module import/main/network/Scrapling/SDK/crypto/proving/keys/wallet/ledger. This tests parser branches only, not a whole reader run, cookie/proxy runtime or ledger truth.",
+  "cases": [
+    {
+      "name": "exact three rows",
+      "expected": true,
+      "actual": true,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_complete:range_covers_all_rows"
+      ]
+    },
+    {
+      "name": "explicit zero total",
+      "expected": true,
+      "actual": true,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_complete_empty:total_zero"
+      ]
+    },
+    {
+      "name": "partial page",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_partial_range:bounded_incomplete"
+      ]
+    },
+    {
+      "name": "unknown total",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_unknown_total:bounded_incomplete_or_unknown"
+      ]
+    },
+    {
+      "name": "empty unknown total",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_unknown_total:bounded_incomplete_or_unknown"
+      ]
+    },
+    {
+      "name": "empty absent range",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_absent:completeness_unknown_bounded_result"
+      ]
+    },
+    {
+      "name": "malformed range",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_malformed:completeness_unknown_bounded_result"
+      ]
+    },
+    {
+      "name": "range row mismatch",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_row_count_mismatch:bounded_incomplete_or_unknown"
+      ]
+    },
+    {
+      "name": "missing first row",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "flags": [
+        "utxo_content_range_partial_range:bounded_incomplete"
+      ]
+    },
+    {
+      "name": "valid finite JSON",
+      "expected": true,
+      "actual": true,
+      "matched": true,
+      "error": null
+    },
+    {
+      "name": "duplicate object key",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "error": "duplicate JSON key: x"
+    },
+    {
+      "name": "literal NaN",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "error": "non-JSON constant: NaN"
+    },
+    {
+      "name": "literal Infinity",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "error": "non-JSON constant: Infinity"
+    },
+    {
+      "name": "numeric overflow",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "error": "non-finite JSON number: 1e999"
+    },
+    {
+      "name": "integer zero",
+      "expected": true,
+      "actual": true,
+      "matched": true,
+      "error": null
+    },
+    {
+      "name": "bool is not integer",
+      "expected": false,
+      "actual": false,
+      "matched": true,
+      "error": "test: x must be non-bool integer in range"
+    }
+  ],
+  "casesCount": 16,
+  "matchedCount": 16,
+  "allMatched": true,
+  "newAuthority": false
+}

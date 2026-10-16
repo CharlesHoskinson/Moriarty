@@ -1,0 +1,73 @@
+{
+  "format": "cardano-preprod-public-observer-expectations/2",
+  "status": "FROZEN_PROVIDER_CONTRACT_INVARIANTS_NOT_LIVE_VALUES_R2_REPAIR_OF_R1",
+  "imports_from_evaluator": false,
+  "provider_base": "https://preprod.koios.rest/api/v1",
+  "address": "addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc",
+  "sequence": [
+    {"step": 1, "method": "GET", "path": "/genesis"},
+    {"step": 2, "method": "GET", "path": "/tip"},
+    {"step": 3, "method": "POST", "path": "/address_utxos", "json": {"_addresses": ["addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc"], "_extended": true}},
+    {"step": 4, "method": "GET", "path": "/epoch_params?_epoch_no=<epoch_no from step 2; explicit; never omitted>"},
+    {"step": 5, "method": "GET", "path": "/tip"}
+  ],
+  "static_preprod_genesis_crosscheck": {
+    "source": "captured official Preprod Shelley genesis, not a live response",
+    "networkMagic": 1,
+    "networkId": "Testnet",
+    "systemStart": "2022-06-01T00:00:00Z",
+    "systemstart_unix": 1654041600,
+    "slotLength": 1,
+    "epochLength": 432000,
+    "securityParam": 2160,
+    "maxLovelaceSupply": 45000000000000000
+  },
+  "genesis_provider_contract": {
+    "top_level": "array_of_exactly_one_object",
+    "string_integer_fields_must_equal": {"networkmagic": "1", "epochlength": "432000", "slotlength": "1", "maxlovelacesupply": "45000000000000000", "slotsperkesperiod": "129600", "maxkesrevolutions": "62", "securityparam": "2160", "updatequorum": "5"},
+    "networkid": "Testnet",
+    "systemstart": "non-bool integer 1654041600",
+    "rule": "integer coercion only from documented string fields; unexpected extra fields retained in the raw step file only, not rejected and not duplicated into RESULT"
+  },
+  "tip_contract": {
+    "top_level": "array_of_exactly_one_object",
+    "hash": "64 lowercase hex chars",
+    "era": "non-empty string",
+    "epoch_no_abs_slot_epoch_slot_block_time": "non-bool integers, block_time >= 1654041600, epoch_slot < 432000",
+    "block_no": "deprecated; if present non-bool integer; tip height-field inconsistency in source is retained, not repaired"
+  },
+  "epoch_params_contract": {
+    "query": "exactly one explicit _epoch_no equal to step-2 epoch_no; omitted/all-history query forbidden",
+    "top_level": "array_of_exactly_one_object for the chosen epoch",
+    "block_hash": "64 lowercase hex chars",
+    "max_tx_size_and_budgets": "present fields must be null (explicit qualification flag) or non-bool integer >= 0; raw values only",
+    "cost_models": "type/shape recorded as unknown (null, object, or other type name) plus raw step-file reference; format unknown in all cases; cannot cost-evaluate; no invented cost decoder"
+  },
+  "address_utxos_contract": {
+    "top_level": "array, 0..1000 rows",
+    "content_range_completeness": "the allowlisted Content-Range is passed to validation; completeness is proven only when it exactly covers all returned rows (start 0, end total-1, row count = total), or */0 with zero rows; forms 0-2/3 partial, 0-2/*, */*, absent, malformed, or row-count-mismatched are flagged bounded/incomplete or completeness-unknown",
+    "empty": "empty with proven completeness is a provider-only unfunded report (not ledger truth); empty without proven completeness MUST be provider_reports_empty_bounded_result_completeness_unknown and never valid-unfunded",
+    "exactly_1000_rows": "bounded set only; possible truncation flag retained even if a range is present; no completeness claim beyond what the range proves",
+    "row": {"address": "exact requested address", "tx_hash": "64 lowercase hex chars", "tx_index": "non-bool integer 0..32767 (SQL smallint source bound; negative rejected)", "is_spent": "exactly false", "value": "raw non-negative decimal string; no ADA/lovelace conversion, total balance, or sum", "asset_list_inline_datum_reference_script": "retained in the raw step file only; no tx building, fee, unit, or cost inference"},
+    "unique_outrefs": "(tx_hash, tx_index) pairs must be unique",
+    "no_extra_mechanism": "no paging, retry, extra request, or Prefer header is added; qualified unknown is acceptable"
+  },
+  "cookies": "discard_cookies=True on every get/post (indexed per-request forwarding); a Set-Cookie may still arrive in the ephemeral response object, but it is not stored in the persistent cookie jar and is not reused between calls; no claim of no Set-Cookie receipt is made",
+  "environment": "source passes no explicit proxy/auth and cannot disable trust_env at the FetcherSession constructor; no-proxy/no-CA-env effect requires the root exact clean environment dict (not inherited) in EXECUTION-PROPOSAL.json with no proxy, CA-bundle, or credential entries at all; this is an operator precondition, not a code guarantee or trust theorem",
+  "partial_preservation": "initial STARTED RESULT is saved, the ledger entry is saved after append before each request, transport_attempted and response_received are recorded distinctly, and Abort or any other Exception finalizes BLOCKED_PARTIAL_PRESERVED (type name only for non-Abort faults) with raw/ledger preserved on a best-effort basis; a physical write failure can prevent the final receipt, in which case the root outer captured terminal output is the authority; output is never overwritten (root passes the exact fresh O)",
+  "json_and_http": {
+    "duplicate_keys": "reject",
+    "nan_infinity": "reject, including literal NaN/Infinity and numeric overflow such as 1e999 via a finite parse_float check; RESULT is serialized with allow_nan=False",
+    "status": "200 only; non-200 body captured if within bound but never accepted",
+    "canonical_url": "response URL must equal requested URL exactly",
+    "content_type": "application/json only; only content-type and content-range response headers are retained",
+    "body_bound": "<= 2097152 bytes checked before persist/JSON; Scrapling buffers whole body first, so this is not a streaming cap and there is no stream cap"
+  },
+  "receipt_bound": "RESULT contains only whitelisted known-field summaries plus raw step-file references (full raw bodies remain exact separate files, so no raw observation is silently discarded); FSIZE 8 MiB is per-file, not aggregate; if even the summary exceeded the 2 MiB receipt guard, a bounded compact fallback referencing the raw files is written instead",
+  "bracket_and_funding_language": {
+    "same_tip": "provider bracket only",
+    "changed_tip_or_epoch": "AMBIGUOUS; not an atomic or authenticated snapshot; no silent retry",
+    "fund_status_allowed": ["provider_reports_nonempty_unspent_utxo", "provider_reports_no_unspent_utxo_valid_unfunded_observation", "provider_reports_empty_bounded_result_completeness_unknown", "unknown"],
+    "forbidden_claims": ["cryptographically verified funded balance", "numeric ADA/lovelace balance or total", "ledger-authenticated identity", "complete UTxO set at exactly 1000 rows", "complete UTxO set from an incomplete, unknown-total, malformed, or absent Content-Range", "no Set-Cookie was received", "code alone guarantees no proxy or CA environment effect"]
+  }
+}

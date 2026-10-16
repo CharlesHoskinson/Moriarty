@@ -1,0 +1,65 @@
+[
+  {
+    "evidence": "Actual RESULT steps 1-5 (RESULT.json:76-186): five steps in fixed order genesis, tip_before, address_utxos, epoch_params?_epoch_no=319, tip_after; each attempts_controller=1, retries_arg=1, status=200, response_url exactly equals url, error=null. Source observe.py:345-356,391-408 sets retries=1 session+request, discard_cookies=True, verify/follow pins. Root ATTEMPT-LEDGER.json:3-6 attemptsStarted=1/maximumAttempts=1/retries=0 STARTED_BEFORE_SPAWN; ATTEMPT-SPENT.json:3-9 attemptsConsumed=1, retries=0, spent=true, stepsRecorded=5.",
+    "id": "CC1-one-batch-five-calls-one-attempt-spent",
+    "requiredFix": "None. This batch is spent; any future query is a separate scope and must not be a quiet auto-retry.",
+    "severity": "info",
+    "summary": "Exactly one controller batch of five sequential calls, one attempt each, zero batch retries, and the single attempt is recorded spent."
+  },
+  {
+    "evidence": "Textual pin agreement (no reviewer recomputation): INDEX pins (INPUT-INDEX.json:504-538) equal actual RESULT step size/sha256 (RESULT.json:92-93,114-115,136-137,158-159,180-181): 01-genesis 7598B 00e6906f..., 02-tip_before 214B 958eeb27..., 03-address_utxos 2B 4f53cda1... (raw body directly read as '[]'), 04-epoch_params 7141B 6df4af02..., 05-tip_after 214B 958eeb27... (same pin as step 2). Root capture RESULT.json:31-35 pins the observer receipt itself at 6387B 0e9bff8891b86b64da7c7d7c8cbd761726e6c7ee8518f8dd097a6300d59fd303, matching INDEX:504-507. Raw bodies 01,02,04 were directly opened and are consistent with the whitelisted summaries.",
+    "id": "CC2-raw-body-custody-size-sha-pins",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "All five raw bodies are preserved as separate step files whose INDEX bytes/SHA-256 pins exactly match the actual RESULT step records and the root receipt pin; no raw observation was folded into or lost from RESULT."
+  },
+  {
+    "evidence": "Actual RESULT.json:39-71, observation genesis networkmagic='1', networkid='Testnet', systemstart=1654041600 and tip_before/tip_after both hash 553229bd5bde27922b1fdafd94fd84c9740a7480440d70a6b29c14f5e6a6e1d1, epoch_no=319, abs_slot=136479015, block_no=5299378, block_time=1792162215, era='Conway'; flags (RESULT.json:4-8) include tip_bracket_same:provider_bracket_only_not_atomic_snapshot. Raw 02-tip_before.bin directly read with the same fields (plus block_height). Source check_genesis/check_tip at observe.py:102-132 and bracket logic at 409-413.",
+    "id": "CC3-genesis-tip-bracket-facts",
+    "requiredFix": "None. Do not upgrade the same-provider bracket to an atomic or authenticated snapshot.",
+    "severity": "info",
+    "summary": "Provider genesis identifies Preprod (magic 1/Testnet, system start 1654041600) and the before/after tips are identical, giving a provider bracket only, not atomicity or ledger authentication (ledger_authenticated=false, RESULT.json:11)."
+  },
+  {
+    "evidence": "Actual RESULT.json:13-18,124-125: address_utxos content_range='*/*', row_count_bounded=0, completeness_proven=false; raw 03 body directly read as '[]' (2B). Source utxo_completeness (observe.py:157-193) returns False for total='*', and fund_status logic (415-420) therefore yields provider_reports_empty_bounded_result_completeness_unknown (RESULT.json:10). EXPECTATIONS.json:48-49,71 forbids valid-unfunded on unproven completeness and forbids complete-set/balance claims.",
+    "id": "CC4-empty-utxo-unknown-total-not-unfunded",
+    "requiredFix": "None in the records. Downstream must not restate this as wallet unfunded, zero ADA, or a complete empty UTxO set.",
+    "severity": "info",
+    "summary": "The empty provider response with Content-Range '*/*' is correctly qualified: one public indexer returned no rows in a bounded result of unknown completeness; funding was not observed, which is not cryptographic proof of absence."
+  },
+  {
+    "evidence": "Raw 04-epoch_params.bin directly read: protocol_major=11, protocol_minor=0, max_tx_size=16384, max_tx_ex_mem=17500000, max_tx_ex_steps=10000000000, min_fee_a=44, min_fee_b=155381, key_deposit='2000000', coins_per_utxo_size='4310', collateral_percent=150, max_collateral_inputs=3, min_fee_ref_script_cost_per_byte=15, and cost_models object with PlutusV1/PlutusV2/PlutusV3 raw arrays. Actual RESULT.json:20-38 records only whitelisted scalars and marks cost_models {format: unknown_cannot_cost_evaluate, shape: object, raw_file: steps/04-epoch_params.bin} with flag cost_models_opaque_object (RESULT.json:6). Source check_params/summarize at observe.py:134-155,268-282 performs no fee, unit, or cost-model decoding.",
+    "id": "CC5-epoch-params-opaque-cost-models-no-conversion",
+    "requiredFix": "None. No guessed unit conversion, fee calculation, tx-fit claim, or qualification of any local K10/default VM cost against these observed protocol cost models is supported.",
+    "severity": "info",
+    "summary": "Epoch-319 provider parameters are faithfully captured as raw provider facts; cost-model coefficient ordering/units and ledger budget application are not established, so no costing conclusion follows."
+  },
+  {
+    "evidence": "Root adoption SOURCE-ADOPTION-AND-PUBLIC-READ-SCOPE.json:7-31,165: argv is timeout 120s (TERM, kill-after 10s) + prlimit --cpu=15:20 --as=1073741824 --core=0 --fsize=8388608 + /usr/bin/python3.14 -B on the operator-materialized observe.py, with exactly six env entries PATH=/usr/bin:/bin, HOME=/nonexistent, LC_ALL=C, TZ=UTC, PYTHONNOUSERSITE=1, PYTHONPATH=/home/charl/.local/lib/python3.14/site-packages; interpreter pinned as /usr/bin/python3.14 with interpreterSha256 52e0a13e... (lines 5-6). Root capture PROCESS.json:5-21 records the same argv at spawn; capture RESULT.json:5-7 wallSeconds=10.321150281, waitedChildrenCpuSeconds=0.22172, transitiveCpuMeasured=false; TERMINAL.json exitCode=0; stdout.log records COMPLETE_PROVIDER_OBSERVATION. EXECUTION-PROPOSAL.json:9,11 retain the author placeholders for interpreter/source SHA, and adoption line 165 states placeholders were filled by the companion runtime metadata, not source mutation; -B only suppresses public bytecode writes and is not -I.",
+    "id": "CC6-root-launch-clean-env-resource-bounds",
+    "requiredFix": "None. Wall/CPU figures are outer waited-child measurements only and must not be presented as transitive CPU.",
+    "severity": "info",
+    "summary": "The single run was launched under the exact six-entry clean environment, pinned observed interpreter and outer timeout/prlimit bounds recorded by root; the retained source proposal placeholders were filled only in the root companion record with no silent code change."
+  },
+  {
+    "evidence": "INDEX pins for candidate runner (INPUT-INDEX.json:342-346: 21135B ef54a814...) and operator-materialized runner (426-430: 21135B ef54a814...) are identical, as are the other four candidate/operator file pins (348-370 vs 432-454); adoption source_sha256 (SOURCE-ADOPTION...json:4) is ef54a814... and states 'Exact five candidate files copied unchanged' (line 165). Root capture RESULT.json:11-12 sourceBytesUnchanged=true, changedFiles=[]. Parser evidence: ordinary-parser-checks RESULT.json:5-9,142-145 source ef54a814..., sourceUnchanged=true, 16/16 matched, scope limited to 6 pure AST nodes.",
+    "id": "CC7-source-identity-materialization-unchanged",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "The executed source is the reviewed R2 candidate byte-for-byte by pin equality across candidate, operator materialization, adoption record, parser checks, and the post-run unchanged record; the finite parser evidence remains parser-only and is not a runtime proof."
+  },
+  {
+    "evidence": "Fallback confirmation USER-GEMINI-MUSE-FALLBACK-CONFIRMATION-20261016T1227.json:4-6 ('if opus goes down, use gemini and muse'; nativeExecutionAuthorityCreated=false). Gemini recovery RESULT.json:9-32: 3 distinct token objects, candidate 1 schema-invalid, candidates 2 and 3 schema-valid, providerRerun=false, independentApprovalInferred=false. Adoption record lines 45,38-44: REVIEW-2 truncated (report/strings), REVIEW-3 complete, all core verdict/boolean flags agree, only REVIEW-3 used for exact 15-clause agreement, both retained as ONE reviewer. REVIEW-3 positions (REVIEW-3.json:150-241) record Gemini AGREE on P01-P15 against author FOR in DESIGN-POSITIONS.json:5-19; its recommendation (242-254) is READY source-only with native/public-export flags false. Preserved failures: Muse R1 strict REPORT.md:1-3 NOT_READY (683d3ac0... per INDEX:270-273) and Muse R2 PROCESS.json:12-15,29 terminal exitCode=1, distinctStructuredReviews=0, cause not stated there.",
+    "id": "CC8-review-provenance-one-gemini-reviewer-preserved-failures",
+    "requiredFix": "None. Do not count REVIEW-2+REVIEW-3 as two reviewers, do not invent a cause for the Muse R2 provider failure, and do not claim cross-vendor cryptographic approval: the Gemini review is a source review, and this actual-result review is a fresh non-author Muse review in the same family as the Muse source author.",
+    "severity": "info",
+    "summary": "Provenance is honestly preserved: one Gemini source reviewer (two valid exports, one truncated), author FOR plus Gemini AGREE on all 15 source clauses, prior Muse NOT_READY and failed R2 attempt retained without an invented cause."
+  },
+  {
+    "evidence": "Actual RESULT.json:11 ledger_authenticated=false; root capture RESULT.json:17-20 ledgerAuthenticated=false, privateMaterialAccess=false, nativeSdkOrProofOperation=false, newNativeAuthority=false; adoption record lines 36-37,166-167 scope is five public queries only with nativeAuthorityCreated=false, privateMaterialAccess=false. Wallet public RESULT.json:51-55,60-62 signingKeyExported=false, signingPerformed=false, transactionBuiltOrSubmitted=false, ledgerObserved=false; the batch consumed only the public address (actual RESULT.json:2 equals payment.addr:1). Capture headers retained are only content-type/content-range per step (RESULT.json:80-83 etc.; observe.py:367-369).",
+    "id": "CC9-no-private-native-ledger-action",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "The completed batch was an ordinary public read-only observation: no signup, persisted cookies, explicit auth/proxy in code, private material access, SDK/prover, signing, or ledger action is recorded; TLS/resolver dependency premises remain as stated limitations."
+  }
+]

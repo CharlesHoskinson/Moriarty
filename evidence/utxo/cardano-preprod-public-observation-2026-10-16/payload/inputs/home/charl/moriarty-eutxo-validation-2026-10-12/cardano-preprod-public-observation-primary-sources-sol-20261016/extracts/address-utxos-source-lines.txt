@@ -1,0 +1,96 @@
+Exact excerpts from captures/address_utxos.sql; CC-BY-4.0 as declared by the pinned repository metadata.
+Source commit 2e2eb57933e1e2528de5ca36ee961759841cf389. These are source lines, not live results.
+
+Lines 1–20:
+1: CREATE OR REPLACE FUNCTION grest.address_utxos(_addresses text [], _extended boolean DEFAULT false)
+2: RETURNS TABLE (
+3:   tx_hash text,
+4:   tx_index smallint,
+5:   address text,
+6:   value text,
+7:   stake_address text,
+8:   payment_cred text,
+9:   epoch_no word31type,
+10:   block_height word31type,
+11:   block_time integer,
+12:   datum_hash text,
+13:   inline_datum jsonb,
+14:   reference_script jsonb,
+15:   asset_list jsonb,
+16:   is_spent boolean
+17: )
+18: LANGUAGE plpgsql
+19: AS $$
+20: BEGIN
+
+Lines 28–63:
+28:   IF _extended = false THEN
+29:     RETURN QUERY
+30:       SELECT
+31:         ENCODE(tx.hash, 'hex')::text AS tx_hash,
+32:         tx_out.index::smallint,
+33:         a.address::text,
+34:         tx_out.value::text,
+35:         sa.view::text AS stake_address,
+36:         ENCODE(a.payment_cred, 'hex') AS payment_cred,
+37:         b.epoch_no,
+38:         b.block_no,
+39:         EXTRACT(EPOCH FROM b.time)::integer AS block_time,
+40:         ENCODE(tx_out.data_hash, 'hex') AS datum_hash,
+41:         NULL::jsonb AS inline_datum,
+42:         NULL::jsonb AS reference_script,
+43:         NULL::jsonb AS asset_list,
+44:         false AS is_spent
+45:       FROM tx_out
+46:       INNER JOIN address AS a ON a.id = tx_out.address_id
+47:       INNER JOIN tx ON tx_out.tx_id = tx.id
+48:       LEFT JOIN stake_address AS sa ON tx_out.stake_address_id = sa.id
+49:       LEFT JOIN block AS b ON b.id = tx.block_id
+50:       WHERE a.address = ANY(_addresses)
+51:         AND tx_out.consumed_by_tx_id IS NULL;
+52:     RETURN;
+53:   END IF;
+54: 
+55:   -- Extended mode with assets - use CTE to pre-aggregate
+56:   RETURN QUERY
+57:     WITH _txo_assets AS (
+58:       -- Pre-aggregate all assets for the requested addresses in one pass
+59:       SELECT
+60:         mto.tx_out_id,
+61:         JSONB_AGG(
+62:           CASE WHEN ma.policy IS NULL THEN NULL
+63:           ELSE JSONB_BUILD_OBJECT(
+
+Lines 75–90:
+75:       WHERE mto.tx_out_id IN (
+76:         SELECT txo.id
+77:         FROM tx_out AS txo
+78:         INNER JOIN address AS a ON a.id = txo.address_id
+79:         WHERE a.address = ANY(_addresses)
+80:           AND txo.consumed_by_tx_id IS NULL
+81:       )
+82:       GROUP BY mto.tx_out_id
+83:     )
+84:     SELECT
+85:       ENCODE(tx.hash, 'hex')::text AS tx_hash,
+86:       tx_out.index::smallint,
+87:       a.address::text,
+88:       tx_out.value::text,
+89:       sa.view::text AS stake_address,
+90:       ENCODE(a.payment_cred, 'hex') AS payment_cred,
+
+Lines 112–125:
+112:     FROM tx_out
+113:     INNER JOIN address AS a ON a.id = tx_out.address_id
+114:     INNER JOIN tx ON tx_out.tx_id = tx.id
+115:     LEFT JOIN stake_address AS sa ON tx_out.stake_address_id = sa.id
+116:     LEFT JOIN block AS b ON b.id = tx.block_id
+117:     LEFT JOIN datum ON datum.id = tx_out.inline_datum_id
+118:     LEFT JOIN script ON script.id = tx_out.reference_script_id
+119:     LEFT JOIN _txo_assets AS ta ON ta.tx_out_id = tx_out.id
+120:     WHERE a.address = ANY(_addresses)
+121:       AND tx_out.consumed_by_tx_id IS NULL;
+122: END;
+123: $$;
+124: 
+125: COMMENT ON FUNCTION grest.address_utxos IS  'Get UTxO details for requested addresses'; -- noqa: LT01

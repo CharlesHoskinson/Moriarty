@@ -1,0 +1,92 @@
+[
+  {
+    "clause": "Exactly one batch of at most five sequential calls in the fixed order genesis, tip, address_utxos, epoch_params with explicit chosen epoch, tip; no paging, repeated address observation, or batch retry.",
+    "clauseId": "P01",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted in this actual-result review (not a new source choice). Carried source votes observed: author FOR (DESIGN-POSITIONS.json:5) and Gemini AGREE (REVIEW-3.json:152-156), recorded together in SOURCE-ADOPTION-AND-PUBLIC-READ-SCOPE.json:46-52. Actual conformity evidence is in CC1."
+  },
+  {
+    "clause": "Use literal retries=1 at Scrapling session and request level for exactly one controller-level attempt; never retries=0.",
+    "clauseId": "P02",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:6), Gemini AGREE (REVIEW-3.json:157-162), adoption record lines 53-58. Actual steps each record retries_arg=1 and attempts_controller=1 (RESULT.json:78,91 etc.)."
+  },
+  {
+    "clause": "Pin follow_redirects=False, max_redirects=0, verify=True, stealthy_headers=False, impersonate=None; reject any redirect history or canonical-URL difference.",
+    "clauseId": "P03",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:7), Gemini AGREE (REVIEW-3.json:163-168), adoption lines 59-64. Actual response_url equals url on all five steps with no redirect error recorded."
+  },
+  {
+    "clause": "Accept only HTTP 200 application/json, append raw bytes before validation, never accept a partial failed response, and preserve partial RESULT/ledger best-effort (initial STARTED save, save after ledger append before each request, BLOCKED_PARTIAL_PRESERVED on Abort or any other Exception); a physical write failure can prevent the final receipt, in which case the root outer captured terminal output is the authority rather than a universal preservation guarantee.",
+    "clauseId": "P04",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:8), Gemini AGREE (REVIEW-3.json:169-174), adoption lines 65-70. Actual run needed no partial path: all steps 200 application/json with raw files appended (CC2)."
+  },
+  {
+    "clause": "Check the 2 MiB bound before persist/JSON while honestly stating Scrapling buffers the whole body first; treat any address-space limit as a bound, not a strict download cap, and claim no stream cap.",
+    "clauseId": "P05",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:9), Gemini AGREE (REVIEW-3.json:175-180), adoption lines 71-76. Largest actual body was 7598B, far under the bound; no stream cap is claimed."
+  },
+  {
+    "clause": "Freeze provider genesis checks to documented string fields equal to static Preprod values (networkmagic 1, networkid Testnet, epochlength 432000, slotlength 1, systemstart 1654041600), coercing only documented strings.",
+    "clauseId": "P06",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:10), Gemini AGREE (REVIEW-3.json:181-186), adoption lines 77-82. Actual genesis summary matches those values (CC3)."
+  },
+  {
+    "clause": "Bound tx_index as a non-bool integer 0..32767 from the SQL smallint source, require unique outrefs and is_spent exactly false, and keep value as a raw non-negative decimal string with no ADA/lovelace conversion, total balance, or sum.",
+    "clauseId": "P07",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:11), Gemini AGREE (REVIEW-3.json:187-192), adoption lines 83-88. Actual UTxO array was empty, so no row-level instance arose; no conversion or sum appears in RESULT."
+  },
+  {
+    "clause": "Treat a proven-complete empty UTxO array as a provider-only unfunded report (not ledger truth), an empty array without proven completeness as provider_reports_empty_bounded_result_completeness_unknown and never valid-unfunded, exactly-1000 rows as bounded-set-only with possible truncation, cost_models as opaque/unsupported, and changed tips as AMBIGUOUS rather than an authenticated snapshot.",
+    "clauseId": "P08",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:12), Gemini AGREE (REVIEW-3.json:193-198), adoption lines 89-94. The actual empty/'*/*' case was classified exactly as this clause requires (CC4/ACT-OBS-1)."
+  },
+  {
+    "clause": "Keep this deliverable source-only: root materializes the R2 sibling fresh (R1 and failed reviews preserved), a fresh full non-author audit follows (not patch-only), and only a separately reviewed single public run may produce a qualifying provider observation; two agreeing positions adopt SOURCE only and create no execution or native authority.",
+    "clauseId": "P09",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:13), Gemini AGREE (REVIEW-3.json:199-204), adoption lines 95-100. Root separately adopted ordinary read scope in SOURCE-ADOPTION-AND-PUBLIC-READ-SCOPE.json:36-37,166-167; this actual review creates no new authority."
+  },
+  {
+    "clause": "Pass discard_cookies=True on every get/post call so cookies are not stored in the persistent jar or reused between calls, without claiming that no Set-Cookie was received (the ephemeral response object may still carry one) and without passing any unsupported session-constructor argument.",
+    "clauseId": "P10",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:14), Gemini AGREE (REVIEW-3.json:205-210), adoption lines 101-106. Source passes discard_cookies=True per request (observe.py:348); capture retains only allowlisted headers, and no no-Set-Cookie-receipt claim is made."
+  },
+  {
+    "clause": "Make no code claim of no proxy/CA environment effect: the source passes no explicit proxy/auth and cannot disable trust_env at the FetcherSession constructor, so root must launch with exactly the clean environment dict PATH=/usr/bin:/bin, HOME=/nonexistent, LC_ALL=C, TZ=UTC, PYTHONNOUSERSITE=1, PYTHONPATH=/home/charl/.local/lib/python3.14/site-packages (not an inherited environment, no proxy/CA/credential entries at all), pin the actual observed interpreter path itself, and never use -I or assume user-site loading under HOME=/nonexistent.",
+    "clauseId": "P11",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:15), Gemini AGREE (REVIEW-3.json:211-216), adoption lines 107-112. Root adoption env (lines 24-31) matches the exact six-entry dict and pins /usr/bin/python3.14 without -I (CC6)."
+  },
+  {
+    "clause": "Pass the allowlisted Content-Range into UTxO validation and prove completeness only when the range exactly covers all returned rows (start 0, end total-1, count = total) or is */0 with zero rows; flag partial, unknown-total (0-2/*, */*), absent, malformed, and row-count-mismatched ranges as bounded/incomplete or completeness-unknown, keep the exactly-1000 possible-truncation flag, and add no paging, retry, extra request, or Prefer header.",
+    "clauseId": "P12",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:16), Gemini AGREE (REVIEW-3.json:217-222), adoption lines 113-118. Actual '*/*' was flagged unknown-total with completeness_proven=false and no extra request was made (CC4)."
+  },
+  {
+    "clause": "Save the initial STARTED RESULT immediately and after each ledger append before the request, record transport_attempted versus response_received distinctly, finalize Abort with its source-known message and any other Exception (including session-enter failure) as BLOCKED_PARTIAL_PRESERVED with the exception type name only, and never overwrite existing output (root passes the exact fresh O).",
+    "clauseId": "P13",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:17), Gemini AGREE (REVIEW-3.json:223-228), adoption lines 119-124. The successful run's final RESULT and root terminal records are consistent with this custody path; no failure terminal arose."
+  },
+  {
+    "clause": "Reject duplicate JSON keys, literal NaN/Infinity, and numeric overflow (for example 1e999) through a finite parse_float check, serialize RESULT with allow_nan=False, retain raw actual bytes, keep cost_models opaque, and perform no fee calculation.",
+    "clauseId": "P14",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:18), Gemini AGREE (REVIEW-3.json:229-234), adoption lines 125-130. All five actual bodies parsed into the recorded summaries, raw bytes retained, cost_models opaque, no fee calculation present."
+  },
+  {
+    "clause": "Treat FSIZE 8 MiB as per-file (not aggregate), retain full raw bodies as exact separate step files, and bound RESULT to whitelisted known-field summaries plus raw-file references (cost_models as type/shape unknown plus raw reference, no invented decoder) with a bounded compact fallback if the summary ever exceeded the receipt guard, so no raw observation is silently discarded.",
+    "clauseId": "P15",
+    "position": "ABSTAIN",
+    "rationale": "Not re-voted. Carried votes: author FOR (DESIGN-POSITIONS.json:19), Gemini AGREE (REVIEW-3.json:235-240), adoption lines 131-136. Actual RESULT (6387B pin) contains only whitelisted summaries plus raw_file references for all five steps (CC2/CC5)."
+  }
+]
