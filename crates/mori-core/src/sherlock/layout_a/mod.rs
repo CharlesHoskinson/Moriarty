@@ -23,3 +23,8 @@ mod state_decode_normal_tests;
 mod state_encoding_normal_tests;
 #[cfg(test)]
 mod observation_normal_tests;
+
+// Internal supplied AuxBlock byte component; no complete step-witness profile.
+mod auxiliary;
+#[cfg(test)]
+mod aux_normal_tests;

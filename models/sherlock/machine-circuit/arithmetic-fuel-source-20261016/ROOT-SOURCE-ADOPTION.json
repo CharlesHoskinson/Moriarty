@@ -1,0 +1,58 @@
+{
+  "record_kind": "ROOT_CONDITIONAL_ARITHMETIC_FUEL_SOURCE_ADOPTION",
+  "created_at": "2026-10-16T10:54:13.918006+00:00",
+  "decision": "ADOPT_COMPLETE_ARITHMETIC_FUEL_SOURCE_WITH_CONDITIONS",
+  "scope": "Exact aux/2 arithmetic/fuel source relations only, conditional on both full reviews. No complete P4, circuit source implementation, native ABI, operator certification or execution.",
+  "subject": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/p4-arithmetic-fuel-source-r1/SOURCE-MANIFEST.json",
+      "bytes": 662,
+      "sha256": "42d45bd3bea826469408a774984318d1ae473b82636ae5f32c0bf4ca8b23c6a2"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/p4-arithmetic-fuel-source-r1/ARITHMETIC-FUEL-DESIGN.md",
+      "bytes": 51590,
+      "sha256": "88887f1d30aee2c5c0f473d2276a8aecd5e8f4e12018a34b0037ec11d51b13c3"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/p4-arithmetic-fuel-source-r1/ARITHMETIC-FUEL-MANIFEST.json",
+      "bytes": 19457,
+      "sha256": "63182dc1b10c5dc93080ab8a5149b89de56308a75e7008a39b9c2cc065d5df4f"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/p4-arithmetic-fuel-source-r1/OWNER-RESULT.json",
+      "bytes": 55926,
+      "sha256": "4d99c6edab866cf3d906302d9821f9b094028d42fdbda4464461db9156bd767f"
+    }
+  ],
+  "fresh_non_author_votes": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/p4-arithmetic-fuel-opus-source-review-r1/RESULT.json",
+      "bytes": 15606,
+      "sha256": "9c46236d37bbce7af44d9362d2b5470d5ef0a4f64c148823c75492d172e66ba5"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/p4-arithmetic-fuel-muse-source-review-r1/RESULT.json",
+      "bytes": 9639,
+      "sha256": "7ddf942d4417319103038973bb2106611ec5ffa6a65f5a3a4f60b4e0a05ff7d2"
+    }
+  ],
+  "owner_errata_E1_E7_verbatim": "## Defects and precise binding readings on unchanged bytes\n\nNone of these requires a new mechanism.\n\n**E1 — inventory error (most material).**\n- §9 and the manifest `fuel_rules` omit **A108** entirely.\n- The text says \"36 = 23 + 8 + 5\", but the third group lists 4 rules (A153, A157, A204, A214). The lists cover only 35 charged plus 3 free rules.\n- **Binding reading:**\n  - A108 is charged (L4 `rule_line_tags` line 108, charge 1).\n  - The `fuel_rules` lists are non-normative inventory.\n  - The normative fuel relation is §5/§8 (en_chg, FD-1 to FD-4). It is rule-agnostic and covers A108.\n  - The correct count is 36 = 23 + A108 + 8 + 4.\n- No consumer may derive charge or FuelDec enablement from those lists. Per-tag charge stays with L4 O4 and P5.\n\n**E2 — §9 wording.** §9 places the A153 successes in the column headed \"Semantic-failure branches still charged\". **Reading:** that column lists every charged A153 branch, not only failures.\n\n**E3 — G4-ISA-3 status.** G4-ISA-3's status \"Inferred from usage\" is not evidence. **Reading:** it is UNKNOWN, like G4-ISA-1, G4-ISA-2 and G4-ISA-4.\n\n**E4 — §10 carry and field-bound wording.** **Reading:**\n- The inductive bound is 4080 and the attained maximum is 4079. Both are below 2^12.\n- The exact field need is p > 1,048,575.\n- The stated p > 2^20 remains the binding requirement.\n\n**E5 — \"No LessThan\" scope.** \"No LessThan\" applies only to aux/2's own relations. **Reading:** the G4-FETCH guard comparator and the A102 fragment's 128-bit `LessThan` carry their own ISA and field requirements. G4-FIELD is necessary for aux/2, not globally sufficient.\n\n**E6 — carrier serialization.** The 12-bit carriers are serialized as 2 byte lanes. **Reading:**\n- aux/2's relations bind logical carriers only.\n- Lane reconstitution (lo + 256·hi, with hi < 16) is part of G4-BYTE.\n- No claim binds the serialized lanes before G4-BYTE.\n\n**E7 — errata texts not supplied (IO-5).** **Reading:** adoption is subordinate to R2-1 and R2-3 through R2-6. Any conflict voids the conflicting aux/2 portion, and repairing it requires fresh bytes, not reinterpretation.\n\n",
+  "owner_conditions_verbatim": "## Conditions on this vote\n\n1. **Scope.** The vote covers only the arithmetic and fuel source relations on these exact bytes, with E1–E7 binding.\n   - It does not cover P4, the spine, P5 dispatch or exactly-one selection, the native witness ABI, L04 or L05.\n   - It does not cover Eq, Cons, Branch or A157 sort reads (IO-4).\n   - It is not G4 operator certification.\n2. **Requirements stay requirements.** G4-FIELD, G4-ISA-1 to G4-ISA-4, G4-FETCH, G4-BYTE and G4-APPEND remain requirements, not native evidence. Separately, INV-TY, D-NAMES and IO-1 to IO-8 remain open.\n3. **No emitter acceptance yet.** There is no emitter acceptance until P3 condition 5 and IO-7 are met. Profile identity and dimensions must be bound into L04 (P3 condition 6) before any native use.\n4. **C4 is unchanged.** No dependent circuit source edit happens before admitted A102 compilation. A compile failure means registration revert. The IO-3 equivalence with the A102 fuel chain is required afterward.\n5. **Execution remains unrun.** Formal correspondence, K, Quint and Clean checks, the negative checks N1–N16 and all native execution remain **UNRUN**. None is demanded or authorized.\n6. **Prior bindings retained.**\n   - full39 conditions 1–10 and F1–F7;\n   - P3 conditions 1–8;\n   - errata R2-1, R2-3, R2-4, R2-5 and R2-6;\n   - the Muse R2-4 dissent, preserved verbatim in both prongs;\n   - native authority 0;\n   - the old 90s/30s caps, counters and terminal failures;\n   - the full roadmap, unchanged.\n7. **Votes needed.** This is one fresh substantive vote. A second fresh substantive vote (Muse normal audit of these exact bytes) and a Root adoption record are still required. No historical vote transfers. Any byte change voids this vote for the changed bytes.\n\nNo adoption, grant or execution authorization is made here.\n\n**ADOPT_COMPLETE_ARITHMETIC_FUEL_SOURCE_WITH_CONDITIONS** — candidate manifest `42d45bd3bea826469408a774984318d1ae473b82636ae5f32c0bf4ca8b23c6a2` (DESIGN `88887f1d…13c3`, MANIFEST `63182dc1…df4f`, OWNER-RESULT `4d99c6ed…767f`), subject to errata E1–E7 and conditions 1–7.",
+  "muse_erratum_E_FUEL_verbatim": "## One concrete non-mechanism erratum\n\nThe fuel inventory enumeration is arithmetically incomplete on the candidate bytes: A108 is a charged rule but is omitted from §9/manifest `charged_no_failure`, and the printed subtotals say `23+8+5` while the listed with-failure-branch group has four rules.\n\n**Binding reading E-FUEL:** the normative selector is the `en_chg` formula, not the illustrative rule list. Read the charged partition as A108 included and corrected counts:\n\n- charged without a special failure-branch group: 24, including A108;\n- charged failure rules: 8;\n- charged rules with failure branches: 4 — A153, A157, A204, A214;\n- total charged: 36; free: A080, A082, A084.\n\nThis requires no new mechanism because A108 already follows from `en_chg`.\n\n",
+  "muse_conditions_verbatim": "## Conditions of this vote\n\n1. Root must bind this vote to the exact candidate manifest `42d45bd3bea826469408a774984318d1ae473b82636ae5f32c0bf4ca8b23c6a2`; any byte change voids this vote for changed bytes.\n2. E-FUEL above governs §9 and the manifest fuel-rule enumeration on unchanged bytes.\n3. Before any native/emitter use, the pinned field must be shown to satisfy G4-FIELD `p>2^20`; if it does not, this byte-limb profile is inapplicable and any nibble alternative requires fresh reviewed bytes.\n4. G4-ISA-1..4, G4-FETCH, G4-BYTE and G4-APPEND remain unproved requirements, not native evidence or operator certification.\n5. IO-1–IO-8 remain open in their stated scopes: P5 dispatch/pre-post binding, P4 spine/POP/W1 wiring, A102/FuelDec equivalence after the C4 gate, Cons/Branch and A157 sort-read witnesses, exact R2-1 reconciliation, L04 profile/layout/statement binding, emitter acceptance and all UNRUN K/Quint/Clean checks.\n6. The adopted P3 conditions 1–8, errata R2-1/3/4/5/6, the preserved Muse R2-4 dissent, full39 conditions/F-readings, costs and capacities remain open and binding. This vote decides only the complete source proposal for A153 Add/Sub/Mul/Lt witnesses and the 39-rule fuel probe/decrement/preservation relations; it does not adopt complete P4, the spine, global dispatch, a native witness ABI or G4 operators.\n\nWith those conditions and E-FUEL, I find no blocking mathematical, selector, disabled-witness, overflow-separation or fuel-precedence defect in the stated source scope.\n\n**ADOPT_COMPLETE_ARITHMETIC_FUEL_SOURCE_WITH_CONDITIONS**",
+  "binding_rule": "Both complete reviews, all owner E1-E7 and conditions1-7, Muse E-FUEL and conditions1-6 govern these unchanged bytes. Historical source manifest UNADOPTED is its authoring snapshot. This dated adoption changes no candidate body. Any changed bytes require fresh reviews.",
+  "agreement": "Both reviewers independently identify omitted charged A108. Both bind the rule-agnostic en_chg formula and corrected partition24+8+4=36; free A080/A082/A084. This record preserves their exact readings and adds no mechanism.",
+  "premise_limits": "G4-FIELD/ISA/FETCH/BYTE/APPEND remain unknown requirements. IO1-8 remain open, including exact P3 errata reconciliation. The reviews did not receive exact P3 errata text. No root determination of that correspondence is made. The prior source and seal commit identities remain distinct, not a native qualification.",
+  "prior_P3_adoption": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/P3-ROOT-COMPLETE-SOURCE-ADOPTION-r2.json",
+    "bytes": 5733,
+    "sha256": "782a2db684298d9acc77850a40d9f79ec40934774a2c338f51134f3e04aefd3d"
+  },
+  "adopted_as_execution": false,
+  "native_authority": 0,
+  "all_new_arithmetic_fuel_K_Quint_Clean_checks": "UNRUN",
+  "all_native_and_stagenet_checks": "UNRUN",
+  "C4": "No dependent circuit source edit before admitted A102 compilation. Compile failure requires registration revert.",
+  "existing_limits": "All original resource caps/counters/terminal failures, full39/P3/L4 conditions, Muse R2-4 dissent and complete U0-U7/M1-M17/MC/SP/G/ZR/MNR/OSR/ACTUS/DeFi/composition/proof/ledger/target requirements retained."
+}
