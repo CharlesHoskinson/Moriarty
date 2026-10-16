@@ -1,0 +1,16 @@
+{
+  "sourceId": "13-k2-cli-consumer",
+  "originalPath": "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/k2/src/main.rs",
+  "originalBytes": 10420,
+  "originalSha256": "9c796a758a17b0f2fe955c571188afa5bd6407fc391541b7145c97315b0f1b4c",
+  "kind": "exact-line-excerpts",
+  "excerpts": [
+    {
+      "firstLine": 137,
+      "lastLine": 162,
+      "sourceText": "fn run(args: &[String]) -> Result<(), CliError> {\n    let (command, rest) = args.split_first().ok_or_else(|| CliError::Usage(\"missing subcommand\".into()))?;\n    match command.as_str() {\n        \"compile\" => {\n            let f = flags(rest, &[\"source\", \"selector\"], &[])?;\n            let source = input::read_source(path(&f, \"source\")?)?;\n            let selector = input::parse_selector(&json_bytes(path(&f, \"selector\")?, \"selector\")?)?;\n            let selected = compile_selected(&source, &selector)?;\n            selected.descriptor().check_profile()?;\n            print_json(selected.descriptor())?;\n            Ok(())\n        }\n        \"inspect\" => {\n            let f = flags(rest, &[\"source\", \"request\", \"vk-digest\"], &[])?;\n            let vk_digest = hexutil::decode_exact::<32>(text(&f, \"vk-digest\")?, \"--vk-digest\")?;\n            let source = input::read_source(path(&f, \"source\")?)?;\n            let request = input::parse_request(&json_bytes(path(&f, \"request\")?, \"request\")?)?;\n            let selected = compile_selected(&source, &request.selector)?;\n            selected.descriptor().check_profile()?;\n            let receipt = inspect::inspect(&selected, &request, vk_digest)?;\n            print_json(&receipt)?;\n            Ok(())\n        }\n        \"setup\" => {\n            let f = flags(rest, &[\"source\", \"selector\", \"out-record\", \"out-proving-key\"], &[])?;\n            let (out_record, out_pk) = (path(&f, \"out-record\")?, path(&f, \"out-proving-key\")?);\n",
+      "excerptBytes": 1475,
+      "excerptSha256": "f7287166f60ef4075526e9946f2035eaf65fc3e31ec864fd9c9cb37b7028020a"
+    }
+  ]
+}
