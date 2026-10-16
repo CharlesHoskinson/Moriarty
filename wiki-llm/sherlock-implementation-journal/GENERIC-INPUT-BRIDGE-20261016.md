@@ -1,0 +1,9 @@
+# Generic Sherlock AST input bridge — 2026-10-16
+
+Facts: the [four-module host client proposal](../../models/sherlock/host-client-source-20261016/README.md) adds `source_input_bridge.rs` unchanged from its source-reviewed candidate. `from_program` copies every current public A dedicated-sort AST constructor into B `CoreProgram`. Expression and tree worklists preserve names, scalar values, source order and separate owned occurrences; calls remain named calls. Draft name, spans and provenance remain with the caller.
+
+Reasons: the bridge supplies typed program input beyond thirteen fixture IDs without a second evaluator, recursion unrolling or fuel/stack selection. It uses the actual public A reexports. Every current A carrier has a B counterpart, so no unsupported case or machine rejection is invented.
+
+Evidence: fresh Muse approved the exact bridge source within a source-only scope. A subsequent [exact 21-file metadata diagnostic](../../docs/audits/2026-10-16/sherlock-generic-input-bridge/README.md) included the bridge, current A declarations and required owner/type/family closure: rustc exit 0, six warnings, zero errors. Root independently verified the complete dependency set and unchanged bound inputs. This qualifies type and borrow checking in that diagnostic crate only. No parser, bridge, engine or tests executed; metadata was neither linked nor loaded.
+
+Open questions: registration and the cfg(test)-only/no-Stage-2 seam remain unresolved. Separate Opus source reviews found two unresolved defects in the engine's invariant diagnostic; correction is in progress. The metadata compile resolves neither those findings nor engine correctness. A/B schedule correspondence, model/circuit evidence, native/target work, financial conformance and all product/roadmap exits remain separate. The required engine closure is not published or adopted by this source package.
