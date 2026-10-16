@@ -1,5 +1,32 @@
 # Moriarty repository instructions
 
+## Current user workflow — October 16 DoctorWatson
+
+The user prohibits Foreman for current work. Use direct agent/model calls,
+Git/GitHub and repository-native tools. Do not invoke Foreman, its session
+runtime, campaign dispatch or Endstop. Do not replace it with another
+orchestration framework. Earlier Foreman instructions remain historical.
+See [the current assignment](raw/assignments/moriarty-v1-factory-planning-2026-10-16.md).
+
+The current user authorizes building and running a repository-native software
+factory for Sherlock after the nine reviews and ten online research reports.
+Implement scoped ordinary QA, CI and roadmap tasks through direct agent calls
+and Git/GitHub. This supersedes planning-only scope; it does not resume the
+cleared historical goal. Existing native/resource limits, counters, terminal
+results, C4 and all product acceptance requirements remain in force. Public
+developer use stays permissionless.
+
+Run CI locally; the user rejects hosted CI cost. Use
+`./scripts/doctorwatson.sh` for the ordinary corpus/source check and its regressions.
+GitHub stores source, PRs and result summaries. Do not add automatic hosted checks.
+The existing site publication workflow is manual only. Follow the
+[factory plan](docs/DOCTORWATSON.md) and retain the required separate
+K/Quint/Lean-Clean/circuit and native/target evidence.
+The user names the factory DoctorWatson and requires its complete workflow design
+to be checked with quint-llm-kit. Its workflow model is separate from Sherlock's
+interpreter models; a sampled workflow pass establishes no interpreter result.
+
+
 ## Security ownership restored — October 16
 
 A fresh substantive Opus 5.5 high review completed with its canonical identity.
@@ -84,8 +111,9 @@ delegated agents. The user does not need to request the plugin each time.
    python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json
    ```
 
-3. Follow the user's current request. Use `next --json` when selecting execution
-   work, and `run --action <ACTION_ID>` for registered campaign dispatches.
+3. Follow the user's current request. The October 16 DoctorWatson override
+   suspends campaign dispatch for current work. The historical `next --json`
+   and `run --action <ACTION_ID>` instructions below do not select current work.
    Read-only diagnosis and authorized file edits do not need a new campaign,
    runner, design vote or permission request. Missing admission blocks its
    dependent dispatch, not unrelated authorized work.
@@ -249,6 +277,9 @@ must be labeled specified-only, never reproduced.
 
 The [required startup procedure](#required-startup-load-the-development-plugin)
 loads the repository-scoped development workflow. Its command entry points are:
+
+For current DoctorWatson work, use read-only `status`; the October 16 override
+suspends the historical `next`/`run` campaign selection and dispatch below.
 
 ```bash
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status

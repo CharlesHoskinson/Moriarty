@@ -1,0 +1,122 @@
+module doctorwatson_test {
+  import doctorwatson(
+    TASKS = Set(1, 2, 3), ACTORS = Set(1, 2, 3, 4), INTEGRATOR = 4,
+    ELIGIBLE_REVIEWERS = Map(1 -> Set(3), 2 -> Set(3), 3 -> Set(3))
+  ).* from "./doctorwatson"
+
+  action prepare(id: int): bool = claim(id, if (id == 3) 4 else id)
+    .then(freeze(id, 3, true)).then(edit(id, if (id == 3) 4 else id, Source)).then(submit(id))
+  action passLocal(id: int): bool = startLocal(id)
+    .then(checker(id, jobToken(state, id), CompleteMatch))
+    .then(regressions(id, jobToken(state, id), true))
+  action audited(id: int): bool = prepare(id).then(passLocal(id)).then(review(id, 3, true))
+  action integrate(id: int): bool = audited(id).then(merge(id))
+
+  run assumptionsTest = init.expect(and {
+    TASKS == Set(1, 2, 3), ACTORS == Set(1, 2, 3, 4), INTEGRATOR == 4,
+    TASKS.forall(id => state.tasks.get(id).owner != state.tasks.get(id).oracleOwner),
+    admittedLayers == Set(K, Quint, LeanClean, Handwritten),
+  })
+  run parallelNonoverlapTest = init.then(claim(1, 1)).then(claim(2, 2))
+    .expect(parallel and ownership)
+  run sharedIntegratorAndDependenciesTest = init.expect(not(canClaim(state, 3, 4)))
+    .then(integrate(1)).then(integrate(2)).expect(not(canClaim(state, 3, 1))).then(claim(3, 4))
+    .expect(state.tasks.get(3).phase == Working and ownership)
+  run overlapRefusalTest = init.then(claim(1, 1)).expect(
+    not(canClaim({ ...state, tasks: state.tasks.setBy(2, t => { ...t, writes: Set(1) }) }, 2, 2)))
+  run oracleIndependenceTest = init.then(claim(1, 1))
+    .expect(not(canFreeze(state, 1, 1, true))).expect(not(canFreeze(state, 1, 3, false)))
+    .expect(not(canEdit(state, 1, 1))).then(freeze(1, 3, true))
+    .expect(independentOracle)
+  run firstMismatchFailureTest = init.then(prepare(1)).then(startLocal(1))
+    .then(checker(1, jobToken(state, 1), StateMismatch))
+    .expect(not(canFinish(state, 1, jobToken(state, 1))))
+    .expect(state.tasks.get(1).test == Failed and state.tasks.get(1).stage == Stopped)
+  run incompleteFailureTest = init.then(prepare(1)).then(startLocal(1))
+    .then(checker(1, jobToken(state, 1), Incomplete))
+    .expect(not(canFinish(state, 1, jobToken(state, 1)))).expect(checkerFailed)
+  run identityFailureTest = init.then(prepare(1)).then(startLocal(1))
+    .then(checker(1, jobToken(state, 1), IdentityMismatch)).expect(checkerFailed)
+  run regressionFailureTest = init.then(prepare(1)).then(startLocal(1))
+    .then(checker(1, jobToken(state, 1), CompleteMatch))
+    .then(regressions(1, jobToken(state, 1), false)).expect(not(canMerge(state, 1)))
+    .expect(state.tasks.get(1).test == Failed)
+  run timeoutTest = init.then(prepare(1)).then(startLocal(1))
+    .then(timeout(1, jobToken(state, 1))).expect(not(canReview(state, 1, 3)))
+    .expect(timedOut)
+  run authorReviewRefusalTest = init.then(prepare(1)).then(passLocal(1))
+    .expect(not(canReview(state, 1, 1))).then(review(1, 3, true)).expect(exactReviews)
+  run rejectedReviewRequiresNewCandidateTest = init.then(prepare(1)).then(passLocal(1))
+    .then(review(1, 3, false)).expect(not(canMerge(state, 1))).expect(not(canReview(state, 1, 3)))
+    .then(edit(1, 1, Source)).then(submit(1)).then(passLocal(1)).then(review(1, 3, true))
+    .expect(exactReviews and state.reviews.size() == 2)
+  run editDuringRunningRefusesOldResultTest = init.then(prepare(1)).then(startLocal(1))
+    .then(edit(1, 1, Tool))
+    .expect(not(canFinish(state, 1, {fingerprint: {task: 1, version: 1, base: 0, dependencies: Map()}, attempt: 1})))
+    .expect(state.tasks.get(1).test == NotRun and state.receipts == Set())
+  run versionChangesInvalidateEvidenceTest = init.then(audited(1))
+    .then(edit(1, 1, Projection)).expect(not(canMerge(state, 1)))
+    .expect(and { not(state.tasks.get(1).frozen), state.tasks.get(1).test == NotRun,
+      not(state.tasks.get(1).reviewed.approved), state.receipts.size() == 1, state.reviews.size() == 1 })
+  run sharedConsumedInputInvalidatesBothTest = init.then(audited(1)).then(audited(2))
+    .then(sharedInput(4, Bounds))
+    .expect(and { sharedChanged, TASKS.forall(id => state.tasks.get(id).test == NotRun),
+      TASKS.forall(id => not(state.tasks.get(id).frozen)), state.receipts.size() == 2,
+      state.reviews.size() == 2, state.sourceMerges == Set() })
+  run mergeRebaseRaceTest = init.then(audited(1)).then(audited(2)).then(merge(1))
+    .expect(not(canMerge(state, 2))).then(rebase(2)).then(submit(2)).then(passLocal(2))
+    .then(review(2, 3, true)).then(merge(2))
+    .expect(and { state.sourceMerges == Set(1, 2), state.receipts.size() == 3,
+      state.tasks.get(2).base == 1, state.tasks.get(2).version == 2, workflowInvariant })
+  run transitiveDependencyInvalidationTest = init.then(integrate(1)).then(prepare(2))
+    .then(changeDependencies(2, 1, 2)).then(submit(2)).then(passLocal(2))
+    .then(review(2, 3, true)).then(merge(2)).then(claim(3, 4)).then(edit(1, 1, Tool))
+    .expect(and { state.tasks.get(1).phase == Working, state.tasks.get(2).phase == Queued,
+      state.tasks.get(3).phase == Queued, state.sourceMerges == Set(),
+      state.receipts.size() == 2, state.reviews.size() == 2, ownership })
+  run missingRequiredLayersAllowOnlySourceMergeTest = init.then(integrate(1))
+    .expect(not(canComplete(state, 1))).expect(sourceOnly and observedCompletion)
+  run availabilityIsNotObservationTest = init.then(integrate(1))
+    .then(makeAvailable(K)).then(makeAvailable(Quint)).then(makeAvailable(LeanClean)).then(makeAvailable(Handwritten))
+    .expect(not(canComplete(state, 1))).expect(state.fullCompletion == Set() and state.tasks.get(1).observed == Set())
+  run actualLayerObservationsPermitScopedCompletionTest = init.then(integrate(1))
+    .then(makeAvailable(K)).then(makeAvailable(Quint)).then(makeAvailable(LeanClean)).then(makeAvailable(Handwritten))
+    .then(observe(1, K)).then(observe(1, Quint)).then(observe(1, LeanClean)).then(observe(1, Handwritten))
+    .then(complete(1)).expect(state.fullCompletion == Set(1) and workflowInvariant)
+  run nativeAvailabilityDoesNotAdmitNativeTest = init.then(integrate(1)).then(makeAvailable(NativeLedger))
+    .expect(not(canObserve(state, 1, NativeLedger))).expect(noEscalation)
+  run repeatFailuresRequireReproducerAndApproachTest = init.then(prepare(1)).then(startLocal(1))
+    .then(checker(1, jobToken(state, 1), StateMismatch)).then(startLocal(1))
+    .then(checker(1, jobToken(state, 1), StateMismatch)).expect(not(canStart(state, 1)))
+    .expect(not(canEdit(state, 1, 1))).then(reproduce(1)).then(changeApproach(1))
+    .then(edit(1, 1, Source)).then(submit(1)).then(startLocal(1))
+    .expect(state.receipts.size() == 2 and state.tasks.get(1).failures == 0)
+  run processCycleStopAndImplementationResumeTest = init.then(prepare(1))
+    .then(process(1, 15)).then(process(1, 15)).expect(not(canProcess(state, 1))).expect(not(canStart(state, 1)))
+    .then(edit(1, 1, Source)).then(submit(1)).then(startLocal(1))
+    .expect(state.tasks.get(1).adminMinutes == 0 and state.tasks.get(1).processCycles == 0)
+  run thirtyMinutesBlockAndReleaseTest = init.then(prepare(1)).then(process(1, 30))
+    .expect(not(canStart(state, 1))).then(nameBlocker(1, 1)).then(claim(2, 2))
+    .then(nameBlocker(3, 4)).then(cancel(2, 2)).then(finalize)
+    .expect(state.terminal and not(active(state.tasks.get(1))) and ownership)
+  run cancellationReleasesOwnerTest = init.then(prepare(1)).then(startLocal(1)).then(cancel(1, 1))
+    .expect(not(canFinish(state, 1, {fingerprint: {task: 1, version: 1, base: 0, dependencies: Map()}, attempt: 1})))
+    .expect(state.tasks.get(1).phase == Cancelled and not(active(state.tasks.get(1))))
+  run latePriorAttemptCompletionRefusedTest = init.then(prepare(1)).then(startLocal(1))
+    .then(timeout(1, jobToken(state, 1))).then(startLocal(1))
+    .expect(not(canFinish(state, 1, {fingerprint: {task: 1, version: 1, base: 0, dependencies: Map()}, attempt: 1})))
+  run upstreamEditPreservesCancelledDependentTest = init.then(integrate(1)).then(integrate(2))
+    .then(prepare(3)).then(cancel(3, 4)).then(edit(1, 1, Tool))
+    .expect(and { state.tasks.get(3).phase == Cancelled, not(state.tasks.get(3).frozen),
+      state.tasks.get(3).test == NotRun, state.receipts.size() == 2,
+      state.reviews.size() == 2, ownership })
+  run upstreamEditPreservesBlockedDependentTest = init.then(integrate(1)).then(integrate(2))
+    .then(prepare(3)).then(process(3, 30)).then(nameBlocker(3, 4)).then(edit(1, 1, Tool))
+    .expect(and { state.tasks.get(3).phase == Blocked, not(state.tasks.get(3).frozen),
+      state.tasks.get(3).adminMinutes == 30, state.tasks.get(3).processCycles == 1,
+      state.tasks.get(3).test == NotRun, state.receipts.size() == 2,
+      state.reviews.size() == 2, ownership })
+  run authorActionDisabledTest = init.then(prepare(1)).then(passLocal(1)).then(review(1, 1, true).fail())
+  run completeDeliveryHasFiniteTerminalTest = init.then(integrate(1)).then(integrate(2)).then(integrate(3))
+    .then(finalize).expect(state.terminal).expect(state.terminal and state.sourceMerges == TASKS and workflowInvariant)
+}

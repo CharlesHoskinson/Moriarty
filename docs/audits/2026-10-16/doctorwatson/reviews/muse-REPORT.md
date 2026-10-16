@@ -1,0 +1,11 @@
+## APPROVE_WITH_SCOPE
+
+No blocking nonsecurity defect was found in candidate `74bc02967de655362555eed06d46bf376a6ebda6`.
+
+The claimed corrections are present in the supplied source. In [doctorwatson.qnt](/tmp/models/doctorwatson/doctorwatson.qnt), `applyEdit` preserves `Cancelled` and `Blocked` phases and their administration, failure, reproduction, and approach-change history while invalidating current evidence. [doctorwatson_coverage_test.qnt](/tmp/models/doctorwatson/doctorwatson_coverage_test.qnt) makes directed completion fail unless all 47 steps reach `directedFinished`, and [doctorwatson.sh](/tmp/scripts/doctorwatson.sh) runs that test before the directed witness run. In [check.py](/tmp/models/sherlock/qa/check.py), `check_rust_transcription` rejects a serializer whose bytes differ from the pinned SHA-256 and compiles exactly the verified bytes with `dont_inherit=True`; `state_at` rejects negative, Boolean, and otherwise non-integer diagnostic indices.
+
+The supplied `design-04` capture is internally consistent with the candidate manifest for all seven executable inputs. It reports exit 0 in 35.243 seconds, 33 Python tests, 30 main Quint scenarios, one directed-completion test, 10,000 default samples with no invariant violation, and a separate 47-operation directed walk reaching all six requested witnesses. The seven default-sampling zero-hit witnesses remain accurately disclosed and are not presented as random-sampling hits.
+
+Warnings remain for the concrete instance's non-overlapping write sets, cancellation-dominated sampling, trusted oracle/reviewer and layer-receipt inputs, weak `noPrematureStop`, tight 30-second model-command limits, and the serializer pin's limited snapshot and import scope. These limitations are documented and do not contradict the scoped claims.
+
+This approval covers only the frozen corpus and Rust-literal readback checker, the shell entrypoint, and the finite abstract DoctorWatson workflow model. It does not certify security, which remains Opus-owned, or any Sherlock K execution, interpreter Quint projection, Lean/Clean, circuit, Rust evaluator, native, proof, target, or real agent/Git behavior. The historical planning and research reports remain advisory and unadopted, and all full V1 roadmap exits remain open.

@@ -1,0 +1,9 @@
+# Compiler correctness and translation validation
+
+Alive2’s project README describes translation validation for LLVM IR passes and compiler output. It can compare source and transformed functions, report a counterexample, and integrate validation into individual LLVM tests or a Clang pipeline (README lines 262–285, 294–309, 327–399). It also states a concrete scope limit: inter-procedural transformations are unsupported and may yield spurious counterexamples (lines 207–209).
+
+**Source claims (falsifiable).** The README says: (1) `alive-tv` accepts source and target IR for a refinement check (lines 327–345); (2) the Clang plugin attempts validation of each IR-level transformation (lines 292–309); and (3) Alive2 does not support inter-procedural transformations (lines 207–209).
+
+**Proposal/inference for Sherlock.** Borrow the placement and failure format, not an assumption that Alive2 itself applies to Sherlock: whenever a compiler or lowering changes one transition, capture the before/after transition and run a transition validator against an independently specified reference. Emit a structured result with transition ID, input state, enabledness, output state, effects, and either a counterexample or a scoped “checked” status. For finite state domains, exhaustively compare each input and retain the checked domain and count. For recursive/unbounded domains, use a proof obligation or label bounded samples as tests; never promote them to a refinement proof. This small per-transition harness localizes regressions and makes the evidence scope explicit.
+
+**Limitation.** A bounded sweep establishes agreement only on its enumerated inputs. Even a symbolic validator only supports its modeled semantics and transformation scope; Alive2’s README specifically warns about inter-procedural scope. Sherlock must define and independently validate its own semantics, and report bounded testing separately from proof.

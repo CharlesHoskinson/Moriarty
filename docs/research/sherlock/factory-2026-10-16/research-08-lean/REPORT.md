@@ -1,0 +1,9 @@
+# Lean recursive definitions for developer QA
+
+**Source and method.** I searched the official Lean 4 reference once and opened one page: “Recursive Definitions,” Lean project, https://lean-lang.org/doc/reference/latest/Definitions/Recursive-Definitions/ (retrieved 2026-10-16; publication date unknown). The Lean language reference is primary documentation for Lean’s definition and termination rules.
+
+**Source claims (falsifiable).** The page states that (1) recursive elaboration produces a justification that the definition is safe (section 7.6, lines 137–138); (2) structural recursion requires recursive calls on strict subcomponents, and elaboration translates such recursion using the argument’s recursor (section 7.6.1, lines 141–142); (3) explicit `termination_by structural` documents the decreasing parameter and prevents accidental use of well-founded recursion (section 7.6.2.1, lines 247–255). These claims can be checked directly against the cited sections.
+
+**Factory proposal (inference).** Add a small Lean QA target that defines Sherlock’s bounded program/data AST as inductive types, implements its reference step/evaluation function with explicit structural termination where applicable, and proves focused correspondence lemmas for selected circuit operations and prefix/state/effect results. Have ordinary developer checks compile the definitions and ask Lean’s kernel to check the proofs; keep this QA outside the public runtime and prover path. This would provide evidence only for the stated Lean model and lemmas, so each claim must name the Rust/K/Quint/circuit behavior it covers.
+
+**Limitation.** Lean’s structural-recursion analysis is syntactic and can reject definitions that terminate; the page points to well-founded recursion for such cases (section 7.6.1, lines 215–217). This source does not establish correctness of a Sherlock implementation or a Lean-to-Clean correspondence.

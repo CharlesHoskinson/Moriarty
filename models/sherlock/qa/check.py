@@ -1,0 +1,401 @@
+#!/usr/bin/env python3
+"""Validate frozen Sherlock normal literals and compare existing literal documents.
+
+File/JSON operations and source transcription only. No interpreter, model,
+compiler, SDK, network, subprocess, proof or ledger execution occurs here.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import math
+from pathlib import Path
+import sys
+
+PROFILE = 'sherlock-k-a/1'
+SOURCE = {'path': 'models/sherlock/k/main.k',
+          'sha256': 'b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41'}
+FROZEN = {
+    'normal-programs.json': 'ef87f94f7e5d22a75b1c2e5e61af016b08175beee9a3599e3e69ddf92945d32f',
+    'normal-prefixes.json': 'dca67b553d7483fdf7d9148e7f4bf1a6022b42b8843635f33f23c58a2415d56d',
+    'extra-normal-programs.json': 'dd85e5d400f24e9be5e2ff017f4b8c141a0bf6e4270053917b735cbe5153f153',
+    'extra-normal-prefixes.json': 'acf460094b258910bad0499fb8feda0cd85b680023939800ad714d2cb71bee16',
+}
+SERIALIZER = {'path': 'models/sherlock/reference/check-reference.py',
+              'sha256': '83acde8054f9859a18bf350651e9de75d10d5d3e4aa575e3e9265e3ba61e9232'}
+FAMILIES = {'normal': ('N01', 'N02', 'N03', 'N04', 'N05', 'N06'),
+            'extra-normal': ('N07', 'N08')}
+STATE_FIELDS = ('charged_steps', 'remaining_fuel', 'depth', 'control_k',
+                'environment_k', 'frames_top_first_k', 'via_rule_start_line')
+INITIAL_FIELDS = ('control_k', 'environment_k', 'frames_top_first_k', 'depth',
+                  'stack_limit', 'code_k', 'remaining_fuel', 'initial_fuel',
+                  'output_k', 'charged_steps')
+
+
+def digest(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def document(path, *, strict=False):
+    raw = Path(path).read_bytes()
+    value = (json.loads(raw, object_pairs_hook=unique_members, parse_constant=nonfinite,
+                        parse_float=finite) if strict else json.loads(raw))
+    return {'path': str(path), 'sha256': digest(raw)}, value
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def unique_members(pairs):
+    """Supplied observations may not hide a member behind a later duplicate."""
+    value = {}
+    for key, member in pairs:
+        require(key not in value, f'duplicate JSON member: {key!r}')
+        value[key] = member
+    return value
+
+
+def nonfinite(token):
+    raise ValueError(f'nonfinite JSON number: {token}')
+
+
+def finite(token):
+    value = float(token)
+    require(math.isfinite(value), f'nonfinite JSON number: {token}')
+    return value
+
+
+def fields(value, names, location):
+    require(type(value) is dict, f'{location}: expected object')
+    for name in names:
+        require(name in value, f'{location}: missing {name}')
+
+
+def integer(value, location):
+    require(type(value) is int and value >= 0, f'{location}: expected nonnegative integer')
+
+
+def text(value, location):
+    require(type(value) is str and bool(value), f'{location}: expected nonempty literal text')
+
+
+def validate_pair(programs, prefixes, *, family):
+    """Check container consistency, never evaluate a program or a K rule."""
+    require(family in FAMILIES, 'unknown corpus family')
+    for label, doc, member, fmt in (
+            ('programs', programs, 'programs', 'sherlock-literal-normal-inputs/1'),
+            ('prefixes', prefixes, 'traces', 'sherlock-literal-normal-prefixes/1')):
+        fields(doc, ('format', 'profile', 'source', member), label)
+        require(doc['format'] == fmt, f'{label}: format mismatch')
+        require(doc['profile'] == PROFILE, f'{label}: profile mismatch')
+        require(doc['source'] == SOURCE, f'{label}: source identity mismatch')
+        require(type(doc[member]) is list, f'{label}: membership must be an array')
+        require(all(type(row) is dict for row in doc[member]), f'{label}: membership row must be object')
+        require([row.get('case_id') for row in doc[member]] == list(FAMILIES[family]),
+                f'{label}: case membership/order mismatch')
+    counts = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
+    for program, trace in zip(programs['programs'], prefixes['traces']):
+        case = program['case_id']
+        fields(program, ('case_id', 'code_k', 'entry_k', 'initial_arguments', 'stack_limit',
+                         'exact_completion_fuel', 'input_sha256', 'expected_value_k'), case)
+        source_keys = ('case_id', 'code_k', 'entry_k', 'initial_arguments', 'stack_limit', 'exact_completion_fuel')
+        source_digest = digest(json.dumps({key: program[key] for key in source_keys},
+                                         sort_keys=True, separators=(',', ':')).encode())
+        require(source_digest == program['input_sha256'], f'{case}: input digest mismatch')
+        for key in ('code_k', 'entry_k', 'initial_arguments', 'expected_value_k'):
+            text(program[key], f'{case}.{key}')
+        exact = program['exact_completion_fuel']
+        integer(exact, f'{case}.exact_completion_fuel')
+        integer(program['stack_limit'], f'{case}.stack_limit')
+        fields(trace, ('case_id', 'input_sha256', 'fixed_state_fields', 'initial_configuration',
+                       'startup', 'states', 'publication', 'ordinary_fuel_prefixes'), case)
+        fixed = trace['fixed_state_fields']
+        fields(fixed, ('code_ref', 'initial_fuel', 'stack_limit', 'output_k'), case + '.fixed')
+        require(trace['input_sha256'] == program['input_sha256'], f'{case}: input reference mismatch')
+        require(fixed['code_ref'] == dict(file=family + '-programs.json', case_id=case,
+                                        input_sha256=program['input_sha256']), f'{case}: code reference mismatch')
+        require(fixed['initial_fuel'] == exact and type(fixed['initial_fuel']) is int,
+                f'{case}: initial fuel mismatch')
+        require(fixed['stack_limit'] == program['stack_limit'] and type(fixed['stack_limit']) is int,
+                f'{case}: stack limit mismatch')
+        require(fixed['output_k'] == 'uiPending()', f'{case}: pending output mismatch')
+        initial = trace['initial_configuration']
+        fields(initial, INITIAL_FIELDS, case + '.initial_configuration')
+        require(initial == dict(control_k=f"uiRun({program['code_k']}, {program['entry_k']}, {exact}, {program['stack_limit']})",
+                                environment_k='.Map', frames_top_first_k=[], depth=0, stack_limit=0,
+                                code_k='uiNoFuns()', remaining_fuel=0, initial_fuel=0,
+                                output_k='uiPending()', charged_steps=0), f'{case}: initial configuration mismatch')
+        require(trace['startup'] == dict(rule_start_line=74, charge=0, post_state_index=0),
+                f'{case}: startup mismatch')
+        states = trace['states']
+        require(type(states) is list and len(states) == exact + 1, f'{case}: state count/work mismatch')
+        for index, state in enumerate(states):
+            location = f'{case}.states[{index}]'
+            fields(state, STATE_FIELDS, location)
+            for name in ('charged_steps', 'remaining_fuel', 'depth'):
+                integer(state[name], location + '.' + name)
+            require(state['charged_steps'] == index, location + ': charged state order mismatch')
+            require(state['remaining_fuel'] == exact - index, location + ': remaining fuel/work mismatch')
+            require(type(state['frames_top_first_k']) is list, location + ': frames must be array')
+            require(state['depth'] == len(state['frames_top_first_k']), location + ': depth mismatch')
+            require(state['depth'] <= program['stack_limit'], location + ': depth exceeds stack limit')
+            for frame in state['frames_top_first_k']:
+                text(frame, location + '.frame')
+            text(state['control_k'], location + '.control_k')
+            text(state['environment_k'], location + '.environment_k')
+            if index == 0:
+                require(state['via_rule_start_line'] is None, location + ': initial incoming rule must be absent')
+                require(state['control_k'] == f"uiEval({program['entry_k']})", location + ': initial control mismatch')
+            else:
+                integer(state['via_rule_start_line'], location + '.via_rule_start_line')
+                require(state['via_rule_start_line'] > 0, location + ': missing charged rule')
+        publication = trace['publication']
+        fields(publication, ('pre_state_index', 'rule_start_line', 'charge', 'post_overrides'), case + '.publication')
+        require(publication == dict(pre_state_index=exact, rule_start_line=80, charge=0,
+                                    post_overrides=dict(control_k='.K', output_k=f"uiDone({program['expected_value_k']})")),
+                f'{case}: publication mismatch')
+        require(states[-1]['control_k'] == f"uiRet({program['expected_value_k']})" and states[-1]['depth'] == 0,
+                f'{case}: publication predecessor mismatch')
+        rows = trace['ordinary_fuel_prefixes']
+        require(type(rows) is list and len(rows) == exact + 2, f'{case}: prefix coverage mismatch')
+        for fuel, row in enumerate(rows):
+            require(type(row) is list and len(row) == 5, f'{case}: prefix columns mismatch')
+            for column in (0, 1, 2, 4):
+                integer(row[column], f'{case}.prefix[{fuel}][{column}]')
+            boundary = min(fuel, exact)
+            outcome = f"uiDone({program['expected_value_k']})" if fuel >= exact else 'uiExhausted()'
+            require(row == [fuel, boundary, fuel - boundary, outcome, 80 if fuel >= exact else 84],
+                    f'{case}: prefix work/publication mismatch at fuel {fuel}')
+        counts['programs'] += 1
+        counts['state_rows'] += len(states)
+        counts['charged_edges'] += len(states) - 1
+        counts['publications'] += 1
+        counts['prefix_rows'] += len(rows)
+    return counts
+
+
+def pointer(path, key):
+    return path + '/' + str(key).replace('~', '~0').replace('/', '~1')
+
+
+def first_difference(expected, observed, path=''):
+    """Structural equality with exact types, all fields and ordered arrays."""
+    def delta(kind, left=expected, right=observed, at=path, **extra):
+        return dict(path=at, kind=kind, expected=left, observed=right, **extra)
+    if type(expected) is not type(observed):
+        return delta('type')
+    if type(expected) is dict:
+        for key in list(expected) + [key for key in observed if key not in expected]:
+            at = pointer(path, key)
+            if key not in expected or key not in observed:
+                return delta('member', expected.get(key), observed.get(key), at,
+                             expected_present=key in expected, observed_present=key in observed)
+            found = first_difference(expected[key], observed[key], at)
+            if found is not None:
+                return found
+    elif type(expected) is list:
+        for index, (left, right) in enumerate(zip(expected, observed)):
+            found = first_difference(left, right, pointer(path, index))
+            if found is not None:
+                return found
+        if len(expected) != len(observed):
+            return delta('array-length', common_entries=min(len(expected), len(observed)))
+    elif expected != observed:
+        return delta('value')
+    return None
+
+
+def state_at(trace, index):
+    """Only an in-range nonnegative int selects a state; bool or negative never does."""
+    states = trace['states']
+    if type(states) is not list or type(index) is not int or not 0 <= index < len(states):
+        raise IndexError('unusable supplied state index')
+    return states[index]
+
+
+def observation_state(programs, trace, parts):
+    """Overlay only the corpus's documented literal fields for diagnostics.
+
+    No rule is evaluated. Missing or malformed supplied components leave the
+    reconstructed diagnostic unavailable; the original raw trace is retained.
+    """
+    if type(trace) is not dict or type(programs) is not dict:
+        return None
+    program = next((p for p in programs.get('programs', [])
+                    if type(p) is dict and p.get('case_id') == trace.get('case_id')), None)
+    if program is None:
+        return None
+    try:
+        field = parts[4] if len(parts) > 4 else None
+        if field == 'initial_configuration':
+            return trace['initial_configuration']
+        if field == 'startup':
+            state = state_at(trace, 0)
+        elif field == 'states' and len(parts) > 5 and parts[5].isdecimal():
+            state = state_at(trace, int(parts[5]))
+        elif field == 'publication':
+            state = state_at(trace, trace['publication']['pre_state_index'])
+        elif field == 'ordinary_fuel_prefixes' and len(parts) > 5 and parts[5].isdecimal():
+            row = trace['ordinary_fuel_prefixes'][int(parts[5])]
+            state = state_at(trace, row[1])
+        else:
+            return None
+        result = dict(trace['fixed_state_fields'], **state)
+        result.update(code_k=program['code_k'], entry_k=program['entry_k'])
+        if field == 'publication':
+            result.update(trace['publication']['post_overrides'])
+        elif field == 'ordinary_fuel_prefixes':
+            result.update(initial_fuel=row[0], remaining_fuel=row[2], control_k='.K', output_k=row[3])
+        return result
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+
+def compare_documents(expected_programs, expected_prefixes, observed_programs, observed_prefixes):
+    """Compare the existing literal documents, including every supplied member.
+
+    This is literal readback comparison, not an executable-layer adapter. No
+    formatting string is interpreted as an authenticated machine snapshot.
+    """
+    require(observed_programs is not None and observed_prefixes is not None,
+            'absent observation: both existing program/prefix documents are required')
+    pairs = (('programs', expected_programs, observed_programs),
+             ('prefixes', expected_prefixes, observed_prefixes))
+    # Contract order: identity precedes state inspection (no Rust comparator claim).
+    for name in ('profile', 'source'):
+        for label, expected, observed in pairs:
+            if type(observed) is not dict or name not in observed:
+                return first_difference({name: expected[name]}, observed, '/' + label)
+            found = first_difference(expected[name], observed[name], f'/{label}/{name}')
+            if found is not None:
+                return found
+    for label, expected, observed in pairs:
+        found = first_difference(expected, observed, '/' + label)
+        if found is None:
+            continue
+        parts = found['path'].split('/')
+        if label == 'prefixes' and len(parts) > 3 and parts[2] == 'traces' and parts[3].isdecimal():
+            index = int(parts[3])
+            left = expected['traces'][index] if index < len(expected['traces']) else None
+            right = observed.get('traces', [])
+            right = right[index] if type(right) is list and index < len(right) else None
+            found.update(case_id=left.get('case_id') if left else None,
+                         expected_trace=left, observed_trace=right)
+            if len(parts) > 5 and parts[4] in ('states', 'ordinary_fuel_prefixes') and parts[5].isdecimal():
+                found['state_index' if parts[4] == 'states' else 'prefix_index'] = int(parts[5])
+            expected_state = observation_state(expected_programs, left, parts)
+            observed_state = observation_state(observed_programs, right, parts)
+            found.update(expected_state=expected_state, observed_state=observed_state)
+            if left is not None and len(parts) > 4:
+                if parts[4] == 'states' and 'state_index' in found:
+                    found['rule_start_line'] = left['states'][found['state_index']]['via_rule_start_line']
+                elif parts[4] == 'publication':
+                    found['rule_start_line'] = left['publication']['rule_start_line']
+                elif parts[4] == 'startup':
+                    found['rule_start_line'] = left['startup']['rule_start_line']
+                elif parts[4] == 'ordinary_fuel_prefixes' and 'prefix_index' in found:
+                    found['rule_start_line'] = left['ordinary_fuel_prefixes'][found['prefix_index']][4]
+        return found
+    return None
+
+
+def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None):
+    """Call the pinned existing serializer only, never its rustc/test entry point.
+
+    Its bytes are hashed before any execution and exactly those verified bytes
+    are compiled, so neither a later file swap nor cached bytecode runs. Its
+    imports and the interpreter remain unpinned: the checkout must be trusted.
+    """
+    helper = repo / SERIALIZER['path']
+    helper_raw = helper.read_bytes()
+    require(digest(helper_raw) == SERIALIZER['sha256'], f'{helper}: serializer digest mismatch; not executed')
+    spec = importlib.util.spec_from_file_location('sherlock_literal_serializer', helper)
+    require(spec is not None and spec.loader is not None, 'serializer unavailable')
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(helper_raw, str(helper), 'exec', dont_inherit=True), module.__dict__)
+    extra = family == 'extra-normal'
+    expected = module.serialize_oracles(programs, prefixes, case_ids=FAMILIES[family],
+                                        programs_file=family + '-programs.json',
+                                        constant_prefix='EXTRA_' if extra else '')
+    path = repo / 'crates/mori-core/src/sherlock' / ('extra_normal_oracles.rs' if extra else 'normal_oracles.rs')
+    actual = read_text(path).encode('utf-8') if read_text is not None else path.read_bytes()
+    require(actual == expected.encode('utf-8'), f'{path}: committed Rust literal transcription differs from frozen JSON')
+    return dict(path=str(path.relative_to(repo)), sha256=digest(actual),
+                serializer_sha256=digest(helper_raw), status='literal-transcription-match',
+                scope='source-literals-only; Rust implementation not executed')
+
+
+def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'):
+    repo = Path(repo)
+    files = []
+    totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
+    transcriptions = []
+    frozen = {}
+    source_raw = (repo / SOURCE['path']).read_bytes()
+    require(digest(source_raw) == SOURCE['sha256'], 'frozen K source changed')
+    files.append(dict(path=SOURCE['path'], sha256=digest(source_raw)))
+    for member in FAMILIES:
+        docs = []
+        for suffix in ('programs', 'prefixes'):
+            name = member + '-' + suffix + '.json'
+            path = repo / 'models/sherlock/oracles' / name
+            ref, value = document(path)
+            require(ref['sha256'] == FROZEN[name], f'frozen oracle changed: {name}')
+            ref['path'] = str(path.relative_to(repo))
+            files.append(ref)
+            docs.append(value)
+        counts = validate_pair(*docs, family=member)
+        for key, count in counts.items():
+            totals[key] += count
+        transcriptions.append(check_rust_transcription(repo, *docs, member))
+        frozen[member] = docs
+    require((observed_programs is None) == (observed_prefixes is None),
+            'observed-programs and observed-prefixes must be supplied together')
+    difference = None
+    observed_files = []
+    if observed_programs is not None:
+        observations = []
+        for path in (observed_programs, observed_prefixes):
+            ref, value = document(path, strict=True)
+            observed_files.append(ref)
+            observations.append(value)
+        difference = compare_documents(*frozen[family], *observations)
+    return dict(status='mismatch' if difference else 'pass',
+                scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
+                profile=PROFILE, counts=totals, frozen_files=files,
+                rust_literal_transcriptions=transcriptions, observed_files=observed_files,
+                supplied_observation_status=('mismatch' if difference else 'match') if observed_files else 'not-supplied',
+                supplied_observation_family=family if observed_files else None,
+                first_difference=difference,
+                execution_layers=[dict(layer=layer, status='not-run', reason='No executable adapter invoked by this SDK-free QA consumer')
+                                  for layer in ('K', 'Quint', 'Lean', 'Clean', 'handwritten-circuit', 'Rust-host', 'native-ledger')],
+                gaps=['Complete literal agreement supplies no semantic execution, refinement, constraint, proof or target evidence.',
+                      'The supplied observation documents use the existing corpus format, not a runtime state codec.',
+                      'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'])
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
+    parser.add_argument('--observed-programs', type=Path)
+    parser.add_argument('--observed-prefixes', type=Path)
+    parser.add_argument('--family', choices=FAMILIES, default='normal')
+    args = parser.parse_args(argv)
+    if (args.observed_programs is None) != (args.observed_prefixes is None):
+        parser.error('--observed-programs and --observed-prefixes must be supplied together')
+    try:
+        report = run(args.repo, observed_programs=args.observed_programs,
+                     observed_prefixes=args.observed_prefixes, family=args.family)
+        output = json.dumps(report, indent=2, allow_nan=False)
+    except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
+        parser.exit(2, f'QA input error: {error}\n')
+    print(output)
+    return 1 if report['status'] == 'mismatch' else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

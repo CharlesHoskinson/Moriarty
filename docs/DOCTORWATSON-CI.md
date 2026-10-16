@@ -1,0 +1,131 @@
+# DoctorWatson local CI
+
+Run the local ordinary QA consumer:
+
+```bash
+./scripts/doctorwatson.sh
+```
+
+The [entrypoint](../scripts/doctorwatson.sh) resolves its own checkout root, so it
+can also be called by absolute path from another directory. It runs these commands
+in order and stops on the first nonzero exit:
+
+```bash
+python3 models/sherlock/qa/check.py
+python3 -m unittest discover -s models/sherlock/qa -p 'test_*.py' -v
+```
+
+An existing Python 3.10 or newer interpreter and its standard library suffice. The
+default entrypoint installs no packages and invokes no network services, GitHub Actions,
+Cargo workspace build, backend, SDK, K executor, Quint engine, Lean/Clean build,
+prover, key generation, native verifier or deployment. There is no hosted Sherlock
+workflow. The existing [site workflow](../.github/workflows/site.yml) has only a
+manual `workflow_dispatch` trigger; pushes and pull requests start no hosted CI.
+Manual site publication remains a separate, explicit action and is unrun here.
+
+## Explicit workflow design check
+
+```bash
+./scripts/doctorwatson.sh --design
+```
+
+This first checks that the required tools already exist, then runs ordinary QA
+and typechecks, tests and samples the
+[DoctorWatson workflow model](../models/doctorwatson/README.md) with the already
+installed Quint CLI and Node. It selects Quint's TypeScript backend explicitly;
+there is no installation, Rust backend, Apalache/`verify`, SDK or target command.
+A fourth model command requires the directed walk to complete all 47 guarded
+steps in a deterministic test. A fifth runs that separate directed reachability
+model (one sample, 50 steps, seed 1), reporting the rare integration paths without
+altering random sampling. Each model command has a 30-second wall limit and Node's old-space limit of
+256 MiB; that is not a total process-memory limit. Failures and timeouts propagate,
+with no silent fallback. The simulation requests 10,000 samples, 60 steps and seed 1.
+
+Node and Quint resolve from the current PATH; `DOCTORWATSON_NODE` and
+`DOCTORWATSON_QUINT` can name trusted existing executables/CLI files. Missing tools
+fail before checks rather than triggering an install. Relative overrides resolve
+against the checkout root, including when called from another directory.
+Child model commands receive
+only PATH, LANG and TMPDIR. Unknown arguments fail with usage status 2.
+
+This workflow model checks task/review/integration behavior. It does not execute
+Sherlock's semantics or replace its required K, Quint and Lean/Clean QA. The
+default command remains Python-only. A sampled pass means no counterexample
+observed under the recorded bounds, not exhaustive verification or a proof of the
+real agents, shell, Git, circuit or interpreter implementation.
+
+Its falsifiable predicate is that the frozen normal corpus, committed Rust oracle
+literal readback and supplied complete comparisons pass the two commands above.
+This checks the actual committed readback through the QA consumer. It does not
+execute the Rust evaluator. Passing supplies only the observations made by those
+checks for the current source.
+
+## Evidence tiers
+
+| Tier | Consumer and required evidence | Included here |
+|---|---|---|
+| Ordinary QA | Frozen normal expectations, supplied complete prefix/state comparisons and committed oracle readback through the commands above | Yes; Python standard library only |
+| DoctorWatson design | Workflow state machine, deterministic scenarios and bounded sampled invariants | Only with explicit `--design`; separate from interpreter semantic QA |
+| Developer semantic checks | Required K execution and explicit finite Quint projection, with actual traces, bounds, clocks and first divergences | No; unrun by this entrypoint |
+| Lean/Clean and handwritten circuits | Required reference/component observations, separate witness and constraint dispositions, and cross-layer correspondence evidence | No; unrun by this entrypoint; existing private Fenrir integration remains separate |
+| Native and target qualification | Exact SDK/relation, keys, proofs, verifier and actual qualified target receipts | No; current native authority remains zero |
+
+The developer tiers remain required by the
+[Sherlock correctness loop](SHERLOCK-CORRECTNESS-LOOP.md). Ordinary fixture and
+readback agreement supplies no formal refinement, constrained circuit result or
+Midnight target observation. Supplied observations retain their source/profile
+identity; missing layers remain gaps. Existing resource ceilings, counters,
+terminal failures, C4, security ownership and every U0–U7, M1–M17 and MC/SP/G
+acceptance requirement remain in force. This entrypoint adds no native execution
+authority and no public developer approval requirement.
+
+Retain the tested source, Python version, exact commands, outputs and terminal
+status when citing a run. Source and result reviews retain the current repository
+routing and exact candidate scope. Running this script locally supplies no
+evidence about execution in another environment.
+
+On October 16, 2026, the entrypoint was run by absolute path from `/tmp` with
+Python 3.14.4. The checker passed eight programs, 208 literal states, 200 charged
+edges, eight publications and 216 fuel prefixes; all 25 QA unit tests passed.
+A separate temporary fixture copy with a changed frozen JSON file returned exit
+2 from the real checker. The shell trace showed that the unit-test command was
+not invoked after that failure. Repository fixtures were unchanged. These are
+local ordinary QA observations only; the other tiers above were unrun.
+
+## Separate local site checks
+
+For an already prepared site environment with Node 24 or newer and its existing
+dependencies, run these existing package commands from `site/`:
+
+```bash
+npm run check
+npm test
+npm run build
+```
+
+The site's `npm run verify` combines those same commands. They do not include
+the separate browser checks against a served build. Site checks, browser setup,
+browser execution and manual publication were not run for this entrypoint change.
+
+A later Opus-owned correction added six malformed-input and exact-byte readback
+regressions. Root reproduced the failures before applying the fixes, then ran
+the local entrypoint: all 31 tests passed with the same corpus counts. The
+[recorded results](audits/2026-10-16/doctorwatson/README.md) retain both
+RED and GREEN observations and exact tested source hashes.
+
+Historical `design-03` ran all four then-current bounded model commands through the actual script
+from another directory, with unchanged input hashes and exit 0. It passed 31
+Python tests and 28 Quint scenarios, reported no invariant violation in 10,000
+default samples, and reached all six directed witnesses. The five default random
+zero-hit warnings remain separate. Total wall time was 34.185 seconds; each model
+command retained its own 30-second cap. See the
+[final entrypoint capture](audits/2026-10-16/doctorwatson/quint/design-03.json).
+
+The current [design-04 capture](audits/2026-10-16/doctorwatson/quint/design-04.json)
+includes the subsequent fixes and all five model commands, with unchanged source
+hashes and exit 0 in 35.243 seconds. It passed 33 Python tests, 30 main Quint
+scenarios and the directed-completion test. Default sampling reported no violation
+in 26.788 seconds, with seven zero-hit witnesses; directed sampling reached its
+six witnesses in 64 ms. The [kit review](audits/2026-10-16/doctorwatson/QUINT-REVIEW.md)
+lists the current warnings and model abstractions. The command caps remain tight
+on slower hosts; timeouts stay failures, with no bounds or sample-count fallback.
