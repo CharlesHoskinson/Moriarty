@@ -18,12 +18,20 @@ check off a complete B task or replace Clean/native/target evidence.
 | B-T03 | Finite call lookup/binding and actual retained call-context adapter | Remaining helper families, full B schedule and counters |
 | B-T04 | Full host snapshot rows and owned in-memory image/helper checkpoints | Fixed-capacity encoding, canonical serialization and B representation |
 | B-T08 | A-event slices at widths 1/2/4/8 and saved pending-return/helper cuts; [checkpoint evidence](../../../docs/audits/2026-10-15/sherlock-host-checkpoint-normal/README.md) | B helper boundaries, financial continuation and constrained execution |
+| B-T02 | Actual parsed Core source through bounded scalar preparation and machine execution: two fixed programs, 70 fuel runs and 1,259 complete records; [PR #105](https://github.com/CharlesHoskinson/Moriarty/pull/105) and [capture](../../../docs/audits/2026-10-16/sherlock-bounded-source-delivery/README.md) | Fixed-fixture H1 scope only; final emit values, without financial effects, general grammar, K source-name correspondence or target qualification |
+| B-T08 | Borrowed `Machine::visit_steps` records with stop/resume: eight standalone tests and a separate 26-input production Core library compile; [PR #106](https://github.com/CharlesHoskinson/Moriarty/pull/106) | Unmetered H1 host diagnostic; no whole-crate test, B helper, circuit or general caller admission claim |
+| B-T11 | Actual Rust host, flat-ID image and generic Quint observations each match eight programs, 216 fuel runs and 5,355 common-projection records; [PR #104](https://github.com/CharlesHoskinson/Moriarty/pull/104). A separately merged private pure Lean producer matches the same diagnostic projection | Actual K execution, refinement, complete bounded Clean/handwritten comparison, B helpers and native/target evidence remain open; Lean rule/no-next inference and terminal-control projection remain explicit |
 
-The latest linked checkpoint capture contains 86 host checks over eight programs
+The October 15 linked checkpoint capture contains 86 host checks over eight programs
 and 216 frozen prefixes. This is a captured scoped result, not a whole-crate
 Cargo result or general source/compiler/native acceptance. The root
 [reference status](../../../docs/SHERLOCK-REFERENCE-STATUS.md) retains the earlier
 captures and their limitations. All B-T01–B-T14 parent tasks remain open.
+
+The later October 16 rows describe separate captured candidates. Their linked
+PRs retain completed scoped source/result reviews and integration checks; frozen
+pre-integration README/status labels remain historical. No parent checkbox below
+is closed by these child observations.
 
 The separate draft-source capture ran eleven new checks and filtered out 86
 earlier tests after compiling their module graph. It did not build Core library

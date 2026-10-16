@@ -43,13 +43,23 @@ The yield scenario waits at accumulator1 with three pending factorial frames and
 
 Source: [K-profile README](../../../models/sherlock/quint/K-PROFILE-README.md), [model](../../../models/sherlock/quint/kProfileMachine.qnt) and [tests](../../../models/sherlock/quint/kProfileMachineTest.qnt). Model SHA256 is `c62c12dd3a973bcb54b549f45768a356b0fb3a154b193cd76ac80d2d80fa95ca`; test SHA256 is `985069bfdfef2f8417a3b7583454b90d84c1764070d77baa608d0add627f6493`. The [source binding](../../../docs/audits/2026-10-15/sherlock-k-profile-quint/SOURCE-BINDING.json) also pins the unchanged K definition and independent normal oracles. This pair is separate from `universalMachine.qnt` and its historical observations.
 
-The model interprets supplied immutable `ExprId -> Expr` AST tables and source-ordered function tables through generic K-A transitions. Function lookup retains the first matching source entry; it does not sort functions or impose unique-function admission. Named self and mutual references reuse the immutable function table. The source dispatches the frozen K-A expression forms and all nine frame forms, evaluates named-call arguments in source order, begins calls with fresh parameter bindings and restores lexical/caller environments through explicit scope/return frames. These are source facts; the six observed programs do not exercise every form or recursion pattern.
+The model interprets supplied immutable `ExprId -> Expr` AST tables and source-ordered function tables through generic K-A transitions. Function lookup retains the first matching source entry; it does not sort functions or impose unique-function admission. Named self and mutual references reuse the immutable function table. The source dispatches the frozen K-A expression forms and all nine frame forms, evaluates named-call arguments in source order, begins calls with fresh parameter bindings and restores lexical/caller environments through explicit scope/return frames. These are source facts; neither the historical six-program capture nor the later eight-program capture exercises every form or recursion pattern.
 
 The declared common domain is finite closed immutable syntax whose expression references unfold to finite terms, canonical signed-decimal names, finite function/parameter/arm lists and nonnegative fuel/stack limits. UInt128 uses mathematical integers with the exact endpoints 0 through 340282366920938463463374607431768211455; lists are ordered UInt sequences and trees are complete structural prefix-token sequences. ExprIds and tree tokens have no mutable pointer or heap identity. Missing/cyclic syntax references and malformed tree encodings are outside that declared projection, not a general admission result. Exact integer bounds establish neither exhaustive numeric coverage nor target-field correspondence.
 
 The counterpart uses `sherlock-k-a/1`: exact charged K rule observations and free startup and return/error publication, with terminal publication before zero-fuel exhaustion. Helper folds remain inside A machine rules without extra fuel events or measured helper work. It does not implement proposed `sherlock-helper-microstep/1`. The historical scalar15 model retains `sherlock-quint-a/1` and its charged terminal-return tick; its Waiting extension has no counterpart in this pure K-A model.
 
 The [captured model evidence](../../../docs/audits/2026-10-15/sherlock-k-profile-quint/README.md) records typecheck exit 0 and 98 passing deterministic normal tests: six complete exact-fuel traces and 92 literal published fuel prefixes. Quint 0.32.0 used its TypeScript backend, seed 1 and `--max-samples 1`. Complete states, rule lines and charges are checked against independent frozen literals; the programs cover a literal, addition, not/conditional selection, lexical shadowing/restoration, named self recursion and ordered list/tree matching. These are recorded finite observations, not a fresh run, random sampling, exhaustive checking or actual K execution. [Completed exact-source reviews](../../../docs/audits/2026-10-15/sherlock-k-profile-quint/reviews/README.md) supersede the evidence README's historical pending-review status and retain their supplied-source/result limitations. The [merged documentation reconciliation](../../../docs/audits/2026-10-15/sherlock-model-docs/README.md) records the same distinction in the current roadmap and correctness loop.
+
+The later October 16 [actual ITF capture](../../../docs/audits/2026-10-16/sherlock-parallel-delivery/README.md),
+merged in [PR #104](https://github.com/CharlesHoskinson/Moriarty/pull/104), ran the
+unchanged generic model on all eight normal programs and 216 fuel prefixes.
+The adapter matched 5,355 complete projected records, including 216 free
+publications, and retained 5,579 raw states and eight terminal stutters separately.
+Actual Rust host and flat-ID image observations matched the same independent
+expectations. This is deterministic finite observation evidence, not exhaustive
+checking, actual K rewriting or a refinement theorem. The PR retains the completed
+scoped reviews and exact candidate checks; frozen package labels remain historical.
 
 ## Correspondence and acceptance gaps
 
@@ -78,7 +88,7 @@ The two Quint repairs added Boolean action-return annotations and then renamed b
 | MachineImage/RepresentationRelation | Generic Quint declares structural values, lexical environments and nine frame forms with normal complete-state checks; historical Quint has a separate fixed scalar15 arena | Canonical codec, bounded MachineImage and full environment/frame correspondence |
 | Named carry/borrow/full-product API | K and generic Quint use mathematical UInt128; historical Quint uses scalar15 | Exact component implementations, layout mapping and cross-limb expectations |
 | WitnessPlan/ConstraintPlan/capabilities | Absent | Separate actual operation, dependency and export coverage |
-| ReferenceSlice/earliest stop | Generic Quint records K-A rule/charge boundaries, six complete traces and 92 published fuel prefixes; historical Quint has separate ticks | B ordered prefix materialization, cross-layer adapters and cut/resume mapping |
+| ReferenceSlice/earliest stop | Generic Quint records K-A rule/charge boundaries; the later actual ITF capture covers eight programs and 216 prefixes, separate from the historical six/92 capture and the algorithm-specific model's ticks | B ordered prefix materialization, cross-layer adapters and cut/resume mapping |
 | ResidualStepIR | Absent | Finite static worklist, fallback and unchanged dynamic checks |
 | TypeDecl/CtorLayout/MatchPlan | Dedicated K list/tree patterns and generic Quint structural list/tree matching; historical Quint has fixed node kinds | Declaration/type/ordered-match adapter, including nested/mutual groups |
 | Financial/await extension | Absent in K and generic Quint; historical Quint has unmatched nonfinancial Waiting | Existing Core/2 successful-prefix/effects/duties adapter and exact opcode/phase policy |
@@ -90,3 +100,10 @@ The two Quint repairs added Boolean action-return annotations and then renamed b
 [UIREQ-026](specs/universal-interpreter/spec.md) retains Lean semantic/representation definitions and a separately bounded Clean step circuit. The existing Fenrir fork separately delivered a merged pure first-order Lean reference foundation with independent source reviews and eight normal plus exact-remaining-zero publication checks. Its source and private pins are not copied here, and this report does not freshly rerun those checks. That child evidence supplies no K/Lean refinement, B helper/image/ADT correspondence, Clean step circuit, exporter/native or financial acceptance.
 
 Recursive inductive semantic values and finite fuel-runs remain separate from fixed-capacity `MachineImage Bounds F`. [clean-stage.md](clean-stage.md) records the current public API pin and remaining codec/component/export tasks. All existing model, Lean, circuit/native and target evidence classes stay separate. No full U0–U7, M1–M17, MC/SP/G or ZR/MNR exit is completed by this integration.
+
+A later observation producer was merged in that existing private fork: eight
+programs, 216 fuel runs and 5,355 diagnostically matching projected records.
+Its K rule labels/no-next are inferred and terminal control is projected; this
+is not K/Lean refinement or a full source-rule correspondence result. The raw
+artifacts and implementation bindings remain private. Clean constraints,
+handwritten-step comparison, native and Midnight stagenet evidence remain open.
