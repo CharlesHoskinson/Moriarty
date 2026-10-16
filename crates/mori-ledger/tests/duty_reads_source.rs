@@ -40,7 +40,7 @@ fn deployment(source: &str, p: &Program) -> Deployment {
         let bytes = codec::unhex(point).unwrap();
         let key = <midnight_base_crypto::ecdsa::VerifyingKey as midnight_serialize::Deserializable>::deserialize(&mut bytes.as_slice(), 0).unwrap();
         let key = SignatureVerifyingKey::ECDSA(key);
-        RoleBinding { role: role.into(), public_key_hex: codec::native_hex(&key).unwrap(), address_hex: codec::native_hex(&UserAddress::from(key)).unwrap() }
+        RoleBinding { role, public_key_hex: codec::native_hex(&key).unwrap(), address_hex: codec::native_hex(&UserAddress::from(key)).unwrap() }
     }).collect();
     let mut d = Deployment {
         profile: PROFILE.into(),
@@ -368,10 +368,10 @@ fn ordered_capture_and_self_read_mutation_operands_precede_effects() {
         .iter()
         .zip(&out.bindings)
         .filter_map(|(op, b)| {
-            if matches!(b.origin.as_str(), "duty-old-read" | "duty-before") {
-                if let Op::Popeq { result, .. } = op {
-                    return Some(u128::try_from(&result.value[3..]).unwrap());
-                }
+            if matches!(b.origin.as_str(), "duty-old-read" | "duty-before")
+                && let Op::Popeq { result, .. } = op
+            {
+                return Some(u128::try_from(&result.value[3..]).unwrap());
             }
             None
         })
@@ -593,16 +593,8 @@ fn signed_source_compile_retains_endpoint_and_consuming_authority_order() {
             origins.iter().filter(|x| **x == "duty-membership").count(),
             15
         ); // pre/source/post
-        assert!(
-            origins[..source_start]
-                .iter()
-                .any(|x| *x == "signed-duty-cardinality")
-        );
-        assert!(
-            origins[source_start..]
-                .iter()
-                .any(|x| *x == "signed-duty-cardinality")
-        );
+        assert!(origins[..source_start].contains(&"signed-duty-cardinality"));
+        assert!(origins[source_start..].contains(&"signed-duty-cardinality"));
         if version == SignedVersion::ConsumingV2 {
             let pre = origins
                 .iter()
@@ -837,11 +829,11 @@ fn producer_shared_expr_ids_deduplicate_each_statement_and_refresh_after_write()
     if let mori_core::Statement::Next { value, .. } = &mut action.statements[2] {
         *value = shared;
     }
-    if let mori_core::Statement::Let { value, .. } = action.statements[3] {
-        if let mori_core::Expr::Binary { lhs, rhs, .. } = &mut p.expressions[value as usize] {
-            *lhs = shared;
-            *rhs = shared;
-        }
+    if let mori_core::Statement::Let { value, .. } = action.statements[3]
+        && let mori_core::Expr::Binary { lhs, rhs, .. } = &mut p.expressions[value as usize]
+    {
+        *lhs = shared;
+        *rhs = shared;
     }
     mori_core::validate(&p).unwrap();
     let s = scenario(&p, Some(7));

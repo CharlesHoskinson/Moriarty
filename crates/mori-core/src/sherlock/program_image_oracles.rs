@@ -5,19 +5,43 @@
 use super::*;
 use std::sync::Arc;
 
-fn s(start: usize, len: usize) -> TableSlice { TableSlice { start, len } }
+fn s(start: usize, len: usize) -> TableSlice {
+    TableSlice { start, len }
+}
 fn r(payload: ExprPayload, start: usize, len: usize) -> ExprRow {
-    ExprRow { payload, children: s(start, len) }
+    ExprRow {
+        payload,
+        children: s(start, len),
+    }
 }
 fn p(owner: SourceOwner, ast_path: Vec<usize>) -> SourceLocator {
     SourceLocator { owner, ast_path }
 }
-fn c(payload: ConstantPayload, start: usize, len: usize, expression: usize, field_path: Vec<usize>) -> ConstantRow {
-    ConstantRow { payload, fields: s(start, len), source: ConstantLocator { expression: ExprId(expression), field_path } }
+fn c(
+    payload: ConstantPayload,
+    start: usize,
+    len: usize,
+    expression: usize,
+    field_path: Vec<usize>,
+) -> ConstantRow {
+    ConstantRow {
+        payload,
+        fields: s(start, len),
+        source: ConstantLocator {
+            expression: ExprId(expression),
+            field_path,
+        },
+    }
 }
-fn a(expr: Expr) -> ExprRef { Arc::new(expr) }
-fn u(value: u128) -> ExprRef { a(Expr::Literal(Value::UInt(value))) }
-fn v(name: &str) -> ExprRef { a(Expr::Var(name.into())) }
+fn a(expr: Expr) -> ExprRef {
+    Arc::new(expr)
+}
+fn u(value: u128) -> ExprRef {
+    a(Expr::Literal(Value::UInt(value)))
+}
+fn v(name: &str) -> ExprRef {
+    a(Expr::Var(name.into()))
+}
 
 pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> {
     // This one physical Arc occurs twice in the input. The expected constant
@@ -31,15 +55,29 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
                 functions: vec![Function {
                     name: "17".into(),
                     parameters: vec![
-                        Parameter { name: "0".into(), ty: Type::UInt },
-                        Parameter { name: "1".into(), ty: Type::UInt },
-                        Parameter { name: "2".into(), ty: Type::UInt },
+                        Parameter {
+                            name: "0".into(),
+                            ty: Type::UInt,
+                        },
+                        Parameter {
+                            name: "1".into(),
+                            ty: Type::UInt,
+                        },
+                        Parameter {
+                            name: "2".into(),
+                            ty: Type::UInt,
+                        },
                     ],
                     return_type: Type::UInt,
-                    body: a(Expr::Binary(BinaryOp::Add,
-                        a(Expr::Binary(BinaryOp::Add, v("0"),
-                            a(Expr::Binary(BinaryOp::Mul, u(10), v("1"))))),
-                        a(Expr::Binary(BinaryOp::Mul, u(100), v("2"))))),
+                    body: a(Expr::Binary(
+                        BinaryOp::Add,
+                        a(Expr::Binary(
+                            BinaryOp::Add,
+                            v("0"),
+                            a(Expr::Binary(BinaryOp::Mul, u(10), v("1"))),
+                        )),
+                        a(Expr::Binary(BinaryOp::Mul, u(100), v("2"))),
+                    )),
                 }],
             },
             ProgramImageDraft {
@@ -59,12 +97,39 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
                     r(ExprPayload::Literal(ConstantId(4)), 11, 0),
                     r(ExprPayload::Var("2".into()), 11, 0),
                 ],
-                ordered_children: vec![ExprId(1), ExprId(2), ExprId(3), ExprId(5), ExprId(10), ExprId(6), ExprId(7), ExprId(8), ExprId(9), ExprId(11), ExprId(12)],
-                functions: vec![FunctionRow { source_table_index: 0, name: "17".into(), parameters: s(0, 3), return_type: Type::UInt, body: ExprId(4) }],
+                ordered_children: vec![
+                    ExprId(1),
+                    ExprId(2),
+                    ExprId(3),
+                    ExprId(5),
+                    ExprId(10),
+                    ExprId(6),
+                    ExprId(7),
+                    ExprId(8),
+                    ExprId(9),
+                    ExprId(11),
+                    ExprId(12),
+                ],
+                functions: vec![FunctionRow {
+                    source_table_index: 0,
+                    name: "17".into(),
+                    parameters: s(0, 3),
+                    return_type: Type::UInt,
+                    body: ExprId(4),
+                }],
                 ordered_parameters: vec![
-                    Parameter { name: "0".into(), ty: Type::UInt },
-                    Parameter { name: "1".into(), ty: Type::UInt },
-                    Parameter { name: "2".into(), ty: Type::UInt },
+                    Parameter {
+                        name: "0".into(),
+                        ty: Type::UInt,
+                    },
+                    Parameter {
+                        name: "1".into(),
+                        ty: Type::UInt,
+                    },
+                    Parameter {
+                        name: "2".into(),
+                        ty: Type::UInt,
+                    },
                 ],
                 match_arms: vec![],
                 constants: vec![
@@ -99,13 +164,22 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
                 entry: a(Expr::Call("18".into(), vec![u(2)])),
                 functions: vec![Function {
                     name: "18".into(),
-                    parameters: vec![Parameter { name: "0".into(), ty: Type::UInt }],
+                    parameters: vec![Parameter {
+                        name: "0".into(),
+                        ty: Type::UInt,
+                    }],
                     return_type: Type::UInt,
                     body: a(Expr::If(
                         a(Expr::Binary(BinaryOp::Eq, v("0"), u(0))),
                         u(1),
-                        a(Expr::Binary(BinaryOp::Mul, v("0"),
-                            a(Expr::Call("18".into(), vec![a(Expr::Binary(BinaryOp::Sub, v("0"), u(1)))])))),
+                        a(Expr::Binary(
+                            BinaryOp::Mul,
+                            v("0"),
+                            a(Expr::Call(
+                                "18".into(),
+                                vec![a(Expr::Binary(BinaryOp::Sub, v("0"), u(1)))],
+                            )),
+                        )),
                     )),
                 }],
             },
@@ -126,9 +200,30 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
                     r(ExprPayload::Var("0".into()), 11, 0),
                     r(ExprPayload::Literal(ConstantId(3)), 11, 0),
                 ],
-                ordered_children: vec![ExprId(1), ExprId(3), ExprId(6), ExprId(7), ExprId(4), ExprId(5), ExprId(8), ExprId(9), ExprId(10), ExprId(11), ExprId(12)],
-                functions: vec![FunctionRow { source_table_index: 0, name: "18".into(), parameters: s(0, 1), return_type: Type::UInt, body: ExprId(2) }],
-                ordered_parameters: vec![Parameter { name: "0".into(), ty: Type::UInt }],
+                ordered_children: vec![
+                    ExprId(1),
+                    ExprId(3),
+                    ExprId(6),
+                    ExprId(7),
+                    ExprId(4),
+                    ExprId(5),
+                    ExprId(8),
+                    ExprId(9),
+                    ExprId(10),
+                    ExprId(11),
+                    ExprId(12),
+                ],
+                functions: vec![FunctionRow {
+                    source_table_index: 0,
+                    name: "18".into(),
+                    parameters: s(0, 1),
+                    return_type: Type::UInt,
+                    body: ExprId(2),
+                }],
+                ordered_parameters: vec![Parameter {
+                    name: "0".into(),
+                    ty: Type::UInt,
+                }],
                 match_arms: vec![],
                 constants: vec![
                     c(ConstantPayload::UInt(2), 0, 0, 1, vec![]),
@@ -158,7 +253,10 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
         (
             "SHARED_ARC_TREE",
             Program {
-                entry: a(Expr::Literal(Value::Tree(Tree::Branch(shared_leaf.clone(), shared_leaf)))),
+                entry: a(Expr::Literal(Value::Tree(Tree::Branch(
+                    shared_leaf.clone(),
+                    shared_leaf,
+                )))),
                 functions: vec![],
             },
             ProgramImageDraft {
@@ -183,8 +281,18 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
             Program {
                 entry: u(7),
                 functions: vec![
-                    Function { name: "8".into(), parameters: vec![], return_type: Type::UInt, body: u(9) },
-                    Function { name: "3".into(), parameters: vec![], return_type: Type::UInt, body: u(4) },
+                    Function {
+                        name: "8".into(),
+                        parameters: vec![],
+                        return_type: Type::UInt,
+                        body: u(9),
+                    },
+                    Function {
+                        name: "3".into(),
+                        parameters: vec![],
+                        return_type: Type::UInt,
+                        body: u(4),
+                    },
                 ],
             },
             ProgramImageDraft {
@@ -196,8 +304,20 @@ pub(super) fn normal_cases() -> Vec<(&'static str, Program, ProgramImageDraft)> 
                 ],
                 ordered_children: vec![],
                 functions: vec![
-                    FunctionRow { source_table_index: 0, name: "8".into(), parameters: s(0, 0), return_type: Type::UInt, body: ExprId(1) },
-                    FunctionRow { source_table_index: 1, name: "3".into(), parameters: s(0, 0), return_type: Type::UInt, body: ExprId(2) },
+                    FunctionRow {
+                        source_table_index: 0,
+                        name: "8".into(),
+                        parameters: s(0, 0),
+                        return_type: Type::UInt,
+                        body: ExprId(1),
+                    },
+                    FunctionRow {
+                        source_table_index: 1,
+                        name: "3".into(),
+                        parameters: s(0, 0),
+                        return_type: Type::UInt,
+                        body: ExprId(2),
+                    },
                 ],
                 ordered_parameters: vec![],
                 match_arms: vec![],

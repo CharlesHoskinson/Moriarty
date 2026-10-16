@@ -10,6 +10,8 @@ Current nonsecurity work uses `gpt-6.1-sol` authoring and fresh independent `mus
 
 The [roadmap](../../ROADMAP.md), [audit plan](../../docs/audits/2026-10-14/AUDIT-PLAN.md), [mid-roadmap review](../../docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md), [OpenSpec/EARS package](../../openspec/changes/consolidated-language-kernel/proposal.md) and [wiki index](../../wiki/index.md) supply current requirements and evidence. The [execution reference](skills/develop/references/execution-focus.md) covers profiles, independent financial/work expectations, unchanged U/M/MC/SP/G exits and the Opus-owned zero-native boundary. Existing disjoint source ownership can continue with one integration owner; no scheduler or new campaign is added.
 
+Rust changes follow checkout `RUST_GUIDELINES.md` and the [Rust checklist](skills/develop/references/rust.md): agreed deviations only, and `cargo fmt`, `cargo clippy -D warnings` and `cargo test --workspace` pass before handoff.
+
 Report implementation, evidence and acceptance separately. Local/static child capabilities, historical proofs and Preview receipts retain their scopes. Fenrir remains separately qualified with unknown external facts left unknown. This plugin update does not complete a product exit or authorize native execution.
 
 ## Guarantees
@@ -102,7 +104,7 @@ The self-contained `test_compatibility.py` and `test_upgrade.py` suites run from
 
 The canonical maintained package is `plugins/moriarty-dev/` in the reviewed repository checkout. Installed caches are snapshots: never patch them directly. Inspect `codex plugin marketplace list --json` and `codex plugin list --marketplace personal --json` to locate the configured source and installed version. For the inspected local personal marketplace, the catalog is `/home/charl/.agents/plugins/marketplace.json` and its mutable source is `/home/charl/plugins/moriarty-dev`; it is separate from the repository.
 
-Version 0.1.1 retains the hardened runtime first deployed as `0.1.0+codex.20260912173932`: the pinned isolated bootstrap, bounded hook protocol, explicit finding resolution and cache-retaining upgrade utility. Upgrade through the [compatibility procedure](COMPATIBILITY.md#upgrade-without-breaking-an-active-session), not a bare `codex plugin add`. A bare re-add skips cache snapshots that active sessions still need, and an older unpinned package would drop the runtime controls above.
+Version 0.1.2 adds the Rust checklist and retains the hardened runtime first deployed as `0.1.0+codex.20260912173932`: the pinned isolated bootstrap, bounded hook protocol, explicit finding resolution and cache-retaining upgrade utility. Upgrade through the [compatibility procedure](COMPATIBILITY.md#upgrade-without-breaking-an-active-session), not a bare `codex plugin add`. A bare re-add skips cache snapshots that active sessions still need, and an older unpinned package would drop the runtime controls above.
 
 1. Back up the configured mutable source. Synchronize this reviewed package into it and verify every file digest against the reviewed candidate.
 2. Run `deployment.py prepare --plugin SOURCE`. It must leave `hooks/hooks.json` byte-identical and report the reviewed runtime digest; any change means the bytes differ from review, so stop.

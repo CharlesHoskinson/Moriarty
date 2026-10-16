@@ -122,7 +122,10 @@ fn core_one_program_passes_the_profile_guard_to_the_next_typed_refusal() {
         &policy(signed::POLICY),
         SignedVersion::ConsumingV2,
     ));
-    assert_eq!((error.layer, error.code), ("native-relation", "source-identity"));
+    assert_eq!(
+        (error.layer, error.code),
+        ("native-relation", "source-identity")
+    );
     let error = refusal(static_compile::compile(
         LEGACY,
         &program,

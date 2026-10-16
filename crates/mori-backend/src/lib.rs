@@ -18,14 +18,14 @@ pub mod authorization;
 pub mod replay;
 pub mod schnorr;
 pub mod signed_relation;
-pub mod stage;
 pub mod source_projection;
+pub mod stage;
 
 mod liabilities;
 pub use liabilities::{
     LiabilityDescriptor, LiabilityIdentity, LiabilityOperation, MAX_LIABILITY_REGISTRY_ENTRIES,
 };
-mod parameters;
+pub mod parameters;
 pub mod proving;
 
 pub const ARTIFACT_FORMAT: &str = "moriarty-zkir-artifact/3";
@@ -406,7 +406,7 @@ pub(crate) fn compile_mode(program: &Program, target: &Target) -> Result<Artifac
     };
     let registry = liabilities::registry(program)?;
     let hash = digest(program)?;
-    let program_hash = hash.iter().map(|b| format!("{b:02x}")).collect();
+    let program_hash = mori_core::intent::hex(&hash);
     let mut circuits = Vec::with_capacity(program.actions.len());
     let mut resources = Resources {
         instructions: 0,
@@ -781,7 +781,10 @@ fn lower_action_segment(
     target: &Target,
     registry: &[LiabilityIdentity],
     signed: Option<&signed_relation::Layout>,
-    stage: Option<(&mori_core::stage::StagedProgram, &stage::frame::SegmentLayout)>,
+    stage: Option<(
+        &mori_core::stage::StagedProgram,
+        &stage::frame::SegmentLayout,
+    )>,
 ) -> Result<(CircuitArtifact, Option<stage::PendingPositions>), Error> {
     let mut builder = Builder::default();
     // Stage positions 0/1 with placeholders. Their constants are the hash of
@@ -805,7 +808,7 @@ fn lower_action_segment(
             builder.public("pre_state", &state.name, state.ty, None, None, None),
         );
     }
-    if stage.map_or(true, |(_, layout)| layout.entry_site == 0) {
+    if stage.is_none_or(|(_, layout)| layout.entry_site == 0) {
         for input in &action.inputs {
             env.insert(
                 input.name.clone(),
@@ -899,16 +902,23 @@ fn lower_action_segment(
             env.insert(name.clone(), wire.clone());
         }
     }
-    if let Some((_, layout)) = stage {
-        if let Some(guard) = layout.guard {
-            let wire = builder.expression(program, guard, &env, &liabilities)?;
-            stage::frame::assert_guard(&mut builder, wire)?;
-        }
+    if let Some((_, layout)) = stage
+        && let Some(guard) = layout.guard
+    {
+        let wire = builder.expression(program, guard, &env, &liabilities)?;
+        stage::frame::assert_guard(&mut builder, wire)?;
     }
-    let statements = stage.map_or(0..action.statements.len(), |(_, layout)| layout.statements.clone());
+    let statements = stage.map_or(0..action.statements.len(), |(_, layout)| {
+        layout.statements.clone()
+    });
     let mut effect_frame = Vec::new();
-    for (step, statement) in action.statements.iter().enumerate()
-        .skip(statements.start).take(statements.end - statements.start) {
+    for (step, statement) in action
+        .statements
+        .iter()
+        .enumerate()
+        .skip(statements.start)
+        .take(statements.end - statements.start)
+    {
         let mut effect = EffectDescriptor {
             step: step as u32,
             kind: String::new(),
@@ -1143,9 +1153,13 @@ fn lower_action_segment(
     }
     let pending_positions = match stage {
         Some((_, layout)) => {
-            let live = layout.slots.iter().take(layout.len_out as usize)
+            let live = layout
+                .slots
+                .iter()
+                .take(layout.len_out as usize)
                 .map(|slot| {
-                    env.get(&slot.name).cloned()
+                    env.get(&slot.name)
+                        .cloned()
                         .map(|wire| (slot.name.as_str(), wire))
                         .ok_or_else(|| error("name", format!("Unbound capture {:?}.", slot.name)))
                 })
@@ -1154,11 +1168,19 @@ fn lower_action_segment(
         }
         None => None,
     };
-    let replay_steps = stage.map_or(action.statements.len() as u32, |(_, layout)| layout.replay_steps);
+    let replay_steps = stage.map_or(action.statements.len() as u32, |(_, layout)| {
+        layout.replay_steps
+    });
     let context = match stage {
         Some((sp, layout)) => stage::context::stage_context_hash(
-            sp, target, registry, layout, &builder.bindings, &effect_frame,
-            &balance_frame, &liability_frame,
+            sp,
+            target,
+            registry,
+            layout,
+            &builder.bindings,
+            &effect_frame,
+            &balance_frame,
+            &liability_frame,
         )?,
         None => signed_relation::context_hash(
             target,
@@ -1213,17 +1235,20 @@ fn lower_action_segment(
     if parsed != ir {
         return Err(error("zkir", "Pinned upstream round-trip changed the IR."));
     }
-    Ok((CircuitArtifact {
-        action: action.name.clone(),
-        zkir,
-        context_hash: proving::hex(&context),
-        public_inputs: builder.bindings,
-        authorization_bindings,
-        private_inputs,
-        instruction_count,
-        effect_frame,
-        balance_frame,
-        liability_frame,
-        replay_steps,
-    }, pending_positions))
+    Ok((
+        CircuitArtifact {
+            action: action.name.clone(),
+            zkir,
+            context_hash: proving::hex(&context),
+            public_inputs: builder.bindings,
+            authorization_bindings,
+            private_inputs,
+            instruction_count,
+            effect_frame,
+            balance_frame,
+            liability_frame,
+            replay_steps,
+        },
+        pending_positions,
+    ))
 }

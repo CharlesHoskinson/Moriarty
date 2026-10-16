@@ -4,12 +4,15 @@
 
 use super::*;
 
-#[path = "extra_oracle_programs.rs"]
-mod extra_oracle_programs;
+use super::super::extra_oracle_programs;
 
 fn limits() -> HostImageLimits {
     // Ordinary specimen allowances only, never selected native capacities.
-    HostImageLimits { rows: 2048, cells: 2048, name_bytes: 4096 }
+    HostImageLimits {
+        rows: 2048,
+        cells: 2048,
+        name_bytes: 4096,
+    }
 }
 
 fn uint(n: u128) -> ExprRef {
@@ -31,32 +34,56 @@ fn branch() -> Value {
 
 fn normal_arms() -> Vec<Arm> {
     vec![
-        Arm { pattern: Pattern::Nil, body: uint(0) },
-        Arm { pattern: Pattern::Cons("h".into(), "t".into()), body: var("h") },
-        Arm { pattern: Pattern::Leaf("n".into()), body: var("n") },
-        Arm { pattern: Pattern::Branch("l".into(), "r".into()), body: var("l") },
-        Arm { pattern: Pattern::Var("v".into()), body: var("v") },
+        Arm {
+            pattern: Pattern::Nil,
+            body: uint(0),
+        },
+        Arm {
+            pattern: Pattern::Cons("h".into(), "t".into()),
+            body: var("h"),
+        },
+        Arm {
+            pattern: Pattern::Leaf("n".into()),
+            body: var("n"),
+        },
+        Arm {
+            pattern: Pattern::Branch("l".into(), "r".into()),
+            body: var("l"),
+        },
+        Arm {
+            pattern: Pattern::Var("v".into()),
+            body: var("v"),
+        },
     ]
 }
 
 fn structural_snapshot(control: Option<Control>, outcome: Outcome) -> Snapshot {
     Snapshot {
         program: Arc::new(Program {
-            entry: Arc::new(Expr::Let("0".into(), uint(7), Arc::new(Expr::Binary(
-                BinaryOp::Add,
-                Arc::new(Expr::Let("0".into(), uint(4), var("0"))),
-                var("0"),
-            )))),
+            entry: Arc::new(Expr::Let(
+                "0".into(),
+                uint(7),
+                Arc::new(Expr::Binary(
+                    BinaryOp::Add,
+                    Arc::new(Expr::Let("0".into(), uint(4), var("0"))),
+                    var("0"),
+                )),
+            )),
             // Deliberately retain original duplicate-name function table order.
             functions: vec![
                 Function {
                     name: "f".into(),
-                    parameters: vec![Parameter { name: "0".into(), ty: Type::UInt }],
+                    parameters: vec![Parameter {
+                        name: "0".into(),
+                        ty: Type::UInt,
+                    }],
                     return_type: Type::UInt,
                     body: var("0"),
                 },
                 Function {
-                    name: "f".into(), parameters: vec![], return_type: Type::Bool,
+                    name: "f".into(),
+                    parameters: vec![],
+                    return_type: Type::Bool,
                     body: Arc::new(Expr::Literal(Value::Bool(true))),
                 },
             ],
@@ -70,8 +97,12 @@ fn structural_snapshot(control: Option<Control>, outcome: Outcome) -> Snapshot {
             Frame::Unary(UnaryOp::Not),
             Frame::If(uint(9), uint(4), environment(4)),
             Frame::Match(normal_arms(), environment(7)),
-            Frame::Args("f".into(), vec![Value::List(vec![4, 9]), branch()],
-                vec![Arc::new(Expr::Call("f".into(), vec![uint(3)])), var("0")], environment(4)),
+            Frame::Args(
+                "f".into(),
+                vec![Value::List(vec![4, 9]), branch()],
+                vec![Arc::new(Expr::Call("f".into(), vec![uint(3)])), var("0")],
+                environment(4),
+            ),
             Frame::Return(Type::UInt, environment(7)),
             Frame::Scope(environment(4)),
         ],
@@ -96,7 +127,10 @@ fn frozen_n08_boundary75_preserves_complete_caller_frames() {
             Frame::Right(BinaryOp::Mul, Value::UInt(2)),
             Frame::Return(Type::UInt, Environment::new()),
         ],
-        stack_limit: 8, remaining_fuel: 7, initial_fuel: 82, outcome: Outcome::Pending,
+        stack_limit: 8,
+        remaining_fuel: 7,
+        initial_fuel: 82,
+        outcome: Outcome::Pending,
     };
     let image = encode_snapshot(&expected, limits()).expect("normal specimen fits");
     assert_eq!(image.frame_ids.len(), 5);
@@ -116,30 +150,60 @@ fn frozen_n08_boundary75_preserves_complete_caller_frames() {
 #[test]
 fn all_typed_controls_frames_and_outcomes_have_flat_structural_payloads() {
     let function = Function {
-        name: "detached".into(), parameters: vec![Parameter { name: "x".into(), ty: Type::Tree }],
-        return_type: Type::Tree, body: var("x"),
+        name: "detached".into(),
+        parameters: vec![Parameter {
+            name: "x".into(),
+            ty: Type::Tree,
+        }],
+        return_type: Type::Tree,
+        body: var("x"),
     };
     let controls = vec![
         None,
         Some(Control::Eval(Arc::new(Expr::If(
-            Arc::new(Expr::Unary(UnaryOp::Not, Arc::new(Expr::Literal(Value::Bool(false))))),
-            Arc::new(Expr::Match(Arc::new(Expr::Literal(Value::List(vec![4]))), normal_arms())),
+            Arc::new(Expr::Unary(
+                UnaryOp::Not,
+                Arc::new(Expr::Literal(Value::Bool(false))),
+            )),
+            Arc::new(Expr::Match(
+                Arc::new(Expr::Literal(Value::List(vec![4]))),
+                normal_arms(),
+            )),
             Arc::new(Expr::Literal(branch())),
         )))),
         Some(Control::Return(branch())),
-        Some(Control::Push(Frame::Scope(environment(7)), Box::new(Control::Push(
-            Frame::Return(Type::Tree, environment(4)), Box::new(Control::Return(branch())),
-            environment(3),
-        )), environment(2))),
-        Some(Control::Invoke("f".into(), vec![Value::UInt(4), Value::List(vec![])])),
+        Some(Control::Push(
+            Frame::Scope(environment(7)),
+            Box::new(Control::Push(
+                Frame::Return(Type::Tree, environment(4)),
+                Box::new(Control::Return(branch())),
+                environment(3),
+            )),
+            environment(2),
+        )),
+        Some(Control::Invoke(
+            "f".into(),
+            vec![Value::UInt(4), Value::List(vec![])],
+        )),
         Some(Control::Enter(Some(function), vec![branch()])),
         Some(Control::Enter(None, vec![])),
         Some(Control::Bound(Some(environment(3)), Type::List, var("x"))),
         Some(Control::Bound(None, Type::Bool, uint(0))),
         Some(Control::Cases(branch(), normal_arms(), environment(7))),
-        Some(Control::CaseResult(Some(environment(4)), Value::List(vec![4, 9]),
-            var("h"), normal_arms(), environment(7))),
-        Some(Control::CaseResult(None, Value::Bool(false), uint(1), vec![], environment(4))),
+        Some(Control::CaseResult(
+            Some(environment(4)),
+            Value::List(vec![4, 9]),
+            var("h"),
+            normal_arms(),
+            environment(7),
+        )),
+        Some(Control::CaseResult(
+            None,
+            Value::Bool(false),
+            uint(1),
+            vec![],
+            environment(4),
+        )),
         Some(Control::PrimitiveResult(Ok(branch()))),
         Some(Control::PrimitiveResult(Err(10))),
         Some(Control::Error(3)),
@@ -155,7 +219,12 @@ fn all_typed_controls_frames_and_outcomes_have_flat_structural_payloads() {
         assert_eq!(image.functions[1].return_type, Type::Bool);
         assert_eq!(decode_snapshot(&image), expected);
     }
-    for outcome in [Outcome::Pending, Outcome::Done(branch()), Outcome::Rejected(6), Outcome::Exhausted] {
+    for outcome in [
+        Outcome::Pending,
+        Outcome::Done(branch()),
+        Outcome::Rejected(6),
+        Outcome::Exhausted,
+    ] {
         let expected = structural_snapshot(None, outcome);
         let image = encode_snapshot(&expected, limits()).expect("finite typed fixture fits");
         assert_eq!(decode_snapshot(&image), expected);
@@ -168,33 +237,96 @@ fn independent_normal_row_fixture_decodes_lists_and_repeated_tree_occurrences() 
     // here is structural; the expected branch contains two separate leaf terms.
     let image = MachineImageDraft {
         limits: limits(),
-        usage: HostImageUsage { rows: 12, cells: 4, name_bytes: 3 },
-        program: ProgramRoots { entry: ExprId(0), functions: Slice { start: 0, len: 0 } },
-        expressions: vec![ExprRow { payload: ExprPayload::Literal(ValueId(6)), children: Slice { start: 0, len: 0 } }],
-        expr_children: vec![], arms: vec![], functions: vec![], parameters: vec![],
+        usage: HostImageUsage {
+            rows: 12,
+            cells: 4,
+            name_bytes: 3,
+        },
+        program: ProgramRoots {
+            entry: ExprId(0),
+            functions: Slice { start: 0, len: 0 },
+        },
+        expressions: vec![ExprRow {
+            payload: ExprPayload::Literal(ValueId(6)),
+            children: Slice { start: 0, len: 0 },
+        }],
+        expr_children: vec![],
+        arms: vec![],
+        functions: vec![],
+        parameters: vec![],
         values: vec![
-            ValueRow { payload: ValuePayload::UInt(4), fields: Slice { start: 0, len: 0 } },
-            ValueRow { payload: ValuePayload::UInt(9), fields: Slice { start: 0, len: 0 } },
-            ValueRow { payload: ValuePayload::List, fields: Slice { start: 0, len: 2 } },
-            ValueRow { payload: ValuePayload::TreeLeaf(7), fields: Slice { start: 0, len: 0 } },
-            ValueRow { payload: ValuePayload::TreeLeaf(7), fields: Slice { start: 0, len: 0 } },
-            ValueRow { payload: ValuePayload::TreeBranch, fields: Slice { start: 2, len: 2 } },
-            ValueRow { payload: ValuePayload::Bool(true), fields: Slice { start: 0, len: 0 } },
+            ValueRow {
+                payload: ValuePayload::UInt(4),
+                fields: Slice { start: 0, len: 0 },
+            },
+            ValueRow {
+                payload: ValuePayload::UInt(9),
+                fields: Slice { start: 0, len: 0 },
+            },
+            ValueRow {
+                payload: ValuePayload::List,
+                fields: Slice { start: 0, len: 2 },
+            },
+            ValueRow {
+                payload: ValuePayload::TreeLeaf(7),
+                fields: Slice { start: 0, len: 0 },
+            },
+            ValueRow {
+                payload: ValuePayload::TreeLeaf(7),
+                fields: Slice { start: 0, len: 0 },
+            },
+            ValueRow {
+                payload: ValuePayload::TreeBranch,
+                fields: Slice { start: 2, len: 2 },
+            },
+            ValueRow {
+                payload: ValuePayload::Bool(true),
+                fields: Slice { start: 0, len: 0 },
+            },
         ],
         value_ids: vec![ValueId(0), ValueId(1), ValueId(3), ValueId(4)],
-        environments: vec![EnvironmentRow { bindings: Slice { start: 0, len: 2 } }],
-        bindings: vec![BindingRow { name: "xs".into(), value: ValueId(2) }, BindingRow { name: "t".into(), value: ValueId(5) }],
-        frames: vec![], frame_ids: vec![],
+        environments: vec![EnvironmentRow {
+            bindings: Slice { start: 0, len: 2 },
+        }],
+        bindings: vec![
+            BindingRow {
+                name: "xs".into(),
+                value: ValueId(2),
+            },
+            BindingRow {
+                name: "t".into(),
+                value: ValueId(5),
+            },
+        ],
+        frames: vec![],
+        frame_ids: vec![],
         controls: vec![ControlRow::Return(ValueId(5))],
-        control: Some(ControlId(0)), environment: EnvironmentId(0),
-        outcome: OutcomeRow::Pending, stack_limit: 3, remaining_fuel: 7, initial_fuel: 19,
+        control: Some(ControlId(0)),
+        environment: EnvironmentId(0),
+        outcome: OutcomeRow::Pending,
+        stack_limit: 3,
+        remaining_fuel: 7,
+        initial_fuel: 19,
     };
-    let tree = Value::Tree(Tree::Branch(Arc::new(Tree::Leaf(7)), Arc::new(Tree::Leaf(7))));
+    let tree = Value::Tree(Tree::Branch(
+        Arc::new(Tree::Leaf(7)),
+        Arc::new(Tree::Leaf(7)),
+    ));
     let expected = Snapshot {
-        program: Arc::new(Program { functions: vec![], entry: Arc::new(Expr::Literal(Value::Bool(true))) }),
+        program: Arc::new(Program {
+            functions: vec![],
+            entry: Arc::new(Expr::Literal(Value::Bool(true))),
+        }),
         control: Some(Control::Return(tree.clone())),
-        environment: Environment::from([("xs".into(), Value::List(vec![4, 9])), ("t".into(), tree)]),
-        frames: vec![], stack_limit: 3, remaining_fuel: 7, initial_fuel: 19, outcome: Outcome::Pending,
+        environment: Environment::from([
+            ("xs".into(), Value::List(vec![4, 9])),
+            ("t".into(), tree),
+        ]),
+        frames: vec![],
+        stack_limit: 3,
+        remaining_fuel: 7,
+        initial_fuel: 19,
+        outcome: Outcome::Pending,
     };
     assert_eq!(decode_snapshot(&image), expected);
 }
@@ -203,27 +335,70 @@ fn independent_normal_row_fixture_decodes_lists_and_repeated_tree_occurrences() 
 fn independent_encoder_rows_preserve_each_shared_tree_occurrence_and_field_order() {
     let expected = Snapshot {
         program: Arc::new(Program {
-            functions: vec![], entry: Arc::new(Expr::Literal(branch())),
+            functions: vec![],
+            entry: Arc::new(Expr::Literal(branch())),
         }),
         control: Some(Control::Return(Value::List(vec![4, 9]))),
-        environment: Environment::new(), frames: vec![], stack_limit: 8,
-        remaining_fuel: 0, initial_fuel: 12, outcome: Outcome::Done(branch()),
+        environment: Environment::new(),
+        frames: vec![],
+        stack_limit: 8,
+        remaining_fuel: 0,
+        initial_fuel: 12,
+        outcome: Outcome::Done(branch()),
     };
     // Independent counts: two 3-row trees + one 3-row list, one expression,
     // one empty environment and one control row; three ordered pairs of fields.
-    let budget = HostImageLimits { rows: 12, cells: 6, name_bytes: 0 };
+    let budget = HostImageLimits {
+        rows: 12,
+        cells: 6,
+        name_bytes: 0,
+    };
     let image = encode_snapshot(&expected, budget).expect("literal exact allowance");
     assert_eq!(image.limits(), budget);
-    assert_eq!(image.usage(), HostImageUsage { rows: 12, cells: 6, name_bytes: 0 });
-    assert_eq!(image.values.iter().map(|row| row.payload).collect::<Vec<_>>(), vec![
-        ValuePayload::TreeBranch, ValuePayload::TreeLeaf(7), ValuePayload::TreeLeaf(7),
-        ValuePayload::List, ValuePayload::UInt(4), ValuePayload::UInt(9),
-        ValuePayload::TreeBranch, ValuePayload::TreeLeaf(7), ValuePayload::TreeLeaf(7),
-    ]);
-    assert_eq!(image.value_ids, vec![ValueId(1), ValueId(2), ValueId(4), ValueId(5), ValueId(7), ValueId(8)]);
-    assert_eq!(image.expressions, vec![ExprRow {
-        payload: ExprPayload::Literal(ValueId(0)), children: Slice { start: 0, len: 0 },
-    }]);
+    assert_eq!(
+        image.usage(),
+        HostImageUsage {
+            rows: 12,
+            cells: 6,
+            name_bytes: 0
+        }
+    );
+    assert_eq!(
+        image
+            .values
+            .iter()
+            .map(|row| row.payload)
+            .collect::<Vec<_>>(),
+        vec![
+            ValuePayload::TreeBranch,
+            ValuePayload::TreeLeaf(7),
+            ValuePayload::TreeLeaf(7),
+            ValuePayload::List,
+            ValuePayload::UInt(4),
+            ValuePayload::UInt(9),
+            ValuePayload::TreeBranch,
+            ValuePayload::TreeLeaf(7),
+            ValuePayload::TreeLeaf(7),
+        ]
+    );
+    assert_eq!(
+        image.value_ids,
+        vec![
+            ValueId(1),
+            ValueId(2),
+            ValueId(4),
+            ValueId(5),
+            ValueId(7),
+            ValueId(8)
+        ]
+    );
+    assert_eq!(
+        image.expressions,
+        vec![ExprRow {
+            payload: ExprPayload::Literal(ValueId(0)),
+            children: Slice { start: 0, len: 0 },
+        }]
+    );
     assert_eq!(image.controls, vec![ControlRow::Return(ValueId(3))]);
     assert_eq!(image.outcome, OutcomeRow::Done(ValueId(6)));
     assert_eq!(decode_snapshot(&image), expected);
@@ -233,11 +408,30 @@ fn independent_encoder_rows_preserve_each_shared_tree_occurrence_and_field_order
 fn normal_encoding_refusal_reports_caller_limits_outside_machine_outcome() {
     let expected = structural_snapshot(Some(Control::Return(Value::UInt(4))), Outcome::Pending);
     for (budget, kind) in [
-        (HostImageLimits { rows: 0, ..limits() }, HostLimitKind::Rows),
-        (HostImageLimits { cells: 0, ..limits() }, HostLimitKind::Cells),
-        (HostImageLimits { name_bytes: 0, ..limits() }, HostLimitKind::NameBytes),
+        (
+            HostImageLimits {
+                rows: 0,
+                ..limits()
+            },
+            HostLimitKind::Rows,
+        ),
+        (
+            HostImageLimits {
+                cells: 0,
+                ..limits()
+            },
+            HostLimitKind::Cells,
+        ),
+        (
+            HostImageLimits {
+                name_bytes: 0,
+                ..limits()
+            },
+            HostLimitKind::NameBytes,
+        ),
     ] {
-        let refusal = encode_snapshot(&expected, budget).err().expect("fixture exceeds selected allowance");
+        let refusal =
+            encode_snapshot(&expected, budget).expect_err("fixture exceeds selected allowance");
         assert_eq!(refusal.kind, kind);
         assert_eq!(expected.outcome, Outcome::Pending);
         assert_eq!(expected.remaining_fuel, 5);

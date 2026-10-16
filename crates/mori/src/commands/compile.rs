@@ -29,7 +29,11 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         publish_staged_artifact(&artifact, &manifest, &args.out)?;
         shell.status(
             "Compiled",
-            format!("{} circuits into {}", artifact.circuits.len(), args.out.display()),
+            format!(
+                "{} circuits into {}",
+                artifact.circuits.len(),
+                args.out.display()
+            ),
         );
         return Ok(ExitCode::SUCCESS);
     }
@@ -51,8 +55,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         path: args.out.clone(),
         source,
     })?;
-    super::proof_io::publish_new(&args.out.join("source-projection.json"), projection.as_bytes())?;
-    publish_artifact(&artifact, &manifest, &args.out)?;
+    publish_artifact(&artifact, &manifest, Some(&projection), &args.out)?;
     shell.status(
         "Compiled",
         format!(
@@ -68,11 +71,16 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
 fn publish_artifact(
     artifact: &mori_backend::Artifact,
     manifest: &str,
+    projection: Option<&str>,
     out: &Path,
 ) -> super::Result<()> {
     for (index, circuit) in artifact.circuits.iter().enumerate() {
         let path = out.join(format!("{index:03}-{}.zkir", circuit.action));
         super::proof_io::publish_new(&path, circuit.zkir.as_bytes())?;
+    }
+    if let Some(projection) = projection {
+        let path = out.join("source-projection.json");
+        super::proof_io::publish_new(&path, projection.as_bytes())?;
     }
     let path = out.join("artifact.json");
     // The manifest is the completion marker; publish it after every circuit.
@@ -87,7 +95,10 @@ fn publish_staged_artifact(
     out: &Path,
 ) -> super::Result<()> {
     for (index, circuit) in artifact.circuits.iter().enumerate() {
-        let path = out.join(format!("{index:03}-{}.s{}.zkir", circuit.action, circuit.segment));
+        let path = out.join(format!(
+            "{index:03}-{}.s{}.zkir",
+            circuit.action, circuit.segment
+        ));
         super::proof_io::publish_new(&path, circuit.zkir.as_bytes())?;
     }
     // As in publish_artifact, the manifest is the completion marker.
@@ -133,7 +144,7 @@ mod tests {
             std::fs::write(&p, b"third-party sentinel").unwrap();
             std::fs::write(d.0.join("unrelated"), b"user addition").unwrap();
             assert!(
-                publish_artifact(&a, &m, &d.0).is_err(),
+                publish_artifact(&a, &m, None, &d.0).is_err(),
                 "raced {leaf} must refuse"
             );
             assert_eq!(std::fs::read(&p).unwrap(), b"third-party sentinel");
@@ -180,7 +191,7 @@ mod tests {
                         std::os::unix::fs::symlink(&target, &p).unwrap();
                     }
                 }
-                assert!(publish_artifact(&a, &m, &d.0).is_err());
+                assert!(publish_artifact(&a, &m, None, &d.0).is_err());
                 if kind == "directory" {
                     assert!(p.is_dir());
                     assert_eq!(std::fs::read_dir(&p).unwrap().count(), 0);
@@ -210,7 +221,7 @@ mod tests {
     fn final_manifest_follows_all_complete_ordered_circuits() {
         let (a, m) = artifact();
         let d = Reserved::new();
-        publish_artifact(&a, &m, &d.0).unwrap();
+        publish_artifact(&a, &m, None, &d.0).unwrap();
         assert_eq!(
             std::fs::read(d.0.join("artifact.json")).unwrap(),
             m.as_bytes()

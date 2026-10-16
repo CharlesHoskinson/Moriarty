@@ -31,7 +31,11 @@ pub fn read_bounded(path: &Path, max: usize, too_large: &'static str) -> Result<
     String::from_utf8(bytes).map_err(|_| Error::new("json", "Stage input is not UTF-8"))
 }
 
-fn strict<T: DeserializeOwned>(text: &str, max: usize, too_large: &'static str) -> Result<T, Error> {
+fn strict<T: DeserializeOwned>(
+    text: &str,
+    max: usize,
+    too_large: &'static str,
+) -> Result<T, Error> {
     let value = crate::json::parse_limited(text, max, too_large)?;
     serde_json::from_value(value).map_err(|e| Error::new("json", e.to_string()))
 }
@@ -165,7 +169,9 @@ pub fn canonical_boundary(
             let id = asset_identity(p, asset)?;
             for account in [from, to] {
                 if b.balances
-                    .binary_search_by(|x| (&x.asset, x.account.as_str()).cmp(&(id, account.as_str())))
+                    .binary_search_by(|x| {
+                        (&x.asset, x.account.as_str()).cmp(&(id, account.as_str()))
+                    })
                     .is_err()
                 {
                     return Err(Error::new(
@@ -203,7 +209,9 @@ pub fn canonical_boundary(
             return Err(Error::new("liability", "Liabilities are not canonical"));
         }
         previous = Some(l.name.as_str());
-        if registry.get(l.name.as_str()) != Some(&(&l.asset, l.debtor.as_str(), l.creditor.as_str())) {
+        if registry.get(l.name.as_str())
+            != Some(&(&l.asset, l.debtor.as_str(), l.creditor.as_str()))
+        {
             return Err(Error::new(
                 "liability",
                 format!("Existing liability identity differs for {:?}.", l.name),

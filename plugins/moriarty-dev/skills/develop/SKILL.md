@@ -44,6 +44,8 @@ Inspect the real consumer before changing helpers. Freeze independent financial/
 
 For Sherlock changes, apply checkout `docs/SHERLOCK-CORRECTNESS-LOOP.md`: iterate K, the declared Quint abstraction, Lean/Clean and handwritten circuits per transition slice using independent complete-state/prefix expectations. Retain exact-source layer results and missing comparisons; the workflow grants no model/circuit/native execution authority.
 
+For any Rust change, read checkout `RUST_GUIDELINES.md` first and follow the [Rust checklist](references/rust.md). Deviations need the maintainer's agreement before they are made. Hand off only after `cargo fmt`, `cargo clippy -D warnings` and `cargo test --workspace` pass; reviewers check guideline conformance too.
+
 Report implementation, evidence and acceptance separately. Retain U0–U7, M1–M17 and every MC/SP/G exit; source, static exports, passing tests or merged PRs cannot close unobserved stages. Preview and Fenrir need separate qualified evidence. Current native authority is zero: apply the [Opus-owned execution boundary](references/execution-focus.md#opus-owned-execution-boundary) before any command selection.
 
 Use `report --json` for historical program records and `doctor --json` for observed host state. Installation and adapter protocol tests do not establish hook interception. The guarded CLI is the fallback when host trust is unverified. Public transaction notifications and delivery follow the [existing reporting procedure](../../README.md#public-transaction-reporting); publish pending public lines before a separate network summary. Never turn test IDs into live evidence.

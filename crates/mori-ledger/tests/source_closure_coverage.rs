@@ -83,6 +83,56 @@ const CORE_STAGE: [&str; 8] = [
     "../../mori-core/src/stage/validate.rs",
 ];
 
+// Sherlock append: every file under Core `src/sherlock`, alphabetical.
+const SHERLOCK: [&str; 35] = [
+    "../../mori-core/src/sherlock/checkpoint_normal_tests.rs",
+    "../../mori-core/src/sherlock/compare.rs",
+    "../../mori-core/src/sherlock/compare_tests.rs",
+    "../../mori-core/src/sherlock/draft_image_bridge.rs",
+    "../../mori-core/src/sherlock/draft_image_bridge_tests.rs",
+    "../../mori-core/src/sherlock/draft_source.rs",
+    "../../mori-core/src/sherlock/draft_source_tests.rs",
+    "../../mori-core/src/sherlock/draft_typecheck.rs",
+    "../../mori-core/src/sherlock/draft_typecheck_tests.rs",
+    "../../mori-core/src/sherlock/extra_normal_oracles.rs",
+    "../../mori-core/src/sherlock/extra_oracle_programs.rs",
+    "../../mori-core/src/sherlock/helper_call_adapter.rs",
+    "../../mori-core/src/sherlock/helper_call_adapter_tests.rs",
+    "../../mori-core/src/sherlock/helper_schedule.rs",
+    "../../mori-core/src/sherlock/helper_schedule_tests.rs",
+    "../../mori-core/src/sherlock/image_reference.rs",
+    "../../mori-core/src/sherlock/image_reference_tests.rs",
+    "../../mori-core/src/sherlock/machine_image.rs",
+    "../../mori-core/src/sherlock/machine_image_tests.rs",
+    "../../mori-core/src/sherlock/mod.rs",
+    "../../mori-core/src/sherlock/normal_oracles.rs",
+    "../../mori-core/src/sherlock/program_image.rs",
+    "../../mori-core/src/sherlock/program_image_oracles.rs",
+    "../../mori-core/src/sherlock/program_image_tests.rs",
+    "../../mori-core/src/sherlock/reference.rs",
+    "../../mori-core/src/sherlock/reference_display.rs",
+    "../../mori-core/src/sherlock/reference_oracles_tests.rs",
+    "../../mori-core/src/sherlock/reference_slice.rs",
+    "../../mori-core/src/sherlock/reference_slice_tests.rs",
+    "../../mori-core/src/sherlock/reference_tests.rs",
+    "../../mori-core/src/sherlock/reference_types.rs",
+    "../../mori-core/src/sherlock/resource_tests.rs",
+    "../../mori-core/src/sherlock/source_adapter.rs",
+    "../../mori-core/src/sherlock/source_adapter_tests.rs",
+    "../../mori-core/src/sherlock/source_origin_normal_tests.rs",
+];
+
+// Backend append: the FENS verifier and SRS pins the ledger calls, with the
+// verifier's third-party notice and licenses.
+const BACKEND: [&str; 6] = [
+    "../../mori-backend/Cargo.toml",
+    "../../mori-backend/src/schnorr.rs",
+    "../../mori-backend/src/parameters.rs",
+    "../../mori-backend/third-party/jubjub-fens/NOTICE.md",
+    "../../mori-backend/third-party/jubjub-fens/LICENSE-MIT",
+    "../../mori-backend/third-party/jubjub-fens/LICENSE-APACHE",
+];
+
 // Frozen A2 coverage roots: Core, lexer and ledger `src`, walked recursively.
 const ROOTS: [&str; 3] = ["../../mori-core/src", "../../mori-lexer/src", "."];
 
@@ -128,9 +178,14 @@ fn members() -> Vec<&'static str> {
     assert!(defs.next().is_none(), "single source_closure declaration");
     let body = &PROVING[start..];
     let body = &body[..body.find("\n}\n").expect("source_closure end")];
-    assert!(PROVING.contains(signature), "unchanged source_closure signature");
+    assert!(
+        PROVING.contains(signature),
+        "unchanged source_closure signature"
+    );
     let rest = body[body.find('{').unwrap() + 1..].trim_start();
-    let rest = rest.strip_prefix("codec::hash(").expect("codec::hash wrapper");
+    let rest = rest
+        .strip_prefix("codec::hash(")
+        .expect("codec::hash wrapper");
     let rest = rest.trim_start().strip_prefix("concat!(").expect("concat!");
     let end = rest.find(".as_bytes()").expect("as_bytes");
     assert_eq!(rest[end..].matches("include_str!").count(), 0);
@@ -198,12 +253,21 @@ fn gaps(
 }
 
 #[test]
-fn closure_is_frozen_baseline_then_core_stage_files() {
+fn closure_is_frozen_baseline_then_appends() {
     let actual = members();
+    let appends = [&CORE_STAGE[..], &SHERLOCK[..], &BACKEND[..]].concat();
     assert!(actual.len() >= BASELINE.len(), "baseline members removed");
-    assert_eq!(actual[..BASELINE.len()], BASELINE, "baseline prefix changed");
-    assert_eq!(actual[BASELINE.len()..], CORE_STAGE, "Core stage suffix changed");
-    assert_eq!(actual.len(), 69);
+    assert_eq!(
+        actual[..BASELINE.len()],
+        BASELINE,
+        "baseline prefix changed"
+    );
+    assert_eq!(
+        actual[BASELINE.len()..],
+        appends,
+        "appended members changed"
+    );
+    assert_eq!(actual.len(), BASELINE.len() + appends.len());
 }
 
 #[test]
@@ -220,7 +284,10 @@ fn closure_covers_every_core_source_file() {
     let mut core = BTreeSet::new();
     rust_files(resolve("../../mori-core/src"), &mut core);
     let missing: Vec<_> = core.difference(&covered).collect();
-    assert!(missing.is_empty(), "Core source outside closure: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "Core source outside closure: {missing:?}"
+    );
 }
 
 #[test]
@@ -233,8 +300,14 @@ fn closure_covers_every_core_lexer_and_ledger_source_file() {
         assert!(walked.contains(&resolve(probe)), "walk missed {probe}");
     }
     let (missing, unused) = gaps(&walked, &listed, &excluded);
-    assert!(missing.is_empty(), "source outside closure and exclusions: {missing:?}");
-    assert!(unused.is_empty(), "exclusion is not an unlisted source file: {unused:?}");
+    assert!(
+        missing.is_empty(),
+        "source outside closure and exclusions: {missing:?}"
+    );
+    assert!(
+        unused.is_empty(),
+        "exclusion is not an unlisted source file: {unused:?}"
+    );
 }
 
 #[test]
@@ -248,21 +321,50 @@ fn exclusions_are_reasoned_cfg_test_modules_outside_core_stage() {
         .collect();
     for x in &EXCLUDED {
         let path = resolve(x.path);
-        assert!(!x.reason.is_empty() && !x.reason.contains('\n'), "{}: reason", x.path);
-        assert!(!path.starts_with(&stage), "{}: Core stage file excluded", x.path);
-        assert!(listed.contains(x.parent), "{}: parent outside closure", x.path);
+        assert!(
+            !x.reason.is_empty() && !x.reason.contains('\n'),
+            "{}: reason",
+            x.path
+        );
+        assert!(
+            !path.starts_with(&stage),
+            "{}: Core stage file excluded",
+            x.path
+        );
+        assert!(
+            listed.contains(x.parent),
+            "{}: parent outside closure",
+            x.path
+        );
         let parent = resolve(x.parent);
         assert!(["lib.rs", "mod.rs"].iter().any(|n| parent.ends_with(n)));
         let file = format!("{}.rs", x.module);
-        assert_eq!(path, parent.parent().unwrap().join(&file), "{}: module", x.path);
+        assert_eq!(
+            path,
+            parent.parent().unwrap().join(&file),
+            "{}: module",
+            x.path
+        );
         let text = fs::read_to_string(&parent).unwrap();
         let decl = format!("#[cfg(test)]\nmod {};\n", x.module);
-        assert_eq!(text.matches(&decl).count(), 1, "{}: cfg(test) declaration", x.path);
+        assert_eq!(
+            text.matches(&decl).count(),
+            1,
+            "{}: cfg(test) declaration",
+            x.path
+        );
         let any_decl = format!("mod {}", x.module);
-        assert_eq!(text.matches(&any_decl).count(), 1, "{}: other declaration", x.path);
-        let named = format!("{file}\"");
+        assert_eq!(
+            text.matches(&any_decl).count(),
+            1,
+            "{}: other declaration",
+            x.path
+        );
+        // A whole path component, so `foo_tests.rs` does not name `tests.rs`.
+        let named = [format!("\"{file}\""), format!("/{file}\"")];
         for (source, f) in &sources {
-            assert!(!source.contains(&named), "{f:?} names excluded {file}");
+            let names = named.iter().any(|n| source.contains(n.as_str()));
+            assert!(!names, "{f:?} names excluded {file}");
         }
     }
 }
@@ -283,5 +385,8 @@ fn coverage_gap_controls_reject_unknown_files_and_unused_exclusions() {
     assert_eq!(unexcluded, (paths(&["/r/t.rs"]), paths(&[])));
     let broad = set(&["/r", "/r/a.rs", "/r/gone.rs", "/r/t.rs"]);
     let unused = gaps(&walked, &listed, &broad);
-    assert_eq!(unused, (paths(&[]), paths(&["/r", "/r/a.rs", "/r/gone.rs"])));
+    assert_eq!(
+        unused,
+        (paths(&[]), paths(&["/r", "/r/a.rs", "/r/gone.rs"]))
+    );
 }
