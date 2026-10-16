@@ -71,3 +71,9 @@ mod layout_a;
 
 #[cfg(test)]
 mod reference_stream_tests;
+
+// Private host arithmetic/fuel materialization; no constraint or wire ABI.
+#[cfg(test)]
+mod arithmetic_witness;
+#[cfg(test)]
+mod arithmetic_witness_normal_tests;

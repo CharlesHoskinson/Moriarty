@@ -1,0 +1,13 @@
+# Sherlock arithmetic/fuel host preparation
+
+The new fixed16-byte host functions compute Add/Sub/Lt/Mul and fuel witness columns for the selected A aux/2 source design. The private consumer first decodes the actual supplied full program, ProgramBlock and StateBlock, then derives operation, operand references, nodes, type guards and fuel inputs from those rows. The aux/1 prefix is unchanged.
+
+The captured standalone rustc1.99 run compiled15Rustfiles through3private shims and passed exactly9distinct normal tests, with zero failed, ignored or filtered tests and successful postflights. It includes owner P1 mixed Constants/Data operands, A3/S3/L4/M6, type/dispatch specimens and fuel precedence. The prior5test subset is not added to the current9test count. Fresh Muse and Opus source, execution-preflight and actual-result reviews approve only their stated scopes.
+
+The supplied wiring patch proposes four private module registrations across two existing module files. The final6source composition includes those2prospective module files and4unchanged reviewed leaves. The9test run did not compile the proposed shared module registrations or the full product crate. Applying the patch does not establish source-integration compilation. Root owns application, export andGit.
+
+Both final actual-result reviews correct earlier audit wording: M6 has maximum diagonal total1,044,224 at k15;979,454 is its k16total. Historic launcher RESULT.report_bytes counts characters before its appended newline; published manifests bind actual raw byte counts and hashes. Original captures remain unchanged.
+
+This is a selected public evidence set, not the complete runtime folder. It includes the current receipt, logs, dep-info, original source/result manifests, runtime source/config and shims, explicit source bindings, six plain reviews and their observed identities. The actual-result manifest pins23retainedrecords; some retained originals, including prior5test captures and the original Opus author JSON, are not exported. The published Opus source review is an explicitly mapped report-field extraction. Public selections do not claim complete reproduction of every original audit input. Provider raw output, prompts, private context and binaries are excluded.
+
+This result does not validate transitions or reachability, appendData, aux/2 packing, ABI/native binding, circuit constraints or certification. Canonical decode mode was compiled but not exercised. Product module wiring and full-crate compilation remain unobserved. No Cargo, SDK/backend, VM, model/degree/k, circuit, native/proof/key/ledger/cache action ran. C4 and nativeauthority0, allG4/IO1–8 and fullroadmap exits remain unchanged.
