@@ -1,0 +1,25 @@
+language "moriarty/2";
+agreement ConditionalGrantTranches {
+  asset CREDIT = { network: "oracle-local", issuer: "financial-core2-oracle", reference: "CREDIT", scale: 0 };
+  asset OPS = { network: "oracle-local", issuer: "financial-core2-oracle", reference: "OPS", scale: 0 };
+  state allocated: UInt = 6;
+  state marker: Bool = false;
+  action allocate(first: UInt, second: UInt) {
+    let opening = allocated;
+    liability("grantDue", CREDIT, "vault", "recipient", first + second);
+    transfer(CREDIT, "vault", "recipient", first);
+    discharge("grantDue", first);
+    next allocated = allocated + first;
+    await review(approved: Bool, supplement: UInt) when approved and supplement == 2;
+    liability("grantDue", CREDIT, "vault", "recipient", supplement);
+    fee(OPS, "vault", "auditor", 1);
+    next allocated = allocated + supplement;
+    await release(released: Bool) when released;
+    transfer(CREDIT, "vault", "recipient", second + supplement);
+    discharge("grantDue", second + supplement);
+    next allocated = allocated + second;
+    emit "openingAllocation"(opening);
+    emit "dutyPresent"(liability_present("grantDue"));
+    ensures allocated == opening + first + supplement + second;
+  }
+}
