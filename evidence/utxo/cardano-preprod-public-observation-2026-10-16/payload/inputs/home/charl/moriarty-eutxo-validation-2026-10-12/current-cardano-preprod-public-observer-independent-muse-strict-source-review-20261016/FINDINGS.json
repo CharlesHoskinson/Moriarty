@@ -1,0 +1,44 @@
+[
+  {
+    "evidence": "observe.py:10-11 claims 'No auth, cookies'; README.md:15 same; EXECUTION-PROPOSAL.json:8 'no auth/cookies'. FetcherSession yields _SyncSessionLogic (static.py:718-733) whose __enter__ creates CurlSession() with no args (static.py:206). curl_cffi BaseSession discard_cookies=False default (session.py:257,295), _cookies=Cookies(cookies) (session.py:262). _parse_response session.py:413-417: if not discard_cookies, self._cookies.update_cookies_from_curl_changes(COOKIECHANGES). cookies.py:221-232 SET updates jar. _request_once sends cookies_list=[self._cookies, cookies] (session.py:725). Candidate passes no discard_cookies/cookies arg (observe.py:214-223,256-259; RequestsSession/Get/Data params in _types.py:31-60 expose cookies per-request but candidate omits).",
+    "id": "F1-persistent-cookie-jar-reuse",
+    "requiredFix": "Pass discard_cookies=True on every session.get/post call (Scrapling _merge_request_args static.py:132-157 forwards non-skip non-None kwargs to curl Session.request which accepts discard_cookies session.py:890,939), or equivalent indexed-supported fresh/discard mechanism; correct observe.py docstring, README.md:15, EXECUTION-PROPOSAL.json:8 wording from 'no cookies' to discard/no-reuse. Re-review that one repair; do not claim no Set-Cookie receipt, only no storage/reuse.",
+    "severity": "critical",
+    "summary": "Candidate 'no cookies' claim does NOT hold. A Set-Cookie from step 1 is stored in the persistent curl_cffi jar and automatically offered on steps 2-5. This directly falsifies the predicate 'cannot accidentally add cookies' through five Session calls."
+  },
+  {
+    "evidence": "curl_cffi BaseSession trust_env=True default (session.py:238,268), verify env fallback reads REQUESTS_CA_BUNDLE/CURL_CA_BUNDLE (session.py:311-316). Scrapling FetcherSession signature static.py:661-679 and RequestsSession _types.py:31-47 have no trust_env/discard_cookies; CurlSession() created with no args static.py:206. Candidate passes only proxies indirectly as defaults {} / proxy None via _ConfigurationLogic static.py:75-77,121-123 and never disables env handling. EXECUTION-PROPOSAL.json:8 claims 'no ... proxies'; observe.py uses no trust_env-style arg (author correctly avoids inventing one, REPORT.md:10). set_curl_options body not indexed, so exact empty-proxies/env precedence is unresolved, but candidate code alone does not guarantee no proxy/CA-env effect.",
+    "id": "F2-proxy-trust-env-not-disabled",
+    "requiredFix": "Make wording honest: code passes no explicit proxy/auth, but env proxy/CA cannot be excluded by candidate as written. Require root clean-env precondition stripping http_proxy/https_proxy/HTTP_PROXY/HTTPS_PROXY/ALL_PROXY/all_proxy/NO_PROXY/no_proxy/REQUESTS_CA_BUNDLE/CURL_CA_BUNDLE (and verify known interpreter/site paths without arbitrary HOME reads; PYTHONNOUSERSITE/isolated interpreter can omit user-site Scrapling, so root must pin verified interpreter+site explicitly), or a separately inspected library-supported disable. No absolute no-proxy claim until that precondition is in the adopted proposal.",
+    "severity": "major",
+    "summary": "Proxy/trust_env and CA-bundle environment effects are not prevented by source. Root clean-env stripping is an operator precondition, not a candidate guarantee."
+  },
+  {
+    "evidence": "observe.py:234-235 allowlists content-range into ledger only; do_step returns parse_strict(raw) only (observe.py:253), losing header for validation. check_utxos(data,flags) observe.py:135-141 flags only len==1000 and aborts >1000. observe.py:278-280 then sets provider_reports_no_unspent_utxo_valid_unfunded_observation for any empty list. SOURCE-CONTRACTS.md:20,22 and EXPECTATIONS.json:48 require bounded-set-only/Content-Range retained; PROMPT requires declared range must not support complete-set/empty claim.",
+    "id": "F3-content-range-truncation-not-flagged",
+    "requiredFix": "Plumb allowlisted Content-Range from do_step into check_utxos; parse PostgREST range/total, flag bounded/incomplete whenever present and total/range does not exactly cover returned rows, and when completeness is unproven do not assign valid-unfunded for empty (use unknown/bounded status). Keep exactly-1000 flag as additional, not sole, truncation signal.",
+    "severity": "major",
+    "summary": "Content-Range is recorded but never evaluated. A <1000-row partial page, including empty with declared total>0 or unknown total, would be silently treated as complete and could produce a false valid-unfunded observation."
+  },
+  {
+    "evidence": "result/ledger created observe.py:194-200 but first save() only inside do_step after response/error (observe.py:226,245) or final (288). Step entry appended in memory observe.py:212 with no save before session.get/post (218-223). Main try observe.py:254-280 catches only Abort observe.py:281-284. FetcherSession construction/enter is inside that try but a non-Abort CurlError/RuntimeError from __enter__ (static.py:727-731) propagates, leaving output dir/steps with no RESULT.json at all. Any non-Abort in response handling (observe.py:228-253, e.g. write_bytes OSError) leaves on-disk RESULT at STARTED with no finished_utc/blocked_boundary terminal receipt.",
+    "id": "F4-partial-preservation-terminal-gaps",
+    "requiredFix": "save() initial STARTED RESULT immediately after result definition and save() after ledger.append before each request; wrap session-enter and whole batch in except Exception -> BLOCKED_PARTIAL_PRESERVED with exception type name only, preserving raw/ledger and final save. Keep Abort path unchanged.",
+    "severity": "major",
+    "summary": "Partial preservation holds for Abort/transport paths, but not universally: session-enter failure can produce no RESULT, in-flight step is not persisted before launch, and unexpected non-Abort exceptions leave stale STARTED without honest terminal record."
+  },
+  {
+    "evidence": "parse_strict observe.py:47-63 rejects duplicate keys and literal NaN/Infinity via parse_constant, but json.loads default parse_float yields inf for 1e999 overflow; opaque retained fields (cost_models observe.py:126-132, params extras) could carry inf, then final json.dumps observe.py:203-204/288 emits non-strict Infinity in RESULT.json. EXPECTATIONS.json:53-54 requires NaN/Infinity reject.",
+    "id": "F5-json-overflow-float",
+    "requiredFix": "Add parse_float that rejects non-finite/overflow (e.g. Decimal or float check) in parse_strict, or validate retained structures for finite numbers before save. Minor compared with F1-F4, but required for strict-JSON claim.",
+    "severity": "minor",
+    "summary": "Literal NaN/Infinity are rejected, but numeric overflow to infinity is not, weakening strict-schema validation and RESULT strictness."
+  },
+  {
+    "evidence": "EXECUTION-PROPOSAL.json:9-10 outer 120s+10s, CPU 15:20, AS 1GiB, FSIZE 8MiB, body 2097152; observe.py:23-24 2MiB post-buffer, TIMEOUT 15. Per-request worst controller time 5*15=75s plus overhead leaves reserve within 120s. No code execution was performed to validate limits; RLIMIT_FSIZE per-file vs aggregate interpretation and RESULT size with duplicated parsed state were not established from indexed source.",
+    "id": "F6-resource-proposal-unverified-residual",
+    "requiredFix": "Root, if ever adopting after F1-F4 repairs, must state FSIZE is per-file, confirm RESULT+each raw under it, pin source SHA at materialization M (EXECUTION-PROPOSAL.json:10 placeholder root-fills metadata only, no silent code edits), use fixed fresh O observe.py:174-177 exists-check, and not treat AS/body as streaming download cap.",
+    "severity": "info",
+    "summary": "Resource arithmetic is superficially sensible (75s request budget <120s outer) but is a proposal only, not source-proven containment; 2MiB is post-buffer (custom.py:83-86 body already materialized), AS is not a strict download cap."
+  }
+]

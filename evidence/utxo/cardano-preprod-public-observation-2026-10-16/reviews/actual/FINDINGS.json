@@ -1,0 +1,30 @@
+[
+  {
+    "evidence": "Actual RESULT.json:10,13-18; raw steps/03-address_utxos.bin '[]'; observe.py:172-174,415-420; EXPECTATIONS.json:49,71.",
+    "id": "ACT-OBS-1-empty-result-completeness-unknown",
+    "requiredFix": "No repair. Any downstream wording must say funding was not observed in one bounded provider result; 'wallet unfunded', 'zero ADA', and 'full UTxO set empty' are prohibited restatements.",
+    "severity": "info",
+    "summary": "Qualification preserved: '*/*' total-unknown empty response is not proof the wallet is unfunded; completeness_proven=false and fund_status is provider_reports_empty_bounded_result_completeness_unknown."
+  },
+  {
+    "evidence": "Actual RESULT.json:22-26,268-282 source shape; raw 04 body PlutusV1/V2/V3 arrays directly inspected without any ordering/unit semantics in the records; Gemini REVIEW-3 and EXPECTATIONS.json:44 likewise keep cost_models opaque.",
+    "id": "ACT-OBS-2-cost-models-opaque",
+    "requiredFix": "No repair. No fee, tx-fit, unit-conversion, or local VM-cost qualification may be derived from this observation.",
+    "severity": "info",
+    "summary": "Cost models were captured as an opaque object; coefficient ordering, units, and ledger budget application are not established by this batch."
+  },
+  {
+    "evidence": "Actual RESULT.json:7,52-71; observe.py:409-413.",
+    "id": "ACT-OBS-3-tip-bracket-not-atomic",
+    "requiredFix": "No repair. Treat genesis/UTxO/params as bracketed by one provider's identical tips only.",
+    "severity": "info",
+    "summary": "Identical before/after tips from the same provider bracket the batch but do not make it an atomic snapshot or authenticated ledger state."
+  },
+  {
+    "evidence": "No step, root, adoption, or recovery record opened in this review contradicts the falsifiable claim as qualified above: five 200 responses, one attempt each, fixed host/URLs/bodies per observe.py:32-41,334-356 and actual RESULT step URLs/request_body_sha256 for the POST (RESULT.json:131), clean env and bounds per CC6, raw custody per CC2. Direct reviewer recomputation of hashes and of the POST body digest was not performed (no execution authorized), so hash agreement is pin-to-pin textual corroboration, not independent cryptographic recomputation.",
+    "id": "ACT-FAIL-0-no-material-actual-failure-found",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "No material actual-result failure was found within the qualified claim; the sole evidentiary limit is that this reviewer verified pins and inspected bodies rather than recomputing digests or replaying the run."
+  }
+]
