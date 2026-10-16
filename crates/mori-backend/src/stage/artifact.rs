@@ -2,8 +2,7 @@
 //! the exact frozen shape only. It establishes no proof, native binding, event
 //! authentication or consumption: those gates stay unperformed.
 use super::frame::{
-    EVENT_ROLE, PENDING_ROLES, POST_CAPTURE_ROLE, POST_SITE_ROLE, PRE_CAPTURE_ROLE,
-    PRE_SITE_ROLE,
+    EVENT_ROLE, PENDING_ROLES, POST_CAPTURE_ROLE, POST_SITE_ROLE, PRE_CAPTURE_ROLE, PRE_SITE_ROLE,
 };
 use crate::{
     BalanceDescriptor, EffectDescriptor, Error, Gate, LiabilityDescriptor, PublicBinding, Target,
@@ -190,7 +189,9 @@ impl StagedArtifact {
             return Err(refuse("Staged artifacts are unsigned only."));
         }
         if self.semantics != SEMANTICS_2 {
-            return Err(refuse("Staged artifacts require moriarty-core/2 semantics."));
+            return Err(refuse(
+                "Staged artifacts require moriarty-core/2 semantics.",
+            ));
         }
         let labels = [
             ("qualification", &self.qualification),
@@ -202,12 +203,16 @@ impl StagedArtifact {
             .zip(STAGE_LABELS.iter())
             .any(|((key, value), (k, v))| key != k || value.as_str() != *v)
         {
-            return Err(refuse("Staged qualification labels differ from the profile."));
+            return Err(refuse(
+                "Staged qualification labels differ from the profile.",
+            ));
         }
         if self.resources.logical_profile != LOGICAL_COST_PROFILE_2
             || self.resources.logical_enforcement != LOGICAL_ENFORCEMENT
         {
-            return Err(refuse("Staged logical-work metadata differs from the profile."));
+            return Err(refuse(
+                "Staged logical-work metadata differs from the profile.",
+            ));
         }
         authorization::decode_digest(&self.program_hash)?;
         authorization::decode_digest(&self.plan_hash)?;
@@ -222,7 +227,9 @@ impl StagedArtifact {
                 .zip(expected_gates)
                 .any(|(gate, predicate)| gate.predicate != *predicate || gate.status != UNPERFORMED)
         {
-            return Err(refuse("Staged gates differ from the ten unperformed predicates."));
+            return Err(refuse(
+                "Staged gates differ from the ten unperformed predicates.",
+            ));
         }
         if self.circuits.len() > MAX_STAGED_CIRCUITS {
             return Err(error("limit", "Program exceeds staged circuit limit."));
@@ -252,9 +259,12 @@ impl StagedArtifact {
 
     fn check_totals(&self) -> Result<(), Error> {
         let overflow = || error("limit", "Staged resource total overflow.");
-        let (mut instructions, mut zkir_bytes, mut public_values, mut replay) = (0u32, 0u32, 0u32, 0);
+        let (mut instructions, mut zkir_bytes, mut public_values, mut replay) =
+            (0u32, 0u32, 0u32, 0);
         for c in &self.circuits {
-            instructions = instructions.checked_add(c.instruction_count).ok_or_else(overflow)?;
+            instructions = instructions
+                .checked_add(c.instruction_count)
+                .ok_or_else(overflow)?;
             zkir_bytes = u32::try_from(c.zkir.len())
                 .ok()
                 .and_then(|n| zkir_bytes.checked_add(n))
@@ -266,12 +276,18 @@ impl StagedArtifact {
             replay = replay.max(c.replay_steps);
         }
         let r = &self.resources;
-        if (r.instructions, r.zkir_bytes, r.public_values, r.max_replay_steps)
-            != (instructions, zkir_bytes, public_values, replay)
+        if (
+            r.instructions,
+            r.zkir_bytes,
+            r.public_values,
+            r.max_replay_steps,
+        ) != (instructions, zkir_bytes, public_values, replay)
         {
             return Err(refuse("Staged resource totals differ from the circuits."));
         }
-        if instructions > self.target.max_instructions || zkir_bytes > self.target.max_artifact_bytes {
+        if instructions > self.target.max_instructions
+            || zkir_bytes > self.target.max_artifact_bytes
+        {
             return Err(error(
                 "limit",
                 "Program exceeds target instruction or ZKIR byte limit.",
@@ -283,10 +299,15 @@ impl StagedArtifact {
         let count = u32::try_from(bytes.len())
             .map_err(|_| error("limit", "Artifact envelope exceeds u32 byte count."))?;
         if count > self.target.max_artifact_bytes {
-            return Err(error("limit", "Artifact envelope exceeds target byte limit."));
+            return Err(error(
+                "limit",
+                "Artifact envelope exceeds target byte limit.",
+            ));
         }
         if count != r.artifact_bytes {
-            return Err(refuse("Staged artifact byte count is not its envelope size."));
+            return Err(refuse(
+                "Staged artifact byte count is not its envelope size.",
+            ));
         }
         Ok(())
     }
@@ -298,14 +319,18 @@ fn is_pending(role: &str) -> bool {
 
 /// One action: segments exactly 0..=N, sites, capture continuity, pending
 /// frames and logical work.
-fn check_action(run: &[StagedCircuit], logical: &ActionLogical, registry: usize) -> Result<(), Error> {
+fn check_action(
+    run: &[StagedCircuit],
+    logical: &ActionLogical,
+    registry: usize,
+) -> Result<(), Error> {
     let n = run.len() - 1;
     let action = &run[0].action;
-    if n > MAX_AWAITS_PER_ACTION
-        || logical.action != *action
-        || logical.segments.len() != run.len()
+    if n > MAX_AWAITS_PER_ACTION || logical.action != *action || logical.segments.len() != run.len()
     {
-        return Err(refuse(format!("Segments of {action:?} are not exactly 0..=N.")));
+        return Err(refuse(format!(
+            "Segments of {action:?} are not exactly 0..=N."
+        )));
     }
     // captures(N) is the entry layout of the last segment: the width-L layout.
     let layout: &[CaptureSlot] = if n == 0 { &[] } else { &run[n].capture_in };
@@ -328,14 +353,18 @@ fn check_action(run: &[StagedCircuit], logical: &ActionLogical, registry: usize)
             return Err(refuse("Advance segments have no input positions."));
         }
         if c.liability_frame.len() != registry {
-            return Err(refuse("Every segment carries the whole liability registry."));
+            return Err(refuse(
+                "Every segment carries the whole liability registry.",
+            ));
         }
-        if c.balance_frame.iter().map(|b| (&b.asset, &b.account)).ne(run[0]
-            .balance_frame
+        if c.balance_frame
             .iter()
-            .map(|b| (&b.asset, &b.account)))
+            .map(|b| (&b.asset, &b.account))
+            .ne(run[0].balance_frame.iter().map(|b| (&b.asset, &b.account)))
         {
-            return Err(refuse("Every segment carries the whole-action balance frame."));
+            return Err(refuse(
+                "Every segment carries the whole-action balance frame.",
+            ));
         }
         let s = &logical.segments[j];
         if s.segment != segment || s.committed_before != committed {
@@ -379,14 +408,17 @@ fn check_action(run: &[StagedCircuit], logical: &ActionLogical, registry: usize)
         if (j == 0 && !c.event.is_empty()) || c.event.len() > MAX_EVENT_BINDERS {
             return Err(refuse("Event layout differs from the entry site."));
         }
-        let p = c
-            .pending_positions
-            .as_ref()
-            .ok_or_else(|| refuse(format!("Segment {j} of {action:?} lacks pending positions.")))?;
+        let p = c.pending_positions.as_ref().ok_or_else(|| {
+            refuse(format!(
+                "Segment {j} of {action:?} lacks pending positions."
+            ))
+        })?;
         check_pending(c, p, layout)?;
     }
     if logical.plan_total != committed {
-        return Err(refuse(format!("Plan total of {action:?} differs from its segments.")));
+        return Err(refuse(format!(
+            "Plan total of {action:?} differs from its segments."
+        )));
     }
     Ok(())
 }
@@ -394,31 +426,61 @@ fn check_action(run: &[StagedCircuit], logical: &ActionLogical, registry: usize)
 /// Roles, names, types and constants per the frame rules; positions are in
 /// range, distinct, disjoint from every other declared position, contiguous at
 /// their two insertion points, and no other binding carries a pending role.
-fn check_pending(c: &StagedCircuit, p: &PendingPositions, layout: &[CaptureSlot]) -> Result<(), Error> {
+fn check_pending(
+    c: &StagedCircuit,
+    p: &PendingPositions,
+    layout: &[CaptureSlot],
+) -> Result<(), Error> {
     let width = layout.len();
     if p.pre_captures.len() != width
         || p.post_captures.len() != width
         || p.events.len() != c.event.len()
     {
-        return Err(refuse("Pending positions differ from the capture and event widths."));
+        return Err(refuse(
+            "Pending positions differ from the capture and event widths.",
+        ));
     }
     let padding = |i: usize, len: usize| (i >= len).then(|| "0".to_string());
     let entry = c.entry_site.to_string();
     let exit = c.exit_site.to_string();
     let mut pre: Vec<(u32, &str, &str, Type, Option<String>)> = Vec::new();
-    pre.push((p.pre_site, PRE_SITE_ROLE, &c.action, Type::UInt, Some(entry)));
+    pre.push((
+        p.pre_site,
+        PRE_SITE_ROLE,
+        &c.action,
+        Type::UInt,
+        Some(entry),
+    ));
     for (i, slot) in layout.iter().enumerate() {
         let constant = padding(i, c.capture_in.len());
-        pre.push((p.pre_captures[i], PRE_CAPTURE_ROLE, &slot.name, slot.ty, constant));
+        pre.push((
+            p.pre_captures[i],
+            PRE_CAPTURE_ROLE,
+            &slot.name,
+            slot.ty,
+            constant,
+        ));
     }
     for (position, binder) in p.events.iter().zip(&c.event) {
         pre.push((*position, EVENT_ROLE, &binder.name, binder.ty, None));
     }
     let mut post: Vec<(u32, &str, &str, Type, Option<String>)> = Vec::new();
-    post.push((p.post_site, POST_SITE_ROLE, &c.action, Type::UInt, Some(exit)));
+    post.push((
+        p.post_site,
+        POST_SITE_ROLE,
+        &c.action,
+        Type::UInt,
+        Some(exit),
+    ));
     for (i, slot) in layout.iter().enumerate() {
         let constant = padding(i, c.capture_out.len());
-        post.push((p.post_captures[i], POST_CAPTURE_ROLE, &slot.name, slot.ty, constant));
+        post.push((
+            p.post_captures[i],
+            POST_CAPTURE_ROLE,
+            &slot.name,
+            slot.ty,
+            constant,
+        ));
     }
     let mut seen = BTreeSet::new();
     for (position, role, name, ty, constant) in pre.iter().chain(&post) {
@@ -454,15 +516,18 @@ fn check_pending(c: &StagedCircuit, p: &PendingPositions, layout: &[CaptureSlot]
         ]);
     }
     if others.iter().any(|q| seen.contains(q)) {
-        return Err(refuse("Pending positions overlap other declared positions."));
+        return Err(refuse(
+            "Pending positions overlap other declared positions.",
+        ));
     }
-    if c
-        .public_inputs
+    if c.public_inputs
         .iter()
         .enumerate()
         .any(|(i, b)| is_pending(&b.role) && !seen.contains(&(i as u32)))
     {
-        return Err(refuse("A pending role appears outside the declared positions."));
+        return Err(refuse(
+            "A pending role appears outside the declared positions.",
+        ));
     }
     // The pre block follows the last pre-liability position; the post block
     // follows the last post-liability position and ends the unsigned ABI.
@@ -496,7 +561,9 @@ fn check_pending(c: &StagedCircuit, p: &PendingPositions, layout: &[CaptureSlot]
         || !contiguous(&post, post_start)
         || post_start + post.len() != c.public_inputs.len()
     {
-        return Err(refuse("Pending blocks are not at their frame insertion points."));
+        return Err(refuse(
+            "Pending blocks are not at their frame insertion points.",
+        ));
     }
     Ok(())
 }

@@ -29,9 +29,9 @@ pub struct AuthorizationArgs {
 pub enum LoadedAuthorization {
     Unsigned,
     Signed {
-        authority: ExpectedAuthority,
+        authority: Box<ExpectedAuthority>,
         at: UInt,
-        signature: SignedIntent,
+        signature: Box<SignedIntent>,
     },
 }
 impl AuthorizationArgs {
@@ -58,9 +58,9 @@ impl AuthorizationArgs {
             ));
         };
         Ok(LoadedAuthorization::Signed {
-            authority: super::core_io::authority(authority)?,
+            authority: Box::new(super::core_io::authority(authority)?),
             at: UInt(at),
-            signature: super::core_io::signed_intent(signature)?,
+            signature: Box::new(super::core_io::signed_intent(signature)?),
         })
     }
 }

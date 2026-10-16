@@ -710,8 +710,8 @@ fn direct_schema_decoding_and_manual_values_keep_semantic_validation() {
         mori_backend::authorization::decode_digest(fixture()["payload_hash"].as_str().unwrap())
             .unwrap();
     let limbs = mori_backend::authorization::digest_limbs(digest);
-    for i in 0..2 {
-        assert_eq!(limbs[i].0.to_string(), fixture()["payload_limbs"][i]);
+    for (i, limb) in limbs.iter().enumerate().take(2) {
+        assert_eq!(limb.0.to_string(), fixture()["payload_limbs"][i]);
     }
     p.predecessor = "\u{85}".to_owned();
     assert!(p.predecessor_hash().is_err());

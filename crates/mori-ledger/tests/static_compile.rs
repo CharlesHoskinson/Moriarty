@@ -1433,8 +1433,7 @@ fn signed_nonce_domain_formula_address_omission_and_key_read_write() {
         .collect::<Vec<_>>();
     let before = groups
         .iter()
-        .filter(|(_, g)| g.origin == "signed-authority-pre-member")
-        .last()
+        .rfind(|(_, g)| g.origin == "signed-authority-pre-member")
         .unwrap()
         .0
         .1
@@ -1448,8 +1447,7 @@ fn signed_nonce_domain_formula_address_omission_and_key_read_write() {
     );
     let after = groups
         .iter()
-        .filter(|(_, g)| g.origin == "signed-authority-post-member")
-        .last()
+        .rfind(|(_, g)| g.origin == "signed-authority-post-member")
         .unwrap()
         .0
         .1
@@ -1520,8 +1518,7 @@ fn signed_nonce_domain_formula_address_omission_and_key_read_write() {
     );
     let pre_count = groups
         .iter()
-        .filter(|(_, g)| g.origin == "signed-authority-pre-count")
-        .last()
+        .rfind(|(_, g)| g.origin == "signed-authority-pre-count")
         .unwrap()
         .0
         .1
@@ -1529,8 +1526,7 @@ fn signed_nonce_domain_formula_address_omission_and_key_read_write() {
         .unwrap();
     let post_count = groups
         .iter()
-        .filter(|(_, g)| g.origin == "signed-authority-post-count")
-        .last()
+        .rfind(|(_, g)| g.origin == "signed-authority-post-count")
         .unwrap()
         .0
         .1

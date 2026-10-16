@@ -663,20 +663,19 @@ fn event_emission_domain_preserves_shorter_instances_and_refuses_oversized_branc
             value: StateValue::Array(v),
             ..
         } = op
+            && v.len() == 3
         {
-            if v.len() == 3 {
-                *op = Op::Push {
-                    storage: false,
-                    value: StateValue::Array(
-                        vec![
-                            mori_ledger::ops::cell(1u32.into()),
-                            mori_ledger::ops::cell((LogEventType::Misc as u8).into()),
-                            mori_ledger::ops::cell(AlignedValue::from(payload.clone())),
-                        ]
-                        .into(),
-                    ),
-                };
-            }
+            *op = Op::Push {
+                storage: false,
+                value: StateValue::Array(
+                    vec![
+                        mori_ledger::ops::cell(1u32.into()),
+                        mori_ledger::ops::cell((LogEventType::Misc as u8).into()),
+                        mori_ledger::ops::cell(AlignedValue::from(payload.clone())),
+                    ]
+                    .into(),
+                ),
+            };
         }
     }
     bad.inputs[0] = Fr::from(u128::MAX);

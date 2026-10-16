@@ -2,7 +2,7 @@
 //! These builders contain source programs only; expectations stay in the
 //! independently authored literal tables.
 
-use super::super::{BinaryOp, Expr, ExprRef, Function, Parameter, Program, Type, Value};
+use super::{BinaryOp, Expr, ExprRef, Function, Parameter, Program, Type, Value};
 use std::sync::Arc;
 
 fn expr(expression: Expr) -> ExprRef {

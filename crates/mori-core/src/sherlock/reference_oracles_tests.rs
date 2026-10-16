@@ -52,8 +52,7 @@ struct ExpectedCase {
 include!("normal_oracles.rs");
 include!("extra_normal_oracles.rs");
 
-#[path = "extra_oracle_programs.rs"]
-mod extra_oracle_programs;
+use super::extra_oracle_programs;
 
 fn expr(expression: Expr) -> ExprRef {
     Arc::new(expression)
@@ -201,15 +200,27 @@ trait NormalExecution {
 }
 
 impl NormalExecution for Machine {
-    fn snapshot(&self) -> Snapshot { Machine::snapshot(self) }
-    fn step(&mut self) -> Option<StepRecord> { Machine::step(self) }
-    fn run(&mut self) -> Snapshot { Machine::run(self) }
+    fn snapshot(&self) -> Snapshot {
+        Machine::snapshot(self)
+    }
+    fn step(&mut self) -> Option<StepRecord> {
+        Machine::step(self)
+    }
+    fn run(&mut self) -> Snapshot {
+        Machine::run(self)
+    }
 }
 
 impl NormalExecution for super::image_reference::ImageMachine {
-    fn snapshot(&self) -> Snapshot { self.snapshot() }
-    fn step(&mut self) -> Option<StepRecord> { self.step() }
-    fn run(&mut self) -> Snapshot { self.run() }
+    fn snapshot(&self) -> Snapshot {
+        self.snapshot()
+    }
+    fn step(&mut self) -> Option<StepRecord> {
+        self.step()
+    }
+    fn run(&mut self) -> Snapshot {
+        self.run()
+    }
 }
 
 // Exercise the new physical host representation, not a new semantic relation.
@@ -218,17 +229,26 @@ impl NormalExecution for super::image_reference::ImageMachine {
 struct ImageMaterializedMachine(Machine);
 
 fn materialize_snapshot(snapshot: &Snapshot) -> Snapshot {
-    use super::machine_image::{HostImageLimits, encode_snapshot, decode_snapshot};
+    use super::machine_image::{HostImageLimits, decode_snapshot, encode_snapshot};
     // Explicit host test limits only; these select no native/product capacities.
-    let limits = HostImageLimits { rows: 20_000, cells: 40_000, name_bytes: 1_000_000 };
+    let limits = HostImageLimits {
+        rows: 20_000,
+        cells: 40_000,
+        name_bytes: 1_000_000,
+    };
     let image = encode_snapshot(snapshot, limits).expect("normal snapshot fits test host limits");
     let materialized = decode_snapshot(&image);
-    assert_eq!(&materialized, snapshot, "complete typed host materialization");
+    assert_eq!(
+        &materialized, snapshot,
+        "complete typed host materialization"
+    );
     materialized
 }
 
 impl NormalExecution for ImageMaterializedMachine {
-    fn snapshot(&self) -> Snapshot { materialize_snapshot(&self.0.snapshot()) }
+    fn snapshot(&self) -> Snapshot {
+        materialize_snapshot(&self.0.snapshot())
+    }
     fn step(&mut self) -> Option<StepRecord> {
         self.0.step().map(|record| StepRecord {
             rule_start_line: record.rule_start_line,
@@ -237,7 +257,9 @@ impl NormalExecution for ImageMaterializedMachine {
             after: materialize_snapshot(&record.after),
         })
     }
-    fn run(&mut self) -> Snapshot { materialize_snapshot(&self.0.run()) }
+    fn run(&mut self) -> Snapshot {
+        materialize_snapshot(&self.0.run())
+    }
 }
 
 // One common assertion consumer; neither implementation computes expectations.
@@ -495,45 +517,81 @@ fn image_n08_recursive_factorial() {
 // Compare retained grouped records directly with the frozen literals. This does
 // not use an ungrouped execution or either evaluator to derive expectations.
 fn compare_grouped_case(case_id: &str) {
-    use super::reference_slice::{advance_m, SliceBoundary, SliceBoundaryKind, SliceStop};
-    let case = CASES.iter().chain(EXTRA_CASES.iter())
-        .find(|case| case.case_id == case_id).expect("frozen normal case");
+    use super::reference_slice::{SliceBoundary, SliceBoundaryKind, SliceStop, advance_m};
+    let case = CASES
+        .iter()
+        .chain(EXTRA_CASES.iter())
+        .find(|case| case.case_id == case_id)
+        .expect("frozen normal case");
     for m in [1, 2, 4, 8] {
         for prefix in case.prefixes {
             let context = format!("{case_id}, group {m}, fuel {}", prefix.initial_fuel);
-            let mut machine = Machine::new(normal_program(case_id), prefix.initial_fuel, case.stack_limit);
+            let mut machine = Machine::new(
+                normal_program(case_id),
+                prefix.initial_fuel,
+                case.stack_limit,
+            );
             let mut prior = machine.snapshot();
             let initial = &case.states[0];
-            compare_snapshot(&prior, case, initial, prefix.initial_fuel,
-                prefix.initial_fuel, initial.control, case.pending_output, &context);
+            compare_snapshot(
+                &prior,
+                case,
+                initial,
+                prefix.initial_fuel,
+                prefix.initial_fuel,
+                initial.control,
+                case.pending_output,
+                &context,
+            );
             let mut charged = 0;
             let mut published = false;
             while !published {
                 let slice = advance_m(&mut machine, m);
                 assert_eq!(slice.profile_id, PROFILE, "{context}: profile");
                 assert_eq!(slice.start, prior, "{context}: complete group start");
-                assert!(!slice.records.is_empty(), "{context}: pending execution must retain its next event");
+                assert!(
+                    !slice.records.is_empty(),
+                    "{context}: pending execution must retain its next event"
+                );
                 assert!(slice.records.len() <= m, "{context}: event budget");
                 assert_eq!(slice.prefix_work.len(), slice.records.len() + 1);
                 assert_eq!(slice.prefix_work[0], 0);
                 let mut group_work = 0;
                 for (position, record) in slice.records.iter().enumerate() {
                     assert!(!published, "{context}: no event after publication");
-                    assert_eq!(record.before, prior, "{context}: complete internal pre-state");
+                    assert_eq!(
+                        record.before, prior,
+                        "{context}: complete internal pre-state"
+                    );
                     if charged < prefix.boundary_state_index {
                         charged += 1;
                         let expected = &case.states[charged];
                         assert_eq!(record.charge, 1, "{context}: internal charged event");
                         assert_eq!(Some(record.rule_start_line), expected.via_rule_start_line);
-                        compare_snapshot(&record.after, case, expected, prefix.initial_fuel,
+                        compare_snapshot(
+                            &record.after,
+                            case,
+                            expected,
+                            prefix.initial_fuel,
                             prefix.initial_fuel - expected.charged_steps,
-                            expected.control, case.pending_output, &context);
+                            expected.control,
+                            case.pending_output,
+                            &context,
+                        );
                     } else {
                         assert_eq!(record.charge, 0, "{context}: free publication");
                         assert_eq!(record.rule_start_line, prefix.publication_rule_start_line);
                         let boundary = &case.states[prefix.boundary_state_index];
-                        compare_snapshot(&record.after, case, boundary, prefix.initial_fuel,
-                            prefix.remaining_fuel, ".K", prefix.output, &context);
+                        compare_snapshot(
+                            &record.after,
+                            case,
+                            boundary,
+                            prefix.initial_fuel,
+                            prefix.remaining_fuel,
+                            ".K",
+                            prefix.output,
+                            &context,
+                        );
                         published = true;
                     }
                     group_work += u128::from(record.charge);
@@ -542,11 +600,26 @@ fn compare_grouped_case(case_id: &str) {
                 }
                 assert_eq!(slice.end, prior, "{context}: complete group end");
                 assert_eq!(machine.snapshot(), prior, "{context}: live machine end");
-                let kind = if published { SliceBoundaryKind::Terminal }
-                    else { SliceBoundaryKind::TechnicalCut };
-                assert_eq!(slice.boundaries, vec![SliceBoundary { position: slice.records.len(), kind }]);
-                assert_eq!(slice.stop, if published { SliceStop::Outcome(prior.outcome.clone()) }
-                    else { SliceStop::TechnicalCut });
+                let kind = if published {
+                    SliceBoundaryKind::Terminal
+                } else {
+                    SliceBoundaryKind::TechnicalCut
+                };
+                assert_eq!(
+                    slice.boundaries,
+                    vec![SliceBoundary {
+                        position: slice.records.len(),
+                        kind
+                    }]
+                );
+                assert_eq!(
+                    slice.stop,
+                    if published {
+                        SliceStop::Outcome(prior.outcome.clone())
+                    } else {
+                        SliceStop::TechnicalCut
+                    }
+                );
             }
             assert_eq!(charged, prefix.boundary_state_index);
             let terminal = advance_m(&mut machine, m);
@@ -555,7 +628,13 @@ fn compare_grouped_case(case_id: &str) {
             assert!(terminal.records.is_empty());
             assert_eq!(terminal.prefix_work, vec![0]);
             assert_eq!(terminal.stop, SliceStop::Outcome(prior.outcome.clone()));
-            assert_eq!(terminal.boundaries, vec![SliceBoundary { position: 0, kind: SliceBoundaryKind::Terminal }]);
+            assert_eq!(
+                terminal.boundaries,
+                vec![SliceBoundary {
+                    position: 0,
+                    kind: SliceBoundaryKind::Terminal
+                }]
+            );
         }
     }
 }

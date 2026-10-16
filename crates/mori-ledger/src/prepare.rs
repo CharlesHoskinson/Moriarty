@@ -407,6 +407,7 @@ impl OutputCodec {
         crate::call_artifacts::json_bytes(value, self.0)
     }
 }
+#[allow(clippy::too_many_arguments)]
 fn prepare_admitted(
     p: &Program,
     d: &StaticBindings,
@@ -436,6 +437,7 @@ fn prepare_admitted(
         None,
     )
 }
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn prepare_admitted_signed(
     p: &Program,
     d: &StaticBindings,
@@ -892,6 +894,7 @@ impl PreparedInstalledCall {
         self.context.clone()
     }
 }
+#[allow(clippy::too_many_arguments)]
 pub fn prepare_installed_native_call(
     source: &str,
     p: &Program,
@@ -997,8 +1000,31 @@ pub(crate) fn admit_preparation_work(
     crate::call_artifacts::admit_intent_work(&processed, limits)
 }
 #[cfg(test)]
-#[path = "../tests/support/mod.rs"]
-mod installed_test_support;
+use crate::test_support as installed_test_support;
+
+pub(crate) fn final_installed_readback(
+    prepared: &Readback,
+    verified: &crate::proving::CallVerification,
+) -> Readback {
+    let mut final_readback = prepared.clone();
+    final_readback.prospective_outputs_hex = verified.prospective_outputs_hex.clone();
+    final_readback.charged_successor_hex = verified.charged_successor_hex.clone();
+    final_readback.measured_gas_hex = verified.measured_gas_hex.clone();
+    if let Some(projection) = &prepared.relation {
+        final_readback.declared_gas_hex = projection.processed_declared_gas_hex.clone();
+    }
+    final_readback.requires_reconstruction_after_final_intent = false;
+    final_readback.evidence.qualification = if verified.scope == crate::signed::RESULT_SCOPE {
+        crate::signed::QUALIFICATION
+    } else {
+        INSTALLED_QUALIFICATION
+    };
+    if verified.scope == crate::signed::RESULT_SCOPE {
+        final_readback.evidence.signature_verification = "strict-host-fens-fixed-compiled-policy";
+    }
+    final_readback.evidence.proof_verification = "ledger-real";
+    final_readback
+}
 #[cfg(test)]
 mod installed_work_tests {
     use super::*;
@@ -1037,28 +1063,4 @@ mod installed_work_tests {
         limits.max_public_inputs -= 1;
         assert!(admit_preparation_work(b, &limits).is_err());
     }
-}
-
-pub(crate) fn final_installed_readback(
-    prepared: &Readback,
-    verified: &crate::proving::CallVerification,
-) -> Readback {
-    let mut final_readback = prepared.clone();
-    final_readback.prospective_outputs_hex = verified.prospective_outputs_hex.clone();
-    final_readback.charged_successor_hex = verified.charged_successor_hex.clone();
-    final_readback.measured_gas_hex = verified.measured_gas_hex.clone();
-    if let Some(projection) = &prepared.relation {
-        final_readback.declared_gas_hex = projection.processed_declared_gas_hex.clone();
-    }
-    final_readback.requires_reconstruction_after_final_intent = false;
-    final_readback.evidence.qualification = if verified.scope == crate::signed::RESULT_SCOPE {
-        crate::signed::QUALIFICATION
-    } else {
-        INSTALLED_QUALIFICATION
-    };
-    if verified.scope == crate::signed::RESULT_SCOPE {
-        final_readback.evidence.signature_verification = "strict-host-fens-fixed-compiled-policy";
-    }
-    final_readback.evidence.proof_verification = "ledger-real";
-    final_readback
 }

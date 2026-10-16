@@ -7,16 +7,14 @@
 use super::*;
 use std::sync::Arc;
 
-#[path = "extra_oracle_programs.rs"]
-mod extra_oracle_programs;
+use super::super::extra_oracle_programs;
 
 // N07's 38 charged rules followed by its free publication, transcribed from
 // the frozen independent derivation. Changing group size never changes this list.
 const N07_RULES: &[usize] = &[
-    131, 135, 102, 177, 102, 177, 102, 181, 200, 204, 208, 135,
-    117, 135, 117, 135, 108, 149, 117, 135, 102, 149, 108, 153,
-    223, 153, 223, 149, 117, 135, 102, 149, 108, 153, 223, 153,
-    223, 185, 80,
+    131, 135, 102, 177, 102, 177, 102, 181, 200, 204, 208, 135, 117, 135, 117, 135, 108, 149, 117,
+    135, 102, 149, 108, 153, 223, 153, 223, 149, 117, 135, 102, 149, 108, 153, 223, 153, 223, 185,
+    80,
 ];
 
 fn machine(case: &str, fuel: u128) -> Machine {
@@ -32,7 +30,11 @@ fn environment(n: u128) -> Environment {
 }
 
 fn rules(slice: &ReferenceSlice) -> Vec<usize> {
-    slice.records.iter().map(|record| record.rule_start_line).collect()
+    slice
+        .records
+        .iter()
+        .map(|record| record.rule_start_line)
+        .collect()
 }
 
 fn assert_contiguous(slice: &ReferenceSlice) {
@@ -55,10 +57,13 @@ fn cut(machine: &mut Machine, events: usize) -> ReferenceSlice {
     assert_eq!(slice.records.len(), events);
     assert_eq!(slice.stop, SliceStop::TechnicalCut);
     assert_eq!(slice.end.outcome, Outcome::Pending);
-    assert_eq!(slice.boundaries, vec![SliceBoundary {
-        position: events,
-        kind: SliceBoundaryKind::TechnicalCut,
-    }]);
+    assert_eq!(
+        slice.boundaries,
+        vec![SliceBoundary {
+            position: events,
+            kind: SliceBoundaryKind::TechnicalCut,
+        }]
+    );
     assert_contiguous(&slice);
     assert_eq!(slice.end, machine.snapshot());
     slice
@@ -82,10 +87,13 @@ fn all_four_group_sizes_retain_n07_literal_rules_and_exact_work() {
             retained_charges.extend(slice.records.iter().map(|record| record.charge));
             previous = slice.end.clone();
             if slice.stop == SliceStop::Outcome(Outcome::Done(Value::UInt(321))) {
-                assert_eq!(slice.boundaries, vec![SliceBoundary {
-                    position: slice.records.len(),
-                    kind: SliceBoundaryKind::Terminal,
-                }]);
+                assert_eq!(
+                    slice.boundaries,
+                    vec![SliceBoundary {
+                        position: slice.records.len(),
+                        kind: SliceBoundaryKind::Terminal,
+                    }]
+                );
                 break;
             }
             assert_eq!(slice.stop, SliceStop::TechnicalCut);
@@ -106,29 +114,42 @@ fn all_four_group_sizes_retain_n07_literal_rules_and_exact_work() {
         assert_eq!(terminal.end, previous);
         assert!(terminal.records.is_empty());
         assert_eq!(terminal.prefix_work, vec![0]);
-        assert_eq!(terminal.stop, SliceStop::Outcome(Outcome::Done(Value::UInt(321))));
-        assert_eq!(terminal.boundaries, vec![SliceBoundary {
-            position: 0,
-            kind: SliceBoundaryKind::Terminal,
-        }]);
+        assert_eq!(
+            terminal.stop,
+            SliceStop::Outcome(Outcome::Done(Value::UInt(321)))
+        );
+        assert_eq!(
+            terminal.boundaries,
+            vec![SliceBoundary {
+                position: 0,
+                kind: SliceBoundaryKind::Terminal,
+            }]
+        );
     }
 }
 
 #[test]
 fn n07_cut_keeps_pending_return_then_free_publication_at_zero_fuel() {
     let mut machine = machine("N07", 38);
-    for _ in 0..4 { cut(&mut machine, 8); }
+    for _ in 0..4 {
+        cut(&mut machine, 8);
+    }
     cut(&mut machine, 4);
     let boundary37 = cut(&mut machine, 1).end;
     assert_eq!(boundary37.control, Some(Control::Return(Value::UInt(321))));
     assert_eq!(boundary37.remaining_fuel, 1);
-    assert_eq!(boundary37.frames,
-        vec![Frame::Return(Type::UInt, Environment::new())]);
-    assert_eq!(boundary37.environment, Environment::from([
-        ("0".into(), Value::UInt(1)),
-        ("1".into(), Value::UInt(2)),
-        ("2".into(), Value::UInt(3)),
-    ]));
+    assert_eq!(
+        boundary37.frames,
+        vec![Frame::Return(Type::UInt, Environment::new())]
+    );
+    assert_eq!(
+        boundary37.environment,
+        Environment::from([
+            ("0".into(), Value::UInt(1)),
+            ("1".into(), Value::UInt(2)),
+            ("2".into(), Value::UInt(3)),
+        ])
+    );
     let tail = advance_m(&mut machine, 8);
     assert_eq!(tail.start, boundary37);
     assert_eq!(rules(&tail), vec![185, 80]);
@@ -137,14 +158,19 @@ fn n07_cut_keeps_pending_return_then_free_publication_at_zero_fuel() {
     assert_eq!(tail.records[1].charge, 0);
     assert_eq!(tail.end.outcome, Outcome::Done(Value::UInt(321)));
     assert_eq!(tail.end.remaining_fuel, 0);
-    assert_eq!(tail.stop, SliceStop::Outcome(Outcome::Done(Value::UInt(321))));
+    assert_eq!(
+        tail.stop,
+        SliceStop::Outcome(Outcome::Done(Value::UInt(321)))
+    );
     assert_contiguous(&tail);
 }
 
 #[test]
 fn n08_group_cuts_preserve_five_pending_frames_and_each_caller_restoration() {
     let mut machine = machine("N08", 82);
-    for _ in 0..9 { cut(&mut machine, 8); }
+    for _ in 0..9 {
+        cut(&mut machine, 8);
+    }
     cut(&mut machine, 2);
     let boundary75 = cut(&mut machine, 1).end;
     let saved_frames = vec![
@@ -172,7 +198,10 @@ fn n08_group_cuts_preserve_five_pending_frames_and_each_caller_restoration() {
     let final_return = cut(&mut machine, 2);
     assert_eq!(rules(&final_return), vec![223, 185]);
     assert_eq!(final_return.prefix_work, vec![0, 1, 2]);
-    assert_eq!(final_return.end.control, Some(Control::Return(Value::UInt(2))));
+    assert_eq!(
+        final_return.end.control,
+        Some(Control::Return(Value::UInt(2)))
+    );
     assert_eq!(final_return.end.remaining_fuel, 0);
     assert!(final_return.end.environment.is_empty());
     assert!(final_return.end.frames.is_empty());
@@ -185,27 +214,37 @@ fn n08_group_cuts_preserve_five_pending_frames_and_each_caller_restoration() {
     assert_eq!(publication.prefix_work, vec![0, 0]);
     assert_eq!(publication.end.outcome, Outcome::Done(Value::UInt(2)));
     assert_eq!(publication.end.remaining_fuel, 0);
-    assert_eq!(publication.stop, SliceStop::Outcome(Outcome::Done(Value::UInt(2))));
+    assert_eq!(
+        publication.stop,
+        SliceStop::Outcome(Outcome::Done(Value::UInt(2)))
+    );
     assert_contiguous(&publication);
 }
 
 #[test]
 fn n08_exhaustion_stops_group_with_last_return_frame_intact() {
     let mut machine = machine("N08", 81);
-    for _ in 0..10 { cut(&mut machine, 8); }
+    for _ in 0..10 {
+        cut(&mut machine, 8);
+    }
     let tail = advance_m(&mut machine, 8);
     assert_eq!(rules(&tail), vec![223, 84]);
     assert_eq!(tail.prefix_work, vec![0, 1, 1]);
     assert_eq!(tail.end.outcome, Outcome::Exhausted);
     assert_eq!(tail.end.remaining_fuel, 0);
     assert_eq!(tail.end.environment, environment(2));
-    assert_eq!(tail.end.frames,
-        vec![Frame::Return(Type::UInt, Environment::new())]);
+    assert_eq!(
+        tail.end.frames,
+        vec![Frame::Return(Type::UInt, Environment::new())]
+    );
     assert_eq!(tail.stop, SliceStop::Outcome(Outcome::Exhausted));
-    assert_eq!(tail.boundaries, vec![SliceBoundary {
-        position: 2,
-        kind: SliceBoundaryKind::Terminal,
-    }]);
+    assert_eq!(
+        tail.boundaries,
+        vec![SliceBoundary {
+            position: 2,
+            kind: SliceBoundaryKind::Terminal,
+        }]
+    );
     assert_contiguous(&tail);
 }
 

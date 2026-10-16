@@ -222,9 +222,7 @@ struct Prepared {
     private: Vec<Fr>,
     binding: Fr,
 }
-pub(crate) fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
-}
+pub(crate) use mori_core::intent::hex;
 pub(crate) fn value_fr(value: &Value) -> Fr {
     match value {
         Value::UInt(n) => Fr::from(n.0),
@@ -522,7 +520,7 @@ fn produce(
     Ok((bundle, report))
 }
 fn decode_proof(text: &str) -> Result<Proof, Error> {
-    if text.is_empty() || text.len() > MAX_PROOF_BYTES * 2 || text.len() % 2 != 0 {
+    if text.is_empty() || text.len() > MAX_PROOF_BYTES * 2 || !text.len().is_multiple_of(2) {
         return Err(error(
             "proof",
             "Expected nonempty bounded even-length proof hex.",
@@ -536,7 +534,7 @@ fn decode_proof(text: &str) -> Result<Proof, Error> {
         }
     }
     let mut bytes = Vec::with_capacity(text.len() / 2);
-    for pair in text.as_bytes().chunks_exact(2) {
+    for pair in text.as_bytes().as_chunks::<2>().0 {
         let hi = nibble(pair[0])
             .ok_or_else(|| error("proof", "Proof hex must use canonical lowercase digits."))?;
         let lo = nibble(pair[1])
@@ -671,6 +669,15 @@ fn public_values(
         .map(value_fr)
         .collect())
 }
+/// One effect as kind, name, asset, from, to and its named fields.
+type EffectRow<'a> = (
+    &'a str,
+    Option<&'a str>,
+    Option<&'a mori_core::AssetId>,
+    Option<&'a str>,
+    Option<&'a str>,
+    Vec<(&'a str, Value)>,
+);
 /// Financial positions 0..N reconstructed from the exact execution.
 pub(crate) fn financial_values(
     program: &Program,
@@ -907,14 +914,7 @@ pub(crate) fn financial_values(
                 "Effect order differs from the exact execution step.",
             ));
         }
-        let (kind, name, asset, from, to, fields): (
-            &str,
-            Option<&str>,
-            Option<&mori_core::AssetId>,
-            Option<&str>,
-            Option<&str>,
-            Vec<(&str, Value)>,
-        ) = match effect {
+        let (kind, name, asset, from, to, fields): EffectRow<'_> = match effect {
             Effect::State {
                 name,
                 before,

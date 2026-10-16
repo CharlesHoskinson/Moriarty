@@ -1125,6 +1125,18 @@ pub fn accept_intent(
 }
 
 #[cfg(test)]
+pub(crate) fn task4_reconstruct_before_caps(
+    source: &str,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    authority: &ExpectedAuthority,
+    at: UInt,
+) -> Result<Reconstruction, Error> {
+    reconstruct_statement(source, action, scenario, target, Some((authority, at)))
+}
+
+#[cfg(test)]
 mod tests {
     //! Ordinary off-circuit ZKIR checker controls only (`ProofPreimage::check`):
     //! no SRS, key generation, proving, MockProver or native verification.
@@ -1710,16 +1722,4 @@ mod tests {
             .unwrap();
         }
     }
-}
-
-#[cfg(test)]
-pub(crate) fn task4_reconstruct_before_caps(
-    source: &str,
-    action: &str,
-    scenario: &Scenario,
-    target: &Target,
-    authority: &ExpectedAuthority,
-    at: UInt,
-) -> Result<Reconstruction, Error> {
-    reconstruct_statement(source, action, scenario, target, Some((authority, at)))
 }

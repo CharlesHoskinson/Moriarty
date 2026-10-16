@@ -34,8 +34,18 @@ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
         tokens,
         pos: 0,
         program: Program {
-            language: if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE }.into(),
-            semantics: if staged { crate::stage::SEMANTICS_2 } else { SEMANTICS }.into(),
+            language: if staged {
+                crate::stage::LANGUAGE_2
+            } else {
+                LANGUAGE
+            }
+            .into(),
+            semantics: if staged {
+                crate::stage::SEMANTICS_2
+            } else {
+                SEMANTICS
+            }
+            .into(),
             name: String::new(),
             states: vec![],
             assets: vec![],
@@ -45,7 +55,11 @@ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
     };
     parser.expect("language")?;
     let profile = parser.string()?;
-    let expected_language = if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE };
+    let expected_language = if staged {
+        crate::stage::LANGUAGE_2
+    } else {
+        LANGUAGE
+    };
     if profile != expected_language {
         return Err(parser.error(
             "profile",
@@ -358,20 +372,36 @@ pub fn language(source: &str) -> Result<&'static str, Error> {
         let raw = &source[span.start as usize..span.end as usize];
         let kind = lexed.kind(idx);
         tokens.push(Tok {
-            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },
+            text: if kind == TokenKind::String {
+                mori_lexer::decode_string(raw)
+            } else {
+                raw.to_owned()
+            },
             kind,
             start: span.start,
         });
     }
-    let mut parser = Parser { tokens, pos: 0, program: Program {
-        language: LANGUAGE.into(), semantics: SEMANTICS.into(), name: String::new(),
-        states: vec![], assets: vec![], expressions: vec![], actions: vec![],
-    }};
+    let mut parser = Parser {
+        tokens,
+        pos: 0,
+        program: Program {
+            language: LANGUAGE.into(),
+            semantics: SEMANTICS.into(),
+            name: String::new(),
+            states: vec![],
+            assets: vec![],
+            expressions: vec![],
+            actions: vec![],
+        },
+    };
     parser.expect("language")?;
     let profile = parser.string()?;
     match profile.as_str() {
         LANGUAGE => Ok(LANGUAGE),
         crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),
-        _ => Err(parser.error("profile", format!("Expected language \"{LANGUAGE}\"; found {profile:?}."))),
+        _ => Err(parser.error(
+            "profile",
+            format!("Expected language \"{LANGUAGE}\"; found {profile:?}."),
+        )),
     }
 }

@@ -240,7 +240,9 @@ fn proving_fixture() -> (std::path::PathBuf, u64, u64) {
 }
 fn proving_fixture_profile(signed: bool) -> (std::path::PathBuf, u64, u64) {
     let root = public_fixture();
-    let pk = vec![0x42; 8192]; // Tiny opaque transport bytes, not an SDK key.
+    // Opaque transport bytes, not an SDK key; larger than every public file
+    // together so a byte budget can admit the public set without the key.
+    let pk = vec![0x42; 1 << 17];
     let pk_leaf = Leaf {
         bytes: pk.len() as u64,
         sha256: codec::hash(&pk),

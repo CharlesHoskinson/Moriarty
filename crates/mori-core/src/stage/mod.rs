@@ -151,6 +151,8 @@ pub struct StageSegment {
 }
 /// `residual` lists every post-boundary liability with a positive amount, in
 /// the existing complete `Liability` representation.
+// Public outcome; boxing `Waiting` would change every caller's pattern.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum StageOutcome {
     Waiting {

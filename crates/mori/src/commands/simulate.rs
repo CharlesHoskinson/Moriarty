@@ -139,7 +139,9 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
 
 /// Render the same explicit qualification on every staged public object.
 pub(super) fn print_stage_report(mut report: serde_json::Value) -> super::Result<()> {
-    let object = report.as_object_mut().expect("stage reports are JSON objects");
+    let object = report
+        .as_object_mut()
+        .expect("stage reports are JSON objects");
     for (name, value) in mori_core::stage::STAGE_LABELS {
         object.insert(name.into(), serde_json::Value::String(value.into()));
     }
@@ -151,24 +153,42 @@ fn print_stage_result(
 ) -> super::Result<ExitCode> {
     use mori_core::stage::StageOutcome;
     let (report, exit) = match result {
-        Ok(StageOutcome::Waiting { advanced, segment, continuation, attempted, residual }) => {
+        Ok(StageOutcome::Waiting {
+            advanced,
+            segment,
+            continuation,
+            attempted,
+            residual,
+        }) => {
             let committed = continuation.logical.committed;
-            (serde_json::json!({
-                "status":"waiting", "advanced":advanced, "segment":segment,
-                "continuation":continuation, "attempted":attempted,
-                "committed":committed, "residual":residual
-            }), ExitCode::SUCCESS)
+            (
+                serde_json::json!({
+                    "status":"waiting", "advanced":advanced, "segment":segment,
+                    "continuation":continuation, "attempted":attempted,
+                    "committed":committed, "residual":residual
+                }),
+                ExitCode::SUCCESS,
+            )
         }
-        Ok(StageOutcome::Complete { segment, committed, attempted, residual }) => (
+        Ok(StageOutcome::Complete {
+            segment,
+            committed,
+            attempted,
+            residual,
+        }) => (
             serde_json::json!({
                 "status":"complete", "segment":segment, "attempted":attempted,
                 "committed":committed, "residual":residual
-            }), ExitCode::SUCCESS),
+            }),
+            ExitCode::SUCCESS,
+        ),
         Err(rejected) => (
             serde_json::json!({
                 "status":"rejected", "error":rejected.error,
                 "attempted":rejected.attempted, "committed":rejected.committed
-            }), ExitCode::FAILURE),
+            }),
+            ExitCode::FAILURE,
+        ),
     };
     print_stage_report(report)?;
     Ok(exit)
@@ -194,17 +214,29 @@ fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
         )
         .and_then(|text| decode::continuation(&text))
         .map_err(no_work)?;
-        let event = decode::read_bounded(event_path, decode::MAX_EVENT_BYTES, decode::EVENT_TOO_LARGE)
-            .and_then(|text| decode::event(&text))
-            .map_err(no_work)?;
-        stage::resume(&program, continuation, event, args.action.as_deref(), args.logical_cap)
+        let event =
+            decode::read_bounded(event_path, decode::MAX_EVENT_BYTES, decode::EVENT_TOO_LARGE)
+                .and_then(|text| decode::event(&text))
+                .map_err(no_work)?;
+        stage::resume(
+            &program,
+            continuation,
+            event,
+            args.action.as_deref(),
+            args.logical_cap,
+        )
     })();
     print_stage_result(result)
 }
 
 /// A `/2` start. Load and scenario failures are labelled stage rejections; the
 /// scenario keeps the legacy 1 MiB strict reader.
-fn run_stage_start(args: &Args, source: &str, action: &str, scenario: &Path) -> super::Result<ExitCode> {
+fn run_stage_start(
+    args: &Args,
+    source: &str,
+    action: &str,
+    scenario: &Path,
+) -> super::Result<ExitCode> {
     use mori_core::stage::{self, StageOutcome, StageRejection, decode};
     let result = (|| -> Result<StageOutcome, StageRejection> {
         let program = stage::load(source).map_err(no_work)?;

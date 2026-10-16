@@ -416,9 +416,9 @@ agreement Mixed {
         Operand::Immediate(Fr::from(0u128))
     }
     fn constrained_to(b: &Builder, wire: &Operand, value: &Operand) -> bool {
-        b.instructions.iter().any(|i| {
-            matches!(i, Instruction::ConstrainEq { a, b } if a == wire && b == value)
-        })
+        b.instructions
+            .iter()
+            .any(|i| matches!(i, Instruction::ConstrainEq { a, b } if a == wire && b == value))
     }
     fn wire_of(b: &Builder, position: u32) -> Operand {
         b.wires[position as usize].clone()
@@ -449,7 +449,10 @@ agreement Mixed {
             .collect();
         assert_eq!(
             shape,
-            vec![(0, 0, 1, 0..2, 0, 1, 2, false), (1, 1, 0, 3..5, 1, 0, 3, true)]
+            vec![
+                (0, 0, 1, 0..2, 0, 1, 2, false),
+                (1, 1, 0, 3..5, 1, 0, 3, true)
+            ]
         );
         for s in &l {
             assert_eq!(s.action_name, "deliver");
@@ -480,7 +483,10 @@ agreement Mixed {
             vec![(0..3, 0, 2, 3), (4..8, 2, 3, 5), (9..12, 3, 0, 4)]
         );
         assert_eq!(
-            l[0].slots.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            l[0].slots
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect::<Vec<_>>(),
             vec!["extra", "held", "quote"]
         );
     }
@@ -514,15 +520,30 @@ agreement Mixed {
         let pre = emit_pre(&mut b, &l[0]).unwrap().unwrap();
         assert!(pre.captures.is_empty() && pre.events.is_empty());
         let live = [("amount", amount.clone())];
-        let p = emit_post(&mut b, &l[0], Some(&pre), &live).unwrap().unwrap();
+        let p = emit_post(&mut b, &l[0], Some(&pre), &live)
+            .unwrap()
+            .unwrap();
         assert_eq!(
-            (p.pre_site, p.pre_captures.clone(), p.events.clone(), p.post_site, p.post_captures.clone()),
+            (
+                p.pre_site,
+                p.pre_captures.clone(),
+                p.events.clone(),
+                p.post_site,
+                p.post_captures.clone()
+            ),
             (1, vec![2], vec![], 3, vec![4])
         );
         let roles: Vec<_> = b
             .bindings
             .iter()
-            .map(|x| (x.role.as_str(), x.name.as_str(), x.ty, x.constant.as_deref()))
+            .map(|x| {
+                (
+                    x.role.as_str(),
+                    x.name.as_str(),
+                    x.ty,
+                    x.constant.as_deref(),
+                )
+            })
             .collect();
         assert_eq!(
             roles,
@@ -535,14 +556,22 @@ agreement Mixed {
             ]
         );
         assert!(constrained_to(&b, &wire_of(&b, p.pre_site), &zero_imm()));
-        assert!(constrained_to(&b, &wire_of(&b, p.pre_captures[0]), &zero_imm()));
+        assert!(constrained_to(
+            &b,
+            &wire_of(&b, p.pre_captures[0]),
+            &zero_imm()
+        ));
         assert!(constrained_to(
             &b,
             &wire_of(&b, p.post_site),
             &Operand::Immediate(Fr::from(1u128))
         ));
         // The post capture equals the actual input wire, not a host value.
-        assert!(constrained_to(&b, &wire_of(&b, p.post_captures[0]), &amount.operand));
+        assert!(constrained_to(
+            &b,
+            &wire_of(&b, p.post_captures[0]),
+            &amount.operand
+        ));
     }
 
     #[test]
@@ -552,11 +581,17 @@ agreement Mixed {
         let mut b = Builder::default();
         let pre = emit_pre(&mut b, &l[1]).unwrap().unwrap();
         assert_eq!(
-            pre.captures.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(),
+            pre.captures
+                .iter()
+                .map(|(n, _)| n.as_str())
+                .collect::<Vec<_>>(),
             vec!["amount"]
         );
         assert_eq!(
-            pre.events.iter().map(|(n, w)| (n.as_str(), w.ty)).collect::<Vec<_>>(),
+            pre.events
+                .iter()
+                .map(|(n, w)| (n.as_str(), w.ty))
+                .collect::<Vec<_>>(),
             vec![("ready", Type::Bool)]
         );
         let guard = pre.events[0].1.clone();
@@ -579,16 +614,27 @@ agreement Mixed {
             i,
             Instruction::ConstrainToBoolean { val } if *val == wire_of(&b, p.events[0])
         )));
-        assert_eq!(b.bindings[p.post_site as usize].constant.as_deref(), Some("0"));
+        assert_eq!(
+            b.bindings[p.post_site as usize].constant.as_deref(),
+            Some("0")
+        );
         assert!(constrained_to(&b, &wire_of(&b, p.post_site), &zero_imm()));
         assert_eq!(
             b.bindings[p.post_captures[0] as usize].constant.as_deref(),
             Some("0")
         );
-        assert!(constrained_to(&b, &wire_of(&b, p.post_captures[0]), &zero_imm()));
+        assert!(constrained_to(
+            &b,
+            &wire_of(&b, p.post_captures[0]),
+            &zero_imm()
+        ));
         // A live pre capture is range-checked, never zero-constrained.
         assert_eq!(b.bindings[p.pre_captures[0] as usize].constant, None);
-        assert!(!constrained_to(&b, &wire_of(&b, p.pre_captures[0]), &zero_imm()));
+        assert!(!constrained_to(
+            &b,
+            &wire_of(&b, p.pre_captures[0]),
+            &zero_imm()
+        ));
     }
 
     #[test]
@@ -606,15 +652,26 @@ agreement Mixed {
         for live in [
             vec![],
             vec![("other", wrong.clone())],
-            vec![("amount", Wire { operand: wrong.operand.clone(), ty: Type::Bool })],
+            vec![(
+                "amount",
+                Wire {
+                    operand: wrong.operand.clone(),
+                    ty: Type::Bool,
+                },
+            )],
             vec![("amount", wrong.clone()), ("amount", wrong.clone())],
         ] {
             assert_eq!(
-                emit_post(&mut b, &l[0], Some(&pre), &live).unwrap_err().code,
+                emit_post(&mut b, &l[0], Some(&pre), &live)
+                    .unwrap_err()
+                    .code,
                 "mori::backend::artifact"
             );
         }
-        let not_bool = Wire { operand: zero_imm(), ty: Type::UInt };
+        let not_bool = Wire {
+            operand: zero_imm(),
+            ty: Type::UInt,
+        };
         let before = b.instructions.len();
         assert_eq!(
             assert_guard(&mut b, not_bool).unwrap_err().code,
@@ -625,7 +682,9 @@ agreement Mixed {
         let mixed = load(MIXED);
         let ml = layouts(&mixed).unwrap();
         assert_eq!(
-            emit_post(&mut b, site(&ml, 1, 0), Some(&pre), &[]).unwrap_err().code,
+            emit_post(&mut b, site(&ml, 1, 0), Some(&pre), &[])
+                .unwrap_err()
+                .code,
             "mori::backend::artifact"
         );
     }

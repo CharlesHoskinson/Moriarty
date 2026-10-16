@@ -151,15 +151,16 @@ fn decoder_refuses_forged_frames_and_fields() {
     let forgeries: [fn(&mut Value, usize, usize); 6] = [
         // A post site constant that is not the exit site.
         |v, p, _| {
-            let pos = v["circuits"][p]["pending_positions"]["post_site"].as_u64().unwrap();
+            let pos = v["circuits"][p]["pending_positions"]["post_site"]
+                .as_u64()
+                .unwrap();
             v["circuits"][p]["public_inputs"][pos as usize]["constant"] = "7".into();
         },
         // A pending position moved onto an ordinary binding.
         |v, p, _| v["circuits"][p]["pending_positions"]["pre_site"] = 0.into(),
         // A zero-await circuit claiming a pending frame.
         |v, p, z| {
-            v["circuits"][z]["pending_positions"] =
-                v["circuits"][p]["pending_positions"].clone()
+            v["circuits"][z]["pending_positions"] = v["circuits"][p]["pending_positions"].clone()
         },
         // The required nullable key is absent.
         |v, _, z| {
@@ -189,11 +190,12 @@ fn legacy_compilers_refuse_staged_programs() {
     assert_eq!(error.code, "mori::backend::program");
 }
 
-// Opus 5.5 repair (F1/T1/T2). Everything above is the unchanged candidate
-// test source; the tests below only add hostile and positive cases.
+// Hostile and positive cases (F1/T1/T2).
 use mori_backend::{
     ARTIFACT_FORMAT, PUBLIC_ABI_VERSION, RELATION_VERSION,
-    stage::{STAGE_CONTEXT_FORMAT, STAGED_ABI_VERSION, STAGED_ARTIFACT_FORMAT, STAGED_RELATION_VERSION},
+    stage::{
+        STAGE_CONTEXT_FORMAT, STAGED_ABI_VERSION, STAGED_ARTIFACT_FORMAT, STAGED_RELATION_VERSION,
+    },
 };
 
 /// An await whose binder is read only by its guard, beside a zero-await action.
@@ -210,7 +212,11 @@ fn refusal(value: &Value) -> String {
 }
 
 fn contexts(artifact: &StagedArtifact) -> Vec<String> {
-    artifact.circuits.iter().map(|c| c.context_hash.clone()).collect()
+    artifact
+        .circuits
+        .iter()
+        .map(|c| c.context_hash.clone())
+        .collect()
 }
 
 /// A signed Target from the static owner-intent vector (data only).
@@ -234,13 +240,25 @@ fn fresh_validation_admits_every_valid_frozen_shape() {
         assert_eq!(serde_json::to_vec_pretty(&decoded).unwrap(), bytes);
     }
     let empty = compile(EMPTY_CAPTURE);
-    let tick: Vec<_> = empty.circuits.iter().filter(|c| c.action == "tick").collect();
+    let tick: Vec<_> = empty
+        .circuits
+        .iter()
+        .filter(|c| c.action == "tick")
+        .collect();
     assert_eq!(tick.len(), 2);
     for c in tick {
         assert_eq!(c.capture_width, 0);
-        assert!(c.pending_positions.as_ref().is_some_and(|p| p.pre_captures.is_empty()));
+        assert!(
+            c.pending_positions
+                .as_ref()
+                .is_some_and(|p| p.pre_captures.is_empty())
+        );
     }
-    let idle: Vec<_> = empty.circuits.iter().filter(|c| c.action == "idle").collect();
+    let idle: Vec<_> = empty
+        .circuits
+        .iter()
+        .filter(|c| c.action == "idle")
+        .collect();
     assert_eq!(idle.len(), 1);
     assert!(idle[0].pending_positions.is_none());
 }
@@ -279,7 +297,10 @@ fn contexts_bind_single_target_and_program_fields() {
     bytes.max_artifact_bytes -= 1;
     for perturbed in [anchor, instructions, bytes] {
         let a = compile_staged(RESERVE, &perturbed, Path::new("unused-output")).unwrap();
-        assert_eq!((&a.program_hash, &a.plan_hash), (&base.program_hash, &base.plan_hash));
+        assert_eq!(
+            (&a.program_hash, &a.plan_hash),
+            (&base.program_hash, &base.plan_hash)
+        );
         assert_eq!(a.circuits.len(), base.circuits.len());
         for (x, y) in contexts(&a).iter().zip(contexts(&base).iter()) {
             assert_ne!(x, y);
@@ -302,14 +323,23 @@ fn contexts_bind_single_target_and_program_fields() {
 fn staged_versions_are_domain_separated_from_v3() {
     assert_eq!(STAGE_CONTEXT_FORMAT, "moriarty-stage-context/1");
     let v3 = [ARTIFACT_FORMAT, PUBLIC_ABI_VERSION, RELATION_VERSION];
-    for v4 in [STAGE_CONTEXT_FORMAT, STAGED_ARTIFACT_FORMAT, STAGED_ABI_VERSION, STAGED_RELATION_VERSION] {
+    for v4 in [
+        STAGE_CONTEXT_FORMAT,
+        STAGED_ARTIFACT_FORMAT,
+        STAGED_ABI_VERSION,
+        STAGED_RELATION_VERSION,
+    ] {
         assert!(!v3.contains(&v4), "{v4}");
     }
     let honest = serde_json::to_value(compile(MIXED)).unwrap();
     let expected = format!(
         "mori::backend::artifact: Expected {STAGED_ARTIFACT_FORMAT}, {STAGED_ABI_VERSION} and {STAGED_RELATION_VERSION}"
     );
-    for (key, legacy) in [("format", ARTIFACT_FORMAT), ("abi", PUBLIC_ABI_VERSION), ("relation", RELATION_VERSION)] {
+    for (key, legacy) in [
+        ("format", ARTIFACT_FORMAT),
+        ("abi", PUBLIC_ABI_VERSION),
+        ("relation", RELATION_VERSION),
+    ] {
         let mut forged = honest.clone();
         forged[key] = legacy.into();
         let message = refusal(&forged);
@@ -333,13 +363,21 @@ fn decoder_refusals_name_the_targeted_predicate() {
     // Preconditions the forgeries rely on, checked on the honest artifact.
     let c = &artifact.circuits;
     assert_eq!(c.len(), 3);
-    assert!(c.iter().all(|c| c.action == "allocate" && c.pending_positions.is_some()));
+    assert!(
+        c.iter()
+            .all(|c| c.action == "allocate" && c.pending_positions.is_some())
+    );
     assert_eq!(c[1].capture_in, c[0].capture_out);
     assert!(!c[1].capture_in.is_empty() && !c[1].event.is_empty());
     assert_eq!(c[1].public_inputs[2].role, "pre_state");
-    assert!(c[1].effect_frame.iter().any(|e| !e.public_positions.is_empty()));
+    assert!(
+        c[1].effect_frame
+            .iter()
+            .any(|e| !e.public_positions.is_empty())
+    );
     assert!(!c[1].balance_frame.is_empty() && !c[1].liability_frame.is_empty());
-    let pending = |v: &Value, key: &str| -> Value { v["circuits"][1]["pending_positions"][key].clone() };
+    let pending =
+        |v: &Value, key: &str| -> Value { v["circuits"][1]["pending_positions"][key].clone() };
     let a = r#""allocate""#;
     let artifact_error = |m: &str| format!("mori::backend::artifact: {m}");
     type Forge = Box<dyn Fn(&mut Value)>;
@@ -349,7 +387,9 @@ fn decoder_refusals_name_the_targeted_predicate() {
             Box::new(|v: &mut Value| {
                 v["circuits"][1]["capture_in"].as_array_mut().unwrap().pop();
             }),
-            artifact_error(&format!("Capture layout of segment 1 of {a} is not the width-L prefix.")),
+            artifact_error(&format!(
+                "Capture layout of segment 1 of {a} is not the width-L prefix."
+            )),
         ),
         (
             "input role in an advance segment",
@@ -394,7 +434,10 @@ fn decoder_refusals_name_the_targeted_predicate() {
             Box::new(move |v: &mut Value| {
                 let site = pending(v, "pre_site").as_u64().unwrap() as usize;
                 let first = pending(v, "pre_captures")[0].as_u64().unwrap() as usize;
-                v["circuits"][1]["public_inputs"].as_array_mut().unwrap().swap(site, first);
+                v["circuits"][1]["public_inputs"]
+                    .as_array_mut()
+                    .unwrap()
+                    .swap(site, first);
                 let p = &mut v["circuits"][1]["pending_positions"];
                 p["pre_site"] = first.into();
                 p["pre_captures"][0] = site.into();
@@ -409,9 +452,14 @@ fn decoder_refusals_name_the_targeted_predicate() {
         (
             "committed_before tampered",
             Box::new(|v: &mut Value| {
-                bump_uint(&mut v["resources"]["logical"][0]["segments"][1]["committed_before"], 1)
+                bump_uint(
+                    &mut v["resources"]["logical"][0]["segments"][1]["committed_before"],
+                    1,
+                )
             }),
-            artifact_error(&format!("Logical work of segment 1 of {a} is inconsistent.")),
+            artifact_error(&format!(
+                "Logical work of segment 1 of {a} is inconsistent."
+            )),
         ),
         (
             "plan_total tampered",
