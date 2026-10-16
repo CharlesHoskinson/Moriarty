@@ -1,4 +1,4 @@
-//! Fixed N01/N02 complete-prefix diagnostic capture through the real L4 codec.
+//! Fixed N01–N08 complete-prefix diagnostic capture through the real L4 codec.
 //! Register as a cfg(test) child of the private layout_a module. No public input
 //! endpoint, byte parser, native operation or physical-codec theorem is provided.
 //! Compilation/execution UNRUN until exact-closure Opus/Muse preflights.
@@ -33,7 +33,10 @@ impl From<StateFailure> for CaptureFailure {
 
 // Exact fixed input fuel/stack limits from the existing independent normal
 // corpus. Expected states, rule choices and results never guide execution.
-const INPUTS: [(&str, u128, usize); 2] = [("N01", 1, 8), ("N02", 7, 8)];
+const INPUTS: [(&str, u128, usize); 8] = [
+    ("N01", 1, 8), ("N02", 7, 8), ("N03", 9, 8), ("N04", 17, 8),
+    ("N05", 27, 8), ("N06", 19, 8), ("N07", 38, 8), ("N08", 82, 8),
+];
 
 // Diagnostic JSON formatting transcribed unchanged from normal_observations.rs.
 // It is a full typed-state projection, not canonical physical L4 byte encoding.
@@ -110,10 +113,10 @@ fn observation(out: &mut impl Write, case_id: &str, trace: TraceView<'_>,
     write!(out, ",\"terminal_has_next\":{terminal_has_next}}}")
 }
 
-/// Write all 12 normal fuel-prefix observations after real codec materialization.
+/// Write all 216 normal fuel-prefix observations after real codec materialization.
 /// The external consumer compares this artifact with frozen independent JSON.
 /// The typed comparison below separately checks internal preservation only.
-pub(crate) fn write_n01_n02(out: &mut impl Write) -> Result<(), CaptureFailure> {
+pub(crate) fn write_n01_n08(out: &mut impl Write) -> Result<(), CaptureFailure> {
     write!(out, "{{")?;
     string_field(out, "producer", "sherlock-layout-reference")?;
     write!(out, ",")?;
