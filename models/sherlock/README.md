@@ -5,6 +5,13 @@ on 2026-10-15. The [Candidate B design](../../openspec/changes/sherlock-universa
 integrates the research into a final-design candidate awaiting fresh independent
 review. This directory's existing executable model sources and recorded
 observations remain Candidate A scope; they do not implement or validate B.
+The separate [B HOST payload source](b-core-host-source-20261016/README.md),
+merged in [PR #120](https://github.com/CharlesHoskinson/Moriarty/pull/120), compiled
+ten files with 96 Enabled row-effect payloads to metadata only, with six warnings.
+Nothing was linked, loaded, run or tested; its selector, driver, guards and
+admission remain unimplemented, and a later owner-driver body is authored only,
+incomplete and uncompiled. Its qualified R4 HOST Stage 1 basis is distinct from the
+unadopted proposed v3a interface amendment.
 No production compiler backend or released Sherlock profile is supplied here.
 
 The proposed reference machine evaluates different supported programs using
@@ -17,7 +24,7 @@ the current K/Quint models retain their narrower concrete data forms.
 
 | Artifact | Actual scope | Remaining work |
 |---|---|---|
-| [K definition](k/README.md) | Generic pure expression machine with named function tables, checked UInt128, lists, trees and explicit frames | Broader engine coverage, actual common-state comparison, metered helper refinement, financial operations, suspension and compiler/circuit correspondence |
+| [K definition](k/README.md) | Generic pure expression machine with named function tables, checked UInt128, lists, trees and explicit frames | Engine coverage beyond one N01/fuel1 common-projection match, metered helper refinement, financial operations, suspension and compiler/circuit correspondence |
 | [Quint companion](quint/README.md) | Finite factorial/list/tree algorithms with explicit frames, work accounting and a local waiting/resume scenario | Arbitrary program loading, lexical environments, K projection and financial correspondence |
 
 Each model's README and source manifest define its exact membership and limits.
@@ -29,12 +36,16 @@ The historical [observed checks](observations.json) record K frontend success,
 eight passing Quint tests and 32 sampled seed-1 traces with no invariant violation;
 all seven Quint witnesses occurred. Those source-specific captures remain unchanged.
 A later local K compile exited 0 in 4.293 seconds and produced an unvalidated
-`definition.kore`; its source/toolchain binding and receipt are not yet published.
+`definition.kore`; [PR #119](https://github.com/CharlesHoskinson/Moriarty/pull/119) now publishes its receipt.
 That record remains compile-only history. A later single N01/fuel1 raw engine run
 completed 12 stages with 11 zero-exit children. Raw logs and states show startup,
 a `uiU(7)` literal return leaving fuel 0, `uiDone(uiU(7))` publication and a following
-zero-rule probe with byte-identical terminal Kore. Its raw receipt is not yet
-published. Actual common-state comparison remains UNRUN; no full 216-run K,
+zero-rule probe with byte-identical terminal Kore. PR #119 also publishes
+the engine receipt and its [literal compile-to-engine file binding](../../docs/audits/2026-10-16/sherlock-k-onecase-source05/FINAL-SOURCE05-RESULT-PUBLICATION-RECORD.json),
+which is not producer authenticity or validation of the generated definition. The
+case's post-startup common projection matched an independently frozen two-record
+expectation with no first difference. The other 215 fixed inputs remain unobserved;
+no full 216-run K,
 general K correctness or refinement result follows. Neither those historical
 captures nor this compilation establishes cross-model refinement.
 
@@ -53,6 +64,15 @@ separate captured scopes, not a combined total.
 [PR #112](https://github.com/CharlesHoskinson/Moriarty/pull/112) adds
 `--k-observations` to the existing QA consumer for supplied K projection documents;
 a supplied-data match does not establish K engine execution or a semantic match.
+[PR #118](https://github.com/CharlesHoskinson/Moriarty/pull/118) adds a
+[post-startup Rust host comparison](../../docs/audits/2026-10-16/sherlock-full-original-fixtures/README.md)
+of fixed typed-AST transcriptions of the eight original fixtures: 569 ordinary
+prefixes (27,997 records) and eight separate fuel1000/stack64 runs (561 records)
+match independently frozen literals. It is not a K-source parser, compiler or K
+startup execution. [PR #117](https://github.com/CharlesHoskinson/Moriarty/pull/117)
+records [two local Core/2 financial programs](../../docs/audits/2026-10-16/sherlock-financial-core2-delivery/README.md)
+matching frozen expectations, including 79 direct original-JSON checks; it does not
+implement Sherlock financial lowering or cover the full financial family.
 
 K's structural helper rewrites are outside its semantic fuel schedule. Candidate B
 names the unchanged schedule `sherlock-k-a/1`, the companion's distinct schedule
