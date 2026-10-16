@@ -1,0 +1,99 @@
+{
+  "language": "moriarty/2",
+  "semantics": "moriarty-core/2",
+  "name": "ContinuationEscrowOracle",
+  "states": [
+    {
+      "name": "marker",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "name": "PAY",
+      "identity": {
+        "network": "local",
+        "issuer": "continuation-escrow-oracle",
+        "reference": "PAY",
+        "scale": 0
+      }
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "ready"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    }
+  ],
+  "actions": [
+    {
+      "name": "deliver",
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Transfer",
+          "asset": "PAY",
+          "from": "alice",
+          "to": "escrow",
+          "amount": 0
+        },
+        {
+          "kind": "Liability",
+          "name": "release",
+          "asset": "PAY",
+          "debtor": "escrow",
+          "creditor": "bob",
+          "amount": 1
+        },
+        {
+          "kind": "Await",
+          "label": "delivery",
+          "binders": [
+            {
+              "name": "ready",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 2
+        },
+        {
+          "kind": "Transfer",
+          "asset": "PAY",
+          "from": "escrow",
+          "to": "bob",
+          "amount": 3
+        },
+        {
+          "kind": "Discharge",
+          "name": "release",
+          "amount": 4
+        }
+      ]
+    }
+  ]
+}

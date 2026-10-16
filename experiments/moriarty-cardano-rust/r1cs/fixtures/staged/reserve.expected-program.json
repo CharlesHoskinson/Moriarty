@@ -1,0 +1,239 @@
+{
+  "language": "moriarty/2",
+  "semantics": "moriarty-core/2",
+  "name": "ReserveContinuationOracle",
+  "states": [
+    {
+      "name": "basis",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "40"
+      }
+    },
+    {
+      "name": "allocated",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "name": "marker",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "name": "CREDIT",
+      "identity": {
+        "network": "local",
+        "issuer": "continuation-reserve-oracle",
+        "reference": "UNIT",
+        "scale": 0
+      }
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "basis"
+    },
+    {
+      "kind": "Name",
+      "name": "extra"
+    },
+    {
+      "kind": "Binary",
+      "op": "Add",
+      "lhs": 0,
+      "rhs": 1
+    },
+    {
+      "kind": "Name",
+      "name": "basis"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "5"
+      }
+    },
+    {
+      "kind": "Binary",
+      "op": "Sub",
+      "lhs": 3,
+      "rhs": 4
+    },
+    {
+      "kind": "Name",
+      "name": "held"
+    },
+    {
+      "kind": "Name",
+      "name": "quote"
+    },
+    {
+      "kind": "Name",
+      "name": "held"
+    },
+    {
+      "kind": "Binary",
+      "op": "Ge",
+      "lhs": 7,
+      "rhs": 8
+    },
+    {
+      "kind": "Name",
+      "name": "held"
+    },
+    {
+      "kind": "Name",
+      "name": "held"
+    },
+    {
+      "kind": "Name",
+      "name": "held"
+    },
+    {
+      "kind": "Name",
+      "name": "basis"
+    },
+    {
+      "kind": "Name",
+      "name": "quote"
+    },
+    {
+      "kind": "Binary",
+      "op": "Add",
+      "lhs": 13,
+      "rhs": 14
+    },
+    {
+      "kind": "Name",
+      "name": "ready"
+    },
+    {
+      "kind": "Name",
+      "name": "quote"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "50"
+      }
+    },
+    {
+      "kind": "Binary",
+      "op": "Le",
+      "lhs": 17,
+      "rhs": 18
+    },
+    {
+      "kind": "Name",
+      "name": "extra"
+    },
+    {
+      "kind": "Name",
+      "name": "quote"
+    }
+  ],
+  "actions": [
+    {
+      "name": "allocate",
+      "inputs": [
+        {
+          "name": "extra",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Let",
+          "name": "held",
+          "value": 2
+        },
+        {
+          "kind": "Next",
+          "state": "basis",
+          "value": 5
+        },
+        {
+          "kind": "Liability",
+          "name": "allocation",
+          "asset": "CREDIT",
+          "debtor": "reserve",
+          "creditor": "target",
+          "amount": 6
+        },
+        {
+          "kind": "Await",
+          "label": "approval",
+          "binders": [
+            {
+              "name": "quote",
+              "ty": "UInt"
+            }
+          ],
+          "guard": 9
+        },
+        {
+          "kind": "Next",
+          "state": "allocated",
+          "value": 10
+        },
+        {
+          "kind": "Transfer",
+          "asset": "CREDIT",
+          "from": "reserve",
+          "to": "target",
+          "amount": 11
+        },
+        {
+          "kind": "Discharge",
+          "name": "allocation",
+          "amount": 12
+        },
+        {
+          "kind": "Next",
+          "state": "basis",
+          "value": 15
+        },
+        {
+          "kind": "Await",
+          "label": "settlement",
+          "binders": [
+            {
+              "name": "ready",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 16
+        },
+        {
+          "kind": "Requires",
+          "predicate": 19
+        },
+        {
+          "kind": "Fee",
+          "asset": "CREDIT",
+          "from": "reserve",
+          "to": "treasury",
+          "amount": 20
+        },
+        {
+          "kind": "Emit",
+          "name": "settled_quote",
+          "value": 21
+        }
+      ]
+    }
+  ]
+}
