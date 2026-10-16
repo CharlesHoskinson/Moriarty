@@ -1,0 +1,36 @@
+{
+  "format": "cardano-preprod-fresh-wallet-outer-execution-proposal/1",
+  "reviewToken": "current-cardano-preprod-fresh-wallet-outer-bound-addendum-muse-source-20261016",
+  "status": "PROPOSAL_NOT_AUTHORIZED",
+  "purpose": "Concrete outer supervisor launch form for fresh-audit checking only. Root may source-write this launcher; it grants no execution authority by itself and accesses no private path except through the reviewed operator.",
+  "paths": {
+    "BASE": "/home/charl/moriarty-eutxo-validation-2026-10-12",
+    "M": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-operator-materialized-20261016",
+    "RR": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-root-records-20261016"
+  },
+  "launch": {
+    "argv": ["/usr/bin/timeout", "--signal=TERM", "--kill-after=10s", "180s", "/usr/bin/prlimit", "--core=0", "/usr/bin/python3", "-I", "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-operator-materialized-20261016/runner/operator.py", "--auth", "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-root-records-20261016/AUTH.json"],
+    "cwd": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-operator-materialized-20261016",
+    "env": {"PATH": "/usr/bin:/bin", "HOME": "/nonexistent", "LC_ALL": "C", "TZ": "UTC"},
+    "stdin": "DEVNULL",
+    "closeFds": true
+  },
+  "bounds": {
+    "outerWallSeconds": 180,
+    "outerKillAfterSeconds": 10,
+    "outerAbsoluteMaximumSeconds": 190,
+    "outerClockStart": "operator process spawn, including archive staging/extraction",
+    "inheritedRlimitCore": [0, 0],
+    "innerAuthTotalWallSeconds": 120,
+    "innerWindow": "Native-call window from Runner construction after extraction (operator.py:435,594-599), plus up to 10 s per-call kill cleanup (operator.py:519-535); not a whole-execution cap",
+    "childLimitsFromExistingCode": {"RLIMIT_CPU": [15, 16], "RLIMIT_AS_BYTES": 4294967296, "RLIMIT_NOFILE": 128, "RLIMIT_FSIZE_BYTES": 33554432, "source": "operator.py:422-426 set_limits, inherited RLIMIT_CORE=(0,0) retained"},
+    "parentHardLimits": "Do not cap the timeout/prlimit parent hard AS or CPU below the child limits; only RLIMIT_CORE=0 is imposed by prlimit."
+  },
+  "caveats": [
+    "GNU timeout signals its managed child/prlimit chain; the operator spawns each native call with start_new_session=True (operator.py:513) and bwrap --new-session --die-with-parent (operator.py:468-469), so outer process-group kill is not guaranteed to reach every descendant session.",
+    "--die-with-parent ties bwrap children to operator death on a best-effort basis only; no guarantee against unkillable D-state processes.",
+    "CPU limits are per-process, not transitive across descendants; total transitive CPU is not capped.",
+    "Failure at any bound (outer 180/190 s, inner 120 s, per-call 30 s) leaves the single attempt spent; zero retries."
+  ],
+  "gate": "Fresh audit must check this actual launch form. Execution only under a separate actual AUTH with status AUTHORIZED_ONE_RUN after the addendum review and two FOR/AGREE votes on P-29..P-32."
+}

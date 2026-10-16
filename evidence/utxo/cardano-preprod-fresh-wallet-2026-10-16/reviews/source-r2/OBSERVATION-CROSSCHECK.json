@@ -1,0 +1,51 @@
+[
+  {
+    "evidence": "Candidate byte identity: INDEX pins and both ROOT-SOURCE-MANIFEST files agree that runner/operator.py is 30735 B, SHA-256 7944d08ff689172a4985c5de657d4b6add0bb47dc93ecc44774f4c45e8e091b6, AUTH-CANDIDATE.json is 1401 B, SHA-256 442c018f38d52416c8a293ed3adeaec174cb43773b8bac574e0f77b596b46b3f, EXECUTION-PROPOSAL.json is 63d8da2da6804a1889ff5cfa4bb3bfd91857b669905efd2c88d6ebc700aae65c, README.md is 71456858dc9c7bb19330011eddee8954de2a46114e15906b7bcee268ad7517ee, and DESIGN-POSITIONS.json is 00a7b3032b70616da393cc7caf611c7f8618b5b7f569ab186036c5404a29f398, all unchanged in R2.",
+    "id": "CC-R2-IDENTITY",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "R2 original five are byte-identical to the old candidate; the four addendum files are additive only."
+  },
+  {
+    "evidence": "AUTH schema: operator.py:54-83 defines exactly 28 AUTH_KEYS names (not 29); load_auth at :247 enforces set equality with no extras, :251-252 requires AUTHORIZED_ONE_RUN so the candidate at AUTH-CANDIDATE.json:27 CANDIDATE_NOT_AUTHORIZED is rejected, :253-284 pins operator hash, archive, member, staged hash 01b131705d658912d08f20ed57bc5c0ff019b77f84df67ce8f14602e7787ad8d, static linkage and empty binds, and :285-306 pins magic 1, mainnet false, attempts 1, retries 0, maxCliCalls 4, totalWallSeconds 120, perCallTimeoutSeconds 30 and all four forbidden scopes false. SCOPE-ADDENDUM.json:28 pins the same values for the future AUTH.",
+    "id": "CC-AUTH-SCHEMA",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Actual-AUTH contract is the existing 28-key set with only the status flip in a new file; no extra key may be invented."
+  },
+  {
+    "evidence": "Outer form: OUTER-EXECUTION-PROPOSAL.json:12 argv is exactly /usr/bin/timeout --signal=TERM --kill-after=10s 180s /usr/bin/prlimit --core=0 /usr/bin/python3 -I M/runner/operator.py --auth RR/AUTH.json with cwd M, env PATH=/usr/bin:/bin, HOME=/nonexistent, LC_ALL=C, TZ=UTC, stdin DEVNULL and closeFds true at :13-16. Bounds at :19-27 record 180 s from operator spawn including staging, 10 s kill grace, 190 s absolute maximum, inherited RLIMIT_CORE [0,0], inner 120 s from Runner construction at operator.py:435 after extract_binary at :594-599, up to 10 s per-call cleanup at :519-535, and child RLIMIT_CPU [15,16], RLIMIT_AS 4294967296, NOFILE 128, FSIZE 33554432 from set_limits :422-426 with CORE inherited. The parent is expressly not to clamp AS or CPU below the child limits at :27.",
+    "id": "CC-OUTER-FORM",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Proposed root launch form matches the required exact argv and honestly bounds the operator process, with descendant caveats disclosed."
+  },
+  {
+    "evidence": "Counter and spent attempt: operator.py:438-455 creates the ledger at attemptsStarted 0 and record_intent writes 1 with INTENT_RECORDED_BEFORE_FIRST_PROCESS_SPAWN before Popen at :508; run_cli sets cliCallsStarted before Popen at :463-464; retries remains 0 at :441,766,793; create_fresh_roots at :189-199 refuses existing public or private leaves, so an early failure before Runner construction still blocks re-entry, and the root one-scope rule must treat the AUTH as consumed once even then.",
+    "id": "CC-COUNTER",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Intent is recorded before the first process spawn and failure preserves a spent, non-retryable attempt."
+  },
+  {
+    "evidence": "Secret boundary: operator.py:615-625 uses only lstat/private_file_info and chmod on payment.skey, never opening, reading, hashing, copying, or printing it; :537-538 writes raw native stdout/stderr only under PRIVATE_ROOT/logs at 0600 while public records at :539-543 hold only call, exitCode and timedOut; RESULT at :750-753 reports only signingKeyRetainedPrivate and signingKeyMode0600 booleans with signingKeyExported and signingKeyHashedByOperator false; README.md:51 states the root prohibition, and no secret body hash exists anywhere in the public schema at :732-800.",
+    "id": "CC-SECRET-BOUNDARY",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Only existence and mode booleans may leave the operator; raw native output and the secret never become public."
+  },
+  {
+    "evidence": "Strict success predicate: operator.py:604-689 performs exactly address key-gen, address key-hash, address build --testnet-magic 1 and address info with no stake, signing, query, transaction, network, or faucet argument; :546-549 fails on timeout or any nonzero exit so all four exits must be 0; :656-657 requires a 56-hex key hash; :671-679 requires a single addr_test1 line; :698-720 requires address-info type payment, era shelley, encoding bech32, identical address, and base16 decoding to 29 bytes with header 0x60 followed by that key hash (source-derived derivation consistency only, via Address/Info/Run.hs fields and Address/Run.hs PaymentCredentialByKey with NoStakeAddress as recorded in the prior review); public files are exported only at :728-731 after checks :721-726, and RESULT status at :734 is exactly WALLET_CREATED_PUBLIC_EXPORT_COMPLETE.",
+    "id": "CC-RESULT-PREDICATE",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "WALLET_CREATED_PUBLIC_EXPORT_COMPLETE requires four zero exits plus key-hash and enterprise-header consistency before any public export."
+  },
+  {
+    "evidence": "Binary and ELF pins: AUTH-CANDIDATE.json:6,8,18,23 now records static, staged SHA-256 01b131705d658912d08f20ed57bc5c0ff019b77f84df67ce8f14602e7787ad8d, operator SHA-256 7944d08ff689172a4985c5de657d4b6add0bb47dc93ecc44774f4c45e8e091b6 and runtimeBinds []; the extracted DATA-ONLY-MANIFEST:7-8,13,24-25 records member 102556168 B with the same SHA-256, ELF64 little-endian machine 62, 9 program headers, no PT_INTERP and no PT_DYNAMIC; operator.py:310-353,356-419,721-726 re-parses the same ELF properties and re-checks archive and staged hashes before and after the native calls; RuntimeBinds is therefore [] with no dynamic fallback.",
+    "id": "CC-ELF-STATIC",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Static classification with empty runtime binds is supported by public ELF data and re-validated by the operator; this is finite ordinary evidence, not a reproducible-build attestation."
+  }
+]

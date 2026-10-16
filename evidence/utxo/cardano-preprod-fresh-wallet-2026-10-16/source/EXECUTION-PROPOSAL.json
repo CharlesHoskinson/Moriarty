@@ -1,0 +1,209 @@
+{
+  "format": "cardano-preprod-fresh-wallet-execution-proposal/1",
+  "status": "PROPOSAL_NOT_AUTHORIZED",
+  "reviewToken": "current-cardano-preprod-fresh-wallet-operator-muse-source-20261016",
+  "walletCreated": false,
+  "nativeExecutionAuthorized": false,
+  "actualProof": false,
+  "targetAcceptance": false,
+  "sourceReadiness": "CONDITIONAL_SOURCE_AUTHORED_NOT_EXECUTABLE_UNTIL_FRESH_REVIEW_AND_EXACT_AUTH",
+  "userRequestedNewWallet": true,
+  "fallbackAuthorship": "Muse Wonder 1.0 source author after the recorded Opus timeout and the indexed explicit user Gemini/Muse fallback; this authorship is not independent approval.",
+  "network": {
+    "name": "Cardano Preprod",
+    "networkMagic": 1,
+    "mainnet": false,
+    "ledgerObserved": false,
+    "networkAccess": false,
+    "faucetRequest": false,
+    "note": "A Shelley testnet address encoding does not by itself distinguish Preview from Preprod. Preprod is the declared configuration target because --testnet-magic 1 is proposed; no ledger observation is claimed."
+  },
+  "paths": {
+    "publicRunRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-public-20261016",
+    "publicOperatorMaterializedRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-operator-materialized-20261016",
+    "publicRootRecordsRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-root-records-20261016",
+    "privateRoot": "/home/charl/.local/share/moriarty/cardano-preprod/moriarty-utxo-20261016",
+    "privateSigningKey": "/home/charl/.local/share/moriarty/cardano-preprod/moriarty-utxo-20261016/payment.skey",
+    "archive": "/home/charl/moriarty-eutxo-validation-2026-10-12/cardano-cli-release-data-20261015/cardano-cli-11.3.1.0-x86_64-linux.tar.gz"
+  },
+  "publicPrivateBoundary": {
+    "publicTreeContainsPrivateSubdirectory": false,
+    "rootMayReadPrivateRoot": false,
+    "rootMayStatPrivateRoot": false,
+    "rootMayHashPrivateRoot": false,
+    "rootMayWalkPrivateRoot": false,
+    "operatorOnlyMayTouchNamedPrivateSecret": true,
+    "signingKeyBytesExport": false,
+    "signingKeyHashExport": false,
+    "signingKeyCborExport": false,
+    "entropyExport": false,
+    "mnemonicExport": false,
+    "rawNativeStdoutPublicExport": false,
+    "rawNativeStderrPublicExport": false,
+    "privateDirectoryListingExport": false,
+    "allowedPublicExportsAfterFullValidation": [
+      "payment.vkey",
+      "payment.vkey.hash",
+      "payment.addr",
+      "address-info.json",
+      "RESULT.json",
+      "attempt-ledger.json",
+      "staged public cardano-cli binary"
+    ]
+  },
+  "binary": {
+    "cliVersion": "11.3.1.0",
+    "sourceCommit": "fc466f22ca5c03c0e373e2d37053b7f1884c50c9",
+    "sourceArchiveSha256": "20ba6e5711a1f8b8aa916cc87001baa04862c19358b9bf2aaebdb9425dc536e2",
+    "binaryArchiveBytes": 24057685,
+    "binaryArchiveSha256": "330d20a904d5f7526a0ba22edec6ba8fe5670978e8a37bf83c27d4b63faeeebe",
+    "soleMember": "cardano-cli-x86_64-linux",
+    "soleMemberBytes": 102556168,
+    "soleMemberRegular": true,
+    "soleMemberLink": false,
+    "expectedStagedBinarySha256": null,
+    "expectedStagedBinarySha256State": "ROOT_TO_MEASURE_FROM_THE_FIXED_ARCHIVE_AS_DATA_BEFORE_FRESH_REVIEW",
+    "reproducibleBuildAttestation": false,
+    "archiveMemberHashInvented": false,
+    "extractionMethod": "Python tarfile member enumeration and streaming read of the single named regular member; no extractall and no traversal path is used.",
+    "binaryLinkage": "UNRESOLVED_REQUIRES_DATA_ONLY_ELF_INSPECTION",
+    "dynamicFallbackToHostCli": false,
+    "installation": false
+  },
+  "nativeSequence": [
+    {
+      "order": 1,
+      "name": "address-key-gen",
+      "argv": [
+        "address",
+        "key-gen",
+        "--verification-key-file",
+        "/private/payment.vkey",
+        "--signing-key-file",
+        "/private/payment.skey"
+      ],
+      "sourceBasis": "Address/Command.hs defines AddressKeyGen; Address/Option.hs parses key-gen from verification/signing outputs; Address/Run.hs generates and writes the Shelley payment pair. Leaf spellings remain a disclosed review point because the imported common-option definitions were not mirrored."
+    },
+    {
+      "order": 2,
+      "name": "address-key-hash",
+      "argv": [
+        "address",
+        "key-hash",
+        "--payment-verification-key-file",
+        "/private/payment.vkey",
+        "--out-file",
+        "/private/payment.vkey.hash"
+      ],
+      "sourceBasis": "Address/Command.hs defines AddressKeyHash; Address/Option.hs parses a payment verification key or file plus optional output; Address/Run.hs serialises verificationKeyHash as hex."
+    },
+    {
+      "order": 3,
+      "name": "address-build",
+      "argv": [
+        "address",
+        "build",
+        "--payment-verification-key-file",
+        "/private/payment.vkey",
+        "--testnet-magic",
+        "1",
+        "--out-file",
+        "/private/payment.addr"
+      ],
+      "sourceBasis": "Address/Command.hs defines AddressBuild with PaymentVerifier, optional StakeIdentifier, NetworkId, and optional output. Address/Run.hs uses PaymentCredentialByKey (verificationKeyHash vkey) and NoStakeAddress when the stake identifier is absent."
+    },
+    {
+      "order": 4,
+      "name": "address-info",
+      "argv": [
+        "address",
+        "info",
+        "--address",
+        "OPERATOR_READS_VALIDATED_ADDRESS_FROM_PRIVATE_PAYMENT_ADDR",
+        "--out-file",
+        "/private/address-info.json"
+      ],
+      "sourceBasis": "Address/Command.hs defines AddressInfo; Address/Info/Run.hs emits type, era, encoding, address, and base16 and classifies a Shelley payment address as payment/shelley/bech32."
+    }
+  ],
+  "limits": {
+    "attempts": 1,
+    "retries": 0,
+    "maxCliCalls": 4,
+    "totalWallSeconds": 120,
+    "perCallTimeoutSeconds": 30,
+    "perCallCpuSeconds": 15,
+    "nativeCpuLimitsArePerProcessNotTransitive": true,
+    "outerKillCannotGuaranteeUninterruptibleDeath": true,
+    "cleanupAndWaitLimitsHonest": true,
+    "intentCounterIncrementedBeforeFirstProcessSpawn": true,
+    "failurePreservesSpentAttempt": true,
+    "partialFailureMayRetainPrivateFiles": true,
+    "partialFailurePublishesFundingAddress": false
+  },
+  "sandbox": {
+    "tool": "/usr/bin/bwrap",
+    "flags": [
+      "--unshare-all",
+      "--die-with-parent",
+      "--new-session",
+      "--clearenv"
+    ],
+    "executableReadOnly": true,
+    "onlyFreshPrivateRootReadWrite": true,
+    "existingHomeMounted": false,
+    "existingUserStateMounted": false,
+    "existingCredentialsMounted": false,
+    "devUrandomAllowedThroughMinimalDev": true,
+    "tmpfsTmp": true,
+    "environment": {
+      "HOME": "/private",
+      "TMPDIR": "/tmp",
+      "LANG": "C.UTF-8",
+      "PATH": "/usr/bin:/bin"
+    },
+    "dynamicRuntimeBinds": "Exact AUTH-listed regular non-link files only, read-only, under /lib, /lib64, /usr/lib, or /usr/lib64 destinations; broad /usr, /home, host CLI, and installation fallbacks are forbidden."
+  },
+  "validationBeforeWalletCreated": [
+    "AUTH status, strict field set, strict non-bool integer counters, exact paths, exact modes, scope, archive, source, member, operator hash, linkage, and runtime binds validate.",
+    "Archive size and SHA-256 validate before and after native calls.",
+    "Archive contains exactly one regular non-link member with the exact name and byte size.",
+    "Staged executable SHA-256 equals the measured hash pinned in the actual AUTH before sandbox execution and again after the calls.",
+    "ELF class, endianness, x86-64 machine, linkage, and interpreter bind validate against the AUTH.",
+    "All native exit codes are zero and no call times out.",
+    "The private signing key is present as a regular non-link file and has mode 0600; the operator does not open, read, hash, copy, or print it.",
+    "The public verification key parses as a text-envelope JSON object containing even-length hexadecimal cborHex; its exact type string is not invented from the incomplete mirror.",
+    "The CLI key-hash output is exactly 56 lowercase hexadecimal characters after stripping.",
+    "The built address is a single addr_test1... line.",
+    "Address info reports type payment, era shelley, encoding bech32, and the identical address.",
+    "The disclosed enterprise check requires base16 to decode to 29 bytes, header byte 0x60, and the final 28 bytes to equal the CLI payment key hash. This is a fail-closed public-format invariant proposed for reviewer agreement, not a signature or ledger proof.",
+    "Public files are exported only after all preceding validations pass."
+  ],
+  "keyRetention": {
+    "form": "CLI-generated PaymentSigningKey text envelope retained only at the private payment.skey path",
+    "hdMnemonic": false,
+    "mnemonicBackup": false,
+    "rootBackup": false,
+    "upload": false,
+    "ownerInstruction": "Protect the retained private file offline. Only the public address may be placed in chat or GitHub. This wallet is for test ADA only."
+  },
+  "scopedFalseOrExcluded": {
+    "groth16": "Not applicable; no Groth16 proof, circuit, witness, or verifier is in this wallet-creation scope.",
+    "ordinarySelftest": "Not applicable; no selftest result is claimed.",
+    "compiledC2Wrapper": "Separate and open; this operator is a Python standard-library orchestrator and does not create or validate a C2 wrapper.",
+    "genuineHashOrSignatureQualification": "Public file hashes are ordinary integrity pins only. No signature test, qualified cost evidence, settlement evidence, ACTUS evidence, DeFi evidence, general-obligation evidence, private handoff, recursion, bounded multi-parent PCD, universal certificate, or real Preprod transaction evidence is created.",
+    "all20UtxoFamilies": "Open and not addressed.",
+    "actusDeFiGeneralObligations": "Open and not addressed.",
+    "realPreprodTransactions": "Open and not addressed."
+  },
+  "firstBlockedBoundary": "Fresh non-author source/effect/security review with two agreeing substantive choices, followed by root completion of the measured staged-binary hash, ordinary data-only ELF linkage/runtime-bind determination, exact operator hash, and a new exact one-run AUTH. No native or key operation is authorized before that boundary.",
+  "unknowns": [
+    "The mirrored files do not include Cardano.CLI.EraBased.Common.Option, the top-level executable dispatch, pNetworkId, pPaymentVerifier, pAddressKeyType, pKeyOutputFormat, or the leaf definitions behind pVerificationKeyFileOut, pSigningKeyFileOut, pMaybeOutputFile, and pAddress.",
+    "The exact default address key type and default key output format therefore remain review points; operator.py fails closed if the resulting verification key is not a text-envelope JSON object with cborHex.",
+    "ELF linkage, interpreter, and DT_NEEDED runtime files are unknown until ordinary data-only inspection.",
+    "The staged member SHA-256 is intentionally not invented and must be measured from the fixed archive before review.",
+    "CLI CSPRNG behaviour is delegated to the official binary and /dev/urandom availability inside the sandbox; no entropy is generated by Python.",
+    "Address info cannot distinguish Preprod from Preview; Preprod is configuration intent from network magic 1.",
+    "No signature test is authorized, so future spendability and live ownership are not proved by address derivation."
+  ]
+}
