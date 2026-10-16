@@ -4,6 +4,37 @@ Status: implemented typed A-profile host component with finite normal comparison
 evidence. Candidate B design adoption, implementation and product acceptance
 remain separate. This delivery does not close a full roadmap exit.
 
+## October 16 delivery update
+
+The historical sections below retain their original capture scopes. Later merged
+deliveries add the following evidence for their exact recorded source:
+
+- [PR #104](https://github.com/CharlesHoskinson/Moriarty/pull/104): actual Rust host,
+  flat-ID image and generic Quint observations each match eight programs, 216 fuel
+  runs and 5,355 projected records against the unchanged complete normal oracles.
+  These are post-startup A observations; prefix totals repeat work. The image
+  unit tests were not selected. Actual K rewriting remains unobserved.
+- [PR #105](https://github.com/CharlesHoskinson/Moriarty/pull/105): actual production
+  Core compilation, 14 selected tests, and parsing/preparation/execution of two
+  fixed scalar source programs across 70 fuel runs and 1,259 complete records.
+  This exercises `observe_scalar_action` and projects final emit values only.
+  Ordered financial effects and K source-name correspondence remain open; the H1 judgment covers only local diagnostic execution of the fixed hash-pinned fixtures, literal scalar arguments and recorded bounds, subject to the preflight's M1–M5 conditions; H1 remains in force.
+- [PR #106](https://github.com/CharlesHoskinson/Moriarty/pull/106): exported
+  `Machine::visit_steps` with borrowed records, observer stop and resumption.
+  Eight standalone tests passed; a separate production Core compile used 26
+  source inputs. Whole-crate tests and general caller admission remain open.
+- The existing private fork merged an actual pure Lean observation producer:
+  eight programs, 216 runs and 5,355 diagnostically matching projected records.
+  Its K rule/no-next declarations are inferred and terminal control is projected.
+  Source, pins and raw artifacts remain private. This supplies no refinement,
+  bounded Clean component or handwritten constraint result.
+
+See the [correctness-loop matrix](SHERLOCK-CORRECTNESS-LOOP.md#october-16-captured-observations)
+for the current layer boundaries. Completed scoped audits and integration results
+are retained in the linked PRs; the immutable packages preserve their original
+pending/UNRUN labels. Candidate B, compiler/circuit correspondence, native and Midnight stagenet acceptance remain open; H1's general untrusted-input restriction remains in force. The source projection section below describes the earlier preparation-only
+capture, not the later two-program execution.
+
 ## Implemented behavior
 
 [`mori_core::sherlock`](../crates/mori-core/src/sherlock/mod.rs) supplies a typed
