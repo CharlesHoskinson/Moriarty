@@ -247,10 +247,25 @@ Opus 5.5's Phase 3 gate, reproduced verbatim from the handoff for [A4/B002](../o
 
 The canonical EARS [specification](../openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md), [traceability](../openspec/changes/sherlock-universal-interpreter-design/traceability.md), [roadmap](../ROADMAP.md) and consolidated crosswalk retain exact normative clauses and parent links. This mapping adds implementation work without replacing them. ACTUS retains all 277 fixtures/fields, 18 executable types, 32 taxonomy dispositions and DS01–07. DeFi retains all 72 rows, DA01–24, supplements, three held-outs, eight intent cases and eight regression classes. Composition retains sequential, disjoint parallel, shared-state interleaving, atomic synchronization and asynchronous messaging.
 
+The [current captured observations](SHERLOCK-CORRECTNESS-LOOP.md) now include
+[PR #109's 35 codec tests and separate 12-run/49-record typed round trip](audits/2026-10-16/sherlock-layout-codec-delivery/AUTHOR-REPORT.md),
+[PR #110's full eight-program/216-run/5,355-record typed preservation](audits/2026-10-16/sherlock-layout-codec-full-normal-delivery/AUTHOR-REPORT.md),
+and [PR #111's nine arithmetic/fuel host tests and private test registrations](audits/2026-10-16/sherlock-arithmetic-fuel-host/README.md).
+[PR #113](https://github.com/CharlesHoskinson/Moriarty/pull/113) separately records
+[all 189 canonical Core library tests passing](audits/2026-10-16/sherlock-core-cfg-test/README.md).
+The codec round trips and separate Machine-to-corpus comparisons remain distinct;
+no count is summed across these captures. [PR #112](https://github.com/CharlesHoskinson/Moriarty/pull/112)
+adds supplied K projection comparison in the existing QA consumer, without engine
+execution. The local K compilation below remains compile-only history. A later
+single N01/fuel1 raw engine capture supplies no actual common-state comparison
+or full 216-run K, general K correctness or refinement result.
+All planned phase predicates, Candidate B adoption and parent checkboxes retain
+their existing requirements.
+
 | Evidence class | Current fact | What still needs distinct evidence |
 |---|---|---|
-| Public models | Source-specific K frontend syntax Kore/compiled text; no runtime `definition.kore` or rule execution. Repaired Quint: eight tests and 32 sampled seed 1 traces, max 32 steps, no `allInv` violation and all seven witnesses | B models, generic Quint projection and cross-model refinement |
-| Compiler/host | Existing Moriarty consumers have their own scoped evidence; this plan supplies no new run | ProgramImage/admission, deterministic complete traces and actual source-to-relation mapping |
+| Public models | Historical K frontend syntax Kore/compiled text; a local compile exited 0 in 4.293 seconds and inventoried an unvalidated `definition.kore`. A later single N01/fuel1 raw engine run completed 12 stages with 11 zero-exit children, recording startup, literal return, publication and a zero-rule terminal probe; source/toolchain binding and both receipts remain unpublished. Historical scalar15 Quint: eight tests and 32 sampled seed 1 traces, max 32 steps, no `allInv` violation and all seven witnesses | B models/projections, actual K common-state comparison, full 216-run K coverage and cross-model refinement |
+| Compiler/host | Canonical Core `lib.rs` cfg(test) compiled with 86 inputs and passed all 189 library tests in PR #113; earlier source/codec captures retain their own scopes. This documentation update supplies no new run | ProgramImage/admission, deterministic complete traces and actual source-to-relation mapping; Cargo/workspace, SDK, integration-test and doctest qualification; cached extern/proc-macro source authenticity |
 | Lean reference | Merged Fenrir generic pure foundation and scoped normal/publication checks | B helper/admission/ADT reconciliation, full reference coverage and separate correspondence evidence |
 | Clean/circuit | Public API inventory and planned required components | Actual bounded step circuit, separate plans/exports and S-owned proofs/security evidence |
 | Native/target | Existing historical results retain their own exact scope | Sherlock-native exporter/relation, actual native recursive evidence and independently qualified Preview/Fenrir target results |

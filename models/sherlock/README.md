@@ -17,7 +17,7 @@ the current K/Quint models retain their narrower concrete data forms.
 
 | Artifact | Actual scope | Remaining work |
 |---|---|---|
-| [K definition](k/README.md) | Generic pure expression machine with named function tables, checked UInt128, lists, trees and explicit frames | Rule execution, metered helper refinement, financial operations, suspension and compiler/circuit correspondence |
+| [K definition](k/README.md) | Generic pure expression machine with named function tables, checked UInt128, lists, trees and explicit frames | Broader engine coverage, actual common-state comparison, metered helper refinement, financial operations, suspension and compiler/circuit correspondence |
 | [Quint companion](quint/README.md) | Finite factorial/list/tree algorithms with explicit frames, work accounting and a local waiting/resume scenario | Arbitrary program loading, lexical environments, K projection and financial correspondence |
 
 Each model's README and source manifest define its exact membership and limits.
@@ -25,11 +25,34 @@ The K fixtures have independently written expected values. Quint has a separate
 test module and independently written arithmetic expectations. Source files and
 expectations alone establish no observed execution result.
 
-[Observed checks](observations.json) record K frontend success, eight passing
-Quint tests and 32 sampled seed-1 traces with no invariant violation. K produced
-syntax Kore and compiled text; no runtime `definition.kore` or rule execution
-was observed. All seven Quint witnesses occurred. These results concern the
-exact recorded model sources and do not establish cross-model refinement.
+The historical [observed checks](observations.json) record K frontend success,
+eight passing Quint tests and 32 sampled seed-1 traces with no invariant violation;
+all seven Quint witnesses occurred. Those source-specific captures remain unchanged.
+A later local K compile exited 0 in 4.293 seconds and produced an unvalidated
+`definition.kore`; its source/toolchain binding and receipt are not yet published.
+That record remains compile-only history. A later single N01/fuel1 raw engine run
+completed 12 stages with 11 zero-exit children. Raw logs and states show startup,
+a `uiU(7)` literal return leaving fuel 0, `uiDone(uiU(7))` publication and a following
+zero-rule probe with byte-identical terminal Kore. Its raw receipt is not yet
+published. Actual common-state comparison remains UNRUN; no full 216-run K,
+general K correctness or refinement result follows. Neither those historical
+captures nor this compilation establishes cross-model refinement.
+
+The [current correctness-loop observations](../../docs/SHERLOCK-CORRECTNESS-LOOP.md)
+include [PR #109's 35 codec tests and separate 12-run/49-record typed round trip](../../docs/audits/2026-10-16/sherlock-layout-codec-delivery/AUTHOR-REPORT.md)
+and [PR #110's full eight-program/216-run/5,355-record typed preservation](../../docs/audits/2026-10-16/sherlock-layout-codec-full-normal-delivery/AUTHOR-REPORT.md).
+The independent Machine-to-corpus matches are separate from internal codec evidence.
+[PR #111](https://github.com/CharlesHoskinson/Moriarty/pull/111) adds nine
+arithmetic/fuel host tests and private Core test registrations; [PR #113's canonical
+Core capture](../../docs/audits/2026-10-16/sherlock-core-cfg-test/README.md) compiles
+86 inputs and passes all 189 library tests, including those nine and the eleven
+pre-existing draft-source tests. This is direct-rustc cfg(test) evidence, without
+Cargo/workspace, SDK, integration-test or doctest qualification; cached extern
+library/proc-macro and cached lexer source authenticity remain unestablished. The counts are
+separate captured scopes, not a combined total.
+[PR #112](https://github.com/CharlesHoskinson/Moriarty/pull/112) adds
+`--k-observations` to the existing QA consumer for supplied K projection documents;
+a supplied-data match does not establish K engine execution or a semantic match.
 
 K's structural helper rewrites are outside its semantic fuel schedule. Candidate B
 names the unchanged schedule `sherlock-k-a/1`, the companion's distinct schedule

@@ -2,8 +2,9 @@
 
 Status: required development workflow from the October 15 user instruction.
 The ordinary complete-observation consumers now accept host, image, Quint and
-pure Lean diagnostic artifacts. Actual execution, projection correspondence and
-the remaining cross-layer circuit/native harness require separate evidence.
+pure Lean diagnostic artifacts, plus supplied K projection documents. Actual
+execution, projection correspondence and the remaining cross-layer circuit/native
+harness require separate evidence.
 This operationalizes UIREQ-021–026 and the existing implementation plan;
 it does not adopt Candidate B, freeze its schema or close a roadmap gate.
 
@@ -147,7 +148,8 @@ are not fresh executions for this documentation update.
 | Flat-ID image | Eight programs, 216 fuel runs, 5,355 common-projection records | Actual image interpreter ran; its unit tests were not selected in this attempt |
 | Generic Quint | 216 actual deterministic ITF captures for eight programs, matching 5,355 projected records; 5,579 raw states and eight terminal stutters retained separately | Finite observations, without exhaustive checking or refinement |
 | Pure Lean reference | Eight programs, 216 fuel runs and 5,355 diagnostically matching projected records; producer merged in the existing private fork | K rule labels/no-next are inferred and terminal control is projected; no K/Lean refinement claim |
-| Actual K, Clean and handwritten circuits | No execution result added by these deliveries | Actual rule traces, bounded constraint checks and paired component comparisons remain required |
+| Actual K | The compile-only record exited 0 in 4.293 seconds and inventoried an unvalidated `definition.kore`. A subsequent single N01/fuel1 raw engine run completed 12 stages with 11 zero-exit children | Raw receipts and source/toolchain binding are not yet published; no actual common-state comparison, full 216-run K coverage or refinement is established |
+| Clean and handwritten circuits | No execution result added by these deliveries | Bounded constraint checks and paired component comparisons remain required |
 | Native and Midnight stagenet | Not run by these deliveries | Required proof, deployment, call and complete readback evidence remains open |
 
 The public host/image/Quint results are in [PR #104](https://github.com/CharlesHoskinson/Moriarty/pull/104)
@@ -167,10 +169,43 @@ ordered financial-effect execution or K source-name correspondence. Its H1 judgm
 The [streaming delivery](audits/2026-10-16/sherlock-streaming-delivery/README.md),
 merged in [PR #106](https://github.com/CharlesHoskinson/Moriarty/pull/106), adds
 `Machine::visit_steps`. Eight standalone tests passed and the production Core
-library compiled with 26 source inputs. Whole-crate test execution and general
-caller admission remain unobserved. H1 remains in force.
+library compiled with 26 source inputs. That capture ran no whole-crate or
+canonical Core library tests; the later direct-rustc library-test observation is
+recorded below. Whole-crate Cargo test execution and general caller admission
+remain unobserved. H1 remains in force.
 
-The immutable delivery records retain their original pending/UNRUN labels and pre-integration scope; the linked PRs retain the completed scoped reviews, integration results and required limitations. The packaging repair in [PR #107](https://github.com/CharlesHoskinson/Moriarty/pull/107) passed 175 ordinary local tests, repaired exactly two files and left all 75 frozen files unchanged. Its revised packager takes three explicit arguments: checkout, public runtime directory and selection. That repair approved no real packager reuse. Historical two-argument instructions in the frozen packages are not current reuse instructions.
+The [codec delivery](audits/2026-10-16/sherlock-layout-codec-delivery/AUTHOR-REPORT.md)
+in [PR #109](https://github.com/CharlesHoskinson/Moriarty/pull/109) records 35 normal tests
+and a separate internal typed Step-mode encode/decode/materialize round trip over
+12 N01/N02 fuel runs and 49 records. The [full normal extension](audits/2026-10-16/sherlock-layout-codec-full-normal-delivery/AUTHOR-REPORT.md)
+in [PR #110](https://github.com/CharlesHoskinson/Moriarty/pull/110) preserves typed
+observations for all eight programs, 216 fuel runs and 5,355 records. The separate
+Machine-to-corpus matches supply no codec evidence of their own; neither result
+establishes canonical uniqueness, a wire ABI or constrained execution.
+
+[PR #111](https://github.com/CharlesHoskinson/Moriarty/pull/111) adds the
+[nine-test arithmetic/fuel host preparation](audits/2026-10-16/sherlock-arithmetic-fuel-host/README.md)
+and its private Core test registrations. The later [canonical Core observation](audits/2026-10-16/sherlock-core-cfg-test/README.md)
+in [PR #113](https://github.com/CharlesHoskinson/Moriarty/pull/113) compiled the actual
+`lib.rs` cfg(test) graph with exactly 86 inputs and passed all 189 registered library
+tests, including those nine tests and the eleven pre-existing draft-source tests.
+This direct-rustc result closes that test-registration compilation gap only.
+It selected six cached extern libraries and two cached proc-macros; cached lexer
+source correspondence and transitive cache/source authenticity remain
+unestablished. Cargo/workspace, SDK, integration-test, doctest and circuit/native
+qualification remain separate. Counts from these distinct captures are not added
+together.
+
+[PR #112](https://github.com/CharlesHoskinson/Moriarty/pull/112) adds the existing
+QA consumer's `--k-observations` mode for supplied K projection documents. A match
+in that mode is a supplied-data comparison, not evidence that K ran. The local K
+compile recorded in the table remains compile-only history. The later N01/fuel1
+raw logs and states show startup, a `uiU(7)` literal return leaving fuel 0, `uiDone(uiU(7))`
+publication and a following probe reporting no applied rules with byte-identical
+terminal Kore. These are raw observations, not an actual common-state comparison;
+full 216-run K coverage, general K correctness and refinement remain open.
+
+For the PR #104–#106 deliveries, the immutable delivery records retain their original pending/UNRUN labels and pre-integration scope; their linked PRs retain the completed scoped reviews, integration results and required limitations. The PR #109–#113 paragraphs above state only what their linked public reports or PRs record; the separate local K compile and raw N01 engine facts rest on receipts whose publication is pending. The packaging repair in [PR #107](https://github.com/CharlesHoskinson/Moriarty/pull/107) passed 175 ordinary local tests, repaired exactly two files and left all 75 frozen files unchanged. Its revised packager takes three explicit arguments: checkout, public runtime directory and selection. That repair approved no real packager reuse. Historical two-argument instructions in the frozen packages are not current reuse instructions.
 
 ### Earlier captures and retained gaps
 
