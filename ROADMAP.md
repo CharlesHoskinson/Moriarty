@@ -4,6 +4,17 @@ Moriarty is a permissionless language of provable financial intention, compiled 
 
 This is the **single delivery sequence**. P0–P7, C0–C4 and K0–K5 are retained requirement/provenance aliases, not parallel work queues. MC01–MC08, SP01–SP12 and G01–G24 retain their objective acceptance obligations. [Traceability and conflict dispositions](openspec/changes/consolidated-language-kernel/traceability.md) map the inherited work without resetting evidence, resource charges or unresolved failures.
 
+## Sherlock factory — 2026-10-16
+
+The [local software factory](docs/DOCTORWATSON.md) turns the nine planning
+reviews and ten online research assignments into scoped Sherlock implementation
+slices, independent oracle QA and direct PR delivery. CI runs locally at the
+user's request; GitHub holds source and result summaries. The
+[OpenSpec/EARS](openspec/changes/doctorwatson/requirements.md) preserves
+required K/Quint/Lean-Clean iteration, native/C4 limits and all existing exits.
+The first increment checks the existing A-profile corpus and source literals;
+it does not execute the interpreter or establish model/circuit correspondence.
+
 ## What exists
 
 Local source/5 lifecycle evaluation, finite [K comparisons](deliverables/k-lifecycle-execution-2026-09-17/RESULT.md), and scoped Preview [loan](deliverables/preview-loan-2026-09-17/recovery-run01/RESULT.md) and [swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/RESULT.md) results are foundations. The [whole-language audit](deliverables/whole-language-review-2026-09-19/REVIEW.md) identifies the missing integrated rich-source/intent/target path, recovery and lifetime-state issues. The [DeFiFormal study](deliverables/defiformal-study-2026-09-19/RESULT.md) supplies semantic reference contracts, not a deployed federation or transferable native proof.
@@ -291,6 +302,6 @@ Libraries supply ACTUS, loans/claims, payments/escrow, AMMs, vaults, netting, re
 
 The [six-expert consolidation record](deliverables/consolidated-design-2026-09-19/CONSENSUS.md) preserves recommendations, disagreements and final review scope. The [MPLR theory log](wiki/research/mplr/index.md) retains MPLR-001–035 as research requirements with future PL investigations.
 
-Foreman/Pel governs project implementation only. It cannot authorize public Mori programs. Existing resource controls, failed runs and public submission limits survive this consolidation; concrete bounded execution packets must reconcile them before dependent work. The roadmap does not start a proof campaign or deploy anything.
+The October 16 DoctorWatson instruction suspends Foreman/Pel and campaign dispatch for current work. Earlier workflow records remain historical and cannot authorize public Mori programs. Existing resource controls, failed runs and public submission limits survive this consolidation; concrete bounded execution packets must reconcile them before dependent work. The roadmap does not start a proof campaign or deploy anything.
 
 The [Mina recursion case study](deliverables/mina-recursion-study-2026-09-19/RESULT.md) refines the same backend contract with MNR01–MNR08: transcript schedule, deferred obligations, compatible and authorized keys, verified-value binding, production mode, artifact provenance, batch soundness and component-level assurance. No Mina backend port is planned.
