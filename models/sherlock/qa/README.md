@@ -132,6 +132,21 @@ are still required; there is no full `--k-observations` comparison mode that can
 silently omit them. See the explicit unsupported row in the checker report.
 
 The [Quint driver](../quint/observations/README.md) prepares 216 deterministic
-normal captures through the existing model. Actual captured results and their
-source bindings are in the [public delivery report](../../../docs/audits/2026-10-16/sherlock-parallel-delivery/README.md).
-Supplied-file agreement, producer execution and downstream acceptance remain separate.
+normal captures through the existing model; the
+[public delivery](../../../docs/audits/2026-10-16/sherlock-parallel-delivery/README.md)
+records their actual successful execution and comparison. The new fixed
+[Core-source consumer](../reference/source_observations.rs) uses the existing
+parser and scalar projection; its [independently derived source observations](../oracles/SOURCE-NORMAL-PROVENANCE.md)
+remain separate from the eight typed-AST fixtures. Its ordinary comparison is:
+
+```bash
+python3 -I -B models/sherlock/qa/check_source_observations.py --observations /absolute/source.json
+```
+
+This checks both complete preparation reports and all 70 source fuel prefixes.
+The [bounded-source delivery](../../../docs/audits/2026-10-16/sherlock-bounded-source-delivery/README.md)
+records a fresh production Core library build, 14 passing selected tests, and
+actual parsed-source execution matching both programs and all 1,259 records.
+Source code, supplied-file agreement and actual execution remain separate; the
+source path has no general or untrusted input endpoint. Compiler/native, Clean
+constraints and target acceptance require their own evidence.

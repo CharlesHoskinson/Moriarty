@@ -26,6 +26,9 @@ mod sherlock_draft_image;
 mod sherlock_draft_image_tests;
 #[path = "sherlock/source_adapter.rs"]
 pub mod sherlock_source;
+// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.
+#[path = "sherlock/bounded_scalar_source.rs"]
+pub mod sherlock_bounded_source;
 pub mod stage;
 mod replay;
 mod runtime;
