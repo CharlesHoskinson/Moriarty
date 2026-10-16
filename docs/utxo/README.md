@@ -5,6 +5,7 @@ This branch contains the UTXO research, requirements, experiments, and implement
 ## Start here
 
 - [Requirements index](requirements-index.md)
+- [Interactive Cardano proof-options draft](proof-options.html) — download and open locally; [scope and UI checks](../../evidence/utxo/proof-options-2026-10-16/README.md).
 - [Requirements coverage](requirements-coverage.json)
 - [Experimental backend](../../experiments/moriarty-eutxo/)
 - [Current source manifest](publication/source-manifest.json)
