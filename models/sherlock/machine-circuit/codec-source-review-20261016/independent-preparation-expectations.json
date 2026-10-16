@@ -1,0 +1,474 @@
+{
+  "format": "sherlock-layout-independent-normal-expectations/1",
+  "status": "EXPECTED DATA ONLY; ALL ACTUAL RESULTS UNRUN",
+  "author": "Root, independently hand-derived from frozen L3 design; no candidate code used",
+  "source_layout_manifest_sha256": "d46e3f38fbb77120d48c6a174a036249d7224fc31229b323d3d7e3baaa143acb",
+  "scope": "Semantic table-order examples for future host-only A codec; not native wire data or complete55variant coverage",
+  "all_cases_assume": "Where omitted, program closure includes all referenced syntax/names, Snapshot is Pending/Some(control), frames fit semantic stack_limit, fuel values satisfy O1, and caller capacities suffice. These are partial normal examples, not complete Snapshot fixtures.",
+  "execution": "UNRUN",
+  "cases": [
+    {
+      "id": "nil-false-zero-distinct",
+      "input_values": [
+        {
+          "List": []
+        },
+        {
+          "Bool": false
+        },
+        {
+          "UInt": "0"
+        }
+      ],
+      "expected_nodes": [
+        {
+          "kind": "Constructor",
+          "type": "List",
+          "ctor": "Nil",
+          "fields": []
+        },
+        {
+          "kind": "Bool",
+          "type": "Bool",
+          "bool": false
+        },
+        {
+          "kind": "UInt",
+          "type": "UInt",
+          "uint": "0"
+        }
+      ],
+      "expected_root_ids": [
+        0,
+        1,
+        2
+      ],
+      "expected_node_count": 3,
+      "expected_field_count": 0
+    },
+    {
+      "id": "list-left-to-right-postorder",
+      "input_values": [
+        {
+          "List": [
+            "7",
+            "9"
+          ]
+        }
+      ],
+      "expected_nodes": [
+        {
+          "kind": "UInt",
+          "type": "UInt",
+          "uint": "7"
+        },
+        {
+          "kind": "UInt",
+          "type": "UInt",
+          "uint": "9"
+        },
+        {
+          "kind": "Constructor",
+          "type": "List",
+          "ctor": "Nil",
+          "fields": []
+        },
+        {
+          "kind": "Constructor",
+          "type": "List",
+          "ctor": "Cons",
+          "fields": [
+            1,
+            2
+          ]
+        },
+        {
+          "kind": "Constructor",
+          "type": "List",
+          "ctor": "Cons",
+          "fields": [
+            0,
+            3
+          ]
+        }
+      ],
+      "expected_root_ids": [
+        4
+      ],
+      "expected_node_count": 5,
+      "expected_field_count": 4
+    },
+    {
+      "id": "tree-shared-child-visited-twice",
+      "input_values": [
+        {
+          "Tree": {
+            "Branch": [
+              {
+                "Leaf": "7"
+              },
+              {
+                "Leaf": "7"
+              }
+            ]
+          },
+          "source_arc_children_identical": true
+        }
+      ],
+      "expected_nodes": [
+        {
+          "kind": "UInt",
+          "type": "UInt",
+          "uint": "7"
+        },
+        {
+          "kind": "Constructor",
+          "type": "Tree",
+          "ctor": "Leaf",
+          "fields": [
+            0
+          ]
+        },
+        {
+          "kind": "UInt",
+          "type": "UInt",
+          "uint": "7"
+        },
+        {
+          "kind": "Constructor",
+          "type": "Tree",
+          "ctor": "Leaf",
+          "fields": [
+            2
+          ]
+        },
+        {
+          "kind": "Constructor",
+          "type": "Tree",
+          "ctor": "Branch",
+          "fields": [
+            1,
+            3
+          ]
+        }
+      ],
+      "expected_root_ids": [
+        4
+      ],
+      "expected_node_count": 5,
+      "expected_field_count": 4
+    },
+    {
+      "id": "two-distinct-invoke-arguments",
+      "input_control": {
+        "Invoke": {
+          "name": "f",
+          "values": [
+            {
+              "UInt": "7"
+            },
+            {
+              "UInt": "9"
+            }
+          ]
+        }
+      },
+      "program_names_required": [
+        "f"
+      ],
+      "expected_data_nodes": [
+        {
+          "UInt": "7"
+        },
+        {
+          "UInt": "9"
+        }
+      ],
+      "expected_value_slots": [
+        {
+          "space": "Data",
+          "index": 0
+        },
+        {
+          "space": "Data",
+          "index": 1
+        }
+      ],
+      "expected_value_slice": {
+        "start": 0,
+        "len": 2
+      },
+      "expected_control_tag": 3
+    },
+    {
+      "id": "present-empty-bindings-versus-none",
+      "input_controls": [
+        {
+          "Bound": {
+            "bindings": null,
+            "type": "UInt",
+            "expression": "entry"
+          }
+        },
+        {
+          "Bound": {
+            "bindings": {},
+            "type": "UInt",
+            "expression": "entry"
+          }
+        }
+      ],
+      "expected_bindings": [
+        {
+          "present": false,
+          "environment": {
+            "present": false,
+            "index": 0
+          }
+        },
+        {
+          "present": true,
+          "environment": {
+            "present": false,
+            "index": 0
+          }
+        }
+      ],
+      "expected_appended_env_cells": [
+        0,
+        0
+      ],
+      "note": "Some(empty map) retains outer presence even though EnvRoot is empty."
+    },
+    {
+      "id": "function-row-zero-is-present",
+      "input_control": {
+        "Enter": {
+          "function": "exact structural clone of functions[0]",
+          "values": []
+        }
+      },
+      "expected_function_present": true,
+      "expected_function_id": 0,
+      "expected_empty_value_slice": {
+        "start": 0,
+        "len": 0
+      }
+    },
+    {
+      "id": "push-payload-before-installed-frames",
+      "input_control": {
+        "Push": {
+          "frame": {
+            "Right": {
+              "op": "Add",
+              "value": {
+                "UInt": "7"
+              }
+            }
+          },
+          "next": {
+            "Return": {
+              "UInt": "9"
+            }
+          },
+          "environment": {}
+        }
+      },
+      "input_environment": {},
+      "input_frames": [
+        {
+          "Right": {
+            "op": "Mul",
+            "value": {
+              "UInt": "12"
+            }
+          }
+        }
+      ],
+      "expected_data_nodes": [
+        {
+          "UInt": "7"
+        },
+        {
+          "UInt": "9"
+        },
+        {
+          "UInt": "12"
+        }
+      ],
+      "expected_pending_value_id": 0,
+      "expected_terminal_control_value_id": 1,
+      "expected_installed_frame_value_id": 2,
+      "expected_control_tags": [
+        2,
+        1
+      ],
+      "expected_depth": 1
+    },
+    {
+      "id": "saved-shadowed-local",
+      "program_names_required": [
+        "x"
+      ],
+      "input_control": {
+        "Return": {
+          "UInt": "12"
+        }
+      },
+      "input_environment": {
+        "x": {
+          "UInt": "9"
+        }
+      },
+      "input_frames": [
+        {
+          "Scope": {
+            "x": {
+              "UInt": "7"
+            }
+          }
+        }
+      ],
+      "expected_data_nodes": [
+        {
+          "UInt": "12"
+        },
+        {
+          "UInt": "9"
+        },
+        {
+          "UInt": "7"
+        }
+      ],
+      "expected_env_cells": [
+        {
+          "name": "x",
+          "value_id": 1,
+          "parent": {
+            "present": false,
+            "index": 0
+          }
+        },
+        {
+          "name": "x",
+          "value_id": 2,
+          "parent": {
+            "present": false,
+            "index": 0
+          }
+        }
+      ],
+      "expected_current_environment": {
+        "present": true,
+        "index": 0
+      },
+      "expected_saved_environment": {
+        "present": true,
+        "index": 1
+      }
+    },
+    {
+      "id": "duplicate-expression-occurrence-versus-held-reference",
+      "input_program": {
+        "entry": {
+          "Binary": {
+            "op": "Add",
+            "left": {
+              "Literal": {
+                "UInt": "7"
+              }
+            },
+            "right": {
+              "Literal": {
+                "UInt": "7"
+              }
+            },
+            "source_arc_children_identical": true
+          }
+        },
+        "functions": []
+      },
+      "expected_expression_ids": {
+        "entry": 0,
+        "left": 1,
+        "right": 2
+      },
+      "expected_entry_child_ids": [
+        1,
+        2
+      ],
+      "expected_held_literal_runtime_expr_id": 1,
+      "expected_constant_nodes": [
+        {
+          "UInt": "7"
+        },
+        {
+          "UInt": "7"
+        }
+      ],
+      "note": "Immutable right occurrence stays2; canonical held reference chooses least equal1."
+    },
+    {
+      "id": "match-source-child-paths",
+      "input_program": {
+        "entry": {
+          "Match": {
+            "scrutinee": {
+              "Literal": {
+                "UInt": "7"
+              }
+            },
+            "arms": [
+              {
+                "pattern": {
+                  "Var": "x"
+                },
+                "body": {
+                  "Var": "x"
+                }
+              },
+              {
+                "pattern": {
+                  "Var": "y"
+                },
+                "body": {
+                  "Var": "y"
+                }
+              }
+            ]
+          }
+        },
+        "functions": []
+      },
+      "expected_occurrence_paths": [
+        [],
+        [
+          0
+        ],
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ],
+      "expected_expression_child_ids": [
+        1
+      ],
+      "expected_arm_body_ids": [
+        2,
+        3
+      ],
+      "expected_names_utf8_order": [
+        "x",
+        "y"
+      ]
+    }
+  ],
+  "limits": [
+    "No new capacities, acceptance policy, proof statement, circuit decision or B narrowing.",
+    "Expected node ids are local to each independent case and are not SDK witness bindings.",
+    "Codec/reconstruction/full trace tests require actual complete typed specimens plus applicable execution admission."
+  ]
+}

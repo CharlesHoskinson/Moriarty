@@ -1,5 +1,13 @@
 # Moriarty repository instructions
 
+## Temporary security fallback - October 16
+
+The user authorizes Gemini or Muse when Opus is unavailable. The direct Opus
+check returned 429 usage_limit_reached. Use Gemini 4 Argon high through AGY
+for new security assignments, then Muse Wonder1.0 high if needed. Restore new
+assignments to Opus after observed recovery. Preserve actual task identities
+and every native limit. See the [fallback record](raw/assignments/moriarty-opus-outage-fallback-2026-10-16.md).
+
 ## Security ownership restored — October 15
 
 A fresh substantive Opus 5.5 high request completed with its returned canonical
