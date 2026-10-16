@@ -1,0 +1,50 @@
+[
+  {
+    "clause": "The experiment produces genuine secp256k1 owner-intent signatures through the already-compiled B9 vi.vi.withdraw validator, using the exact current Rust Core signing message and the unchanged Aiken validator source; no generic scheduler, mock, fresh Groth16 proof, compiler or ledger deployment is substituted.",
+    "clauseId": "VI-C1",
+    "position": "FOR",
+    "rationale": "Core exposes prepare/signing_message/verify with no signer; VI withdraw delegates to shard.authorize; B9 VI hash fc2266228a6a5072946ba7bef649be56fd984ee851d50e57977c1f64."
+  },
+  {
+    "clause": "Both schemes sign with the high-level k256 Signer::try_sign on the exact Core signing_message bytes; signing the digest with Signer (double hash) and sign_prehash on the full message (missing outer hash) are refused, and no auxiliary randomness is guessed (Schnorr zero auxiliary bytes, ECDSA deterministic RFC6979).",
+    "clauseId": "VI-C2",
+    "position": "FOR",
+    "rationale": "Core Verifier::verify(message), k256 Signer chains and thread SigCheckV2.digest = sha2_256(message) all meet at one outer SHA-256."
+  },
+  {
+    "clause": "The Rust helper creates exactly two fresh ephemeral keys inside the isolated producer process, one per scheme, each from exactly one 32-byte /dev/urandom read with no retry on an invalid scalar; secret material is never stored, printed or serialized, existing wallets and keys are never read, and the test keys are never future live catalogue keys.",
+    "clauseId": "VI-C3",
+    "position": "FOR",
+    "rationale": "The indexed packet names the fresh-key producer as the first missing boundary; the helper hardcodes one device read, static errors and no storage, with no erasure theorem."
+  },
+  {
+    "clause": "The helper fills only the explicitly declared TEMPLATE_PUBLIC_KEY_HEX template field with the freshly derived key before canonicalization, and the adapter propagates that same public key into the catalogue account, failing closed if the producer intent does not carry it.",
+    "clauseId": "VI-C4",
+    "position": "FOR",
+    "rationale": "prepare_intent canonicalizes the filled Authorization; the adapter asserts intent key equals producer key and builds AccountV2.key from those bytes."
+  },
+  {
+    "clause": "The public adapter derives the exact Core OwnerIntent from the same public domain facts, rebuilds the Aiken JSON by explicit intent.ak fragment order, compares it byte-for-byte with the Core signing_message, recomputes the VI hash as blake2b-224(0x03 || compiledCode bytes) rather than hashing the inner flat payload, and binds the genuine C2 hash as the VI parameter and claim hash with no fake #b1 credential and no old C2 script reuse.",
+    "clauseId": "VI-C5",
+    "position": "FOR",
+    "rationale": "intent.ak fragment order and 194-byte domain/2 target_hash; K10 recompute method; chain.json C2/VI hashes and applied parameter."
+  },
+  {
+    "clause": "The eight cases are two genuine positives (Schnorr, ECDSA) and six single-delta negatives (Schnorr signature bitflip, ECDSA signature bitflip, stale seq/nonce, domain predicate bitflip, whole-interval window exceedance, absent native co-authority); every guard label is SOURCE EXPECTED only because the runtime does not instrument named guards, and bad decode, budget, signal and timeout shapes are never counted as crypto rejects.",
+    "clauseId": "VI-C6",
+    "position": "FOR",
+    "rationale": "shard.authorize composes authority shape, window, native, messages and verify; strict K10-style parsers separate semantic failure from every other shape."
+  },
+  {
+    "clause": "Phase A (one build, two helper calls, 480 seconds) and Phase B (eight VI evaluations, 600 seconds) are separate exact one-attempt zero-retry AUTHs with no auto-chain, a total bound of 1080 seconds, launch intent recorded before every Popen, raw returned steps appended before validation with attempted/returned/validated counted distinctly, and the candidate operator refusing every PENDING_UNMATERIALIZED pin.",
+    "clauseId": "VI-C7",
+    "position": "FOR",
+    "rationale": "300+2x30+120=480 and 8x60+120=600; spent K6/K10 authorities are never reused and phases stop at their audit gates."
+  },
+  {
+    "clause": "A positive VI result is finite local consumer behavior of the authorization shard only: Core self-verification is internal agreement, not an independent certificate, and custody, claim, shape-digest, statement, VS, S2 prime, C2 proof, complete T3 and ledger acceptance, plus all 20 UTxO, ACTUS, DeFi, recursion, private-handoff, bounded multi-parent, universal and real Preprod obligations, remain open with no percentage of full compatibility.",
+    "clauseId": "VI-C8",
+    "position": "FOR",
+    "rationale": "thread_authorization omits VS checks and the FX1R2 adoption record retains all broader requirements open."
+  }
+]
