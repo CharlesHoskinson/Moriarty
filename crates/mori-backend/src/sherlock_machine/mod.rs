@@ -1,9 +1,10 @@
-//! Reusable source-only bounded scalar row fetch, pending integration/review.
+//! Source-only bounded scalar fetch and composable A102 Literal instructions.
 //!
 //! These constructors emit pinned SDK instructions. They do not load, check,
 //! evaluate, compile or prove them. A caller supplies the table shape and all
 //! witness cells; no program or machine transition is evaluated by this module.
-//! This is not a Sherlock machine layout, codec, dispatch table or profile.
+//! A102 registration is an uncompiled integration candidate. Full StepInv,
+//! canonical byte binding, F4 and exactly-one dispatch remain caller obligations.
 
 use midnight_transient_crypto::curve::Fr;
 use midnight_zkir_v3::ir::Operand;
@@ -19,6 +20,13 @@ pub use fetch::emit_fetch_block;
 mod enabled_fetch;
 pub use enabled_fetch::{
     emit_enabled_fetch_block, EnabledFetchBlock, EnabledFetchInputs, EnabledTypedOperand,
+};
+
+mod literal_step;
+pub use literal_step::{
+    emit_literal_step, literal_schema, LiteralCapacities, LiteralConstructionError,
+    LiteralEnvelope, LiteralImage, LiteralLane, LiteralSchema, LiteralStepBlock,
+    LiteralStepInputs, LiteralTable,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -228,3 +236,6 @@ mod identifier_rejection_tests;
 
 #[cfg(test)]
 mod enabled_fetch_tests;
+
+#[cfg(test)]
+mod literal_step_normal_tests;
