@@ -140,3 +140,13 @@ decision reviews. It is not adopted, frozen, executable, a proof, a circuit
 component or a completed Phase 0 policy. Other ownership, helper, charge, codec,
 security and correspondence rows remain open. No A rule, normal expectation,
 compiled host module, resource limit or native authority changes here.
+
+## Scoped offline input/readback observation
+
+The [offline helper](../STAGENET-OFFLINE-README.md) inventories existing Core/1 inputs and compares all supplied
+JSON fields, retaining ordered arrays and missing/present distinctions. Its
+captured R2 result records 16 passing normal assertions for the bound source.
+This is preparatory tooling for complete readback reporting, with no native
+execution or independent semantic oracle. It does not implement the missing
+Sherlock/Clean/native adapter or public Moriarty commands and closes no
+UIREQ/B/U/M/MC/SP/G exit or Midnight stagenet qualification.
