@@ -31,6 +31,8 @@ The [aux/2 arithmetic/fuel source design](models/sherlock/machine-circuit/arithm
 
 The [finite append-model evidence](models/sherlock/machine-circuit/append-model-review-20261016/README.md) records Quint model-root typechecking, eight passing normal tests and a short seed-1 simulation with nine-state traces and no reported violation. Its 32-sample count is inferred as documented. The independent K projection has nine authored cases and source reviews, with execution UNRUN. These child results do not establish full P3, circuit, financial or target correspondence.
 
+The [arithmetic/fuel model evidence](models/sherlock/machine-circuit/arithmetic-model-source-review-20261016/README.md) now includes full-width UInt128 Quint and K source projections with fresh source reviews: 18 authored Quint tests and 33 authored K checks (nine distinct fuel requests). The Quint model-root typecheck was captured once with raw exit 0. An internal Unix socket call in the unpinned timeout process triggered the adopted execution gate, so the sequence stopped; all 18 tests, the sampled run and all K checks remain UNRUN. This is not accepted complete model QA, circuit correspondence or Midnight stagenet evidence.
+
 The [complete CandidateA P3 arena source design](models/sherlock/machine-circuit/arena-policy-source-20261016/README.md) is conditionally adopted with fresh Opus and Muse source reviews and their binding errata. It specifies the append catalog and four auxiliary records, with symbolic equality-trace capacity. Model correspondence, arithmetic/fuel witness placement, circuit compilation and Midnight stagenet validation remain open; this closes no roadmap exit.
 
 PR #95 registers the A102 source APIs `literal_schema` and `emit_literal_step`

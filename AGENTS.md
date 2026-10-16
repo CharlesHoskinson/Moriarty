@@ -1,5 +1,13 @@
 # Moriarty repository instructions
 
+## Security ownership restored — October 16
+
+A fresh substantive Opus 5.5 high review completed with its canonical identity.
+Use Opus for new security assignments. Existing Muse fallback tasks retain their
+identities. If Opus becomes unavailable again, use Gemini or Muse until recovery
+is observed. See the [restoration record](raw/assignments/moriarty-opus-security-restored-2026-10-16.md).
+All native limits and acceptance gates remain unchanged.
+
 ## Temporary security fallback - October 16
 
 The user authorizes Gemini or Muse when Opus is unavailable. The direct Opus
