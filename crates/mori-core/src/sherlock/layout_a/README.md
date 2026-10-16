@@ -1,7 +1,7 @@
 # Internal L4 preparation and typed state codec source
 
 Status: source-only proposal. The private `#[cfg(test)] mod layout_a` connects
-this source to the test source graph. Compilation and all 25 normal tests
+this source to the test source graph. Compilation and all 29 normal tests
 are UNRUN. Core test dependencies include SDK code; no test command is admitted
 or implied. This is H1 host tooling only. The decoder consumes an internal typed
 image with a retained PreparedA; no public byte importer or network consumer is
@@ -105,6 +105,25 @@ run a machine step or establish transition validity. No callback or success
 stub replaces either implementation. This remains uncompiled source, not an
 observed roundtrip or a verified decoder.
 
+`observation::project_a` calls the real Step decoder and then the canonical
+encoder. This reconstructs the same typed observation while choosing canonical
+references; it does not take a machine step. `ObservedRecordA` retains both
+complete state images and a separate source-line/charge envelope, with one
+shared full Program/ProgramBlock context. `materialize_record_a` reconstructs
+both Snapshots through the real decoder and checks O4: the before outcome is
+Pending, the line is one of the exact 39 listed source rules, and the charge
+matches that rule. A host source line such as 102 is distinct from wire enum
+tag 3; no envelope byte codec is implemented here.
+
+`materialize_trace_a` retains the supplied initial image and every ordered
+record. An empty record slice is a present zero-step trace. Its materialized
+view uses the actual `TraceView`, and `compare_a` calls the existing
+`first_difference`. The caller's `TraceIdentity` remains declared comparison
+metadata, without authentication, invented origins or native provenance.
+Neither materialization nor comparison checks continuity, reachability,
+rule execution or transition validity. Those checks remain separate consumer
+obligations; observation equality does not establish them.
+
 The normal test source uses literal expected table orders from the independent
 normal packet and complete typed specimens. Coverage includes all eight Expr,
 five Pattern, seven BinaryOp, two UnaryOp and four Value forms, duplicate source
@@ -125,12 +144,17 @@ were authored before the serializer; a fourth independently supplied example
 was added afterward. They cover pending Eval, full scalar bytes, a two-byte
 stack limit with full fuel, and a pending saved frame distinct from current
 environment and installed frame. This is partial positive coverage. All
-8 + 8 + 5 + 4 tests are UNRUN. No owner rejection-test module is present or
-registered in this candidate.
+8 + 8 + 5 + 4 byte/codec tests are UNRUN. Four further observation tests were
+authored first from literal complete structures: a two-record UInt7 trace with
+an unused function, a present zero-step trace, equal-expression projection from
+occurrence2 to occurrence1, and all 39 source-line/tag/charge mappings. The full
+29-test source is UNRUN. No owner rejection-test module is present or registered
+in this candidate.
 
-Future work still includes StateBlock byte parsing, reviewed boundary
-projection, complete record/trace materialization and comparison, owner refusal
-test sources and executable normal evidence. The current-A constructor mappings
+Future work still includes StateBlock byte parsing, record/trace wire formats,
+continuity and rule-validity checks, physical boundary projection, owner refusal
+test sources and executable normal evidence for the implemented materialization
+and comparison. The current-A constructor mappings
 do not discharge the full 55-variant/general-ADT roadmap. Retained PreparedA is
 trusted internal preparation output; accepting an arbitrary mutated preparation
 object is not an interface promise. Standard Arc/Box/BTreeMap allocation and
