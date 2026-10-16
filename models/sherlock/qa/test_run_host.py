@@ -4,13 +4,15 @@
 The actual run_host.py is imported by file spec; main() never runs in-process.
 Nothing here launches rustc, Cargo, a model, an SDK, native code or the network:
 helpers receive inputs built inside temporary directories, and the CLI cases run
-only the wrapper's own argument refusals with a nonexistent compiler path, so even
-a regressed guard stops at preflight before any child is started.
+only the wrapper's own refusals with a nonexistent compiler path, so even a
+regressed guard stops at preflight before any child is started.
 """
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -42,12 +44,32 @@ def temporary_root(case):
     return Path(os.path.realpath(tmp.name))
 
 
+def declared_rust_tests(relative):
+    """Names of #[test] functions in a checkout source file; it is read, never compiled."""
+    text = (run_host.REPO / relative).read_text(encoding='utf-8')
+    return re.findall(r'(?m)^#\[test\]\s*\nfn ([a-z0-9_]+)\(', text)
+
+
 class LibtestResults(unittest.TestCase):
-    def test_exact_seven_named_passes_are_accepted_in_any_order(self):
-        self.assertEqual(COUNT, 7)
+    def test_exact_fourteen_named_passes_are_accepted_in_any_order(self):
+        self.assertEqual(COUNT, 14)
         self.assertEqual(run_host.libtest_results(libtest_output(PASSING)), list(run_host.EXPECTED_TESTS))
         reordered = PASSING[::-1]
         self.assertEqual(run_host.libtest_results(libtest_output(reordered)), [name for name, _ in reordered])
+
+    def test_either_module_alone_with_consistent_counts_is_refused(self):
+        for module in ('reference_bounded_tests::', 'reference_bounded_extra_tests::'):
+            alone = [row for row in PASSING if row[0].startswith(module)]
+            with self.subTest(module):
+                self.assertEqual(len(alone), 7)
+                text = libtest_output(alone, running=7, summary=SUMMARY.replace(f'{COUNT} passed', '7 passed'))
+                with self.assertRaises(Failure):
+                    run_host.libtest_results(text)
+
+    def test_an_empty_declared_suite_is_never_a_pass(self):
+        empty = libtest_output([], running=0, summary=SUMMARY.replace(f'{COUNT} passed', '0 passed'))
+        with self.assertRaisesRegex(Failure, 'empty suite is never a pass'):
+            run_host.libtest_results(empty, ())
 
     def test_missing_extra_failed_ignored_or_misnamed_results_are_refused(self):
         (first, _), rest = PASSING[0], PASSING[1:]
@@ -61,6 +83,8 @@ class LibtestResults(unittest.TestCase):
             ignored=libtest_output([(first, 'ignored')] + rest),
             unqualified=libtest_output([(first.split('::', 1)[1], 'ok')] + rest),
             other_module=libtest_output([(first.replace('reference_bounded_tests', 'reference_tests'), 'ok')] + rest),
+            swapped_module=libtest_output(
+                [(first.replace('reference_bounded_tests', 'reference_bounded_extra_tests'), 'ok')] + rest),
         )
         for name, text in cases.items():
             with self.subTest(name):
@@ -104,7 +128,7 @@ class CompileInputs(unittest.TestCase):
         return path
 
     def test_exact_declared_closure_is_accepted(self):
-        for closure in (run_host.PRODUCER_CLOSURE, run_host.TEST_CLOSURE):
+        for closure in (run_host.PRODUCER_CLOSURE, run_host.TEST_CLOSURE, run_host.IMAGE_CLOSURE):
             with self.subTest(members=len(closure)):
                 result = run_host.compile_inputs(self.dep_info(self.inside(closure)), self.snapshot, closure)
                 self.assertEqual(result, sorted(closure))
@@ -116,6 +140,13 @@ class CompileInputs(unittest.TestCase):
             test_module_in_producer=(self.inside(tests), producer),
             unread_test_module=(self.inside(producer), tests),
             undeclared_sibling=(self.inside(producer + (run_host.SHERLOCK + 'mod.rs',)), producer),
+            unread_extra_module=(self.inside(tuple(m for m in tests if 'extra_tests' not in m)), tests),
+            unread_literal_includes=(self.inside(tuple(m for m in tests if not m.endswith('_oracles.rs'))), tests),
+            machine_in_image=(self.inside(run_host.IMAGE_CLOSURE + (run_host.SHERLOCK + 'reference.rs',)),
+                              run_host.IMAGE_CLOSURE),
+            image_test_module=(self.inside(run_host.IMAGE_CLOSURE + (run_host.SHERLOCK + 'program_image_tests.rs',)),
+                               run_host.IMAGE_CLOSURE),
+            host_producer_for_image=(self.inside(producer), run_host.IMAGE_CLOSURE),
         )
         for name, (deps, closure) in cases.items():
             with self.subTest(name):
@@ -211,19 +242,83 @@ class CompilerRecord(unittest.TestCase):
             run_host.compiler_record(str(self.base / 'absent' / 'bin' / 'rustc'))
 
 
+class ComparisonHelpers(unittest.TestCase):
+    LOAD = b"path = Path(__file__).resolve().with_name('%s')\n"
+
+    def contents(self, check, helper=b''):
+        contents = {run_host.CHECK: check}
+        contents.update({path: helper for path in run_host.CHECK_HELPERS})
+        return contents
+
+    def test_exact_declared_loads_are_accepted(self):
+        loads = b''.join(self.LOAD % os.path.basename(path).encode() for path in run_host.CHECK_HELPERS)
+        self.assertEqual(run_host.comparison_helpers(self.contents(loads)), sorted(run_host.CHECK_HELPERS))
+
+    def test_undeclared_or_unloaded_helpers_are_refused(self):
+        declared = b''.join(self.LOAD % os.path.basename(path).encode() for path in run_host.CHECK_HELPERS)
+        cases = dict(
+            undeclared_in_check=self.contents(declared + self.LOAD % b'image_observations.py'),
+            undeclared_in_helper=self.contents(declared, helper=self.LOAD % b'layer_observations.py'),
+            double_quoted=self.contents(declared + b'x.with_name("k_terms.py")\n'),
+            unloaded=self.contents(b'# host_observations.py is not loaded\n'),
+        )
+        for name, contents in cases.items():
+            with self.subTest(name):
+                with self.assertRaisesRegex(Failure, 'comparison helper loads differ'):
+                    run_host.comparison_helpers(contents)
+
+    def test_checkout_check_loads_exactly_the_declared_helpers(self):
+        contents = run_host.read_sources(run_host.REPO, run_host.COMMON_PATHS)
+        self.assertEqual(run_host.comparison_helpers(contents), sorted(run_host.CHECK_HELPERS))
+
+
+class TerminalState(unittest.TestCase):
+    PLAN = ('preflight', 'rustc-version', 'compile-producer', 'compile-tests', 'run-tests', 'run-producer',
+            'compare', 'postflight')
+
+    def steps(self, **states):
+        return [dict(name=name, state=states.get(name.replace('-', '_'), 'ok')) for name in self.PLAN]
+
+    def test_complete_host_success_and_declared_image_skip(self):
+        self.assertEqual(run_host.terminal_state(self.steps()), 'success')
+        skipped = self.steps(compile_tests='not-selected', run_tests='not-selected')
+        self.assertEqual(run_host.terminal_state(skipped, run_host.NOT_SELECTED), 'success')
+
+    def test_undeclared_skips_and_failures_are_not_success(self):
+        cases = dict(
+            host_skips_tests=(self.steps(compile_tests='not-selected', run_tests='not-selected'), (),
+                              'not-selected:compile-tests'),
+            image_skips_compare=(self.steps(compile_tests='not-selected', run_tests='not-selected',
+                                            compare='not-selected'), run_host.NOT_SELECTED, 'not-selected:compare'),
+            image_not_run_tests=(self.steps(compile_tests='not-selected', run_tests='not-run'),
+                                 run_host.NOT_SELECTED, 'not-run:run-tests'),
+            timeout=(self.steps(run_tests='timeout', run_producer='not-run'), (), 'timeout:run-tests'),
+            interrupted=(self.steps(compare='running'), (), 'interrupted:compare'),
+        )
+        for name, (steps, allowed, expected) in cases.items():
+            with self.subTest(name):
+                self.assertEqual(run_host.terminal_state(steps, allowed), expected)
+
+
 class ReadSources(unittest.TestCase):
-    def tree(self):
+    def tree(self, paths=run_host.SOURCE_PATHS):
         root = temporary_root(self)
-        for relative in run_host.SOURCE_PATHS:
+        for relative in paths:
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(relative.encode())
         return root
 
     def test_complete_regular_tree_is_read_in_declared_order(self):
-        contents = run_host.read_sources(self.tree())
-        self.assertEqual(list(contents), list(run_host.SOURCE_PATHS))
-        self.assertTrue(all(raw == path.encode() for path, raw in contents.items()))
+        for paths in (run_host.SOURCE_PATHS, run_host.IMAGE_SOURCE_PATHS):
+            with self.subTest(members=len(paths)):
+                contents = run_host.read_sources(self.tree(paths), paths)
+                self.assertEqual(list(contents), list(paths))
+                self.assertTrue(all(raw == path.encode() for path, raw in contents.items()))
+
+    def test_image_member_absent_from_a_host_only_tree_is_refused(self):
+        with self.assertRaises(OSError):
+            run_host.read_sources(self.tree(), run_host.IMAGE_SOURCE_PATHS)
 
     def test_symlinked_member_or_parent_is_refused(self):
         root = self.tree()
@@ -256,30 +351,70 @@ class ReadSources(unittest.TestCase):
 
 class SourceMembership(unittest.TestCase):
     def test_source_paths_are_unique_normalized_and_dep_info_safe(self):
-        paths = run_host.SOURCE_PATHS
-        self.assertEqual(len(set(paths)), len(paths))
-        for relative in paths:
-            with self.subTest(relative):
-                self.assertFalse(os.path.isabs(relative))
-                self.assertEqual(os.path.normpath(relative), relative)
-                self.assertNotIn('..', relative.split('/'))
-                self.assertTrue(run_host.SAFE_PATH.fullmatch('/' + relative))
+        for paths in (run_host.SOURCE_PATHS, run_host.IMAGE_SOURCE_PATHS):
+            self.assertEqual(len(set(paths)), len(paths))
+            for relative in paths:
+                with self.subTest(relative):
+                    self.assertFalse(os.path.isabs(relative))
+                    self.assertEqual(os.path.normpath(relative), relative)
+                    self.assertNotIn('..', relative.split('/'))
+                    self.assertTrue(run_host.SAFE_PATH.fullmatch('/' + relative))
 
-    def test_closures_bind_the_bounded_normal_test_module(self):
+    def test_closures_bind_both_bounded_normal_test_modules(self):
         producer, tests = run_host.PRODUCER_CLOSURE, run_host.TEST_CLOSURE
-        module = run_host.SHERLOCK + 'reference_bounded_tests.rs'
+        added = tuple(run_host.SHERLOCK + name for name in (
+            'reference_bounded_tests.rs', 'reference_bounded_extra_tests.rs',
+            'normal_oracles.rs', 'extra_normal_oracles.rs'))
         self.assertEqual(producer[0], run_host.PRODUCER)
         self.assertEqual(len(set(tests)), len(tests))
-        self.assertEqual(tests, producer + (module,))
-        self.assertNotIn(module, producer)
+        self.assertEqual(tests, producer + added)
+        self.assertFalse(set(added) & set(producer))
         self.assertLessEqual(set(tests), set(run_host.SOURCE_PATHS))
         for member in (run_host.CHECK, run_host.SERIALIZER, 'rust-toolchain.toml',
-                       WRAPPER.relative_to(run_host.REPO).as_posix()):
+                       WRAPPER.relative_to(run_host.REPO).as_posix()) + run_host.CHECK_HELPERS:
             self.assertIn(member, run_host.SOURCE_PATHS)
+            self.assertIn(member, run_host.IMAGE_SOURCE_PATHS)
         self.assertEqual(len(set(run_host.EXPECTED_TESTS)), COUNT)
-        self.assertTrue(all(name.startswith('reference_bounded_tests::') for name in run_host.EXPECTED_TESTS))
+        modules = [name.split('::', 1)[0] for name in run_host.EXPECTED_TESTS]
+        self.assertEqual(modules, ['reference_bounded_tests'] * 7 + ['reference_bounded_extra_tests'] * 7)
+
+    def test_image_closure_excludes_machine_tests_and_host_producer(self):
+        image = run_host.IMAGE_CLOSURE
+        self.assertEqual(image[0], run_host.IMAGE_PRODUCER)
+        self.assertEqual(len(set(image)), len(image))
+        for member in (run_host.PRODUCER, run_host.SHERLOCK + 'reference.rs', run_host.SHERLOCK + 'compare.rs'):
+            self.assertNotIn(member, image)
+            self.assertNotIn(member, run_host.IMAGE_SOURCE_PATHS)
+        self.assertFalse([member for member in image if member.endswith('_tests.rs')])
+        self.assertLessEqual(set(image), set(run_host.IMAGE_SOURCE_PATHS))
+        for module in ('reference_bounded_tests.rs', 'reference_bounded_extra_tests.rs'):
+            self.assertNotIn(run_host.SHERLOCK + module, run_host.IMAGE_SOURCE_PATHS)
+
+    def test_realizations_are_fixed_and_distinct(self):
+        self.assertEqual(sorted(run_host.REALIZATIONS), ['host', 'image'])
+        host, image = run_host.REALIZATIONS['host'], run_host.REALIZATIONS['image']
+        self.assertEqual((host.format, host.producer, host.tests, host.sources, host.test_closure),
+                         (run_host.FORMAT, run_host.PRODUCER, run_host.EXPECTED_TESTS, run_host.SOURCE_PATHS,
+                          run_host.TEST_CLOSURE))
+        self.assertEqual((image.tests, image.test_closure, image.sources),
+                         ((), None, run_host.IMAGE_SOURCE_PATHS))
+        self.assertEqual(image.claims['acceptance'], 'none')
+        self.assertTrue(image.claims['tests'].startswith('not-selected'))
+        for field in ('format', 'producer', 'crate', 'compare_flag', 'report_key', 'output'):
+            with self.subTest(field):
+                self.assertNotEqual(getattr(host, field), getattr(image, field))
+
+    def test_expected_test_names_match_the_checkout_test_sources(self):
+        for module in ('reference_bounded_tests', 'reference_bounded_extra_tests'):
+            with self.subTest(module):
+                declared = declared_rust_tests(run_host.SHERLOCK + module + '.rs')
+                expected = [name.split('::', 1)[1] for name in run_host.EXPECTED_TESTS
+                            if name.split('::', 1)[0] == module]
+                self.assertEqual(sorted(declared), sorted(expected))
 
     def test_checkout_members_pin_one_channel_and_the_workspace_edition(self):
+        self.assertEqual(list(run_host.read_sources(run_host.REPO, run_host.IMAGE_SOURCE_PATHS)),
+                         list(run_host.IMAGE_SOURCE_PATHS))
         contents = run_host.read_sources(run_host.REPO)
         self.assertEqual(list(contents), list(run_host.SOURCE_PATHS))
         self.assertEqual(contents['models/sherlock/qa/run_host.py'], WRAPPER.read_bytes())
@@ -341,6 +476,37 @@ class CliPreflight(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn('--output-dir: only', result.stderr)
         self.assertEqual(os.listdir(self.base), [])
+
+    def test_unknown_realization_exits_2_without_creating_it(self):
+        for value in ('source', 'HOST', ''):
+            with self.subTest(value=value):
+                result = self.wrapper('--rustc', self.rustc, '--output-dir', os.path.join(self.base, 'attempt'),
+                                      '--realization', value)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('invalid choice', result.stderr)
+        self.assertEqual(os.listdir(self.base), [])
+
+    def test_absent_compiler_stops_each_realization_at_preflight_without_a_child(self):
+        repo = str(run_host.REPO)
+        for realization in ('host', 'image'):
+            attempt = os.path.join(self.base, 'attempt-' + realization)
+            if not run_host.SAFE_PATH.fullmatch(attempt) or os.path.commonpath([attempt, repo]) == repo:
+                self.skipTest('temporary directory is not an accepted output location here')
+            with self.subTest(realization):
+                result = self.wrapper('--rustc', self.rustc, '--output-dir', attempt, '--realization', realization)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                summary = json.loads(result.stdout)
+                self.assertEqual((summary['realization'], summary['terminal_state']),
+                                 (realization, 'failed:preflight'))
+                with open(os.path.join(attempt, 'receipt.json'), encoding='utf-8') as handle:
+                    receipt = json.load(handle)
+                self.assertEqual(receipt['format'], run_host.REALIZATIONS[realization].format)
+                self.assertFalse([step for step in receipt['steps'] if 'child' in step])
+                self.assertEqual(os.listdir(os.path.join(attempt, 'logs')), [])
+                states = {step['name']: step['state'] for step in receipt['steps']}
+                skipped = 'not-selected' if realization == 'image' else 'not-run'
+                self.assertEqual((states['compile-tests'], states['run-tests']), (skipped, skipped))
+                self.assertEqual(states['compile-producer'], 'not-run')
 
     def test_empty_compiler_argument_exits_2_before_the_output_dir(self):
         result = self.wrapper('--rustc', '', '--output-dir', os.path.join(self.base, 'attempt'))

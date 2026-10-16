@@ -17,6 +17,10 @@ mod normal_oracle_inputs;
 #[path = "../../../crates/mori-core/src/sherlock/reference_bounded_tests.rs"]
 mod reference_bounded_tests;
 
+#[cfg(test)]
+#[path = "../../../crates/mori-core/src/sherlock/reference_bounded_extra_tests.rs"]
+mod reference_bounded_extra_tests;
+
 use compare::{TraceIdentity, TraceView};
 use normal_oracle_inputs::normal_program;
 use reference::Machine;

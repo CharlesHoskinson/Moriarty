@@ -43,3 +43,24 @@ compiler/test/execution/comparison receipts and ordinary CLI/guard regressions
 are concrete evidence; the workflow model abstracts these external command
 results and does not prove wrapper refinement. Constructor startup, the other
 semantic layers, native and target qualification remain explicit separate gaps.
+
+
+## Parallel Sherlock observation increment
+
+The same SF-01–03/06/09–12/15 requirements govern the added supplied Lean,
+Quint and flat-ID image observation modes. The existing common projection keeps
+complete program identity, control, environments, ordered frames, fuel/work,
+raw outcomes and terminal publication. A mismatch retains its producer's raw
+context. Inferred rule mappings, terminal-control projection and terminal
+stutters remain explicit; file agreement does not authenticate execution.
+
+The K complete-cell decoder has a separate unsupported-comparison disposition
+until complete observed rule labels and capture coverage exist. Availability of
+K or a passing normal parser fixture cannot replace that evidence (SF-15).
+
+The extra ordinary continuation tests exercise production `Machine::run_steps`
+on N03–N08 across all frozen prefixes, every event cut and widths 1/2/4/8.
+The flat-ID producer exercises the existing separate host image interpreter.
+Neither changes A semantics, selects a B schema, admits arbitrary images or
+provides a native state codec. Actual command/source/result records and fresh
+reviews remain necessary for their observed dispositions.

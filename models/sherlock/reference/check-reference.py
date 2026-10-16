@@ -40,6 +40,7 @@ SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/compare_tests.rs",
     "crates/mori-core/src/sherlock/reference.rs",
     "crates/mori-core/src/sherlock/reference_bounded_tests.rs",
+    "crates/mori-core/src/sherlock/reference_bounded_extra_tests.rs",
     "crates/mori-core/src/sherlock/normal_oracle_inputs.rs",
     "crates/mori-core/src/sherlock/reference_types.rs",
     "crates/mori-core/src/sherlock/reference_display.rs",

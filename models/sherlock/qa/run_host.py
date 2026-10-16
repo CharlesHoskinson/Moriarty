@@ -8,8 +8,14 @@ read-only source snapshot inside a fresh attempt directory. The first failure
 stops every dependent step. Memory, disk and process counts are not bounded.
 Fixed trusted normal typed ASTs only; K/Quint/Lean/Clean/circuit/native layers
 are not run and no acceptance is claimed.
+
+The default `host` realization runs the existing Machine producer and its
+fourteen bounded tests. `--realization image` runs the fixed ImageMachine
+producer instead; it has no unit suite, so its test steps are recorded as
+not-selected rather than as an empty pass.
 """
 import argparse
+from collections import namedtuple
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -24,26 +30,40 @@ import time
 
 REPO = Path(__file__).resolve().parents[3]
 FORMAT = 'sherlock-normal-host-run/1'
+IMAGE_FORMAT = 'sherlock-image-host-run/1'
 TIMEOUT_SECONDS = 30
 EDITION = '2024'  # Workspace edition inherited by mori-core; metadata is snapshotted.
 PRODUCER = 'models/sherlock/reference/normal_observations.rs'
+IMAGE_PRODUCER = 'models/sherlock/reference/image_observations.rs'
 CHECK = 'models/sherlock/qa/check.py'
 SERIALIZER = 'models/sherlock/reference/check-reference.py'
 SHERLOCK = 'crates/mori-core/src/sherlock/'
 PRODUCER_CLOSURE = (PRODUCER,) + tuple(SHERLOCK + name for name in (
     'reference_types.rs', 'reference.rs', 'reference_display.rs', 'compare.rs',
     'normal_oracle_inputs.rs', 'extra_oracle_programs.rs'))
-TEST_CLOSURE = PRODUCER_CLOSURE + (SHERLOCK + 'reference_bounded_tests.rs',)
+# The extra continuation module include!s both literal transcriptions, so they
+# are compile inputs of the test binary as well as files read by check.py.
+TEST_CLOSURE = PRODUCER_CLOSURE + tuple(SHERLOCK + name for name in (
+    'reference_bounded_tests.rs', 'reference_bounded_extra_tests.rs',
+    'normal_oracles.rs', 'extra_normal_oracles.rs'))
+# The image closure deliberately excludes reference.rs (Machine) and compare.rs.
+IMAGE_CLOSURE = (IMAGE_PRODUCER,) + tuple(SHERLOCK + name for name in (
+    'reference_types.rs', 'reference_display.rs', 'program_image.rs', 'image_reference.rs',
+    'normal_oracle_inputs.rs', 'extra_oracle_programs.rs'))
+# Exactly the sibling modules check.py loads by literal with_name(); see comparison_helpers.
+CHECK_HELPERS = ('models/sherlock/qa/host_observations.py',)
 # Complete known read+compile closure. Membership is a local pin, not schema authenticity.
-SOURCE_PATHS = TEST_CLOSURE + (
-    CHECK, 'models/sherlock/qa/host_observations.py', 'models/sherlock/qa/run_host.py',
-    'models/sherlock/qa/HOST-OBSERVATIONS.md', SERIALIZER, 'models/sherlock/k/main.k',
+COMMON_PATHS = (CHECK,) + CHECK_HELPERS + (
+    'models/sherlock/qa/run_host.py', 'models/sherlock/qa/HOST-OBSERVATIONS.md', SERIALIZER,
+    'models/sherlock/k/main.k',
     'models/sherlock/oracles/normal-programs.json', 'models/sherlock/oracles/normal-prefixes.json',
     'models/sherlock/oracles/extra-normal-programs.json',
     'models/sherlock/oracles/extra-normal-prefixes.json',
     SHERLOCK + 'normal_oracles.rs', SHERLOCK + 'extra_normal_oracles.rs',
     'rust-toolchain.toml', 'Cargo.toml', 'crates/mori-core/Cargo.toml',
     'scripts/doctorwatson.sh')
+SOURCE_PATHS = tuple(dict.fromkeys(TEST_CLOSURE + COMMON_PATHS))
+IMAGE_SOURCE_PATHS = tuple(dict.fromkeys(IMAGE_CLOSURE + COMMON_PATHS))
 EXPECTED_TESTS = tuple('reference_bounded_tests::' + name for name in (
     'zero_events_observes_initial_and_partial_machine_without_advancing',
     'partial_calls_resume_the_actual_current_machine',
@@ -51,8 +71,18 @@ EXPECTED_TESTS = tuple('reference_bounded_tests::' + name for name in (
     'excess_event_budget_stops_at_first_terminal_publication',
     'already_published_normal_outcomes_return_no_further_events',
     'widths_one_two_four_eight_retain_every_independent_normal_prefix',
-    'mixed_step_and_group_calls_match_actual_one_step_baseline'))
+    'mixed_step_and_group_calls_match_actual_one_step_baseline')) + tuple(
+    'reference_bounded_extra_tests::' + name for name in (
+        'run_steps_n03_conditional_all_frozen_prefixes_and_cuts',
+        'run_steps_n04_lexical_restoration_all_frozen_prefixes_and_cuts',
+        'run_steps_n05_named_recursion_all_frozen_prefixes_and_cuts',
+        'run_steps_n06_ordered_list_tree_match_all_frozen_prefixes_and_cuts',
+        'run_steps_n07_three_ordered_arguments_all_frozen_prefixes_and_cuts',
+        'run_steps_n08_recursive_factorial_all_frozen_prefixes_and_cuts',
+        'run_steps_extra_normal_frozen_membership'))
 EXPECTED_PROGRAMS, EXPECTED_RUNS = 8, 216
+COMPARISON_ROWS = 7  # K source, four frozen oracle documents, two literal transcriptions.
+NOT_SELECTED = ('compile-tests', 'run-tests')
 # rustc dep-info is split on whitespace, so attempt paths stay within this alphabet.
 SAFE_PATH = re.compile(r'/[A-Za-z0-9._+/-]*')
 CLAIMS = dict(
@@ -62,6 +92,20 @@ CLAIMS = dict(
     wall_clock_seconds_per_child=TIMEOUT_SECONDS, memory_bound='none-claimed', disk_bound='none-claimed',
     authenticity='local SHA-256 bindings in a trusted checkout only',
     unhashed_inputs=['rustc sysroot (librustc_driver, std)', 'system linker and libc', 'Python stdlib', 'kernel'])
+IMAGE_CLAIMS = dict(
+    CLAIMS, observed='Rust-host compile, fixed ImageMachine producer execution and diagnostic comparison of this attempt only',
+    constructor_startup='not-executed; ImageMachine::new constructs the post-startup state',
+    tests='not-selected; no unit suite is compiled or run, and none is reported as passing',
+    independence='compile closure excludes reference.rs (Machine); a closure boundary, not a proof of independence')
+Realization = namedtuple('Realization', 'format producer crate producer_closure test_closure tests sources '
+                                        'compare_flag report_key output claims')
+REALIZATIONS = dict(
+    host=Realization(FORMAT, PRODUCER, 'sherlock_normal_observations', PRODUCER_CLOSURE, TEST_CLOSURE,
+                     EXPECTED_TESTS, SOURCE_PATHS, '--host-observations', 'supplied_host_observation',
+                     'host-observations', CLAIMS),
+    image=Realization(IMAGE_FORMAT, IMAGE_PRODUCER, 'sherlock_image_observations', IMAGE_CLOSURE, None,
+                      (), IMAGE_SOURCE_PATHS, '--image-observations', 'supplied_image_observation',
+                      'image-observations', IMAGE_CLAIMS))
 
 
 class Failure(Exception):
@@ -93,15 +137,32 @@ def file_record(path):
     return dict(path=str(path), sha256=digest_file(path), bytes=os.stat(path).st_size)
 
 
-def read_sources(root):
+def read_sources(root, paths=SOURCE_PATHS):
     """Read each declared member once; absent, symlinked or nonregular members fail."""
     contents = {}
-    for relative in SOURCE_PATHS:
+    for relative in paths:
         path = root / relative
         require(os.path.realpath(path) == str(path), f'{relative}: symlinked source member')
         require(stat.S_ISREG(os.lstat(path).st_mode), f'{relative}: not a regular file')
         contents[relative] = path.read_bytes()
     return contents
+
+
+def comparison_helpers(contents):
+    """check.py and its helpers load exactly CHECK_HELPERS by literal with_name().
+
+    A static declaration check only: the read-only snapshot, not this scan, is
+    what keeps an undeclared or dynamically named sibling from being loaded.
+    """
+    qa = os.path.dirname(CHECK) + '/'
+    loaded = set()
+    for path in (CHECK,) + CHECK_HELPERS:
+        names = re.findall(rb"""with_name\(\s*['"]([A-Za-z0-9_.-]+\.py)['"]\s*\)""", contents[path])
+        loaded.update(qa + name.decode() for name in names)
+    declared = set(CHECK_HELPERS)
+    require(loaded == declared, f'comparison helper loads differ from the declaration: '
+                                f'undeclared {sorted(loaded - declared)}, unloaded {sorted(declared - loaded)}')
+    return sorted(loaded)
 
 
 def toolchain_channel(raw):
@@ -138,31 +199,45 @@ def compile_inputs(dep_info, snapshot, expected):
     return sorted(read)
 
 
-def libtest_results(text):
+def libtest_results(text, expected=EXPECTED_TESTS):
     """Accept exactly the bounded normal tests, each passing, and nothing filtered."""
-    count = len(EXPECTED_TESTS)
+    count = len(expected)
+    require(count > 0, 'no tests are declared; an empty suite is never a pass')
     results = re.findall(r'(?m)^test (\S+) \.\.\. (\S+)$', text)
     require(re.search(rf'(?m)^running {count} tests$', text), f'test binary did not announce exactly {count} tests')
-    require(sorted(results) == sorted((name, 'ok') for name in EXPECTED_TESTS),
+    require(sorted(results) == sorted((name, 'ok') for name in expected),
             f'test membership/results differ from the bounded normal tests: {results}')
     require(re.search(rf'(?m)^test result: ok\. {count} passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;', text),
             'libtest summary is not a complete pass')
     return [name for name, _ in results]
 
 
+def terminal_state(steps, not_selected=()):
+    """Only the realization's declared not-selected steps may be skipped; nothing else passes."""
+    failed = next((step for step in steps if step['state'] != 'ok'
+                   and not (step['state'] == 'not-selected' and step['name'] in not_selected)), None)
+    if failed is None:
+        return 'success'
+    return ('interrupted' if failed['state'] == 'running' else failed['state']) + ':' + failed['name']
+
+
 class Attempt:
     """One fresh attempt directory; every step, child and check is recorded in order."""
 
-    def __init__(self, root, rustc):
+    def __init__(self, root, rustc, realization='host'):
         self.root, self.rustc = root, rustc
+        self.kind, self.realization = realization, REALIZATIONS[realization]
+        self.not_selected = () if self.realization.tests else NOT_SELECTED
         self.snapshot, self.build, self.logs = root / 'source', root / 'build', root / 'logs'
         for path in (self.snapshot, self.build, self.logs, root / 'tmp'):
             path.mkdir(mode=0o700)
         self.env = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp')}
         self.sources, self.artifacts, self.channel, self.current = {}, {}, None, None
-        self.receipt = dict(format=FORMAT, checkout=str(REPO), output_dir=str(root), argv=list(sys.argv),
-                            child_environment=self.env, timeout_seconds=TIMEOUT_SECONDS, claims=CLAIMS,
-                            python=None, compiler=None, sources=None, steps=[], terminal_state='running')
+        self.receipt = dict(format=self.realization.format, realization=realization, checkout=str(REPO),
+                            output_dir=str(root), argv=list(sys.argv), child_environment=self.env,
+                            timeout_seconds=TIMEOUT_SECONDS, claims=self.realization.claims, python=None,
+                            compiler=None, sources=None, comparison_helpers=None, steps=[],
+                            terminal_state='running')
         self.save()
 
     def save(self):
@@ -221,7 +296,7 @@ class Attempt:
         self.receipt['python'] = dict(file_record(python), realpath=os.path.realpath(python), version=sys.version,
                                       isolated=bool(sys.flags.isolated),
                                       dont_write_bytecode=bool(sys.flags.dont_write_bytecode))
-        contents = read_sources(REPO)
+        contents = read_sources(REPO, self.realization.sources)
         self.sources = {path: hashlib.sha256(raw).hexdigest() for path, raw in contents.items()}
         self.receipt['sources'] = [dict(path=path, sha256_before=sha) for path, sha in self.sources.items()]
         # Every child reads these exact verified bytes, never the live checkout.
@@ -231,6 +306,7 @@ class Attempt:
             with open(path, 'xb') as handle:
                 handle.write(raw)
             os.chmod(path, 0o444)
+        self.receipt['comparison_helpers'] = comparison_helpers(contents)
         self.channel = toolchain_channel(contents['rust-toolchain.toml'])
         self.receipt['compiler'] = dict(compiler_record(self.rustc), toolchain_channel=self.channel)
 
@@ -246,7 +322,7 @@ class Attempt:
     def compile(self, crate, closure, *flags):
         binary, dep_info = self.build / crate, self.build / (crate + '.d')
         self.child([self.rustc, *flags, '--edition=' + EDITION, '--crate-name=' + crate,
-                    f'--emit=dep-info={dep_info},link={binary}', str(self.snapshot / PRODUCER)])
+                    f'--emit=dep-info={dep_info},link={binary}', str(self.snapshot / self.realization.producer)])
         self.artifacts[self.current['name']] = file_record(binary)
         self.current.update(artifact=self.artifacts[self.current['name']], dep_info=file_record(dep_info))
         self.current['compile_inputs'] = compile_inputs(dep_info, self.snapshot, closure)
@@ -259,25 +335,29 @@ class Attempt:
     def tests(self):
         self.execute('compile-tests', '--test-threads=1', '--nocapture')
         text = (self.logs / 'run-tests.stdout').read_text(encoding='utf-8', errors='replace')
-        self.current['tests'] = libtest_results(text)
+        self.current['tests'] = libtest_results(text, self.realization.tests)
 
     def produce(self):
-        output = self.root / 'host-observations.json'
+        name = self.realization.output
+        output = self.root / (name + '.json')
         self.execute('compile-producer', stdout=output)
         record = file_record(output)
         require(record['bytes'] > 0, 'producer wrote no observations')
-        self.artifacts['host-observations'] = self.current['host_observations'] = record
+        self.artifacts[name] = self.current[name.replace('-', '_')] = record
 
     def compare(self):
-        produced = self.artifacts['host-observations']
+        realization = self.realization
+        produced = self.artifacts[realization.output]
         artifact = produced['path']
-        require(digest_file(artifact) == produced['sha256'], 'host observations changed before comparison')
+        require(digest_file(artifact) == produced['sha256'], 'observations changed before comparison')
         output = self.root / 'comparison.json'
-        self.child([sys.executable, '-I', '-B', str(self.snapshot / CHECK), '--host-observations', artifact],
+        self.child([sys.executable, '-I', '-B', str(self.snapshot / CHECK), realization.compare_flag, artifact],
                    stdout=output)
         report = json.loads(output.read_bytes())
-        host = report.get('supplied_host_observation')
-        require(type(host) is dict, 'comparison omitted the host observation result')
+        host = report.get(realization.report_key)
+        require(type(host) is dict, f'comparison omitted {realization.report_key}')
+        modes = sorted(key for key in report if key.startswith('supplied_') and key.endswith('_observation'))
+        require(modes == [realization.report_key], f'comparison modes differ from the selected one: {modes}')
         status, host_status = report.get('status'), host.get('status')
         self.current['comparison'] = dict(file=file_record(output), status=status, host_status=host_status,
                                           scope=host.get('scope'), first_difference=report.get('first_difference'),
@@ -292,15 +372,16 @@ class Attempt:
         rows = report.get('frozen_files', []) + transcriptions
         read = [(row.get('path'), row.get('sha256')) for row in rows]
         read += [(SERIALIZER, row.get('serializer_sha256')) for row in transcriptions]
-        require(len(rows) == 7 and all(self.sources.get(path) == sha for path, sha in read),
+        require(len(rows) == COMPARISON_ROWS and all(self.sources.get(path) == sha for path, sha in read),
                 'comparison did not read exactly the snapshot bytes')
 
     def postflight(self):
-        checkout = {path: hashlib.sha256(raw).hexdigest() for path, raw in read_sources(REPO).items()}
-        snapshot = {path: digest_file(self.snapshot / path) for path in SOURCE_PATHS}
+        paths = self.realization.sources
+        checkout = {path: hashlib.sha256(raw).hexdigest() for path, raw in read_sources(REPO, paths).items()}
+        snapshot = {path: digest_file(self.snapshot / path) for path in paths}
         self.receipt['sources'] = [dict(path=path, sha256_before=self.sources[path],
                                         snapshot_sha256_after=snapshot[path], checkout_sha256_after=checkout[path])
-                                   for path in SOURCE_PATHS]
+                                   for path in paths]
         python = self.receipt['python']
         python['sha256_after'] = digest_file(sys.executable)
         compiler = self.receipt['compiler']
@@ -313,13 +394,22 @@ class Attempt:
                 'compiler binary changed during the attempt')
 
     def run(self):
-        plan = (('preflight', self.preflight), ('rustc-version', self.version),
-                ('compile-producer', lambda: self.compile('sherlock_normal_observations', PRODUCER_CLOSURE)),
-                ('compile-tests', lambda: self.compile('sherlock_normal_observations_tests', TEST_CLOSURE, '--test')),
-                ('run-tests', self.tests), ('run-producer', self.produce), ('compare', self.compare))
+        realization = self.realization
+        plan = [('preflight', self.preflight), ('rustc-version', self.version),
+                ('compile-producer', lambda: self.compile(realization.crate, realization.producer_closure))]
+        if realization.tests:
+            plan += [('compile-tests', lambda: self.compile(realization.crate + '_tests', realization.test_closure,
+                                                            '--test')),
+                     ('run-tests', self.tests)]
+        else:
+            plan += [(name, None) for name in NOT_SELECTED]
+        plan += [('run-producer', self.produce), ('compare', self.compare)]
         blocked = None
         for name, action in plan:
-            if blocked is None:
+            if action is None:  # A fixed plan property, never a skipped failure.
+                self.receipt['steps'].append(dict(name=name, state='not-selected',
+                                                  reason=f'{self.kind} realization has no unit suite'))
+            elif blocked is None:
                 blocked = None if self.step(name, action) else name
             else:
                 self.receipt['steps'].append(dict(name=name, state='not-run',
@@ -333,23 +423,26 @@ class Attempt:
         else:
             self.receipt['steps'].append(dict(name='postflight', state='not-run',
                                               reason='no source snapshot was taken'))
-        failed = next((step for step in self.receipt['steps'] if step['state'] != 'ok'), None)
-        state = 'success' if failed is None else (
-            ('interrupted' if failed['state'] == 'running' else failed['state']) + ':' + failed['name'])
+        steps = self.receipt['steps']
+        state = terminal_state(steps, self.not_selected)
         self.receipt['terminal_state'] = state
         self.save()
-        result = dict(format=FORMAT, terminal_state=state, output_dir=str(self.root),
+        tests = next((step['state'] for step in steps if step['name'] == 'run-tests'), 'not-run')
+        result = dict(format=self.realization.format, realization=self.kind, terminal_state=state,
+                      test_disposition=tests, output_dir=str(self.root),
                       receipt=file_record(self.root / 'receipt.json'))
         with open(self.root / 'result.json', 'x', encoding='utf-8') as handle:
             handle.write(json.dumps(result, indent=2) + '\n')
         print(json.dumps(result, indent=2))
-        return 0 if failed is None else 1
+        return 0 if state == 'success' else 1
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--rustc', required=True, help='absolute path of the installed pinned rustc binary')
     parser.add_argument('--output-dir', required=True, help='absolute, not yet existing attempt directory')
+    parser.add_argument('--realization', choices=sorted(REALIZATIONS), default='host',
+                        help='fixed producer: host Machine with its tests (default) or ImageMachine without tests')
     args = parser.parse_args(argv)
     if not (sys.flags.isolated and sys.flags.dont_write_bytecode):
         parser.error('run as: python3 -I -B models/sherlock/qa/run_host.py')
@@ -365,7 +458,7 @@ def main(argv=None):
         os.mkdir(root, 0o700)  # Exclusive: an existing attempt is never reused or overwritten.
     except OSError as error:
         parser.exit(2, f'run_host: no fresh attempt directory: {error}\n')
-    attempt = Attempt(Path(root), args.rustc)
+    attempt = Attempt(Path(root), args.rustc, args.realization)
     try:
         attempt.run()
     finally:

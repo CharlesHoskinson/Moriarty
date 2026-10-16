@@ -19,6 +19,16 @@ new bounded stepping and compares all 216 normal fuel-prefix executions. Its
 the predecessor compile failure, successful build and complete observations.
 This scoped host result establishes no model/circuit or target correspondence.
 
+The subsequent [parallel delivery](docs/audits/2026-10-16/sherlock-parallel-delivery/README.md)
+records actual Rust host, flat-ID image and Quint executions, each matching eight
+programs and 216 prefixes across 5,355 complete records. All 14 selected host
+tests pass; image unit tests were not selected. Continuation coverage includes
+all 204 N03–N08 prefixes, every event cut and widths 1/2/4/8. The checker also
+retains the correct fuel run in divergence diagnostics. K configuration decoding
+is implemented, but actual K captures remain missing. Lean/Clean, handwritten
+circuits, native proofs and Midnight stagenet retain separate evidence requirements;
+this delivery closes no parent roadmap exit.
+
 ## What exists
 
 Local source/5 lifecycle evaluation, finite [K comparisons](deliverables/k-lifecycle-execution-2026-09-17/RESULT.md), and scoped Preview [loan](deliverables/preview-loan-2026-09-17/recovery-run01/RESULT.md) and [swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/RESULT.md) results are foundations. The [whole-language audit](deliverables/whole-language-review-2026-09-19/REVIEW.md) identifies the missing integrated rich-source/intent/target path, recovery and lifetime-state issues. The [DeFiFormal study](deliverables/defiformal-study-2026-09-19/RESULT.md) supplies semantic reference contracts, not a deployed federation or transferable native proof.
