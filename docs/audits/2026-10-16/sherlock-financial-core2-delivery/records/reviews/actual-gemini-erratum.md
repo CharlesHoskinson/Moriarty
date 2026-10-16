@@ -1,0 +1,28 @@
+# Erratum to Designated-Security Actual-Source/Result and Public-Selection Review (Gemini 4 Argon High via AGY)
+
+- **Reviewer**: Gemini 4 Argon (High) via AGY (fresh independent non-author designated-security reviewer under explicit security fallback; `native_authority = 0`, zero tools/actions/execution).
+- **Referenced Review Scope**:
+  - `PUBLIC-SELECTION.json` SHA-256: `f2ea068d4e58f08113ec27d1ec4beff34195f83091f0fa92dc8c4ebd5c5f99e7` (`55` files, `861,826` bytes; destination `docs/audits/2026-10-16/sherlock-financial-core2-delivery`)
+  - `records/source/RUNTIME-MEMBERSHIP.json` SHA-256: `d1486e9b56172f6573c2147db56ac927d6d7b1941d39873509de97592393976b` (`2,179` bytes, `14` members)
+  - `records/source/CANDIDATE-MEMBERSHIP.json` SHA-256: `96521effe3e13486e72a02c4b5be52cba27f154dcd99018c2ef8dcb7f7483091` (`1,828` bytes, `9` members)
+  - `records/actual/result.json` SHA-256: `9f80e599e082b548c3974a1f8e6340c46a9b121f0baced4973daa362a256ca25` (`17,193` bytes)
+  - `records/actual/DIRECT-ORIGINAL-JSON-COMPARISON.json` SHA-256: `21500690c2ac0ce9e41526bc222187431289c8302cf0f1f2794d2c901545658d` (`10,891` bytes, `79` checks passed)
+  - `records/actual/ROOT-INDEPENDENT-RESULT-01.json` SHA-256: `ca248c61fd7f29d5f7280fdbba3008e711ef8ce78d1539f1fffc2ca284d72e63` (`1,875` bytes)
+- **Verdict Impact**: **None (`APPROVE_WITH_SCOPE` unchanged)** for both (1) Actual Source & Execution Result Evidence and (2) Exact Public Selection & Post-Review Publication Plan.
+
+## Factual Corrections to Original Review Report Prose
+
+1. **Zero-Based `ExprId` Indexing**: `ExprId` values in `records/source/financial_core2_literals.rs` and `records/oracle/expected.json` are **zero-based** (`0..N-1`), not 1-based (for example, in `F01`, the first action statement `Statement::Liability { ..., amount: 0 }` indexes `program.expressions[0]`, which is `Expr::Name("invoice")`).
+2. **`CANDIDATE-MEMBERSHIP.json` Member Count**: `records/source/CANDIDATE-MEMBERSHIP.json` (`96521eff...`, `1,828` bytes) lists **9** members, not 12. The counts for `records/source/RUNTIME-MEMBERSHIP.json` (`14` members) and `PUBLIC-SELECTION.json` (`55` members, `861,826` bytes) are unchanged.
+3. **Production Stage Type Name (`StagedProgram`)**: `mori_core::stage::load` returns `StagedProgram` (inspected in `records/source/financial_core2_consumer.rs` via `staged.program()`, `staged.plan()`, `staged.program_hash()`, and `staged.plan_hash()`), not a type named `LoadedStage`.
+4. **Location of `STAGE_LABELS` Equality Check**: `records/source/financial_core2_consumer.rs` asserts equality on `staged.program()`, `staged.plan()`, `staged.program_hash()`, and `staged.plan_hash()`, and prints `crate::stage::STAGE_LABELS` in the `"labels"` field of each `load` JSON line on stdout. Exact nested-array equality of `"labels"` against `[["qualification", "local-reference-stage"], ["authentication", "none"], ["consumption", "untracked"]]` is enforced by `verify_test_stdout` in `records/source/run_financial_core2.py` (and by `records/qa/compare_original_json.py` against `records/oracle/expected.json`), not by an `assert_eq!` inside `financial_core2_consumer.rs`.
+5. **Precise Scope of `mori_core::json` Deserialization Limit**: Shared v1 `Statement` / `Step` / `Execution` JSON deserialization in `mori_core::json` rejects `Await`, which is why Core/2 expected `Step` and `Execution` observations are bound as typed Rust literals in `financial_core2_literals.rs`. Generic `mori_core::json` is not globally Core/1-only, and existing stage input decoders remain separate; external CLI file decoding was not compared in this packet.
+6. **Historical Normative Snapshot Directory Path**: The 22 local historical normative-source snapshot copies recorded in `records/oracle/NORMATIVE-FREEZE.json` (`5d4bed3a...`) and `records/oracle/SOURCE-FREEZE.json` (`6853c508...`) reside under `normative-source/` (not `normative/`) in the local `financial-core2-oracles-01` directory and remain intentionally excluded as file bodies from the 55-file public selection.
+
+## Retained Scope Limits & Explicit Non-Claims
+
+All scope limits and non-claims from the original review remain in full force:
+- **Normal-Case In-Memory Coverage Only**: All 6 `resume` calls use `cli_action: null` and `cli_cap: null`, and all 8 stage invocations return `Ok(StageOutcome::Waiting)` or `Ok(StageOutcome::Complete)`. No `Err(StageRejection)` path, malformed/hostile continuation, tampered hash, non-null CLI override refusal, or external CLI file decoding path is exercised.
+- **Fictional Asset Domain**: `oracle-local` / `financial-core2-oracle` (`PAY`, `CREDIT`, `OPS`) are local test asset identifiers only (`target: null`).
+- **Provenance & Host Trust Bounds**: `libmori_core.rlib` (`dff1c647...`) was reused from `attempt-core-01` (25/26 compiled sources matching current; sole diff `crates/mori-core/src/sherlock/mod.rs` outside the Core/2 stage/parser/IR/runtime/logical-cost closure). Uncopied local binary/inventory/normative-snapshot bodies are attested only by their recorded SHA-256 digests and postflight invariants. Transitive source provenance of cached `libmori_lexer.rlib` and extern/proc-macro binaries, as well as the local host kernel, `rustc` sysroot, linker, `libc`, and Python runtime, remains locally trusted.
+- **Zero Downstream / Gate Acceptance**: This package establishes local host diagnostic evidence only (`native_authority = 0`, `acceptance = "none"`) and does **not** establish Sherlock financial lowering (`H1` remains scalar-only), general compiler projection, K / Quint / Lean / Clean correspondence, circuit/witness generation, native/SDK/Halo2 proof generation, Preview/ledger settlement, ACTUS/DeFi conformance, or any parent roadmap gate (`MC01`–`MC08`).
