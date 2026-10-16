@@ -24,7 +24,7 @@ FROZEN = {
     'extra-normal-prefixes.json': 'acf460094b258910bad0499fb8feda0cd85b680023939800ad714d2cb71bee16',
 }
 SERIALIZER = {'path': 'models/sherlock/reference/check-reference.py',
-              'sha256': 'a5ae942e9899e736581cb067843d25502df802672fb407cc88d581bd7dd9c354'}
+              'sha256': '1b22a0c4dc14ac0dabd5fe4e8c5ca5ff85485e9b22dd2673a4645f5145cfa94b'}
 FAMILIES = {'normal': ('N01', 'N02', 'N03', 'N04', 'N05', 'N06'),
             'extra-normal': ('N07', 'N08')}
 STATE_FIELDS = ('charged_steps', 'remaining_fuel', 'depth', 'control_k',
@@ -32,6 +32,12 @@ STATE_FIELDS = ('charged_steps', 'remaining_fuel', 'depth', 'control_k',
 INITIAL_FIELDS = ('control_k', 'environment_k', 'frames_top_first_k', 'depth',
                   'stack_limit', 'code_k', 'remaining_fuel', 'initial_fuel',
                   'output_k', 'charged_steps')
+LAYER_ARTIFACTS = {
+    'lean': ('sherlock-lean-normal-observations/1', 'sherlock-lean-reference', ('raw_runs',)),
+    'quint': ('sherlock-quint-itf-observations/1', 'sherlock-quint-k-profile',
+              ('raw_traces', 'raw_trace_references', 'evidence')),
+    'image': ('sherlock-image-observations/1', 'sherlock-image-reference', ()),
+}
 
 
 def digest(raw):
@@ -340,7 +346,132 @@ def host_adapter():
     return module
 
 
-def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None):
+def layer_raw_context(artifact, difference):
+    """Retain supplied diagnostics for the differing expected case and fuel.
+
+    These fields are diagnostic declarations, never another source of expected
+    states. A reference or raw Repr/ITF value is not an execution receipt.
+    """
+    case, fuel = difference.get('case_id'), difference.get('initial_fuel')
+    if artifact.get('format') == 'sherlock-quint-itf-observations/1':
+        # Inspect only the existing ITF Snapshot fields. No model execution or
+        # projection recomputation participates in this diagnostic lookup.
+        def machine(state):
+            if type(state) is not dict:
+                return None
+            keys = [key for key in state if key == 'machine' or key.endswith('::machine')]
+            return state[keys[0]] if len(keys) == 1 and type(state[keys[0]]) is dict else None
+
+        rows = artifact.get('raw_traces')
+        candidates = []
+        if type(rows) is list and case is not None and type(fuel) is int:
+            for index, row in enumerate(rows):
+                if type(row) is not dict or row.get('case_id') != case:
+                    continue
+                try:
+                    initial = machine(row['itf']['states'][0])['initial']
+                    if type(initial) is dict and int(initial['#bigint']) == fuel:
+                        candidates.append(index)
+                except (KeyError, IndexError, TypeError, ValueError):
+                    continue
+        if len(candidates) != 1:
+            return dict(raw_context_status='multiple' if candidates else 'unavailable',
+                        raw_trace_candidate_indices=candidates,
+                        case_id=case, initial_fuel=fuel)
+
+        index = candidates[0]
+        row = rows[index]
+        states = row['itf']['states']
+        context = dict(raw_context_status='available', raw_trace_index=index,
+                       case_id=case, initial_fuel=fuel, raw_trace=row)
+        references = artifact.get('raw_trace_references')
+        if (type(references) is list and index < len(references)
+                and type(references[index]) is dict and references[index].get('case_id') == case):
+            context['raw_trace_reference'] = references[index]
+            context['raw_trace_reference_status'] = 'available'
+        else:
+            context['raw_trace_reference_status'] = 'unavailable'
+
+        # Only post-publication rule-0 stutters are omitted from K-A records.
+        # The actual publication is the first raw non-Pending outcome, so a
+        # terminal diagnostic never accidentally substitutes its later stutter.
+        publication = next((i for i, state in enumerate(states)
+                            if type(machine(state)) is dict
+                            and type(machine(state).get('outcome')) is dict
+                            and machine(state)['outcome'].get('tag') in ('Done', 'Rejected', 'Exhausted')), None)
+        parts = difference.get('path', '').split('/')
+        field = parts[3] if len(parts) > 3 and parts[1] == 'runs' else None
+        record = difference.get('record_index')
+        if field == 'records' and type(record) is int and publication is not None and 0 <= record < publication:
+            context.update(raw_before_state=states[record], raw_after_state=states[record + 1],
+                           raw_state_indices=dict(before=record, after=record + 1))
+        elif field in ('initial', 'terminal'):
+            state_index = 0 if field == 'initial' else publication
+            if state_index is not None:
+                context.update(raw_state=states[state_index], raw_state_indices={field: state_index})
+            else:
+                context['raw_state_status'] = 'unavailable'
+        elif field == 'records':
+            context['raw_state_status'] = 'unavailable'
+        return context
+    context = {}
+    projection = artifact['projection']
+    def matching(rows, *, prefix=False):
+        if type(rows) is not list or case is None:
+            return None
+        return next((row for row in rows if type(row) is dict and row.get('case_id') == case
+                     and (not prefix or row.get('initial_fuel') == fuel)), None)
+    raw_runs = artifact.get('raw_runs')
+    if raw_runs is None and type(projection) is dict:
+        raw_runs = projection.get('runs')
+    for label, rows, prefix in (
+            ('raw_run', raw_runs, True),
+            ('raw_trace', artifact.get('raw_traces'), False),
+            ('raw_trace_reference', artifact.get('raw_trace_references'), False),
+            ('program_image', projection.get('program_images') if type(projection) is dict else None, False)):
+        row = matching(rows, prefix=prefix)
+        if row is not None:
+            context[label] = row
+    return context
+
+
+def compare_supplied_observations(artifact, families, *, layer):
+    """Compare a declared adapter envelope with independently frozen literals.
+
+    Only the existing common observation projection is compared. Raw machine
+    diagnostics and projection limitations are retained without interpreting
+    them or authenticating the producing process.
+    """
+    require(layer in LAYER_ARTIFACTS, 'unsupported supplied observation layer')
+    fmt, producer, extra = LAYER_ARTIFACTS[layer]
+    fields(artifact, ('format', 'observations', 'projection') + extra, layer + ' artifact')
+    require(artifact['format'] == fmt, layer + ' artifact: format mismatch')
+    require(type(artifact['projection']) is dict, layer + ' artifact: projection must be object')
+    adapter = host_adapter()
+    expected = adapter.expected_observations(families, producer=producer)
+    observed = artifact['observations']
+    difference = adapter.compare_observations(expected, observed, first_difference)
+    if difference is not None:
+        difference.update(projection=artifact['projection'],
+                          raw_context=layer_raw_context(artifact, difference))
+    declaration = observed if type(observed) is dict else {}
+    summary = dict(status='mismatch' if difference else 'match',
+                   scope='complete-supplied-' + layer + '-diagnostic-artifact-comparison-only',
+                   format=fmt, declared_producer=declaration.get('producer'),
+                   declared_profile=declaration.get('profile'),
+                   declared_source_sha256=declaration.get('source_sha256'),
+                   producer_authenticity='not-established', execution_receipt='not-supplied',
+                   constructor_startup='unsupported', projection=artifact['projection'],
+                   artifact_metadata={key: value for key, value in artifact.items()
+                                      if key not in ('observations', 'projection', 'raw_runs', 'raw_traces')},
+                   raw_diagnostic_counts={key: len(artifact[key]) for key in ('raw_runs', 'raw_traces')
+                                          if type(artifact.get(key)) is list},
+                   expected_programs=len(expected['programs']), expected_prefix_runs=len(expected['runs']))
+    return difference, summary
+
+
+def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
+        lean_observations=None, quint_observations=None, image_observations=None):
     repo = Path(repo)
     files = []
     totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
@@ -366,10 +497,15 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         frozen[member] = docs
     require((observed_programs is None) == (observed_prefixes is None),
             'observed-programs and observed-prefixes must be supplied together')
-    require(host_observations is None or observed_programs is None,
-            'host observations and literal document observations are separate comparison modes')
+    supplied_paths = dict(host=host_observations, lean=lean_observations,
+                          quint=quint_observations, image=image_observations)
+    require(sum(path is not None for path in supplied_paths.values()) <= 1,
+            'supplied layer observations are mutually exclusive comparison modes')
+    require(not any(path is not None for path in supplied_paths.values()) or observed_programs is None,
+            'layer observations and literal document observations are separate comparison modes')
     difference = None
     supplied_host = None
+    supplied_layers = {}
     observed_files = []
     if observed_programs is not None:
         observations = []
@@ -392,38 +528,53 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                              producer_authenticity='not-established', execution_receipt='not-supplied',
                              constructor_startup='unsupported',
                              expected_programs=len(expected['programs']), expected_prefix_runs=len(expected['runs']))
+    for layer, path in supplied_paths.items():
+        if layer == 'host' or path is None:
+            continue
+        ref, artifact = document(path, strict=True)
+        difference, summary = compare_supplied_observations(artifact, list(frozen.values()), layer=layer)
+        summary['file'] = ref
+        supplied_layers['supplied_' + layer + '_observation'] = summary
     return dict(status='mismatch' if difference else 'pass',
                 scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
                 profile=PROFILE, counts=totals, frozen_files=files,
                 rust_literal_transcriptions=transcriptions, observed_files=observed_files,
                 supplied_observation_status=('mismatch' if difference else 'match') if observed_files else 'not-supplied',
                 supplied_observation_family=family if observed_files else None,
+                supplied_comparison_gaps={'K': dict(status='unsupported',
+                    reason='K configuration decoding exists; complete corpus observations, actual rule labels and terminal next-step observations remain unavailable.')},
                 first_difference=difference,
                 execution_layers=[dict(layer=layer, status='not-run', reason='No executable adapter invoked by this SDK-free QA consumer')
                                   for layer in ('K', 'Quint', 'Lean', 'Clean', 'handwritten-circuit', 'Rust-host', 'native-ledger')],
                 gaps=['Complete literal agreement supplies no semantic execution, refinement, constraint, proof or target evidence.',
                       'The supplied observation documents use the existing corpus format, not a runtime state codec.',
                       'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'],
-                **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}))
+                **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}),
+                **supplied_layers)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--observed-programs', type=Path)
-    parser.add_argument('--host-observations', type=Path,
+    supplied = parser.add_mutually_exclusive_group()
+    supplied.add_argument('--host-observations', type=Path,
                         help='compare a supplied complete normal host diagnostic artifact; does not execute it')
+    for layer in LAYER_ARTIFACTS:
+        supplied.add_argument('--' + layer + '-observations', type=Path,
+                              help='compare a supplied complete normal ' + layer + ' adapter artifact; does not execute it')
     parser.add_argument('--observed-prefixes', type=Path)
     parser.add_argument('--family', choices=FAMILIES, default='normal')
     args = parser.parse_args(argv)
-    if args.host_observations is not None and (args.observed_programs is not None or args.observed_prefixes is not None):
-        parser.error('host observations and literal document observations are separate comparison modes')
+    if any(getattr(args, layer + '_observations') is not None for layer in ('host', *LAYER_ARTIFACTS)) and (args.observed_programs is not None or args.observed_prefixes is not None):
+        parser.error('layer observations and literal document observations are separate comparison modes')
     if (args.observed_programs is None) != (args.observed_prefixes is None):
         parser.error('--observed-programs and --observed-prefixes must be supplied together')
     try:
         report = run(args.repo, observed_programs=args.observed_programs,
                      observed_prefixes=args.observed_prefixes, family=args.family,
-                     host_observations=args.host_observations)
+                     host_observations=args.host_observations, lean_observations=args.lean_observations,
+                     quint_observations=args.quint_observations, image_observations=args.image_observations)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')
