@@ -1,0 +1,83 @@
+{
+  "format": "sherlock-literal-normal-inputs/1",
+  "status": "hand-authored source preparation; specified-only/unexecuted",
+  "profile": "sherlock-k-a/1",
+  "source": {
+    "path": "models/sherlock/k/main.k",
+    "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41"
+  },
+  "baseline_commit": "c9f7cf6a712c7e6069cdc7a3ecdd86fb79817429",
+  "programs": [
+    {
+      "case_id": "F06bool",
+      "code_k": "uiNoFuns()",
+      "entry_k": "uiLet(0, uiLiteral(uiU(5)), uiIf(uiUnary(uiNotOp(), uiLiteral(uiB(false))), uiBinary(uiAdd(), uiVar(0), uiLiteral(uiU(2))), uiLiteral(uiU(99))))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 64,
+      "exact_completion_fuel": 20,
+      "input_sha256": "d319b6558e67da9792f34ca237f7ff322b4db10fe9897e8259218899d86c05e3",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Frozen bool/let order fixture",
+      "expected_value_k": "uiU(7)",
+      "derivation": "20 charges: let declaration/push/literal/bind (4), if declaration/push (2), unary declaration/push/literal/result/publication-to-ret (5), true branch choice (1), binary declaration/push/variable/left-to-right/literal/result/to-ret (7), lexical scope restoration (1).",
+      "original_fixture": {
+        "path": "models/sherlock/k/fixtures/uiBoolLetOrder.ui",
+        "sha256": "ecb5743d4047b89fbc01f1b5ed8b73717953eacc5aa7ff1a4d776fe1845cbd7a",
+        "initial_fuel": 1000,
+        "stack_limit": 64,
+        "bytes_preserved_in_pinned_copy": true
+      },
+      "expected_maximum_depth": 3
+    },
+    {
+      "case_id": "F07caller",
+      "code_k": "uiFunction(uiFun(5, uiParam(0, uiUIntT(), uiNoParams()), uiUIntT(), uiVar(0)), uiNoFuns())",
+      "entry_k": "uiLet(0, uiLiteral(uiU(10)), uiBinary(uiAdd(), uiCall(5, uiExpr(uiLiteral(uiU(2)), uiNoExprs())), uiVar(0)))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 64,
+      "exact_completion_fuel": 21,
+      "input_sha256": "07da4b69f73bdd54574c98469d8757e7451fc2a6c62e94fe43eaf08b23e94fe0",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Frozen caller-local restoration fixture",
+      "expected_value_k": "uiU(12)",
+      "derivation": "21 charges: initial let bind (4), binary declaration/push (2), argument declaration/push/literal/invoke (4), lookup/bind/return declaration/push (4), callee variable (1), caller restoration (1), left-to-right/right variable/result/to-ret (4), lexical scope restoration (1).",
+      "original_fixture": {
+        "path": "models/sherlock/k/fixtures/uiCallerLocal.ui",
+        "sha256": "074815b24122a529fe76f4e278798cbf0cfb4b6fb03738b946fbc6ca5f812dc3",
+        "initial_fuel": 1000,
+        "stack_limit": 64,
+        "bytes_preserved_in_pinned_copy": true
+      },
+      "expected_maximum_depth": 3
+    },
+    {
+      "case_id": "F08mutual",
+      "code_k": "uiFunction(uiFun(6, uiParam(0, uiUIntT(), uiNoParams()), uiBoolT(), uiIf(uiBinary(uiEq(), uiVar(0), uiLiteral(uiU(0))), uiLiteral(uiB(true)), uiCall(7, uiExpr(uiBinary(uiSub(), uiVar(0), uiLiteral(uiU(1))), uiNoExprs())))), uiFunction(uiFun(7, uiParam(0, uiUIntT(), uiNoParams()), uiBoolT(), uiIf(uiBinary(uiEq(), uiVar(0), uiLiteral(uiU(0))), uiLiteral(uiB(false)), uiCall(6, uiExpr(uiBinary(uiSub(), uiVar(0), uiLiteral(uiU(1))), uiNoExprs())))), uiNoFuns()))",
+      "entry_k": "uiCall(6, uiExpr(uiLiteral(uiU(4)), uiNoExprs()))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 64,
+      "exact_completion_fuel": 120,
+      "input_sha256": "e913652949720e23e8d92dd528e5f44b265b86681ce32396413d6f0356a830a0",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.",
+      "title": "Frozen mutual even-four fixture",
+      "expected_value_k": "uiB(true)",
+      "derivation": "120 charges: entry argument/call setup (8); four nonbase descents with false comparison/branch (10), strict subtraction argument evaluation/invoke (10), lookup/bind/return declaration/push (4), total 4*24; base comparison/true branch/literal (11); five checked return restorations (5). 8+96+11+5=120.",
+      "original_fixture": {
+        "path": "models/sherlock/k/fixtures/uiMutualEven4.ui",
+        "sha256": "4de8f5a9b05cf6a19ec07497513555c8b333f02b26572a1f752595a6756bfe16",
+        "initial_fuel": 1000,
+        "stack_limit": 64,
+        "bytes_preserved_in_pinned_copy": true
+      },
+      "expected_maximum_depth": 7
+    }
+  ],
+  "scope": {
+    "case_ids": [
+      "F06bool",
+      "F07caller",
+      "F08mutual"
+    ],
+    "coverage_status": "Three original frozen fixture full-state A tables only. Existing eight normal programs and 216 ordinary prefixes unchanged. No B, finance, theorem, circuit, native or target claim."
+  }
+}
