@@ -410,3 +410,7 @@ The language package guide at `experiments/moriarty-language/README.md` covers t
 The repository also holds the project research vault. `wiki/index.md` and `wiki/overview.md` lead to the findings and their sources; `docs/OBSIDIAN.md` explains the vault workflow. Obsidian is an optional viewer. `openspec/` holds implementation requirements, while `deliverables/`, `evidence/` and `raw/` retain scoped results, reviews and source material. Historical plans and receipts describe their recorded versions; the requirements page above carries the consolidated design direction. `docs/ARCHIVE.md` locates superseded work.
 
 Contributing agents follow the startup instructions in `AGENTS.md`, including loading `moriarty-dev:develop` and checking current status. Those instructions govern work in this repository; they confer no authority over users' financial programs.
+
+[DoctorWatson](docs/DOCTORWATSON.md) is the local software factory for the Sherlock
+universal interpreter. Run its ordinary QA with `./scripts/doctorwatson.sh`.
+GitHub stores reviewed source and results; routine CI runs locally.
