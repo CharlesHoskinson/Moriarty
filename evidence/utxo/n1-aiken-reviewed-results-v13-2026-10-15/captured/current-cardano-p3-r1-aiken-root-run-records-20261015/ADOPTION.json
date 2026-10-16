@@ -1,0 +1,125 @@
+{
+  "decidedAt": "2026-10-15T22:15:44.102097+00:00",
+  "decision": "ADOPT_SCOPED_LOCAL_A1_AND_A2_IDENTITIES_ONLY",
+  "reviewReportSha256": "2f88a9466aba35469954756f992920eed167ee6e9749072d9bb38d554f46ca27",
+  "reviewManifestSha256": "d6e59ab409f394e5e41aadfe78090487cc179e0aa96915288f26ee5dc8ec12c8",
+  "recommendationSha256": "b66c03f06682349aa48305e4eb84202d9c55c617b6525393a4d2009be7ef5585",
+  "resultManifestSha256": "c1cd3dfc1778fd183750f4fe6db7c5a1b4b9666ae389ff5be34e20def5b9e18f",
+  "adopted": [
+    {
+      "id": "ADOPT-A1",
+      "label": "GREEN(A1) local CEK library agreement",
+      "exactScope": "P3S1-R1 16-file package (SOURCE-MANIFEST-R1 a54de569...a957) placed under aiken v1.1.24+bacbeb3 (binary 4257cc8b...7677) with stdlib v2.2.0 (38 pinned files), 'aiken check --trace-filter all --trace-level silent', seed 1945995588, offline in a user+net namespace. 146/146 pass; the frozen name/module/status/expected-failure comparison is exact; per-module 110/27, 9/1, 27/9; 0 property tests.",
+      "meaning": "The library predicates agree with same-author fixture predictions under aiken's own CEK evaluator, through the test_ctx decoder.",
+      "notMeaning": [
+        "compiled ScriptContext wrapper behaviour (X1)",
+        "serialise_data ledger byte equality (OEX7)",
+        "ledger ExUnits or budget fit",
+        "signature positives (FX1)",
+        "independent encoding oracle or Rust/Aiken canonical-encoding agreement",
+        "Core correspondence",
+        "error-location isolation for the 37 fail tests"
+      ]
+    },
+    {
+      "id": "ADOPT-A2-ID",
+      "label": "A2 compiled identity records",
+      "exactScope": "Unapplied blueprint 8444db4f...6d45 (236,796 B); applied blueprint aa6d4627...cc77 (236,529 B); C2 23bdcc2d...4f19 (2,911 B); S2 unapplied 5323f552...18c9 (30,728 B); S2 applied with 581c||C2 -> 338293e4...1b7e (30,764 B); same trace settings as A1.",
+      "meaning": "Tool-derived identities and compiled byte sizes for these exact sources and tool.",
+      "notMeaning": [
+        "an independently recomputed script hash",
+        "a deployable script",
+        "a proven reference-script bound",
+        "a signer-accepted anchor",
+        "proof/key/setup",
+        "ledger admission or funding"
+      ]
+    },
+    {
+      "id": "ADOPT-RUN",
+      "label": "Run integrity",
+      "exactScope": "25/25 literal steps exit 0, 0 retries, launch pins equal PRE-LAUNCH, D1=TF and D2 all four criteria, hygiene/no-fetch/no-etag/empty dirs/tmp empty, all source pins unchanged (F1), unapplied blueprint preserved, host resources as recorded (176.07 s wall, 330.44 s user, 306.01 s system, 424,668 KiB max RSS).",
+      "qualification": "Within accepted run-scoped residuals: no mount namespace, reachable UNIX sockets, no FSIZE cap, no syscall trace, P1/F2 unwrapped."
+    }
+  ],
+  "notAdopted": [
+    "Any ledger ExUnits, budget or cost fit (host CEK figures are not ExUnits; A1m deferred)",
+    "Deployability of S2, inline or by reference (blocked by size: 30,764 > maxTxSize 16,384)",
+    "The term 'reference-script bound' for 16,384 (it is maxTxSize)",
+    "minUTxO, fee, collateral, stake deposit or funding sufficiency",
+    "X1 compiled wrapper, OEX7, FX1",
+    "Genuine current-language Groth16 setup/key/VK/proof; no legacy Source5 relabel",
+    "Rust R1 ABI2 native/BUILD2; old R3 DirectFieldV0 native proof",
+    "RR-03 general constraint source/runtime adoption",
+    "Authenticated ledger claims, transactions, settlement, Preprod",
+    "Any funding approval"
+  ],
+  "attributedOpusPreprodBlockers": [
+    {
+      "id": "PB-01",
+      "blocker": "S2 compiled size 30,764 B > observed maxTxSize 16,384; undeployable inline or as a reference script",
+      "grade": "actual size + provider-observed limit + pinned-source rule",
+      "unblock": "S2 size reduction and/or decomposition so that every deployable script, and its measured deploy transaction, fits with margin"
+    },
+    {
+      "id": "PB-02",
+      "blocker": "Settle cost: host signal of about 2.8-3.7x per-tx memory and 1.4-1.9x steps after harness-decode subtraction; P07 two-thread likely above per-block memory",
+      "grade": "host-derived estimate",
+      "unblock": "Cost redesign, then X1 evaluation under the pinned Preprod PlutusV3 cost model, with per-tx totals within limits and margin"
+    },
+    {
+      "id": "PB-03",
+      "blocker": "X1 compiled ScriptContext wrapper unrun",
+      "unblock": "Evaluate the compiled C2/S2 (or successors) on ledger-shaped ScriptContext Data"
+    },
+    {
+      "id": "PB-04",
+      "blocker": "No authenticated/pinned parameter and cost-model source; deployed node/ledger identity unknown; PlutusV3 parameter-name mapping not pinned",
+      "unblock": "Authenticated node query or multiple independent providers at a recorded epoch; pin the ledger/plutus-ledger-api sources that define the mapping"
+    },
+    {
+      "id": "PB-05",
+      "blocker": "OEX7 serialise_data vs ledger datum bytes unobserved",
+      "unblock": "Compare on-chain re-encoding with the original transaction datum bytes, including non-canonical encodings"
+    },
+    {
+      "id": "PB-06",
+      "blocker": "FX1 valid-signer positives absent",
+      "unblock": "Test-generated keys (never wallet/existing keys), positive and negative signature cases with domain/network/script/outref/seq binding"
+    },
+    {
+      "id": "PB-07",
+      "blocker": "No genuine Groth16 setup/VK/proof; C2 issue ExUnits unmeasured",
+      "unblock": "Actual Rust source -> new proof (K2) under separate authority"
+    },
+    {
+      "id": "PB-08",
+      "blocker": "Rust R1 ABI2 native/BUILD2 unrun; Rust<->Aiken canonical encoding agreement unshown",
+      "unblock": "Separate native authority with a mount view"
+    },
+    {
+      "id": "PB-09",
+      "blocker": "Script hashes only tool-self-consistent",
+      "unblock": "Independent recomputation by a non-aiken implementation"
+    },
+    {
+      "id": "PB-10",
+      "blocker": "Deployment economics and authority (reference-output minUTxO, ref-script fees, collateral, stake-credential deposit); no funding authority",
+      "unblock": "Pinned formulas plus a measured deploy plan; explicit funding decision by the root/user"
+    },
+    {
+      "id": "PB-11",
+      "blocker": "RR-03 open",
+      "unblock": "Product obligation, separate"
+    },
+    {
+      "id": "PB-12",
+      "blocker": "Phase-2 failure/collateral policy and residual-duty retention for every settle failure outcome not stated",
+      "unblock": "Explicit failure-outcome table bound to signed intent, per the product contract"
+    }
+  ],
+  "fundingApproval": "NONE",
+  "authorityCreated": "NONE",
+  "scope": "LocalCEKlibraryagreement + compiledidentity + runintegrityonly; noledgerExUnits/deployability/keys/proof/ledger/settlement/Preprod acceptance. Alloriginalsource/results/expectations unchanged.",
+  "independence": "FreshcontextsameOpusfamily, no vendordiversity; fixtures/predictionssameauthorlineage."
+}

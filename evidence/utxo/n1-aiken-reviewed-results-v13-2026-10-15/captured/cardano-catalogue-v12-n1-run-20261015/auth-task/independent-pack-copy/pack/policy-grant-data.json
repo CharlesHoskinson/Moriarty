@@ -1,0 +1,746 @@
+{
+ "schema": "moriarty-cardano-catalogue-independent-falsifiers/1#policy-grant-data",
+ "futureSchema": {
+  "status": "NORMATIVE for the B1 repair (falsifier-author vote 2; see REPORT.md votes)",
+  "policySchemaV2": "moriarty-cardano-consumer-policy/2",
+  "policyKeysV2": [
+   "schema",
+   "policy_id",
+   "profile_id",
+   "catalogue_manifest_digest",
+   "record_log_digest",
+   "accepted",
+   "denied_vk_digests",
+   "accepted_auditors",
+   "required_audit_scopes"
+  ],
+  "grantKeys": [
+   "auditor_id",
+   "report_sha256",
+   "verdict",
+   "scopes",
+   "covers_vk_digests",
+   "predicate_refs"
+  ],
+  "grantTyping": {
+   "auditor_id": "non-empty string (free text; no registry)",
+   "report_sha256": "exactly 64 lowercase ASCII hex (re.fullmatch, re.ASCII)",
+   "verdict": "approve-scoped | dispute",
+   "scopes": "non-empty list of known audit scopes",
+   "covers_vk_digests": "non-empty list of exactly-64-lowercase-hex strings",
+   "predicate_refs": "MANDATORY non-empty list of versioned ids matching ^MCP-[A-Z]+-[0-9]{2}@(0|[1-9][0-9]*)$ under fullmatch with ASCII classes"
+  },
+  "legacyPolicyV1": "moriarty-cardano-consumer-policy/1 stays accepted ONLY with accepted_auditors == []; any non-empty v1 accepted_auditors (the scope-less pair shape) is refused with CTX_POLICY_SCHEMA, never reinterpreted",
+  "effectiveScopes": "for record R: union over R.audit_refs a with a.verdict == approve-scoped and a.covers_vk_digest == R.vk_digest, and a consumer grant g with g.verdict == approve-scoped, g.auditor_id == a.auditor_id, g.report_sha256 == a.report_sha256, R.vk_digest in g.covers_vk_digests and R.predicate_ref in g.predicate_refs, of (a.scopes intersect g.scopes). A record reference with no matching grant counts for nothing; a grant the record does not cite contributes nothing.",
+  "disputes": "MANDATORY: R is disputed (ADM_AUDIT_DISPUTED, so bundles get BND_ADMISSION_REFUSED) if ANY consumer grant g with g.verdict == dispute has R.vk_digest in g.covers_vk_digests and R.predicate_ref in g.predicate_refs, whether or not R mentions it, and also if R itself cites a dispute from a granted (auditor_id, report_sha256) pair.",
+  "requirements": "required = profile.requiredAuditScopes union policy.required_audit_scopes; ADM_AUDIT_REQUIREMENT_UNMET unless required is a subset of effectiveScopes(R)",
+  "evidenceCap": "vector-evidenced needs {relation-observation, statement-binding} subset of effectiveScopes(R), R admitted, not disputed; otherwise BND_EVIDENCE_UPGRADE",
+  "labels": "a credited record still carries audit-refs-declared-not-verified (no signature, no report fetch, no VK/ledger verification); every result keeps NOT_PERFORMED / NOT_ESTABLISHED / UNIT",
+  "permissionless": "auditor identity is consumer-chosen; the checker holds no auditor registry and no maintainer approval list"
+ },
+ "notes": {
+  "syntheticKeys": "33.. / 44.. / 3a.. / 3b.. are synthetic UNIT stand-ins, not real VK digests. No real G16 VK digest is pinned here.",
+  "G_G16_TRUTHFUL_RO_33_PL01": "The ONLY grant naming the real G16 audit report 62fbdee0. Its scopes are the maximum truthful scope: relation-observation only (G16 audit sec. 9/12 approve the X0-X5 P-L0 relation observations; sec. 12 does NOT approve the X6 binding or the catalogue/bundle format, so statement-binding is never granted). Key 33.. is a synthetic stand-in, so even this grant is a test fixture, not a claim that the report covered key 33.. or established any correspondence to PLN-01@2 (review sec. 5: no established circuit correspondence).",
+  "PAIR_G16": "Legacy pair used only by counterexample CE-1 (laundering attempt); never in a positive control.",
+  "aud-X/aud-Y/aud-W/aud-Z/consumer-chosen:alice": "synthetic auditors chosen by the consumer; no registry; nobody's permission is needed to issue or name an audit (product contract: permissionless)."
+ },
+ "data": {
+  "policies": {
+   "P_RESEARCH_L": {
+    "schema": "moriarty-cardano-consumer-policy/1",
+    "policy_id": "independent-falsifier-research-policy",
+    "profile_id": "moriarty-research-preprod/0",
+    "catalogue_manifest_digest": "<world>",
+    "record_log_digest": "<world>",
+    "accepted": [
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-01"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "33",
+         32
+        ]
+       }
+      ]
+     },
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-02"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "44",
+         32
+        ]
+       }
+      ]
+     }
+    ],
+    "denied_vk_digests": [],
+    "accepted_auditors": [],
+    "required_audit_scopes": []
+   },
+   "P_COUNTERPARTY_L": {
+    "schema": "moriarty-cardano-consumer-policy/1",
+    "policy_id": "independent-falsifier-counterparty-policy",
+    "profile_id": "moriarty-counterparty-protective/0",
+    "catalogue_manifest_digest": "<world>",
+    "record_log_digest": "<world>",
+    "accepted": [
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-01"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "33",
+         32
+        ]
+       }
+      ]
+     },
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-02"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "44",
+         32
+        ]
+       }
+      ]
+     }
+    ],
+    "denied_vk_digests": [],
+    "accepted_auditors": [],
+    "required_audit_scopes": []
+   },
+   "P_RESEARCH_F": {
+    "schema": "moriarty-cardano-consumer-policy/2",
+    "policy_id": "independent-falsifier-research-policy",
+    "profile_id": "moriarty-research-preprod/0",
+    "catalogue_manifest_digest": "<world>",
+    "record_log_digest": "<world>",
+    "accepted": [
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-01"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "33",
+         32
+        ]
+       }
+      ]
+     },
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-02"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "44",
+         32
+        ]
+       }
+      ]
+     }
+    ],
+    "denied_vk_digests": [],
+    "accepted_auditors": [],
+    "required_audit_scopes": []
+   },
+   "P_COUNTERPARTY_F": {
+    "schema": "moriarty-cardano-consumer-policy/2",
+    "policy_id": "independent-falsifier-counterparty-policy",
+    "profile_id": "moriarty-counterparty-protective/0",
+    "catalogue_manifest_digest": "<world>",
+    "record_log_digest": "<world>",
+    "accepted": [
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-01"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "33",
+         32
+        ]
+       }
+      ]
+     },
+     {
+      "predicate_ref": {
+       "$head": "MCP-PLN-02"
+      },
+      "vk_digests": [
+       {
+        "$rep": [
+         "44",
+         32
+        ]
+       }
+      ]
+     }
+    ],
+    "denied_vk_digests": [],
+    "accepted_auditors": [],
+    "required_audit_scopes": []
+   }
+  },
+  "PAIR_AUDX": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   }
+  },
+  "PAIR_G16": {
+   "auditor_id": "g16-root-attempt-2",
+   "report_sha256": "62fbdee0341f410684449d72e09e515a99d5c8d94d8b16cb489ab4267b7ed238"
+  },
+  "PAIR_AUDY": {
+   "auditor_id": "aud-Y",
+   "report_sha256": {
+    "$rep": [
+     "cd",
+     32
+    ]
+   }
+  },
+  "G_AUDX_RO_SB_33_PL01": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_G16_TRUTHFUL_RO_33_PL01": {
+   "auditor_id": "g16-root-attempt-2",
+   "report_sha256": "62fbdee0341f410684449d72e09e515a99d5c8d94d8b16cb489ab4267b7ed238",
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDX_RO_SB_3A_PL01": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "3a",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDX_RO_SB_33_PL02": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-02"
+    }
+   ]
+  },
+  "G_AUDX_RO_33_PL01": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDW_SB_33_PL01": {
+   "auditor_id": "aud-W",
+   "report_sha256": {
+    "$rep": [
+     "ef",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDY_DISPUTE_SB_33_PL01": {
+   "auditor_id": "aud-Y",
+   "report_sha256": {
+    "$rep": [
+     "cd",
+     32
+    ]
+   },
+   "verdict": "dispute",
+   "scopes": [
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDY_DISPUTE_SB_3B_PL01": {
+   "auditor_id": "aud-Y",
+   "report_sha256": {
+    "$rep": [
+     "cd",
+     32
+    ]
+   },
+   "verdict": "dispute",
+   "scopes": [
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "3b",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDX_ALL5_33_PL01": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding",
+    "setup-transcript",
+    "build-provenance",
+    "verifier-script"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_AUDX_ALL5_3A_PL01": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding",
+    "setup-transcript",
+    "build-provenance",
+    "verifier-script"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "3a",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "G_ALICE_RO_SB_33_PL01": {
+   "auditor_id": "consumer-chosen:alice",
+   "report_sha256": {
+    "$rep": [
+     "e1",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digests": [
+    {
+     "$rep": [
+      "33",
+      32
+     ]
+    }
+   ],
+   "predicate_refs": [
+    {
+     "$head": "MCP-PLN-01"
+    }
+   ]
+  },
+  "REF_G16_RO_SB_33": {
+   "auditor_id": "g16-root-attempt-2",
+   "report_sha256": "62fbdee0341f410684449d72e09e515a99d5c8d94d8b16cb489ab4267b7ed238",
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_G16_RO_33": {
+   "auditor_id": "g16-root-attempt-2",
+   "report_sha256": "62fbdee0341f410684449d72e09e515a99d5c8d94d8b16cb489ab4267b7ed238",
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDX_RO_SB_33": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDX_RO_33": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDX_ALL5_33": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding",
+    "setup-transcript",
+    "build-provenance",
+    "verifier-script"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDX_REPORT_AC_RO_SB_33": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ac",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDZ_REPORT_AB_RO_SB_33": {
+   "auditor_id": "aud-Z",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDY_APPROVE_RO_SB_33": {
+   "auditor_id": "aud-Y",
+   "report_sha256": {
+    "$rep": [
+     "cd",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDY_DISPUTE_SB_33": {
+   "auditor_id": "aud-Y",
+   "report_sha256": {
+    "$rep": [
+     "cd",
+     32
+    ]
+   },
+   "verdict": "dispute",
+   "scopes": [
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDX_DISPUTE_SB_33": {
+   "auditor_id": "aud-X",
+   "report_sha256": {
+    "$rep": [
+     "ab",
+     32
+    ]
+   },
+   "verdict": "dispute",
+   "scopes": [
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_AUDW_SB_33": {
+   "auditor_id": "aud-W",
+   "report_sha256": {
+    "$rep": [
+     "ef",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  },
+  "REF_ALICE_RO_SB_33": {
+   "auditor_id": "consumer-chosen:alice",
+   "report_sha256": {
+    "$rep": [
+     "e1",
+     32
+    ]
+   },
+   "verdict": "approve-scoped",
+   "scopes": [
+    "relation-observation",
+    "statement-binding"
+   ],
+   "covers_vk_digest": {
+    "$rep": [
+     "33",
+     32
+    ]
+   }
+  }
+ }
+}
