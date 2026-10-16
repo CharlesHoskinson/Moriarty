@@ -1,0 +1,9 @@
+# Luna additive Graphify fragment — R3 documentation
+
+This R3 sibling preserves the R2 graph exactly. The graph SHA-256 is `879d2a8cf4d18827c34fb5fe686726d928db9a28cd72caec13b5e540264c00c1`; only documentation and audit metadata changed. Open `graphify-out/graph.json` for the frozen directed graph, `graphify-out/GRAPH_REPORT.md` for the current time-scoped interpretation, `SOURCE-MANIFEST.json` for source/evidence pins, and `AUDIT-DISPOSITION.md` for the independent Muse findings.
+
+For graph consumers, effective classification is `evidence_type` when present and otherwise `type`. 165 links carry classification only in `type`; consumers that require literal `evidence_type` must apply that fallback. It is a read-time rule, not a graph modification or semantic approval. The previously reported 1,542-node / 5,627-edge extraction output is withdrawn as unverified provenance because the extraction/cache and transformation metadata were not retained; use the root-checked published graph counts of 1,356 nodes / 3,620 links.
+
+AST link `source_file` paths are package-relative to the manifest's `packageRoot`. File-node paths have the `experiments/moriarty-cardano-rust/` prefix and resolve from the repository root. Name-based inferred calls can misbind same-named symbols; they are navigation hypotheses only.
+
+K4H's actual-result review is complete and adopted narrowly as an ordinary prerequisite for K5 source preparation. This does not grant execution authority or establish an arbitrary-witness theorem. The four-way failed run's actual-result review and initial diagnosis are also complete, but its outcome remains unadopted. A proposed test-only harness correction is unrun and has no acceptance from its author. Historical pending text inside the frozen package docs and R2 graph is called out in the report; current status is time-scoped to 2026-10-16.
