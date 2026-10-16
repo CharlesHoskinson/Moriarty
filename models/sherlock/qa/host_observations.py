@@ -19,7 +19,7 @@ def literal_snapshot(program, trace, state, fuel, *, published_output=None):
                 charged_steps=state['charged_steps'])
 
 
-def expected_observations(families):
+def expected_observations(families, *, producer=PRODUCER):
     """Expand validated frozen inputs/prefix literals into full observation rows."""
     identities, runs = [], []
     for programs, prefixes in families:
@@ -39,7 +39,7 @@ def expected_observations(families):
                 runs.append(dict(case_id=program['case_id'], initial=snapshots[0], records=records,
                                  terminal=terminal, terminal_has_next=False))
     first = families[0][0]
-    return dict(producer=PRODUCER, profile=first['profile'], source_sha256=first['source']['sha256'],
+    return dict(producer=producer, profile=first['profile'], source_sha256=first['source']['sha256'],
                 boundary='post-startup', programs=identities, runs=runs)
 
 

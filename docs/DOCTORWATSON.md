@@ -16,6 +16,17 @@ See the [local commands](DOCTORWATSON-CI.md), the QA
 [contract](../models/sherlock/qa/CONTRACT.md), and the
 [factory EARS](../openspec/changes/doctorwatson/requirements.md).
 
+The [parallel delivery results](audits/2026-10-16/sherlock-parallel-delivery/README.md)
+now include actual Rust host, flat-ID image and Quint observations against the
+same independently frozen eight-program corpus. Each matches all 216 prefixes
+and 5,355 complete records. All 14 selected Rust host tests pass; image tests
+were not selected. The new continuation tests cover all 204 N03–N08 prefixes,
+every event cut and widths 1/2/4/8. A captured regression also fixes selection of
+the correct fuel run in raw divergence diagnostics. K decoding and supplied
+Lean comparison are implemented consumers; their presence does not establish
+actual K or Lean execution. Source-Core and streaming execution are separate
+increments, outside those recorded captures.
+
 ## One delivery cycle
 
 1. Select an unchecked feature in the existing

@@ -1,7 +1,9 @@
 # Sherlock correctness loop
 
 Status: required development workflow from the October 15 user instruction.
-The cross-layer harness described here is not implemented or executed yet.
+The ordinary complete-observation consumers now accept host, image, Quint and
+pure Lean diagnostic artifacts. Actual execution, projection correspondence and
+the remaining cross-layer circuit/native harness require separate evidence.
 This operationalizes UIREQ-021–026 and the existing implementation plan;
 it does not adopt Candidate B, freeze its schema or close a roadmap gate.
 

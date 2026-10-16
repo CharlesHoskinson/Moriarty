@@ -14,7 +14,7 @@ use super::program_image::{ConstantPayload, ExprId, ExprPayload, ProgramImageDra
 use super::reference_types::*;
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum ImageFrame {
     Let(Name, ExprId, Environment),
     Left(BinaryOp, ExprId, Environment),
@@ -27,7 +27,7 @@ enum ImageFrame {
     Scope(Environment),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum ImageControl {
     Eval(ExprId),
     Return(Value),
@@ -68,6 +68,15 @@ pub(super) struct ImageCheckpoint {
 }
 
 impl ImageMachine {
+    /// Noncanonical diagnostics of the actual ID controls and ordered frame payloads.
+    /// Structural snapshots remain separate from these host representation details.
+    pub(super) fn representation_diagnostics(&self) -> (Option<String>, Vec<String>) {
+        (
+            self.control.as_ref().map(|control| format!("{control:?}")),
+            self.frames.iter().map(|frame| format!("{frame:?}")).collect(),
+        )
+    }
+
     /// Requires an unchanged image produced by prepare_program_image. This
     /// constructor deliberately adds no policy for arbitrary malformed tables.
     pub(crate) fn new(image: Arc<ProgramImageDraft>, fuel: u128, stack_limit: usize) -> Self {
