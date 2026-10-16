@@ -1,0 +1,74 @@
+[
+  {
+    "clause": "The first live flow is the bounded invoice-partial subset executed as T0 reference scripts, T1 genesis, T2 C2 claim mint (+1), and T3 one atomic transaction that spends the S2p thread input and the C2 claim input, executes c2.mint Burn (-1) with no C2 token in any output, carries the Ed25519 claimant VKH in transaction extra_signatories, and withdraws zero from VI, VS1, VS2, VS3 and VS4; there is no post-success claim-burn transaction, and a separate claimant-signed claim burn exists only as the alternative post-expiry refund (validity lower bound after env.expiry) when T3 never settles, because claim.release checks settle_outref against the current transaction inputs and not chain history; claim mint alone is never described as end-to-end.",
+    "clauseId": "R2-01",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "DESIGN-POSITION-TALLY.json:7-11 literalTextEqual=true, verified against FIRST-PREPROD-DESIGN.md:9-14; graph node fx1_t3_atomic_settlement_design faithful (EXACT-GRAPH-ADDITIONS.json:234). One full Gemini review plus focused correction, not two audits (TALLY:3)."
+  },
+  {
+    "clause": "The funded wallet UTxO spent by T1 Genesis as seed (from which thread_id is derived) and the T1 thread output outref locked at Script(s2p_hash) are distinct values: env.settle_outref in the fresh T2 statement and envelope is the actual confirmed T1 thread outref, consumed by T3, and never the already-spent wallet seed.",
+    "clauseId": "R2-02",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:15-19; FIRST-PREPROD-DESIGN.md:11; node fx1_t1_thread_outref (EXACT:220) preserves the seed/thread distinction exactly."
+  },
+  {
+    "clause": "The actual Aiken invocation includes withdraw-zero for all five of VI, VS1, VS2, VS3 and VS4 in T3; registration, certificate, witness-rule and deposit requirements for each of the five stake credentials must be pinned from normative Conway DELEG/UTXOW primary sources and a target experiment before T3 is buildable, and until then that registration behaviour is an obligation, not an established legal fact derived from the Aiken calls.",
+    "clauseId": "R2-03",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:23-27; registration behaviour remains an obligation pending primary-source pinning and target experiment \u2014 graph carries it as design obligation only (EXACT:234,248)."
+  },
+  {
+    "clause": "Class-0 single-party setup forgeability, the unproved VK-to-matrix link and unproved constraint soundness are carried as an explicit test trusted basis in every document, fixture and interface touching the current proof, and are never presented as production readiness or as a full circuit theorem; the missing 8 compiler and 64 Core/driver dependencies are retained explicitly.",
+    "clauseId": "R2-04",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:31-35; no production/security claim is made in the graph (GRAPH_REPORT.md:7,11)."
+  },
+  {
+    "clause": "Authorisation is per-contract and objective: the S2p c2_hash parameter plus the genesis-frozen catalogue ActionEntry (predicate, vk and shape digests) is the verifier identity; no protocol registry, Moriarty-language compile/prove/deploy admission, maintainer admission or root approval is introduced, and claim.issue alone (which accepts any self-consistent VK/proof pair) is never described as authorised-relation binding.",
+    "clauseId": "R2-05",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:39-43; consistent with adoption flags all false (SOURCE-DESIGN-ADOPTION.json:5-9)."
+  },
+  {
+    "clause": "A fresh secp256k1 intent account keypair must be generated and privately custodied and its public key frozen in catalogue.accounts at T1 as a prerequisite; the Ed25519 Preprod wallet key signs only Cardano transaction fields (T3 claimant extra_signatory, fee and collateral) and is never an intent or proving key; existing wallet keygen AUTH is spent, no existing key use is granted here, and any future proving-key read requires fresh exact-scope private-custody authorisation after descriptor and source-pin comparison, native key reuse for a changed context being UNPERFORMED.",
+    "clauseId": "R2-06",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:47-51; FIRST-PREPROD-DESIGN.md:16-17; no key material is present in the public mirror and none is claimed."
+  },
+  {
+    "clause": "The Rust statement is a 343-byte header (tag, family, predicate and shape as constants) plus a program-dependent body whose length and order derive from the selected program and action; the full statement is BLAKE2b-256 hashed into two public-input halves; the context segment is hashed free witness bytes over caller-supplied values that are not ledger authentication; ContextInput networkId is the ABI u8 byte and is not a conversion of Preprod magic 1; admission is exactly Core1/SettlementHashV2/NotBound/GrossDebitAndFees/TouchedOnly with /2 refused as staged-not-lowered and no invoice filename allowlist; compile_selected takes no context, changing source asset identities can change program, shape and descriptor, and no fixed universal body length is claimed.",
+    "clauseId": "R2-07",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:55-59, correcting the full review's universal-721-byte assumption; intent payload is canonical JSON per SOURCE-DESIGN-ADOPTION.json:67, not CBOR \u2014 preserved as qualification, not current graph truth beyond the design node."
+  },
+  {
+    "clause": "The next callable capability after K10 is, in order, an actual genuine secp256k1 intent through the already-compiled VI wrapper, then a current-Rust fresh-context proof, then the atomic C2 spend/Burn + VI + VS1..VS4 + S2p settle; the next source task is a source-only five-part specification (public host codec building the actual Rust request and Aiken Plutus Data, real-context acquisition, secp256k1 intent-signing boundary, symbolic transaction assembly, independent expectations with positive and negative cases) consumed by a real builder, with no implementation in this study, no handwritten application IR replacing the compiler, no extra campaign or platform, and local synthetic fixtures labelled explicitly local and never used as Preprod substitutes.",
+    "clauseId": "R2-08",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:63-67; FIRST-PREPROD-DESIGN.md:25-26; node fx1_next_capability_sequence (EXACT:248) keeps genuine VI, fresh-context proof and T3 as future work."
+  },
+  {
+    "clause": "Financial expectations are stated completely and symbolically: escrow 109 -> 72, seller 0 -> 35, fee 2, gross debit 37, invoice liability 90 -> 55, reserve duty 14 unchanged, marker 7 / opened true over 29 slots; the claim token is +1 at T2 and -1 inside T3 (or in the alternative post-expiry refund), its carrier lovelace is disposed by T3 change/payout accounting, and per-stage physical assets, fees, min-ADA, collateral, credential deposits and reclaim, and current wallet balance remain symbolic or UNKNOWN with no invented balance or denomination; phase-1 versus phase-2 failure cost treatment is a conditional normative obligation, not proof that every rejected or off-chain transaction costs money; residual liabilities, duties and the cancellation nonce survive failure and Revoke.",
+    "clauseId": "R2-09",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:71-75; graph asserts no fee/min-ADA/ExUnit figure (EXACT:262, GRAPH_REPORT.md:5)."
+  },
+  {
+    "clause": "T3 references all seven scripts (67028 B combined applied size); protocol reference-script size limits, tiered reference-script fees, ExUnits and transaction fit are UNKNOWN until measured with live parameters and a built transaction; provider observation must use _extended = true for address UTxOs, name the chosen epoch explicitly for epoch parameters, and treat value units and cost-model format as UNKNOWN until inspected; slot-to-POSIX conversion must be established from Preprod EraHistory including the Byron transition and never as systemStart + slot * slotLength; wallet funding is UNKNOWN and any unfunded assertion without a query is unsupported.",
+    "clauseId": "R2-10",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:79-83, cross-referencing the adopted 14:50 UTC observation and the Preview-only faucet result; graph nodes preprod_obs_economics_unknown/fx1_parameter_and_acceptance_open preserve every UNKNOWN."
+  },
+  {
+    "clause": "The seven Aiken validators remain unchanged with compiled B9 hashes stable, and K10 (root adoption 6421ba8478218c633c4604a9d25b82010afe4c1a9ffb359275d7cf16be6cfc18, fresh report 92307d73b99140baed69be125160c106a947f86d5fd88ef555b0987f75f9466a) is cited only for its finite seven compiled-wrapper cases, with source-time pending flags preserved as history, no K10 rerun and no ledger claim.",
+    "clauseId": "R2-11",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:87-91; edges preprod_edge_025/026 link into the base K10 boundary node without closing acceptance (EXACT:626-650)."
+  },
+  {
+    "clause": "All 20 UTxO families, ACTUS 277 fixtures / 18 types / 32 dispositions / DS01-DS07, DeFi 72 rows / DA01-DA24, general financial obligations, real recursion, private witness handoff, bounded multi-parent PCD, universal certificates and real Preprod acceptance remain required and open; source recursion_mode 0 and parent_count 0 are current limitations and not scope waivers; no compatibility percentage is stated and no execution authority follows from this source design.",
+    "clauseId": "R2-12",
+    "position": "FOR (author) / AGREE (reviewer)",
+    "rationale": "TALLY:95-99; node fx1_broader_requirements_open (EXACT:276) and GRAPH_REPORT.md:7 retain all of these as open; this review states no compatibility percentage."
+  }
+]
