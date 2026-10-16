@@ -1,0 +1,9 @@
+# Sherlock host client source preparation — 2026-10-16
+
+Source facts: the [three-module proposal](../../models/sherlock/host-client-source-20261016/README.md) contains a concrete callable capture consumer, literal typed input constructors and a pure full-observation JSON writer. The capture source calls the proposed fixed owner factory and public admission, bound-observation and step APIs. It does not implement the engine or calculate source transitions, event metadata or expected results. Fuel and stack inputs come unchanged from its caller. Startup and P0 have no StepEvent under the adopted event contract; the initial full observation captures startup state.
+
+Reasons: keeping complete admission/image observations and actual returned events lets a separate comparison consumer inspect the original public fields without a second semantic evaluator in the capture client. Typed errors preserve failed admission, host, formatting and I/O outcomes; capture completion reports only an observed terminal outcome and accepted writes. The literal fixtures and pure presentation writer keep input construction and transport separate from execution.
+
+Evidence: fresh Muse Wonder 1.0 high source audits approved or agreed with the exact three source candidates within their stated source-only scopes. The original reports remain private review context. This package has no combined compile or actual engine-capture result. Publication is source preparation, with no new product capability or adoption claim.
+
+Open questions: the integrator must register the modules against the actual shared/owner/raw closure and obtain separately authorized compilation and execution evidence. Actual capture agreement needs independent expected-state comparison. K/Quint/Lean-Clean and handwritten circuit correspondence, required proofs, native/target execution, financial conformance and all existing product/roadmap acceptance obligations remain open.
