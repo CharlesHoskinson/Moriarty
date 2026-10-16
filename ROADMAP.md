@@ -23,6 +23,18 @@ qualification and every existing parent exit remain open.
 
 The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provenance/README.md) records compiler-produced statement/expression-to-field metadata, public export/reopen, byte-identical IR for one independent specimen and ten passing focused tests. Full source/result audits remain pending. This is source-static correspondence support; all U0/U2 and other parent exits remain open.
 
+## Sherlock source status — 2026-10-16
+
+PR #95 registers the A102 source APIs `literal_schema` and `emit_literal_step`
+([literal-fragment mapping](models/sherlock/literal-step/MAPPING.md)). The machine
+module has 16 authored and registered Rust tests, all UNRUN. The
+[full39 semantic source map](models/sherlock/machine-circuit/README.md) has
+conditional Opus/Muse source adoption; it does not complete P1 or establish
+emitter, compiler, circuit, native or stagenet acceptance. The separate
+[implementation-status note](openspec/changes/sherlock-machine-circuit-layout/IMPLEMENTATION-STATUS-2026-10-16.md)
+records child source progress and retained gaps. Existing milestone statuses,
+resource limits and acceptance obligations below are unchanged.
+
 ## Sherlock design work — 2026-10-15
 
 [Sherlock](openspec/changes/sherlock-universal-interpreter-design/proposal.md)
