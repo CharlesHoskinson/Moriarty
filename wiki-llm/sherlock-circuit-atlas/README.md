@@ -17,7 +17,7 @@ Each note is triggered by an existing implementation event:
 3. Opus 5.5 returns one note.
 4. Root writes the note verbatim and records provider provenance.
 
-Nothing new is scheduled, polled or orchestrated, and implementation never waits on this log. Security source reviews of the same bytes are separate documents and are not part of any note.
+Nothing new is scheduled, polled or orchestrated, and implementation never waits on this log. Security source reviews of the same bytes are separate documents and are not part of any note. This holds even when one session writes both, as in iteration 003.
 
 Each frozen source iteration gets one `ITERATION-NNN-*.md` file. Earlier notes are never rewritten; later notes supersede them by reference. Each note carries its date, author, source pins, observations from the source, alternatives, a recommended concept and open notes.
 
@@ -33,6 +33,7 @@ Each frozen source iteration gets one `ITERATION-NNN-*.md` file. Earlier notes a
   - [`provenance/iteration-000-opus-public-reply.json.gz`](provenance/iteration-000-opus-public-reply.json.gz)
   - [`provenance/iteration-001-opus-public-reply.json.gz`](provenance/iteration-001-opus-public-reply.json.gz)
   - [`provenance/iteration-002-opus-public-reply.json.gz`](provenance/iteration-002-opus-public-reply.json.gz)
+  - [`provenance/iteration-003-opus-public-reply.json.gz`](provenance/iteration-003-opus-public-reply.json.gz). Root recorded the original public reply when materializing iteration 003.
 - Source bases are recorded per iteration:
 
 | Iteration | Source base |
@@ -40,10 +41,13 @@ Each frozen source iteration gets one `ITERATION-NNN-*.md` file. Earlier notes a
 | 000 | Not recorded by the original receipt; the exact file digests are authoritative |
 | 001 | `1fb794d1598e19fe34b9735f90996fc316b743fa` |
 | 002 | `1fb794d1598e19fe34b9735f90996fc316b743fa` |
+| 003 | `1fb794d1598e19fe34b9735f90996fc316b743fa`; the G3 candidate files are uncommitted |
 
 - The concept checkout base `f7ff06ed05bcef5fc3540bdde70ddbf6402f5547` is where this log is written. It is not a source base.
 - Root's corrections after review changed provenance metadata only. Notes 000 and 001 were not rewritten.
 - Publication statements in each note describe its recorded freeze time. The source snapshots and later publication records retain that history; publication never supplies executable validation. Root added this provenance clarification and the iteration 002 reply link during integration; the brainstorm notes remain verbatim.
+- For iteration 003, Root appends the exact source-capture metadata to `AUTHORSHIP.json` after the reply. The note's pins are the values from the forwarded author manifest.
+- Notes 000 to 002 were published with G2 in [PR #91](https://github.com/CharlesHoskinson/Moriarty/pull/91), merge `5178d576e3f1931560e626738dd8ddfe6de243f7`. At its materialization freeze, iteration 003 was local to the concept working tree. This source publication package carries iteration 003 with G3; publication supplies no executable validation. Root updated this publication provenance after the author reply; the iteration notes remain unchanged.
 
 ## Source, idea and status
 
@@ -66,7 +70,7 @@ The following carry over unchanged:
 - The 4px spine and the measured grid.
 - The ink grounds and the copper accent (`#9a3412` light, `#e8724a` dark).
 
-Any new hue or emission is a proposal pending design review and contrast measurement. That includes the cyan proposed in iteration 000 and the copper obligation emission proposed in iteration 001. `site/VOICE.md` continues to govern page copy.
+Any new hue or emission is a proposal pending design review and contrast measurement. That includes the cyan proposed in iteration 000 and the copper obligation emission proposed in iteration 001. Iteration 003 adds no new hue. `site/VOICE.md` continues to govern page copy.
 
 ## Index
 
@@ -75,20 +79,22 @@ Any new hue or emission is a proposal pending design review and contrast measure
 | 000 | Scalar literal step (`sherlock_step`, `sherlock-scalar-literal-step/1`) | [Literal step](ITERATION-000-LITERAL-STEP.md) | Candidate frozen, not on `main`; execution UNRUN. A different module from 001/002. Its field, test and instruction counts are author observations that the latest G audit did not review. |
 | 001 | Row fetch, r1 snapshot | [Bounded row fetch](ITERATION-001-BOUNDED-ROW-FETCH.md) | Unregistered; four tests and execution UNRUN. Grounding reviewed by Muse. Its unprefixed identifiers belong to r1 only. |
 | 002 | Row fetch, r2 snapshot (`%` identifiers, rejection tests, locked wiring) | [Identifiers and wiring](ITERATION-002-IDENTIFIERS-AND-WIRING.md) | Unregistered; six tests SOURCE-ONLY UNRUN; actual output UNRUN. |
+| 003 | Separate enabled fetch, G3 snapshot (`emit_enabled_fetch_block`) | [Enabled fetch](ITERATION-003-ENABLED-FETCH.md) | Unregistered; five new and six inherited tests UNRUN; actual output UNRUN, including the disabled 2^128 raw-index case. A separate fresh security source review exists outside this log. |
 
 ## Latest iteration
 
-Iteration 002 responds to the r2 identifier repair. It proposes three things:
+Iteration 003 responds to the separate enabled fetch, a sibling of the unchanged G2 constructor. It proposes the following:
 
-- **Net keys.** Every net on the array board is keyed by its exact operand string, such as `%row_fetch.temp.9`, with the `%` kept literally.
-- **Keep-out.** The fragment's reserved namespace is drawn as a hatched PCB keep-out.
-- **Specification overlay.** An overlay marks, with unlit ink ticks, the edges that the strengthened normal tests name.
+- **Enable bus.** The single enable operand is one inner-layer net with vias only at its real instruction terminals. The enable tags on selected outputs are silkscreen flags, because they are host data rather than instructions.
+- **Select glyphs.** Every CondSelect is drawn as a trapezoid. The raw index taps only the effective-index true arm, the prefix Assert sits behind a guard select, and the sum terminator is a via on the enable bus.
+- **Disabled-zero.** It is shown as construction data: the zero seed and a DOM card quoting the definition. It is never a table row, padding or an animated lane. The board stays identical across fixture cases.
+- **Caller obligations.** Dispatch provenance of enable and consumer gating are drawn as dashed, unlit off-board sockets, because no dispatch or consumer source exists.
 
-The Opus-prescribed rejection tests appear on a DOM refusal card captioned UNRUN. The capacity, prefix and sum-to-one terminators stay hardwired because the source has no enable. The 57-instruction hand count sizes the scene only.
+The 41-instruction and 19-temporary hand counts for the 3×2 test shape size the scene only. Dispatch backplanes and recursion stay conceptual sketches.
 
 The next note is triggered by one of these events:
 
-- Astra high freezes a separate enabled fetch or an adapter candidate.
+- Astra high freezes dispatch, consumer or adapter source.
 - Root forwards a recorded, admitted run.
 
 A recorded run would be the first input to the measured light channel.
@@ -98,4 +104,6 @@ A recorded run would be the first input to the measured light channel.
 - Notes use only public, forwarded source. No private Fenrir or Clean source and no secret witness data appear or are requested.
 - Notes do not state constraint success, circuit size parameters, fees, speeds, proving benchmarks or recursion completion unless a forwarded result records them.
 - No proposed page evaluates circuits in the browser or animates proving.
+- Disabled-zero values are construction data, never fetched rows, padding or animated execution.
 - Visuals for recursive calls and multi-branch machines stay labelled conceptual until actual source exists.
+- No note claims that a source candidate is machine-ready or that Sherlock is complete.
