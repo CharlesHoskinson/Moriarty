@@ -1,0 +1,7 @@
+Recovered all 20 retained inventory IDs and names from PATTERN-INVENTORY.json. They match the 20 versioned requirements-coverage family rows. The historical result matrix contains 24 specimen rows for those 20 IDs under Source/5, Source/6 or bounded-atomic/1. Its status labels and the S2 draft family matrix remain historical source evidence.
+
+Current Rust sources identify the moriarty/1 and moriarty-core/1 parser/checker, admission frontend, compiler entry, K2 driver and CLI. Invoice and reserve programs have exact fixture bindings, selectors and named source test callsites. Tests and commands were read, not run. None of these records explicitly associates a retained family ID with a current Rust program/action; every family mapping is therefore UNLOCATED within the recorded search, without an unsupported or compatibility judgment.
+
+The existing invoice-partial public ProofExport has the captured invoice source SHA256. The public K6 adoption records one current Rust invoice-partial roundtrip with fabricated caller context and keeps all 20 families open. It does not establish F03, another canonical family, ledger truth, Preview or Preprod acceptance. Historical never-run source comments do not override that later narrow record.
+
+This packet contains source facts only. No code, tests, native operations, network, private paths or Git mutations were used. Root remains the sole integrator. General financial obligations, residual duties, ACTUS, DeFi and PCD remain open. Preview first and later Preprod acceptance remain required.

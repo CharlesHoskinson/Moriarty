@@ -1,0 +1,16 @@
+{
+  "sourceId": "12-k2-relation-consumer",
+  "originalPath": "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/k2/src/relation.rs",
+  "originalBytes": 14625,
+  "originalSha256": "e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5",
+  "kind": "exact-line-excerpts",
+  "excerpts": [
+    {
+      "firstLine": 257,
+      "lastLine": 291,
+      "sourceText": "/// Compiles `source` for `selector` with the actual compiler, then checks optional pins.\npub fn compile_selected(source: &str, selector: &RelationSelector) -> Result<SelectedRelation, DriverError> {\n    check_selector(selector)?;\n    let options = CompileOptions {\n        action: selector.action.clone(),\n        cap: CapBinding::NotBound,\n        frame: FrameCells::TouchedOnly,\n        accounting: AccountingBinding::GrossDebitAndFees,\n        compiler: CompilerBuild::embedded().map_err(DriverError::Compile)?,\n    };\n    let relation =\n        mori_r1cs::compile_source::<Fr>(source, options, StatementAdapter::SettlementHashV2).map_err(DriverError::Compile)?;\n    let descriptor = RelationDescriptor::of(&relation)?;\n    if descriptor.language != selector.language || descriptor.semantics != selector.semantics {\n        return Err(DriverError::mismatch(\n            \"language/semantics\",\n            format!(\"{}/{}\", selector.language, selector.semantics),\n            format!(\"{}/{}\", descriptor.language, descriptor.semantics),\n        ));\n    }\n    if let Some(pin) = &selector.expected_source_sha256 {\n        hexutil::decode_exact::<32>(pin, \"expectedSourceSha256\")?;\n        let actual = descriptor.source_sha256.clone().unwrap_or_default();\n        if *pin != actual {\n            return Err(DriverError::mismatch(\"source sha256\", pin.clone(), actual));\n        }\n    }\n    if let Some(pin) = &selector.expected_program_hash {\n        hexutil::decode_exact::<32>(pin, \"expectedProgramHash\")?;\n        if *pin != descriptor.program_hash {\n            return Err(DriverError::mismatch(\"program hash\", pin.clone(), descriptor.program_hash.clone()));\n        }\n    }\n    Ok(SelectedRelation { selector: selector.clone(), relation, descriptor })\n}\n",
+      "excerptBytes": 1758,
+      "excerptSha256": "40b1d706436df063bdbf6d69167192758e2e1a6a0f1a20cc011dedb6ad0e5c17"
+    }
+  ]
+}
