@@ -1,0 +1,103 @@
+--- k_compile_attempt_01.py
++++ k_compile_attempt_03.py
+@@ -34,14 +34,14 @@
+ RUNTIME = RUNTIME_PARENT + '/k-actual-01'
+ ATTEMPT_NAME = 'attempt-compile-01'
+ ATTEMPT = RUNTIME + '/' + ATTEMPT_NAME
+-HOME = ATTEMPT + '/home'
++K_HOME = ATTEMPT + '/home'
+ TMP = ATTEMPT + '/tmp'
+ OUTPUT = ATTEMPT + '/main-kompiled'
+ STDOUT = ATTEMPT + '/compile.stdout'
+ STDERR = ATTEMPT + '/compile.stderr'
+ RECEIPT = ATTEMPT + '/receipt.json'
+ LEDGER = RUNTIME + '/k-attempt-ledger.jsonl'
+-CANDIDATE_ROOT = RUNTIME + '/candidate'
++CANDIDATE_ROOT = RUNTIME + '/compile-input'
+ CANDIDATE_TREE = (CANDIDATE_ROOT, CANDIDATE_ROOT + '/models', CANDIDATE_ROOT + '/models/sherlock',
+                   CANDIDATE_ROOT + '/models/sherlock/k', CANDIDATE_ROOT + '/models/sherlock/k/main.k')
+ CANDIDATE = CANDIDATE_TREE[-1]
+@@ -54,6 +54,7 @@
+ K_BUILTIN = K_ROOT + '/include/kframework/builtin'
+ K_WRAPPER = K_ROOT + '/bin/kompile'
+ K_UNWRAPPED = K_ROOT + '/bin-unwrapped/kompile'
++K_LIBRARY = K_ROOT + '/lib/kframework/k'
+ TOOL_ROOTS = (  # PATH order; K starts these children by bare name.
+     ('kore-parser', STORE + '5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81'),
+     ('gcc', STORE + '9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0'),
+@@ -73,12 +74,12 @@
+ MAIN_BYTES = 16249
+ SOURCE_FILES = (
+     (MAIN_REL, MAIN_SHA256, MAIN_BYTES),
+-    ('models/sherlock/qa/k_capture_observations.py', '68cae079fb506b1e8de955b63dd7d9df795985ef3d3dd938755cd1d9d9dc821e', 7379),
+-    ('models/sherlock/qa/test_k_capture_observations.py', 'da79c06b4c6fc73d21a6ff6e4c03eac1fe9deabe0773bab71bb0f241c9252ea1', 3992),
++    ('models/sherlock/qa/k_capture_observations.py', '2f9d939ea847a61ecaa6c27058b00504c7d613642273767f79fcaa111fc2f8bd', 11336),
++    ('models/sherlock/qa/test_k_capture_observations.py', 'e4b71ca2c249396e9ad262f5c43a16885193045da649d36a33069b686d898767', 5866),
+     ('models/sherlock/qa/k_observations.py', '540128fdb7f693a7b1f415898fd74bd6c1918df50a7a48ce602471b6e85f9b07', 7686),
+     ('models/sherlock/qa/k_terms.py', 'c79a852cbda9259c736d36da29132486d10903007fd3adc755e7d0585b8366ca', 5666),
+     ('models/sherlock/qa/host_observations.py', '61b8258595a298231679362cb3974ae176b6970e7e4475388252d59da545fcdc', 4912),
+-    ('models/sherlock/qa/check.py', '95187b4a91cb3457a21002fe066e70d7f67a1d2d104d8be6a5b7252b3a7d62d8', 33532),
++    ('models/sherlock/qa/check.py', '7a6d1bbca881f5c2b012278989dac600834d610986694e640da51a40b5a412e0', 36429),
+     ('models/sherlock/oracles/normal-programs.json', 'ef87f94f7e5d22a75b1c2e5e61af016b08175beee9a3599e3e69ddf92945d32f', 10202),
+     ('models/sherlock/oracles/extra-normal-programs.json', 'dd85e5d400f24e9be5e2ff017f4b8c141a0bf6e4270053917b735cbe5153f153', 3721),
+     ('models/sherlock/oracles/normal-prefixes.json', 'dca67b553d7483fdf7d9148e7f4bf1a6022b42b8843635f33f23c58a2415d56d', 53119),
+@@ -113,7 +114,7 @@
+     '-XX:+ExitOnOutOfMemoryError', '-XX:-UsePerfData', '-XX:+DisableAttachMechanism',
+     '-XX:ErrorFile=' + ATTEMPT + '/hs_err_pid%p.log',
+     '-Dfile.encoding=UTF-8', '-Djava.awt.headless=true',
+-    '-Djava.io.tmpdir=' + TMP, '-Duser.home=' + HOME,
++    '-Djava.io.tmpdir=' + TMP, '-Duser.home=' + K_HOME,
+     '-ea', '-cp', K_JARS + '/*', 'org.kframework.main.Main', '-kompile', CANDIDATE,
+     '--backend', 'haskell', '--no-haskell-binary',
+     '--main-module', 'MORIARTY-UI', '--syntax-module', 'MORIARTY-UI-SYNTAX',
+@@ -126,7 +127,7 @@
+ 
+ 
+ def environment(token):
+-    return {'PATH': ':'.join(root + '/bin' for _, root in TOOL_ROOTS), 'HOME': HOME,
++    return {'PATH': ':'.join(root + '/bin' for _, root in TOOL_ROOTS), 'HOME': K_HOME,
+             'TMPDIR': TMP, 'LANG': 'C', 'LC_ALL': 'C', TOKEN_NAME: token}
+ 
+ 
+@@ -261,7 +262,8 @@
+ def packaging_evidence(blockers):
+     """The installed package, not this proposal, must name the JRE and tool roots."""
+     evidence, texts = {}, {}
+-    for label, path in (('kompile-wrapper', K_WRAPPER), ('kompile-unwrapped', K_UNWRAPPED)):
++    for label, path in (('kompile-wrapper', K_WRAPPER), ('kompile-unwrapped', K_UNWRAPPED),
++                        ('kompile-library', K_LIBRARY)):
+         try:
+             texts[label] = read_store(path)
+             evidence[label] = hashlib.sha256(texts[label]).hexdigest()
+@@ -273,9 +275,12 @@
+             if root.encode() not in texts['kompile-wrapper']:
+                 blockers.append('kompile-wrapper-does-not-reference: ' + root)
+     if texts['kompile-unwrapped'] is not None:
+-        for marker in (b'org.kframework.main.Main', b'-kompile'):
++        for marker in (b'../lib/kframework/k', b'-kompile'):
+             if marker not in texts['kompile-unwrapped']:
+                 blockers.append('kompile-entrypoint-not-observed: ' + marker.decode())
++    if (texts['kompile-library'] is not None
++            and b'org.kframework.main.Main' not in texts['kompile-library']):
++        blockers.append('kompile-library-entrypoint-not-observed: org.kframework.main.Main')
+     return evidence
+ 
+ 
+@@ -385,7 +390,7 @@
+ 
+ 
+ def inventories(closure):
+-    roots = [JRE_ROOT, K_JARS, K_BUILTIN, K_WRAPPER, K_UNWRAPPED, GCC_ROOT + '/nix-support']
++    roots = [JRE_ROOT, K_JARS, K_BUILTIN, K_WRAPPER, K_UNWRAPPED, K_LIBRARY, GCC_ROOT + '/nix-support']
+     roots += [root + '/bin' for _, root in TOOL_ROOTS]
+     roots += sorted(path for path in closure.values() if path)
+     return {root: tree(os.path.realpath(root)) for root in dict.fromkeys(roots)}
+@@ -490,7 +495,7 @@
+ 
+ 
+ def run_child(receipt, token):
+-    os.mkdir(HOME, 0o700)
++    os.mkdir(K_HOME, 0o700)
+     os.mkdir(TMP, 0o700)
+     problem = candidate_problem()
+     if problem is not None:
