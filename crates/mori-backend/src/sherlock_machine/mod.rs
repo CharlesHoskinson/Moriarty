@@ -16,6 +16,11 @@ use std::sync::Arc;
 mod fetch;
 pub use fetch::emit_fetch_block;
 
+mod enabled_fetch;
+pub use enabled_fetch::{
+    emit_enabled_fetch_block, EnabledFetchBlock, EnabledFetchInputs, EnabledTypedOperand,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Column {
     pub name: String,
@@ -220,3 +225,6 @@ mod normal_tests;
 
 #[cfg(test)]
 mod identifier_rejection_tests;
+
+#[cfg(test)]
+mod enabled_fetch_tests;
