@@ -25,6 +25,8 @@ The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provena
 
 ## Sherlock source status — 2026-10-16
 
+The [finite append-model evidence](models/sherlock/machine-circuit/append-model-review-20261016/README.md) records Quint model-root typechecking, eight passing normal tests and a short seed-1 simulation with nine-state traces and no reported violation. Its 32-sample count is inferred as documented. The independent K projection has nine authored cases and source reviews, with execution UNRUN. These child results do not establish full P3, circuit, financial or target correspondence.
+
 The [complete CandidateA P3 arena source design](models/sherlock/machine-circuit/arena-policy-source-20261016/README.md) is conditionally adopted with fresh Opus and Muse source reviews and their binding errata. It specifies the append catalog and four auxiliary records, with symbolic equality-trace capacity. Model correspondence, arithmetic/fuel witness placement, circuit compilation and Midnight stagenet validation remain open; this closes no roadmap exit.
 
 PR #95 registers the A102 source APIs `literal_schema` and `emit_literal_step`
