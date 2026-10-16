@@ -1,0 +1,30 @@
+[
+  {
+    "evidence": "operator.py:535-575,719-771,853-862,929-949; custody.py:229-283. When finalizer_eligible is false the operator prints only external stdout and returns 1 with runner still None on AUTH/R1/R0-partial paths, so no block_rest, finalizer, freeze, or invented directory is written in a foreign or partial tree. block_rest writes occur only inside failure handlers after Runner creation, which occurs only after record_r0_receipt establishes layoutCompleteOwned and inputsPrepared, or in the eligible runner-None fallback at operator.py:863-868 for a complete owned layout whose prepare_inputs failed. Eligible finalizers are attempted once via attempt_finalizers at operator.py:524-532 and 929, independently; Z62 pre-freeze failure writes BLOCKED FREEZE-MANIFEST create-exclusively at operator.py:920-928, custody excludes that manifest name from the freeze file set by failing the walk if it pre-exists at custody.py:412 and writes FROZEN only after the walk at custody.py:474-479, and the parent fallback at operator.py:936-949 is create-exclusive via _write_receipt/_write_new O_EXCL at operator.py:125-146 and never overwrites an existing receipt or FROZEN manifest.",
+    "id": "F-R3-PLACEMENT-FINALIZERS",
+    "requiredFix": "",
+    "severity": "INFO",
+    "summary": "No remaining source blocker found in R3 placement/finalizer admission, partial-R0 evidence, Z62 BLOCKED handling, or parent fallback on current bytes."
+  },
+  {
+    "evidence": "operator.py:476-505 joins drains 10s then closes parent pipe ends and rejoins 5s, sets drainJoined false if still alive, and clean requires not drain_unjoined at operator.py:504. _StreamDrain threads are daemon=True at operator.py:407-430; a thread still blocked after the second deadline can therefore linger as a daemon reader on a closed fd number until it errors or the process exits, although its result is charged full-cap and never called clean by Runner at operator.py:633-652. DESIGN-POSITIONS K6-BOUNDED-CAPTURE explicitly claims only non-clean/full-charge in that subcase, and selftest.py:304-315 exercises only the bounded ~2s holder, not the still-unjoined subcase.",
+    "id": "F-DRAIN-RESIDUAL",
+    "requiredFix": "No fix required for source readiness under the disclosed clause, because the run is non-clean and fully charged; do not upgrade this to an absolute descendant-kill or complete-drain claim in AUTH or run records.",
+    "severity": "MINOR",
+    "summary": "Unjoined-drain handling is fail-closed for cleanliness/charging but leaves a disclosed daemon-reader residual; no absolute kill claim is made."
+  },
+  {
+    "evidence": "Exact command runs /usr/bin/python3 -I selftest.py without -B or PYTHONDONTWRITEBYTECODE; selftest.py:60-70 loads sibling operator.py via importlib SourceFileLoader, which in ordinary CPython may write __pycache__ bytecode next to operator.py in the candidate directory. That write is outside the declared /tmp testroot, is not a protected T5/T6/M6/RR6, key, or ledger path, and does not change the eight manifest file hashes that root verifies before/after, but it is not listed among deterministic testroot files.",
+    "id": "F-ORDINARY-PYCACHE",
+    "requiredFix": "In the ordinary run record, note possible candidate-directory __pycache__ creation as harness infrastructure residue, or have root pre-declare it; do not perform unknown-path cleanup to hide it.",
+    "severity": "MINOR",
+    "summary": "Ordinary command may create Python bytecode cache in the candidate directory; contained but should be disclosed in the run record."
+  },
+  {
+    "evidence": "claims.py:411,422,427 and DESIGN-POSITIONS K6-NEGATIVE-BINDING retain descriptorGuardObserved=false on Compile refusal and conditional IdentityMismatch only if finish compiles. No execution was performed in this review and finish-compile reachability is not established by the operator/custody/claims bytes alone.",
+    "id": "F-N10-UNRESOLVED",
+    "requiredFix": "Keep N10 classified conditionally and do not count a Compile refusal as a tested descriptor guard in any future G6/H6 or native outcome record.",
+    "severity": "MINOR",
+    "summary": "N10 remains honestly conditional; this is an unresolved evidence item, not a source defect."
+  }
+]

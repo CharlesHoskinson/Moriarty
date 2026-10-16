@@ -1,0 +1,194 @@
+{
+  "format": "root-k6-source-adoption/3",
+  "createdAt": "2026-10-16T10:53:28.080517+00:00",
+  "candidate": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-integrated-r3-combined-candidate-20261016",
+  "candidateManifestSha256": "c407c3771500090ddb39674eac174a727b4fcc6efcb95eeebfb36fd3525f994c",
+  "freshReview": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-integrated-r3-independent-muse-source-audit-20261016/REPORT.md",
+  "freshReviewSha256": "cad525464531f217c018cbf20b844fbecaf455b5d431a7ce0f65263452925b07",
+  "sourceReady": true,
+  "scope": "Exact operative R3 source only; no crypto/protected execution authority. Thirteen exact consequential clauses have authorFOR+freshnon-authorAGREE.",
+  "clauses": [
+    {
+      "clauseId": "K6-PLACEMENT-LIFECYCLE",
+      "clause": "Run-owned placement lifecycle (new clause): finalizer admission, blocked-record log-writing, and freeze are governed solely by an explicit placement state in the operator: authOk is set only after the exact AUTH bytes verify, r1Ok only after the supervised R1 admission returns, and layoutCompleteOwned only when the supervised R0 step returns a structured receipt whose layoutMade list equals the exact custody T6_LAYOUT list; the R0 child recovers a partial made list only from the custody-owned LAYOUT-STATUS.json receipt written when that invocation created T6. Mere path or directory existence, and any flag set before creation, are never ownership evidence. When the predicate finalizer_eligible(state) is false the run makes no in-tree write at all: a refused R1 against a pre-existing T6 leaves that tree completely untouched, and a partial owned layout retains only the custody-owned partial LAYOUT-STATUS.json plus the external operator stdout failure record, with no invented directories, no blocked logs, no finalizers, and no freeze. Only a complete owned layout admits block_rest (inside failure handling or guarded so its failure cannot prevent finalizers) and the four finalizers.",
+      "clauseSha256": "297843f236ea22ae77eb0cd7f43045ffadc6aef77f7b9983da3bda50d8dd3065",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Author position implementing audit 552 F-01 and the root reproduction bf7a20b5 (validAUTH + R1-refused-existing-T6 + imported helpers + pre-existing freeze-root directories gives guard falls-through with layoutCreatedByThisRun=false). The patch records custody.create_t6_layout's existing structured return and LAYOUT-STATUS receipt across the supervised fork, so no custody helper patch is required; the selftest truth table exercises the actual production predicate.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "Verified in operator.py new_placement_state/record_r0_receipt/finalizer_eligible and main admission flow, and custody create_t6_layout/LAYOUT-STATUS handling; zero-mutation refused-R1 path holds because Runner is not yet created.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-AGGREGATE",
+      "clause": "Aggregate sandbox envelope: the 19 sandboxes in fixed order are charged in aggregate at most 7200 CPU seconds and 12600 wall seconds; a clean exit (including native exit 1 and usage exit 2) charges ceil(RUSAGE_CHILDREN user+sys delta) and ceil(monotonic wall delta); any signal death, timeout, stream-cap kill, launch failure, missing measurement, or unjoined drain thread charges the full per-command cap plus 60 for both CPU and wall and records a charged row before stopping; a launch occurs only when remaining CPU and wall are each at least the next per-command cap plus 60, with no cap reduction, reordering, skipping ahead, retry, or reset; host steps keep separate supervised caps.",
+      "clauseSha256": "34c8b4099e3686d889c0051371945dca724e41a73cb24b95302b3b5d57f34373",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Unchanged from the base candidate except that an unjoined drain thread now also makes a run non-clean; both fresh audits agreed with the envelope on the base bytes and the patch preserves the 7200/12600 ceilings and all per-command caps exactly.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "Runner.run implements cap+60 launch rule, clean measured charge, non-clean full cap+60 including drainJoined=false, and charged record before failure propagation; aggregate constants remain 7200/12600.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-HOST-SUPERVISION",
+      "clause": "Host supervision: every host step R1/R0/S6N/G6/H6/Z61/Z62/OUT-CHECK runs in a supervised fork child with RLIMIT_CPU 300 soft and 360 hard, a nominal 600-second wall cap with a 60-second kill grace (hard kill and failure at 660 monotonic seconds, and a child finishing inside the grace is not retroactively failed at 600), a 2097152-byte capped JSON result pipe, process-group SIGKILL and wait4 reaping on timeout, overflow, or lost result; no resource is increased. The key postchecks after Q6P, P6, and N11 and the pre-P6 memory/disk gate are explicit subeffects of the adjacent named steps Q6P, P6, and N11 (and the Z61 postcheck of Z61), bound in the AUTH hostCaps text, adding no top-level effect, no native call, and no sandbox; OUT-CHECK remains a declared effect; wrapper fork/drain/reap mechanics run inside the same deadline.",
+      "clauseSha256": "4cefe8aa44566ab6ed935b0e8392d9e26e89d64df3e01f7c3bc1b0ba3ea1476f",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Resolves the preserved disagreement between audit 552 (AGREE under the disclosed cap+killAfter reading, F-04 MINOR) and audit 682 (DISAGREE, BLOCKER on the literal 600 wording and unnamed substeps) by adopting the second permitted option once, in code constant, proposal, README, and this clause: retain nominal 300/600 plus killAfter 60 and state the soft/hard/grace semantics literally everywhere. The code deadline already was wall_cap+kill_after; no deadline code change and no resource increase is made.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "run_supervised_callable deadline is wall+kill_after with RLIMIT_CPU cpu/cpu+60 and IPC cap; code, README, proposal and HOST_CAPS now all use the same nominal 300/600 plus 60 grace literal; subeffects are named in HOST_CAPS and adjacent call sites.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-BOUNDED-CAPTURE",
+      "clause": "Bounded capture: one generic streaming runner serves all 19 sandboxes with start_new_session and bwrap --die-with-parent, two drainer threads, and a hard 4194304-byte ceiling per stdout/stderr enforced during the run; on cap or timeout the process group is killed and waited on, the bounded prefix and observed byte counts are preserved and charged, and the parent never buffers unbounded child output. Drain threads are joined under a bounded deadline (10 seconds, plus one 5-second re-join after closing the parent pipe ends); a run whose drain thread is still unjoined, or whose pipe is held by a surviving descendant, is non-clean and charged in full, and no result is called clean in that case. Process-group kill is claimed only for group members; descendants that escape the group are claimed killed only insofar as the native bwrap --die-with-parent and pid-namespace contract provides it, and the generic runner alone makes no absolute all-descendant kill claim.",
+      "clauseSha256": "8c8db03129cf674956922d963cb6ae9102b7933aef3f20166ef98980a22f5535",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Extends the base clause both audits agreed with by the drain-thread completion condition required by audit 682 F-DRAIN-THREAD-COMPLETION; the patch adds drainJoined to the runner record and folds it into clean, and the selftest adds a safely bounded 2-second escaped-pipe-holder regression. The still-unjoined-after-second-deadline subcase is flagged non-clean but is not exercised by an ordinary regression, because exercising it would require holding a pipe past the join deadlines.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "run_bounded_process implements streaming cap kill, bounded prefix/total, 10s+5s joins, drainJoined folded into clean, and docstring limits kill claims to group/bwrap contract; residual daemon reader is disclosed in finding F-DRAIN-RESIDUAL and not claimed clean.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6A-06",
+      "clause": "Publication (updated K6A-06): publication is limited to the explicit PUB_CANDIDATES list, which includes logs/custody-layout.log; the freeze allowlist is a required set derived from run state (existence is a failure, not a filter) with the single declared S6N-failure exception in K6-FAILURE-FREEZE; the proof receipt is exported whenever P6 carries a genuine proofExportSha256 independent of G6; N8/N11 setup-record bodies and PK material are never published; T6/LAYOUT-STATUS.json is a permissible partial-placement status at the T6 root outside the freeze roots.",
+      "clauseSha256": "043a372d9c6dd3c20913ab1b9be39f234853d2a089eee47cbdb93dfb78f32b50",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Unchanged in substance from the base candidate, which both fresh audits agreed with; the S6N-failure exception is stated here by reference so the required-set rule and the partial-S6N rule cannot be read as contradicting each other.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "PUB_CANDIDATES includes custody-layout.log; _required_publication is state-derived and existence-failing except declared S6N partition; Z62 exports proof independent of G6; custody freeze forbids key/setup/witness path tokens.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-STAGING-HOST",
+      "clause": "A distinct host step S6N runs once after V6-source and V6-export succeed and before N1, under the supervised host cap, with bounded reads of the positive proof, staged record, and pinned request, bounded create-exclusive stage writes, plus bounded custody.export_negative_variants publication of N1-N7/N10 bodies to receipts/negatives and validated N8/N11 single-edit metadata only, and it persists the actual returned export metadata to receipts/negatives-metadata.json; it generates no proof, reads no key, and resets no budget. S6N success requires the full checked set: all ten export entries validated by custody (N1-N7/N10 bodies plus N8/N11 single-edit metadata) and the persisted metadata receipt; if the child dies or fails after writing some bodies or the metadata, s6n_done stays false and the run is INCOMPLETE, never an S6N success.",
+      "clauseSha256": "ee56b9017c9c85eda001f4fff6fafdecb56cdad04ea6b0fee3d24f8b545e6cb8",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Retained as amended and agreed fresh by both audits; the patch adds only the failure-side freeze treatment of the same fixed path universe and does not change what S6N writes, the export order in custody, or the success predicate.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "main s6n host step follows both V6 verifies, writes stage files create-exclusively, calls custody export, persists actual returned metadata, and sets s6n_done only after the supervised step returns.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-OUT-EXACTLY-ONE",
+      "clause": "Exactly-one-proof: after the N1-N11/usage loop and before finalizers, a supervised host check (the declared OUT-CHECK effect) requires T6/w/out to contain exactly invoice-partial.proof.json as a bounded regular file; any stray, extra, or missing entry (including N10/N11 must-not-exist proofs) fails the run honestly; the expected-output path remains the writable /task/out bind.",
+      "clauseSha256": "ef5675d5df31031ab9cad2daea7c5738535622a8735fd001674b55a6fa4c8c2d",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Unchanged; both fresh audits verified OUT-CHECK is a declared effect in AUTH, proposal, and README rather than hidden host activity, and the patch keeps it and names the neighbouring key-postcheck and memory/disk subeffects explicitly instead.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "check_exactly_one_entry enforces single bounded regular nlink-1 entry; OUT-CHECK is declared in AUTH effects, proposal hostChronology and README, and runs after the N-loop before finalizers.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-FINALIZERS",
+      "clause": "Finalizers: when finalizer_eligible(placement) holds (valid AUTH, admitted R1, complete layout created by this run), G6, H6, Z61, and Z62 are each attempted exactly once with independent exception handling after all dispatched children are terminal; a failed or dead finalizer never prevents the others. Each finalizer attempts its own success or failure receipt in the owned tree (G6 receipts/g6.json, H6 receipts/h6.json, Z61 receipts/z61.json, Z62 the FROZEN or BLOCKED receipts/FREEZE-MANIFEST.json, the manifest path being already excluded from the freeze allowlist so there is no hash cycle); a pre-freeze Z62 failure writes that BLOCKED manifest create-exclusively before returning; after the four attempts the parent writes one create-exclusive bounded failure receipt for any eligible finalizer that left none, never overwriting an existing receipt or a FROZEN manifest. The guarantee is the attempt and its outcome record on external operator stdout; an in-tree receipt is attempted but cannot be guaranteed against disk failure, and no receipt is created absent the eligible owned layout. PASS requires g6_ok and h6_ok and z61_ok and freeze_ok.",
+      "clauseSha256": "43b1e092778f7d0af022f8619caef20e22e25f3f7995dcb85b77636b47210199",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Rewrites the clause both audits disagreed with (552 F-01/F-02; 682 F-FINALIZERS-PARTIAL-R0) around the new placement predicate: partial-R0 and foreign-tree cases are now outside the clause by explicit eligibility rather than silently skipped, and the parent fallback plus Z62 BLOCKED manifest close the receipt gap without claiming an impossible on-disk guarantee.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "attempt_finalizers plus parent fallback and Z62 BLOCKED path match the clause, with stdout as guaranteed record and PASS requiring all four oks; fallback occurs after Z62 so it cannot retroactively fabricate a FROZEN pass.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-FAILURE-FREEZE",
+      "clause": "Failure freeze and partial S6N: when no proof was ever produced, failure evidence is frozen honestly from logs, journal, and whatever receipts exist, no empty or substitute proof receipt is created, and the run status remains BLOCKED, FAILED, or INCOMPLETE rather than PASS. For S6N specifically, success MUST present receipts/negatives-metadata.json and all of N1-N7/N10 body rels; failure MAY present any subset of exactly that fixed universe (S6N_FAILURE_MAY_RELS), and the freeze required set is built from the actual subset present with bounded hashes, preserving the partial files under an INCOMPLETE status; the existence of any file outside that fixed universe still fails the freeze through the custody walked-set equality, and no proof, record body beyond the declared negatives, or PK body is published by the failure path. Actual partial files are evidence of what was written, distinct from accepted negative verification results, which still require their native N1-N11 exits.",
+      "clauseSha256": "b98734b4c35d79a7fa7ddc535bbda16f70cdcfeb00fa42ff6a9efcbe85014e1d",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Adopts the first option offered by audit 682 F-FAILURE-FREEZE-PARTIAL-S6N (MUST/MAY partition over a fixed explicit universe, implemented as the pure production function s6n_freeze_additions and regression-tested in the selftest) instead of an atomic scoped export, which would have required changing custody export internals; this also answers audit 552's agreement that the no-proof path must stay honest, on the paths where 682 showed it previously failed.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "s6n_freeze_additions implements MUST 9-path success and MAY subset failure over the fixed universe; custody walked-set equality still fails on undeclared files; proof receipt is added only when proof_state exported is true.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "K6-AUTH-PUBLICATION",
+      "clause": "Before-run AUTH pins allowed publication paths, schema, and caps, not unpredictable proof or log content hashes; observed content hashes are authenticated later by a runtime root manifest (a root-owned trusted dynamic-hash manifest outside the static AUTH effect schema, so there is no self-cycle), and no directory walk approves arbitrary files.",
+      "clauseSha256": "b3c925981deb921b007f847e79ee3ae011c8d5831d47eab7fdede5d5ba53ad0a",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-finalization-muse-r3-targeted-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "Unchanged; both fresh audits agreed. The patched operator changes the AUTH-bound HOST_CAPS text (supervision semantics and named subeffects), so a new exact RR6 AUTH is required before any run, as the proposal states.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "_load_auth pins publication list, paths, order, argvs, caps and counts without future content hashes; custody freeze verifies a caller-supplied exact allowlist tuple and walked-set equality rather than approving arbitrary files.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "GENERIC-KILL-GRACE-FORWARDING-20261016",
+      "clause": "Give _limits an optional per-call kill grace default KILL_AFTER for compatibility and forward actual kill_after from run_bounded_process.",
+      "clauseSha256": "75df482d23fa265d85d80cfb756cd30a1662ae7f3e034dec5fea2d590bf2e2ab",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-limit-forwarding-muse-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "operator.py:242-244 and operator.py:437 in frozen 7973e29a prove the global 60 is used instead of the accepted kill_after; the supplied operatorPatch changes only that signature/body and that one preexec call.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "Current operator.py _limits signature/body and single preexec forwarding match the clause exactly; this reviewer AGREE plus author FOR are same-family muse-wonder-1.0 positions only, not cross-provider independence.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "NATIVE-CAPS-UNCHANGED-20261016",
+      "clause": "All native calls already kill_after=60, so native per-command CPU soft/hard remain unchanged.",
+      "clauseSha256": "384f195eec24da7cd486b6115617fc04fe9950653132554d10485e9c7f034b8f",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-limit-forwarding-muse-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "operator.py:528 Runner.run passes KILL_AFTER explicitly, so forwarding yields (cpu, cpu+60) exactly as before; AS_BYTES=8589934592 at operator.py:42, CAPS, counts, paths, and zero retry are untouched.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "Runner passes KILL_AFTER=60 explicitly, so forwarding yields cpu/cpu+60 as before; AS_BYTES, CAPS, counts and zero-retry constants are unchanged. Same-family position only.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    },
+    {
+      "clauseId": "FUTURE-ORDINARY-OUTER-COMPATIBILITY-20261016",
+      "clause": "On future corrected native bytes plus harness full fresh review, root could use ordinary outer --cpu=30:35 --as=8589934592 timeout 60 plus kill 5, compatible with stub 5/6.",
+      "clauseSha256": "e8d72cd0395349fcea56f6dc8eff45dfb71b8af03b3dd9d2387d2963fdb8ef61",
+      "authorPosition": "FOR",
+      "authorSource": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-limit-forwarding-muse-source-20261016/DESIGN-POSITIONS.json",
+      "authorRationale": "After the patch the ordinary stub requests CPU (5,6) and AS (8589934592,8589934592), both within outer hard CPU 35 and AS 8589934592. This is source compatibility only; no execution was performed and a fresh full combined source/effects review is still required before ordinary tests or any new RR6 AUTH.",
+      "freshNonAuthorPosition": "AGREE",
+      "reviewRationale": "This fresh review is the required full combined review for current bytes; all literal stub requests inspected are cpu 5 with grace 1 producing 5/6 and AS 8589934592, fitting the exact outer command in the recommendation. Source compatibility only until root actually runs it. Same-family position only.",
+      "agreeingSubstantivePositions": 2,
+      "independence": "Fresh non-author context, same muse-wonder-1.0 family; not cross-provider independence."
+    }
+  ],
+  "unresolvedEvidence": [
+    {
+      "clauseId": "K6-NEGATIVE-BINDING",
+      "clause": "N10 classification: a Compile refusal is reported with descriptorGuardObserved=false and is never counted as a tested descriptor guard; the honest conditional N10 branch (IdentityMismatch only if finish compiles) remains classified, and no unconditional descriptor-guard reachability is asserted while the actual compiler permits only a Compile refusal on the observed path.",
+      "author": "ABSTAIN",
+      "reviewer": "ABSTAIN",
+      "votes": 0,
+      "disposition": "N10 descriptor-guard reachability remains unobserved; Compile refusal is classified explicitly and cannot count as tested descriptor binding."
+    }
+  ],
+  "ordinaryActualResult": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k6-r3-ordinary-supervision-results-20261016/RESULT.json",
+    "passed": 15,
+    "total": 17,
+    "status": "FAILED:2 Pythonstubimports; minimalselftest-onlyisolationrepairpending. Nativeoperativebytesunchanged."
+  },
+  "executionAuthorityGranted": false,
+  "nativeCallsObserved": 0,
+  "pkReadsObserved": 0,
+  "proofsObserved": 0,
+  "nextRequired": "Correctedordinarysourcefreshreview, actualsuccessfulordinaryrun+freshresultreview, independentlyreviewedexactnewAUTHandguardedlaunchbeforeM6/T6/privatekeyoperation/nativeK6. K5retentionunchanged.",
+  "historicalDissentPreserved": [
+    "552c26b127c4028fbdab4a75e842f3ee1cbc0ea85bde085c124587f4d77dd0ab",
+    "682891903053dfd3c12c0eab1a04cba6e62c9faa6fbea292fcc0cdca5c73b000",
+    "d582599e63fca0c68619978c5abc941b8de188ef0eb0f47c65281751957b307f"
+  ]
+}
