@@ -1,0 +1,97 @@
+{
+  "artifact": "proposed-shared-rust-contract-v2-host-stage1",
+  "status": "PROPOSED_UNADOPTED_V3_EXACT_PATCH_NOT_APPLIED_REQUIRES_FRESH_AUDITS",
+  "closed_portion": "HOST Stage 1 after V3 patch: DedicatedSorts, finance Absent, genesis/one uncut segment, HostOnly, 96 Enabled rows, full StepEventC, owner PreImageView/storage closed; materialization/bounded/Stage2/full-B excluded",
+  "module_proposal": {
+    "shared": "crates/mori-core/src/sherlock/helper_machine/shared.rs",
+    "owner_impl": "crates/mori-core/src/sherlock/helper_machine/shared/owner.rs (child of shared; only constructor of PreImage internals, OwnerGuards, ValidatedPlan, Admitted, MachineImage)",
+    "families": "crates/mori-core/src/sherlock/helper_machine/families/*.rs (siblings of shared, not descendants; no private-field access)",
+    "raw": "crates/mori-core/src/sherlock/helper_machine/raw.rs (frozen raw-104 ef9c70a4, unmutated, no added derives)"
+  },
+  "entries": [
+    {
+      "name": "PreImage::bind",
+      "source": "schema#/machine_image/admission_binding; D-32",
+      "owner": "security/shared",
+      "obligations": "Arc::ptr_eq AB before any other read; twin refused, clone accepted"
+    },
+    {
+      "name": "OwnerGuards",
+      "source": "schema#/guards; #/dispatch/select",
+      "owner": "security/shared::owner only",
+      "obligations": "families receive &OwnerGuards, cannot construct it; reads-r is AST Root{r}, never substring"
+    },
+    {
+      "name": "Selected",
+      "source": "schema#/api_types/Selected; #/dispatch",
+      "owner": "security select",
+      "obligations": "single authoritative rule/site/helperKind/eventKind/eligibility/visits; passed to every family body; never recomputed by Sol"
+    },
+    {
+      "name": "FamilyPlans (11 methods)",
+      "source": "rows#/legacy_completion_instances, #/helper_events, #/bookkeeping_events",
+      "owner": "Sol pure row effects only",
+      "obligations": "foreign RuleId -> HostViolation{ForeignRuleId}; no charges, caps, refusals, Outcome, or mutation"
+    },
+    {
+      "name": "OwnerEngine::validate_plan -> ValidatedPlan",
+      "source": "schema#/precedence PS+P6; D-33; HB-45",
+      "owner": "security",
+      "obligations": "PS before physical/P3/P4; reconciles Selected vs delta vs writes, arity, slice normalization, new ids, site/helper membership, parent_resume None"
+    },
+    {
+      "name": "OwnerEngine::apply_validated",
+      "source": "schema#/row_language/effects; SC-01..SC-10",
+      "owner": "security",
+      "obligations": "single &mut MachineImage; counters/active/depth/task/visits/cursor exactly once; cap refusal before physical only when cap_refusal is None"
+    },
+    {
+      "name": "AllocDataWrite",
+      "source": "schema#/records/DataRow; G1",
+      "owner": "Sol stages per-variant, security constructs row",
+      "obligations": "field_len inherent to variant; len 0 normalized to (0,0); no DataRow.fields access"
+    },
+    {
+      "name": "pure_leaves::BorrowedValueRow",
+      "source": "expanded-13 leaves; schema#/logical_kind",
+      "owner": "Sol leaves, security maps None to ArithmeticUndefined/PrimError",
+      "obligations": "pub re-authored signatures, borrowed raw rows only, no old private visibility assumed"
+    },
+    {
+      "name": "CoreProgram/CoreExpr/CoreTree",
+      "source": "schema#/core_program_input + D-36 carrier_linearity",
+      "owner": "security",
+      "obligations": "unique owned tree; iterative Drop worklist required in owner impl; From<&reference_types::Program> cfg(test) only"
+    },
+    {
+      "name": "Reserved tags",
+      "source": "schema#/enums PatternTag, BoundaryKind, FrameRow ConstructorFields_EXTENSION_RESERVED",
+      "owner": "security refusal sites",
+      "obligations": "Wildcard/Constructor and SourceSuspension tags restored as carriers and refused; ConstructorFields frame payload C-INV, no new frame variant; ResumeId HOST Option<usize> always None, bounded width DEFERRED"
+    },
+    {
+      "name": "V3 owner storage/view/event closure",
+      "source": "SHARED-V3-EXACT-PATCH.json operations V3-04..V3-19; schema#/machine_image,#/program_image_view,#/step_event,#/admission",
+      "owner": "security/shared::owner",
+      "obligations": "ProgramView constants, MachineImage data/dataFields, full PreImageView, RuleIdC/RunIntC/StepEventC, LayoutSchemaC retained in Admitted, existing HostViolationKind only"
+    }
+  ],
+  "residual_choices": [
+    {
+      "choice": "Root/I final file placement confirmation",
+      "consumer": "mod.rs registration",
+      "closed_subset_if_unconfirmed": "all carriers and traits above"
+    },
+    {
+      "choice": "materialization capacity per consumer (decodeStep/comparator/example)",
+      "consumer": "out-of-image materialization",
+      "closed_subset_if_unconfirmed": "step core only; materializers not callable"
+    },
+    {
+      "choice": "bounded ResumeId width and bounded From conversion",
+      "consumer": "bounded encoder, Stage 2 ingestion",
+      "closed_subset_if_unconfirmed": "HostOnly core"
+    }
+  ],
+  "native_authority": 0
+}
