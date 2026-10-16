@@ -102,7 +102,7 @@ checks for the current source.
 | Tier | Consumer and required evidence | Included here |
 |---|---|---|
 | Ordinary QA | Frozen normal expectations, supplied complete prefix/state comparisons and committed oracle readback through the commands above | Yes; Python standard library only |
-| Sherlock host | Actual source compilation, seven bounded normal tests, fixed-input execution and all complete prefix observations | Only explicit `--host`; post-startup normal A-profile domain |
+| Sherlock host | Actual source compilation, fourteen bounded normal tests, fixed-input execution and all complete prefix observations | Only explicit `--host`; post-startup normal A-profile domain |
 | DoctorWatson design | Workflow state machine, deterministic scenarios and bounded sampled invariants | Only with explicit `--design`; separate from interpreter semantic QA |
 | Developer semantic checks | Required K execution and explicit finite Quint projection, with actual traces, bounds, clocks and first divergences | No; unrun by this entrypoint |
 | Lean/Clean and handwritten circuits | Required reference/component observations, separate witness and constraint dispositions, and cross-layer correspondence evidence | No; unrun by this entrypoint; existing private Fenrir integration remains separate |
@@ -178,3 +178,23 @@ stages remained unrun. The final `--design` command passed 79 Python tests,
 31.733 seconds. Eight random witnesses had zero hits; those warnings remain
 separate from positive deterministic/directed observations. All per-command
 timeouts and model bounds were preserved.
+
+
+The additional flat-ID host realization uses the same inspected wrapper with a
+separate fresh attempt directory:
+
+```bash
+python3 -I -B models/sherlock/qa/run_host.py \
+  --rustc /absolute/path/to/1.99.0/bin/rustc \
+  --output-dir /absolute/path/to/new-image-attempt \
+  --realization image
+```
+
+It compiles and executes the existing builder-produced image interpreter on the
+same eight normal inputs and compares all 216 complete observations. Its test
+stages are explicitly `not-selected`; they are not reported as passing tests.
+Actual row tables, expression/frame origins and runtime Debug values remain
+separate from the common structural projection. This is an A-profile host
+proposal, not B adoption, canonical image admission or a circuit/native result.
+The command requires the current scoped preflight; source preparation is not an
+execution receipt. Default `--host` retains its own fourteen-test realization.

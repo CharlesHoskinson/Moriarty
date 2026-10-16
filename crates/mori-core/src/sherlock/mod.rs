@@ -20,6 +20,9 @@ mod reference_tests;
 mod reference_bounded_tests;
 
 #[cfg(test)]
+mod reference_bounded_extra_tests;
+
+#[cfg(test)]
 mod normal_oracle_inputs;
 
 #[cfg(test)]

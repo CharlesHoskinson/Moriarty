@@ -31,7 +31,7 @@ error. JSON is printed to stdout; input errors go to stderr. `--repo PATH`
 selects another checkout containing the same frozen expectations.
 That checkout's `check-reference.py` module is executed, so name only a trusted
 checkout. It is executed only after its bytes match the pinned SHA-256
-`a5ae942e9899e736581cb067843d25502df802672fb407cc88d581bd7dd9c354`; a differing
+`1b22a0c4dc14ac0dabd5fe4e8c5ca5ff85485e9b22dd2673a4645f5145cfa94b`; a differing
 helper is not executed and is an input error (exit 2). Exactly the hashed bytes
 are compiled, so a file swap after hashing or cached bytecode is not run.
 Time-of-check/time-of-use limit: the pin covers those helper bytes only, not
@@ -97,3 +97,41 @@ this Python mode never launches it. Supplied producer/profile/source fields are
 declarations. The report keeps execution receipt `not-supplied`, producer
 authenticity `not-established`, constructor startup `unsupported`, and every
 execution layer `not-run`. Actual build/run receipts must be reported separately.
+
+
+## Complete observations from other realizations
+
+The ordinary checker accepts explicit supplied artifacts from the private pure
+Lean reference, the finite K-A Quint model and the flat-ID host interpreter:
+
+```bash
+python3 -I -B models/sherlock/qa/check.py --lean-observations /absolute/lean.json
+python3 -I -B models/sherlock/qa/check.py --quint-observations /absolute/quint.json
+python3 -I -B models/sherlock/qa/check.py --image-observations /absolute/image.json
+```
+
+Each mode compares all eight program identities and 216 complete post-startup
+runs with the same independent frozen expectations. It reports the first
+mismatch with raw state context and the producer's projection declarations.
+The input is a versioned envelope containing `observations`, `projection` and
+its declared raw diagnostics. These modes compare supplied files; they do not
+execute or authenticate their producer. A separate actual command receipt is
+required for an execution claim. Input modes are mutually exclusive.
+
+Lean retains its actual terminal control in raw machine diagnostics while the
+shared projection clears it. Its rule correspondence and no-next interpretation
+are declared in the envelope. Quint retains raw ITF states and terminal stutters;
+its action remains enabled after publication, so no-next means no further K-A
+semantic event. The image producer retains actual row tables, control and frame
+IDs and noncanonical runtime diagnostics separately from structural snapshots.
+None of these diagnostics is a canonical codec or general state admission API.
+
+The K cell decoder and shared `k_terms.py` parse the pinned nine-cell diagnostic
+syntax and retain raw cells. Actual K rule labels and complete capture coverage
+are still required; there is no full `--k-observations` comparison mode that can
+silently omit them. See the explicit unsupported row in the checker report.
+
+The [Quint driver](../quint/observations/README.md) prepares 216 deterministic
+normal captures through the existing model. Actual captured results and their
+source bindings are in the [public delivery report](../../../docs/audits/2026-10-16/sherlock-parallel-delivery/README.md).
+Supplied-file agreement, producer execution and downstream acceptance remain separate.
