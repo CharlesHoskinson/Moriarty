@@ -1,0 +1,83 @@
+[
+  {
+    "blocking": false,
+    "description": "Candidate README correctly explains that the old UNADOPTED, never-built and never-run labels are original author-time labels preserved verbatim, while dated captured observations describe later executions and this documentation task performed no new build. The staged files confirm the labels (k2/README.md line 1; k2/Cargo.toml line 9; k2/src/lib.rs line 5; k2/src/main.rs line 1; r1cs compiler Cargo.toml line 9 and lib.rs line 4). No embedded source header needs rewriting for publication, and the candidate does not propose rewriting one.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md:27",
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/k2/README.md:1"
+    ],
+    "file": "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md",
+    "id": "F-01",
+    "line": 27,
+    "recommendation": "Publish the historical labels unchanged and keep the candidate explanation. Do not restamp embedded source identity to claim the staged package itself was newly built.",
+    "severity": "info"
+  },
+  {
+    "blocking": true,
+    "description": "The proposed publishable DELIVERY-INVENTORY.json embeds absolute host paths in sourceDelivery.path, baseDelivery.path, k4hDelivery.path and every evidence[].path (for example /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k4h-root-records-20261016/OBSERVATION.json). They are provenance references rather than build inputs, and README commands use only relative paths, so no developer build depends on them; nevertheless publishing them verbatim ships non-portable local filesystem layout and dangling references for an external developer. baseDelivery also points to current-rust-public-delivery-boundary-20261016/SOURCE-DELIVERY-BASE-153.json, which is not a row in INPUT-INDEX.json and cannot be verified from this mirror. This is the one material packaging correction found.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/INVENTORY.json:20-34",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/INVENTORY.json:168-234"
+    ],
+    "file": "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/INVENTORY.json",
+    "id": "F-02",
+    "line": 20,
+    "recommendation": "Before publication, replace absolute evidence and delivery paths in DELIVERY-INVENTORY.json with package-relative references or clearly labelled archival record identifiers, keep the SHA-256 pins, and either supply or drop the unverifiable base-delivery reference. Keep README build, compile, inspect and test commands relative. Root remains sole integrator for this correction.",
+    "severity": "medium"
+  },
+  {
+    "blocking": false,
+    "description": "The standalone-build story is internally consistent but carries an unobserved resolution risk that the docs already disclose. mori-core inherits edition, rust-version, license and dependencies through workspace = true, and the staged moriarty/Cargo.toml declares workspace members crates/* plus workspace.dependencies that include git Midnight entries and path entries for crates outside the frozen Core70 closure. Cargo was not run, so whether the captured k2/Cargo.lock resolves cleanly from the staged subset on a clean external host is unproven. Candidate README lines 31-33 and 40 already require Rust 1.99.0, warn that the toolchain file sits in the sibling Core directory, require registry access or a populated offline registry, and state that clean external installation is unobserved.",
+    "evidence": [
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/Cargo.toml:1-19",
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/moriarty/Cargo.toml:1-38",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md:31-40"
+    ],
+    "file": "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/Cargo.toml",
+    "id": "F-03",
+    "line": 4,
+    "recommendation": "Do not strengthen the build claim. Publish only as an experimental source delivery whose exact reproduction commands and clean external installation are explicitly UNOBSERVED, and let a separate authorised build (outside this review) settle workspace resolution.",
+    "severity": "medium"
+  },
+  {
+    "blocking": false,
+    "description": "No accidental private, cache, binary, key, proof, wallet or result payload was found in the staged source/lock rows as represented by SOURCE-DELIVERY.json, whose scope states that no cache, runtime binary, key, proof, wallet, private input or model-transport material was copied, and whose 157 rows are source, fixture, expectation, test, gold, request and lock files. The candidate INVENTORY likewise adds no evidence copies to the package and treats evidence as references. This review did not open every row individually, so the statement is a manifest-level finding, not a byte-by-byte secret scan.",
+    "evidence": [
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/SOURCE-DELIVERY.json:9-11",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/INVENTORY.json:19"
+    ],
+    "file": "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/SOURCE-DELIVERY.json",
+    "id": "F-04",
+    "line": 10,
+    "recommendation": "Keep results, receipts and execution records outside the published source package; publish only their hashes and archival references after the F-02 relativisation.",
+    "severity": "info"
+  },
+  {
+    "blocking": false,
+    "description": "Developer prose does not substitute the Source/6 TypeScript path for Rust and does not imply source APIs equal genuine execution. Candidate README line 23 states the old JavaScript CLI uses Source/6 and TypeScript Core/5 and does not exercise this Rust path, and that no Rust mori CLI, LSP or MCP is supplied. Lines 100-112 place setup, prove and verify in a separate source-interface section, state that setup and prove draw OsRng in source, refuse overwrites and use mode 0600 for the proving key, then state that no genuine current-language Groth16 setup, key, proof, keyed verification or Moriarty Preprod transaction is established. Line 112 forbids inferring such a result from compiled APIs, specimen bytes, a synthesis mode named Setup, or a passing ordinary target.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md:23",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md:100-112",
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/k2/src/main.rs:160-219"
+    ],
+    "file": "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md",
+    "id": "F-05",
+    "line": 100,
+    "recommendation": "Retain this separation verbatim in substance. The crypto-authority Cargo feature must remain described as an internal experiment label, not a public-developer permission, as candidate README line 110 already states.",
+    "severity": "info"
+  },
+  {
+    "blocking": false,
+    "description": "The candidate preserves the routed security interpretation limits without replacing them: UNSAT means canonical completion rejected against fixed rows, single-variable sweeps do not prove arbitrary-witness soundness or uniqueness, carry cases do not isolate Booleanity, receipt self-comparison is not an independent anchor, and wide144 values with a nonzero top limb can print as top*2^128+lo. These match the prior source review findings R-K4H-03 to R-K4H-06 and OBSERVATION interpretationLimits. The candidate also preserves all 20 UTxO families, ACTUS, DeFi, general obligations, recursion, private handoff, multi-parent composition and U0-U7/M1-M17/MC/SP/G exits as open, with no global compatibility percentage, and keeps the future Midnight ZKIRv3 target separate from this Cardano experiment.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md:118-122",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k4h-independent-source-review-20261016/REPORT.md:30-36",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k4h-root-records-20261016/OBSERVATION.json:34-40"
+    ],
+    "file": "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-public-delivery-developer-docs-sol-20261016/README.md",
+    "id": "F-06",
+    "line": 118,
+    "recommendation": "Report these as previously routed crypto and security findings only. This packaging review neither approves nor re-judges them, and the K4H captured result must not be called independently accepted while actual-result review remains pending.",
+    "severity": "info"
+  }
+]

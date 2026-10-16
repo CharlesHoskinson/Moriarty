@@ -1,0 +1,202 @@
+{
+  "format": "mori-r1cs-author-expectations/1",
+  "classification": "SOURCE-AUTHOR DERIVATION (Claude Opus 5.5, compiler author). Specified-only. NOT an independent implementation oracle. Hand-derived from current Core source (SEMANTIC-REQUIREMENTS.md); no parser, evaluator, compiler or test ran. Fresh non-author held-out vectors and hostile witness mutations remain required before any execution is scored.",
+  "value_notation": "Core JSON: UInt is a canonical decimal string, Bool is a JSON boolean; Value is {type,value}.",
+  "assets": {
+    "USD": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0},
+    "X": {"network": "fresh-unit", "issuer": "self-move", "reference": "x", "scale": 0}
+  },
+  "constants": {
+    "u128_max": "340282366920938463463374607431768211455",
+    "two_pow_127": "170141183460469231731687303715884105728",
+    "two_pow_64": "18446744073709551616",
+    "two_pow_64_minus_1": "18446744073709551615",
+    "two_pow_64_plus_1": "18446744073709551617",
+    "two_pow_127_minus_1": "170141183460469231731687303715884105727",
+    "bls12_381_r": "52435875175126190479447740508185965837690552500527637822603658699938581184513",
+    "wrap_probe_b": "154095187621958656428822154526901524486",
+    "wrap_probe_product_mod_r": "74876584989711204157371212294527002617",
+    "wrap_probe_note": "a = u128_max, b = ceil(r / a) < 2^128; the integer product a*b exceeds 2^128 (Core overflow) but a*b mod r = wrap_probe_product_mod_r < 2^128. A gadget that checks a*b = c in the field with only a 128-bit range on c would accept c = wrap_probe_product_mod_r. The compiled relation must not."
+  },
+  "statement_layout_v0": {
+    "status": "UNADOPTED proposal for DirectFieldAdapterV0; to be mapped into the separately frozen claimant-bound ABI",
+    "header": [
+      "relation_version: 1 field, constant 1",
+      "program_hash: 2 fields [hi128, lo128], big-endian halves of the 32-byte SHA-256 canonical Program digest, constant",
+      "profile_digest: 2 fields [hi128, lo128], constant",
+      "action_index: 1 field, declaration index, constant",
+      "shape_digest: 2 fields [hi128, lo128], constant",
+      "compiler_build_digest: 2 fields [hi128, lo128], constant, byte identity only",
+      "logical_work: 2 fields [lo64, hi64], constant W",
+      "cap: 2 fields [lo64, hi64], only when cap binding is PublicCap"
+    ],
+    "body_order": [
+      "inputs in declaration order",
+      "pre states sorted by name",
+      "pre balance cells sorted by (AssetId, account)",
+      "pre duties sorted by name, each [present, amount_lo64, amount_hi64]",
+      "post states, post cells, post duties in the same order",
+      "effects in statement order; State: before, after; Transfer/Fee: amount; Liability: before, after; Emit: value"
+    ],
+    "uint_encoding": "[lo64, hi64], each forced < 2^64 by bit decomposition",
+    "bool_encoding": "one field forced to {0,1}"
+  },
+  "shape_expectations": [
+    {"program": "installment-invoice.mori", "action": "open", "cells": [["CASH","buyer"],["CASH","escrow"],["CASH","fees"]], "duties": ["invoice","reserve"], "effects": 6, "logical_work": "38", "public_inputs_with_public_cap": 70},
+    {"program": "installment-invoice.mori", "action": "partial", "cells": [["CASH","escrow"],["CASH","fees"],["CASH","seller"]], "duties": ["invoice","reserve"], "effects": 4, "logical_work": "28", "public_inputs_with_public_cap": 62},
+    {"program": "installment-invoice.mori", "action": "finish", "cells": [["CASH","escrow"],["CASH","seller"]], "duties": ["invoice","reserve"], "effects": 4, "logical_work": "20", "public_inputs_with_public_cap": 56},
+    {"program": "conditional-reserve.mori", "action": "allocate", "cells": [["A","alpha"],["A","beta"],["A","fees"],["A","vault"],["B","alpha"],["B","vault"]], "duties": ["allocation_reserve","rebate"], "effects": 8, "logical_work": "57", "public_inputs_with_public_cap": 89},
+    {"program": "conditional-reserve.mori", "action": "rebate", "cells": [["B","owner"],["B","vault"]], "duties": ["allocation_reserve","rebate"], "effects": 3, "logical_work": "26", "public_inputs_with_public_cap": 56},
+    {"program": "payroll-ledger.mori", "action": "pay", "cells": [["USD","employer"],["USD","payroll"],["USD","worker"]], "duties": ["benefit"], "effects": 8, "logical_work": "45", "public_inputs_with_public_cap": 68},
+    {"program": "payroll-ledger.mori", "action": "settle", "cells": [["USD","employer"],["USD","worker"]], "duties": ["benefit"], "effects": 4, "logical_work": "12", "public_inputs_with_public_cap": 49}
+  ],
+  "public_input_count_derivation": {
+    "open": "14 header + inputs 4 + pre (states 5 + cells 6 + duties 6) + post 17 + effects (2+2+4+4+4+2) 18 = 70",
+    "partial": "14 + 2 + pre (5 + 6 + 6) + post 17 + effects (2+2+4+4) 12 = 62",
+    "finish": "14 + 0 + pre (5 + 4 + 6) + post 15 + effects (2+4+4+2) 12 = 56",
+    "allocate": "14 + inputs (1+2+2+2) 7 + pre (states 1+2+2=5 + cells 12 + duties 6) 23 + post 23 + effects (2+2+2+2+4+4+2+4) 22 = 89",
+    "rebate": "14 + 2 + pre (5 + 4 + 6) 15 + post 15 + effects (2+4+4) 10 = 56",
+    "pay": "14 + inputs (2+1+2) 5 + pre (states 1+2+2=5 + cells 6 + duties 3) 14 + post 14 + effects (2+2+2+4+4+4+2+1) 21 = 68",
+    "settle": "14 + 2 + pre (5 + 4 + 3) 12 + post 12 + effects (4+2+2+1) 9 = 49",
+    "drafting_note": "Six totals were miscounted in the first draft and corrected against these itemised derivations before the freeze."
+  },
+  "vectors": [
+    {
+      "id": "P1", "program": "payroll-ledger.mori", "action": "pay", "cap": "45",
+      "scenario": {
+        "state": {"period": {"type": "UInt", "value": "0"}, "closed": {"type": "Bool", "value": false}, "rate": {"type": "UInt", "value": "3"}},
+        "inputs": {"hours": {"type": "UInt", "value": "7"}, "bonus": {"type": "Bool", "value": true}, "ceiling": {"type": "UInt", "value": "25"}},
+        "balances": [
+          {"account": "auditor", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "9"},
+          {"account": "employer", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "100"},
+          {"account": "payroll", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "0"},
+          {"account": "worker", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "4"}
+        ],
+        "liabilities": []
+      },
+      "expected": {
+        "outcome": "success",
+        "post": {
+          "state": {"closed": {"type": "Bool", "value": false}, "period": {"type": "UInt", "value": "2"}, "rate": {"type": "UInt", "value": "3"}},
+          "balances": [
+            {"account": "auditor", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "9"},
+            {"account": "employer", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "78"},
+            {"account": "payroll", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "1"},
+            {"account": "worker", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "amount": "25"}
+          ],
+          "liabilities": [
+            {"name": "benefit", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "debtor": "employer", "creditor": "worker", "amount": "7"}
+          ]
+        },
+        "effects": [
+          {"kind": "Transfer", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "from": "employer", "to": "worker", "amount": "21"},
+          {"kind": "Fee", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "from": "employer", "to": "payroll", "amount": "1"},
+          {"kind": "Transfer", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "from": "worker", "to": "worker", "amount": "21"},
+          {"kind": "Liability", "name": "benefit", "asset": {"network": "fresh-unit", "issuer": "payroll-issuer", "reference": "usd", "scale": 0}, "debtor": "employer", "creditor": "worker", "before": "0", "after": "7"},
+          {"kind": "State", "name": "period", "before": {"type": "UInt", "value": "0"}, "after": {"type": "UInt", "value": "1"}},
+          {"kind": "State", "name": "period", "before": {"type": "UInt", "value": "1"}, "after": {"type": "UInt", "value": "2"}},
+          {"kind": "Emit", "name": "wage", "value": {"type": "UInt", "value": "21"}},
+          {"kind": "Emit", "name": "flag", "value": {"type": "Bool", "value": true}}
+        ],
+        "step_values": [true, "21", true, "21", "1", "21", "7", "1", "2", "21", true, true],
+        "logical_schedule": [7, 4, 6, 2, 2, 2, 2, 4, 4, 2, 4, 6],
+        "logical_work": "45",
+        "derivation": "s0 nodes closed,Not,hours,0,Gt,And=6 -> 7; s1 wage=7*3=21 nodes hours,rate,Mul -> 4; s2 21<=25 true, Or with bonus true, nodes wage,ceiling,Le,bonus,Or -> 6; s3 employer 100-21=79 worker 4+21=25; s4 employer 79-1=78 payroll 0+1=1; s5 self-transfer debit check 25>=21, no change; s6 benefit absent->present 0+7=7; s7 period 0+1=1; s8 period 1*2=2 (reads updated period); s9 emit 21; s10 true != false = true, nodes bonus,closed,Ne -> 4; s11 present and 2>=2, nodes LP,period,2,Ge,And -> 6. Gross debit employer 22 (21 transfer + 1 fee), worker 21 (self-transfer). Auditor 9 untouched frame row."
+      }
+    },
+    {
+      "id": "P2", "program": "payroll-ledger.mori", "action": "settle", "cap": "12",
+      "scenario_from": "P1.post", "inputs": {"amount": {"type": "UInt", "value": "7"}},
+      "expected": {
+        "outcome": "success",
+        "post_state": {"closed": true, "period": "2", "rate": "3"},
+        "post_balances": {"auditor": "9", "employer": "71", "payroll": "1", "worker": "32"},
+        "post_liabilities": [{"name": "benefit", "present": true, "amount": "0", "identity": ["USD", "employer", "worker"]}],
+        "effects": [
+          {"kind": "Liability", "name": "benefit", "before": "7", "after": "0"},
+          {"kind": "Transfer", "from": "employer", "to": "worker", "amount": "7"},
+          {"kind": "State", "name": "closed", "before": false, "after": true},
+          {"kind": "Emit", "name": "closed", "value": true}
+        ],
+        "step_values": [true, "7", "7", true, true],
+        "logical_schedule": [2, 2, 2, 4, 2],
+        "logical_work": "12",
+        "derivation": "discharge 7-7=0 keeps the row present (present-zero); liability_amount reads 0 so closed := (0 == 0) = true; emit reads the updated closed binding."
+      }
+    },
+    {
+      "id": "P3", "program": "payroll-ledger.mori", "action": "settle", "cap": "12",
+      "scenario_from": "P1.post", "inputs": {"amount": {"type": "UInt", "value": "3"}},
+      "expected": {
+        "outcome": "success",
+        "post_state": {"closed": false, "period": "2", "rate": "3"},
+        "post_balances": {"auditor": "9", "employer": "75", "payroll": "1", "worker": "28"},
+        "post_liabilities": [{"name": "benefit", "present": true, "amount": "4"}],
+        "effects": [
+          {"kind": "Liability", "name": "benefit", "before": "7", "after": "4"},
+          {"kind": "Transfer", "from": "employer", "to": "worker", "amount": "3"},
+          {"kind": "State", "name": "closed", "before": false, "after": false},
+          {"kind": "Emit", "name": "closed", "value": false}
+        ],
+        "step_values": [true, "3", "3", false, false],
+        "logical_work": "12"
+      }
+    },
+    {"id": "P4", "program": "payroll-ledger.mori", "action": "pay", "cap": "45", "scenario_from": "P1.scenario", "inputs": {"hours": "7", "bonus": false, "ceiling": "20"}, "expected": {"outcome": "rejected", "code": "mori::core::requires", "step": 2, "reason": "21 <= 20 false, bonus false"}},
+    {"id": "P5", "program": "payroll-ledger.mori", "action": "pay", "cap": "45", "scenario_from": "P1.scenario", "inputs": {"hours": "7", "bonus": true, "ceiling": "0"}, "expected": {"outcome": "success", "same_post_and_effects_as": "P1", "reason": "Or evaluates both operands without error; Le is false, bonus true"}},
+    {"id": "P6", "program": "payroll-ledger.mori", "action": "settle", "cap": "12", "scenario_from": "P1.post", "inputs": {"amount": "8"}, "expected": {"outcome": "rejected", "code": "mori::core::liability", "step": 1, "reason": "Discharge exceeds residual liability 7"}},
+    {"id": "P7", "program": "payroll-ledger.mori", "action": "settle", "cap": "12", "scenario_from": "P1.scenario (no liabilities)", "inputs": {"amount": "1"}, "expected": {"outcome": "rejected", "code": "mori::core::requires", "step": 0, "reason": "benefit absent"}},
+    {"id": "P8", "program": "payroll-ledger.mori", "action": "pay", "cap": "45", "scenario_from": "P1.scenario with employer=21", "inputs": {"hours": "7", "bonus": true, "ceiling": "25"}, "expected": {"outcome": "rejected", "code": "mori::core::balance", "step": 4, "reason": "transfer leaves employer 0; fee 1 insufficient"}},
+    {"id": "P9", "program": "payroll-ledger.mori", "action": "pay", "cap": "45", "scenario_from": "P1.scenario", "inputs": {"hours": "170141183460469231731687303715884105728", "bonus": true, "ceiling": "0"}, "expected": {"outcome": "rejected", "code": "mori::core::overflow", "step": 1, "reason": "2^127 * 3 exceeds u128"}},
+    {"id": "P10", "program": "payroll-ledger.mori", "action": "pay", "cap": "44", "scenario_from": "P1.scenario", "inputs": "P1", "expected": {"outcome": "rejected", "code": "mori::core::meter", "step": 11, "reason": "W = 45 > cap 44; the 45th charge is the last node of statement 11"}},
+    {"id": "P12", "program": "payroll-ledger.mori", "action": "pay", "cap": "45", "scenario_from": "P1.scenario with worker=340282366920938463463374607431768211435", "inputs": "P1", "expected": {"outcome": "rejected", "code": "mori::core::overflow", "step": 3, "reason": "debit 100>=21 passes first; credit u128_max-20+21 overflows"}},
+
+    {"id": "A1", "program": "arith-boundary.mori", "action": "add", "cap": "4", "pre_acc": "0", "inputs": {"a": "u128_max", "b": "0"}, "expected": {"outcome": "success", "post_acc": "u128_max", "effects": [["State", "acc", "0", "u128_max"]], "logical_work": "4"}},
+    {"id": "A1-cap3", "program": "arith-boundary.mori", "action": "add", "cap": "3", "pre_acc": "0", "inputs": {"a": "u128_max", "b": "0"}, "expected": {"outcome": "rejected", "code": "mori::core::meter"}},
+    {"id": "A2", "program": "arith-boundary.mori", "action": "add", "pre_acc": "0", "inputs": {"a": "u128_max", "b": "1"}, "expected": {"outcome": "rejected", "code": "mori::core::overflow", "step": 0}},
+    {"id": "A3", "program": "arith-boundary.mori", "action": "add", "pre_acc": "0", "inputs": {"a": "two_pow_127", "b": "two_pow_127"}, "expected": {"outcome": "rejected", "code": "mori::core::overflow", "step": 0}},
+    {"id": "A4", "program": "arith-boundary.mori", "action": "add", "pre_acc": "0", "inputs": {"a": "two_pow_127", "b": "two_pow_127_minus_1"}, "expected": {"outcome": "success", "post_acc": "u128_max"}},
+    {"id": "A5", "program": "arith-boundary.mori", "action": "sub", "pre_acc": "0", "inputs": {"a": "5", "b": "6"}, "expected": {"outcome": "rejected", "code": "mori::core::underflow", "step": 0}},
+    {"id": "A6", "program": "arith-boundary.mori", "action": "sub", "pre_acc": "0", "inputs": {"a": "u128_max", "b": "u128_max"}, "expected": {"outcome": "success", "post_acc": "0"}},
+    {"id": "A7", "program": "arith-boundary.mori", "action": "mul", "pre_acc": "0", "inputs": {"a": "two_pow_64", "b": "two_pow_64"}, "expected": {"outcome": "rejected", "code": "mori::core::overflow", "step": 0}},
+    {"id": "A8", "program": "arith-boundary.mori", "action": "mul", "pre_acc": "0", "inputs": {"a": "two_pow_64_minus_1", "b": "two_pow_64_plus_1"}, "expected": {"outcome": "success", "post_acc": "u128_max"}},
+    {"id": "A9", "program": "arith-boundary.mori", "action": "mul", "pre_acc": "0", "inputs": {"a": "u128_max", "b": "1"}, "expected": {"outcome": "success", "post_acc": "u128_max"}},
+    {"id": "A10", "program": "arith-boundary.mori", "action": "mul", "pre_acc": "0", "inputs": {"a": "0", "b": "u128_max"}, "expected": {"outcome": "success", "post_acc": "0"}},
+    {"id": "A11", "program": "arith-boundary.mori", "action": "mul", "pre_acc": "0", "inputs": {"a": "u128_max", "b": "wrap_probe_b"}, "expected": {"outcome": "rejected", "code": "mori::core::overflow", "step": 0, "hostile_statement": "post acc = wrap_probe_product_mod_r with any internal witness MUST be unsatisfiable"}},
+    {"id": "A12", "program": "arith-boundary.mori", "action": "cmp", "pre_acc": "9", "inputs": {"a": "3", "b": "3"}, "expected": {"outcome": "success", "emits": {"lt": false, "le": true, "gt": false, "ge": true, "eq": true, "ne": false}, "post_acc": "9", "logical_work": "24"}},
+    {"id": "A13", "program": "arith-boundary.mori", "action": "cmp", "pre_acc": "9", "inputs": {"a": "u128_max", "b": "0"}, "expected": {"outcome": "success", "emits": {"lt": false, "le": false, "gt": true, "ge": true, "eq": false, "ne": true}}},
+    {"id": "A14", "program": "arith-boundary.mori", "action": "cmp", "pre_acc": "9", "inputs": {"a": "0", "b": "u128_max"}, "expected": {"outcome": "success", "emits": {"lt": true, "le": true, "gt": false, "ge": false, "eq": false, "ne": true}}},
+    {"id": "A15", "program": "arith-boundary.mori", "action": "strict", "pre_acc": "9", "inputs": {"flag": true, "a": "0", "b": "1"}, "expected": {"outcome": "rejected", "code": "mori::core::underflow", "step": 0, "reason": "Or evaluates rhs even though flag is true; a short-circuit lowering would wrongly accept"}},
+    {"id": "A16", "program": "arith-boundary.mori", "action": "strict", "pre_acc": "9", "inputs": {"flag": true, "a": "1", "b": "1"}, "expected": {"outcome": "success", "effects": [], "logical_work": "8"}},
+    {"id": "A17", "program": "arith-boundary.mori", "action": "strict", "pre_acc": "9", "inputs": {"flag": false, "a": "2", "b": "2"}, "expected": {"outcome": "success", "effects": []}},
+    {"id": "A18", "program": "arith-boundary.mori", "action": "strict", "pre_acc": "9", "inputs": {"flag": false, "a": "3", "b": "2"}, "expected": {"outcome": "rejected", "code": "mori::core::requires", "step": 0}},
+
+    {"id": "S1", "program": "self-move.mori", "action": "move", "balances": {"a": "5"}, "inputs": {"amount": "5"}, "expected": {"outcome": "success", "post_balances": {"a": "5"}, "effects": [["Transfer", "a", "a", "5"]], "logical_work": "2"}},
+    {"id": "S2", "program": "self-move.mori", "action": "move", "balances": {"a": "5"}, "inputs": {"amount": "6"}, "expected": {"outcome": "rejected", "code": "mori::core::balance", "step": 0, "reason": "self-transfer debit check applies although the balance would not change"}},
+    {"id": "S3", "program": "self-move.mori", "action": "move", "balances": {"a": "0"}, "inputs": {"amount": "0"}, "expected": {"outcome": "success", "post_balances": {"a": "0"}, "effects": [["Transfer", "a", "a", "0"]]}},
+
+    {"id": "D1", "program": "manual IR DagShare (not source-expressible: the parser never shares nodes)",
+     "ir": {"language": "moriarty/1", "semantics": "moriarty-core/1", "name": "DagShare",
+            "states": [{"name": "s", "ty": "UInt", "initial": {"type": "UInt", "value": "1"}}],
+            "assets": [],
+            "expressions": [{"kind": "Name", "name": "s"}, {"kind": "Binary", "op": "Add", "lhs": 0, "rhs": 0}],
+            "actions": [{"name": "twice", "inputs": [], "statements": [{"kind": "Next", "state": "s", "value": 1}, {"kind": "Next", "state": "s", "value": 1}]}]},
+     "pre_s": "1",
+     "expected": {"outcome": "success", "post_s": "4", "effects": [["State", "s", "1", "2"], ["State", "s", "2", "4"]], "logical_work": "6",
+                  "derivation": "per-statement cache: node 0 charged once per statement, so each statement costs 1 + 2; node 1 re-evaluated in statement 1 against the updated s = 2."}},
+
+    {"id": "R-PARTIAL-EQ", "program": "installment-invoice.mori", "action": "partial", "cap": "28", "scenario_from": "oracle invoice-partial.json scenario with amount = 90", "expected": {"outcome": "rejected", "code": "mori::core::requires", "step": 2, "reason": "amount < opening is 90 < 90 = false"}}
+  ],
+  "tamper_expectations": [
+    {"id": "T1", "base": "oracle invoice-open with PublicCap(38)", "mutation": "change any single body slot (input, pre, post or effect) by +1, or flip a Bool slot", "expected": "unsatisfiable", "reason": "every body slot is functionally determined by the pre-state and inputs (all invoice-open inputs are used)"},
+    {"id": "T1-cap", "base": "oracle invoice-open with PublicCap(38)", "mutation": "cap + 1", "expected": "satisfiable"},
+    {"id": "T2", "base": "oracle invoice-open with PublicCap(38)", "mutation": "cap = 37", "expected": "unsatisfiable"},
+    {"id": "T3", "base": "oracle invoice-open", "mutation": "any header slot changed (program hash half, profile, version, action, shape, compiler, work)", "expected": "unsatisfiable"},
+    {"id": "T4", "base": "oracle invoice-open", "mutation": "non-canonical limb pair (lo + 2^64, hi - 1) on a UInt slot whose hi >= 1, or a Bool slot set to 2", "expected": "unsatisfiable"},
+    {"id": "T5", "base": "oracle invoice-partial", "mutation": "internal witness: flip the Lt flag of `amount < opening`", "expected": "unsatisfiable"},
+    {"id": "T6", "base": "oracle invoice-open", "mutation": "pre duty invoice = (present 0, amount 5)", "expected": "unsatisfiable (absent duty must have amount 0)"},
+    {"id": "T7", "base": "A11 hostile", "mutation": "any assignment of the Mul gadget's internal witnesses with output acc = wrap_probe_product_mod_r", "expected": "unsatisfiable"},
+    {"id": "T8", "base": "A15", "mutation": "claimed success statement (acc 9 -> 9, no effects) with any witness", "expected": "unsatisfiable"},
+    {"id": "T9", "base": "oracle invoice-finish", "mutation": "post invoice duty absent (present 0, amount 0) instead of present-zero", "expected": "unsatisfiable"}
+  ]
+}

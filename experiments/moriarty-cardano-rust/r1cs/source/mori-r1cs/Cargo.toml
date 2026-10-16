@@ -1,0 +1,40 @@
+[package]
+name = "mori-r1cs"
+version = "0.0.2-p3s1.1"
+edition = "2024"
+# mori-core uses edition 2024 and its workspace pins rust-version 1.99 (rust-toolchain.toml 1.99.0).
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+description = "UNADOPTED P3S1-R1 successor candidate: admitted current-Core moriarty/1 typed Program to arkworks 0.4 R1CS, one relation per (program, action), the PROPOSED SettlementHashV2 adapter (in-circuit BLAKE2b-256 of the MRG16-PVC ABI v2 statement) and a byte-derived build identity. Source only; never built, tested or run."
+
+# Standalone root: this crate is not a member of the Moriarty workspace and never edits it.
+[workspace]
+
+[dependencies]
+# Actual current Core is the admission frontend (parse/validate/stage::load) and the
+# reference used only to *propose* witness values. The relative path assumes the
+# isolated execution layout in ../../EXECUTION-REQUEST.json: a pinned copy of the
+# Moriarty files listed in ../../CORE-CLOSURE-PINS.json at <root>/moriarty and this
+# task directory at <root>/r1cs. It deliberately names no live, mutable worktree.
+mori-core = { path = "../../../moriarty/crates/mori-core" }
+# arkworks 0.4 line, the exact versions of the frozen prototype manifest
+# (claim-utxo-prototype-source-20261015/implementation-attempt-2/source/x7/Cargo.toml).
+# No lock exists for this crate and none is invented; see EXECUTION-REQUEST.json.
+ark-ff = { version = "=0.4.2", default-features = false }
+ark-relations = { version = "=0.4.0", default-features = false }
+# Same versions as the current Core workspace closure (Moriarty Cargo.toml and the
+# mori-cardano metadata-consumer lock).
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+# Optional Groth16 verification glue; disabled by default and not exercised by any test.
+ark-bls12-381 = { version = "=0.4.0", default-features = false, features = ["curve"], optional = true }
+ark-groth16 = { version = "=0.4.0", default-features = false, optional = true }
+ark-snark = { version = "=0.4.0", default-features = false, optional = true }
+
+[dev-dependencies]
+ark-bls12-381 = { version = "=0.4.0", default-features = false, features = ["curve"] }
+
+[features]
+default = []
+groth16 = ["dep:ark-bls12-381", "dep:ark-groth16", "dep:ark-snark"]

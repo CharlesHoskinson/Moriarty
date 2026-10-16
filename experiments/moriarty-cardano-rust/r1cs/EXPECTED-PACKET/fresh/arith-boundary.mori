@@ -1,0 +1,24 @@
+language "moriarty/1";
+agreement ArithBoundary {
+  state acc: UInt = 0;
+  action add(a: UInt, b: UInt) {
+    next acc = a + b;
+  }
+  action sub(a: UInt, b: UInt) {
+    next acc = a - b;
+  }
+  action mul(a: UInt, b: UInt) {
+    next acc = a * b;
+  }
+  action cmp(a: UInt, b: UInt) {
+    emit "lt"(a < b);
+    emit "le"(a <= b);
+    emit "gt"(a > b);
+    emit "ge"(a >= b);
+    emit "eq"(a == b);
+    emit "ne"(a not = b);
+  }
+  action strict(flag: Bool, a: UInt, b: UInt) {
+    requires flag or a - b == 0;
+  }
+}
