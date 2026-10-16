@@ -1,0 +1,44 @@
+[
+  {
+    "evidence": "R2 CLAIM-DESCRIPTIONS.json contains exactly the 16 ids CAP-C-001,002,004,006,007,016,017,018,019,020,021,022,023,024,026,027, each observed with the same 11 fields: groth16Constraints, groth16PrivateWitness, groth16PublicInputs, id, ledgerAuthenticationPremises, limitations, moriartyMappingAndFirstBlocker, plainDescription, proposedDisposition, reviewCommentDisposition, sourceCitations. Dispositions match AUTHOR-REPORT.md:5 (retain 001/026; revise 002/004/007/017/018/019/021/022/023/024; split 006/016/020 under original ID lineage; unsupported 027). ASSIGNED-CLAIMS.json original rows and PRIOR-REVIEW-COMMENTS.json opus-1/gpt-1/gemini-1 comments are dispositioned per row in reviewCommentDisposition; splits keep lineage with no renumbering and no dropped row.",
+    "id": "F-01-SIXTEEN-ROWS-STRUCTURE",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "All 16 R2 rows are present with 11 fields each and dispositions traceable to assigned rows and prior seat comments."
+  },
+  {
+    "evidence": "Gov/Properties/LastVoteApplied.lagda.md does contain a source-read proof term: last-vote-applied (lines 388-391) inhabiting last-vote-applied-to-GA (78-90), with per-step lemmas and a freshness premise \u0393.txid \u2262 proj\u2081 aid whose reachable-state justification is a footnote TODO (391-393); properties.yaml:122-133 likewise notes vote-applied/last-vote-applied as proved on master upstream. This is not typechecked here, is scoped to a single block's GOVS closure, and does not establish CAP-C-021's boundary recorded map after rmOrphanDRepVotes filtering (Ledger.lagda.md:137-145,185) or any authenticated state. The appended wording therefore errs only on the conservative side for CAP-C-021: it understates grounding, removes no blocker, and overclaims nothing. It does not block source readiness; catalogue adjudication should record the append as R1's exact sentence, not as a literal claim that LastVoteApplied contains no theorem-shaped content at all.",
+    "id": "F-02-LASTVOTEAPPLIED-NUANCE",
+    "requiredFix": "",
+    "severity": "minor",
+    "summary": "Appended 'definitional grounding only, no new theorem' is conservative for LastVoteApplied and must not be read literally as denying its single-block source-read proof term."
+  },
+  {
+    "evidence": "Ratify.lagda.md code: accepted uses \u2265 with /\u2080 at 352-355 (CC, plus sizeActiveCC \u2265 ccMinSize), 433 (DRep), and SPO section follows the same /\u2080 \u2265 pattern; prose 'must exceed' (56-58) and 'greater than ccMinSize' (298-300) contradict the code and the candidate follows code while preserving the contradiction. Candidate Groth16 fields require rational cross-multiplication with an explicit zero-denominator branch, reduced (num,den), limb range checks so no sum or product wraps modulo r, complete authenticated state maps/Merkle openings, closed-epoch fork finality, and meaningful public inputs distinct from private witnesses containing complete maps/traces \u2014 never a hash of prover-chosen maps (G16-CL-01/02/03). Threshold selection: PParams.lagda.md modifiesGovernanceGroup and modifiesSecurityGroup both list govActionDeposit (386-413), so P5d and Q5 trigger together; candidate preserves this.",
+    "id": "F-03-RATIONAL-SEMANTICS-RETAINED",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Rational \u2265 with zero-denominator semantics and integer no-field-wrap requirements are correctly retained."
+  },
+  {
+    "evidence": "Epoch.lagda.md: two-stage pipeline EPOCH (773-801) consumes the previous RatifyState fut and runs RATIFIES into fut'; GovernanceUpdate (640-660) refunds ratified/rejected removals at the next boundary and orphans at the detection boundary; dormant increment mapValues suc\u1d49 iff govSt' empty (690-694); DRep stake from live post-removal UTxO + GA deposits + rewards for active VDelegs (468-505) vs pool stake from mark snapshot + GA deposits restricted to registered pools with the CIP-1694 erratum preserved (513-545,548-559). Enact.lagda.md:183-186 cumulative treasury cap at ENACT; payout aggregated as reward credits at the next boundary (Epoch 725-742). Script/ScriptPurpose.lagda.md:31-43 formal TxInfo has realizedInputs/txOuts/fee/mint/txCerts/txWithdrawals/time/vkKey/txdats/txId only \u2014 no votes/proposals/treasury/constitution fields \u2014 and the candidate correctly distinguishes this from actual Plutus V3/Haskell and invents no in-transaction script path; a genuine Moriarty invoice proof is nowhere presented as proving governance.",
+    "id": "F-04-PIPELINE-AND-TXINFO",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Epoch timing, state-complete authenticated-map requirements, fork/finality naming, governance-epoch distinctions and the formal-TxInfo limit are correctly retained."
+  },
+  {
+    "evidence": "CAP-C-026: EventuallyRefunded.lagda.md defines GADepositsEventuallyRefunded (123-137) only under govDepsMatch + membership + LastEpoch \u2264 expiresIn + CHAINS trace + RTC-All InvariantAt + expiresIn+2 \u2264 LastEpoch(cs'); InvariantAt derivation from CHAIN is explicitly future work needing TxId freshness (81-94,186-194). The candidate retains it strictly in that conditional form, conclusion deposit-pot absence only, not receipt, and not a full refund theorem; no Agda typecheck was performed by author or reviewers. CAP-C-027: EpochStep.lagda.md:40-52 enact-change\u21d2newEpoch returns the equality Type with 'Proof. (coming soon)' and properties.yaml:112-120 repeats 'Statement present; proof coming soon'; the candidate marks it unsupported and refuses finite Groth16 substitutes under the same ID.",
+    "id": "F-05-CAP026-CAP027",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "CAP-C-026 remains conditional-only and CAP-C-027 remains refused for a coming-soon upstream proof; neither is overstated."
+  },
+  {
+    "evidence": "USER-FALLBACK-ROUTING-20261016.json records at 2026-10-16T09:23:17Z 'if opus goes down, use gemini and muse', trigger exitCode 124, limitSeconds 1800, reportDelivered false, authority 'Routing only. No new protected-path, cryptographic, wallet or ledger authority.' TERMINAL-RESULT-EXPORT.json for the Gemini supplement seat: status ERROR stream interrupted, responseChars 0, distinctStructuredReviews 0, sourceAdviceAdopted false. AUTHOR-REPORT.md:3,21 and candidate PROCESS record the author as a source author under that fallback, not an independent reviewer and not a ninth seat. PRIOR-REVIEW-COMMENTS.json header declares sourceAdviceNotVotesOrAcceptedRequirements true; the 585-row/8-seat provenance is task-supplied historical advice provenance, not consensus and not a ninth seat in this review. Original 42 Cardano / 52 Midnight provenance remains unrecovered (AUTHOR-REPORT.md:15; R1 READ-COVERAGE recoveredBridgeRows 0).",
+    "id": "F-06-PROVENANCE-NOT-CONSENSUS",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Fallback routing, the zero-review Gemini supplement, and the original seats' advice status are preserved without inventing authority or consensus."
+  }
+]
