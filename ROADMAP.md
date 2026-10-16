@@ -25,6 +25,10 @@ The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provena
 
 ## Sherlock source status — 2026-10-16
 
+The [aux/1 host packing component](models/sherlock/machine-circuit/auxiliary-host-source-20261016/README.md) now has conditional source adoption and separate fresh Opus/Muse reviews. It supplies four fixed-shape records to six private normal tests; compilation and all six tests are UNRUN. It has no complete step-witness or production consumer.
+
+The [aux/2 arithmetic/fuel source design](models/sherlock/machine-circuit/arithmetic-fuel-source-20261016/README.md) specifies checked UInt128 byte relations and fuel handling under fresh conditional Opus/Muse votes. Owner E1–E7 and Muse E-FUEL govern the unchanged proposal. G4, IO1–IO8, complete P4 and all new formal/native/target checks remain open. These 232 logical lanes are not measured circuit costs. The [atlas design companion](wiki-llm/sherlock-circuit-atlas/DESIGN-005-STATUS-AND-PROVENANCE.md) records visual concepts only; circuit iteration 004 remains the latest.
+
 The [finite append-model evidence](models/sherlock/machine-circuit/append-model-review-20261016/README.md) records Quint model-root typechecking, eight passing normal tests and a short seed-1 simulation with nine-state traces and no reported violation. Its 32-sample count is inferred as documented. The independent K projection has nine authored cases and source reviews, with execution UNRUN. These child results do not establish full P3, circuit, financial or target correspondence.
 
 The [complete CandidateA P3 arena source design](models/sherlock/machine-circuit/arena-policy-source-20261016/README.md) is conditionally adopted with fresh Opus and Muse source reviews and their binding errata. It specifies the append catalog and four auxiliary records, with symbolic equality-trace capacity. Model correspondence, arithmetic/fuel witness placement, circuit compilation and Midnight stagenet validation remain open; this closes no roadmap exit.

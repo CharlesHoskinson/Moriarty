@@ -124,3 +124,13 @@ The complete public adapter JSON and exact `RESULT.text` are retained separately
 - [Opus adapter](provenance/iteration-004-opus-public-reply.json.gz) and [exact text](provenance/iteration-004-opus-public-reply.md.gz).
 
 The Opus adapter SHA256 is `31aedb8f0b59fae1287d2090d33047375db61e2d5a36c06dd368e966a5ee1dbf`; the original Gemini adapter SHA256 is `975cb29561fc0b0bc94bd673a2ef465bbc726fc3aa2746495569229b9d98e1a2`. The note retains provider placeholders and historical status verbatim. `AUTHORSHIP.json` appends actual captured hashes, relative receipt paths and the returned canonical Opus identity without rewriting those strings. Astra materialized these bytes under Root's delegation; publication remains with Root. No private provider/debug transcript is included.
+
+## Design companion 005
+
+[Design 005: arena slices and byte lanes](DESIGN-005-ARENA-SLICES-AND-BYTE-LANES.md)
+is an Opus-authored companion concept note. It does not add a frozen circuit
+iteration. The latest circuit iteration remains 004. Read the adjacent
+[status and provenance clarification](DESIGN-005-STATUS-AND-PROVENANCE.md) for
+the historical candidate labels, later source adoption and exact captures.
+Earlier notes remain unchanged. This folder still contains no website code,
+assets, rendered scene or deployment.
