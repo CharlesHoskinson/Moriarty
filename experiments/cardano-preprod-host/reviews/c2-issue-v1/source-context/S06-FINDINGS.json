@@ -1,0 +1,58 @@
+[
+  {
+    "id": "F01-driver-scope",
+    "severity": "low (non-blocking, deliberate contract scope)",
+    "summary": "The contract (CI04) admits any str `driver`. Rust parse_setup_record requires the exact DRIVER_ID 'mori-k2-driver/0.1.0-k2s1+k4h1' from the now-supplied lib.rs, so the consumer admits more drivers than the Rust parser does.",
+    "evidence": "export.rs parse_setup_record: fixed(\"driver\", &record.driver, crate::DRIVER_ID); lib.rs DRIVER_ID; contract CI04 says 'driver is a str'.",
+    "requiredFix": "None in this file; I implemented the frozen clause as written. A later contract revision may pin DRIVER_ID as a declared-identity check (still not build provenance)."
+  },
+  {
+    "id": "F02-relation-profile-subset",
+    "severity": "low (non-blocking, deliberate contract scope)",
+    "summary": "Rust RelationDescriptor uses deny_unknown_fields, and check_profile also checks language, semantics, adapter, five more hex identities, logicalWork, instanceVariables==3 and abi2ShapeDigest==BLAKE2b(abi2ShapeBytesHex). The contract consumes only a subset and leaves relation keys open; I implemented exactly that.",
+    "evidence": "relation.rs RelationDescriptor and check_profile; contract CI04 and the user instruction that consumed relation keys stay open.",
+    "requiredFix": "None here. Record it as an explicit scope gap. Any later move to full check_profile parity must be a separate reviewed contract revision and must not imply native correspondence."
+  },
+  {
+    "id": "F03-curve-strictness-not-mirrored",
+    "severity": "info (explicit non-claim)",
+    "summary": "Rust decode_vk and decode_proof check flags, on-curve and subgroup membership, canonical re-encoding, the IC prefix and identity points. The consumer checks VK/proof length and hex only.",
+    "evidence": "encoding.rs decode_vk, decode_proof, vk_profile_ok; contract F02 and CI12.",
+    "requiredFix": "None. The labels vkCurveValidity NOT_CHECKED and groth16 NOT_VERIFIED stay in place; the on-chain verify is the only pairing check."
+  },
+  {
+    "id": "F04-provingKeyBytes-upper-bound",
+    "severity": "info",
+    "summary": "The contract says 'positive int' for provingKeyBytes. Rust is u64. I enforce only exact int >= 1, with no upper bound.",
+    "evidence": "export.rs SetupRecord proving_key_bytes: u64; contract CI04.",
+    "requiredFix": "None here. Optionally add a u64 bound in a later contract revision."
+  },
+  {
+    "id": "F05-statement-reencode-check",
+    "severity": "info",
+    "summary": "Rust parse_statement re-encodes the statement with the compiler's abi2::statement_bytes and requires byte equality. The consumer relies only on host header framing (tag, family, length) and header-field equality, as CI07 specifies.",
+    "evidence": "claim.rs parse_statement; host_codec._admit_statement.",
+    "requiredFix": "None. Compiler-encoder correspondence stays OPEN."
+  },
+  {
+    "id": "F06-dict-interpretation",
+    "severity": "info (interpretation to review)",
+    "summary": "I read CI04's 'relation is a dict' as an exact dict whose keys are all exact str. This is consistent with JSON-compatible inputs and the host's _wire_keys idiom. It refuses dict subclasses and non-str keys, which JSON parsing can never produce.",
+    "evidence": "_admit_object in the module; contract section 1 says inputs arrive as JSON-compatible dicts.",
+    "requiredFix": "The reviewer should confirm this reading. If rejected, it needs a contract clarification, not a silent widening."
+  },
+  {
+    "id": "F07-protocol-literals",
+    "severity": "info",
+    "summary": "The ABI v2 statement-tag and family-id hex, header length 343 and statement bound 262144 are written as public protocol literals. They duplicate private host constants but are not copied host algorithms.",
+    "evidence": "relation.rs and claim.rs constants; host_codec _STMT_TAG, _FAMILY_V2, _HEADER_LEN, _MAX_STATEMENT_BYTES.",
+    "requiredFix": "The reviewer should confirm that literals rather than private host attributes are acceptable under CI01."
+  },
+  {
+    "id": "F08-untested-paths",
+    "severity": "medium (review attention)",
+    "summary": "No ordinary test reaches C2I-BUILD or every closed-schema leaf. Many leaf types (e.g. a non-str intentTargetHashV2, a uint above range in catalogueActionEntry.index) are covered only by source inspection. GREEN is unobserved.",
+    "evidence": "TAMPER and test_09 cover a subset of leaves; no BUILD-path test exists.",
+    "requiredFix": "After GREEN, the fresh Opus review should inspect _admit/_admit_object across all schemas. Any extra tests need a separate reviewed revision; test bytes are not changed here."
+  }
+]
