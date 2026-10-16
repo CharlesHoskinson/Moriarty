@@ -1,0 +1,241 @@
+{
+  "reviewToken": "current-cardano-c2-consumer-fresh-opus-full-candidate-audit-20261016",
+  "report": "FRESH NON-AUTHOR REVIEW (claude-opus-5-5, tools off, inline bodies only). I read all 17 supplied bodies (S01-S17) as text. I executed nothing, imported nothing and recomputed no hashes. Every byte count and SHA-256 below is the value declared by the supplied headers or the root RESULT files, not one I verified. Same-provider independence is context-only.\n\nVERDICT: AGREE-NARROW. Full source inspection finds that c2_issue_artifacts.py (declared 15231 B, 23c3f99d...) implements the frozen CI01-CI12 contract as written. I found no correctness defect. Root's actual RED (20:56Z: 11 run, 1 pass, 10 failures all 'missing implementation', 0 errors) matches the author prediction. Root's actual GREEN (21:06Z: 11/11, exit 0, five pinned files unchanged) is newer than every author-time 'RED and GREEN unobserved' statement in S01, S03 and S06. Those statements are kept here as historical snapshots. The component can be adopted as source ONLY as an explicitly unverified structural artifact serializer, with conditions R01-R03 recorded. It is not equivalent to Rust parse_setup_record/check_export acceptance. It closes no integration, native, operator, ledger or authority boundary.\n\nCLAUSE CONFORMANCE (source):\nCI01: The module's only imports are `import hashlib` and `import host_codec`. Its only public function is prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id), with no defaults. All seven host APIs are called as host_codec attributes: parse_statement_header, statement_digest_hex, statement_public_inputs, build_env_data, encode_data (x3), build_c2_mint_data and build_value_data. hashlib appears only for the VK digest and the token, and neither is a host API. test_02 checks the signature and host identity, not that the calls are made (R05). Source inspection confirms the calls.\nCI02: type checks with `is`; bool is excluded; the 0..2^64-1 range and the 28-byte bytes check all happen before any subscript; the _Hooked test confirms this.\nCI03: expiry reaches only build_env_data. Every export object is closed (top, context, publicInputs, cardano, envV2, settleOutref, catalogueActionEntry), so an expiry key at any level is refused with C2I-EXPORT. The label is present. setup.relation is open, but its values are never read for expiry.\nCI04: there are 12 closed keys. The notice, snark, encoding and six-premise literals match export.rs character for character, and GREEN on the real fixture confirms it. driver is any str; provingKeyBytes is int >= 1 with no upper bound. The relation is an exact dict with exact str keys; its consumed keys are typed and the rest stay open. headerLen is 343, bodyLen is 0..261801 (= 262144 - 343) and publicInputCount is 2. The VK is 976 hex characters, and BLAKE2b-256(vk) == vkDigestBlake2b256.\nCI05: field names match the Rust structs exactly (18/10/2/4/8/2/5). The u8/u16/u64 ranges are exact. Fixed widths are 64/56. sourceSha256 is hex-or-null. The str leaves, the fixed format and the premises list are all checked.\nCI06: the loop covers the 8 identity keys plus the VK digest.\nCI07: length is checked before the set() scan, so the 524288-character bound holds before any O(n) work. Parity, lowercase, host admission, and header predicate/shape/vk/bodyLen are checked.\nCI08: dict equality is checked against the 10 header keys; booleans were already excluded, so 1 == True cannot match. networkId == 0 is checked after equality. A comment says network 0 does not distinguish Preview from Preprod.\nCI09: digest and halves use exact strings via the host. The proof is checked as 384 lowercase hex. The derived cardano section matches cardano_export field for field (familyId = FAMILY_V2 hex; claimant, outref and anchor from the header; name, index, predicate and shape from the relation).\nCI10: there are 12 keys. env, issue and value objects are fresh from the host. labels is dict(_LABELS), and its values are immutable strings. Byte bounds check out: env is 212-222 B (expiry head 1-9 B, outputIndex head 1-3 B), issue is 710 B, mint is 67 B. The EnvV2 field order, OutputReference constr 0 [txid, ix] and C2Mint Issue constr 0 [vk, proof] match types.ak. The token rule matches claim.ak envelope_name.\nCI11: the module raises only ValueError('C2I-<stage>: ...'). _host rewraps ValueError only, and MemoryError and similar propagate, consistent with the host's I2 rule. Nothing in the module writes to its inputs. There is no I/O, clock, environment access, randomness, logging, caching or global mutation.\nCI12: labels and the docstring carry the required non-claims.\n\nBUILD and DIGEST rewrap reachability: every host precondition is implied by earlier stages. predicate, vk and digest are 32 B and claimant is 28 B (hex-checked); ix is u16 from a 2-byte header field; expiry was checked at ARG; vk is 488 B and the proof 192 B; policy is 28 B and the token 32 B with quantity 1. DIGEST uses the same admission as STATEMENT. So C2I-BUILD and the DIGEST host refusals cannot happen for admitted inputs. They are defensive code that ordinary tests cannot reach without substituting the host. This is source-inspected only, not tested (R04).\n\nTEST COVERAGE (GREEN covers selected subtests only). Covered: the API shape; the K6 env, issue and mint vectors; two policies; four expiry encodings and six bad expiries; result schema, labels, widths, determinism and detachment; no mutation on the success path; 29 tampers; 8 first-failure orderings; 11 ARG cases; and the import, fixture-token and effect scan.\nUntested branches that are correct by source inspection (R03):\n- Schema kinds: no refusal test for the 'str' kind or for a malformed non-null 'hex-or-null', and none for a missing required field or a non-dict nested object.\n- SETUP: wrong format, notice, curve, snark or encoding; non-str driver; malformed provingKeySha256; provingKeyBytes 0, negative or bool; non-dict relation; a missing consumed relation key; a bad statementTagHex or familyIdHex; bodyLen out of range; publicInputCount other than 2.\n- EXPORT: extra keys in context, publicInputs, cardano, settleOutref or catalogueActionEntry; u8, u16 or u64 upper-bound violations; premises reordered, as a tuple, or with one character changed.\n- RELATION: mismatch of action, compilerBuildDigest, r1csSha256, predicateDigest or abi2ShapeDigest alone, and of the export vkDigestBlake2b256 alone.\n- STATEMENT: more than 524288 characters; non-hex characters; a flip in the shape digest (offset 80), tag or family; a relation bodyLen mismatch at a consistent length.\n- DIGEST: an x2-only mismatch.\n- PROOF: uppercase.\n- CARDANO: catalogueActionEntry, intentTargetHashV2, envV2 version, familyId or statementDigest.\n- Purity: no-mutation on refusal paths.\n- Host use: no check that the host APIs are actually invoked.\n- Context: only one real (fabricated, historical) K6 context is exercised.\nAll of these reuse code paths that are partly exercised: the generic _admit/_admit_object (closed check at two levels; int, hex, fixed and premises kinds), the identity loop, host admission and dict equality. For a narrow serializer they do not block adoption, but each must be recorded as source-inspected, not tested. A separately reviewed supplementary test revision is required before anyone claims refusal completeness.\n\nF01-F08 CROSSCHECK DECISIONS:\nF01 (driver is any str; Rust requires DRIVER_ID 'mori-k2-driver/0.1.0-k2s1+k4h1'). Confirmed from lib.rs and export.rs. Acceptable ONLY for the unverified serializer. It rules out any claim that an admitted setup is one Rust would accept. Pin it in the next contract revision; it is still a declared name, not provenance.\nF02 (open relation subset vs deny_unknown_fields and full check_profile). Confirmed. The consumer admits descriptors Rust refuses: extra or missing unconsumed keys, wrong language, semantics or adapter, instanceVariables other than 3, a non-decimal logicalWork, and abi2ShapeDigest != BLAKE2b(abi2ShapeBytesHex). The output does not depend on these fields, but this must not be read as a moriarty/1 / moriarty-core/1 / SettlementHashV2 profile check. Do not let this cheaper library subset quietly stand in for the current language requirement. The adoption record must state that relationProfile is NOT_CHECKED beyond the consumed keys. The next revision should pin language, semantics, adapter and instanceVariables before the builder treats admission as meaningful.\nF03 (curve strictness not mirrored). Confirmed against encoding.rs decode_vk/decode_proof/vk_profile_ok. These are non-pairing checks that Rust check_export performs. Acceptable as an explicit non-claim. vkCurveValidity NOT_CHECKED is labelled, but proof-point validity is covered only implicitly by groth16 NOT_VERIFIED; add an explicit proofCurveValidity label in a later revision.\nF04 (provingKeyBytes has no u64 bound). Confirmed. A superset of Rust, info only; add the u64 bound in the next revision.\nF05 (no compiler re-encode). Confirmed against claim.rs parse_statement. abi2.rs is unread, so whether re-encoding refuses anything beyond tag, family and length is unknown. Acceptable as a non-claim; compiler-encoder correspondence stays OPEN and there is no label for it yet.\nF06 (exact dict and str interpretation). AGREE. It is narrower than plain 'dict' and consistent with JSON-compatible input and the host's _wire_keys idiom. Note that str leaves accept lone-surrogate text that serde_json refuses. Such text never reaches the artifacts, but it is one more superset point. Clarify the wording in the next contract text.\nF07 (protocol literals). AGREE. I checked the tag and family hex against the ASCII. 343 and 262144 match claim.rs and the host. The literals are constants, not copied host algorithms, and they avoid coupling to the host's private attributes. The drift risk is bounded by the hash-pinned host and redundant admission.\nF08 (untested paths). Confirmed and expanded under R03. Its 'GREEN unobserved' wording is historical, because root GREEN is now observed.\n\nNARROWINGS RELATIVE TO RUST (acceptable): sourceSha256 must be present (serde treats a missing Option as None); x1 and x2 are compared as exact canonical strings (hexutil.parse_u128_decimal unread); networkId must be 0; premises are checked at EXPORT. The wording 'non-pairing consistency' in the module docstring, and the DESIGN-POSITIONS rationales 'Mirrors parse_setup_record' (CI04) and 'Covers the remaining non-pairing check_export steps' (CI09), overstate parity (R02).\n\nLIMITS PRESERVED: the current real public path is the old fixture-based R2 builder. No r3 implementation exists; the latest builder is only at actual RED (1 historical pass, 9 missing). The byte parser, I/O, CLI and the sha256(setup bytes) link check remain open. The legacy uppercase Data/UPLC bridge is open. The K5/K6 setup is single-party, TEST ONLY and forgeable. VK-to-matrix, compiler and hash-gadget correspondence is OPEN. Context and prover-chosen roots are not ledger-authenticated. There is no funded-context proof, no transaction, and no Preview or Preprod result. There is no general bundle and no recursive, private, multi-parent or universal PCD; one ProofExport is not a bundle or PCD. Full20 UTxO, financial, ACTUS and DeFi obligations stay OPEN. The host accepts structure only; it has no authority over min-ADA, fees, collateral, ExUnits or fit. The historical K6 Env CBOR and token are reproduction vectors, not an oracle. This review grants no maintainer, council, campaign or toolchain permissions.",
+  "findings": [
+    {
+      "id": "R01-rust-acceptance-superset",
+      "severity": "medium (non-blocking for narrow serializer adoption; blocks any Rust-acceptance or profile claim)",
+      "summary": "Admission checks a declared subset of Rust parse_setup_record + check_export, so the consumer accepts inputs Rust refuses. Missing checks: DRIVER_ID; relation deny_unknown_fields and check_profile (language, semantics, adapter, 9-hex set, logicalWork, instanceVariables==3, shape-bytes digest); provingKeyBytes u64 bound; decode_vk/decode_proof; parse_statement re-encode; the setupRecordSha256 byte link; UTF-8-valid strings. The output labels expose only groth16, vkCurveValidity and setupRecordLink.",
+      "evidence": "S04 _SETUP_RECORD 'driver': _TEXT, 'provingKeyBytes': ('int', 1, None), 'relation': ('object', _RELATION, False); _LABELS has 8 keys with no relationProfile, statementReencode or proofCurveValidity label; S09 parse_setup_record fixed(driver, DRIVER_ID) and check_profile(); S10 RelationDescriptor deny_unknown_fields and check_profile; S11 parse_statement rebuild; S12 decode_vk/decode_proof.",
+      "requiredFix": "Adoption record must state: 'structural serializer; NOT equivalent to Rust parse_setup_record/check_export acceptance; relation language/semantics/adapter/profile, driver identity, statement re-encode and proof/VK curve validity NOT_CHECKED'. A separately reviewed contract revision is required before builder integration treats admission as meaningful. It should pin DRIVER_ID, language moriarty/1, semantics moriarty-core/1, adapter SettlementHashV2, instanceVariables 3 and provingKeyBytes <= 2^64-1, and add labels relationProfile, statementReencode and proofCurveValidity. Optionally close the relation schema to all 30 Rust keys."
+    },
+    {
+      "id": "R02-parity-wording-overclaim",
+      "severity": "low",
+      "summary": "The module docstring 'checks the non-pairing consistency' and the DESIGN-POSITIONS rationales CI04 'Mirrors parse_setup_record where supplied' and CI09 'Covers the remaining non-pairing check_export steps in Rust order' overstate parity. Several non-pairing Rust steps are not mirrored.",
+      "evidence": "S04 docstring lines 4-6; S02 CI04 and CI09 rationale; S09 check_export performs setupRecordSha256, decode_proof, parse_u128_decimal and parse_statement (re-encode), none of which the consumer mirrors.",
+      "requiredFix": "Do not repeat these rationales in the adoption record. The next source revision should change the docstring to 'checks a declared subset of the non-pairing check_export consistency'. That edit changes bytes and needs a new root GREEN."
+    },
+    {
+      "id": "R03-untested-refusal-branches",
+      "severity": "medium (review attention; source-inspected only, not silently approved)",
+      "summary": "Ordinary GREEN does not exercise: the 'str' and malformed 'hex-or-null' refusal kinds; the missing-required-field and non-dict nested-object branches; most SETUP literals and leaves; nested extra keys outside top level and envV2; u8/u16/u64 upper bounds; premises variants; five of eight RELATION keys plus the export vkDigest alone; statement >524288 characters, non-hex, shape/tag/family flips and relation bodyLen mismatch; x2 alone; uppercase proof; most CARDANO fields; no-mutation on refusal paths. Only one real context is used.",
+      "evidence": "S03 TAMPER (29 entries), test_09 (8 cases), test_06 no-mutation on success only; S04 _admit/_admit_object branches for 'str', 'hex-or-null', missing field and non-dict.",
+      "requiredFix": "Record these as source-inspected-only. Before any claim of refusal completeness or builder reliance, run a separately reviewed supplementary test revision that adds one tamper per listed branch and kind, plus refusal-path deepcopy equality. Do not edit the frozen test in place."
+    },
+    {
+      "id": "R04-build-and-digest-rewrap-unreachable",
+      "severity": "info",
+      "summary": "C2I-BUILD and the C2I-DIGEST host-refusal rewraps cannot trigger for admitted inputs, because every host precondition is implied by earlier stages. They are defensive code with no ordinary test.",
+      "evidence": "S04 BUILD arguments come from hex64/hex56-checked fields, a 2-byte header ix, the ARG-checked expiry, a 976-hex VK, a 384-hex proof, a 28-byte policy, a 32-byte token and quantity 1; S05 build_env_data, build_c2_mint_data and build_value_data bounds; DIGEST reuses _admit_statement, already passed at STATEMENT.",
+      "requiredFix": "None for narrow adoption. Optionally, a separate reviewed test could exec the consumer against a refusing host proxy without displacing the pinned host."
+    },
+    {
+      "id": "R05-host-call-not-test-enforced",
+      "severity": "info",
+      "summary": "test_02 checks host identity and that no API was copied, but not that the seven APIs are invoked. A hashlib reimplementation of statement_digest_hex would still pass. Source inspection confirms all seven calls.",
+      "evidence": "S03 test_02 and test_11; S04 _host(...) calls to all seven host_codec attributes.",
+      "requiredFix": "Optional future test: a counting proxy module for a separate consumer exec. Not required for narrow adoption."
+    },
+    {
+      "id": "R06-historical-wording-and-mutable-module-tables",
+      "severity": "info",
+      "summary": "The author-time statements 'RED and GREEN unobserved' / 'not reviewed or adopted' (S01, S03, S04, S06) are historical snapshots; the actual root RED and GREEN are newer. Module-level schema and label dicts are mutable but only read or copied.",
+      "evidence": "S01 Status; S03 docstring; S06 F08; S07/S08 timestamps; S08 'unreviewed': true, 'adopted': false; S04 _LABELS and schema dicts.",
+      "requiredFix": "Keep the historical wording unchanged, and cite S07/S08 as the actual results. Optionally freeze the tables (tuples or mapping proxies) in a later revision; in-process tampering is out of scope."
+    }
+  ],
+  "crosschecks": [
+    {
+      "id": "X-F01",
+      "severity": "low",
+      "summary": "Author driver-scope finding confirmed: any str is admitted, while Rust requires DRIVER_ID.",
+      "evidence": "S13 DRIVER_ID 'mori-k2-driver/0.1.0-k2s1+k4h1'; S09 fixed('driver', ...); S04 'driver': _TEXT; S15 fixture carries the exact ID.",
+      "requiredFix": "Acceptable only for the unverified serializer; no Rust-acceptance claim. Pin it in the next contract revision (a declared name, not provenance)."
+    },
+    {
+      "id": "X-F02",
+      "severity": "medium",
+      "summary": "Relation subset confirmed. Language, semantics and adapter are unchecked, so admission must not be read as satisfying the current moriarty/1 SettlementHashV2 profile requirement.",
+      "evidence": "S10 check_profile; S04 _RELATION open with 13 consumed keys; S15 relation has 30 keys, so GREEN exercises the open path.",
+      "requiredFix": "Adoption record: relationProfile NOT_CHECKED beyond consumed keys. A reviewed revision must pin the profile literals before integration relies on admission. No implied native correspondence."
+    },
+    {
+      "id": "X-F03",
+      "severity": "info",
+      "summary": "Curve strictness is not mirrored. decode_vk/decode_proof are non-pairing Rust checks, so the consumer is not check_export-equivalent.",
+      "evidence": "S12 decode_g1/decode_g2/vk_profile_ok/decode_proof; S04 PROOF and SETUP check length and hex only; labels vkCurveValidity NOT_CHECKED and groth16 NOT_VERIFIED.",
+      "requiredFix": "Keep as an explicit non-claim. Add a proofCurveValidity label in a later revision. On-chain verify_digest is the only pairing check."
+    },
+    {
+      "id": "X-F04",
+      "severity": "info",
+      "summary": "provingKeyBytes has no u64 upper bound, so the consumer accepts a superset of Rust.",
+      "evidence": "S09 proving_key_bytes: u64 with zero refused; S04 ('int', 1, None).",
+      "requiredFix": "Add the bound in the next revision. Not blocking."
+    },
+    {
+      "id": "X-F05",
+      "severity": "info",
+      "summary": "No statement re-encode against the compiler. abi2.rs is unread, so any extra refusal power of the Rust re-encode is unknown.",
+      "evidence": "S11 parse_statement rebuild via abi2::statement_bytes; S05 _admit_statement checks tag, family and length only.",
+      "requiredFix": "Non-claim. Compiler-encoder correspondence stays OPEN. Add a statementReencode NOT_CHECKED label later."
+    },
+    {
+      "id": "X-F06",
+      "severity": "info",
+      "summary": "The exact dict / exact str key reading is AGREED. It narrows, not widens. str leaves may hold lone surrogates that serde_json refuses; these never reach the outputs.",
+      "evidence": "S04 _admit_object; S05 _wire_keys idiom; S01 section 1 'JSON-compatible dicts'.",
+      "requiredFix": "Clarify the contract text in the next revision. No source change is needed for narrow adoption."
+    },
+    {
+      "id": "X-F07",
+      "severity": "info",
+      "summary": "Protocol literals AGREED. Tag and family hex decode to MRG16-PVC-STMT-2 and MRG16-PVC-FAM2-G16-BLS-ARK04-HL2. 343 and 262144 match claim.rs and the host. They are constants, not copied host APIs.",
+      "evidence": "S04 _STMT_TAG_HEX, _FAMILY_HEX, _HEADER_LEN, _MAX_STATEMENT_BYTES; S05 _STMT_TAG, _FAMILY_V2; S11 MAX_STATEMENT_BYTES; S15 statementTagHex and familyIdHex.",
+      "requiredFix": "None. Literals are preferable to private host attributes under CI01."
+    },
+    {
+      "id": "X-F08",
+      "severity": "medium",
+      "summary": "Untested paths confirmed and expanded (see R03, R04 and R05). The author's 'GREEN unobserved' is superseded by root GREEN 11/11, which covers selected subtests only.",
+      "evidence": "S08 allPassed with 11 tests; S03 TAMPER and test_09 scope.",
+      "requiredFix": "Record source-inspected-only coverage, then run a separately reviewed supplementary test revision before claiming refusal completeness."
+    },
+    {
+      "id": "X-ORDER",
+      "severity": "info",
+      "summary": "Stage order differs from Rust check_export (premises earlier, networkId 0 added, setupRecordSha256 omitted by design). These are narrowings or declared omissions, consistent with the frozen contract.",
+      "evidence": "S09 check_export order; S04 stage sequence; label setupRecordLink DECLARED_NOT_BYTE_CHECKED.",
+      "requiredFix": "None. The byte link check belongs to the open builder/I-O step."
+    },
+    {
+      "id": "X-ONCHAIN",
+      "severity": "info",
+      "summary": "Artifact shapes match the Aiken C2 types: EnvV2 9 positional fields, OutputReference constr 0 [txid, ix], C2Mint Issue constr 0 [vk, proof], token = blake2b_256(serialise_data(env)), well_formed conjuncts true by construction, vk_digest == blake2b_256(vk).",
+      "evidence": "S16 EnvV2 and C2Mint; S17 envelope_name, well_formed, issue; S05 build_env_data and build_c2_mint_data.",
+      "requiredFix": "None. No ledger, Value, min-ADA or acceptance claim. Historical K6 vectors are reproduction only."
+    }
+  ],
+  "recommendation": {
+    "verdict": "AGREE-NARROW: source conforms to frozen CI01-CI12; adoptable as source only as an explicitly unverified structural C2 Issue artifact serializer, with R01-R03 recorded as conditions; not equivalent to Rust parse_setup_record/check_export acceptance; closes no integration, native or authority boundary",
+    "sourceReady": true,
+    "scope": "Only c2_issue_artifacts.py (declared 15231 B, 23c3f99d...) with the unchanged host_codec.py (declared 23252 B, 3c18539e...) against frozen contract CI01-CI12 and the frozen test (declared 20643 B). Not the full public path, the builder, the byte parser or I/O, the legacy bridge, native admission, Groth16 or curve validity, or ledger acceptance.",
+    "firstBlockedBoundary": "Builder integration (C2-CONSUMER-INTEGRATION r3): no implementation exists, and the latest builder is only at actual RED (1 historical pass, 9 missing). Production byte parser, I/O, CLI, the sha256(setup bytes)==setupRecordSha256 link and the legacy uppercase Data/UPLC bridge remain open. Native and operator paths are closed.",
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "Already run by root (RED 20:56Z, GREEN 21:06Z, 11/11, five pinned read-only files, bounded envelope). This review grants no new self-test authority. GREEN covers selected subtests only, not every schema leaf or the BUILD path.",
+    "authorityProposalReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false
+  },
+  "coverage": {
+    "readPaths": [
+      "S01 C2-ISSUE-ARTIFACT-CONTRACT.md",
+      "S02 DESIGN-POSITIONS.json",
+      "S03 test_c2_issue_artifacts.py",
+      "S04 c2_issue_artifacts.py",
+      "S05 host_codec.py",
+      "S06 FINDINGS.json",
+      "S07 first-ordinary-red RESULT.json",
+      "S08 first-ordinary-green RESULT.json",
+      "S09 k2/src/export.rs",
+      "S10 k2/src/relation.rs",
+      "S11 k2/src/claim.rs",
+      "S12 k2/src/encoding.rs",
+      "S13 k2/src/lib.rs",
+      "S14 K6-PUBLIC-PROOF.json",
+      "S15 K2-PUBLIC-SETUP-RECORD.json",
+      "S16 lib/pvc2/types.ak",
+      "S17 lib/pvc2/claim.ak"
+    ],
+    "unreadPaths": [
+      "mori_r1cs abi2.rs (statement_bytes)",
+      "k2/src/hexutil.rs (parse_u128_decimal, decode_exact/bounded)",
+      "k2/src/input.rs (parse_json)",
+      "k2/src/error.rs",
+      "pvc2 groth16.ak, core.ak, bytes.ak and the c2 validator wrapper",
+      "build_k10_inputs.py and its helpers",
+      "EXPECTATIONS, manifest, context 09, receipt 11",
+      "STATEMENT-HOST-CONTRACT.md",
+      "C2-CONSUMER-INTEGRATION.json and the latest builder RED result",
+      "pallas plutus_data.rs"
+    ],
+    "limitations": "Inline text only, with tools off: no execution, import, hashing or file access. All sizes and SHA-256 values are the declared headers or root RESULT values, not recomputed. RED and GREEN are taken from root RESULT records as reported. The hexutil and abi2 semantics behind F05 and the x1/x2 parsing are unknown. Same-provider independence is context-only."
+  },
+  "positions": [
+    {
+      "clauseId": "CI01",
+      "clause": "Pure sibling module c2_issue_artifacts.py importing only hashlib and host_codec; sole public prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults; uses the seven host APIs as host_codec attributes of the unchanged 23252-byte host",
+      "position": "AGREE",
+      "rationale": "Source has exactly the two imports and one public function with keyword-only policy_id and no defaults. All seven APIs are called as host_codec attributes. hashlib is used only for the VK digest and the token, which are not host APIs. The call usage is source-verified, not test-enforced (R05)."
+    },
+    {
+      "clauseId": "CI02",
+      "clause": "Refuse C2I-ARG before touching any record unless exact dict, exact dict, exact int expiry 0..2^64-1 and exact 28-byte bytes policy_id",
+      "position": "AGREE",
+      "rationale": "The type-is checks run before any subscript, bool is excluded and the ranges are exact. test_07 and test_10 (including _Hooked) cover this."
+    },
+    {
+      "clauseId": "CI03",
+      "clause": "Expiry only from the argument; an export carrying envV2.expiry is refused; labelled CALLER_SUPPLIED_NOT_PROOF_BOUND",
+      "position": "AGREE",
+      "rationale": "expiry flows only into build_env_data. Every export object level is closed, so an expiry key anywhere in it is refused with C2I-EXPORT, and the label is present. EnvV2Export omits expiry."
+    },
+    {
+      "clauseId": "CI04",
+      "clause": "C2I-SETUP: closed SetupRecord schema, export.rs profile constants, consumed relation keys, ABI v2 tag/family/header literals, 976-hex VK and BLAKE2b-256(VK) == vkDigestBlake2b256",
+      "position": "AGREE",
+      "rationale": "Implemented exactly, and the literals match export.rs. AGREE applies only to the narrow serializer scope: the open relation, any-str driver and unbounded provingKeyBytes are supersets of Rust (F01, F02, F04, R01), and the rationale 'Mirrors parse_setup_record' overstates parity (R02)."
+    },
+    {
+      "clauseId": "CI05",
+      "clause": "C2I-EXPORT: closed ProofExport schema at every level with exact types/widths, fixed format and exact six PREMISES",
+      "position": "AGREE",
+      "rationale": "Field names match the Rust structs at all seven levels, with exact int ranges, hex widths, hex-or-null, str leaves, fixed format and an exact premises list. Many leaf refusals are source-inspected only (R03)."
+    },
+    {
+      "clauseId": "CI06",
+      "clause": "C2I-RELATION: export identity fields equal setup relation fields and the recomputed VK digest",
+      "position": "AGREE",
+      "rationale": "A loop over the 8 identity keys plus the VK digest comparison reproduces the check_export identity checks. The setupRecordSha256 byte check is deliberately absent and labelled."
+    },
+    {
+      "clauseId": "CI07",
+      "clause": "C2I-STATEMENT: bounded lowercase hex, host parse_statement_header admission, header predicate/shape/vk/bodyLen equal relation and recomputed VK digest",
+      "position": "AGREE",
+      "rationale": "Length is bounded before the scan, and host admission plus the four header equalities follow. The compiler re-encode is not mirrored (F05), a non-claim."
+    },
+    {
+      "clauseId": "CI08",
+      "clause": "C2I-CONTEXT: export context equals the ten header values exactly, and networkId must be 0",
+      "position": "AGREE",
+      "rationale": "Dict equality is checked against the 10 header keys after the bool exclusion, then networkId 0. This is narrower than Rust and does not distinguish Preview from Preprod."
+    },
+    {
+      "clauseId": "CI09",
+      "clause": "C2I-DIGEST via statement_digest_hex and statement_public_inputs exact strings; then C2I-PROOF 384 lowercase hex; then C2I-CARDANO equals cardano_export derivation",
+      "position": "AGREE",
+      "rationale": "The order and the derivation match cardano_export field for field. The rationale's 'covers the remaining non-pairing check_export steps' is inaccurate: decode_proof, the u128 parse and the byte link are not mirrored (R02)."
+    },
+    {
+      "clauseId": "CI10",
+      "clause": "Return closed 12-key result: envData via build_env_data from header plus caller expiry, token = BLAKE2b-256(encode_data(env)), issueData via build_c2_mint_data, mintValueData via build_value_data(None, [(policy, token, 1)])",
+      "position": "AGREE",
+      "rationale": "There are exactly 12 keys and the host objects are fresh. The 212-222/710/67-byte bounds are consistent with the host rules, and the shapes match the types.ak and claim.ak EnvV2 and C2Mint definitions. No ledger Value claim."
+    },
+    {
+      "clauseId": "CI11",
+      "clause": "Exact ValueError with stage-code prefix for the first failing stage in fixed order, host errors rewrapped, no partial result, no input mutation, purity",
+      "position": "AGREE",
+      "rationale": "The module raises only ValueError with a stage prefix, and the fixed order is tested at 8 transitions. Nothing writes to the inputs and there are no effects. BUILD and the DIGEST rewraps are unreachable for admitted inputs (R04). No-mutation on refusal paths is source-inspected only."
+    },
+    {
+      "clauseId": "CI12",
+      "clause": "No claim of pairing, curve validity, setup byte identity, ledger/provider authenticity, Preview/Preprod acceptance, legacy/UPLC compatibility or certification; K6 reproduction is historical only; all flags false",
+      "position": "AGREE",
+      "rationale": "The labels and docstring carry these non-claims. A later revision should add explicit non-claims for Rust parser/check_export equivalence, relation profile, statement re-encode and proof-point validity (R01)."
+    }
+  ]
+}
