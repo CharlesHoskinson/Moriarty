@@ -1,0 +1,113 @@
+{
+  "format": "cardano-k2-k8-native-consumer-execution-proposal/2",
+  "proposalOnly": true,
+  "executionAuthorized": false,
+  "authorIsReviewer": false,
+  "authorApproval": false,
+  "status": "SOURCE_ONLY_UNEXECUTED_NATIVE_AUTHORITY_ZERO_R2_REPAIR",
+  "date": "2026-10-16",
+  "revision": "R2 minimal source repair of the R1 candidate after the fresh 5c72e3 non-author source review (REPORT.md/FINDINGS.json F1-F6). No production Aiken function, fixture, proof, VK or test expectation changes. The original R1 candidate and the failed fresh review are preserved as received and are not rewritten by this revision.",
+  "purpose": "Smallest concrete offline native-consumer run: exercise the unchanged pvc2/groth16.verify_digest through actual Aiken BLS12-381 builtins (verify_digest in crates via aiken check) on the already-published K6 native proof, K7 public VK and actually-adopted K8 fixture, with 4 real pairing expectations (1 positive TRUE, 3 explicit-FALSE negatives) and 6 other fixed checks (5 auxiliary plus 1 malformed-length fail): 10 tests total. Native execution is unrun; actual cost is proposed/unknown, never presented as measured.",
+  "roots": {
+    "base": "/home/charl/moriarty-eutxo-validation-2026-10-12",
+    "freshLocalRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-local-20261016",
+    "freshLocalRootNote": "Entirely public data. There is NO /w subtree at all. The operator refuses to start if this root already exists, never overwrites it and never writes into a pre-existing root.",
+    "materializedOperatorDir": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-operator-materialized-20261016",
+    "rootRecordsDir": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-root-records-20261016",
+    "runtimeReceiptsAndLogs": "Public only, under <freshLocalRoot>/receipts and <freshLocalRoot>/logs, created only by a run that itself created the fresh local root. Host source inputs and the data-only binary are pin-checked before and after; only the explicit fresh local root is written by the operator."
+  },
+  "rootSequenceBeforeAnyRun": [
+    "1. Root materialises this R2 candidate into the materializedOperatorDir by AST/JSON inspection only (Python ast parse of runner/operator.py; strict JSON parse of AUTH-CANDIDATE.json, EXECUTION-PROPOSAL.json, DESIGN-POSITIONS.json). No execution during materialisation.",
+    "2. A fresh non-author performs a FULL fresh source/effect/resource audit of the materialised R2 bytes (not of this proposal text) and records it in rootRecordsDir. This R2 author is not that auditor and supplies no independent approval.",
+    "3. For review custody, root fills exactly the one operatorSha256 placeholder in AUTH-CANDIDATE.json by LITERAL string replacement of OPERATOR_SHA256_TO_BE_FILLED_BY_ROOT_AFTER_MATERIALIZATION with the sha256 of the materialised runner/operator.py, preserving all other bytes, formatting and indent; status remains CANDIDATE_NOT_AUTHORIZED. No re-serialisation and no hidden change is permitted at this step.",
+    "4. Only after a fresh AGREE on the new runtime clauses (revised NC-C8/NC-C9 and NC-C13) does root materialise a real AUTH.json from that candidate by exactly two typed fills and no other change: operatorSha256 placeholder -> actual materialised hash, and status CANDIDATE_NOT_AUTHORIZED -> AUTHORIZED_EXACT_ONE_RUN. The operator rejects that AUTH unless status is exactly AUTHORIZED_EXACT_ONE_RUN and the hash matches the materialised operator. No runtime AUTH currently exists; none is created by this source.",
+    "5. Only after that exact AUTH does root run the single launch command below, once, with zero automatic retries. Every failure is preserved with its budget and the original bytes, followed by a mandatory fresh post-run actual audit."
+  ],
+  "authDeltaRefutation": {
+    "claim": "The fresh review's X6 reported a root status flip in the R1 AUTH fill.",
+    "ordinaryDelta": "AUTH-DELTA-REPRODUCTION.json records authorStatus=CANDIDATE_NOT_AUTHORIZED and candidateStatus=CANDIDATE_NOT_AUTHORIZED, semanticChangedFields=[operatorSha256] only, authorBytes=5063, candidateBytes=5585, totalGrowthBytes=522, hashPlaceholderLength=58, filledHashLength=64 and whitespaceReserializationGrowthBytes=516, with nativeAUTHMaterialized=false. The +522 bytes are therefore +6 from the longer hash plus +516 of whitespace re-serialisation, not a status change.",
+    "disposition": "The false flip is refuted with that exact ordinary delta and is not treated as a separate FINDINGS entry, not blindly flipped now, and as no new native authority. It is ordinary public source custody, not a secret or private action. For R2 the literal-replacement rule in step 3 removes the whitespace ambiguity."
+  },
+  "launchCommand": "/usr/bin/timeout --signal=TERM --kill-after=10s 1400s /usr/bin/prlimit --core=0 -- /usr/bin/python3 -I /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-operator-materialized-20261016/runner/operator.py /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-root-records-20261016/AUTH.json < /dev/null",
+  "launchNote": "Whole-operator hard finite wrapper cap: outer timeout 1400s wall with 10s kill-after around prlimit --core=0 and python3 -I running the materialised operator. Operator semantics if the outer timeout ends the operator: the operator process group is signalled by the launcher; inside, every Aiken launch already runs under its own 600s+10s timeout inside bwrap with --die-with-parent and a PID namespace (--unshare-all --new-session), so sandbox descendants are tied to the bwrap parent's death rather than to any single kill claim. No hard real-time kill claim is made for uninterruptible OS states. The fresh source auditor assesses this concrete chain; this proposal does not add another framework.",
+  "budgetAccounting": {
+    "oldNominalAggregateSeconds": 1220,
+    "oldNominalMeaning": "2 * (600s inner wall + 10s kill-after) = 1220s. That old figure covered only the two inner Aiken timeout caps and omitted the operator's own parent waits and cleanup, which is the F3 budget defect.",
+    "perAikenStep": {"innerWallSeconds": 600, "innerKillAfterSeconds": 10, "parentWaitSeconds": 620, "cleanupWaitSeconds": 20},
+    "plannedAggregateSeconds": 1280,
+    "plannedAggregateMeaning": "2 * (620s parent wait + 20s bounded cleanup) = 1280s execution planning charge for the two sequential steps.",
+    "prepFinalReserveSeconds": 120,
+    "wholeOperatorWallSeconds": 1400,
+    "wholeOperatorMeaning": "1280s planned step charge plus a declared 120s preparation/final reserve = 1400s. Bounded host-side staging is finite by construction (the pinned 38,299,808-byte binary copy plus the finite pinned project/stdlib copies and fixed-shape JSON records) and ordinary staging/final stages sit under this whole-operator deadline; no separate unbounded stage exists in the operator.",
+    "guaranteeCaveat": "These are finite proposed caps, not measured cost and not a guarantee that preparation or final work completes within the reserve on a loaded or blocked host. A breach is a terminal reported failure, never a retry or ceiling reset.",
+    "counterSemantics": "This is the first-ever K8 native-consumer run under new revised authority. No old R1/OPX attempt, retry or call counter is reset, reused or carried over; AUTH fixes attempts=1, retries=0, maxAikenCalls=2 for this run alone."
+  },
+  "projectScope": {
+    "rationale": "The design inspects the actual consumer import closure instead of copying the whole old large package. groth16.ak imports only aiken/builtin and pvc2/bytes; bytes.ak imports aiken/builtin, aiken/collection/list, aiken/primitive/bytearray, aiken/primitive/int and pvc2/types; types.ak imports cardano/address and cardano/transaction; the K8 test imports aiken/builtin, pvc2/bytes, pvc2/groth16 and pvc2/k8_fixture. The smallest unchanged production-module harness is therefore exactly 3 production modules (bytes, types, groth16) plus the generated k8_fixture and the k8_genuine_proof_test: 5 .ak files, with aiken.toml and the published aiken.lock, and no validators or other old test modules. This closure is unchanged from R1.",
+    "akFiles": ["lib/pvc2/groth16.ak", "lib/pvc2/bytes.ak", "lib/pvc2/types.ak", "lib/pvc2/k8_fixture.ak", "lib/pvc2/k8_genuine_proof_test.ak"],
+    "explicitlyExcluded": ["validators/*", "all other old lib/pvc2 modules and test modules", "the old 34-file operator and its steps", "blueprint, native build and prover commands"],
+    "cannotQualify": "This narrower local-function consumer scope cannot qualify the whole old package and cannot qualify any C2 wrapper (claim.issue). Those remain separate later stages.",
+    "tomlLock": "Original aiken.toml (name mrg16/pvc2-settlement, compiler v1.1.24, Plutus v3, stdlib v2.2.0) and published aiken.lock are copied byte-verbatim and hash-checked after copying and again in the post-run staged check. No production module is renamed and no alias is introduced. A dated PROPOSED qualification appears in README.md only.",
+    "stdlib": "Dependency is the 38 files of aiken-lang/stdlib v2.2.0 source (SOURCE-PIN commit 779e9025356a85484475e06d5a14acb032bcdcc9, SOURCE-MANIFEST sha256 e44ed447...), copied per-file by hash to <work>/build/packages/aiken-lang-stdlib/ plus the exact 77-byte packages.toml (sha256 42ca23893e5c0f43598c15a1c699fa2bcbb451999c054351f67dae174d49ffb6) at <work>/build/packages/packages.toml: the exact old OPX1p placement. Stdlib source roots are read on the host for copying only and are never mounted into the sandbox."
+  },
+  "binaryStaging": {
+    "source": "/home/charl/moriarty-eutxo-validation-2026-10-12/aiken-fixed-compiler-release-discovery-20261015/v1.1.24-data-only/compiler-data/aiken-x86_64-unknown-linux-musl/aiken",
+    "bytes": 38299808,
+    "sha256": "4257cc8be37cbde5bf7b5dd111e43a1277f45352fb2433ad7a7e647209aa7677",
+    "sourceMode": "644 data only; never executed in place",
+    "staging": "Verified against DATA-ONLY-MANIFEST.json (1554399B, 8adde843...) by size and hash before a copy-only staging into <freshLocalRoot>/tool/aiken, then chmod 555 on the copy only; staged hash and mode 555 are re-checked after the run.",
+    "releaseIdentity": "The operator parses the exact existing DATA-ONLY-MANIFEST.json binary entry (path compiler-data/aiken-x86_64-unknown-linux-musl/aiken, 38299808 bytes, sha256 4257cc8b..., mode '0644 data only') together with releaseTarget bacbeb35fbc9f1db93cd2e1e93fb1d93053acb4a and records declared version v1.1.24, declared commit/target, binary sha256 and bytes in RESULT.json as releaseIdentityDeclared. That label is manifest-declared only: same-origin digests are not an independent signature, the binary was not shown rebuilt from the indexed source, and no --version or other extra call is made to derive identity from the binary."
+  },
+  "aikenCalls": [
+    {"step": 1, "argvInsideSandbox": ["/tool/aiken", "check", "--skip-tests", "--trace-filter", "all", "--trace-level", "silent"], "cwd": "/work"},
+    {"step": 2, "argvInsideSandbox": ["/tool/aiken", "check", "--trace-filter", "all", "--trace-level", "silent", "--match-tests", "pvc2/k8_genuine_proof_test"], "cwd": "/work", "note": "--match-tests selects the module; qualification does not rest on the selector alone because step-2 stdout must parse as the exact FinishedTests JSON for that one module with exactly the pinned 10 rows."}
+  ],
+  "aikenCallLimits": "Exactly 2 Aiken calls maximum. No --version, --help, misc probe, retry, 147/472 parent suites, cost benches, blueprint, native build or prover call is authorised.",
+  "sandbox": {
+    "tool": "/usr/bin/bwrap (observed on PATH only; capability UNPROBED)",
+    "argvPrefix": ["/usr/bin/bwrap", "--unshare-all", "--die-with-parent", "--new-session", "--clearenv", "--ro-bind", "<freshLocalRoot>/tool/aiken", "/tool/aiken", "--bind", "<freshLocalRoot>/work", "/work", "--tmpfs", "/tmp", "--dev", "/dev", "--proc", "/proc", "--chdir", "/work"],
+    "cleanupSemantics": "On a parent-wait timeout the operator sends SIGTERM then, after 10s, SIGKILL to the timeout leader's process group via os.killpg, with total cleanup bounded at 20s per step. That group contains the timeout/prlimit chain; bwrap itself runs in a new session, so killpg alone does not reach every sandbox task. bwrap descendants are instead tied by --die-with-parent to the bwrap parent and by the PID namespace created under --unshare-all: when bwrap dies, its namespace processes die with it. No claim is made that any signal can kill an uninterruptible (D-state) process in real time.",
+    "note": "Only the staged static musl Aiken binary read-only at /tool/aiken and the fresh public project read-write at /work are bound, plus tmpfs /tmp and minimal /dev and /proc. No /usr, home, BASE, full-host or credential folder is bound, and no original stdlib/production source root is mounted. The static musl binary should not need host libraries. No extra sandbox probe command is needed: the same actual compiler launch proves namespace availability by success, and a capability failure is captured honestly as terminal. There is no fallback to unshare-only, no overwrite and no quiet retry. If bwrap requires a dependency or flags not named here, that is an unknown to be named substantively in the fresh audit, not a runtime claim by this source."
+  },
+  "hostExecutablesObservedOnPathOnly": ["/usr/bin/bwrap", "/usr/bin/unshare", "/usr/bin/prlimit", "/usr/bin/timeout"],
+  "resourceCapsProposal": {
+    "status": "PROPOSED finite caps; actual cost is UNKNOWN and unmeasured. Author resource position is FOR these finite bounds only. A cap breach is a reported failure, never a retry or ceiling reset.",
+    "perAikenStep": {"wallSeconds": 600, "killAfterSeconds": 10, "parentWaitSeconds": 620, "cleanupWaitSeconds": 20, "cpuSeconds": "300:310 via prlimit --cpu=300:310", "addressSpaceBytes": 8589934592, "coreSize": 0, "stdoutBytesMax": 16777216, "stderrBytesMax": 16777216, "fileSizeCap": "prlimit --fsize=16777216 applied to plain-file logs"},
+    "calls": 2,
+    "retries": 0,
+    "attempts": 1,
+    "plannedAggregateSeconds": 1280,
+    "prepFinalReserveSeconds": 120,
+    "wholeOperatorWallSeconds": 1400,
+    "wholeOperatorKillAfterSeconds": 10,
+    "concurrency": "one process at a time, steps strictly sequential; stop after the first nonzero or failed step (no second Aiken call after a first-step failure) and still write a terminal report",
+    "logs": "Plain regular files only, each post-checked at 16 MiB (no pipes, no buffered reader joins, no daemon reader), stdin DEVNULL, minimal environment, fixed cwd /work inside the sandbox.",
+    "counting": "aikenLaunchAttempts increments before every Popen spawn attempt, including spawn/timeout failures; aikenCallsReturned counts only steps that returned; nativeExecutablesStarted is recorded as not_measured because a bwrap failure before exec cannot prove the Aiken executable ever started.",
+    "killCaveat": "No hard real-time kill claim is made for uninterruptible OS states; timeout/prlimit/bwrap scope is the exact full argv in runner/operator.py."
+  },
+  "expectedTests": [
+    {"name": "k8_positive_verify_digest", "fail": false, "expectation": "verify_digest(vk, proof, statement_digest) == True via actual Aiken BLS12-381 builtins"},
+    {"name": "k8_n1_body_rederived_digest_rejected", "fail": false, "expectation": "!verify_digest(...) == True for the N1 re-derived body digest; lengths, IC prefix and points unchanged, so the pairing equation is the first expected refusal"},
+    {"name": "k8_n2_context_rederived_digest_rejected", "fail": false, "expectation": "!verify_digest(...) == True for the N2 re-derived context digest (seq 1 -> 2); same pairing path as N1"},
+    {"name": "k8_n3_proof_ac_swapped_rejected", "fail": false, "expectation": "!verify_digest(...) == True for the A/C-swapped proof; both swapped G1 points uncompress, so the pairing equation must refuse"},
+    {"name": "k8_scalars_are_be128_halves_of_statement_digest", "fail": false},
+    {"name": "k8_n1_scalars_are_be128_halves_of_n1_digest", "fail": false},
+    {"name": "k8_n2_scalars_are_be128_halves_of_n2_digest", "fail": false},
+    {"name": "k8_byte_profile_matches_groth16_layout", "fail": false},
+    {"name": "k8_negative_cases_are_distinct_from_positive", "fail": false},
+    {"name": "k8_short_vk_is_refused", "fail": true, "expectation": "the single malformed-length fail test; verify_digest's own length expect is the check under test"}
+  ],
+  "outputValidation": "Schema-exact, fail closed. Step 2 must exit 0 and its whole stdout must parse as one complete JSON document equal to the aiken-1.1.24 telemetry/json.rs FinishedTests shape: top keys exactly {seed, summary, modules} with seed a u32 integer; summary and the single module summary each exactly total=10, passed=10, failed=0 with kind exactly unit=10, property=0, all typed as integers not booleans; exactly one module named pvc2/k8_genuine_proof_test; exactly 10 test rows in the pinned source-definition order (order is source-guaranteed: definitions are collected in AST order, the indexed parallel runner preserves order, and group_by_module preserves Vec order within the single module), with no duplicates, missing or extra titles; every status exactly 'pass'; on_failure exactly 'succeed_immediately' only for k8_short_vk_is_refused (the Aiken fail annotation) and 'fail_immediately' for the other nine; execution_units exactly {mem, cpu} as non-negative integers, recorded per test as run evaluation units, not as an on-chain budget and with no invented per-test cap. The counterexample {\"note\": \"<all 10 names>\"} is rejected. No substring search over arbitrary strings is used. Whole-file parsing is intentionally strict: FinishedTests is the only JSON event, other events delegate to the Terminal listener and could pollute stdout, and such pollution fails closed rather than being stripped or hidden. A missing, empty, truncated or non-JSON step-2 output after a compile failure is a failure, never a pass, and step 2 is not validated at all when its exit code is nonzero.",
+  "failureHandling": "Exactly one attempt, zero automatic retries. Stop after the first nonzero or failed step (step 2 is not started if step 1 fails), still write a terminal receipts/RESULT.json when this run created the fresh local root, preserve every failure with its budget and the original bytes, and require a fresh post-run audit before any part is called an actual result. Early AUTH/pin/freshness failures produce a valid stdout JSON terminal record that root captures; no receipt is written into a root this run did not create (including a pre-existing root), and that absence is stated honestly in the record. A RESULT.json write failure itself returns nonzero with an explicit resultWriteError and never reports success. Host 14-pin and staged postchecks run in the terminal path whenever this run created the local root; a postcheck failure preserves the recorded test evidence but flips the status to FAILED so the run cannot qualify as good. This source claims no actual PASS.",
+  "authority": {
+    "thisProposalGrants": "nothing",
+    "nativeAuthority": "zero until a fresh non-author full fresh audit, a fresh AGREE on the new runtime clauses and the exact AUTH above exist",
+    "authorRuntimePosition": "The author is FOR the new revised runtime clauses in DESIGN-POSITIONS.json (revised NC-C8, NC-C9 and new NC-C13/NC-C14) with the concrete finite caps and schema-exact validation above. That author FOR is a source position only: it is not an AGREE by a non-author, not an approval of materialised bytes not yet audited, and not an AUTH.",
+    "c11": "The prior K8-C11 source position is ABSTAIN and is preserved as history, not waived and not counted as a vote by this candidate. It does not supply the author FOR required for the new clauses; NC-C13 supplies that FOR separately.",
+    "spentScopes": "K6 native proof and K7 public-VK scopes are spent and grant no authority here. K8 ordinary fixture actual adoption (ACTUAL-ADOPTION.json) closes only the fixture prerequisite and explicitly grants no native execution authority."
+  },
+  "scopeRetainedOpen": ["all 20 UTxO families", "ACTUS 277 fixtures / 18 types / 32 taxonomy / DS01-07", "DeFi 72 rows / DA01-24", "general financial duties and obligations", "recursion, private handoff, bounded multi-parent PCD", "universal certificates", "compiled applied B9 C2 wrapper with genuine hash, FX1, inclusion and qualified transaction ExUnits", "real Preprod"],
+  "limitationsRetained": ["K6 single-party setup remains forgeable by its controller", "VK-to-matrix link is unproved", "caller/ledger context in the public fixtures is fabricated", "transitive CPU from K6 is unmeasured", "native cost of this run is unknown until an actual authorised run measures it"],
+  "nextAfterDirectPairing": "C2 typed builder and expiry handling, compiled applied B9 genuine hash, FX1 and inclusion with qualified transaction ExUnits, then real Preprod, each under its own scope.",
+  "noCompatibilityPercentage": true
+}

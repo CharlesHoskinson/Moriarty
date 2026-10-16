@@ -1,0 +1,23 @@
+## Verdict
+
+**READY — PUBLICATION ONLY.** The staged Sol HIGH capsule accurately packages the adopted finite K10 compiled-wrapper result as public evidence. This recommends publication of the public capsule only; it grants no execution, retry, signing, ledger, native-roundtrip or Preprod authority and does not itself publish anything.
+
+## Findings
+
+No packaging defect was found. The falsifiable predicate in [PUBLICATION.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k10-compiled-wrapper-publication-independent-muse-review-20261016/public-inputs/inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k10-compiled-wrapper-publication-stage-sol-20261016/PUBLICATION.json:9) holds on the inspected evidence: 337 lossless public payloads / 5,125,461 B (327 frozen plus 10 companions: the input freeze, eight actual-review outputs and the root adoption, per COPY-MANIFEST.json lines 2961-3040), plus four packaging documents for 341 staged files / 5,667,881 B total. The sourceMap at COPY-MANIFEST.json line 3042 resolves original absolute public paths to `payload/inputs/` plus the path without its leading slash, and README.md lines 39-58 links are portable inside the capsule. No tool binary, private material or provider raw entry appears in INPUT-INDEX.json.
+
+## Adopted finite result, correctly bounded
+
+[Root adoption](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k10-compiled-wrapper-publication-independent-muse-review-20261016/public-inputs/inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k10-compiled-wrapper-publication-stage-sol-20261016/root/K10-ACTUAL-ADOPTION.json:5) (6421ba84...) closes only `compiledC2WrapperPrerequisiteClosed` for seven frozen cases: genuine T1 unit (VM cpu 2222340191, mem 205312) plus six semantic EvaluationFailure negatives, with source/AUTH host 11 pins and staged 9 inputs unchanged, 7 launched / 7 returned / 7 validated, 1 attempt, 0 retries. Guard names are source-expected from claim.ak conjunct order, not runtime-instrumented, and typed-decode failure remains possible. VM costs are local `ExBudget::default()` accounting, not ledger ExUnits; wall 0.848344222 and waited CPU 0.570947 are not transitive. The script is the already-compiled 2770 CBOR / 2767 flat wrapper, policy 6a4b67e7...59c1, with no rebuild, new proof, setup, network or ledger step. Claimant 555..., outref 2222..., zero fee, settle-A2 and unbound 2030 expiry are caller premises, not real data; Class-0 forgeability and VK-to-matrix correspondence remain unproved test-basis limits.
+
+## History and flags
+
+R1 f7caa READY was never executed and was contradicted by three reproduced bugs; R2 repaired the mapping, staged-custody and returned-accounting defects and received fresh source review a67387df plus five ordinary helper checks only. Source positions are 13 author FOR plus fresh source AGREE resolved before AUTH; the actual review positions are empty and no 13 actual votes are invented. Its false publicExport/publicInputs flags meant no earlier publication approval, which this review now supplies for publication only. Generic native/authority flags are narrowed: `nativeRoundtripPrerequisiteClosed` false and `authorityProposalReady` false here, with no new authority. Immutable pending and raw failures remain unchanged; a future root companion handles publication. Git 752c7 is a source anchor only. Internal AUTH is historical SPENT; public Moriarty compile/prove/deploy remains permissionless.
+
+## Scope, limitations and first blocked boundary
+
+I inspected the manifest and key copies but did not semantically read all 5 MB, and with execution not authorized I cross-checked pins rather than recomputing hashes. All 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates and real Preprod remain required open. Funding is unknown; the first blocked boundary is a fresh real-context proof, genuine secp256k1 intent, compiled VI/four shards, atomic C2 spend/burn and actual signed ledger acceptance.
+
+## Independence
+
+Fresh independent non-author Muse Wonder 1.0 HIGH publication reviewer in a new context, under the user Sol author / fresh Muse routing and the indexed Gemini/Muse fallback confirmation (nativeExecutionAuthorityCreated=false). I did not author the candidate, operator, source reviews or execution results, and I executed nothing. This is cross-provider packaging independence from the Sol-authored stage; I invent no provider identity, authority or approval beyond this publication-only recommendation.

@@ -1,0 +1,44 @@
+[
+  {
+    "evidence": "Full read of candidate runner/operator.py (436 lines), AUTH-CANDIDATE.json, EXECUTION-PROPOSAL.json, README.md, DESIGN-POSITIONS.json, ROOT-SOURCE-MANIFEST.json and ROOT-PUBLIC-PIN-CROSSCHECK.json. operator.py:88-175 implements regular-non-symlink bounded reads, exact pin checks, typed AUTH and operator self-hash; operator.py:199-227 checks generated-manifest policy/byte counts/case order and strict one-line contexts; operator.py:274-387 implements the seven sandboxed calls and strict result validation; operator.py:389-433 preserves FAILED status, partial calls/counters and custody postchecks.",
+    "id": "F1-no-material-source-defect-found",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "No material defect was found in the five concrete candidate files that would block source readiness. The operator evaluates only the already-compiled script.hex plus one pinned context term per call, with no compile/build/help/probe/version, shell, SDK, stdlib staging, wallet, key, signing, ledger, RNG, proof-generation or network path in the source."
+  },
+  {
+    "evidence": "operator.py:45-55 and 384-387; claim.ak:60-70 orders qty, holder, output quantity/token-count, reference-script, name, well-formedness and VK-digest before groth16.verify_digest at line 69; generated manifest cases at manifest.json:32-102 record the coherent N1/N2 rebuilds, A/C proof swap, quantity 2, token-name first-bit flip 9f... to 9e..., and VK-digest first-bit flip d19d... to d09d....",
+    "id": "F2-guard-labels-are-source-expectations-only",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "The T2-T7 guard labels (pairing for N1 body digest, N2 context digest and N3 A/C swap; qty == 1; name == envelope_name(raw); env.vk_digest == blake2b_256(vk)) are correctly carried only as source-expected guards from claim.issue conjunct order, the coherent positive control and each minimal changed case. The runtime does not instrument named guards and a typed-decode failure could also surface as EvaluationFailure, so a future result may support only the finite seven-case predicate, never per-guard runtime proof."
+  },
+  {
+    "evidence": "AUTH-CANDIDATE.json:66,130; operator.py:133-136; EXECUTION-PROPOSAL.json:9,14-15; K10-GENERATED-INPUTS-ACTUAL-ADOPTION.json:4-22,182-186; fresh actual review REPORT.md:21-23.",
+    "id": "F3-input-audit-prerequisite-now-closed-but-auth-still-absent",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "The formerly pending fresh actual-input audit is now closed as ordinary data only by the fresh non-author actual review 00e1287c1448... and root K10 adoption 6a86c215244a... over the nine files, so the candidate's PENDING wording is superseded source-time prose. That closure does not itself create authority: a future exact AUTH must newly have status AUTHORIZED_EXACT_ONE_RUN and inputAuditAttestation ROOT_ATTESTS_FRESH_ACTUAL_INPUT_AUDIT_ACCEPTED_BEFORE_THIS_AUTH, recorded by root only after the full source audit and two substantive positions, and no such AUTH exists in the mirror."
+  },
+  {
+    "evidence": "operator.py:37-44 defines wholeOperatorWallSeconds=600 and wholeOperatorKillAfterSeconds=10 only inside CAPS; the only uses of CAPS whole values are the exact AUTH caps equality check at operator.py:145-147. Per-call enforcement is at operator.py:274-332. On an outer kill, main cannot run its RESULT-writing block at operator.py:416-432, while plain per-case logs already written under the fresh logs directory remain on disk.",
+    "id": "F4-whole-600-requires-root-outer-enforcement",
+    "requiredFix": "Root's future exact AUTH/invocation must impose timeout 600s with 10s kill-after on the operator process, capture its stdout terminal JSON, retain plain logs, and classify any outer-bound hit as FAILED with zero retries and no rerun. No operator.py hunk is required for the stated design because the candidate consistently describes 600s as the outer bound rather than an internal per-call sum.",
+    "severity": "observation",
+    "summary": "Non-blocking observation: the 600s whole-operator bound is an AUTH-validated cap, not a deadline implemented inside operator.py. Read as the intended outer hard bound it is consistent (7x60=420 planned aggregate plus 180 staging/final reserve equals 600, plus 10 kill-after), and the parent-wait/cleanup path (80s plus two 10s waits) must not be summed into a false 700s worst case. If the outer bound hits, partial plain logs and counters must be preserved, status remains FAILED, and no quiet rerun is permitted."
+  },
+  {
+    "evidence": "operator.py:339-343 returns the failing step inside run_call, but main appends step and validation together only at operator.py:407-410; on validation failure the exception path at operator.py:414-425 writes status/error and previously validated calls, while the failing case's stdout/stderr files remain in the fresh logs directory.",
+    "id": "F5-failing-step-metadata-lives-in-plain-logs",
+    "requiredFix": "",
+    "severity": "observation",
+    "summary": "Non-blocking observation: when a call returns but fails strict validation, RESULT.json records the case error, launch-attempt counter and previously validated calls, while that failing call's exit code/argv/log hashes are not appended as a completed call entry. Its plain stdout/stderr log files are preserved for the required fresh actual-result audit, and the run remains FAILED with no further calls or retry, so this does not create a false acceptance path."
+  },
+  {
+    "evidence": "T1 context line 1 retains B #2222... settle txid, B #5555... claimant, I 0 fee and I 1893456000000 expiry; manifest.json:116-120 states the same limitations; claim.ak:49-70 authenticates none of claimant, outref, expiry or unspentness; operator.py:19-20 and 345-349 state the local-cost limits.",
+    "id": "F6-fabricated-context-and-local-cost-limits-retained",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "The fabricated 2222../555.. outref/claimant, zero fee and unbound 2030 expiry are retained and correctly labelled LOCAL FABRICATED / UNBOUND; they support no ledger, fee, conservation, min-ADA, admission, wallet, signing or Preprod claim. Local VM cpu/mem are Aiken ExBudget::default() costs only, not qualified ledger ExUnits or tx-fit evidence, the actual compiled policy 6a4b... is not replaced by the old local a2 policy or any blind Env settle-A2 substitution, and Class-0 single-party forgeability plus the VK matrix remain unproved."
+  }
+]

@@ -1,0 +1,45 @@
+{
+  "format": "cardano-k2-k10-compiled-c2-execution-proposal/2",
+  "revision": "R2: ordinary data generation is specified as a bounded stdlib-only step needing no native AUTH; the native compiled-UPLC step remains under a separate future scoped AUTH with a concrete operator. R1 command shape and acceptance are preserved.",
+  "status": "SOURCE-ONLY PROPOSAL. This file grants no authority. A later fresh non-author full source/effect audit (which must AGREE), ordinary data generation from the reviewed adapter, a fresh actual-input review, and a separate new exact bounded native AUTH are all required before any native command below is run. The source author executed nothing; generated=false until root ordinary generation produces a public receipt.",
+  "generated": false,
+  "objective": "Execute the already compiled APPLIED B9 c2.c2.mint UPLC program (not a rebuilt predicate) with the genuine public Rust proof/VK payload, the independently recomputed actual C2 policy, and raw PlutusV3 ScriptContexts, including coherent tampered contexts.",
+  "prerequisites": [
+    "Fresh non-author full source/effect audit of the five K10 R2 source files as materialized, ending in AGREE; the author's own FOR positions in DESIGN-POSITIONS.json are not that audit and no review vote is fabricated here.",
+    "Ordinary DATA generation (below): stdlib-only, one attempt, zero retries, no native AUTH needed for this pure data step.",
+    "Fresh actual-input review of the generated manifest.json, script.hex and seven context terms against EXPECTATIONS.json, including input before/after pin equality and the claimed vs independently recomputed script-hash identity recorded in the manifest.",
+    "Separate new exact bounded native AUTH naming a concrete scoped operator, the Aiken binary, the seven invocations, one attempt each, zero retries, and the isolated tool/data mounts. Wallet, signing, ledger submission and Preprod are out of scope."
+  ],
+  "ordinaryDataGeneration": {
+    "command": "python3 tools/build_k10_inputs.py <b9-applied.json> <k8_fixture.ak> BASE/current-cardano-k2-k10-public-inputs-generated-20261016",
+    "authority": "No native AUTH is needed for this pure data step; it is still not authorized by this source proposal itself and runs only after the fresh audit above. No Aiken/native/curve/RNG/setup/proof/key/wallet/network/signing/ledger action is part of it.",
+    "stdlibOnly": true,
+    "attempts": 1,
+    "retries": 0,
+    "output": "Fresh exclusive output directory named current-cardano-k2-k10-public-inputs-generated-20261016; a non-empty existing directory is refused by the generator.",
+    "pinChecks": "SHA-256 of b9-applied.json and k8_fixture.ak are verified inside the generator before and after generation and must be byte-identical; the operator records SHA-256 of every source and generated file before and after.",
+    "budgets": {"wallClockSecondsMax": 30, "cpuSecondsMax": 10, "addressSpaceMiBMax": 256, "note": "Ordinary desktop-class envelope for a deterministic stdlib generator over two pinned public files; if the host cannot enforce one figure, the AUTH/audit record must state the enforced substitute before launch rather than silently widening it."},
+    "hashAssert": "Generation must fail closed unless the independently recomputed script hash (blake2b-224, 0x03||compiledCode bytes, strict single-CBOR guard) equals the pinned tool-declared hash; a mismatch is a failed generation to preserve, not to retry or edit around."
+  },
+  "commandTemplate": {
+    "literal": "aiken uplc eval --cbor script.hex '<singlecontextterm>'",
+    "argv": ["aiken", "uplc", "eval", "--cbor", "script.hex", "<singlecontextterm>"],
+    "binding": "script.hex is resolved inside the fresh generated directory; '<singlecontextterm>' is the entire content of one generated contexts/K10-T*.uplc.txt file passed as exactly one argv element. No --debug and no other flags; no --script or --datafile flags exist and none may be invented.",
+    "sourceBasis": "uplc eval.rs (Aiken 1.1.24): script is a positional path; --cbor reads hex text and Program::from_cbor; each positional arg is parsed with parser::term and applied; no --debug, so stdout is a single JSON {result,cpu,mem} on success and process exit 1 with stderr Error/Costs on failure.",
+    "invocations": "Exactly 7 later, in EXPECTATIONS.json id order, one attempt each, 0 retries, by the new scoped concrete operator named in the future native AUTH (no operator is named or created here). Preserve every stdout, stderr and exit code verbatim, including failures; never re-run a failed case under this proposal.",
+    "budgets": "Per-invocation wall-clock and output-size caps must be fixed numerically in the future AUTH before launch; this proposal deliberately sets no ledger ExUnits, maxTxSize or fee figures, which are unknown from the supplied inputs. Local VM cpu/mem are recorded as local VM costs only."
+  },
+  "successParser": {
+    "acceptT1OnlyIf": "exitCode==0 AND stdout parses as exactly one JSON object AND result is exactly the string \"(con unit ())\" AND cpu and mem are integers > 0",
+    "acceptT2ToT7OnlyIf": "exitCode==1 AND stdout is empty AND stderr follows the eval.rs Error/Costs error path",
+    "rejectOtherwise": "Any parse error, pin mismatch, unexpected stdout shape, non-integer or non-positive cpu/mem, or guard-path ambiguity is a failed run to be preserved and audited, not retried or relabeled. No string-searched PASS label substitutes for this typed parser."
+  },
+  "isolation": "Tool tree mounted read-only; the fresh generated public-data directory is the only writable mount; no network; no /w, signing key, PK/SRS/prover cache or provider-raw access; no wallet. Source and input files are hashed before and after and must be immutable.",
+  "acceptance": "T1 accepts only under successParser.acceptT1OnlyIf. T2-T7 accept only under successParser.acceptT2ToT7OnlyIf. No K8/K9, 147/472, passed-prefix, proof, setup or network run is repeated or inherited by this proposal.",
+  "explicitNonClaims": [
+    "No hash match is reported as observed: the recomputation identity is an expected assert from source until root ordinary generation produces a public receipt.",
+    "No actual ledger transaction, mint on chain, fee/conservation/admission or Preprod claim; the context is locally fabricated in K9 placeholder style (2222../555.., zero fee, unbound 2030 expiry) and is LOCAL FABRICATED only, never a live Preprod claim.",
+    "No live mint may ever use the fabricated claimant key/outref; a real Preprod attempt requires a newly reviewed context/proof/identity pipeline binding a new funded wallet and an actual settle outref under a reviewed prover by a private operator, not the root key.",
+    "Class-0 single-party setup forgeability and the VK-matrix link remain open; all 20 UTxO families, ACTUS, DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD and universal certificates remain open."
+  ]
+}
