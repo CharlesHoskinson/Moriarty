@@ -17,6 +17,12 @@ pub use reference_types::*;
 mod reference_tests;
 
 #[cfg(test)]
+mod reference_bounded_tests;
+
+#[cfg(test)]
+mod normal_oracle_inputs;
+
+#[cfg(test)]
 mod reference_oracles_tests;
 
 #[cfg(test)]

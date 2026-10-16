@@ -73,6 +73,30 @@ impl Machine {
         })
     }
 
+    /// Retains at most `max_events` successive [`Self::step`] records from the current state.
+    ///
+    /// Each event preserves its complete before/after snapshots, source-rule line and charge.
+    /// Free terminal publication counts as one event; collection stops immediately when its
+    /// outcome is published. A zero budget leaves the machine unchanged and returns no records.
+    /// Later calls resume this same machine, including any pending publication.
+    ///
+    /// This is a host observation grouping limit, not another fuel or resource policy. Pure
+    /// helpers, snapshot cloning and retained allocations remain unmetered as in [`Self::step`].
+    pub fn run_steps(&mut self, max_events: usize) -> Vec<StepRecord> {
+        let mut records = Vec::new();
+        for _ in 0..max_events {
+            let Some(record) = self.step() else {
+                break;
+            };
+            let terminal = record.after.outcome != Outcome::Pending;
+            records.push(record);
+            if terminal {
+                break;
+            }
+        }
+        records
+    }
+
     // One charged machine rule from the pinned main.k. Pure helpers below do
     // not generate steps or consume fuel in the A profile.
     fn transition(&mut self, control: Control) -> (usize, Control) {

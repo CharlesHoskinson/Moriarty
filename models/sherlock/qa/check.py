@@ -24,7 +24,7 @@ FROZEN = {
     'extra-normal-prefixes.json': 'acf460094b258910bad0499fb8feda0cd85b680023939800ad714d2cb71bee16',
 }
 SERIALIZER = {'path': 'models/sherlock/reference/check-reference.py',
-              'sha256': '83acde8054f9859a18bf350651e9de75d10d5d3e4aa575e3e9265e3ba61e9232'}
+              'sha256': 'a5ae942e9899e736581cb067843d25502df802672fb407cc88d581bd7dd9c354'}
 FAMILIES = {'normal': ('N01', 'N02', 'N03', 'N04', 'N05', 'N06'),
             'extra-normal': ('N07', 'N08')}
 STATE_FIELDS = ('charged_steps', 'remaining_fuel', 'depth', 'control_k',
@@ -329,7 +329,18 @@ def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None
                 scope='source-literals-only; Rust implementation not executed')
 
 
-def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'):
+def host_adapter():
+    """Load the known sibling source even when Python -I excludes script paths."""
+    path = Path(__file__).resolve().with_name('host_observations.py')
+    raw = path.read_bytes()
+    spec = importlib.util.spec_from_file_location('sherlock_host_observations', path)
+    require(spec is not None and spec.loader is not None, 'host observation adapter unavailable')
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(raw, str(path), 'exec', dont_inherit=True), module.__dict__)
+    return module
+
+
+def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None):
     repo = Path(repo)
     files = []
     totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
@@ -355,7 +366,10 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         frozen[member] = docs
     require((observed_programs is None) == (observed_prefixes is None),
             'observed-programs and observed-prefixes must be supplied together')
+    require(host_observations is None or observed_programs is None,
+            'host observations and literal document observations are separate comparison modes')
     difference = None
+    supplied_host = None
     observed_files = []
     if observed_programs is not None:
         observations = []
@@ -364,6 +378,20 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
             observed_files.append(ref)
             observations.append(value)
         difference = compare_documents(*frozen[family], *observations)
+    if host_observations is not None:
+        adapter = host_adapter()
+        host_ref, observed = document(host_observations, strict=True)
+        expected = adapter.expected_observations(list(frozen.values()))
+        difference = adapter.compare_observations(expected, observed, first_difference)
+        declaration = observed if type(observed) is dict else {}
+        supplied_host = dict(status='mismatch' if difference else 'match',
+                             scope='complete-supplied-host-diagnostic-artifact-comparison-only',
+                             file=host_ref, declared_producer=declaration.get('producer'),
+                             declared_profile=declaration.get('profile'),
+                             declared_source_sha256=declaration.get('source_sha256'),
+                             producer_authenticity='not-established', execution_receipt='not-supplied',
+                             constructor_startup='unsupported',
+                             expected_programs=len(expected['programs']), expected_prefix_runs=len(expected['runs']))
     return dict(status='mismatch' if difference else 'pass',
                 scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
                 profile=PROFILE, counts=totals, frozen_files=files,
@@ -375,21 +403,27 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                                   for layer in ('K', 'Quint', 'Lean', 'Clean', 'handwritten-circuit', 'Rust-host', 'native-ledger')],
                 gaps=['Complete literal agreement supplies no semantic execution, refinement, constraint, proof or target evidence.',
                       'The supplied observation documents use the existing corpus format, not a runtime state codec.',
-                      'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'])
+                      'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'],
+                **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}))
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--observed-programs', type=Path)
+    parser.add_argument('--host-observations', type=Path,
+                        help='compare a supplied complete normal host diagnostic artifact; does not execute it')
     parser.add_argument('--observed-prefixes', type=Path)
     parser.add_argument('--family', choices=FAMILIES, default='normal')
     args = parser.parse_args(argv)
+    if args.host_observations is not None and (args.observed_programs is not None or args.observed_prefixes is not None):
+        parser.error('host observations and literal document observations are separate comparison modes')
     if (args.observed_programs is None) != (args.observed_prefixes is None):
         parser.error('--observed-programs and --observed-prefixes must be supplied together')
     try:
         report = run(args.repo, observed_programs=args.observed_programs,
-                     observed_prefixes=args.observed_prefixes, family=args.family)
+                     observed_prefixes=args.observed_prefixes, family=args.family,
+                     host_observations=args.host_observations)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')

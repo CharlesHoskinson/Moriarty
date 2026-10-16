@@ -33,3 +33,13 @@ The [DoctorWatson workflow model](../../../models/doctorwatson/README.md) checks
 the abstract delivery transitions. The Python checker regressions separately
 exercise concrete SF-01–06 behavior. Workflow simulation neither replays the
 interpreter nor proves the shell, agents, Git or private tools implement the model.
+
+The explicit `--host` consumer exercises SF-01/02/03/06/09/11/12/15 through an
+actual Sherlock build and run. Its bounded-stepping feature supports the existing
+Sherlock finite-step and observation requirements; the
+[independent cycle contract](../../../docs/audits/2026-10-16/doctorwatson-delivery/acceptance/CONTRACT.md)
+requires every admitted post-startup field and all 216 fuel prefixes. Actual
+compiler/test/execution/comparison receipts and ordinary CLI/guard regressions
+are concrete evidence; the workflow model abstracts these external command
+results and does not prove wrapper refinement. Constructor startup, the other
+semantic layers, native and target qualification remain explicit separate gaps.

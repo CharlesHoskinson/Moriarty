@@ -30,13 +30,13 @@ module doctorwatson {
   const TASKS: Set[int]
   const ACTORS: Set[int]
   const INTEGRATOR: int
-  pure def admittedLayers: Set[Layer] = Set(K, Quint, LeanClean, Handwritten)
+  pure val admittedLayers: Set[Layer] = Set(K, Quint, LeanClean, Handwritten)
   // External applicable-owner predicate; its security policy is not derived here.
   const ELIGIBLE_REVIEWERS: int -> Set[int]
   var state: State
 
-  pure def emptyFingerprint: Fingerprint = { task: 0, version: -1, base: -1, dependencies: Map() }
-  pure def emptyReview: Review = { fingerprint: emptyFingerprint, reviewer: 0, approved: false }
+  pure val emptyFingerprint: Fingerprint = { task: 0, version: -1, base: -1, dependencies: Map() }
+  pure val emptyReview: Review = { fingerprint: emptyFingerprint, reviewer: 0, approved: false }
   pure def initialTask(id: int): Task = {
     phase: Queued, owner: if (id == 3) INTEGRATOR else id, oracleOwner: 3,
     writes: Set(id), shared: id == 3,
@@ -46,7 +46,7 @@ module doctorwatson {
     tested: emptyFingerprint, reviewed: emptyReview, observed: Set(),
     failures: 0, reproduced: false, changedApproach: false, processCycles: 0, adminMinutes: 0,
   }
-  pure def initialState: State = {
+  pure val initialState: State = {
     tasks: TASKS.mapBy(id => initialTask(id)), integrationBase: 0, available: Set(),
     receipts: Set(), reviews: Set(), event: Initial, lastTask: 0, terminal: false,
     sourceMerges: Set(), fullCompletion: Set(),
@@ -102,8 +102,9 @@ module doctorwatson {
         ...reset(t), version: t.version + 1,
         phase: if (disposed) t.phase else if (other == id) Working else Queued,
         frozen: t.frozen and other == id and kind != Oracle and kind != Profile and kind != Bounds and kind != Projection,
-        processCycles: if (disposed) t.processCycles else 0,
-        adminMinutes: if (disposed) t.adminMinutes else 0,
+        // Only this task owner's implementation resumes its administration budget.
+        processCycles: if (disposed or other != id) t.processCycles else 0,
+        adminMinutes: if (disposed or other != id) t.adminMinutes else 0,
         failures: if (disposed) t.failures else if (t.changedApproach) 0 else t.failures,
         reproduced: if (disposed) t.reproduced else false,
         changedApproach: if (disposed) t.changedApproach else false,
@@ -123,7 +124,7 @@ module doctorwatson {
     val tasks = TASKS.mapBy(id => {
       val t = s.tasks.get(id)
       if (t.phase == Cancelled or t.phase == Blocked) t else
-        { ...reset(t), phase: Queued, version: t.version + 1, frozen: false, processCycles: 0, adminMinutes: 0 }
+        { ...reset(t), phase: Queued, version: t.version + 1, frozen: false }
     })
     { ...s, tasks: tasks, sourceMerges: Set(), fullCompletion: Set(), event: Edited, lastTask: 0 }
   }
@@ -149,6 +150,12 @@ module doctorwatson {
     not(s.terminal), s.tasks.get(id).phase == Candidate, s.tasks.get(id).test == Running,
     s.tasks.get(id).attempt == stamp.attempt, s.tasks.get(id).tested == stamp.fingerprint,
     s.tasks.get(id).base == s.integrationBase, stamp.fingerprint == fingerprint(s, id),
+  }
+  // Equivalent to canFinish(s, id, jobToken(s, id)), without allocating a token
+  // for every task considered by the sampler before its cheap phase guards.
+  pure def canFinishCurrent(s: State, id: int): bool = and {
+    not(s.terminal), s.tasks.get(id).phase == Candidate, s.tasks.get(id).test == Running,
+    s.tasks.get(id).base == s.integrationBase, s.tasks.get(id).tested == fingerprint(s, id),
   }
   pure def applyResult(s: State, id: int, result: Result): State = {
     val t = s.tasks.get(id)
@@ -308,6 +315,7 @@ module doctorwatson {
   // Choose within enabled operations: an unlucky task/actor cannot stop a trace.
   action step = all { not(state.terminal), {
     val editable = TASKS.filter(id => canEdit(state, id, state.tasks.get(id).owner))
+    val finishable = TASKS.filter(id => canFinishCurrent(state, id))
     any {
     { nondet id = TASKS.filter(id => canClaim(state, id, state.tasks.get(id).owner)).oneOf()
       claim(id, state.tasks.get(id).owner) },
@@ -322,13 +330,13 @@ module doctorwatson {
       submit(id) },
     { nondet id = TASKS.filter(id => canStart(state, id)).oneOf()
       startLocal(id) },
-    { nondet id = TASKS.filter(id => canFinish(state, id, jobToken(state, id)) and state.tasks.get(id).stage == Checker).oneOf()
+    { nondet id = finishable.filter(id => state.tasks.get(id).stage == Checker).oneOf()
       nondet observation = Set(CompleteMatch, Incomplete, IdentityMismatch, StateMismatch).oneOf()
       checker(id, jobToken(state, id), observation) },
-    { nondet id = TASKS.filter(id => canFinish(state, id, jobToken(state, id)) and state.tasks.get(id).stage == Regressions).oneOf()
+    { nondet id = finishable.filter(id => state.tasks.get(id).stage == Regressions).oneOf()
       nondet passed = Set(true, false).oneOf()
       regressions(id, jobToken(state, id), passed) },
-    { nondet id = TASKS.filter(id => canFinish(state, id, jobToken(state, id))).oneOf()
+    { nondet id = finishable.oneOf()
       timeout(id, jobToken(state, id)) },
     { nondet id = TASKS.filter(id => ELIGIBLE_REVIEWERS.get(id).exists(actor => canReview(state, id, actor))).oneOf()
       nondet actor = ELIGIBLE_REVIEWERS.get(id).filter(actor => canReview(state, id, actor)).oneOf()

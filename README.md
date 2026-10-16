@@ -414,3 +414,7 @@ Contributing agents follow the startup instructions in `AGENTS.md`, including lo
 [DoctorWatson](docs/DOCTORWATSON.md) is the local software factory for the Sherlock
 universal interpreter. Run its ordinary QA with `./scripts/doctorwatson.sh`.
 GitHub stores reviewed source and results; routine CI runs locally.
+The explicit `--host` mode builds and runs the actual Sherlock reference and
+compares its complete normal observations; see the
+[local build command](docs/DOCTORWATSON-CI.md#explicit-sherlock-host-build) and
+[delivery evidence](docs/audits/2026-10-16/doctorwatson-delivery/README.md).

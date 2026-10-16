@@ -12,8 +12,12 @@ slices, independent oracle QA and direct PR delivery. CI runs locally at the
 user's request; GitHub holds source and result summaries. The
 [OpenSpec/EARS](openspec/changes/doctorwatson/requirements.md) preserves
 required K/Quint/Lean-Clean iteration, native/C4 limits and all existing exits.
-The first increment checks the existing A-profile corpus and source literals;
-it does not execute the interpreter or establish model/circuit correspondence.
+The default lane checks the existing A-profile corpus and source literals.
+The explicit `--host` lane now builds the actual Sherlock reference, exercises
+new bounded stepping and compares all 216 normal fuel-prefix executions. Its
+[delivery evidence](docs/audits/2026-10-16/doctorwatson-delivery/README.md) retains
+the predecessor compile failure, successful build and complete observations.
+This scoped host result establishes no model/circuit or target correspondence.
 
 ## What exists
 

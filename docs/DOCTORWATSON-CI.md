@@ -23,7 +23,44 @@ workflow. The existing [site workflow](../.github/workflows/site.yml) has only a
 manual `workflow_dispatch` trigger; pushes and pull requests start no hosted CI.
 Manual site publication remains a separate, explicit action and is unrun here.
 
-## Explicit workflow design check
+## Explicit Sherlock host build
+
+```bash
+DOCTORWATSON_RUSTC=/absolute/path/to/rustc \
+DOCTORWATSON_OUTPUT_DIR=/absolute/path/to/new-attempt \
+  ./scripts/doctorwatson.sh --host
+```
+
+Use the installed Rust compiler matching `rust-toolchain.toml`. The output
+directory must be a new attempt, preserving earlier results. This mode first
+runs ordinary QA, then the explicit host wrapper. It compiles the actual Sherlock
+reference and fixed-input observation producer, builds and runs the bounded
+stepping tests, executes the producer, and compares every complete observation
+against the independent N01–N08 corpus. Each child command has a 30-second limit;
+no failed stage enables its dependent stage. No tool installation, Cargo/SDK
+build, native circuit, proof or ledger command is selected.
+
+The producer calls `Machine::run_steps`, so this lane consumes new executable
+Sherlock behavior. The comparison covers all 216 fuel runs, including initial
+post-startup state, every complete charged record, free publication, terminal
+state and absence of a further step. Width 1/2/4/8, zero-event cuts and continuation
+have separate normal tests. Diagnostic K text is a declared common-domain
+projection, not a canonical machine codec or typed structural equality proof.
+
+The wrapper retains source/compiler/artifact identities, commands, raw outputs,
+terminal statuses and comparisons. A separately supplied JSON file establishes
+artifact comparison only; the checker does not authenticate its producer or
+claim it executed Rust. The wrapper's own build/run receipt supplies the actual
+local observation. The original K startup edge, K execution, interpreter Quint,
+Lean/Clean, handwritten constraints, native and Midnight stagenet evidence stay
+separate. Source input extraction and the new tests are included in consumed
+source membership; the existing frozen expectations are unchanged.
+
+`--host` and `--design` are separate explicit modes. The default remains ordinary
+Python QA. A host pass completes this local host job, not full Sherlock or any
+Moriarty roadmap exit.
+
+## Workflow design commands
 
 ```bash
 ./scripts/doctorwatson.sh --design
@@ -65,6 +102,7 @@ checks for the current source.
 | Tier | Consumer and required evidence | Included here |
 |---|---|---|
 | Ordinary QA | Frozen normal expectations, supplied complete prefix/state comparisons and committed oracle readback through the commands above | Yes; Python standard library only |
+| Sherlock host | Actual source compilation, seven bounded normal tests, fixed-input execution and all complete prefix observations | Only explicit `--host`; post-startup normal A-profile domain |
 | DoctorWatson design | Workflow state machine, deterministic scenarios and bounded sampled invariants | Only with explicit `--design`; separate from interpreter semantic QA |
 | Developer semantic checks | Required K execution and explicit finite Quint projection, with actual traces, bounds, clocks and first divergences | No; unrun by this entrypoint |
 | Lean/Clean and handwritten circuits | Required reference/component observations, separate witness and constraint dispositions, and cross-layer correspondence evidence | No; unrun by this entrypoint; existing private Fenrir integration remains separate |
@@ -121,7 +159,7 @@ zero-hit warnings remain separate. Total wall time was 34.185 seconds; each mode
 command retained its own 30-second cap. See the
 [final entrypoint capture](audits/2026-10-16/doctorwatson/quint/design-03.json).
 
-The current [design-04 capture](audits/2026-10-16/doctorwatson/quint/design-04.json)
+The predecessor [design-04 capture](audits/2026-10-16/doctorwatson/quint/design-04.json)
 includes the subsequent fixes and all five model commands, with unchanged source
 hashes and exit 0 in 35.243 seconds. It passed 33 Python tests, 30 main Quint
 scenarios and the directed-completion test. Default sampling reported no violation
@@ -129,3 +167,14 @@ in 26.788 seconds, with seven zero-hit witnesses; directed sampling reached its
 six witnesses in 64 ms. The [kit review](audits/2026-10-16/doctorwatson/QUINT-REVIEW.md)
 lists the current warnings and model abstractions. The command caps remain tight
 on slower hosts; timeouts stay failures, with no bounds or sample-count fallback.
+
+The [delivery follow-up](audits/2026-10-16/doctorwatson-delivery/README.md) records
+the actual `--host` build and execution: 79 Python tests, seven compiled normal
+Rust tests and 216 complete prefix comparisons passed. The final host command
+exited 0 in 3.611 seconds with unchanged consumed source bytes. Its predecessor
+failed compilation specifically because `run_steps` was absent; all dependent
+stages remained unrun. The final `--design` command passed 79 Python tests,
+34 model scenarios, its directed-completion test and both simulations in
+31.733 seconds. Eight random witnesses had zero hits; those warnings remain
+separate from positive deterministic/directed observations. All per-command
+timeouts and model bounds were preserved.
