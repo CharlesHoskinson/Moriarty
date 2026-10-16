@@ -1,0 +1,87 @@
+{
+  "format": "moriarty-k9-expectations/1",
+  "status": "fixed-before-execution; source-only; uncompiled; unexecuted; no results claimed",
+  "consumer": "unchanged pvc2/claim.issue(policy_id, vk, proof, transaction) -> Bool",
+  "builder": "pvc2/k9_consumer_builder over cardano/transaction.placeholder; chosen_policy_id is the 28-byte public export settle hash a2a2..a2, explicitly NOT a compiled C2 script hash",
+  "expiry": {
+    "value": 1893456000000,
+    "meaning": "builder-chosen EnvV2.expiry fill (2030-01-01 POSIX ms); intentionally omitted from the Rust export; not cryptographically bound, not proved, not a ledger assertion; claim.issue does not inspect expiry"
+  },
+  "genuineInputs": {
+    "vkBytes": 488,
+    "vkDigestBlake2b256": "d19d99a4ede6bf6ed8ee241dfc4c14f2abf8d73f15a58367f4a38a127cd613bd",
+    "proofBytes": 192,
+    "proofFileSha256": "930198631617f1f931aa93e836b32ffa8acadedadafe3b3d90081ff629e9ba5b",
+    "statementDigestBlake2b256": "c9ef8ea00a7f7b71fc1e049bd956dc8a068e635e31306aca88210711282384cc",
+    "n1StatementDigestBlake2b256": "123f0bad95de57ef884f4d01e00258cd878bd0aeb6df286b807185133639e521",
+    "n2StatementDigestBlake2b256": "621c562ae5f2b75f9bef8686c14dd1bb98d894f79388724ca16b08ca42a3141b",
+    "n3Proof": "positive proof with A [0,48) and C [144,192) G1 slices swapped",
+    "fixture": "lib/pvc2/k8_fixture.ak 5269 bytes sha256 1b9e2a9a2eb6a2b47915bfc9aacd3b68a59d76f189f98da5615b4c653923ef64 (actually adopted; compiled=false, executed=false)"
+  },
+  "tests": [
+    {
+      "name": "k9_positive_claim_issue_returns_true",
+      "kind": "positive",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool True",
+      "construction": "build_positive(): genuine public EnvV2 record values, token name = claim.envelope_name(raw), mint exactly 1 policy token, only C2 output is Script(policy) with inline env datum and no reference script",
+      "firstExpectedGuard": "none; every conjunct including groth16.verify_digest(vk, proof, statement_digest) must pass"
+    },
+    {
+      "name": "k9_n1_body_rederived_digest_claim_issue_rejected",
+      "kind": "crypto-negative",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool False via explicit !claim.issue(...) assertion",
+      "construction": "FULL coherent tampered EnvV2 with statement_digest = N1 body-rederived digest; token name/mint/output RECOMPUTED from that env via build_for_env; genuine VK and genuine proof",
+      "firstExpectedGuard": "pairing equation inside groth16.verify_digest (lengths, IC prefix, well-formedness, token name and VK-digest conjuncts all pass by construction)"
+    },
+    {
+      "name": "k9_n2_context_rederived_digest_claim_issue_rejected",
+      "kind": "crypto-negative",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool False via explicit !claim.issue(...) assertion",
+      "construction": "FULL coherent tampered EnvV2 with statement_digest = N2 context-rederived digest (seq change); token name/mint/output RECOMPUTED from that env via build_for_env; genuine VK and genuine proof",
+      "firstExpectedGuard": "pairing equation inside groth16.verify_digest (same reasoning as N1)"
+    },
+    {
+      "name": "k9_n3_proof_ac_swapped_claim_issue_rejected",
+      "kind": "crypto-negative",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool False via explicit !claim.issue(...) assertion",
+      "construction": "unchanged positive envelope/transaction from build_positive(); proof = N3 A/C-swapped proof; genuine VK",
+      "firstExpectedGuard": "pairing equation inside groth16.verify_digest (A and C are valid positive G1 points swapped, so uncompress succeeds)"
+    },
+    {
+      "name": "k9_wrong_minted_quantity_claim_issue_rejected",
+      "kind": "non-crypto-guard-negative",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool False via explicit !claim.issue(...) assertion",
+      "construction": "positive env; build_for_env_with_token with correct envelope token name and quantity 2 for both mint and the single output",
+      "firstExpectedGuard": "qty == 1 (first conjunct of claim.issue)"
+    },
+    {
+      "name": "k9_mismatched_envelope_name_claim_issue_rejected",
+      "kind": "non-crypto-guard-negative",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool False via explicit !claim.issue(...) assertion",
+      "construction": "positive env; mint and single output carry token name zero32 with quantity 1, so qty/holder/quantity/single-token conjuncts pass",
+      "firstExpectedGuard": "name == envelope_name(raw)"
+    },
+    {
+      "name": "k9_wrong_vk_digest_claim_issue_rejected",
+      "kind": "non-crypto-guard-negative",
+      "failAnnotation": false,
+      "expected": "claim.issue returns Bool False via explicit !claim.issue(...) assertion",
+      "construction": "EnvV2 with vk_digest = zero32; token name/mint/output rebuilt from that env via build_for_env; genuine VK and genuine proof",
+      "firstExpectedGuard": "env.vk_digest == blake2b_256(vk)"
+    }
+  ],
+  "nonClaims": [
+    "No Aiken compilation, pairing execution, compiled C2 wrapper, applied script hash, ledger, wallet, signing, network or Preprod result is claimed; compilation is UNOBSERVED.",
+    "chosen_policy_id is a locally chosen 28-byte export settle hash for direct library-function tests, NOT the actual compiled C2 hash.",
+    "All 2222../555../a2.. context values are existing local fixtures, not real Preprod data, chain balances or claim-ledger truth.",
+    "C2 alone does not authenticate settle_outref, claimant or predicate; statement recomputation, authenticated catalogue and signatures remain S2 obligations.",
+    "Single-party test setup is forgeable by its controller; VK matrix unproved; transitive CPU unmeasured.",
+    "No K8 authority is reused; no direct-pairing K8 AUTH exists; native authority is zero."
+  ]
+}

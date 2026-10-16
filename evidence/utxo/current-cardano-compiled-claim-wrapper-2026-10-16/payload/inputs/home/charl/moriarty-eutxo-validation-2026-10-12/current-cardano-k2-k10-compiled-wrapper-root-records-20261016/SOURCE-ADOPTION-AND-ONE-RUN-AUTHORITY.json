@@ -1,0 +1,274 @@
+{
+  "format": "root-K10-first-compiled-wrapper-one-run-authority/1",
+  "at": "2026-10-16T14:08:38.756773+00:00",
+  "sourceFiles": [
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-compiled-wrapper-operator-materialized-20261016/runner/operator.py",
+      "bytes": 29240,
+      "sha256": "a5a8a49cd524eb08a6e0207a001ca419bd4fc643e8b15a307e9dba968fd6246e"
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-compiled-wrapper-operator-materialized-20261016/AUTH-CANDIDATE.json",
+      "bytes": 6419,
+      "sha256": "5544ad6bf9f830002379cc7af82694f1e52dbd22fa752e55363790cd8aeefb83"
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-compiled-wrapper-operator-materialized-20261016/EXECUTION-PROPOSAL.json",
+      "bytes": 7841,
+      "sha256": "6376c161805e9cdea1ede07f210e3af9b65b284e8007e73e34b6c32dd24218f1"
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-compiled-wrapper-operator-materialized-20261016/README.md",
+      "bytes": 8477,
+      "sha256": "af766eb7feb673698abf6c8c2351cdf2fb9ece303f4e94019f52ae8d2d3d473d"
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-compiled-wrapper-operator-materialized-20261016/DESIGN-POSITIONS.json",
+      "bytes": 10826,
+      "sha256": "fcea14a1fe1efd91386278a201eed04fe8d154e41a999569024eaec79ad10fde"
+    }
+  ],
+  "sourceReview": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-native-operator-r2-independent-muse-source-review-20261016/REPORT.md",
+    "bytes": 3536,
+    "sha256": "a67387dfde5d618e5ae4396406893b0e5e4a1b80e981f8596ac12f9067995808"
+  },
+  "actualInputsAdoption": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k10-public-input-generation-root-records-20261016/K10-GENERATED-INPUTS-ACTUAL-ADOPTION.json",
+    "bytes": 24632,
+    "sha256": "6a86c215244afded16cff28c725ab54e697d67119a293c38ca9697ac0f903c5f"
+  },
+  "positions": [
+    {
+      "clauseId": "K10W-C1-compiled-wrapper-not-rebuilt",
+      "clause": "The operator must evaluate the actual already-compiled APPLIED B9 c2.c2.mint wrapper (2770 CBOR compiled bytes, one 590acf byte string, 2767 inner flat bytes) with genuine published proof/VK and raw PlutusV3 ScriptContext, and must not rebuild claim.issue, recompile, or substitute a handwritten verifier.",
+      "author": {
+        "clause": "The operator must evaluate the actual already-compiled APPLIED B9 c2.c2.mint wrapper (2770 CBOR compiled bytes, one 590acf byte string, 2767 inner flat bytes) with genuine published proof/VK and raw PlutusV3 ScriptContext, and must not rebuild claim.issue, recompile, or substitute a handwritten verifier.",
+        "clauseId": "K10W-C1-compiled-wrapper-not-rebuilt",
+        "position": "FOR",
+        "rationale": "validators/c2.ak delegates Issue to claim.issue; the generated manifest records the compiled bytes and the operator only supplies script.hex plus one Data term per call. The policy hash basis is ordinary Pallas/Aiken inspection (blake2b-224 over 0x03 || compiled CBOR bytes), proven by source inspection, not a compile theorem."
+      },
+      "freshNonAuthor": {
+        "clause": "The operator must evaluate the actual already-compiled APPLIED B9 c2.c2.mint wrapper (2770 CBOR compiled bytes, one 590acf byte string, 2767 inner flat bytes) with genuine published proof/VK and raw PlutusV3 ScriptContext, and must not rebuild claim.issue, recompile, or substitute a handwritten verifier.",
+        "clauseId": "K10W-C1-compiled-wrapper-not-rebuilt",
+        "position": "AGREE",
+        "rationale": "operator.py runs only uplc eval --cbor on pinned script.hex (:323); generated manifest records 2770/2767 and policy basis (manifest.json:125-132). Ordinary script identity observed, not a compile theorem."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C2-nine-input-pins-and-tool-custody",
+      "clause": "The nine generated inputs (script.hex 5541 B, manifest.json 10588 B, seven contexts of 2649 B each, exact names and SHA-256 in AUTH-CANDIDATE.json) and the staged read-only Aiken 1.1.24 tool must be pinned literally and hashed before and after; a wrong size or hash fails before any command. The nine staged input files must additionally be rechecked for pinned size and SHA-256, non-link regular-file status and read-only mode at staging and after the native loop, including on the failure path once staging is complete.",
+      "author": {
+        "clause": "The nine generated inputs (script.hex 5541 B, manifest.json 10588 B, seven contexts of 2649 B each, exact names and SHA-256 in AUTH-CANDIDATE.json) and the staged read-only Aiken 1.1.24 tool must be pinned literally and hashed before and after; a wrong size or hash fails before any command. The nine staged input files must additionally be rechecked for pinned size and SHA-256, non-link regular-file status and read-only mode at staging and after the native loop, including on the failure path once staging is complete.",
+        "clauseId": "K10W-C2-nine-input-pins-and-tool-custody",
+        "position": "FOR",
+        "rationale": "Generated manifest and ordinary root RESULT agree on all nine sizes/hashes; the DATA-ONLY-MANIFEST binary entry gives 38299808 B and 4257cc8be37cbde5bf7b5dd111e43a1277f45352fb2433ad7a7e647209aa7677 at mode 0644 data only, staged as mode 555. R2 check_staged_inputs enforces whole staged custody through the one INPUT_STAGED_REL mapping. Release identity is parsed from that manifest; no executable probe or argv self-claim is used."
+      },
+      "freshNonAuthor": {
+        "clause": "The nine generated inputs (script.hex 5541 B, manifest.json 10588 B, seven contexts of 2649 B each, exact names and SHA-256 in AUTH-CANDIDATE.json) and the staged read-only Aiken 1.1.24 tool must be pinned literally and hashed before and after; a wrong size or hash fails before any command. The nine staged input files must additionally be rechecked for pinned size and SHA-256, non-link regular-file status and read-only mode at staging and after the native loop, including on the failure path once staging is complete.",
+        "clauseId": "K10W-C2-nine-input-pins-and-tool-custody",
+        "position": "AGREE",
+        "rationale": "11 pins at operator.py:66-77, check_staged_inputs :134-152, verify_custody :301-309, created-gated postcheck :477-483; helper RESULT corroborates the staged helper only."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C3-actual-c2-policy-bound",
+      "clause": "The compiled policy 6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1 already bound in ScriptInfo, output credential and value maps must not be replaced by the old local a2 policy, and no Env settle-A2 statement may be blindly replaced; the native wrapper's actual C2 holder policy is the context identity.",
+      "author": {
+        "clause": "The compiled policy 6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1 already bound in ScriptInfo, output credential and value maps must not be replaced by the old local a2 policy, and no Env settle-A2 statement may be blindly replaced; the native wrapper's actual C2 holder policy is the context identity.",
+        "clauseId": "K10W-C3-actual-c2-policy-bound",
+        "position": "FOR",
+        "rationale": "Generated T1 context and manifest bind 6a4b67e7...59c1 at every policy site; claim.issue requires holder == policy_id, so any other policy would not exercise the compiled wrapper."
+      },
+      "freshNonAuthor": {
+        "clause": "The compiled policy 6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1 already bound in ScriptInfo, output credential and value maps must not be replaced by the old local a2 policy, and no Env settle-A2 statement may be blindly replaced; the native wrapper's actual C2 holder policy is the context identity.",
+        "clauseId": "K10W-C3-actual-c2-policy-bound",
+        "position": "AGREE",
+        "rationale": "POLICY constant operator.py:45 and manifest check :246-247 bind 6a4b...59c1; no a2 substitution exists in the code."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C4-seven-exact-calls",
+      "clause": "Exactly seven sequential pinned-Aiken calls `uplc eval --cbor /inputs/script.hex '<single context term>'` are permitted, each term bounded-read, hash-checked, strict-UTF-8 decoded with exactly one trailing newline stripped, passed as one argv element with no shell, string evaluation, --flat, --debug or other flags. A raw step is appended and counted as returned immediately after the process returns and before validation, with distinct returned and validated counts, and only seven returned plus seven validated calls can complete.",
+      "author": {
+        "clause": "Exactly seven sequential pinned-Aiken calls `uplc eval --cbor /inputs/script.hex '<single context term>'` are permitted, each term bounded-read, hash-checked, strict-UTF-8 decoded with exactly one trailing newline stripped, passed as one argv element with no shell, string evaluation, --flat, --debug or other flags. A raw step is appended and counted as returned immediately after the process returns and before validation, with distinct returned and validated counts, and only seven returned plus seven validated calls can complete.",
+        "clauseId": "K10W-C4-seven-exact-calls",
+        "position": "FOR",
+        "rationale": "Aiken 1.1.24 eval.rs: --cbor reads hex text, each positional arg is parser::term-applied, and no other flag is needed or sourced. One attempt each, zero retries, intent counted before Popen; intent is not native start, and a wait/cleanup failure without return creates no phantom returned call."
+      },
+      "freshNonAuthor": {
+        "clause": "Exactly seven sequential pinned-Aiken calls `uplc eval --cbor /inputs/script.hex '<single context term>'` are permitted, each term bounded-read, hash-checked, strict-UTF-8 decoded with exactly one trailing newline stripped, passed as one argv element with no shell, string evaluation, --flat, --debug or other flags. A raw step is appended and counted as returned immediately after the process returns and before validation, with distinct returned and validated counts, and only seven returned plus seven validated calls can complete.",
+        "clauseId": "K10W-C4-seven-exact-calls",
+        "position": "AGREE",
+        "rationale": "eval.rs:71-75 applies each positional term; operator.py:258-270,311-323,448-473 implements exactly this with no shell or extra flags."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C5-positive-strict-json",
+      "clause": "T1 accepts only on exit 0, empty stderr, and strict JSON with exactly result/cpu/mem, result exactly (con unit ()), and non-bool positive integer VM costs.",
+      "author": {
+        "clause": "T1 accepts only on exit 0, empty stderr, and strict JSON with exactly result/cpu/mem, result exactly (con unit ()), and non-bool positive integer VM costs.",
+        "clauseId": "K10W-C5-positive-strict-json",
+        "position": "FOR",
+        "rationale": "eval.rs success path prints exactly that pretty JSON shape under ExBudget::default(); the source-proposed unit literal is thus verified against the actual constant output shape, not guessed debug JSON."
+      },
+      "freshNonAuthor": {
+        "clause": "T1 accepts only on exit 0, empty stderr, and strict JSON with exactly result/cpu/mem, result exactly (con unit ()), and non-bool positive integer VM costs.",
+        "clauseId": "K10W-C5-positive-strict-json",
+        "position": "AGREE",
+        "rationale": "eval.rs:90-103 plus pretty.rs:234-236 support the shape; operator.py:391-406 enforces exit 0, empty stderr, exact keys, unit literal and is_int positive costs."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C6-negative-exact-evaluation-failure",
+      "clause": "T2..T7 accept only on exit exactly 1, empty stdout, and full-match stderr with the exact EvaluationFailure text 'the validator crashed / exited prematurely' plus strict positive Costs and at most one bounded Logs section; OutOfExError, syntax/Miette errors, signals, timeouts, budget exhaustion and trailing content fail closed.",
+      "author": {
+        "clause": "T2..T7 accept only on exit exactly 1, empty stdout, and full-match stderr with the exact EvaluationFailure text 'the validator crashed / exited prematurely' plus strict positive Costs and at most one bounded Logs section; OutOfExError, syntax/Miette errors, signals, timeouts, budget exhaustion and trailing content fail closed.",
+        "clauseId": "K10W-C6-negative-exact-evaluation-failure",
+        "position": "FOR",
+        "rationale": "machine/error.rs distinguishes EvaluationFailure from OutOfExError ('execution went over budget'); eval.rs prints Error/-----, Costs and optional Logs then exits 1. No arbitrary substring or any-nonzero PASS is accepted."
+      },
+      "freshNonAuthor": {
+        "clause": "T2..T7 accept only on exit exactly 1, empty stdout, and full-match stderr with the exact EvaluationFailure text 'the validator crashed / exited prematurely' plus strict positive Costs and at most one bounded Logs section; OutOfExError, syntax/Miette errors, signals, timeouts, budget exhaustion and trailing content fail closed.",
+        "clauseId": "K10W-C6-negative-exact-evaluation-failure",
+        "position": "AGREE",
+        "rationale": "eval.rs:144-154 and error.rs:11-22 ground the exact shape; NEG_RE full-match with m.end() check at operator.py:97-100,407-424 rejects all other shapes."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C7-guard-attribution-limits",
+      "clause": "Named guards (T2/T3/T4 pairing, T5 qty == 1, T6 name == envelope_name(raw), T7 env.vk_digest == blake2b_256(vk)) are reported as source-expected guards supported by the positive control, coherent minimal changed cases and claim.issue order, not as per-guard runtime instrumentation; a typed-decode failure could also surface as EvaluationFailure.",
+      "author": {
+        "clause": "Named guards (T2/T3/T4 pairing, T5 qty == 1, T6 name == envelope_name(raw), T7 env.vk_digest == blake2b_256(vk)) are reported as source-expected guards supported by the positive control, coherent minimal changed cases and claim.issue order, not as per-guard runtime instrumentation; a typed-decode failure could also surface as EvaluationFailure.",
+        "clauseId": "K10W-C7-guard-attribution-limits",
+        "position": "FOR",
+        "rationale": "claim.ak orders its conjuncts with verify_digest last and EXPECTATIONS freezes each minimal change; the compiled trace does not name guards unless Logs happen to carry scoped trace text, which the parser only bounds and preserves."
+      },
+      "freshNonAuthor": {
+        "clause": "Named guards (T2/T3/T4 pairing, T5 qty == 1, T6 name == envelope_name(raw), T7 env.vk_digest == blake2b_256(vk)) are reported as source-expected guards supported by the positive control, coherent minimal changed cases and claim.issue order, not as per-guard runtime instrumentation; a typed-decode failure could also surface as EvaluationFailure.",
+        "clauseId": "K10W-C7-guard-attribution-limits",
+        "position": "AGREE",
+        "rationale": "operator.py:54-63,421-424 and README:29 state source-expected labels only; N1/N2 env/name/mint/output coherence and N3 A/C swap, qty 2, name and VK-digest guards are source expectations, not runtime-instrumented or ledger facts."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C8-bounded-budget",
+      "clause": "Budgets are author-chosen and consistent: 60 s wall per call plus 10 s kill-after, 80 s parent wait, 10 s cleanup waits, CPU 30:35, 8 GiB address space, core 0, 16 MiB file-size/log caps, 420 s planned aggregate plus 180 s reserve equals 600 s outer plus 10 s kill-after; the VM ExBudget::default() remains separate from OS resources, with no uninterruptible-death or transitive-CPU claim.",
+      "author": {
+        "clause": "Budgets are author-chosen and consistent: 60 s wall per call plus 10 s kill-after, 80 s parent wait, 10 s cleanup waits, CPU 30:35, 8 GiB address space, core 0, 16 MiB file-size/log caps, 420 s planned aggregate plus 180 s reserve equals 600 s outer plus 10 s kill-after; the VM ExBudget::default() remains separate from OS resources, with no uninterruptible-death or transitive-CPU claim.",
+        "clauseId": "K10W-C8-bounded-budget",
+        "position": "FOR",
+        "rationale": "Seven calls at 60 s bound the aggregate; timeout/prlimit/bwrap plus parent TERM/KILL cleanup mirrors the known K9 discipline scaled to seven short evaluations, and plain bounded log files replace unbounded pipes. Whole 600 plus 10 is root-enforced outer bound per R1 F4, not an internal 700 s sum."
+      },
+      "freshNonAuthor": {
+        "clause": "Budgets are author-chosen and consistent: 60 s wall per call plus 10 s kill-after, 80 s parent wait, 10 s cleanup waits, CPU 30:35, 8 GiB address space, core 0, 16 MiB file-size/log caps, 420 s planned aggregate plus 180 s reserve equals 600 s outer plus 10 s kill-after; the VM ExBudget::default() remains separate from OS resources, with no uninterruptible-death or transitive-CPU claim.",
+        "clauseId": "K10W-C8-bounded-budget",
+        "position": "AGREE",
+        "rationale": "CAPS operator.py:46-53 and timeout/prlimit/bwrap :311-323; 7x60=420+180=600 is the planned root outer bound, honestly not a guaranteed-finish 700 s sum."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C9-isolation-and-custody",
+      "clause": "Isolation is bwrap --unshare-all --die-with-parent --new-session --clearenv with tool and nine inputs read-only, only fresh capture writable, minimal /dev//proc//tmp and environment, and no network, stdlib/build/validators, wallet, host home, keys, RNG, prover, LLVM or cargo. Custody claims in prose must equal code checks, including the nine staged inputs.",
+      "author": {
+        "clause": "Isolation is bwrap --unshare-all --die-with-parent --new-session --clearenv with tool and nine inputs read-only, only fresh capture writable, minimal /dev//proc//tmp and environment, and no network, stdlib/build/validators, wallet, host home, keys, RNG, prover, LLVM or cargo. Custody claims in prose must equal code checks, including the nine staged inputs.",
+        "clauseId": "K10W-C9-isolation-and-custody",
+        "position": "FOR",
+        "rationale": "The compiled script needs no project tree; mounting only /tool, /inputs and /capture removes the K9 compiler machinery that is irrelevant here. All eleven host pins, the nine staged inputs, the staged tool and the five operator files are checked at staging and after."
+      },
+      "freshNonAuthor": {
+        "clause": "Isolation is bwrap --unshare-all --die-with-parent --new-session --clearenv with tool and nine inputs read-only, only fresh capture writable, minimal /dev//proc//tmp and environment, and no network, stdlib/build/validators, wallet, host home, keys, RNG, prover, LLVM or cargo. Custody claims in prose must equal code checks, including the nine staged inputs.",
+        "clauseId": "K10W-C9-isolation-and-custody",
+        "position": "AGREE",
+        "rationale": "bwrap argv operator.py:316-323 mounts only /tool, /inputs RO and /capture RW with tmp/proc/dev and minimal env; custody prose now equals verify_custody code."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C10-authority-separation-and-pending-input-audit",
+      "clause": "This candidate authorizes nothing: the fresh actual-input audit prerequisite is now closed as ordinary data (00e128 plus root 6a86c215) while the candidate attestation remains historical PENDING, root must materialize the R2 source as a new sibling and fill the literal operator SHA before audit only, a fresh full non-author source/effect/resource audit of all R2 changed bytes must AGREE, and only then may root issue an exact new AUTH attesting the accepted input audit; the operator reads no future audit file, invents no audit hash, and no source proposal self-approves.",
+      "author": {
+        "clause": "This candidate authorizes nothing: the fresh actual-input audit prerequisite is now closed as ordinary data (00e128 plus root 6a86c215) while the candidate attestation remains historical PENDING, root must materialize the R2 source as a new sibling and fill the literal operator SHA before audit only, a fresh full non-author source/effect/resource audit of all R2 changed bytes must AGREE, and only then may root issue an exact new AUTH attesting the accepted input audit; the operator reads no future audit file, invents no audit hash, and no source proposal self-approves.",
+        "clauseId": "K10W-C10-authority-separation-and-pending-input-audit",
+        "position": "FOR",
+        "rationale": "The fallback confirmation creates no native authority and no AUTH was issued or spent for R1; closure of the input audit as data does not itself create authority, so the exact new AUTH after the fresh R2 audit remains the first authority boundary and is carried as a root attestation field in AUTH, not as an unknown future pin."
+      },
+      "freshNonAuthor": {
+        "clause": "This candidate authorizes nothing: the fresh actual-input audit prerequisite is now closed as ordinary data (00e128 plus root 6a86c215) while the candidate attestation remains historical PENDING, root must materialize the R2 source as a new sibling and fill the literal operator SHA before audit only, a fresh full non-author source/effect/resource audit of all R2 changed bytes must AGREE, and only then may root issue an exact new AUTH attesting the accepted input audit; the operator reads no future audit file, invents no audit hash, and no source proposal self-approves.",
+        "clauseId": "K10W-C10-authority-separation-and-pending-input-audit",
+        "position": "AGREE",
+        "rationale": "Candidate status/PENDING self-rejects in load_auth :176-179; root filled only operatorSha256 per ROOT-SOURCE-MANIFEST:13-19. Source-time PENDING text is historical, and a root adoption asserting the closed input audit is required before any new AUTH. This review is one vote; two agreeing votes are required before AUTHORIZED_EXACT_ONE_RUN."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C11-no-ledger-or-preprod-claim",
+      "clause": "The locally fabricated 2222../555.. outref/claimant, zero fee and unbound 2030 expiry support no ledger, fee, conservation, min-ADA, admission, wallet, signing or Preprod claim; local VM cpu/mem are not qualified ledger ExUnits, and the forgeable Class-0 header/vkey setup supports no trusted-ceremony inference.",
+      "author": {
+        "clause": "The locally fabricated 2222../555.. outref/claimant, zero fee and unbound 2030 expiry support no ledger, fee, conservation, min-ADA, admission, wallet, signing or Preprod claim; local VM cpu/mem are not qualified ledger ExUnits, and the forgeable Class-0 header/vkey setup supports no trusted-ceremony inference.",
+        "clauseId": "K10W-C11-no-ledger-or-preprod-claim",
+        "position": "FOR",
+        "rationale": "Generated manifest limitations state the same; claim.issue authenticates neither claimant, outref, expiry nor unspentness. A user wallet now created is separate and its spent AUTH is not available in this scope."
+      },
+      "freshNonAuthor": {
+        "clause": "The locally fabricated 2222../555.. outref/claimant, zero fee and unbound 2030 expiry support no ledger, fee, conservation, min-ADA, admission, wallet, signing or Preprod claim; local VM cpu/mem are not qualified ledger ExUnits, and the forgeable Class-0 header/vkey setup supports no trusted-ceremony inference.",
+        "clauseId": "K10W-C11-no-ledger-or-preprod-claim",
+        "position": "AGREE",
+        "rationale": "operator.py:18-20,386 and EXECUTION-PROPOSAL:7 state identical non-claims; a different user wallet and its spent AUTH confer nothing in this scope and no signing is in scope."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C12-ordered-next-steps-only",
+      "clause": "After the seven calls, a fresh actual-result audit must precede any proposal for FX1, signatures, claim consume/atomic settle, qualified ledger cost or real Preprod; K8/K9 authority is spent, its passed prefix is not rerun, and no new build, compile, test, proof, setup or 147/472 parent run is included.",
+      "author": {
+        "clause": "After the seven calls, a fresh actual-result audit must precede any proposal for FX1, signatures, claim consume/atomic settle, qualified ledger cost or real Preprod; K8/K9 authority is spent, its passed prefix is not rerun, and no new build, compile, test, proof, setup or 147/472 parent run is included.",
+        "clauseId": "K10W-C12-ordered-next-steps-only",
+        "position": "FOR",
+        "rationale": "Source readiness, finite ordinary evidence and proposed authority are distinct from actual proof or target acceptance; each later step needs its own reviewed authority. The first actual milestone is the first-ever seven compiled C2 wrapper calls plus a fresh actual audit."
+      },
+      "freshNonAuthor": {
+        "clause": "After the seven calls, a fresh actual-result audit must precede any proposal for FX1, signatures, claim consume/atomic settle, qualified ledger cost or real Preprod; K8/K9 authority is spent, its passed prefix is not rerun, and no new build, compile, test, proof, setup or 147/472 parent run is included.",
+        "clauseId": "K10W-C12-ordered-next-steps-only",
+        "position": "AGREE",
+        "rationale": "Completion status is only COMPLETED_AWAITING_FRESH_ACTUAL_RESULT_AUDIT (operator.py:474); no build/probe/--version/SDK/K8/K9/147/472 rerun path exists in the code."
+      },
+      "agreeingSubstantivePositions": 2
+    },
+    {
+      "clauseId": "K10W-C13-r2-three-repairs-only",
+      "clause": "R2 repair is limited to three source changes over R1: one literal INPUT_STAGED_REL mapping for exactly nine roles (manifest.json, script.hex, seven EXPECTED contexts) reused by staging and custody with no eager dict.get default; verify_custody rechecking the nine staged inputs (size, SHA-256, non-link regular file, read-only mode) at staging and post-native including the failure path once staging is complete; and raw returned steps appended and counted before validation with validationStatus/validationError preserved and distinct returned versus validated counts, completing only on seven returned plus seven validated.",
+      "author": {
+        "clause": "R2 repair is limited to three source changes over R1: one literal INPUT_STAGED_REL mapping for exactly nine roles (manifest.json, script.hex, seven EXPECTED contexts) reused by staging and custody with no eager dict.get default; verify_custody rechecking the nine staged inputs (size, SHA-256, non-link regular file, read-only mode) at staging and post-native including the failure path once staging is complete; and raw returned steps appended and counted before validation with validationStatus/validationError preserved and distinct returned versus validated counts, completing only on seven returned plus seven validated.",
+        "clauseId": "K10W-C13-r2-three-repairs-only",
+        "position": "FOR",
+        "rationale": "Root REPRODUCTION.json observes ValueError int('t')/int('x') and return for contextT1 from R1 operator.py:242 by ordinary dict.get semantics only, plus the two additional source discrepancies on staged custody and returned-step accounting. The R2 hunks address exactly those observations, keep the 11 pins, 7 cases, 6a4b policy, strict parsers, effects and resources unchanged, and require a fresh full non-author audit of the complete R2 candidate, not only the patch."
+      },
+      "freshNonAuthor": {
+        "clause": "R2 repair is limited to three source changes over R1: one literal INPUT_STAGED_REL mapping for exactly nine roles (manifest.json, script.hex, seven EXPECTED contexts) reused by staging and custody with no eager dict.get default; verify_custody rechecking the nine staged inputs (size, SHA-256, non-link regular file, read-only mode) at staging and post-native including the failure path once staging is complete; and raw returned steps appended and counted before validation with validationStatus/validationError preserved and distinct returned versus validated counts, completing only on seven returned plus seven validated.",
+        "clauseId": "K10W-C13-r2-three-repairs-only",
+        "position": "AGREE",
+        "rationale": "Full-candidate read confirms pins (4257cc... tool, 8adde data manifest, 9 generated inputs), 7 cases, 6a4b policy, parsers, effects and resources are unchanged from the R1 description; no new implementation-mirror tests or probes are needed for this approval."
+      },
+      "agreeingSubstantivePositions": 2
+    }
+  ],
+  "maximumAttempts": 1,
+  "retries": 0,
+  "maximumNativeEvalCalls": 7,
+  "scope": "First actual evaluation of the already compiled applied C2 wrapper on seven public local contexts, no build/proof/setup/keys/wallet/signing/network/ledger.",
+  "twoPositionRuleQualification": "The applicable user rule requires two substantive agreeing positions. Each current clause has source-author FOR and fresh non-author AGREE. Review prose calling for two fresh full audits is not adopted as an additional rule. The contradicted f7caa R1 audit is not counted for R2.",
+  "genericRecommendationFlagsNotAdopted": "READY is source proposal readiness only. No native closure or target acceptance is inferred.",
+  "sourceNotesPreserved": "README placeholder wording remains an authoring-time snapshot; manifest records the literal fill. R1 eager-default/staged-custody/returned-accounting defects and failed readiness assessment remain in their immutable records.",
+  "outerBounds": "600 seconds from operator spawn plus 10-second kill grace. Per-call parent/cleanup bounds may cause partial failure before all seven finish. No worst-case-700 aggregate guarantee or transitive native CPU claim.",
+  "freshActualResultAuditRequired": true,
+  "rootPrivateMaterialAccess": false
+}

@@ -1,0 +1,49 @@
+{
+  "format": "cardano-k2-k10-compiled-c2-input-adapter-expectations/1",
+  "status": "SOURCE-FROZEN. No execution has occurred. These expectations were derived from the cited primary sources before any native run and must not be edited after a run to fit observed output.",
+  "compiledArtifact": {
+    "title": "c2.c2.mint",
+    "sharedTitles": ["c2.c2.mint", "c2.c2.spend", "c2.c2.else"],
+    "compiledBytes": 2770,
+    "compiledHexPrefix": "590acf",
+    "parameters": "none present on the c2 validators",
+    "policyIdHex": "6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1",
+    "policyIdClassification": "tool-declared (b9-applied.json hash field and hash-c2.txt agree). NOT independently recomputed: uplc ast.rs compiled_code_and_hash delegates to conway::PlutusScript::<3>(cbor).compute_hash() (Pallas), and the Pallas ComputeHash implementation (pallas-primitives 0.35.1 / pallas-traverse 0.35.1 per Cargo.lock) is not in the public mirror. No independent-hash claim is made."
+  },
+  "genuinePayload": {
+    "source": "k8_fixture.ak public constants (SHA-256 1b9e2a9a2eb6a2b47915bfc9aacd3b68a59d76f189f98da5615b4c653923ef64)",
+    "vkBytes": 488,
+    "proofBytes": 192,
+    "statementBytes": 721,
+    "vkDigestHex": "d19d99a4ede6bf6ed8ee241dfc4c14f2abf8d73f15a58367f4a38a127cd613bd",
+    "statementDigestHex": "c9ef8ea00a7f7b71fc1e049bd956dc8a068e635e31306aca88210711282384cc",
+    "n1StatementDigestHex": "123f0bad95de57ef884f4d01e00258cd878bd0aeb6df286b807185133639e521",
+    "n2StatementDigestHex": "621c562ae5f2b75f9bef8686c14dd1bb98d894f79388724ca16b08ca42a3141b",
+    "setupWarning": "Single-party Class-0 setup: whoever controlled setup could forge proofs for this relation. VK-matrix link unproved. No ledger truth is conferred."
+  },
+  "positiveEnvelope": {
+    "fields": "EnvV2 Constr 0 [version=2, claim_kind=0, family_id='MRG16-PVC-FAM2-G16-BLS-ARK04-HL2', predicate_digest=0d230246...019bd, vk_digest=d19d99a4...613bd, claimant_vkh=55*28, settle_outref=Constr 0 [txid=22*32, index=0], statement_digest=c9ef8ea0...384cc, expiry=1893456000000]",
+    "cborSegments": ["d8799f", "02", "00", "5820 + family_id(32B)", "5820 + predicate_digest", "5820 + vk_digest", "581c + claimant_vkh(28B)", "d8799f 5820 + settle_txid(32B) 00 ff", "5820 + statement_digest", "1b000001b8dac5b400", "ff"],
+    "cborRule": "Constr index 0 -> CBOR tag 121 (d879) + indefinite field list 9f..ff (stdlib cbor.ak serialise examples; uplc runtime convert_constr_to_tag 0->121); integers shortest-form; byte strings definite with 58-length for 24..255 bytes. All envelope byte fields are <=32 bytes, so the >64-byte chunked (0x5f) serialise_data path is unreachable; the adapter fails closed if it is ever reached.",
+    "tokenNameRule": "token name = blake2b-256(CBOR above), exactly claim.envelope_name(raw). The adapter must reproduce the frozen segment assembly byte-for-byte or generation fails; the token-name hex itself is recorded in the generated manifest, not asserted here as an independently computed value."
+  },
+  "contextShape": {
+    "term": "Single positional UPLC term `(con data (Constr 0 [tx_info, redeemer, script_info]))` per uplc eval.rs apply_term and parser.rs constant_data.",
+    "txInfo": "Constr 0 with the 16 PlutusV3 fields of to_plutus_data.rs in order: inputs=[], reference_inputs=[], outputs=[claim output], fee=I 0 (V3 bare Coin), mint=value map, certificates=[], withdrawals=Map [], validity_range=everything, extra_signatories=[], redeemers=Map [] (placeholder parity with K9; the mint handler does not read it), datums=Map [], id=B #00..00 (bare bytes in V3), votes=Map [], proposal_procedures=[], current_treasury=None (Constr 1 []), treasury_donation=None (Constr 1 []).",
+    "claimOutput": "Constr 0 [address=Constr 0 [payment=Constr 1 [B policy] (Script), stake=None Constr 1 []], value=Map [(B policy, Map [(B token-name, I qty)])] with zero Ada omitted exactly as the V3 Value encoding omits a zero coin, datum=Constr 2 [EnvV2] (InlineDatum), reference_script=None Constr 1 []].",
+    "validityRange": "interval.everything: Constr 0 [Constr 0 [Constr 0 [] (NegativeInfinity), Constr 1 [] (True)], Constr 0 [Constr 2 [] (PositiveInfinity), Constr 1 [] (True)]].",
+    "redeemer": "C2Mint::Issue = Constr 0 [B vk(488B), B proof(192B)]; Burn is not used.",
+    "scriptInfo": "ScriptInfo::Minting = Constr 0 [B policy(28B)] with the tool-declared compiled policy above, replacing the K9 locally chosen a2 policy everywhere.",
+    "semanticsWarning": "This is a locally constructed, semantically well-formed context in the K9 placeholder style. It is NOT an actual ledger transaction: no fee/conservation/min-ADA/admission, unspentness, signature or chain-state claim is made. Fabricated 2222../555.. values and the unbound 2030 expiry are retained for the local wrapper only."
+  },
+  "tests": [
+    {"id": "K10-T1-positive-genuine-issue", "construction": "Positive envelope, coherent token name/mint/output, genuine VK/proof.", "expected": {"exitCode": 0, "stdout": "single JSON object with result == \"(con unit ())\" and integer cpu/mem > 0 (eval.rs non-debug shape)", "firstFailure": "none"}, "guardPath": "All claim.issue conjuncts pass, pairing (groth16.verify_digest) checked last."},
+    {"id": "K10-T2-n1-body-digest-pairing-reject", "construction": "Envelope rebuilt coherently with n1_statement_digest (body re-derived); token name/mint/output rebuilt from the tampered envelope.", "expected": {"exitCode": 1, "stdout": "empty; error and costs on stderr (eval.rs error path)", "firstFailure": "pairing inside groth16.verify_digest"}, "guardPath": "Name, well-formedness and VK-digest guards pass by construction, so refusal is the pairing, not an earlier guard."},
+    {"id": "K10-T3-n2-context-digest-pairing-reject", "construction": "Same coherent rebuild with n2_statement_digest (context/seq re-derived).", "expected": {"exitCode": 1, "stdout": "empty; error and costs on stderr", "firstFailure": "pairing inside groth16.verify_digest"}, "guardPath": "Same as T2."},
+    {"id": "K10-T4-n3-proof-ac-swap-pairing-reject", "construction": "Unchanged positive envelope/context; proof is the genuine proof with A and C G1 slices swapped (n3_proof).", "expected": {"exitCode": 1, "stdout": "empty; error and costs on stderr", "firstFailure": "pairing inside groth16.verify_digest"}, "guardPath": "Unlike K9's Bool False, the compiled wrapper surfaces rejection as a non-zero eval exit; do not relabel it as a metadata/Bool result."},
+    {"id": "K10-T5-quantity-two-reject", "construction": "Positive envelope; token quantity 2 in both mint and the claim output.", "expected": {"exitCode": 1, "stdout": "empty; error and costs on stderr", "firstFailure": "qty == 1"}, "guardPath": "Singleton mint-pair/output expects still hold; qty==1 is the first failing conjunct."},
+    {"id": "K10-T6-token-name-bitflip-reject", "construction": "Positive envelope/datum; minted and output token name is the correct name with its first bit flipped.", "expected": {"exitCode": 1, "stdout": "empty; error and costs on stderr", "firstFailure": "name == envelope_name(raw)"}, "guardPath": "Quantity/holder/single-token checks pass; the name guard fires before well-formedness/pairing."},
+    {"id": "K10-T7-vk-digest-bitflip-reject", "construction": "Envelope vk_digest first bit flipped; token name/mint/output rebuilt coherently from that tampered envelope.", "expected": {"exitCode": 1, "stdout": "empty; error and costs on stderr", "firstFailure": "env.vk_digest == blake2b_256(vk)"}, "guardPath": "All earlier conjuncts pass by construction; the VK-digest equality fires before the pairing."}
+  ],
+  "determinism": "Generation is deterministic: fixed pins are verified before and after, existing non-empty output directories are refused, and every generated file hash is recorded by the future operator. Local VM cpu/mem from eval are not ledger ExUnits and not a ledger cost model. Current mainnet/Preprod maxTxSize/ExUnits are unknown from these inputs and must not be inferred."
+}

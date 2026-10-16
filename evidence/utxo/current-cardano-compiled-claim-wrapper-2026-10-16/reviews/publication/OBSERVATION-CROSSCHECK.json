@@ -1,0 +1,58 @@
+[
+  {
+    "evidence": "PUBLICATION.json lines 12-14: payloadCount 337, payloadBytes 5125461, totalStagedFiles 341. COPY-MANIFEST.json lines 11-13: copiedPayloadCount 337, copiedPayloadBytes 5125461, copyRule mirroring payload/inputs/<original absolute path without leading slash>. README.md line 35 repeats 337 payloads / 5,125,461 bytes and 341 staged files.",
+    "id": "CC1-counts-and-bytes",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "Membership arithmetic is internally consistent: 327 frozen plus 10 companions equals 337 payloads; 337 payloads plus 4 packaging documents equals 341 staged files; the four documents pinned in INPUT-INDEX.json (README 10598 B, PUBLICATION 12652 B, COPY-MANIFEST 369678 B, OWN-OUTPUT-ALLOWLIST 149492 B) total 542420 B, and 5125461 + 542420 = 5667881 B total staged."
+  },
+  {
+    "evidence": "COPY-MANIFEST.json tail lines 2961-3040 lists one actual-review input freeze (ROOT-INPUT-FREEZE.json, 144576 B, 3ec9bb8f...), eight fresh non-author actual-review outputs (REPORT, PROCESS, MODEL-REVIEW, FINDINGS, OBSERVATION-CROSSCHECK, ADOPTION-RECOMMENDATION, READ-COVERAGE, DESIGN-POSITIONS) and one root scoped actual adoption (K10-ACTUAL-ADOPTION.json, 10781 B, 6421ba84...). OWN-OUTPUT-ALLOWLIST.json lines 337-346 lists the same reviews/actual and root targets.",
+    "id": "CC2-companion-membership",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "The 10 companions are exactly the freeze, eight actual-review outputs and the root adoption; no root or timestamp count was guessed."
+  },
+  {
+    "evidence": "COPY-MANIFEST.json lines 3042 onward: sourceMap pairs originalSourcePath with publicationRelativePath equal to payload/inputs/ plus the source path without its leading slash; the first data entry at lines 19-25 shows the same source, target, bytes, sha256, category and ROOT-INPUT-FREEZE pinBasis. OWN-OUTPUT-ALLOWLIST.json line 4 allowedFileCount 341 and lines 6-9 list COPY-MANIFEST.json, OWN-OUTPUT-ALLOWLIST.json, PUBLICATION.json and README.md first.",
+    "id": "CC3-lossless-source-map",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "The sourceMap resolves original absolute public paths losslessly, and README.md links (adoption, actual, recommendation, review-coverage, freeze, receipt, capture, script, generated, expectations, operator, source-authority, auth, spent, r1, defects, r2, helpers, c2, claim at lines 39-58) are portable relative paths inside the capsule whose targets appear in PUBLICATION.json keyArtifacts and the allowlist."
+  },
+  {
+    "evidence": "Search of INPUT-INDEX.json for .bin, .exe, .dll, .so, .dylib, .skey, .vkey, .pem, .key, seed and mnemonic extensions returned no matches. PUBLICATION.json line 194: No new Rust source packet, private/provider raw, protected paths or binary/archive tool bodies. README.md line 21: No executable tool body is included; tool identity is release-declared Aiken v1.1.24 provenance only.",
+    "id": "CC4-public-only-no-binaries",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "No tool binary, private material or provider raw file is listed in the mirror index; included operator and adapter files are public source text, consistent with the stated public-only scope."
+  },
+  {
+    "evidence": "Root adoption lines 63-172: T1 ACCEPT_UNIT (con unit ()), cpu 2222340191, mem 205312; T2-T7 SEMANTIC_EVALUATION_FAILURE with source-expected guards and the explicit qualification that runtime does not instrument named guards and typed-decode failure is possible. Lines 183-187: authSpent true, attempts 1, retries 0, newAuthority false, ledgerOrPreprodAccepted false. Actual REPORT.md lines 7-13 corroborate receipt 53e4e667... (41249 B), 7 launched / 7 returned / 7 validated, host 11 pins, staged 9 unchanged, wall 0.8483442220021971, waited CPU 0.570947, transitiveNativeCpuMeasured=false, 2770 CBOR / 2767 flat / policy 6a4b67e7...59c1.",
+    "id": "CC5-finite-actual-scope",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "Root adoption 6421ba84... closes only the finite seven-case result: one genuine T1 unit plus six semantic EvaluationFailure negatives on frozen public contexts. Local VM cpu/mem are ExBudget::default() accounting, explicitly not ledger ExUnits, fees, min-ADA, collateral or transaction fit."
+  },
+  {
+    "evidence": "SOURCE-ADOPTION-AND-ONE-RUN-AUTHORITY.json positions K10W-C1 to K10W-C13 each carry author FOR and freshNonAuthor AGREE, resolved before AUTH; root adoption line 61 states the actual review returns empty positions despite a request for 13 repeats and that no 13 actual votes are to be fabricated. MODEL-REVIEW.json positions is empty. Actual ADOPTION-RECOMMENDATION.json lines 9-10 leaves publicRecordExportPrerequisiteClosed and publicVerificationInputsPublishable false, while root adoption line 61 requires a separate exact packaging review, which is this review.",
+    "id": "CC6-positions-and-publication-flags",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "The 13 FOR/AGREE positions are source-decision history, not actual-review votes; the actual review invented none. Its false publicExport/publicInputs flags mean no earlier publication approval, so this distinct packaging review is the correct place to recommend publication only."
+  },
+  {
+    "evidence": "Actual REPORT.md line 17 and README.md line 25: R1 f7caa24e READY was contradicted by root REPRODUCTION (eager dict.get default int(t/x) ValueError, missing post-run custody of nine staged inputs, returned call dropped from accounting on validation failure), was never executed or authorized; R2 repaired those three points and received fresh full source review a67387df; helper RESULT.json shows five ordinary check_staged_inputs outcomes only. Root adoption line 62 preserves this history and states immutable source-time pending flags are unchanged.",
+    "id": "CC7-history-preserved",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "R1 wrong READY, the three reproduced bugs, the R2 mapping/staged-custody/returned-accounting repair and the five ordinary helper checks are preserved without rewriting immutable pending, whitespace or raw failures; PUBLICATION.json status STAGED_PENDING_FRESH_MUSE_PUBLICATION_AUDIT and the capture false review flag remain source-time history for a future root companion to supersede."
+  },
+  {
+    "evidence": "PUBLICATION.json lines 10-11 and README.md line 35: checkoutSourceCommit 752c7aa7a07523a7bc5bf929fcadc094815c48e4 is repository source-navigation context only; most frozen inputs are separately materialized artifacts outside Git pinned by the freeze. Root adoption line 61 narrows generic nativeRoundtrip/authorityProposalReady flags to the finite result and spent historical AUTH. README.md line 29: AUTH is historical and spent; public Moriarty compilation, proving and deployment remain permissionless with no reviewer registry.",
+    "id": "CC8-git-and-authority-narrowing",
+    "requiredFix": "",
+    "severity": "none",
+    "summary": "Git 752c7 is a source anchor only and does not claim outside-Git evidence was Git source. Generic native and authority flags are not broad adoption, and internal AUTH remains historical SPENT."
+  }
+]
