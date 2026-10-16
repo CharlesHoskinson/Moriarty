@@ -58,6 +58,18 @@ The K complete-cell decoder has a separate unsupported-comparison disposition
 until complete observed rule labels and capture coverage exist. Availability of
 K or a passing normal parser fixture cannot replace that evidence (SF-15).
 
+The fixed Core-source increment has independently frozen complete observations
+for two contrasting scalar source programs: 70 fuel prefixes and 1,259 records.
+Its consumer compares complete source/preparation reports before all complete
+runs. The [bounded-source delivery](../../../docs/audits/2026-10-16/sherlock-bounded-source-delivery/README.md)
+records the production Core library and producer builds, 14 passing selected
+tests, and actual parser/projection/Machine execution matching both fixed source
+programs and all 70 prefixes. This observes the caller-bounded diagnostic path
+for those fixtures; general H1 qualification and grammar coverage remain open.
+It projects emit values only and establishes no financial effects or
+compiler-to-ledger correspondence. Copied matching literals remain comparison
+fixtures, not separate parser/evaluator execution evidence.
+
 The extra ordinary continuation tests exercise production `Machine::run_steps`
 on N03–N08 across all frozen prefixes, every event cut and widths 1/2/4/8.
 The flat-ID producer exercises the existing separate host image interpreter.
