@@ -52,3 +52,8 @@ mod helper_call_adapter;
 // Causal occurrence metadata on the private image execution path.
 #[cfg(test)]
 mod source_origin_normal_tests;
+
+// Internal L4 host preparation source proposal; H1, no network/untrusted API.
+// Compilation and all normal tests remain UNRUN pending separate admission.
+#[cfg(test)]
+mod layout_a;

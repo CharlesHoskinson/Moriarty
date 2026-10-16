@@ -1,0 +1,1386 @@
+{
+  "format": "sherlock-machine-circuit-layout-proposal-crosswalk/1",
+  "status": "UNADOPTED SOURCE-DESIGN DATA; NOT A CANONICAL SCHEMA OR NATIVE ABI",
+  "source": "crates/mori-core/src/sherlock/reference_types.rs",
+  "profile": "sherlock-k-a/1",
+  "tag_note": "Tags are proposed within the named enum/row namespace, not existing source ABI. Value.List/Tree have no wrapper tag: their exact builtin type and constructor nodes encode them. Tree tags shown are constructor IDs.",
+  "source_enum_variants": {
+    "Tree": {
+      "Leaf": {
+        "proposed_tag": 2,
+        "source_payload": [
+          "u128"
+        ],
+        "storage": "ValueNode Constructor(type=Tree,ctor=Leaf), field[0]=UInt node"
+      },
+      "Branch": {
+        "proposed_tag": 3,
+        "source_payload": [
+          "Arc<Tree>",
+          "Arc<Tree>"
+        ],
+        "storage": "ValueNode Constructor(type=Tree,ctor=Branch), fields=[left,right]"
+      }
+    },
+    "Value": {
+      "UInt": {
+        "proposed_tag": 0,
+        "source_payload": [
+          "u128"
+        ],
+        "storage": "ValueNode kind=UInt,type=UInt,uintBytes"
+      },
+      "Bool": {
+        "proposed_tag": 1,
+        "source_payload": [
+          "bool"
+        ],
+        "storage": "ValueNode kind=Bool,type=Bool,boolValue"
+      },
+      "List": {
+        "proposed_tag": null,
+        "source_payload": [
+          "Vec<u128>"
+        ],
+        "storage": "ValueNode Constructor List Cons/Nil chain in source order; each head UInt node"
+      },
+      "Tree": {
+        "proposed_tag": null,
+        "source_payload": [
+          "Tree"
+        ],
+        "storage": "ValueNode Constructor Tree Leaf/Branch; Tree crosswalk"
+      }
+    },
+    "Type": {
+      "UInt": {
+        "proposed_tag": 0,
+        "source_payload": [],
+        "storage": "typeId=0"
+      },
+      "Bool": {
+        "proposed_tag": 1,
+        "source_payload": [],
+        "storage": "typeId=1"
+      },
+      "List": {
+        "proposed_tag": 2,
+        "source_payload": [],
+        "storage": "typeId=2"
+      },
+      "Tree": {
+        "proposed_tag": 3,
+        "source_payload": [],
+        "storage": "typeId=3"
+      }
+    },
+    "BinaryOp": {
+      "Add": {
+        "proposed_tag": 0,
+        "source_payload": [],
+        "storage": "binaryOp=0"
+      },
+      "Sub": {
+        "proposed_tag": 1,
+        "source_payload": [],
+        "storage": "binaryOp=1"
+      },
+      "Mul": {
+        "proposed_tag": 2,
+        "source_payload": [],
+        "storage": "binaryOp=2"
+      },
+      "Eq": {
+        "proposed_tag": 3,
+        "source_payload": [],
+        "storage": "binaryOp=3"
+      },
+      "Lt": {
+        "proposed_tag": 4,
+        "source_payload": [],
+        "storage": "binaryOp=4"
+      },
+      "Cons": {
+        "proposed_tag": 5,
+        "source_payload": [],
+        "storage": "binaryOp=5"
+      },
+      "Branch": {
+        "proposed_tag": 6,
+        "source_payload": [],
+        "storage": "binaryOp=6"
+      }
+    },
+    "UnaryOp": {
+      "Leaf": {
+        "proposed_tag": 0,
+        "source_payload": [],
+        "storage": "unaryOp=0"
+      },
+      "Not": {
+        "proposed_tag": 1,
+        "source_payload": [],
+        "storage": "unaryOp=1"
+      }
+    },
+    "Pattern": {
+      "Var": {
+        "proposed_tag": 0,
+        "source_payload": [
+          "Name"
+        ],
+        "storage": "PatternRow.name0"
+      },
+      "Nil": {
+        "proposed_tag": 1,
+        "source_payload": [],
+        "storage": "no payload"
+      },
+      "Cons": {
+        "proposed_tag": 2,
+        "source_payload": [
+          "Name",
+          "Name"
+        ],
+        "storage": "PatternRow.name0=head,name1=tail"
+      },
+      "Leaf": {
+        "proposed_tag": 3,
+        "source_payload": [
+          "Name"
+        ],
+        "storage": "PatternRow.name0"
+      },
+      "Branch": {
+        "proposed_tag": 4,
+        "source_payload": [
+          "Name",
+          "Name"
+        ],
+        "storage": "PatternRow.name0=left,name1=right"
+      }
+    },
+    "Expr": {
+      "Literal": {
+        "proposed_tag": 0,
+        "source_payload": [
+          "Value"
+        ],
+        "storage": "ExprRow.valueRef with Constant space"
+      },
+      "Var": {
+        "proposed_tag": 1,
+        "source_payload": [
+          "Name"
+        ],
+        "storage": "ExprRow.nameId"
+      },
+      "Let": {
+        "proposed_tag": 2,
+        "source_payload": [
+          "Name",
+          "ExprRef",
+          "ExprRef"
+        ],
+        "storage": "nameId; childSlice=[value,body]"
+      },
+      "Binary": {
+        "proposed_tag": 3,
+        "source_payload": [
+          "BinaryOp",
+          "ExprRef",
+          "ExprRef"
+        ],
+        "storage": "binaryOp; childSlice=[left,right]"
+      },
+      "Unary": {
+        "proposed_tag": 4,
+        "source_payload": [
+          "UnaryOp",
+          "ExprRef"
+        ],
+        "storage": "unaryOp; childSlice=[operand]"
+      },
+      "If": {
+        "proposed_tag": 5,
+        "source_payload": [
+          "ExprRef",
+          "ExprRef",
+          "ExprRef"
+        ],
+        "storage": "childSlice=[condition,then,else]"
+      },
+      "Call": {
+        "proposed_tag": 6,
+        "source_payload": [
+          "Name",
+          "Vec<ExprRef>"
+        ],
+        "storage": "nameId; childSlice=ordered arguments"
+      },
+      "Match": {
+        "proposed_tag": 7,
+        "source_payload": [
+          "ExprRef",
+          "Vec<Arm>"
+        ],
+        "storage": "childSlice=[scrutinee]; ordered armSlice"
+      }
+    },
+    "Frame": {
+      "Let": {
+        "proposed_tag": 0,
+        "source_payload": [
+          "Name",
+          "ExprRef",
+          "Environment"
+        ],
+        "storage": "nameId,expr0=body,savedEnv"
+      },
+      "Left": {
+        "proposed_tag": 1,
+        "source_payload": [
+          "BinaryOp",
+          "ExprRef",
+          "Environment"
+        ],
+        "storage": "binaryOp,expr0=right,savedEnv"
+      },
+      "Right": {
+        "proposed_tag": 2,
+        "source_payload": [
+          "BinaryOp",
+          "Value"
+        ],
+        "storage": "binaryOp,valueRef=left; no environment field"
+      },
+      "Unary": {
+        "proposed_tag": 3,
+        "source_payload": [
+          "UnaryOp"
+        ],
+        "storage": "unaryOp"
+      },
+      "If": {
+        "proposed_tag": 4,
+        "source_payload": [
+          "ExprRef",
+          "ExprRef",
+          "Environment"
+        ],
+        "storage": "expr0=then,expr1=else,savedEnv"
+      },
+      "Match": {
+        "proposed_tag": 5,
+        "source_payload": [
+          "Vec<Arm>",
+          "Environment"
+        ],
+        "storage": "armSlice,savedEnv"
+      },
+      "Args": {
+        "proposed_tag": 6,
+        "source_payload": [
+          "Name",
+          "Vec<Value>",
+          "Vec<ExprRef>",
+          "Environment"
+        ],
+        "storage": "nameId,completedSlice,remainingExprSlice,savedEnv"
+      },
+      "Return": {
+        "proposed_tag": 7,
+        "source_payload": [
+          "Type",
+          "Environment"
+        ],
+        "storage": "typeId,savedEnv"
+      },
+      "Scope": {
+        "proposed_tag": 8,
+        "source_payload": [
+          "Environment"
+        ],
+        "storage": "savedEnv"
+      }
+    },
+    "Control": {
+      "Eval": {
+        "proposed_tag": 0,
+        "source_payload": [
+          "ExprRef"
+        ],
+        "storage": "exprId"
+      },
+      "Return": {
+        "proposed_tag": 1,
+        "source_payload": [
+          "Value"
+        ],
+        "storage": "valueRef"
+      },
+      "Push": {
+        "proposed_tag": 2,
+        "source_payload": [
+          "Frame",
+          "Box<Control>",
+          "Environment"
+        ],
+        "storage": "pendingFrame inline full FrameRow; next=next active ControlRow; environment"
+      },
+      "Invoke": {
+        "proposed_tag": 3,
+        "source_payload": [
+          "Name",
+          "Vec<Value>"
+        ],
+        "storage": "nameId,valueSlice"
+      },
+      "Enter": {
+        "proposed_tag": 4,
+        "source_payload": [
+          "Option<Function>",
+          "Vec<Value>"
+        ],
+        "storage": "functionPresent; functionId = least row with exact Function equality; valueSlice"
+      },
+      "Bound": {
+        "proposed_tag": 5,
+        "source_payload": [
+          "Option<Environment>",
+          "Type",
+          "ExprRef"
+        ],
+        "storage": "bindingsPresent,bindings EnvRoot; typeId,exprId"
+      },
+      "Cases": {
+        "proposed_tag": 6,
+        "source_payload": [
+          "Value",
+          "Vec<Arm>",
+          "Environment"
+        ],
+        "storage": "valueRef,armSlice,environment"
+      },
+      "CaseResult": {
+        "proposed_tag": 7,
+        "source_payload": [
+          "Option<Environment>",
+          "Value",
+          "ExprRef",
+          "Vec<Arm>",
+          "Environment"
+        ],
+        "storage": "bindingsPresent,bindings EnvRoot; valueRef,exprId,armSlice,environment"
+      },
+      "PrimitiveResult": {
+        "proposed_tag": 8,
+        "source_payload": [
+          "Result<Value,u8>"
+        ],
+        "storage": "primitiveIsOk; Ok valueRef or Err errorCode"
+      },
+      "Error": {
+        "proposed_tag": 9,
+        "source_payload": [
+          "u8"
+        ],
+        "storage": "errorCode"
+      }
+    },
+    "Outcome": {
+      "Pending": {
+        "proposed_tag": 0,
+        "source_payload": [],
+        "storage": "Root.outcomeTag; inactive value/error zero"
+      },
+      "Done": {
+        "proposed_tag": 1,
+        "source_payload": [
+          "Value"
+        ],
+        "storage": "Root.outcomeValue"
+      },
+      "Rejected": {
+        "proposed_tag": 2,
+        "source_payload": [
+          "u8"
+        ],
+        "storage": "Root.outcomeError"
+      },
+      "Exhausted": {
+        "proposed_tag": 3,
+        "source_payload": [],
+        "storage": "Root.outcomeTag; no B reason injected"
+      }
+    }
+  },
+  "source_struct_fields": {
+    "Arm": {
+      "pattern": "Arms.patternId -> Patterns complete variant",
+      "body": "Arms.bodyExprId -> Expressions"
+    },
+    "Parameter": {
+      "name": "Parameters.nameId -> Names/NameBytes",
+      "ty": "Parameters.typeId"
+    },
+    "Function": {
+      "name": "Functions.nameId",
+      "parameters": "Functions.parameterSlice in source order",
+      "return_type": "Functions.returnType",
+      "body": "Functions.bodyExprId"
+    },
+    "Program": {
+      "functions": "complete immutable Functions/Parameters/Expressions, original order including unused bodies",
+      "entry": "ProgramBlock.entryExprId; complete entry syntax"
+    },
+    "Snapshot": {
+      "program": "one shared ProgramBlock; decoded Program must equal PreparedA.fullProgram structurally, else ProgramMismatch; reconstruct full Program",
+      "control": "Root.controlLength plus entire ControlRows spine; zero means None",
+      "environment": "Root.environment -> full EnvCells map",
+      "frames": "Root.depth plus complete top-first FrameSlots payloads",
+      "stack_limit": "Root.stackLimit exact count(SL), distinct from physical capacity S",
+      "remaining_fuel": "Root.remainingFuel sixteen little-endian bytes",
+      "initial_fuel": "Root.initialFuel sixteen little-endian bytes",
+      "outcome": "Root.outcomeTag/outcomeValue/outcomeError"
+    },
+    "StepRecord": {
+      "rule_start_line": "ObservedRecordA.envelope.ruleStartLine enum(39) per rule_line_tags; outside StateBlock",
+      "charge": "ObservedRecordA.envelope.charge exact u8; O4 requires the tag's charge",
+      "before": "beforeImage StateBlock decoded with the shared ProgramBlock",
+      "after": "afterImage StateBlock decoded with the same ProgramBlock"
+    }
+  },
+  "aliases": {
+    "Name": "exact String bytes via Names/NameBytes",
+    "Environment": "finite BTreeMap<Name,Value> meaning of newest-binding-first EnvRoot chain",
+    "ExprRef": "immutable child link: its own preorder ExprId; state-held reference: least structurally equal ExprId; Arc identity is not source meaning"
+  },
+  "additional_sum_distinctions": {
+    "Snapshot.control": "controlLength=0 None; positive length Some control spine",
+    "Control.Enter.function": "functionPresent false/true, present row0 valid",
+    "Control.Bound.bindings": "bindingsPresent separately from empty EnvRoot",
+    "Control.CaseResult.bindings": "bindingsPresent separately from empty EnvRoot and saved environment",
+    "Control.PrimitiveResult": "primitiveIsOk true value / false u8 error",
+    "EnvRoot": "present=false empty map, not failed binding",
+    "ValueRef": "constant versus runtime namespace, never absence"
+  },
+  "ordered_record_columns": {
+    "Names": [
+      [
+        "byteStart",
+        "start(NB)"
+      ],
+      [
+        "byteLength",
+        "count(NB)"
+      ]
+    ],
+    "NameBytes": [
+      [
+        "byte",
+        "u8"
+      ]
+    ],
+    "Occurrences": [
+      [
+        "ownerTag",
+        "enum(Entry,Function)"
+      ],
+      [
+        "functionIndex",
+        "id(F)"
+      ],
+      [
+        "pathStart",
+        "start(OP)"
+      ],
+      [
+        "pathLength",
+        "count(OP)"
+      ]
+    ],
+    "OccurrencePaths": [
+      [
+        "childPosition",
+        "count(max(XC,A+1))"
+      ]
+    ],
+    "Expressions": [
+      [
+        "tag",
+        "enum(Literal,Var,Let,Binary,Unary,If,Call,Match)"
+      ],
+      [
+        "occurrenceId",
+        "id(O)"
+      ],
+      [
+        "valueRef",
+        "ValueRef"
+      ],
+      [
+        "nameId",
+        "id(N)"
+      ],
+      [
+        "binaryOp",
+        "enum(Add,Sub,Mul,Eq,Lt,Cons,Branch)"
+      ],
+      [
+        "unaryOp",
+        "enum(Leaf,Not)"
+      ],
+      [
+        "childSlice",
+        "Slice(XC)"
+      ],
+      [
+        "armSlice",
+        "Slice(A)"
+      ]
+    ],
+    "ExprChildren": [
+      [
+        "expression",
+        "id(X)"
+      ]
+    ],
+    "Functions": [
+      [
+        "sourceTableIndex",
+        "id(F)"
+      ],
+      [
+        "nameId",
+        "id(N)"
+      ],
+      [
+        "parameterSlice",
+        "Slice(P)"
+      ],
+      [
+        "returnType",
+        "id(T)"
+      ],
+      [
+        "bodyExprId",
+        "id(X)"
+      ]
+    ],
+    "Parameters": [
+      [
+        "nameId",
+        "id(N)"
+      ],
+      [
+        "typeId",
+        "id(T)"
+      ]
+    ],
+    "Patterns": [
+      [
+        "tag",
+        "enum(Var,Nil,Cons,Leaf,Branch)"
+      ],
+      [
+        "name0",
+        "id(N)"
+      ],
+      [
+        "name1",
+        "id(N)"
+      ]
+    ],
+    "Arms": [
+      [
+        "patternId",
+        "id(R)"
+      ],
+      [
+        "bodyExprId",
+        "id(X)"
+      ]
+    ],
+    "Types": [
+      [
+        "kind",
+        "enum(UInt,Bool,List,Tree)"
+      ],
+      [
+        "ctorStart",
+        "start(Q)"
+      ],
+      [
+        "ctorLength",
+        "count(Q)"
+      ]
+    ],
+    "Constructors": [
+      [
+        "owningType",
+        "id(T)"
+      ],
+      [
+        "sourceOrder",
+        "count(Q)"
+      ],
+      [
+        "fieldTypeSlice",
+        "Slice(QF)"
+      ]
+    ],
+    "ConstructorFieldTypes": [
+      [
+        "typeId",
+        "id(T)"
+      ]
+    ],
+    "ValueRef": [
+      [
+        "space",
+        "Bool"
+      ],
+      [
+        "index",
+        "id(max(K,D))"
+      ]
+    ],
+    "ConstantNode": [
+      [
+        "kind",
+        "enum(UInt,Bool,Constructor)"
+      ],
+      [
+        "typeId",
+        "id(T)"
+      ],
+      [
+        "ctorId",
+        "id(Q)"
+      ],
+      [
+        "uintBytes",
+        "u8[16]"
+      ],
+      [
+        "boolValue",
+        "Bool"
+      ],
+      [
+        "fieldStart",
+        "start(KF)"
+      ],
+      [
+        "fieldLength",
+        "count(KF)"
+      ]
+    ],
+    "DataNode": [
+      [
+        "kind",
+        "enum(UInt,Bool,Constructor)"
+      ],
+      [
+        "typeId",
+        "id(T)"
+      ],
+      [
+        "ctorId",
+        "id(Q)"
+      ],
+      [
+        "uintBytes",
+        "u8[16]"
+      ],
+      [
+        "boolValue",
+        "Bool"
+      ],
+      [
+        "fieldStart",
+        "start(DF)"
+      ],
+      [
+        "fieldLength",
+        "count(DF)"
+      ]
+    ],
+    "ConstantFields": [
+      [
+        "value",
+        "ValueRef"
+      ]
+    ],
+    "DataFields": [
+      [
+        "value",
+        "ValueRef"
+      ]
+    ],
+    "EnvRoot": [
+      [
+        "present",
+        "Bool"
+      ],
+      [
+        "index",
+        "id(E)"
+      ]
+    ],
+    "EnvCells": [
+      [
+        "nameId",
+        "id(N)"
+      ],
+      [
+        "valueRef",
+        "ValueRef"
+      ],
+      [
+        "parent",
+        "EnvRoot"
+      ]
+    ],
+    "ValueSlots": [
+      [
+        "value",
+        "ValueRef"
+      ]
+    ],
+    "FrameRow": [
+      [
+        "tag",
+        "enum(Let,Left,Right,Unary,If,Match,Args,Return,Scope)"
+      ],
+      [
+        "nameId",
+        "id(N)"
+      ],
+      [
+        "binaryOp",
+        "enum(Add,Sub,Mul,Eq,Lt,Cons,Branch)"
+      ],
+      [
+        "unaryOp",
+        "enum(Leaf,Not)"
+      ],
+      [
+        "typeId",
+        "id(T)"
+      ],
+      [
+        "expr0",
+        "id(X)"
+      ],
+      [
+        "expr1",
+        "id(X)"
+      ],
+      [
+        "savedEnv",
+        "EnvRoot"
+      ],
+      [
+        "valueRef",
+        "ValueRef"
+      ],
+      [
+        "completedSlice",
+        "Slice(V)"
+      ],
+      [
+        "remainingExprSlice",
+        "Slice(XC)"
+      ],
+      [
+        "armSlice",
+        "Slice(A)"
+      ]
+    ],
+    "ControlRow": [
+      [
+        "tag",
+        "enum(Eval,Return,Push,Invoke,Enter,Bound,Cases,CaseResult,PrimitiveResult,Error)"
+      ],
+      [
+        "exprId",
+        "id(X)"
+      ],
+      [
+        "valueRef",
+        "ValueRef"
+      ],
+      [
+        "pendingFrame",
+        "FrameRow"
+      ],
+      [
+        "environment",
+        "EnvRoot"
+      ],
+      [
+        "nameId",
+        "id(N)"
+      ],
+      [
+        "valueSlice",
+        "Slice(V)"
+      ],
+      [
+        "functionPresent",
+        "Bool"
+      ],
+      [
+        "functionId",
+        "id(F)"
+      ],
+      [
+        "bindingsPresent",
+        "Bool"
+      ],
+      [
+        "bindings",
+        "EnvRoot"
+      ],
+      [
+        "typeId",
+        "id(T)"
+      ],
+      [
+        "armSlice",
+        "Slice(A)"
+      ],
+      [
+        "primitiveIsOk",
+        "Bool"
+      ],
+      [
+        "errorCode",
+        "u8"
+      ]
+    ],
+    "Root": [
+      [
+        "activeData",
+        "count(D)"
+      ],
+      [
+        "activeDataFields",
+        "count(DF)"
+      ],
+      [
+        "activeEnvCells",
+        "count(E)"
+      ],
+      [
+        "activeValueSlots",
+        "count(V)"
+      ],
+      [
+        "depth",
+        "count(S)"
+      ],
+      [
+        "controlLength",
+        "count(C)"
+      ],
+      [
+        "environment",
+        "EnvRoot"
+      ],
+      [
+        "stackLimit",
+        "count(SL)"
+      ],
+      [
+        "remainingFuel",
+        "u8[16]"
+      ],
+      [
+        "initialFuel",
+        "u8[16]"
+      ],
+      [
+        "outcomeTag",
+        "enum(Pending,Done,Rejected,Exhausted)"
+      ],
+      [
+        "outcomeValue",
+        "ValueRef"
+      ],
+      [
+        "outcomeError",
+        "u8"
+      ]
+    ]
+  },
+  "width_rules": {
+    "id(Z)": "max(1,ceil(log2(max(1,Z)))) bits; selected active bound still required",
+    "count(Z),start(Z)": "max(1,ceil(log2(Z+1))) bits",
+    "Slice(Z)": "start:start(Z),len:count(Z); empty=(0,0)",
+    "enum(v variants)": "max(1,ceil(log2(v))) bits; tags in documented order only",
+    "unsigned(w bits)": "ceil(w/8) little-endian byte lanes; high unused bits zero",
+    "Bool": "one Boolean lane",
+    "u8": "one byte lane",
+    "u8[16]": "sixteen little-endian bytes, exact UInt128"
+  },
+  "unadopted_b_extension": "extensions-and-obligations.md; no B counters defaulted into A",
+  "execution": "NONE",
+  "table_capacities": {
+    "Names": "N",
+    "NameBytes": "NB",
+    "Occurrences": "O",
+    "OccurrencePaths": "OP",
+    "Expressions": "X",
+    "ExprChildren": "XC",
+    "Functions": "F",
+    "Parameters": "P",
+    "Patterns": "R",
+    "Arms": "A",
+    "Types": "T",
+    "Constructors": "Q",
+    "ConstructorFieldTypes": "QF",
+    "Constants": "K",
+    "ConstantFields": "KF",
+    "Data": "D",
+    "DataFields": "DF",
+    "EnvCells": "E",
+    "ValueSlots": "V",
+    "FrameSlots": "S",
+    "ControlRows": "C"
+  },
+  "block_order": {
+    "ProgramBlock": [
+      "ProgramHeader(program_header_columns)",
+      "Names",
+      "NameBytes",
+      "Occurrences",
+      "OccurrencePaths",
+      "Expressions",
+      "ExprChildren",
+      "Functions",
+      "Parameters",
+      "Patterns",
+      "Arms",
+      "Types",
+      "Constructors",
+      "ConstructorFieldTypes",
+      "Constants",
+      "ConstantFields"
+    ],
+    "StateBlock": [
+      "Root",
+      "Data",
+      "DataFields",
+      "EnvCells",
+      "ValueSlots",
+      "FrameSlots",
+      "ControlRows"
+    ]
+  },
+  "table_record_aliases": {
+    "Constants": "ConstantNode",
+    "Data": "DataNode",
+    "FrameSlots": "FrameRow",
+    "ControlRows": "ControlRow"
+  },
+  "a_builtin_active_lengths": {
+    "Types": 4,
+    "Constructors": 4,
+    "ConstructorFieldTypes": 5
+  },
+  "program_header_columns": [
+    [
+      "entryExprId",
+      "id(X)"
+    ],
+    [
+      "activeNames",
+      "count(N)"
+    ],
+    [
+      "activeNameBytes",
+      "count(NB)"
+    ],
+    [
+      "activeOccurrences",
+      "count(O)"
+    ],
+    [
+      "activeOccurrencePaths",
+      "count(OP)"
+    ],
+    [
+      "activeExpressions",
+      "count(X)"
+    ],
+    [
+      "activeExprChildren",
+      "count(XC)"
+    ],
+    [
+      "activeFunctions",
+      "count(F)"
+    ],
+    [
+      "activeParameters",
+      "count(P)"
+    ],
+    [
+      "activePatterns",
+      "count(R)"
+    ],
+    [
+      "activeArms",
+      "count(A)"
+    ],
+    [
+      "activeTypes",
+      "count(T)"
+    ],
+    [
+      "activeConstructors",
+      "count(Q)"
+    ],
+    [
+      "activeConstructorFieldTypes",
+      "count(QF)"
+    ],
+    [
+      "activeConstants",
+      "count(K)"
+    ],
+    [
+      "activeConstantFields",
+      "count(KF)"
+    ]
+  ],
+  "observation_envelope": {
+    "placement": "outside ProgramBlock and StateBlock; not a Root column; freezes no trace identity, exposure or statement binding",
+    "ObservedRecordA": [
+      [
+        "ruleStartLine",
+        "enum(39) rule_line_tags"
+      ],
+      [
+        "charge",
+        "u8"
+      ],
+      [
+        "beforeImage",
+        "StateBlock"
+      ],
+      [
+        "afterImage",
+        "StateBlock"
+      ]
+    ]
+  },
+  "rule_line_tags": {
+    "source": "crates/mori-core/src/sherlock/reference.rs literal rule_start_line values; no ranges",
+    "order": "ascending line value; columns [tag, line, charge, source arm]",
+    "rows": [
+      [
+        0,
+        80,
+        0,
+        "Return, no frames: publish Done"
+      ],
+      [
+        1,
+        82,
+        0,
+        "Error: publish Rejected"
+      ],
+      [
+        2,
+        84,
+        0,
+        "zero fuel: publish Exhausted"
+      ],
+      [
+        3,
+        102,
+        1,
+        "Eval Literal"
+      ],
+      [
+        4,
+        108,
+        1,
+        "Eval Var bound"
+      ],
+      [
+        5,
+        111,
+        1,
+        "Eval Var unbound: Error(3)"
+      ],
+      [
+        6,
+        114,
+        1,
+        "Eval Let"
+      ],
+      [
+        7,
+        117,
+        1,
+        "Eval Binary"
+      ],
+      [
+        8,
+        120,
+        1,
+        "Eval Unary"
+      ],
+      [
+        9,
+        123,
+        1,
+        "Eval If"
+      ],
+      [
+        10,
+        126,
+        1,
+        "Eval Match"
+      ],
+      [
+        11,
+        129,
+        1,
+        "Eval Call, no args"
+      ],
+      [
+        12,
+        131,
+        1,
+        "Eval Call, args"
+      ],
+      [
+        13,
+        135,
+        1,
+        "Push install"
+      ],
+      [
+        14,
+        140,
+        1,
+        "Push at stack_limit: Error(4)"
+      ],
+      [
+        15,
+        145,
+        1,
+        "Return to Let"
+      ],
+      [
+        16,
+        149,
+        1,
+        "Return to Left"
+      ],
+      [
+        17,
+        153,
+        1,
+        "Return to Right"
+      ],
+      [
+        18,
+        157,
+        1,
+        "Return to Unary"
+      ],
+      [
+        19,
+        161,
+        1,
+        "Return to If, true"
+      ],
+      [
+        20,
+        165,
+        1,
+        "Return to If, false"
+      ],
+      [
+        21,
+        169,
+        1,
+        "Return to If, non-Bool: Error(5)"
+      ],
+      [
+        22,
+        173,
+        1,
+        "Return to Match"
+      ],
+      [
+        23,
+        177,
+        1,
+        "Return to Args, more"
+      ],
+      [
+        24,
+        181,
+        1,
+        "Return to Args, last"
+      ],
+      [
+        25,
+        185,
+        1,
+        "Return to Return, typed"
+      ],
+      [
+        26,
+        190,
+        1,
+        "Return to Return, mistyped: Error(6)"
+      ],
+      [
+        27,
+        195,
+        1,
+        "Return to Scope"
+      ],
+      [
+        28,
+        200,
+        1,
+        "Invoke"
+      ],
+      [
+        29,
+        202,
+        1,
+        "Enter None: Error(7)"
+      ],
+      [
+        30,
+        204,
+        1,
+        "Enter Some"
+      ],
+      [
+        31,
+        206,
+        1,
+        "Bound None: Error(8)"
+      ],
+      [
+        32,
+        208,
+        1,
+        "Bound Some"
+      ],
+      [
+        33,
+        212,
+        1,
+        "Cases empty: Error(9)"
+      ],
+      [
+        34,
+        214,
+        1,
+        "Cases first arm"
+      ],
+      [
+        35,
+        217,
+        1,
+        "CaseResult None"
+      ],
+      [
+        36,
+        220,
+        1,
+        "CaseResult Some"
+      ],
+      [
+        37,
+        223,
+        1,
+        "PrimitiveResult Ok"
+      ],
+      [
+        38,
+        225,
+        1,
+        "PrimitiveResult Err"
+      ]
+    ]
+  },
+  "refusal_classes": [
+    "Capacity",
+    "ProgramMismatch",
+    "OutsideProgramClosure",
+    "WrongRepresentation",
+    "OutsideObservationDomain",
+    "WrongProfile",
+    "HostUnrepresentable"
+  ],
+  "refusal_note": "located tooling results; never Outcome, error code or StepRecord",
+  "runtime_code_reference_rule": {
+    "immutable_links": "preorder occurrence, child ExprId greater than parent; never redirected",
+    "state_expr": "least structurally equal ExprId",
+    "state_remainingExprSlice": "least-start equal suffix of a Call childSlice; empty (0,0)",
+    "state_armSlice": "least-start equal suffix of a Match armSlice; empty (0,0)",
+    "state_function": "least row with exact Function equality",
+    "mid_segment": "any candidate meeting the same condition; the manifest defines each rule's output",
+    "decoded_slice_validation": "Nonempty StateBlock remainingExprSlice must be a suffix of one Call childSlice; nonempty StateBlock armSlice must be a suffix of one Match armSlice. Non-suffix is WrongRepresentation in Canonical and Step decode modes; empty is (0,0). StepInv row-check obligation (Opus F2)."
+  },
+  "canonical_state_visit_order": [
+    "ControlRows row-major: Push pendingFrame, then Push.environment, then next row; terminal row in source order",
+    "Root.environment",
+    "FrameSlots top to depth-1, Frame source order",
+    "Done value",
+    "values in post-order, fields left to right; map roots by ascending Name: value then cell; value lists: values then contiguous ValueSlots"
+  ],
+  "observation_domain": {
+    "O1": "remaining_fuel <= initial_fuel",
+    "O2": "frames.len() <= stack_limit",
+    "O3": "outcome == Pending iff control is Some",
+    "O4": "record: before Pending; line in rule_line_tags; charge per tag; both programs equal fullProgram"
+  },
+  "capacity_not_domain": [
+    "depth<=S",
+    "controlLength<=C",
+    "stack_limit<=SL",
+    "active lengths<=capacities"
+  ],
+  "prepare_a_determinism": {
+    "authority": "Opus F1(a-c), machine-layout-and-rule-manifest-security-opus-r2; L3 clarification pending fresh review",
+    "names_membership": "Exactly the distinct names occurring anywhere in Program syntax: function, parameter, Var/Let/Call names and pattern binders; no others. Preserve every syntax occurrence and duplicate binder in source position.",
+    "match_occurrence_path_child_position": {
+      "scrutinee": 0,
+      "arm_body_k": "k+1 for zero-based arm k in source order; not an execution ordinal"
+    },
+    "constant_order": "Literal ExprId order; each constant subtree in left-to-right post-order, constructor fields before parent; no interning."
+  },
+  "canonical_projection_obligations": {
+    "authority": "Opus F3/F4/F5; no mechanism selection or admission",
+    "F3": "No-interning unfolding may grow exponentially in fuel. Canonical-boundary checkpoint/chunk/external-claim admission uses the unfolded capacity envelope, not fuel, live DAG size or mid-segment high-water occupancy alone. Overflow is Capacity, never semantic Outcome.",
+    "F4": {
+      "status": "UNSELECTED",
+      "alternatives": [
+        "prepare-time canonical-representative table bound with ProgramBlock",
+        "verifier-recomputed ProgramBlock"
+      ],
+      "restriction": "Do not rely on per-step in-circuit search for least-equal canonicality."
+    },
+    "F5_H1": "Host encoders, closure search and unfolding check capacity incrementally and refuse at first overflow, never after full unfold. Every proposed adapter is host tooling only, with no untrusted or network consumer."
+  },
+  "canonical_append_and_path_clarifications": {
+    "authority": "Opus G1/G2, machine-layout-l3-and-rules-r2-opus-r1; exact quoted text; L4 pending fresh review",
+    "G1": "When a node is appended to Constants (respectively Data), its ordered field references are appended at that same moment, as one contiguous block at the current end of ConstantFields (respectively DataFields), in field order. A node with no fields has fieldStart=0 and fieldLength=0.",
+    "G2": "For non-Match nodes, childPosition is the child's zero-based index in the order listed above. A root occurrence (entry or function body) has pathStart=0, pathLength=0, and an Entry occurrence has functionIndex=0."
+  },
+  "step_inv_status": "Future row-check obligation label only; not an existing component, implemented invariant checker or proved result (Opus G3)."
+}
