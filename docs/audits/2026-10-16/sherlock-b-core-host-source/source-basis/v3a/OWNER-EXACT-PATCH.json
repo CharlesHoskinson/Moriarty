@@ -1,0 +1,77 @@
+{
+  "artifact": "OWNER-RESOLUTION-event-side-and-v3-errata-PROPOSED_UNADOPTED_SOURCE_ONLY",
+  "governance": {
+    "native_authority": 0,
+    "c4_unchanged": true,
+    "adopted": false,
+    "execution_claims": []
+  },
+  "operations": [
+    {
+      "target": "review-candidate-r4/schema-supplement.json",
+      "operation": "replace",
+      "pointer": "/step_event/fields/helperKind",
+      "old": "Opt<HelperKind>",
+      "new": "Opt<HelperKind>: interval kind, distinct from live-helper presence. Source in priority order: (1) kind of pre.helper if present; (2) kind of post.helper if present (Applied HelperEnter); (3) if pre.result is present, helperPlan(site(pre), pre), which is Some for every consuming site in site_result_sets (Applied LegacyComplete consuming a staged result); (4) if the Selected row is HelperEnter/HelperVisit/HelperExit/HelperFail/Bookkeeping under an Applied, RefusedHelperWorkUncharged or RefusedCapCharged disposition, Selected.helperKind (covers a P3/P6-refused entry with no helper installed); (5) otherwise absent. Publish uses branches (1) or (3) for a retained helper/result and is otherwise absent; a helper-free LegacyComplete is absent."
+    },
+    {
+      "target": "review-candidate-r4/schema-supplement.json",
+      "operation": "replace",
+      "pointer": "/step_event/fields/helperPhaseBefore",
+      "old": "Opt<phase or status of pre.helper> (catalog phase)",
+      "new": "Opt<phase or status of pre.helper> (catalog phase): present iff pre.helper is present. Scalar maps to its ScalarPhase; EnvGet, EnvPut, Find, Validate and Equal map to TriStatus; Bind maps to BindPhase; Append maps to AppendPhase; Match maps to MatchPhase. Absent for HelperEnter, for LegacyComplete including staged-result consumption, and whenever pre.helper is absent. Never sourced from post.helper or from a staged result."
+    },
+    {
+      "target": "review-candidate-r4/schema-supplement.json",
+      "operation": "replace",
+      "pointer": "/step_event/fields/helperPhaseAfter",
+      "old": "Opt<phase or status of post.helper>",
+      "new": "Opt<phase or status of post.helper>: present iff post.helper is present, using the same per-kind phase/status mapping as helperPhaseBefore. Absent for Applied HelperExit and HelperFail (helper cleared), for LegacyComplete including staged-result consumption, and whenever post.helper is absent. Never sourced from pre.helper or from a staged result."
+    },
+    {
+      "target": "review-candidate-r4/schema-supplement.json",
+      "operation": "replace",
+      "pointer": "/step_event/fields/helperCursorBefore",
+      "old": "Opt<Nat> (catalog cursorBefore): Scalar phase ordinal; EnvGet cursor index (absent if None); EnvPut newRoot; Find rowCursor; Bind pCursor; Append srcCursor; Validate and Equal taskLive; Match fieldIdx",
+      "new": "Opt<Nat> (catalog cursorBefore), sourced only from pre.helper: Scalar phase ordinal in declaration order (First=0, Second=1, Done=2); EnvGet cursor index (absent if its cursor is absent); EnvPut newRoot (absent if absent); Find rowCursor; Bind pCursor; Append srcCursor; Validate and Equal pre.taskLive; Match fieldIdx. Some(0) is a present zero and is distinct from absent. Absent if pre.helper is absent (including LegacyComplete consuming a staged result) or if the EnvGet/EnvPut mapped option is absent. Never sourced from post.helper or from a staged result."
+    },
+    {
+      "target": "review-candidate-r4/schema-supplement.json",
+      "operation": "replace",
+      "pointer": "/step_event/fields/helperCursorAfter",
+      "old": "the same quantity on the post-image",
+      "new": "Opt<Nat>: the same per-kind quantity sourced only from post.helper, with Validate and Equal using post.taskLive. Absent if post.helper is absent (including Applied HelperExit, HelperFail and LegacyComplete) or if the EnvGet/EnvPut mapped option is absent. Never sourced from pre.helper or from a staged result."
+    },
+    {
+      "target": "review-candidate-r4/schema-supplement.json",
+      "operation": "replace",
+      "pointer": "/step_event/fields/originReferenceCursor",
+      "old": "Opt<ReferenceCursor> of the live helper",
+      "new": "Opt<ReferenceCursor>: interval origin, sourced in priority order: (1) pre.helper.originReferenceCursor if pre.helper is present; (2) post.helper.originReferenceCursor if post.helper is present (Applied HelperEnter; equals pre.referenceCursor by the .entry effects); (3) pre.referenceCursor if pre.result is present, or if the Selected row is a .entry row refused at P3 or P6 with no helper installed; (4) otherwise absent. In case (3), pre.referenceCursor equals the producer helper's stored origin because referenceCursor advances only on an Applied LegacyComplete (P7, SI-04) and no LegacyComplete intervenes between the staging HelperExit/HelperFail and the consuming LegacyComplete or a Publish event retaining the result. P1 Publish and a helper-free, result-free LegacyComplete or Publish are absent. P0 and Startup emit no StepEvent."
+    },
+    {
+      "target": "shared-rust-contract-candidate-v3/shared.proposed.rs",
+      "operation": "unique-text-replace",
+      "old": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct StepEventC {",
+      "new": "#[derive(Clone, PartialEq, Eq, Debug)]\npub struct StepEventC {"
+    },
+    {
+      "target": "shared-rust-contract-candidate-v3/shared.proposed.rs",
+      "operation": "unique-text-replace",
+      "old": "    // Copy shared rule carrier in R4 RuleId order. Owner alone maps &RawRuleId<->RuleIdC exhaustively; raw pin unchanged. Families match RuleIdC exhaustively and copy it into HostViolation.rule.",
+      "new": "    // Copy shared rule carrier in R4 RuleId order. Owner alone maps &RawRuleId<->RuleIdC exhaustively; raw pin unchanged. Families match RuleIdC exhaustively; for a foreign RuleIdC they use the sole foreign-rule rendering at FamilyPlans and do not copy that RuleIdC into HostViolation.rule."
+    },
+    {
+      "target": "shared-rust-contract-candidate-v3/shared.proposed.rs",
+      "operation": "unique-text-replace",
+      "old": "// Every method receives the authoritative Selected. A method presented a\n// foreign RuleId MUST return HostViolation{ForeignRuleId}. Families never\n// recompute site/helper-plan/dispatch, charges, caps, or refusals.",
+      "new": "// Every method receives the authoritative Selected. A method presented a\n// foreign RuleId MUST return HostViolation { kind: HostViolationKind::WrongVariant, clause: None, rule: None, locator: Some(\"foreign rule for family\".to_string()) }.\n// The same literal rendering applies to private family free functions. Families never\n// recompute site/helper-plan/dispatch, charges, caps, or refusals."
+    },
+    {
+      "target": "shared-rust-contract-candidate-v3/shared.proposed.rs",
+      "operation": "unique-text-replace",
+      "old": "// Foreign RuleIdC for the family: HostViolation{WrongVariant,None,None,Some(\"foreign rule for family\")}.",
+      "new": "// Foreign RuleIdC for the family (sole rendering): HostViolation { kind: HostViolationKind::WrongVariant, clause: None, rule: None, locator: Some(\"foreign rule for family\".to_string()) }."
+    }
+  ]
+}

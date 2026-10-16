@@ -1,0 +1,1079 @@
+{
+  "kind": "literal-R4-row-effect-map-no-oracle",
+  "normative_file": "rows-supplement.json",
+  "full_delta_order": [
+    "remainingWork",
+    "consumedWork",
+    "helperWork",
+    "helperVisits",
+    "referenceCursor",
+    "alloc.dataNodes",
+    "alloc.dataFields",
+    "alloc.environmentCells",
+    "depth",
+    "taskLive",
+    "active.valueSlots"
+  ],
+  "rows": [
+    {
+      "row_id": "b.helper.EnvGet.entry",
+      "source_pointer": "/helper_events/6",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/6/reads",
+      "effects_source_pointer": "/helper_events/6/effects",
+      "delta_source_pointer": "/helper_events/6/deltas",
+      "reads": [
+        {
+          "loc": "prog.expressions",
+          "index": "c.expr",
+          "bound": "active(prog.expressions)"
+        }
+      ],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.helper",
+          "value": "EnvGet{site: EvalVar, originReferenceCursor: pre.referenceCursor, parentResume: none, binder: X.binder, cursor: pre.envRoot, found: none, status: Pending}"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperEnter",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_get_entry",
+      "family_plan_function": "plan_env_get",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvGet.cell",
+      "source_pointer": "/helper_events/7",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/7/reads",
+      "effects_source_pointer": "/helper_events/7/effects",
+      "delta_source_pointer": "/helper_events/7/deltas",
+      "reads": [
+        {
+          "loc": "img.env",
+          "index": "unwrap(h.cursor)",
+          "bound": "pre.active.env"
+        }
+      ],
+      "ordered_effects": [
+        {
+          "op": "let",
+          "bind": "cl",
+          "value": "cell(unwrap(h.cursor))"
+        },
+        {
+          "op": "if",
+          "when": "cl.binder = h.binder",
+          "then": [
+            {
+              "op": "set",
+              "target": "h.found",
+              "value": "some(cl.value)"
+            },
+            {
+              "op": "set",
+              "target": "h.status",
+              "value": "Positive"
+            }
+          ],
+          "else": [
+            {
+              "op": "set",
+              "target": "h.cursor",
+              "value": "cl.previous"
+            }
+          ]
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 1
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_get_cell",
+      "family_plan_function": "plan_env_get",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvGet.empty",
+      "source_pointer": "/helper_events/8",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/8/reads",
+      "effects_source_pointer": "/helper_events/8/effects",
+      "delta_source_pointer": "/helper_events/8/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "h.status",
+          "value": "Negative"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_get_empty",
+      "family_plan_function": "plan_env_get",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvGet.exit",
+      "source_pointer": "/helper_events/9",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/9/reads",
+      "effects_source_pointer": "/helper_events/9/effects",
+      "delta_source_pointer": "/helper_events/9/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.result",
+          "value": "EnvFound{value: unwrap(h.found)}"
+        },
+        {
+          "op": "clearHelper"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperExit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_get_exit",
+      "family_plan_function": "plan_env_get",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvGet.failure",
+      "source_pointer": "/helper_events/10",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/10/reads",
+      "effects_source_pointer": "/helper_events/10/effects",
+      "delta_source_pointer": "/helper_events/10/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.result",
+          "value": "EnvMissing"
+        },
+        {
+          "op": "clearHelper"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperFail",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_get_failure",
+      "family_plan_function": "plan_env_get",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvPut.entry",
+      "source_pointer": "/helper_events/11",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/11/reads",
+      "effects_source_pointer": "/helper_events/11/effects",
+      "delta_source_pointer": "/helper_events/11/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.helper",
+          "value": "EnvPut{site: RetLet, originReferenceCursor: pre.referenceCursor, parentResume: none, binder: top.binder, value: v, base: top.savedEnv, newRoot: none, status: Pending}"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperEnter",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_put_entry",
+      "family_plan_function": "plan_env_put",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvPut.cell",
+      "source_pointer": "/helper_events/12",
+      "status": "Disabled",
+      "implementation": "No planner branch; designated owner handles Disabled before dispatch.",
+      "reason": "Rho[X <- V] is realized by prepending one cell whose previous is Rho; first-match lookup gives the K Map meaning, so no shadow-position scan exists (D-05). A scan would add work with no semantic content."
+    },
+    {
+      "row_id": "b.helper.EnvPut.insert",
+      "source_pointer": "/helper_events/13",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/13/reads",
+      "effects_source_pointer": "/helper_events/13/effects",
+      "delta_source_pointer": "/helper_events/13/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "allocEnv",
+          "bind": "ce",
+          "cell": "EnvCell{binder: h.binder, value: h.value, previous: h.base}"
+        },
+        {
+          "op": "set",
+          "target": "h.newRoot",
+          "value": "some(ce)"
+        },
+        {
+          "op": "set",
+          "target": "h.status",
+          "value": "Positive"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 1
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 1,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_put_insert",
+      "family_plan_function": "plan_env_put",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvPut.empty",
+      "source_pointer": "/helper_events/14",
+      "status": "Disabled",
+      "implementation": "No planner branch; designated owner handles Disabled before dispatch.",
+      "reason": "No position scan exists (see EnvPut.cell); an empty base is handled by insert with previous absent."
+    },
+    {
+      "row_id": "b.helper.EnvPut.exit",
+      "source_pointer": "/helper_events/15",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/15/reads",
+      "effects_source_pointer": "/helper_events/15/effects",
+      "delta_source_pointer": "/helper_events/15/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.result",
+          "value": "EnvUpdated{cell: unwrap(h.newRoot)}"
+        },
+        {
+          "op": "clearHelper"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperExit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "env_put_exit",
+      "family_plan_function": "plan_env_put",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.EnvPut.failure",
+      "source_pointer": "/helper_events/16",
+      "status": "Disabled",
+      "implementation": "No planner branch; designated owner handles Disabled before dispatch.",
+      "reason": "K Map update has no failure variant (main.k:147); the result shape is Updated only (rules.json:5331). Capacity refusal is P6 Exhausted(EnvironmentCells) on EnvPut.insert, not a helper failure."
+    },
+    {
+      "row_id": "b.helper.Find.entry",
+      "source_pointer": "/helper_events/17",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/17/reads",
+      "effects_source_pointer": "/helper_events/17/effects",
+      "delta_source_pointer": "/helper_events/17/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.helper",
+          "value": "Find{site: Invoke, originReferenceCursor: pre.referenceCursor, parentResume: none, functionName: c.functionName, rowCursor: 0, found: none, status: Pending}"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperEnter",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "find_entry",
+      "family_plan_function": "plan_find",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Find.row",
+      "source_pointer": "/helper_events/18",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/18/reads",
+      "effects_source_pointer": "/helper_events/18/effects",
+      "delta_source_pointer": "/helper_events/18/deltas",
+      "reads": [
+        {
+          "loc": "prog.functions",
+          "index": "h.rowCursor",
+          "bound": "active(prog.functions)"
+        }
+      ],
+      "ordered_effects": [
+        {
+          "op": "if",
+          "when": "fn(h.rowCursor).functionName = h.functionName",
+          "then": [
+            {
+              "op": "set",
+              "target": "h.found",
+              "value": "some(h.rowCursor)"
+            },
+            {
+              "op": "set",
+              "target": "h.status",
+              "value": "Positive"
+            }
+          ],
+          "else": [
+            {
+              "op": "set",
+              "target": "h.rowCursor",
+              "value": "h.rowCursor + 1"
+            }
+          ]
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 1
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "find_row",
+      "family_plan_function": "plan_find",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Find.empty",
+      "source_pointer": "/helper_events/19",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/19/reads",
+      "effects_source_pointer": "/helper_events/19/effects",
+      "delta_source_pointer": "/helper_events/19/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "h.status",
+          "value": "Negative"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "find_empty",
+      "family_plan_function": "plan_find",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Find.exit",
+      "source_pointer": "/helper_events/20",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/20/reads",
+      "effects_source_pointer": "/helper_events/20/effects",
+      "delta_source_pointer": "/helper_events/20/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.result",
+          "value": "FindFound{function: unwrap(h.found)}"
+        },
+        {
+          "op": "clearHelper"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperExit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "find_exit",
+      "family_plan_function": "plan_find",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Find.failure",
+      "source_pointer": "/helper_events/21",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/21/reads",
+      "effects_source_pointer": "/helper_events/21/effects",
+      "delta_source_pointer": "/helper_events/21/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.result",
+          "value": "FindMissing"
+        },
+        {
+          "op": "clearHelper"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperFail",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "find_failure",
+      "family_plan_function": "plan_find",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.entry",
+      "source_pointer": "/helper_events/32",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/32/reads",
+      "effects_source_pointer": "/helper_events/32/effects",
+      "delta_source_pointer": "/helper_events/32/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.helper",
+          "value": "Append{site: RetArgs, originReferenceCursor: pre.referenceCursor, parentResume: none, src: top.completed, value: v, srcCursor: 0, destStart: pre.active.valueSlots, staged: none, phase: Copy}"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperEnter",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "append_entry",
+      "family_plan_function": "plan_append",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.cell",
+      "source_pointer": "/helper_events/33",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/33/reads",
+      "effects_source_pointer": "/helper_events/33/effects",
+      "delta_source_pointer": "/helper_events/33/deltas",
+      "reads": [
+        {
+          "loc": "img.valueSlots",
+          "index": "h.src.start + h.srcCursor",
+          "bound": "pre.active.valueSlots"
+        }
+      ],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "h.staged",
+          "value": "some(vslot(h.src, h.srcCursor))"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 1
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "append_cell",
+      "family_plan_function": "plan_append",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.empty",
+      "source_pointer": "/helper_events/34",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/34/reads",
+      "effects_source_pointer": "/helper_events/34/effects",
+      "delta_source_pointer": "/helper_events/34/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "h.phase",
+          "value": "Tail"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "append_empty",
+      "family_plan_function": "plan_append",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.tail",
+      "source_pointer": "/helper_events/35",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/35/reads",
+      "effects_source_pointer": "/helper_events/35/effects",
+      "delta_source_pointer": "/helper_events/35/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "allocValueSlot",
+          "value": "h.value"
+        },
+        {
+          "op": "set",
+          "target": "h.phase",
+          "value": "Done"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 1
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 1
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "append_tail",
+      "family_plan_function": "plan_append",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.copy",
+      "source_pointer": "/helper_events/36",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/36/reads",
+      "effects_source_pointer": "/helper_events/36/effects",
+      "delta_source_pointer": "/helper_events/36/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "allocValueSlot",
+          "value": "unwrap(h.staged)"
+        },
+        {
+          "op": "set",
+          "target": "h.srcCursor",
+          "value": "h.srcCursor + 1"
+        },
+        {
+          "op": "set",
+          "target": "h.staged",
+          "value": "none"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperVisit",
+        "helperVisits": 1
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 1
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "append_copy",
+      "family_plan_function": "plan_append",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.exit",
+      "source_pointer": "/helper_events/37",
+      "status": "Enabled",
+      "reads_source_pointer": "/helper_events/37/reads",
+      "effects_source_pointer": "/helper_events/37/effects",
+      "delta_source_pointer": "/helper_events/37/deltas",
+      "reads": [],
+      "ordered_effects": [
+        {
+          "op": "set",
+          "target": "reg.result",
+          "value": "AppendDone{seq: slice(h.destStart, h.src.len + 1)}"
+        },
+        {
+          "op": "clearHelper"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "HelperExit",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": 0,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "append_exit",
+      "family_plan_function": "plan_append",
+      "rust_source_file": "row_effects.proposed.rs"
+    },
+    {
+      "row_id": "b.helper.Append.failure",
+      "source_pointer": "/helper_events/38",
+      "status": "Disabled",
+      "implementation": "No planner branch; designated owner handles Disabled before dispatch.",
+      "reason": "uiAppend has no failure variant (main.k:285-287); the result shape is the ordered sequence only (rules.json:6154). Value-slot capacity is admitted (R5), so no runtime refusal exists."
+    },
+    {
+      "row_id": "b.bookkeeping.task.release",
+      "source_pointer": "/bookkeeping_events/1",
+      "status": "Enabled",
+      "reads_source_pointer": "/bookkeeping_events/1/reads",
+      "effects_source_pointer": "/bookkeeping_events/1/effects",
+      "delta_source_pointer": "/bookkeeping_events/1/deltas",
+      "reads": [
+        {
+          "loc": "img.tasks",
+          "index": "pre.taskLive - 1",
+          "bound": "pre.taskLive"
+        }
+      ],
+      "ordered_effects": [
+        {
+          "op": "taskPop"
+        }
+      ],
+      "full_delta_base": [
+        -1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -1,
+        0
+      ],
+      "delta_when": [],
+      "owner_selected_facts": {
+        "eventKind": "Bookkeeping",
+        "helperVisits": 0
+      },
+      "plan_delta_assert": {
+        "alloc_data_nodes": 0,
+        "alloc_data_fields": 0,
+        "alloc_environment_cells": 0,
+        "depth": 0,
+        "task_live": -1,
+        "active_value_slots": 0
+      },
+      "selection_predicate_implemented": false,
+      "rust_effect_body": "plan_bookkeeping_release",
+      "family_plan_function": "plan_bookkeeping_release",
+      "rust_source_file": "row_effects.proposed.rs"
+    }
+  ],
+  "semantics": "Select_when, charge, eligibility, visits, cursor and cap handling stay with designated owner. Family plan delta_assert retains only six allocated/depth/task/slot components.",
+  "implementation_state": "Complete 20 enabled row-effect bodies and five concrete planner functions against exact v3 plus designated-owner errata; uninstalled source preparation."
+}
