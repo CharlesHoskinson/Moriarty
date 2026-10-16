@@ -1,0 +1,37 @@
+[
+  {
+    "evidence": "Full candidate operator.py (195 lines) read against full R1 operator.py: OPERATOR.patch contains exactly hunks for _ADOPT (patch:7-8 vs candidate operator.py:14), _REL_FIELDS 29 (patch:15-16 vs :34), _parts BASE (patch:22-23 vs :55), and actual adoption predicates (patch:32-37 vs :130-137). DELIVERY-INTERFACE-REPRODUCTION.json:4-11 records the three pure R1 interface failures before any protected action; candidate README.md:7 and muse-source REPORT.md:9-11 tie each hunk to its counterexample. No other code change was observed.",
+    "id": "F1",
+    "requiredFix": "None.",
+    "severity": "ready",
+    "summary": "The 4-hunk repair addresses exactly the three reproduced R1 interface failures plus the consequent adoption-path correction, and nothing else"
+  },
+  {
+    "evidence": "Candidate operator.py:106-119 verifies the externally supplied expected AUTH SHA-256 with no default, the exact 18-field set, executionAuthorized is True, fixed scope/paths/source/proof identities, and effects/caps equality; :185 checks AUTH (16384B cap) before :186 own-source M7 hash, before _check_public, before the single protected read at :188. AUTH-CANDIDATE.json:23 executionAuthorized:true is a field in a candidate file only; muse-source REPORT.md:24 and candidate README.md:13-15 state M7/RR7/new AUTH do not yet exist and grant nothing before root materialisation and consensus.",
+    "id": "F2",
+    "requiredFix": "None in source. Root must not treat AUTH-CANDIDATE.json, MODEL-REVIEW.json authTemplateJson, or this review as an AUTH; only a byte-identical RR7 AUTH.json created after root consensus, invoked once with its external SHA-256, is the proposed authority.",
+    "severity": "ready-with-authority-distinction",
+    "summary": "Source verifies an external expected AUTH SHA with no defaults; the candidate AUTH field is not yet actual authority"
+  },
+  {
+    "evidence": "Candidate operator.py:151-157 checks verifyingKeyHex length/hex and Blake2b-256 digest equality only, provingKeySha256 syntax only, and provingKeyBytes equality to 98715456. This is exactly the specified hash-only public-record check, not a curve/pairing verification; the whole-record SHA-256 at :139 binds every byte including the PK-hash metadata, which was already public via K6-ACTUAL-ADOPTION.json:25, proof.json:3, and g6.json recordSha256/recordBytes. No proving-key bytes are read, hashed, stated, copied, or deleted anywhere in the candidate body.",
+    "id": "F3",
+    "requiredFix": "None. Any future demand for curve verification, semantic validation of the other 21 descriptor fields, or forward compatibility beyond this exact pinned 3926-byte payload is a separately scoped change, not a defect in this source.",
+    "severity": "accepted-limit-not-a-defect",
+    "summary": "VK and PK-metadata handling is hash/syntax-only by design; publication of the already-public record is not a private-PK disclosure"
+  },
+  {
+    "evidence": "d092 REPORT.md:5,18,26 and K6-ACTUAL-ADOPTION.json:44-55,66,68 preserve: Class-0 forgeable single-party setup, caller-fabricated context (proof.json:13-24), consumerCanCheckVkToMatrixLink:false, transitive native CPU UNMEASURED, no Aiken C2 pairing/applied wrapper/genuine signature/transaction/Preprod. Candidate README.md:11 and EXECUTION-PROPOSAL.json preservedBoundaries carry the same limits, receipt status is PUBLIC_VERIFIER_RECORD_EXPORTED (operator.py:174), and no native rerun, setup, prove, PK re-read/copy/hash/delete, or retention extension exists in the candidate source.",
+    "id": "F4",
+    "requiredFix": "None. These remain qualifications on the K6 result and open scope, not blockers for this ordinary hash-pinned public byte copy.",
+    "severity": "qualification-preserved",
+    "summary": "All d092/R1 qualifications are preserved and no cryptographic, ledger, or Preprod claim is made by the export"
+  },
+  {
+    "evidence": "MODEL-REVIEW.json is a 49464B author artefact whose authTemplateJson (line 2) still contains EXTERNAL_ROOT_REQUIRED and whose recommendation (lines 192-201) says sourceReady:false / authorityProposalReady:false as an author snapshot before root population. The actual candidate AUTH-CANDIDATE.json:32 already contains the filled root operator SHA 6158deec, and candidate README.md:7 / EXECUTION-PROPOSAL.json describe the now-closed canonical K6 adoption. Reading the author snapshot's stale fields as current state would be a false blocker; the candidate files are the current exact objects under review.",
+    "id": "F5",
+    "requiredFix": "No cosmetic rewrite. Root should record that the author snapshot is superseded on those two points by the populated candidate AUTH and the adopted K6 file.",
+    "severity": "non-blocking-stale-author-snapshot",
+    "summary": "Author MODEL-REVIEW/README snapshot language is stale in two identified places and was not treated as a current blocker"
+  }
+]
