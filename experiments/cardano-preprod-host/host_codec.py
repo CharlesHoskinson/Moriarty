@@ -481,3 +481,176 @@ def validate_context_input(context):
     result = _wire_context(context, "context")
     result["authentication"] = "CALLER_SUPPLIED_UNAUTHENTICATED"
     return result
+
+
+# Provisional ABI v2 statement APIs. These check fixed-header framing only: the
+# body is opaque, context fields are caller supplied and unauthenticated, and no
+# proof, VK, descriptor, program or ledger value is verified.
+
+import hashlib
+
+_STMT_TAG = b"MRG16-PVC-STMT-2"
+_FAMILY_V2 = b"MRG16-PVC-FAM2-G16-BLS-ARK04-HL2"
+_HEADER_LEN = 343
+_MAX_STATEMENT_BYTES = 262144
+# Returned fields: key, offset, width, kind (claim.rs offsets, abi2.rs statement_bytes).
+_STATEMENT_FIELDS = (
+    ("predicateDigest", 48, 32, "hex"),
+    ("shapeDigest", 80, 32, "hex"),
+    ("vkDigest", 112, 32, "hex"),
+    ("claimantVkh", 144, 28, "hex"),
+    ("networkId", 172, 1, "int"),
+    ("settleHash", 173, 28, "hex"),
+    ("threadId", 201, 32, "hex"),
+    ("consumedTxid", 233, 32, "hex"),
+    ("consumedIx", 265, 2, "int"),
+    ("seq", 267, 8, "int"),
+    ("catalogueDigest", 275, 32, "hex"),
+    ("intentsDigest", 307, 32, "hex"),
+    ("bodyLen", 339, 4, "int"),
+)
+
+
+def _admit_statement(statement):
+    # A1 comes first: exact bytes is immutable and has no caller-defined hooks,
+    # so nothing about a refused argument is touched (contract SH-05).
+    if type(statement) is not bytes:
+        raise ValueError("statement: expected exact bytes")
+    size = len(statement)
+    if not _HEADER_LEN <= size <= _MAX_STATEMENT_BYTES:
+        raise ValueError("statement: length outside the ABI v2 bounds")
+    if statement[0:16] != _STMT_TAG:
+        raise ValueError("statement: tag is not MRG16-PVC-STMT-2")
+    if statement[16:48] != _FAMILY_V2:
+        raise ValueError("statement: family is not MRG16-PVC-FAM2-G16-BLS-ARK04-HL2")
+    if int.from_bytes(statement[339:343], "big") + _HEADER_LEN != size:
+        raise ValueError("statement: length differs from 343 + bodyLen")
+
+
+def _statement_digest(statement):
+    _admit_statement(statement)
+    # Unkeyed 32-byte BLAKE2b of the whole admitted statement; no key, salt or person.
+    return hashlib.blake2b(statement, digest_size=32).digest()
+
+
+def parse_statement_header(statement):
+    """Return a new dict of the header fields as found; authenticate and judge none."""
+    _admit_statement(statement)
+    result = {}
+    for name, offset, width, kind in _STATEMENT_FIELDS:
+        field = statement[offset:offset + width]
+        if kind == "hex":
+            result[name] = field.hex()
+        else:
+            result[name] = int.from_bytes(field, "big")
+    # The body is opaque: admission checked only its length.
+    result["body"] = statement[_HEADER_LEN:]
+    return result
+
+
+def statement_digest_hex(statement):
+    """Return the lowercase hex BLAKE2b-256 digest of an admitted statement."""
+    return _statement_digest(statement).hex()
+
+
+def statement_public_inputs(statement):
+    """Return (x1, x2): decimal big-endian 128-bit halves of the statement digest."""
+    digest = _statement_digest(statement)
+    return (str(int.from_bytes(digest[0:16], "big")),
+            str(int.from_bytes(digest[16:32], "big")))
+
+
+# Provisional structural Data factories (DF-01..DF-15). All inputs are caller
+# supplied and unauthenticated. Opaque bytes carry no VK, proof or ledger judgment.
+
+
+def _data_bytes(value, minimum, maximum, path):
+    if type(value) is not bytes or not minimum <= len(value) <= maximum:
+        raise ValueError(path + ": expected exact bytes within the length bounds")
+
+
+def _data_integer(value, minimum, maximum, path):
+    if type(value) is not int or not minimum <= value <= maximum:
+        raise ValueError(path + ": expected exact integer within the range")
+
+
+def build_value_data(lovelace, tokens):
+    """Return a fresh map of policy maps in the supplied strictly ascending order."""
+    if lovelace is not None:
+        _data_integer(lovelace, 0, 18446744073709551615, "lovelace")
+    if type(tokens) is not list:
+        raise ValueError("tokens: expected exact list")
+    if len(tokens) > 256:
+        raise ValueError("tokens: expected at most 256 elements")
+
+    entries = []
+    if lovelace is not None:
+        entries.append((("bytes", b""), ("map", [(("bytes", b""), ("int", lovelace))])))
+    previous = None
+    current_policy = None
+    names = None
+    for token in tokens:
+        if type(token) is not tuple or len(token) != 3:
+            raise ValueError("tokens[]: expected exact tuple of length 3")
+        policy, name, quantity = token
+        _data_bytes(policy, 28, 28, "tokens[].policy")
+        _data_bytes(name, 0, 32, "tokens[].name")
+        _data_integer(quantity, -18446744073709551615, 18446744073709551615,
+                      "tokens[].quantity")
+        if quantity == 0:
+            raise ValueError("tokens[].quantity: expected nonzero integer")
+        pair = (policy, name)
+        if previous is not None and pair <= previous:
+            raise ValueError("tokens.order: expected strictly ascending policy and name")
+        if policy != current_policy:
+            names = []
+            entries.append((("bytes", policy), ("map", names)))
+            current_policy = policy
+        names.append((("bytes", name), ("int", quantity)))
+        previous = pair
+    return ("map", entries)
+
+
+def build_output_reference(transaction_id, output_index):
+    """Return a fresh constructor-0 output reference after structural checks."""
+    _data_bytes(transaction_id, 32, 32, "transaction_id")
+    _data_integer(output_index, 0, 65535, "output_index")
+    return ("constr", 0, [("bytes", transaction_id), ("int", output_index)])
+
+
+def build_env_data(predicate_digest, vk_digest, claimant_vkh, settle_transaction_id,
+                   settle_output_index, statement_digest, expiry):
+    """Return a fresh fixed-version envelope without authenticating its fields."""
+    _data_bytes(predicate_digest, 32, 32, "predicate_digest")
+    _data_bytes(vk_digest, 32, 32, "vk_digest")
+    _data_bytes(claimant_vkh, 28, 28, "claimant_vkh")
+    _data_bytes(settle_transaction_id, 32, 32, "settle_transaction_id")
+    _data_integer(settle_output_index, 0, 65535, "settle_output_index")
+    _data_bytes(statement_digest, 32, 32, "statement_digest")
+    _data_integer(expiry, 0, 18446744073709551615, "expiry")
+    return ("constr", 0, [
+        ("int", 2),
+        ("int", 0),
+        ("bytes", b"MRG16-PVC-FAM2-G16-BLS-ARK04-HL2"),
+        ("bytes", predicate_digest),
+        ("bytes", vk_digest),
+        ("bytes", claimant_vkh),
+        ("constr", 0, [("bytes", settle_transaction_id), ("int", settle_output_index)]),
+        ("bytes", statement_digest),
+        ("int", expiry),
+    ])
+
+
+def build_c2_mint_data(kind, vk=None, proof=None):
+    """Return fresh Issue or Burn Data, treating Issue payloads as opaque bytes."""
+    if type(kind) is not str or kind not in ("Issue", "Burn"):
+        raise ValueError("kind: expected exact Issue or Burn string")
+    if kind == "Issue":
+        _data_bytes(vk, 1, 65536, "vk")
+        _data_bytes(proof, 1, 65536, "proof")
+        return ("constr", 0, [("bytes", vk), ("bytes", proof)])
+    if vk is not None:
+        raise ValueError("vk: expected None for Burn")
+    if proof is not None:
+        raise ValueError("proof: expected None for Burn")
+    return ("constr", 1, [])

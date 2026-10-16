@@ -1,0 +1,44 @@
+[
+  {
+    "id": "F-01",
+    "severity": "LOW (non-blocking)",
+    "summary": "build_value_data(0, ...) produces a zero-quantity ada entry. That Data is not a canonical stdlib Value.",
+    "evidence": "assets.ak says a Value never contains a zero quantity, and from_lovelace(0) returns zero (an empty dict, serialised as a0). build_value_data(0, []) returns ('map', [(('bytes', b''), ('map', [(('bytes', b''), ('int', 0))]))]), which encodes as a140a14000. DF-07 labels the None/0 convention as DESIGN, so the clause is not false. But a consumer that compares this output with an Aiken-built Value, or with a Value carried as Data in assets.match or a datum, would see a mismatch.",
+    "requiredFix": "No code change is needed for this increment. Record in the API notes that lovelace=None, not 0, is the stdlib-canonical form for 'no ada'. Any future consumer, or any native or compiled roundtrip, must decide its convention explicitly. No Aiken or ledger correspondence may be claimed."
+  },
+  {
+    "id": "F-02",
+    "severity": "INFO",
+    "summary": "The Issue VK and proof bounds (1..65536 bytes) are wider than the on-chain verifier's fixed sizes.",
+    "evidence": "groth16.ak expects vk_len 488, proof_len 192 and vk_ic_count at offset 336. claim.ak issue also requires env.vk_digest == blake2b_256(vk). The factory admits any opaque bytes in range, as DF-10 and DF-11 state.",
+    "requiredFix": "None for this increment. Consumers must not treat factory admission as size, encoding or digest validity. Treat payloads of other sizes as negative fixtures only."
+  },
+  {
+    "id": "F-03",
+    "severity": "INFO",
+    "summary": "The statement test pins host bytes with an O_NOFOLLOW read, but loads the module with a separate importlib path load.",
+    "evidence": "_require_host_path uses lstat, and test_host_prefix_preserved_byte_for_byte reads through _read_regular with O_NOFOLLOW. _host then uses spec_from_file_location and exec_module. That load follows paths, may consult __pycache__, and is not proven within the test to execute the pinned bytes. The Data factory test, by contrast, compiles and execs the exact bytes it read.",
+    "requiredFix": "Mitigated by root: a dedicated read-only directory holding only the stated files, with isolatedFilesUnchanged and sourceUnchangedAfter both true. Keep this run envelope mandatory. Optional future hardening: execute the pinned bytes."
+  },
+  {
+    "id": "F-04",
+    "severity": "INFO",
+    "summary": "SH-11's rationale ('blake2b.rs is unread') is superseded at author time. The parameter equivalence now rests on source inspection plus the K6 literal.",
+    "evidence": "blake2b.rs uses PARAM 0x01010020, the standard IV and SIGMA, 12 rounds, t equal to bytes so far, f0 only on the last block, and little-endian output of h[0..3]. That matches hashlib.blake2b(digest_size=32). The file's header says 'never compiled or run', which is in tension with the Rust-emitted K6. The file read comes from tracked worktree W source and is not proven to be the build that emitted K6.",
+    "requiredFix": "None. Keep this a source-inspected parity claim with no compiled correspondence."
+  },
+  {
+    "id": "F-05",
+    "severity": "INFO",
+    "summary": "`import hashlib` exposes a non-underscore module attribute `host_codec.hashlib`, and the module docstring now describes only the encoder.",
+    "evidence": "The combined namespace holds 11 public callables plus the module object `hashlib`. The first-line docstring 'Provisional pure PlutusData encoder...' is stale, as C-N04 already noted. Aliasing the import would break the encoder test's exact-import phase gate.",
+    "requiredFix": "None now. Any future docstring or alias change requires a fresh audit, because the 16134 and 19096 prefix pins forbid editing them in place."
+  },
+  {
+    "id": "F-06",
+    "severity": "INFO",
+    "summary": "Carried non-claims now extend to the factories and statement APIs.",
+    "evidence": "C-N01: concurrent mutation of a tokens list by another thread is outside every clause. R2-N01: encoder peak memory is about 2*B4. Importing hashlib may initialise OpenSSL, which can read a system configuration file; blake2b itself comes from builtin _blake2 in standard CPython. Root RESULT records do not list the run environment variables.",
+    "requiredFix": "Keep the minimal secret-free environment and single-threaded use as stated preconditions."
+  }
+]
