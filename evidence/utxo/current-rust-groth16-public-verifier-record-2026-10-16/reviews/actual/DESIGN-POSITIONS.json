@@ -1,0 +1,62 @@
+[
+  {
+    "clause": "Allow exactly BASE itself in _parts so _export's _open_abs(BASE, True) reaches the fd-pinned walk; reject every other non-BASE-prefixed, dot-component, or non-string path unchanged.",
+    "clauseId": "K7-PATH-BASE-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE (prior votes: author FOR, source-review AGREE, agreeingPositions 2 in SOURCE-AUTHORITY-ADOPTION). The actual run exited 0 and created the destination via _open_abs(BASE,True) (operator.py:54,160; RESULT.json:4), proving the repair in operation."
+  },
+  {
+    "clause": "The setup record's nested relation must present exactly the 29 fields of the actual RelationDescriptor (relation.rs / A6.stdout); the existing 8 identity fields are compared to the public proof, and the other 21 are admitted by exact presence only, bound by the whole-record SHA-256 86b588fe... over all 3926 bytes. This is not a semantic re-validation of those 21 fields and adds no public A6 read.",
+    "clauseId": "K7-RELATION-29-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. The exported record itself presents exactly those 29 keys with 8/8 identity equality to the 93019863 proof (setup.json:5-35 vs proof.json:4-11; relation.rs:72-107). Presence-only treatment of the 21 remains disclosed."
+  },
+  {
+    "clause": "Adoption is checked against the actual canonical public file BASE/current-cardano-k2-k6-integrated-operator-root-records-20261016/K6-ACTUAL-ADOPTION.json (4005B, sha256 83a6e4fd...): format root-K6-native-roundtrip-actual-adoption/1, nativeRoundtripPrerequisiteClosed true, actualResultAdopted true, acceptedObservations.proofExportSha256 = 93019863..., acceptedObservations.setupRecordSha256 = 86b588fe..., executionAuthorityGranted false, and the whole file pinned by its exact AUTH-bound SHA-256. No explicitNewScopeAllowed, ADOPTED status, top-level proofSha256, or root-k6-actual-adoption/1 format is required or invented.",
+    "clauseId": "K7-ADOPTION-ACTUAL-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. K6-ACTUAL-ADOPTION.json:2,4-5,23,25,66 matches each literal and the receipt/adoption SHAs agree (EXPORT-RECEIPT.json:20); the run's _check_public (operator.py:130-137) enforced them before the protected read."
+  },
+  {
+    "clause": "The actual K6 adoption grants NO new execution (executionAuthorityGranted:false). Only a new exact K7 AUTH with executionAuthorized:true grants this one export scope, and only after a fresh full non-author source/effect/custody/resource/authority review of the exact populated AUTH, all patched source, and the actual K6 adoption, before any M7 materialisation, RR7 AUTH creation, or export run.",
+    "clauseId": "K7-AUTH-GATE-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. Sequence observed: cb3ff93 source review (PROCESS ended 11:56:37) preceded SOURCE-AUTHORITY-ADOPTION and AUTH creation (11:57:29), AUTH byte-identical to the reviewed candidate; the spent AUTH scope is now consumed by the single run and grants nothing further."
+  },
+  {
+    "clause": "authTemplateJson is a complete valid JSON object with exactly the 18 _AUTH_FIELDS, fixed literal paths, no arbitrary PATH data, and no self-hash; every known actual SHA is filled from the inputs (launch 2e2d3087..., adoption 83a6e4fd..., proof 93019863..., source 86b588fe...), and operatorSha256 alone remains EXTERNAL_ROOT_REQUIRED for root to replace from the actual final patched source bytes in root's own public candidate (not a real AUTH). The operator checks its own public file SHA against AUTH operatorSha256 before any protected read.",
+    "clauseId": "K7-AUTH-TEMPLATE-18-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. The actual AUTH.json has exactly the 18 fields (AUTH.json:1-37 = operator.py:32 _AUTH_FIELDS) with operatorSha256 6158deec filled, and operator.py:185-188 verifies AUTH SHA then own-source SHA before the protected read; the run's exit 0 confirms the gate operated."
+  },
+  {
+    "clause": "Materialisation is exactly: fresh M7 directory (mode 0555) containing only operator.py (mode 0444, root-materialised from the patched source), the RR7 AUTH as a public root record, and capture outside both; no additional invented runtime audit is required before capture.",
+    "clauseId": "K7-MATERIALIZE-4-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. M7-SOURCE-ATTESTATION.json:4-15 attests dir 0555 and sole operator.py 0444/6158deec; captures (stdout/stderr/RESULT/PRE-RUN) sit in the root-capture directory outside M7 and the destination per RESULT-MANIFEST.json."
+  },
+  {
+    "clause": "Exactly one fd-pinned protected payload read (3926B, sha256 86b588fe..., nonsymlink regular nlink-1 operator-UID, identity stable, bounded whole read) plus the named public checks (AUTH, own source, LAUNCH-RECORD, public proof, actual adoption); two create-exclusive public outputs at 0444 (exact record copy and EXPORT-RECEIPT.json); on failure any partial owned outputs are retained, stdout is FAIL with nonzero exit, no false PASS, and no cleanup is claimed.",
+    "clauseId": "K7-ONE-READ-TWO-OUTPUTS-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. Exactly the two public outputs exist at 0444 (RESULT-MANIFEST publicOutputs), effects record protectedRecordReads 1 (EXPORT-RECEIPT.json:7-18), and the source implements the fd-pinned read and O_EXCL/0444 writes (operator.py:81-99,171-178). The one-read/PK-0 counts are source-plus-stop-point evidence, not independent instrumentation (RESULT.json:13)."
+  },
+  {
+    "clause": "Zero PK metadata reads, PK bytes, PK hashes, native calls, SDK, network, RNG, subprocess, wallet, signing, or ledger effects; import-time I/O is zero and root never reads /w. The public outputs carry setup-record and PK-hash metadata as before (provingKeyBytes 98715456, provingKeySha256 syntax), never PK bytes.",
+    "clauseId": "K7-NO-PK-NO-EFFECTS-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE on the clause's own terms. No PK path exists in the 195-line source; the only PK material carried is the already-public record metadata provingKeyBytes 98715456 / provingKeySha256 cadcf470 (setup.json:41-42), explicitly allowed, with pkByteReads/pkHashes/pkMetadataReads 0 in the receipt effects."
+  },
+  {
+    "clause": "Outer invocation is exactly one attempt, zero retries: timeout TERM kill-after 5s at 30s wall, prlimit CPU 10:15, AS 268435456, core 0, python3 -I, cwd M7, stdin DEVNULL, close-fds, minimal environment, single argument pair --expected-auth-sha256 HEX. This ordinary byte export's CPU is negligible and no new CPU or full-crypto claim is made (parent d092 transitive CPU remains unmeasured).",
+    "clauseId": "K7-RESOURCES-ONESHOT-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. PRE-RUN.json:4-29 is literally that invocation and RESULT.json records exit 0 at wall 0.03597s, one attempt, zero retries. No new CPU claim is made; the K6 transitive native CPU remains unmeasured."
+  },
+  {
+    "clause": "Preserve R1 and all d092 qualifications: Class-0 single-party-test-setup forgeability, caller-fabricated context, VK-to-matrix link not consumer-checkable (false), no independent public pairing reproduction yet, no Preprod; the prior clauses that stated the invented adoption format, the RR7-copy adoption path, the 8-field relation set, or a 13-field outer record are corrected here and must not be read as silent votes for those misstatements.",
+    "clauseId": "K7-PRESERVE-R1-D092-20261016",
+    "position": "AGREE",
+    "rationale": "Actual-review AGREE. The exported record's own notice (setup.json:4), g6 consumerVkToMatrixChecked:false, and K6-ACTUAL-ADOPTION limitations:44-55 preserve every qualification; this verdict closes only the publication prerequisite. All 20 UTXO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates, and real Preprod remain open; no percentage of full compatibility is claimed."
+  }
+]

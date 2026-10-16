@@ -1,0 +1,30 @@
+[
+  {
+    "evidence": "INPUT-INDEX.json:108-118 (3926B/86b588fe and 1629B/af066b34); exported record full body at invoice-partial.setup.json:1-44; EXPORT-RECEIPT.json:28-33 (setupRecordBytes 3926, setupRecordSha256 86b588fe, verifyingKeyBytes 488, vkDigestBlake2b256 d19d99a4, status PUBLIC_VERIFIER_RECORD_EXPORTED).",
+    "id": "F1-RECORD-REPRODUCED",
+    "requiredFix": "None.",
+    "severity": "closed",
+    "summary": "The falsifiable predicate holds on the supplied public bytes: the exported exact 3926-byte record with SHA-256 86b588fe reproduces the native K6 setup-record identity, contains the PUBLIC VK (488-byte hex) with digest d19 consistent with proof 93019863 descriptor, the actual 12-field setup-record schema, and the 1629B receipt af066b34 matches AUTH/source/adoption/proof/labels/effects."
+  },
+  {
+    "evidence": "operator.py:183-191 main order (AUTH check, own-source SHA read, public checks, single protected read, record check, export, stdout receipt); RESULT.json:4-13 (exitCode 0, wall 0.03597, nativeCalls 0, newSetups 0, newProofs 0, rootPrivateReads 0, actualResultAdopted false pending this review, sourceEffectsQualification disclosed); stderr.log 0 bytes.",
+    "id": "F2-SCOPED-RUN",
+    "requiredFix": "None. Root must not reuse this spent scope for any new read.",
+    "severity": "closed",
+    "summary": "Actual execution was one bounded reviewed-scope record export, terminal exit 0, stderr empty, stdout the public receipt, with no native call, new setup, new proof, or PK operation in the source or result."
+  },
+  {
+    "evidence": "K6-ACTUAL-ADOPTION.json:44-55 (class0ControllerCanForge true, consumerCanCheckVkToMatrixLink false, publicVkIndependentPairingReproduction false, ledgerTruthClaimed false, spectator41FrameContextAuthenticated false, aikenC2PairingObserved false, appliedWrappersObserved false, genuineIntentSignaturesObserved false, preprodTransactionObserved false, universalPropertyCertificate false); exported record notice (setup.json:4) states the same forgeability/provenance limit; proof premises (proof.json:56-63) state caller-declared context and no ledger implication.",
+    "id": "F3-QUALIFICATIONS-PRESERVED",
+    "requiredFix": "None; carry these qualifications into any capsule entry point (actual REPORT is entry point, historical source README qualified by stage/source-time state).",
+    "severity": "open-qualification",
+    "summary": "All d092/K6 qualifications survive the export: Class-0 forgeable setup, honesty condition, fabricated context, VK-to-matrix link unproved to consumers, CPU transitive unmeasured, spectator frame unproved. The export adds no crypto PASS."
+  },
+  {
+    "evidence": "Task prompt and source review REPORT.md:23: USER-ROUTING-ADDENDUM-20261016.json was not in INPUT-INDEX.json. USER-FALLBACK-ROUTING-20261016.json:6-15 (indexed, read) records the Opus 1800s timeout/nondelivery trigger and routing-only authority.",
+    "id": "F4-UNREAD-ADDENDUM",
+    "requiredFix": "None for this verdict, which rests only on indexed public bytes; if root's capsule cites the addendum, root must supply it as its own public record.",
+    "severity": "limitation",
+    "summary": "USER-ROUTING-ADDENDUM-20261016.json is not in INPUT-INDEX.json and was not opened; the historical Opus routing override is taken from the task prompt and the indexed USER-FALLBACK-ROUTING-20261016.json only, with no provider identity, authority, or approval invented."
+  }
+]
