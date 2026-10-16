@@ -163,3 +163,13 @@ continuation mappings and full grammar/compiler consumers remain required.
 
 U0–U7, M1–M17, MC/SP/G/ZR/MNR/OSR, ACTUS, DeFi and composition exits remain open.
 Native authority and historical counters remain unchanged.
+
+## Scoped offline input/readback observation
+
+The [offline helper](../models/sherlock/STAGENET-OFFLINE-README.md) inventories existing Core/1 inputs and compares all supplied
+JSON fields, retaining ordered arrays and missing/present distinctions. Its
+captured R2 result records 16 passing normal assertions for the bound source.
+This is preparatory tooling for complete readback reporting, with no native
+execution or independent semantic oracle. It does not implement the missing
+Sherlock/Clean/native adapter or public Moriarty commands and closes no
+UIREQ/B/U/M/MC/SP/G exit or Midnight stagenet qualification.

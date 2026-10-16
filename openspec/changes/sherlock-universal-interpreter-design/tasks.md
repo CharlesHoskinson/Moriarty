@@ -163,3 +163,13 @@ Every task below is unchecked. Each must use [interfaces.md](interfaces.md) and 
 | 033 | [B-T09](#b-t09-bounded-static-residualization) |
 | 034 | [B-T10](#b-t10-declaration-and-match-plan-extension) |
 | 035 | [B-T07](#b-t07-deterministic-witness-baseline) |
+
+## Scoped offline input/readback observation
+
+The [offline helper](../../../models/sherlock/STAGENET-OFFLINE-README.md) inventories existing Core/1 inputs and compares all supplied
+JSON fields, retaining ordered arrays and missing/present distinctions. Its
+captured R2 result records 16 passing normal assertions for the bound source.
+This is preparatory tooling for complete readback reporting, with no native
+execution or independent semantic oracle. It does not implement the missing
+Sherlock/Clean/native adapter or public Moriarty commands and closes no
+UIREQ/B/U/M/MC/SP/G exit or Midnight stagenet qualification.
