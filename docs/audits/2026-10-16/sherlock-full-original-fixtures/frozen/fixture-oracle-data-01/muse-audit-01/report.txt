@@ -1,0 +1,158 @@
+SHERLOCK ORACLE O NORMAL SOURCE AUDIT
+Frozen candidate: F03/F04/F05 fixture-normal-programs.json, fixture-normal-prefixes.json, derivation.md, input-pins.json, serialize-literals.py, check-source-packet.py, source-static-receipt.json, packet-manifest.json
+Normative basis: pinned main.k and original frozen fixture texts uiListsum123.ui, uiTreesum45.ui, uiConstructList.ui only
+
+VERDICT: ACCEPT
+
+This acceptance is solely a non-author normal-source review of the supplied hand-derived F03/F04/F05 expectations against the supplied main.k and fixture texts. It is not a runtime test, K capture, producer agreement result, cross-layer correspondence claim, theorem, security audit, hostile-case review, finance review, B-profile review, native review, or product acceptance.
+
+EXAMINED SCOPE AND COMPLETENESS
+
+Complete for the supplied F03/F04/F05 literal material: I reviewed the program records, the complete charged state sequences, ordinary fuel-prefix tables, original-fixture-run reconstructions, startup and publication records, derivation counts, code references, and stated digest conventions for all three cases.
+
+State totals reviewed:
+- F03: states 0..93, 94 states
+- F04: states 0..60, 61 states
+- F05: states 0..13, 14 states
+- Total: 169 states
+
+Ordinary prefix rows reviewed:
+- F03: budgets 0..94, 95 rows
+- F04: budgets 0..61, 62 rows
+- F05: budgets 0..14, 15 rows
+- Total: 172 rows
+
+Original-budget overlays reviewed:
+- F03: states 0..93 at initial fuel 1000
+- F04: states 0..60 at initial fuel 1000
+- F05: states 0..13 at initial fuel 1000
+- Total: 169 overlay rows
+
+Limitations are stated in the pointer/digest and preservation sections below. No complete supplied F03/F04/F05 state was left uninspected for the normal derivation review.
+
+INDEPENDENTLY DERIVED PER-CASE WORK / RESULT / DEPTH
+
+F03 uiListsum123.ui
+Independent expectation: exact_completion_fuel 93; expected_value_k uiU(6); expected_maximum_frame_depth 11.
+
+Recount from main.k:
+- Initial call and first callee entry: 8 charged edges, via lines 131,135,102,181,200,204,208,135.
+- Each nonempty list level: match sequence 9 edges via 126,135,108,173,214,217,214,220,135; addition left side 4 edges via 117,135,108,149; recursive tail call 8 edges via 131,135,108,181,200,204,208,135. Subtotal per nonempty level: 21.
+- Three nonempty levels: 3 * 21 = 63.
+- Nil callee local completion: 10 edges via 126,135,108,173,214,220,135,102,195,185.
+- Three suspended additions unwind: each 4 edges via 153,223,195,185. Subtotal: 12.
+- Total: 8 + 63 + 10 + 12 = 93.
+
+Control/environment/frame check:
+- Ordered case behaviour is correct: for [1,2,3], [2,3], and [3], the uiPNil arm is tried first and yields uiNoMatch via line 214, advances via line 217, then uiPCons(1,2) matches via line 214. For [], uiPNil matches at the first arm via line 214, with no line 217 advance.
+- Fresh callee parameter environments are correct: 0 |-> [1,2,3], then 0 |-> [2,3], then 0 |-> [3], then 0 |-> uiNil(). They do not inherit caller head/tail bindings as parameter bindings.
+- Successful cons scopes correctly retain parameter 0 plus head 1 and tail 2: e.g. first scope is 0 |-> [1,2,3] 1 |-> uiU(1) 2 |-> [2,3].
+- Saved caller environments in uiReturnF, uiScopeF, uiArgsF, uiLeftF/uiRightF, and uiMatchF are consistent through the recursion. Pending right frames retain uiU(1), then uiU(2), then uiU(3) in the correct nesting order.
+- Scope exits via line 195 and typed returns via line 185 restore the stated caller environments. Primitive arithmetic normalizes inside the charged line 153 edge and returns via line 223: 3+0=3, 2+3=5, 1+5=6.
+- Maximum supplied depth is 11, reached in the nil match/literal region. This is below stack limit 64; every line 135 push is within the D <Int L guard.
+
+F04 uiTreesum45.ui
+Independent expectation: exact_completion_fuel 60; expected_value_k uiU(9); expected_maximum_frame_depth 5.
+
+Recount from main.k:
+- Initial call and root callee entry: 8.
+- Root branch match: 9, via 126,135,108,173,214,217,214,220,135. The uiPLeaf arm misses first via line 214, advances via line 217, then uiPBranch(1,2) matches via line 214.
+- Binary scheduling and push: 2, via 117,135.
+- Left leaf call and local leaf completion: 18.
+- Left-to-right frame switch: 1, via 149.
+- Right leaf call and local leaf completion: 18.
+- Final primitive reduction and primitive return: 2, via 153,223.
+- Root scope exit and typed return: 2, via 195,185.
+- Total: 8 + 9 + 2 + 18 + 1 + 18 + 2 + 2 = 60.
+
+Control/environment/frame check:
+- Root branch scope is correctly 0 |-> branch(leaf4,leaf5) 1 |-> leaf4 2 |-> leaf5.
+- The pending right-tree call uiCall(4, uiExpr(uiVar(2), uiNoExprs())) remains in the uiLeftF frame throughout the entire left leaf computation.
+- Left leaf callee has fresh parameter environment 0 |-> uiLeaf(uiU(4)); its leaf scope is 0 |-> uiLeaf(uiU(4)) 1 |-> uiU(4). It returns uiU(4), scope-exits via 195, typed-returns via 185 to the branch caller, then line 149 installs uiRightF(uiAdd(), uiU(4)).
+- Right leaf is independent and symmetric, returning uiU(5). Final checked addition gives uiU(9) at state 57 via line 153, returns via 223, exits root scope via 195, and typed-returns via 185.
+- Maximum supplied depth is 5. This is below stack limit 64.
+
+F05 uiConstructList.ui
+Independent expectation: exact_completion_fuel 13; expected_value_k uiCons(uiU(1), uiCons(uiU(2), uiNil())); expected_maximum_frame_depth 2.
+
+Recount from main.k:
+- A binary constructor over two literals takes 7 charged edges: 117,135,102,149,102,153,223.
+- The outer right literal is replaced by the inner 7-edge binary computation.
+- Total: 7 + 7 - 1 = 13.
+
+Control/environment/frame check:
+- Environment remains .Map in every state; there are no functions and no call, binding, match, scope, or return frames.
+- Outer left value uiU(1) is stored in uiRightF(uiConsOp(), uiU(1)) before the inner computation.
+- Inner left value uiU(2) is stored above it in uiRightF(uiConsOp(), uiU(2)); uiNil() is then evaluated with both right frames retained.
+- Inner uiCons(uiU(2), uiNil()) completes at states 10-11 via 153,223 before the outer uiCons(uiU(1), inner) completes at states 12-13 via 153,223. Constructor field order is preserved.
+- Maximum supplied depth is 2. This is below stack limit 64.
+
+ACTIONABLE FINDINGS
+
+None.
+
+No definite normal derivation error was found in the supplied F03/F04/F05 states, via_rule_start_line assignments, charged counts, results, depths, environments, frame order, saved caller environments, case ordering, fresh bindings, scope exits, typed returns, startup fields, publication records, ordinary prefixes, or original-run reconstructions.
+
+In particular, I found no case/state index requiring a literal correction, no incorrect source-rule locator requiring correction, and no consequent change to specified work, result, or maximum depth.
+
+STARTUP / PUBLICATION / PREFIX / FULL-ORIGINAL-RUN FINDINGS
+
+Startup:
+- The initial configurations correctly show the pre-startup K configuration shape: control uiRun(code, entry, fuel, 64), environment .Map, frames [], depth 0, stack_limit 0, code uiNoFuns(), remaining_fuel 0, initial_fuel 0, output uiPending(), charged_steps 0.
+- Startup is correctly recorded as free rule74, charge 0, post_state_index 0. Rule74 installs code P, fuel F, initialFuel F, stackLimit L, and control uiEval(E), subject to F >=Int 0 and L >=Int 0. All supplied budgets and limits satisfy this.
+- State 0 in each minimal trace is the correct post-startup state: control uiEval(entry), code_ref resolving to the case record, initial_fuel equal to exact completion fuel, stack_limit 64, remaining_fuel equal to exact completion fuel, output uiPending(), charged_steps 0, via_rule_start_line null.
+
+Terminal publication at exact completion:
+- F03 state 93: uiRet(uiU(6)), empty frames, depth 0, remaining_fuel 0. Publication via free rule80 gives control .K and output uiDone(uiU(6)).
+- F04 state 60: uiRet(uiU(9)), empty frames, depth 0, remaining_fuel 0. Publication via free rule80 gives control .K and output uiDone(uiU(9)).
+- F05 state 13: uiRet(uiCons(uiU(1), uiCons(uiU(2), uiNil()))), empty frames, depth 0, remaining_fuel 0. Publication via free rule80 gives the corresponding uiDone value.
+- Exact remaining zero is correct in all three exact-completion publications. No terminal machine charge is added after the final charged state.
+
+Zero-budget publication at nonterminal prefixes:
+- Every ordinary prefix with initial fuel i < exact completion uses boundary_state_index i, remaining_fuel 0, published_output_k uiExhausted(), publication_rule_start_line 84.
+- This matches main.k rule84: a nonterminal control at fuel 0 publishes uiExhausted() with charge 0. The supplied boundary controls are nonterminal for rule84 purposes: uiEval/uiPush/uiInvoke/uiEnter/uiBound/uiCases/uiCaseResult/uiPrimResult controls are nonterminal, and uiRet with a nonempty frame stack is also nonterminal under uiTerminal(uiRet(_), uiFrame(_, _)) => false.
+- At exact completion, the boundary is uiRet with uiNoFrames(), so uiTerminal is true and rule84 does not apply; rule80 publication is used instead.
+- At completion plus one, boundary remains the exact-completion state, remaining_fuel is 1, and rule80 publishes the same uiDone result. This is correct because rule80 has no fuel charge and no positive-fuel side condition in the supplied main.k.
+
+Ordinary prefix reconstruction:
+- The five-column prefix format is consistently interpreted: initial_fuel, boundary_state_index, remaining_fuel, published_output_k, publication_rule_start_line.
+- For each row, consumed_work equals boundary_state_index, and remaining_fuel equals initial_fuel - boundary_state_index for the listed rows. Non-completing rows end at remaining 0; completing rows are [93,93,0], [60,60,0], [13,13,0]; surplus rows are [94,93,1], [61,60,1], [14,13,1].
+- Every integer budget 0..exactcompletion+1 is explicitly present for every case. No budget is skipped and no boundary index exceeds the supplied state array.
+
+Full original runs:
+- The original fixture runs are kept separate from minimal-budget prefixes. They use the original initial fuel 1000 and stack limit 64, not the minimal exact-completion fuel as the fixture fuel.
+- Original initial configurations textually match the frozen fixtures: F03 uiRun(code3, entry[1,2,3], 1000, 64), F04 uiRun(code4, entry branch(leaf4,leaf5), 1000, 64), F05 uiRun(uiNoFuns(), cons entry, 1000, 64).
+- Original overlays list remaining_fuel 1000-i for every state i. Terminal remaining fuel is therefore 907 for F03, 940 for F04, and 987 for F05, with charged_steps 93, 60, and 13 respectively. Terminal control .K, environment .Map, frames [], depth 0, stack_limit 64, and uiDone outputs are consistent.
+- No ordinary minimal prefix budget is substituted into the frozen fixture runs.
+
+Helpers:
+- Pure helper normalization is correctly folded into the charged machine edge that uses it: uiFind within line 200, uiBind/uiBindOne within line 204, uiMatching/uiKind within line 214, uiAppend within line 181, uiBinaryResult/uiChecked within line 153, uiValid within line 102, and uiHasType within lines 185/195-relevant return checks where applicable.
+- No helper microstep is counted as an additional A-profile fuel event, and no helper work is represented as a zero-filled machine charge. This matches the supplied main.k comment and representation.
+
+POINTER / DIGEST CONSISTENCY AND LIMITATIONS
+
+Textual cross-reference checks performed:
+- source path models/sherlock/k/main.k and source sha256 string b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41 are consistently stated in fixture-normal-programs.json, fixture-normal-prefixes.json, and input-pins.json.
+- F03 input_sha256 832f1c6521477d052b1021cb7cff25c2a7da3b807e6374243479e7b3126e4100 is consistent across the F03 program record, trace input_sha256, fixed_state_fields.code_ref, and original-run terminal code_ref.
+- F04 input_sha256 3cabbc184d63b366f3f94d40f04dffc16c49fb3478d2008b6ec82d5a2adb55c2 is consistent across the corresponding F04 records.
+- F05 input_sha256 b997e41a0bdc080aa3ef4939794b88db88a5f6015fa427a13d71adffa1d4b5d8 is consistent across the corresponding F05 records.
+- Every code_ref has file fixture-normal-programs.json, the matching case_id, and the matching input_sha256. No code_ref points to a different case or digest string.
+- Original fixture path/hash strings are consistent between program records, original_fixture_run records, and input-pins.json: uiListsum123.ui e08da8ed9afb166899de72c8dccf85f63f67325936e83ad805d58dedff9bf440; uiTreesum45.ui addb55d31d554e626f6c6f52ea7225d69b94ee48d75656495ef6e5eaf2c0b4b3; uiConstructList.ui e9391d748b80e8b47109b3d8b2198ae1b6fc258127a81d854a1de9730feffc64.
+- The stated input digest convention is uniform: SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata. The six fields are case_id, code_k, entry_k, initial_arguments, stack_limit, exact_completion_fuel. The code_k and entry_k strings textually match the corresponding frozen fixture uiRun arguments after whitespace-insensitive reading, with original fixture fuel 1000 and limit 64 retained in original_fixture metadata.
+
+Digest limitation:
+- This tools-disabled review did not recompute any SHA256 value and does not claim cryptographic hash verification for main.k, the fixtures, input_sha256 values, candidate file hashes in packet-manifest.json, or input-pins.json. The checks above are textual cross-reference, field-linkage, and convention-consistency checks only.
+- Therefore the reviewable normal expectation predicate is the serialized literal predicate: for each listed fixture and budget 0..exactcompletion+1, a future producer is expected to agree on control, environment, top-first frames, depth, code reference, fuel fields, output, and charged work. The supplied literal data and derivation make that predicate reviewable as a source expectation. This review does not infer that any producer agrees with it.
+
+Preservation limitation:
+- Original fixture bytes and the existing 216 normal prefixes were not supplied as full contents in this packet. The statement that they remain immutable is supported here only by the packet's pins, manifest obligations, derivation statement, and author's source-static receipt. That receipt is author's source-static evidence, not independent runtime evidence and not independent content inspection by this audit.
+- I do not treat the author's count or shape receipt as semantic authority. The F03/F04/F05 acceptance above rests on the supplied main.k, fixture texts, and literal traces, not on source-static-receipt.json.
+- No subject implementation, producer output, actual K capture, evaluator, circuit, compiler, witness, or reference runtime was used or relied upon.
+
+FINAL STATEMENT
+
+Verdict: ACCEPT for this exact frozen normal-source packet, limited to independent source review of the F03/F04/F05 normal expectations as specified above.
+
+Required corrections: none.
+
+Coverage caveats: no cryptographic hash recomputation is claimed; no independent content-level preservation verification of the unsupplied existing 216 prefixes is claimed; no runtime or producer correspondence is claimed.

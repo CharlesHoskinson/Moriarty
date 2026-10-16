@@ -1,0 +1,729 @@
+# Independent Source-Only Normal QA Report
+
+## Terminal disposition
+
+**PASS**, limited strictly to the exact source-only, nonsecurity normal-semantics scope defined for this review.
+
+No definite normal source-correctness defect was found in the two fixed programs, their charged traces, prefix extents, startup handling, environment and frame restoration, depth accounting, terminal publication, original fuel-1000 runs, or internal cross-references that can be checked from the embedded text without recomputing cryptographic hashes.
+
+This PASS is not runtime evidence. It is not producer agreement, implementation agreement, theorem or refinement evidence, Candidate B adoption, circuit evidence, financial evidence, native evidence, or target acceptance.
+
+---
+
+## 1. Exact candidate identification and evidence actually inspected
+
+### 1.1 Candidate profile and source identity
+
+The packet identifies the profile as:
+
+- `sherlock-k-a/1`
+- Baseline commit: `c9f7cf6a712c7e6069cdc7a3ecdd86fb79817429`
+- Normative source path: `models/sherlock/k/main.k`
+- Asserted normative source SHA-256: `b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41`
+
+The two reviewed cases are:
+
+1. `F01factorial`
+   - Function identifier: `1`
+   - Entry: `uiCall(1, uiExpr(uiLiteral(uiU(3)), uiNoExprs()))`
+   - Asserted input digest: `c72ce5559463ace8b30dc8e650521b94995484f76a64031a44e6e5ef9c9a16e3`
+   - Expected terminal value: `uiU(6)`
+   - Exact completion fuel: `113`
+   - Stack limit: `64`
+   - Original fixture: `models/sherlock/k/fixtures/uiFactorial3.ui`
+   - Asserted original fixture SHA-256: `0622e01b0b7ba1ee588ff648a9299840fd97e64375fd5aad3d6393ed349b6592`
+
+2. `F02sum`
+   - Function identifier: `2`
+   - Entry: `uiCall(2, uiExpr(uiLiteral(uiU(3)), uiNoExprs()))`
+   - Asserted input digest: `b005133b43ae8d54fd978b9205da394d2ac2bae548bbea3b7a095565aefc4c7c`
+   - Expected terminal value: `uiU(6)`
+   - Exact completion fuel: `113`
+   - Stack limit: `64`
+   - Original fixture: `models/sherlock/k/fixtures/uiSum3.ui`
+   - Asserted original fixture SHA-256: `661bd0d819885de654e5605635e10231bd587c4113547db696f4aaabd67ec351`
+
+Both cases retain the original fuel argument `1000` and stack limit `64` in their original fixture runs. The value `113` is used for the separate minimal-budget prefix traces and is not substituted into the original fixture terms.
+
+### 1.2 Evidence inspected
+
+The review inspected the embedded text of:
+
+- The frozen artifact manifest.
+- `models/sherlock/k/main.k`.
+- `models/sherlock/k/fixtures/uiFactorial3.ui`.
+- `models/sherlock/k/fixtures/uiSum3.ui`.
+- `INPUT-PINS.json`.
+- `newprograms.json`.
+- `prefixes.json`, including both 114-state traces and both 115-row ordinary-prefix arrays.
+- `original-fixture-runs.json`, including both complete fuel-1000 traces.
+- `DERIVATION.md`.
+- `serialize_literals.py`.
+- `check_literal_inventory.py`.
+- `LITERAL-INVENTORY.json`.
+- `HANDOFF.json`.
+
+No subject implementation, producer output, compiler output, evaluator output, circuit, witness, or actual model output was supplied or inspected.
+
+No tool, interpreter, second semantic oracle, compiler, producer, or external source was used for this report.
+
+### 1.3 Evidence status
+
+The packet repeatedly and consistently describes itself as provisional, hand-authored or hand-derived, specified-only, and unexecuted. That status was retained throughout this review.
+
+The embedded serializer and inventory checker were read as source documents. Their assertions and printed results were not treated as independently executed evidence.
+
+---
+
+## 2. Normal source-correctness findings
+
+### Finding N-01 — No definite charged-step defect in either full trace
+
+**Cases:** `F01factorial`, `F02sum`  
+**Files:** `prefixes.json`, `original-fixture-runs.json`, `models/sherlock/k/main.k`  
+**States:** `0..113` for each case  
+**Result:** No correction required.
+
+For both programs, the charged sequence decomposes as:
+
+- Initial entry, argument evaluation, lookup, binding, and function-body entry: states `0..8`, using incoming rules `131, 135, 102, 181, 200, 204, 208, 135`.
+- Recursive body for argument `3`: states `8..36`, 28 charged steps.
+- Recursive body for argument `2`: states `36..64`, 28 charged steps.
+- Recursive body for argument `1`: states `64..92`, 28 charged steps.
+- Base body for argument `0`, through restoration to caller argument `1`: states `92..104`, 12 charged steps.
+- Unwind through caller argument `1`: states `104..107`, 3 charged steps.
+- Unwind through caller argument `2`: states `107..110`, 3 charged steps.
+- Unwind through caller argument `3`: states `110..113`, 3 charged steps.
+
+The total is:
+
+`8 + 3*28 + 12 + 3*3 = 113`
+
+That arithmetic is directly verifiable from the embedded counts. It agrees with:
+
+- `newprograms.json` field `exact_completion_fuel: 113` for both programs.
+- `prefixes.json` state indices `0..113`.
+- `original-fixture-runs.json` terminal charged work `113`.
+- `DERIVATION.md`.
+- `LITERAL-INVENTORY.json`.
+- `HANDOFF.json`.
+
+Each trace state has:
+
+- `charged_steps` equal to its state index in the minimal-fuel trace.
+- `remaining_fuel = 113 - charged_steps` in `prefixes.json`.
+- `remaining_fuel = 1000 - charged_steps` in `original-fixture-runs.json`.
+- Exactly one charged incoming machine rule for states `1..113`.
+- `via_rule_start_line: null` only for post-startup state `0`.
+
+No state requires a second charged event for a pure helper normalization. This agrees with the K source structure: helper functions such as `uiValid`, `uiHasType`, `uiBinaryResult`, `uiUnaryResult`, `uiFind`, `uiAppend`, `uiBind`, and `uiMatching` normalize inside the charged machine rewrite that contains them.
+
+### Finding N-02 — Startup is correctly zero-charge and installs the correct configuration
+
+**Cases:** Both  
+**Files:** `prefixes.json`, `original-fixture-runs.json`, `models/sherlock/k/main.k`  
+**Rule:** startup at source line `74`, external label `k.admin.startup.valid`  
+**Result:** No correction required.
+
+The explicit pre-start configuration in both trace files is:
+
+- Control: the applicable `uiRun(code, entry, fuel, 64)` term.
+- Environment: `.Map`
+- Frames: empty
+- Depth: `0`
+- Configured stack limit cell: `0`
+- Configured code cell: `uiNoFuns()`
+- Configured fuel: `0`
+- Configured initial fuel: `0`
+- Output: `uiPending()`
+- Charged steps: `0`
+
+Rule line `74` applies when both the fuel and limit arguments are nonnegative. It:
+
+- Replaces `uiRun(P, E, F, L)` with `uiEval(E)`.
+- Installs `P` in the code cell.
+- Installs `F` in both fuel and initial-fuel cells.
+- Installs `L` in the stack-limit cell.
+- Does not decrement fuel.
+
+For the minimal traces, post-startup state `0` therefore has remaining fuel `113`, depth `0`, empty environment, empty frames, and control `uiEval(entry)`.
+
+For the original runs, post-startup state `0` has remaining fuel `1000`, with the same control, environment, frames, and depth.
+
+For an ordinary prefix budget `B`, the representation states that only the `uiRun` fuel argument in the initial configuration changes to `B`. The configured pre-start cells remain zero, and startup line `74` installs `B`. That reconstruction is consistent with the K startup rule.
+
+Budget `0` is valid at startup because line `74` requires `F >=Int 0`, not `F >Int 0`. The negative-fuel startup alternative at line `78` is not used by any reviewed prefix because all listed budgets are `0..114`.
+
+### Finding N-03 — Entry argument evaluation and first function entry are correct
+
+**Cases:** Both  
+**States:** `0..8`  
+**Rules:** `131, 135, 102, 181, 200, 204, 208, 135`  
+**Result:** No correction required.
+
+The sequence is:
+
+1. State `0`: `uiEval(uiCall(N, uiExpr(uiLiteral(uiU(3)), uiNoExprs())))`.
+2. State `1`, via line `131`: creates `uiPush(uiArgsF(N, uiNoValues(), uiNoExprs(), .Map), uiEval(uiLiteral(uiU(3))), .Map)`.
+3. State `2`, via line `135`: installs the argument frame, depth becomes `1`, and evaluates the literal.
+4. State `3`, via line `102`: returns `uiU(3)`. The literal is valid because `3` is inside the unsigned 128-bit range checked by `uiValid`.
+5. State `4`, via line `181`: the argument frame has no remaining expressions, so it is popped, depth returns to `0`, the caller environment `.Map` is restored, and control becomes `uiInvoke(N, uiValue(uiU(3), uiNoValues()))`.
+6. State `5`, via line `200`: `uiFind` resolves the singleton function table to the fixed function.
+7. State `6`, via line `204`: `uiBind` produces `uiBindings(0 |-> uiU(3))`. The value has type `uiUIntT()`, matches the sole parameter, and does not duplicate a binding.
+8. State `7`, via line `208`: schedules `uiPush(uiReturnF(uiUIntT(), .Map), uiEval(body), 0 |-> uiU(3))`. The current environment at this pre-push state is still `.Map`; the return frame saves `.Map`.
+9. State `8`, via line `135`: installs the return frame, sets the current environment to `0 |-> uiU(3)`, and evaluates the function body at depth `1`.
+
+The distinction between the scheduled push at state `7` and the installed frame at state `8` is correctly represented.
+
+### Finding N-04 — The three false recursive bodies use the correct condition, operand, subtraction, and callee sequence
+
+**Cases:** Both  
+**States:** `8..36`, `36..64`, `64..92`  
+**Rules per recursive interval:**  
+`123, 135, 117, 135, 108, 149, 102, 153, 223, 165, 117, 135, 108, 149, 131, 135, 117, 135, 108, 149, 102, 153, 223, 181, 200, 204, 208, 135`  
+**Result:** No correction required.
+
+For each nonzero argument `n` in `3, 2, 1`, the trace correctly performs the following operations.
+
+First, rule line `123` schedules the `uiIfF` frame, and line `135` installs it. The condition is `uiBinary(uiEq(), uiVar(0), uiLiteral(uiU(0)))`.
+
+Second, rule line `117` schedules the binary-left frame for `uiEq()`, and line `135` installs it.
+
+Third, rule line `108` returns the current `uiU(n)` from `uiVar(0)`.
+
+Fourth, rule line `149` replaces the left frame with `uiRightF(uiEq(), uiU(n))` and evaluates `uiLiteral(uiU(0))`. Depth does not change on this transition, correctly, because one frame replaces another.
+
+Fifth, rule line `102` returns `uiU(0)`.
+
+Sixth, rule line `153` pops the right frame and produces `uiPrimResult(uiPrimValue(uiB(false)))`. This is correct because `n == 0` is false for `n = 3, 2, 1`.
+
+Seventh, rule line `223` converts the primitive value to `uiRet(uiB(false))`.
+
+Eighth, rule line `165` selects the false branch, pops the `uiIfF`, restores the environment saved in that frame, and evaluates:
+
+- For `F01factorial`: `uiBinary(uiMul(), uiVar(0), recursiveCall)`.
+- For `F02sum`: `uiBinary(uiAdd(), uiVar(0), recursiveCall)`.
+
+The unselected true branch, `uiLiteral(uiU(1))` for factorial or `uiLiteral(uiU(0))` for sum, is retained only as the unused branch inside the consumed `uiIfF`. It is not evaluated in these activations. That is correct.
+
+Ninth, rule line `117` schedules the left frame for `uiMul()` or `uiAdd()`, line `135` installs it, line `108` returns `uiU(n)`, and line `149` replaces it with the corresponding `uiRightF` containing `uiU(n)`. Control then evaluates the recursive call in the caller environment.
+
+Tenth, the recursive argument `uiBinary(uiSub(), uiVar(0), uiLiteral(uiU(1)))` is evaluated under the caller environment:
+
+- Rule `131` schedules the argument frame.
+- Rule `135` installs it.
+- Rule `117` schedules the subtraction-left frame.
+- Rule `135` installs that frame.
+- Rule `108` returns `uiU(n)`.
+- Rule `149` evaluates literal `1`.
+- Rule `102` returns `uiU(1)`.
+- Rule `153` computes `uiU(n - 1)` through the checked subtraction helper.
+- Rule `223` returns that value.
+- Rule `181` pops the argument frame and restores the caller environment.
+
+Finally, rules `200`, `204`, `208`, and `135` find the same fixed function, bind parameter `0` to `uiU(n - 1)`, schedule the new return frame, and install the callee environment.
+
+The callee’s fresh parameter map is not installed before the subtraction finishes. The subtraction is correctly evaluated with the caller’s `0 |-> uiU(n)` map.
+
+### Finding N-05 — The base body at argument zero selects the correct branch
+
+**Cases:** Both  
+**States:** `92..104`  
+**Rules:** `123, 135, 117, 135, 108, 149, 102, 153, 223, 161, 102, 185`  
+**Result:** No correction required.
+
+At state `92`, the current environment is `0 |-> uiU(0)`, and the top frame is the return frame for the base activation.
+
+The equality subcomputation proceeds as in the false cases until state `100`, where the primitive result is `uiPrimValue(uiB(true))`. This is correct because `0 == 0`.
+
+At state `101`, rule line `223` produces `uiRet(uiB(true))`.
+
+At state `102`, rule line `161` selects the true branch, pops the `uiIfF`, restores the environment saved in the `uiIfF`, and evaluates the base literal:
+
+- `F01factorial`: `uiLiteral(uiU(1))`.
+- `F02sum`: `uiLiteral(uiU(0))`.
+
+The recursive false branch remains only inside the consumed `uiIfF` payload and is not evaluated. That is correct.
+
+At state `103`, rule line `102` returns the base value.
+
+At state `104`, rule line `185` consumes the base activation’s `uiReturnF(uiUIntT(), 0 |-> uiU(1))`. The returned value has type `uiUIntT()`, so the valid return rule applies rather than error rule line `189`. The environment is restored to the caller body for argument `1`, depth decreases, and the pending right-operand frame for argument `1` becomes visible.
+
+### Finding N-06 — The three unwind steps compute the correct values and restore each caller
+
+**Cases:** Both  
+**States:** `104..113`  
+**Rules per unwind interval:** `153, 223, 185`  
+**Result:** No correction required.
+
+For `F01factorial`:
+
+- State `104`: returns base value `uiU(1)` to pending `uiMul()` with saved left operand `uiU(1)`.
+- State `105`, via line `153`: computes `1 * 1 = 1`.
+- State `106`, via line `223`: returns `uiU(1)`.
+- State `107`, via line `185`: restores caller environment `0 |-> uiU(2)`.
+- State `108`, via line `153`: computes `2 * 1 = 2`.
+- State `109`, via line `223`: returns `uiU(2)`.
+- State `110`, via line `185`: restores caller environment `0 |-> uiU(3)`.
+- State `111`, via line `153`: computes `3 * 2 = 6`.
+- State `112`, via line `223`: returns `uiU(6)`.
+- State `113`, via line `185`: consumes the outermost return frame, restores `.Map`, empties the frame stack, and returns depth to `0`.
+
+For `F02sum`:
+
+- State `104`: returns base value `uiU(0)` to pending `uiAdd()` with saved left operand `uiU(1)`.
+- State `105`, via line `153`: computes `1 + 0 = 1`.
+- State `106`, via line `223`: returns `uiU(1)`.
+- State `107`, via line `185`: restores caller environment `0 |-> uiU(2)`.
+- State `108`, via line `153`: computes `2 + 1 = 3`.
+- State `109`, via line `223`: returns `uiU(3)`.
+- State `110`, via line `185`: restores caller environment `0 |-> uiU(3)`.
+- State `111`, via line `153`: computes `3 + 3 = 6`.
+- State `112`, via line `223`: returns `uiU(6)`.
+- State `113`, via line `185`: consumes the outermost return frame, restores `.Map`, empties the frame stack, and returns depth to `0`.
+
+The hand arithmetic in `newprograms.json` and `DERIVATION.md` agrees:
+
+- Factorial: `factorial(0)=1`, `1*1=1`, `2*1=2`, `3*2=6`.
+- Sum: `sum(0)=0`, `1+0=1`, `2+1=3`, `3+3=6`.
+
+All intermediate and final values are inside the checked unsigned 128-bit range, so the checked helper produces `uiPrimValue`, not `uiPrimError(10)`.
+
+### Finding N-07 — Current environments, saved environments, and frame payloads are complete and consistently restored
+
+**Cases:** Both  
+**Files:** `prefixes.json`, `original-fixture-runs.json`  
+**Relevant states:** Especially `8`, `36`, `64`, `92`, `96..99`, `104`, `107`, `110`, `113`  
+**Result:** No correction required.
+
+The state representation stores, for every state:
+
+- `charged_steps`
+- `remaining_fuel`
+- `depth`
+- `control_k`
+- `environment_k`
+- `frames_top_first_k`
+- `via_rule_start_line`
+
+The fixed overlay supplies:
+
+- `code_ref`
+- The applicable `initial_fuel`
+- `stack_limit: 64`
+- `output_k: uiPending()` before publication
+
+Frame arrays are explicitly top-first. The representation explains folding them right with `uiFrame(frame, rest)` and ending with `uiNoFrames()`. Each frame string contains its full expression, value, operator, and saved-map payloads where applicable. The traces do not reconstruct frames from depth alone.
+
+At state `8`, the current map is `0 |-> uiU(3)`, and the sole frame is `uiReturnF(uiUIntT(), .Map)`.
+
+At state `36`, the current map is `0 |-> uiU(2)`. The top-first stack contains the return frame saving the argument-3 caller map, the pending arithmetic right frame for operand `3`, and the outer return frame saving `.Map`.
+
+At state `64`, the argument-2 caller map is saved by the next return frame, with the pending arithmetic frame for operand `2` below it, followed by the earlier frames.
+
+At state `92`, the base activation has current map `0 |-> uiU(0)` and seven frames before the condition subcomputation adds its frames.
+
+The final-argument rule at line `181` restores the environment stored in `uiArgsF`. The traces use that rule to restore the caller map before lookup and binding.
+
+The bound rule at line `208` schedules the return frame while the caller map remains current. The following push rule at line `135` installs the callee map. The traces preserve that distinction at states `7..8`, `35..36`, `63..64`, and `91..92`.
+
+Return restoration is exact:
+
+- State `104` restores `0 |-> uiU(1)`.
+- State `107` restores `0 |-> uiU(2)`.
+- State `110` restores `0 |-> uiU(3)`.
+- State `113` restores `.Map`.
+
+No stale callee binding remains visible after any return.
+
+### Finding N-08 — Depth and stack-limit accounting are correct
+
+**Cases:** Both  
+**States:** Maximum-depth states `96..99`  
+**Rules:** Push acceptance at line `135`; return and primitive transitions at lines `149`, `153`, `161`, `165`, `181`, `185`, and `223`  
+**Result:** No correction required.
+
+Depth equals the number of frames in every reviewed state.
+
+The maximum depth is `9`, reached at states `96`, `97`, `98`, and `99`. At state `96`, the nine frames are the equality-left frame, the base activation’s `uiIfF`, the base return frame, the pending operand frame for `1`, the argument-1 caller return frame, the pending operand frame for `2`, the argument-2 caller return frame, the pending operand frame for `3`, and the outermost return frame.
+
+Every push transition is made while the pre-push depth is below `64`. The last maximum-depth push moves from depth `8` at state `95` to depth `9` at state `96`; `8 < 64`, so line `135` applies and line `140` push-overflow error `4` does not.
+
+Transitions that replace a left frame by a right frame preserve depth. Transitions that pop a right frame, `uiIfF`, argument frame, or return frame decrement depth exactly once where the K rule specifies a depth decrement.
+
+The declared maximum depth `9` in `newprograms.json`, `DERIVATION.md`, `LITERAL-INVENTORY.json`, and `HANDOFF.json` agrees with the trace states and with the checker assertion identifying depth-9 states as `[96, 97, 98, 99]`.
+
+### Finding N-09 — Terminal publication and exact-zero success are correct
+
+**Cases:** Both  
+**States:** `113`  
+**Rules:** Publication at line `80`, label `k.admin.publish.value`; exhausted publication at line `84`, label `k.admin.publish.exhausted`  
+**Result:** No correction required.
+
+At state `113` in the minimal trace:
+
+- Control: `uiRet(uiU(6))`
+- Environment: `.Map`
+- Frames: empty
+- Depth: `0`
+- Charged steps: `113`
+- Remaining fuel: `0`
+- Output before publication: `uiPending()`
+
+Rule line `80` applies specifically to `uiRet(V)` with `uiNoFrames()`. It replaces control with `.K`, changes output to `uiDone(V)`, and has no fuel decrement.
+
+The exhausted rule at line `84` also requires fuel `0`, but additionally requires `notBool uiTerminal(C, S)`. For `uiRet(uiU(6))` with `uiNoFrames()`, the helper rule at line `89` gives `uiTerminal(...) = true`. Therefore the exhausted rule does not apply at exact completion.
+
+This establishes exact-zero success for budget `113`: all 113 charged steps complete, remaining fuel reaches zero, and zero-charge publication produces `uiDone(uiU(6))`.
+
+For budget `114`, the same boundary is reached after 113 charged steps with remaining fuel `1`. Publication line `80` has no positive-fuel requirement, so the same terminal output is produced without consuming the surplus.
+
+### Finding N-10 — All ordinary prefixes from budget 0 through exact completion plus one are correctly represented
+
+**Cases:** Both  
+**File:** `prefixes.json`  
+**Rows:** `115` per case, budgets `0..114`  
+**Result:** No correction required.
+
+Each row has the five columns declared in the representation:
+
+1. `initial_fuel`
+2. `boundary_state_index`
+3. `remaining_fuel`
+4. `published_output_k`
+5. `publication_rule_start_line`
+
+For budgets `0..112`, each row is:
+
+- Initial fuel equal to the boundary state index.
+- Remaining fuel `0`.
+- Published output `uiExhausted()`.
+- Publication rule line `84`.
+
+That is correct because after exactly that many charged machine steps, fuel is zero and the boundary is nonterminal. The relevant control forms are all covered by a false `uiTerminal` case:
+
+- `uiEval` is false.
+- `uiPush` is false.
+- `uiInvoke` is false.
+- `uiEnter` is false.
+- `uiBound` is false.
+- `uiPrimResult` is false.
+- `uiRet` with a nonempty frame stack is false.
+
+No prefix boundary from `0..112` is `uiRet` with an empty stack. The only empty-stack return is state `113`.
+
+For budget `113`, the row is `[113, 113, 0, uiDone(uiU(6)), 80]`.
+
+For budget `114`, the row is `[114, 113, 1, uiDone(uiU(6)), 80]`.
+
+The published prefix state preserves the boundary environment, frames, depth, code, stack limit, initial fuel, remaining fuel, and charged-step count while replacing only control with `.K` and output with the published output. That matches the administrative publication rules and the general K convention that cells not rewritten by a rule remain unchanged.
+
+No attempted-work diagnostic is introduced. The representation correctly states that K-A defines no such diagnostic.
+
+The broader statement that budgets above `114` reach the same terminal boundary with surplus fuel is a direct source-level consequence of the fact that no further charged rule is needed after state `113` and publication line `80` is zero-charge. Those larger budgets are correctly not represented as additional rows.
+
+### Finding N-11 — Both original programs and original fixture identities remain unchanged and separate
+
+**Cases:** Both  
+**Files:** `newprograms.json`, `original-fixture-runs.json`, `models/sherlock/k/fixtures/uiFactorial3.ui`, `models/sherlock/k/fixtures/uiSum3.ui`  
+**Result:** No correction required.
+
+The `code_k` and `entry_k` values in `newprograms.json` agree textually with the fixture function tables and entry calls after whitespace normalization:
+
+- Factorial uses function `1`, base `uiLiteral(uiU(1))`, and `uiMul()`.
+- Sum uses function `2`, base `uiLiteral(uiU(0))`, and `uiAdd()`.
+- Both use parameter `0`, parameter type `uiUIntT()`, return type `uiUIntT()`, test `uiVar(0) == uiLiteral(uiU(0))`, recursive argument `uiVar(0) - uiLiteral(uiU(1))`, and entry literal `3`.
+
+The original `run_k` terms in both `newprograms.json` and `original-fixture-runs.json` retain fuel `1000` and stack limit `64`.
+
+The original runs are separate from the 115-row minimal prefix arrays. They are not included as budget rows `0..114`, and their initial fuel has not been changed to `113`.
+
+### Finding N-12 — External rule labels and state-rule pointers are internally consistent
+
+**Files:** `prefixes.json`, `original-fixture-runs.json`, `models/sherlock/k/main.k`  
+**Result:** No correction required, subject to the catalog limitation in section 5.
+
+The `source_rule_labels` maps contain the same 19 entries in both trace files:
+
+- `74`: `k.admin.startup.valid`
+- `80`: `k.admin.publish.value`
+- `84`: `k.admin.publish.exhausted`
+- `102`: `k.machine.eval.literal.valid`
+- `108`: `k.machine.eval.variable.present`
+- `117`: `k.machine.eval.binary`
+- `123`: `k.machine.eval.if`
+- `131`: `k.machine.eval.call.arguments`
+- `135`: `k.machine.push.accept`
+- `149`: `k.machine.return.left`
+- `153`: `k.machine.return.right`
+- `161`: `k.machine.return.if.true`
+- `165`: `k.machine.return.if.false`
+- `181`: `k.machine.return.arguments.final`
+- `185`: `k.machine.return.call.valid`
+- `200`: `k.machine.invoke.find`
+- `204`: `k.machine.enter.bind`
+- `208`: `k.machine.bound.valid`
+- `223`: `k.machine.primitive.value`
+
+Counting the line breaks in the embedded `main.k` text places the corresponding rule openings at those lines. The labels are external catalog labels; the K rules themselves are not annotated with those label strings in `main.k`. `DERIVATION.md` explicitly makes that distinction.
+
+All incoming-rule values used by the traces belong to this label set, apart from state `0`, which correctly has `via_rule_start_line: null` and is reached through the separate startup record for line `74`.
+
+The labels `k.machine.return.left` and `k.machine.return.call.valid` are concise names rather than literal K constructor names. In context, line `149` is the return transition handling a `uiLeftF`, and line `185` is the valid-type return transition handling a `uiReturnF`. No competing rule at those lines creates a pointer ambiguity within this packet.
+
+---
+
+## 3. Explicit assessment of traces, prefix extents, startup, publication, and counter overlays
+
+### 3.1 Full trace assessment
+
+Both full traces contain exactly 114 post-startup states, indexed `0..113`.
+
+Both traces have the same control shape and differ only where the fixed program differs:
+
+- Function identifier `1` versus `2`.
+- Base literal `uiU(1)` versus `uiU(0)`.
+- Pending and evaluated operator `uiMul()` versus `uiAdd()`.
+- Intermediate unwind values at states `104..110`, especially:
+  - Factorial computes `1`, then `2`, then `6`.
+  - Sum computes `1`, then `3`, then `6`.
+
+Those are the expected differences. No factorial state uses `uiAdd()`, and no sum state uses `uiMul()`.
+
+The traces cover all semantic branches actually taken:
+
+- Three false equality branches for arguments `3`, `2`, and `1`.
+- One true equality branch for argument `0`.
+- Three recursive calls.
+- Three valid function returns from recursive activations.
+- One outermost valid return.
+- Three binary arithmetic unwind operations.
+- Four equality operations.
+- Three subtraction operations.
+
+The traces also account for unselected branches by retaining them in the applicable `uiIfF` payload until that frame is consumed. Those branches are not incorrectly evaluated.
+
+No `uiLet`, `uiUnary`, `uiMatch`, list, tree, missing-function, bad-binding, unbound-variable, invalid-literal, primitive-error, type-error, or stack-overflow path is taken by these two fixed programs. That is expected. This review does not claim those untaken rules were exercised by these cases.
+
+### 3.2 Startup assessment
+
+Startup is represented as a separate zero-charge administrative edge to state `0`.
+
+The initial configuration is explicit and not conflated with state `0`:
+
+- Before startup, the configured code and counters are at their literal defaults.
+- The `uiRun` term supplies the code, entry, fuel, and limit.
+- Startup line `74` installs those values.
+- State `0` is the first post-startup machine state.
+
+For ordinary prefixes, the initial-configuration reconstruction changes only the fuel argument in the `uiRun` term. This is explicitly documented and is consistent with startup line `74`.
+
+No startup step consumes a K-A fuel unit.
+
+### 3.3 Publication assessment
+
+Successful publication is represented as a separate zero-charge administrative edge from state `113` through rule line `80`.
+
+The publication record is:
+
+- `pre_state_index: 113`
+- `rule_start_line: 80`
+- `charge: 0`
+- Post-overrides:
+  - `control_k: .K`
+  - `output_k: uiDone(uiU(6))`
+
+All other boundary fields are preserved.
+
+Exhausted publication for prefixes `0..112` uses rule line `84`. It likewise clears control and changes only the output to `uiExhausted()`, preserving the interrupted state fields.
+
+There is no confusion between state `113` before publication and the published terminal configuration. The value remains in `uiRet(uiU(6))` at state `113`; `uiDone(uiU(6))` appears only after publication.
+
+### 3.4 Counter overlay assessment
+
+The minimal traces use fixed `initial_fuel: 113`. Every state satisfies `remaining_fuel = 113 - charged_steps`.
+
+The original traces use fixed `initial_fuel: 1000`. Every state has the same charged steps, control, environment, frames, depth, and incoming rule as the corresponding minimal state, with `remaining_fuel = 1000 - charged_steps`.
+
+The original terminal summary is therefore:
+
+- Charged work: `113`
+- Initial fuel: `1000`
+- Remaining fuel: `887`
+- Control after publication: `.K`
+- Environment: `.Map`
+- Frames: empty
+- Depth: `0`
+- Output: `uiDone(uiU(6))`
+
+The arithmetic `1000 - 113 = 887` is directly verifiable.
+
+Ordinary prefix rows override the fixed initial fuel and boundary remaining fuel according to the row. That overlay precedence is explicitly documented: the row supplies the budget, the boundary state supplies all other fields, and consumed work equals the boundary state index.
+
+No helper work is represented as zero. The representation states that helper work is unmetered in K-A and is not another A fuel event. That is consistent with the pinned K text, where only the enumerated machine and administrative rules affect the configuration; pure helper rewrites are not separate configuration transitions.
+
+---
+
+## 4. Internal digest, pointer, and count consistency
+
+### 4.1 Counts that can be verified directly from the embedded text
+
+The following counts are arithmetically verifiable without executing code or recomputing hashes:
+
+- Two new cases: `F01factorial` and `F02sum`.
+- 114 states per full trace: indices `0..113`.
+- 228 states across the two minimal traces.
+- 115 ordinary prefix rows per case: budgets `0..114`.
+- 230 ordinary prefix rows across the two new cases.
+- Two original fuel-1000 traces.
+- 113 charged steps per case.
+- Original remaining fuel `887` per case.
+- Maximum depth `9`.
+- Depth-9 states listed as `96..99`, which is consistent with the per-state frame counts.
+
+The incoming-rule frequency expected by the checker is also internally consistent with the ordered trace sequence:
+
+- `131`: 4
+- `135`: 22
+- `102`: 9
+- `181`: 4
+- `200`: 4
+- `204`: 4
+- `208`: 4
+- `123`: 4
+- `117`: 10
+- `108`: 10
+- `149`: 10
+- `153`: 10
+- `223`: 10
+- `165`: 3
+- `161`: 1
+- `185`: 4
+
+Those counts sum to 113 charged transitions per trace.
+
+The serialized rule sequence in `check_literal_inventory.py` has the same interval decomposition as the traces and `DERIVATION.md`.
+
+### 4.2 Six-source-field input digest convention
+
+`newprograms.json` states, for each program:
+
+> SHA256 of UTF-8 compact sorted-key JSON of the six preceding source fields, excluding digest/convention and metadata.
+
+The six fields used in the record construction are:
+
+- `case_id`
+- `code_k`
+- `entry_k`
+- `initial_arguments`
+- `stack_limit`
+- `exact_completion_fuel`
+
+The serializer constructs a record containing exactly those six fields before computing `input_sha256`. It then adds the digest, convention, title, expected value, derivation, and original-fixture metadata. That construction matches the stated convention.
+
+The checker independently expresses the same intended reconstruction in source form: it selects those six fields from each program record, encodes them as compact sorted-key JSON, hashes the result, and asserts equality with:
+
+- The program’s `input_sha256`.
+- The corresponding minimal trace’s `input_sha256`.
+- The corresponding original trace’s `input_sha256`.
+
+The textual pointer consistency is exact:
+
+- The factorial digest `c72ce5559463ace8b30dc8e650521b94995484f76a64031a44e6e5ef9c9a16e3` appears in the factorial program record, its `code_ref`, its minimal trace, its original trace, and its original-fixture cross-reference structure.
+- The sum digest `b005133b43ae8d54fd978b9205da394d2ac2bae548bbea3b7a095565aefc4c7c` appears in the corresponding sum records.
+
+Each `code_ref` identifies `newprograms.json`, one case ID, and that case’s digest. There are two distinct case IDs and two distinct digests, so the reference resolves to exactly one program record within the embedded packet.
+
+### 4.3 Calculations that remain embedded author assertions
+
+SHA-256 values cannot be recomputed reliably by manual inspection in this review. Therefore the following are treated as internally repeated author assertions, not independently verified cryptographic facts:
+
+- The SHA-256 and byte count for `main.k`.
+- The SHA-256 and byte counts for the two fixture files.
+- The six-field `input_sha256` values for both programs.
+- The manifest SHA-256 values and byte counts for the eight listed artifacts.
+- The `INPUT-PINS.json` values for files whose bodies were not embedded, including the older oracle files, interface document, implementation plan, and reference rule catalog.
+- The asserted equality between those pins and any external checkout state.
+
+This limitation does not create a trace inconsistency. The digests are consistently cross-referenced, and the convention for constructing them is explicit. It does mean this report does not claim byte-level pin verification.
+
+Likewise, the byte values in the frozen manifest were not independently measured. They are consistent as labels across the packet, but no tool-based byte count was performed.
+
+### 4.4 Pointer consistency and one naming ambiguity
+
+All case IDs, source paths, function identifiers, fixture paths, rule-line pointers, trace references, and original-run references are internally consistent.
+
+One non-semantic naming ambiguity remains outside the candidate traces:
+
+- `HANDOFF.json` names its manifest field as `ARTIFACT-PINS.json`.
+- The frozen manifest supplied for this review is presented as a manifest block without that filename in its own text.
+
+Because no filesystem inspection is authorized or performed, this report does not determine whether `ARTIFACT-PINS.json` is the filename of the supplied manifest in the runtime directory. This ambiguity does not affect either K trace, any state, any prefix row, any digest pointer inside the trace files, or the terminal disposition. No correction is required for the source-semantics candidate. If the packet is later integrated as files, the manifest filename should be made explicit to remove the ambiguity.
+
+`HANDOFF.json` itself is not one of the eight artifacts listed in the frozen artifact manifest. It was therefore treated as delivery context, not as a ninth frozen semantic artifact.
+
+### 4.5 Existing eight cases and 216 prefixes
+
+The packet asserts that the existing eight normal cases and 216 prefixes remain untouched. The relevant embedded evidence is:
+
+- `INPUT-PINS.json` pins the older normal and extra-normal files.
+- `check_literal_inventory.py` contains assertions counting eight older cases and 216 older prefixes.
+- `LITERAL-INVENTORY.json` reports `existing_cases_untouched: 8` and `existing_prefixes_untouched: 216`.
+- `HANDOFF.json` reports the same preserved counts.
+
+The bodies of those older files were not embedded, and no hash comparison was executed in this review. Therefore this report finds no embedded evidence that the new packet alters them, but it does not independently verify their continued byte identity. Within the requested source-only review of the new packet, the important consistency point is that neither new trace file includes or rewrites those older cases: both contain only `F01factorial` and `F02sum`.
+
+---
+
+## 5. Limitations and unperformed execution
+
+The following work was not performed:
+
+1. No K program was compiled or executed.
+2. No producer or subject implementation was run.
+3. No second interpreter or generic semantic oracle was constructed or used.
+4. No Git command was run.
+5. No SHA-256 digest was recomputed.
+6. No file byte count was measured.
+7. No external checkout file was inspected.
+8. The reference rule catalog `models/sherlock/reference/rules.json` was not embedded, so the serializer’s assertion that its catalog IDs match every line-label pair was not independently checked against that catalog. The line-to-rule correspondence was instead checked by counting and reading the embedded `main.k` text.
+9. The older eight-case and 216-prefix oracle bodies were not embedded, so their preservation is reported as a packet assertion rather than independently reverified.
+10. No circuit, witness, native, financial, target, or product-exit evidence was reviewed.
+11. No security or hostile-input policy judgment is made.
+12. No theorem, refinement, correspondence, or Candidate B adoption claim is made.
+
+Normal ambiguity is therefore explicit in three places:
+
+- Cryptographic pin equality is asserted, not recomputed.
+- External rule labels originate from a catalog whose body is not embedded, although the line positions match the embedded K text.
+- The manifest filename referenced by `HANDOFF.json` is not resolved by the embedded evidence.
+
+None of those ambiguities changes the hand-checkable K-A trace semantics for the two fixed normal programs.
+
+---
+
+## 6. Final disposition and dissent
+
+### Disposition: **PASS**
+
+This PASS is limited to the exact frozen source packet and the following proposition:
+
+- `F01factorial` and `F02sum` have complete, internally consistent, source-derived normal traces.
+- Each requires exactly 113 charged K-A machine steps.
+- Each reaches `uiRet(uiU(6))` with an empty stack and restored `.Map` environment.
+- Budget `113` succeeds with exactly zero fuel remaining through zero-charge publication line `80`.
+- Budgets `0..112` terminate at the correctly identified nonterminal boundary through zero-charge exhausted publication line `84`.
+- Budget `114` reaches the same success boundary with one unit of fuel remaining.
+- Both original fuel-1000 runs remain separate, retain their original fixture terms, and terminate with 887 fuel remaining.
+- Maximum stack depth is 9, well below the limit of 64.
+- All current and saved environments, frame payloads, control states, and caller restorations agree with the pinned K rules.
+
+### Required corrections
+
+None within this source-only nonsecurity scope.
+
+### Material dissent
+
+No material dissent was found against the normal traces or prefix expectations.
+
+There is dissent only against any stronger interpretation of the packet: the embedded inventory result and handoff are author-produced structural assertions, not independent runtime evidence. This report does not adopt them as execution proof, producer agreement, or evidence outside the stated provisional source-only scope.
