@@ -1,0 +1,25 @@
+# G4 source requirements — 2026-10-16
+
+This folder prepares publication of the unchanged proposal, exact adoption record, and three fresh review captures. It does not itself record publication approval. Root adopted reviewed source requirements and a conditional source argument only. The governing limitation is quoted verbatim from the adoption record:
+
+> this acceptance rests on source inspection and paper derivation only; it includes no execution evidence and confers no G4 runtime certification, no emitter acceptance, and no native authority.
+
+Read [Root’s adoption](G4-ROOT-SOURCE-REQUIREMENT-ADOPTION-r1.json), then [the binding-reading index](BINDING-READINGS.md) and the complete owner and Muse captures under `reviews/`. [The proposal](proposal/PROPOSAL.md), its provenance, and its original manifest retain their original bytes. Root’s binding rule is:
+
+> The unchanged draft proposal is subordinate to the complete Opus designated-owner B1-B13 readings, independently agreed by the fresh Muse disposition. Superseded redundant-defense and weaker determinism language remain historical, never current requirements. Any changed source/proposal needs fresh applicable review; no earlier source vote transfers.
+
+The index quotes the owner’s separate G4-FIELD-SRC, G4-FIELD-PRIME and G4-FIELD-REAL readings and every B1–B13 reconciliation paragraph. In particular, the proposal and first Muse review’s “redundant defense” wording is historical and subordinate to owner B2 and the later Muse correction. The full reviews, rather than an author-created security interpretation, govern.
+
+The original Muse fallback provider text completed, but its adapter rejected the omitted requested closure SHA. The draft is retained unchanged in `proposal/` and is not an admitted vote. The three subsequent captures are distinct source reviews and reconciliation, not runtime evidence. Each `RESULT.json.gz` and `RESULT.md.gz` expands to its exact source file. Each `RESULT.text.gz` expands to the exact UTF-8 JSON `/text` string, without normalization or an appended newline. Original Markdown adds one newline to that string; both forms are retained separately.
+
+[The explicit source closure](G4-ROOT-EXPLICIT-SOURCE-CLOSURE-r1.json) inventories all 93 original files. The original INPUT/SOURCE manifests, UNKNOWN record, hash summary and embedded-reference record are included unchanged under `source-collection/`. Their historical status wording remains historical; current source-requirement adoption is the separate Root record above. The nested-manifest omission in the original source manifest remains documented by Root’s explicit closure rather than repaired in place.
+
+[SOURCE-BODY-SELECTION.json](SOURCE-BODY-SELECTION.json) lists every original file and its inclusion or exclusion. Five collection metadata files are copied; 88 original bodies are omitted. No copied third-party SDK/registry/ledger implementation payload, Moriarty implementation body, Git binary listing, installed tool or skill, private source, provider debug log or prompt is published here. Original public source bodies remain exact-pin references only. This is an explicitly selected publication packet, not the complete 93-file SDK source packet or a newly authenticated source distribution. The reviewers’ original reading scope and limits are quoted from Root:
+
+> Reviewers received complete93 source bodies but did not execute tools or independently recompute source hashes. Root matched82original-snapshot pairs and26provided selected Git blob identities. Registry extracted files authenticated only by local hashes/lock pins, no fresh archive or full build/transitive/native/feature/C backend closure.
+
+The packet’s static rehashes are raw-byte identity checks only. They add no registry authentication, complete build/transitive/native/feature/C backend closure, primitive certificate, G4 runtime result, emitter acceptance, test result or execution grant. Publication hygiene and any notice/source-privacy questions remain for Root’s fresh full-publication reviews; no legal or security conclusion is supplied here.
+
+Both retained R2-4 dissent prongs are quoted without alteration in the binding index. The complete owner §7 is also quoted there. IO-1–IO-8, E1–E7/E-FUEL, full39 conditions 1–10/F1–F7, P3 conditions 1–8 and R2 errata, L4/L04/L05, C4, old 90s/30s caps/counters/terminal failures, and the U0–U7/M1–M17/MC/SP/G financial/proof/ledger/Midnight stagenet roadmap remain retained. G4-FETCH/G4-BYTE/G4-APPEND, complete P4/P5/StepInv/chaining and unobserved FIELD-PRIME/REAL obligations are not closed. Native authority is zero; no retry, resource grant or dependent circuit change is introduced.
+
+[COPY-AND-GZIP-IDENTITIES.json](COPY-AND-GZIP-IDENTITIES.json) maps direct and compressed copies to exact original paths, sizes and SHA256 values. [PUBLICATION-BINDING.json](PUBLICATION-BINDING.json) binds every selected public file except itself; the separate runtime manifest binds that file and the complete preparation packet. The publication worktree is untouched by this runtime-only preparation.
