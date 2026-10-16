@@ -1,0 +1,12 @@
+# Sherlock implementation journal
+
+This journal records implementation findings, design decisions, short rationales, measured results and open questions as Sherlock develops. It is a working narrative in `wiki-llm/`, separate from the canonical `wiki/` source/claim ledger and the acceptance roadmap. It contains no private reasoning transcripts or private-fork material.
+
+- [October 16: complete observations and the first implementation comparisons](2026-10-16.md)
+- [Implementation plan](../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md)
+- [Correctness loop](../../docs/SHERLOCK-CORRECTNESS-LOOP.md)
+- [Circuit atlas concept log](../sherlock-circuit-atlas/README.md)
+
+After each frozen implementation iteration, record the source or result identity, what was learned, the resulting implementation choice, the check that supports it, and the next unresolved question. Label observations, interpretations and proposals separately. Preserve failed attempts and earlier entries; add a dated correction when evidence changes. Root integrates entries from parallel workers so their edits do not collide.
+
+The circuit atlas remains the separate visual concept log, with its own authorship and source snapshots. A journal entry is not a new circuit iteration, a security audit or a milestone completion.
