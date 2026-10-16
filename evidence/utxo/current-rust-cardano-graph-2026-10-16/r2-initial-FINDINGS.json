@@ -1,0 +1,78 @@
+[
+  {
+    "blocking": true,
+    "description": "165 semantic links carry their classification only in `type` (with `confidence`), not in `evidence_type`. A consumer requiring the literal `evidence_type` field \u2014 the field the report's wording leads a reader to expect \u2014 silently drops or misclassifies all 165 semantic links, including every package CONTAINS link. The declared 3401 EXTRACTED / 216 INFERRED / 3 AMBIGUOUS split is reproducible only under the root's read-only effective fallback (evidence_type if present, else type), which the graph itself nowhere declares. GRAPH_REPORT.md:24 and GRAPH_REPORT.md:30 overstate the literal schema by asserting every node and edge includes an evidence type; SOURCE-MANIFEST.json:146 hedges with \"type/evidence_type\" but still does not state the fallback rule. The root structural check did not modify the graph, and no approval may be inferred from the fallback.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-graph-root-records-20261016/STRUCTURAL-CHECK.json:12-16",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/GRAPH_REPORT.md:24",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/GRAPH_REPORT.md:30",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:146",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-graph-root-records-20261016/REVIEW-RELATION-SLICE.json:5661-5672"
+    ],
+    "file": "graphify-out/graph.json (mirrored at inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/graph.json)",
+    "id": "F-01",
+    "line": 24,
+    "recommendation": "Before publication, add an explicit schema note in the fragment README and GRAPH_REPORT (graph bytes unchanged): effective classification = evidence_type if present, else type (equivalently confidence); state that 165 semantic links use type only, that counts 3401/216/3 hold only under that rule, and that literal-evidence_type consumers must apply the fallback. Do not describe the root fallback as a graph correction or approval.",
+    "severity": "major"
+  },
+  {
+    "blocking": true,
+    "description": "The reported deterministic extraction output (1542 nodes, 5627 edges from 80 Rust files) is larger than the entire published graph (1356 nodes, 3620 links) that supposedly results from adding evidence and profile nodes to it. No deduplication, collapsing (the graph declares multigraph: false), filtering, or pruning step is documented anywhere in the fragment, so a reader cannot reconcile what the published graph actually contains against what Graphify extracted, and the phrase \"before evidence/profile nodes\" is arithmetically impossible for an additive fragment.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/GRAPH_REPORT.md:7",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/GRAPH_REPORT.md:29",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:30-32",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:311-318"
+    ],
+    "file": "graphify-out/GRAPH_REPORT.md (mirrored at inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/GRAPH_REPORT.md)",
+    "id": "F-02",
+    "line": 29,
+    "recommendation": "Reconcile the two count pairs in the report text without altering graph bytes: either correct the extraction counts, or state the exact transformation (e.g. duplicate-edge collapse under multigraph:false, node merging, community filtering) with its own counts, so 1542/5627 and 1356/3620 are jointly truthful. Until then the extraction claim must not be cited as the provenance of the published node/edge set.",
+    "severity": "major"
+  },
+  {
+    "blocking": true,
+    "description": "R1-era partial-capture status survives inside the R2 graph alongside its own supersession. The sizes node still carries status \"raw partial capture; full run and actual-result review pending\", and two AMBIGUOUS RAW_PARTIAL_CAPTURE links to the authorization node still say \"session 6551 still in OPX2 testing; full run/result review pending\", even though the same nodes also carry currentRunStatus \"completed with test/prediction failures\", the fragment metadata states the run completed, and R2 adds updated MEASURES_IN_COMPLETED_FAILED_RUN / HASH_CHAIN_PASS_IN_COMPLETED_RUN links. A navigation consumer reading the wrong field or link will report the run as still in progress. The historical captures are labelled historicalR1Status at node level, but the stale `status` field and the two stale link qualifications are not themselves marked superseded.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-graph-root-records-20261016/REVIEW-RELATION-SLICE.json:1541-1546",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-graph-root-records-20261016/REVIEW-RELATION-SLICE.json:8172-8199",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-graph-root-records-20261016/REVIEW-RELATION-SLICE.json:8343-8370",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/graph.json:80567-80594"
+    ],
+    "file": "graphify-out/graph.json (mirrored at inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/graph.json)",
+    "id": "F-03",
+    "line": 80579,
+    "recommendation": "In the publication README/report (not by rewriting graph bytes), state expressly: the R1 partial-capture `status` field and the two RAW_PARTIAL_CAPTURE-to-authorization link qualifications are historical, superseded on run state by currentRunStatus and fragment_metadata.fourwayRunState (completed-failed, unadopted, actual-result review and diagnosis pending); the size/chain receipts themselves remain raw and unadopted. Consumers must not treat the stale qualifications as current run state.",
+    "severity": "major"
+  },
+  {
+    "blocking": false,
+    "description": "AST link source paths use a different base than node source paths: sampled AST `calls` links give source_file package-relative (e.g. moriarty/crates/mori-core/src/logical_cost.rs, r1cs/source/mori-r1cs/tests/tamper.rs) while file nodes give source_file prefixed with experiments/moriarty-cardano-rust/. Both resolve, but only against different roots, and only the manifest states the package root. A resolver that assumes one base will fail on the other class. In the sampled link the resolution is otherwise exact: source_location L70 lands precisely on the compare_execution call in replay_detailed_metered, and the evidence digest matches the mirrored source file's INPUT-INDEX digest.",
+    "evidence": [
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-graph-root-records-20261016/REVIEW-RELATION-SLICE.json:1988-2005",
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/logical_cost.rs:58-74",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/graph.json:6-21",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:8"
+    ],
+    "file": "graphify-out/graph.json (mirrored at inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/graphify-out/graph.json)",
+    "id": "F-04",
+    "line": 1994,
+    "recommendation": "Document the two source_file bases in the fragment README: AST link paths are package-relative to SOURCE-MANIFEST packageRoot; file-node paths are prefixed with experiments/moriarty-cardano-rust/. Note also that AST call targets are name-based (INFERRED, 0.8) and can misbind same-name symbols.",
+    "severity": "minor"
+  },
+  {
+    "blocking": false,
+    "description": "Package documentation retained inside the graph's evidence set is itself partly stale relative to the fragment's R2 state: the package README still says fresh independent actual-result review of K4H remains pending, and DELIVERY-INVENTORY still records independentActualResultReview and independentPackagingAudit as pending, while the fragment correctly records K4H as adopted narrowly (ADOPTION.json) and the four-way (not K4H) actual-result review as the pending one. The package README does flag captured-evidence wording as author-time, and the inventory self-describes as PROPOSED with no self-approval, so this is a navigation caveat rather than a false graph claim, but a reader following evidence_package_readme could invert which review is pending.",
+    "evidence": [
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/README.md:116",
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/DELIVERY-INVENTORY.json:162-172",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k4h-root-records-20261016/ADOPTION.json:9-10",
+      "inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-publication-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:147-153"
+    ],
+    "file": "README.md (package, mirrored at inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/README.md)",
+    "id": "F-05",
+    "line": 116,
+    "recommendation": "In the fragment report, add one line distinguishing the two pendings: K4H actual-result review is complete and adopted narrowly; the four-way run's actual-result review and diagnosis are the pending items. Do not edit the frozen package bytes to achieve this.",
+    "severity": "minor"
+  }
+]

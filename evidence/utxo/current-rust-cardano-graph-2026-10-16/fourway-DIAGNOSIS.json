@@ -1,0 +1,19 @@
+{
+  "format": "fourway-actual-diagnosis/1",
+  "rootCause": "Malformed new test harness identifier, not a production defect. shard4_harness.vs2_t equals fixtures_r1.c2_hash byte for byte (28 bytes of 0xc2), so shard4.identities_distinct always returns False on every honest transaction. Every failing path conjoins that predicate; every passing split, financial and piece bench avoids it.",
+  "exactEvidence": [
+    "fixtures_r1.ak:379-380: pub const c2_hash = #\"c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2\"",
+    "shard4_harness.ak:25-26 (parent M): pub const vs2_t = #\"c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2\" (identical string)",
+    "shard4.ak identities_distinct: ids = [c2_hash, vi_hash, policy, ..pieces]; requires 4 pieces, every id 28 bytes, and list.unique length equality, so the duplicated 0xc2 value alone forces False",
+    "OPX2-compare.json statusNotPass lists exactly the 18 delegation, genesis or direct distinctness callers; directional benchStatuses show every vs1..vs4 and decode bench pass while every s2p bench fails",
+    "OPX2-tests.tsv: all q_h*_split, fin_* and hostile rows pass; q_alias_* rows pass vacuously because distinctness is already False"
+  ],
+  "callsites": [
+    {"site": "shard4.delegated via shard4_harness.s2p_on", "covers": ["s4c_p01_s2p", "s4c_p04_s2p", "s4c_p07_s2p_0", "s4c_p07_s2p_1", "q_p01_accept", "q_p02_accept", "q_p03_accept", "q_p04_accept", "q_p05_accept", "q_p06_accept", "q_p07_accept", "q_p14_accept", "q_p15_accept", "q_p16_accept", "q_p17_accept"], "mechanism": "accepts1 and the cost benches conjoin s2p_on, which calls delegated, whose first conjunct is identities_distinct"},
+    {"site": "shard4.genesis via shard4_harness.genesis4", "covers": ["q_p08_genesis", "q_p09_genesis"], "mechanism": "genesis conjoins identities_distinct over [vi_hash, ..pieces] with the genesis policy"},
+    {"site": "shard4.identities_distinct direct", "covers": ["q_distinct_fixture_accepts"], "mechanism": "the test itself asserts distinctness of the honest fixture identifiers"}
+  ],
+  "whyNotProduction": "Real compiled hashes of the distinct C2 and VS2 scripts differ; only the hand-written test stand-ins collide. Weakening identities_distinct, removing any piece, or switching back to the old VS would destroy a required binding and is prohibited. The guard, exact coverage, four withdrawals, intent, custody, digest and native checks all stay.",
+  "minimalFix": "In candidate/aiken/lib/pvc2/shard4_harness.ak only, change vs2_t from 28 bytes of 0xc2 to 28 bytes of 0xd2, which collides with none of c2_hash (0xc2), vi_t (0xb1), vs1_t (0xc1), vs3_t (0xc3), vs4_t (0xc4), foreign (0xb3) or c2_hash_foreign (0xcc). Byte length and file size are unchanged, so no compiled validator size changes. Root must verify the new file digest after materialization.",
+  "alternativesRejected": ["Editing shard4.ak distinctness (weakens identity binding)", "Flipping any expected status or fail flag (refit, prohibited)", "Changing fixtures_r1.ak c2_hash (rewrites R1 author financial bytes, prohibited)", "Adding tests that mirror the code (no new oracle value)"]
+}
