@@ -1,6 +1,6 @@
 # Sherlock Candidate B Implementation Plan
 
-Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+Routing for new work: [AGENTS.md](../AGENTS.md#security-ownership-restored--october-16) records restored Opus 5.5 high security ownership. GPT-6.1 Sol high implements nonsecurity work; a fresh non-author Muse Wonder1.0 high audits it. Historical Argon/Opus requirements, results and frozen gates retain their actual identities and scope.
 
 > **For agentic workers:** Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` for authorized implementation packages. Checkboxes below track planned delivery; none records execution in this design edit. Retain existing execution authority and resource limits.
 
@@ -24,7 +24,7 @@ Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AG
 
 ## Correctness loop within every phase
 
-Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the restored Opus 5.5 high assignment in [AGENTS.md](../AGENTS.md#security-ownership-restored--october-15). GPT-6.1 Sol high implements nonsecurity work, and fresh Muse Wonder1.0 high reviews it. Historical Argon and Opus records retain their actual identities and scopes.
+Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the restored Opus 5.5 high assignment in [AGENTS.md](../AGENTS.md#security-ownership-restored--october-16). GPT-6.1 Sol high implements nonsecurity work, and fresh Muse Wonder1.0 high reviews it. Historical Argon and Opus records retain their actual identities and scopes.
 
 ## File and ownership map
 

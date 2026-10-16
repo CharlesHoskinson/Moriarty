@@ -135,6 +135,45 @@ resource limits; this document supplies no new configuration or execution grant.
 
 ## Current gaps and execution boundary
 
+### October 16 captured observations
+
+The following table reconciles the later deliveries with the historical captures
+below. Counts describe their recorded candidates and declared projections; they
+are not fresh executions for this documentation update.
+
+| Layer or consumer | Captured observation | Remaining boundary |
+|---|---|---|
+| Rust host | Eight programs, 216 fuel runs, 5,355 complete records; 14 selected Rust tests | Post-startup A profile; helpers and host allocation remain unmetered |
+| Flat-ID image | Eight programs, 216 fuel runs, 5,355 common-projection records | Actual image interpreter ran; its unit tests were not selected in this attempt |
+| Generic Quint | 216 actual deterministic ITF captures for eight programs, matching 5,355 projected records; 5,579 raw states and eight terminal stutters retained separately | Finite observations, without exhaustive checking or refinement |
+| Pure Lean reference | Eight programs, 216 fuel runs and 5,355 diagnostically matching projected records; producer merged in the existing private fork | K rule labels/no-next are inferred and terminal control is projected; no K/Lean refinement claim |
+| Actual K, Clean and handwritten circuits | No execution result added by these deliveries | Actual rule traces, bounded constraint checks and paired component comparisons remain required |
+| Native and Midnight stagenet | Not run by these deliveries | Required proof, deployment, call and complete readback evidence remains open |
+
+The public host/image/Quint results are in [PR #104](https://github.com/CharlesHoskinson/Moriarty/pull/104)
+and its [captured evidence](audits/2026-10-16/sherlock-parallel-delivery/README.md).
+Each layer's 5,355-record prefix aggregate repeats work: 5,139 charged events and
+216 free publications. One complete trace per program totals 208 records and
+200 charged events. Private Lean source, pins and raw artifacts stay private;
+its diagnostic agreement does not establish a bounded Clean component.
+
+The separate [Core-source delivery](audits/2026-10-16/sherlock-bounded-source-delivery/README.md),
+merged in [PR #105](https://github.com/CharlesHoskinson/Moriarty/pull/105), compiled
+the production Core library and ran 14 selected tests. Actual parsing, bounded
+scalar preparation and machine execution matched two independent source cases,
+70 fuel runs and 1,259 records. This projects final emit values only, with no
+ordered financial-effect execution or K source-name correspondence. Its H1 judgment covers only local diagnostic execution of the two fixed hash-pinned fixtures, literal scalar arguments and recorded bounds, subject to the Opus preflight's M1–M5 conditions; it is not merge, supported-API or result acceptance, and H1 remains in force.
+
+The [streaming delivery](audits/2026-10-16/sherlock-streaming-delivery/README.md),
+merged in [PR #106](https://github.com/CharlesHoskinson/Moriarty/pull/106), adds
+`Machine::visit_steps`. Eight standalone tests passed and the production Core
+library compiled with 26 source inputs. Whole-crate test execution and general
+caller admission remain unobserved. H1 remains in force.
+
+The immutable delivery records retain their original pending/UNRUN labels and pre-integration scope; the linked PRs retain the completed scoped reviews, integration results and required limitations. The packaging repair in [PR #107](https://github.com/CharlesHoskinson/Moriarty/pull/107) passed 175 ordinary local tests, repaired exactly two files and left all 75 frozen files unchanged. Its revised packager takes three explicit arguments: checkout, public runtime directory and selection. That repair approved no real packager reuse. Historical two-argument instructions in the frozen packages are not current reuse instructions.
+
+### Earlier captures and retained gaps
+
 The typed A host component, independent normal test consumer and generic finite
 K-A Quint projection exist. The [recorded model evidence](audits/2026-10-15/sherlock-k-profile-quint/README.md)
 binds typecheck exit 0 and 98 passing deterministic normal tests: six complete
@@ -174,7 +213,7 @@ A Sherlock bounded Clean step circuit, paired handwritten-step comparison adapte
 and complete cross-layer runner are not yet delivered; those implementation
 tasks remain unchecked.
 
-Use the current [AGENTS.md routing](../AGENTS.md#security-ownership-restored--october-15)
+Use the current [AGENTS.md routing](../AGENTS.md#security-ownership-restored--october-16)
 for authors and independent reviews, with Opus 5.5 high restored for new security
 work; historical Argon results keep their actual identities. Security requirements,
 hostile cases, theorem statements and judgments stay with the designated security owner.
