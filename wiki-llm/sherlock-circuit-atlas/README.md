@@ -81,7 +81,13 @@ Any new hue or emission is a proposal pending design review and contrast measure
 | 002 | Row fetch, r2 snapshot (`%` identifiers, rejection tests, locked wiring) | [Identifiers and wiring](ITERATION-002-IDENTIFIERS-AND-WIRING.md) | Unregistered; six tests SOURCE-ONLY UNRUN; actual output UNRUN. |
 | 003 | Separate enabled fetch, G3 snapshot (`emit_enabled_fetch_block`) | [Enabled fetch](ITERATION-003-ENABLED-FETCH.md) | Unregistered; five new and six inherited tests UNRUN; actual output UNRUN, including the disabled 2^128 raw-index case. A separate fresh security source review exists outside this log. |
 
+| 004 | Full-image A102 Literal and 16-byte LE borrow; original three-file manifest `662bc7748f2a98e2186372970951c08ebed0328b04c574f6f7e4f5eab42e7f85` | [Full-image literal and borrow](ITERATION-004-FULL-IMAGE-LITERAL-AND-BORROW.md) | Historical unregistered/uncompiled freeze; five tests UNRUN. Initial Gemini fallback concepts, Opus source-accuracy revision. Later source approvals do not approve this concept note or a website. |
+
 ## Latest iteration
+
+Iteration 004 records the full-image A102 Literal fragment and its sixteen-byte fuel borrow. Its corrected note is the exact decoded Opus reply, with initial Gemini concepts credited. The [original source snapshot](provenance/iteration-004-source-snapshot.json.gz) retains the original unregistered three-file freeze. The current registered ten-file source candidate and its separate source/data reviews are documented in [the A102 source package](../../models/sherlock/literal-step/source-review-20261016/README.md); compilation and all sixteen machine tests remain UNRUN. No circuit, site or runtime result is implied.
+
+## Previous iteration 003
 
 Iteration 003 responds to the separate enabled fetch, a sibling of the unchanged G2 constructor. It proposes the following:
 
@@ -107,3 +113,14 @@ A recorded run would be the first input to the measured light channel.
 - Disabled-zero values are construction data, never fetched rows, padding or animated execution.
 - Visuals for recursive calls and multi-branch machines stay labelled conceptual until actual source exists.
 - No note claims that a source candidate is machine-ready or that Sherlock is complete.
+
+## Iteration 004 captured provenance
+
+Initial concepts came from Gemini 4 Argon high via AGY under the explicit outage fallback. The request used plan mode; the returned permission mode was always-proceed. No plan-mode enforcement or mechanical tool-absence claim follows. Source-accuracy revisions came from Claude Opus 5.5 high after recovery. Iterations 000–003 and their original author entries remain unchanged.
+
+The complete public adapter JSON and exact `RESULT.text` are retained separately:
+
+- [Gemini adapter](provenance/iteration-004-gemini-public-reply.json.gz) and [exact text](provenance/iteration-004-gemini-public-reply.md.gz).
+- [Opus adapter](provenance/iteration-004-opus-public-reply.json.gz) and [exact text](provenance/iteration-004-opus-public-reply.md.gz).
+
+The Opus adapter SHA256 is `31aedb8f0b59fae1287d2090d33047375db61e2d5a36c06dd368e966a5ee1dbf`; the original Gemini adapter SHA256 is `975cb29561fc0b0bc94bd673a2ef465bbc726fc3aa2746495569229b9d98e1a2`. The note retains provider placeholders and historical status verbatim. `AUTHORSHIP.json` appends actual captured hashes, relative receipt paths and the returned canonical Opus identity without rewriting those strings. Astra materialized these bytes under Root's delegation; publication remains with Root. No private provider/debug transcript is included.
