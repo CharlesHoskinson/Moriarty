@@ -1,0 +1,63 @@
+[
+  {
+    "evidence": [
+      "steps/OPX0.sh nice -n 10 timeout --kill-after=10 60 prlimit --as=34359738368 --core=0, charged 70s in header",
+      "Every run_step in OPX1t..OPX7: W=min(CAP,1800-(75+sum(elapsed))-RESERVE-KILL); W<5 -> 200; nice -n 10 timeout --kill-after=KILL W prlimit --as=34359738368 --core=0",
+      "Caps/kill/reserve read per step: OPX1t 120/10/136, OPX1p 120/10/136, OPX2a 300/30/136, OPX3 300/30/136, OPX3p 60/10/136, OPX4 240/10/136, OPX5 30/10/136, OPX6 30/10/136, OPX2 clipped/60/246, OPX2p 60/10/176, OPX2x 30/10/136, OPX7 90/10/36, OPX7f 30/5 standalone with 35s aggregate check",
+      "OPX1 fixed 5s unwrapped atomic mkdir chain (accepted parent residual); one attempt, no retry loop anywhere in 15 steps"
+    ],
+    "id": "X-CAP",
+    "limits": "Root EC-1/EC-2/EC-3 themselves (rehash before each call, lost-wrapper EC-2, no outer wrapper timeout) are root-side controls in parent AUTHORIZATION.json stopRules; they are not implemented inside the 34 files and must be re-imposed verbatim in any new root authorization. Successor reduced EXECUTION-PROPOSAL.json does not erase them because HR-CAP and ROOT-PLACEMENT-INSTRUCTIONS require root exact authorization after fresh review.",
+    "status": "holds in source"
+  },
+  {
+    "evidence": [
+      "OPX2a gate ok OPX1t OPX1p; OPX3 gate ok OPX2a; OPX3p runs iff OPX2a started (exit not 200/201); OPX4/OPX5/OPX6 gate ok OPX3 OPX3p; OPX2 gate ok OPX2a OPX3p (not OPX3); OPX2p iff OPX2 started; OPX2x iff logs/OPX2.log from a started OPX2; OPX7 unconditional run_step after OPX1 per header; OPX7f last, writes T/OPX7f.exit",
+      "preflight.py LAUNCH_ORDER = OPX0,OPX1,OPX1t,OPX1p,OPX2a,OPX3,OPX3p,OPX4,OPX5,OPX6,OPX2,OPX2p,OPX2x,OPX7,OPX7f; PRE-LAUNCH steps identical"
+    ],
+    "id": "X-ORD-GATES",
+    "limits": "Root must still invoke literally once in order and enforce OPX0!=0 STOP and OPX1.exit missing/!=0 STOP (parent AUTH stopRules); steps self-gate thereafter.",
+    "status": "holds in source"
+  },
+  {
+    "evidence": [
+      "tree_check.py: 71 expected (32 candidate-32 + 38 stdlib-38 prefixed build/packages/aiken-lang-stdlib/ + packages.toml 42ca2389); extra regular files bad unless aiken.lock, build/aiken-compile.lock, plutus.json; non-regular bad; PLACED_DIRS 19; build/packages exactly [aiken-lang-stdlib, packages.toml] else fetch; aiken.lock exactly one [[packages]], stdlib v2.2.0, no aiken-lang/stdlib@ etag; extra non-fetch directories recorded in extraDirectories, not gated",
+      "OPX3p: --require-lock iff ok OPX2a, --plutus iff ok OPX3 (PSR-09: failed type-check manufactures no hygiene failure); OPX2p: --require-lock always (OPX2 started only if OPX2a=0); OPX7 final same FL rule; OPX1p --forbid-generated at placement",
+      "All steps check binary sha 4257cc8b + mode 555 (OPX3p/OPX2p/OPX7) and empty-home/xdg/probe-cwd emptiness; OPX1t stages DATA-ONLY copy cp, chmod 0600, sha gate, chmod 0555, DATA-ONLY stays 644, lo-only netns probe, help byte-equal via parent-evidence-9 grep ' help/' =5 rows, help chmod 0444"
+    ],
+    "id": "X-HYG-TOOLS",
+    "limits": "Accepted residuals carried from parent: host filesystem reachable with user permissions (no mount namespace), pathname UNIX sockets reachable, no FSIZE cap, no syscall trace, no CPU affinity (prlimit --core=0 is core-file size, not taskset). No extraction/native-crypto/key/wallet/ledger call exists in the 8 tools: stdlib-only imports (hashlib,json,os,re,stat,sys,collections,datetime), no socket/subprocess imports, writes only mode-'x' named outputs under T.",
+    "status": "holds in source"
+  },
+  {
+    "evidence": [
+      "hash_chain4.py: STAGES U,B1..B9 acyclic, TITLES 16 titles exactly, DECLARED tails, remaining() counts, non-target unchanged/target code-changed, hashes from tool receipts vs blueprint fields and B9, final re-derivation, params 581c||hash, APPLIED_AT cycle check ORDER.index(APPLIED_AT)>=stage, 7 distinct 56-hex, not TEST_IDS, B9 zero params, S2' != parent def07bb0/R1 338293e4; predictions c2/vi vs parent recorded not falsifiers except S2'",
+      "OPX4.sh: 4 unparameterized hashes, 9 applies each from preceding read-only blueprint, 3 staged hashes, 6 final hashes (22 aiken calls), hx single-line 56-hex, unapplied re-verified before/after, a2 sha256 list",
+      "label_search4.py: R1 control pin aa6d4627 exit 2 on mismatch, even-offset UTF-8 label hits, PS4-7 judged on applied if present else unapplied, UNVALIDATED if control zero; size_report4.py: parent sizes pin 804a8c44, PS4-1..PS4-4 + size halves PS4-5/6, 14336 working target only, 16384 unauthenticated context no verdict",
+      "test_compare4.py: pins EXPECTATIONS 80cf1601 + parent TSV 2771106b, report block first '{' to last '}', classification PREDICTIONS_HOLD/FAILED(prediction)/UNCLASSIFIED(match-filter)/UNCLASSIFIED(report-schema), PC4-1..PC4-4 mem+cpu formulas vs shc_* parent rows; evaluate4.py: allCommandsExit0 separate from allPredictionsHeld, T-147/PS4/PC4/OP-P1..P5/RANGE-* TRUE/FALSE/UNEVALUATED, GREEN conditional on OPX7f.exit=0"
+    ],
+    "id": "X-CHAIN-LABEL-SIZE-TEST",
+    "limits": "Aiken --match-tests semantics remain help+recalled-source reading; preflight P5 proves no other module name contains either string and any membership deviation becomes UNCLASSIFIED(match-filter), never a result. Hashes are tool-derived locally (M-HASH open), sizes are compiledCode bytes only (not tx/ExUnits/fees).",
+    "status": "holds in source"
+  },
+  {
+    "evidence": [
+      "evaluate4.py LINEAGE: attempt1 14 calls/90s FAILED(candidate compile) shard.ak:186:3 0/472; attempt2 14 calls/934s 472/472 (61 fail-annotated) PS-S4 FALSE vs 20503B; attempt3 first four-piece 15 calls/446s 129/147 pass 18 FAIL T-147/PC4-4/RANGE-vs1 FALSE; thisRun separate, prior total 43 calls/1470s not reset",
+      "Inside the new 147: 125 shard4_test tests with 9 fail-annotated + 22 shard4_cost_test cost units with 0 fail (preflight P5: counts, failCount 9/0, totals.new {147,9}, 147 unique names, declarations parsed from shard4_test.ak/shard4_cost_test.ak equal EXPECTATIONS)",
+      "size_report4.py POINT_RANGES informative incl vs1 (7000,10500); prior NOTREADY noted aggregate code increase 18615B preserved; no source here predicts all-green"
+    ],
+    "id": "X-LINEAGE-NOREFIT",
+    "limits": "Corrects the shorthand in the task prompt: actual frozen set is 125 tests (9 fail) + 22 cost units (0 fail) = 147, old four-piece outcome is 129/147 with 18 FAIL (not 'old 129/147 18 fail' as a pass count), charges are 14/90 + 14/934 + 15/446.",
+    "status": "preserved"
+  },
+  {
+    "evidence": [
+      "OPERATOR-COMPOSITION.json: sourceFiles 34, parentManifest 3cc6a927, per-file checks e.g. OPX0/OPX1/OPX1t edits count-asserted to header text + HOME/OWN/PINSTORE/M/T path retargets only in the windows read",
+      "SOURCE-CHANGE-MAP.json runtimeFiles: '27 files are parent bytes plus only the exact edits in RENDER-PLAN.json: step header and OWN PINSTORE M T HOME path retargets, OPX1p M2 pin comment, preflight SRC rendered-candidate and harness-repair formats and candidate manifest 14506/54e0fc56, evaluate4 LINEAGE attempt3 plus thisRun, candidate-32 harness row, m-docs-10 manifest row. No production logic, conditional grade formula, cap, gate, order, or command changes.' + 7 literalFiles",
+      "preflight.py CANDIDATE_MANIFEST {14506,54e0fc56}, P1 HEX64 placeholder refusal, P2 OWN==rendered-candidate SRC byte equality, P3 41 rows (32 package == candidate-32, 9 docs == m-docs-10 minus manifest row), OPX0 runs before T exists and writes nothing"
+    ],
+    "id": "X-PIN-COMPOSITION",
+    "limits": "Full RENDER-PLAN edit list and full OPERATOR-COMPOSITION-DIFF.patch were not body-read in this completion (see unreadInputs); HR-PIN AGREE rests on the 34 bodies themselves, composition checks head, SOURCE-CHANGE-MAP, and OPX0's fail-before-T enforcement, not on re-applying the plan (no execution authorized).",
+    "status": "holds for operator source, with stated limit"
+  }
+]

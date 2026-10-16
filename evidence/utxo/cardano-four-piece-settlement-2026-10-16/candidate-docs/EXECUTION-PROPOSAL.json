@@ -1,0 +1,62 @@
+{
+  "format": "four-way-vs-split-execution-proposal/1",
+  "status": "SOURCE-ONLY PROPOSAL. Nothing here was executed. No authority is assumed or created. Before any run: (1) a new operator O'' must be materialized as concrete step/tool files and root-hashed; (2) a fresh independent Opus source/effect review of the exact candidate bytes and O'' bytes; (3) any substantive new resource position (R4-1 below) needs two agreeing substantive positions; (4) the root's exact authorization naming the candidate and O'' manifests. This is a new candidate's first run, not a retry of either parent attempt.",
+  "author": "claude-opus-5-5 (runtime-stated)",
+  "lineage": {
+    "attempt1": "current-cardano-sharded-settlement-local-measurement-20261015: FAILED(candidate compile) at shard.ak:186 parser; 14 calls, 90 s charged; retained, not reset",
+    "attempt2": "current-cardano-sharded-settlement-parser-repair-local-measurement-20261016: 14 steps all exit 0, 472/472 expected outcomes, PS-S4 FALSE (vs 20,503 B); 934 s charged; raw, actual-result review pending; retained, not reset",
+    "thisProposal": "first run of the four-piece candidate; prior debits stay on their own ledgers; nothing reruns passed parent prefixes"
+  },
+  "candidate": "placed per SOURCE-CHANGE-MAP.json placementRecipe: 23 UNCHANGED files from C' + 9 files from this directory = 32 files",
+  "tools": {
+    "aiken": "v1.1.24+bacbeb3, the parent run's pinned binary sha256 4257cc8b... (root-recorded; author did not verify)",
+    "stdlib": "aiken-lang/stdlib v2.2.0, the 38 pinned files, offline",
+    "python": "-I, only for the O'' tools"
+  },
+  "effects": {
+    "writes": "only under a new absent task directory T'' (placement, build/, blueprints, logs, receipts, journal)",
+    "network": "none: unshare --user --map-root-user --net; loopback only",
+    "environment": "env -i, task-local HOME/XDG/TMPDIR, NO_COLOR, stdin /dev/null",
+    "limits": "prlimit AS 32 GiB, core 0, nice 10; per-step wall from the remaining aggregate",
+    "never": ["keys, signatures, proofs, SRS or setup", "SDK, node, wallet, provider, ledger or funds", "registration or deployment", "retries", "editing C', this directory, any parent operator or any parent task directory", "re-running the 472 parent tests"]
+  },
+  "steps": [
+    {"id": "OPX0", "kind": "preflight", "action": "T'' absent; verify O'' files against their root manifest; verify the 23 C' sources and the 9 candidate files against the root-recorded digests; verify the aiken binary and the 38 stdlib files", "falsifier": "any mismatch => BLOCKED(layout); stop"},
+    {"id": "OPX1", "kind": "placement", "action": "atomic mkdir of T''; 32 literal `cp --` into pre-created run/aiken.toml, run/lib/pvc2/, run/validators/; copy the 38 stdlib files and packages.toml; re-hash placed files", "expected": "32 package files in 3 directories; validators exactly c2, vi, s2p, vs1, vs2, vs3, vs4; vs.ak and s2.ak absent", "falsifier": "count or digest mismatch => FAILED(transcription); stop"},
+    {"id": "OPX2a", "kind": "type-check only", "argv": "aiken check --skip-tests --trace-filter all --trace-level silent", "expected": "exit 0", "falsifier": "compile error => FAILED(candidate compile) with the first error location from the log; stop. Two-failed-cycles rule: the shard line has one compile-class failure (attempt 1); a second one here means preserve it, reproduce it and change approach (for example a per-module type-check plan) before any further run, rather than repairing one error per run"},
+    {"id": "OPX2", "kind": "local CEK tests, new modules only", "argv": "aiken check --trace-filter all --trace-level silent -m shard4 (stdout redirected => JSON report)", "expected": "147 tests (shard4_test 125 with 9 fail-annotated, shard4_cost_test 22), every status pass, names and fail flags exactly EXPECTATIONS.json shard4TestModule and shard4CostModule", "falsifier": "a deviation in status, name or fail flag => FAILED(prediction), preserved, never refit. A test count other than 147, or any test from another module, => UNCLASSIFIED(match-filter), not a candidate result (the `-m` substring semantics are unverified)", "note": "The 472 parent tests are not re-executed: their modules and every module they import are byte-identical, and no test imports validators/. Their parent observation stays raw historical-local evidence."},
+    {"id": "OPX3", "kind": "build", "argv": "aiken build --trace-filter all --trace-level silent", "expected": "blueprint titles exactly c2.c2.{mint,spend,else}, vi.vi.{withdraw,else}, s2p.s2p.{mint,spend,else}, vs1.vs1.{withdraw,else}, vs2.vs2.{withdraw,else}, vs3.vs3.{withdraw,else}, vs4.vs4.{withdraw,else}; parameters: vi 1, vs3 2, s2p 6, others 0"},
+    {"id": "OPX4", "kind": "parameter application and hashes, acyclic order", "action": "hash c2, vs1, vs2, vs4 (unparameterized); apply 581c||c2 to vi; hash vi; apply c2 then vi to vs3; hash vs3; apply c2, vi, vs1, vs2, vs3, vs4 to s2p in declaration order; hash s2p. One `aiken blueprint apply -i <prev> -o <new> -m <module> -v <validator> <cbor>` per parameter (9 applications), each output read-only", "expected": "seven distinct 56-hex hashes, none equal to the #b1/#b2/#b3/#c1..#c4 test identifiers; c2 hash 6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1 and vi hash fc2266228a6a5072946ba7bef649be56fd984ee851d50e57977c1f64 equal the parent observation (PS4-5, PS4-6); s2p hash differs from the parent s2p hash", "falsifier": "a remaining parameter, a non-target change, or a tool hash different from the blueprint field => FAILED(hash-chain)"},
+    {"id": "OPX5", "kind": "read-only label search", "expected": "no R1 diagnostic label in any applied compiled script (PS4-7), with the parent's positive control"},
+    {"id": "OPX6", "kind": "read-only size and cost report", "expected": "applied bytes of c2, vi, s2p, vs1..vs4; PS4-1..PS4-6 evaluated; per-script fit verdict against 14,336 B; PC4-1..PC4-4 evaluated against the parent's shc_* host-CEK rows (parent raw observation, cited by digest, not adopted)", "falsifier": "none gating; every miss is a FAILED prediction, preserved"},
+    {"id": "OPX7", "kind": "integrity and freeze", "action": "re-verify O'', placed sources and C'; freeze every log, receipt and blueprint read-only; record the charged ledger and true UTC times"}
+  ],
+  "outcomes": {
+    "GREEN(source-measured)": "OPX0-OPX7 exit 0, OPX2 exact, all hash-chain falsifiers pass. Records sizes and host-CEK only.",
+    "FIT": "every applied script <= 14,336 B. Not deployment fit: deploy-transaction size, settle-transaction size, ExUnits and fees stay unobserved.",
+    "NOT-FIT": "any applied script > 14,336 B: preserved as a failed PS4 prediction. The next step is a source change (DESIGN-VOTES N-8 or a different cut), reviewed afresh; never a rerun of the same bytes.",
+    "FAILED(candidate compile)": "OPX2a error; see two-failed-cycles rule",
+    "FAILED(prediction)": "OPX2 deviation",
+    "BLOCKED(resource)": "timeout or AS failure; precedence over later labels",
+    "BLOCKED(tool-abnormal)": "lost wrapper or missing journal end; no retry",
+    "UNCLASSIFIED": "report-schema or match-filter anomalies"
+  },
+  "resources": {
+    "positionR4-1": "Unchanged parent caps R-2: aggregate wall 1,800 s, AS 32 GiB, offline, one attempt, no retries. My first position: FOR (DESIGN-VOTES R4-1). Needs a second substantive position because it applies to a new candidate and operator.",
+    "estimate": "OPX2a 60-150 s; OPX2 400-800 s (parent: 837 s wall for 472 tests; the 147 new tests each build a five-shard transaction and run up to five predicates); OPX3 60-150 s; OPX4-OPX7 under 60 s. Total about 600-1,150 s. A prediction, not a measurement.",
+    "secretsKeysWalletsFunding": "none touched or needed"
+  },
+  "operatorNotWritten": {
+    "statement": "O'' step and tool files are NOT produced by this task. The parent operator O' cannot be reused by literal translation: its candidate-25 list, c-docs-12 list, hash_chain.py TITLES/DECLARED/REMAINING (four validators, three-hash chain), test_compare.py index pins (472 tests) and size_report.py validator set all encode the parent shape.",
+    "requiredChanges": ["placement list of 32 files from two roots", "OPX2a skip-tests step", "OPX2 `-m shard4` and a 147-test index from EXPECTATIONS.json", "seven-validator title set and the nine-application acyclic chain", "test-identifier exclusion set extended with #c1..#c4", "size report over seven validators with the 14,336 B fit verdict and PS4 predicates", "PC4 comparison reading the parent's OP2-tests.tsv by digest 2771106b677cb957277f2efe2dbc9338292a5f060d23b63cd0486e9a3f3e8aef"],
+    "firstBlocker": "this is the first actual blocker to measuring the four pieces"
+  },
+  "measuresAfterwards": [
+    {"id": "M-SZ", "measure": "serialized size of each reference-script deploy transaction and of one concrete four-piece settle transaction", "blocked": "needs a pinned transaction builder and funding inputs (PB-10)"},
+    {"id": "M-EU", "measure": "X1: compiled s2p (Spend, Mint), vi and vs1..vs4 (Withdraw) and c2 on ledger-shaped contexts under a pinned PlutusV3 cost model", "blocked": "no Withdraw-purpose ScriptContext fixtures; predicted to fail PB-02"},
+    {"id": "M-REG", "measure": "registration of five stake credentials and phase-1 refusal for an unregistered one", "blocked": "deployed node identity open"},
+    {"id": "M-HASH", "measure": "independent recomputation of the seven applied hashes"},
+    {"id": "M-SIG", "measure": "FX1 with test-generated keys only"}
+  ],
+  "explicitlyNot": ["any key, signature, proof, SDK, node, network, ledger, funding or deployment action", "a retry of attempt 1 or attempt 2", "any change to the 472 parent expectations", "circuit or proof acceptance", "target acceptance"]
+}
