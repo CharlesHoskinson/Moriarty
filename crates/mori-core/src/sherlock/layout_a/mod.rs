@@ -28,3 +28,8 @@ mod observation_normal_tests;
 mod auxiliary;
 #[cfg(test)]
 mod aux_normal_tests;
+
+// Private decoded A program/state consumer for aux/2 numeric host columns.
+mod arithmetic_fuel;
+#[cfg(test)]
+mod arithmetic_fuel_normal_tests;
