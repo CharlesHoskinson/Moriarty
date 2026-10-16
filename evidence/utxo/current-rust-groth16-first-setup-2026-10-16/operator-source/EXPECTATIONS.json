@@ -1,0 +1,62 @@
+{
+  "format": "k5-expectations/1",
+  "taskToken": "K5-MUSE-SOURCE-R2-20261016",
+  "author": "Meta Muse Wonder 1.0 (Muse)",
+  "frozen": "Before any K5 build or run. Nothing here was produced by executing a Moriarty parser, compiler, driver, gate, hash or setup. Grades state the provenance of each expectation.",
+  "derivations": {
+    "descriptorIdentities": {
+      "grade": "STAGE-C-OBSERVED: copied from the adopted stage-C receipts read in this session",
+      "K5a": {"receipt": "TOLD/receipts/K4b-descriptor.json", "sha256": "7bae4fb1ded96b8c767acfabc135bb54aafab0c8a13a648686da32d38696e959", "fields": 29, "action": "partial", "r1csSha256": "e458153e583e0a817fbab08f24f4ba16465e459969c1f8cd4e13b801e82694c0", "predicateDigest": "0d2302467c2abb5333e823e24d9c640376f13643cc3971a02b62d512864019bd", "constraints": 308790, "instanceVariables": 3, "witnessVariables": 306452, "publicInputCount": 2, "bodyLen": 378},
+      "K5b": {"receipt": "TOLD/receipts/K4c-descriptor.json", "sha256": "8cf25094747b774bfda66d91c76999c6c3c6e845313cea6363209fe0ed67192a", "fields": 29, "action": "allocate", "r1csSha256": "61bea6fd6639cedb8f48a807c8c825a61882d0829f34a75052f6d5af2daef2d0", "predicateDigest": "c3268ed306645db498b8358203d846823002f835cb1b62b1f4237485503b54e0", "constraints": 414211, "instanceVariables": 3, "witnessVariables": 411068, "publicInputCount": 2, "bodyLen": 609},
+      "prediction": "K5a and K5b stdout are byte-identical to those receipts. No compiler or Core byte changes and neither the release profile nor the driver bytes enter any descriptor field, so any difference is a reproducibility finding, classified BLOCKED(identity) under K5-5."
+    },
+    "setupRecordIdentities": {
+      "grade": "SOURCE-DERIVED: read from export.rs, encoding.rs, relation.rs and the patched main.rs and setup.rs",
+      "format": "moriarty-k2-groth16-setup/1",
+      "trustProfile": "single-party-test-setup/1",
+      "notice": "TEST-ONLY single-party Groth16 setup sampled from OsRng; not a ceremony. Whoever controlled the setup process could forge proofs for this relation. VK provenance is declared by this record; no verifier can check that the VK was generated from r1csSha256.",
+      "driver": "mori-k2-driver/0.1.0-k2s1+k4h1",
+      "curve": "BLS12-381",
+      "fieldOrder": ["format", "trustProfile", "notice", "relation", "curve", "snark", "encoding", "verifyingKeyHex", "vkDigestBlake2b256", "provingKeySha256", "provingKeyBytes", "driver"],
+      "relationPrediction": "the relation object equals the K5a descriptor field for field, including field order under the gate's canonical comparison",
+      "vk": {"bytes": 488, "hexChars": 976, "icLengthPrefixOffset": 336, "icLengthPrefixHex": "0300000000000000", "icCount": 3, "pointOffsets": {"alphaG1": 0, "betaG2": 48, "gammaG2": 144, "deltaG2": 240, "ic0": 344, "ic1": 392, "ic2": 440}, "digestRule": "vkDigestBlake2b256 equals hashlib BLAKE2b-256 of the 488 VK bytes, recomputed by the gate", "structureOnly": "the gate checks length, prefix and compression/infinity flags; on-curve and subgroup membership are enforced by the driver's strict decode_vk when a record is consumed and remain K6 hostile-validation scope"},
+      "summary": {"keys": ["setupRecordSha256", "predicateDigest", "observedR1csSha256", "vkDigestBlake2b256", "provingKeySha256", "trustProfile"], "observedR1csSha256": "e458153e583e0a817fbab08f24f4ba16465e459969c1f8cd4e13b801e82694c0", "meaning": "DigestBound inside the setup process digests the exact matrices the QAP reduction reads and refuses unless they equal the descriptor digest, so this value is an observation of the setup process, not a value a VK holder can check"}
+    },
+    "sizeArithmeticRecordedNotGated": {
+      "grade": "ARITHMETIC ONLY, never a gate and never a cap",
+      "provingKeyBytes": 98715456,
+      "setupRecordBytes": 3926,
+      "note": "The K4H plan arithmetic puts the compressed proving key at about 99 MB for invoice/partial from the query lengths at 308790 constraints and 306452 witnesses over the 2^19 domain. The gate records observed sizes next to these predictions and never compares them for a verdict. A different observed size with matching SHA-256 and record fields still passes."
+    },
+    "provenanceChain": {
+      "links": ["predicateDigest 0d230246...", "descriptor r1csSha256 e458153e...", "Cargo.lock 39b7db9be3e68b2a29cf281d53e54546a65c6862921771b9462cacb8f08de556", "toolchain 1.99.0-x86_64-unknown-linux-gnu", "release mori-k2 SHA-256 from the closed K4H KH2 receipt (value not predicted here and never assumed)", "observedR1csSha256 e458153e...", "vkDigestBlake2b256 recomputed from the record"],
+      "consumerCanCheckVkToMatrixLink": false,
+      "note": "This chain is recorded provenance under single-party-test-setup/1. Whoever controlled the setup process could forge proofs for invoice/partial; no production, mainnet, financial-context or ledger claim follows."
+    }
+  },
+  "gateOutcomes": [
+    {"verdict": "PASS", "class": "step K5g exit 0", "meaning": "every custody, identity and prediction check in k5g_gate.py holds"},
+    {"verdict": "STOP-CUSTODY", "class": "BLOCKED(hygiene)", "meaning": "a link, non-regular, missing or extra entry, wrong mode, owner or link count, or a change while read, in w/out or w/keys; the affected bytes were not relied on"},
+    {"verdict": "STOP-IDENTITY", "class": "BLOCKED(identity)", "meaning": "relation, driver, observed matrix digest, a pinned input, a gate constant, or the key size or SHA-256 differs from what it must equal"},
+    {"verdict": "FAIL-PREDICTION", "class": "FAILED(prediction)", "meaning": "identities hold but a format, constant, VK-structure, digest or summary prediction fails"},
+    {"verdict": "REFUSED or no verdict", "class": "BLOCKED(environment)", "meaning": "usage or interpreter-level fault in the gate"}
+  ],
+  "stepOutcomes": {
+    "P1": "either T5 is created after a full precondition PASS, or nothing is created and the refusal is on P1 stdout",
+    "Q5": "probe-ok view=sbx_run with out and keys still empty, or BLOCKED(capability) with no fallback",
+    "K5M": "exactly one setup invocation. Success, refusal, resource death and abnormal death are all terminal for this authorization; original failures and resource counters are retained unchanged.",
+    "afterAbnormalK5M": "K5g is skipped by its prerequisite chain; H5 still records the logs and Z51 still records any leftover record or key by guarded metadata only, never for reuse"
+  },
+  "undecidableOrUnpredicted": [
+    "the release mori-k2 SHA-256 and every K4H receipt hash (future root precondition inputs, verified at P0, never predicted)",
+    "the VK digest, proving-key SHA-256, setup-record SHA-256 and exact byte sizes (random setup outputs, recorded by K5g)",
+    "setup wall time, CPU time and peak RSS (the K5M measurement itself)",
+    "whether the host satisfies the Q5 view probe (capability outcome, not assumed)"
+  ],
+  "nonClaims": [
+    "No subgroup, pairing, proof or verification result is predicted or claimed; all are K6 scope.",
+    "The descriptors' specimens are oracle-unit fixtures with fabricated context and a synthetic declared VK digest in their lineage; they are not INV-C or RES-C specimens, not Cardano assets and not Preprod data.",
+    "A single-party test setup gives no production, mainnet or ceremony assurance, and a VK consumer cannot verify the VK-to-matrix link.",
+    "All 20 UTxO pattern families, ACTUS, DeFi, recursion and PCD, private handoff, multi-parent composition, general or universal proving and every ledger exit remain open."
+  ]
+}

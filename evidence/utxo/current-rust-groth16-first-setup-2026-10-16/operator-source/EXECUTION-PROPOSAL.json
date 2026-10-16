@@ -1,0 +1,41 @@
+{
+  "format": "k5-execution-proposal/1",
+  "taskToken": "K5-MUSE-SOURCE-R2-20261016",
+  "author": "Meta Muse Wonder 1.0 (Muse), source author only",
+  "status": "PROPOSAL ONLY. Creates no authority, attempt, budget, counter reset, key or crypto permission. Nothing here has been executed, and the K5 source plan by itself does not authorize setup.",
+  "paths": {
+    "BASE": "/home/charl/moriarty-eutxo-validation-2026-10-12",
+    "M5": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-setup-operator-materialized-20261016",
+    "OWN": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-setup-operator-materialized-20261016/operator/request",
+    "RR5": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-root-records-20261016",
+    "T5": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-single-party-test-setup-20261016",
+    "absentBeforePlacement": ["M5", "RR5", "T5"]
+  },
+  "invocation": "env -i PATH=/usr/bin:/bin HOME=/nonexistent LC_ALL=C TZ=UTC /usr/bin/bash --noprofile --norc <OWN>/steps/<ID>.sh < /dev/null, exactly once per step, in the order P1 P0 Q5 K5a K5b K5M K5g H5 Z51 Z52",
+  "exactPreconditions": [
+    "Root materialized this packet byte for byte at M5 and wrote RR5/K5-OPERATOR-PINS.sha256 and RR5/K5-MATERIALIZATION-PIN.sha256 plus M5/ROOT-SOURCE-MANIFEST.json as defined in ROOT-PLACEMENT-INSTRUCTIONS.json.",
+    "Fresh non-author Gemini source and effect review of the materialized bytes with zero blocking findings, bound to the operator pin list.",
+    "Two substantive agreeing positions on each of K5-1, K5-2, K5-4M, K5-5, K5-7, K5-8 and K5-8A.",
+    "K4H actual-result review closed and independently adopted: KH3 10/10 ok, KH6 PASS, KH5 binaries unchanged, no relation-level security finding. Raw captured K4H results alone do not satisfy this, and no K4H binary hash is assumed in this proposal.",
+    "RR5/K5-PRECONDITIONS.json, RR5/K5-AUTHORIZATION.json and RR5/K5-PRE-LAUNCH.json complete in the exact schemas of ROOT-PLACEMENT-INSTRUCTIONS.json. Missing or malformed values refuse in P1 and P0 before effects; there is no placeholder substitution.",
+    "T5 absent immediately before P1."
+  ],
+  "steps": [
+    {"id": "P1", "where": "host, unwrapped", "effect": "k5_preconditions.py p1 verifies every root record and K4H public receipt; only then mkdir T5, logs, receipts, journal, w/{bin,in,out} and w/keys mode 0700", "onRefusal": "creates nothing; BLOCKED(prerequisite)"},
+    {"id": "P0", "where": "host", "cpuWall": [300, 600], "effect": "pins re-verified; P0-root-pins.sha256 recorded; host copies the K4H release mori-k2 from TK/w/target/release behind link guards, verified against KH-binaries-pre.sha256 on both files, mode 0555; two sources and two selectors placed mode 0444 and verified; out and keys empty; disk and memory gates"},
+    {"id": "Q5", "where": "host + sbx_run", "cpuWall": [120, 300], "effect": "bwrap version; full probe-k5.sh probe of sbx_run; out and keys still empty afterwards", "onFailure": "BLOCKED(capability), no fallback view"},
+    {"id": "K5a", "where": "sbx_run + in-view GNU time", "cpuWall": [600, 900], "command": "/task/bin/mori-k2 compile --source /task/in/installment-invoice.mori --selector /task/in/invoice-partial.selector.json", "prediction": "stdout byte-identical to stage-C K4b-descriptor.json (sha256 7bae4fb1...)"},
+    {"id": "K5b", "where": "sbx_run + in-view GNU time", "cpuWall": [600, 900], "command": "/task/bin/mori-k2 compile --source /task/in/conditional-reserve.mori --selector /task/in/reserve-allocate.selector.json", "prediction": "stdout byte-identical to stage-C K4c-descriptor.json (sha256 8cf25094...)"},
+    {"id": "K5M", "where": "sbx_run + in-view GNU time", "cpuWall": [3600, 3600], "killAfterSeconds": 60, "command": "/usr/bin/time -v /task/bin/mori-k2 setup --source /task/in/installment-invoice.mori --selector /task/in/invoice-partial.selector.json --out-record /task/out/invoice-partial.setup.json --out-proving-key /task/keys/invoice-partial.pk", "perProcess": "RLIMIT_AS 8 GiB, RLIMIT_CORE 0, nice 10, RLIMIT_CPU 3600 s; MemAvailable at least 10485760 kB and free disk at T5 at least 6 GiB gated immediately before", "attempts": 1, "retries": 0, "prediction": "exit 0; stdout summary observedR1csSha256 e458153e...; one public record in out and one 0600 proving key in keys. Setup time and memory are UNMEASURED; this step is the measurement.", "onResourceFailure": "BLOCKED(resource), never retried, no cap change; any further setup needs a new resource decision citing the measured figures"},
+    {"id": "K5g", "where": "host python3 -I", "cpuWall": [300, 600], "effect": "data/k5g_gate.py strict gate: verdict PASS, STOP-CUSTODY, STOP-IDENTITY or FAIL-PREDICTION in receipts/K5g.json; records record SHA-256, VK digest and key path, mode, size and SHA-256 only", "neverDoes": "no pairing, subgroup check, proof or verify; never records VK or key bytes"},
+    {"id": "H5", "where": "host", "cpuWall": [60, 120], "effect": "non-gating in-view time and abnormal-line extracts; K5M summary and K5g receipt records"},
+    {"id": "Z51", "where": "host", "cpuWall": [300, 600], "effect": "final hygiene; operator pins, binary and inputs re-verified; setup record hashed; proving key path, mode, size, link count and SHA-256 recorded only behind the custody guard; no deletion"},
+    {"id": "Z52", "where": "host, unwrapped", "effect": "freeze logs and receipts to receipts/stage-K5-final.json; never w, bin, keys or key material"}
+  ],
+  "custody": "DV-K2-1-R unchanged: OsRng only inside the driver, getrandom failure BLOCKED(abnormal-exit) with no fallback; no seeded RNG, test_rng, existing key, wallet, SRS, PK, cache or legacy artefact read or reused; RLIMIT_CORE 0; proving key create_new mode 0600 in the fresh T5/w/keys (directory 0700), never published or copied; leftovers from a failed invocation stay in place, are recorded by path, size and SHA-256, and are never used; all keys retained unread apart from guarded metadata hashing until the K5 actual-result review closes; deletion only by a later separately reviewed exact custody step at review close unless that review names a retaining follow-up; single-party test trust only, no production or mainnet assurance.",
+  "view": "sbx_run of clause K5-2 exactly: bwrap user, pid, net, ipc and uts namespaces, die-with-parent, new session, read-only /usr /bin /lib /lib64, synthetic /dev, /proc, 256 MiB tmpfs /tmp, read-only T5/w/bin at /task/bin and T5/w/in at /task/in, writable T5/w/out and T5/w/keys only, chdir /task, cleared environment with PATH /usr/bin:/bin and HOME /nonexistent, stdin /dev/null. No cargo, toolchain, registry, target, home or other host path is mounted.",
+  "effectsExcluded": ["prove", "verify", "inspect", "pairing", "subgroup checks", "second setup", "reserve/allocate setup", "key publication or copying", "network", "wallet", "signing", "ledger", "Cardano", "Preprod", "Midnight", "retries", "cap changes"],
+  "after": "Fresh independent actual-result review of the full public logs and receipts precedes any K6 resource clause. K6 subgroup checks and proving remain outside this proposal and need their own reviewed clause set derived from the K5M measurement.",
+  "worstCaseWallSecondsWrapped": 10800,
+  "permissionless": "This is a maintainer-run measurement. It is never a public compile, prove or deploy prerequisite."
+}
