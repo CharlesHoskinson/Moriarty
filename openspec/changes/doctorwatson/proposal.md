@@ -14,6 +14,13 @@ checker consumes existing independent A-profile data; it does not run rules or
 authenticate a claim made by a producer. Missing model/circuit adapters remain
 explicit gaps.
 
+The explicit `--host` increment builds the actual Sherlock reference and its
+fixed-input producer, runs independently specified bounded-stepping tests and
+compares every complete normal fuel prefix. The default checker still performs
+no interpreter execution. Local build/run receipts and supplied-artifact
+comparisons remain distinct. See the
+[first delivered cycle](../../../docs/audits/2026-10-16/doctorwatson-delivery/README.md).
+
 See [EARS and scenarios](requirements.md), the
 [delivery plan](../../../docs/DOCTORWATSON.md), and the
 [required correctness loop](../../../docs/SHERLOCK-CORRECTNESS-LOOP.md).

@@ -116,6 +116,37 @@ module doctorwatson_test {
       state.tasks.get(3).adminMinutes == 30, state.tasks.get(3).processCycles == 1,
       state.tasks.get(3).test == NotRun, state.receipts.size() == 2,
       state.reviews.size() == 2, ownership })
+  // SF-14: invalidation is not eligible implementation by the dependent owner.
+  run upstreamStoppedActiveDependentHistoryTest = init.then(integrate(1)).then(integrate(2))
+    .then(prepare(3)).then(process(3, 30)).then(edit(1, 1, Tool))
+    .expect(and { state.tasks.get(3).phase == Queued,
+      state.tasks.get(3).processCycles == 1, state.tasks.get(3).adminMinutes == 30,
+      processStopped(state.tasks.get(3)), state.receipts.size() == 2, state.reviews.size() == 2 })
+    .then(process(1, 15)).then(edit(1, 1, Tool))
+    .expect(and { state.tasks.get(1).processCycles == 0, state.tasks.get(1).adminMinutes == 0,
+      state.tasks.get(3).processCycles == 1, state.tasks.get(3).adminMinutes == 30 })
+  run upstreamPartiallyAdministeredActiveDependentHistoryTest = init.then(integrate(1)).then(integrate(2))
+    .then(prepare(3)).then(process(3, 15)).then(edit(1, 1, Tool))
+    .expect(and { state.tasks.get(3).phase == Queued,
+      state.tasks.get(3).processCycles == 1, state.tasks.get(3).adminMinutes == 15,
+      not(processStopped(state.tasks.get(3))) })
+  run sharedInputPreservesActiveAdministrationTest = init.then(prepare(1)).then(process(1, 30))
+    .then(prepare(2)).then(process(2, 15)).then(sharedInput(4, Bounds))
+    .expect(and { state.tasks.get(1).processCycles == 1, state.tasks.get(1).adminMinutes == 30,
+      state.tasks.get(2).processCycles == 1, state.tasks.get(2).adminMinutes == 15,
+      state.tasks.get(1).phase == Queued, state.tasks.get(2).phase == Queued })
+    .then(claim(1, 1)).then(freeze(1, 3, true)).then(submit(1))
+    .expect(not(canStart(state, 1)) and not(canProcess(state, 1)))
+    .then(claim(2, 2)).then(freeze(2, 3, true)).then(submit(2))
+    .expect(canStart(state, 2) and canProcess(state, 2))
+    .then(edit(1, 1, Source)).then(submit(1)).then(startLocal(1))
+    .expect(and { state.tasks.get(1).processCycles == 0, state.tasks.get(1).adminMinutes == 0,
+      state.tasks.get(2).processCycles == 1, state.tasks.get(2).adminMinutes == 15 })
+  run sharedInputPreservesIntegratorTaskAdministrationTest = init.then(integrate(1)).then(integrate(2))
+    .then(prepare(3)).then(process(3, 15)).then(process(3, 15)).then(sharedInput(4, Tool))
+    .expect(and { state.tasks.get(3).phase == Queued,
+      state.tasks.get(3).processCycles == 2, state.tasks.get(3).adminMinutes == 30,
+      processStopped(state.tasks.get(3)), state.receipts.size() == 2, state.reviews.size() == 2 })
   run authorActionDisabledTest = init.then(prepare(1)).then(passLocal(1)).then(review(1, 1, true).fail())
   run completeDeliveryHasFiniteTerminalTest = init.then(integrate(1)).then(integrate(2)).then(integrate(3))
     .then(finalize).expect(state.terminal).expect(state.terminal and state.sourceMerges == TASKS and workflowInvariant)

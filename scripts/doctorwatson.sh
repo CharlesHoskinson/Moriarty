@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Local QA; --design also checks the finite DoctorWatson workflow model.
+# Local QA; --design and --host select explicit additional local checks.
 # See docs/DOCTORWATSON-CI.md for evidence limits.
 set -euo pipefail
 
 design=false
+host=false
 if [[ $# -eq 1 && $1 == --design ]]; then
   design=true
+elif [[ $# -eq 1 && $1 == --host ]]; then
+  host=true
 elif [[ $# -ne 0 ]]; then
-  printf 'Usage: %s [--design]\n' "$0" >&2
+  printf 'Usage: %s [--design|--host]\n' "$0" >&2
   exit 2
 fi
 
@@ -36,6 +39,12 @@ fi
 
 python3 models/sherlock/qa/check.py
 python3 -m unittest discover -s models/sherlock/qa -p 'test_*.py' -v
+
+if "$host"; then
+  python3 -I -B models/sherlock/qa/run_host.py \
+    --rustc "${DOCTORWATSON_RUSTC:-}" \
+    --output-dir "${DOCTORWATSON_OUTPUT_DIR:-}"
+fi
 
 if "$design"; then
   # Each local model command has its own 30-second wall limit and 256 MiB heap.

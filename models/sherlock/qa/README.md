@@ -31,7 +31,7 @@ error. JSON is printed to stdout; input errors go to stderr. `--repo PATH`
 selects another checkout containing the same frozen expectations.
 That checkout's `check-reference.py` module is executed, so name only a trusted
 checkout. It is executed only after its bytes match the pinned SHA-256
-`83acde8054f9859a18bf350651e9de75d10d5d3e4aa575e3e9265e3ba61e9232`; a differing
+`a5ae942e9899e736581cb067843d25502df802672fb407cc88d581bd7dd9c354`; a differing
 helper is not executed and is an input error (exit 2). Exactly the hashed bytes
 are compiled, so a file swap after hashing or cached bytecode is not run.
 Time-of-check/time-of-use limit: the pin covers those helper bytes only, not
@@ -77,3 +77,23 @@ local command passes all 31 tests. See the
 Two later Opus-authored tests reproduced the unpinned helper and unusable
 observed-index findings before their fixes. The corrected local entrypoint
 passes 33 tests; its current capture is recorded at the same public result link.
+
+Compare a complete supplied normal host diagnostic artifact with the new opt-in mode:
+
+```sh
+python3 -I -B models/sherlock/qa/check.py --host-observations path/to/host-observations.json
+```
+
+This is a file comparison, and it cannot be combined with the two supplied literal
+corpus document flags. It checks all eight program/entry identities before the
+216 complete prefix runs, including every record's rule/charge/full before/after
+state and terminal publication. The independently reconstructed expectation has
+5,355 records; [HOST-OBSERVATIONS.md](HOST-OBSERVATIONS.md) freezes the projection
+and its limits. The [producer](../reference/normal_observations.rs) uses actual
+`Machine::run_steps` and `TraceView` observations on fixed trusted typed inputs.
+Its standalone `--test` build includes only the new bounded normal host tests.
+The producer's compilation/execution is a separately inspected wrapper action;
+this Python mode never launches it. Supplied producer/profile/source fields are
+declarations. The report keeps execution receipt `not-supplied`, producer
+authenticity `not-established`, constructor startup `unsupported`, and every
+execution layer `not-run`. Actual build/run receipts must be reported separately.
