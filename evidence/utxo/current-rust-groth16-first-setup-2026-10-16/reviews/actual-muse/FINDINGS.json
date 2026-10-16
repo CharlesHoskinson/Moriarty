@@ -1,0 +1,80 @@
+[
+  {
+    "blocking": false,
+    "description": "No blocking finding on the completed exact K5 actual setup predicate. All ten steps exit 0, K5M is a single invoice/partial OsRng setup within caps, K5g PASSes with zero custody/identity/prediction problems, and Z51/Z52 custody/freeze evidence is consistent across raw logs, receipts, journals and the 45-row root manifest.",
+    "evidence": [
+      "K5-RAW-OBSERVATION.json allTenPublicStepExits all 0, setupGateVerdict PASS, custody/identity/predictionProblems []",
+      "K5M.log/K5g.log/Z51.log raw lines cross-checked in crosschecks CC-01..CC-08"
+    ],
+    "file": "K5-RESULT-MANIFEST.json / logs / receipts",
+    "id": "F-RESULT-OK",
+    "line": 1,
+    "recommendation": "Close only the first genuine-setup prerequisite for K6 SOURCE preparation; grant no execution authority.",
+    "severity": "INFO"
+  },
+  {
+    "blocking": false,
+    "description": "F-K5M-01 exact-key residual remains a provenance limitation, not an actual-result failure: k5_preconditions.py does not enforce exact key sets for AUTHORIZATION/PRE-LAUNCH, but the actual root records present in mirror have only their stated fields (K5-AUTHORIZATION.json 16 keys, K5-PRE-LAUNCH.json 4 keys), P1/P0 logs verify their hashes before creation, and no extra second-setup/prove flag is present in the actual records. Root must not claim exact-schema enforcement beyond this observed actual set.",
+    "evidence": [
+      "Muse source FINDINGS.json F-K5M-01",
+      "K5-AUTHORIZATION.json/K5-PRE-LAUNCH.json opened in full in this review; P1.log:14-18 hashes ab376625.../de6ee0bc..."
+    ],
+    "file": "operator/request/data/k5_preconditions.py (via source review) / K5-AUTHORIZATION.json",
+    "id": "F-K5M-01-actual",
+    "line": 320,
+    "recommendation": "Retain as disclosed residual for K6 source drafting; tighten or explicitly accept in any successor operator, never silently claim exactness.",
+    "severity": "LOW"
+  },
+  {
+    "blocking": false,
+    "description": "F-K5M-02 Z51 extra-keys gap is covered on the actual success path: Z51 itself guards only invoice-partial.pk, but K5g keys_listing required exactly [invoice-partial.pk] and passed, and the actual Z51 listing shows exactly one keys entry and one out entry, with no extra entries to classify. No leftover is reused.",
+    "evidence": [
+      "Muse source FINDINGS.json F-K5M-02",
+      "K5g.json records.keysEntries exactly one invoice-partial.pk; Z51.log:6-16 keys/out listings exactly one file each"
+    ],
+    "file": "operator/request/steps/Z51.sh / receipts/K5g.json",
+    "id": "F-K5M-02-actual",
+    "line": 61,
+    "recommendation": "No action for this run; any future abnormal run must classify extra keys entries as BLOCKED(hygiene) and never reuse them.",
+    "severity": "LOW"
+  },
+  {
+    "blocking": false,
+    "description": "F-K5M-03 freeze link-following remains INFO: freeze.py uses plain open() without O_NOFOLLOW, but the actual frozen set in stage-K5-final.json is 32 rows under logs/ and receipts/ only, no /w, binaries or keys, and every row hash matches the root 45-row manifest and INPUT-INDEX. Mirror does not prove each host file was non-symlink at freeze time; do not invent stronger hygiene.",
+    "evidence": [
+      "freeze.py:25-28 open(os.path.join(root,rel),'rb')",
+      "stage-K5-final.json files[] all logs/* or receipts/* (32 rows); K5-RESULT-MANIFEST.json scope 'no w traversal'"
+    ],
+    "file": "claim-utxo-abi-v1-aiken-placement-candidate-20261015/tools/freeze.py",
+    "id": "F-K5M-03-actual",
+    "line": 26,
+    "recommendation": "Accept for this host-written logs/receipts freeze only; do not widen freeze scope in K6 without a link guard.",
+    "severity": "INFO"
+  },
+  {
+    "blocking": false,
+    "description": "Helper/runtime hash distinction and old Gemini R2: operator helper does not runtime-hash all 8 top-level docs (runtime checks 18 operator files; root rehashed all 26 before P1 per PRE-LAUNCH operatorFilesRehashedBeforeP1), and the old false Gemini R2 review remains unadopted - actual clause voices/scopes are the 7 in EXACT-K5-R2-CLAUSES.json as tallied, not the R2 inventions.",
+    "evidence": [
+      "Gemini operative report section 1 discrepancies; Muse source report independence note",
+      "K5-VOTE-TALLY unadoptedGeminiR2VotesCounted false; K5-EXACT-RUN-SCOPE sourceReviews scopes"
+    ],
+    "file": "GEMINI-R2-REVIEW-DISCREPANCIES.json (via source reports) / K5-VOTE-TALLY.json",
+    "id": "F-VOICES",
+    "line": 1,
+    "recommendation": "Count only the tallied Muse author FOR + fresh Muse AGREE and the separate Gemini operative AGREE as recorded by root; invent no further votes.",
+    "severity": "INFO"
+  },
+  {
+    "blocking": false,
+    "description": "Provenance-only VK binding and single-party trust limit the result: consumerCanCheckVkToMatrixLink is false, no PK deserialization, embedded-VK extraction, curve subgroup, pairing, proof generation/verification or ledger acceptance was performed. Whoever controlled this single-party setup could forge invoice/partial proofs; this is test-only, not a ceremony or production setup.",
+    "evidence": [
+      "K5g.json provenanceNote and consumerCanCheckVkToMatrixLink false; K5-RAW-OBSERVATION notEstablished list",
+      "setup.rs DigestBound observes matrix digest in-process only (lines 10-15, 63-94); encoding.rs strict decoders exist as source but were not executed on the actual PK in K5"
+    ],
+    "file": "receipts/K5g.json / patches/k2/src/setup.rs",
+    "id": "F-TRUST-SCOPE",
+    "line": 45,
+    "recommendation": "First blocked boundary for K6 is PK deserialization/subgroup/PK-VK match and a real Groth16 prove plus independent pairing verify under a new exact reviewed operator and crypto authorization.",
+    "severity": "INFO"
+  }
+]
