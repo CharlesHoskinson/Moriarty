@@ -1,0 +1,48 @@
+Verdict: PASS
+
+Top finding: the candidate implements the contracted pure comparison consumer on the frozen literal packets, with no contract-blocking defect found in source inspection. This PASS covers source implementation and the supplied normal-test evidence only. It is not runtime agreement, semantic execution, proof, native acceptance, or product acceptance, and no actual capture exists or was read.
+
+Candidate scope reviewed:
+- Implementation: compare_full_fixtures.py
+- Tests: test_compare_full_fixtures.py
+- Supplied evidence: normal-tests.txt, normal-test-receipt.json, prepared-only.json
+- Pinned dependencies used by the candidate, not treated as candidate-authored implementation: models/sherlock/qa/check.py, models/sherlock/qa/host_observations.py, ROOT-FULL-FIXTURE-EXPECTATION-FREEZE-01.json, and the three frozen fixture-oracle family packets.
+
+Contract conformance:
+
+1. Pinned helpers and freeze handling conform.
+   The candidate pins SHA-256 values for check.py, host_observations.py, and the root freeze manifest. It verifies the helper bytes before loading them, verifies the freeze manifest before parsing it, then rehashes and length-checks every frozen file listed in that manifest before reading the family packets with the strict JSON reader from check.py. It also checks the pinned K source identity exposed by check.py. Expected observations are produced only through host_observations.expected_observations and host_observations.literal_snapshot, and supplied artifacts are compared through check.first_difference.
+
+2. Ordinary prefix membership is complete and exact.
+   The candidate requires exactly eight program/trace pairs, checks each program against the frozen case identity, fixture path, input_sha256 string, charged-edge count, and ordinary-prefix count, and then requires the expanded ordinary run count to be exactly 569. The supplied prepared membership gives the per-case ordinary-prefix counts 115, 115, 95, 62, 15, 22, 23, and 122, totalling 569. Comparison uses the whole observations object, so there is no common-subset pass, no observed-extent truncation, and no expected count inferred from an artifact.
+
+3. Original fixture runs remain separate and unchanged in budget.
+   The candidate separately constructs eight original-fixture runs. Each reconstruction is required to remain fuel 1000 with stack limit 64, with the boundary at the last frozen state and fuel consistency checked state by state. Arithmetic cases use the independent original-fixture-runs packet; data cases use the explicit state fuel overlays; environment cases use the explicit fuel-1000 reconstruction fields. Those eight runs are compared as the separate original_fixture_runs array and are not substituted for the ordinary prefixes.
+
+4. Identity preservation and aliasing conform.
+   Original case IDs and input_sha256 values are preserved in the membership report and checked across program, trace, frozen case, and original-run references without recomputing input_sha256. Expected observation IDs are aliased to host F01 through F08 by the pinned fixture-path table PATH_TO_CASE. The artifact projection.inputs declarations are compared as a complete ordered list over case_id, fixture_path, declared_fixture_sha256, original_fuel, and stack_limit.
+
+5. Snapshot and record comparison is exact.
+   The candidate names all eleven snapshot fields: code_k, entry_k, control_k, environment_k, frames_top_first_k, depth, stack_limit, remaining_fuel, initial_fuel, output_k, and charged_steps. Because the entire expected observations object is passed to first_difference, every initial snapshot, every record before/after snapshot, every rule_start_line, every charge, the terminal snapshot, and terminal_has_next are compared exactly and in order. The original eight runs receive the same whole-array comparison.
+
+6. Normalization is correctly absent.
+   No k_terms or other text normalizer is used. K strings are compared as exact strings through the frozen check.py comparison convention, and the report explicitly records normalization as none under that convention.
+
+7. Diagnostics and acceptance boundaries are explicit.
+   The semantic selection is declared as the entire observations object, the entire original_fixture_runs array, and the five identity fields from projection.inputs. Other envelope material is retained in retained_diagnostics rather than semantically interpreted. The report keeps acceptance as none, subject_execution as false, producer authenticity as not established, execution evidence as not established by this consumer, and constructor startup outside the post-startup comparison. In prepared-only mode it reports actual_capture_read as false. In comparison mode it prepares and verifies the frozen expectations before reading any supplied observations file.
+
+Non-blocking observations:
+- When the first difference is in the projection identity list, fixture_membership can be null because that identity difference does not itself carry a case_id. This weakens that one diagnostic annotation only; it does not change match/mismatch determination.
+- The candidate computes the original-run difference even when an earlier identity or ordinary difference already exists, but it only uses that later difference when no earlier difference was found. This has no semantic effect on the verdict.
+
+Normal-test assessment:
+The supplied normal tests report four passing tests. They cover complete frozen membership and counts, alignment of every ordinary prefix with the existing helper projection, snapshot field-set completeness, terminal/no-next checks, original fuel-1000/stack-64 budget preservation, selected original terminal and overlay literals, synthetic exact roundtrip matching, diagnostic retention, non-mutation of the synthetic artifact, and the non-acceptance report fields. The supplied receipt states that these were literal synthetic tests only, with no subject execution and no capture read.
+
+Coverage limitations:
+- All supplied tests are positive. They do not themselves demonstrate negative mismatch behaviour for a changed snapshot field, changed rule or charge, truncated or reordered run list, reordered identity list, altered original-fixture run, or changed terminal_has_next. The implementation inspection supports those behaviours through whole-object first_difference comparison, but the test evidence does not exercise them.
+- The synthetic roundtrip builds its artifact from a deep copy of the expected object, so it proves comparator self-consistency and diagnostic retention, not agreement with an independently produced capture.
+- Original-run test detail is strongest for the arithmetic and data families. The environment original runs receive the generic budget, record-count, remaining-fuel, and terminal_has_next checks, but fewer case-specific terminal-literal assertions.
+- The command-line paths for supplied-capture mismatch exit status, prepared-only invocation, and input-error exit status are represented by the implementation and prepared-only artifact, but are not directly asserted by the four supplied tests.
+- There is no actual capture, no producer execution evidence, and no basis in this candidate for claiming runtime agreement, semantic execution correctness, proof, native acceptance, or product acceptance.
+
+Required changes: none for the stated pure comparison-consumer contract.
