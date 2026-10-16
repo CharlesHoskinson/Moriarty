@@ -201,3 +201,13 @@ any retained requirement. Full grammar, bounded images, complete prefixes,
 cross-layer correspondence, circuits and qualified targets remain open.
 
 Before implementation acceptance, exact helper-rule inventories/payload bounds and profile admission must be reviewed; completed-interval helper erasure and partial representation relations remain unproved. Concrete scalar/arena/frame layouts, backend realization and any measured winner remain open. Generic ADTs beyond the admitted closed fragment and bounded parameter instantiation remain extensions. Core/2 financial await preservation is required, but exact future Commit/Yield/Await opcodes, complete financial machine fields and target phase correspondence are still open. Fresh independent Muse nonsecurity and Opus security reviews plus the existing decision rule are required before architecture adoption. These are maintainer delivery obligations, never public developer membership or compile/prove/deploy permissions.
+
+## Scoped offline input/readback observation
+
+The [offline helper](../../../models/sherlock/STAGENET-OFFLINE-README.md) inventories existing Core/1 inputs and compares all supplied
+JSON fields, retaining ordered arrays and missing/present distinctions. Its
+captured R2 result records 16 passing normal assertions for the bound source.
+This is preparatory tooling for complete readback reporting, with no native
+execution or independent semantic oracle. It does not implement the missing
+Sherlock/Clean/native adapter or public Moriarty commands and closes no
+UIREQ/B/U/M/MC/SP/G exit or Midnight stagenet qualification.
