@@ -257,15 +257,25 @@ The codec round trips and separate Machine-to-corpus comparisons remain distinct
 no count is summed across these captures. [PR #112](https://github.com/CharlesHoskinson/Moriarty/pull/112)
 adds supplied K projection comparison in the existing QA consumer, without engine
 execution. The local K compilation below remains compile-only history. A later
-single N01/fuel1 raw engine capture supplies no actual common-state comparison
-or full 216-run K, general K correctness or refinement result.
+single N01/fuel1 engine capture, published in [PR #119](https://github.com/CharlesHoskinson/Moriarty/pull/119),
+matched an independently frozen two-record common projection; the other 215 fixed
+inputs remain unobserved, with no full 216-run K, general K correctness or
+refinement result. [PR #118](https://github.com/CharlesHoskinson/Moriarty/pull/118)
+records [fixed original-fixture post-startup host agreement](audits/2026-10-16/sherlock-full-original-fixtures/README.md)
+over 569 ordinary prefixes and eight separate fuel1000/stack64 runs, not K source
+parsing. [PR #117](https://github.com/CharlesHoskinson/Moriarty/pull/117) records
+[two local Core/2 financial programs](audits/2026-10-16/sherlock-financial-core2-delivery/README.md)
+matching frozen expectations, without Sherlock financial lowering.
+[PR #120](https://github.com/CharlesHoskinson/Moriarty/pull/120) compiled
+[96 Enabled B HOST row-effect payloads](audits/2026-10-16/sherlock-b-core-host-source/README.md)
+to metadata only, with no link, run, test or owner-driver implementation.
 All planned phase predicates, Candidate B adoption and parent checkboxes retain
 their existing requirements.
 
 | Evidence class | Current fact | What still needs distinct evidence |
 |---|---|---|
-| Public models | Historical K frontend syntax Kore/compiled text; a local compile exited 0 in 4.293 seconds and inventoried an unvalidated `definition.kore`. A later single N01/fuel1 raw engine run completed 12 stages with 11 zero-exit children, recording startup, literal return, publication and a zero-rule terminal probe; source/toolchain binding and both receipts remain unpublished. Historical scalar15 Quint: eight tests and 32 sampled seed 1 traces, max 32 steps, no `allInv` violation and all seven witnesses | B models/projections, actual K common-state comparison, full 216-run K coverage and cross-model refinement |
-| Compiler/host | Canonical Core `lib.rs` cfg(test) compiled with 86 inputs and passed all 189 library tests in PR #113; earlier source/codec captures retain their own scopes. This documentation update supplies no new run | ProgramImage/admission, deterministic complete traces and actual source-to-relation mapping; Cargo/workspace, SDK, integration-test and doctest qualification; cached extern/proc-macro source authenticity |
+| Public models | Historical K frontend syntax Kore/compiled text; a local compile exited 0 in 4.293 seconds and inventoried an unvalidated `definition.kore`. A later single N01/fuel1 raw engine run completed 12 stages with 11 zero-exit children, recording startup, literal return, publication and a zero-rule terminal probe; [PR #119](https://github.com/CharlesHoskinson/Moriarty/pull/119) publishes both receipts and their literal compile-to-engine file binding, without producer authenticity or definition validation, and the case's post-startup common projection matched an independently frozen two-record expectation. Historical scalar15 Quint: eight tests and 32 sampled seed 1 traces, max 32 steps, no `allInv` violation and all seven witnesses | B models/projections, K common-state comparison of the other 215 fixed inputs, full 216-run K coverage and cross-model refinement |
+| Compiler/host | Canonical Core `lib.rs` cfg(test) compiled with 86 inputs and passed all 189 library tests in PR #113; earlier source/codec captures retain their own scopes. PR #118's fixed original-fixture post-startup host comparison, PR #117's local Core/2 financial comparison, PR #119's default ordinary local CI pass of 230 tests and PR #120's metadata-only compile of 96 Enabled B HOST row-effect payloads are separate historical scoped captures. This documentation update supplies no new run | ProgramImage/admission, deterministic complete traces and actual source-to-relation mapping; Cargo/workspace, SDK, integration-test and doctest qualification; cached extern/proc-macro source authenticity; B HOST selector, owner driver, guards, admission, charging/caps, plan application and execution; Sherlock financial lowering |
 | Lean reference | Merged Fenrir generic pure foundation and scoped normal/publication checks | B helper/admission/ADT reconciliation, full reference coverage and separate correspondence evidence |
 | Clean/circuit | Public API inventory and planned required components | Actual bounded step circuit, separate plans/exports and S-owned proofs/security evidence |
 | Native/target | Existing historical results retain their own exact scope | Sherlock-native exporter/relation, actual native recursive evidence and independently qualified Preview/Fenrir target results |
