@@ -1,0 +1,158 @@
+{
+  "format": "p3s1r1-aiken-actual-result-review-findings/1",
+  "reviewer": "claude-opus-5-5 (runtime-stated; fresh non-author context; same model family as all prior seats, context-level independence only)",
+  "attribution": "Security, ledger, cryptographic and cost judgments are this reviewer's (Opus security routing), not the root's.",
+  "run": {
+    "taskRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-p3-r1-aiken-local-execution-20261015",
+    "resultManifestSha256": "c1cd3dfc1778fd183750f4fe6db7c5a1b4b9666ae389ff5be34e20def5b9e18f",
+    "hashProvenance": "root-provided; not recomputed by this reviewer"
+  },
+  "predicate": "Does the immutable actual P3S1-R1 H/A1/A2 run establish only the exact scoped local CEK library outcomes and compiled identities, with effect/resource/source/counter/expectation integrity?",
+  "predicateVerdict": "YES (qualified by AR-04, AR-08, AR-12, AR-14, AR-15)",
+  "findings": [
+    {
+      "id": "AR-01",
+      "severity": "pass",
+      "class": "expectation-integrity",
+      "statement": "All 146 actual test titles, modules, statuses and on_failure flags equal the frozen EXPECTED-A1-TESTS.json exactly: settle_r1_test 110 (27 succeed_eventually), unit_r1_test 9 (1), unit_test 27 (9); 146 pass, 0 fail, 0 property; seed 1945995588. Raw A1.log JSON (lines 6-1375) aligns 1:1 with root A1-TEST-RESULTS.json (lines 1-1370) at a constant offset of 5, and with receipts/A1-tests.tsv; every mem/cpu value was compared by reading.",
+      "evidence": ["logs/A1.log 45216c5b...4bb9", "root A1-TEST-RESULTS.json 92557033...b1d5", "receipts/A1-tests.tsv ac442723...6233", "data/EXPECTED-A1-TESTS.json 5ce611f9...7554"],
+      "grade": "current-local actual, exact tree"
+    },
+    {
+      "id": "AR-02",
+      "severity": "pass",
+      "class": "counter-and-launch-integrity",
+      "statement": "25/25 steps reserved and completed, 0 retries; every LAUNCH fileSha256 equals its PRE-LAUNCH pin; literal env -i argv, cwd /, stdin /dev/null; journals strictly sequential, no overlap; D1 (TF) decided before A1pl, D2 after A1x and before A2b; final A1 GREEN label held until after F1. All 25 .exit files read as 0 (F2.exit at the task root).",
+      "evidence": ["root ACCOUNTING.json e3cd9539...d576", "root PRE-LAUNCH.json 3a22a8b1...9d11", "root D1.json", "root D2.json", "journal/*.txt (25)", "logs/*.exit (24) + F2.exit"],
+      "grade": "current-local actual"
+    },
+    {
+      "id": "AR-03",
+      "severity": "pass",
+      "class": "effect-and-hygiene-integrity",
+      "statement": "Only lo in the netns at 0 bytes/packets (P4). Five empty dirs stayed empty at Hp/A1p/A2bp/A2p; the tmp listings after H, A1 and A2 are 0 bytes. aiken.lock has one package with empty [etags]; sha ec5d6a58...da83 equals the prediction. build/packages had exactly 2 entries. Run tree 56 -> 58 (aiken.lock, empty aiken-compile.lock) -> 59 (plutus.json), as predicted; other rows unchanged. F1: R1 tree, Sol helper, reused tools, stdlib pin/38 files and DATA-ONLY binary/manifest unchanged; DATA-ONLY binary still 0644. Unapplied blueprint preserved byte-equal (0444) and re-verified at A2a and A2p.",
+      "evidence": ["logs/P4.log", "logs/Hp.log", "logs/A1p.log", "logs/A2bp.log", "logs/A2p.log", "logs/F1.log", "receipts/run-before.json", "receipts/run-after-A1.json", "receipts/aiken-lock-sha256.txt", "run/aiken.lock"],
+      "grade": "current-local actual within accepted residuals (AR-15)"
+    },
+    {
+      "id": "AR-04",
+      "severity": "pass-qualified",
+      "class": "compiled-identity",
+      "statement": "C2 hash 23bdcc2d...4f19 is the same for mint/spend/else and in both stages; 2,911 B; compiledCode sha unchanged by apply. S2 unapplied 5323f552...18c9 (30,728 B); applied with parameter 581c||C2 (a CBOR byte string of length 28, Plutus Data B) -> 338293e4...1b7e (30,764 B). The blueprint field equals the 'blueprint hash' output for all three S2 handlers. Both values come from the same tool, so they show tool self-consistency, not an independent recomputation.",
+      "evidence": ["logs/A2t.log", "logs/A2a.log", "logs/A2h.log", "logs/A2r.log", "receipts/a2-*-validators.tsv", "root A2-IDENTITIES.json ffcc0d0a...087c"],
+      "grade": "current-local actual (tool-derived identities)",
+      "disposition": "Adopt as identity records only. Recompute with a non-aiken implementation before any signer anchors an intent to the S2 hash (PB-09)."
+    },
+    {
+      "id": "AR-05",
+      "severity": "high",
+      "class": "target-feasibility (Preprod deploy)",
+      "statement": "Applied S2 is 30,764 compiled bytes (single-CBOR-wrapped flat; confirmed by the C2 header 590b5c = 3 + 2,908 = 2,911). A transaction carrying the script inline, or creating a reference-script output that contains it, is therefore >= 30,764 B. The ledger requires txsize <= maxTxSize (Conway UTXO -> Babbage.babbageUtxoValidation L420-421; formal Utxo.lagda.md L554). Observed Preprod maxTxSize is 16,384. S2 cannot be deployed inline or by reference under the observed parameters; the excess is >= 14,380 B (1.88x). C2 at 2,911 B fits. The A2r label 'reference-script bound' misnames 16,384: it is maxTxSize. Reference-script limits are the separate maxRefScriptSizePerTx (formal L555; implementation validateRefScriptSize) and a per-block limit; their values are not in the packet.",
+      "evidence": ["root A2-IDENTITIES.json", "a2/plutus.applied.json (preamble + c2 compiledCode hex read)", "preprod-public-aiken-size-observation-20261015/protocol-parameters.json (maxTxSize 16384)", "PROJECTION.json", "cardano-ledger 56ddee12 eras/babbage/.../Rules/Utxo.hs", "eras/conway/.../Rules/Utxo.hs", "eras/conway/.../Rules/Ledger.hs", "formal-ledger-specifications 9322b5a9 src/Ledger/Conway/Specification/Utxo.lagda.md"],
+      "grade": "size: current-local actual; limit: provider-observed (anonymous Koios HTTP, single provider, no consensus/finality proof); rule: pinned source-only, not verified as the deployed node",
+      "disposition": "Hard Preprod blocker PB-01. Requires source work to reduce and split S2 (NEXT-CAPABILITY.md). No governance-change assumption."
+    },
+    {
+      "id": "AR-06",
+      "severity": "high",
+      "class": "target-feasibility (ExUnits)",
+      "statement": "Host CEK (aiken default cost model, trace silent; NOT ledger ExUnits). All 80 settle-path tests exceed the observed per-tx memory limit of 17.5 M (min h41 26,255,647). Decode harness estimated from the run's own tests: about 25.5 M mem / 6.74 B cpu per decode (sequential_chain_invoice_r1 / 2) and 28.27 M / 7.49 B (sequential_chain_reserve_r1). After subtracting it, single-thread settle production is about 48.7 M / 13.9 B (p01) to 65.2 M / 18.6 B (p04), i.e. 2.8-3.7x per-tx mem and 1.4-1.9x steps. A two-thread atomic settle (p07; one full pass 94,250,082) is estimated at about 120-135 M, above the per-block 77.5 M. The settle tx also includes the C2 release (about 18 M single pass including decode). Non-settle handlers: genesis 9.76 M, close 13.06 M, refund 3.63 M fit; revoke 17,500,956 and release 18,208,659 are at the margin before decode removal. The C2 Groth16 issue cost is unmeasured.",
+      "evidence": ["logs/A1.log", "root A1-TEST-RESULTS.json", "run/lib/pvc2/settle_r1_test.ak (accepted = facts + settle_checks; test_ctx via aiken/cbor.deserialise)", "run/lib/pvc2/test_ctx.ak", "PROJECTION.json maxTxExecutionUnits 17,500,000/10,000,000,000; maxBlockExecutionUnits 77,500,000/20,000,000,000"],
+      "grade": "host-derived estimate; subtraction is approximate; cost model not pinned to Preprod",
+      "disposition": "Preprod blocker PB-02. Requires redesign for cost and an X1 compiled-wrapper evaluation under the pinned Preprod PlutusV3 cost model before any ledger-fit claim. Reviewer judgment: a cost-model difference alone is unlikely to close a gap above 2.5x."
+    },
+    {
+      "id": "AR-07",
+      "severity": "medium",
+      "class": "size/cost source defect",
+      "statement": "The production C2 compiled code contains the gate-component name strings 'own_token', 'single_token', 'burned', 'claimant_signs', 'spent_or_expired' (seen in the applied blueprint hex). Named-part diagnostics are compiled into deployable scripts, costing bytes and execution. S2 is likely affected the same way (its hex was not read).",
+      "evidence": ["a2/plutus.applied.json line 22 (c2.c2.mint compiledCode)"],
+      "grade": "current-local actual (C2); inference (S2)",
+      "disposition": "Split production Bool gates from test-only named parts, with an equivalence obligation (NEXT-CAPABILITY.md step 1)."
+    },
+    {
+      "id": "AR-08",
+      "severity": "medium",
+      "class": "evidence limit",
+      "statement": "The 37 'fail' tests pass if the predicate errors OR returns False. The 10 ERROR-PATH and 6 placeholder-signature tests are refusal evidence only; at trace level silent the failure location is unobserved. Cost profiles weakly corroborate the documented locations (e.g. p01 full refuses 74,127,913 vs facts 74,140,029; h33/h40/h41/h64 near decode-only cost) but do not show isolation.",
+      "evidence": ["root A1-TEST-RESULTS.json", "run/lib/pvc2/settle_r1_test.ak"],
+      "grade": "current-local actual + inference",
+      "disposition": "Preserved; no rerun authorized."
+    },
+    {
+      "id": "AR-09",
+      "severity": "medium",
+      "class": "signature evidence",
+      "statement": "No valid-signer positive (FX1). h63 relies on aiken's Rust Schnorr builtin returning False on a zero signature; the Haskell ledger builtin's behaviour on that input is unverified. Error or False both refuse, so only the isolation claim is affected.",
+      "evidence": ["h63_r1_parts pass (fail_immediately)", "h63_r1_refuses pass (succeed_eventually)"],
+      "grade": "current-local actual (aiken evaluator only)",
+      "disposition": "PB-06."
+    },
+    {
+      "id": "AR-10",
+      "severity": "medium",
+      "class": "cost/proof gap",
+      "statement": "C2 issue (Groth16 verification on BLS12-381 builtins) has no real VK/proof test; only groth16_refuses_short_vk (101 mem). Its ExUnits and its fit together with other redeemers are unmeasured.",
+      "evidence": ["unit_test groth16_refuses_short_vk"],
+      "grade": "absence observed",
+      "disposition": "PB-07 (K2 not authorized here)."
+    },
+    {
+      "id": "AR-11",
+      "severity": "low",
+      "class": "fixture distinctness",
+      "statement": "Identical costs: h28/h30/h31 (76,608,381 / 21,122,584,936), h46_parts/h58_parts (9,756,452 / 2,641,286,080), cells_ordered_refuses_duplicate_cell/descending_accounts (28,131 / 8,373,210). This is consistent with equal-length mutations on the same path; the sources name distinct fixture constants. The fixture bytes were not read, so distinctness is unverified.",
+      "evidence": ["root A1-TEST-RESULTS.json", "run/lib/pvc2/settle_r1_test.ak"],
+      "grade": "observation",
+      "disposition": "Optional fixture-diff in a later authorized read; not a result defect."
+    },
+    {
+      "id": "AR-12",
+      "severity": "info",
+      "class": "record semantics",
+      "statement": "TOOL-RESULT.wall_time_seconds is not the step duration (A1 0.824 s against 176.07 s in the journal; most steps ~1e-5 s). The A1 TOOL-RESULT output is truncated. The journals and log files are authoritative; the root used them.",
+      "evidence": ["root steps/A1/TOOL-RESULT.json", "journal/A1.txt", "receipts/A1-time.txt"],
+      "grade": "observation"
+    },
+    {
+      "id": "AR-13",
+      "severity": "info",
+      "class": "host resources",
+      "statement": "A1: 2:56.07 wall (about 9.8% of the 1,800 s cap), 330.44 s user, 306.01 s system, 361% CPU, max RSS 424,668 KiB (about 1.3% of the 32 GiB AS cap), 24,757,602 voluntary context switches, 0 major faults, FS outputs 32. Socket counters are not populated on Linux and are not evidence. A2b: 4.78 s. Not comparable with the precedent's verbose 12.3 s on a different package.",
+      "evidence": ["receipts/A1-time.txt", "journal/A1.txt", "journal/A2b.txt"],
+      "grade": "current-local actual"
+    },
+    {
+      "id": "AR-14",
+      "severity": "info",
+      "class": "freeze coverage",
+      "statement": "task-final.json freezes 77 files (a2 2, help 5, logs 47, receipts 23); journal/ is excluded by design (F2 is still writing it). The journals and F2.exit are pinned only by the root RESULT-MANIFEST. Every task-final hash I compared equals the root manifest row (cross-record agreement only).",
+      "evidence": ["receipts/task-final.json", "steps F2.sh"],
+      "grade": "observation"
+    },
+    {
+      "id": "AR-15",
+      "severity": "info",
+      "class": "accepted residuals",
+      "statement": "The run-scoped residuals are unchanged: no mount namespace, reachable pathname UNIX sockets, no FSIZE cap, no syscall trace, P1/F2 unwrapped. The post-checks cannot show the absence of writes outside the checked paths; no contrary evidence was observed. These do not waive the R1 Rust mount-view requirement.",
+      "evidence": ["root AUTHORIZATION.json acceptedResidualsAttributed", "readiness review REPORT.md section 5"],
+      "grade": "accepted residual"
+    },
+    {
+      "id": "AR-16",
+      "severity": "info",
+      "class": "normative-source coverage",
+      "statement": "In this packet, the per-tx ExUnits bound is evidenced only by the implementation (Alonzo.validateExUnitsTooBigUTxO, called at Babbage Utxo.hs L423-424). The formal Conway UTXO/UTXOW rules read here do not state it. No claim is made about the rest of the formal spec. Missing normative sources: Shelley validateMaxTxSizeUTxO/txsize definition; Babbage/Conway TxOut CDDL for script_ref framing; Conway PParams (maxRefScriptSizePerTx/perBlock values); Conway tiered reference-script fee (scriptsCost implementation); Babbage getMinCoinSizedTxOut; Alonzo script hashing; PlutusV3 cost-model parameter-name mapping; Conway stake-registration witness rules.",
+      "grade": "source coverage note"
+    },
+    {
+      "id": "AR-17",
+      "severity": "info",
+      "class": "cost-model binding",
+      "statement": "Formal UTXOW binds scriptIntegrityHash to the language views of the cost models in force (Utxow.lagda.md L261-266). ExUnits evidence must use the Preprod cost model actually in force; aiken-default CEK numbers cannot substitute.",
+      "grade": "pinned source-only"
+    }
+  ],
+  "preprodBlockers": ["PB-01", "PB-02", "PB-03", "PB-04", "PB-05", "PB-06", "PB-07", "PB-08", "PB-09", "PB-10", "PB-11", "PB-12"],
+  "noAuthorityCreated": "No execution, retry, probe, test, key, proof, ledger, network or funding authority is created by these findings."
+}
