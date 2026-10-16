@@ -82,3 +82,9 @@ private target credentials or public developer approval requirements are added.
 This publication candidate still needs fresh full owner and Muse publication
 reviews. The semantic source votes do not approve publication hygiene or make
 any executable result pass. Native authority remains zero.
+
+## Complete P3 source design
+
+The [arena source publication](../../../models/sherlock/machine-circuit/arena-policy-source-20261016/README.md) records conditional source adoption of the complete CandidateA P3 proposal. The unchanged design, JSON catalog, Root adoption and exact fresh Opus/Muse captures must be read together. The binding errata and conditions remain mandatory.
+
+This is source-only evidence. The four auxiliary records do not provide arithmetic or fuel-borrow witness placement. Complete-relation K/Quint/Clean correspondence, G4/P4/P5/F4/MD2, StepInv and chaining, Constant typing, D-NAMES, O-ARITH, L04 statement/profile binding and L05 numeric admission remain open. C4, native authority zero, existing limits and terminal failures are unchanged. No U/M/MC/SP/G or Midnight stagenet exit is closed.
