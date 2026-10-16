@@ -1,0 +1,23 @@
+[
+  {
+    "evidence": "Opus FINDINGS.json C-N01 records that _wire_record/_wire_map iterate live dict views; the audit brief states calls assume no concurrent input mutation. Inside that stated assumption no ordinary single-threaded defect follows from host_codec.py _wire_record, _wire_map or validate_prove_request.",
+    "id": "F-01-CONCURRENT-MUTATION-ASSUMPTION",
+    "requiredFix": "None in this audit. Keep the no-concurrent-mutation assumption explicit at call sites; do not claim thread-safe validation.",
+    "severity": "INFO (non-blocking)",
+    "summary": "DTO validation is established only for calls whose input is not mutated concurrently by another thread."
+  },
+  {
+    "evidence": "host_codec.py _wire_array, _wire_map and _wire_text impose no total-size or node-count bound, while k2/src/input.rs parse_json enforces MAX_JSON_BYTES 1048576 and mori-core json.rs parse_limited enforces depth 32, 65536 nodes and duplicate/trailing refusal, as also recorded in Opus FINDINGS.json C-N02. DTO depth is fixed by the schema, so only width and byte size can diverge.",
+    "id": "F-02-HOST-VALID-NOT-RUST-PARSE-ADMISSION",
+    "requiredFix": "None in this audit. Keep the disclaimer that validate_prove_request True means structural DTO validity only; the byte emitter/parser stage remains a separate future slice.",
+    "severity": "INFO (non-blocking)",
+    "summary": "A host-valid request may still be refused by the Rust byte-parser stage on size, node, duplicate-key or trailing-data grounds."
+  },
+  {
+    "evidence": "host_codec.py line 1 docstring reads Provisional pure PlutusData encoder for the frozen serialise_data profile, while the appended DTO comment block describes the structural request APIs; Opus FINDINGS.json C-N04 records the same observation. The frozen 5634-byte prefix must not be edited.",
+    "id": "F-03-PREFIX-DOCSTRING-SCOPE",
+    "requiredFix": "None in code. Describe the combined scope only in external metadata; do not modify the frozen encoder prefix bytes.",
+    "severity": "INFO (non-blocking)",
+    "summary": "The frozen prefix module docstring describes only the encoder although the combined module also provides the DTO APIs."
+  }
+]

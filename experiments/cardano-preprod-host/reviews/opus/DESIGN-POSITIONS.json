@@ -1,0 +1,56 @@
+[
+  {
+    "clauseId": "A1-EXACT-NODES",
+    "clause": "Only exact builtin JSON nodes are accepted where the schema expects them: type(x) is dict/list/str/int/bool, where int excludes bool and bool appears only where the schema says Bool. None is accepted only at Option positions: context vkDigest, expectedSourceSha256 and expectedProgramHash. Any other object, including subclasses, raises ValueError without invoking any caller-controlled method. Messages name only the path and the expected type.",
+    "position": "AGREE",
+    "rationale": "Every _wire_ validator runs a type() is check first: _wire_keys, _wire_array, _wire_text, _wire_action, _wire_uint, _wire_hex, _wire_bool, and _wire_integer, which excludes bool. Each short-circuits before len, iteration, comparison, int() or encode. None is accepted only by _wire_optional_hex32, which is used solely for context vkDigest and the two selector pins. The builder's pin arguments use an `is not None` identity check, which runs no hook. Messages are path plus a literal. Paths contain only schema names, '.*' or '[]', and refused keys and values are never formatted. The actual 31/31 run includes the _Trap, _Str, _Int, _List and _Dict rows."
+  },
+  {
+    "clauseId": "A2-KEYS-FIRST",
+    "clause": "Every dict key is checked to be type(k) is str before any membership test, hash, set operation or comparison. Unknown keys of closed objects are refused before any value is visited. Map keys (state, inputs) may be any exact str.",
+    "position": "AGREE",
+    "rationale": "_wire_keys iterates the exact dict, which hashes and compares nothing, and checks each key with type(key) is str. Only then do _wire_record, _wire_tagged and _wire_map run membership tests, and those hash only exact str. _wire_record's unknown-key loop runs before any value is read. _wire_tagged derives candidate variants from the key set alone, then reads and type-checks the tag value. _wire_map accepts any exact, UTF-8-encodable str key, including the empty string, and checks all keys before visiting values. _KeyTrap rows passed."
+  },
+  {
+    "clauseId": "A3-TYPED-COPY",
+    "clause": "Validation is a fixed-depth, schema-directed walk of the typed wire, not a generic JSON normalizer. build_prove_request returns new dict and list objects copied from validated exact nodes. The copy preserves field presence, null, dict iteration order and array order, and is detached from the caller. copy.deepcopy is never applied to unvalidated input, unknown keys or foreign objects.",
+    "position": "AGREE",
+    "rationale": "The walk is driven by fixed schema functions with a depth of about 8, so no cycle or deep input can recurse. Copies are new comprehension-built dicts and lists in caller iteration order. Leaves are immutable exact scalars. Absent optional keys stay absent, null stays null, and pins are emitted only when supplied. There is no import, so there is no deepcopy. build_prove_request revalidates the result. Validation and copying are fused node by node (C-N03), and each node is type-checked before it is copied, which satisfies the clause."
+  },
+  {
+    "clauseId": "A4-CHEAP-BOUNDS",
+    "clause": "A UInt must be an exact str of 1..39 characters, all ASCII 0-9, with no leading zero except '0', checked before int(), and then at most 2^128-1. action must be an exact str of at most 1024 characters, checked before the UTF-8 byte count, and then 1..1024 bytes. Over-long or lone-surrogate strings raise an ordinary ValueError.",
+    "position": "AGREE",
+    "rationale": "_wire_uint checks the exact str, length 1..39, every character between '0' and '9' by code point (which refuses non-ASCII digits) and the leading-zero rule, and only then calls int() and the 2^128-1 bound. That equals hexutil parse_u128_decimal and the ir.rs UInt acceptance set. _wire_action checks the exact str and 1..1024 characters before encode('utf-8'), then a byte count of at most 1024, matching check_selector. UnicodeEncodeError becomes a plain ValueError via `from None`. The oversized R04 rows passed."
+  },
+  {
+    "clauseId": "A5-VALUEERROR-SCOPE",
+    "clause": "The ValueError guarantee covers input-validation refusals only. There is no time, memory, MemoryError or process guarantee, and no byte-parser duplicate, depth, node or size claim.",
+    "position": "AGREE",
+    "rationale": "No exception handler other than the UnicodeEncodeError conversion exists in the DTO code, and the encoder prefix keeps its I2 no-handler behaviour. Width and string length are unbounded on the host and allocation is O(n), with no claim made. Duplicate keys, the 1 MiB size limit, the 65,536-node limit and trailing data remain json.rs/input.rs byte-stage properties (C-N02). Concurrent mutation is a nonclaim (C-N01)."
+  },
+  {
+    "clauseId": "A6-SEMANTICS-OWNER",
+    "clause": "The host performs no Core or financial evaluation and has no fallback. Core and Rust decide semantics and the admitted program. Context remains CALLER_SUPPLIED_UNAUTHENTICATED. The full future host_codec may include the separately defined encode_data alongside these three APIs. There is no permanent API ban, and no mirrored module, interpreter or stubs.",
+    "position": "AGREE",
+    "rationale": "The only value comparisons are literal format and selector strings, which are driver rules in parse_request and check_selector. There are no row, order, duplicate, program-type, balance or Emit-policy checks, and wrong financial stories pass by design. The authentication label appears only on validate_context_input output, which the wire refuses. encode_data coexists unchanged. There are exactly four public callables and no stubs, no mirrored module and no interpreter. claim.rs keeps proposal separate from acceptance."
+  },
+  {
+    "clauseId": "A7-SUPERSESSION",
+    "clause": "Addendum section 2 supersedes the author-time 'unread' qualifications. F-01, F-02 and F-04 are closed. F-03 is narrowed to 'native from_records acceptance unexecuted'. F-05 is narrowed to 'reserve CoreReference request not transcribed; values match as multisets, order differs'. RESULT.json (counter 0) and RESULT-QUALIFIED (18) are both preserved.",
+    "position": "AGREE",
+    "rationale": "Checked against the supplied sources: lib.rs ADAPTER=SettlementHashV2 (F-01); hexutil decode_exact length 2N and nibble [0-9a-f] (F-02); witness.rs name lookup, missing duty as (false, 0), frame_unchanged and effect shapes (F-03, with native acceptance still unexecuted). My literal comparison agrees with the root fact that original_request equals invoice-partial.request.json (F-04). The reserve request's ten balances, inputs, state and empty liabilities equal reserve_records pre as multisets, and only order differs (F-05). Qualification: the historical 24-run RESULT.json and RESULT-QUALIFIED were not in this packet, so their preservation is taken from the addendum and the prior review."
+  },
+  {
+    "clauseId": "A8-ORDER-RATIONALE",
+    "clause": "Verbatim order is kept because intent scenario_hash = sha256(canonical(scenario)) preserves array order, and the intents a caller binds through intentsDigest and the context depend on it. The statement body does not directly commit a balance-array permutation. A derived scenario needs a fresh context-bound proof. K6 is never relabelled.",
+    "position": "AGREE",
+    "rationale": "In intent.rs, canonical() sorts object keys via BTreeMap and maps arrays in order, and hash_bytes is SHA-256, so scenario_hash, the OwnerIntent and its signing message depend on array order. witness body() uses find by name, runtime scenario_snapshot sorts, and abi2 body_bytes follows plan order, so the body does not directly commit a permutation. The candidate preserves order exactly. The intentsDigest derivation is not in the sources, and the clause does not overclaim it."
+  },
+  {
+    "clauseId": "A9-R04-TESTS",
+    "clause": "The new test copy is the base bytes plus appended private helpers and 7 methods. The 24 base methods, their assertions and the GOLD literals are unchanged. Predicted RED is 31 run, 6 passes and 25 missing-implementation failures.",
+    "position": "AGREE",
+    "rationale": "I count 24 base methods (6+5+4+4+3+2) plus 7 appended (1+2+2+2), and the appended text matches TEST-REPLACEMENTS newText. GOLD_BYTES and GOLD_SHA256 are unchanged. The prediction was confirmed by the actual RED (31 run, 6 gold passes, 25 missing-implementation failures, 0 errors, base24TestPrefixUnchanged true, sha ef343bbe), and the frozen bytes then ran 31/31 OK against the candidate. Base-byte identity rests on root records, since the 36315 B base was not re-supplied."
+  }
+]
