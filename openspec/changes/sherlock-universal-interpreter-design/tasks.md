@@ -19,8 +19,11 @@ check off a complete B task or replace Clean/native/target evidence.
 | B-T04 | Full host snapshot rows and owned in-memory image/helper checkpoints | Fixed-capacity encoding, canonical serialization and B representation |
 | B-T08 | A-event slices at widths 1/2/4/8 and saved pending-return/helper cuts; [checkpoint evidence](../../../docs/audits/2026-10-15/sherlock-host-checkpoint-normal/README.md) | B helper boundaries, financial continuation and constrained execution |
 | B-T02 | Actual parsed Core source through bounded scalar preparation and machine execution: two fixed programs, 70 fuel runs and 1,259 complete records; [PR #105](https://github.com/CharlesHoskinson/Moriarty/pull/105) and [capture](../../../docs/audits/2026-10-16/sherlock-bounded-source-delivery/README.md) | Fixed-fixture H1 scope only; final emit values, without financial effects, general grammar, K source-name correspondence or target qualification |
-| B-T08 | Borrowed `Machine::visit_steps` records with stop/resume: eight standalone tests and a separate 26-input production Core library compile; [PR #106](https://github.com/CharlesHoskinson/Moriarty/pull/106) | Unmetered H1 host diagnostic; no whole-crate test, B helper, circuit or general caller admission claim |
+| B-T08 | Borrowed `Machine::visit_steps` records with stop/resume: eight standalone tests and a separate 26-input production Core library compile; [PR #106](https://github.com/CharlesHoskinson/Moriarty/pull/106) | Unmetered H1 host diagnostic; no whole-crate test, B helper, circuit or general caller admission claim; later canonical direct-rustc library tests are recorded separately below |
 | B-T11 | Actual Rust host, flat-ID image and generic Quint observations each match eight programs, 216 fuel runs and 5,355 common-projection records; [PR #104](https://github.com/CharlesHoskinson/Moriarty/pull/104). A separately merged private pure Lean producer matches the same diagnostic projection | Actual K execution, refinement, complete bounded Clean/handwritten comparison, B helpers and native/target evidence remain open; Lean rule/no-next inference and terminal-control projection remain explicit |
+| B-T04 | [PR #109](https://github.com/CharlesHoskinson/Moriarty/pull/109): [35 codec tests and a separate typed Step-mode round trip over 12 N01/N02 runs/49 records](../../../docs/audits/2026-10-16/sherlock-layout-codec-delivery/AUTHOR-REPORT.md); [PR #110's full eight-program/216-run/5,355-record typed preservation](../../../docs/audits/2026-10-16/sherlock-layout-codec-full-normal-delivery/AUTHOR-REPORT.md) | Internal Step-mode codec evidence remains distinct from Machine-to-corpus comparison; the round-trip captures add no canonical-mode, byte-parser/wire-format or hostile/refusal result, and the 35 baseline normal tests' literal byte/decoder cases remain limited positive examples; no canonical uniqueness, wire ABI, B representation or constrained-execution acceptance |
+| B-T05 | [PR #111's nine arithmetic/fuel host tests](../../../docs/audits/2026-10-16/sherlock-arithmetic-fuel-host/README.md) and private Core test registrations; [PR #113's canonical Core cfg(test) capture](../../../docs/audits/2026-10-16/sherlock-core-cfg-test/README.md) compiles 86 inputs and passes all 189 library tests | Direct-rustc library-test evidence only; no transition/reachability, aux/2 packing, appendData, canonical-decode, constraint, Cargo/workspace, SDK, integration-test, doctest or circuit/native qualification; cached extern/proc-macro source authenticity unestablished |
+| B-T11 | [PR #112](https://github.com/CharlesHoskinson/Moriarty/pull/112) adds supplied K projection comparison in the existing QA consumer; a separate local compile exited 0 in 4.293 seconds and inventoried an unvalidated `definition.kore`. A later single N01/fuel1 raw engine run completed 12 stages with 11 zero-exit children, recording startup, literal return, publication and a zero-rule terminal probe; source/toolchain binding and both receipts remain unpublished | Supplied-data matching is not engine execution; actual common-state comparison is UNRUN, with no full 216-run K, general K correctness or refinement result |
 
 The October 15 linked checkpoint capture contains 86 host checks over eight programs
 and 216 frozen prefixes. This is a captured scoped result, not a whole-crate
@@ -28,14 +31,20 @@ Cargo result or general source/compiler/native acceptance. The root
 [reference status](../../../docs/SHERLOCK-REFERENCE-STATUS.md) retains the earlier
 captures and their limitations. All B-T01–B-T14 parent tasks remain open.
 
-The later October 16 rows describe separate captured candidates. Their linked
+The PR #104–#106 rows describe separate captured candidates. Their linked
 PRs retain completed scoped source/result reviews and integration checks; frozen
-pre-integration README/status labels remain historical. No parent checkbox below
+pre-integration README/status labels remain historical. The PR #109–#113 rows
+state only what their linked public reports or PRs record; the separate local K
+compile and raw N01 engine facts rest on receipts whose publication is pending. No parent checkbox below
 is closed by these child observations.
 
 The separate draft-source capture ran eleven new checks and filtered out 86
 earlier tests after compiling their module graph. It did not build Core library
-or whole-crate Cargo integration. This child evidence does not complete the
+or whole-crate Cargo integration. The later PR #113 observation compiles the
+canonical Core cfg(test) graph and runs all 189 registered library tests, including
+the eleven pre-existing draft-source tests and nine arithmetic/fuel tests.
+Cached lexer source correspondence remains unproven. It does not retroactively
+broaden the earlier capture or complete the
 compiler/representation tasks or any Candidate B acceptance scenario below.
 
 ## Reconcile and freeze the candidate
