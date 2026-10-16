@@ -1,0 +1,86 @@
+[
+  {
+    "evidence": "INVENTORY.md lines 7-9 give 33 package + 207 evidence = 240 files and 1,295,611 + 4,053,804 = 5,349,415 bytes; rows occupy lines 23-262 (240 rows). Sampled rows match INPUT-INDEX.json and SOURCE-PUBLICATION-SELECTION.json exactly, e.g. package/lib/pvc2/shard4.ak 10629/7bac10be..., evidence/root/ACTUAL-ADOPTION.json 2732/a6a9b2ec..., evidence/history/first-four-way/RESULT-MANIFEST.json 30072/d0dd0966.... Final mapping is package-to-experiments/cardano-four-piece-settlement and evidence-to-evidence/utxo/cardano-four-piece-settlement-2026-10-16 per INVENTORY.md lines 5-13 and SOURCE-PUBLICATION-SELECTION.json lines 4-5.",
+    "id": "XC-INVENTORY-240",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Inventory count, byte total, SHA rows, and final mapping are internally consistent."
+  },
+  {
+    "evidence": "package/aiken.toml lines 3-4 and 13-16 pin compiler v1.1.24, Plutus v3, stdlib v2.2.0; package/aiken.lock lines 4-12 capture the same stdlib v2.2.0 lock. package/README.md line 31 states the captured tool aiken v1.1.24+bacbeb3, corroborated by actual-opus REPORT.md line 55.",
+    "id": "XC-TOOLCHAIN-LOCK",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Compiler/stdlib pins and captured lock are correctly documented; no field upgrades v1.1.24 or v2.2.0."
+  },
+  {
+    "evidence": "OPX2-compare.json lines 15-35 and 44-48: 147/147 unit, 0 property, 125 shard4_test with 9 fail annotations plus 22 cost benches, membership empty, exact true. outcome.json lines 52-64 repeats this and lines 103-110 define T-147 as 125+22. package/README.md line 27 and evidence/README.md line 20 state the same and state the retained 472 parent tests were not rerun, consistent with EXPECTATIONS.json lines 16-23 (619 total = 472 retained + 147 new).",
+    "id": "XC-147-NOT-472",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "147 outcomes are 125 tests (9 expected-fail) plus 22 cost benches, not the parent 472."
+  },
+  {
+    "evidence": "sizes.json lines 7-41 and outcome.json lines 87-97. Arithmetic verified from those numbers: 6859+9940+10832+10825=38456; 38456+2770+12784+13018=67028; 67028-48413=18615. sizes.json lines 125-139 and package/README.md lines 13-23 and evidence/README.md line 24 preserve the same numbers, each piece below the prior 20,503-byte monolithic VS, and the 14,336-byte figure as a working target only.",
+    "id": "XC-SIZES-TOTAL",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Applied sizes C2 2770, VI 12784, VS1/2/3/4 6859/9940/10832/10825, S2p 13018, total 67028 are preserved exactly."
+  },
+  {
+    "evidence": "OPX2-compare.json lines 73-137: PC4-1 and PC4-3 aggregates hold with four-piece sums above parent VS; PC4-2 per-piece values (e.g. mem 2428646/2859115/3385856/2730141) are each below parent 7265669. package/README.md line 23 and evidence/README.md line 24 state per-piece lower but aggregate higher for P01 and P07, with decode subtraction only approximate. No doc converts this into ledger ExUnits.",
+    "id": "XC-COST-DIRECTION",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Per-piece cost lower, aggregate higher, is preserved rather than inverted."
+  },
+  {
+    "evidence": "outcome.json lines 21-25 and 311-317: allCommandsExit0 true, allPredictionsHeld false, sole miss RANGE-vs1 FALSE (6859 below 7000-10500). sizes.json lines 80-87 records the same. package/README.md line 27 and evidence/README.md line 22 preserve both flags; neither README claims all predictions held.",
+    "id": "XC-RANGE-FALSE",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "RANGE-vs1 FALSE and allPredictionsHeld false are retained."
+  },
+  {
+    "evidence": "test_ctx.ak lines 1-6 states it is test plumbing, not the compiled validator wrapper. vi.ak lines 13-16 and c2.ak lines 9-14 are thin wrappers delegating to shard.authorize and claim.issue. actual-opus REPORT.md lines 133-135 states tests use authorize_gate, not authorize, and are library predicates over test_ctx contexts, not compiled wrapper runs. package/README.md lines 3, 25, 45 and evidence/README.md lines 24, 38 state no VI signature verification, no C2 Groth16 pairing, hashes tool-derived with M-HASH open, and no wrapper ledger acceptance; that matches chain/hash discussion in actual-opus REPORT.md lines 63-83.",
+    "id": "XC-TESTCTX-NO-WRAPPER",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Predicates use test_ctx; no compiled-wrapper ledger acceptance and no genuine signature/pairing were exercised."
+  },
+  {
+    "evidence": "source-opus REPORT.md lines 104-117 and shard4.ak lines 9-19: VS1 6, VS2 3, VS3 4, VS4 3 components plus VI 3, not catalogue claim IDs and no piece_1 functions. package/README.md line 11 and evidence/README.md line 20 state 6/3/4/3 plus three VI components and explicitly deny sixteen catalogue claim IDs.",
+    "id": "XC-COMPONENTS-6343",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "16 VS components partitioned 6/3/4/3 are components, not catalogue IDs."
+  },
+  {
+    "evidence": "history/first-four-way/outcome.json lines 56-68: 129 passed, 18 failed; lines 21-35 preserve T-147, PC4-4, RANGE-vs1 false. EXACT-HARNESS-DIFF.patch lines 6-8 changes only vs2_t from c2x28 to d2x28 in shard4_harness.ak. evidence/README.md line 28 describes that single test-constant repair, unchanged production guards/expectations, and the preserved 129/147 snapshot.",
+    "id": "XC-OLD-129-FAILURE",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Old 129/147 failure and its one-constant harness repair are preserved, not rewritten as success."
+  },
+  {
+    "evidence": "RAW-OBSERVATION.json lines 3 and 35 still says pending review and actualResultIndependentlyReviewed false; outcome.json line 20 predates OPX7f. evidence/README.md line 18 and package/README.md line 9 explicitly qualify those and the aiken.toml PROPOSED/unreviewed/uncompiled wording (aiken.toml line 6) as immutable dated observations superseded only within the dated adoption scope. ACTUAL-ADOPTION.json lines 13-18 limits adoption to the finite local measurement with no new authority.",
+    "id": "XC-HISTORICAL-PENDING",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Historical source/pending fields are qualified as dated snapshots rather than requiring rewrites."
+  },
+  {
+    "evidence": "GEMINI-FULL-REVIEW-DISCREPANCIES.json lines 5-20 records wrong HR-FILT rationale, wrong prior sizes c2=13989/vi=1565 versus frozen 2770/12784, and wrong HR-HYG rationale. evidence/README.md line 30 labels the Gemini report c611776c UNADOPTED and non-authoritative; package documentation does not rely on it. Source and actual Opus reports were checked directly rather than accepting any reviewer verdict alone.",
+    "id": "XC-GEMINI-UNADOPTED",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Archived Gemini report is explicitly unadopted and its discrepancies are not imported into the READMEs."
+  },
+  {
+    "evidence": "package/README.md line 5 and evidence/README.md line 5 assign the Rust experiment itself to 515bd5c5 and separately assign 82c20ad4 to the first Rust setup publication; neither sentence calls 82c20ad4 the language/Rust source commit. The sibling link ../moriarty-cardano-rust/README.md in package/README.md line 5 and ../../../experiments/moriarty-cardano-rust/README.md in evidence/README.md line 5 point to the separately published Rust README supplied in the mirror, whose lines 100-112 state no genuine current-language Groth16 setup/key/proof or Preprod transaction is established. Both Cardano READMEs repeat that proof integration remains unproven.",
+    "id": "XC-RUST-COMMITS",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "No material conflation of 82c20ad4 (setup-evidence publication) with the 515bd5c5 language source was found; wording keeps them distinct."
+  }
+]
