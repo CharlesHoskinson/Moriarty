@@ -1,7 +1,7 @@
-//! Ordinary public staged-test consumers. Author-supplied provisional reports
-//! and canonical preimages were frozen before the command implementation.
-//! They are independent of evaluator output, not independent author ownership.
-//! No evaluator/compiler/backend import; these checks remain UNRUN until admitted.
+//! Ordinary public staged-test consumers against blinded independent R3 oracle copies.
+//! Current reports and canonical preimages were frozen after implementation existed.
+//! Oracle independence rests on blinding, not preimplementation timing.
+//! No evaluator/compiler/backend import; all runtime comparisons remain UNRUN.
 use serde_json::{Value, json};
 use std::{
     fs,
