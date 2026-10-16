@@ -1,0 +1,58 @@
+[
+  {
+    "evidence": "Current selftest.py:132,137,142,148,159 (t1,t2,t3,t4,t6 outer), :173 (t7 outer), :313 (t15 outer) are [PY, '-I', '-c', ...]; nested grandchildren at :167 (t7) and :310 (t15) are [\"/usr/bin/python3\", \"-I\", \"-c\", ...]. That is all 9 previously unisolated Python argv sites. Already-isolated t16 at :319 keeps exactly one '-I'. No [PY, '-c' or [\"/usr/bin/python3\", \"-c\" site without -I remains in the lines read.",
+    "id": "F-STUB-ISOLATION-COMPLETE",
+    "requiredFix": "",
+    "severity": "INFO",
+    "summary": "All 9 previously unisolated stub/grandchild argv sites are now isolated with -I; the previously isolated rlimit test was not double-isolated."
+  },
+  {
+    "evidence": "selftest.py:325-333 t17 runs an actual child via [PY, '-I', '-c', script] importing json, operator, subprocess, asserts operator.add(20,22)==42, asserts realpath(operator.__file__) != realpath(op.__file__) where op is the candidate loaded by _load_candidate, and asserts basename(subprocess.__file__)=='subprocess.py', under cpu_cap=5, wall_cap=5, kill_after=1, stream_cap=1024 with clean exit 0 required. This is a direct stdlib-resolution regression, not a constant mirror, and brings the future total to 18 checks, which are unobserved.",
+    "id": "F-T17-MEANINGFUL-REGRESSION",
+    "requiredFix": "",
+    "severity": "INFO",
+    "summary": "New t17 meaningfully checks actual child stdlib operator.add and file separation from the candidate operator."
+  },
+  {
+    "evidence": "stdout.log:7,16 truncated tracebacks traverse subprocess -> locale -> functools -> from c... and selftest.py:129 truncates each failure string to 512 characters, so the full terminal exception was not observed. The stub author REPORT.md:11-13 labels namespace collision (candidate operator.py shadowing stdlib operator for unisolated python3 -c from the candidate cwd in PRE-RUN.json) as a source-informed inference consistent with the two subprocess-importing checks failing while the already-isolated rlimit check passed at stdout.log:17. This review adopts that labeling discipline: cause is INFERENCE, not a fully observed exception fact.",
+    "id": "F-CAUSE-IS-INFERENCE",
+    "requiredFix": "Keep the inference label in all run/adoption records; do not restate it as an observed exception.",
+    "severity": "MINOR",
+    "summary": "Author namespace-collision cause is a plausible inference against truncated traces, not an observed full exception."
+  },
+  {
+    "evidence": "Candidate ROOT-SOURCE-MANIFEST.json:6-10 changedSourceFiles=[selftest.py] with all 7 other files byte-identical; operator.py (90c313d1), custody.py (a2362a13), claims.py (97a500e6) and probe-k6.sh (19638b9c) pins match INPUT-INDEX.json and SOURCE-ADOPTION-R3.json. Full operative call paths were inspected in this review: operator.py run_supervised_callable (270-400), run_bounded_process/_StreamDrain (407-505), Runner.run charging (613-655), placement/finalizer/S6N partition (535-594,719-955) and _load_auth/_import_helpers ordering (200-246); custody.py fd-pinned reads, layout, key metadata-only pre/postcheck, export and freeze walk (93-480); claims.py strict public-byte gate and native-outcome parsing including N10 (592-731); probe-k6.sh bounded probe (1-229). No scope expansion or extra crypto operation was introduced by the selftest-only change.",
+    "id": "F-OPERATIVE-FOUR-UNCHANGED-AND-INSPECTED",
+    "requiredFix": "",
+    "severity": "INFO",
+    "summary": "The four operative files are byte-identical to the source-ready R3 and their full call paths remain as previously adopted; the change is harness-only."
+  },
+  {
+    "evidence": "operator.py:407-430 _StreamDrain is daemon=True; operator.py:476-494 joins drains 10s, closes parent pipe ends and rejoins 5s, and operator.py:504 folds drainJoined into clean, with Runner full-cap charging for non-clean at operator.py:633-652. The prior audit FINDINGS.json F-DRAIN-RESIDUAL and candidate DESIGN-POSITIONS K6-BOUNDED-CAPTURE disclose that a still-unjoined drain can linger as a daemon reader, is non-clean and fully charged, and is not an absolute all-descendant kill. Selftest t15 (selftest.py:307-315) exercises only the safely bounded case whose escaped holder self-terminates after about 2 seconds (selftest.py:310) and asserts drainJoined; whether it joins on the future run must be actually checked, not assumed by construction.",
+    "id": "F-DRAIN-RESIDUAL-DISCLOSED",
+    "requiredFix": "Do not upgrade this to an absolute descendant-kill or complete-drain claim in AUTH or run records; report the actual t15 drainJoined outcome from the future run.",
+    "severity": "MINOR",
+    "summary": "Residual unjoined-daemon-drain stays disclosed and non-clean/full-charge; no absolute kill claim is made."
+  },
+  {
+    "evidence": "Assessed future command runs the harness as /usr/bin/python3 -I .../selftest.py /tmp/moriarty-k6-public-supervision-20261016-r2 with cwd at the new candidate, stdin DEVNULL/close_fds, root verification of all 8 source hashes before/after and bounded stdout/stderr/exit/cpu/wall recorded in new public run records. Selftest.py:112-120 refuses forbidden/non-public roots and pre-existing roots and creates the root deterministically; fixtures use create-exclusive writes (grandchild.pid open 'x' at selftest.py:168, stage/out writes via operator helpers). Public source inputs at files 0444/dir 0555, as enforced and observed with no new entries in R1 (PRE-RUN.json inputReadOnlyModes; RESULT.json newCandidateEntries []), prevent Python bytecode-cache writing into the candidate, addressing the prior audit F-ORDINARY-PYCACHE for this run configuration; no private cache is involved. R1 at /tmp/moriarty-k6-public-supervision-20261016-r1 is left untouched and there is no same-bytes retry; the changed harness uses the new R2 fixture tree with no cleanup of unknown R1 paths.",
+    "id": "F-FUTURE-COMMAND-CONTAINMENT",
+    "requiredFix": "",
+    "severity": "INFO",
+    "summary": "The exact assessed future ordinary command is contained and bounded under its stated root-side conditions."
+  },
+  {
+    "evidence": "claims.py:671-677 classifies an N10 Compile refusal with descriptorGuardObserved=false and never as a tested descriptor guard, retaining IdentityMismatch only via _descriptor_record if finish compiles; candidate DESIGN-POSITIONS K6-NEGATIVE-BINDING is ABSTAIN and SOURCE-ADOPTION-R3.json records author ABSTAIN / reviewer ABSTAIN with 0 votes. This is the same non-descriptor-binding treatment as the prior review; finish-compile reachability remains unobserved without execution.",
+    "id": "F-N10-CONDITIONAL-UNCHANGED",
+    "requiredFix": "Keep N10 Compile refusals classified with descriptorGuardObserved=false in any future outcome record.",
+    "severity": "MINOR",
+    "summary": "N10 Compile branch is not descriptor binding and remains honestly conditional and unresolved."
+  },
+  {
+    "evidence": "Candidate README.md:13 and EXECUTION-PROPOSAL.json status state future M6/T6/RR6 execution and AUTH are still absent at source-review time and nothing is authorized; no AUTH.json, materialized M6 bytes, native proof, PK validation, S6N native persistence, Runner full-cap charging result, or ledger/Preprod evidence is in the mirror. Selftest.py:22-25 and :204-207 explicitly do not exercise Runner charging or native S6N persistence. An ordinary pass would evidence only the 17 prior mechanics plus the new isolation check.",
+    "id": "F-NATIVE-AND-AUTHORITY-UNOBSERVED",
+    "requiredFix": "",
+    "severity": "INFO",
+    "summary": "No native proof, AUTH, materialization, or target acceptance exists in the reviewed evidence; ordinary evidence would be finite only."
+  }
+]

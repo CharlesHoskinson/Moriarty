@@ -1,0 +1,86 @@
+[
+  {
+    "clause": "Run-owned placement lifecycle (new clause): finalizer admission, blocked-record log-writing, and freeze are governed solely by an explicit placement state in the operator: authOk is set only after the exact AUTH bytes verify, r1Ok only after the supervised R1 admission returns, and layoutCompleteOwned only when the supervised R0 step returns a structured receipt whose layoutMade list equals the exact custody T6_LAYOUT list; the R0 child recovers a partial made list only from the custody-owned LAYOUT-STATUS.json receipt written when that invocation created T6. Mere path or directory existence, and any flag set before creation, are never ownership evidence. When the predicate finalizer_eligible(state) is false the run makes no in-tree write at all: a refused R1 against a pre-existing T6 leaves that tree completely untouched, and a partial owned layout retains only the custody-owned partial LAYOUT-STATUS.json plus the external operator stdout failure record, with no invented directories, no blocked logs, no finalizers, and no freeze. Only a complete owned layout admits block_rest (inside failure handling or guarded so its failure cannot prevent finalizers) and the four finalizers.",
+    "clauseId": "K6-PLACEMENT-LIFECYCLE",
+    "position": "FOR",
+    "rationale": "Author position implementing audit 552 F-01 and the root reproduction bf7a20b5 (validAUTH + R1-refused-existing-T6 + imported helpers + pre-existing freeze-root directories gives guard falls-through with layoutCreatedByThisRun=false). The patch records custody.create_t6_layout's existing structured return and LAYOUT-STATUS receipt across the supervised fork, so no custody helper patch is required; the selftest truth table exercises the actual production predicate."
+  },
+  {
+    "clause": "Aggregate sandbox envelope: the 19 sandboxes in fixed order are charged in aggregate at most 7200 CPU seconds and 12600 wall seconds; a clean exit (including native exit 1 and usage exit 2) charges ceil(RUSAGE_CHILDREN user+sys delta) and ceil(monotonic wall delta); any signal death, timeout, stream-cap kill, launch failure, missing measurement, or unjoined drain thread charges the full per-command cap plus 60 for both CPU and wall and records a charged row before stopping; a launch occurs only when remaining CPU and wall are each at least the next per-command cap plus 60, with no cap reduction, reordering, skipping ahead, retry, or reset; host steps keep separate supervised caps.",
+    "clauseId": "K6-AGGREGATE",
+    "position": "FOR",
+    "rationale": "Unchanged from the base candidate except that an unjoined drain thread now also makes a run non-clean; both fresh audits agreed with the envelope on the base bytes and the patch preserves the 7200/12600 ceilings and all per-command caps exactly."
+  },
+  {
+    "clause": "Host supervision: every host step R1/R0/S6N/G6/H6/Z61/Z62/OUT-CHECK runs in a supervised fork child with RLIMIT_CPU 300 soft and 360 hard, a nominal 600-second wall cap with a 60-second kill grace (hard kill and failure at 660 monotonic seconds, and a child finishing inside the grace is not retroactively failed at 600), a 2097152-byte capped JSON result pipe, process-group SIGKILL and wait4 reaping on timeout, overflow, or lost result; no resource is increased. The key postchecks after Q6P, P6, and N11 and the pre-P6 memory/disk gate are explicit subeffects of the adjacent named steps Q6P, P6, and N11 (and the Z61 postcheck of Z61), bound in the AUTH hostCaps text, adding no top-level effect, no native call, and no sandbox; OUT-CHECK remains a declared effect; wrapper fork/drain/reap mechanics run inside the same deadline.",
+    "clauseId": "K6-HOST-SUPERVISION",
+    "position": "FOR",
+    "rationale": "Resolves the preserved disagreement between audit 552 (AGREE under the disclosed cap+killAfter reading, F-04 MINOR) and audit 682 (DISAGREE, BLOCKER on the literal 600 wording and unnamed substeps) by adopting the second permitted option once, in code constant, proposal, README, and this clause: retain nominal 300/600 plus killAfter 60 and state the soft/hard/grace semantics literally everywhere. The code deadline already was wall_cap+kill_after; no deadline code change and no resource increase is made."
+  },
+  {
+    "clause": "Bounded capture: one generic streaming runner serves all 19 sandboxes with start_new_session and bwrap --die-with-parent, two drainer threads, and a hard 4194304-byte ceiling per stdout/stderr enforced during the run; on cap or timeout the process group is killed and waited on, the bounded prefix and observed byte counts are preserved and charged, and the parent never buffers unbounded child output. Drain threads are joined under a bounded deadline (10 seconds, plus one 5-second re-join after closing the parent pipe ends); a run whose drain thread is still unjoined, or whose pipe is held by a surviving descendant, is non-clean and charged in full, and no result is called clean in that case. Process-group kill is claimed only for group members; descendants that escape the group are claimed killed only insofar as the native bwrap --die-with-parent and pid-namespace contract provides it, and the generic runner alone makes no absolute all-descendant kill claim.",
+    "clauseId": "K6-BOUNDED-CAPTURE",
+    "position": "FOR",
+    "rationale": "Extends the base clause both audits agreed with by the drain-thread completion condition required by audit 682 F-DRAIN-THREAD-COMPLETION; the patch adds drainJoined to the runner record and folds it into clean, and the selftest adds a safely bounded 2-second escaped-pipe-holder regression. The still-unjoined-after-second-deadline subcase is flagged non-clean but is not exercised by an ordinary regression, because exercising it would require holding a pipe past the join deadlines."
+  },
+  {
+    "clause": "Publication (updated K6A-06): publication is limited to the explicit PUB_CANDIDATES list, which includes logs/custody-layout.log; the freeze allowlist is a required set derived from run state (existence is a failure, not a filter) with the single declared S6N-failure exception in K6-FAILURE-FREEZE; the proof receipt is exported whenever P6 carries a genuine proofExportSha256 independent of G6; N8/N11 setup-record bodies and PK material are never published; T6/LAYOUT-STATUS.json is a permissible partial-placement status at the T6 root outside the freeze roots.",
+    "clauseId": "K6A-06",
+    "position": "FOR",
+    "rationale": "Unchanged in substance from the base candidate, which both fresh audits agreed with; the S6N-failure exception is stated here by reference so the required-set rule and the partial-S6N rule cannot be read as contradicting each other."
+  },
+  {
+    "clause": "A distinct host step S6N runs once after V6-source and V6-export succeed and before N1, under the supervised host cap, with bounded reads of the positive proof, staged record, and pinned request, bounded create-exclusive stage writes, plus bounded custody.export_negative_variants publication of N1-N7/N10 bodies to receipts/negatives and validated N8/N11 single-edit metadata only, and it persists the actual returned export metadata to receipts/negatives-metadata.json; it generates no proof, reads no key, and resets no budget. S6N success requires the full checked set: all ten export entries validated by custody (N1-N7/N10 bodies plus N8/N11 single-edit metadata) and the persisted metadata receipt; if the child dies or fails after writing some bodies or the metadata, s6n_done stays false and the run is INCOMPLETE, never an S6N success.",
+    "clauseId": "K6-STAGING-HOST",
+    "position": "FOR",
+    "rationale": "Retained as amended and agreed fresh by both audits; the patch adds only the failure-side freeze treatment of the same fixed path universe and does not change what S6N writes, the export order in custody, or the success predicate."
+  },
+  {
+    "clause": "Exactly-one-proof: after the N1-N11/usage loop and before finalizers, a supervised host check (the declared OUT-CHECK effect) requires T6/w/out to contain exactly invoice-partial.proof.json as a bounded regular file; any stray, extra, or missing entry (including N10/N11 must-not-exist proofs) fails the run honestly; the expected-output path remains the writable /task/out bind.",
+    "clauseId": "K6-OUT-EXACTLY-ONE",
+    "position": "FOR",
+    "rationale": "Unchanged; both fresh audits verified OUT-CHECK is a declared effect in AUTH, proposal, and README rather than hidden host activity, and the patch keeps it and names the neighbouring key-postcheck and memory/disk subeffects explicitly instead."
+  },
+  {
+    "clause": "Finalizers: when finalizer_eligible(placement) holds (valid AUTH, admitted R1, complete layout created by this run), G6, H6, Z61, and Z62 are each attempted exactly once with independent exception handling after all dispatched children are terminal; a failed or dead finalizer never prevents the others. Each finalizer attempts its own success or failure receipt in the owned tree (G6 receipts/g6.json, H6 receipts/h6.json, Z61 receipts/z61.json, Z62 the FROZEN or BLOCKED receipts/FREEZE-MANIFEST.json, the manifest path being already excluded from the freeze allowlist so there is no hash cycle); a pre-freeze Z62 failure writes that BLOCKED manifest create-exclusively before returning; after the four attempts the parent writes one create-exclusive bounded failure receipt for any eligible finalizer that left none, never overwriting an existing receipt or a FROZEN manifest. The guarantee is the attempt and its outcome record on external operator stdout; an in-tree receipt is attempted but cannot be guaranteed against disk failure, and no receipt is created absent the eligible owned layout. PASS requires g6_ok and h6_ok and z61_ok and freeze_ok.",
+    "clauseId": "K6-FINALIZERS",
+    "position": "FOR",
+    "rationale": "Rewrites the clause both audits disagreed with (552 F-01/F-02; 682 F-FINALIZERS-PARTIAL-R0) around the new placement predicate: partial-R0 and foreign-tree cases are now outside the clause by explicit eligibility rather than silently skipped, and the parent fallback plus Z62 BLOCKED manifest close the receipt gap without claiming an impossible on-disk guarantee."
+  },
+  {
+    "clause": "Failure freeze and partial S6N: when no proof was ever produced, failure evidence is frozen honestly from logs, journal, and whatever receipts exist, no empty or substitute proof receipt is created, and the run status remains BLOCKED, FAILED, or INCOMPLETE rather than PASS. For S6N specifically, success MUST present receipts/negatives-metadata.json and all of N1-N7/N10 body rels; failure MAY present any subset of exactly that fixed universe (S6N_FAILURE_MAY_RELS), and the freeze required set is built from the actual subset present with bounded hashes, preserving the partial files under an INCOMPLETE status; the existence of any file outside that fixed universe still fails the freeze through the custody walked-set equality, and no proof, record body beyond the declared negatives, or PK body is published by the failure path. Actual partial files are evidence of what was written, distinct from accepted negative verification results, which still require their native N1-N11 exits.",
+    "clauseId": "K6-FAILURE-FREEZE",
+    "position": "FOR",
+    "rationale": "Adopts the first option offered by audit 682 F-FAILURE-FREEZE-PARTIAL-S6N (MUST/MAY partition over a fixed explicit universe, implemented as the pure production function s6n_freeze_additions and regression-tested in the selftest) instead of an atomic scoped export, which would have required changing custody export internals; this also answers audit 552's agreement that the no-proof path must stay honest, on the paths where 682 showed it previously failed."
+  },
+  {
+    "clause": "Before-run AUTH pins allowed publication paths, schema, and caps, not unpredictable proof or log content hashes; observed content hashes are authenticated later by a runtime root manifest (a root-owned trusted dynamic-hash manifest outside the static AUTH effect schema, so there is no self-cycle), and no directory walk approves arbitrary files.",
+    "clauseId": "K6-AUTH-PUBLICATION",
+    "position": "FOR",
+    "rationale": "Unchanged; both fresh audits agreed. The patched operator changes the AUTH-bound HOST_CAPS text (supervision semantics and named subeffects), so a new exact RR6 AUTH is required before any run, as the proposal states."
+  },
+  {
+    "clause": "N10 classification: a Compile refusal is reported with descriptorGuardObserved=false and is never counted as a tested descriptor guard; the honest conditional N10 branch (IdentityMismatch only if finish compiles) remains classified, and no unconditional descriptor-guard reachability is asserted while the actual compiler permits only a Compile refusal on the observed path.",
+    "clauseId": "K6-NEGATIVE-BINDING",
+    "position": "ABSTAIN",
+    "rationale": "Retained abstention matching both fresh audits: claims.py was not re-read in full in this authoring pass and finish-compile reachability is unobserved without execution, so no stronger author claim is made and no predecessor vote is inherited."
+  },
+  {
+    "clause": "Give _limits an optional per-call kill grace default KILL_AFTER for compatibility and forward actual kill_after from run_bounded_process.",
+    "clauseId": "GENERIC-KILL-GRACE-FORWARDING-20261016",
+    "position": "FOR",
+    "rationale": "operator.py:242-244 and operator.py:437 in frozen 7973e29a prove the global 60 is used instead of the accepted kill_after; the supplied operatorPatch changes only that signature/body and that one preexec call."
+  },
+  {
+    "clause": "All native calls already kill_after=60, so native per-command CPU soft/hard remain unchanged.",
+    "clauseId": "NATIVE-CAPS-UNCHANGED-20261016",
+    "position": "FOR",
+    "rationale": "operator.py:528 Runner.run passes KILL_AFTER explicitly, so forwarding yields (cpu, cpu+60) exactly as before; AS_BYTES=8589934592 at operator.py:42, CAPS, counts, paths, and zero retry are untouched."
+  },
+  {
+    "clause": "On future corrected native bytes plus harness full fresh review, root could use ordinary outer --cpu=30:35 --as=8589934592 timeout 60 plus kill 5, compatible with stub 5/6.",
+    "clauseId": "FUTURE-ORDINARY-OUTER-COMPATIBILITY-20261016",
+    "position": "FOR",
+    "rationale": "After the patch the ordinary stub requests CPU (5,6) and AS (8589934592,8589934592), both within outer hard CPU 35 and AS 8589934592. This is source compatibility only; no execution was performed and a fresh full combined source/effects review is still required before ordinary tests or any new RR6 AUTH."
+  }
+]

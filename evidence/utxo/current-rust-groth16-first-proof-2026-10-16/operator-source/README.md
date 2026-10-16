@@ -1,0 +1,39 @@
+# K6 integrated operator
+
+## Purpose and boundary
+
+`operator.py` is a single-file Python standard-library controller for one spent-maintainer experiment: the first invoice/partial Groth16 proof roundtrip under `single-party-test-setup/1`, using the retained K5 proving key only inside the native P6 and N11 sandboxes. It establishes no setup honesty, consumer VK-to-matrix binding, context or financial authenticity beyond the frozen-gold comparison, Spectator 41, frame or ledger authenticity, Cardano acceptance, or Preprod result. All 20 UTXO families, ACTUS, DeFi, general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates, and real Preprod remain required and open. Goal for all 20 families/ACTUS/DeFi/general/recursion/private/multiparent/universal catalogue/Preprod remains required and unclosed by one invoice proof.
+
+## Files and placement
+
+An authorized maintainer places the reviewed bytes in the fixed materialized directory `current-cardano-k2-k6-proof-roundtrip-materialized-20261016` (M6): `operator.py` and `selftest.py` as patched by the targeted finalization repair on the corrected-selftest candidate (operator 7973e29a lineage, selftest 67480b20 lineage), exact reviewed `custody.py` (a2362a13, unchanged by this repair; no helper patch), exact `claims.py` (97a500e6, unchanged), and preserved `probe-k6.sh` (19638b9c, unchanged). Changed bytes require full fresh non-author review and a new exact RR6 AUTH. Same-family audit independence is disclosed: author and auditor may share the muse-wonder-1.0 family, which is not cross-provider independence.
+
+## Invocation and authority
+
+Only invocation: `/usr/bin/python3 -I <M6>/operator.py --expected-auth-sha256 <64 lowercase hex>`. The value is required, has no default, and is compared with the SHA-256 of exact `<RR6>/AUTH.json` bytes before helper import or protected action. AUTH binds M6 pins, fixed paths, 19-sandbox order, native argvs, caps, supervised host caps (including the named host subeffects below), aggregate/stream rules, counts, effects (including OUT-CHECK), and the publication list (including `logs/custody-layout.log`). Future M6/T6/RR6 execution and AUTH are still absent at source-review time; the root must not touch protected paths without that AUTH.
+
+## Placement lifecycle and finalizer admission
+
+Admission is an explicit run-owned placement state, never directory existence. `authOk` is set only after the exact AUTH bytes verify, `r1Ok` only after the supervised R1 admission returns, and `layoutCompleteOwned` only when the supervised R0 step returns a structured receipt whose made list equals the exact custody layout; on layout failure the R0 child recovers the partial made list only from the custody-owned `LAYOUT-STATUS.json` receipt that custody writes when that invocation created T6. When the predicate is not satisfied the run writes nothing in any tree: a refused fresh-only invocation against a pre-existing T6 leaves that tree completely untouched, and a partial owned layout retains only the custody-owned partial `T6/LAYOUT-STATUS.json` plus the external operator stdout failure record, with no invented directories, blocked logs, finalizers, or freeze. Only a complete owned layout admits blocked-record writing (guarded so its failure cannot prevent finalizers) and the four finalizers.
+
+## Runtime sequence
+
+R1 admission, R0 placement (structured receipt as above), Q6N, A6 (all 29 descriptor fields), I6 (all 29 gold slots, fixedMatrix violated 0, both digest flags), Q6P plus its key-postcheck subeffect, the pre-P6 memory/disk gate and P6 plus its key-postcheck subeffect, P6 (stdout `proofExportSha256` required), V6-source/V6-export (real verify report keys `accepted` and `relationRecompiled`), amended S6N (stage writes plus bounded negative export and persisted `receipts/negatives-metadata.json` with N8/N11 metadata only), N1-N11 with strict native refusal/usage exits (1 and 2 are clean completed outcomes) and the N11 key-postcheck subeffect, OUT-CHECK (exactly `invoice-partial.proof.json` in `T6/w/out`), then finalizers G6/H6/Z61/Z62 each attempted exactly once independently when eligible. The key postchecks and the memory/disk gate are named subeffects of the adjacent steps Q6P, P6, and N11; they add no top-level effect, native call, or sandbox. Nineteen fixed sandboxes and seventeen native calls are preserved, with fixed per-command caps, single proof, 2 PK reads, one full decode, one OsRng, zero setups and zero retries.
+
+## Supervision and resources
+
+Host steps run in a supervised fork child: RLIMIT_CPU 300 soft / 360 hard, nominal 600-second wall cap with a 60-second kill grace (hard kill and failure at 660 monotonic seconds), result IPC capped at 2097152 bytes, process-group SIGKILL and wait4 reaping; no resource is increased over the base candidate. Sandboxes use one generic streaming runner (start_new_session, bwrap die-with-parent) with a hard 4194304-byte per-stream ceiling enforced during the run, bounded prefixes preserved, and group kill/wait on cap or timeout; drain threads are joined under a bounded deadline and an unjoined drain makes the run non-clean rather than complete. Clean exits charge measured CPU/wall; signal death, timeout, cap kill, launch failure, missing measurement, or an unjoined drain charges full cap plus 60 and records a charged row. Aggregate remains 7200 CPU / 12600 wall, launched only when both remainders cover the next cap plus 60.
+
+## Publication and failure
+
+Freeze requires the state-derived required set (never existence-filtered), including `logs/custody-layout.log`, all sandbox logs/journals, finalizer receipts, and the proof receipt only when genuinely exported (export is independent of G6). S6N success requires `receipts/negatives-metadata.json` and all N1-N7/N10 bodies; after a failed S6N the actual subset of exactly that fixed path universe is preserved with bounded hashes and frozen as INCOMPLETE evidence, while any file outside the fixed universe still fails the freeze and no partial file is labelled an S6N success or an accepted negative result. Each eligible finalizer attempts its own success or failure receipt; a pre-freeze Z62 failure writes a BLOCKED `receipts/FREEZE-MANIFEST.json` create-exclusively (the manifest path is excluded from the freeze allowlist, so there is no hash cycle), and the parent afterwards writes one create-exclusive bounded failure receipt for any eligible finalizer that left none, never overwriting an existing receipt. The guaranteed record of each attempt and outcome is the external operator stdout; an in-tree receipt cannot be guaranteed against disk failure. `T6/LAYOUT-STATUS.json` may exist after partial placement and sits outside the freeze roots. No proof is fabricated; failures remain BLOCKED/FAILED/INCOMPLETE, never PASS.
+
+## Ordinary selftest
+
+`selftest.py` is a public stub-Python harness only: it loads the exact sibling `operator.py` under a unique importlib name, exercises bounded capture, the supervised callable, the placement-predicate truth table (R1 refusal with an old tree, owned fully placed run, owned partial placement, no-AUTH), the S6N freeze-set partition, finalizer attempts, exactly-one-output, and strict JSON, and honestly does not exercise Runner full-cap charging or native S6N persistence. Its corrected outer command uses an 8 GiB address-space allowance matching the child default under the retained 60-second timeout; that exact command still requires fresh reviewer approval, and any pass is finite ordinary evidence only.
+
+## Reproduction
+
+Reproduction requires exact reviewed M6 bytes, fresh full independent source/effect/custody/resource review, the approved ordinary mechanics test, and a separate exact RR6 AUTH created after that review. Nothing in this document authorizes execution, and no cryptographic or ledger result is inferred from source approval.
+
+End of operator source documentation.
