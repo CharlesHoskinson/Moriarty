@@ -18,7 +18,8 @@ mode explicitly typechecks this model, runs deterministic scenarios with the
 TypeScript backend, samples `doctorwatson_small` with seed 1, 10,000 samples
 and 60 steps. A fourth command tests directed completion; a fifth runs the
 directed coverage walk described below.
-Each model command has a 30-second timeout and 256 MiB Node heap.
+Each model command has a 30-second timeout and 256 MiB Node old-space limit;
+this is not a full-heap or process-memory limit.
 The entrypoint records a failing command as a failure; it has no smaller-run,
 Rust backend, download, hosted CI, Apalache or native fallback. Consult the
 entrypoint for the exact installed-tool discovery and complete witness arguments.
@@ -119,7 +120,20 @@ scenarios and directed walk, with the random zero counts retained below.
 
 ## Observations and retained failures
 
-The current deterministic suite has 30 passing scenarios, including all three tasks
+The delivery follow-up strengthens SF-14: upstream edits preserve active
+dependents' administration counters, and shared-input changes preserve every
+task's counters. Only the directly acting owner's eligible implementation resets
+its task's administration history. Four new scenarios reproduced the old resets
+before correction; the current deterministic suite has 34 scenarios. Original
+30-scenario captures below remain scoped to their recorded predecessor bytes.
+
+The actual host build commands are an explicit local consumer job. This model
+abstracts post-checker command execution into a regression-stage result; it does
+not simulate compilers or prove wrapper fidelity. Concrete build/run/comparison
+ordering and fail-stop behavior require the wrapper's own checks and receipts.
+K/Quint/Lean-Clean/circuit observations remain separate required task layers.
+
+The predecessor deterministic suite had 30 passing scenarios, including all three tasks
 through source merge and explicit finalization, parallel work, failed checks,
 timeouts, rejected/self reviews, stale source/base/dependency/shared-input
 receipts, late prior-attempt completion, required-layer gaps, scoped layer
@@ -239,7 +253,7 @@ same five zero-hit warnings; the directed sample reaches all six witnesses in
 commands. See the [public kit review](../../docs/audits/2026-10-16/doctorwatson/QUINT-REVIEW.md)
 and [final capture](../../docs/audits/2026-10-16/doctorwatson/quint/design-03.json).
 
-Current integrated `design-04` binds the corrected model, tests, script and Python
+Predecessor integrated `design-04` binds its corrected model, tests, script and Python
 checker. It passed 33 Python tests, 30 main scenarios and the directed-completion
 test, exiting 0 in 35.243 seconds across five model commands. Default sampling
 observed no invariant violation in 26.788 seconds; **seven witnesses had zero
@@ -247,4 +261,16 @@ hits**: reviewed, rebased, integrated, dependenciesChanged, layerRecorded,
 completed and sourceOnly. The other 18 were positive. The separate directed
 walk reached its six requested witnesses in 64 ms. Deterministic scenarios
 exercise review/layer recording as well; those are not random hits.
-See the [current capture](../../docs/audits/2026-10-16/doctorwatson/quint/design-04.json).
+See the [predecessor capture](../../docs/audits/2026-10-16/doctorwatson/quint/design-04.json).
+
+The current [delivery capture](../../docs/audits/2026-10-16/doctorwatson-delivery/design-FINAL/result.json)
+includes the counter-history fix and cached pure constants/lazy finish filters.
+It passed 79 Python tests, 34 main scenarios and the directed-completion test.
+The full sampler observed no invariant violation in 21.383 seconds, at the same
+10,000 samples, 60 steps and seed 1. Eight random witnesses had zero hits:
+testPassed, reviewed, rebased, integrated, dependenciesChanged, layerRecorded,
+completed and sourceOnly. The other 17 were positive. All six separate directed
+witnesses were positive in 64 ms. Whole-command exit was 0 in 31.733 seconds;
+source before/after hashes matched. The earlier delivery timeout remains exit124.
+The optimization's 1,000-sample diagnostics retained identical witness counts
+and RNG state before/after; they were never substituted for the full run.

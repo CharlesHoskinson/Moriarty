@@ -7,9 +7,11 @@ stores source, PRs and result summaries. No Foreman or replacement scheduler is
 used. The [research review](research/sherlock/factory-2026-10-16/README.md)
 records the nine planning reviews and ten online research assignments.
 
-The first executable increment checks the existing independent A-profile corpus
-and its committed source transcription. This is developer QA infrastructure;
-it does not run the interpreter or establish cross-layer correspondence.
+The default executable lane checks the independent A-profile corpus and its
+committed source transcription. The explicit `--host` lane builds and executes
+the actual Sherlock host reference, exercises bounded stepping and compares its
+complete normal observations with those expectations. These are distinct
+developer QA jobs; neither establishes the remaining cross-layer correspondence.
 See the [local commands](DOCTORWATSON-CI.md), the QA
 [contract](../models/sherlock/qa/CONTRACT.md), and the
 [factory EARS](../openspec/changes/doctorwatson/requirements.md).
@@ -101,6 +103,7 @@ Advance ready independent source tasks in parallel; acceptance retains dependenc
 | Slice | Concrete output and acceptance test | Parallel preparation | Retained blocker |
 |---|---|---|---|
 | Current: local QA foundation | One local command validates the frozen eight-case corpus, checks committed source readback, and reports incomplete or different supplied observations | Local command/docs; independent checker tests; source/task maps | No actual K/Quint/Lean/Clean/circuit execution follows from this check |
+| Current: first real Sherlock build | Explicit local host build, new `Machine::run_steps`, normal cut/resume tests and all 216 complete prefix observations through the actual consumer | Reference API; fixed typed inputs/exporter; independent literal projection; real CLI regressions; Opus wrapper | Host post-startup common domain only; constructor startup and model/circuit/native layers stay separate |
 | Current: factory design audit | Quint scenarios and sampled workflow traces check SF-01–15, candidate/attempt freshness, ownership, CI fail-stop and integration | Independent requirements checklist and source performance review | This models the factory's design; real agent/Git compliance and interpreter correctness remain separate |
 | Existing A arithmetic/fuel QA | Finish adjudicating the already captured 18-test attempt; run the existing separately admitted sampled phase once only if its postgates pass | K source review and normal literal maps; G4 source analysis | No rerun of terminal attempts; K execution and full relation correspondence remain open |
 | Reference and model adapters | Map one declared common domain to complete typed observations and earliest differing prefix | Independent fixtures; K field map; finite Quint map; existing Lean reconciliation | Profile clocks differ; absent layers cannot count as agreement |
