@@ -1,0 +1,29 @@
+{
+  "format": "cardano-k2-k8-captured-telemetry-validation-execution-proposal/1",
+  "status": "PROPOSED_NOT_AUTHORIZED",
+  "authorSelfApproval": "none - fresh non-author AGREE required before any run",
+  "kind": "one bounded ordinary public-input read; no native execution, no new native AUTH needed or granted",
+  "attempts": 1,
+  "retries": 0,
+  "argvTemplate": [
+    "/usr/bin/timeout", "--signal=TERM", "--kill-after=5s", "30s",
+    "/usr/bin/prlimit", "--cpu=10:15", "--as=268435456", "--core=0",
+    "/usr/bin/python3", "-I", "ABS/validate_capture.py",
+    "--source", "ABS/PUBLICINTAKE/staged/lib/pvc2/k8_genuine_proof_test.ak",
+    "--telemetry", "ABS/PUBLICINTAKE/run/logs/step2-k8-tests.stdout.log",
+    "--original-result", "ABS/PUBLICINTAKE/run/receipts/RESULT.json",
+    "--output-dir", "ABS/BASE/current-cardano-k2-k8-captured-telemetry-validation-20261016"
+  ],
+  "cliContract": "python3 -I validate_capture.py --source PUBLICINTAKE/staged/lib/pvc2/k8_genuine_proof_test.ak --telemetry PUBLICINTAKE/run/logs/step2-k8-tests.stdout.log --original-result PUBLICINTAKE/run/receipts/RESULT.json --output-dir BASE/current-cardano-k2-k8-captured-telemetry-validation-20261016 (output-dir fresh, must be absent)",
+  "env": {"PATH": "/usr/bin:/bin", "HOME": "/nonexistent", "LC_ALL": "C", "TZ": "UTC"},
+  "stdin": "/dev/null",
+  "closeFds": true,
+  "cwd": "candidate root containing validate_capture.py",
+  "inputPinsCheckedByRootBeforeAndAfter": [
+    {"role": "source", "bytes": 4782, "sha256": "d25c3811132ee99dab4bba9862ec87147931c80cd516e6eae5940e2088551eec"},
+    {"role": "telemetry", "bytes": 2914, "sha256": "9ac4871e8923873843d607b42648f31987834ac1fdbf79cf5b7607898a015800"},
+    {"role": "original_result", "bytes": 4875, "sha256": "5bc3033c0274cb50f2d3e473c74974a547bd4a896c5e7cd1d4e82c47b45ece8f"}
+  ],
+  "expectedOutput": "sole fresh file VALIDATION.json in the new output-dir; nonzero exit with stderr and no output directory on any validation failure; old records never overwritten",
+  "prohibited": ["native/Aiken rerun", "proof generation", "RNG", "setup", "key/PK/wallet/signing", "network", "ledger", "subprocess/socket from the script", "retry", "pointing caller output at old files"]
+}

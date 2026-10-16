@@ -1,0 +1,37 @@
+[
+  {
+    "evidence": "test_like.rs:26-31 maps optional Token::Once to SucceedImmediately and absent once to SucceedEventually; def_test_fail.snap:51 records plain `fail` as SucceedEventually. json.rs:89-93 serialises these faithfully. The operator's want (operator.py:368) is therefore wrong for this source, and R1/R2 agreement on that label is a retained misread, not fabricated agreement.",
+    "id": "CC-1-parser-definition-vs-operator-and-prior-reviews",
+    "requiredFix": "Ordinary source/result validator only: expect succeed_eventually for plain `fail`, succeed_immediately only for `fail once`; revise NC-C9/NC-C13 wording in a future ordinary validation. No native rerun, no expectation rewrite of this run.",
+    "severity": "critical-second-parser-class-defect",
+    "summary": "Actual AST parser definition contradicts the operator expectation and both prior fresh reviews (5c72 R1, a563 R2)."
+  },
+  {
+    "evidence": "run/logs/step2-k8-tests.stdout.log:3-11 summary total=10 passed=10 failed=0 kind unit=10/property=0; :25-60 the four pairing rows pass with on_failure=fail_immediately; :107-113 short-VK row passes with succeed_eventually. stderr: Summary 10 checks, 0 errors, 0 warnings; step1 stderr: Summary 0 errors, 0 warnings. RESULT.json:5,21 error/status and :80,149 both exitCode 0.",
+    "id": "CC-2-raw-aiken-json-vs-wrapper-FAILED",
+    "requiredFix": "None for the raw evidence itself. Preserve wrapper FAILED; an ordinary captured-JSON validator may adopt only the scoped predicate in the recommendation.",
+    "severity": "decisive-for-adoption",
+    "summary": "Raw structured JSON is internally complete and contradicts only the operator's last telemetry label, not any test status."
+  },
+  {
+    "evidence": "k8_genuine_proof_test.ak:35-45 uses !verify_digest(...) Bool assertions (an evaluation error would fail the unit test, not pass it); :31-33 positive returns the Bool directly. groth16.ak:52-91 implements verify_digest with actual builtin.bls12_381_g1/g2_uncompress, miller_loop, mul_miller_loop_result and final_verify (:72-90), with no implicit stub. Fixture bytes: vk/proof/statement/digests at k8_fixture.ak:2-24; layout constants vk_len=488/proof_len=192 at groth16.ak:15-20.",
+    "id": "CC-3-crypto-interpretation-independent-of-frozen-expectations",
+    "requiredFix": "None. Do not reinterpret the malformed short-VK fail-annotation unit (test.ak:111-113) as a cryptographic False; it is a length-expect refusal observed as a passing fail-annotated unit.",
+    "severity": "scoped-positive",
+    "summary": "The 4 pairing outcomes are genuine Bool outcomes of the unchanged production function, independent of the operator label bug."
+  },
+  {
+    "evidence": "RESULT.json:2-4,18-19 aikenCallsReturned=2, attempts=1, retries=0, staged/host unchanged true; AUTH.json:64-65,138-141 maxAikenCalls=2, AUTHORIZED_EXACT_ONE_RUN, operatorSha256 bd7487...; capture/RESULT.json:3-5,18-19 exitCode 1, wallSeconds 6.013, attempts 1 retries 0; operator.py:424-436 exactly two hard-coded argv, no retry/probe. AUTH is consumed: no new retry may spend it again.",
+    "id": "CC-4-authority-consumption-and-limits",
+    "requiredFix": "Do not grant new retry AUTH from this review and do not re-spend the old AUTH. Any future native run needs fresh explicit scope; it is not required to repair the parser label.",
+    "severity": "authority-boundary",
+    "summary": "The one authorised attempt is fully consumed within caps; nothing in this review creates further authority."
+  },
+  {
+    "evidence": "step2 stdout:30-32 positive mem 22033 cpu 2142357433; :38-41,:48-50,:57-59 negatives mem 22534 cpu 2142513482. These are Aiken interpreter spent_budget values (json.rs:102-105), not network ledger ExUnits. capture/RESULT.json:5-6 waitedChildrenCpuSecondsDelta 0.234848 with actualTransitiveNativeCpuMeasured false; operator wall caps are 1400+10 typed limits, actual walls 2.97s/2.82s.",
+    "id": "CC-5-cost-and-context-qualifications",
+    "requiredFix": "Retain qualifications verbatim in any adoption record; require separate qualified ledger evidence before any ExUnit/tx-fit claim.",
+    "severity": "qualification",
+    "summary": "Pinned VM measurements and wall/CPU figures must not be promoted, and K6 single-party forgeability/context limits remain."
+  }
+]

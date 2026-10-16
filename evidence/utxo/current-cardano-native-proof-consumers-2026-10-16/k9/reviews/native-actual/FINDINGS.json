@@ -1,0 +1,37 @@
+[
+  {
+    "evidence": "claim.ak:49-71 issue(): expect singleton mint pair, single claim output, Script holder, InlineDatum; and{qty==1, holder==policy, quantity==1, single token, no refscript, name==envelope_name(raw)=blake2b_256(serialise_data(raw)) claim.ak:24-26, well_formed, vk_digest==blake2b_256(vk), groth16.verify_digest last}. groth16.ak:52-92 verify_digest checks lengths 488/192, IC count, scalars from digest halves, points_non_identity, final_verify pairing. Tests k9_genuine_c2_consumer_test.ak:53-150 contain only direct claim.issue calls, no duplicated gate/diag/stub.",
+    "id": "F1-predicate-source",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "Actual unchanged pvc2/claim.issue is the single production gate; typed claim function compiled, not validator wrapper (validators/c2.ak excluded from closure)."
+  },
+  {
+    "evidence": "k9_consumer_builder.ak:74-83,121-124 build_for_env recomputes claim.envelope_name(raw) and rebuilds mint/output from tampered EnvV2 for N1 (n1_statement_digest 123f0b...) and N2 (621c56...); test :94-97 N3 uses build_positive tx with k8_fixture.n3_proof (A[0,48)/C[144,192) swapped, both valid G1). EXPECTATIONS.json fixed before execution with same first-refusal reasoning.",
+    "id": "F2-negatives-first-refusal",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "N1/N2 use FULL tampered EnvData + recomputed H(serialiseData) token/mint/output, same well-formed guards before curve; N3 same env, different actual proof."
+  },
+  {
+    "evidence": "RESULT.json: aikenCallsReturned 2, attempts 1 retries 0, both steps exitCode 0, host/staged unchanged true; step2 stdout FinishedTests summary 7/7/0 unit7 property0, all on_failure fail_immediately, no fail annotation/panic count in source (operator derive_tests maps normal->fail_immediately, plain fail->succeed_eventually per test_like.rs). Costs: positive mem200075 cpu2238951754; N1/N2 mem207952 cpu2241631930; N3 mem200676 cpu2239123803; guards mem90334/130616/178092 cpu44949797/58721558/94235004.",
+    "id": "F3-actual-run",
+    "requiredFix": "None for scoped predicate.",
+    "severity": "info",
+    "summary": "Actual run: outer exit 0, wall 6.933383817988215s (capture/RESULT.json), CHILDREN CPU 0.249917s not transitive/native CPU, both Aiken calls returned 0, in bwrap offline prescribed 1400+10 scope."
+  },
+  {
+    "evidence": "k9_consumer_builder.ak:43-48 chosen_policy_id a2a2.. (28B settle hash) explicitly NOT compiled C2 hash; test_expiry 1893456000000 builder-chosen/unbound, claim.issue never reads expiry; context 2222.../555.../a2.. caller-fabricated fixtures. claim.ak:7-10: claim certifies only proof verifies for digest under VK; S2 must recompute/authenticate/sign. No ledger phase-1 execution or token minted on chain in any record.",
+    "id": "F4-scope-honesty",
+    "requiredFix": "Retain all non-claims in any adoption record.",
+    "severity": "major-scope",
+    "summary": "Builder local a2 policy is NOT actual compiled C2 hash; expiry/context not bound/real; C2 alone does not authenticate outref/claimant/predicate/expiry/signature/current UTxO/unspent non-membership."
+  },
+  {
+    "evidence": "RESULT releaseIdentityDeclared provenance: manifest-declared only, binary not shown rebuilt, no --version; operator pins 18 host roles, staged 9 AK + toml/lock + stdlib 38 + packages.toml, tool hash/mode postchecks source-observed; nativeExecutablesStarted not_measured in RESULT and operator.",
+    "id": "F5-identity-limits",
+    "requiredFix": "Do not state binary-from-source proof or independently measured native start.",
+    "severity": "minor",
+    "summary": "All 18 host pins and staged closure postchecks observed; source binary public SHA 4257 not mirrored body, identity manifest-declared only."
+  }
+]
