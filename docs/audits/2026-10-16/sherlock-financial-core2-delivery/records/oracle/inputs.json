@@ -1,0 +1,85 @@
+{
+  "format": "sherlock-independent-core2-financial-inputs/1",
+  "status": "source-only; specified-only/unexecuted",
+  "source_profile": "moriarty/2",
+  "semantics": "moriarty-core/2",
+  "production_consumer": "mori_core::stage::load/start/resume",
+  "cases": [
+    {
+      "case_id": "F01",
+      "source": "inputs/installment-invoice.mori",
+      "action": "settle",
+      "scenario": "inputs/invoice-scenario.json",
+      "start_cap": "35",
+      "sequence": [
+        {
+          "id": "start",
+          "operation": "start"
+        },
+        {
+          "id": "not-yet-accepted",
+          "operation": "resume",
+          "continuation_from": "start",
+          "event": "inputs/invoice-false-event.json",
+          "cli_action": null,
+          "cli_cap": null
+        },
+        {
+          "id": "accepted",
+          "operation": "resume",
+          "continuation_from": "not-yet-accepted",
+          "event": "inputs/invoice-true-event.json",
+          "cli_action": null,
+          "cli_cap": null
+        }
+      ]
+    },
+    {
+      "case_id": "F02",
+      "source": "inputs/conditional-grant-tranches.mori",
+      "action": "allocate",
+      "scenario": "inputs/grant-scenario.json",
+      "start_cap": "58",
+      "sequence": [
+        {
+          "id": "start",
+          "operation": "start"
+        },
+        {
+          "id": "review-not-ready",
+          "operation": "resume",
+          "continuation_from": "start",
+          "event": "inputs/grant-review-false-event.json",
+          "cli_action": null,
+          "cli_cap": null
+        },
+        {
+          "id": "review-ready",
+          "operation": "resume",
+          "continuation_from": "review-not-ready",
+          "event": "inputs/grant-review-true-event.json",
+          "cli_action": null,
+          "cli_cap": null
+        },
+        {
+          "id": "release-not-ready",
+          "operation": "resume",
+          "continuation_from": "review-ready",
+          "event": "inputs/grant-release-false-event.json",
+          "cli_action": null,
+          "cli_cap": null
+        },
+        {
+          "id": "release-ready",
+          "operation": "resume",
+          "continuation_from": "release-not-ready",
+          "event": "inputs/grant-release-true-event.json",
+          "cli_action": null,
+          "cli_cap": null
+        }
+      ]
+    }
+  ],
+  "target": null,
+  "target_status": "unsupplied; oracle-local is a declared fictional asset-domain input, not a network/target observation"
+}
