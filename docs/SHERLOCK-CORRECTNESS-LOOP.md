@@ -201,3 +201,13 @@ The 86 older tests compiled but were filtered out and were not rerun. These
 literal AST/value comparisons supply no new complete-prefix, K/Quint/Lean,
 constraint or target correspondence. The draft envelope remains unregistered
 and private test-only preparation. All missing layers above retain their gaps.
+
+## Scoped offline input/readback observation
+
+The [offline helper](../models/sherlock/STAGENET-OFFLINE-README.md) inventories existing Core/1 inputs and compares all supplied
+JSON fields, retaining ordered arrays and missing/present distinctions. Its
+captured R2 result records 16 passing normal assertions for the bound source.
+This is preparatory tooling for complete readback reporting, with no native
+execution or independent semantic oracle. It does not implement the missing
+Sherlock/Clean/native adapter or public Moriarty commands and closes no
+UIREQ/B/U/M/MC/SP/G exit or Midnight stagenet qualification.

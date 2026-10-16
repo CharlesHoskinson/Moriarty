@@ -103,6 +103,14 @@ Midnight stagenet deployment/call and full effects readback. The
 records required identities and results. This remains unexecuted; Preview and
 Fenrir qualification, resource limits and every existing exit remain separate.
 
+
+The [offline readback helper](models/sherlock/STAGENET-OFFLINE-README.md) now
+inventories supplied Core/1 artifacts and compares every supplied JSON field
+without invoking the backend. Its captured 16 normal assertions pass on the
+bound source. It supplies no Sherlock/Clean lowering, native or financial
+acceptance, public `mori` command implementation, or Midnight stagenet result.
+All retained parent exits remain open.
+
 ## Core continuation closure observation — 2026-10-15
 
 The [closure observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CLOSURE.json)
