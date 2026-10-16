@@ -40,7 +40,10 @@ fn h23_cases() -> [(Value, &'static str); 3] {
             json!({"kind": "Await", "label": "wait", "binders": [], "guard": 0}),
             BASELINE_AWAIT,
         ),
-        (json!({"kind": "Await", "guard": "x", "extra": true}), BASELINE_AWAIT),
+        (
+            json!({"kind": "Await", "guard": "x", "extra": true}),
+            BASELINE_AWAIT,
+        ),
         (json!({"kind": "Foo", "predicate": 0}), BASELINE_FOO),
     ]
 }
@@ -131,13 +134,25 @@ const H15_EXECUTION: &str = include_str!("fixtures/compat_v1_identifiers/executi
 #[test]
 fn h15_await_and_when_identifiers_keep_program_and_execution_bytes() {
     let program = mori_core::parse(H15_SOURCE).unwrap();
-    assert_eq!(format!("{}\n", mori_core::json::export(&program).unwrap()), H15_PROGRAM);
-    assert_eq!(serde_json::from_str::<Program>(H15_PROGRAM).unwrap(), program);
+    assert_eq!(
+        format!("{}\n", mori_core::json::export(&program).unwrap()),
+        H15_PROGRAM
+    );
+    assert_eq!(
+        serde_json::from_str::<Program>(H15_PROGRAM).unwrap(),
+        program
+    );
     let scenario: Scenario = serde_json::from_value(json!({
         "state": {}, "inputs": {}, "balances": [], "liabilities": []
     }))
     .unwrap();
     let execution = mori_core::simulate(&program, "run", &scenario).unwrap();
-    assert_eq!(format!("{}\n", mori_core::json::export(&execution).unwrap()), H15_EXECUTION);
-    assert_eq!(serde_json::from_str::<Execution>(H15_EXECUTION).unwrap(), execution);
+    assert_eq!(
+        format!("{}\n", mori_core::json::export(&execution).unwrap()),
+        H15_EXECUTION
+    );
+    assert_eq!(
+        serde_json::from_str::<Execution>(H15_EXECUTION).unwrap(),
+        execution
+    );
 }

@@ -8,10 +8,12 @@ use std::{
     path::Path,
 };
 
-const MAX_PARAMETER_BYTES: u64 = 128 * 1024 * 1024;
+/// Largest SRS file read, in bytes.
+pub const MAX_PARAMETER_BYTES: u64 = 128 * 1024 * 1024;
+/// SHA-256 of `bls_midnight_2p{k}` for each degree `k` in `0..20`.
 // Copied as data from ledger revision 04c9c5d9bcebb8d4427d8589fb54d58a55599c14,
 // base-crypto/src/data_provider.rs EXPECTED_DATA. Never trust a supplied digest.
-const PINNED_HASHES: [&str; 20] = [
+pub const PINNED_HASHES: [&str; 20] = [
     "59b30b3114a34ccbbfb599376e178fb8d9b3366cae2174c2f1da20e75847f823",
     "bbe04fe3c70d0c138447cb086b4baddc30cb8bb2a004114bc02e6f739516280e",
     "80e15568fa1a0117db893239be7fa5e34a6bcc3a8c3bfa7709534b9cb88eb6c1",

@@ -95,7 +95,11 @@ fn reference(predicates: &[&str]) -> Value {
     json!({"status": "available-not-executed", "predicates": predicates})
 }
 
-fn enforcement_report(source: &str, program: &Program, artifact: &Artifact) -> super::Result<Value> {
+fn enforcement_report(
+    source: &str,
+    program: &Program,
+    artifact: &Artifact,
+) -> super::Result<Value> {
     let actions = program
         .actions
         .iter()
@@ -142,7 +146,11 @@ fn enforcement_report(source: &str, program: &Program, artifact: &Artifact) -> s
     }))
 }
 
-fn action_report(program: &Program, action: &Action, circuit: &CircuitArtifact) -> super::Result<Value> {
+fn action_report(
+    program: &Program,
+    action: &Action,
+    circuit: &CircuitArtifact,
+) -> super::Result<Value> {
     let fields: Vec<_> = circuit
         .public_inputs
         .iter()

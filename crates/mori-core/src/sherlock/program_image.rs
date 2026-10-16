@@ -7,8 +7,9 @@
 //! binding: these local locators are meaningful only within this whole image.
 //! Preparing tables evaluates no expression and never follows a named call.
 
-use super::{BinaryOp, Expr, ExprRef, Name, Parameter, Pattern, Program, Tree,
-            Type, UnaryOp, Value, PROFILE};
+use super::{
+    BinaryOp, Expr, ExprRef, Name, PROFILE, Parameter, Pattern, Program, Tree, Type, UnaryOp, Value,
+};
 
 /// Host table positions only; these select no native width or tag convention.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -125,21 +126,33 @@ pub struct ProgramImageDraft {
 pub fn prepare_program_image(program: &Program) -> ProgramImageDraft {
     let mut image = ProgramImageDraft {
         profile_id: PROFILE,
-        expressions: Vec::new(), ordered_children: Vec::new(),
-        functions: Vec::new(), ordered_parameters: Vec::new(),
-        match_arms: Vec::new(), constants: Vec::new(),
-        constant_fields: Vec::new(), source_map: Vec::new(), entry: ExprId(0),
+        expressions: Vec::new(),
+        ordered_children: Vec::new(),
+        functions: Vec::new(),
+        ordered_parameters: Vec::new(),
+        match_arms: Vec::new(),
+        constants: Vec::new(),
+        constant_fields: Vec::new(),
+        source_map: Vec::new(),
+        entry: ExprId(0),
     };
     image.entry = image.append_expression(&program.entry, SourceOwner::Entry);
     for (source_table_index, function) in program.functions.iter().enumerate() {
         let parameters = TableSlice {
-            start: image.ordered_parameters.len(), len: function.parameters.len(),
+            start: image.ordered_parameters.len(),
+            len: function.parameters.len(),
         };
-        image.ordered_parameters.extend_from_slice(&function.parameters);
-        let body = image.append_expression(&function.body, SourceOwner::Function(source_table_index));
+        image
+            .ordered_parameters
+            .extend_from_slice(&function.parameters);
+        let body =
+            image.append_expression(&function.body, SourceOwner::Function(source_table_index));
         image.functions.push(FunctionRow {
-            source_table_index, name: function.name.clone(), parameters,
-            return_type: function.return_type, body,
+            source_table_index,
+            name: function.name.clone(),
+            parameters,
+            return_type: function.return_type,
+            body,
         });
     }
     image
@@ -169,12 +182,19 @@ impl ProgramImageDraft {
     fn append_expression(&mut self, root: &ExprRef, owner: SourceOwner) -> ExprId {
         let root_id = ExprId(self.expressions.len());
         let mut pending = vec![ExprTask {
-            expression: root.as_ref(), path: Vec::new(), parent_child: None, arm: None,
+            expression: root.as_ref(),
+            path: Vec::new(),
+            parent_child: None,
+            arm: None,
         }];
         while let Some(task) = pending.pop() {
             let id = ExprId(self.expressions.len());
-            if let Some(slot) = task.parent_child { self.ordered_children[slot] = id; }
-            if let Some(arm) = task.arm { self.match_arms[arm].body = id; }
+            if let Some(slot) = task.parent_child {
+                self.ordered_children[slot] = id;
+            }
+            if let Some(arm) = task.arm {
+                self.match_arms[arm].body = id;
+            }
             let mut children: Vec<(&Expr, Option<usize>)> = Vec::new();
             let payload = match task.expression {
                 Expr::Literal(value) => ExprPayload::Literal(self.append_constant(value, id)),
@@ -192,7 +212,11 @@ impl ProgramImageDraft {
                     ExprPayload::Unary(*op)
                 }
                 Expr::If(condition, then_body, else_body) => {
-                    children.extend([(condition.as_ref(), None), (then_body.as_ref(), None), (else_body.as_ref(), None)]);
+                    children.extend([
+                        (condition.as_ref(), None),
+                        (then_body.as_ref(), None),
+                        (else_body.as_ref(), None),
+                    ]);
                     ExprPayload::If
                 }
                 Expr::Call(name, arguments) => {
@@ -201,24 +225,45 @@ impl ProgramImageDraft {
                 }
                 Expr::Match(scrutinee, arms) => {
                     children.push((scrutinee.as_ref(), None));
-                    let slice = TableSlice { start: self.match_arms.len(), len: arms.len() };
+                    let slice = TableSlice {
+                        start: self.match_arms.len(),
+                        len: arms.len(),
+                    };
                     for arm in arms {
                         let arm_id = self.match_arms.len();
-                        self.match_arms.push(MatchArmRow { pattern: arm.pattern.clone(), body: ExprId(0) });
+                        self.match_arms.push(MatchArmRow {
+                            pattern: arm.pattern.clone(),
+                            body: ExprId(0),
+                        });
                         children.push((arm.body.as_ref(), Some(arm_id)));
                     }
                     ExprPayload::Match(slice)
                 }
             };
-            let child_slice = TableSlice { start: self.ordered_children.len(), len: children.len() };
+            let child_slice = TableSlice {
+                start: self.ordered_children.len(),
+                len: children.len(),
+            };
             // Temporary slots are filled by the corresponding pending tasks.
-            self.ordered_children.resize(child_slice.start + child_slice.len, ExprId(0));
-            self.expressions.push(ExprRow { payload, children: child_slice });
-            self.source_map.push(SourceLocator { owner, ast_path: task.path.clone() });
+            self.ordered_children
+                .resize(child_slice.start + child_slice.len, ExprId(0));
+            self.expressions.push(ExprRow {
+                payload,
+                children: child_slice,
+            });
+            self.source_map.push(SourceLocator {
+                owner,
+                ast_path: task.path.clone(),
+            });
             for (position, (expression, arm)) in children.into_iter().enumerate().rev() {
                 let mut path = task.path.clone();
                 path.push(position);
-                pending.push(ExprTask { expression, path, parent_child: Some(child_slice.start + position), arm });
+                pending.push(ExprTask {
+                    expression,
+                    path,
+                    parent_child: Some(child_slice.start + position),
+                    arm,
+                });
             }
         }
         root_id
@@ -226,10 +271,16 @@ impl ProgramImageDraft {
 
     fn append_constant(&mut self, value: &Value, expression: ExprId) -> ConstantId {
         let root_id = ConstantId(self.constants.len());
-        let mut pending = vec![ConstantTask { input: ConstantInput::Value(value), path: Vec::new(), parent_field: None }];
+        let mut pending = vec![ConstantTask {
+            input: ConstantInput::Value(value),
+            path: Vec::new(),
+            parent_field: None,
+        }];
         while let Some(task) = pending.pop() {
             let id = ConstantId(self.constants.len());
-            if let Some(slot) = task.parent_field { self.constant_fields[slot] = id; }
+            if let Some(slot) = task.parent_field {
+                self.constant_fields[slot] = id;
+            }
             let mut children = Vec::new();
             let payload = match task.input {
                 ConstantInput::UInt(n) => ConstantPayload::UInt(n),
@@ -242,20 +293,36 @@ impl ProgramImageDraft {
                 ConstantInput::Value(Value::Tree(tree)) | ConstantInput::Tree(tree) => match tree {
                     Tree::Leaf(n) => ConstantPayload::TreeLeaf(*n),
                     Tree::Branch(left, right) => {
-                        children.extend([ConstantInput::Tree(left.as_ref()), ConstantInput::Tree(right.as_ref())]);
+                        children.extend([
+                            ConstantInput::Tree(left.as_ref()),
+                            ConstantInput::Tree(right.as_ref()),
+                        ]);
                         ConstantPayload::TreeBranch
                     }
                 },
             };
-            let fields = TableSlice { start: self.constant_fields.len(), len: children.len() };
-            self.constant_fields.resize(fields.start + fields.len, ConstantId(0));
-            self.constants.push(ConstantRow { payload, fields, source: ConstantLocator {
-                expression, field_path: task.path.clone(),
-            }});
+            let fields = TableSlice {
+                start: self.constant_fields.len(),
+                len: children.len(),
+            };
+            self.constant_fields
+                .resize(fields.start + fields.len, ConstantId(0));
+            self.constants.push(ConstantRow {
+                payload,
+                fields,
+                source: ConstantLocator {
+                    expression,
+                    field_path: task.path.clone(),
+                },
+            });
             for (position, input) in children.into_iter().enumerate().rev() {
                 let mut path = task.path.clone();
                 path.push(position);
-                pending.push(ConstantTask { input, path, parent_field: Some(fields.start + position) });
+                pending.push(ConstantTask {
+                    input,
+                    path,
+                    parent_field: Some(fields.start + position),
+                });
             }
         }
         root_id

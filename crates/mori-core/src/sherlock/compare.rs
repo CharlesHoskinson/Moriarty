@@ -93,10 +93,7 @@ pub enum TraceDifference {
 /// `None` means only that both supplied observations agree completely. It says
 /// nothing about validity, source authenticity, missing layers, or proofs.
 #[must_use]
-pub fn first_difference(
-    left: TraceView<'_>,
-    right: TraceView<'_>,
-) -> Option<TraceDifference> {
+pub fn first_difference(left: TraceView<'_>, right: TraceView<'_>) -> Option<TraceDifference> {
     if left.identity.profile != right.identity.profile {
         return Some(TraceDifference::Identity(IdentityField::Profile));
     }
@@ -106,20 +103,15 @@ pub fn first_difference(
     if let Some(field) = snapshot_difference(left.initial, right.initial) {
         return Some(TraceDifference::Initial(field));
     }
-    for (index, (left_record, right_record)) in
-        left.records.iter().zip(right.records).enumerate()
-    {
+    for (index, (left_record, right_record)) in left.records.iter().zip(right.records).enumerate() {
         let field = if left_record.rule_start_line != right_record.rule_start_line {
             Some(RecordField::RuleStartLine)
         } else if left_record.charge != right_record.charge {
             Some(RecordField::Charge)
-        } else if let Some(field) =
-            snapshot_difference(&left_record.before, &right_record.before)
-        {
+        } else if let Some(field) = snapshot_difference(&left_record.before, &right_record.before) {
             Some(RecordField::Before(field))
         } else {
-            snapshot_difference(&left_record.after, &right_record.after)
-                .map(RecordField::After)
+            snapshot_difference(&left_record.after, &right_record.after).map(RecordField::After)
         };
         if let Some(field) = field {
             return Some(TraceDifference::Record { index, field });

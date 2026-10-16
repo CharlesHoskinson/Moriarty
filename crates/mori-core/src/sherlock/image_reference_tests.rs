@@ -3,11 +3,10 @@
 //! N07/N08 literals, independently of either Rust transition implementation.
 //! These tests are specified-only until separately authorized execution.
 
-use super::*;
 use super::super::program_image::prepare_program_image;
+use super::*;
 
-#[path = "extra_oracle_programs.rs"]
-mod extra_oracle_programs;
+use super::super::extra_oracle_programs;
 
 fn machine(case: &str, fuel: u128) -> ImageMachine {
     let program = extra_oracle_programs::extra_program(case).expect("normal source case");
@@ -33,12 +32,18 @@ fn n07_ordered_arguments_keep_return_check_and_free_publication() {
     let pending = machine.snapshot();
     assert_eq!(pending.control, Some(Control::Return(Value::UInt(321))));
     assert_eq!(pending.remaining_fuel, 2);
-    assert_eq!(pending.frames, vec![Frame::Return(Type::UInt, Environment::new())]);
-    assert_eq!(pending.environment, Environment::from([
-        ("0".into(), Value::UInt(1)),
-        ("1".into(), Value::UInt(2)),
-        ("2".into(), Value::UInt(3)),
-    ]));
+    assert_eq!(
+        pending.frames,
+        vec![Frame::Return(Type::UInt, Environment::new())]
+    );
+    assert_eq!(
+        pending.environment,
+        Environment::from([
+            ("0".into(), Value::UInt(1)),
+            ("1".into(), Value::UInt(2)),
+            ("2".into(), Value::UInt(3)),
+        ])
+    );
 
     let restored = machine.step().expect("charged caller return");
     assert_eq!((restored.rule_start_line, restored.charge), (185, 1));
@@ -61,13 +66,16 @@ fn n08_named_recursion_preserves_all_pending_returns_and_multiplications() {
     assert_eq!(base.control, Some(Control::Return(Value::UInt(1))));
     assert_eq!(base.environment, environment(0));
     assert_eq!(base.remaining_fuel, 7);
-    assert_eq!(base.frames, vec![
-        Frame::Return(Type::UInt, environment(1)),
-        Frame::Right(BinaryOp::Mul, Value::UInt(1)),
-        Frame::Return(Type::UInt, environment(2)),
-        Frame::Right(BinaryOp::Mul, Value::UInt(2)),
-        Frame::Return(Type::UInt, Environment::new()),
-    ]);
+    assert_eq!(
+        base.frames,
+        vec![
+            Frame::Return(Type::UInt, environment(1)),
+            Frame::Right(BinaryOp::Mul, Value::UInt(1)),
+            Frame::Return(Type::UInt, environment(2)),
+            Frame::Right(BinaryOp::Mul, Value::UInt(2)),
+            Frame::Return(Type::UInt, Environment::new()),
+        ]
+    );
     let first_return = machine.step().expect("base caller return");
     assert_eq!(first_return.rule_start_line, 185);
     assert_eq!(first_return.after.environment, environment(1));
@@ -78,8 +86,10 @@ fn n08_named_recursion_preserves_all_pending_returns_and_multiplications() {
     assert_eq!(second_return.after.environment, environment(2));
     assert_eq!(second_return.after.frames, base.frames[3..].to_vec());
     advance(&mut machine, 2);
-    assert_eq!(machine.snapshot().frames,
-        vec![Frame::Return(Type::UInt, Environment::new())]);
+    assert_eq!(
+        machine.snapshot().frames,
+        vec![Frame::Return(Type::UInt, Environment::new())]
+    );
     let outer_return = machine.step().expect("outer caller return");
     assert_eq!(outer_return.rule_start_line, 185);
     assert_eq!(outer_return.after.remaining_fuel, 0);
@@ -99,7 +109,9 @@ fn n08_fuel_prefix_keeps_last_pending_return_observable() {
     assert_eq!(final_state.outcome, Outcome::Exhausted);
     assert_eq!(final_state.remaining_fuel, 0);
     assert_eq!(final_state.environment, environment(2));
-    assert_eq!(final_state.frames,
-        vec![Frame::Return(Type::UInt, Environment::new())]);
+    assert_eq!(
+        final_state.frames,
+        vec![Frame::Return(Type::UInt, Environment::new())]
+    );
     assert_eq!(final_state.charged_steps(), 81);
 }

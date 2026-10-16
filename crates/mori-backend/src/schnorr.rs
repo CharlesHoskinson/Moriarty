@@ -9,7 +9,7 @@ use midnight_transient_crypto::{curve::Fr, hash::transient_hash};
 pub const FENS_DOMAIN: u64 = 0x46454e53;
 
 /// Exactly sized lowercase hex. Supplied field integers are never reduced.
-pub(crate) fn unhex(text: &str, bytes: usize) -> Result<Vec<u8>, Error> {
+pub fn unhex(text: &str, bytes: usize) -> Result<Vec<u8>, Error> {
     if text.len() != 2 * bytes
         || !text
             .bytes()

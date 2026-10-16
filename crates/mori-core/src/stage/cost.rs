@@ -93,13 +93,19 @@ fn segment_cost(
         ordinal(segment + 1)?
     };
     if begin >= end && !(segment == 0 && begin == end) {
-        return Err(Error::new("program", "Stage plan invariant violated: ordinals."));
+        return Err(Error::new(
+            "program",
+            "Stage plan invariant violated: ordinals.",
+        ));
     }
     let mut total = UInt(0);
     for (offset, statement) in statements[begin..end].iter().enumerate() {
         // Only an advance's first statement is an Await (its dispatch).
         if matches!(statement, Statement::Await { .. }) && (segment == 0 || offset != 0) {
-            return Err(Error::new("program", "Stage plan invariant violated: unplanned await."));
+            return Err(Error::new(
+                "program",
+                "Stage plan invariant violated: unplanned await.",
+            ));
         }
         total = add(total, statement_cost(program, statement)?)?;
     }
@@ -146,7 +152,11 @@ pub(crate) fn fill(program: &Program, plan: &mut StagePlan) -> Result<(), Error>
 
 /// Attempted work of a resume whose guard at `site` is false: one dispatch
 /// plus the guard's distinct nodes. Committed work is unchanged by it.
-pub(crate) fn dispatch_cost(program: &Program, plan: &ActionPlan, site: u16) -> Result<UInt, Error> {
+pub(crate) fn dispatch_cost(
+    program: &Program,
+    plan: &ActionPlan,
+    site: u16,
+) -> Result<UInt, Error> {
     let action = program
         .actions
         .iter()
@@ -164,16 +174,17 @@ pub(crate) fn dispatch_cost(program: &Program, plan: &ActionPlan, site: u16) -> 
 /// Start refusal before evaluation (C3). Without a cap there is no admission
 /// check. Returns the meter limit of segment 0.
 pub(crate) fn start_preflight(plan: &ActionPlan, cap: Option<UInt>) -> Result<UInt, Error> {
-    let first = *plan.segment_cost.first().ok_or_else(|| {
-        Error::new("stage_logical", "Stage plan has no segment costs.")
-    })?;
-    if let Some(cap) = cap {
-        if plan.plan_total > cap {
-            return Err(Error::new(
-                "stage_logical",
-                "Action plan total exceeds the logical cap.",
-            ));
-        }
+    let first = *plan
+        .segment_cost
+        .first()
+        .ok_or_else(|| Error::new("stage_logical", "Stage plan has no segment costs."))?;
+    if let Some(cap) = cap
+        && plan.plan_total > cap
+    {
+        return Err(Error::new(
+            "stage_logical",
+            "Action plan total exceeds the logical cap.",
+        ));
     }
     Ok(first)
 }
@@ -233,7 +244,10 @@ pub(crate) fn require_static(meter: &Meter, expected: UInt) -> Result<(), Error>
 
 /// Committed work after segment `segment` succeeds.
 pub(crate) fn committed_after(plan: &ActionPlan, segment: usize) -> Result<UInt, Error> {
-    match (plan.committed_before.get(segment), plan.segment_cost.get(segment)) {
+    match (
+        plan.committed_before.get(segment),
+        plan.segment_cost.get(segment),
+    ) {
         (Some(before), Some(cost)) => add(*before, *cost),
         _ => Err(Error::new(
             "stage_logical",
@@ -285,13 +299,27 @@ mod tests {
             assets: vec![],
             expressions: vec![
                 Expr::Name { name: "x".into() },
-                Expr::Binary { op: BinaryOp::Add, lhs: 0, rhs: 0 },
-                Expr::Binary { op: BinaryOp::Mul, lhs: 1, rhs: 1 },
+                Expr::Binary {
+                    op: BinaryOp::Add,
+                    lhs: 0,
+                    rhs: 0,
+                },
+                Expr::Binary {
+                    op: BinaryOp::Mul,
+                    lhs: 1,
+                    rhs: 1,
+                },
             ],
             actions: vec![Action {
                 name: "a".into(),
-                inputs: vec![InputDecl { name: "x".into(), ty: Type::UInt }],
-                statements: vec![Statement::Let { name: "y".into(), value: 2 }],
+                inputs: vec![InputDecl {
+                    name: "x".into(),
+                    ty: Type::UInt,
+                }],
+                statements: vec![Statement::Let {
+                    name: "y".into(),
+                    value: 2,
+                }],
             }],
         };
         let statement = &program.actions[0].statements[0];
@@ -303,7 +331,10 @@ mod tests {
         let p = plan(&[5, 6]);
         assert_eq!(start_preflight(&p, None).unwrap(), UInt(5));
         assert_eq!(start_preflight(&p, Some(UInt(11))).unwrap(), UInt(5));
-        assert_eq!(code(start_preflight(&p, Some(UInt(10)))), "mori::core::stage_logical");
+        assert_eq!(
+            code(start_preflight(&p, Some(UInt(10)))),
+            "mori::core::stage_logical"
+        );
     }
 
     #[test]
@@ -367,6 +398,9 @@ mod tests {
             committed_before: vec![UInt(0), UInt(u128::MAX)],
             ..plan(&[u128::MAX, 1])
         };
-        assert_eq!(committed_after(&huge, 1).unwrap_err().code, "mori::core::bound");
+        assert_eq!(
+            committed_after(&huge, 1).unwrap_err().code,
+            "mori::core::bound"
+        );
     }
 }
