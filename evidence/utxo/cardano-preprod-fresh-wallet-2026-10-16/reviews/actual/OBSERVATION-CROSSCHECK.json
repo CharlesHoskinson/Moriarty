@@ -1,0 +1,58 @@
+[
+  {
+    "evidence": "Public RESULT.json:2 address equals payment.addr:1 (single line plus newline, 64 B, SHA 84897c9f...) and address-info.json:2 address; root RESULT.json:11-16 pins same bytes/hash.",
+    "id": "CC-01-address-identity",
+    "requiredFix": "None for the narrow funding-address prerequisite.",
+    "severity": "info",
+    "summary": "Exact address string is identical across payment.addr, public RESULT, and CLI address-info output."
+  },
+  {
+    "evidence": "payment.vkey:2-4 type PaymentVerificationKeyShelley_ed25519, cborHex 5820 + 32-byte key bc61daca74a60b51fe7febed3805af2dce1dc8110d11da5122a26dd676d8c5ae; payment.vkey.hash:1 = public RESULT.json:47 = 96a9d23c533e33a10611cdd9e88e1b8fba539b4b98346c578bb78ddb; address-info.json:3 base16 6096a9d23c...ddb = 0x60 header plus that 28-byte hash (29 bytes). Cryptographic hash was not recomputed because execution is prohibited; consistency is file-to-file plus operator source operator.py:649-657,717-720.",
+    "id": "CC-02-vkey-hash-enterprise",
+    "requiredFix": "None. Do not request a signing-key body or separate signature proof before funding advice for this test wallet.",
+    "severity": "info",
+    "summary": "Verification key, key hash, and enterprise address payload are mutually consistent in the public exports."
+  },
+  {
+    "evidence": "Public RESULT.json:14-35 lists address-key-gen, address-key-hash, address-build, address-info each exitCode 0 timedOut false; attempt-ledger.json:2-6 attemptsStarted 1 cliCallsStarted 4 retries 0 COMPLETE; root RESULT.json:3-10 exitCode 0 wallSeconds 0.9268561 waitedChildrenCpuSeconds 0.74048 (explicitly not transitive, transitiveNativeCpuMeasured false) attempts 1 retries 0 inputPinsUnchanged true.",
+    "id": "CC-03-four-calls-one-attempt",
+    "requiredFix": "None; do not rerun anything.",
+    "severity": "info",
+    "summary": "Exactly four successful CLI calls in one attempt with zero retries."
+  },
+  {
+    "evidence": "PREPARED.json:3-15 exact argv /usr/bin/timeout --signal=TERM --kill-after=10s 180s /usr/bin/prlimit --core=0 /usr/bin/python3 -I M/runner/operator.py --auth RR/AUTH, :17-24 minimal env PATH/HOME/LC_ALL/TZ, stdin DEVNULL, closeFds true; OUTER-EXECUTION-PROPOSAL.json:12,19-27 matches with 190 s absolute maximum and no parent AS clamp. TERMINAL.json:2-4 terminal exitCode 0 is authoritative for completion; PROCESS.json running is the immutable at-spawn record, not a current liveness claim.",
+    "id": "CC-04-outer-bound-terminal",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "Actual launch matches the reviewed outer bound; terminal record supersedes the at-spawn running record."
+  },
+  {
+    "evidence": "AUTH.json:27 status AUTHORIZED_ONE_RUN with operatorSha256 7944d08f... (:18), networkMagic 1 (:15), attempts 1 retries 0 maxCliCalls 4, signing/transaction/network/old-key all false (:14,17,24,29); AUTH-SPENT.json:2-7 spent true attemptsConsumed 1 retries 0 exitCode 0 noNewAuthority true, authSha256 f3af1241... matching PREPARED pin and public RESULT authFileSha256. The frozen AUTH retains its historical AUTHORIZED_ONE_RUN text; no future authority exists.",
+    "id": "CC-05-auth-spent",
+    "requiredFix": "None. Any signing, faucet, or transaction requires separate future authority and review.",
+    "severity": "info",
+    "summary": "One-run authority was consumed exactly once and is spent."
+  },
+  {
+    "evidence": "SOURCE-ADOPTION-AND-ONE-RUN-AUTHORITY.json:5-59 nine files with operator 7944d08ff689172a4985c5de657d4b6add0bb47dc93ecc44774f4c45e8e091b6 and candidate 442c018f...; :61-65 pins R2 review 06567309...; :609-614 authority narrow, fundingAdviceRequiresFreshActualAudit true, genericRecommendationFlagsNotAdopted noting nativeRoundtrip/publicRecordExport/ordinarySelftest boilerplate not adopted, rootMayAccessPrivateMaterial false. Materialized ROOT-SOURCE-MANIFEST matches the same nine pins.",
+    "id": "CC-06-source-adoption",
+    "requiredFix": "None. Use scoped wallet-actual terminology only; do not import generic nativeRoundtrip/ordinarySelftest scope.",
+    "severity": "info",
+    "summary": "Root adopted the reviewed R2 copy with only the AUTH status flip; boilerplate flags were expressly not adopted and no deployment admission is claimed."
+  },
+  {
+    "evidence": "Public RESULT.json:8-10,56-58 archive 330d20a9... sourceArchive 20ba6e57... commit fc466f22...; BINARY-ARCHIVE-MEMBERS.json single regular non-link member 102556168 B; extracted DATA-ONLY-MANIFEST:7-8 member SHA 01b131705d658912d08f20ed57bc5c0ff019b77f84df67ce8f14602e7787ad8d, :24-25 no PT_INTERP/PT_DYNAMIC; operator.py:356-419 checks archive/member/staged hash and ELF before calls and :721-726 re-checks after. Staged binary was not included in this review mirror and was not independently read here.",
+    "id": "CC-07-archive-binary-pins",
+    "requiredFix": "None for this predicate; reproducible-build provenance and CSPRNG internals remain qualified residuals.",
+    "severity": "info",
+    "summary": "Archive, single member, CLI 11.3.1.0, and staged-binary pins agree across actual result and data-only manifests."
+  },
+  {
+    "evidence": "Public RESULT.json:49-54 privateRootMode0700 true signingKeyMode0600 true signingKeyRetainedPrivate true signingKeyExported false signingKeyHashedByOperator false; operator.py:615-625 lstat/chmod only never opens payment.skey, :537-538 raw CLI outputs private 0600, :728-774 export only after validation; root RESULT.json:43-56 stdout 113 B sanitized {resultSha256,status} only, stderr 0 B, privatePathInspectedByRoot false. No skey hash, seed, mnemonic, credential, or raw private output appears in any public export read.",
+    "id": "CC-08-secret-boundary",
+    "requiredFix": "None. State retention/modes as operator-reported qualification, not independent secret inspection; never impose a secret read.",
+    "severity": "info",
+    "summary": "No private material leaked in public exports; secret retention is operator-reported per closed source."
+  }
+]

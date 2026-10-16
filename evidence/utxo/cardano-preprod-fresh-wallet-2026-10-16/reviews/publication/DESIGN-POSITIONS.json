@@ -1,0 +1,62 @@
+[
+  {
+    "clause": "Public validation requires address info type=payment, era=shelley, encoding=bech32, identical address, a single addr_test1... line, a 56-hex payment key hash, and the disclosed enterprise base16 invariant of 29 bytes with header 0x60 followed by that payment key hash. This invariant is fail-closed and requires explicit reviewer agreement; it is not a ledger or signature proof.",
+    "clauseId": "P-19",
+    "position": "AGREE",
+    "rationale": "Transcription check only for this doc review: address-info.json/payment.vkey.hash/payment.addr satisfy literals as in CC-03; agrees invariant as public consistency, not ledger/signature proof. Source author FOR and actual reviewer AGREE preserved in WALLET-ACTUAL-ADOPTION.json:35-46."
+  },
+  {
+    "clause": "The network label is Cardano Preprod solely as configured target through --testnet-magic 1. Address encoding and address info do not distinguish Preprod from Preview, and no ledger observation, funded status, or target acceptance is claimed.",
+    "clauseId": "P-20",
+    "position": "AGREE",
+    "rationale": "README.md:9,15 and RESULT.json:42-43,39 retain configured magic 1, ledgerObserved false, encoding limitation. WALLET-ACTUAL-ADOPTION.json:52-63."
+  },
+  {
+    "clause": "walletCreated may become true only after archive/binary immutability, all four exit codes, private key presence/mode booleans, public verification-key parsing, key-hash format, address format, address-info fields, enterprise invariant, and public export all succeed. Failures remain FAILED_ATTEMPT_SPENT with fundingAddress and addressAdvice null.",
+    "clauseId": "P-21",
+    "position": "AGREE",
+    "rationale": "For publication transcription: actual REPORT.md:15-17 and RESULT show success path observed by prior actual review; this reviewer did not re-execute or re-audit operator logic. WALLET-ACTUAL-ADOPTION.json:68-81."
+  },
+  {
+    "clause": "AUTH-CANDIDATE.json must remain literal status CANDIDATE_NOT_AUTHORIZED, with null staged-binary hash, unresolved linkage, empty runtime binds, and a root-to-fill operator hash. operator.py must reject it.",
+    "clauseId": "P-02",
+    "position": "DISAGREE",
+    "rationale": "Historical literal retained as DISAGREE: root later filled static/01b13170.../7944d08f... per README.md:23 and R2 REPORT.md:11; do not rewrite history. Superseded only by P-30."
+  },
+  {
+    "clause": "No staged-binary member hash may be invented in the candidate or proposal. Root must measure it from the fixed archive as data before fresh review, pin that exact measured hash in the actual AUTH, and operator.py must compare it before execution and after the native sequence.",
+    "clauseId": "P-11",
+    "position": "DISAGREE",
+    "rationale": "Historical literal DISAGREE preserved (README.md:23, WALLET-ACTUAL-ADOPTION.json:118-122): candidate wording null/unresolved superseded by measured fills via P-30, not by editing P-11."
+  },
+  {
+    "clause": "Whole execution is capped at 120 seconds, each call at 30 seconds wall and 15 seconds CPU, with filesystem-size and descriptor limits. CPU limits are per-process rather than transitive, and outer kill cannot guarantee death of an uninterruptible process.",
+    "clauseId": "P-25",
+    "position": "DISAGREE",
+    "rationale": "Literal whole-120 false: clock after extraction plus cleanup, per R1 REPORT.md:15 and README.md:19-21. Corrected additively by P-29; no replacement vote fabricated."
+  },
+  {
+    "clause": "The caller launches the operator with RLIMIT_CORE=(0,0) inherited, and an outer supervisor enforces 180 s wall from operator process spawn including archive staging/extraction, then kills the operator process group after a 10 s grace (absolute maximum 190 s). The AUTH totalWallSeconds=120 is only the inner native-call window measured from Runner construction after extraction, plus up to 10 s per-call kill cleanup, and is not a whole-execution cap. Failure at any bound leaves the attempt spent.",
+    "clauseId": "P-29",
+    "position": "AGREE",
+    "rationale": "README.md:21 correctly states outer 180 TERM+10 kill CORE 0, inner 120 post-extraction not whole, 30s/15:16/4GiB, D-state/non-transitive qualifiers. Author FOR in DESIGN-POSITIONS-ADDENDUM.json:7, R2 AGREE in R2 REPORT.md:5-9."
+  },
+  {
+    "clause": "The immutable historical P-02/P-11 null/unresolved/placeholder wording is superseded ONLY by the reviewed root literal AUTH fills and public source/ELF pins now known; the actual AUTH uses the same existing typed keys with only the status flip, as a new isolated file, with no old-scope carry-over, no additional hidden field, and no hypothetical authority.",
+    "clauseId": "P-30",
+    "position": "AGREE",
+    "rationale": "README.md:23 and addendum:8; root AUTH.json shows same keys status AUTHORIZED_ONE_RUN historically, now spent. Agree for doc transcription only."
+  },
+  {
+    "clause": "The missing leaf defaults/dispatch source-data gaps are closed by the pinned public Haskell supplement with literal citations; no runtime probe is needed and no binary/source reproducible-build proof is claimed.",
+    "clauseId": "P-31",
+    "position": "AGREE",
+    "rationale": "README.md:23,25 retains no reproducible build; addendum:9. Finite ordinary evidence only, bodies not in mirror and not read here."
+  },
+  {
+    "clause": "The secret/public boundary is unchanged: one new keypair from four calls, no existing keys, no secret read by root, only private existence/mode booleans from the operator; no funding advice before a fresh actual audit completes public export, and raw native private outputs are never public. No signing, network, faucet, or later spend authority is derived.",
+    "clauseId": "P-32",
+    "position": "AGREE",
+    "rationale": "README.md:17, actual REPORT.md:19, RESULT booleans CC-02; private 0600/0700 operator-reported only, never inspected by root/reviewer/this reviewer. WALLET-ACTUAL-ADOPTION.json:85-98."
+  }
+]

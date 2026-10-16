@@ -1,0 +1,133 @@
+{
+  "format": "root-dedicated-Cardano-Preprod-wallet-qualified-actual-adoption/1",
+  "createdAt": "2026-10-16T13:39:53.282842+00:00",
+  "walletCreatedPrerequisiteClosed": true,
+  "walletFundingAddressReady": true,
+  "scope": "Fresh dedicated enterprise-payment wallet and consistent public address, ready to report for Preprod test ADA funding. No funded status or ledger/signature/settlement claim.",
+  "address": "addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc",
+  "network": "Cardano Preprod",
+  "networkMagic": 1,
+  "mainnet": false,
+  "result": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-public-20261016/RESULT.json",
+    "sha256": "eb85770af187c927f91cff4a5b5341ae4fcd376f34bce02e69d4b2cd20611dae"
+  },
+  "freshActualReview": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-independent-muse-actual-review-20261016/REPORT.md",
+    "sha256": "a4deebf6d92123508c8ddb2c428e6127c3fb6d2b18ff0789632fa895b6a92859",
+    "sameFamilyFreshNonAuthor": true,
+    "returnedMetadata": [
+      {
+        "model_id": "muse-wonder-1.0"
+      },
+      {
+        "provider": "meta"
+      },
+      {
+        "model": "muse-wonder-1.0"
+      }
+    ]
+  },
+  "positions": [
+    {
+      "clauseId": "P-19",
+      "clause": "Public validation requires address info type=payment, era=shelley, encoding=bech32, identical address, a single addr_test1... line, a 56-hex payment key hash, and the disclosed enterprise base16 invariant of 29 bytes with header 0x60 followed by that payment key hash. This invariant is fail-closed and requires explicit reviewer agreement; it is not a ledger or signature proof.",
+      "author": {
+        "clause": "Public validation requires address info type=payment, era=shelley, encoding=bech32, identical address, a single addr_test1... line, a 56-hex payment key hash, and the disclosed enterprise base16 invariant of 29 bytes with header 0x60 followed by that payment key hash. This invariant is fail-closed and requires explicit reviewer agreement; it is not a ledger or signature proof.",
+        "clauseId": "P-19",
+        "position": "FOR",
+        "rationale": "The CLI fields are source-supported; the byte invariant is explicit, public, and fail-closed so the reviewer can accept or reject it."
+      },
+      "freshNonAuthorActualReviewer": {
+        "clause": "Public validation requires address info type=payment, era=shelley, encoding=bech32, identical address, a single addr_test1... line, a 56-hex payment key hash, and the disclosed enterprise base16 invariant of 29 bytes with header 0x60 followed by that payment key hash. This invariant is fail-closed and requires explicit reviewer agreement; it is not a ledger or signature proof.",
+        "clauseId": "P-19",
+        "position": "AGREE",
+        "rationale": "Actual exports satisfy every element literally: address-info.json type/era/encoding/address/base16 6096a9...ddb, payment.vkey.hash 56-hex 96a9...ddb equal to base16 suffix, payment.addr single line, operator.py:698-720 enforces the same check before export."
+      },
+      "agreeingPositions": 2
+    },
+    {
+      "clauseId": "P-20",
+      "clause": "The network label is Cardano Preprod solely as configured target through --testnet-magic 1. Address encoding and address info do not distinguish Preprod from Preview, and no ledger observation, funded status, or target acceptance is claimed.",
+      "author": {
+        "clause": "The network label is Cardano Preprod solely as configured target through --testnet-magic 1. Address encoding and address info do not distinguish Preprod from Preview, and no ledger observation, funded status, or target acceptance is claimed.",
+        "clauseId": "P-20",
+        "position": "FOR",
+        "rationale": "This prevents a testnet encoding from being misrepresented as network observation."
+      },
+      "freshNonAuthorActualReviewer": {
+        "clause": "The network label is Cardano Preprod solely as configured target through --testnet-magic 1. Address encoding and address info do not distinguish Preprod from Preview, and no ledger observation, funded status, or target acceptance is claimed.",
+        "clauseId": "P-20",
+        "position": "AGREE",
+        "rationale": "AUTH.json networkMagic 1/Cardano Preprod, operator.py:44-45,658-666 build --testnet-magic 1, public RESULT ledgerObserved false; encoding limitation expressly retained."
+      },
+      "agreeingPositions": 2
+    },
+    {
+      "clauseId": "P-21",
+      "clause": "walletCreated may become true only after archive/binary immutability, all four exit codes, private key presence/mode booleans, public verification-key parsing, key-hash format, address format, address-info fields, enterprise invariant, and public export all succeed. Failures remain FAILED_ATTEMPT_SPENT with fundingAddress and addressAdvice null.",
+      "author": {
+        "clause": "walletCreated may become true only after archive/binary immutability, all four exit codes, private key presence/mode booleans, public verification-key parsing, key-hash format, address format, address-info fields, enterprise invariant, and public export all succeed. Failures remain FAILED_ATTEMPT_SPENT with fundingAddress and addressAdvice null.",
+        "clauseId": "P-21",
+        "position": "FOR",
+        "rationale": "No partial log or partial public output may become funding advice."
+      },
+      "freshNonAuthorActualReviewer": {
+        "clause": "walletCreated may become true only after archive/binary immutability, all four exit codes, private key presence/mode booleans, public verification-key parsing, key-hash format, address format, address-info fields, enterprise invariant, and public export all succeed. Failures remain FAILED_ATTEMPT_SPENT with fundingAddress and addressAdvice null.",
+        "clauseId": "P-21",
+        "position": "AGREE",
+        "rationale": "Actual success path is now observed, not merely source-promised: four exit-0 calls, WALLET_CREATED_PUBLIC_EXPORT_COMPLETE, walletCreated true, six pinned exports, archive/staged recheck in operator.py:721-726 preceding export at :728-774. This fresh actual review is the audit P-21/P-32 required before funding advice."
+      },
+      "agreeingPositions": 2
+    },
+    {
+      "clauseId": "P-32",
+      "clause": "The secret/public boundary is unchanged: one new keypair from four calls, no existing keys, no secret read by root, only private existence/mode booleans from the operator; no funding advice before a fresh actual audit completes public export, and raw native private outputs are never public. No signing, network, faucet, or later spend authority is derived.",
+      "author": {
+        "clause": "The secret/public boundary is unchanged: one new keypair from four calls, no existing keys, no secret read by root, only private existence/mode booleans from the operator; no funding advice before a fresh actual audit completes public export, and raw native private outputs are never public. No signing, network, faucet, or later spend authority is derived.",
+        "clauseId": "P-32",
+        "position": "FOR",
+        "rationale": "Source author vote. operator.py:189-199,537-543,615-625,750-753; README.md:51. Existing private leaf unobserved by this author."
+      },
+      "freshNonAuthorActualReviewer": {
+        "clause": "The secret/public boundary is unchanged: one new keypair from four calls, no existing keys, no secret read by root, only private existence/mode booleans from the operator; no funding advice before a fresh actual audit completes public export, and raw native private outputs are never public. No signing, network, faucet, or later spend authority is derived.",
+        "clauseId": "P-32",
+        "position": "AGREE",
+        "rationale": "This review is that fresh actual audit: public export is complete and consistent, root RESULT records privatePathInspectedByRoot false and sanitized stdout only, AUTH-SPENT noNewAuthority true. Funding address may now be reported to the human; no signing/faucet/transaction authority is derived."
+      },
+      "agreeingPositions": 2
+    },
+    {
+      "clauseId": "P-29",
+      "clause": "The caller launches the operator with RLIMIT_CORE=(0,0) inherited, and an outer supervisor enforces 180 s wall from operator process spawn including archive staging/extraction, then kills the operator process group after a 10 s grace (absolute maximum 190 s). The AUTH totalWallSeconds=120 is only the inner native-call window measured from Runner construction after extraction, plus up to 10 s per-call kill cleanup, and is not a whole-execution cap. Failure at any bound leaves the attempt spent.",
+      "author": {
+        "clause": "The caller launches the operator with RLIMIT_CORE=(0,0) inherited, and an outer supervisor enforces 180 s wall from operator process spawn including archive staging/extraction, then kills the operator process group after a 10 s grace (absolute maximum 190 s). The AUTH totalWallSeconds=120 is only the inner native-call window measured from Runner construction after extraction, plus up to 10 s per-call kill cleanup, and is not a whole-execution cap. Failure at any bound leaves the attempt spent.",
+        "clauseId": "P-29",
+        "position": "FOR",
+        "rationale": "Source author vote. operator.py:435,594-599 clock after extraction; :519-535 up to 10 s cleanup; :422-426 no RLIMIT_CORE. Original P-25 whole-120 claim expressly not pretended true; fresh review DISAGREE on P-25 preserved."
+      },
+      "freshNonAuthorActualReviewer": {
+        "clause": "The caller launches the operator with RLIMIT_CORE=(0,0) inherited, and an outer supervisor enforces 180 s wall from operator process spawn including archive staging/extraction, then kills the operator process group after a 10 s grace (absolute maximum 190 s). The AUTH totalWallSeconds=120 is only the inner native-call window measured from Runner construction after extraction, plus up to 10 s per-call kill cleanup, and is not a whole-execution cap. Failure at any bound leaves the attempt spent.",
+        "clauseId": "P-29",
+        "position": "AGREE",
+        "rationale": "Actual PREPARED argv and bounds match exactly and TERMINAL exit 0 completed in 0.9268561 s wall; caveats on descendant/D-state/non-transitive CPU remain as qualified residuals."
+      },
+      "agreeingPositions": 2
+    }
+  ],
+  "historicalDisagreementsPreserved": [
+    "P-02",
+    "P-11",
+    "P-25"
+  ],
+  "keyRetention": "Operator-reported private0700 and signing-key0600 presence/mode. Root and reviewer did not inspect any signing key or private logs. Public keypair-to-address correspondence follows the reviewed CLI generation/derivation path.",
+  "privateMaterialAccessByRoot": false,
+  "ownershipSignatureTestPerformed": false,
+  "ledgerObserved": false,
+  "fundingObserved": false,
+  "attemptsConsumed": 1,
+  "retries": 0,
+  "executionAuthoritySpent": true,
+  "newNativeOrSigningOrTransactionAuthority": false,
+  "fullPreprodPrototypeComplete": false
+}

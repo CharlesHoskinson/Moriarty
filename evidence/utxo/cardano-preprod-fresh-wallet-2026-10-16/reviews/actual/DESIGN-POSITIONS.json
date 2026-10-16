@@ -1,0 +1,50 @@
+[
+  {
+    "clause": "Public validation requires address info type=payment, era=shelley, encoding=bech32, identical address, a single addr_test1... line, a 56-hex payment key hash, and the disclosed enterprise base16 invariant of 29 bytes with header 0x60 followed by that payment key hash. This invariant is fail-closed and requires explicit reviewer agreement; it is not a ledger or signature proof.",
+    "clauseId": "P-19",
+    "position": "AGREE",
+    "rationale": "Actual exports satisfy every element literally: address-info.json type/era/encoding/address/base16 6096a9...ddb, payment.vkey.hash 56-hex 96a9...ddb equal to base16 suffix, payment.addr single line, operator.py:698-720 enforces the same check before export."
+  },
+  {
+    "clause": "The network label is Cardano Preprod solely as configured target through --testnet-magic 1. Address encoding and address info do not distinguish Preprod from Preview, and no ledger observation, funded status, or target acceptance is claimed.",
+    "clauseId": "P-20",
+    "position": "AGREE",
+    "rationale": "AUTH.json networkMagic 1/Cardano Preprod, operator.py:44-45,658-666 build --testnet-magic 1, public RESULT ledgerObserved false; encoding limitation expressly retained."
+  },
+  {
+    "clause": "walletCreated may become true only after archive/binary immutability, all four exit codes, private key presence/mode booleans, public verification-key parsing, key-hash format, address format, address-info fields, enterprise invariant, and public export all succeed. Failures remain FAILED_ATTEMPT_SPENT with fundingAddress and addressAdvice null.",
+    "clauseId": "P-21",
+    "position": "AGREE",
+    "rationale": "Actual success path is now observed, not merely source-promised: four exit-0 calls, WALLET_CREATED_PUBLIC_EXPORT_COMPLETE, walletCreated true, six pinned exports, archive/staged recheck in operator.py:721-726 preceding export at :728-774. This fresh actual review is the audit P-21/P-32 required before funding advice."
+  },
+  {
+    "clause": "The secret/public boundary is unchanged: one new keypair from four calls, no existing keys, no secret read by root, only private existence/mode booleans from the operator; no funding advice before a fresh actual audit completes public export, and raw native private outputs are never public. No signing, network, faucet, or later spend authority is derived.",
+    "clauseId": "P-32",
+    "position": "AGREE",
+    "rationale": "This review is that fresh actual audit: public export is complete and consistent, root RESULT records privatePathInspectedByRoot false and sanitized stdout only, AUTH-SPENT noNewAuthority true. Funding address may now be reported to the human; no signing/faucet/transaction authority is derived."
+  },
+  {
+    "clause": "Whole execution is capped at 120 seconds, each call at 30 seconds wall and 15 seconds CPU, with filesystem-size and descriptor limits. CPU limits are per-process rather than transitive, and outer kill cannot guarantee death of an uninterruptible process.",
+    "clauseId": "P-25",
+    "position": "DISAGREE",
+    "rationale": "Historical literal disagreement preserved as in R2 review: the 120 s clock starts after extraction (operator.py:435,594-599), so whole-execution-120 as written remains false; the operative bound is P-29. Actual wall 0.9268561 s was well inside all bounds, which does not retroactively make P-25 literal text true."
+  },
+  {
+    "clause": "AUTH-CANDIDATE.json must remain literal status CANDIDATE_NOT_AUTHORIZED, with null staged-binary hash, unresolved linkage, empty runtime binds, and a root-to-fill operator hash. operator.py must reject it.",
+    "clauseId": "P-02",
+    "position": "DISAGREE",
+    "rationale": "Historical literal disagreement preserved: candidate AUTH-CANDIDATE.json:6,8,18 is filled static/01b13170.../7944d08f... while status remains CANDIDATE_NOT_AUTHORIZED and operator.py:251-252 still rejects it; superseded only additively by P-30."
+  },
+  {
+    "clause": "No staged-binary member hash may be invented in the candidate or proposal. Root must measure it from the fixed archive as data before fresh review, pin that exact measured hash in the actual AUTH, and operator.py must compare it before execution and after the native sequence.",
+    "clauseId": "P-11",
+    "position": "DISAGREE",
+    "rationale": "Historical literal disagreement preserved for the candidate-null premise after root fill; substance satisfied by measured pin 01b13170... in AUTH and operator.py:408-409,723-726, qualified by P-30."
+  },
+  {
+    "clause": "The caller launches the operator with RLIMIT_CORE=(0,0) inherited, and an outer supervisor enforces 180 s wall from operator process spawn including archive staging/extraction, then kills the operator process group after a 10 s grace (absolute maximum 190 s). The AUTH totalWallSeconds=120 is only the inner native-call window measured from Runner construction after extraction, plus up to 10 s per-call kill cleanup, and is not a whole-execution cap. Failure at any bound leaves the attempt spent.",
+    "clauseId": "P-29",
+    "position": "AGREE",
+    "rationale": "Actual PREPARED argv and bounds match exactly and TERMINAL exit 0 completed in 0.9268561 s wall; caveats on descendant/D-state/non-transitive CPU remain as qualified residuals."
+  }
+]
