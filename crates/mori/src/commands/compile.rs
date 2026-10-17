@@ -125,11 +125,8 @@ fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Resu
 fn report_sherlock_failure(
     failure: &mori_core::sherlock_compile_artifact::CompileFailure,
 ) -> mori_diagnostics::Report {
-    match serde_json::to_string(failure) {
-        Ok(diagnostic) => {
-            eprintln!("{diagnostic}");
-            core_io::operation("Sherlock host compilation failed; structured diagnostic emitted")
-        }
+    match mori_core::json::export(failure) {
+        Ok(diagnostic) => core_io::operation(diagnostic),
         Err(error) => core_io::operation(error),
     }
 }
