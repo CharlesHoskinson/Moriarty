@@ -110,20 +110,60 @@ fn compare_boundary(
     }
 }
 
+// The first visit to each (fuel prefix, event position) must pass the full
+// independent literal comparison above. Later visits still compare the complete
+// typed Snapshot against that validated immutable observation. This avoids
+// rendering the same program, control, environment and frames for every replay;
+// it does not use another evaluator or skip any Machine::run_steps call.
+struct ValidatedBoundaries<'a> {
+    case: &'a ExpectedCase,
+    prefix: &'a ExpectedPrefix,
+    snapshots: Vec<Option<Snapshot>>,
+}
+
+impl<'a> ValidatedBoundaries<'a> {
+    fn new(case: &'a ExpectedCase, prefix: &'a ExpectedPrefix) -> Self {
+        Self {
+            case,
+            prefix,
+            // Positions include the initial state and free terminal publication.
+            snapshots: vec![None; prefix.boundary_state_index + 2],
+        }
+    }
+
+    fn check(&mut self, actual: &Snapshot, position: usize, context: &str) {
+        if let Some(validated) = self.snapshots[position].as_ref() {
+            assert_eq!(actual, validated, "{context}: complete validated boundary at {position}");
+            return;
+        }
+        compare_boundary(actual, self.case, self.prefix, position, context);
+        // Store only after every independent literal assertion has succeeded.
+        self.snapshots[position] = Some(actual.clone());
+    }
+
+    fn assert_complete(&self, context: &str) {
+        assert!(
+            self.snapshots.iter().all(Option::is_some),
+            "{context}: every frozen boundary must receive its literal comparison"
+        );
+    }
+}
+
 // Consume exactly the next literal event interval. Both endpoints of every
 // record are checked against independent observations, even across call cuts.
 fn compare_group(
     machine: &mut Machine,
-    case: &ExpectedCase,
-    prefix: &ExpectedPrefix,
+    boundaries: &mut ValidatedBoundaries<'_>,
     offset: usize,
     budget: usize,
     context: &str,
 ) -> usize {
+    let case = boundaries.case;
+    let prefix = boundaries.prefix;
     let event_count = prefix.boundary_state_index + 1;
     let expected_len = budget.min(event_count - offset);
     let before = machine.snapshot();
-    compare_boundary(&before, case, prefix, offset, context);
+    boundaries.check(&before, offset, context);
     let records = machine.run_steps(budget);
     assert_eq!(records.len(), expected_len, "{context}: retained event count at {offset}");
     let mut previous = before;
@@ -131,8 +171,8 @@ fn compare_group(
     for (index, record) in records.iter().enumerate() {
         let position = offset + index;
         assert_eq!(record.before, previous, "{context}: typed record continuity at {position}");
-        compare_boundary(&record.before, case, prefix, position, context);
-        compare_boundary(&record.after, case, prefix, position + 1, context);
+        boundaries.check(&record.before, position, context);
+        boundaries.check(&record.after, position + 1, context);
         let (rule, charge) = if position < prefix.boundary_state_index {
             (case.states[position + 1].via_rule_start_line.expect("literal charged edge"), 1)
         } else {
@@ -146,7 +186,7 @@ fn compare_group(
     let end = offset + expected_len;
     let after = machine.snapshot();
     assert_eq!(after, previous, "{context}: complete live machine at group end");
-    compare_boundary(&after, case, prefix, end, context);
+    boundaries.check(&after, end, context);
     let expected_work = case.states[end.min(prefix.boundary_state_index)].charged_steps
         - case.states[offset.min(prefix.boundary_state_index)].charged_steps;
     assert_eq!(group_work, expected_work, "{context}: retained prefix work");
@@ -165,6 +205,7 @@ fn compare_all_frozen_prefixes_and_cuts(case_id: &str) {
 
     for prefix in case.prefixes {
         let event_count = prefix.boundary_state_index + 1;
+        let mut boundaries = ValidatedBoundaries::new(case, prefix);
         for cut in 0..=event_count {
             for width in [1, 2, 4, 8] {
                 let context = format!("{case_id}, fuel {}, cut {cut}, width {width}", prefix.initial_fuel);
@@ -172,22 +213,23 @@ fn compare_all_frozen_prefixes_and_cuts(case_id: &str) {
                 // Cut zero and cut terminal are real run_steps calls, so empty
                 // calls and an exact cut immediately before free publication
                 // are covered alongside every saved control/frame boundary.
-                let mut offset = compare_group(&mut machine, case, prefix, 0, cut, &context);
+                let mut offset = compare_group(&mut machine, &mut boundaries, 0, cut, &context);
                 assert_eq!(offset, cut, "{context}: exact requested cut");
                 let saved = machine.snapshot();
                 assert!(machine.run_steps(0).is_empty(), "{context}: zero-event observation");
                 assert_eq!(machine.snapshot(), saved, "{context}: zero-event cut preserves full state");
                 while offset < event_count {
-                    offset = compare_group(&mut machine, case, prefix, offset, width, &context);
+                    offset = compare_group(&mut machine, &mut boundaries, offset, width, &context);
                 }
                 let terminal = machine.snapshot();
-                compare_boundary(&terminal, case, prefix, event_count, &context);
+                boundaries.check(&terminal, event_count, &context);
                 for budget in [0, 1, 2, 4, 8] {
                     assert!(machine.run_steps(budget).is_empty(), "{context}: terminal event budget {budget}");
                     assert_eq!(machine.snapshot(), terminal, "{context}: published state remains stable");
                 }
             }
         }
+        boundaries.assert_complete(&format!("{case_id}, fuel {}", prefix.initial_fuel));
     }
 }
 
