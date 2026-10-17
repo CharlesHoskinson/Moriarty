@@ -1,25 +1,26 @@
 # Current35 EARS assessment
 
-Three of the 35 original requirements are closed on their supported typed A host
-scope: UIREQ-001, UIREQ-010 and UIREQ-011. Their original scenarios, unchanged
-source dependencies and independent historical observations received fresh
-review and [Root adoption](../results/sherlock-ears-closure-20261017/acceptance/ROOT-ADOPTION.json).
-DoctorWatson reports all three as current. The remaining 32 original requirements
-and all 25 refinements/68 scenarios remain open. These inventories are separate
-from the linked security, financial, formal, native and release requirements.
-UIREQ-025 still needs its reporting proof; UIREQ-026 lacks the private-record and
-per-slice evidence. Matching files alone cannot close a requirement.
+Seven of the 35 original requirements are closed on their supported typed A host
+scope: UIREQ-001, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008, UIREQ-010 and UIREQ-011.
+The latest [independent review and Root adoption](../results/sherlock-ears-host-closure-20261017/README.md)
+bind the unchanged generic source, original scenarios, independent expectations
+and actual host observations. DoctorWatson's selected report verifies all seven
+as current. The remaining 28 original requirements and all 25 refinements/68
+scenarios remain open. These are separate inventories from the retained security,
+financial, formal, native and release requirements. UIREQ-025 still needs its
+reporting proof; UIREQ-026 lacks the private-record and per-slice evidence.
+Matching files alone cannot close a requirement.
 
 | ID | Implementation | Validation | Acceptance | Exact missing work / next discriminator |
 |---|---|---|---|---|
 | UIREQ-001 | complete | observed | closed | None for this exact host predicate: adopt exact scenario/current source evidence; do not repeat unchanged passing fixtures. |
 | UIREQ-002 | partial | partial | open | Use real current selected compiler/report API on one named-call/constructor/match admitted program; compare every required grammar/domain/bound/disposition field, or located Unsupported, against independent declaration. |
-| UIREQ-003 | complete | partial | open | Ordinary fixed A caller-local input: outer x7, callee parameter x2 returns2, then caller reads7. Freeze exact saved environments/return and verify the complete trace, expected combined sum9 if expressed as addition. |
-| UIREQ-004 | partial | partial | open | First close A strict-argument predicate with add(double2,increment3)->8 and exact call-order trace. Separately implement/check ConstructorFields first/last recursive-field cases without hiding field evaluation in Build. |
-| UIREQ-005 | complete | partial | open | Add only fixed ordinary odd5 input to the same observed generic mutual-recursion table/consumer, compare independently expected true and complete call/return/frame prefix. No native requirement. |
-| UIREQ-006 | complete | partial | open | Ordinary fixed typed A add2,3/sub7,2/mul3,4/lt2,3 cases must yield5/5/12/true with declared error mapping. Retain existing independently owned error10 boundary cases rather than invent new security tests. |
+| UIREQ-003 | complete | observed | closed | Lexical parameter binding and caller scope are source-complete and observed in the exact original case; retain unchanged evidence. |
+| UIREQ-004 | partial | partial | open | Nested-arguments case now observed: double2 completes before increment3 and add returns8. Implement generic ConstructorFields and independent strict/recursive field cases; do not repeat the passed argument test. |
+| UIREQ-005 | complete | observed | closed | Factorial3, even4 and odd5 use the same generic call/return relation and all passed under declared bounds. |
+| UIREQ-006 | complete | observed | closed | Checked UInt128/Bool source plus all four original normal cases accepted; direct A overflow/underflow runtime remains unobserved, with circuit/B obligations separate. |
 | UIREQ-007 | partial | partial | open | Implement owner-adopted nominal ListUInt128 declaration/constructor continuation and construct Cons1(Cons2Nil); compare actual identity/ordered fields/type before claiming generic support. |
-| UIREQ-008 | complete | observed | open | Root can adjudicate A tree-fold/ordered-match host closure using exact F04 and N06 evidence; explicit additional generic scope remains034. Kept open here pending full-clause scope adjudication, not stagenet. |
+| UIREQ-008 | complete | observed | closed | Generic ordered-match source, complete historical F04 tree-fold comparison and discriminating N06 first-match evidence accepted; generic nominal matches remain034. |
 | UIREQ-009 | partial | partial | open | Ordinary normal paired shared/unshared tree fold8 with independent complete visit/work expectations, using identical profile/bounds; compare both occurrence visits, not just decoded rows. |
 | UIREQ-010 | complete | observed | closed | None for exact host pending-return clause: adopt factorial3 independent prefix locator and unchanged current reference source; no native prerequisite. |
 | UIREQ-011 | complete | observed | closed | None for exact pure-result clause: adopt complete list-sum terminal/pending evidence and Done/Halted mapping, retaining no-next/publication. |
@@ -33,7 +34,7 @@ per-slice evidence. Matching files alone cannot close a requirement.
 | UIREQ-019 | partial | partial | open | Implement required committed/tentative outcome adapter and run the existing designated-owner local-failure scenario; retained68/10 plus attempted work, no fabricated returned rollback continuation/global ledger rollback. |
 | UIREQ-020 | absent | unrun | open | Owner/compiler map actual chosen target phase policy and retained fee/duty observations; only then obtain separately admitted actual phase evidence. This clause genuinely needs target evidence. |
 | UIREQ-021 | partial | partial | open | Obtain one permitted actual K arithmetic/list trace (e.g.N02 add2,3), pair with existing Quint trace and publish numeric/field/hidden-step/difference/finance omissions. No native requirement. |
-| UIREQ-022 | partial | partial | open | Finish current exact five preflight ordinary regressions/CLI classification, then public scalar two-program pipeline. Separately implement nested-call/list public grammar/lowering and named rule correspondence; no manufactured literal proof. |
+| UIREQ-022 | partial | partial | open | Five current preflight regressions are complete via preserved R83 two plus corrected R90 three results. Next qualify the public two-program scalar compile pipeline, then implement nested-call/list public grammar/lowering with named semantic correspondence and complete applicable observations; no evaluated-literal proof. |
 | UIREQ-023 | partial | partial | open | Complete full39/native consumer inventory, then only original separately admitted build/proof/target stages with exact relation/key/statement/network/effects. Do not close from333 host carriers. |
 | UIREQ-024 | partial | partial | open | Select one actual frame/sharing optimization proposal, freeze complete preservation predicate and independently compare its declared observations/costs; unmeasured physical/native costs remain unknown rather than mandatory native run for host-only proposal. |
 | UIREQ-025 | complete | observed | open | Review the exact seven-field reporting proof and original scenario distinctions; historical compiler captures do not establish current compiler execution. |
