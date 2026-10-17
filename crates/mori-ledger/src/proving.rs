@@ -180,6 +180,7 @@ pub(crate) fn source_closure() -> String {
             include_str!("static_compile.rs"),
             include_str!("call_artifacts.rs"),
             include_str!("sherlock_literal.rs"),
+            include_str!("sherlock_transaction.rs"),
             include_str!("../../mori/Cargo.toml"),
             include_str!("../../mori/src/cli.rs"),
             include_str!("../../mori/src/commands/mod.rs"),
