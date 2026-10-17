@@ -25,12 +25,28 @@ and dependency/toolchain pins were unchanged. Dep-info contains 60 production
 paths and one test path, all pinned after normalizing path spellings. Each child
 exit was saved before later collector checks.
 
-No linking or test execution occurred. Source/runtime review and the actual
-three-test run remain pending. This is the ordinary A host grouping baseline,
-not full SCON-015, B grouping, residualization, persistent boundaries,
-constraints, cross-layer correspondence or native/stagenet acceptance. No
-transition/model/circuit body was edited or model/native command run. Existing
-private grouping tests remain configured as tests; they were not rerun here.
+The later [actual run](actual99/attempt-01/RESULT.json) built the frozen public
+production library, linked only the fixed three-test source, listed exactly
+three selectors and observed all three serial exact runs pass. The six phases
+retain their actual commands, exits, logs, source/dependency pins and dep-info.
+The [fresh non-author review](review/r104/REPORT.md) approves this exact promotion
+and result; its [qualifications](review/r104/REVIEW-QUALIFICATIONS.md) preserve the
+historical non-grant labels and source/runtime scope.
+
+The executed production snapshot is20a4fcb0. A later current-production
+[metadata check](current-production-metadata/RESULT.json) also passed after
+composition with the current compiler surface; this separate check did not link
+or run the current full CLI. [Root adoption](ROOT-COMPOSITION-ADOPTION.json)
+records that distinction. It preserves the original runtime inputs and prior
+functional clause adoptions through an explicit reviewed compatible dependency
+update, rather than silently replacing historical source hashes. The checker
+first rejected changed dependencies and removed three stale closures from its
+current count; the [rebind records](evidence-rebind/) preserve that result.
+
+Full UIREQ-032/SCON-015, B grouping, grouped callee returns, residualization,
+persistent boundaries, constraints, formal correspondence, financial and
+native/stagenet acceptance remain open. Existing private grouping tests were
+not rerun. No interpreter transition, circuit or model body changed.
 
 [Membership](membership.json) preserves 23 byte-identical original receipts.
 Binary metadata outputs stay local with their recorded hashes. Original local
