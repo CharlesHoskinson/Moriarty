@@ -3,9 +3,12 @@
 //! This typed API represents the valid-UInt128, nonnegative-budget common
 //! domain of the frozen K reference. It does not change Moriarty source `/1`
 //! or `/2`, implement the proposed B helper schedule, or produce constraints.
+//! The separate B helper machine lives in the `helper_machine` child module;
+//! it does not alter this A profile or its execution paths.
 //! Pure helpers and host allocation remain unmetered in this A profile.
 
 pub mod compare;
+pub mod helper_machine;
 mod reference;
 mod reference_stream;
 pub mod reference_display;
