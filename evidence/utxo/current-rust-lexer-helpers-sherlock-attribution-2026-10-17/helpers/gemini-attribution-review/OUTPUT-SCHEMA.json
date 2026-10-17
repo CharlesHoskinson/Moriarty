@@ -1,0 +1,118 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewToken",
+    "summary",
+    "findings",
+    "coverage",
+    "recommendation"
+  ],
+  "properties": {
+    "reviewToken": {
+      "const": "core-helpers-bounded-gemini4-argon-high-20261017"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "evidence",
+          "requiredFix"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "blocking",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "requiredFix": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "read",
+          "checked"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "checked": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceAttributionReady",
+        "verdict",
+        "firstBlockedBoundary",
+        "operatorReady",
+        "securityReady",
+        "runtimeReady",
+        "ledgerReady",
+        "nativeAuthority"
+      ],
+      "properties": {
+        "sourceAttributionReady": {
+          "type": "boolean"
+        },
+        "verdict": {
+          "enum": [
+            "SOURCE_ATTRIBUTION_ONLY_READY",
+            "NEEDS_FIX",
+            "INSUFFICIENT_COVERAGE"
+          ]
+        },
+        "firstBlockedBoundary": {
+          "type": "string"
+        },
+        "operatorReady": {
+          "const": false
+        },
+        "securityReady": {
+          "const": false
+        },
+        "runtimeReady": {
+          "const": false
+        },
+        "ledgerReady": {
+          "const": false
+        },
+        "nativeAuthority": {
+          "const": 0
+        }
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  }
+}
