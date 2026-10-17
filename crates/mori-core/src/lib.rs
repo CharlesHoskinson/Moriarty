@@ -6,6 +6,9 @@ mod logical_cost;
 mod parser;
 pub mod policy;
 pub mod sherlock;
+// Explicit selected HostOnly source preparation/report; no native export.
+#[path = "sherlock/compile_artifact.rs"]
+pub mod sherlock_compile_artifact;
 
 // Unregistered draft source capability: Core-only ordinary host test proposal.
 // These lexer-dependent modules stay outside Sherlock's standalone Std graph.
