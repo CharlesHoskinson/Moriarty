@@ -1,0 +1,9 @@
+# B complete observations — source and typecheck
+
+The new `helper_machine::complete_observation` module defines owned typed snapshots of every current public admission, layout, program and image field. Its explicit `record_step` copies the bound pre-observation before invoking the existing fixed owner step once, preserves the complete actual event, and copies the post-observation. Terminal and observation/step failures retain their actual available evidence without fabricating an event. The supplied-record continuity comparator checks complete initial, adjacent and returned boundaries, including empty sequences.
+
+Root integrated the two exact candidate source files and module registration. The registered production Core library metadata/type/borrow/derive check exited0 in23.0009seconds, with six pre-existing warnings. Its exact source/dependency selection and dep-info are retained. No cfg(test), SDK/backend/ledger dependency, product step or test execution was selected.
+
+The four fixed literal observer test functions also typecheck against the actual production metadata (exit0 in1.069seconds, without linking). Their test execution remains UNRUN. Applicable source/composition review and execution-scope classification are pending. Source structure checks are not Rust execution or semantic correspondence. This result does not validate transition rules, event charge accounting, source authenticity, canonical persistence, generic ADTs, native circuits/proofs/verification or stagenet settlement; full SCON-007 and retained Sherlock acceptance remain open.
+
+This branch is separate from the compiler branch with pending guard corrections. It depends on the A continuity source branch; no underlying owner or guard source was changed. Compiled metadata is retained locally, not committed. Receipts and the original candidate manifest preserve their pre-integration status and local paths; the later production check records the actual observed candidate.
