@@ -502,3 +502,7 @@ pub use self as literal_host;
 pub mod literal_witness;
 #[cfg(all(test, mori_sdk_free))]
 mod literal_witness_normal_tests;
+#[cfg(mori_sdk_free)]
+pub mod return_publication_witness;
+#[cfg(all(test, mori_sdk_free))]
+mod return_publication_witness_normal_tests;
