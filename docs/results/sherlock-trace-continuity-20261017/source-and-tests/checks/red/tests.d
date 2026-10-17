@@ -1,0 +1,8 @@
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/checks/red/tests.d: /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/checks/red-harness.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/inputs/reference_types.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/red/crates/mori-core/src/sherlock/compare.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/red/crates/mori-core/src/sherlock/trace_continuity_tests.rs
+
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/checks/red/tests: /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/checks/red-harness.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/inputs/reference_types.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/red/crates/mori-core/src/sherlock/compare.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/red/crates/mori-core/src/sherlock/trace_continuity_tests.rs
+
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/checks/red-harness.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/inputs/reference_types.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/red/crates/mori-core/src/sherlock/compare.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/37-a-trace-continuity/red/crates/mori-core/src/sherlock/trace_continuity_tests.rs:
