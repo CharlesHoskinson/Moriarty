@@ -16,7 +16,9 @@ pub mod profile;
 pub mod proving;
 pub mod relation;
 pub mod sherlock_literal;
+pub mod sherlock_literal_complete;
 pub mod sherlock_transaction;
+pub mod sherlock_transaction_complete;
 pub mod signed;
 pub mod static_compile;
 
