@@ -160,3 +160,68 @@ The next factory-update pass should select a small proposal from this log only
 after the useful Sherlock increment is delivered. Any proposal touching execution
 guards, resources, security policy or security source requires the designated
 security owner. This log grants no execution authority and closes no parent exit.
+
+
+## 2026-10-17 UTC — second edition
+
+The [first edition](https://github.com/CharlesHoskinson/Moriarty/pull/125)
+was published at `ef8a6636de12ded575e039fea5a80c1aa8d63320` with all four selected
+blobs verified by the integrator. Earlier entries above retain their original
+freeze and status; the following observations update only their stated scope.
+
+### DW-07 update — Corrected invocation reached an actual host capture
+
+**Observation/evidence:** the coordinator records a fresh designated Muse-authored
+minimal invocation candidate and separate fresh security/nonsecurity operational
+reviews, each with actual CLI exit 0 and scoped source conclusions. Root then
+recorded the exact operation and ran it once. The retained independent result
+records actual tool exit 0: compiler version check exit 0 in 0.229 seconds;
+exact 21-file library compilation exit 0 in 5.873 seconds, retaining six warnings;
+binary compilation/link exit 0 in 1.086 seconds; and the D01 host run exit 0 in
+0.011 seconds, with empty run stderr. The capture contains seven parseable JSON
+records, 30,046 bytes, SHA-256
+`9231489b77a7cf4a2bffe05a197428b755f35e15117a43d6331214d1fe32d114`.
+Root's receipt verifies the exact library/binary dependency read sets and source,
+snapshot and artifact hashes. That receipt remains unpublished; no public result
+locator is claimed here.
+
+**Status:** observed correction, scoped source reviews and actual host capture.
+Semantic comparison is unrun and fresh actual-result audits are pending at this
+entry's freeze. This updates DW-07's earlier in-progress correction status; the
+factory checklist remains **proposed**. No full-B, native or parent acceptance
+follows from parsing a capture or from operational source review.
+
+**Validation needed / next action:** the comparison owner must compare the actual
+capture against independently frozen complete expectations; designated reviewers
+must assess the actual result and its bindings. Publish only the separately
+verified evidence selection. Record those terminal results in a later entry.
+
+### DW-10 — Track input context and output headroom separately
+
+**Observation/evidence:** the coordinator reports two Muse row-author calls
+failed before a source report: CLI exit 1, zero report bytes and no tools. Their
+provider-reported context-compaction figures were 473,027 and 473,183 tokens,
+both above the reported 460,800 threshold. The failures are retained as failures
+and supply no review vote. Underlying receipts remain unpublished. These figures
+describe those provider attempts; they do not establish a universal model limit.
+
+**Observed change of approach:** the coordinator retained full current typed
+schema, rows, canonical requirements, security/interface/Core2 context, current
+dissent and dependency contracts inline, while moving superseded historical
+companions into an explicit inventory reserved for final composition. This
+changes packet assembly without waiving requirements or discarding dissent.
+Exact resulting row-artifact validation remains pending for this entry.
+
+**Proposed:** track observed input-context/transport headroom separately from
+output-artifact budget and completion time. Preserve failed raw transport
+privately, require complete parseable owner artifacts, and retain final
+composition dependencies when reducing a packet. **Status:** observed failures
+and packet revision; factory automation and general performance conclusions
+remain **proposed**. DW-01's changed-model/scope benchmark limitation still applies.
+
+**Validation needed / next action:** the source coordinator must verify current
+requirements and dissent membership in the revised packet, complete owner output
+and exact application against its base, then reconcile the reserved dependencies
+before composition. Keep later outputs pending until their actual terminal and
+artifact checks. No user budget, concurrency limit, execution guard or security
+policy is changed by this log.
