@@ -1,0 +1,245 @@
+"""Unit preparation for the opt-in terminal structured_output selector.
+
+SCOPE AND SAFETY
+  This file is SOURCE PREPARATION ONLY. It is authored, not executed, now.
+  Running it is a *future* ordinary unit verification that is gated on owner
+  review plus a root decision (see EXPORT-POLICY.md). Do not run it as part of
+  authoring.
+
+  The test exercises ONLY the pure function
+  `select_terminal_structured_review` from run_source_task_candidate.py. It
+  loads that one function by AST-extracting its single top-level FunctionDef
+  node and exec'ing *that node alone* in an isolated namespace that provides
+  json and jsonschema. It never imports or runs the whole candidate module,
+  its top-level job/dispatch logic, or any private-file logic.
+
+FIXTURES
+  Every envelope below is a DERIVED UNIT envelope modeled on the public B
+  whole objects (the B-I6 `0`-style vs `\\u0030`-style difference). They are
+  NOT real provider records and NOT Cardano ledger data. A compact UNIT schema
+  stands in for the frozen OUTPUT-SCHEMA so the test is self-contained; the
+  future bound run may instead bind the public B/A whole objects, the real
+  OUTPUT-SCHEMA and the public PROCESS fixtures (and only those).
+
+FROZEN METHOD COUNT: 20.
+EXPECTED RED: with no `select_terminal_structured_review` in the candidate,
+  `_load_selector` raises AssertionError and every method errors.
+EXPECTED GREEN: all 20 methods pass against the candidate as written.
+BOUNDED EFFECTS: the test reads one public code file (the candidate) to AST
+  extract one function; it writes nothing, opens no socket, imports no new
+  dependency beyond stdlib + jsonschema, and reads no private capture.
+NOT RUN NOW: outcomes above are recorded expectations, not observed results.
+"""
+import ast
+import json
+import pathlib
+import unittest
+
+import jsonschema
+
+CANDIDATE = pathlib.Path(__file__).resolve().parent / "run_source_task_candidate.py"
+
+# --- derived UNIT schema (stands in for the frozen OUTPUT-SCHEMA) -----------
+UNIT_TOKEN = "unit-terminal-review-token"
+UNIT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["reviewToken", "findings"],
+    "properties": {
+        "reviewToken": {"const": UNIT_TOKEN},
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["id", "evidence"],
+                "properties": {"id": {"type": "string"}, "evidence": {"type": "string"}},
+            },
+        },
+    },
+}
+
+# The canonical typed object (what the provider carries on result.structured_output)
+# and a contradictory-but-valid draft that differs only at the B-I6 escape, exactly
+# as the two public B whole objects differ. The draft is what the buggy recursive
+# walk would also have collected from quoted/nested text.
+CANON = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6", "evidence": "lost a \\u0030-style escape"}]}
+DRAFT = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6", "evidence": "lost a 0-style escape"}]}
+
+
+def _load_selector():
+    """AST-extract and exec ONLY the pure selector function; nothing else."""
+    tree = ast.parse(CANDIDATE.read_text())
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "select_terminal_structured_review":
+            module = ast.Module(body=[node], type_ignores=[])
+            namespace = {"json": json, "jsonschema": jsonschema}
+            exec(compile(module, str(CANDIDATE), "exec"), namespace)
+            return namespace["select_terminal_structured_review"]
+    raise AssertionError("select_terminal_structured_review not found in candidate")
+
+
+def _assistant(model):
+    return {"type": "assistant", "message": {"model": model}}
+
+
+def _stream(structured_output=CANON, include_structured=True, subtype="success",
+            is_error=False, result_events=1, assistant_models=("claude-opus-5-5",)):
+    """Build a derived UNIT stream.
+
+    By construction the DRAFT appears twice as a non-canonical duplicate: once as
+    a nested tool_use argument and once as quoted ```json``` text, plus once more
+    in the terminal result's `result` text. Only CANON is ever on
+    result.structured_output.
+    """
+    events = [{"type": "system", "subtype": "init", "model": "claude-opus-5-5"}]
+    for m in assistant_models:
+        events.append(_assistant(m))
+    # a nested tool_use argument carrying the contradictory DRAFT object
+    events.append({"type": "assistant", "message": {"model": assistant_models[0],
+                  "content": [{"type": "tool_use", "name": "Read", "input": {"draft": DRAFT}}]}})
+    # an assistant text block quoting the DRAFT object as fenced JSON
+    events.append({"type": "assistant", "message": {"model": assistant_models[0],
+                  "content": [{"type": "text", "text": "```json\n" + json.dumps(DRAFT) + "\n```"}]}})
+    events.append({"type": "user", "message": {"role": "user"}})
+    for _ in range(result_events):
+        result = {"type": "result", "subtype": subtype, "is_error": is_error,
+                  "result": "```json\n" + json.dumps(DRAFT) + "\n```"}
+        if include_structured:
+            result["structured_output"] = structured_output
+        events.append(result)
+    return events
+
+
+def _naive_whole_stream_candidates(events, token, schema):
+    """Mimic the pre-fix recursive walk, to show the derived fixture's multiplicity."""
+    found = {}
+
+    def walk(x):
+        if isinstance(x, dict):
+            if x.get("reviewToken") == token:
+                try:
+                    jsonschema.validate(x, schema)
+                except jsonschema.ValidationError:
+                    pass
+                else:
+                    found[json.dumps(x, sort_keys=True)] = x
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        elif isinstance(x, str):
+            z = x.strip()
+            if z.startswith("```"):
+                z = z.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            if z.startswith("{") and z.endswith("}"):
+                try:
+                    walk(json.loads(z))
+                except (ValueError, RecursionError):
+                    pass
+
+    for e in events:
+        walk(e)
+    return list(found.values())
+
+
+def _select(events, **overrides):
+    kwargs = dict(review_token=UNIT_TOKEN, schema=UNIT_SCHEMA, requested_model="claude-opus-5-5",
+                  exit_code=0, provider="claude", input_pins_unchanged=True,
+                  retained_whole_candidates=[CANON, DRAFT])
+    kwargs.update(overrides)
+    return _load_selector()(events, **kwargs)
+
+
+class TerminalReviewSelection(unittest.TestCase):
+    # --- 1. the derived fixture reproduces the pre-fix multiplicity ---------
+    def test_derived_fixture_has_prefix_stream_multiplicity(self):
+        found = _naive_whole_stream_candidates(_stream(), UNIT_TOKEN, UNIT_SCHEMA)
+        self.assertEqual(len(found), 2)  # CANON + DRAFT, exactly the B shape
+
+    # --- 2-4. canonical selection ignores draft/quoted/internal-tool text ---
+    def test_exports_single_canonical_structured_output(self):
+        out = _select(_stream())
+        self.assertEqual(out["decision"], "EXPORT")
+        self.assertEqual(out["review"], CANON)
+
+    def test_ignores_quoted_and_nested_draft(self):
+        out = _select(_stream())
+        self.assertNotEqual(out["review"], DRAFT)
+
+    def test_contradictory_valid_nested_cannot_override_typed_object(self):
+        # DRAFT is schema-valid and present nested + quoted, yet CANON wins.
+        self.assertIn(DRAFT, _naive_whole_stream_candidates(_stream(), UNIT_TOKEN, UNIT_SCHEMA))
+        self.assertEqual(_select(_stream())["review"], CANON)
+
+    # --- 5-19. STOP rejections, no partial salvage / no text fallback -------
+    def test_reject_non_claude_provider(self):
+        self.assertEqual(_select(_stream(), provider="gemini")["reason"], "NON_CLAUDE_PROVIDER")
+
+    def test_reject_requested_model_not_opus55(self):
+        self.assertEqual(_select(_stream(), requested_model="claude-opus-4-8")["reason"],
+                         "REQUESTED_MODEL_NOT_OPUS55")
+
+    def test_reject_non_zero_exit(self):
+        self.assertEqual(_select(_stream(), exit_code=1)["reason"], "NON_ZERO_OR_MISSING_TERMINAL_EXIT")
+
+    def test_reject_missing_exit(self):
+        self.assertEqual(_select(_stream(), exit_code=None)["reason"], "NON_ZERO_OR_MISSING_TERMINAL_EXIT")
+
+    def test_reject_pins_changed(self):
+        self.assertEqual(_select(_stream(), input_pins_unchanged=False)["reason"], "INPUT_PINS_CHANGED")
+
+    def test_reject_no_actual_assistant_frames(self):
+        self.assertEqual(_select(_stream(assistant_models=()))["reason"], "NO_ACTUAL_ASSISTANT_MODEL_FRAMES")
+
+    def test_reject_mixed_actual_48(self):
+        out = _select(_stream(assistant_models=("claude-opus-5-5", "claude-opus-4-8")))
+        self.assertEqual(out["reason"], "MIXED_OR_WRONG_ACTUAL_ASSISTANT_MODEL")
+
+    def test_reject_no_terminal_result_event(self):
+        self.assertEqual(_select(_stream(result_events=0))["reason"], "NO_TERMINAL_RESULT_EVENT")
+
+    def test_reject_multiple_terminal_result_events(self):
+        self.assertEqual(_select(_stream(result_events=2))["reason"], "MULTIPLE_TERMINAL_RESULT_EVENTS")
+
+    def test_reject_failed_terminal_result(self):
+        out = _select(_stream(subtype="error_during_execution", is_error=True))
+        self.assertEqual(out["reason"], "FAILED_OR_NON_SUCCESS_TERMINAL_RESULT")
+
+    def test_reject_structured_output_absent(self):
+        self.assertEqual(_select(_stream(include_structured=False))["reason"], "STRUCTURED_OUTPUT_ABSENT")
+
+    def test_reject_structured_output_string(self):
+        out = _select(_stream(structured_output=json.dumps(CANON)))
+        self.assertEqual(out["reason"], "STRUCTURED_OUTPUT_NOT_DICT")
+
+    def test_reject_review_token_mismatch(self):
+        bad = {"reviewToken": "some-other-token", "findings": []}
+        self.assertEqual(_select(_stream(structured_output=bad))["reason"], "REVIEW_TOKEN_MISMATCH")
+
+    def test_reject_schema_invalid(self):
+        bad = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6"}]}  # missing 'evidence'
+        self.assertEqual(_select(_stream(structured_output=bad),
+                                 retained_whole_candidates=None)["reason"], "SCHEMA_INVALID")
+
+    def test_reject_canonical_not_in_retained(self):
+        other = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6", "evidence": "a third unseen variant"}]}
+        out = _select(_stream(structured_output=other))
+        self.assertEqual(out["reason"], "CANONICAL_OBJECT_NOT_IN_RETAINED")
+
+    # --- 20. the EXPORT receipt is bounded / allowlisted (no raw, no partials)
+    def test_export_receipt_bounded_fields(self):
+        receipt = _select(_stream())["receipt"]
+        allowed = {"policy", "decision", "reason", "reviewToken", "requestedModel",
+                   "exclusiveActualAssistantModel", "assistantEnvelopeModelCounts",
+                   "terminalResultEvents", "structuredOutputKind", "terminalExitCode",
+                   "inputPinsUnchanged", "provider", "identityMatchedRetainedCandidate",
+                   "noTextOrPartialFallback", "selection"}
+        self.assertTrue(set(receipt).issubset(allowed))
+        self.assertTrue(receipt["noTextOrPartialFallback"])
+        self.assertEqual(receipt["exclusiveActualAssistantModel"], "claude-opus-5-5")
+
+
+if __name__ == "__main__":  # pragma: no cover - not executed during authoring
+    unittest.main()
