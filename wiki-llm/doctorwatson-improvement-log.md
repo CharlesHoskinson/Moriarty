@@ -871,3 +871,27 @@ and evidence limits. A smaller packet is a proposed improvement awaiting an
 actual reliable review; it does not automatically rehabilitate the failed vote.
 Provider success, read receipts, authored code, actual tests and accepted review
 remain separate observations. No security gate or model assignment changes.
+
+### DW-48 — Make current requirement closure a factory output
+
+The ordinary factory checker reported corpus consistency and execution-layer
+gaps, but did not consume current per-requirement acceptance evidence. The frozen
+design traceability record still labelled all 35 original requirements open;
+those historical labels were not a current implementation census. This made
+passing source and test batches difficult to reconcile with actual EARS closure.
+
+The user directs the existing loop to close retained requirements. Add a current
+evidence sidecar to the existing checker, preserving the frozen design bindings.
+Keep implementation, observed validation, owner-assessed acceptance and computed
+source/evidence currentness separate. Include the original 35 clauses, 25 additive
+features/68 scenarios and linked retained families. A changed supporting source
+must remove a prior declaration from the current closed count; matching hashes
+do not establish semantic acceptance.
+
+The first ordinary regression ran on October17 at21:58:48UTC and failed because
+the actual checker lacked the `requirement_evidence` interface. Its copied source
+remained unchanged. The regression describes a synthetic closure followed by a
+source edit; it is not evidence that an actual Sherlock requirement is closed.
+Implementation, green verification and fresh review follow this preserved red
+result. Select the next missing requirement behavior or exact acceptance scenario
+after the repair; do not build a replacement scheduler or repeat passing cohorts.

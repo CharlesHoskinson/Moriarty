@@ -1,0 +1,1094 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema",
+    "requirementCatalogue",
+    "requirements",
+    "refinementInventory",
+    "refinementRequirements",
+    "retainedInventory",
+    "assessment"
+  ],
+  "properties": {
+    "schema": {
+      "const": "sherlock.current-requirement-evidence/1"
+    },
+    "requirementCatalogue": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "jsonPointer": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 35,
+      "maxItems": 35,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "requirementSource",
+          "predicate",
+          "implementation",
+          "validation",
+          "acceptance",
+          "currentness",
+          "nextDiscriminatingCheck",
+          "citations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "requirementSource": {
+            "type": "object",
+            "required": [
+              "path",
+              "sha256",
+              "heading",
+              "scenarioNames"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "startLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "jsonPointer": {
+                "type": "string"
+              },
+              "heading": {
+                "type": "string"
+              },
+              "scenarioNames": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "predicate": {
+            "type": "object",
+            "required": [
+              "id",
+              "description",
+              "domain"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "applicableEvidenceClasses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "nativeRequiredByOriginal": {
+                "type": "boolean"
+              },
+              "allOriginalScenarios": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "implementation": {
+            "type": "object",
+            "required": [
+              "status",
+              "supportedScope",
+              "missing"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "partial",
+                  "absent",
+                  "unknown"
+                ]
+              },
+              "supportedScope": {
+                "type": "string"
+              },
+              "missing": {
+                "type": "string"
+              },
+              "sourceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "validation": {
+            "type": "object",
+            "required": [
+              "status",
+              "evidenceRefs",
+              "countercaseRefs",
+              "reviewRefs"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "observed",
+                  "partial",
+                  "unrun",
+                  "unknown"
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "countercaseRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "reviewRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "scenarioCoverage": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": true
+          },
+          "acceptance": {
+            "type": "object",
+            "required": [
+              "status",
+              "scope",
+              "reason"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "closed",
+                  "open"
+                ]
+              },
+              "proposedStatus": {
+                "enum": [
+                  "closed",
+                  "open"
+                ]
+              },
+              "scope": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "adoption": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "currentness": {
+            "type": "object",
+            "required": [
+              "sourcePins",
+              "comparedToCurrent",
+              "limitations"
+            ],
+            "properties": {
+              "sourcePins": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "comparedToCurrent": {
+                "enum": [
+                  "identical",
+                  "changed",
+                  "partial",
+                  "unknown"
+                ]
+              },
+              "limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "recordedConsumerClosure": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "scope": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "nextDiscriminatingCheck": {
+            "type": "object",
+            "required": [
+              "consumer",
+              "input",
+              "expected",
+              "missingAuthorityOrOwner"
+            ],
+            "properties": {
+              "consumer": {
+                "type": "string"
+              },
+              "input": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "missingAuthorityOrOwner": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "startLine": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "endLine": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "jsonPointer": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "originalRequirementIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "refinementInventory": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "featureIds",
+        "scenarioCount"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "jsonPointer": {
+          "type": "string"
+        },
+        "featureIds": {
+          "type": "array",
+          "minItems": 25,
+          "maxItems": 25,
+          "items": {
+            "type": "string"
+          }
+        },
+        "scenarioCount": {
+          "const": 68
+        }
+      },
+      "additionalProperties": true
+    },
+    "refinementRequirements": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "requirementSource",
+          "predicate",
+          "implementation",
+          "validation",
+          "acceptance",
+          "currentness",
+          "nextDiscriminatingCheck",
+          "citations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "requirementSource": {
+            "type": "object",
+            "required": [
+              "path",
+              "sha256",
+              "heading",
+              "scenarioNames"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "startLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "jsonPointer": {
+                "type": "string"
+              },
+              "heading": {
+                "type": "string"
+              },
+              "scenarioNames": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "predicate": {
+            "type": "object",
+            "required": [
+              "id",
+              "description",
+              "domain"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "applicableEvidenceClasses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "nativeRequiredByOriginal": {
+                "type": "boolean"
+              },
+              "allOriginalScenarios": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "implementation": {
+            "type": "object",
+            "required": [
+              "status",
+              "supportedScope",
+              "missing"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "complete",
+                  "partial",
+                  "absent",
+                  "unknown"
+                ]
+              },
+              "supportedScope": {
+                "type": "string"
+              },
+              "missing": {
+                "type": "string"
+              },
+              "sourceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "validation": {
+            "type": "object",
+            "required": [
+              "status",
+              "evidenceRefs",
+              "countercaseRefs",
+              "reviewRefs"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "observed",
+                  "partial",
+                  "unrun",
+                  "unknown"
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "countercaseRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "reviewRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "scenarioCoverage": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": true
+          },
+          "acceptance": {
+            "type": "object",
+            "required": [
+              "status",
+              "scope",
+              "reason"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "closed",
+                  "open"
+                ]
+              },
+              "proposedStatus": {
+                "enum": [
+                  "closed",
+                  "open"
+                ]
+              },
+              "scope": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "adoption": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "currentness": {
+            "type": "object",
+            "required": [
+              "sourcePins",
+              "comparedToCurrent",
+              "limitations"
+            ],
+            "properties": {
+              "sourcePins": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "comparedToCurrent": {
+                "enum": [
+                  "identical",
+                  "changed",
+                  "partial",
+                  "unknown"
+                ]
+              },
+              "limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "recordedConsumerClosure": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "jsonPointer": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "scope": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "nextDiscriminatingCheck": {
+            "type": "object",
+            "required": [
+              "consumer",
+              "input",
+              "expected",
+              "missingAuthorityOrOwner"
+            ],
+            "properties": {
+              "consumer": {
+                "type": "string"
+              },
+              "input": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "missingAuthorityOrOwner": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "startLine": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "endLine": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "jsonPointer": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "originalRequirementIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "retainedInventory": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "family",
+          "catalogue",
+          "status",
+          "disposition"
+        ],
+        "properties": {
+          "family": {
+            "type": "string"
+          },
+          "catalogue": {
+            "type": "object",
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "startLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "jsonPointer": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "required": [
+        "status",
+        "adoption",
+        "globalV1"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "adoption": {
+          "enum": [
+            "pending-root",
+            "adopted"
+          ]
+        },
+        "globalV1": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "x-integrity-contract": "Mechanically validate exact IDs/headings/ordered scenario names and refs/pins; report declared statuses separately from computed integrity. Never infer semantic acceptance or security approval."
+}
