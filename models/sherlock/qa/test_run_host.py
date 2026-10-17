@@ -391,7 +391,7 @@ class SourceMembership(unittest.TestCase):
             self.assertNotIn(run_host.SHERLOCK + module, run_host.IMAGE_SOURCE_PATHS)
 
     def test_realizations_are_fixed_and_distinct(self):
-        self.assertEqual(sorted(run_host.REALIZATIONS), ['host', 'image'])
+        self.assertEqual(sorted(run_host.REALIZATIONS), ['host', 'image', 'stream'])
         host, image = run_host.REALIZATIONS['host'], run_host.REALIZATIONS['image']
         self.assertEqual((host.format, host.producer, host.tests, host.sources, host.test_closure),
                          (run_host.FORMAT, run_host.PRODUCER, run_host.EXPECTED_TESTS, run_host.SOURCE_PATHS,
@@ -488,7 +488,7 @@ class CliPreflight(unittest.TestCase):
 
     def test_absent_compiler_stops_each_realization_at_preflight_without_a_child(self):
         repo = str(run_host.REPO)
-        for realization in ('host', 'image'):
+        for realization in ('host', 'image', 'stream'):
             attempt = os.path.join(self.base, 'attempt-' + realization)
             if not run_host.SAFE_PATH.fullmatch(attempt) or os.path.commonpath([attempt, repo]) == repo:
                 self.skipTest('temporary directory is not an accepted output location here')

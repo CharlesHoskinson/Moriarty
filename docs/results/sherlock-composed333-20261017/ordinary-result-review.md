@@ -1,0 +1,44 @@
+# Composed actual host capture — ordinary result review
+
+**Verdict: APPROVE_SCOPED_ORDINARY_RESULT_PUBLICATION. Material corrections: none identified.** The retained evidence supports one actual SDK-free A102→A80 host producer capture and matching **333 noncontext carriers**, checked in named and ordered forms against previously frozen independent expectations. These are two comparisons of the same 333 carriers, not 666 distinct carriers. This is no security/native judgment or product acceptance.
+
+Scope: `checks/composed-actual-01` and its `continuation-01`; the prior evidence-lane source review; original independent expectation freezes. I read the actual client, extractor, comparator, source/command/result receipts, dep-info, logs and relevant host producer/cfg boundaries. I independently rehashed source/tool/extern/expectation and result artifact bytes and inspected parsed artifacts. I did not execute the producer, comparator, tests, compiler, provider or native code. Only these review outputs were written. No private source was read.
+
+## Preserved failure and honest continuation
+
+The initial `RESULT.json` remains **FAILED**, SHA256 `0168f3f43f56b41639537702dd5594dfd1c77a06894e196712bd219f70ad8a21`. The host compile itself exited 0, taking 0.516 seconds and emitting two warnings. Its following exact lexical path-set check failed because rustc retained `../../../../models/sherlock/literal-step/MAPPING.md` in an `include_str!` dependency path. This is a failed check after successful compilation, not a compiler failure or an original full-attempt pass. The preflight note also retains an earlier manifest-key lookup correction before command selection; it claims no execution from that preparation.
+
+Continuation PREEXEC binds the failed result and the already-produced host rlib at SHA256 `bb08ff484f057412d9681c9940d79fd74bc341e66ef29e24a4214fbfe6d28ebd`. Both hashes match actual bytes. I independently parsed `host.d`, normalized every dependency with the same `os.path.normpath` convention used by existing `run_host.compile_inputs`, and compared the entire set: **exactly ten expected members, all inside the frozen source snapshot**, with no additions or omissions. The raw lexical set differs solely in spelling of the retained relative include path. Normalization changes neither source nor required membership. The continuation records no host recompilation, and does not overwrite the failed initial result.
+
+The subsequent recorded children all exit 0: client compile/link (0.316 s), capture invocation (0.008 s), extraction (0.032 s), named comparison (0.065 s), ordered comparison (0.064 s). Each recorded command has the specified 30-second timeout prefix. `client.d` names exactly the one client source; linked externs remain separately pinned dependencies, not source members inferred from that dep-info. Only the continuation's narrow scope is PASS.
+
+## Source and artifact identity
+
+All **117** original PREEXEC source/tool/extern/expected pins match current bytes and lengths, including **57 Core source members** and the reused Core artifact. The ten host source-union snapshots match their W source pins. All **23** continuation artifact hashes/lengths also match. This independently confirms current file identity, not compiler/cache provenance or process authenticity.
+
+| Artifact | SHA256 |
+|---|---|
+| Client source, 7,281 bytes | `23583d35bd71139a3024006be4f6276ba0f647a52f2fa00745e6d3fcf13c3938` |
+| Raw capture, 45,210 bytes | `e895d510703c82e044427babab0c9a14fefc407ba5afe1696af7ef1e74f55520` |
+| Extractor source, 757 bytes | `94ebf9c525f0615960a80cd9be452a2d260db41d8926c85f35da3d1d478f925f` |
+| Named export, 5,479 bytes | `c2b21a7332c43820178f54bcd2d661f1a7973d684132689ccb9a67aa4ea4980f` |
+| Ordered export, 2,337 bytes | `9031d686a3eb91edd76701e622d744336b8a38f92aa860bf0e3b7bbc89289fdb` |
+| Expected membership | `fe8cfdd3e942104e705abbe1c76259b76c6b7faff61dfe40ad66c64437b16041` |
+
+Under `--cfg mori_sdk_free`, the actual host root registers `literal_witness` and `return_publication_witness`. Other host-union files are compile-time source text through `include_str!`, not compiled SDK module bodies. The inspected command sequence/call path selects no SDK relation, keygen, prove, verification, ledger or target operation. This is a source/receipt observation, not a whole-process syscall or absence-of-side-effects attestation. Existing cache/transitive source, proc-macro, sysroot, linker and runtime trust limitations remain; Core was reused rather than rebuilt here.
+
+## Actual data and independent expected lineage
+
+The frozen composed expectation `SOURCE-FREEZE.json`, SHA256 `88c6fba4b81f7326b34fb5cc759019e55dd6370fc9785ff5040ad080409cc2a2`, records **15:32:43 UTC**, before this attempt's 17:33:59 PREEXEC and 17:35 execution. It retains prior literal and A80 expectation provenance and an explicit independent-data author declaration: no implementation/actual captures read and no expected cells sent to source authors. The prior independent ordinary data/comparator review is separate from the host-client source review. I verified the copied expected-membership hash and all **25** pinned files, including exact expected values, coverage and exchange contract, against both retained original/preexecution identities and current copies. This audit verifies timing/byte lineage and actual equality; it does not redo the original independent mathematical derivation or authenticate those local author declarations cryptographically.
+
+The client contains no expectation import. It constructs the fixed public UInt7/fuel1/stack16 specimen and calls `produce_a102_literal_return_publication` once. That production function observes A102 then A80 on one real Machine; the client exports the returned Program, pre, intermediate and Done images and both actual envelopes. It copies every stored root/table/row/lane; it does not construct substitute images or fill missing cells from expected data. The existing physical adapters construct Step-mode images after observing the semantic records. A80's adapter clones its prior physical image and clears control/aliases the Constant reference; this result is evidence about those actual adapters, not a canonical projection or a separate proof that they are correct for all inputs.
+
+The extractor parses one complete JSON envelope, rejects duplicate members and unquoted numeric/nonfinite tokens, checks its exact outer schema, and selects `payload` and `ordered_non_context_payload` without rewriting either. I independently parsed the raw and extracted artifacts: both extracted objects are exactly their original raw-envelope subvalues. Flattening the named Program/Init/intermediate/Done images in the declared order and appending the two envelopes exactly reproduces the ordered export. All **333** entries are canonical quoted u128 decimal strings: **86 Program +81 Init +81 intermediate +81 Done +4 envelope**. Complete arrays, zero rows and empty tables remain present.
+
+I independently found the named export structurally equal to frozen `EXPECTED-VALUES.json` and the ordered export equal to frozen `EXPECTED-ORDERED-NONCONTEXT.json`'s values. Both retained comparator outputs bind their actual export hash and expected-membership hash and report PASS with precisely these component counts. The comparator pins expectations before opening actual data and rejects extra/missing structure or incorrect array lengths; it neither evaluates the implementation nor removes positions to obtain a match.
+
+There is **no context stripping**. The source client never creates a 335-lane statement: it exports the explicitly agreed six-field 333-carrier value interface. The raw metadata states the two context limbs are unbound and absent without placeholders; extraction does not remove them from a larger list. Neither zeros/nulls nor inferred contexts are supplied. Caller source-digest strings remain retained data. The actual metadata reports A102 line102/charge1 followed by A80 line80/charge0; full semantic StepRecord snapshots are not exported, so this is not a full typed-trace comparison.
+
+## Publication limits
+
+Publish as an **actual fixed SDK-free composed host carrier match**, preserving the initial failed check, explicit continuation/artifact reuse and every scope qualification. This closes the previously unobserved real-client capture/333-comparison gap for this exact specimen only. It does not establish the checked composed request/layout, 335-lane context/transcript/PI binding, native emitter compilation/execution, constraints, proof, ledger/stagenet, canonical Done/projectA, general interpreter/financial coverage or any U/M/MC/SP/G exit. The distinct stream eight-test/216-run and 241-test observations remain separate cohorts, not combined native evidence. Native authority and Root's sole integration role are unchanged.

@@ -1,5 +1,25 @@
 # Moriarty consolidated roadmap
 
+## October17 Sherlock completion review
+
+The [reconciled revision03](docs/sherlock/design.md), [additive OpenSpec/EARS](openspec/changes/sherlock-completion-convergence/ADOPTION.md)
+and [finite implementation plan](docs/SHERLOCK-IMPLEMENTATION-PLAN.md) now control
+Sherlock completion work alongside every retained requirement below. The25 added
+features/68 scenarios map all35 original UIREQ; these are indices, not a completion
+fraction. Current v1 still requires witness/constraint/export separation, an
+uncached dependency baseline, widths1/2/4/8 and bounded residualization.
+
+Observed preparation results: [241 local checks and actual stream8/216](docs/results/sherlock-stream-20261017/README.md),
+[actual composed333 named/ordered comparison](docs/results/sherlock-composed333-20261017/README.md),
+and merged [PR168](https://github.com/CharlesHoskinson/Moriarty/pull/168).
+These do not close full39/B, public source integration, persistent/financial/
+formal/native/target/release exits. The next ordinary source batch connects
+existing mori compile to real B preparation/admission; native prerequisites remain
+separately blocked. The [loop contract](docs/sherlock/implementation-loop.md)
+requires product progress and documentation on each code batch, with no unchanged
+blocker requeues or new orchestration framework.
+
+
 Moriarty is a permissionless language of provable financial intention, compiled to Midnight ZKIRv3. The optional Federated DeFi Kernel coordinates solvers, evidence and multichain execution under those intentions. The [consolidated vision and design](docs/MORIARTY-CONSOLIDATED-DESIGN.md) defines that boundary; the [product contract](docs/MORIARTY-PRODUCT-CONTRACT.md) preserves the user's controlling constraints.
 
 This is the **single delivery sequence**. P0–P7, C0–C4 and K0–K5 are retained requirement/provenance aliases, not parallel work queues. MC01–MC08, SP01–SP12 and G01–G24 retain their objective acceptance obligations. [Traceability and conflict dispositions](openspec/changes/consolidated-language-kernel/traceability.md) map the inherited work without resetting evidence, resource charges or unresolved failures.
