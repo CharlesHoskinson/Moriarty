@@ -40,3 +40,13 @@ The [ordinary result review](independent/32-compiler-ordinary-result-review/REVI
 A later [independent additive comparator](independent/38-compiler-compare-preparation-source/HANDOFF.json) froze additional predicates from the existing independent expectations and public declarations before reading actual output. Its98 pure synthetic checks passed. Both original captured artifacts then [matched](preparation-comparison/RESULT.json) all22 admission bounds and selected preparation values, nested key/type/presence, order and cardinality predicates. Exact unselected raw metadata paths remain43 for Quote and97 for Eligibility; comparison_complete remains false. This extends comparison of existing captures; it does not rerun the compiler or establish runtime semantics.
 
 The designated ArgonHIGH owner also authored a [single diagnostic-routing source edit](diagnostic-source-correction/OWNER-LITERAL.patch), applied exactly by Root: canonical core JSON export now flows through the existing command report and main Shell renderer. A parser-only check passed with the resulting source hash20ff4648d1f96d12ac68534b49c97b878e5972344c8201d11daf9e1d451ed2f9. This is an authored correction awaiting fresh source review and actual CLI checks, not an approved or executed diagnostic fix. The mandatory preflight-ordering finding remains OPEN. Original candidate/build/review records are unchanged; their exact source scope is historical.
+
+## Later preflight source correction
+
+The [later correction and typecheck record](../sherlock-compiler-preflight-20261017/README.md)
+preserves the first private-module compilation failure, the owner's API repair,
+successful production/five-test metadata checking, and an integrated-tree
+collector failure with unrecorded child exits. The exact correction and five
+test sources are now integrated on the draft compiler branch. Fresh combined
+review, actual regression execution and CLI checks remain pending; the original
+findings are not closed by source authorship or metadata output.

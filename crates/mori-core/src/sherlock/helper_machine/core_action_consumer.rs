@@ -29,8 +29,8 @@ use super::shared::{Admitted, FinanceInput, HostViolation, MachineImage, OwnerEn
 use super::source_input_bridge;
 
 pub use super::core_action_consumer_security::{
-    CompletedRun, ConsumerConfig, ConsumerError, ConsumerProfile, HostGuardError, HostMeasure,
-    SourceHostBounds,
+    preflight_action_inputs, preflight_source_global, validate_config, CompletedRun,
+    ConsumerConfig, ConsumerError, ConsumerProfile, HostGuardError, HostMeasure, SourceHostBounds,
 };
 
 /// The unchanged source preparation report and the actual completed B run.

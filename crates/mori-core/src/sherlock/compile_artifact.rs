@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::{json, Value};
 use crate::sherlock::helper_machine::core_action_consumer::{
-    prepare_scalar_action_host, run_scalar_action, ConsumerError,
+    preflight_action_inputs, preflight_source_global, prepare_scalar_action_host,
+    run_scalar_action, validate_config, ConsumerError,
 };
 use crate::sherlock::helper_machine::shared::StepEventC;
 use crate::sherlock_source::ScalarActionReport;
@@ -138,12 +139,18 @@ pub fn compile_host(
     observe: bool,
 ) -> Result<CompileArtifact, CompileFailure> {
     let config = parse_config(config_source)?;
+    let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
     let target_descriptor = crate::json::parse(target_source)
         .map_err(|error| CompileFailure::core("config", error))?;
+    validate_config(&consumer)
+        .map_err(|error| CompileFailure::consumer(ConsumerError::HostGuard(error)))?;
     let program = crate::parse(source).map_err(|error| CompileFailure::core("parse", error))?;
+    preflight_source_global(&program, &consumer).map_err(CompileFailure::consumer)?;
     let action_index = program.actions.iter().position(|action| action.name == action_name)
         .ok_or_else(|| CompileFailure::input("select", format!("unknown action: {action_name}")))?;
-    let action = &program.actions[action_index];
+    let inputs = BTreeMap::<String, crate::Value>::new();
+    let action = preflight_action_inputs(&program, action_index, &inputs, &consumer)
+        .map_err(CompileFailure::consumer)?;
     if !action.inputs.is_empty() {
         return Err(CompileFailure {
             stage:"select", actual_error:json!({"unsupported":"parameterized-action",
@@ -152,8 +159,6 @@ pub fn compile_host(
             events_forwarded:"0".into(), completed:false,
         });
     }
-    let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
-    let inputs = BTreeMap::<String, crate::Value>::new();
     // Each branch owns exactly one admission/image pair. In observe mode the
     // pair comes only from run_scalar_action, never a separate first preparation.
     let (preparation, admission, observation) = if observe {
