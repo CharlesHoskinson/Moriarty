@@ -1,0 +1,11 @@
+# Complete B trace comparison — source and metadata
+
+The new `helper_machine::complete_comparison::first_difference` compares two supplied complete B observations. It checks initial state, each common record's before/event/after fields in order, then record counts. Differences borrow the original values; equality retains every field covered by the existing typed equality. No serialization, arena normalization, A/B clock conversion, owner call or transition judgment occurs in this helper.
+
+The [source handoff](source/REPORT.md) contains the exact comparator, nine test function sources and documentation. [Sixteen independent position expectations](independent/EXPECTED.json) froze before execution; the author retained them unchanged. New tests use one fixed literal admission/capture fixture per test, then compare typed clones and public event literals. Those event values are supplied comparison specimens, not observed owner transitions. Private SegBase construction remains private; different SegBase values are not covered by the fixed genesis fixture.
+
+Root [registered the new module](registration/REGISTRATION.json) above the merged B observer implementation. The [pure leaf metadata](pure-leaf-metadata/RESULT.json), [registered production Core metadata](production-metadata/RESULT.json), and [nine external test function metadata](external-test-metadata/RESULT.json) checks all exited0. The production source inventory contains125 files; dep-info names59 compiled Rust inputs. Six existing owner warnings are preserved. External-test metadata checking linked no test binary and executed no admission, capture or test body.
+
+Fresh source/composition review and execution-scope classification are pending. All nine tests remain UNRUN. Earlier R44/R46 permissions and results concern four different exact tests and do not transfer. Actual test execution requires its own applicable classification and result review. This increment does not close full SCON-007, transition validity, canonical persistence, formal/circuit correspondence, native proofs, finance or stagenet settlement.
+
+The earlier compiler PR remains separate while its preflight finding is corrected. Local CI only; no hosted checks were added. Source handoffs and receipts retain their original paths/statuses. Compiled metadata remains local, with output hashes in the receipts.

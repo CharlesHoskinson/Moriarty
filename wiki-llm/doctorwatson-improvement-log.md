@@ -833,6 +833,14 @@ Observed October17: the A complete-state continuity comparator passed48 focused 
 
 **Improvement:** use named selector fields or parse the value after a known flag when command metadata is needed. Check original command exits separately from later local assertions, preserve both outcomes, and continue from the precise cause when the already produced artifact remains valid. Passing test counts retain their exact source and selected branch scope. No new runner or execution policy is proposed.
 
+
+### DW-45 — Check imported namespaces as well as local module APIs
+
+**Observation:** the repaired prerequisite test source passed a direct guard-export/arity scan, but still called `mock.ExitStack()`. A separate Python3.14 namespace probe found that `unittest.mock` has no `ExitStack` while `contextlib` does. The designated owner supplied the import/call correction in a small follow-up; the eight test names and assertion counts remained unchanged. These are source and namespace facts; the prerequisite tests have not run.
+
+**Evidence:** runtime `R50-one-file-test-api-repair`, `53-r2-integrated-source-candidate/STDLIB-NAMESPACE-READBACK.json`, and `R50-namespace-api-fix-01`; the final test afterimage is `4a91f6ffec061c78564d2bfbf6a13c2b5750d690d4570577e1ebfa5909273e54`. The driver and test repairs remain separate from an execution classification, R2 adoption and native permission.
+
+**Improvement:** enumerate imported modules used by a new test fixture alongside the local target module. Verify an unfamiliar namespace against its installed source or a read-only namespace probe before running the suite. Keep syntax/API scans, unchanged assertion inventories and actual behavior as separate evidence. This adds no new gate, runner or execution authority.
 ### DW-46 — Include module visibility in function-level source tasks
 
 The compact preflight author returned applicable source edits, but the first
