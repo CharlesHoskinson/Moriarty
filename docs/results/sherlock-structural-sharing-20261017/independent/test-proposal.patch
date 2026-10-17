@@ -1,0 +1,185 @@
+--- /dev/null
++++ b/crates/mori-core/tests/sherlock_original_009_structural_sharing.rs
+@@ -0,0 +1,182 @@
++//! SOURCE ONLY. Execute only after designated-owner classification of this exact closure.
++//! Original UIREQ-009 positive shared/separate Leaf4 scenario, fixed typed A host only.
++//! K-derived rule/work oracle, complete endpoints and selected complete checkpoints.
++//! Pairwise full trace equality is supplemental; no full independent prefix-state claim.
++
++use std::sync::Arc;
++use mori_core::sherlock::{
++    Arm, BinaryOp, Control, Environment, Expr, ExprRef, Frame, Function, Machine,
++    Outcome, Parameter, Pattern, Program, Snapshot, StepRecord, Tree, Type, Value,
++    K_SOURCE_SHA256, PROFILE,
++};
++
++const FUEL: u128 = 512;
++const STACK: usize = 32;
++const MAX_EVENTS: usize = 513;
++const WORK: u128 = 60;
++const RULES: &[usize] = &[
++    131,135,102,181,200,204,208,135,126,135,108,173,214,217,214,220,135,
++    117,135,131,135,108,181,200,204,208,135,126,135,108,173,214,220,135,
++    108,195,185,149,131,135,108,181,200,204,208,135,126,135,108,173,214,
++    220,135,108,195,185,153,223,195,185,80,
++];
++const PREFIX_DEPTH: &[usize] = &[0,0,1,1,0,0,0,0,1,1,2,2,1,1,1,1,1,2,2,3,3,4,4,3,3,3,3,4,4,5,5,4,4,4,5,5,4,3,3,3,4,4,3,3,3,3,4,4,5,5,4,4,4,5,5,4,3,2,2,1,0,0];
++fn var(name: &str) -> ExprRef { Arc::new(Expr::Var(name.into())) }
++fn call(arg: ExprRef) -> ExprRef { Arc::new(Expr::Call("10".into(), vec![arg])) }
++#[derive(Clone)]
++struct Code {
++    function: Function,
++    body: ExprRef,
++    leaf_body: ExprRef,
++    left_call: ExprRef,
++    right_call: ExprRef,
++    arms: Vec<Arm>,
++}
++fn code() -> Code {
++    let leaf_body = var("12");
++    let left_call = call(var("13"));
++    let right_call = call(var("14"));
++    let branch_body = Arc::new(Expr::Binary(BinaryOp::Add, left_call.clone(), right_call.clone()));
++    let arms = vec![
++        Arm { pattern: Pattern::Leaf("12".into()), body: leaf_body.clone() },
++        Arm { pattern: Pattern::Branch("13".into(), "14".into()), body: branch_body },
++    ];
++    let body = Arc::new(Expr::Match(var("11"), arms.clone()));
++    let function = Function {
++        name: "10".into(), parameters: vec![Parameter { name: "11".into(), ty: Type::Tree }],
++        return_type: Type::UInt, body: body.clone(),
++    };
++    Code { function, body, leaf_body, left_call, right_call, arms }
++}
++struct Fixture { program: Arc<Program>, root: Value, code: Code }
++fn fixture(code: Code, shared: bool) -> Fixture {
++    let left = Arc::new(Tree::Leaf(4));
++    let right = if shared { left.clone() } else { Arc::new(Tree::Leaf(4)) };
++    assert_eq!(Arc::ptr_eq(&left, &right), shared, "actual fixture sharing, not a label");
++    let root = Value::Tree(Tree::Branch(left, right));
++    let entry = call(Arc::new(Expr::Literal(root.clone())));
++    let program = Arc::new(Program { functions: vec![code.function.clone()], entry });
++    Fixture { program, root, code }
++}
++fn leaf() -> Value { Value::Tree(Tree::Leaf(4)) }
++fn env(bindings: &[(&str, Value)]) -> Environment {
++    bindings.iter().map(|(name,value)| ((*name).into(), value.clone())).collect()
++}
++fn root_env(f: &Fixture) -> Environment { env(&[("11",f.root.clone())]) }
++fn branch_env(f: &Fixture) -> Environment {
++    env(&[("11",f.root.clone()),("13",leaf()),("14",leaf())])
++}
++fn leaf_env() -> Environment { env(&[("11",leaf())]) }
++fn leaf_bindings() -> Environment { env(&[("11",leaf()),("12",Value::UInt(4))]) }
++fn outer_frames(f: &Fixture) -> Vec<Frame> {
++    vec![Frame::Scope(root_env(f)),Frame::Return(Type::UInt,Environment::new())]
++}
++fn pending_frames(f: &Fixture, right: bool) -> Vec<Frame> {
++    let pending = if right { Frame::Right(BinaryOp::Add,Value::UInt(4)) }
++        else { Frame::Left(BinaryOp::Add,f.code.right_call.clone(),branch_env(f)) };
++    let mut frames = vec![pending]; frames.extend(outer_frames(f)); frames
++}
++fn callee_frames(f: &Fixture, right: bool) -> Vec<Frame> {
++    let mut frames=vec![Frame::Return(Type::UInt,branch_env(f))];
++    frames.extend(pending_frames(f,right)); frames
++}
++fn leaf_scope_frames(f: &Fixture, right: bool) -> Vec<Frame> {
++    let mut frames=vec![Frame::Scope(leaf_env())];frames.extend(callee_frames(f,right));frames
++}
++fn expected_state(f: &Fixture, charged: u128, control: Option<Control>, environment: Environment,
++    frames: Vec<Frame>, outcome: Outcome) -> Snapshot {
++    Snapshot { program:f.program.clone(),control,environment,frames,stack_limit:STACK,
++        remaining_fuel:FUEL-charged,initial_fuel:FUEL,outcome }
++}
++struct Trace { initial: Snapshot, records: Vec<StepRecord>, final_state: Snapshot }
++// Actual observation only. No expected state/rule/work is generated here.
++fn observe(f: &Fixture) -> Trace {
++    let mut machine=Machine::new(f.program.clone(),FUEL,STACK);
++    let initial=machine.snapshot();let records=machine.run_steps(MAX_EVENTS);
++    let final_state=machine.snapshot();Trace { initial,records,final_state }
++}
++fn checkpoint(t: &Trace, f: &Fixture, event: usize, after: bool, control: Control,
++    environment: Environment, frames: Vec<Frame>) {
++    let charged=(if after { event+1 } else { event }) as u128;
++    let expected=expected_state(f,charged,Some(control),environment,frames,Outcome::Pending);
++    let actual=if after { &t.records[event].after } else { &t.records[event].before };
++    assert_eq!(actual,&expected,"complete selected state at event {event}, after={after}");
++    assert!(Arc::ptr_eq(&actual.program,&f.program));
++}
++fn assert_oracle(t: &Trace, f: &Fixture) {
++    assert_eq!(PROFILE,"sherlock-k-a/1");
++    assert_eq!(K_SOURCE_SHA256,"b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41");
++    assert_eq!(t.initial,expected_state(f,0,Some(Control::Eval(f.program.entry.clone())),
++        Environment::new(),vec![],Outcome::Pending));
++    let done=expected_state(f,WORK,None,Environment::new(),vec![],Outcome::Done(Value::UInt(8)));
++    assert_eq!(t.final_state,done,"complete independent endpoint, remaining fuel452");
++    assert_eq!(t.records.iter().map(|r|r.rule_start_line).collect::<Vec<_>>().as_slice(),RULES);
++    assert_eq!(t.records.len(),61);
++    for (i,r) in t.records.iter().enumerate() {
++        assert_eq!(r.charge,if i<60 { 1 } else { 0 });
++        for state in [&r.before,&r.after] {
++            assert!(Arc::ptr_eq(&state.program,&f.program));
++            assert_eq!(state.program,f.program);assert_eq!(state.initial_fuel,FUEL);assert_eq!(state.stack_limit,STACK);
++        }
++        assert_eq!(r.before.remaining_fuel,FUEL-(i.min(60) as u128));
++        assert_eq!(r.after.remaining_fuel,FUEL-((i+1).min(60) as u128));
++        assert_eq!(r.before.depth(),PREFIX_DEPTH[i]);
++        assert_eq!(r.after.depth(),PREFIX_DEPTH[i+1]);
++        assert_eq!(r.before.outcome,Outcome::Pending);
++        assert_eq!(r.after.outcome,if i<60 { Outcome::Pending } else { Outcome::Done(Value::UInt(8)) });
++    }
++    assert_eq!(t.records.iter().map(|r|r.after.depth()).max(),Some(5));
++    for pair in t.records.windows(2) { assert_eq!(pair[0].after,pair[1].before,"actual continuity only"); }
++    let indices=|line|t.records.iter().enumerate().filter_map(|(i,r)|(r.rule_start_line==line).then_some(i)).collect::<Vec<_>>();
++    assert_eq!(indices(200),vec![4,23,42]);
++    assert_eq!(indices(204),vec![5,24,43]);
++    assert_eq!(indices(185),vec![36,55,59]);
++    let visits=t.records.iter().enumerate().filter_map(|(i,r)|match &r.before.control {
++        Some(Control::Eval(e)) if e==&f.code.leaf_body => Some(i), _=>None,
++    }).collect::<Vec<_>>();
++    assert_eq!(visits,vec![34,53],"both semantic Leaf occurrences evaluate their selected body");
++
++    checkpoint(t,f,4,false,Control::Invoke("10".into(),vec![f.root.clone()]),Environment::new(),vec![]);
++    checkpoint(t,f,4,true,Control::Enter(Some(f.code.function.clone()),vec![f.root.clone()]),Environment::new(),vec![]);
++    checkpoint(t,f,5,true,Control::Bound(Some(root_env(f)),Type::UInt,f.code.body.clone()),Environment::new(),vec![]);
++    checkpoint(t,f,6,true,Control::Push(Frame::Return(Type::UInt,Environment::new()),Box::new(Control::Eval(f.code.body.clone())),root_env(f)),Environment::new(),vec![]);
++    checkpoint(t,f,7,true,Control::Eval(f.code.body.clone()),root_env(f),vec![Frame::Return(Type::UInt,Environment::new())]);
++    checkpoint(t,f,19,false,Control::Eval(f.code.left_call.clone()),branch_env(f),pending_frames(f,false));
++    // Left and right leaf calls have equal arguments but different pending callers.
++    for (right,invoke,bound,stage,entered,matched,body,scope_return,returned) in [
++        (false,23,24,25,26,31,34,35,36),(true,42,43,44,45,50,53,54,55),
++    ] {
++        checkpoint(t,f,invoke,false,Control::Invoke("10".into(),vec![leaf()]),branch_env(f),pending_frames(f,right));
++        checkpoint(t,f,bound,true,Control::Bound(Some(leaf_env()),Type::UInt,f.code.body.clone()),branch_env(f),pending_frames(f,right));
++        checkpoint(t,f,stage,true,Control::Push(Frame::Return(Type::UInt,branch_env(f)),Box::new(Control::Eval(f.code.body.clone())),leaf_env()),branch_env(f),pending_frames(f,right));
++        checkpoint(t,f,entered,true,Control::Eval(f.code.body.clone()),leaf_env(),callee_frames(f,right));
++        checkpoint(t,f,matched,true,Control::CaseResult(Some(leaf_bindings()),leaf(),f.code.leaf_body.clone(),vec![f.code.arms[1].clone()],leaf_env()),leaf_env(),callee_frames(f,right));
++        checkpoint(t,f,body,false,Control::Eval(f.code.leaf_body.clone()),leaf_bindings(),leaf_scope_frames(f,right));
++        checkpoint(t,f,body,true,Control::Return(Value::UInt(4)),leaf_bindings(),leaf_scope_frames(f,right));
++        checkpoint(t,f,scope_return,true,Control::Return(Value::UInt(4)),leaf_env(),callee_frames(f,right));
++        checkpoint(t,f,returned,false,Control::Return(Value::UInt(4)),leaf_env(),callee_frames(f,right));
++        checkpoint(t,f,returned,true,Control::Return(Value::UInt(4)),branch_env(f),pending_frames(f,right));
++    }
++    checkpoint(t,f,37,true,Control::Eval(f.code.right_call.clone()),branch_env(f),pending_frames(f,true));
++    checkpoint(t,f,56,true,Control::PrimitiveResult(Ok(Value::UInt(8))),branch_env(f),outer_frames(f));
++    checkpoint(t,f,57,true,Control::Return(Value::UInt(8)),branch_env(f),outer_frames(f));
++    checkpoint(t,f,58,true,Control::Return(Value::UInt(8)),root_env(f),vec![Frame::Return(Type::UInt,Environment::new())]);
++    checkpoint(t,f,59,false,Control::Return(Value::UInt(8)),root_env(f),vec![Frame::Return(Type::UInt,Environment::new())]);
++    checkpoint(t,f,59,true,Control::Return(Value::UInt(8)),Environment::new(),vec![]);
++    assert_eq!(t.records[60].before,expected_state(f,WORK,Some(Control::Return(Value::UInt(8))),Environment::new(),vec![],Outcome::Pending));
++    assert_eq!(t.records[60].after,done);
++}
++
++#[test]
++fn uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8() {
++    let code=code();let shared=fixture(code.clone(),true);let distinct=fixture(code,false);
++    assert_eq!(shared.program,distinct.program,"same structural program/function/entry");
++    assert!(Arc::ptr_eq(&shared.code.body,&distinct.code.body),"same actual recursive function AST");
++    let shared_trace=observe(&shared);let distinct_trace=observe(&distinct);
++    assert_oracle(&shared_trace,&shared);assert_oracle(&distinct_trace,&distinct);
++    // Supplemental complete actual structural observation equality. This cannot
++    // replace the independent rules/endpoints/selected full snapshots above.
++    assert_eq!(shared_trace.initial,distinct_trace.initial);
++    assert_eq!(shared_trace.records,distinct_trace.records);
++    assert_eq!(shared_trace.final_state,distinct_trace.final_state);
++}
