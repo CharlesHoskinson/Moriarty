@@ -4,6 +4,58 @@ Requested by the user on2026-10-17 after final design/spec integration. This use
 
 ## Entry and next actual implementation
 
+### October 17 priority: close the retained EARS through DoctorWatson
+
+The user's current instruction is to update DoctorWatson, use it to close all
+retained Sherlock EARS, and rearm this loop around that outcome. The existing
+full-Sherlock goal remains active. This priority supersedes the historical next
+batch ordering below; it does not discard unfinished compiler or stagenet work.
+
+Use the current requirement-evidence sidecar beside the completion-convergence
+traceability record. Preserve the frozen design record and its historical open
+labels. Inventory all 35 original UIREQ clauses and the 25 additive refinement
+features with their 68 scenarios separately; neither heading counts nor test
+counts establish acceptance.
+
+Each cycle must select a still-open requirement and its exact missing predicate:
+
+1. Compare the original clause and every applicable scenario with the current
+   implementation, independent expectations, actual observations and review.
+2. Reuse applicable unchanged evidence. If a named scenario is missing, implement
+   its behavior or add and run that exact discriminating check through the
+   existing applicable local QA path. Do not rerun an unchanged passing cohort.
+3. Review the candidate and evidence under the current ownership rules. Record
+   closure only for the complete requirement scope; partial evidence remains
+   partial. Source hashes establish currentness, not semantic correctness.
+4. Update the current-evidence row, its source and evidence pins, review scope,
+   remaining gaps and next action. Run DoctorWatson's requirement report. Changed
+   or missing supporting material must make a prior closure stale or invalid,
+   remove it from the current closed count and fail the selected integrity check.
+5. Publish the reviewed source, checks and updated checklist, merge routinely,
+   and select the next actionable open predicate. Update affected documentation
+   and the DoctorWatson improvement log in the same batch.
+
+Keep implementation status, observed validation and owner-assessed acceptance
+separate. A structurally valid report can contain open requirements; its exit
+code does not mean those requirements are closed. Host semantic or design-stage
+clauses need their own stated evidence and must not inherit a stagenet blocker
+from another clause. Requirements that explicitly demand native, formal or
+target evidence retain those obligations. A blocked row names its missing
+premise and the event that can make work actionable; independent rows continue.
+
+The factory repair is complete: the existing checker consumes current evidence,
+and its regression demonstrates that a source edit invalidates closure. Seven
+original host clauses are now adopted and current. Select the remaining missing
+behavior from the [current checklist](requirements-status.md) and
+`NEXT-ACTIONS.json`: structural sharing observations, the public recursive
+compiler producer, public grouping, then the remaining persistent, plan/DAG,
+generic, financial and formal predicates. Native work retains its actual separate
+prerequisites. Do not repeat the passed nine host cases or five compiler
+preflight bodies without a relevant change. Avoid
+further factory expansion unless a concrete closure attempt demonstrates a
+defect. Finish only when every retained applicable EARS has complete current
+acceptance evidence; do not weaken a clause to make the count increase.
+
 Root binds DESIGN-FINAL-03.md, its three Gemini/Astra reconciliation annexes, the additive sherlock-completion-convergence OpenSpec/EARS/interface/config/task package, actual bounded Quint results with explicit missing coverage, and the five AstraHIGH final readiness reports. Apply material ordinary fixes first. Reports can qualify readiness; unknown feasibility or external dependencies cannot be guaranteed away. The old cleared goal remains historical. A new explicit goal is armed only after this reconciliation; its real state is reported from the goal tool.
 
 B00 installs the reconciled specification and navigation. B01 records the already observed241 Python checks, actual stream build/eight tests/216 independent runs and actual333 named/ordered match; it does not redispatch those unchanged passing closures. The initial composed lexical dep-info check failure and normalized ten-member continuation remain separate preserved records. B02 records merged PR168 and exact source/host scope; SDK/native acceptance stays open.

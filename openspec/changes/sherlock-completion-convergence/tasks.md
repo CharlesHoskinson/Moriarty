@@ -1,26 +1,26 @@
 # Finite implementation tasks
 
-DRAFT, all unchecked. This is a finite batch decomposition of existing U/B work, not a new scheduler/campaign. Root chooses eligible ordinary work after final canonical spec and explicit rearming. A blocked unchanged node is not requeued; preserve its original wake condition and failure/resource history. Existing two-repeat defect and two-process-cycle/30-minute stop rules apply.
+Adopted source contract. B00 and the exact B01 evidence closure below are complete at the recorded October17 integration cut; other acceptance predicates remain open. This is a finite batch decomposition of existing U/B work, not a new scheduler/campaign. Root chooses eligible ordinary work after final canonical spec and explicit rearming. A blocked unchanged node is not requeued; preserve its original wake condition and failure/resource history. Existing two-repeat defect and two-process-cycle/30-minute stop rules apply.
 
 For every batch: independent O expectations before execution; complete actual consumer predicate; transitive check classification; exact source/candidate/attempt receipts; applicable fresh non-author review; affected docs update/no-impact rationale; first blocked boundary. Security/private/native ownership is unchanged.
 
 ## B00 — Install final additive spec and reconcile exact integrated source/evidence identity
 
-- [ ] Owner/integration: Root/I.
-- [ ] Freeze exact leaf write sets: openspec/changes/sherlock-completion-convergence/**; openspec/README.md; docs/SHERLOCK-IMPLEMENTATION-PLAN.md; ROADMAP.md.
-- [ ] Acceptance dependencies: Root final-design integration only. Independent preparation: All independent ordinary source inventories/oracles continue; no blocked native reroute.
-- [ ] Predicate `canonical_links_and_retention_complete` through the actual consumer. Features: SCON-019, SCON-020, SCON-021.
-- [ ] Ordinary and separately admitted QA: Document/JSON/required-clause/link checks; no behavioral claim.
-- [ ] Documentation: Current design03 and entrypoint links; stale status/routing wording corrected as live guidance.
-- [ ] Retain first blocked boundary: Final03/reviews pending; baseline HEAD excludes current runtime QA afterimages. Wake only on: Root integrates final03, exact review deltas/current receipts and this spec; arms only then.
+- [x] Owner/integration: Root/I.
+- [x] Freeze exact leaf write sets: openspec/changes/sherlock-completion-convergence/**; openspec/README.md; docs/SHERLOCK-IMPLEMENTATION-PLAN.md; ROADMAP.md.
+- [x] Acceptance dependencies: Root final-design integration only. Independent preparation: All independent ordinary source inventories/oracles continue; no blocked native reroute.
+- [x] Predicate `canonical_links_and_retention_complete` through the actual consumer. Features: SCON-019, SCON-020, SCON-021.
+- [x] Ordinary and separately admitted QA: Document/JSON/required-clause/link checks; no behavioral claim.
+- [x] Documentation: Current design03 and entrypoint links; stale status/routing wording corrected as live guidance.
+- [x] Historical entry boundary resolved: revision03/specification and exact reviewed QA afterimages were integrated and published in PR169, merged into sherlock at3d3401ef. The new goal was subsequently observed armed; no native/full-language closure follows.
 
 ## B01 — Bind already observed scoped S1/S2/S3 evidence
 
-- [ ] Root/I binds the exact existing241 ordinary, stream build/eight tests/216 prefixes and actual333 named/ordered receipts and source/import membership; no unchanged rerun.
-- [ ] Predicate `current_s1_s2_s3_evidence_closed` is evidence closure only. Generic SCON-007 continuity/full B materialization and full-domain SCON-008 remain open.
-- [ ] Actual source leaves: models/sherlock/qa/check.py, models/sherlock/qa/run_host.py and assigned models/sherlock/qa/test_*.py; no scripts/sherlock_qa.py.
-- [ ] Preserve initial composed lexical dep-info failure, normalized exact10-member continuation/reused artifact and117 unchanged pins; context/checked335/native/target remain open.
-- [ ] Current doc/source links reflect exact receipts; unchanged passing closure wakes only on affected input change or actual new defect.
+- [x] Root/I binds the exact existing241 ordinary, stream build/eight tests/216 prefixes and actual333 named/ordered receipts and source/import membership; no unchanged rerun.
+- [x] Predicate `current_s1_s2_s3_evidence_closed` is evidence closure only. Generic SCON-007 continuity/full B materialization and full-domain SCON-008 remain open.
+- [x] Actual source leaves: models/sherlock/qa/check.py, models/sherlock/qa/run_host.py and assigned models/sherlock/qa/test_*.py; no scripts/sherlock_qa.py.
+- [x] Preserve initial composed lexical dep-info failure, normalized exact10-member continuation/reused artifact and117 unchanged pins; context/checked335/native/target remain open.
+- [x] Current doc/source links reflect exact receipts; unchanged passing closure wakes only on affected input change or actual new defect.
 
 ## B02 — Reconcile first literal source/host closure with merged PR168 without claiming native
 
@@ -51,6 +51,8 @@ For every batch: independent O expectations before execution; complete actual co
 - [ ] Ordinary and separately admitted QA: Exact FIRST-COMPILER-BATCH.md contract; real CLI two new positive source cases82/true; preserved AST/operators; no run in compile-only; actual run consumer only --observe; typed report complete; refusal/bounds/default Core regression; inspect transitive SDK calls before commands.
 - [ ] Documentation: Tutorial/how-to for selected host route, exact flags/config/schema reference, statement that emit effects/native plans not implemented.
 - [ ] Retain first blocked boundary: Generic untrusted caller execution stays under existing H1 disposition; no new guard policy by P. Wake only on: Applicable current owner disposition authorizes claimed ordinary execution; source prep can proceed now.
+
+Current B04 evidence: [production-library build and seven positive tests](../../../docs/results/sherlock-source-compile-20261017/README.md), including two real compile-only preparation/admission cases. All twelve program-table fields and selected metadata matched independently frozen expectations for both cases. Mandatory bounds/diagnostic corrections and complete artifact/runtime comparison remain open. No CLI/observe/native acceptance is implied.
 
 ## B05 — Complete A full39 implementation/read-write/normal-case inventory and generic realization
 
