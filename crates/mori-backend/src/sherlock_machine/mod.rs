@@ -40,6 +40,7 @@ pub mod return_publication_step;
 pub mod return_publication_witness;
 pub mod literal_complete_execution;
 pub mod error_publication_step;
+pub mod fuel_exhaustion_step;
 pub use literal_step::{
     emit_literal_step, literal_schema, LiteralCapacities, LiteralConstructionError,
     LiteralEnvelope, LiteralImage, LiteralLane, LiteralSchema, LiteralStepBlock,
@@ -55,6 +56,11 @@ pub use literal_witness::{
     produce_a102_literal_transition, produce_a102_literal_transition_from_step,
     program_block_to_image_values, state_block_to_image_values, validate_literal_schema,
     ProducedLiteralTransition,
+};
+pub use fuel_exhaustion_step::{
+    emit_fuel_exhaustion_step, is_reserved_fuel_exhaustion_variable, FuelExhaustionStepBlock,
+    FuelExhaustionStepInputs, FUEL_EXHAUSTION_RULE_CHARGE, FUEL_EXHAUSTION_RULE_ID,
+    FUEL_EXHAUSTION_RULE_START_LINE, FUEL_EXHAUSTION_RULE_TAG,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -274,3 +280,6 @@ mod literal_complete_execution_normal_tests;
 
 #[cfg(test)]
 mod error_publication_step_normal_tests;
+
+#[cfg(test)]
+mod fuel_exhaustion_step_normal_tests;
