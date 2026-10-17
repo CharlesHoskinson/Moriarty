@@ -1,0 +1,144 @@
+{
+  "reviewToken": "c2-r2-four-mutants-actual-result-review-opus55-20261017",
+  "report": "FRESH NON-AUTHOR ACTUAL-RESULT REVIEW OF THE FOUR C2r2 MEANINGFULNESS RUNS (claude-opus-5-5, high effort, Read tool only). This reviews captured results only. I executed nothing and wrote nothing.\n\nROUTE\n- I read MANIFEST.json, then SEGMENT-INDEX.json, then READ-SEGMENT-01 to -33 in order, one Read each.\n- No read was truncated, so I reread nothing.\n- The segment boundaries ran continuously across all 34 originals (9968 decoded lines by the root index). The originals were:\n  - both prediction reviews and their PROCESS records;\n  - ROOT-DECISION, ROOT-SUMMARY and the frozen 213 identities;\n  - the M01-M04 RESULT and ATTEMPT-STARTED records and the four full stderr transcripts (stdout is pinned at 0 B);\n  - MUTATION-PLAN, MEANINGFULNESS-NOTES, the materialized envelope and the materialization record;\n  - the full test (1-1102) and the base candidate (1-508);\n  - S33 and S34;\n  - the baseline GREEN acceptance;\n  - the full R4 contract and the R4 conditional adoption.\n- I did not open the raw originals or any provenance path directly.\n- Every byte count, SHA-256, exit code, stdin and capture method, argv-as-executed, sandbox fact, mode, listing, occurrence count, timestamp and the one-attempt fact is a root record, not something I observed.\n\nTRANSCRIPT FACTS (observed by reading)\n- **M01 stderr (3461 lines):**\n  - T00 ok. T01 prints 'c2_issue_artifacts_r2.py sha256 23c3f99d\u2026' once, then ok.\n  - T02: 12 FAIL at test:835 ('/1' != '/2').\n  - T04: 2 ACCEPTED ('driver one-char change', 'provingKeyBytes 2**64').\n  - T05a: 34 STAGE_MISMATCH ('C2I-PROFILE' vs 'C2I-SETUP: \u2026'). T05b: 57 ACCEPTED. T05c: 1 mismatch at RELATION (abi2ShapeDigest).\n  - T06, 10 failures:\n    - ACCEPTED: the three relation fields, REDUNDANT and the consistent case;\n    - RELATION mismatch: relation action alone and export action alone;\n    - CARDANO mismatch: catalogue name, intentTargetHashV2 and intentAnchor alone.\n  - T07-T13 ok. T14: SETUP/PROFILE ACCEPTED, and PROFILE/EXPORT refused at EXPORT ('export: expected closed schema object').\n  - T15: method-level FAIL at test:992, an 8-label map against the 16-label map.\n  - T16: 65 ACCEPTED, 3 with expected SETUP and 62 with expected PROFILE.\n  - T17: method-level FAIL at test:1086.\n  - 'Ran 18 tests in 1.531s', then 'FAILED (failures=185)'.\n- **M02 stderr:**\n  - SHA cc6249fb\u2026 once. T00-T05, T07-T15 and T17 ok.\n  - T06: 9 FAIL. relationFormat, logicalCostProfile, fieldModulusLeHex and the consistent case are ACCEPTED. Relation action and export action go to RELATION; catalogue name, intentTargetHashV2 and intentAnchor go to CARDANO.\n  - T16: 4 FAIL.\n  - The REDUNDANT case passes in both T06 and T16, as do statementHex, proofHex and x1, and every T05 int-typed case.\n  - 'FAILED (failures=13)'.\n- **M03 stderr:**\n  - SHA b1a53361\u2026 once.\n  - T05b 'abi2ShapeBytesHex one byte flipped' ACCEPTED. T05c is refused at RELATION ('C2I-RELATION: abi2ShapeDigest: differs\u2026'), which is the planned PROFILE-to-RELATION move. T16 repeats the flip.\n  - The odd, uppercase and 524290-char cases, the T05a abi2ShapeDigest cases and T08 all still pass.\n  - 'FAILED (failures=3)'.\n- **M04 stderr:**\n  - SHA 9ebdc328\u2026 once.\n  - Exactly 6 T05b and 6 T16 ACCEPTED: '+1', '-1', Arabic-Indic two-eight, '1_0', ' 28' and '28' plus LF.\n  - '', '01', 40 digits, 2**128, 5000 digits and int 28 do not fail.\n  - 'FAILED (failures=12)'.\n- **All four:**\n  - No 'ERROR:' header, no 'missing r2 implementation', 'Ran 18 tests' exactly once, and the last line is the predicted summary.\n  - Every predicted-passing method has its '... ok'.\n  - No stray traceback appears outside the ===== / ----- FAIL-block structure.\n\nIDENTITY COMPARISON\n- I decoded each header by reading. A double-quoted repr such as case=\"logicalWork '+1'\" decodes to logicalWork '+1'; for T02, policy='\u2026' decodes to the bare hex.\n- I compared every header with ROOT-FROZEN-EXPECTED-FAILURE-IDENTITIES (sorted) and with the unsorted lists of seat A and seat B, one by one, for M01 (185), M02 (13), M03 (3) and M04 (12).\n- All 213 are equal as sets in all three sources and in the transcripts. There is no missing and no unexpected identity, and each RESULT actualNormalizedIdentities list equals the frozen list.\n- I reached these equalities myself and did not rely on the root A07 flag.\n\nTRACEBACK CLASSIFICATION\n- Every ValueError plus 'During handling of the above exception' chain sits inside a FAIL block and ends in 'AssertionError: False is not true : (expected, actual)' from test:667. These are STAGE_MISMATCH assertion failures, not ERRORs.\n- Chained blocks per mutant:\n  - M01: 41 (T05a 34, T05c 1, T06 5, T14 1);\n  - M02: 5;\n  - M03: 1;\n  - M04: 0.\n- All ACCEPTED kills are self.fail at test:669.\n\nKILLS ARE BEHAVIOURAL, NOT LOADER OR PROVENANCE\n- The test pins no r2 bytes.\n- The SHA line appears once, and the loader phrase never does.\n- The traceback frames are consistent with the mutant bytes actually running:\n  - M02 refuses at r2:388 and r2:464, which are base 393 and 469 minus 5 (5 lines deleted);\n  - M03 refuses at r2:389, which is base 393 minus 4;\n  - _refuse at 235 is unchanged in both, because it sits above the edit sites;\n  - M01 frames carry v1-style line numbers and messages.\n- This is reading corroboration only, not hash verification.\n- T01 passing under M01 shows directly that T01 does not test aliasing or value passing.\n\nPER-MUTANT\n- **M01:** the designated S33:185 kills (T02, T04, every T05b) are present. The extra failures are exactly the predicted ones, which follow from v1's frozen semantics.\n- **M02:** all five S33:186 discriminators are killed. The redundant extra-key case is refused by the closed-key check and passes, so it is not counted.\n- **M03:** the shape-digest weakening is killed by the T05b flip, and T05c moves from PROFILE to RELATION as predicted.\n- **M04:** each of the six non-canonical decimal cases is killed in both T05b and T16. The 'abc' path is untested and is not claimed as a kill.\n\nROOT-RECORDED, NOT OBSERVED BY ME\n- Each run's exit code is 1.\n- stdin was subprocess.DEVNULL. The GREEN baseline inherited an exhausted heredoc; both deliver EOF; the proposal allowed DEVNULL or closed; the test never reads stdin.\n- Capture used subprocess.run pipes, as GREEN did. RLIMIT_FSIZE bounds regular files, not pipes; this is disclosed, and the largest stderr is 236230 B.\n- The argv equals the materialized argv.\n- Base 67fb3b3e\u2026 was verified, each M02-M04 literal occurred exactly once, and the scratch root is 0555 holding only M01-M04 with no symlinks or caches.\n- The six-file listings, modes and pins are unchanged before and after each run.\n- There was one attempt each, in the order M01..M04, with 0 retries and 0 baseline reruns.\n- The timestamps are sequential. The decision is at 17:46:32.207, after both reviews had ended.\n- These records satisfy the requiredFixes of A-F02, A-F03 and B02. I did not observe any of them.\n\nSTOP CHECK\n- I found no prediction discrepancy, no designated kill missing, no ERROR, no SHA anomaly and no format-only header difference.\n- So there is no STOP, no rerun and no refit.\n\nLIMITS RETAINED\n- **What the kills show:** the named frozen methods and subTests discriminate these four weakenings, and nothing more.\n- **Source-only properties:** these stay exact-byte source-audit discharges of 67fb3b3e\u2026 only:\n  - CP04 no-encode, no input-proportional copy and length-before-scan;\n  - no host alias or patching (CP01/L01/L02);\n  - no hidden or cached state (L03/I06).\n- **What is not verified:**\n  - the GREEN and meaningfulness acceptance gives no ledger truth and no UPLC or proof verification;\n  - K6 is captured public bytes whose pairing and context are not verified;\n  - T17 is synthetic, untrusted, not a proof and not an oracle;\n  - circuit/VK/key correspondence stays OPEN.\n- **Still open:** all 20 UTxO families, the full financial work, ACTUS, DeFi, PCD recursion, private handoff, multiparent and real Preprod. Native authority is 0.\n- **Independence:** A, B and this review are fresh contexts of the same provider, with no provider diversity.\n- **Python version:** not pinned. The headers have the CPython 3.11+ form.\n\nCP08 SOURCE-ADOPTION ELIGIBILITY\n- **Basis.** I reviewed eligibility using only the earlier source audits and root acceptances (ROOT-BASELINE-GREEN-ACCEPTANCE: RED and GREEN accepted, review cb104e08\u2026) plus the full S33, S34 and R4 texts. This is not a new host or crypto audit.\n- **The S33 CP08 prerequisites:**\n  - a reviewed r2 implementation and a fresh non-author audit: earlier records;\n  - root-observed meaningful RED then GREEN: RED and GREEN are root-accepted, and meaningfulness becomes complete when root accepts these results;\n  - a reviewed downstream contract that consumes /2 with 16 labels: the R4 contract does, but it was conditionally adopted for test authoring only, on two historical actual claude-opus-4-8 votes (CB401-CB412 AGREE), whose identities are preserved.\n- **Gap in the downstream review.** The R4 reviewers never saw the r2 bytes (R4-F03).\n- **My literal check.** By reading, base 67fb\u2026 matches the R4 dependency literals: format /2, the 12 result keys, the 16-label map (values and order equal S34), 11 C2I stages and 7 host APIs called by attribute. The R4 contract pins S33 at 30809 B 6e2c3989\u2026 and S34 at 8563 B 0f592eea\u2026, which equal the packet pins. I found no difference that would void R4. Root should record this check in the adoption record. Independent confirmation needs a fresh review, and R4 R00 test authoring must recheck it against the adopted bytes in any case.\n- **Recommendation:** root may separately adopt the exact 21648 B bytes 67fb3b3e\u2026 as an ordinary artifact-preparation component and as the basis for R4 TEST AUTHORING ONLY. builderReliancePermitted stays false. This review makes no decision and grants nothing automatically.",
+  "findings": [
+    {
+      "id": "F01-all-213-identities-match-transcripts-and-both-independent-sets",
+      "severity": "info",
+      "evidence": "I decoded the FAIL headers by reading:\n- M01: 12 T02, 2 T04, 34 T05a, 57 T05b, 1 T05c, 10 T06, 2 T14, 1 T15, 65 T16, 1 T17 (185).\n- M02: 9 T06, 4 T16 (13).\n- M03: T05b flip, T05c, T16 flip (3).\n- M04: 6 T05b, 6 T16 (12).\n\nThese equal, as sets, ROOT-FROZEN-EXPECTED-FAILURE-IDENTITIES, PREDICTION-A expectedFailureIdentities and PREDICTION-B expectedFailureIdentities. Each RESULT actualNormalizedIdentities list equals the frozen list. The summary lines are FAILED (failures=185/13/3/12), 'Ran 18 tests' appears once, there is no ERROR header and every predicted-pass method reports ok.",
+      "requiredFix": "None. Root may accept these results as MUTANT_KILLED_AS_PREDICTED for M01-M04."
+    },
+    {
+      "id": "F02-chained-valueerror-tracebacks-are-fail-not-error",
+      "severity": "info",
+      "evidence": "Every 'ValueError: C2I-\u2026' followed by 'During handling of the above exception' lies inside a ===== FAIL block and ends in an AssertionError from test:667. The counts are M01 41 (T05a 34, T05c 1, T06 5, T14 PROFILE/EXPORT 1), M02 5, M03 1 and M04 0. Every ACCEPTED kill is self.fail at test:669. No traceback appears outside a FAIL block.",
+      "requiredFix": "None. Do not reclassify these as ERROR."
+    },
+    {
+      "id": "F03-kills-behavioural-frames-consistent-with-mutant-bytes",
+      "severity": "info",
+      "evidence": "- M02 frames: r2:388 (RELATION) and r2:464 (CARDANO), which are base 393 and 469 minus the 5 deleted lines.\n- M03 frame: r2:389, which is base 393 minus 4.\n- _refuse at r2:235 is unchanged.\n- M01 frames carry v1 line numbers and v1 schema messages.\n- The SHA substring appears once per run and equals the root mutant pin. The missing-r2 phrase is absent. The test pins no r2 bytes.",
+      "requiredFix": "None. This is reading corroboration only, not hash verification. Pins remain root records."
+    },
+    {
+      "id": "F04-stdin-differs-from-green-disclosed",
+      "severity": "low",
+      "evidence": "The ENVELOPE asked for stdin '/dev/null or closed, as in the GREEN run'. ROOT-DECISION and each RESULT record subprocess.DEVNULL, and disclose that GREEN inherited an exhausted heredoc stdin. Both give EOF, and by reading, the test never reads stdin.",
+      "requiredFix": "Root's acceptance should note this disclosed, outcome-neutral difference. No rerun."
+    },
+    {
+      "id": "F05-fsize-does-not-bound-pipe-capture",
+      "severity": "low",
+      "evidence": "The capture used subprocess.run pipes, as GREEN did, and RLIMIT_FSIZE bounds regular files, not pipes. Root disclosed this. The largest stderr is 236230 B (M01, root pin), well under 2 MiB, and the transcript is complete through 'FAILED (failures=185)'.",
+      "requiredFix": "None for these results. Any future envelope should not cite fsize as the bound on piped output."
+    },
+    {
+      "id": "F06-source-only-residues-unchanged",
+      "severity": "info",
+      "evidence": "T01 passes under M01 (SHA line, then ok), so T01 does not test aliasing or value passing. None of the four mutants targets these properties:\n- CP04 no-encode, no input-proportional copy, length-before-scan;\n- L01/L02 no alias or patching;\n- L03/I06 hidden or cached state.",
+      "requiredFix": "Keep these as exact-byte source-audit discharges of 67fb3b3e\u2026 only. Never cite these kills as evidence for them."
+    },
+    {
+      "id": "F07-untested-and-redundant-cases-not-claimed",
+      "severity": "info",
+      "evidence": "- M04's uncoded int('abc') ValueError path is reached by no frozen case.\n- M02's REDUNDANT extra-key case passes in both T06 and T16, refused by the closed-key check, and is not counted.\n- The six M04 cases refused by retained checks did not fail.",
+      "requiredFix": "Do not claim the 'abc' path or the REDUNDANT case as kills. Any test extension needs separate authoring and review."
+    },
+    {
+      "id": "F08-root-records-vs-reviewer-observations",
+      "severity": "info",
+      "evidence": "Not observed by me:\n- exit code 1;\n- stdin and capture;\n- argv as executed and the sandbox;\n- base-pin verification and occurrence count 1;\n- the scratch-root 0555 listing;\n- the before/after listings, modes and pins;\n- one attempt each, 0 retries, 0 baseline reruns;\n- the timestamps and the stderr/stdout SHAs.\nThese come from ROOT-DECISION, the RESULT and ATTEMPT-STARTED records and ROOT-SUMMARY.",
+      "requiredFix": "Root's acceptance must keep root-recorded facts distinct from transcript observations."
+    },
+    {
+      "id": "F09-cp08-downstream-basis-is-conditional-48-reviewed-r4",
+      "severity": "medium",
+      "evidence": "S33 CP08 requires a reviewed downstream contract that consumes /2 with 16 labels. The R4 contract does, but it was adopted only as a conditional basis for test authoring, on two historical actual claude-opus-4-8 votes, and its reviewers did not see the r2 bytes (R4-F03). R4 section 0 says an r2 implementation that differs from its literals voids R4.\n\nBy reading, 67fb\u2026 matches those literals:\n- format moriarty-c2-issue-artifacts/2;\n- the 12 result keys;\n- the 16 labels, with values and order equal to S34;\n- 11 stages;\n- 7 host APIs called by attribute.\nThe S33 and S34 pins in R4 equal the packet pins.",
+      "requiredFix": "Root's separate CP08 record must:\n- name the downstream basis exactly, as the conditional R4 contract with preserved Opus 4.8 vote identities;\n- record the exact-literal compatibility of 67fb\u2026 with the R4 dependency literals.\nIf root wants that compatibility independently confirmed, a fresh review is needed. The R4 test-source review must recheck R00 against the adopted bytes. No builder reliance and no R4 execution."
+    },
+    {
+      "id": "F10-same-provider-independence",
+      "severity": "info",
+      "evidence": "Seats A and B and this review are all fresh claude-opus-5-5 contexts. The Opus 4.8 R4 votes are a different model from the same provider.",
+      "requiredFix": "Record fresh-context independence only; do not claim provider diversity."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "No new self-test is recommended. The four meaningfulness runs are complete. No retry, rerun, baseline rerun or new test is authorized or recommended by this review.\n\nsourceReady covers only the exact 21648 B c2_issue_artifacts_r2.py, SHA-256 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98, as an eligible candidate for a separate root CP08 source adoption. It covers ordinary artifact preparation and a basis for R4 test authoring only. It is contingent on root first accepting these four results.",
+    "firstBlockedBoundary": "(1) Root's explicit acceptance of the four captured meaningfulness results (M01-M04 MUTANT_KILLED_AS_PREDICTED), recording F04, F05 and F08.\n(2) Then a separate root CP08 source-adoption decision for the exact bytes 67fb3b3e\u2026, scoped to ordinary artifact preparation and R4 test authoring only. It records the conditional R4 basis on Opus 4.8 votes and the exact-literal compatibility (F09).\n(3) Only later: R4 test authoring and review, meaningful R4 RED, R4 implementation, GREEN and audits, and a separate decision on builderReliancePermitted.\nNothing is granted automatically.",
+    "operatorReady": false,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-meaningfulness-result-review-packet/MANIFEST.json (1-379)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-meaningfulness-result-review-packet/SEGMENT-INDEX.json (1-213)",
+      "READ-SEGMENT-01.txt: PREDICTION-A-REVIEW 1-123",
+      "READ-SEGMENT-02.txt: PREDICTION-A-REVIEW 124-337; PREDICTION-A-PROCESS 1-90; PREDICTION-B-REVIEW 1-2",
+      "READ-SEGMENT-03.txt: PREDICTION-B-REVIEW 3-133",
+      "READ-SEGMENT-04.txt: PREDICTION-B-REVIEW 134-348; PREDICTION-B-PROCESS 1-89; ROOT-DECISION 1-124",
+      "READ-SEGMENT-05.txt: ROOT-DECISION 125-265; ROOT-SUMMARY 1-93; ROOT-FROZEN-EXPECTED-FAILURE-IDENTITIES 1-159",
+      "READ-SEGMENT-06.txt: FROZEN 160-223; M01-RESULT 1-390; M01-ATTEMPT-STARTED 1",
+      "READ-SEGMENT-07 to READ-SEGMENT-18.txt: M01-stderr 1-3461 (complete)",
+      "READ-SEGMENT-18.txt: also M02-RESULT 1-224; M02-ATTEMPT-STARTED; M02-stderr 1-160",
+      "READ-SEGMENT-19.txt: M02-stderr 161-258; M03-RESULT 1-214; M03-ATTEMPT-STARTED; M03-stderr 1-76; M04-RESULT 1-37",
+      "READ-SEGMENT-20.txt: M04-RESULT 38-223; M04-ATTEMPT-STARTED; M04-stderr 1-180; MUTATION-PLAN 1-12",
+      "READ-SEGMENT-21.txt: MUTATION-PLAN 13-241",
+      "READ-SEGMENT-22.txt: MUTATION-PLAN 242-300; MEANINGFULNESS-NOTES 1-192; MATERIALIZED-ENVELOPE 1-49",
+      "READ-SEGMENT-23.txt: MATERIALIZED-ENVELOPE 50-399",
+      "READ-SEGMENT-24.txt: MATERIALIZED-ENVELOPE 400-518; MATERIALIZATION 1-215; test 1-7",
+      "READ-SEGMENT-25 to READ-SEGMENT-28.txt: test 8-1102 (complete)",
+      "READ-SEGMENT-28.txt and READ-SEGMENT-29.txt: c2_issue_artifacts_r2.py 1-508 (complete); S33 1-33",
+      "READ-SEGMENT-30.txt and READ-SEGMENT-31.txt: S33 34-213; S34 1-36; ROOT-BASELINE-GREEN-ACCEPTANCE 1-21; DOWNSTREAM-R4-CONTRACT 1-55",
+      "READ-SEGMENT-32.txt: DOWNSTREAM-R4-CONTRACT 56-177; DOWNSTREAM-R4-CONDITIONAL-ADOPTION 1-56",
+      "READ-SEGMENT-33.txt: DOWNSTREAM-R4-CONDITIONAL-ADOPTION 57-211"
+    ],
+    "unreadPaths": [
+      "The 34 raw originals in the packet were not opened directly. Their full decoded content was read only through READ-SEGMENT-01 to -33, with no truncation and no reread. Raw bytes, line endings and whitespace were not compared.",
+      "M01-, M02-, M03- and M04-stdout.txt: pinned at 0 bytes with the empty-string SHA-256; they have no segment lines.",
+      "Not followed: every originalPublicSource or provenance path, the scratch directories, the results root, the jobs/* originals, the GREEN envelope, the RUST, HOST, VAL and PRE roots, K6-ACTUAL-ADOPTION, and every private, provider-raw, auth, key, PK, SRS, cache, home or research-root path.",
+      "Not supplied and not re-audited here: the whole mutant bodies M01-M04, host_codec.py, the v1 c2_issue_artifacts.py, the K2 and K6 fixtures, and the earlier source audits themselves (only root references to them)."
+    ],
+    "limitations": [
+      "Read-only, captured-result review. Nothing was executed, imported, compiled, AST-parsed, hashed or parsed by a tool. There was no network or web access, and no file was written. Plan mode was active, but no plan-file write tool or ExitPlanMode tool was available and the task was read-only.",
+      "Every SHA-256, byte count and line count is a root pin. Header decoding and identity-set comparison were done by reading.",
+      "These are root records, not reviewer observations: exit code, stdin and capture, argv as executed, sandbox, modes, listings, occurrence counts, scratch-root state, the one-attempt and no-retry facts, and timestamps.",
+      "This is not a new source, host or crypto audit. Mutant-body correctness and source effects rest on the earlier prediction audits A and B plus the root pins. The traceback line-number checks are only consistency corroboration.",
+      "The CP08 eligibility judgment uses the earlier source audits and root acceptances, S33, S34 and the R4 texts. The R4 votes are historical Opus 4.8 votes for test authoring only.",
+      "Python version unpinned; headers show CPython 3.11+ formatting.",
+      "Same provider as the author and the prediction seats: fresh context, no provider diversity. This review is not adoption and grants no authority."
+    ]
+  },
+  "meaningfulnessResultsAcceptable": true,
+  "perMutantResults": [
+    {
+      "id": "M01",
+      "acceptable": true,
+      "evidence": "The transcript shows:\n- T00 ok; T01 prints SHA 23c3f99d\u2026 once, then ok;\n- T02 12 FAIL at test:835 ('/1' != '/2');\n- T04 2 ACCEPTED;\n- T05a 34 STAGE_MISMATCH (PROFILE vs SETUP), T05b 57 ACCEPTED, T05c RELATION mismatch;\n- T06 10 FAIL (5 ACCEPTED, 2 RELATION, 3 CARDANO);\n- T07-T13 ok;\n- T14 SETUP/PROFILE ACCEPTED and PROFILE/EXPORT refused at EXPORT;\n- T15 method-level FAIL at test:992 (8 vs 16 labels);\n- T16 65 ACCEPTED;\n- T17 method-level FAIL at test:1086;\n- 'Ran 18 tests', 'FAILED (failures=185)'.\nThe 185 identities equal the frozen set and both the A and B sets. There is no ERROR and no missing phrase. The S33:185 designated kills (T02, T04, every T05b) are present.",
+      "limits": "The v1 bytes themselves were not supplied or re-audited, and the SHA, exit code, pins and modes are root records. T01 passing shows T01 cannot detect aliasing or value passing, so CP01/L01-L03 stay source-only. The extra failures follow from v1 semantics and claim nothing beyond discrimination."
+    },
+    {
+      "id": "M02",
+      "acceptable": true,
+      "evidence": "The transcript shows:\n- SHA cc6249fb\u2026 once;\n- T06 9 FAIL: relationFormat, logicalCostProfile, fieldModulusLeHex and the consistent case ACCEPTED; relation action and export action RELATION; catalogue name, intentTargetHashV2 and intentAnchor CARDANO;\n- T16 4 FAIL;\n- the REDUNDANT extra key passes in T06 and T16; statementHex, proofHex and x1 pass; T05 is ok, including the int-typed cases;\n- 'FAILED (failures=13)'.\nThe set equals the frozen, A and B sets. All five S33:186 discriminators are killed.",
+      "limits": "The kills show only that T06 and T16 discriminate removal of the scan. CP04 no-encode, no input-proportional copy and length-before-scan stay exact-byte source-only discharges. The REDUNDANT case is not counted."
+    },
+    {
+      "id": "M03",
+      "acceptable": true,
+      "evidence": "The transcript shows:\n- SHA b1a53361\u2026 once;\n- T05b 'abi2ShapeBytesHex one byte flipped' ACCEPTED;\n- T05c refused at RELATION ('abi2ShapeDigest: differs from the setup relation'), the planned PROFILE-to-RELATION move;\n- T16 flip ACCEPTED;\n- the odd, uppercase and 524290-char cases, the T05a digest cases and T08 all still pass;\n- 'FAILED (failures=3)'.\nThe set equals the frozen, A and B sets. The frame r2:389 is consistent with 4 deleted lines.",
+      "limits": "This is hashlib fixture consistency only. Rust, circuit, VK and key correspondence are OPEN. The result discriminates one weakening and nothing more."
+    },
+    {
+      "id": "M04",
+      "acceptable": true,
+      "evidence": "The transcript shows:\n- SHA 9ebdc328\u2026 once;\n- exactly 6 T05b and 6 T16 ACCEPTED: '+1', '-1', Arabic-Indic two-eight, '1_0', ' 28', '28' plus LF;\n- '', '01', 40 digits, 2**128 as decimal, 5000 digits and int 28 do not fail;\n- 'FAILED (failures=12)'.\nThe set equals the frozen, A and B sets. Each of the six non-canonical decimal cases is killed in both T05b and T16.",
+      "limits": "The uncoded int('abc') ValueError path is untested and not claimed as a kill. CPython int() semantics are inferred from the observed admissions, not separately verified."
+    }
+  ],
+  "rootSourceAdoptionRecommendation": "RECOMMENDATION ONLY. This is not a decision.\n\nSCOPE\n- Root may take a separate CP08 source-adoption decision for exactly c2_issue_artifacts_r2.py, 21648 B, SHA-256 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98.\n- The adoption would cover an ordinary artifact-preparation component and the basis for R4 TEST AUTHORING ONLY.\n- builderReliancePermitted stays false. No R4 execution, implementation, native, operator, wallet, VM, prover, key or network authority.\n\nPREREQUISITES\n1. Root first explicitly accepts these four meaningfulness results, recording the disclosed stdin and pipe-capture facts and keeping root records distinct from observations.\n2. The adoption record cites:\n   - the root-accepted RED and GREEN (ROOT-BASELINE-GREEN-ACCEPTANCE, review cb104e08\u2026);\n   - these accepted meaningfulness results;\n   - the earlier source audits of 67fb\u2026.\n3. The record names the downstream basis exactly: the conditionally adopted R4 contract (28131 B b0aa395e\u2026, API 13080 B 2cfefb33\u2026), reviewed for test authoring only on two preserved historical actual claude-opus-4-8 votes.\n4. Root records exact-literal compatibility of 67fb\u2026 with the R4 dependency literals:\n   - format moriarty-c2-issue-artifacts/2;\n   - the 12 result keys;\n   - the 16-entry label map in S34 order and values;\n   - 11 C2I stages;\n   - 7 host APIs called by attribute;\n   - S33 at 30809 B 6e2c3989\u2026 and S34 at 8563 B 0f592eea\u2026.\n   My reading found no difference. If root wants that compatibility confirmed independently, a fresh downstream-compatibility review is required. The R4 test-source review must recheck R00 against the adopted bytes.\n5. The CP01-CP08 flags stay false, there is no CB r1 routing, and v1 stays immutable and is not used for reliance.\n\nRESIDUALS\n- These stay exact-byte source-audit discharges only, not shown by any test or mutant:\n  - CP04 no-encode, no input-proportional copy, length-before-scan;\n  - no host alias or patching (L01/L02);\n  - no hidden or cached state (L03/I06).\n- Rust acceptance is NOT_ESTABLISHED.\n- K6 is captured public bytes whose pairing and context are not verified. T17 is synthetic, untrusted, not a proof and not an oracle.\n- circuit/VK/key correspondence is OPEN.\n- No ledger, UPLC, proof, ExUnits, fee, Preview or Preprod claim is made.\n- All 20 UTxO families, the full financial work, ACTUS, DeFi, PCD recursion, private handoff, multiparent and real Preprod stay OPEN. Native authority is 0.\n- Same-provider review, with no provider diversity.\n- A later separate decision is still required for builder reliance, after R4 test authoring and review, meaningful R4 RED, R4 implementation, GREEN, a fresh audit and a Muse review of the Sol glue."
+}

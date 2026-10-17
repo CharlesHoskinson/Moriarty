@@ -1,0 +1,300 @@
+{
+  "format": "c2-r2-meaningfulness-mutation-plan/1",
+  "reviewToken": "c2-r2-meaningfulness-plan-opus55-20261017",
+  "status": "AUTHOR_PROPOSED_NOT_REVIEWED_NOT_EXECUTED",
+  "author": "claude-opus-5-5 high; tools Read/Write/Edit only; nothing executed, imported, compiled or hashed",
+  "normativeBasis": [
+    "S33-C2-PROFILE-R2-CONTRACT.md:182-188 (meaningfulness check)",
+    "S33-C2-PROFILE-R2-CONTRACT.md:176-180 (RED/GREEN/STOP vocabulary, 18 methods)",
+    "S33-C2-PROFILE-R2-CONTRACT.md:137-140,150 (T05a/T05b/T05c, T06, T16 rows)",
+    "S34-C2-PROFILE-R2-API.json:32 tests.meaningfulness and T06Redundant"
+  ],
+  "flags": {
+    "sourceReadyClaimed": false,
+    "executionApproved": false,
+    "mutantsAdoptable": false,
+    "implementationAdopted": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "baseCandidate": {
+    "name": "c2_issue_artifacts_r2.py",
+    "bytes": 21648,
+    "sha256": "67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98",
+    "lines": 508,
+    "encoding": "ASCII-only UTF-8, LF line endings (prediction from the segments; the occurrence-count-1 rule below guards it)"
+  },
+  "unmodifiedTest": {
+    "name": "test_c2_issue_artifacts_r2.py",
+    "bytes": 58800,
+    "sha256": "b9c1921102411734e060e48508d13be9b459721b04b43b93aa7b13b206217b3e",
+    "modification": "none"
+  },
+  "materializationRules": [
+    "Read the base bytes from the trusted source named in ENVELOPE-PROPOSAL.json. Verify their byte count and SHA-256 before any transformation; on mismatch, STOP.",
+    "M01: copy the exact v1 bytes (15231 B, 23c3f99d...) to the target name c2_issue_artifacts_r2.py. Apply no transformation.",
+    "M02-M04: decode nothing. Operate on the raw bytes, with beforeUtf8 and afterUtf8 encoded as UTF-8 (both are pure ASCII). Require base.count(before) == 1 exactly; if the count is 0 or 2 or more, STOP. Set i = base.index(before) and mutant = base[:i] + after + base[i+len(before):]. Require len(mutant) == expectedMutantBytes. Make no other change.",
+    "Apply each M02-M04 transformation only to the bytes whose SHA-256 is 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98. Never chain mutants.",
+    "Root computes and records the SHA-256 of each materialized mutant once, freezes it (file 0444, directory 0555), and has the whole mutant file reviewed before execution. The sha256 fields marked ROOT_COMPUTES_AFTER_MATERIALIZATION are not author claims.",
+    "Mutants are never adopted, renamed into a non-scratch location, or used as evidence of anything except test meaningfulness."
+  ],
+  "testFailureIdentity": {
+    "headerRule": "Each failure produces a block header line 'FAIL: ' + D. For a method-level failure, D = M + ' (__main__.C2IssueArtifactR2Tests.' + M + ')'. For a subTest failure, D = that string + ' [' + label + '] (' + params + ')', where params joins k + '=' + repr(v) over the subTest keyword arguments in order: 'case=' + repr(caseName) for T04/T05/T06/T14/T16, and 'expiry=' + repr(e) + ', policy=' + repr(p) for T02. repr() is Python's: single quotes unless the name contains a single quote and no double quote.",
+    "classification": "FAIL means unittest's failureException (AssertionError) was raised. ERROR means any other exception. Every predicted kill below is FAIL. Any ERROR anywhere is STOP.",
+    "methods": {
+      "T00": "test_T00_pins_fixtures_and_literals_without_r2",
+      "T01": "test_T01_sole_function_imports_and_seven_host_apis",
+      "T02": "test_T02_k6_admitted_cbor_labels_keys_expiry_policy_matrix",
+      "T03": "test_T03_argument_types_refused_before_records_are_touched",
+      "T04": "test_T04_setup_record_refused_at_setup",
+      "T05": "test_T05_relation_profile_subtests_T05a_T05b_T05c",
+      "T06": "test_T06_surrogate_code_points_by_stage_owner",
+      "T07": "test_T07_export_closed_schema_and_exact_types",
+      "T08": "test_T08_relation_identity",
+      "T09": "test_T09_statement_framing",
+      "T10": "test_T10_context_equals_header",
+      "T11": "test_T11_digest_and_public_inputs",
+      "T12": "test_T12_proof_length_and_hex",
+      "T13": "test_T13_cardano_derivation",
+      "T14": "test_T14_first_failing_stage_wins_for_all_nine_pairs",
+      "T15": "test_T15_detachment_nonaliasing_and_source_effects",
+      "T16": "test_T16_strictness_only_v1_admits_r2_refuses",
+      "T17": "test_T17_synthetic_changed_context_both_admit"
+    },
+    "assertionTexts": {
+      "ACCEPTED": "AssertionError: accepted; expected C2I-<expected stage>   (test:669 self.fail; r2 returned a result)",
+      "STAGE_MISMATCH": "AssertionError: False is not true : ('C2I-<expected>', '<actual refusal message>')   (test:667; r2 raised an exact ValueError with another stage prefix)",
+      "EQUALITY": "AssertionError: <left> != <right> ...   (assertEqual inside the method body)"
+    }
+  },
+  "commonPredictions": {
+    "testsRun": 18,
+    "exitCode": 1,
+    "stdoutBytes": 0,
+    "errors": 0,
+    "skipped": 0,
+    "setUpModule": "passes: host, v1, K6 and K2 pins are unchanged, and r2 is not pinned by the test",
+    "T00": "passes: it never calls _prepare (test:703-757)",
+    "shaLine": "_prepare (test:173-180) loads r2 once, inside T01 (the first caller), and prints 'c2_issue_artifacts_r2.py sha256 <sha of the mutant bytes>' inline after the T01 description. The FIX['prepare'] cache and the non-printing _module re-execs (test:800, 963) prevent a second print. Expected occurrences: exactly 1.",
+    "missingPhrase": "'missing r2 implementation' never appears: the r2 file exists in every scratch directory",
+    "verboseLayout": "Each passing method writes '<description> ... ok'. A method whose subTests fail writes '<description> ... ', then one '  <subTest description> ... FAIL' line per failing subTest. A method-level failure writes '... FAIL'. Then come the FAIL blocks, the 70-dash separator, 'Ran 18 tests in <t>s', a blank line and 'FAILED (failures=N)'."
+  },
+  "mutants": [
+    {
+      "id": "M01",
+      "title": "frozen v1 consumer bytes under the r2 filename (S33:185)",
+      "kind": "exactCopy",
+      "sourceName": "c2_issue_artifacts.py",
+      "sourceBytes": 15231,
+      "sourceSha256": "23c3f99d5e0aacfdacc462803b605b5c3c47b6e7e2b5b18b217a562fa0e80f76",
+      "targetName": "c2_issue_artifacts_r2.py",
+      "transformation": "none; byte-identical copy",
+      "expectedMutantBytes": 15231,
+      "expectedMutantSha256": "23c3f99d5e0aacfdacc462803b605b5c3c47b6e7e2b5b18b217a562fa0e80f76",
+      "expectedShaSubstring": "c2_issue_artifacts_r2.py sha256 23c3f99d5e0aacfdacc462803b605b5c3c47b6e7e2b5b18b217a562fa0e80f76",
+      "validityByReading": "This is the frozen adopted v1 module, already executed by setUpModule (test:158) in every prior run. Its only imports are 'import hashlib' and 'import host_codec' (S11:13-14). It defines prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults (S11:234). It is ASCII, so T01's UTF-8 decode cannot fail. The loader cannot kill it.",
+      "designatedKills": {
+        "T02": "all 12 subTests [T02] (expiry=e, policy=p), at test:835: result['format'] is '/1', expected '/2'",
+        "T04": [
+          "[T04] (case='driver one-char change'): ACCEPTED, expected C2I-SETUP",
+          "[T04] (case='provingKeyBytes 2**64'): ACCEPTED, expected C2I-SETUP"
+        ],
+        "T05b": "all 57 subTests [T05b] (every case of T05B_CASES, test:454-477): ACCEPTED, expected C2I-PROFILE. v1 admits each, by the v1 column already confirmed at GREEN"
+      },
+      "predictedAdditionalFailures": {
+        "T05a": "all 34 subTests [T05a] (every case of T05A_CASES, test:431-446): STAGE_MISMATCH, ('C2I-PROFILE', 'C2I-SETUP: ...'). Expected by S33:185 and not counted toward T05b.",
+        "T05c": "1 subTest [T05c] (case='abi2ShapeDigest another valid hex64'): STAGE_MISMATCH, ('C2I-PROFILE', 'C2I-RELATION: abi2ShapeDigest: differs from the setup relation'). v1 has no PROFILE stage or shape-digest check.",
+        "T06": [
+          "[T06] (case='U+D800 in relation relationFormat'): ACCEPTED, expected C2I-PROFILE",
+          "[T06] (case='U+D800 in relation logicalCostProfile'): ACCEPTED, expected C2I-PROFILE",
+          "[T06] (case='U+D800 in relation fieldModulusLeHex'): ACCEPTED, expected C2I-PROFILE",
+          "[T06] (case='U+D800 in a relation extra key (REDUNDANT)'): ACCEPTED, expected C2I-PROFILE. The v1 relation schema is open (S11:158), so this fails here even though it is not a scan discriminator.",
+          "[T06] (case='U+D800 in relation action alone'): STAGE_MISMATCH, ('C2I-PROFILE', 'C2I-RELATION: action: differs from the setup relation')",
+          "[T06] (case='U+D800 consistently in relation action, export action and catalogue name'): ACCEPTED, expected C2I-PROFILE",
+          "[T06] (case='U+D800 in export action alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-RELATION: action: differs from the setup relation')",
+          "[T06] (case='U+D800 in catalogue name alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-CARDANO: cardano: differs from the derived section')",
+          "[T06] (case='U+D800 in intentTargetHashV2 alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-CARDANO: cardano: differs from the derived section')",
+          "[T06] (case='U+D800 in intentAnchor alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-CARDANO: cardano: differs from the derived section')"
+        ],
+        "T14": [
+          "[T14] (case='SETUP/PROFILE'): ACCEPTED, expected C2I-SETUP (v1 has a free-text driver and no language check)",
+          "[T14] (case='PROFILE/EXPORT'): STAGE_MISMATCH, ('C2I-PROFILE', 'C2I-EXPORT: export: expected closed schema object')"
+        ],
+        "T15": "method-level FAIL at test:992, assertEqual(third['labels'], LABELS): the 8-entry v1 map != the 16-entry r2 map. The method stops there, so its later T15 subTests (including the token scan) are not reached.",
+        "T16": "all 65 subTests [T16] (every case of T16_CASES, test:638-639): ACCEPTED, expected C2I-SETUP (3 cases) or C2I-PROFILE (62 cases). By construction (test:1034), v1 admits every case.",
+        "T17": "method-level FAIL at test:1086, assertEqual(result['format'], RESULT_FORMAT): '/1' != '/2'"
+      },
+      "predictedPassingMethods": ["T00", "T01", "T03", "T07", "T08", "T09", "T10", "T11", "T12", "T13"],
+      "predictedPassNotes": "T01 passes: v1 has the same two import lines, the same signature and sole public callable, holds no host API name, is not the FIX['v1'] object, and reaches all 7 APIs through the counting proxy, because it looks up host_codec attributes at call time and passes them to _host. That shows T01 does not detect v1's function-object passing, a CP01/L01 source-only property. T03 and T07-T13 are '=' rows, where v1's stage equals r2's.",
+      "predictedFailureCountsByMethod": {"T02": 12, "T04": 2, "T05": 92, "T06": 10, "T14": 2, "T15": 1, "T16": 65, "T17": 1},
+      "predictedFailures": 185,
+      "predictedSummaryLine": "FAILED (failures=185)",
+      "predictedStderrSizeNote": "Roughly 150-400 KB (185 blocks), below the 2 MiB fsize limit. This is a prediction, not an acceptance criterion."
+    },
+    {
+      "id": "M02",
+      "title": "r2 with the CP04 surrogate scan removed from _is_text (S33:186)",
+      "kind": "literalReplacement",
+      "applyOnlyToSha256": "67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98",
+      "function": "_is_text (candidate lines 258-269)",
+      "beforeUtf8": "    if str.isascii(value):\n        return True\n    for char in value:\n        if _SURROGATE_FIRST <= ord(char) <= _SURROGATE_LAST:\n            return False\n    return True\n",
+      "afterUtf8": "    return True\n",
+      "requiredOccurrenceCount": 1,
+      "replaceCount": 1,
+      "beforeBytes": 172,
+      "afterBytes": 16,
+      "deltaBytes": -156,
+      "expectedMutantBytes": 21492,
+      "expectedMutantLines": 503,
+      "expectedMutantSha256": "ROOT_COMPUTES_AFTER_MATERIALIZATION",
+      "sourceLineIdentities": "Deletes original lines 264-268. Original line 269 ('    return True') becomes mutant line 264. Original lines 270-508 become mutant lines 265-503. Lines 1-263 are unchanged. The comment at 259-261 and the constants _SURROGATE_FIRST/_SURROGATE_LAST (75-76) stay, now unused.",
+      "resultingFunction": "def _is_text(value):\n    # (unchanged comment lines 259-261)\n    if type(value) is not str:\n        return False\n    return True\n",
+      "expectedUnifiedDiff": "--- a/c2_issue_artifacts_r2.py\n+++ b/c2_issue_artifacts_r2.py\n@@ -261,11 +261,6 @@\n     # the input and no conversion of the str to bytes.\n     if type(value) is not str:\n         return False\n-    if str.isascii(value):\n-        return True\n-    for char in value:\n-        if _SURROGATE_FIRST <= ord(char) <= _SURROGATE_LAST:\n-            return False\n     return True\n \n \n",
+      "validityByReading": "This is valid Python: a function body of an if/return and a return. No import, name or signature changes. No new text, so no new T15 EFFECT_TOKENS or T01 import lines. The text joined at the boundary is '        return False\\n    return True\\n'. The exact str type check and every other kind stay, so non-str values in str-kind fields are still refused.",
+      "designatedKills": [
+        "[T06] (case='U+D800 in relation relationFormat'): ACCEPTED, expected C2I-PROFILE",
+        "[T06] (case='U+D800 in relation logicalCostProfile'): ACCEPTED, expected C2I-PROFILE",
+        "[T06] (case='U+D800 in relation fieldModulusLeHex'): ACCEPTED, expected C2I-PROFILE",
+        "[T06] (case='U+D800 in export action alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-RELATION: action: differs from the setup relation')",
+        "[T06] (case='U+D800 in intentAnchor alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-CARDANO: cardano: differs from the derived section')"
+      ],
+      "predictedAdditionalFailures": [
+        "[T06] (case='U+D800 in relation action alone'): STAGE_MISMATCH, ('C2I-PROFILE', 'C2I-RELATION: action: differs from the setup relation')",
+        "[T06] (case='U+D800 consistently in relation action, export action and catalogue name'): ACCEPTED, expected C2I-PROFILE. RELATION, CARDANO (derived name = relation action) and BUILD all pass.",
+        "[T06] (case='U+D800 in catalogue name alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-CARDANO: cardano: differs from the derived section')",
+        "[T06] (case='U+D800 in intentTargetHashV2 alone'): STAGE_MISMATCH, ('C2I-EXPORT', 'C2I-CARDANO: cardano: differs from the derived section')",
+        "[T16] (case='U+D800 in relation relationFormat'): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case='U+D800 in relation logicalCostProfile'): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case='U+D800 in relation fieldModulusLeHex'): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case='U+D800 consistently in relation action, export action and catalogue name'): ACCEPTED, expected C2I-PROFILE"
+      ],
+      "mustNotFail": [
+        "[T06] (case='U+D800 in a relation extra key (REDUNDANT)'): the closed-key check (_admit_object:315-317) still refuses at PROFILE. It does not discriminate the scan, and if it fails, that is STOP.",
+        "[T16] (case='U+D800 in a relation extra key (REDUNDANT)'): same reason",
+        "[T06] (case='U+D800 in statementHex'), [T06] (case='U+D800 in proofHex'), [T06] (case='U+D800 in x1'): deferred kinds, not scanned in either version",
+        "Every T05 subTest, including 'relationFormat int', 'logicalCostProfile int', 'fieldModulusLeHex int' and 'action int' (type check retained)"
+      ],
+      "predictedPassingMethods": ["T00", "T01", "T02", "T03", "T04", "T05", "T07", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T17"],
+      "predictedFailureCountsByMethod": {"T06": 9, "T16": 4},
+      "predictedFailures": 13,
+      "predictedSummaryLine": "FAILED (failures=13)",
+      "outputSafetyNote": "No failure message or subTest description contains U+D800. Case names are ASCII, and refusal messages carry field names, not values. stderr encoding therefore cannot raise."
+    },
+    {
+      "id": "M03",
+      "title": "r2 without the PROFILE abi2ShapeDigest comparison (S33:187)",
+      "kind": "literalReplacement",
+      "applyOnlyToSha256": "67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98",
+      "function": "prepare_c2_issue, PROFILE block (candidate lines 380-385)",
+      "beforeUtf8": "    _admit_object(relation, _RELATION, \"C2I-PROFILE\", \"relation\")\n    shape_bytes = bytes.fromhex(relation[\"abi2ShapeBytesHex\"])\n    if (hashlib.blake2b(shape_bytes, digest_size=32).hexdigest()\n            != relation[\"abi2ShapeDigest\"]):\n        _refuse(\"C2I-PROFILE\", \"abi2ShapeBytesHex: differs from abi2ShapeDigest\")\n",
+      "afterUtf8": "    _admit_object(relation, _RELATION, \"C2I-PROFILE\", \"relation\")\n",
+      "requiredOccurrenceCount": 1,
+      "replaceCount": 1,
+      "deletedBytes": 255,
+      "deltaBytes": -255,
+      "expectedMutantBytes": 21393,
+      "expectedMutantLines": 504,
+      "expectedMutantSha256": "ROOT_COMPUTES_AFTER_MATERIALIZATION",
+      "sourceLineIdentities": "Deletes original lines 382-385. Original line 381 stays as mutant line 381 (it is the shared anchor). Original lines 386-508 become mutant lines 382-504. The comment at 380 ('then the shape digest') stays as author-time text. Untouched: the shape-hex syntax check (_is_shape_hex), the RELATION identity comparison of abi2ShapeDigest (_RELATION_IDENTITY:231, lines 391-393), the STATEMENT header shapeDigest comparison (408) and the CARDANO derivation (445).",
+      "expectedUnifiedDiff": "--- a/c2_issue_artifacts_r2.py\n+++ b/c2_issue_artifacts_r2.py\n@@ -379,10 +379,6 @@\n \n     # PROFILE (CP03): closed 29-key relation descriptor, then the shape digest.\n     _admit_object(relation, _RELATION, \"C2I-PROFILE\", \"relation\")\n-    shape_bytes = bytes.fromhex(relation[\"abi2ShapeBytesHex\"])\n-    if (hashlib.blake2b(shape_bytes, digest_size=32).hexdigest()\n-            != relation[\"abi2ShapeDigest\"]):\n-        _refuse(\"C2I-PROFILE\", \"abi2ShapeBytesHex: differs from abi2ShapeDigest\")\n \n     # EXPORT: closed ProofExport schema at every depth, narrowed by CP04.\n     _admit_object(proof_export, _PROOF_EXPORT, \"C2I-EXPORT\", \"export\")\n",
+      "validityByReading": "Valid Python: one statement and its if block are removed. shape_bytes is used nowhere else. hashlib is still used at lines 376 and 486, so T01's module identity check is unaffected. No new text is introduced. The joined boundary is '\"relation\")\\n\\n    # EXPORT', with no EFFECT_TOKENS.",
+      "designatedKills": [
+        "[T05b] (case='abi2ShapeBytesHex one byte flipped'): ACCEPTED, expected C2I-PROFILE. _flip(v, 0) turns the leading '4d' of K2 abi2ShapeBytesHex into '4c'. The value keeps even length and lowercase hex, so only the removed digest comparison could refuse it, and no later stage reads abi2ShapeBytesHex."
+      ],
+      "predictedAdditionalFailures": [
+        "[T05c] (case='abi2ShapeDigest another valid hex64'): STAGE_MISMATCH, ('C2I-PROFILE', 'C2I-RELATION: abi2ShapeDigest: differs from the setup relation'). The setup-side digest of 00x32 now passes PROFILE and is caught by the RELATION identity, the first differing key in _RELATION_IDENTITY order.",
+        "[T16] (case='abi2ShapeBytesHex one byte flipped'): ACCEPTED, expected C2I-PROFILE (T16 reuses every T05b case)"
+      ],
+      "mustNotFail": [
+        "[T05b] abi2ShapeBytesHex odd / uppercase / 524290 chars: still refused by _is_shape_hex",
+        "[T05a] abi2ShapeDigest missing / 63 hex / uppercase: still refused by the hex64 kind",
+        "[T08] (case='export abi2ShapeDigest 00x32'): still RELATION"
+      ],
+      "predictedPassingMethods": ["T00", "T01", "T02", "T03", "T04", "T06", "T07", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T17"],
+      "predictedFailureCountsByMethod": {"T05": 2, "T16": 1},
+      "predictedFailures": 3,
+      "predictedSummaryLine": "FAILED (failures=3)"
+    },
+    {
+      "id": "M04",
+      "title": "r2 _is_decimal using int() without the ASCII 0-9 check (S33:187)",
+      "kind": "literalReplacement",
+      "applyOnlyToSha256": "67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98",
+      "function": "_is_decimal (candidate lines 272-283)",
+      "beforeUtf8": "    for char in value:\n        if not \"0\" <= char <= \"9\":\n            return False\n    if len(value) > 1 and value[0] == \"0\":\n",
+      "afterUtf8": "    if len(value) > 1 and value[0] == \"0\":\n",
+      "requiredOccurrenceCount": 1,
+      "replaceCount": 1,
+      "deletedBytes": 83,
+      "deltaBytes": -83,
+      "expectedMutantBytes": 21565,
+      "expectedMutantLines": 505,
+      "expectedMutantSha256": "ROOT_COMPUTES_AFTER_MATERIALIZATION",
+      "sourceLineIdentities": "Deletes original lines 278-280. Original line 281 becomes mutant line 278. Original lines 282-508 become mutant lines 279-505. The comment at 273-275 stays as author-time text. The length check (276-277), the leading-zero check and int(value) <= _MAX_UINT128 are unchanged.",
+      "uniquenessNote": "'    for char in value:' also occurs at lines 248 and 266. The full before literal, which includes the '\"0\" <= char <= \"9\"' line, occurs exactly once.",
+      "resultingFunction": "def _is_decimal(value):\n    # (unchanged comment lines 273-275)\n    if type(value) is not str or not 1 <= len(value) <= _MAX_DECIMAL_CHARS:\n        return False\n    if len(value) > 1 and value[0] == \"0\":\n        return False\n    return int(value) <= _MAX_UINT128\n",
+      "expectedUnifiedDiff": "--- a/c2_issue_artifacts_r2.py\n+++ b/c2_issue_artifacts_r2.py\n@@ -275,9 +275,6 @@\n     # only then int(), which can no longer fail, and the 2**128-1 bound.\n     if type(value) is not str or not 1 <= len(value) <= _MAX_DECIMAL_CHARS:\n         return False\n-    for char in value:\n-        if not \"0\" <= char <= \"9\":\n-            return False\n     if len(value) > 1 and value[0] == \"0\":\n         return False\n     return int(value) <= _MAX_UINT128\n",
+      "validityByReading": "Valid Python. No new text. The joined boundary '        return False\\n    if len(value)' carries no EFFECT_TOKENS. For the test inputs, int() receives only strings that it parses, so no uncoded ValueError arises: '+1'->1, '-1'->-1, Arabic-Indic U+0662 U+0668 ->28, '1_0'->10, ' 28'->28, '28\\n'->28. Each passes the length, leading-zero and bound checks, so the mutant admits it.",
+      "maskingAnalysis": "Not masked; no STOP or dissent. The checks that come before the removed loop (exact str type, length 1..39) let all six discriminating cases through, and the checks after it (no leading zero, <= 2**128-1) do not reject them. The other six logicalWork cases are refused in both versions by retained checks, so they are not discriminators: '' (length), '01' (leading zero), '40 digits' and '5000 digits' (length), '2**128 as decimal' (39 digits, bound) and int 28 (type).",
+      "designatedKills": [
+        "[T05b] (case=\"logicalWork '+1'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T05b] (case=\"logicalWork '-1'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T05b] (case='logicalWork Arabic-Indic two-eight'): ACCEPTED, expected C2I-PROFILE",
+        "[T05b] (case=\"logicalWork '1_0'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T05b] (case=\"logicalWork ' 28'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T05b] (case=\"logicalWork '28' plus LF\"): ACCEPTED, expected C2I-PROFILE"
+      ],
+      "predictedAdditionalFailures": [
+        "[T16] (case=\"logicalWork '+1'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case=\"logicalWork '-1'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case='logicalWork Arabic-Indic two-eight'): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case=\"logicalWork '1_0'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case=\"logicalWork ' 28'\"): ACCEPTED, expected C2I-PROFILE",
+        "[T16] (case=\"logicalWork '28' plus LF\"): ACCEPTED, expected C2I-PROFILE"
+      ],
+      "mustNotFail": [
+        "[T05b] and [T16] (case=\"logicalWork ''\"), (case=\"logicalWork '01'\"), (case='logicalWork 40 digits'), (case='logicalWork 2**128 as decimal'), (case='logicalWork 5000 digits'), (case='logicalWork int 28')"
+      ],
+      "predictedPassingMethods": ["T00", "T01", "T02", "T03", "T04", "T06", "T07", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T17"],
+      "predictedFailureCountsByMethod": {"T05": 6, "T16": 6},
+      "predictedFailures": 12,
+      "predictedSummaryLine": "FAILED (failures=12)",
+      "untestedWeakeningNote": "The mutant also lets int() raise an uncoded ValueError for non-numeric strings such as 'abc'. No frozen test case exercises that path. It is recorded here as a source fact, not as a predicted kill."
+    }
+  ],
+  "acceptancePerMutant": {
+    "allMustHold": [
+      "A01 exactly one attempt, under the exact argv of ENVELOPE-PROPOSAL for that mutant",
+      "A02 exit status exactly 1 (0, 124, 137 or anything else is STOP)",
+      "A03 stdout is 0 bytes",
+      "A04 stderr contains 'Ran 18 tests in ' exactly once",
+      "A05 the last non-empty stderr line is exactly the mutant's predictedSummaryLine (so no errors=, skipped=, expected failures= or unexpected successes=)",
+      "A06 no stderr line begins 'ERROR: '. The number of lines beginning 'FAIL: ' equals predictedFailures",
+      "A07 the set of FAIL header identities equals exactly the designatedKills plus the predictedAdditionalFailures, under the headerRule",
+      "A08 every mustNotFail identity is absent from the FAIL headers, and every predictedPassingMethod has its '... ok' report (for T01, the SHA substring precedes 'ok')",
+      "A09 the substring 'c2_issue_artifacts_r2.py sha256 ' occurs exactly once, followed by the SHA-256 that root computed for the frozen mutant file (for M01, 23c3f99d...)",
+      "A10 stderr never contains 'missing r2 implementation'",
+      "A11 before and after the run, the scratch directory is mode 0555 with exactly the six entries, each 0444 with unchanged bytes and SHA-256"
+    ],
+    "statusIfAllHold": "MUTANT_KILLED_AS_PREDICTED (a meaningfulness observation for that mutant only)",
+    "statusIfDesignatedKillsPresentButA07orA08Differs": "KILL_OBSERVED_PREDICTION_DISCREPANCY: STOP for fresh review, not accepted, no rerun",
+    "stopConditions": [
+      "any designated kill absent, or present but not as FAIL",
+      "any ERROR, including setUpModule or tearDownModule errors",
+      "testsRun other than 18",
+      "unexpected startup: a missing or multiple SHA substring, the missing-r2 phrase, or a traceback outside FAIL blocks",
+      "any pin, mode or listing change of a scratch file",
+      "timeout, signal, or exit status other than 1",
+      "non-empty stdout",
+      "a materialization occurrence count other than 1, or a mutant byte count different from expectedMutantBytes"
+    ]
+  },
+  "nonClaims": [
+    "Killing these mutants shows only that the named frozen methods and subTests discriminate these four weakenings. It does not prove the CP04 no-encode, no-input-proportional-copy or length-before-scan rules, no host aliasing or patching, or no hidden or cached state. Those stay source-audit-only discharges of exactly 67fb3b3e....",
+    "No Rust acceptance, subset, equivalence or conditional-inclusion relation is claimed.",
+    "No Groth16 pairing, VK, curve, circuit or key correspondence is claimed. circuitVkCorrespondence stays OPEN.",
+    "No ledger, context authentication, ExUnits, fee, deployment, Preview or Preprod claim is made.",
+    "No CP08 reliance, builder reliance, R4 execution or native authority is granted.",
+    "No progress toward closing any of the 20 UTxO families or the financial, ACTUS, DeFi, recursion, PCD, private-handoff or multiparent tracks is claimed."
+  ]
+}
