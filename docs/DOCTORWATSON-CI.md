@@ -251,3 +251,32 @@ separate from the common structural projection. This is an A-profile host
 proposal, not B adoption, canonical image admission or a circuit/native result.
 The command requires the current scoped preflight; source preparation is not an
 execution receipt. Default `--host` retains its own fourteen-test realization.
+
+
+## Current EARS evidence report
+
+The ordinary DoctorWatson checker call explicitly selects
+`openspec/changes/sherlock-completion-convergence/current-evidence.json` with
+`--requirement-evidence`. It reports all 35 original UIREQ rows (37 named
+scenarios), the separate 25 refinement rows (68 named scenarios), and the
+declared retained-family inventory. These are distinct inventories, not one
+completion denominator. Each row retains its owner-declared implementation,
+validation, acceptance, scope, review/evidence references and next concrete check.
+
+The checker validates declared membership, named scenario completeness, file
+hashes and reference line spans. Computed currentness is separate from semantic
+assessment: matching files do not authenticate a reviewer or close a requirement.
+Original and refinement summaries stay separate. Pending Root semantic adoption
+cannot enter an adopted-closed subtotal; proposals remain visible as proposals.
+A changed source/evidence/review reference preserves its historical declaration
+but reports stale/not-current and cannot count as currently closed. Undeclared
+dependency closure remains unestablished. Required evidence classes are declared
+per original clause; this report adds no blanket native prerequisite.
+
+A complete current report may contain open, partial or unrun obligations and
+return exit 0. A stale/missing/invalid selected row returns mismatch exit 1 with
+row diagnostics; malformed top-level input returns input-error exit 2. This
+validates the declared report, not the requirements themselves. The existing
+shell fail-stop propagates those failures. A bare `check.py` invocation without
+the selector retains the existing corpus/source-only behavior and reads no
+requirement sidecar, preserving the fixed small host/image/stream snapshots.

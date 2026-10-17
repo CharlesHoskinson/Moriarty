@@ -258,12 +258,13 @@ agreement NineInputs {
     assert_eq!(sibling_artifact.source.action, "plain");
     assert_eq!(sibling_artifact.admission["status"], json!("admitted"));
 
-    let name_65 = "x".repeat(65);
+    let name_33 = "x".repeat(33);
     let long_name_src = format!(
-        "language \"moriarty/1\";\nagreement LongName {{\n  action take({name_65}: UInt) {{ emit \"ok\"({name_65}); }}\n}}\n"
+        "language \"moriarty/1\";\nagreement LongName {{\n  action take({name_33}: UInt) {{ emit \"ok\"({name_33}); }}\n}}\n"
     );
-    let name_err = compile_err(&long_name_src, "take", CONFIG);
-    assert_exceeded(&name_err, "InputNameBytes", 65, 64);
+    let long_name_cfg = with_host_bounds(&[("max_input_name_bytes", "32")]);
+    let name_err = compile_err(&long_name_src, "take", &long_name_cfg);
+    assert_exceeded(&name_err, "InputNameBytes", 33, 32);
 
     let two_inputs_src = r#"language "moriarty/1";
 agreement PrecedenceInputs {

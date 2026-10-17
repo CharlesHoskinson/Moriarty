@@ -13,11 +13,23 @@
 | Options | Contract |
 | --- | --- |
 | `--repo PATH` | Defaults to checkout root |
+| `--requirement-evidence PATH` | Read the selected current EARS evidence sidecar; report declared status and computed currentness separately |
 | `--observed-programs PATH --observed-prefixes PATH` | Both required together; existing literal document mode |
 | `--family normal|extra-normal` | Selects literal comparison family; default normal |
 | One of `--host-observations`, `--k-observations`, `--quint-observations`, `--lean-observations`, `--image-observations` | Complete supplied artifact; mutually exclusive with other layer flags and literal-document mode |
 
-JSON exits: 0 `pass`, 1 `mismatch`, 2 malformed input. Fields include scope/acceptance/profile/counts, frozen/transcription records, first difference, supplied layers and `execution_layers`. `source_reference_facts` inventories explicit input byte reads only: dependency closure, reviewer reading and execution remain unestablished. Acceptance is `none`; checker execution layers remain `not-run`. Supplied comparison does not execute/authenticate a producer. [Options](../../../models/sherlock/qa/check.py#L624), [report](../../../models/sherlock/qa/check.py#L604).
+JSON exits: 0 `pass`, 1 `mismatch`, 2 malformed input. Fields include scope/acceptance/profile/counts, frozen/transcription records, first difference, supplied layers and `execution_layers`. `source_reference_facts` inventories explicit input byte reads only: dependency closure, reviewer reading and execution remain unestablished. Acceptance is `none`; checker execution layers remain `not-run`. Supplied comparison does not execute/authenticate a producer. [Checker source](../../../models/sherlock/qa/check.py).
+
+The shell selects the [current evidence sidecar](../../../openspec/changes/sherlock-completion-convergence/current-evidence.json).
+Its `requirement_evidence` report inventories the 35 original clauses/37 scenarios,
+25 refinements/68 scenarios and declared retained families separately. Each row
+preserves implementation, validation, acceptance and next-action declarations;
+the checker verifies named membership and declared source/evidence currentness.
+Changed or missing support excludes a closure from the current count and returns
+a mismatch. Current open requirements can pass this integrity check. Matching
+hashes do not establish semantic acceptance. See the [requirement checklist](../requirements-status.md)
+and [complete report contract](../../DOCTORWATSON-CI.md#current-ears-evidence-report).
+A bare checker call omits this report and keeps the existing corpus behavior.
 
 ## Host runner and files
 
