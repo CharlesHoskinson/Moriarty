@@ -29,6 +29,13 @@ The selected source action must have no parameters. The route uses the public Co
 
 Current scope excludes parameterized actions, Core/2, state/assets/financial effects, source functions/recursion, generic ADTs and non-scalar source values. These remain broader Sherlock requirements. HostOnly admission is not a bounded native encoding, persistent checkpoint, witness/constraint export, proof or stagenet result.
 
+The draft preflight correction checks configuration/global source extents before
+action selection and selected input/name extents before the unsupported-parameter
+diagnostic. Five owner-authored regression functions typecheck; execution and
+fresh combined review remain pending. The [correction record](../../results/sherlock-compiler-preflight-20261017/README.md)
+preserves both the original API compilation failure and later integration-check
+limitations. This does not extend the supported input policy.
+
 ## Artifact: `sherlock-host-artifact/1`
 
 `CompileArtifact` is a serializable, output-only record; there is no executable-image reopen/import API. [Complete declarations](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L26):

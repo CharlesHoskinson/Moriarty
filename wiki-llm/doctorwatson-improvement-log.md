@@ -832,3 +832,34 @@ Observed October17: the A complete-state continuity comparator passed48 focused 
 **Evidence:** [actual tests and the original checker erratum](../docs/results/sherlock-b-complete-observation-20261017/README.md). Source approval, the four-test execution classification and actual-result review remain distinct. This is a local metadata-reader defect; it did not change product source or the classified execution bounds.
 
 **Improvement:** use named selector fields or parse the value after a known flag when command metadata is needed. Check original command exits separately from later local assertions, preserve both outcomes, and continue from the precise cause when the already produced artifact remains valid. Passing test counts retain their exact source and selected branch scope. No new runner or execution policy is proposed.
+
+### DW-46 — Include module visibility in function-level source tasks
+
+The compact preflight author returned applicable source edits, but the first
+production metadata check failed with three private-module import errors.
+Supplying the module declaration and public consumer exports let the owner
+return a two-file import/re-export repair while preserving the private module
+and guard bodies. Production metadata and all five new regression functions
+then typechecked. These are authored/compiled source results, not fresh review
+or executed regression results. [Exact attempts and limitations](../docs/results/sherlock-compiler-preflight-20261017/README.md).
+
+Include the relevant module boundary with full changed function bodies. Save
+each child result before subsequent collector assertions: the integrated-tree
+check emitted metadata but lost its child exit/timing values after a lexical
+path comparison failed. The normalized dep-info matches pinned files; the
+missing values remain unrecorded and the unchanged compilation was not retried.
+
+### DW-47 — Check review facts independently of model completion
+
+The B pairwise result reviewer returned provider SUCCESS and claimed approval
+after 101 recorded page reads, but invented material types, JSON fields, sizes
+and hashes. Root rejected that approval and held the merge. The request carried
+561,839 bytes across 72 units; that oversized context is an observed task
+property, not a proven cause of the factual errors. [Sealed failed disposition](../docs/results/sherlock-compiler-preflight-20261017/64-b-pairwise-actual-result-review/REVIEW-DISPOSITION.json).
+
+Keep raw reports and contradictions. Calculate literal membership, counts and
+hashes with inspectable code, then ask focused questions about source behavior
+and evidence limits. A smaller packet is a proposed improvement awaiting an
+actual reliable review; it does not automatically rehabilitate the failed vote.
+Provider success, read receipts, authored code, actual tests and accepted review
+remain separate observations. No security gate or model assignment changes.

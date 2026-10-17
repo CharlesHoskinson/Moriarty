@@ -1,0 +1,95 @@
+--- a/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security.rs
+@@ -281,12 +281,10 @@
+ ///    never saturation-as-success.
+ /// The sizes workspace is one u128 per flat expression; its length was
+ /// already bounded in step 1 by max_source_expressions.
+-pub fn preflight_source(
++pub fn preflight_source_global(
+     program: &crate::Program,
+-    action_index: usize,
+-    supplied: &BTreeMap<String, crate::Value>,
+     config: &ConsumerConfig,
+-) -> Result<SourcePreflight, ConsumerError> {
++) -> Result<(), ConsumerError> {
+     validate_config(config).map_err(ConsumerError::HostGuard)?;
+     let host = &config.host;
+     within(HostMeasure::SourceActions, count(program.actions.len()), host.max_source_actions)
+@@ -307,6 +305,17 @@
+     }
+     within(HostMeasure::SourceStatements, statements, host.max_source_statements)
+         .map_err(ConsumerError::HostGuard)?;
++    Ok(())
++}
++
++pub fn preflight_action_inputs<'a>(
++    program: &'a crate::Program,
++    action_index: usize,
++    supplied: &BTreeMap<String, crate::Value>,
++    config: &ConsumerConfig,
++) -> Result<&'a crate::Action, ConsumerError> {
++    validate_config(config).map_err(ConsumerError::HostGuard)?;
++    let host = &config.host;
+     let action = program.actions.get(action_index).ok_or(ConsumerError::HostGuard(
+         HostGuardError::NoSuchAction { action_index, action_count: program.actions.len() },
+     ))?;
+@@ -334,6 +343,18 @@
+     }
+     within(HostMeasure::TotalInputNameBytes, total_name_bytes, host.max_total_input_name_bytes)
+         .map_err(ConsumerError::HostGuard)?;
++    Ok(action)
++}
++
++pub fn preflight_source(
++    program: &crate::Program,
++    action_index: usize,
++    supplied: &BTreeMap<String, crate::Value>,
++    config: &ConsumerConfig,
++) -> Result<SourcePreflight, ConsumerError> {
++    preflight_source_global(program, config)?;
++    let action = preflight_action_inputs(program, action_index, supplied, config)?;
++    let host = &config.host;
+     // Exact input policy: no missing, no type mismatch, no extra. A complete
+     // MissingInput pass in declared order precedes a complete TypeMismatch
+     // pass in declared order; nothing is defaulted or coerced.
+--- a/crates/mori-core/src/sherlock/compile_artifact.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact.rs
+@@ -7,6 +7,9 @@
+ use serde_json::{json, Value};
+ use crate::sherlock::helper_machine::core_action_consumer::{
+     prepare_scalar_action_host, run_scalar_action, ConsumerError,
++};
++use crate::sherlock::helper_machine::core_action_consumer_security::{
++    preflight_action_inputs, preflight_source_global, validate_config,
+ };
+ use crate::sherlock::helper_machine::shared::StepEventC;
+ use crate::sherlock_source::ScalarActionReport;
+@@ -138,12 +141,18 @@
+     observe: bool,
+ ) -> Result<CompileArtifact, CompileFailure> {
+     let config = parse_config(config_source)?;
++    let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
+     let target_descriptor = crate::json::parse(target_source)
+         .map_err(|error| CompileFailure::core("config", error))?;
++    validate_config(&consumer)
++        .map_err(|error| CompileFailure::consumer(ConsumerError::HostGuard(error)))?;
+     let program = crate::parse(source).map_err(|error| CompileFailure::core("parse", error))?;
++    preflight_source_global(&program, &consumer).map_err(CompileFailure::consumer)?;
+     let action_index = program.actions.iter().position(|action| action.name == action_name)
+         .ok_or_else(|| CompileFailure::input("select", format!("unknown action: {action_name}")))?;
+-    let action = &program.actions[action_index];
++    let inputs = BTreeMap::<String, crate::Value>::new();
++    let action = preflight_action_inputs(&program, action_index, &inputs, &consumer)
++        .map_err(CompileFailure::consumer)?;
+     if !action.inputs.is_empty() {
+         return Err(CompileFailure {
+             stage:"select", actual_error:json!({"unsupported":"parameterized-action",
+@@ -152,8 +161,6 @@
+             events_forwarded:"0".into(), completed:false,
+         });
+     }
+-    let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
+-    let inputs = BTreeMap::<String, crate::Value>::new();
+     // Each branch owns exactly one admission/image pair. In observe mode the
+     // pair comes only from run_scalar_action, never a separate first preparation.
+     let (preparation, admission, observation) = if observe {
