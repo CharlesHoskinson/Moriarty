@@ -1,5 +1,18 @@
 # Moriarty repository instructions
 
+## Current Opus model rule
+
+The user's [October 17 Opus authorization](raw/assignments/moriarty-opus-4-8-and-5-5-allowed-2026-10-17.md)
+allows both **Opus 5.5 and Opus 4.8 at high effort** for cryptographic and
+security authoring, tests, reviews and judgments. Either model may be used
+without another confirmation. Record the requested and actual model honestly;
+an actual Opus 4.8 result is not disqualified solely because Opus 5.5 was
+requested. Apply this rule to pending and future work before older routing or
+cached skill defaults. Keep historical receipts, failures and rejection records
+unchanged; this rule does not itself approve an artifact or override a provider
+refusal, resource limit or execution boundary. Gemini 4 Argon High remains the
+nonsecurity reviewer, and GPT-6.1 Sol high remains the nonsecurity author.
+
 ## Required startup: load the development plugin
 
 Whenever an agent starts work in Moriarty, load `moriarty-dev:develop` before
