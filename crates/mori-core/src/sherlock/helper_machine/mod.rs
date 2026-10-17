@@ -9,6 +9,9 @@ pub mod shared;
 mod families;
 pub mod source_input_bridge;
 
+// Complete owned observations around the existing fixed host owner step.
+pub mod complete_observation;
+
 // Source-only Core scalar consumer and diagnostic projections. No native
 // or whole-language acceptance is established by these registrations.
 mod core_action_consumer_security;

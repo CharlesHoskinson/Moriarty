@@ -95,3 +95,7 @@ profile/source authenticity, absent adapters/layers, proofs or B-profile
 correspondence. Declared metadata is not authenticated by this API. Host
 structural traversal remains unbounded; this adds no resource policy. The full
 SCON-007/R02 and parent acceptance obligations remain separate.
+
+## Owned B host observations
+
+The source `helper_machine::complete_observation` exposes `capture`, `copy_observation`, `record_step` and `first_discontinuity`. Its records copy all current public typed admission/program/layout/image fields, preserve the full actual event and retain terminal/failure evidence. This is separate from the A comparator and does not align their clocks. The [production typecheck](../../results/sherlock-b-complete-observation-20261017/README.md) passed; the four new fixed-step tests and applicable source/execution-scope review remain pending. Host copying is unmetered diagnostic work; these snapshots are not a canonical checkpoint or a transition proof.
