@@ -1,0 +1,89 @@
+{
+  "artifactBefore": "231a7f91e01c929b9d309d334179a30633f03efb214d78b0b6a665d0175eeb58",
+  "repeatedDefectClass": "Unsupported funding or release-beneficiary attribution in new lifecycle copy. O01 identified fee payer; O02 identified min-ADA beneficiary.",
+  "reproduction": "Enumerate every new lifecycle field mentioning ADA/funding/recovery/fees/payment/return/release, rather than patch the single named payer clause.",
+  "sourceExpectation": "SOURCE-NOTES.md Q06 leaves Issue sponsor, fee/collateral funder and released min-ADA destination unknown. Apply exact O02 replacements only; final Opus owns judgment.",
+  "clausesBeforeCorrection": [
+    {
+      "stage": "genesis",
+      "field": "outputs",
+      "text": "A thread state with its catalogue digest and a lovelace thread reserve, returned on Close"
+    },
+    {
+      "stage": "genesis",
+      "field": "signersAndFunding",
+      "text": "Genesis funds the V2 thread reserve in lovelace. The supplied sources do not name who signs genesis or who supplies that reserve."
+    },
+    {
+      "stage": "authorize",
+      "field": "action",
+      "text": "Each owner signs an intent with per-asset gross, fee, net-floor and liability limits, a validity window, nonce = seq and the target predicate, VK and shape digests. Signing happens before any proof is made."
+    },
+    {
+      "stage": "authorize",
+      "field": "outputs",
+      "text": "Signed owner intents, which feed intents_digest"
+    },
+    {
+      "stage": "authorize",
+      "field": "signersAndFunding",
+      "text": "The owners of the debited accounts sign. Signing is an offchain act. The supplied sources state no ADA cost for it and do not specify how signed intents are transported."
+    },
+    {
+      "stage": "prove",
+      "field": "outputs",
+      "text": "Proof instances with their statements and binding metadata"
+    },
+    {
+      "stage": "prove",
+      "field": "signersAndFunding",
+      "text": "The prover chooses the claimant bytes. No transaction is created and nothing is funded."
+    },
+    {
+      "stage": "assemble",
+      "field": "action",
+      "text": "An assembler matches Strands to the identified consumer's requirements and names the issue and settlement stages, outputs, funding and continuation."
+    },
+    {
+      "stage": "issue",
+      "field": "action",
+      "text": "The claim policy checks the Groth16 proof and mints exactly one proof-claim output. Issuing never mints the application's asset and moves no application funds."
+    },
+    {
+      "stage": "issue",
+      "field": "outputs",
+      "text": "One proof-claim output holding min-ADA"
+    },
+    {
+      "stage": "issue",
+      "field": "signersAndFunding",
+      "text": "The Issue transaction must cover the network fee, collateral and the claim output's min-ADA in ADA. The supplied material does not state who must sign an Issue transaction or who funds it."
+    },
+    {
+      "stage": "settle",
+      "field": "action",
+      "text": "The validator rebuilds each statement, compares it with the digest checked at issuance, requires each claimant's signature, burns each claim token, and enforces the signed caps, payments, custody and continuing duties."
+    },
+    {
+      "stage": "settle",
+      "field": "signersAndFunding",
+      "text": "Each claimant whose claim is consumed must sign. The owners' consent is checked through their signed intents. Network fees and collateral are paid in ADA, and program-asset fees move as application outputs."
+    },
+    {
+      "stage": "reclaim",
+      "field": "action",
+      "text": "The claimant releases the output and recovers its min-ADA. Reclaim before expiry is not available."
+    },
+    {
+      "stage": "reclaim",
+      "field": "outputs",
+      "text": "Released min-ADA"
+    },
+    {
+      "stage": "reclaim",
+      "field": "signersAndFunding",
+      "text": "The claimant signs. The supplied sources do not state who funds the reclaim transaction's network fee and collateral."
+    }
+  ],
+  "nextApproach": "Exact reviewer-authored bounded replacements and focused source inventory, followed by full fresh Opus audit; no broad author rewrite or native retry."
+}

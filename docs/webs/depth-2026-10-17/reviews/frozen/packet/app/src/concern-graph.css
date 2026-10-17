@@ -1,0 +1,82 @@
+.concern-graph {
+  --cg-paper: #14130f;
+  --cg-deep: #0e0d0a;
+  --cg-ink: #f0ede4;
+  --cg-muted: #beb6a5;
+  --cg-gold: #d0b98a;
+  --cg-line: #625a49;
+  --cg-selected: #302b20;
+  container: concern-graph / inline-size;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--cg-line);
+  background: var(--cg-paper);
+  color: var(--cg-ink);
+  font: 400 16px/1.6 ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow-wrap: anywhere;
+}
+.concern-graph *, .concern-graph *::before, .concern-graph *::after { box-sizing: border-box; }
+.concern-graph :is(h3,p) { margin: 0; }
+.cg-heading { padding: 20px 20px 0; }
+.concern-graph h3 { color: var(--cg-ink); font: 600 21px/1.35 ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: -.015em; }
+.cg-heading p { margin-top: 10px; color: var(--cg-muted); font-size: 15px; }
+.cg-network { position: relative; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 48px; margin: 24px 20px; }
+.cg-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.cg-lines path { fill: none; stroke: var(--cg-gold); stroke-width: 1.6; vector-effect: non-scaling-stroke; opacity: .85; }
+.cg-relation-label { position: relative; z-index: 1; grid-column: 1 / -1; grid-row: 2; display: flex; justify-content: center; align-items: center; gap: 8px; justify-self: center; padding: 2px 8px; background: var(--cg-paper); color: var(--cg-gold); font-size: 15px; }
+.cg-relation-label span { width: 16px; border-top: 1px solid var(--cg-gold); }
+.cg-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  min-height: 132px;
+  padding: 14px;
+  border: 1px solid var(--cg-line);
+  border-radius: 2px;
+  background: var(--cg-deep);
+  color: var(--cg-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.cg-node:hover { border-color: var(--cg-gold); background: #211e18; }
+.cg-node:focus-visible { outline: 3px solid var(--cg-ink); outline-offset: 3px; }
+.cg-node-selected { justify-self: center; width: min(100%,340px); border: 2px solid var(--cg-gold); background: var(--cg-selected); }
+.cg-node-related { border-color: var(--cg-gold); }
+.cg-number { display: grid; place-items: center; min-width: 28px; height: 28px; border: 1px solid var(--cg-line); border-radius: 50%; color: var(--cg-muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+.cg-node-selected .cg-number, .cg-node-related .cg-number { border-color: var(--cg-gold); color: var(--cg-gold); }
+.cg-name { display: block; max-width: 100%; color: var(--cg-ink); font-size: 16px; font-weight: 600; }
+.cg-subtitle { display: block; max-width: 100%; color: var(--cg-muted); font-size: 15px; }
+.cg-node-status { display: block; max-width: 100%; margin-top: auto; padding-top: 4px; color: var(--cg-muted); font-size: 15px; }
+.cg-node-selected .cg-node-status, .cg-node-related .cg-node-status { color: var(--cg-gold); }
+.cg-summary { margin: 0 20px; padding: 16px; border-left: 3px solid var(--cg-gold); background: var(--cg-deep); font-size: 15px; }
+.cg-summary p + p { margin-top: 6px; }
+.concern-graph .cg-caption { padding: 18px 20px 20px; color: var(--cg-muted); font-size: 15px; }
+@container concern-graph (min-width: 381px) {
+  .cg-node { display: grid; grid-template-columns: 28px minmax(0,1fr); align-content: start; gap: 7px 10px; min-height: 108px; }
+  .cg-number { grid-column: 1; grid-row: 1 / span 2; }
+  .cg-name { grid-column: 2; grid-row: 1; font-size: 15px; }
+  .cg-subtitle { grid-column: 2; grid-row: 2; }
+  .cg-node-status { grid-column: 2; grid-row: 3; margin: 0; padding: 0; }
+  .cg-node:not(.cg-node-selected) .cg-subtitle { display: none; }
+  .cg-node:not(.cg-node-selected) .cg-node-status { grid-row: 2; }
+}
+@container concern-graph (max-width: 380px) {
+  .cg-heading { padding: 16px 12px 0; }
+  .cg-network { margin: 20px 12px; gap: 18px 40px; }
+  .cg-node { padding: 10px; }
+  .cg-summary { margin-inline: 12px; padding: 12px; }
+  .concern-graph .cg-caption { padding: 16px 12px; }
+}
+@media (forced-colors: active) {
+  .cg-lines path { stroke: CanvasText; }
+  .cg-node-selected { outline: 2px solid Highlight; outline-offset: -5px; }
+  .cg-node-related { border-color: Highlight; }
+}

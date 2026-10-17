@@ -1,0 +1,181 @@
+{
+  "reviewToken": "webs-readers-20261017-H02",
+  "persona": "A liquidity protocol designer",
+  "summary": "The page explains the shape of a Web well enough for a designer to follow the invoice example: a Web is a bundle of Strands, each Strand is one Groth16 proof plus the claim and transaction binding, and the validator rebuilds statements from the transaction. The exchange-order case, which is the one a liquidity designer would evaluate first, is not understandable beyond that shape. It names a pool, two orders and a 92 B result, but gives no reserves, fee, rounding rule, pool output, or pool-state continuation, so the designer cannot check the 92 B figure or see what happens when the pool moves between proving and settlement. Several load-bearing statements are written as present-tense fact (the validator rebuilds and enforces the signed limits; a Web settles only when complete) while the technical notes say the all-or-nothing consumer is not yet built. The 112 CASH funding in the main worksheet is shown as the design, while the notes say the S12 source funds 110 and 112 needs a program change. The diagrams are one template reused five times and add little beyond the text. The page needs a worked DEX example with real numbers and a clear Strand/Issue/settlement count per application before it teaches a protocol designer much.",
+  "comprehension": [
+    {
+      "task": "(1) What a Web and a Strand contain",
+      "myAnswer": "A Web is the set of Strands a contract requires for one transaction; settlement needs every required condition covered by a matching Strand. A Strand carries one Groth16 proof, the claim it proves, and the binding to a particular transaction. The page also says a claim specification can be reused across transactions but a proof for an old state cannot be reused for a changed one.",
+      "pageEvidence": "Main text 'What are Webs and Strands?': 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' 'A Web collects the Strands a contract requires for a transaction.' Also 'How can an application reuse a kind of claim?' answer. Technical notes: 'A copied proof can be re-issued with the same claimant and a new expiry.'",
+      "whatIStillCannotExplain": "Whether a Web for the DEX example is two Strands, three Strands (one per check), or one Strand covering all three checks. The page says 'One execution proof can cover several required conditions' (settlement step 2) and also 'An Issue transaction verifies one Groth16 proof' (step 3), and never resolves which one a designer should expect. Also unclear how a re-issued copy of a proof relates to the 'old state cannot be reused' rule."
+    },
+    {
+      "task": "(2) How a proof connects to real transaction inputs and outputs",
+      "myAnswer": "The Strand's public statement is a digest of bytes; the settlement validator rebuilds those bytes from the transaction and the spent thread state and compares them with the proven claim. Amounts that appear in outputs or the statement are public. The validator, not the circuit, checks actual outputs against signed limits.",
+      "pageEvidence": "Invoice 'How the proof connects' paragraph: 'The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.' Proof section: 'The statement says what is being proved... so a correct calculation cannot be attached to a different payment.' Exchange text: 'The validator checks the recipient\u2019s actual output against those signed limits.' Technical notes: 'Actual output allocation is the consuming validator\u2019s job; a proof can attest arithmetic only over values the validator recomputes.'",
+      "whatIStillCannotExplain": "For a pool, which input is the pool's spent state, where the pool's post-trade reserves appear as output, and whether they are read from a reference input or the spent datum. The notes list reference-input reads as PROPOSED, but the page's DEX pool-update check says reserves 'come from the pool state being spent' without showing how that is bound to the output. A designer cannot tell which pool output the rebuilt claim is compared against."
+    },
+    {
+      "task": "(3) A complete concrete payment workflow",
+      "myAnswer": "Invoice: owner signs limits; prover runs the program over the opening state (duty 100, escrow 112) and produces Strands; each Strand is issued in an Issue transaction creating a min-ADA claim output; a settlement transaction consumes all claim outputs, burns their tokens, requires claimant signatures, rebuilds statements and checks outputs (seller 35, fee recipient 2, escrow remaining 75). Afterwards the next state records invoice 65 and reserve 10.",
+      "pageEvidence": "Settlement steps 1 to 4; invoice worksheet values 'Seller receives 35 CASH', 'Program fee recipient receives 2 CASH', 'Gross escrow debit 37 CASH', 'Cash remaining 75 CASH'.",
+      "whatIStillCannotExplain": "The exchange workflow is missing entirely: who is the pool counterparty, who pays the 92 B, what the pool's reserves become, which transaction carries the pool continuation, and what happens to the two owners' intents if one order is not matched in the same batch. The invoice workflow also omits who pays the Issue transactions and their min-ADA (the notes say claimant-signature rules differ by event, but the page does not say who signs an Issue)."
+    },
+    {
+      "task": "(4) Distinction between conditions, proofs and on-chain claim outputs",
+      "myAnswer": "A condition is a contract requirement such as a fee calculation. A proof (inside a Strand) is evidence for one or more conditions. An on-chain claim output is created by an Issue transaction after the claim policy verifies the proof; it records checked evidence, holds min-ADA, and is consumed and burned at settlement. It does not pay anyone or mint the app asset.",
+      "pageEvidence": "Invoice inspector text: 'A condition is something the contract requires... A Strand contains a Groth16 proof...'. Settlement step 3: 'This output records checked evidence for later settlement. It does not pay the seller or mint the application\u2019s asset.'",
+      "whatIStillCannotExplain": "Whether the reader's three DEX conditions each produce a separate claim output or share one. The step 2 vs step 3 wording leaves the mapping open, and the DEX diagram shows nothing about claim outputs. Also whether a claim output locked during an orphaned settlement (after a pool change) can be consumed by a later settlement that is built against the new pool state."
+    },
+    {
+      "task": "(5) What gets set up and how to count setups",
+      "myAnswer": "One shared phase-1 parameter set can serve compatible circuits; each distinct compiled circuit needs its own phase-2 run; a changed rule means a new phase 2; new amounts do not. The five-application cases are not mapped to a circuit count, so a designer cannot count setups for the DEX.",
+      "pageEvidence": "Setup counter widget: '1 shared phase 1 + 5 phase 2' for five abstract circuits; 'These are stages, not 5 + 1 complete ceremonies.' Architecture 1 \u00b7 Setup: 'the count follows circuits, not predicates or catalogue entries.' Technical notes: 'total setup count UNKNOWN'.",
+      "whatIStillCannotExplain": "For the DEX example specifically: whether the pool-update relation, the order relation and the batch-accounting relation are three compiled circuits or one parameterised circuit, and therefore how many phase-2 runs a pool change would trigger. I did not read the setup-counter screenshot, so I cannot say whether the widget itself labels its circuits by application."
+    }
+  ],
+  "missingDepth": [
+    {
+      "section": "Exchange orders (DEX case, main worksheet and inspector)",
+      "missingExplanation": "No numbers beyond the owner's output. The page names a 'liquidity pool' and 'pool reserves' but gives no reserves, no fee rate, no rounding rule, no pool output, and no post-trade reserves, so 92 B cannot be checked.",
+      "concreteExampleNeeded": "A worked batch: pool reserves before (for example A and B amounts), fee rate, the two orders (100 A each, minimum 90 B net), the exact pool formula with rounding, gross B out from the pool, fee, net to each owner (92 B each would have to follow), and the pool reserves after. Show which numbers appear in each Strand's claim and which appear in the settlement outputs.",
+      "whyItMatters": "A liquidity designer's first question is whether the owner's net and the pool's continuation agree. The page cannot show that agreement, and the 92 B figure looks like an assertion, not a result."
+    },
+    {
+      "section": "Pool state across proving and settlement",
+      "missingExplanation": "The page says claims are tied to the state being spent and that a proof for an old state cannot be reused for a changed one, but gives no example of what happens when another transaction moves the pool between proof and submission.",
+      "concreteExampleNeeded": "A timeline: proof built against pool state N; a competing trade moves the pool to N+1; the settlement attempt is rejected or the claim is orphaned; the claim locks min-ADA until expiry; the owner reclaims after expiry or rebuilds. Include the lock-up duration and the min-ADA count for one claim, and whether orders are re-proved or re-issued.",
+      "whyItMatters": "Pool state volatility determines both execution risk and capital lock-up. Without this, a designer cannot judge whether the design is usable under contention."
+    },
+    {
+      "section": "Batch accounting and output allocation",
+      "missingExplanation": "The strict versus coalesced allocation choice is mentioned only in the inspector and the technical notes. The main text never states which rule the DEX example uses, nor what a coalesced payment would look like on-chain.",
+      "concreteExampleNeeded": "Two outputs under the strict rule (one per owner) and one coalesced output paying both owners under the partition rule, with the exact amounts that each validator check would compare.",
+      "whyItMatters": "It decides whether batched fills can share an output, which affects the transaction shape and the pool's accounting."
+    },
+    {
+      "section": "Strand count per application",
+      "missingExplanation": "The page says 'one execution proof can cover several required conditions' and 'each Strand needs its own Issue transaction' without saying how many Strands the DEX example needs.",
+      "concreteExampleNeeded": "A table for each of the five applications: conditions, Strands, Issue transactions, claim outputs, settlement transaction inputs, and min-ADA locked at peak. Show one invoice case and one DEX case in full.",
+      "whyItMatters": "Cost and latency scale with the number of claim outputs; a designer cannot compare the Strand route with whole-execution proofs without it, and the notes admit no measurement exists."
+    },
+    {
+      "section": "Funding of the invoice worksheet",
+      "missingExplanation": "The worksheet presents 112 CASH funding as the state. Technical notes say S12 funds 110 and 112 is a proposed backing policy needing a program change and a consumer-enforced backing rule.",
+      "concreteExampleNeeded": "Show the 110 source state and the 112 proposed state side by side, with the 2 CASH shortfall at 110 spelled out in the worksheet, and say what a second partial needs.",
+      "whyItMatters": "A designer reading the worksheet will take 112 as the design; the shortfall is exactly the kind of backing issue a liquidity designer checks first."
+    },
+    {
+      "section": "Public visibility of order flow and amounts",
+      "missingExplanation": "The statement that amounts in settlement outputs and statements are public appears only in the 'Book passages' section at the bottom. The DEX main text does not say that order sizes, fills and pool reserves are public on-chain.",
+      "concreteExampleNeeded": "One sentence in the DEX section: order sizes, minimum receipts, and pool reserves are visible in the settlement transaction; only the witness (for example intermediate pool arithmetic) is hidden.",
+      "whyItMatters": "Visibility of order size and pool reserves is a core design constraint for an exchange and affects front-running exposure."
+    }
+  ],
+  "diagramFindings": [
+    {
+      "diagram": "invoice-diagram.png (Applications section, invoice tab selected)",
+      "whatIActuallyInspected": "Image read. Three boxes labelled 'Payment calculation', 'Separate program fee', 'Remaining obligations' (each 'Required check') with connector lines into a central ellipse labelled 'Web / PROOF COLLECTION'. Payment calculation is highlighted. Below: status box 'All required conditions are covered... 3 of 3 conditions covered.' Right panel: 'Selected check' text and a 'Remove proof coverage' checkbox.",
+      "whatItTeaches": "The reader sees that a Web collects several conditions, that each condition is a separate selectable check, and that coverage is a yes/no count (3 of 3).",
+      "whatItFailsToShow": "No arrows or direction; the lines from checks to the Web do not show whether each check is one Strand or one proof covering several. No amounts appear on the diagram (35, 2, 37, 75 are only in text). No state change is drawn: opening state, the next state, and the claim outputs are absent. A reader cannot tell whether the 3 checks become 1 or 3 Strands.",
+      "replacementOrRevision": "Replace the hub with a two-column diagram: left side the opening escrow state (112 CASH, invoice 100, reserve 10) with arrows labelled by amounts into the transaction (seller 35, fee 2, escrow debit 37); right side the next state (escrow 75, invoice 65, reserve 10). Under it, show proofs as boxes with a line to each condition they cover, so that a shared proof is visible as one box with two lines."
+    },
+    {
+      "diagram": "dex-diagram.png (Applications section, exchange tab selected)",
+      "whatIActuallyInspected": "Image read. Same template as the invoice image: three 'Required check' boxes ('Each owner's result', 'Pool update', 'Combined order accounting') into the 'Web / PROOF COLLECTION' ellipse, status box '3 of 3 conditions covered'.",
+      "whatItTeaches": "Only that the DEX has three checks and all are covered in the default state.",
+      "whatItFailsToShow": "No pool, no order nodes, no owner outputs, no pool reserves, no 92 B, no 100 A. The diagram is structurally identical to the invoice one, so it does not teach anything specific to a pool. A designer cannot see the pool's before and after state or where the 92 B leaves the transaction.",
+      "replacementOrRevision": "Draw the batch: two order inputs (100 A each) and the pool input (reserves before) on the left; the pool output (reserves after) and two owner outputs (92 B each) and fee on the right, with labelled amounts; and under it, each check shown as a bracket over the outputs it compares."
+    },
+    {
+      "diagram": "settlement-stages.png (On Cardano section, four step columns)",
+      "whatIActuallyInspected": "Image read. Four columns Step 1 to Step 4 with headings and text, a horizontal rule with dots at each step, and a link 'Issuance assumptions and funding'.",
+      "whatItTeaches": "A linear order: sign limits, build the Web, issue claims on-chain, settle. It conveys that issuance and settlement are different transactions.",
+      "whatItFailsToShow": "No arrows, no transaction boxes, no claim outputs drawn between Issue and settlement, no count. The reader cannot see how many Issue transactions there are, which outputs settlement consumes, or when the pool state is read. The dots suggest a timeline but do not show that step 3 can happen days before step 4 or that claims can orphan between them.",
+      "replacementOrRevision": "Replace with a timeline showing: Issue transaction 1..n (each with one proof and one claim output), settlement transaction consuming n claim outputs, with the pool or escrow state as input/output; mark the window where a competing transaction can spend the state and the claims become orphaned."
+    },
+    {
+      "diagram": "invoice-missing-coverage.png, setup-counter.png, architecture.png, mobile-invoice-diagram.png, desktop-opening.png",
+      "whatIActuallyInspected": "Not inspected. Only the text of these states was supplied in the packet; I did not read these image files.",
+      "whatItTeaches": "Not assessed.",
+      "whatItFailsToShow": "Not assessed.",
+      "replacementOrRevision": "None proposed on this basis."
+    }
+  ],
+  "proseProblems": [
+    {
+      "location": "Applications > Exchange orders intro",
+      "exactQuote": "Exchange assets through a liquidity pool, combining two orders in one transaction.",
+      "problem": "It names a pool but not the pool's assets, reserves, fee or counterparty. A liquidity designer cannot tell whether the pool is one of the two orders, a third input, or a continuation of the spent pool state.",
+      "suggestedRewrite": "Name the pool as a spent input with reserves A and B, state the fee rate, and say that the two orders trade against that pool in one transaction, with the pool's post-trade reserves as an output."
+    },
+    {
+      "location": "Applications > Exchange orders > Pool update inspector",
+      "exactQuote": "The updated pool reserves follow the pool\u2019s rules for fees and rounding.",
+      "problem": "The sentence asserts that the pool rule is followed but gives neither the rule nor a number. It reads as a claim, not a result.",
+      "suggestedRewrite": "Give the formula and one worked example: reserves before, input amount, fee, output before rounding, rounding direction, output after rounding, reserves after."
+    },
+    {
+      "location": "Applications > Exchange orders > Combined order accounting inspector",
+      "exactQuote": "The amounts used for each owner\u2019s result are the amounts in the batch accounting, and no payment counts toward two orders.",
+      "problem": "The sentence refers to the batch accounting without defining it, so it is circular. The reader still does not know which amounts are batch accounting or how a payment is allocated to one order.",
+      "suggestedRewrite": "List the two order amounts and the single output (or two outputs) that pays each owner, and say in one sentence which allocation rule (one output per order, or an exact partition) the example uses."
+    },
+    {
+      "location": "Applications > Exchange orders > Financial result",
+      "exactQuote": "The reserve update, fee rule and exact rounding agree with both orders.",
+      "problem": "This is repeated from the inspector and again asserts agreement without values. It is the one place a designer would most expect numbers.",
+      "suggestedRewrite": "Replace with numbers: pool reserve after = X A and Y B; fee = Z B; rounding favours the pool by R."
+    },
+    {
+      "location": "On Cardano > How a Web reaches settlement, Step 4",
+      "exactQuote": "The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants\u2019 signatures.",
+      "problem": "Present-tense description of a consumer that the technical notes list as 'Not yet built: the all-or-nothing Web consumer and required-set enforcement'. The sentence reads as operating behaviour, and a designer would build on it.",
+      "suggestedRewrite": "Keep the design in present tense but mark the status where it first matters: 'Designed: the settlement validator rebuilds... Status: not yet implemented; see Technical notes.'"
+    },
+    {
+      "location": "On Cardano > How a Web reaches settlement, Steps 2 and 3",
+      "exactQuote": "One execution proof can cover several required conditions.",
+      "problem": "Step 3 then says 'An Issue transaction verifies one Groth16 proof', and the page never explains how many Issue transactions a Web needs. A reader sees two rules that look like they conflict.",
+      "suggestedRewrite": "State the rule once with a count: 'One proof covers one or more conditions. Each proof needs one Issue transaction and produces one claim output. A three-condition invoice step could need one or three Issue transactions depending on how its proofs are grouped; see the count table.'"
+    },
+    {
+      "location": "Applications > Invoice payment > What the validator receives (and DEX/issuance/loan/treasury equivalents)",
+      "exactQuote": "A Web covering these conditions, bound to the transaction that spends the contract state.",
+      "problem": "Five repetitions of the same sentence. It says nothing about the validator's inputs, the state it reads, or what it outputs, and it is the one line that would tell a designer what the on-chain check is.",
+      "suggestedRewrite": "Name the validator's inputs for this case (spent escrow state, Web claim outputs, transaction outputs) and what it returns (accept or reject, and what it compares)."
+    },
+    {
+      "location": "Applications > Invoice payment > intro and worksheet opening",
+      "exactQuote": "The escrow\u2014the account holding the funds\u2014starts with 112 CASH.",
+      "problem": "Presented as the design. Technical notes say the S12 source funds 110 and 112 requires a program change and a backing policy the consumer does not yet enforce. A reader cannot tell that the opening number is a proposal.",
+      "suggestedRewrite": "Show both opening states in the worksheet (110 from source, 112 proposed) and say that the 2 CASH shortfall at 110 is what the 112 funding would cover."
+    },
+    {
+      "location": "Settlement stage 4 and Applications > Invoice payment > How the proof connects",
+      "exactQuote": "The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.",
+      "problem": "Accurate as a design, but the page never says what 'the transaction' contains for the DEX case, or where the pool's post-trade reserves are read from. It is the sentence a DEX designer most needs expanded.",
+      "suggestedRewrite": "Add one sentence and a picture: 'For a pool trade, the validator rebuilds the claim from the pool input's reserves and the pool output's reserves, and from the two owner outputs.'"
+    },
+    {
+      "location": "Applications > Exchange orders intro",
+      "exactQuote": "Each owner sets a minimum amount to receive.",
+      "problem": "It does not say whether the minimum is gross or net of fees, or what counts as the fee. The DEX check says 'at least 90 B net' without defining net.",
+      "suggestedRewrite": "Define net: the amount the owner's output receives after the pool fee and any program fee, in the output asset. Give the fee rule once."
+    }
+  ],
+  "priorityChanges": [
+    "Add one fully worked DEX batch with real numbers (pool reserves before and after, fee rule, rounding, pool output, each owner's gross, fee and net, and the owner outputs) and show that the 92 B result is computed rather than asserted. Make sure the numbers in each check match the numbers in the worked example.",
+    "Add a pool-moved-before-settlement timeline: proof built on pool state N, a competing trade to N+1, what the claim outputs do (orphaned, min-ADA locked until expiry, reclaimable only by the claimant), and what the owner must do next. Give the lock-up and min-ADA amount for one example claim.",
+    "Reconcile the invoice's 112 CASH opening state with the 110 source state in the worksheet itself, and mark the status (proposed backing policy, not yet enforced) at the point where 112 first appears.",
+    "Give a count table for each of the five applications: conditions, proofs, Strands, Issue transactions, claim outputs and settlement inputs, and resolve the 'one execution proof can cover several conditions' versus 'each Strand needs its own Issue transaction' wording so a designer can predict the count.",
+    "Move the public-visibility statement (order sizes, minimum receipts and pool reserves are visible on-chain; only the witness is hidden) into the Exchange orders section, and replace the five identical diagrams with diagrams that show the entities, amounts and state changes of each case."
+  ],
+  "inspectedImages": [
+    "invoice-diagram.png",
+    "dex-diagram.png",
+    "settlement-stages.png"
+  ],
+  "limitations": "\"Read only the three screenshots listed (invoice, DEX and settlement stages); I did not read invoice-missing-coverage.png, setup-counter.png, architecture.png, mobile-invoice-diagram.png or desktop-opening.png, so my diagram assessment of those is not made. I did not run the interactive page, so my statements about what the 'Remove proof coverage' control shows for the DEX or invoice are based only on the default-state screenshots and the supplied state text. My review relies on the supplied page text and the states the root captured, and I did not independently browse. The environment was in plan mode: I made no file edits and used only read-only Read calls; no plan file was written because this task asked for a structured review rather than a code change. This is model-reader feedback, not human research or a security audit, and I have not assessed the cryptography or the security policy.\"",
+  "verdict": "NEEDS_MORE_DEPTH"
+}

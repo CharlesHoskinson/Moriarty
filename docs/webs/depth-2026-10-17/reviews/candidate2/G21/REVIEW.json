@@ -1,0 +1,81 @@
+{
+  "filesRead": [
+    "MANIFEST.json",
+    "PAGE-REPORT.json",
+    "app/ARTIFACT-CHECK.json",
+    "app/src/App.jsx",
+    "app/src/TransactionDiagram.jsx",
+    "app/src/transaction-diagram.css",
+    "app/src/DepthContent.jsx",
+    "app/src/CryptographicDetail.jsx",
+    "app/src/ConcernGraph.jsx",
+    "app/src/concern-graph.css",
+    "app/src/SevenLayers.jsx",
+    "app/src/Groth16.jsx",
+    "app/src/invoice.mjs",
+    "app/src/data.generated.json",
+    "app/src/app.css",
+    "app/src/brand.css",
+    "app/src/depth.css",
+    "app/build.mjs",
+    "app/check-artifact.mjs",
+    "depth-2026-10-17/COPY.json",
+    "depth-2026-10-17/DESIGN-AND-PLAN.md",
+    "depth-2026-10-17/reader-study/SYNTHESIS.md",
+    "depth-2026-10-17/narrative/SOURCE-NOTES.md",
+    "depth-2026-10-17/applications/SOURCE-NOTES.md",
+    "contributions/11-v2-security/V2-COPY.json",
+    "contributions/14-review-corrections/PRESENTATION-PATCHES.json",
+    "contributions/14-review-corrections/COUNT-CLARIFICATION.json",
+    "reference-inputs/concept/integrated-r2/CONCEPT.md",
+    "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md",
+    "app/src/main.jsx",
+    "app/src/editorial.mjs",
+    "app/src/presentation.mjs"
+  ],
+  "findings": [
+    {
+      "location": "app/src/app.css:31; app/src/DepthContent.jsx:67,78; app/src/CryptographicDetail.jsx:64",
+      "problem": "At @media(max-width:760px), .artifact-flow hides thead and injects hardcoded pseudo-element labels td:nth-child(2)::before{content:'Input'} and td:nth-child(3)::before{content:'Artifact \u2192 next consumer'}. When DepthContent.jsx (compiler-path table and 4-column scenarioComparison table) and CryptographicDetail.jsx (lifecycle signing/funding table) reuse .artifact-flow without overriding td::before (unlike .layer-mapping in app.css:41), mobile viewports mislabel 'What it supplies', 'Cash before \u2192 after', and 'Frequency' as 'Input', mislabel 'What to inspect', 'Invoice before \u2192 after', and 'Signing and funding' as 'Artifact \u2192 next consumer', and leave the 4th column ('Reserve') in scenarioComparison unlabelled.",
+      "requiredChange": "In app/src/depth.css (or app/src/app.css), override .artifact-flow td::before for the tables in DepthContent.jsx and CryptographicDetail.jsx with their actual column labels (or suppress td::before and retain visible headers on mobile).",
+      "severity": "medium",
+      "source": "app/src/app.css lines 31 and 41; app/src/DepthContent.jsx lines 67-73 and 78; app/src/CryptographicDetail.jsx line 64; depth-2026-10-17/DESIGN-AND-PLAN.md line 5"
+    },
+    {
+      "location": "depth-2026-10-17/COPY.json:432; app/src/TransactionDiagram.jsx:120",
+      "problem": "The treasury model note (models[3].note) rendered in TransactionDiagram contains an article and capitalization typo: 'Source arithmetic with a Illustrative backing premise, not an executed treasury transaction.'",
+      "requiredChange": "Change 'with a Illustrative backing premise' to 'with an illustrative backing premise' in depth-2026-10-17/COPY.json line 432 and rebuild data.generated.json / index.html.",
+      "severity": "low",
+      "source": "depth-2026-10-17/COPY.json line 432; app/src/TransactionDiagram.jsx line 120"
+    },
+    {
+      "location": "app/src/App.jsx:1,12,27-38",
+      "problem": "App.jsx constructs const caseCopy from data.v2.main.caseCopy on line 12 (and imports useRef on line 1) but never reads either. In Explorer (lines 27-38), #role-inspector ('Connect it to the ledger') reads role?.authentication from source.strands (data.scenarios, i.e., contributions/04-scenarios/scenarios.json) rather than caseCopy[caseId]?.roles[check.id]?.authentication from the V2/editorial caseCopy object.",
+      "requiredChange": "Either consume caseCopy[caseId]?.roles[check.id]?.authentication in App.jsx line 38 (matching V2-COPY.json / editorial COPY.json) or remove the unused caseCopy definition on line 12 and unused useRef import on line 1.",
+      "severity": "low",
+      "source": "app/src/App.jsx lines 1, 12, 27-38; app/src/data.generated.json scenarios vs v2.main.caseCopy; depth-2026-10-17/applications/SOURCE-NOTES.md A01/A04"
+    },
+    {
+      "location": "app/src/CryptographicDetail.jsx:69-74; depth-2026-10-17/COPY.json:613-615,744-748",
+      "problem": "In SettlementLifecycle ('Unused claims, stale state and readback' drawer), CryptographicDetail.jsx renders copy.binding['Spent state and sequence'].body (which is already rendered inside BindingReference on line 74 and uses the shorter phrasing 'If a Revoke or a competing settlement advances the sequence first...') together with c.failureBranch[0] and c.failureBranch[2], omitting c.failureBranch[1]. c.failureBranch[1] is the Opus-authored paragraph carrying the explicit OP-04 wording ('Any catalogue account can Revoke, which advances the sequence, and a competing settlement can spend the same state first...') and the duplicate/mismatched claim-envelope failure details. Flagged for Opus review.",
+      "requiredChange": "In app/src/CryptographicDetail.jsx lines 70-72, render c.failureBranch[1] (or all three paragraphs of c.failureBranch) instead of duplicating copy.binding['Spent state and sequence'].body, subject to Opus confirmation.",
+      "severity": "low",
+      "source": "app/src/CryptographicDetail.jsx lines 69-74; depth-2026-10-17/COPY.json lines 613-615 and 744-748; contributions/14-review-corrections/PRESENTATION-PATCHES.json OP-04-revocation"
+    },
+    {
+      "location": "app/src/SevenLayers.jsx:22; app/src/ConcernGraph.jsx:15-16,99,108-117",
+      "problem": "ConcernGraph.jsx symmetrizes layer.dependencies into an undirected neighborhood under the label 'Related concerns' (so Layer 6 Cryptographic Bedrock shows related concerns 1, 4, 5, 7), whereas the adjacent detail panel in SevenLayers.jsx line 22 renders the raw one-way layer.dependencies array under the identical heading 'Related concerns' (rendering no buttons for Layer 6 because its raw dependencies array is empty, and omitting incoming links on Layers 1, 2, 4, and 5).",
+      "requiredChange": "In app/src/SevenLayers.jsx line 22, compute the button list from the same undirected neighborhood used by ConcernGraph.jsx (or give the raw layer.dependencies list a distinct heading).",
+      "severity": "low",
+      "source": "app/src/SevenLayers.jsx line 22; app/src/ConcernGraph.jsx lines 15-16, 99, 108-117; app/src/data.generated.json sevenLayers.layers"
+    }
+  ],
+  "limits": [
+    "Fresh independent nonauthor source/UI/copy audit by Gemini 4 Argon (High) using only the public packet files listed in MANIFEST.json.",
+    "No browser execution, visual rendering inspection, image inspection, shell execution, network access, native SDK execution, compilation, setup, proving, verification, signing, or ledger action was performed.",
+    "This audit covers nonsecurity source, arithmetic, UI, accessibility in source, diagram structure, and prose quality only; it is not a security audit or substitute for Opus security approval."
+  ],
+  "reviewToken": "moriarty-webs-v4-final-G21",
+  "summary": "Independent nonauthor Gemini 4 Argon (High) source/UI/copy audit of the Moriarty Webs v4 depth-revision candidate (artifactSha256 b71e79b19f68e49634e7d7593fa415900d22b0ddf8fb5ab02016138c4136b920). All 31 files in MANIFEST.json (plus MANIFEST.json itself) were inspected. The candidate resolves the reader-study complaints with substantive, clear prose and distinct quantitative diagrams: (1) shared invoice arithmetic in app/src/invoice.mjs and DepthContent.jsx conserves 112 = 35 + 2 + 75 with continuing duties 65 + 10 = 75, keeps the source 110 opening distinct (leaving 73 cash against 75 duties, a 2 CASH backing gap), and separates the checked-in request scenario (109/90/14 leaving 72/55/14); (2) the invoice walkthrough and TransactionDiagram model one whole-execution Strand covering three conditions producing one Issue claim output consumed by one settlement transaction, never three proof producers; (3) the other four application models are financially distinct without fabricating unprovided pool reserves, rate schedules, datum layouts, signer matrices, or ADA costs (DEX two 100 A orders with 90 B floors and 92 B net receipts sharing an unspecified pool transition; Issuance 300 = 180 + 120 under a 1,000 cap with 700 unissued capacity explicitly distinguished from debt and payments; Loan 100 + 5 - 35 = 70 remaining duty versus 37 CASH gross payer debit; Treasury allocate(true,23,7,2) paying 14 + 7 + 2 = 23 A and 4 B, retaining 2 A and 6 B custody against 2 A remainder reserve duty and 6 B rebate duty, with fixed 2 A fee distinct from remainder); (4) actual Moriarty partial source and moriarty-k2-relation-selector/1 JSON are exposed; (5) offchain preparation (authorize, prove, assemble) is separated from onchain Issue, settlement, and post-expiry reclaim; (6) Groth16 setup counting per distinct compiled relation (with predicate_digest as a circuit constant in current source vs free context/body wires) and local forgeable test-setup limits are preserved alongside original technical evidence; and (7) ConcernGraph.jsx renders an undirected neighborhood with native button controls and a polite live region rather than a false directed execution pipeline. No blocking or major issues were found within the assigned scope; one medium responsive CSS issue on mobile tables and four low-severity copy/code items (including one Opus security-wording referral) are reported.",
+  "verdict": "READY"
+}

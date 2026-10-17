@@ -1,0 +1,97 @@
+[
+  {
+    "case": "invoice",
+    "intro": "Invoice payment\n\nPay 35 CASH toward an invoice held in escrow. The seller receives the payment and the fee recipient receives a separate 2 CASH. The unpaid invoice balance and reserve obligation remain in the next state.",
+    "roles": [
+      {
+        "button": "1\nPayment calculation\nRequired check\n\u2197",
+        "inspector": "Selected check\nPayment calculation\n\nThe seller receives the chosen partial payment.\n\nWhat the claim says\nOpening invoice duty 100 CASH; payment 35 CASH; escrow debit for payment and fee 37 CASH.\nWhere the inputs come from\nThe opening duty comes from the escrow state this transition spends, and CASH is the asset the invoice program declares.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "2\nSeparate program fee\nRequired check\n\u2197",
+        "inspector": "Selected check\nSeparate program fee\n\nThe escrow pays a separate 2 CASH fee, which does not reduce the invoice balance.\n\nWhat the claim says\nEscrow pays the seller 35 CASH and the fee recipient 2 CASH; the fee does not reduce invoice duty.\nWhere the inputs come from\nThe consuming validator checks the actual seller and fee-recipient outputs against these amounts.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "3\nRemaining obligations\nRequired check\n\u2197",
+        "inspector": "Selected check\nRemaining obligations\n\nThe next state records the unpaid invoice balance and the unchanged reserve obligation.\n\nWhat the claim says\nInvoice 100 \u2212 35 = 65 CASH; reserve duty stays 10 CASH; total duties 75 CASH; escrow keeps 75 CASH.\nWhere the inputs come from\nDuties carry over from the spent escrow state and change only through recorded accruals and discharges.\nRemove proof coverage for this check\nThe contract still requires it."
+      }
+    ],
+    "result": "Financial result\nSeller receives 35 CASH; the program fee recipient receives 2 CASH.\nGross escrow debit is 37 CASH; 75 CASH remains in escrow.\nThe unpaid invoice is 65 CASH; with the 10 CASH reserve obligation, 75 CASH remains owed.\nWhat the validator receives\n\nA Web covering these conditions, bound to the transaction that spends the contract state."
+  },
+  {
+    "case": "dex",
+    "intro": "Exchange orders\n\nExchange assets through a liquidity pool, combining two orders in one transaction. Each owner sets a minimum amount to receive. The contract must check both the pool calculation and what each owner actually receives.",
+    "roles": [
+      {
+        "button": "1\nEach owner\u2019s result\nRequired check\n\u2197",
+        "inspector": "Selected check\nEach owner\u2019s result\n\nEach owner receives at least the minimum amount they agreed to.\n\nWhat the claim says\nTwo orders each offer 100 A and require at least 90 B net; each owner receives 92 B.\nWhere the inputs come from\nAsset identities and each owner\u2019s limits come from the owners\u2019 signed intents; the validator checks the actual outputs.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "2\nPool update\nRequired check\n\u2197",
+        "inspector": "Selected check\nPool update\n\nThe updated pool reserves follow the pool\u2019s rules for fees and rounding.\n\nWhat the claim says\nThe reserve update, fee rule and exact rounding agree with both orders.\nWhere the inputs come from\nPool reserves come from the pool state being spent; any outside price carries its named source and freshness limit.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "3\nCombined order accounting\nRequired check\n\u2197",
+        "inspector": "Selected check\nCombined order accounting\n\nThe combined transaction accounts for both orders without counting one payment toward two orders.\n\nWhat the claim says\nThe amounts used for each owner\u2019s result are the amounts in the batch accounting, and no payment counts toward two orders.\nWhere the inputs come from\nThe consuming validator allocates actual outputs under its profile\u2019s rule: one output per order, or an exact partition that admits combined payments with every order allocated once.\nRemove proof coverage for this check\nThe contract still requires it."
+      }
+    ],
+    "result": "Financial result\nTwo orders each offer 100 A and require at least 90 B net; each owner receives 92 B.\nThe reserve update, fee rule and exact rounding agree with both orders.\nThe amounts used for each owner\u2019s result are the amounts in the batch accounting, and no payment counts toward two orders.\nWhat the validator receives\n\nA Web covering these conditions, bound to the transaction that spends the contract state."
+  },
+  {
+    "case": "issuance",
+    "intro": "Token issuance\n\nCreate 300 units of an application token under a cap of 1,000, then distribute them to two recipients. The cap leaves room for up to 700 more units under the minting policy; that capacity is not an amount already owed.",
+    "roles": [
+      {
+        "button": "1\nSupply limit\nRequired check\n\u2197",
+        "inspector": "Selected check\nSupply limit\n\nThe number of tokens issued stays within the cap.\n\nWhat the claim says\nFirst issue: 300 units under a cap of 1,000; unissued capacity is 700.\nWhere the inputs come from\nThe application asset\u2019s own minting policy enforces the cap and continues the supply state from its predecessor.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "2\nRecipient amounts\nRequired check\n\u2197",
+        "inspector": "Selected check\nRecipient amounts\n\nThe amounts sent to the recipients add up to the number of tokens issued.\n\nWhat the claim says\nRecipient one receives 180 units and recipient two receives 120 units; 180 + 120 = 300.\nWhere the inputs come from\nThe minting policy and the consuming validator check the actual mint and recipient outputs.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "3\nSeparate token obligations\nRequired check\n\u2197",
+        "inspector": "Selected check\nSeparate token obligations\n\nIssuing tokens creates a servicing obligation only if the program defines one.\n\nWhat the claim says\nThe remaining 700 units of capacity are not debt. A redemption promise is a duty only when the program defines it.\nWhere the inputs come from\nA servicing duty names its parties, its exact asset and its creation and discharge rules; eligibility documents keep their issuer and freshness limits.\nRemove proof coverage for this check\nThe contract still requires it."
+      }
+    ],
+    "result": "Financial result\nFirst issue: 300 units under a cap of 1,000; unissued capacity is 700.\nRecipient one receives 180 units and recipient two receives 120 units; 180 + 120 = 300.\nThe remaining 700 units of capacity are not debt. A redemption promise is a duty only when the program defines it.\nWhat the validator receives\n\nA Web covering these conditions, bound to the transaction that spends the contract state."
+  },
+  {
+    "case": "loan",
+    "intro": "Loan repayment\n\nA debt of 100 CASH grows by 5 CASH for the period. A 35 CASH repayment reduces it to 70 CASH. The borrower also pays a 2 CASH fee, which does not repay any debt.",
+    "roles": [
+      {
+        "button": "1\nUpdated debt\nRequired check\n\u2197",
+        "inspector": "Selected check\nUpdated debt\n\nThe debt increases by the period\u2019s accrued amount.\n\nWhat the claim says\nDebt 100 CASH plus accrual 5 CASH gives a duty of 105 CASH.\nWhere the inputs come from\nThe loan agreement fixes period, rate and rounding; a variable rate carries its named observation source and freshness rule.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "2\nRepayment and fee\nRequired check\n\u2197",
+        "inspector": "Selected check\nRepayment and fee\n\nThe payer funds the debt repayment and its separate fee.\n\nWhat the claim says\nDebt payment 35 CASH plus separate fee 2 CASH gives payer gross debit 37 CASH.\nWhere the inputs come from\nPayer, lender, fee recipient and asset match the payer\u2019s signed intent and the transaction\u2019s actual outputs.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "3\nRemaining debt\nRequired check\n\u2197",
+        "inspector": "Selected check\nRemaining debt\n\nOnly the repayment reduces the debt; the fee is accounted for separately.\n\nWhat the claim says\nDuty 105 \u2212 repayment 35 = 70 CASH remaining; the 2 CASH fee is not repayment.\nWhere the inputs come from\nThe continuing debt carries over from the predecessor state through explicit accrual and discharge entries; collateral release follows its own policy.\nRemove proof coverage for this check\nThe contract still requires it."
+      }
+    ],
+    "result": "Financial result\nDebt 100 CASH plus accrual 5 CASH gives a duty of 105 CASH.\nDebt payment 35 CASH plus separate fee 2 CASH gives payer gross debit 37 CASH.\nDuty 105 \u2212 repayment 35 = 70 CASH remaining; the 2 CASH fee is not repayment.\nWhat the validator receives\n\nA Web covering these conditions, bound to the transaction that spends the contract state."
+  },
+  {
+    "case": "treasury",
+    "intro": "Treasury allocation\n\nAllocate funds to two beneficiaries while paying a separate fee. The transaction also creates reserve and rebate obligations, so the treasury must retain enough of each asset to cover them.",
+    "roles": [
+      {
+        "button": "1\nDivision and remainder\nRequired check\n\u2197",
+        "inspector": "Selected check\nDivision and remainder\n\nThe allocation uses the correct quotient and remainder when dividing 23 by 3.\n\nWhat the claim says\nDividing 23 by 3 gives 7 with a remainder of 2: 23 = 3 \u00d7 7 + 2, and the remainder is less than 3. The program call is allocate(true,23,7,2), where true supplies the approval flag.\nWhere the inputs come from\nThe allocation inputs, including approved=true, sit inside the intent the debited treasury account signs; a separate governance approver must itself be a required signer, an advancer or an authenticated input.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "2\nBeneficiary payments\nRequired check\n\u2197",
+        "inspector": "Selected check\nBeneficiary payments\n\nThe beneficiary payments and fee match the allocation calculation.\n\nWhat the claim says\nAlpha receives 14 A and 4 B; beta receives 7 A; fees receive 2 A. Total custody debit is 23 A and 4 B.\nWhere the inputs come from\nTreasury custody, the identities of A and B and the beneficiary outputs are checked by the consuming validator.\nRemove proof coverage for this check\nThe contract still requires it."
+      },
+      {
+        "button": "3\nFunds retained for obligations\nRequired check\n\u2197",
+        "inspector": "Selected check\nFunds retained for obligations\n\nThe treasury keeps enough of assets A and B to cover the new reserve and rebate obligations.\n\nWhat the claim says\nAllocation creates a reserve duty of 2 A and a rebate duty of 6 B. The treasury holds 25 A and 10 B before the step and keeps 2 A and 6 B against those duties.\nWhere the inputs come from\nOpening custody comes from the treasury state being spent; the consumer enforces that custody covers the duties.\nRemove proof coverage for this check\nThe contract still requires it."
+      }
+    ],
+    "result": "Financial result\nDividing 23 by 3 gives 7 with a remainder of 2: 23 = 3 \u00d7 7 + 2, and the remainder is less than 3. The program call is allocate(true,23,7,2), where true supplies the approval flag.\nAlpha receives 14 A and 4 B; beta receives 7 A; fees receive 2 A. Total custody debit is 23 A and 4 B.\nAllocation creates a reserve duty of 2 A and a rebate duty of 6 B. The treasury holds 25 A and 10 B before the step and keeps 2 A and 6 B against those duties.\nWhat the validator receives\n\nA Web covering these conditions, bound to the transaction that spends the contract state."
+  }
+]

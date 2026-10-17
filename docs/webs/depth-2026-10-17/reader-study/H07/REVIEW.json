@@ -1,0 +1,156 @@
+{
+  "reviewToken": "webs-readers-20261017-H07",
+  "persona": "A lender servicing a loan",
+  "summary": "As a lender servicing a loan, I can follow the arithmetic on the loan panel (100 + 5 accrual = 105 duty; 35 repayment plus 2 fee = 37 gross debit; 70 remaining) and I can see that the fee is kept out of the debt. The page does not tell me enough to service a real loan. It never gives the rate or period behind the 5 CASH accrual, never says how a repayment is applied across interest and principal, names the borrower as payer in one place and the lender nowhere in the loan case, and says collateral release 'follows its own policy' without showing one. The loan diagram reuses the invoice template and shows no loan-specific state, so it does not help. The technical notes admit the loan amounts have no supplied source program; the main loan section does not say that, so a lender reader would take 5 CASH as a computed fact. The mechanism (Strand, Web, claim output, settlement) is explained clearly enough at the level of a single payment. What is missing is how this specific loan's state moves from one datum to the next, and who receives what.",
+  "comprehension": [
+    {
+      "task": "(1) What a Web and a Strand contain",
+      "myAnswer": "A Strand carries one Groth16 proof, the claim that proof establishes, and the information tying it to a particular transaction. A Web is the set of Strands the contract requires for one transaction; settlement needs every required condition covered. For the loan, I take the three required checks (updated debt, repayment and fee, remaining debt) as the conditions a Web must cover.",
+      "pageEvidence": "Strand: 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' Web: 'A Web collects the Strands a contract requires for a transaction... Settlement needs every required condition covered by a matching Strand.' Loan panel: '3 of 3 conditions covered.' Technical notes: 'One execution proof can cover several required conditions.'",
+      "whatIStillCannotExplain": "Whether the loan's three checks become one Strand or three. The loan panel shows three check buttons feeding one oval; it does not show a Strand. I also cannot tell what the claim bytes for the accrual check contain: 100 and 5 only, or the rate and period as well."
+    },
+    {
+      "task": "(2) How a proof connects to real transaction inputs and outputs",
+      "myAnswer": "The validator rebuilds each claim from the transaction and checks that it matches the claim whose proof was verified. For a loan repayment, that means the 35 repayment and the 2 fee must match the actual payer debit and the actual lender and fee-recipient outputs. The page says this in general terms.",
+      "pageEvidence": "Invoice inspector: 'The consuming validator checks the actual seller and fee-recipient outputs against these amounts.' Loan inspector for check 2: 'Payer, lender, fee recipient and asset match the payer's signed intent and the transaction's actual outputs.' Settlement step 4: 'The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants' signatures.'",
+      "whatIStillCannotExplain": "Which output carries the 35 CASH to the lender, which output carries the 2 CASH, and what the continuing 70 CASH datum looks like on-chain. The page names a lender in the check text but never names a lender output. I also cannot tell whether the 105 duty is read from the predecessor datum or computed inside this transaction."
+    },
+    {
+      "task": "(3) A complete concrete payment workflow for a loan",
+      "myAnswer": "My reconstruction, not one the page gives: the borrower signs an intent capping gross debit at 37 CASH and fee at 2 CASH; a prover runs the loan program over the predecessor state (debt 100, period accrual 5) and produces the Strands; an Issue transaction verifies each proof and creates claim outputs holding minimum ADA; a settlement transaction consumes those outputs, burns their tokens, checks the borrower's signature and caps, pays the lender 35 and the fee recipient 2, and writes a successor state with duty 70.",
+      "pageEvidence": "Settlement stages step 1 to step 4 describe this shape in general. Loan inspector result: 'Debt payment 35 CASH plus separate fee 2 CASH gives payer gross debit 37 CASH.' 'Duty 105 - repayment 35 = 70 CASH remaining.' Technical notes say loan amounts are 'worked examples with no supplied source program.'",
+      "whatIStillCannotExplain": "Whether the accrual of 5 is a separate transaction at period close or is part of each repayment. The page places 'Updated debt' inside the repayment Web, which suggests it happens at repayment time, but it does not say. I also cannot tell who signs the settlement from the lender's side, whether the lender must consent to a reduction, and what finality the lender must wait for before treating 70 as the debt."
+    },
+    {
+      "task": "(4) The distinction between conditions, proofs and on-chain claim outputs",
+      "myAnswer": "A condition is a required check (for example, the repayment and fee split). A proof is the Groth16 object that covers one or more conditions. A claim output is the on-chain UTXO created by an Issue transaction that holds checked evidence and minimum ADA until settlement. The page says the claim output does not move the 35 CASH or mint the asset. For a lender, this means the repayment is not paid when the claim output appears.",
+      "pageEvidence": "Settlement step 3: 'It does not pay the seller or mint the application's asset.' Technical notes: 'Each claim output locks min-ADA from issuance until settlement or claimant-signed reclaim after the claimant-chosen expiry.' Invoice inspector: 'A condition is something the contract requires... A Strand contains a Groth16 proof.'",
+      "whatIStillCannotExplain": "Whether a loan repayment is ever visible as 'pending' to the lender or borrower between Issue and settlement, and what the lender's own ledger should show during that interval. The page says the claim output does not pay the lender, but not what a servicing system should display."
+    },
+    {
+      "task": "(5) What gets set up and how to count setups",
+      "myAnswer": "One phase 2 per distinct compiled circuit, one phase 1 per compatible parameter set; claim types and catalogue entries do not set the count. For a loan servicer, the operational question is whether changing a loan term requires a new setup. The page says a changed constraint needs a new phase 2, but never says whether a rate or rounding rule is a constraint or a public input.",
+      "pageEvidence": "Setup section: 'Count one phase 2 for each distinct compiled circuit, including wrappers.' 'New values can reuse those keys; a changed circuit needs a new phase 2.' Technical notes: 'Catalogue VK digests are fixed at genesis... Close requires zero balances and duties, so any key change needs a PROPOSED key migration action.'",
+      "whatIStillCannotExplain": "Whether a loan with a different rate, period or rounding rule uses the same circuit or a new one. Whether a loan can close (duty to zero) without a key migration. How many circuits a loan product would need. The setup-counter diagram was not inspected, so I cannot confirm what it shows."
+    }
+  ],
+  "missingDepth": [
+    {
+      "section": "Loan repayment (application panel)",
+      "missingExplanation": "The page gives the accrual as '5 CASH for the period' with no rate, period length, day count or rounding. It also does not say whether the 35 CASH repayment is applied to accrued interest first, to principal first, or pro rata.",
+      "concreteExampleNeeded": "A two-row datum table before and after: opening principal 100, accrued interest 5 (rate and period stated, e.g. 5 percent simple for one period), repayment 35, and a rule such as interest-first, giving principal 70 and interest 0, or principal 95 and interest 0 with a stated alternative. Show each field of the successor state.",
+      "whyItMatters": "A lender cannot tell from the page how much of the 35 reduces interest and how much reduces principal, which determines the accounting and any late-payment or default treatment."
+    },
+    {
+      "section": "Loan repayment (party roles)",
+      "missingExplanation": "The loan intro says 'The borrower also pays a 2 CASH fee'; the inspector says 'The payer funds the debt repayment'; the lender is named only in the check text 'Payer, lender, fee recipient and asset match...'. The fee recipient is never named for the loan.",
+      "concreteExampleNeeded": "A party table with the borrower, lender and fee recipient, the output each one receives in the settlement, and which party's intent and signature authorize each debit.",
+      "whyItMatters": "A servicer needs to know which account receives the repayment and which account receives the fee, and whose consent is required."
+    },
+    {
+      "section": "Collateral and payoff",
+      "missingExplanation": "The loan inspector says 'collateral release follows its own policy' and the case intro never mentions collateral. The technical notes say separate origination and collateral policies are needed and that 'this lesson establishes no ACTUS conformance'. No payoff example shows the duty reaching zero and collateral being released.",
+      "concreteExampleNeeded": "A final-payment example: repayment that brings duty to 0, what outputs close the thread, and where collateral release is proven or stated as out of scope for this example.",
+      "whyItMatters": "A lender's core servicing act is the final payment and release. The page leaves that path unexplained."
+    },
+    {
+      "section": "Accrual timing and pending state",
+      "missingExplanation": "It is unclear whether accrual is computed at each repayment or at period close in a separate transaction. The page also does not say what a repayment's pending status looks like before settlement.",
+      "concreteExampleNeeded": "A timeline: period opens at day 0 with duty 100; accrual posted at period close (or in the repayment Web); repayment Issue transaction; settlement; what the lender's servicing record shows at each point, and what it shows if the Web never settles.",
+      "whyItMatters": "Without this, the lender cannot tell which balance to report to a borrower while a repayment is in flight."
+    },
+    {
+      "section": "Loan amounts as worked examples",
+      "missingExplanation": "The technical notes say 'DEX, issuance and loan amounts are worked examples with no supplied source program' and 'No rate source or live accrual is supplied'. The main loan section does not say this.",
+      "concreteExampleNeeded": "One sentence in the loan section, e.g. the figures illustrate the arithmetic, and the rate and source program are not supplied here.",
+      "whyItMatters": "Without it a lender reader may take 5 CASH as a computed fact from a defined loan program."
+    }
+  ],
+  "diagramFindings": [
+    {
+      "diagram": "loan-diagram.png (Loan repayment panel: three required-check buttons, arrows into a Web oval labelled PROOF COLLECTION, inspector panel on the right, financial result beneath)",
+      "whatIActuallyInspected": "The rendered loan panel with check 1 (Updated debt) selected, status box '3 of 3 conditions covered', and the result list.",
+      "whatItTeaches": "Three conditions feed one Web; the Web is complete only when all three are covered; the 'Remove proof coverage' checkbox is the lever for incompleteness. The lender can see the three loan checks are 1, 2 and 3 and that the status reads covered.",
+      "whatItFailsToShow": "Any loan state. It has the same structure and layout as the invoice diagram, so it reads as the invoice template with loan labels. It does not show the debt before and after, the lender output, the fee output, or how many Strands cover the three checks. The oval labelled Web is the only object and carries no count.",
+      "replacementOrRevision": "Replace the oval with a loan-specific diagram: left column predecessor datum (principal 100, accrual, sequence number); centre the Strands (labelled with the checks they cover and their count); right column settlement outputs (borrower debit 37, lender 35, fee recipient 2) and successor datum (duty 70). Use arrows for state change, not just for coverage."
+    },
+    {
+      "diagram": "settlement-stages.png (How a Web reaches settlement: four numbered step columns on a horizontal rule with dots)",
+      "whatIActuallyInspected": "The four-column step layout with step text: owner signs limits, prover builds the Web, proof claims go on-chain, transaction settles.",
+      "whatItTeaches": "The order of the four stages and the one-line distinction that claim outputs do not pay anyone and that settlement consumes them and burns their token.",
+      "whatItFailsToShow": "Any flow of value or state. There are no arrows between steps, no transaction objects, no inputs or outputs, and no data passed between stages. The 'reads back the payments and remaining obligations' step has no visual target, so a reader cannot see where the 70 CASH lives after settlement.",
+      "replacementOrRevision": "Draw three boxes in sequence (intent, Issue transaction, settlement transaction) with input and output boxes inside each: the claim output (min ADA, token) in the Issue box; in the settlement box, the consumed claim outputs and burned token on the left, and the lender, fee recipient and successor datum on the right. Mark which signatures are required at each box."
+    },
+    {
+      "diagram": "invoice-diagram.png (invoice payment panel; not the role-relevant application, read for comparison as required)",
+      "whatIActuallyInspected": "The invoice panel with check 1 selected, the Web oval, the status box '3 of 3 conditions covered', financial result text and a paragraph 'How the proof connects to the transaction'.",
+      "whatItTeaches": "The same Web/condition model as the loan case; that a condition is a required check; and that coverage is the gate for submission.",
+      "whatItFailsToShow": "Strands, proofs, claim outputs or transactions. The word Strand appears only in prose below the diagram, never in the figure. The 'Remove proof coverage' checkbox is shown but the figure does not show the consequence of unchecking it, so the incomplete-set claim is text, not visible.",
+      "replacementOrRevision": "Show one Strand as a box containing its proof, claim and transaction binding; show the consequence of removing coverage (the Web status changes to incomplete and the settlement box shows the missing claim)."
+    }
+  ],
+  "proseProblems": [
+    {
+      "location": "Loan repayment section intro",
+      "exactQuote": "A debt of 100 CASH grows by 5 CASH for the period.",
+      "problem": "The accrual is stated with no rate, no period length, and no statement that it is an illustrative figure. A lender reads it as a computed interest amount and cannot check it against any rule.",
+      "suggestedRewrite": "A debt of 100 CASH accrues 5 CASH of interest for one period at a stated rate (for example 5 percent, simple, rounded to the cent). This example does not supply a rate source; the figures show the arithmetic only."
+    },
+    {
+      "location": "Loan repayment section intro and inspector check 2",
+      "exactQuote": "The borrower also pays a 2 CASH fee, which does not repay any debt. / The payer funds the debt repayment and its separate fee.",
+      "problem": "The borrower and the payer are used as if they were the same party, and the lender is never named in the loan text. The fee recipient is not named at all.",
+      "suggestedRewrite": "The borrower pays 37 CASH in total: 35 CASH to the lender as repayment and 2 CASH to the fee recipient named in the agreement. Use borrower, lender and fee recipient consistently in every section."
+    },
+    {
+      "location": "Loan inspector check 2 'Where the inputs come from'",
+      "exactQuote": "Payer, lender, fee recipient and asset match the payer's signed intent and the transaction's actual outputs.",
+      "problem": "The sentence lists the parties but does not say where the lender or fee recipient appears in the transaction, so the claim cannot be checked against outputs.",
+      "suggestedRewrite": "The validator checks that the output to the lender holds 35 CASH and the output to the fee recipient holds 2 CASH, and that the borrower's debit is 37 CASH as authorised in the borrower's signed intent."
+    },
+    {
+      "location": "Loan inspector check 3 'Remaining debt'",
+      "exactQuote": "Only the repayment reduces the debt; the fee is accounted for separately.",
+      "problem": "This states that the fee does not reduce the debt, but not how the repayment itself is applied. With interest in the duty, the question of which part of the 35 reduces interest and which reduces principal is unanswered.",
+      "suggestedRewrite": "The 35 CASH applies first to accrued interest of 5 and then to principal of 30, leaving principal 70 and no accrued interest. If the program applies it differently, say so and show the successor state."
+    },
+    {
+      "location": "Loan inspector check 3 'Where the inputs come from'",
+      "exactQuote": "The continuing debt carries over from the predecessor state through explicit accrual and discharge entries; collateral release follows its own policy.",
+      "problem": "'Discharge entries' is undefined on the page, and 'duty' is used throughout without definition. The collateral clause defers to a policy the page never shows, leaving the lender with no payoff path.",
+      "suggestedRewrite": "Define duty (the amount owed under the agreement at the start of a transaction) and discharge (a recorded reduction of duty by a payment) on first use. Then state either the collateral release rule for this example or that collateral is out of scope."
+    },
+    {
+      "location": "Loan 'What the validator receives' (also repeated under all five applications)",
+      "exactQuote": "A Web covering these conditions, bound to the transaction that spends the contract state.",
+      "problem": "Identical boilerplate under every application, so it tells the loan reader nothing about what the loan's validator checks beyond the generic claim.",
+      "suggestedRewrite": "For the loan repayment, the validator receives the Strands covering the accrual, repayment and remaining-debt checks, and it checks that the lender output equals 35 CASH and the successor duty equals 70 CASH."
+    },
+    {
+      "location": "Settlement step 4",
+      "exactQuote": "The application then checks inclusion and its required finality, and reads back the payments and remaining obligations.",
+      "problem": "'Required finality' is never given a value or an example, so the lender cannot say when 70 CASH may be reported as the settled balance.",
+      "suggestedRewrite": "Give one example of required finality for a loan payment (for instance a stated number of confirmations or a named finality rule) and say which balance the servicing record should show before and after it."
+    },
+    {
+      "location": "Technical notes evidence block, not the main loan section",
+      "exactQuote": "DEX, issuance and loan amounts are worked examples with no supplied source program",
+      "problem": "This candour is in the technical notes only. The loan section itself presents the 5 CASH accrual and the 70 CASH remaining as fact, so a lender reader could treat them as the output of a real program.",
+      "suggestedRewrite": "Add one sentence to the loan section: The loan figures are a worked example; no loan program or rate source is supplied for this page, and the arithmetic shows the checks a real program would need."
+    }
+  ],
+  "priorityChanges": [
+    "Give the loan example a real state table: the rate, period and rounding that produce the 5 CASH accrual, the order in which the 35 CASH repayment reduces interest and principal, and the successor datum (principal, accrued interest, sequence number) before and after. Without this the lender cannot verify the 70 CASH.",
+    "Name the borrower, lender and fee recipient consistently across the loan intro, inspector and result, and state which output each party receives and whose signature authorises each debit. Fix the payer/borrower drift.",
+    "Add a payoff path: the final repayment that brings duty to zero, the outputs that close the thread, and what happens to collateral (a rule, or an explicit statement that collateral is out of scope for this example). Right now the page stops at 70 CASH remaining.",
+    "Replace the loan diagram, which reuses the invoice oval, with a Web/Strand/state diagram showing the predecessor datum, the number of Strands, the settlement outputs and the successor datum. Replace the settlement-stage columns with a flow of intent, Issue and settlement transactions that shows inputs and outputs.",
+    "Define duty and discharge on first use and say whether changing a loan term (rate or rounding) requires a new circuit and phase 2, since the setup section does not answer the question for a loan product."
+  ],
+  "inspectedImages": [
+    "invoice-diagram.png",
+    "loan-diagram.png",
+    "settlement-stages.png"
+  ],
+  "limitations": "\"Image inspection covered only invoice-diagram.png, loan-diagram.png and settlement-stages.png, read with the Read tool. I did not inspect dex-diagram.png, issuance-diagram.png, treasury-diagram.png, invoice-missing-coverage.png, setup-counter.png, architecture.png, mobile-invoice-diagram.png or desktop-opening.png, so my diagram assessment covers only those three and says nothing about the rest. I did not browse, navigate or run the page; I relied on the captured states and the page text supplied. Several loan claims (accrual timing, party roles, collateral, setup for a rate change) are not stated in the page text and are marked as open questions, not as defects in the implementation. This is model reader feedback, not a security audit or human research.\"",
+  "verdict": "NEEDS_MORE_DEPTH"
+}

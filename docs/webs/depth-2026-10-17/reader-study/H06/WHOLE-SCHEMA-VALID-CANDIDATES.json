@@ -1,0 +1,208 @@
+[
+  {
+    "reviewToken": "webs-readers-20261017-H06",
+    "persona": "A financial application product manager",
+    "summary": "As a PM evaluating whether to build a payment product on Webs, I can follow the invoice arithmetic and the broad shape of the lifecycle (owner limits, prover, Issue, settlement, readback). I cannot yet tell who funds the example escrow, how many proofs and transactions a real invoice payment costs me in time or money, who must sign each step, or what the page's headline 112 CASH funding actually is. The page says the 112 CASH opening funding is the example, but the technical notes say the reviewed source funds 110, and 112 is a proposed backing policy with no source action. The body never says that. The diagrams show the same three-box hub for every application and do not show data flow, so they teach little beyond the prose. The setup and proof sections are accurate but aimed at cryptographers; they omit the current test-setup status that a product owner needs before any commitment. Verdict: needs more depth and a diagram rework before a PM could make a build decision.",
+    "comprehension": [
+      {
+        "task": "(1) What a Web and a Strand contain",
+        "myAnswer": "A Strand is one Groth16 proof plus its public claim and the data tying it to a particular transaction. A Web is the set of Strands the contract requires for one transaction; settlement needs every required condition covered by a matching Strand. A proof can cover several conditions, so a Strand and a condition are not one-to-one.",
+        "pageEvidence": "Strand: 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' Web: 'A Web collects the Strands a contract requires for a transaction.' Invoice inspector: 'One proof can cover several conditions.' Settlement step 2: 'One execution proof can cover several required conditions.'",
+        "whatIStillCannotExplain": "For the invoice example I cannot tell how many Strands the Web contains. The diagram shows three conditions around one Web, but nothing says whether that is one Strand or three. Step 2 says 'Each claim is tied to the state being spent' and the glossary says 'the claim it proves', so I cannot tell whether a claim is a condition, a Strand, or a claim output."
+      },
+      {
+        "task": "(2) How a proof connects to real transaction inputs and outputs",
+        "myAnswer": "The validator rebuilds the claim's statement from the spending transaction and the spent thread state, then compares it with the statement whose proof was verified. The proof is checked at Issue time; settlement recomputes the statement and does not re-verify the proof. Amounts in outputs and statements are public; only the witness is hidden.",
+        "pageEvidence": "Invoice inspector: 'The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.' Verification step: 'the validator rebuilds each statement from the transaction and spent state.' Book passage: 'On Cardano, zero-knowledge hides only the witness.' Technical notes: 'The settlement transaction consumes them, recomputes each statement and compares it with the digest checked at issuance; it does not verify the proof again.'",
+        "whatIStillCannotExplain": "The body never names which UTxO is spent (the escrow thread), which outputs the transaction must create (seller, fee recipient, escrow continuation with duties), or where the 65 and 10 duty values are written. The phrase 'rebuilds the claim from the transaction' is not shown for any example. I cannot draw the mapping from 35 CASH to a specific output index."
+      },
+      {
+        "task": "(3) A complete concrete payment workflow",
+        "myAnswer": "As I reconstruct it: the owner signs an intent with per-asset caps and a validity window; a prover runs the open/partial program over the escrow state and produces Strands; each Strand is issued in an Issue transaction that verifies the proof and creates a claim output holding min-ADA; a settlement transaction consumes all claim outputs, burns their tokens, requires each claimant's signature, and produces the seller payment (35), fee payment (2) and continuing escrow (75 with duties 65 and 10); the application then waits for finality and reads back outputs.",
+        "pageEvidence": "Settlement section, Steps 1-4; Q 'How do I know the payment happened?'; Q 'Does a proof claim mint my application's token?' ('Settlement consumes it and burns the claim token.').",
+        "whatIStillCannotExplain": "Who the claimant is in an invoice partial payment (buyer, seller, or escrow); what the owner's intent caps are for this payment (is the gross cap 37 CASH, and is the net floor 35?); how many Issue transactions a three-condition invoice needs; who pays the Issue transactions; and whether a partial payment produces one settlement or several. The page never walks one payment end to end with actual transaction boxes."
+      },
+      {
+        "task": "(4) Distinction between conditions, proofs and on-chain claim outputs",
+        "myAnswer": "A condition is a requirement the contract lists (e.g. payment calculation). A proof is the cryptographic artifact that covers one or more conditions and is carried by a Strand. A claim output is the on-chain UTxO created when a proof is issued; it locks min-ADA, records the checked evidence, and is consumed and burned at settlement. The page gives this distinction in three separate places but never puts it in one table.",
+        "pageEvidence": "Invoice body: 'The payment above has several conditions to check. These are the names for the evidence that travels with it.' Settlement Step 3: 'An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA.'",
+        "whatIStillCannotExplain": "The phrase 'These are the names for the evidence that travels with it' calls conditions the evidence, which blurs the line the rest of the page draws. I still cannot say whether a condition ever exists on-chain. For the product question 'what do I hold and what do I pay for while waiting' the answer is only partly stated: min-ADA per claim output, amount not given."
+      },
+      {
+        "task": "(5) What gets set up and how to count setups",
+        "myAnswer": "One phase-1 parameter set can be shared if curve and format match and capacity fits; phase 2 runs once per distinct compiled circuit, including wrappers. The page's count widget gives 1 shared phase 1 plus 5 phase 2 for five circuits. A changed rule means a new phase 2 and a new verifying key. The page says there is no fixed Cardano-wide total.",
+        "pageEvidence": "Count widget: '1 shared phase 1 + 5 phase 2'; 'These are stages, not 5 + 1 complete ceremonies.'; 'A total requires a frozen inventory of compiled circuits.'",
+        "whatIStillCannotExplain": "How many circuits the invoice example needs; whether a wrapper counts as a circuit in practice; who runs the ceremony; and whether any production setup exists. The body never states that the current test setup is operator-forgeable. That appears only in the technical notes ('The current class-0 test setup is forgeable by its operator, so no production security claim follows.'), so the body's setup section overstates readiness by omission."
+      }
+    ],
+    "missingDepth": [
+      {
+        "section": "Invoice worksheet funding and fee",
+        "missingExplanation": "The worksheet presents 112 CASH as the opening funding. Technical notes say the reviewed source S12 funds 110, has no extra-funding action, and that 112 is a proposed backing policy. The body never states who funds the opening escrow, and when the user chooses 110 the page does not show the consequence.",
+        "concreteExampleNeeded": "A two-row table: source S12 (fund 110, partial 35 debits 37, cash 73 vs duties 75, 2 short) and the proposed 112 policy (cash 75 vs duties 75), with a labelled note that the buyer's opening debit under 112 is unspecified. Show what the 110 toggle leaves: shortfall of 2 CASH on the same payment.",
+        "whyItMatters": "A PM cannot tell from the page whether the headline example is what the product would actually do, or a design that engineering still has to build."
+      },
+      {
+        "section": "Per-payment cost and time",
+        "missingExplanation": "The page explains that each Strand needs its own Issue transaction and that claim outputs lock min-ADA until settlement or reclaim, but gives no number, no formula, and no expiry example. It also refuses to estimate network fees.",
+        "concreteExampleNeeded": "A labelled template: N Issue transactions + 1 settlement; fee per transaction placeholder; min-ADA per claim output placeholder times locked duration; reclaim after expiry. Show a worked example for a 3-condition invoice and a 1-proof variant, with placeholders clearly marked as not measured.",
+        "whyItMatters": "Unit economics decide whether a small partial payment is viable. The page says splitting proofs may not save cost but gives no basis for comparing."
+      },
+      {
+        "section": "Who signs what",
+        "missingExplanation": "The page says claimant signatures are required at settlement and owner intents are signed before proving, but gives no signer matrix. The technical notes admit 'no transaction-by-transaction signer matrix' exists.",
+        "concreteExampleNeeded": "A table with rows: intent, each Issue, settlement, reclaim; columns: who signs, which key, what is checked. Fill in the invoice example with the seller and buyer named.",
+        "whyItMatters": "Signing responsibility is the first question a payments team asks about custody and dispute handling."
+      },
+      {
+        "section": "Setup readiness",
+        "missingExplanation": "The body explains setup in general terms and gives a count widget, but does not state the current status (single-party test setup, forgeable by the operator, no production ceremony) on the same section.",
+        "concreteExampleNeeded": "One sentence next to the count widget: 'Today: one forgeable test setup; no production ceremony; circuit count for the invoice example is N.' Plus a small table of circuits per application with phase-2 status.",
+        "whyItMatters": "A PM deciding whether to commit to Moriarty must know the proof system is not yet trustable for real value."
+      },
+      {
+        "section": "Strands per application",
+        "missingExplanation": "The application cards show conditions but not Strands. The invoice card says 3 of 3 conditions covered, but never says how many proofs cover them.",
+        "concreteExampleNeeded": "For each of the five cases, a row: conditions, Strands, proofs per Strand, Issue transactions, settlement. Mark the invoice row as the example and the others as proposed.",
+        "whyItMatters": "The product cost and the engineering work scale with Strands, not conditions."
+      },
+      {
+        "section": "Issuance and the mint policy",
+        "missingExplanation": "The issuance card lists 'Supply limit' as a required Web check, yet its inspector says the application asset's own minting policy enforces the cap. The page never says which component enforces what.",
+        "concreteExampleNeeded": "A two-column split: what the Web proves (arithmetic 300 + 700 = 1000) vs what the mint policy enforces (cap, recipients, supply continuity).",
+        "whyItMatters": "A product owner must know which code to audit for a cap failure."
+      },
+      {
+        "section": "Loan accrual and fee",
+        "missingExplanation": "The loan example gives 5 CASH accrual without a rate, period, or rounding. The 2 CASH fee is identical to the invoice fee, and the page does not say who the fee recipient is.",
+        "concreteExampleNeeded": "State the rate (e.g. 5% on 100 for one period, labelled as an illustration), the rounding rule, and the fee recipient name.",
+        "whyItMatters": "A lending PM cannot check the 105 duty or the fee routing without the rate and recipient."
+      },
+      {
+        "section": "Treasury division",
+        "missingExplanation": "The inspector says 'dividing 23 by 3 gives 7 with a remainder of 2' but never says what 3 is. The beneficiary figures (alpha 14 A = 2 x 7; beta 7 A = 1 x 7) suggest a share count of 3, which is an inference the page does not state.",
+        "concreteExampleNeeded": "A line: 'Shares: alpha 2, beta 1; total 3; per-share 7; remainder 2 goes to fees.' (Label the share interpretation as inferred if the author cannot confirm.)",
+        "whyItMatters": "A treasury operator must know what the divisor represents before approving a run."
+      },
+      {
+        "section": "Settlement readback and finality",
+        "missingExplanation": "The page says the app waits for 'required finality' and reads back outputs, but gives no finality parameter and no status states (pending, settled, unknown, failed).",
+        "concreteExampleNeeded": "A status table: submitted, included, final, settled, timed out (unknown), reclaimable. Show what the app displays for each.",
+        "whyItMatters": "Support and reconciliation depend on a clear state machine."
+      }
+    ],
+    "diagramFindings": [
+      {
+        "diagram": "invoice-diagram.png (desktop 'What each application needs to prove' with Invoice payment selected)",
+        "whatIActuallyInspected": "Screenshot of the invoice card: tabs, three numbered 'Required check' buttons with arrows into a single 'Web / PROOF COLLECTION' oval, selected-check inspector, financial result, 'What the validator receives' text, and the status banner '3 of 3 conditions covered'.",
+        "whatItTeaches": "That the contract has three checks, that they feed one Web, and that the banner reports coverage. A reader can see which check is selected and that removing coverage changes the banner (per the page text).",
+        "whatItFailsToShow": "Data flow. Nothing shows the escrow UTxO spent, the outputs created, the claim outputs, the Strand count, or which check each proof covers. The three arrows look one-to-one with the boxes, contradicting 'A proof can cover more than one condition'. The 'Web' label sits on the oval's edge in the image, which looks clipped. The 'All required conditions are covered... can be submitted for settlement' banner reads as ready to submit even though Issue must happen first.",
+        "replacementOrRevision": "Replace the hub with a left-to-right transaction flow: escrow UTxO (112 funding, duties 100/10) -> Issue x N (proof, claim output, min-ADA) -> settlement tx (consumes claims, burns tokens, signers) -> outputs (seller 35, fee 2, escrow 75 with duties 65 and 10). Keep the condition list as a side key that marks which Strand covers which condition."
+      },
+      {
+        "diagram": "loan-diagram.png (Loan repayment selected)",
+        "whatIActuallyInspected": "Same template as the invoice card with loan copy: 'Updated debt', 'Repayment and fee', 'Remaining debt'; result 105, 37 gross debit, 70 remaining; identical 3-of-3 banner.",
+        "whatItTeaches": "The same three-check pattern applies to a debt agreement, and the arithmetic is internally consistent (100 + 5 - 35 = 70).",
+        "whatItFailsToShow": "Any difference between a loan and an invoice. The diagram is the same structure with different labels, so it does not show accrual timing, rate, or the fee recipient. A lender reading it cannot see who pays whom.",
+        "replacementOrRevision": "Show the loan's before/after state as two stacked boxes (debt 100 -> 105 accrual -> 70 after repayment) with the fee as a separate arrow to a fee recipient, and label the rate as an illustration."
+      },
+      {
+        "diagram": "settlement-stages.png ('How a Web reaches settlement', four steps)",
+        "whatIActuallyInspected": "Four-column timeline with dots and text for Steps 1-4 and one link 'Issuance assumptions and funding'.",
+        "whatItTeaches": "The order of operations: intent, prover, Issue, settlement. It is clearer than the prose alone.",
+        "whatItFailsToShow": "Who signs each step, what each transaction consumes and creates, and any value (min-ADA is named but not quantified). Nothing shows that Issue transactions can happen before settlement across multiple transactions, or how many there are. The diagram does not show that the escrow is a separate state from the claim outputs.",
+        "replacementOrRevision": "Add a row under each step: 'Signed by', 'Consumes', 'Creates', and a count ('x N for N Strands'). Use a box for each transaction with arrows to the UTxOs it touches."
+      },
+      {
+        "diagram": "mobile-invoice-diagram.png (narrow viewport, same invoice card)",
+        "whatIActuallyInspected": "Mobile layout of the invoice card: tabs stacked, hub diagram shrunk, inspector below.",
+        "whatItTeaches": "The layout reflows without losing the three checks and the banner, so the content survives at small width.",
+        "whatItFailsToShow": "The hub's 'Web' label and 'PROOF COLLECTION' text are very small; the diagram conveys no more on mobile than on desktop.",
+        "replacementOrRevision": "On mobile, replace the shrunken hub with a vertical list: check -> covered by Strand X -> Issue tx -> settlement. Keep the same content order."
+      }
+    ],
+    "proseProblems": [
+      {
+        "location": "Hero lede",
+        "exactQuote": "Webs let a Cardano application attach proofs to a transaction, so its validator can check that the contract\u2019s rules were followed.",
+        "problem": "On the issuance route the proofs are verified in earlier Issue transactions; the settlement transaction consumes claim outputs and does not carry the proofs. The lede describes a different mechanism than the Cardano section explains, and a PM reading only the top will expect proofs in the payment transaction.",
+        "suggestedRewrite": "Webs let a Cardano application check proofs about a payment before the payment settles. Each proof is verified in its own transaction, and the settlement transaction consumes the checked results and enforces the contract's rules."
+      },
+      {
+        "location": "What are Webs and Strands?, lead-in",
+        "exactQuote": "These are the names for the evidence that travels with it.",
+        "problem": "Calls conditions 'evidence', blurring the difference between the requirement and the proof that covers it, which the rest of the page depends on.",
+        "suggestedRewrite": "Each condition is a requirement the contract places on this payment. A Strand is the proof that covers one or more of those conditions, and it travels with the transaction."
+      },
+      {
+        "location": "Opening escrow worksheet",
+        "exactQuote": "Opening escrow funding\n112 CASH",
+        "problem": "The headline example is funded at 112 CASH, but the technical notes say reviewed source S12 funds 110 and 112 is a proposed backing policy with no source action. The body does not say this, and the 110 toggle has no shown consequence.",
+        "suggestedRewrite": "Opening escrow funding (proposed policy): 112 CASH. The reviewed source funds 110 and has no extra-funding action; at 110 the same 35 CASH payment leaves 73 CASH against 75 owed. Who funds the 112 is not yet specified."
+      },
+      {
+        "location": "Payment worksheet, after the slider",
+        "exactQuote": "The extra 2 CASH funds the fee for this payment. Afterward, the remaining cash covers both the unpaid invoice and the reserve.",
+        "problem": "'Afterward' reads as a general rule, but it holds only for one partial payment, as the page says a few lines later. A reader may think a second payment is covered.",
+        "suggestedRewrite": "The extra 2 CASH funds the fee for this payment only. After it, the remaining 75 CASH covers the 75 owed. A second partial payment needs another 2 CASH."
+      },
+      {
+        "location": "Treasury Payment calculation inspector",
+        "exactQuote": "Dividing 23 by 3 gives 7 with a remainder of 2",
+        "problem": "The divisor 3 is never explained. A treasury operator cannot tell what it represents (shares, beneficiaries, or a rate).",
+        "suggestedRewrite": "Divide 23 A by the 3 total shares (alpha 2, beta 1) to get 7 per share with remainder 2, which goes to fees. State the share interpretation or mark it as inferred."
+      },
+      {
+        "location": "Issuance Supply limit inspector",
+        "exactQuote": "The application asset\u2019s own minting policy enforces the cap and continues the supply state from its predecessor.",
+        "problem": "The card lists 'Supply limit' as a required Web check, but says the minting policy enforces it. The reader cannot tell what the Web proves versus what the mint policy enforces.",
+        "suggestedRewrite": "The Web proves the 300 + 700 = 1000 arithmetic for this step. The application's minting policy enforces the cap and supply continuity, and only that policy can refuse an over-cap mint."
+      },
+      {
+        "location": "Loan repayment intro and inspector",
+        "exactQuote": "The loan agreement fixes period, rate and rounding; a variable rate carries its named observation source and freshness rule.",
+        "problem": "The example's 5 CASH accrual is given with no rate, period or rounding, so the 105 cannot be checked, and the fee recipient is not named.",
+        "suggestedRewrite": "Example: 5% on 100 CASH for one period, rounded down, gives 5 CASH (illustrative rate). The 2 CASH fee goes to the named program fee recipient."
+      },
+      {
+        "location": "Setup section, count widget",
+        "exactQuote": "These are stages, not 5 + 1 complete ceremonies.",
+        "problem": "The '5 + 1' phrasing undercuts the widget's own count (1 phase 1 + 5 phase 2) and does not say what a stage costs or who runs it.",
+        "suggestedRewrite": "For five distinct circuits, one shared phase 1 is reused and phase 2 runs five times, each with its own participants. Today the project has one single-party test setup, which is forgeable by its operator."
+      },
+      {
+        "location": "Why there is a trusted setup",
+        "exactQuote": "A common ceremony divides this work into two phases so part of it can be shared.",
+        "problem": "The section describes the ideal ceremony without saying that none exists in production; the reader is left to assume one does.",
+        "suggestedRewrite": "A common ceremony divides this work into two phases so part of it can be shared. Moriarty currently has only a single-party test setup, and no production ceremony is recorded."
+      },
+      {
+        "location": "Settlement Step 3",
+        "exactQuote": "creates a claim output holding minimum ADA",
+        "problem": "Minimum ADA per claim output is not quantified and not labelled as a placeholder, so the cost of a multi-Strand Web cannot be estimated.",
+        "suggestedRewrite": "creates a claim output holding minimum ADA (amount: [to be measured]); this is locked until settlement or a claimant-signed reclaim after expiry."
+      },
+      {
+        "location": "Invoice completeness banner",
+        "exactQuote": "All required conditions are covered. The Web can be submitted for settlement; the validator still checks it against the actual transaction.",
+        "problem": "'Can be submitted' suggests the Web is a single transaction artifact. In the issuance route the Strands must first be issued on-chain, which the banner does not mention.",
+        "suggestedRewrite": "All required conditions are covered by Strands. Each Strand must be issued on-chain before the Web can settle; the validator then checks the settlement against the actual transaction."
+      }
+    ],
+    "priorityChanges": [
+      "Put one honest funding box next to the invoice worksheet: the reviewed source funds 110 and cannot pay a second fee; 112 is a proposed policy; who funds the opening escrow is unspecified; and at 110 the same payment leaves a 2 CASH shortfall. Show that shortfall in the result panel, not only in the notes.",
+      "Add one end-to-end invoice walkthrough as a numbered trace: escrow UTxO before, owner intent (caps), prover, Issue transactions (one per Strand, with the count stated), claim outputs with min-ADA placeholders, settlement signers (named claimants), outputs (seller 35, fee 2, escrow 75 with duties 65 and 10), and readback states. Name the claimant for an invoice partial.",
+      "Replace the shared three-box hub diagram with a transaction-flow diagram per application. Each diagram should show which UTxO is spent, which outputs are created, and which Strand covers which condition. The loan and invoice cards currently look identical.",
+      "State the current setup status in the body next to the setup count: one single-party test setup, forgeable by its operator, no production ceremony, and the invoice example's circuit count. Without this a PM cannot judge readiness.",
+      "Add a cost and signer table: per-Strand Issue fee and locked min-ADA with placeholders, settlement fee, and who signs each transaction type. The page currently gives neither a number nor a signer matrix, and the cost question is the one a product owner asks first."
+    ],
+    "inspectedImages": [
+      "invoice-diagram.png",
+      "loan-diagram.png",
+      "settlement-stages.png",
+      "mobile-invoice-diagram.png"
+    ],
+    "limitations": "I read the full page text, the five-application state text, and the seven-layer state text supplied in the prompt. I inspected four of the eleven screenshots: invoice-diagram.png, loan-diagram.png, settlement-stages.png and mobile-invoice-diagram.png. I did not view dex-diagram.png, issuance-diagram.png, treasury-diagram.png, invoice-missing-coverage.png, setup-counter.png, architecture.png or desktop-opening.png, so my comments on the DEX, issuance, treasury, missing-coverage, setup and architecture views rely on the text alone. I did not browse, run commands, or read private material. The page's 'Remove proof coverage' behaviour is described only by its text. I did not verify the arithmetic beyond checking the stated numbers against each other. My reading of the treasury divisor as a share count is an inference from the beneficiary amounts, not something the page states.",
+    "verdict": "NEEDS_MORE_DEPTH"
+  }
+]
