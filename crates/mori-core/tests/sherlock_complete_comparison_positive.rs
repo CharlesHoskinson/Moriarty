@@ -1,0 +1,365 @@
+//! SOURCE-ONLY. Root must freshly classify this admission/capture test closure.
+//! One fixed UInt7/fuel64/stack8 admission and capture per test; no owner steps.
+//! Event literals and modified snapshot clones are supplied comparison data.
+//! They are never presented as actual transitions or fed back to an owner.
+use std::sync::Arc;
+use mori_core::sherlock::{Expr, Program, Value};
+use mori_core::sherlock::helper_machine::complete_observation::{
+    self as complete, ConstantSnapshot, DataSnapshot, HostSnapshot, CompleteStepRecord,
+    WidthsSnapshot,
+};
+use mori_core::sherlock::helper_machine::complete_comparison::{first_difference, TraceDifference};
+use mori_core::sherlock::helper_machine::shared::{
+    AllocDeltasC, BoundaryKind, BoundsC, DigestC, EventKind, ExpandedStepIdC,
+    ExhaustReason, FinanceInput, HelperKind, HelperPhaseSummaryC, HelperResultC,
+    HelperResultTagC, LayoutCapacitiesC, LayoutSchemaC, LocatorC, OutcomeC,
+    OutcomeTagC, OwnerEngine, RefC, RuleIdC, RunIntC, SiteTag, StepDisposition,
+    StepEventC, TriStatus,
+};
+use mori_core::sherlock::helper_machine::shared::owner_host::host_owner_engine;
+use mori_core::sherlock::helper_machine::source_input_bridge;
+
+fn initial_snapshot() -> HostSnapshot {
+    let program = Program { functions:vec![], entry:Arc::new(Expr::Literal(Value::UInt(7))) };
+    let source = source_input_bridge::from_program(&program);
+    let bounds = BoundsC {
+        code_rows:64, function_rows:4, code_child_slots:16, parameter_slots:8,
+        pattern_rows:8, match_plan_rows:8, match_arm_rows:8, type_rows:8,
+        constructor_rows:8, constructor_field_slots:16, max_arity:8,
+        constant_nodes:16, constant_field_slots:16, data_nodes:64,
+        data_field_slots:64, environment_cells:64, frames:64, helper_tasks:64,
+        serialization_bytes:65536, max_reference_work:4096, max_helper_work:4096, step_cap:4096,
+    };
+    let layout = LayoutSchemaC {
+        layout_version:("moriarty".into(), "sherlock-helper-microstep-hostonly/1".into()),
+        field_id:None, widths:None, scalar_layout_id:None, bounds,
+        capacities:LayoutCapacitiesC { name_rows:32, name_bytes:256, occurrence_path_slots:256, value_slots:1024 },
+        boundary_capacities_present:false,
+    };
+    let owner = host_owner_engine();
+    let admitted = owner.admit(&source, &bounds, &layout)
+        .unwrap_or_else(|_| panic!("fixed ordinary literal admission"));
+    let image = owner.admit_run(&admitted, &RunIntC::Nat(64), &RunIntC::Nat(8), &FinanceInput::Absent)
+        .unwrap_or_else(|_| panic!("fixed ordinary genesis"));
+    complete::capture(&admitted, &image).unwrap_or_else(|_| panic!("fixed ordinary initial copy"))
+}
+
+// Explicit raw values for a supplied event, not an expected owner event.
+fn supplied_record(initial: &HostSnapshot) -> CompleteStepRecord {
+    CompleteStepRecord {
+        before: initial.clone(),
+        event: StepEventC {
+            step_id: ExpandedStepIdC { run_id: Arc::new(initial.image.run_id.clone()), ordinal: 41 },
+            rule_id: RuleIdC::BHelperValidateEntry,
+            event_kind: EventKind::HelperEnter,
+            site: None, helper_kind: None, disposition: StepDisposition::Applied,
+            work_delta: 1, helper_work_delta: 0, helper_visits_delta: 0,
+            reference_cursor_delta: 0,
+            alloc_deltas: AllocDeltasC { data_nodes: 0, data_fields: 0, environment_cells: 0 },
+            value_slot_writes: 0, logical_depth_before: 0, logical_depth_after: 0,
+            task_cursor_before: 0, task_cursor_after: 0,
+            helper_phase_before: None, helper_phase_after: None,
+            helper_cursor_before: None, helper_cursor_after: None, result_tag: None,
+            origin_reference_cursor: None, source_expr_id: 0,
+            source_occurrence: LocatorC::Occurrence {
+                owner_is_function: false, function: 0, ast_path: vec![2, 1],
+            },
+            exhausted_kind: None, outcome_tag: OutcomeTagC::Running,
+            outcome_payload: OutcomeC::Running, boundary: BoundaryKind::None,
+        },
+        after: initial.clone(),
+    }
+}
+
+#[test]
+fn equal_present_empty_and_nonempty_traces_use_full_snapshots() {
+    let initial = initial_snapshot();
+    let cloned_initial = initial.clone();
+    assert!(first_difference(&initial, &[], &cloned_initial, &[]).is_none());
+    let mut record = supplied_record(&initial);
+    // Equal supplied records can be discontinuous: comparison adds no continuity claim.
+    record.before.image.reference_cursor = 17;
+    record.after.image.reference_cursor = 29;
+    let expected = [record];
+    let observed = expected.clone();
+    assert!(first_difference(&initial, &expected, &cloned_initial, &observed).is_none());
+}
+
+#[test]
+fn initial_difference_precedes_records_and_length_and_borrows_original_values() {
+    let initial = initial_snapshot();
+    let mut other = initial.clone();
+    other.admission.layout.layout_version.1.push_str("-other");
+    let expected = [supplied_record(&initial)];
+    match first_difference(&initial, &expected, &other, &[]).expect("different initial") {
+        TraceDifference::Initial { expected, observed } => {
+            assert!(std::ptr::eq(expected, &initial));
+            assert!(std::ptr::eq(observed, &other));
+        }
+        _ => panic!("initial must precede records and length"),
+    }
+}
+
+#[test]
+fn record_fields_compare_before_then_event_then_after_and_borrow_original_values() {
+    let initial = initial_snapshot();
+    let expected = [supplied_record(&initial)];
+    let mut observed = expected.clone();
+    observed[0].before.image.control_origin += 1;
+    observed[0].event.step_id.ordinal += 1;
+    observed[0].after.image.control_origin += 1;
+    match first_difference(&initial, &expected, &initial, &observed).expect("before") {
+        TraceDifference::RecordBefore { index: 0, expected: e, observed: o } => {
+            assert!(std::ptr::eq(e, &expected[0].before));
+            assert!(std::ptr::eq(o, &observed[0].before));
+        }
+        _ => panic!("before wins"),
+    }
+    observed[0].before = expected[0].before.clone();
+    match first_difference(&initial, &expected, &initial, &observed).expect("event") {
+        TraceDifference::RecordEvent { index: 0, expected: e, observed: o } => {
+            assert!(std::ptr::eq(e, &expected[0].event));
+            assert!(std::ptr::eq(o, &observed[0].event));
+        }
+        _ => panic!("event wins over after"),
+    }
+    observed[0].event = expected[0].event.clone();
+    match first_difference(&initial, &expected, &initial, &observed).expect("after") {
+        TraceDifference::RecordAfter { index: 0, expected: e, observed: o } => {
+            assert!(std::ptr::eq(e, &expected[0].after));
+            assert!(std::ptr::eq(o, &observed[0].after));
+        }
+        _ => panic!("after remains"),
+    }
+}
+
+#[test]
+fn ascending_record_index_precedes_field_order_of_later_records() {
+    let initial = initial_snapshot();
+    let record = supplied_record(&initial);
+    let expected = [record.clone(), record];
+    let mut observed = expected.clone();
+    observed[0].after.image.helper_work += 1;
+    observed[1].before.image.helper_work += 1;
+    assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+        Some(TraceDifference::RecordAfter { index: 0, .. })));
+    observed[0] = expected[0].clone();
+    assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+        Some(TraceDifference::RecordBefore { index: 1, .. })));
+}
+
+#[test]
+fn strict_prefix_reports_lengths_in_both_directions_including_zero_events() {
+    let initial = initial_snapshot();
+    let records = [supplied_record(&initial), supplied_record(&initial)];
+    for (expected, observed, common, expected_len, observed_len) in [
+        (&records[..0], &records[..1], 0, 0, 1),
+        (&records[..1], &records[..0], 0, 1, 0),
+        (&records[..1], &records[..2], 1, 1, 2),
+        (&records[..2], &records[..1], 1, 2, 1),
+    ] {
+        match first_difference(&initial, expected, &initial, observed).expect("length") {
+            TraceDifference::RecordLength { common_records, expected_records, observed_records } => {
+                assert_eq!((common_records, expected_records, observed_records),
+                    (common, expected_len, observed_len));
+            }
+            _ => panic!("equal common prefix must reach length"),
+        }
+    }
+}
+
+#[test]
+fn common_record_difference_precedes_extra_record_count() {
+    let initial = initial_snapshot();
+    let expected = [supplied_record(&initial)];
+    let mut observed = [expected[0].clone(), expected[0].clone()];
+    observed[0].event.work_delta += 1;
+    assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+        Some(TraceDifference::RecordEvent { index: 0, .. })));
+}
+
+#[test]
+fn concrete_snapshot_contrasts_retain_metadata_options_flags_and_raw_rows() {
+    let initial = initial_snapshot();
+    let expected = [supplied_record(&initial)];
+    let changes: &[(&str, fn(&mut HostSnapshot))] = &[
+        ("admission identity", |s| s.admission.identity.profile_id += 1),
+        ("admission bounds", |s| s.admission.bounds.code_rows += 1),
+        ("program marker flag", |s| s.admission.view.constants[0] =
+            ConstantSnapshot::U128 { marker_free: false, n: 7 }),
+        ("program entry", |s| s.admission.view.entry += 1),
+        ("program ordered names", |s| s.admission.view.names = vec!["b".into(), "a".into()]),
+        ("layout version", |s| s.admission.layout.layout_version.0.push('x')),
+        ("layout field option", |s| s.admission.layout.field_id = Some(("f".into(), "1".into()))),
+        ("layout widths option", |s| s.admission.layout.widths = Some(WidthsSnapshot {
+            index_widths: vec![], counter_widths: vec![], record_widths: vec![],
+        })),
+        ("layout scalar option", |s| s.admission.layout.scalar_layout_id = Some(("s".into(), "1".into()))),
+        ("layout bounds", |s| s.admission.layout.bounds.code_rows += 1),
+        ("layout capacities", |s| s.admission.layout.capacities.name_rows += 1),
+        ("layout flag", |s| s.admission.layout.boundary_capacities_present = true),
+        ("image raw run identity", |s| s.image.run_id.identity.layout_digest = DigestC::Selected {
+            format: ("raw".into(), "1".into()), bytes: vec![0, 1],
+        }),
+        ("image control origin", |s| s.image.control_origin += 1),
+        ("image env option", |s| s.image.env_root = Some(0)),
+        ("image fuel", |s| s.image.initial_fuel += 1),
+        ("image work", |s| s.image.consumed_work += 1),
+        ("image helper work", |s| s.image.helper_work += 1),
+        ("image reference cursor", |s| s.image.reference_cursor += 1),
+        ("image active lengths", |s| s.image.active.value_slots += 1),
+        ("image logical allocations", |s| s.image.alloc.data_nodes += 1),
+        ("image result option", |s| s.image.result = Some(HelperResultC::Validated { ok: true })),
+        ("image arena", |s| s.image.data.push(DataSnapshot::U128 { n: 7 })),
+        ("image raw field reference", |s| s.image.data_fields.push(RefC::Data(0))),
+        ("image raw value slot", |s| s.image.value_slots.push(RefC::Const(0))),
+    ];
+    for (label, change) in changes {
+        let mut observed = expected.clone();
+        change(&mut observed[0].after);
+        assert_ne!(observed[0].after, expected[0].after, "contrast must differ: {label}");
+        assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+            Some(TraceDifference::RecordAfter { index: 0, .. })), "{label}");
+    }
+    // Order and reference variants matter even where lengths and decoded values agree.
+    let mut left = initial.clone();
+    left.image.data = vec![DataSnapshot::U128 { n: 1 }, DataSnapshot::U128 { n: 2 }];
+    left.image.value_slots = vec![RefC::Const(0)];
+    let mut right = left.clone();
+    right.image.data.reverse();
+    assert!(matches!(first_difference(&left, &[], &right, &[]), Some(TraceDifference::Initial { .. })));
+    right = left.clone();
+    right.image.value_slots[0] = RefC::Data(0);
+    assert!(matches!(first_difference(&left, &[], &right, &[]), Some(TraceDifference::Initial { .. })));
+}
+
+#[test]
+fn every_raw_event_field_is_compared_without_normalization() {
+    let initial = initial_snapshot();
+    let expected = [supplied_record(&initial)];
+    let changes: &[(&str, fn(&mut StepEventC))] = &[
+        ("step_id", |e| e.step_id.ordinal += 1),
+        ("rule_id", |e| e.rule_id = RuleIdC::BHelperValidateExit),
+        ("event_kind", |e| e.event_kind = EventKind::HelperExit),
+        ("site", |e| e.site = Some(SiteTag::EvalLiteral)),
+        ("helper_kind", |e| e.helper_kind = Some(HelperKind::Validate)),
+        ("disposition", |e| e.disposition = StepDisposition::Published),
+        ("work_delta", |e| e.work_delta += 1),
+        ("helper_work_delta", |e| e.helper_work_delta += 1),
+        ("helper_visits_delta", |e| e.helper_visits_delta += 1),
+        ("reference_cursor_delta", |e| e.reference_cursor_delta += 1),
+        ("alloc_deltas", |e| e.alloc_deltas.environment_cells = -1),
+        ("value_slot_writes", |e| e.value_slot_writes += 1),
+        ("logical_depth_before", |e| e.logical_depth_before += 1),
+        ("logical_depth_after", |e| e.logical_depth_after += 1),
+        ("task_cursor_before", |e| e.task_cursor_before += 1),
+        ("task_cursor_after", |e| e.task_cursor_after += 1),
+        ("helper_phase_before", |e| e.helper_phase_before = Some(HelperPhaseSummaryC::Tri(TriStatus::Pending))),
+        ("helper_phase_after", |e| e.helper_phase_after = Some(HelperPhaseSummaryC::Tri(TriStatus::Positive))),
+        ("helper_cursor_before", |e| e.helper_cursor_before = Some(0)),
+        ("helper_cursor_after", |e| e.helper_cursor_after = Some(0)),
+        ("result_tag", |e| e.result_tag = Some(HelperResultTagC::Validated)),
+        ("origin_reference_cursor", |e| e.origin_reference_cursor = Some(0)),
+        ("source_expr_id", |e| e.source_expr_id += 1),
+        ("source_occurrence", |e| e.source_occurrence = LocatorC::Occurrence {
+            owner_is_function: true, function: 0, ast_path: vec![2, 1],
+        }),
+        ("exhausted_kind", |e| e.exhausted_kind = Some(ExhaustReason::Fuel)),
+        ("outcome_tag", |e| e.outcome_tag = OutcomeTagC::Halted),
+        ("outcome_payload", |e| e.outcome_payload = OutcomeC::Halted { value: RefC::Const(0) }),
+        ("boundary", |e| e.boundary = BoundaryKind::Terminal),
+    ];
+    for (label, change) in changes {
+        let mut observed = expected.clone();
+        change(&mut observed[0].event);
+        assert_ne!(observed[0].event, expected[0].event, "contrast must differ: {label}");
+        assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+            Some(TraceDifference::RecordEvent { index: 0, .. })), "{label}");
+    }
+    // Arc equality compares raw identity contents, not allocation addresses.
+    let mut observed = expected.clone();
+    observed[0].event.step_id.run_id = Arc::new((*expected[0].event.step_id.run_id).clone());
+    assert!(first_difference(&initial, &expected, &initial, &observed).is_none());
+    Arc::make_mut(&mut observed[0].event.step_id.run_id).fuel_input = RunIntC::Nat(65);
+    assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+        Some(TraceDifference::RecordEvent { index: 0, .. })));
+    observed = expected.clone();
+    observed[0].event.source_occurrence = LocatorC::Occurrence {
+        owner_is_function: false, function: 0, ast_path: vec![1, 2],
+    };
+    assert!(matches!(first_difference(&initial, &expected, &initial, &observed),
+        Some(TraceDifference::RecordEvent { index: 0, .. })));
+}
+
+
+#[test]
+fn independently_frozen_positions_match_exact_supplied_contrasts() {
+    // Expectations: unchanged R52 EXPECTED.json, frozen independently before
+    // Root read this candidate. These are positions, not owner output tables.
+    let initial = initial_snapshot();
+    let records = [supplied_record(&initial), supplied_record(&initial)];
+    let clones = records.clone();
+    macro_rules! position {
+        ($id:literal, $ei:expr, $er:expr, $oi:expr, $or:expr, $pattern:pat) => {
+            assert!(matches!(first_difference($ei, $er, $oi, $or), $pattern), $id)
+        };
+    }
+    position!("E01", &initial, &[], &initial, &[], None);
+    position!("E02", &initial, &records, &initial, &clones, None);
+    let mut other = initial.clone();
+    other.admission.layout.layout_version.1.push_str("-other");
+    position!("E03", &initial, &[], &other, &[], Some(TraceDifference::Initial { .. }));
+    let mut contrast = records.clone();
+    contrast[0].before.admission.layout.layout_version.0.push('x');
+    position!("E04", &initial, &records, &initial, &contrast,
+        Some(TraceDifference::RecordBefore { index: 0, .. }));
+    contrast = records.clone();
+    contrast[0].event.work_delta += 1;
+    position!("E05", &initial, &records, &initial, &contrast,
+        Some(TraceDifference::RecordEvent { index: 0, .. }));
+    contrast = records.clone();
+    contrast[0].after.image.remaining_work += 1;
+    position!("E06", &initial, &records, &initial, &contrast,
+        Some(TraceDifference::RecordAfter { index: 0, .. }));
+    position!("E07", &initial, &records[..1], &initial, &records,
+        Some(TraceDifference::RecordLength { common_records: 1, expected_records: 1, observed_records: 2 }));
+    position!("E08", &initial, &records, &initial, &records[..1],
+        Some(TraceDifference::RecordLength { common_records: 1, expected_records: 2, observed_records: 1 }));
+    contrast = records.clone();
+    contrast[0].before.image.control_origin += 1;
+    contrast[0].event.work_delta += 1;
+    contrast[0].after.image.control_origin += 1;
+    position!("E09", &initial, &records, &initial, &contrast,
+        Some(TraceDifference::RecordBefore { index: 0, .. }));
+    contrast = records.clone();
+    contrast[0].event.work_delta += 1;
+    position!("E10", &initial, &records, &other, &contrast,
+        Some(TraceDifference::Initial { .. }));
+    position!("E11", &initial, &records, &initial, &contrast[..1],
+        Some(TraceDifference::RecordEvent { index: 0, .. }));
+    let mut other = initial.clone();
+    assert!(other.admission.layout.widths.is_none(), "fixed R46 HostOnly fixture");
+    other.admission.layout.widths = Some(WidthsSnapshot {
+        index_widths: vec![], counter_widths: vec![], record_widths: vec![],
+    });
+    position!("E12", &initial, &[], &other, &[], Some(TraceDifference::Initial { .. }));
+    other = initial.clone();
+    match &mut other.admission.view.constants[0] {
+        ConstantSnapshot::U128 { marker_free, n: 7 } => *marker_free = !*marker_free,
+        _ => panic!("fixed R46 UInt7 constant"),
+    }
+    position!("E13", &initial, &[], &other, &[], Some(TraceDifference::Initial { .. }));
+    contrast = records.clone();
+    contrast[0].event.source_occurrence = LocatorC::Occurrence {
+        owner_is_function: false, function: 0, ast_path: vec![1, 2],
+    };
+    position!("E14", &initial, &records, &initial, &contrast,
+        Some(TraceDifference::RecordEvent { index: 0, .. }));
+    let mut left = initial.clone();
+    left.admission.view.names = vec!["alpha".into(), "beta".into()];
+    other = left.clone();
+    other.admission.view.names.reverse();
+    position!("E15", &left, &[], &other, &[], Some(TraceDifference::Initial { .. }));
+    position!("E16 alias", &initial, &records, &initial, &records, None);
+    position!("E16 clone", &initial, &records, &initial.clone(), &clones, None);
+}
