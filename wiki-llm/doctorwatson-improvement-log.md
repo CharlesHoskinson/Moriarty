@@ -538,3 +538,82 @@ claimed here. **Proposed / validation needed:** update availability from each
 actual terminal, retain failed requests as nonvotes, and record the actual
 fallback identity and scope. One request's failure does not establish provider-wide
 health or change the standing fallback policy, native limits or acceptance gates.
+
+
+## 2026-10-17 UTC — sixth edition
+
+The [fifth edition](https://github.com/CharlesHoskinson/Moriarty/pull/139),
+merge `06f7ff03a245e0ab6fae271f09cd75bf813f0330`, remains unchanged above.
+These observations record exact source and result scopes at this freeze;
+no new factory automation, security recommendation or execution authority is
+created by this log.
+
+### DW-24 — Record prospective admission and the actual compiler read set
+
+**Observation/evidence:** [PR #138](https://github.com/CharlesHoskinson/Moriarty/pull/138),
+merge `64fc52ca4b323b2ea5b537bc88470601961a3612`, published the production B
+library source. Root then inspected a structured preflight exit 0 with all
+required checks true, wrote the prospective grant, and invoked the separate
+metadata operation once. Both actual children exited 0: the pinned Rust 1.99.0
+version query and library metadata/dep-info compilation. The compile child took
+0.516 seconds and retained six warnings; this is a child duration, not an
+aggregate timing or performance benchmark.
+
+The normalized compiler read set was exactly 24 files: 23 real canonical A+B
+production files plus a 67-byte public-module wrapper. The historical consumed
+source commit was `06f7ff03a245e0ab6fae271f09cd75bf813f0330`. Non-test module,
+name and type closure compiled; 18 cfg(test) modules were excluded. Fresh distinct
+Muse security-fallback and nonsecurity actual-result reviews accepted only the
+scoped metadata result. The curated result selection and its publication review
+are separate from that acceptance; this entry records no result publication.
+
+**Status:** published production source, properly admitted observed metadata
+compilation and scoped actual-result reviews. Cargo/whole-crate build,
+cfg(test) compilation, runtime, semantic correctness, correspondence, SDK/native,
+circuit, proof and stagenet acceptance are not established.
+**Proposed documentation improvement / validation needed:** retain structured
+preflight status, prior grant, actual child terminals and normalized consumed-file
+membership together. Keep wrapper files and excluded modules explicit; refresh
+only the evidence affected by later source changes.
+
+### DW-25 — Keep test-source counts separate from executed tests
+
+**Observation/evidence:** [PR #140](https://github.com/CharlesHoskinson/Moriarty/pull/140),
+merge `92ca233157fc320ed7c9f34750803a7437f4a057`, published the production
+cfg(test) append and its coverage README. The exact two merged files and unchanged
+production prefix were verified. The source has 21 nonignored cells, while the
+mandatory N01 cell remains ignored and unimplemented. At that publication freeze, all new Rust test
+cells were **UNCOMPILED / UNEXECUTED**. The default ordinary CI summary records
+230 PASS / 9.379 seconds; it did not compile or execute those cells.
+
+**Status:** published test preparation and retained mandatory gap. A separate
+cfg(test) metadata proposal, actual source-caller work, N01 difference analysis
+and the remaining circuit-rest layout work are ongoing; none is complete here.
+**Proposed / validation needed:** report each cell's implemented, ignored,
+compiled and executed status independently. Bind later checks to the exact test
+source and caller; neither a test count nor ordinary QA closes an unrun cell or
+waives the mandatory N01 obligation.
+
+### DW-23 update — Lossless staging preserves evidence, not admission
+
+**Observation/evidence:** Root independently reconstructed all 13 held incident
+streams byte-for-byte from their staged representations. The recorded designated
+security and independent nonsecurity dispositions support structural retention
+only. Root adopted the inert hash, byte, framing, record and source-pin facts,
+closing the stated reconstruction condition. Staged review coverage remains
+explicit; this is not a claim that one context read all raw captures and the
+complete engine together.
+
+**Status:** observed exact roundtrip and adopted structural-retention facts. The
+original attempt 60460 remains **UNADMITTED / HOLD**: no QA, comparison, result
+reliance, publication, retry, retroactive grant, admission or artifact reuse.
+The separately admitted production metadata check in DW-24 changes none of those
+restrictions. Native authority remains zero and C4, limits and counters remain
+unchanged. The underlying retention and roundtrip receipts are unpublished.
+
+**Proposed documentation improvement / validation needed:** bind any staged
+summary to its original immutable bytes and retain each review's coverage limits.
+Report a successful reconstruction as reconstruction; further reliance or
+comparison remains dependent on its separate designated disposition and exact
+independent expectations. No expected observations or held captures are selected
+for publication by this log.
