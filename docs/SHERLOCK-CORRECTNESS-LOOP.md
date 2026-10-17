@@ -298,3 +298,52 @@ This is preparatory tooling for complete readback reporting, with no native
 execution or independent semantic oracle. It does not implement the missing
 Sherlock/Clean/native adapter or public Moriarty commands and closes no
 UIREQ/B/U/M/MC/SP/G exit or Midnight stagenet qualification.
+
+
+## Current scoped host closures and reporting — October17 R102/R103
+
+Root supplied the completed PR170 merge identity
+`f2e781e44e4a68e8dc3a4260bfe8661591cb639d`. Public compilation is a source and
+scoped result increment; it does not close the full Sherlock goal. PR173 is now
+merged at9dde3c3baa4dae26964f5287d588d58b731e7fdc after R72's scoped C1–C5 and
+supplied-public-prose adoption. The full62-payload privacy ABSTAIN and R64's
+rejected factual review remain visible; no broad payload/privacy or native
+approval is inferred from that merge.
+
+DoctorWatson retains35 original clauses and25 separate refinements. Root's
+[new adoption record](results/sherlock-ears-host-closure-20261017/ROOT-ADOPTION.json)
+adopts003/005/006/008 on the supported typed-A host relation and preserves
+001/010/011. Seven original clauses are adopted/closed;28 originals and all25
+refinements remain open. UIREQ004 remains open for missing complete generic
+constructor-field evaluation despite the now-observed nested-arguments scenario.
+The original R95 proposed/open rows remain historical; the actual Root adoption,
+R96 verdict and qualified exact symbol anchors are separate evidence. Normal
+case tests and source case analysis do not become a universal formal theorem,
+full B/generic language, financial, H1 security, circuit or target result.
+
+R92 externally compiled the independently frozen test source against its recorded
+normal production Core artifact, listed exactly nine selectors and observed one
+pass per selected normal scenario, with407 recorded input pins unchanged. The
+cases retain complete independent initial/final expectations and selected typed
+checkpoints; they do not supply a complete independently specified intermediate
+state oracle or new K execution. Direct reference-Machine arithmetic error
+runtime observations and broader obligations remain as qualified by Root.
+
+The [factory record](results/sherlock-ears-closure-20261017/README.md) preserves
+R94's252-test pass and three-current-closure report at sidecar66cacfe3. Adoption
+changed that sidecar, so the historical report is not relabelled as a seven-clause
+run. R103 then actually ran only the existing selected requirement-evidence
+report against checker3076e385 and sidecar84945bda: statuscurrent, seven current
+adopted originals,28 originals open and25 refinements open, in0.374796737seconds.
+Its exact local RESULT/REPORT remain in
+`.moriarty-dev/runtime/sherlock-review-20261017/103-selected-seven-closure-report`.
+No unchanged252-test or nine-scenario cohort was rerun for this reporting refresh.
+
+Computed integrity/currentness, scoped semantic adoption and actual report
+execution remain distinct. A changed declared source/evidence dependency must
+invalidate a dependent current closure while preserving history. Matching hashes
+never adopt semantics. The full goal remains active/open and native authority0;
+K/Quint/Lean-Clean/handwritten full-correspondence, financial, native proof,
+qualified settlement and release obligations remain. This knowledge update
+runs no interpreter/model/circuit/native code and adds no circuit iteration or
+website circuit-progress claim.
