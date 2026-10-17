@@ -1,0 +1,135 @@
+{
+  "reviewToken": "c2-r2-implementation-fresh-review-opus55-20261017-user-resumed",
+  "report": "FRESH NON-AUTHOR SECURITY SOURCE AUDIT of the proposed C2 r2 implementation (claude-opus-5-5, high effort, Read tool only). I did not run, import, compile, hash or execute anything, and I fetched nothing from the web. Every byte count and SHA-256 below comes from the root pins in MANIFEST.json and SEGMENT-INDEX.json; I did not recompute any of them. All runtime statements are predictions. Author and reviewer share a provider, so this review has a fresh context but no provider diversity. No prior implementation vote was supplied, and I treated IMPLEMENTATION-NOTES as the candidate under review, not as a verdict.\n\nROUTE: I read MANIFEST.json, SEGMENT-INDEX.json and READ-SEGMENT-01 to -10 in order. Through the segments I read every line of all 19 originals, with contiguous prefixes: the candidate (lines 1-508), NOTES (1-118), the test (1-1102), S33 (1-213), S34 (1-36), S11 (1-357), S22 (1-656), S23 (1-420), S15 (1-44), S16 (1-64), S51 (1-9), PREVIOUS-TEST-SOURCE-REVIEW (1-109), ROOT-RED-DECISION (1-100), ROOT-RED-RESULT (1-56), ROOT-RED-stderr (1-206), PROPOSED-ORDINARY-GREEN-ENVELOPE (1-108), DOWNSTREAM-R4-CONTRACT (1-177) and DOWNSTREAM-R4-CONDITIONAL-ADOPTION (1-211). ROOT-RED-stdout is 0 bytes. I opened no raw original directly and followed no provenance path.\n\nVERDICT: I found no critical, high or medium issue. All of CP01-CP08 are AGREE. My recommendation is that the exact candidate bytes (21648 B, 67fb3b3e\u2026) are source-ready only for exactly one ROOT GREEN in the proposed envelope. Root alone decides. This review neither adopts the implementation nor permits reliance on it.\n\nCP01, structure:\n- The only import statements are `import hashlib` and `import host_codec` (lines 22-23).\n- No docstring or comment line, once stripped, begins with `import ` or `from `. The comment at line 472 starts with `#`, and line 406 starts with `raise`. There are no `;`-joined imports, so the T01 line scan and the prior I01 residue are clean.\n- The only public name is `prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id)` (line 355), with no defaults. Every helper and constant starts with `_`.\n- The ARG checks (lines 363-368) are byte-equivalent to v1 CI02 (S11:241-246).\n- All 7 host APIs are called in place as `host_codec.<api>(\u2026)`: lines 404, 426, 432, 480, 483, 488, 489, 491 and 492. No host API is bound to another name, passed as a value (unlike v1's `_host(code, api, \u2026)`), reimplemented, assigned to, setattr'd or deleted.\n- `hashlib` is used only as `hashlib.blake2b` (lines 376, 383 and 486). v1 is never referenced.\n- This discharges prior findings L01 (aliasing) and L02 (patching) by source inspection, for these bytes only.\n\nCP02, SETUP:\n- `_SETUP_RECORD` (lines 117-130) is a closed schema of exactly 12 keys.\n- format, trustProfile, notice, curve, snark and encoding are fixed literals equal to S15 and S11. driver is fixed to mori-k2-driver/0.1.0-k2s1+k4h1.\n- provingKeySha256 is checked as hex64, and provingKeyBytes as an exact int in 1..2**64-1. relation is accepted only as an exact dict, with its members left to PROFILE.\n- verifyingKeyHex goes through `_is_hex(\u2026, 976)`: exact type, then length, then the per-character scan. After the whole record is admitted, the unkeyed BLAKE2b-256 of the VK bytes is compared with vkDigestBlake2b256 (lines 374-378). No point is decoded.\n\nCP03, PROFILE:\n- `_RELATION` (lines 134-164) has exactly 29 keys. I counted them against V1_CONSUMED (13) plus NON_CONSUMED (16).\n- Nine digests are hex64. sourceSha256 is a required key holding hex64 or null. Four keys are str with the surrogate scan.\n- language, semantics, adapter, statementTagHex and familyIdHex are fixed literals. headerLen, instanceVariables and publicInputCount are exact ints of 343, 3 and 2. bodyLen is 0..261801. actionIndex is u16, and the three other ints are u64.\n- `_is_decimal` (lines 272-283) checks the type and a length of 1..39 first, then ASCII 0-9 by code-point comparison, then no leading zero, and only then calls `int()`, which can no longer fail, and applies the 2**128-1 bound. The Arabic-Indic digits, `'28\\n'`, `' 28'`, 5000 digits and 2**128 cases are all refused.\n- `_is_shape_hex` checks length \u2264524288 and evenness before the scan. After admission, the BLAKE2b-256 of the shape bytes must equal abi2ShapeDigest (lines 382-385).\n\nCP04, admission rules:\n- `_admit_object` (lines 309-321) refuses any key that is not an exact str naming a schema field, before it visits any value. The equality it uses is exact str against exact str, so no caller-defined code runs.\n- Ints must satisfy `type(v) is int`, so bool is refused.\n- `_is_text` (lines 258-269) checks for an exact str, then takes the `str.isascii` fast path, and otherwise compares `ord` per character against U+D800..U+DFFF. It makes no copy, slice, set, join or bytes conversion. `.encode` does not appear anywhere: the only occurrences are `encode_data`, \"re-encode\" and \"encoding\".\n- No str-kind field has a length check, so \"scan after length check\" holds trivially. Every hex, shape, decimal, statement and proof check tests length before scanning.\n- statementHex, proofHex, x1 and x2 use the `deferred` kind, an exact-str check only, which equals v1's `_TEXT` strength. They are then refused by the length-first STATEMENT check (lines 399-401), `_is_hex(\u2026, 384)` at PROOF, and exact tuple equality at DIGEST (`halves` is a host tuple; S22:559).\n- Stage ownership comes from the code argument: setup members map to SETUP, relation members to PROFILE, and export members at any depth to EXPORT.\n\nCP05, later stages:\n- EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF and CARDANO match S11 line for line. The only differences are the CP04 narrowing and the CONTEXT check, which compares the same 10 closed keys one by one instead of by dict equality and is equivalent.\n- The module docstring (lines 10-20) lists every required non-check, states that Rust acceptance is not established, and explicitly asserts no subset, equivalence or inclusion relation.\n\nCP06, result and retention:\n- The result has the 12 keys, format /2, and `labels = dict(_LABELS)`, a fresh dict built on every call whose 16 entries match S34 in order and value.\n- Every v1 check is retained at equal or stricter strength: the relation is closed, driver is fixed, provingKeyBytes is bounded and 8 str fields are scanned; everything else is identical.\n- BUILD passes identical arguments to the same host calls, so by construction an r2-admitted input is v1-admitted and the four byte fields are equal. T02 and T17 only sample this property.\n\nCP07, errors and state:\n- `_refuse` raises an exact ValueError. Host calls are wrapped in `except ValueError` and re-raised `from None` through `_host_refusal` with the current stage code. Other exceptions propagate.\n- After admission, no unconverted exception is reachable from adversarial input: `bytes.fromhex` only sees admitted hex, `int()` only sees \u226439 ASCII digits, and recursion is bounded by the schema, not the input.\n- Inputs are never written. Module constants are only str, int and tuples of these. There are no classes, closures, lambdas, function attributes, defaults, caches or `global` statements.\n- envData, issueData and mintValueData are freshly built tuples and lists from the host on every call (S22:577-656). This discharges the prior L03 and I06 residues by source reading.\n\nCP08: the source has no flags, bridge or routing, and its docstring disclaims CB r1 and builder reliance.\n\nFIXTURE HARDCODING: there is none. The only literals are export.rs and ABI constants that the contract mandates, and v1 has the same ones. None of the T15 EFFECT_TOKENS appears in the source: the fixture prefixes, the expiry, `open(`, `exec(`, `compile(`, `print(`, `environ` and `global` are all absent.\n\nGREEN PREDICTION (from my reading only):\n- I traced every row of T00-T17 against the candidate, S22, S11, S15 and S16. Examples: the T05 counts are 34/57/1, T16 has 65 cases, every T06 placement goes to its owner stage, T09 refuses at length or through host framing, T10 networkId fails at CONTEXT, and T17 is admitted by both r2 and v1.\n- The K6 premises and the K2 notice match the candidate literals exactly.\n- I expect 18 passes, exit 0, empty stdout, and exactly one stderr line `c2_issue_artifacts_r2.py sha256 67fb3b3e\u2026`, because T01 and T15 re-exec via `_module` and print nothing.\n- I see no likely unexpected result.\n- One dependency cannot be checked by reading. BLAKE2b(abi2ShapeBytesHex) = abi2ShapeDigest is new to r2, and as far as these sources show it has never been checked at runtime. The bytes start with the MRG16-PVC-SHP-02 tag, which is consistent with it, but if the digest differs, every admit path fails at PROFILE. That is a STOP, not a reason to edit anything.\n- The VK digest, statement digest, x1/x2, HIST_TOKEN and the CBOR framing are shared with v1. That the 11-test v1 GREEN covered them is my inference from the R4 contract \u00a70; I did not observe it here.\n\nEFFECTS: the candidate, test, host and v1 chain spawns no subprocess, has no network or ctypes access, and uses no project SDK, native code, VM, prover, keys or file writes. Test effects stay inside the six read-only files: bounded O_NOFOLLOW reads, exec of pinned bytes, a process-local `sys.modules` entry restored afterwards, stdlib hashlib, copy and unittest, and linecache only if a traceback is rendered. The case tables are bounded by the frozen inputs, with the largest strings at 524290 characters.\n\nPROPOSED GREEN ENVELOPE: it is acceptable as written.\n- Exactly 6 files, including the candidate at its pinned bytes and SHA. Directory 0555 and files 0444.\n- timeout 10 s with kill-after 2 s, giving a hard kill at 12 s, as accepted for RED.\n- prlimit cpu 10:10, as 536870912, fsize 2097152, core 0.\n- bwrap `--unshare-all`, so there is no network namespace. `--die-with-parent`, `--new-session`, read-only /usr and /input, `--clearenv` with only PATH, LANG and PYTHONDONTWRITEBYTECODE, and `python3 -I -B`.\n- maximumAttempts 1, and any unexpected result is a STOP.\n- testExecutionApproved stays false until root decides.\n- Root should explicitly record the before and after state as in RED: directory mode, the exact six-entry listing, and each file's bytes, SHA and mode (F05).\n\nROOT RED (observed versus frozen expectation):\n- The stderr transcript shows T00 ok and T01-T17 FAIL. Each failure is an AssertionError carrying 'missing r2 implementation: c2_issue_artifacts_r2.py is absent', raised from `_prepare` line 177.\n- The summary is 'Ran 18 tests' and 'FAILED (failures=17)', so there were 0 errors.\n- ROOT-RED-RESULT records exit 1, 0 stdout bytes, no r2 SHA line, and before and after file pins and modes that are identical. ROOT-RED-DECISION records r2Absent true, one attempt, and native 0.\n- This matches S33 \u00a77 and the prior prediction. redResultAcceptable is true, scoped only to the missing-implementation RED. It is not GREEN and not implementation adoption.\n- I verified the transcript text myself. The 5-file directory contents and the directory mode are root's records; I did not observe them.\n\nPRIOR RESIDUES: L01, L02, L03, I01, I02, I03 and I06 are discharged by source inspection, for these exact bytes only. L04 (docstring wording) remains nonblocking. I04, I05 and I10 are unchanged and nonblocking.\n\nSTALE WORDING (nonblocking):\n- NOTES:114, S33:119 and S34 compatibility.r4 say R4 targets attempt 2 and stays incompatible. That is accurate history, but it must be qualified. A later dependency-reconciled R4 contract (28131 B, b0aa395e\u2026) consumes rev 4: /2, 12 keys, 16 labels, 11 stages and 7 APIs. The candidate matches those literals.\n- That R4 contract was conditionally accepted only as a basis for R4 test authoring, on two votes by actual claude-opus-4-8 (CB401-CB412 AGREE). It grants no implementation, reliance, runtime or native authority, and R4 R00 still requires a root-adopted r2.\n- Historical identities must be preserved: the R4 contract self-labels as claude-opus-5-5, but R4-F05 records that the returned main model was claude-opus-4-8. It must not be relabelled 5.5.\n\nSCOPE PRESERVED: This review does not run GREEN or authorize mutants (meaningfulness needs its own reviewed envelope), and it makes no CP08, builder-reliance, native, operator, wallet, prover, VM or network grant. builderReliancePermitted stays false. It establishes nothing about Rust acceptance, Groth16, VK or curve validity, the ledger, or the 20 UTxO families, the general financial work, recursion, private handoff, multiparent or Preprod, all of which stay OPEN. Agreement between labels and the shared host is consistency, not verification.",
+  "findings": [
+    {
+      "id": "F01-stale-R4-incompatibility-wording",
+      "severity": "low",
+      "evidence": "IMPLEMENTATION-NOTES.md:114 says 'R4 depends on attempt 2 (14 labels) and stays incompatible until there is an explicit reviewed reconciliation'. The frozen S33-C2-PROFILE-R2-CONTRACT.md:119 and S34-C2-PROFILE-R2-API.json:31 (compatibility.r4) carry the same historical text. DOWNSTREAM-R4-CONTRACT.md:1-11 and 34-45 is a later dependency-reconciled R4 consuming rev 4 (/2, 12 keys, 16 labels, 11 stages, 7 APIs). DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json:195-210 accepts it only as a conditional basis for R4 test authoring (implementationAdopted false, builderReliancePermitted false, native 0). The candidate source itself contains no R4 wording.",
+      "requiredFix": "Nonblocking. Do not edit the candidate, NOTES or frozen S33/S34 bytes. In the root GREEN and adoption records, qualify this wording: a reconciled R4 contract exists and was conditionally accepted only for R4 test authoring, with no implementation, reliance or runtime grant. R4 R00 still requires a root-adopted r2, and the candidate's literals match R4's frozen dependency."
+    },
+    {
+      "id": "F02-shape-digest-first-runtime-dependency",
+      "severity": "info",
+      "evidence": "c2_issue_artifacts_r2.py:382-385 compares the BLAKE2b-256 of the K2 abi2ShapeBytesHex (S15:24) with abi2ShapeDigest (S15:23). v1 never checks this, so as far as the supplied sources show it has never been checked at runtime. It cannot be verified by reading. If it differs, every admit path (T01 result, T02, T15, T17 and the v1-ADMIT rows' r2 side) refuses at C2I-PROFILE.",
+      "requiredFix": "None to the source. If GREEN shows a PROFILE refusal of unmodified K2, STOP for review. Never edit fixtures, tests or expectations, and never retry."
+    },
+    {
+      "id": "F03-prior-test-residues-discharged-by-source-only",
+      "severity": "info",
+      "evidence": "Prior L01 (aliasing), L02 (host patching), L03 (fresh third result), I01 (import-line scan), I02 (CP04 no-encode, no-copy, length-first, caching), I03 (_Hooked) and I06 (deepcopy of exotic globals). In the source: host_codec appears only at lines 404, 426, 432, 480, 483, 488, 489, 491 and 492, plus prose. There is no assignment to host_codec or hashlib, no `.encode`, and no module-level dict, list or module-in-tuple. The S22 factories build fresh tuples and lists per call.",
+      "requiredFix": "Record that these are discharged by source inspection for exactly 21648 B / 67fb3b3e\u2026 only, not by any test outcome. Any byte change voids the discharge and requires a fresh audit."
+    },
+    {
+      "id": "F04-L04-stderr-and-linecache-wording",
+      "severity": "info",
+      "evidence": "test_c2_issue_artifacts_r2.py:7-13 omits linecache traceback reads. At GREEN, `_prepare` (lines 173-180) prints one SHA line. T01 (line 800) and T15 (line 963) re-exec via `_module` and print nothing.",
+      "requiredFix": "Nonblocking. At GREEN, root should confirm that stderr contains exactly one line 'c2_issue_artifacts_r2.py sha256 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98' and that stdout is empty. Any deviation is a STOP."
+    },
+    {
+      "id": "F05-green-envelope-before-after-record-detail",
+      "severity": "low",
+      "evidence": "PROPOSED-ORDINARY-GREEN-ENVELOPE.json:5-43 lists directoryMode 0555 and six file pins (modes written as '0o444', whereas RED wrote '0444'), but it does not itself specify the after-run re-pin or the directory listing. ROOT-RED-DECISION and ROOT-RED-RESULT recorded per-file before and after pins but not the directory mode or the exact entry listing.",
+      "requiredFix": "Before and after the single GREEN, root records the directory mode 0555, an exact six-entry listing with no extra entries, and each file's bytes, SHA-256 and mode 0444, including the test (b9c19211\u2026) and the candidate (67fb3b3e\u2026). Use one mode notation. Any mismatch is a STOP."
+    },
+    {
+      "id": "F06-candidate-self-status-becomes-history",
+      "severity": "info",
+      "evidence": "c2_issue_artifacts_r2.py:3-4 says 'not reviewed, adopted or executed', and IMPLEMENTATION-NOTES.md:3 says it was never executed. Both become historical once root decides or GREEN runs.",
+      "requiredFix": "Do not edit the bytes. Root records qualify these phrases as author-time history."
+    },
+    {
+      "id": "F07-shared-immutable-bytes-leaf",
+      "severity": "info",
+      "evidence": "c2_issue_artifacts_r2.py:491 places the caller's policy_id bytes object inside mintValueData. This is identical to v1 (S11:341-342). CP07 names str and int leaves as shareable, while bytes is also immutable and is not counted by `_containers`.",
+      "requiredFix": "None. This is consistent with CP07's no-dict/list intent. Note it in the adoption record."
+    },
+    {
+      "id": "F08-historical-model-identity-preservation",
+      "severity": "info",
+      "evidence": "DOWNSTREAM-R4-CONTRACT.md:3 self-labels as 'claude-opus-5-5 HIGH'. DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json:68 (R4-F05) records originalRequestedModel claude-opus-5-5 and originalReturnedMainModel claude-opus-4-8, and both votes are actual claude-opus-4-8 (lines 31-34 and 120-123). S51 restores 5.5 prospectively only.",
+      "requiredFix": "Preserve the 4.8 identities as recorded. Do not relabel the R4 contract or its votes as 5.5, and do not treat them as r2 evidence."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "ordinarySelftestReady": true,
+    "ordinarySelftestScope": "RECOMMENDATION ONLY, for exactly one ROOT GREEN after a root decision. One run of /usr/bin/python3 -I -B /input/test_c2_issue_artifacts_r2.py on the unchanged test (58800 B, b9c19211\u2026) with the candidate c2_issue_artifacts_r2.py (21648 B, 67fb3b3e\u2026), in PROPOSED-ORDINARY-GREEN-ENVELOPE as written: a 0555 directory holding exactly the 6 pinned 0444 files; timeout --kill-after=2s 10s; prlimit cpu 10:10, as 536870912, fsize 2097152, core 0; bwrap --unshare-all --die-with-parent --new-session, read-only /usr and /input, --clearenv with PATH, LANG and PYTHONDONTWRITEBYTECODE only; no network. Pins are checked before and after, with directory mode and exact listing (F05). One attempt, no retry. Required result: 18 tests, all passing, 0 failures, 0 errors, exit 0, empty stdout, exactly one r2 SHA stderr line, pins unchanged. Anything else is a STOP. This excludes mutants, CP08, builder reliance, R4 execution and any native, VM, prover, key or network action.",
+    "firstBlockedBoundary": "The root decision to adopt these exact candidate bytes for the single ROOT GREEN, then root execution and observation of that GREEN. After a GREEN: a separately reviewed meaningfulness-mutant envelope, then a separate CP08 root reliance decision. R4 RED stays blocked on a root-adopted r2. builderReliancePermitted stays false.",
+    "operatorReady": false,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/SEGMENT-INDEX.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-01.txt (candidate 1-508; NOTES 1-72)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-02.txt (NOTES 73-118; test 1-469)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-03.txt (test 470-957)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-04.txt (test 958-1102; S33 1-169)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-05.txt (S33 170-213; S34 1-36; S11 1-357; S22 1-49)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-06.txt (S22 50-656; S23 1-121)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-07.txt (S23 122-420; S15 1-44; S16 1-64; S51 1-9; PREVIOUS-TEST-SOURCE-REVIEW 1-2)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-08.txt (PREVIOUS-TEST-SOURCE-REVIEW 3-109; ROOT-RED-DECISION 1-100; ROOT-RED-RESULT 1-56; ROOT-RED-stderr 1-129)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-09.txt (ROOT-RED-stderr 130-206; PROPOSED-ORDINARY-GREEN-ENVELOPE 1-108; DOWNSTREAM-R4-CONTRACT 1-163)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-implementation-review-packet/READ-SEGMENT-10.txt (DOWNSTREAM-R4-CONTRACT 164-177; DOWNSTREAM-R4-CONDITIONAL-ADOPTION 1-211)"
+    ],
+    "unreadPaths": [
+      "The 19 raw original files in the packet were not opened directly. Their full decoded contents were read only through the root-derived segments, which root declares exact and complete (4494 lines, each exactly once). I did not compare raw bytes.",
+      "ROOT-RED-stdout.txt was not opened. It is pinned at 0 bytes with the empty-string SHA-256.",
+      "Every originalPublicSource path and every provenance path named inside the sources (RUST, HOST, VAL, PRE, K6-ACTUAL-ADOPTION, the S35/S42/S44/S45 files cited in NOTES, the opus48 R4 packet and review jobs). These are data labels only and were not followed."
+    ],
+    "limitations": [
+      "Read-only text review. Nothing was executed, imported, compiled or hashed, and no web retrieval was done. All byte counts and SHA-256 values come from the root pins and were not recomputed.",
+      "The GREEN outcome is a prediction from source reading. I did not compute the BLAKE2b-256 of the K2 VK or shape bytes, the K6 statement digest, the T17 synthetic digest or the HIST_TOKEN. Agreement between hashlib and Rust blake2b256 is not established.",
+      "The observed ROOT RED was judged from the supplied transcript and root records. The 5-file directory contents, the directory mode and the exit code are root's records, not my observation.",
+      "That a prior 11-test v1 GREEN exercised the shared fixture digests is my inference from the R4 contract \u00a70, not something I observed.",
+      "Same provider as the author: fresh context, not provider diversity. This review is not adoption, not a Sherlock or upstream qualification, and grants no native, operator, builder or ledger authority."
+    ]
+  },
+  "clauseAssessment": [
+    {
+      "id": "CP01",
+      "stance": "AGREE",
+      "reason": "The only imports are hashlib and host_codec (lines 22-23). The sole public function has the exact signature with no defaults (line 355). ARG is byte-equivalent to v1 CI02. All 7 host APIs are called only as host_codec attributes at their call sites, never aliased, passed around, patched or reimplemented. v1 is never referenced."
+    },
+    {
+      "id": "CP02",
+      "stance": "AGREE",
+      "reason": "A closed 12-key schema; fixed export.rs literals and driver; provingKeySha256 hex64; provingKeyBytes an exact int in 1..2**64-1; relation an exact dict; VK checked for type, then length 976, then scan; then the unkeyed BLAKE2b-256 equals vkDigestBlake2b256. No point decoding."
+    },
+    {
+      "id": "CP03",
+      "stance": "AGREE",
+      "reason": "A closed 29-key relation with the S34 kinds: nine hex64 digests, sourceSha256 required as hex64 or null, language, semantics and adapter fixed, the ABI tag and family fixed, headerLen 343, instanceVariables 3, publicInputCount 2, bodyLen 0..261801. logicalWork is checked for length, then ASCII by code point, then no leading zero, then int() and the u128 bound. Shape hex is checked for length and evenness first, then lowercase, then its BLAKE2b-256 must equal abi2ShapeDigest."
+    },
+    {
+      "id": "CP04",
+      "stance": "AGREE",
+      "reason": "Keys must be exact str naming a schema field before any value is visited. Ints must be exact int, never bool. Str kinds get an isascii fast path, else a per-character ord comparison, with no copy and no .encode anywhere. Length precedes every scan. Stage ownership comes from the code argument. statementHex, proofHex, x1 and x2 are exact-str only at EXPORT and are refused by STATEMENT, PROOF and DIGEST."
+    },
+    {
+      "id": "CP05",
+      "stance": "AGREE",
+      "reason": "EXPORT through CARDANO match v1 in order and strength, narrowed only by CP04, with an equivalent per-key CONTEXT comparison. The docstring lists every required non-check, states that Rust acceptance is not established, and asserts no subset or equivalence relation."
+    },
+    {
+      "id": "CP06",
+      "stance": "AGREE",
+      "reason": "A fresh 12-key result with format /2 and labels = dict(_LABELS), whose 16 entries match S34. Every v1 check is retained equal or stricter, and BUILD is identical to v1, so by construction an r2-admitted input is v1-admitted with equal byte fields. T02 and T17 only sample this property."
+    },
+    {
+      "id": "CP07",
+      "stance": "AGREE",
+      "reason": "Refusals are exact ValueError with the C2I-<STAGE> prefix of the first failing stage. Host ValueError is rewrapped with the stage code from None, and other errors propagate. No partial result, no input mutation, no input dict or list in the result or module state. Constants are immutable. No I/O, clock, environment, randomness, logging, cache, class, closure, function attribute or global."
+    },
+    {
+      "id": "CP08",
+      "stance": "AGREE",
+      "reason": "The source has no flag, bridge or routing, and its docstring disclaims CB r1 and builder reliance. This review keeps builderReliancePermitted false and grants nothing. CP08 still requires a separate root decision after GREEN, meaningfulness and a reviewed downstream /2 consumer."
+    }
+  ],
+  "redResultAcceptable": true
+}
