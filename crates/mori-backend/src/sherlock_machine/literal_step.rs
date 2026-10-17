@@ -3,37 +3,11 @@
 //! Byte reconstitution, full StepInv/F4, dispatch and binding remain caller work.
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LiteralCapacities {
-    /// N, NB, O, OP, X, XC, F, P, R, A, T, Q, QF, K, KF.
-    pub program: [usize; 15],
-    /// D, DF, E, V, S, C. No numeric defaults or resource admission.
-    pub state: [usize; 6],
-    pub stack_limit: u128,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LiteralLane {
-    pub name: String,
-    pub bits: u32,
-    pub boolean: bool,
-    /// Inclusive scalar bound, separate from reference active-prefix checks.
-    pub maximum: Option<u128>,
-}
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LiteralTable {
-    pub name: &'static str,
-    pub capacity: usize,
-    pub lanes: Vec<LiteralLane>,
-}
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LiteralSchema {
-    pub program_header: Vec<LiteralLane>,
-    pub program_tables: Vec<LiteralTable>,
-    pub state_root: Vec<LiteralLane>,
-    pub state_tables: Vec<LiteralTable>,
-    capacities: LiteralCapacities,
-}
+pub use super::literal_host::{
+    literal_schema, LiteralCapacities, LiteralConstructionError, LiteralLane, LiteralSchema,
+    LiteralTable,
+};
+use super::literal_host::{tag, unsigned};
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiteralImage {
     pub root: Vec<Operand>,
@@ -61,123 +35,7 @@ pub struct LiteralStepBlock {
     /// Operand aliases only; this is not a transition/acceptance result.
     pub preserved: LiteralStepInputs,
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum LiteralConstructionError {
-    MinimumShape,
-    SizeOverflow,
-    SchemaMismatch,
-    ImageShape { block: &'static str, table: Option<usize>, row: Option<usize> },
-    Fetch(ConstructionError),
-}
-impl From<ConstructionError> for LiteralConstructionError {
-    fn from(e: ConstructionError) -> Self { Self::Fetch(e) }
-}
 type Result<T> = std::result::Result<T, LiteralConstructionError>;
-
-fn unsigned(name: &str, bits: u32, maximum: Option<u128>) -> LiteralLane {
-    LiteralLane { name: name.into(), bits, boolean: false, maximum }
-}
-fn id(name: &str, capacity: u128) -> LiteralLane {
-    unsigned(name, (128 - capacity.saturating_sub(1).leading_zeros()).max(1), None)
-}
-fn count(name: &str, capacity: u128) -> LiteralLane {
-    unsigned(name, (128 - capacity.leading_zeros()).max(1), Some(capacity))
-}
-fn tag(name: &str, variants: u128) -> LiteralLane {
-    let mut lane = id(name, variants); lane.maximum = Some(variants - 1); lane
-}
-fn boolean(name: &str) -> LiteralLane {
-    LiteralLane { name: name.into(), bits: 1, boolean: true, maximum: None }
-}
-fn prefixed(prefix: &str, fields: Vec<LiteralLane>) -> Vec<LiteralLane> {
-    fields.into_iter().map(|mut f| { f.name = format!("{prefix}.{}", f.name); f }).collect()
-}
-fn slice(prefix: &str, capacity: u128) -> Vec<LiteralLane> {
-    prefixed(prefix, vec![count("start", capacity), count("len", capacity)])
-}
-fn value_ref(prefix: &str, capacity: u128) -> Vec<LiteralLane> {
-    prefixed(prefix, vec![boolean("space"), id("index", capacity)])
-}
-fn env_root(prefix: &str, capacity: u128) -> Vec<LiteralLane> {
-    prefixed(prefix, vec![boolean("present"), id("index", capacity)])
-}
-fn bytes(prefix: &str) -> Vec<LiteralLane> {
-    (0..16).map(|i| unsigned(&format!("{prefix}.{i}"), 8, None)).collect()
-}
-fn node(t: u128, q: u128, fields: u128) -> Vec<LiteralLane> {
-    let mut row = vec![tag("kind", 3), id("typeId", t), id("ctorId", q)];
-    row.extend(bytes("uintBytes")); row.push(boolean("boolValue"));
-    row.extend([count("fieldStart", fields), count("fieldLength", fields)]); row
-}
-
-/// Exact L4 logical columns. Zero-capacity unused tables remain represented.
-/// Serialized byte/Boolean expansion and its connection to these nonfuel
-/// carriers is unwaived OBL.G4/StepInv, not implemented by this schema helper.
-pub fn literal_schema(c: &LiteralCapacities) -> Result<LiteralSchema> {
-    let [n, nb, o, op, x, xc, f, p, r, a, t, q, qf, k, kf] = c.program.map(|v| v as u128);
-    let [d, df, e, v, s, control] = c.state.map(|v| v as u128);
-    if x == 0 || k == 0 || control == 0 || t < 4 || q < 4 || qf < 5 {
-        return Err(LiteralConstructionError::MinimumShape);
-    }
-    let value_capacity = k.max(d);
-    let mut expression = vec![tag("tag", 8), id("occurrenceId", o)];
-    expression.extend(value_ref("valueRef", value_capacity));
-    expression.extend([id("nameId", n), tag("binaryOp", 7), tag("unaryOp", 2)]);
-    expression.extend(slice("childSlice", xc)); expression.extend(slice("armSlice", a));
-    let mut function = vec![id("sourceTableIndex", f), id("nameId", n)];
-    function.extend(slice("parameterSlice", p)); function.extend([id("returnType", t), id("bodyExprId", x)]);
-    let mut constructor = vec![id("owningType", t), count("sourceOrder", q)];
-    constructor.extend(slice("fieldTypeSlice", qf));
-    let path_position = xc.max(a.checked_add(1).ok_or(LiteralConstructionError::SizeOverflow)?);
-    let program_rows = vec![
-        vec![count("byteStart", nb), count("byteLength", nb)],
-        vec![unsigned("byte", 8, None)],
-        vec![tag("ownerTag", 2), id("functionIndex", f), count("pathStart", op), count("pathLength", op)],
-        vec![count("childPosition", path_position)], expression,
-        vec![id("expression", x)], function,
-        vec![id("nameId", n), id("typeId", t)],
-        vec![tag("tag", 5), id("name0", n), id("name1", n)],
-        vec![id("patternId", r), id("bodyExprId", x)],
-        vec![tag("kind", 4), count("ctorStart", q), count("ctorLength", q)], constructor,
-        vec![id("typeId", t)], node(t, q, kf), value_ref("value", value_capacity),
-    ];
-    let program_names = ["Names", "NameBytes", "Occurrences", "OccurrencePaths", "Expressions", "ExprChildren", "Functions", "Parameters", "Patterns", "Arms", "Types", "Constructors", "ConstructorFieldTypes", "Constants", "ConstantFields"];
-    let program_tables: Vec<_> = program_rows.into_iter().enumerate().map(|(i, lanes)|
-        LiteralTable { name: program_names[i], capacity: c.program[i], lanes }).collect();
-    let mut header = vec![id("entryExprId", x)];
-    for (i, name) in program_names.iter().enumerate() {
-        header.push(count(&format!("active{name}"), c.program[i] as u128));
-    }
-    let mut frame = vec![tag("tag", 9), id("nameId", n), tag("binaryOp", 7), tag("unaryOp", 2), id("typeId", t), id("expr0", x), id("expr1", x)];
-    frame.extend(env_root("savedEnv", e)); frame.extend(value_ref("valueRef", value_capacity));
-    frame.extend(slice("completedSlice", v)); frame.extend(slice("remainingExprSlice", xc)); frame.extend(slice("armSlice", a));
-    let mut cr = vec![tag("tag", 10), id("exprId", x)];
-    cr.extend(value_ref("valueRef", value_capacity)); cr.extend(prefixed("pendingFrame", frame.clone()));
-    cr.extend(env_root("environment", e)); cr.push(id("nameId", n)); cr.extend(slice("valueSlice", v));
-    cr.extend([boolean("functionPresent"), id("functionId", f), boolean("bindingsPresent")]);
-    cr.extend(env_root("bindings", e)); cr.push(id("typeId", t)); cr.extend(slice("armSlice", a));
-    cr.extend([boolean("primitiveIsOk"), unsigned("errorCode", 8, None)]);
-    let mut env = vec![id("nameId", n)]; env.extend(value_ref("valueRef", value_capacity)); env.extend(env_root("parent", e));
-    let state_rows = vec![node(t, q, df), value_ref("value", value_capacity), env, value_ref("value", value_capacity), frame, cr];
-    let state_names = ["Data", "DataFields", "EnvCells", "ValueSlots", "FrameSlots", "ControlRows"];
-    let state_tables: Vec<_> = state_rows.into_iter().enumerate().map(|(i, lanes)|
-        LiteralTable { name: state_names[i], capacity: c.state[i], lanes }).collect();
-    let mut root = vec![count("activeData", d), count("activeDataFields", df), count("activeEnvCells", e), count("activeValueSlots", v), count("depth", s), count("controlLength", control)];
-    root.extend(env_root("environment", e)); root.push(count("stackLimit", c.stack_limit));
-    root.extend(bytes("remainingFuel")); root.extend(bytes("initialFuel")); root.push(tag("outcomeTag", 4));
-    root.extend(value_ref("outcomeValue", value_capacity)); root.push(unsigned("outcomeError", 8, None));
-    // Host construction arithmetic only, not a resource bound/admission.
-    let mut cells = header.len().checked_add(root.len().checked_mul(2).ok_or(LiteralConstructionError::SizeOverflow)?)
-        .ok_or(LiteralConstructionError::SizeOverflow)?;
-    for (tables, copies) in [(&program_tables, 1usize), (&state_tables, 2usize)] {
-        for table in tables {
-            cells = cells.checked_add(table.capacity.checked_mul(table.lanes.len()).and_then(|v| v.checked_mul(copies))
-                .ok_or(LiteralConstructionError::SizeOverflow)?).ok_or(LiteralConstructionError::SizeOverflow)?;
-        }
-    }
-    cells.checked_mul(32).ok_or(LiteralConstructionError::SizeOverflow)?;
-    Ok(LiteralSchema { program_header: header, program_tables, state_root: root, state_tables, capacities: c.clone() })
-}
 
 fn check_image(image: &LiteralImage, root: &[LiteralLane], tables: &[LiteralTable], block: &'static str) -> Result<()> {
     if image.root.len() != root.len() || image.tables.len() != tables.len() {

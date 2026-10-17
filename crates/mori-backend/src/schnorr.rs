@@ -8,26 +8,7 @@ use midnight_transient_crypto::{curve::Fr, hash::transient_hash};
 
 pub const FENS_DOMAIN: u64 = 0x46454e53;
 
-/// Exactly sized lowercase hex. Supplied field integers are never reduced.
-pub(crate) fn unhex(text: &str, bytes: usize) -> Result<Vec<u8>, Error> {
-    if text.len() != 2 * bytes
-        || !text
-            .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-    {
-        return Err(error(
-            "signature",
-            "Expected exactly sized lowercase hexadecimal.",
-        ));
-    }
-    (0..text.len())
-        .step_by(2)
-        .map(|i| {
-            u8::from_str_radix(&text[i..i + 2], 16)
-                .map_err(|_| error("signature", "Invalid hexadecimal."))
-        })
-        .collect()
-}
+pub(crate) use crate::sherlock_machine::literal_host::unhex;
 
 /// Decode a canonical 32LE native field element strictly below p.
 pub fn decode_native_hex(text: &str) -> Result<Fr, Error> {
