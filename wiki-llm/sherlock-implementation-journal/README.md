@@ -6,6 +6,7 @@ This journal records implementation findings, design decisions, short rationales
 - [Implementation plan](../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md)
 - [Correctness loop](../../docs/SHERLOCK-CORRECTNESS-LOOP.md)
 - [Circuit atlas concept log](../sherlock-circuit-atlas/README.md)
+- [DoctorWatson improvement log](../doctorwatson-improvement-log.md): observed factory lessons and proposals for a later update
 
 After each frozen implementation iteration, record the source or result identity, what was learned, the resulting implementation choice, the check that supports it, and the next unresolved question. Label observations, interpretations and proposals separately. Preserve failed attempts and earlier entries; add a dated correction when evidence changes. Root integrates entries from parallel workers so their edits do not collide.
 
