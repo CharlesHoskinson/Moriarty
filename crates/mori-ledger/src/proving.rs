@@ -147,6 +147,8 @@ fn encode_key<T: Serializable + Tagged>(
     Ok(writer.bytes)
 }
 // Declared source identity, not a certificate for the complete Rust build or SRS.
+// mori-backend non-test modules are named by path from an inventory. cfg(test)
+// modules, mori-core files outside this list, and SDK/registry sources are not covered.
 pub(crate) fn source_closure() -> String {
     codec::hash(
         concat!(
@@ -177,6 +179,7 @@ pub(crate) fn source_closure() -> String {
             include_str!("local_deployment.rs"),
             include_str!("static_compile.rs"),
             include_str!("call_artifacts.rs"),
+            include_str!("sherlock_literal.rs"),
             include_str!("../../mori/Cargo.toml"),
             include_str!("../../mori/src/cli.rs"),
             include_str!("../../mori/src/commands/mod.rs"),
@@ -218,7 +221,28 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-core/src/stage/mod.rs"),
             include_str!("../../mori-core/src/stage/plan.rs"),
             include_str!("../../mori-core/src/stage/profile.rs"),
-            include_str!("../../mori-core/src/stage/validate.rs")
+            include_str!("../../mori-core/src/stage/validate.rs"),
+            include_str!("../../../models/sherlock/literal-step/MAPPING.md"),
+            include_str!("../../mori-backend/Cargo.toml"),
+            include_str!("../../mori-backend/src/lib.rs"),
+            include_str!("../../mori-backend/src/authorization.rs"),
+            include_str!("../../mori-backend/src/liabilities.rs"),
+            include_str!("../../mori-backend/src/parameters.rs"),
+            include_str!("../../mori-backend/src/proving.rs"),
+            include_str!("../../mori-backend/src/replay.rs"),
+            include_str!("../../mori-backend/src/schnorr.rs"),
+            include_str!("../../mori-backend/src/signed_relation.rs"),
+            include_str!("../../mori-backend/src/source_projection.rs"),
+            include_str!("../../mori-backend/src/stage/mod.rs"),
+            include_str!("../../mori-backend/src/stage/artifact.rs"),
+            include_str!("../../mori-backend/src/stage/context.rs"),
+            include_str!("../../mori-backend/src/stage/frame.rs"),
+            include_str!("../../mori-backend/src/stage/lower.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/mod.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/fetch.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/enabled_fetch.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_step.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_bridge.rs")
         )
         .as_bytes(),
     )
