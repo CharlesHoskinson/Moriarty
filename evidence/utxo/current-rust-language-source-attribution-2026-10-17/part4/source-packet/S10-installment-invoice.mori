@@ -1,0 +1,40 @@
+language "moriarty/1";
+agreement InstallmentInvoice {
+  state opened: Bool = false;
+  state paid: UInt = 0;
+  state marker: UInt = 7;
+  asset CASH = { network: "oracle-unit", issuer: "invoice-issuer", reference: "cash", scale: 0 };
+  action open(principal: UInt, reserve: UInt) {
+    requires not opened;
+    ensures paid == 0;
+    requires not liability_present("invoice");
+    let face = principal + 10;
+    let funding = face + reserve;
+    transfer(CASH, "buyer", "escrow", funding);
+    fee(CASH, "buyer", "fees", 3);
+    liability("invoice", CASH, "escrow", "seller", principal);
+    liability("invoice", CASH, "escrow", "seller", 10);
+    liability("reserve", CASH, "escrow", "buyer", reserve);
+    next opened = true;
+    ensures liability_amount("invoice") == face and liability_amount("reserve") == reserve;
+  }
+  action partial(amount: UInt) {
+    requires opened and amount > 0;
+    let opening = liability_amount("invoice");
+    requires amount < opening;
+    fee(CASH, "escrow", "fees", 2);
+    transfer(CASH, "escrow", "seller", amount);
+    discharge("invoice", amount);
+    next paid = paid + amount;
+    ensures liability_amount("invoice") == opening - amount;
+  }
+  action finish() {
+    requires opened;
+    let closing = liability_amount("invoice");
+    transfer(CASH, "escrow", "seller", closing);
+    discharge("invoice", closing);
+    next paid = paid + closing;
+    next opened = false;
+    ensures liability_present("invoice") and liability_amount("invoice") == 0;
+  }
+}

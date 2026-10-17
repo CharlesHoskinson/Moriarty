@@ -1,0 +1,221 @@
+{
+  "format": "r4-implementation-tail-contract/1",
+  "status": "AUTHOR-PROPOSED interface and decision record of the R4 implementation tail; derived by reading R4-IMPLEMENTATION-TAIL.py.part as written; nothing imported, compiled, parsed, executed, hashed, linted, tested or reviewed; authority 0",
+  "author": {
+    "requestedModel": "claude-opus-5-5 HIGH (claude-opus-4-8 HIGH fallback user-authorized)",
+    "actualModel": "claude-opus-5-5 (Opus 5.5); effort level is harness-configured and not self-verified",
+    "fallbackUsed": false,
+    "attempt": "one source-only attempt, no retry",
+    "independence": "same model as the prefix author and the F1 test-revision author; no provider or model diversity; author work only, not a vote or self-adoption"
+  },
+  "tailFile": "R4-IMPLEMENTATION-TAIL.py.part",
+  "targetModule": "build_k10_inputs_r4.py (R4-API module.file); this output creates no file of that name",
+  "layout": {
+    "append": "byte-for-byte after the LF that ends the prefix seam line; the tail begins with two blank lines",
+    "seamRepeated": false,
+    "order": ["header comment", "3 private constants", "BRIDGE helpers and legacy_env_from_host", "POLICY and CONSUMER helpers", "BRIDGE gate", "rows and manifest helpers", "verbatim Sol renderer", "plan_outputs", "main ARGV/OUTDIR/READ helpers", "private writer, REREAD and cleanup", "main", "CLI guard"],
+    "encoding": "ASCII only; LF line endings",
+    "imports": "none added",
+    "prefixNamesRebound": "none; no prefix function, constant or import is redefined, assigned or shadowed at module level",
+    "overlapWithPrefix": "none: every prefix-owned check (path encoding, expiry text and int, READ, JSON, LINK) is reached only by calling the prefix function"
+  },
+  "publicFunctions": [
+    {
+      "signature": "legacy_env_from_host(env_data) -> legacy Constr tree",
+      "stage": "BRIDGE",
+      "clauses": ["CB402", "CB409", "contract section 5"],
+      "admits": "exact tuple ('constr', 0, list of exactly 9 nodes): ('int', 2), ('int', 0), ('bytes', legacy.FAMILY_V2), ('bytes', 32), ('bytes', 32), ('bytes', 28), ('constr', 0, [('bytes', 32), ('int', 0..65535)]), ('bytes', 32), ('int', 0..2**64-1); every node exact tuple/list/str/bytes/int, bool refused, types checked before any comparison",
+      "returns": "fresh legacy.Constr(0, [legacy.I, legacy.I, legacy.B x4, legacy.Constr(0, [legacy.B, legacy.I]), legacy.B, legacy.I]) built by legacy attributes at call time; input never mutated",
+      "refusals": ["BRIDGE 'envData is not an exact constructor 0 of exactly 9 nodes'", "BRIDGE 'envData integer node is outside its exact shape or range'", "BRIDGE 'envData bytes node is outside its exact shape or length'", "BRIDGE 'envData family is not legacy.FAMILY_V2'", "BRIDGE 'envData settle outref is not an exact constructor 0 of 2 nodes'", "BRIDGE 'legacy refused the translated envelope' (legacy ValueError during construction)"]
+    },
+    {
+      "signature": "plan_outputs(b9_raw, export_raw, setup_raw, expiry) -> dict[str, bytes]",
+      "clauses": ["CB402", "CB406", "CB407", "CB408", "CB409", "CB410", "CB412"],
+      "order": [
+        "ARGV: _admit_expiry_int(expiry)",
+        "JSON: parse_public_json(export_raw, _EXPORT_CAP)",
+        "JSON: parse_public_json(setup_raw, _SETUP_CAP)",
+        "LINK: check_setup_link(export, setup_raw); return value kept as the LINK digest",
+        "POLICY (_policy_gate): exact bytes; len <= _B9_CAP; sha256 == legacy.PIN_B9_APPLIED (exact str); only then legacy.extract_compiled (ValueError -> POLICY); result an exact 2-tuple; policy_hex 56 lowercase hex; code_hex even lowercase hex; len(code) == legacy.COMPILED_BYTES_LEN; blake2b(bytes([3]) + code, digest_size=28).hexdigest() == policy_hex; legacy.TOOL_DECLARED_C2_HASH == policy_hex; legacy.INNER_FLAT_LEN exact int",
+        "CONSUMER (_consume): c2_issue_artifacts_r2.prepare_c2_issue(export, setup, expiry, policy_id=policy) once by attribute; ValueError -> _consumer_refusal; other exceptions propagate",
+        "BRIDGE (_bridge_gate): see bridgeChecks",
+        "rows (_prepare_rows) and manifest fields (_manifest_fields)",
+        "RENDER: _render_prepared_outputs(code_hex, policy, rows, fields); no refusal code; its exceptions propagate",
+        "postcondition: exact dict of exactly the 6 _OUTPUT_FILES names, each exact bytes, else RuntimeError('internal: ...')"
+      ],
+      "purity": "no I/O, clock, randomness or environment access; only prefix gates, hashlib, and legacy/host_codec/r2 attributes"
+    },
+    {
+      "signature": "main(argv) -> int",
+      "clauses": ["CB402", "CB403", "CB404", "CB405", "CB411"],
+      "order": [
+        "ARGV (_admit_argv) before any filesystem access: type(argv) is list; tuple snapshot; len 6; every element exact str; _encode_path(argv[i], 'ARGV') for i in 1, 2, 3, 5; parse_expiry(argv[4])",
+        "OUTDIR (_open_outdir): os.path.split(argv[5]); basename fullmatch _BASENAME_RE; parent ('.' when empty) through _encode_path(.., 'OUTDIR') and os.open(_PARENT_DIR_FLAGS), stored in state at once; errno via _errno_refusal('OUTDIR', 'parent open', .., _OUTDIR_REFUSAL_ERRNOS) else re-raise; os.stat(basename, dir_fd=parent, follow_symlinks=False): ENOENT admits, success refuses 'output path already exists', listed errno refuses 'output stat failed <NAME> <n>', other errno propagates; creates nothing",
+        "READ: read_public_file(argv[1], _B9_CAP), (argv[2], _EXPORT_CAP), (argv[3], _SETUP_CAP) in that order",
+        "plan_outputs(b9, export, setup, expiry)",
+        "WRITE (_write_outputs): os.mkdir(basename, 0o755, dir_fd=parent); pin out with _PINNED_DIR_FLAGS and record (st_dev, st_ino); os.mkdir('contexts', 0o755, dir_fd=out); pin contexts; script.hex; T1, T5, T6, T7 contexts; each file os.open(name, _WRITE_FLAGS, 0o644, dir_fd=pinned), logged as created immediately, full os.write loop (zero-progress guard), strict close",
+        "REREAD (_reread): read_public_file with the same three caps; READ refusal or byte difference -> REREAD; other exceptions propagate after cleanup",
+        "WRITE: manifest.json.tmp the same way, then os.rename(tmp, manifest.json, src_dir_fd=out, dst_dir_fd=out); created log entry replaced by manifest.json",
+        "stage 8: strict close of contexts, out, parent fds (each dropped from state before os.close); close OSError -> WRITE with cleanup",
+        "success: print(json.dumps({'output': argv[5], 'cases': len(_CASE_IDS)})) after the try, return 0; a print error propagates and the output stays complete"
+      ],
+      "catch": "inner except BaseException runs _cleanup then re-raises; outer except ValueError: if _is_refusal(error) print error.args[0] to sys.stderr (one line, no stdout) and return 2, else re-raise; finally _close_remaining closes every held fd best effort",
+      "cliGuard": "if __name__ == '__main__': raise SystemExit(main(sys.argv))"
+    }
+  ],
+  "bridgeChecks": [
+    "result exact dict; every key exact str (iteration only); len 12 and every _RESULT_KEYS member present",
+    "format exact str == _R2_FORMAT",
+    "labels exact dict; every entry an exact (str, str) pair; labels == dict(_R2_LABELS) (refuses the v1 8-entry, superseded 14-entry and any missing, extra or changed map)",
+    "every result key ending in Hex (envCborHex, envelopeTokenNameHex, issueCborHex, mintValueCborHex, policyIdHex) exact even-length lowercase hex, checked before any equality",
+    "policyIdHex == policy.hex(); expiry exact int == argument; setupRecordSha256Declared exact str == LINK digest",
+    "export fields: context exact dict; predicateDigest, vkDigestBlake2b256, context.claimantVkh, context.consumedTxid, statementDigestBlake2b256 exact lowercase hex of 32/32/28/32/32 bytes; context.consumedIx exact int 0..65535; setup verifyingKeyHex 488 bytes (_VK_BYTES); export proofHex 192 bytes (_PROOF_BYTES)",
+    "envData: legacy_env_from_host admission first; == host_codec.build_env_data(predicate, vkDigest, claimant, txid, index, statementDigest, expiry); legacy.cbor_encode(translation) == host_codec.encode_data(envData) == bytes.fromhex(envCborHex); BLAKE2b-256 == bytes.fromhex(envelopeTokenNameHex)",
+    "mintValueData: _is_exact_data; == host_codec.build_value_data(None, [(policy, token, 1)]); legacy.cbor_encode(legacy.value_map(policy, token, 1)) == host_codec.encode_data(mintValueData) == bytes.fromhex(mintValueCborHex)",
+    "issueData: _is_exact_data (refuses bytearray, bool, subclasses); == ('constr', 0, [('bytes', vk), ('bytes', proof)]); == host_codec.build_c2_mint_data('Issue', vk, proof); host_codec.encode_data(issueData) == bytes.fromhex(issueCborHex); no legacy encoding (fails closed above 64 bytes)",
+    "T7: legacy.flip_first_bit(vkDigest); host_codec.build_env_data with it; host_codec.encode_data; _translated_env requires legacy.cbor_encode(translation) == that host CBOR; token BLAKE2b-256 of it",
+    "host_codec and legacy ValueErrors inside these checks become BRIDGE 'a host_codec or legacy encoder refused a checked value' via _bridge_call"
+  ],
+  "consumerWrap": "conforming iff type(error) is ValueError, error.args is one exact str of at most 1024 characters without CR or LF beginning 'C2I-<STAGE>: ' for a STAGE in _C2I_STAGES -> _refusal('CONSUMER', message); every other ValueError -> _refusal('CONSUMER', _NONCONFORMING_CONSUMER)",
+  "rows": {
+    "T1": "env: the BRIDGE translation of consumer envData; token: consumer token; quantity 1",
+    "T5": "env: a fresh per-call translation with CBOR equality; same token; quantity 2",
+    "T6": "env: a fresh per-call translation with CBOR equality; token legacy.flip_first_bit(token); quantity 1",
+    "T7": "env: translation of host envData with the flipped VK digest; token BLAKE2b-256 of its host CBOR; quantity 1",
+    "allRows": "genuine 488-byte setup VK and 192-byte export proof; metadata envelopeCborHex, tokenNameHex, quantity, envVkDigestHex, envStatementDigestHex, proofHexSha256 computed by the tail; id and contextFile added by the renderer",
+    "gaps": "T2-T4 only as coverageGaps"
+  },
+  "manifestValues": {
+    "auditSourcePins": "[{role, sha256}] from prefix _AUDIT_SOURCE_PINS (verbatim copy of legacy AUDIT_SOURCE_PINS); API manifest.keptFromR2",
+    "builderLabels": "dict(_BUILDER_LABELS); API manifest.builderLabels",
+    "builderRevision": "_BUILDER_REVISION build_k10_inputs_r4; API",
+    "cases": "4 renderer-copied row records in T1, T5, T6, T7 order; CB410",
+    "claimantVkhHex": "BRIDGE-checked export context claimantVkh bytes, hex; equal to the envData claimant node; API manifest.other",
+    "compiledValidatorTitle": "_COMPILED_VALIDATOR_TITLE c2.c2.mint; pinned legacy main() literal; not restated by R4-API (F1 OD1)",
+    "consumerFormat": "_R2_FORMAT, after BRIDGE equality; API",
+    "consumerLabels": "dict(_R2_LABELS), after BRIDGE equality; API dependency.labels (16)",
+    "coverageGaps": "[{id, status}] from _GAP_IDS and _GAP_STATUS; API",
+    "expiry": "the ARGV-checked expiry argument (exact int); API manifest.other",
+    "flags": "dict.fromkeys(_FLAG_NAMES, False); API (10 false)",
+    "format": "_MANIFEST_FORMAT cardano-k2-k10-public-inputs/3; API",
+    "inputs": "[{role, sha256, bytes}] for _INPUT_ROLES with hashlib.sha256 and len of the actual raw b9, export and setup bytes of this call; API manifest.other (see apiAmbiguities)",
+    "issueCborHex": "host_codec.encode_data of the BRIDGE-checked issueData, hex; CB409",
+    "limitations": "list(_LIMITATIONS); API (4)",
+    "mintValueCborHex": "host_codec.encode_data of the BRIDGE-checked mintValueData, hex; CB409",
+    "policyIdHex": "POLICY-recomputed 28-byte policy, hex; CB407",
+    "positiveEnvelopeCborHex": "BRIDGE-checked T1 envelope host CBOR, hex",
+    "positiveTokenNameHex": "BRIDGE-checked T1 token, hex",
+    "proofBytes": "len of the 192-byte BRIDGE-checked export proof; legacy main() len(proof); contract 192-byte proof",
+    "scriptCompiledBytes": "legacy.COMPILED_BYTES_LEN read at call time, POLICY-checked equal to len(bytes.fromhex(code_hex)); legacy main() (F1 OD1)",
+    "scriptHashAlgorithm": "_SCRIPT_HASH_ALGORITHM; verbatim legacy main(); API keptFromR2",
+    "scriptHashClaimedHex": "legacy.TOOL_DECLARED_C2_HASH read at call time, POLICY-checked equal to the recomputed policy; legacy main()",
+    "scriptHashClassification": "_SCRIPT_HASH_CLASSIFICATION; verbatim legacy main(); API keptFromR2",
+    "scriptHashIndependentlyRecomputedHex": "policy_hex after the tail's own blake2b-224(0x03 || code) equality; legacy main() recomputed hash",
+    "scriptHashPreimage": "_SCRIPT_HASH_PREIMAGE; verbatim legacy main(); API keptFromR2",
+    "scriptHexFile": "_SCRIPT_HEX_FILE script.hex; legacy main() literal and API outputs.files[0] (F1 OD1)",
+    "scriptInnerFlatBytes": "legacy.INNER_FLAT_LEN read at call time (exact int); enforced inside legacy.extract_compiled via recompute_script_hash, not re-derived by the tail; legacy main() (F1 OD1)",
+    "settleOutref": "{transactionIdHex, outputIndex} from BRIDGE-checked export context consumedTxid and consumedIx; API manifest.other",
+    "setupRecordSha256": "LINK digest returned by check_setup_link; API manifest.other",
+    "statementDigestHex": "BRIDGE-checked export statementDigestBlake2b256 bytes, hex (equal to the envData statement node)",
+    "vkBytes": "len of the 488-byte BRIDGE-checked setup VK; legacy main() len(vk); contract 488-byte VK",
+    "vkDigestHex": "BRIDGE-checked export vkDigestBlake2b256 bytes, hex (genuine, never the T7 flip)"
+  },
+  "manifestPostcondition": "set(fields) | {'cases'} == set(_MANIFEST_KEYS), else RuntimeError('internal: ...'); no manifest string written by the tail contains the R13-forbidden word",
+  "renderer": {
+    "location": "tail, section '---- Sol renderer: verbatim from SOL-RENDERER.py.txt lines 9-35; do not edit', between _manifest_fields and plan_outputs",
+    "copied": "the def _render_prepared_outputs block, lines 9-35 of SOL-RENDERER.py.txt, once, unchanged",
+    "notCopied": "the fragment's module docstring (lines 1-6) and its two blank lines; they are not part of the function and would be a stray mid-module expression",
+    "calledFrom": "plan_outputs only, after LINK, POLICY, CONSUMER, BRIDGE, rows and manifest fields",
+    "preconditionsDischarged": ["exact 4-tuple of exact dicts in T1, T5, T6, T7 order", "each env a fresh, CBOR-checked legacy translation", "row metadata computed by the tail", "manifest fields exact builtin, finite and acyclic, all keys except cases", "legacy and json are the unchanged prefix bindings; the tail never rebinds or patches them"]
+  },
+  "privateNamesAdded": {
+    "constants": ["_INPUT_READS", "_LOWER_HEX_RE", "_DATA_VISIT_BOUND"],
+    "functions": ["_is_lower_hex", "_bridge_hex", "_bridge_call", "_is_exact_data", "_env_int", "_env_bytes", "_is_constr0", "_translated_env", "_policy_gate", "_consumer_refusal", "_consume", "_bridge_gate", "_case_row", "_prepare_rows", "_manifest_fields", "_render_prepared_outputs", "_admit_argv", "_open_outdir", "_read_inputs", "_new_state", "_write_refusal", "_close_quietly", "_pin_dir", "_write_file", "_reread", "_close_pinned", "_write_outputs", "_reopen_created", "_cleanup", "_close_remaining"]
+  },
+  "prefixHelpersUsed": ["_refusal", "_is_refusal", "_errno_refusal", "_encode_path", "_admit_expiry_int", "parse_expiry", "read_public_file", "parse_public_json", "check_setup_link"],
+  "prefixConstantsUsed": ["_B9_CAP", "_EXPORT_CAP", "_SETUP_CAP", "_CONSUMER_MESSAGE_CHARS", "_U64_MAX", "_BASENAME_RE", "_PARENT_DIR_FLAGS", "_PINNED_DIR_FLAGS", "_WRITE_FLAGS", "_WRITE_MODE", "_MKDIR_MODE", "_ERRNO_NUMBERS", "_OUTDIR_REFUSAL_ERRNOS", "_R2_FORMAT", "_RESULT_KEYS", "_C2I_STAGES", "_R2_LABELS", "_NONCONFORMING_CONSUMER", "_VK_BYTES", "_PROOF_BYTES", "_POLICY_BYTES", "_SCRIPT_HEX_FILE", "_CONTEXTS_DIR", "_MANIFEST_FILE", "_MANIFEST_TMP_FILE", "_CASE_IDS", "_OUTPUT_FILES", "_GAP_IDS", "_GAP_STATUS", "_INPUT_ROLES", "_MANIFEST_FORMAT", "_BUILDER_REVISION", "_MANIFEST_KEYS", "_BUILDER_LABELS", "_LIMITATIONS", "_FLAG_NAMES", "_COMPILED_VALIDATOR_TITLE", "_AUDIT_SOURCE_PINS", "_SCRIPT_HASH_CLASSIFICATION", "_SCRIPT_HASH_PREIMAGE", "_SCRIPT_HASH_ALGORITHM"],
+  "attributeCallsAtCallTime": {
+    "c2_issue_artifacts_r2": ["prepare_c2_issue (once per plan)"],
+    "host_codec": ["build_env_data (2: envData expectation, T7)", "encode_data (4: envelope, mint, issue, T7)", "build_value_data (1)", "build_c2_mint_data (1)"],
+    "hostNotCalledByTail": ["parse_statement_header", "statement_digest_hex", "statement_public_inputs"],
+    "legacy": ["PIN_B9_APPLIED", "extract_compiled", "COMPILED_BYTES_LEN", "TOOL_DECLARED_C2_HASH", "INNER_FLAT_LEN", "FAMILY_V2", "Constr", "I", "B", "cbor_encode", "value_map", "flip_first_bit", "script_context and uplc_term (renderer)"]
+  },
+  "effects": {
+    "import": "none beyond the prefix; module level adds 3 constant assignments, one re.compile, function definitions and the CLI guard",
+    "plan_outputs": "pure",
+    "main": ["os.open parent (read-only dir) and os.stat via dir_fd", "3 bounded reads and 3 rereads through read_public_file", "2 os.mkdir and 2 pinned dir os.open plus os.fstat", "6 exclusive file creates (script.hex, 4 contexts, manifest.json.tmp), os.write loops, closes", "1 os.rename within the pinned output fd", "cleanup: os.unlink, os.rmdir, optional pinned reopen with os.fstat identity check, os.close", "one stdout line on success or one stderr line on refusal"],
+    "never": ["clock", "randomness", "environment variables", "network", "subprocess", "fsync or durability claim", "writes outside argv[5]", "patching of os, builtins, json, legacy, host_codec or r2"]
+  },
+  "cbCoverage": {
+    "CB401": "tail part: no import, 3 new public functions (7 total with the prefix), private helpers only otherwise, attribute calls at call time, no v1 identifier, importlib, sys.path or sys.modules, no rebinding, no /2-to-/1 bridge, seam not repeated",
+    "CB402": "exact type checks before any comparison in every tail gate; every refusal through _refusal with fixed literals, module constants, errno numbers or a conforming C2I message",
+    "CB403": "_admit_argv, then prefix _encode_path and parse_expiry",
+    "CB404": "_open_outdir",
+    "CB405": "_read_inputs in order with the frozen caps (gate itself is prefix read_public_file)",
+    "CB406": "plan_outputs ARGV int gate then two parse_public_json calls (gate itself is prefix)",
+    "CB407": "check_setup_link (prefix) then _policy_gate",
+    "CB408": "_consume and _consumer_refusal",
+    "CB409": "_bridge_gate, legacy_env_from_host, _translated_env",
+    "CB410": "_prepare_rows, _manifest_fields, verbatim renderer, roster postcondition",
+    "CB411": "main, _write_outputs, _write_file, _reread, _cleanup, _close_pinned, _close_remaining",
+    "CB412": "frozen labels, limitations, builderLabels and false flags from prefix constants; no claim strings added"
+  },
+  "testMethodPredictions": {
+    "basis": "source reading of the F1 test f6514a47... (1191 lines, read whole) against prefix plus tail; predictions only, not results; no RED transfers from the old c9375097 bytes",
+    "R00": "independent of R4; unchanged",
+    "R01": "predict pass: 9 imports, no from-import, 7 public FunctionDefs, one seam, no forbidden names",
+    "R02": "predict pass: roster, T1 == HIST-09, script.hex, canonical manifest, envelope, token, policy and mint literals, determinism",
+    "R03": "predict pass: every consumer-variable field drawn from the edited export and consumer; no K6 claimant, txid, expiry, token or statement digest in non-script outputs",
+    "R04": "predict pass",
+    "R05": "predict pass: bad name, trailing slash and '.' fail the basename regex; existing dir and final symlink fail the no-follow stat; absent parent fails the parent open",
+    "R06": "prefix only; predict pass",
+    "R07": "predict pass; the signed 20-character literal reaches CONSUMER as C2I-EXPORT",
+    "R08": "predict pass",
+    "R09": "predict pass: POLICY refuses before extract_compiled on b9+space, bytearray and over-cap; one call on the genuine plan",
+    "R10": "predict pass: three conforming messages kept verbatim with one consumer call; seven nonconforming collapse to the literal; LINK precedes CONSUMER",
+    "R11": "predict pass for all 22 edits",
+    "R12": "predict pass: tree equals legacy.env_data for K6, input unmutated, 7 mutations refused",
+    "R13": "predict pass for all 33 per-field values, exact int types, false flags and byte-exact canonical manifest",
+    "R14": "predict pass, subject to the test-side umask and mode observations",
+    "R15": "predict pass",
+    "R16": "predict pass when run unprivileged with permission enforcement: 0555 parent -> mkdir EACCES -> WRITE, nothing created; edited setup copy -> REREAD with full cleanup",
+    "R17": "predict pass: builder-only increments on exactly build_env_data, encode_data, build_c2_mint_data and build_value_data"
+  },
+  "apiAmbiguities": [
+    "inputs[]: R4-API manifest.other says 'inputs [{role, sha256, bytes}]' without saying whether the values are the pinned fixture values or the actual bytes of the call; the tail records the actual raw input SHA-256 and byte length (interface obligation from R4-PREFIX-INTERFACE tailObligations); the F1 test asserts them only for the K6 inputs, where both readings agree (F1 OD2 stays open)",
+    "compiledValidatorTitle, scriptHexFile, scriptCompiledBytes, scriptInnerFlatBytes are not restated by R4-API; the tail uses the pinned legacy main() values (F1 OD1 stays open for the owner)"
+  ],
+  "decisions": [
+    "D01 consumer conformance requires type(error) is ValueError; a ValueError subclass is treated as nonconforming without reading its args (r2 CP07 raises exactly ValueError; avoids an args property hook)",
+    "D02 POLICY adds redundant fail-closed checks beyond the CB407 list: extract result shape, code_hex hex form, len(code) == legacy.COMPILED_BYTES_LEN, legacy.TOOL_DECLARED_C2_HASH == policy_hex, legacy.INNER_FLAT_LEN exact int; they make the scriptCompiledBytes, scriptHashClaimedHex and scriptInnerFlatBytes values checked rather than copied",
+    "D03 BRIDGE checks hex shape before every equality, admits envData through legacy_env_from_host before comparing it, and walks mintValueData and issueData with _is_exact_data (bound 4096 nodes) before comparing them, because == alone admits bytearray for bytes and True for 1",
+    "D04 every env translation (T1 in BRIDGE, T5, T6, T7) is its own legacy_env_from_host call with legacy and host CBOR equality (uplcBridge per-call label)",
+    "D05 renderer and manifest postconditions raise RuntimeError('internal: ...'), never a refusal; RENDER stays a non-refusal stage",
+    "D06 WRITE reasons carry the operation literal and the errno number only",
+    "D07 stage 8 closes contexts, out, then parent; a lost contexts or out fd is reopened by cleanup with O_NOFOLLOW and a recorded (st_dev, st_ino) identity check",
+    "D08 cleanup unlinks the created log newest first, so manifest.json (or manifest.json.tmp) goes first, then rmdirs contexts and the output",
+    "D09 argv is snapshotted as a tuple after the exact-list check",
+    "D10 the OUTDIR parent path is encoded with _encode_path(.., 'OUTDIR'); its refusals are unreachable after ARGV",
+    "D11 CLI guard added: if __name__ == '__main__': raise SystemExit(main(sys.argv))"
+  ],
+  "unresolvedGaps": [
+    "G01 final-close residual: if closing the parent fd at stage 8 fails, no pinned fd remains, cleanup cannot reach the output and a complete output with manifest.json may remain while main returns 2; any close order leaves one such final-close case",
+    "G02 os.rename replaces a manifest.json that a same-uid racer created inside the new output directory (accepted same-uid race residual of contract section 3)",
+    "G03 CB408 excludes only CR and LF; a conforming C2I message may hold other Unicode line or paragraph separators (U+000B, U+000C, U+001C..U+001E, U+0085, U+2028, U+2029) and is printed verbatim",
+    "G04 between a successful os.mkdir or os.open and the state update, an asynchronous KeyboardInterrupt could leave one created entry unlogged",
+    "G05 values that never vary in any fixture (vkDigestHex, vkBytes, proofBytes, issueCborHex, proofHexSha256) cannot distinguish this tail from a hardcoding one; the tail draws them from checked inputs regardless",
+    "G06 source-only: syntax, regex behaviour, CPython dict/tuple equality semantics, os.rename dir_fd keywords, memoryview truthiness and close-on-error fd release are cited from knowledge, not observed"
+  ],
+  "prefixOpenQuestionsPreserved": [
+    "_is_refusal uses isinstance(ValueError) (contract literal); exact-type matching would be stricter",
+    "ENXIO, ENODEV, ENAMETOOLONG, ELOOP and EOVERFLOW numbers are not import-checked",
+    "check_setup_link scans top-level export keys only",
+    "parse_public_json admits DEL and C1 controls inside strings"
+  ],
+  "prefixWorkaround": "none; no prefix behaviour is duplicated, bypassed or patched",
+  "nonClaims": "no Groth16, VK or proof curve validity, VK profile, statement re-encode, Rust parse_json limits, circuit/VK correspondence, Rust acceptance or any relation to it, ledger, provider, fee, min-ADA, collateral, ExUnits, fit, Preview, Preprod or operator compatibility; setup single-party TEST ONLY and forgeable; context fabricated local VM test; expiry caller supplied and not proof bound",
+  "hashes": "none computed or claimed for any file; root pins the tail bytes",
+  "pending": ["root literal assembly of prefix plus tail into build_k10_inputs_r4.py", "fresh review of the F1 test f6514a47... and its own ordinary RED (the c9375097 RED does not transfer)", "fresh whole-source non-author Opus implementation audits", "Gemini 4 Argon High review of the Sol glue", "root one-GREEN decision and one GREEN run", "fresh audit of the actual GREEN result", "separate CP08 r2 reliance and R4 adoption decisions"],
+  "openTracks": "all 20 UTxO families, full finance, ACTUS, DeFi, PCD recursion, private handoff, bounded multiparent PCD and real Cardano Preview/Preprod remain OPEN",
+  "flags": {"executed": false, "imported": false, "compiled": false, "reviewed": false, "adopted": false, "sourceReady": false, "builderReliancePermitted": false, "nativeAuthority": 0}
+}

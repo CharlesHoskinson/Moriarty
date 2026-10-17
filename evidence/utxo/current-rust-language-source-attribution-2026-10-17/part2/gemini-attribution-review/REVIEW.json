@@ -1,0 +1,106 @@
+{
+  "coverage": [
+    {
+      "checked": "Full read (lines 1-264 of 264, 13137 bytes). Checked packet membership (12 claims: GR01-GR05, V01-V07 out of 61 parent claims), 13 payload file entries and SHA-256 digests, snapshot separation between Core main 8174e52975d8db9bf59636fea0fa338c0f47c855 and backend 54fc7a1a54106245abb1a5ef6e16407464e1b654, and declared context gaps (mori_lexer and external serde/std bodies).",
+      "read": true,
+      "sourceId": "MANIFEST.json"
+    },
+    {
+      "checked": "Full read across bounded views (lines 1-701 of 701, 60654 bytes: bytes 0-46080, bytes 46080-60654, plus lines 536-620 spanning the byte-46080 split). Checked all 20 familyInventory entries and citations, all 12 selected claims (GR01-GR05, V01-V07), classifications, profiles, statements, citation file keys, SHA-256 pins, line ranges, exact literals, and reviewPart scope metadata.",
+      "read": true,
+      "sourceId": "CANDIDATE-PART.json"
+    },
+    {
+      "checked": "Full read (lines 1-484 of 484, 12823 bytes). Checked enclosing Core IR declarations pinned to 8174e52975d8db9bf59636fea0fa338c0f47c855: LANGUAGE, SEMANTICS, MAX_EXPRESSIONS (8192), MAX_STATEMENTS (1024), MAX_DECLARATIONS (256), UInt, Type, Value, ExprId, BinaryOp, Expr, StateDecl, InputDecl, AssetId, AssetDecl, Statement (including Await), Action, Program, v1 decode wire, and Error.",
+      "read": true,
+      "sourceId": "CORE-ir.rs"
+    },
+    {
+      "checked": "Full read (lines 1-42 of 42, 1277 bytes). Checked module visibility and re-exports (parse, language, validate, stage, and separate test/adapter Sherlock modules).",
+      "read": true,
+      "sourceId": "CORE-lib.rs"
+    },
+    {
+      "checked": "Full read (lines 1-378 of 378, 14920 bytes). Independently verified GR01 (lines 46-102), GR02 (lines 103-151), GR03 (lines 217-250), GR04 (lines 252-305), GR05 (lines 316-347), plus enclosing parse, parse_v2, parse_profile (lines 14-161), Parser helpers (lines 162-216), language() router (lines 352-377), and uninspected mori_lexer::lex / decode_string call boundary.",
+      "read": true,
+      "sourceId": "CORE-parser.rs"
+    },
+    {
+      "checked": "Partial read (lines 1-500 of 1055, 37400 bytes total; lines 501-1055 unread). Independently verified V01 (lines 120-152), V02 (lines 8-38 and 153-181), V03 (lines 182-232), V04 (lines 233-319), V05 (lines 320-372), and enclosing helper definitions failure, identifier, names, expr_type, type_cached (lines 5-118) and require_uint, validate_asset (lines 374-390).",
+      "read": true,
+      "sourceId": "CORE-runtime.rs"
+    },
+    {
+      "checked": "Full read (lines 1-188 of 188, 6169 bytes). Checked Stage2 constants LANGUAGE_2, SEMANTICS_2, STAGE_PLAN_FORMAT, MAX_AWAITS_PER_ACTION (16), MAX_EVENT_BINDERS (16), MAX_CAPTURE_SLOTS (256), STAGE_LABELS, StagedProgram, and stage::load (lines 71-88) calling parse_v2, require_core2, validate_v2, plan::build, plan_invariants, cost::fill, and cost_invariants.",
+      "read": true,
+      "sourceId": "CORE-stage-mod.rs"
+    },
+    {
+      "checked": "Full read (lines 1-107 of 107, 3881 bytes). Independently verified V07 citation 1 (lines 55-106, plan::build) and enclosing stage layout structs Origin, CaptureSlot, StageBinder, AwaitSite, ActionPlan, StagePlan (lines 6-53).",
+      "read": true,
+      "sourceId": "CORE-stage-plan.rs"
+    },
+    {
+      "checked": "Full read (lines 1-32 of 32, 1237 bytes). Checked require_core1 (lines 10-23) and require_core2 (lines 26-31) profile predicates.",
+      "read": true,
+      "sourceId": "CORE-stage-profile.rs"
+    },
+    {
+      "checked": "Full read (lines 1-445 of 445, 18435 bytes). Independently verified V05 citation 2 (lines 284-285), V06 citations 1-2 (lines 28-43 and 144-211), V07 citations 2-3 (lines 288-310 and 341-409), plus all enclosing checks in validate_v2 (lines 47-286), plan_invariants (lines 291-413), and cost_invariants (lines 417-444).",
+      "read": true,
+      "sourceId": "CORE-stage-validate.rs"
+    },
+    {
+      "checked": "Full read (lines 1-244 of 244, 11698 bytes). Checked 33-file parent manifest entries, SHA-256 digests, and Core gitCommit 8174e52975d8db9bf59636fea0fa338c0f47c855 pins without following external paths.",
+      "read": true,
+      "sourceId": "INPUT-MANIFEST.json"
+    },
+    {
+      "checked": "Full read (lines 1-123 of 123, 4701 bytes). Independently verified all 20 family IDs, names, line ranges (lines 4-119), and literal strings against CANDIDATE-PART.json familyInventory without following inert case_file pointers.",
+      "read": true,
+      "sourceId": "PATTERN-INVENTORY.json"
+    },
+    {
+      "checked": "Full read (lines 1-69 of 69, 2585 bytes). Checked backend caller context admit_source, admit_program, and admit_checked routing Core1 (mori_core::parse, require_core1, validate) vs Staged2 (mori_core::stage::load).",
+      "read": true,
+      "sourceId": "S06-frontend.rs"
+    },
+    {
+      "checked": "Full read (lines 1-142 of 142, 7131 bytes). Checked separate backend checkout_head 54fc7a1a54106245abb1a5ef6e16407464e1b654 provenance metadata for S06-frontend.rs without following recoverable_from pointers.",
+      "read": true,
+      "sourceId": "SOURCE-MANIFEST.json"
+    }
+  ],
+  "findings": [
+    {
+      "evidence": "In CORE-parser.rs:2,15,22,353,361, parse_profile and language invoke mori_lexer::lex, TokenIdx, TokenKind, and mori_lexer::decode_string. As recorded in MANIFEST.json:246-249 and CANDIDATE-PART.json:703 (reviewPart.unresolvedBoundaries), mori_lexer implementation bodies and external serde/std dependency bodies are outside the 33-file parent input set and are not included in this packet.",
+      "id": "BOUNDARY-UNINSPECTED-LEXER-AND-DEPS",
+      "requiredFix": "None for part2 source attribution; retain explicit UNINSPECTED_BOUNDARY qualification for mori_lexer token/string decoding and external dependency bodies.",
+      "severity": "info"
+    },
+    {
+      "evidence": "MANIFEST.json:30-34, INPUT-MANIFEST.json:4-240, and SOURCE-MANIFEST.json:4 pin CORE-* files to Core main commit 8174e52975d8db9bf59636fea0fa338c0f47c855 while S06-frontend.rs is pinned via SOURCE-MANIFEST.json to frozen backend commit 54fc7a1a54106245abb1a5ef6e16407464e1b654. StagePlan layout/invariant checks in CORE-stage-plan.rs and CORE-stage-validate.rs are stage-plan metadata in mori-core, distinct from backend R1CS lowering and distinct from test-gated/adapter Sherlock modules in CORE-lib.rs:12-31.",
+      "id": "BOUNDARY-SNAPSHOT-AND-PROFILE-SEPARATION",
+      "requiredFix": "None for part2 source attribution; keep Core 8174e52975d8db9bf59636fea0fa338c0f47c855 and backend 54fc7a1a54106245abb1a5ef6e16407464e1b654 distinct with no inferred runtime or compilation equivalence.",
+      "severity": "info"
+    },
+    {
+      "evidence": "CANDIDATE-PART.json:27-368 lists all 20 family entries from PATTERN-INVENTORY.json:1-122 (sha256 8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997) with exact matching id, name, lineStart/lineEnd, and literal fields, and classifies all 20 as UNINSPECTED_BOUNDARY / UNLOCATED_IN_THIS_PACKET without following inert case_file pointers.",
+      "id": "BOUNDARY-FAMILY-INVENTORY-UNLOCATED",
+      "requiredFix": "None for part2 source attribution; preserve UNINSPECTED_BOUNDARY / UNLOCATED_IN_THIS_PACKET for all 20 pattern families within this bounded packet.",
+      "severity": "info"
+    }
+  ],
+  "recommendation": {
+    "firstBlockedBoundary": "mori_lexer::lex and mori_lexer::decode_string lexical implementation boundary (absent from parent 33-file source input set), plus uninspected runtime/prover/compilation/ledger boundaries outside this 12-claim static source-attribution slice.",
+    "ledgerReady": false,
+    "nativeAuthority": 0,
+    "operatorReady": false,
+    "runtimeReady": false,
+    "securityReady": false,
+    "sourceAttributionReady": true,
+    "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+  },
+  "reviewToken": "core-remaining-part2-gemini4-argon-high-20261017",
+  "summary": "Independent fresh nonauthor source-attribution review of bounded packet part2 (requested model configuration Gemini 4 Argon High; actual runtime model identity not independently attested). Scope is strictly limited to the 12 selected claims (GR01, GR02, GR03, GR04, GR05, V01, V02, V03, V04, V05, V06, V07) out of the 61-claim parent table; the prior 18 part1 claims and remaining 31 claims in other parts are not reviewed or approved here.\n\nAll 12 in-scope claims and all 20 PATTERN-INVENTORY.json family entries were independently checked against the provided primary source payloads and enclosing definitions/callers:\n1. GR01 (SOURCE_DECLARATION, Core1/Staged2 syntax, CORE-parser.rs:46-102, sha256 83c8d4fa...): Exact literal and line match inside parse_profile (lines 14-161). Faithfully attributes language quoted-profile header, agreement name and brace block, state name:type=literal; declaration, and asset identity block with fixed network, issuer, reference, scale order (u8 conversion on UInt literal) and optional trailing comma.\n2. GR02 (SOURCE_DECLARATION, Core1/Staged2 syntax, CORE-parser.rs:103-151, sha256 83c8d4fa...): Exact literal and line match. Faithfully attributes action parenthesized typed inputs, brace-delimited statement list, pre-statement input name:type; declarations, per-action MAX_STATEMENTS (1024 in CORE-ir.rs:7) check, and total state+asset+action MAX_DECLARATIONS (256 in CORE-ir.rs:8) check.\n3. GR03 (SOURCE_DECLARATION, Core1/Staged2 syntax, CORE-parser.rs:217-250, sha256 83c8d4fa...): Exact literal and line match. Faithfully attributes Parser::ty() recognizing UInt/Bool, Parser::literal() handling true/false or TokenKind::Number with underscore removal and u128 parsing, and Parser::push() refusing expression count >= MAX_EXPRESSIONS (8192 in CORE-ir.rs:6).\n4. GR04 (SOURCE_DECLARATION, Core1/Staged2 syntax, CORE-parser.rs:252-305, sha256 83c8d4fa...): Exact literal and line match. Faithfully attributes Parser::expr() depth > 64 check, parentheses, unary not (precedence 6), literals, word names, liability_present/liability_amount with quoted duty string, and binary operator precedence branches (or=1, and=2, ==/not=/<=/ >=/</>=3, +/-=4, *=5) with enclosing loop continuation at lines 307-314.\n5. GR05 (SOURCE_DECLARATION, Core1/Staged2 syntax, CORE-parser.rs:316-347, sha256 83c8d4fa...): Exact literal and line match. Faithfully attributes Parser::statement() branches for let, next, requires, ensures, emit, transfer, fee, liability, discharge, semicolon termination, and await label(binders) when expr gated on self.program.language == crate::stage::LANGUAGE_2.\n6. V01 (SOURCE_DECLARATION, Core1, CORE-runtime.rs:120-152, sha256 7c736b2f...): Exact literal and line match. Faithfully attributes validate(program) checks for LANGUAGE/SEMANTICS identity, agreement identifier(&program.name), non-empty actions, MAX_DECLARATIONS/MAX_EXPRESSIONS bounds, and separate names() uniqueness passes over chained state+asset declarations and over action names (via names() at lines 39-50).\n7. V02 (SOURCE_DECLARATION, Core1, CORE-runtime.rs:8-38 and 153-181, sha256 7c736b2f...): Exact literal and line match for both citations. Faithfully attributes identifier() (ASCII letter first byte, len <= 64, ASCII alphanumeric or '_', not in the 23-keyword/type/literal reserved list) and asset identity validation (non-empty <=1024-byte network/issuer/reference, scale <= 38, BTreeSet uniqueness, and no conflicting scale for equal network/issuer/reference triples).\n8. V03 (SOURCE_DECLARATION, Core1, CORE-runtime.rs:182-232, sha256 7c736b2f...): Exact literal and line match. Faithfully attributes DAG expression reference check (usize::from(r) < i), derived depth <= 64, initial state value type matching state.ty, per-action input (<= MAX_DECLARATIONS = 256) and statement (<= MAX_STATEMENTS = 1024) bounds, input name validity/uniqueness via names(), and non-shadowing of state or asset declarations.\n9. V04 (SOURCE_DECLARATION, Core1, CORE-runtime.rs:233-319, sha256 7c736b2f...): Exact literal and line match. Faithfully attributes ordered statement validation in validate(): Await rejection in Core1, Let typing via expr_type (lines 51-118) and non-shadowing check against identifier/env/assets, Bool predicates on Requires/Ensures, known state and matching type on Next, 1..=1024 byte string checks and expr_type/validate_asset/require_uint (lines 374-390) on Emit, Transfer, Fee, Liability, and Discharge.\n10. V05 (CALL_EDGE, Core1/Staged2, CORE-runtime.rs:320-372 and CORE-stage-validate.rs:284-285): Exact literal and line match across both files. Faithfully attributes both validate and validate_v2 calling validate_liability_reads(program), and validate_liability_reads collecting LiabilityPresent/LiabilityAmount read names (1..=1024 bytes) and resolving them against Statement::Liability declarations across all actions for a single non-conflicting (asset identity, debtor, creditor) tuple.\n11. V06 (SOURCE_DECLARATION, Staged2, CORE-stage-validate.rs:28-43 and 144-211, sha256 5828e182...): Exact literal and line match. Faithfully attributes identifier_v2/names_v2 reserving \"await\" and \"when\", and validate_v2 enforcing MAX_AWAITS_PER_ACTION (16), MAX_EVENT_BINDERS (16), MAX_CAPTURE_SLOTS (256) on captured count before a site, unique valid await labels per action, valid non-shadowing binders inserted into env before checking that guard has Type::Bool, and incrementing captured on Await binders and Let bindings.\n12. V07 (SOURCE_DECLARATION, Staged2, CORE-stage-plan.rs:55-106 and CORE-stage-validate.rs:288-310, 341-409): Exact literal and line match across all three citations, verified with enclosing lines 311-340 of CORE-stage-validate.rs and caller stage::load in CORE-stage-mod.rs:71-88. Faithfully attributes stage::plan::build recording inputs first, then Let bindings and post-site Event binders as CaptureSlots while numbering AwaitSite 1..N with the current captures vector, and plan_invariants independently reconstructing expected sites and checking A3 ordering/prefix-capture invariants prior to cost::fill.\n\nAll 20 familyInventory items match PATTERN-INVENTORY.json (sha256 8fde592b...) and remain UNINSPECTED_BOUNDARY / UNLOCATED_IN_THIS_PACKET. Core main commit 8174e52975d8db9bf59636fea0fa338c0f47c855 and frozen backend commit 54fc7a1a54106245abb1a5ef6e16407464e1b654 remain strictly separated, with no runtime, cryptographic, compiler-lowering, or ledger claims inferred."
+}
