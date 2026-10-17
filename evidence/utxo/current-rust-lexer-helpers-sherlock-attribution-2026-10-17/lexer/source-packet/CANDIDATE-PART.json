@@ -1,0 +1,898 @@
+{
+  "format": "moriarty-bounded-source-attribution-projection/1",
+  "parentTableSha256": "3ae1c197633e09d59e4d8241a6d87ba02c2f856cb762fb706bcb249d1b93d97a",
+  "parentClaimCount": 53,
+  "part": "LEXER",
+  "claims": [
+    {
+      "id": "L01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Constants declare source limit 65,536 bytes, token limit 8,192, identifier limit 64 bytes and decoded-string limit 1,024 UTF-8 bytes. lex checks source.len() before Lexer::run(false).",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 28,
+          "lineEnd": 35,
+          "literal": "/// Largest accepted source file, in bytes.\npub const MAX_SOURCE_BYTES: usize = 65_536;\n/// Most tokens in one file, including the end-of-file token.\npub const MAX_TOKENS: usize = 8_192;\n/// Longest identifier or keyword, in bytes.\npub const MAX_IDENT_BYTES: usize = 64;\n/// Longest decoded string, in UTF-8 bytes.\npub const MAX_STRING_BYTES: usize = 1_024;"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 28,
+          "lineEnd": 35,
+          "literal": "/// Largest accepted source file, in bytes.\npub const MAX_SOURCE_BYTES: usize = 65_536;\n/// Most tokens in one file, including the end-of-file token.\npub const MAX_TOKENS: usize = 8_192;\n/// Longest identifier or keyword, in bytes.\npub const MAX_IDENT_BYTES: usize = 64;\n/// Longest decoded string, in UTF-8 bytes.\npub const MAX_STRING_BYTES: usize = 1_024;"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 47,
+          "lineEnd": 53,
+          "literal": "/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 47,
+          "lineEnd": 53,
+          "literal": "/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}"
+        }
+      ]
+    },
+    {
+      "id": "L02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "run dispatches ASCII space/tab/CR/LF, slash line/block comments, double-quoted strings, digit-started numbers, ASCII-letter-started words, then single-byte punctuation or unexpected_character; EOF is appended after the loop.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 113,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });\n        Ok(Tokens {\n            tokens: self.tokens,\n            comments: self.comments,\n        })\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 113,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });\n        Ok(Tokens {\n            tokens: self.tokens,\n            comments: self.comments,\n        })\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "push refuses when existing token count is at least MAX_TOKENS-1, reserving EOF. Comments are appended to a separate collection, so they do not pass through push token counting.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 119,
+          "lineEnd": 138,
+          "literal": "    /// Records a token ending at `end` and moves past it.\n    fn push(&mut self, kind: TokenKind, start: usize, end: usize) -> Result<(), MoriDiagnostic> {\n        if self.tokens.len() >= MAX_TOKENS - 1 {\n            return Err(diagnostics::too_many_tokens(span(start, end)));\n        }\n        self.tokens.push(Token {\n            kind,\n            start: offset(start),\n        });\n        self.pos = end;\n        Ok(())\n    }\n\n    fn push_comment(&mut self, start: usize, end: usize) {\n        self.comments.push(Comment {\n            start: offset(start),\n            end: offset(end),\n        });\n        self.pos = end;\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 119,
+          "lineEnd": 138,
+          "literal": "    /// Records a token ending at `end` and moves past it.\n    fn push(&mut self, kind: TokenKind, start: usize, end: usize) -> Result<(), MoriDiagnostic> {\n        if self.tokens.len() >= MAX_TOKENS - 1 {\n            return Err(diagnostics::too_many_tokens(span(start, end)));\n        }\n        self.tokens.push(Token {\n            kind,\n            start: offset(start),\n        });\n        self.pos = end;\n        Ok(())\n    }\n\n    fn push_comment(&mut self, start: usize, end: usize) {\n        self.comments.push(Comment {\n            start: offset(start),\n            end: offset(end),\n        });\n        self.pos = end;\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Line-comment scanning ends before CR or LF, or source end. Block-comment scanning finds the first */ after its opening, with an error if absent; no nesting counter appears in this body.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 140,
+          "lineEnd": 156,
+          "literal": "    /// `//` up to, but not including, the next line break.\n    fn line_comment(&mut self, start: usize) {\n        let end = self.bytes[start..]\n            .iter()\n            .position(|&b| b == b'\\r' || b == b'\\n')\n            .map_or(self.bytes.len(), |len| start + len);\n        self.push_comment(start, end);\n    }\n\n    /// `/*` through the first `*/`. Block comments do not nest.\n    fn block_comment(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let body = start + 2;\n        let Some(len) = self.source[body..].find(\"*/\") else {\n            return Err(diagnostics::unterminated_block_comment(span(start, body)));\n        };\n        self.push_comment(start, body + len + 2);\n        Ok(())"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 140,
+          "lineEnd": 156,
+          "literal": "    /// `//` up to, but not including, the next line break.\n    fn line_comment(&mut self, start: usize) {\n        let end = self.bytes[start..]\n            .iter()\n            .position(|&b| b == b'\\r' || b == b'\\n')\n            .map_or(self.bytes.len(), |len| start + len);\n        self.push_comment(start, end);\n    }\n\n    /// `/*` through the first `*/`. Block comments do not nest.\n    fn block_comment(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let body = start + 2;\n        let Some(len) = self.source[body..].find(\"*/\") else {\n            return Err(diagnostics::unterminated_block_comment(span(start, body)));\n        };\n        self.push_comment(start, body + len + 2);\n        Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "L05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Word scan starts after its first byte and accepts ASCII alphanumeric or underscore thereafter. Lexer dispatch requires initial ASCII letter; word length over 64 is refused before keyword classification.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 92,
+          "lineEnd": 98,
+          "literal": "                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 92,
+          "lineEnd": 98,
+          "literal": "                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 210,
+          "lineEnd": 218,
+          "literal": "    /// An identifier, or a keyword when the text matches one.\n    fn word(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let end = scan::word_end(self.bytes, start);\n        if end - start > MAX_IDENT_BYTES {\n            return Err(diagnostics::identifier_too_long(span(start, end)));\n        }\n        let kind = TokenKind::keyword(&self.source[start..end]).unwrap_or(TokenKind::Ident);\n        self.push(kind, start, end)\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 210,
+          "lineEnd": 218,
+          "literal": "    /// An identifier, or a keyword when the text matches one.\n    fn word(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let end = scan::word_end(self.bytes, start);\n        if end - start > MAX_IDENT_BYTES {\n            return Err(diagnostics::identifier_too_long(span(start, end)));\n        }\n        let kind = TokenKind::keyword(&self.source[start..end]).unwrap_or(TokenKind::Ident);\n        self.push(kind, start, end)\n    }"
+        },
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 5,
+          "lineEnd": 17,
+          "literal": "pub fn is_word_byte(b: u8) -> bool {\n    b.is_ascii_alphanumeric() || b == b'_'\n}\n\n/// End of the identifier or keyword starting at `start`.\npub fn word_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| is_word_byte(b))\n            .count()\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 5,
+          "lineEnd": 17,
+          "literal": "pub fn is_word_byte(b: u8) -> bool {\n    b.is_ascii_alphanumeric() || b == b'_'\n}\n\n/// End of the identifier or keyword starting at `start`.\npub fn word_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| is_word_byte(b))\n            .count()\n}"
+        }
+      ]
+    },
+    {
+      "id": "L06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "keyword() maps profile/agreement/action/uses/true/false/None/SuccessOnly/domain/account/asset/const/intent/obligation/pool/instrument/observation/policy/grant/stage/episode/party/share_class; unmatched spelling returns None. is_word accepts Ident or keyword.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 68,
+          "lineEnd": 96,
+          "literal": "    pub fn keyword(text: &str) -> Option<Self> {\n        let kind = match text {\n            \"profile\" => Self::KwProfile,\n            \"agreement\" => Self::KwAgreement,\n            \"action\" => Self::KwAction,\n            \"uses\" => Self::KwUses,\n            \"true\" => Self::KwTrue,\n            \"false\" => Self::KwFalse,\n            \"None\" => Self::KwNone,\n            \"SuccessOnly\" => Self::KwSuccessOnly,\n            \"domain\" => Self::KwDomain,\n            \"account\" => Self::KwAccount,\n            \"asset\" => Self::KwAsset,\n            \"const\" => Self::KwConst,\n            \"intent\" => Self::KwIntent,\n            \"obligation\" => Self::KwObligation,\n            \"pool\" => Self::KwPool,\n            \"instrument\" => Self::KwInstrument,\n            \"observation\" => Self::KwObservation,\n            \"policy\" => Self::KwPolicy,\n            \"grant\" => Self::KwGrant,\n            \"stage\" => Self::KwStage,\n            \"episode\" => Self::KwEpisode,\n            \"party\" => Self::KwParty,\n            \"share_class\" => Self::KwShareClass,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 68,
+          "lineEnd": 96,
+          "literal": "    pub fn keyword(text: &str) -> Option<Self> {\n        let kind = match text {\n            \"profile\" => Self::KwProfile,\n            \"agreement\" => Self::KwAgreement,\n            \"action\" => Self::KwAction,\n            \"uses\" => Self::KwUses,\n            \"true\" => Self::KwTrue,\n            \"false\" => Self::KwFalse,\n            \"None\" => Self::KwNone,\n            \"SuccessOnly\" => Self::KwSuccessOnly,\n            \"domain\" => Self::KwDomain,\n            \"account\" => Self::KwAccount,\n            \"asset\" => Self::KwAsset,\n            \"const\" => Self::KwConst,\n            \"intent\" => Self::KwIntent,\n            \"obligation\" => Self::KwObligation,\n            \"pool\" => Self::KwPool,\n            \"instrument\" => Self::KwInstrument,\n            \"observation\" => Self::KwObservation,\n            \"policy\" => Self::KwPolicy,\n            \"grant\" => Self::KwGrant,\n            \"stage\" => Self::KwStage,\n            \"episode\" => Self::KwEpisode,\n            \"party\" => Self::KwParty,\n            \"share_class\" => Self::KwShareClass,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 122,
+          "lineEnd": 134,
+          "literal": "    pub fn is_keyword(self) -> bool {\n        (Self::KwProfile as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Keywords that start a declaration, such as `const` or `asset`.\n    pub fn is_declaration_kind(self) -> bool {\n        (Self::KwDomain as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Identifiers and keywords. Record fields and call names accept either.\n    pub fn is_word(self) -> bool {\n        self == Self::Ident || self.is_keyword()\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 122,
+          "lineEnd": 134,
+          "literal": "    pub fn is_keyword(self) -> bool {\n        (Self::KwProfile as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Keywords that start a declaration, such as `const` or `asset`.\n    pub fn is_declaration_kind(self) -> bool {\n        (Self::KwDomain as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Identifiers and keywords. Record fields and call names accept either.\n    pub fn is_word(self) -> bool {\n        self == Self::Ident || self.is_keyword()\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L07",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "punctuation() maps { } [ ] ( ) : ; , = < > . + - * to single token kinds. Slash outside comment dispatch reaches unexpected_character and the division diagnostic; this is a local lexical branch, not a global family judgment.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 98,
+          "lineEnd": 120,
+          "literal": "    /// The punctuation token for byte `b`, if any.\n    pub fn punctuation(b: u8) -> Option<Self> {\n        let kind = match b {\n            b'{' => Self::LBrace,\n            b'}' => Self::RBrace,\n            b'[' => Self::LBracket,\n            b']' => Self::RBracket,\n            b'(' => Self::LParen,\n            b')' => Self::RParen,\n            b':' => Self::Colon,\n            b';' => Self::Semicolon,\n            b',' => Self::Comma,\n            b'=' => Self::Eq,\n            b'<' => Self::Lt,\n            b'>' => Self::Gt,\n            b'.' => Self::Dot,\n            b'+' => Self::Plus,\n            b'-' => Self::Minus,\n            b'*' => Self::Star,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 98,
+          "lineEnd": 120,
+          "literal": "    /// The punctuation token for byte `b`, if any.\n    pub fn punctuation(b: u8) -> Option<Self> {\n        let kind = match b {\n            b'{' => Self::LBrace,\n            b'}' => Self::RBrace,\n            b'[' => Self::LBracket,\n            b']' => Self::RBracket,\n            b'(' => Self::LParen,\n            b')' => Self::RParen,\n            b':' => Self::Colon,\n            b';' => Self::Semicolon,\n            b',' => Self::Comma,\n            b'=' => Self::Eq,\n            b'<' => Self::Lt,\n            b'>' => Self::Gt,\n            b'.' => Self::Dot,\n            b'+' => Self::Plus,\n            b'-' => Self::Minus,\n            b'*' => Self::Star,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 89,
+          "lineEnd": 98,
+          "literal": "                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 89,
+          "lineEnd": 98,
+          "literal": "                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 220,
+          "lineEnd": 233,
+          "literal": "    fn unexpected_character(&self, start: usize) -> MoriDiagnostic {\n        let c = self.source[start..]\n            .chars()\n            .next()\n            .expect(\"a character remains at the current position\");\n        let at = span(start, start + c.len_utf8());\n        match c {\n            '/' => diagnostics::division(at),\n            '\u201c' | '\u201d' | '\u2018' | '\u2019' => diagnostics::curly_quote(at),\n            '\\'' => diagnostics::single_quote(at),\n            '_' => diagnostics::leading_underscore(at),\n            c if !c.is_ascii() => diagnostics::non_ascii(at, c),\n            c => diagnostics::unexpected_character(at, c),\n        }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 220,
+          "lineEnd": 233,
+          "literal": "    fn unexpected_character(&self, start: usize) -> MoriDiagnostic {\n        let c = self.source[start..]\n            .chars()\n            .next()\n            .expect(\"a character remains at the current position\");\n        let at = span(start, start + c.len_utf8());\n        match c {\n            '/' => diagnostics::division(at),\n            '\u201c' | '\u201d' | '\u2018' | '\u2019' => diagnostics::curly_quote(at),\n            '\\'' => diagnostics::single_quote(at),\n            '_' => diagnostics::leading_underscore(at),\n            c if !c.is_ascii() => diagnostics::non_ascii(at, c),\n            c => diagnostics::unexpected_character(at, c),\n        }"
+        }
+      ]
+    },
+    {
+      "id": "L08",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Number extent includes digits, underscores and dots. validate checks a second dot first, leading-zero integer part second, integer underscore positions third, then optional nonempty fraction and its underscore positions. Underscores must have digits on both sides.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 19,
+          "lineEnd": 28,
+          "literal": "/// End of the number starting at `start`. Numbers extend over digits, `_`\n/// and `.`; spelling is validated separately.\npub fn number_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| b.is_ascii_digit() || b == b'_' || b == b'.')\n            .count()\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 19,
+          "lineEnd": 28,
+          "literal": "/// End of the number starting at `start`. Numbers extend over digits, `_`\n/// and `.`; spelling is validated separately.\npub fn number_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| b.is_ascii_digit() || b == b'_' || b == b'.')\n            .count()\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 55,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())\n}\n\n/// `part` contains only digits and `_` and starts at `offset` in the number.\nfn check_underscores(part: &str, offset: usize) -> Result<(), NumberError> {\n    let bytes = part.as_bytes();\n    for (i, &b) in bytes.iter().enumerate() {\n        let between_digits = i > 0\n            && bytes[i - 1].is_ascii_digit()\n            && bytes.get(i + 1).is_some_and(u8::is_ascii_digit);\n        if b == b'_' && !between_digits {\n            return Err(NumberError::MisplacedUnderscore { at: offset + i });\n        }\n    }\n    Ok(())"
+        },
+        {
+          "file": "BACKEND-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 55,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())\n}\n\n/// `part` contains only digits and `_` and starts at `offset` in the number.\nfn check_underscores(part: &str, offset: usize) -> Result<(), NumberError> {\n    let bytes = part.as_bytes();\n    for (i, &b) in bytes.iter().enumerate() {\n        let between_digits = i > 0\n            && bytes[i - 1].is_ascii_digit()\n            && bytes.get(i + 1).is_some_and(u8::is_ascii_digit);\n        if b == b'_' && !between_digits {\n            return Err(NumberError::MisplacedUnderscore { at: offset + i });\n        }\n    }\n    Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "L09",
+      "classification": "CALL_EDGE",
+      "profile": "Core1/Staged2 parser",
+      "sourceObservation": "Core parse_profile and language call mori_lexer::lex, then recover token spans and decode String tokens. The inspected language body does not call first_token_text.",
+      "citations": [
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 14,
+          "lineEnd": 31,
+          "literal": "fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let tokens = (0..lexed.len())\n        .map(|i| {\n            let idx = TokenIdx::new(i);\n            let span = lexed.span(idx, source);\n            let raw = &source[span.start as usize..span.end as usize];\n            let text = if lexed.kind(idx) == TokenKind::String {\n                mori_lexer::decode_string(raw)\n            } else {\n                raw.to_owned()\n            };\n            Tok {\n                text,\n                kind: lexed.kind(idx),\n                start: span.start,\n            }\n        })"
+        },
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 352,
+          "lineEnd": 365,
+          "literal": "pub fn language(source: &str) -> Result<&'static str, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let mut tokens = Vec::new();\n    for i in 0..lexed.len() {\n        let idx = TokenIdx::new(i);\n        let span = lexed.span(idx, source);\n        let raw = &source[span.start as usize..span.end as usize];\n        let kind = lexed.kind(idx);\n        tokens.push(Tok {\n            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },\n            kind,\n            start: span.start,\n        });\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L10",
+      "classification": "INFERENCE",
+      "profile": "Core1/Staged2 parser",
+      "sourceObservation": "Lexical decimal spelling and Core UInt parsing are separate source gates: lexer validates optional fraction syntax, whereas Core literal strips underscores and calls parse::<u128>(). This statement does not report executed acceptance or rejection.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 41,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())"
+        },
+        {
+          "file": "BACKEND-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 41,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())"
+        },
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 224,
+          "lineEnd": 242,
+          "literal": "    fn literal(&mut self) -> Result<Value, Error> {\n        if self.eat(\"true\") {\n            return Ok(Value::Bool(true));\n        }\n        if self.eat(\"false\") {\n            return Ok(Value::Bool(false));\n        }\n        if self.peek().kind != TokenKind::Number {\n            return Err(self.error(\"syntax\", \"Expected an unsigned integer or boolean literal.\"));\n        }\n        let raw = self.peek().text.replace('_', \"\");\n        let n = raw.parse::<u128>().map_err(|_| {\n            self.error(\n                \"number\",\n                \"UInt literal must fit u128; amounts use integral atomic units.\",\n            )\n        })?;\n        self.pos += 1;\n        Ok(Value::UInt(UInt(n)))"
+        }
+      ]
+    },
+    {
+      "id": "L11",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "string_end tracks escaped byte state until an unescaped quote; Lexer::string calls decode_with to count emitted character len_utf8 and compares against MAX_STRING_BYTES before pushing the String token.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 30,
+          "lineEnd": 41,
+          "literal": "/// End of the string starting with `\"` at `start`, just past the closing\n/// quote, or `None` if it is unterminated. A backslash escapes the next byte.\npub fn string_end(bytes: &[u8], start: usize) -> Option<usize> {\n    let mut escaped = false;\n    for (offset, &b) in bytes[start + 1..].iter().enumerate() {\n        if b == b'\"' && !escaped {\n            return Some(start + 1 + offset + 1);\n        }\n        escaped = b == b'\\\\' && !escaped;\n    }\n    None\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 30,
+          "lineEnd": 41,
+          "literal": "/// End of the string starting with `\"` at `start`, just past the closing\n/// quote, or `None` if it is unterminated. A backslash escapes the next byte.\npub fn string_end(bytes: &[u8], start: usize) -> Option<usize> {\n    let mut escaped = false;\n    for (offset, &b) in bytes[start + 1..].iter().enumerate() {\n        if b == b'\"' && !escaped {\n            return Some(start + 1 + offset + 1);\n        }\n        escaped = b == b'\\\\' && !escaped;\n    }\n    None\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 159,
+          "lineEnd": 184,
+          "literal": "    fn string(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let Some(end) = scan::string_end(self.bytes, start) else {\n            return Err(diagnostics::unterminated_string(span(start, start + 1)));\n        };\n        let raw = &self.source[start..end];\n        let mut decoded_len = 0;\n        if let Err(error) = string::decode_with(raw, |c| decoded_len += c.len_utf8()) {\n            let at = span(start + error.start, start + error.end);\n            return Err(match error.kind {\n                StringErrorKind::ControlCharacter('\\r' | '\\n') => {\n                    diagnostics::string_line_break(at)\n                }\n                StringErrorKind::ControlCharacter(c) => {\n                    diagnostics::string_control_character(at, c)\n                }\n                StringErrorKind::InvalidEscape => {\n                    diagnostics::invalid_escape(at, at.source_text(self.source))\n                }\n                StringErrorKind::InvalidUnicodeEscape => diagnostics::invalid_unicode_escape(at),\n                StringErrorKind::LoneSurrogate => diagnostics::lone_surrogate(at),\n            });\n        }\n        if decoded_len > MAX_STRING_BYTES {\n            return Err(diagnostics::string_too_long(span(start, end), decoded_len));\n        }\n        self.push(TokenKind::String, start, end)"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 159,
+          "lineEnd": 184,
+          "literal": "    fn string(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let Some(end) = scan::string_end(self.bytes, start) else {\n            return Err(diagnostics::unterminated_string(span(start, start + 1)));\n        };\n        let raw = &self.source[start..end];\n        let mut decoded_len = 0;\n        if let Err(error) = string::decode_with(raw, |c| decoded_len += c.len_utf8()) {\n            let at = span(start + error.start, start + error.end);\n            return Err(match error.kind {\n                StringErrorKind::ControlCharacter('\\r' | '\\n') => {\n                    diagnostics::string_line_break(at)\n                }\n                StringErrorKind::ControlCharacter(c) => {\n                    diagnostics::string_control_character(at, c)\n                }\n                StringErrorKind::InvalidEscape => {\n                    diagnostics::invalid_escape(at, at.source_text(self.source))\n                }\n                StringErrorKind::InvalidUnicodeEscape => diagnostics::invalid_unicode_escape(at),\n                StringErrorKind::LoneSurrogate => diagnostics::lone_surrogate(at),\n            });\n        }\n        if decoded_len > MAX_STRING_BYTES {\n            return Err(diagnostics::string_too_long(span(start, end), decoded_len));\n        }\n        self.push(TokenKind::String, start, end)"
+        }
+      ]
+    },
+    {
+      "id": "L12",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "decode_with maps quote,backslash,slash,b,f,n,r,t escapes, uses hex4 for u escape, rejects raw characters below space, and emits other characters. hex4 reads exactly four to_digit(16) characters.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 45,
+          "lineEnd": 55,
+          "literal": "    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 45,
+          "lineEnd": 55,
+          "literal": "    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;"
+        },
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 79,
+          "lineEnd": 100,
+          "literal": "            let decoded = match escape {\n                '\"' => '\"',\n                '\\\\' => '\\\\',\n                '/' => '/',\n                'b' => '\\u{8}',\n                'f' => '\\u{c}',\n                'n' => '\\n',\n                'r' => '\\r',\n                't' => '\\t',\n                _ => {\n                    let end = i + 1 + escape.len_utf8();\n                    return Err(error(StringErrorKind::InvalidEscape, i, end));\n                }\n            };\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(decoded);\n        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 79,
+          "lineEnd": 100,
+          "literal": "            let decoded = match escape {\n                '\"' => '\"',\n                '\\\\' => '\\\\',\n                '/' => '/',\n                'b' => '\\u{8}',\n                'f' => '\\u{c}',\n                'n' => '\\n',\n                'r' => '\\r',\n                't' => '\\t',\n                _ => {\n                    let end = i + 1 + escape.len_utf8();\n                    return Err(error(StringErrorKind::InvalidEscape, i, end));\n                }\n            };\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(decoded);\n        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }"
+        },
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 122,
+          "lineEnd": 131,
+          "literal": "/// Reads exactly four hexadecimal digits.\nfn hex4(chars: &mut Peekable<CharIndices<'_>>) -> Option<u32> {\n    let mut value = 0;\n    for _ in 0..4 {\n        let digit = chars.peek()?.1.to_digit(16)?;\n        chars.next();\n        value = value * 16 + digit;\n    }\n    Some(value)\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 122,
+          "lineEnd": 131,
+          "literal": "/// Reads exactly four hexadecimal digits.\nfn hex4(chars: &mut Peekable<CharIndices<'_>>) -> Option<u32> {\n    let mut value = 0;\n    for _ in 0..4 {\n        let digit = chars.peek()?.1.to_digit(16)?;\n        chars.next();\n        value = value * 16 + digit;\n    }\n    Some(value)\n}"
+        }
+      ]
+    },
+    {
+      "id": "L13",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Unicode escape handling stores a pending high surrogate, combines a following low surrogate into a scalar, records the first lone surrogate while emitting replacement characters, and returns that LoneSurrogate error after the loop unless an earlier immediate error returned.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 33,
+          "lineEnd": 77,
+          "literal": "pub fn decode_with(raw: &str, mut emit: impl FnMut(char)) -> Result<(), StringError> {\n    let body = &raw[1..raw.len() - 1];\n    let mut chars = body.char_indices().peekable();\n    let mut pending_high: Option<(u32, usize)> = None;\n    let mut first_lone: Option<(usize, usize)> = None;\n\n    let error = |kind, start: usize, end: usize| StringError {\n        kind,\n        start: start + 1,\n        end: end + 1,\n    };\n\n    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;\n                match (pending_high.take(), unit) {\n                    (Some((high, _)), 0xDC00..=0xDFFF) => {\n                        let scalar = 0x10000 + ((high - 0xD800) << 10) + (unit - 0xDC00);\n                        emit(char::from_u32(scalar).expect(\"surrogate pair is a scalar\"));\n                    }\n                    (pending, _) => {\n                        if let Some((_, start)) = pending {\n                            first_lone.get_or_insert((start, start + 6));\n                            emit(char::REPLACEMENT_CHARACTER);\n                        }\n                        match unit {\n                            0xD800..=0xDBFF => pending_high = Some((unit, i)),\n                            0xDC00..=0xDFFF => {\n                                first_lone.get_or_insert((i, end));\n                                emit(char::REPLACEMENT_CHARACTER);\n                            }\n                            _ => emit(char::from_u32(unit).expect(\"non-surrogate is a scalar\")),\n                        }\n                    }\n                }\n                continue;\n            }"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 33,
+          "lineEnd": 77,
+          "literal": "pub fn decode_with(raw: &str, mut emit: impl FnMut(char)) -> Result<(), StringError> {\n    let body = &raw[1..raw.len() - 1];\n    let mut chars = body.char_indices().peekable();\n    let mut pending_high: Option<(u32, usize)> = None;\n    let mut first_lone: Option<(usize, usize)> = None;\n\n    let error = |kind, start: usize, end: usize| StringError {\n        kind,\n        start: start + 1,\n        end: end + 1,\n    };\n\n    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;\n                match (pending_high.take(), unit) {\n                    (Some((high, _)), 0xDC00..=0xDFFF) => {\n                        let scalar = 0x10000 + ((high - 0xD800) << 10) + (unit - 0xDC00);\n                        emit(char::from_u32(scalar).expect(\"surrogate pair is a scalar\"));\n                    }\n                    (pending, _) => {\n                        if let Some((_, start)) = pending {\n                            first_lone.get_or_insert((start, start + 6));\n                            emit(char::REPLACEMENT_CHARACTER);\n                        }\n                        match unit {\n                            0xD800..=0xDBFF => pending_high = Some((unit, i)),\n                            0xDC00..=0xDFFF => {\n                                first_lone.get_or_insert((i, end));\n                                emit(char::REPLACEMENT_CHARACTER);\n                            }\n                            _ => emit(char::from_u32(unit).expect(\"non-surrogate is a scalar\")),\n                        }\n                    }\n                }\n                continue;\n            }"
+        },
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 95,
+          "lineEnd": 119,
+          "literal": "        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }\n    }\n    flush_high(&mut pending_high, &mut first_lone, &mut emit);\n\n    match first_lone {\n        Some((start, end)) => Err(error(StringErrorKind::LoneSurrogate, start, end)),\n        None => Ok(()),\n    }\n}\n\n/// A high surrogate not followed by a low surrogate escape is lone.\nfn flush_high(\n    pending_high: &mut Option<(u32, usize)>,\n    first_lone: &mut Option<(usize, usize)>,\n    emit: &mut impl FnMut(char),\n) {\n    if let Some((_, start)) = pending_high.take() {\n        first_lone.get_or_insert((start, start + 6));\n        emit(char::REPLACEMENT_CHARACTER);\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 95,
+          "lineEnd": 119,
+          "literal": "        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }\n    }\n    flush_high(&mut pending_high, &mut first_lone, &mut emit);\n\n    match first_lone {\n        Some((start, end)) => Err(error(StringErrorKind::LoneSurrogate, start, end)),\n        None => Ok(()),\n    }\n}\n\n/// A high surrogate not followed by a low surrogate escape is lone.\nfn flush_high(\n    pending_high: &mut Option<(u32, usize)>,\n    first_lone: &mut Option<(usize, usize)>,\n    emit: &mut impl FnMut(char),\n) {\n    if let Some((_, start)) = pending_high.take() {\n        first_lone.get_or_insert((start, start + 6));\n        emit(char::REPLACEMENT_CHARACTER);\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L14",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Public decode_string calls decode_with and expect(\"lexed strings are valid\"). Its body does not return Result. first_token_text instead selects a bounded character-boundary prefix and calls run(true); run(true) stops after its first noncomment token and appends EOF.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 37,
+          "lineEnd": 63,
+          "literal": "/// The text of a string token, with escapes decoded.\n///\n/// `raw` must be the full text of a [`TokenKind::String`] token, quotes\n/// included, as produced by [`lex`].\npub fn decode_string(raw: &str) -> String {\n    let mut text = String::with_capacity(raw.len());\n    string::decode_with(raw, |c| text.push(c)).expect(\"lexed strings are valid\");\n    text\n}\n\n/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}\n\n/// Identify a leading profile token without requiring the remaining source to\n/// lex successfully. Inspect only a bounded prefix; full parsing retains all\n/// source and token limits.\npub fn first_token_text(source: &str) -> Result<&str, MoriDiagnostic> {\n    let end = source.floor_char_boundary(source.len().min(MAX_SOURCE_BYTES));\n    let prefix = &source[..end];\n    let tokens = Lexer::new(prefix).run(true)?;\n    Ok(tokens.span(TokenIdx::new(0), prefix).source_text(prefix))\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 37,
+          "lineEnd": 63,
+          "literal": "/// The text of a string token, with escapes decoded.\n///\n/// `raw` must be the full text of a [`TokenKind::String`] token, quotes\n/// included, as produced by [`lex`].\npub fn decode_string(raw: &str) -> String {\n    let mut text = String::with_capacity(raw.len());\n    string::decode_with(raw, |c| text.push(c)).expect(\"lexed strings are valid\");\n    text\n}\n\n/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}\n\n/// Identify a leading profile token without requiring the remaining source to\n/// lex successfully. Inspect only a bounded prefix; full parsing retains all\n/// source and token limits.\npub fn first_token_text(source: &str) -> Result<&str, MoriDiagnostic> {\n    let end = source.floor_char_boundary(source.len().min(MAX_SOURCE_BYTES));\n    let prefix = &source[..end];\n    let tokens = Lexer::new(prefix).run(true)?;\n    Ok(tokens.span(TokenIdx::new(0), prefix).source_text(prefix))\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 108,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 108,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });"
+        }
+      ]
+    },
+    {
+      "id": "L15",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Token stores kind and u32 start; TokenIdx wraps u16 via try_from/expect. Tokens::span calls scan::token_end, which re-scans word/number/string extents, uses zero length for EOF and one byte otherwise.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 137,
+          "lineEnd": 165,
+          "literal": "/// A token's kind and start offset. Its end is recovered by re-scanning.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Token {\n    pub kind: TokenKind,\n    pub start: u32,\n}\n\n/// A `//` or `/* */` comment, kept for the formatter.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Comment {\n    pub start: u32,\n    pub end: u32,\n}\n\n/// Index of a token in [`Tokens`]. Sources hold at most 8,192 tokens.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\npub struct TokenIdx(u16);\n\nimpl TokenIdx {\n    pub fn new(index: usize) -> Self {\n        Self(u16::try_from(index).expect(\"token index exceeds u16\"))\n    }\n\n    pub fn index(self) -> usize {\n        usize::from(self.0)\n    }\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 137,
+          "lineEnd": 165,
+          "literal": "/// A token's kind and start offset. Its end is recovered by re-scanning.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Token {\n    pub kind: TokenKind,\n    pub start: u32,\n}\n\n/// A `//` or `/* */` comment, kept for the formatter.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Comment {\n    pub start: u32,\n    pub end: u32,\n}\n\n/// Index of a token in [`Tokens`]. Sources hold at most 8,192 tokens.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\npub struct TokenIdx(u16);\n\nimpl TokenIdx {\n    pub fn new(index: usize) -> Self {\n        Self(u16::try_from(index).expect(\"token index exceeds u16\"))\n    }\n\n    pub fn index(self) -> usize {\n        usize::from(self.0)\n    }\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 185,
+          "lineEnd": 205,
+          "literal": "    pub fn kind(&self, idx: TokenIdx) -> TokenKind {\n        self.tokens.kind()[idx.index()]\n    }\n\n    pub fn start(&self, idx: TokenIdx) -> u32 {\n        self.tokens.start()[idx.index()]\n    }\n\n    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 185,
+          "lineEnd": 205,
+          "literal": "    pub fn kind(&self, idx: TokenIdx) -> TokenKind {\n        self.tokens.kind()[idx.index()]\n    }\n\n    pub fn start(&self, idx: TokenIdx) -> u32 {\n        self.tokens.start()[idx.index()]\n    }\n\n    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 43,
+          "lineEnd": 55,
+          "literal": "/// Recovers the end offset of a token from its kind and start.\npub fn token_end(kind: TokenKind, bytes: &[u8], start: u32) -> u32 {\n    let start_index = start as usize;\n    let end = match kind {\n        TokenKind::Ident => word_end(bytes, start_index),\n        _ if kind.is_keyword() => word_end(bytes, start_index),\n        TokenKind::Number => number_end(bytes, start_index),\n        TokenKind::String => string_end(bytes, start_index).expect(\"lexed strings are terminated\"),\n        TokenKind::Eof => start_index,\n        _ => start_index + 1,\n    };\n    end as u32\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 43,
+          "lineEnd": 55,
+          "literal": "/// Recovers the end offset of a token from its kind and start.\npub fn token_end(kind: TokenKind, bytes: &[u8], start: u32) -> u32 {\n    let start_index = start as usize;\n    let end = match kind {\n        TokenKind::Ident => word_end(bytes, start_index),\n        _ if kind.is_keyword() => word_end(bytes, start_index),\n        TokenKind::Number => number_end(bytes, start_index),\n        TokenKind::String => string_end(bytes, start_index).expect(\"lexed strings are terminated\"),\n        TokenKind::Eof => start_index,\n        _ => start_index + 1,\n    };\n    end as u32\n}"
+        }
+      ]
+    },
+    {
+      "id": "L16",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer diagnostics",
+      "sourceObservation": "Diagnostics functions construct literal mori::lex::* codes; shown examples include source_too_large,too_many_tokens,invalid_escape,invalid_unicode_escape,lone_surrogate and division. Help-text claims are not adopted as runtime/correctness evidence.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 8,
+          "lineEnd": 25,
+          "literal": "pub fn source_too_large(len: usize) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file is {len} bytes, but a source file can be at most {MAX_SOURCE_BYTES} bytes.\"\n    ))\n    .with_code(\"mori::lex::source_too_large\")\n    .with_help(\"Agreements are kept small so every check stays bounded.\")\n}\n\npub fn too_many_tokens(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file has more than {MAX_TOKENS} tokens, counting the end of the file.\"\n    ))\n    .with_code(\"mori::lex::too_many_tokens\")\n    .with_label(span.label(\"the limit is reached here\"))\n    .with_help(\n        \"Agreements are kept small so every check stays bounded. \\\n         Comments and whitespace do not count toward this limit.\",\n    )"
+        },
+        {
+          "file": "BACKEND-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 8,
+          "lineEnd": 25,
+          "literal": "pub fn source_too_large(len: usize) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file is {len} bytes, but a source file can be at most {MAX_SOURCE_BYTES} bytes.\"\n    ))\n    .with_code(\"mori::lex::source_too_large\")\n    .with_help(\"Agreements are kept small so every check stays bounded.\")\n}\n\npub fn too_many_tokens(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file has more than {MAX_TOKENS} tokens, counting the end of the file.\"\n    ))\n    .with_code(\"mori::lex::too_many_tokens\")\n    .with_label(span.label(\"the limit is reached here\"))\n    .with_help(\n        \"Agreements are kept small so every check stays bounded. \\\n         Comments and whitespace do not count toward this limit.\",\n    )"
+        },
+        {
+          "file": "MAIN-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 73,
+          "lineEnd": 101,
+          "literal": "pub fn invalid_escape(span: Span, escape: &str) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\"`{escape}` is not an escape I know.\"))\n        .with_code(\"mori::lex::invalid_escape\")\n        .with_label(span.label(\"unknown escape\"))\n        .with_help_code(\n            \"Strings use JSON escapes. To write a backslash itself, use `\\\\\\\\`:\",\n            \"\\\\\\\"  \\\\\\\\  \\\\/  \\\\b  \\\\f  \\\\n  \\\\r  \\\\t  \\\\uXXXX\",\n        )\n}\n\npub fn invalid_unicode_escape(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"A `\\\\u` escape needs exactly four hexadecimal digits.\")\n        .with_code(\"mori::lex::invalid_unicode_escape\")\n        .with_label(span.label(\"this escape is incomplete\"))\n        .with_help_code(\n            \"Write all four digits, or write the character directly:\",\n            \"\\\"caf\\\\u00e9\\\"\",\n        )\n}\n\npub fn lone_surrogate(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"This escape is half of a surrogate pair.\")\n        .with_code(\"mori::lex::lone_surrogate\")\n        .with_label(span.label(\"this half has no partner\"))\n        .with_help_code(\n            \"A character above U+FFFF is written as a high escape followed by a low one, \\\n             or directly:\",\n            \"\\\"\\\\uD83D\\\\uDE00\\\"\",\n        )"
+        },
+        {
+          "file": "BACKEND-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 73,
+          "lineEnd": 101,
+          "literal": "pub fn invalid_escape(span: Span, escape: &str) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\"`{escape}` is not an escape I know.\"))\n        .with_code(\"mori::lex::invalid_escape\")\n        .with_label(span.label(\"unknown escape\"))\n        .with_help_code(\n            \"Strings use JSON escapes. To write a backslash itself, use `\\\\\\\\`:\",\n            \"\\\\\\\"  \\\\\\\\  \\\\/  \\\\b  \\\\f  \\\\n  \\\\r  \\\\t  \\\\uXXXX\",\n        )\n}\n\npub fn invalid_unicode_escape(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"A `\\\\u` escape needs exactly four hexadecimal digits.\")\n        .with_code(\"mori::lex::invalid_unicode_escape\")\n        .with_label(span.label(\"this escape is incomplete\"))\n        .with_help_code(\n            \"Write all four digits, or write the character directly:\",\n            \"\\\"caf\\\\u00e9\\\"\",\n        )\n}\n\npub fn lone_surrogate(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"This escape is half of a surrogate pair.\")\n        .with_code(\"mori::lex::lone_surrogate\")\n        .with_label(span.label(\"this half has no partner\"))\n        .with_help_code(\n            \"A character above U+FFFF is written as a high escape followed by a low one, \\\n             or directly:\",\n            \"\\\"\\\\uD83D\\\\uDE00\\\"\",\n        )"
+        },
+        {
+          "file": "MAIN-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 150,
+          "lineEnd": 158,
+          "literal": "pub fn division(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"There is no division in Moriarty.\")\n        .with_code(\"mori::lex::division\")\n        .with_label(span.label(\"division is not supported\"))\n        .with_help_code(\n            \"Amounts are exact, so nothing is ever rounded behind your back. \\\n             Write the result directly, so instead of `1 USD / 4`:\",\n            \"0.25 USD\",\n        )"
+        },
+        {
+          "file": "BACKEND-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 150,
+          "lineEnd": 158,
+          "literal": "pub fn division(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"There is no division in Moriarty.\")\n        .with_code(\"mori::lex::division\")\n        .with_label(span.label(\"division is not supported\"))\n        .with_help_code(\n            \"Amounts are exact, so nothing is ever rounded behind your back. \\\n             Write the result directly, so instead of `1 USD / 4`:\",\n            \"0.25 USD\",\n        )"
+        }
+      ]
+    },
+    {
+      "id": "L17",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer dependencies",
+      "sourceObservation": "Cargo declares workspace mori-diagnostics,mori-span,soa-rs and dev dependencies indoc,insta,mori-diagnostics/fancy,proptest. Exact versions and workspace inheritance bodies are not supplied here.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 1,
+          "lineEnd": 19,
+          "literal": "[package]\nname = \"mori-lexer\"\nversion = \"0.1.0\"\ndescription = \"Lexer for Moriarty source\"\nedition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        },
+        {
+          "file": "BACKEND-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 1,
+          "lineEnd": 19,
+          "literal": "[package]\nname = \"mori-lexer\"\nversion = \"0.1.0\"\ndescription = \"Lexer for Moriarty source\"\nedition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        }
+      ]
+    },
+    {
+      "id": "B01",
+      "classification": "CALL_EDGE",
+      "profile": "Core1 backend",
+      "sourceObservation": "compile_selected creates explicit NotBound/TouchedOnly/GrossDebitAndFees options with CompilerBuild::embedded, then calls compile_source::<Fr>(...,SettlementHashV2). compile_source routes Core1 to compile and Staged2 to StagedNotLowered(lowering_plan()).",
+      "citations": [
+        {
+          "file": "S04-relation.rs",
+          "sha256": "e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5",
+          "lineStart": 258,
+          "lineEnd": 269,
+          "literal": "pub fn compile_selected(source: &str, selector: &RelationSelector) -> Result<SelectedRelation, DriverError> {\n    check_selector(selector)?;\n    let options = CompileOptions {\n        action: selector.action.clone(),\n        cap: CapBinding::NotBound,\n        frame: FrameCells::TouchedOnly,\n        accounting: AccountingBinding::GrossDebitAndFees,\n        compiler: CompilerBuild::embedded().map_err(DriverError::Compile)?,\n    };\n    let relation =\n        mori_r1cs::compile_source::<Fr>(source, options, StatementAdapter::SettlementHashV2).map_err(DriverError::Compile)?;\n    let descriptor = RelationDescriptor::of(&relation)?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 266,
+          "lineEnd": 271,
+          "literal": "pub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "B02",
+      "classification": "CALL_EDGE",
+      "profile": "Core1 backend",
+      "sourceObservation": "compile checks compiler identity,adapter admission,then ABI2 options for SettlementHashV2,then plans and builds layout; later it constructs ABI2 constants from identity.digest and invokes probe.",
+      "citations": [
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 212,
+          "lineEnd": 226,
+          "literal": "pub fn compile<F: PrimeField>(admitted: AdmittedCore1, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    if F::MODULUS_BIT_SIZE < crate::MIN_MODULUS_BITS {\n        return Err(CompileError::Field(format!(\n            \"scalar field has {} bits; the exact-integer gadgets need at least {}\",\n            F::MODULUS_BIT_SIZE,\n            crate::MIN_MODULUS_BITS\n        )));\n    }\n    let build = options.compiler.checked()?;\n    adapter.admits(admitted.program()).map_err(CompileError::Adapter)?;\n    if adapter == StatementAdapter::SettlementHashV2 {\n        abi2::options_ok(&options)?;\n    }\n    let plan = plan::plan_action(admitted.program(), &options)?;\n    let layout = StatementLayout::build(admitted.identity(), &plan, build)?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 254,
+          "lineEnd": 261,
+          "literal": "    let abi2 = if adapter == StatementAdapter::SettlementHashV2 {\n        Some(abi2::constants(admitted.program(), &plan, &layout, identity.digest()?.0)?)\n    } else {\n        None\n    };\n    let mut relation = CompiledRelation { admitted, options, plan, layout, identity, adapter, abi2, probe: placeholder };\n    relation.probe = probe::<F>(&relation)?;\n    Ok(relation)"
+        }
+      ]
+    },
+    {
+      "id": "PR01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "profile separation",
+      "sourceObservation": "Frontend branches on Core1 or Stage2 after language(); Core lib declares public Sherlock modules separately and private cfg(test) draft modules. None of these inspected dispatch bodies adds a Sherlock branch to compile_source.",
+      "citations": [
+        {
+          "file": "S06-frontend.rs",
+          "sha256": "039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9",
+          "lineStart": 29,
+          "lineEnd": 49,
+          "literal": "pub enum Admitted {\n    Core1(AdmittedCore1),\n    Staged2(StagedAdmission),\n}\n\n/// Route by `mori_core::language`, then admit with the profile's own Core entry point.\npub fn admit_source(source: &str) -> Result<Admitted, CompileError> {\n    let profile = mori_core::language(source).map_err(CompileError::Core)?;\n    let source_sha256 = identity::source_hash(source);\n    match profile {\n        mori_core::LANGUAGE => {\n            // `parse` validates before returning (parser.rs:157-159).\n            let program = mori_core::parse(source).map_err(CompileError::Core)?;\n            admit_checked(program, Some(source_sha256)).map(Admitted::Core1)\n        }\n        mori_core::stage::LANGUAGE_2 => {\n            let staged = mori_core::stage::load(source).map_err(CompileError::Core)?;\n            Ok(Admitted::Staged2(StagedAdmission::new(staged, source_sha256)))\n        }\n        other => Err(CompileError::Profile(other.to_string())),\n    }"
+        },
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 370,
+          "lineEnd": 377,
+          "literal": "    parser.expect(\"language\")?;\n    let profile = parser.string()?;\n    match profile.as_str() {\n        LANGUAGE => Ok(LANGUAGE),\n        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),\n        _ => Err(parser.error(\"profile\", format!(\"Expected language \\\"{LANGUAGE}\\\"; found {profile:?}.\"))),\n    }\n}"
+        },
+        {
+          "file": "CORE-lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "lineStart": 8,
+          "lineEnd": 31,
+          "literal": "pub mod sherlock;\n\n// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 266,
+          "lineEnd": 271,
+          "literal": "pub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "U01",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "lexer external boundary",
+      "sourceObservation": "Span,Soa/Soars and MoriDiagnostic implementations plus inherited Cargo versions are absent. Token-span and diagnostic-construction call sites are inspected,not these dependency bodies.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 19,
+          "lineEnd": 21,
+          "literal": "use mori_diagnostics::MoriDiagnostic;\nuse mori_span::Span;\nuse soa_rs::Soa;"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 19,
+          "lineEnd": 21,
+          "literal": "use mori_diagnostics::MoriDiagnostic;\nuse mori_span::Span;\nuse soa_rs::Soa;"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 1,
+          "lineEnd": 2,
+          "literal": "use mori_span::Span;\nuse soa_rs::{Soa, Soars};"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 1,
+          "lineEnd": 2,
+          "literal": "use mori_span::Span;\nuse soa_rs::{Soa, Soars};"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 193,
+          "lineEnd": 204,
+          "literal": "    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 193,
+          "lineEnd": 204,
+          "literal": "    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }"
+        },
+        {
+          "file": "MAIN-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 5,
+          "lineEnd": 19,
+          "literal": "edition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        },
+        {
+          "file": "BACKEND-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 5,
+          "lineEnd": 19,
+          "literal": "edition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        }
+      ]
+    },
+    {
+      "id": "U02",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "identity external boundary",
+      "sourceObservation": "Core intent::canonical/hash_bytes and every include_bytes target not separately supplied remain external to this packet. Source declarations and helper call order do not prove actual embedded contents,build execution,binary identity or cryptographic behavior.",
+      "citations": [
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 80,
+          "lineEnd": 99,
+          "literal": "/// SHA-256 of `intent::canonical(value)`, reusing Core's canonical encoder and hash.\npub fn digest_of<T: Serialize>(value: &T) -> Result<Digest32, CompileError> {\n    let bytes = mori_core::intent::canonical(value).map_err(CompileError::Core)?;\n    Ok(digest_bytes(&bytes))\n}\n\n/// SHA-256 of raw bytes through Core's `hash_bytes`.\npub fn digest_bytes(bytes: &[u8]) -> Digest32 {\n    Digest32::from_hex(&mori_core::intent::hash_bytes(bytes)).expect(\"Core hash_bytes returns 64 lowercase hex characters\")\n}\n\n/// Canonical typed-Program identity (equals `CoreSourceExportV1.program_hash` and the\n/// owner-intent `program_hash` for the same Program).\npub fn program_hash(program: &Program) -> Result<Digest32, CompileError> {\n    digest_of(program)\n}\n\n/// Raw source identity; never bound in-circuit by this compiler.\npub fn source_hash(source: &str) -> Digest32 {\n    digest_bytes(source.as_bytes())"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 44,
+          "lineEnd": 54,
+          "literal": "macro_rules! own {\n    ($p:literal) => {\n        Embedded { path: $p, bytes: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", $p)) }\n    };\n}\n\nmacro_rules! core_file {\n    ($p:literal) => {\n        Embedded { path: $p, bytes: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/../../../moriarty/\", $p)) }\n    };\n}"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 173,
+          "lineEnd": 204,
+          "literal": "/// Entries sorted by path bytewise; a repeated path is refused.\npub fn entries(files: &[Embedded]) -> Result<Vec<Entry>, CompileError> {\n    let mut out: Vec<Entry> = files\n        .iter()\n        .map(|f| Entry { path: f.path.to_string(), sha256: identity::digest_bytes(f.bytes).hex(), bytes: f.bytes.len() as u64 })\n        .collect();\n    out.sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));\n    if out.windows(2).any(|w| w[0].path == w[1].path) {\n        return Err(CompileError::Identity(\"embedded build membership repeats a path\".into()));\n    }\n    Ok(out)\n}\n\n/// Canonical bytes of the `mori-r1cs-build-manifest/2` document for `OWN_FILES`.\npub fn build_manifest_bytes() -> Result<Vec<u8>, CompileError> {\n    mori_core::intent::canonical(&BuildManifestV2 { format: BUILD_MANIFEST_FORMAT, files: entries(OWN_FILES)? }).map_err(CompileError::Core)\n}\n\n/// SHA-256 of the canonical build manifest.\npub fn build_manifest_digest() -> Result<Digest32, CompileError> {\n    Ok(identity::digest_bytes(&build_manifest_bytes()?))\n}\n\n/// The Core closure digest under the unchanged `/1` closure rule.\npub fn core_closure_digest() -> Result<Digest32, CompileError> {\n    identity::digest_of(&entries(CORE_FILES)?)\n}\n\n/// The only `CompilerBuild` that `compile` accepts.\npub fn embedded_build() -> Result<CompilerBuild, CompileError> {\n    Ok(CompilerBuild { compiler_source_manifest_sha256: build_manifest_digest()?, core_closure_sha256: core_closure_digest()? })\n}"
+        }
+      ]
+    },
+    {
+      "id": "U03",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "gadget and field boundary",
+      "sourceObservation": "blake2b256,blake2b256_gadget,alloc_bit,digest_half_lc,Cs/Lc/fe and UIntW/WideW implementation bodies are absent. Calls/types are recorded; no hash,field,proof,range or resource adequacy judgment is made.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 22,
+          "lineEnd": 29,
+          "literal": "use crate::adapter::{AdapterError, BindError, SlotWire};\nuse crate::blake2b::{self, Bit};\nuse crate::error::{CompileError, MappingError};\nuse crate::gadgets::{UIntW, WideW};\nuse crate::plan::{AccountingBinding, ActionPlan, CapBinding, CompileOptions, DutyOrigin, EffectShape, FrameCells};\nuse crate::r1cs::{Cs, Lc, fe};\nuse crate::statement::{EffectValues, SlotEncoding, SlotKind, StatementLayout, TransitionValues, Wide, accounting_summary};\nuse ark_ff::PrimeField;"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 297,
+          "lineEnd": 304,
+          "literal": "/// The two public inputs `[int_be(d[0..16]), int_be(d[16..32])]`, d = BLAKE2b-256(stmt).\npub fn public_inputs<F: PrimeField>(statement: &[u8]) -> Vec<F> {\n    let d = blake2b::blake2b256(statement);\n    let mut hi = [0u8; 16];\n    let mut lo = [0u8; 16];\n    hi.copy_from_slice(&d[..16]);\n    lo.copy_from_slice(&d[16..]);\n    vec![fe(u128::from_be_bytes(hi)), fe(u128::from_be_bytes(lo))]"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 343,
+          "lineEnd": 354,
+          "literal": "    let mut sum = Lc::zero();\n    for k in 0..n {\n        for j in 0..8 {\n            let val = honest.map(|h| (h[k] >> j) & 1 == 1);\n            let bit = blake2b::alloc_bit(cs, \"abi2.body\", val)?;\n            let weight = 8 * (n - 1 - k) + j;\n            sum = sum.plus(&bit.lc.scaled(fe(1u128 << weight)));\n            bits.push(bit);\n        }\n    }\n    cs.enforce_eq(&sum, limb)?;\n    Ok(())"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 431,
+          "lineEnd": 435,
+          "literal": "    let digest = blake2b::blake2b256_gadget(cs, &bits)?;\n    for (k, from) in [0usize, 16].into_iter().enumerate() {\n        let x = cs.input(claimed.map(|c| c[k]))?;\n        cs.enforce_eq(&Lc::var(x), &blake2b::digest_half_lc(&digest, from))?;\n    }"
+        }
+      ]
+    },
+    {
+      "id": "U04",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "staged/backend boundaries",
+      "sourceObservation": "plan::statement_cost and Core StagedProgram accessors/types are called from lowering_plan but their implementations are outside this packet. S16 plan_action/probe calls are also boundary references here. Prior33-file analysis remains separately immutable.",
+      "citations": [
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 25,
+          "lineEnd": 29,
+          "literal": "use crate::error::CompileError;\nuse crate::identity::Digest32;\nuse crate::plan;\nuse mori_core::stage::{CaptureSlot, StageBinder, StagedProgram};\nuse mori_core::{Statement, UInt};"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 156,
+          "lineEnd": 169,
+          "literal": "    pub fn lowering_plan(&self) -> Result<StagedLoweringPlan, CompileError> {\n        let program = self.staged.program();\n        let stage_plan = self.staged.plan();\n        let mut actions = Vec::with_capacity(stage_plan.actions.len());\n        for (index, (action, ap)) in program.actions.iter().zip(&stage_plan.actions).enumerate() {\n            if ap.action != action.name || ap.segment_cost.len() != ap.sites.len() + 1 || ap.committed_before.len() != ap.sites.len() + 1 {\n                return Err(CompileError::Bound(format!(\"stage plan for {:?} is not the admitted plan\", action.name)));\n            }\n            let action_index = u16::try_from(index).map_err(|_| CompileError::Bound(\"action index exceeds u16\".into()))?;\n            let inputs: Vec<CaptureSlot> = action\n                .inputs\n                .iter()\n                .enumerate()\n                .map(|(i, input)| CaptureSlot { name: input.name.clone(), ty: input.ty, origin: mori_core::stage::Origin::Input, ordinal: i as u16 })"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 199,
+          "lineEnd": 207,
+          "literal": "                let effect_kinds: Vec<String> = statements.iter().filter_map(effect_kind).collect();\n                let has_emit = statements.iter().any(|s| matches!(s, Statement::Emit { .. }));\n                let not_advanced_attempted = match statements.first() {\n                    Some(guard @ Statement::Await { .. }) if segment > 0 => Some(UInt(plan::statement_cost(program, guard)?)),\n                    _ => None,\n                };\n                let before = ap.committed_before[segment];\n                let cost = ap.segment_cost[segment];\n                let after = before.0.checked_add(cost.0).map(UInt).ok_or_else(|| CompileError::Bound(\"committed work exceeds u128\".into()))?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 225,
+          "lineEnd": 226,
+          "literal": "    let plan = plan::plan_action(admitted.program(), &options)?;\n    let layout = StatementLayout::build(admitted.identity(), &plan, build)?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 260,
+          "lineEnd": 260,
+          "literal": "    relation.probe = probe::<F>(&relation)?;"
+        }
+      ]
+    },
+    {
+      "id": "U05",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "document-only claims",
+      "sourceObservation": "Adapter TARGET_OBLIGATIONS,SETTLEMENT_V2_TARGET_DISCHARGE and STAGED_REMAINING are source string arrays. Their presence is recorded; the text is not evidence that listed obligations are discharged or implemented. No referenced ledger/source paths are followed.",
+      "citations": [
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 89,
+          "lineEnd": 113,
+          "literal": "/// Obligations a pure transition proof does not discharge, whatever the adapter.\npub const TARGET_OBLIGATIONS: &[&str] = &[\n    \"Pre-state authenticity: pre states, cells and duties are statement inputs; a target must bind them to the consumed datum/UTxO (ScriptCustodied) or label them unauthenticated premises (KeyHeldExternal, projection.rs:415-430).\",\n    \"Balance-row existence (premise, review F-04): Core refuses a scenario that lacks an explicit balance row for a touched account (runtime.rs:609-627), but the layout has no balance presence bit, so a claimed pre-balance of 0 for a missing row satisfies the relation. A target must authenticate the existence of every represented balance row, or a reviewed presence bit must be added; until then this is an unauthenticated premise, not a relation constant.\",\n    \"Frame completeness: rows outside the represented cells are not in the statement; a target must represent them (FrameCells::Include) or establish that none exist, because Core's 65,536 trace bound counts every scenario row (runtime.rs:540-547). FrameCells::Include covers balance cells only: an unregistered incoming duty (no source Liability) cannot be represented at all (review F-05), so duty-frame completeness rests entirely on the target until a reviewed duty-frame option exists. No P3 or ABI mapping may claim a complete frame before then.\",\n    \"Physical asset delta: Transfer/Fee effects are bookkeeping; payouts, deposits, custody totals, conservation and tagged outputs are separate target relations (ABI-V1 VOTES.md P3).\",\n    \"Debit authority: authority for debited accounts and owner intent limits (intent::check_effects) are separate checks; the accounting summary only exposes gross debit and fees. The P3-7 scope is disputed and unreconciled: the later ABI review (f3ae8556, V6) requires authority for every debited account including custody-held balances, thread-advance authority and a signed intent in the statement, not only external (KeyHeldExternal) signers.\",\n    \"Replay and consumption: one-time use of the consumed thread/claim, nonce and predecessor history.\",\n    \"Ledger phases and failure outcomes: rejected executions have no success proof here; any charged failure transition needs its own relation.\",\n    \"Setup provenance: the R1CS digest names the matrices; a VK is trusted only with a reviewed setup transcript over exactly those matrices.\",\n];\n\n/// P3S1 PROPOSED: how the ABI v2 Cardano target (S2, `candidate/aiken/lib/pvc2/thread.ak`)\n/// takes over each [`TARGET_OBLIGATIONS`] entry for [`StatementAdapter::SettlementHashV2`].\n/// Source-level mapping only; nothing here is reviewed, compiled or executed.\npub const SETTLEMENT_V2_TARGET_DISCHARGE: &[(&str, &str)] = &[\n    (\"Pre-state authenticity\", \"S2 builds pre states, custody cells and duties from the spent thread datum; external cells use the canonical premise (gross debit in the step).\"),\n    (\"Balance-row existence (F-04)\", \"S2 refuses a represented custody cell without a datum row; external cells have no row by design.\"),\n    (\"Frame completeness (F-05)\", \"The datum is the complete snapshot; S2 copies every unrepresented custody row and liability (registered or not) into the continuation and checks Core's scenario bounds on the whole snapshot.\"),\n    (\"Physical asset delta\", \"S2 checks exact custody value before and after, tagged or pinned-datum payouts per external credit, global output allocation, reserve top-ups and no own-policy mint.\"),\n    (\"Debit authority\", \"S2 requires a verified Core owner intent from every debited account (custody included), every accrual debtor, every discharge creditor and one action advancer; Core check_effects runs on the bound effects and the complete closing duties.\"),\n    (\"Replay and consumption\", \"The intent binds the consumed outref and full pre-snapshot; the claim names the outref; the ledger consumes it once; seq and the event chain advance.\"),\n    (\"Ledger phases and failure outcomes\", \"Cardano transactions are atomic; phase-2 failure consumes only key-locked collateral; a refusal leaves the datum (and every duty) unchanged. No charged failure transition is modelled.\"),\n    (\"Setup provenance\", \"Unchanged: the catalogue pins (predicate, vk) per action; VK provenance needs a reviewed setup transcript.\"),\n];"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 113,
+          "lineEnd": 127,
+          "literal": "/// Remaining staged obligations. Listing them waives none.\npub const STAGED_REMAINING: &[&str] = &[\n    \"segment relations for every (action, segment) with program and plan hash bound in-circuit\",\n    \"pre/post frame slots (Idle | Pending{site, captures}) in the exact capture layouts, captures prefix-monotone\",\n    \"event binder slots and the resumed guard as a constrained Step against the unchanged boundary\",\n    \"await entry charge and committed_before/committed_after/plan_total binding (logical-cost/2)\",\n    \"stored cap as an explicit public slot; D-13 canonical reconstruction value stays split\",\n    \"R7 canonical boundary predicates (states exact, balances strictly ascending, registry identities, trace bound)\",\n    \"residual duties and present-zero versus absent across segments\",\n    \"NotAdvanced (false guard) as a separate non-transaction relation with attempted work\",\n    \"Emit and every effect kind in staged segments (the staged UNIT codec admits Emit)\",\n    \"staged continuation codec correspondence (production codec 3b21... frozen; FREEZE-4 r2 result unadopted)\",\n    \"authentication and one-time consumption of continuations and events (STAGE_LABELS: none/untracked)\",\n    \"independent staged differential oracles and hostile witness mutations before any execution\",\n];"
+        }
+      ]
+    }
+  ],
+  "claimCount": 25,
+  "scope": "Only exact listed claim objects reviewed; parent metadata/other parts not inherited.",
+  "sourceSnapshots": {
+    "main8174": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+    "backend9c86": "9c861d945fc8b706d5e2ee132aab3230490ff72e"
+  },
+  "all20Families": "OPEN; reference-only, no new mappings or name validation from unprovided inventory",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true
+}

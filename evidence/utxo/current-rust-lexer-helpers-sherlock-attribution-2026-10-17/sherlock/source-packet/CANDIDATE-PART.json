@@ -1,0 +1,686 @@
+{
+  "format": "moriarty-bounded-source-attribution-projection/1",
+  "parentTableSha256": "f32ff672e4720dce8e3edcbdfe3443ab369986dc2cc79797d4535746edd0e338",
+  "parentClaimCount": 26,
+  "part": "SHERLOCK",
+  "claims": [
+    {
+      "id": "S01",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "Core lib publicly declares sherlock,sherlock_source and sherlock_bounded_source; the draft source/typechecker/tests/image bridge modules are separate private cfg(test) declarations.",
+      "citations": [
+        {
+          "inputFile": "CORE-LIB.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/lib.rs",
+          "lineStart": 8,
+          "lineEnd": 31,
+          "literal": "pub mod sherlock;\n\n// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "Sherlock mod publicly reexports Machine,VisitResult/VisitStop and reference_types; image/program/helper/layout/arithmetic modules displayed here are cfg(test). Implementation bodies of Machine/reference streams are not inspected in this packet.",
+      "citations": [
+        {
+          "inputFile": "SHERLOCK-MOD.rs",
+          "sha256": "562f563d6f679d188bdb283d1dc191b34f19459a98d9c8a260911f16e7e367de",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/mod.rs",
+          "lineStart": 8,
+          "lineEnd": 25,
+          "literal": "pub mod compare;\nmod reference;\nmod reference_stream;\npub mod reference_display;\nmod reference_types;\n\npub use reference::Machine;\npub use reference_stream::{VisitResult, VisitStop};\npub use reference_types::*;\n\n#[cfg(test)]\nmod reference_tests;\n\n#[cfg(test)]\nmod reference_bounded_tests;\n\n#[cfg(test)]\nmod reference_bounded_extra_tests;"
+        },
+        {
+          "inputFile": "SHERLOCK-MOD.rs",
+          "sha256": "562f563d6f679d188bdb283d1dc191b34f19459a98d9c8a260911f16e7e367de",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/mod.rs",
+          "lineStart": 39,
+          "lineEnd": 79,
+          "literal": "// Host-only image proposal: exercised here without exporting a public runtime API.\n#[cfg(test)]\npub(crate) mod program_image;\n\n// Private flat-table consumer proposal, normal-oracle comparisons only.\n#[cfg(test)]\npub(crate) mod image_reference;\n\n// Host-only event grouping; every internal reference record stays observable.\n#[cfg(test)]\nmod reference_slice;\n\n// Unadopted host snapshot rows; normal materialization checks only.\n#[cfg(test)]\nmod machine_image;\n\n// Unadopted finite call-helper proposal; clock and handle adapters stay separate.\n#[cfg(test)]\nmod helper_schedule;\n\n// Host projection of helper completions to the unchanged A reference boundary.\n#[cfg(test)]\nmod helper_call_adapter;\n\n// Causal occurrence metadata on the private image execution path.\n#[cfg(test)]\nmod source_origin_normal_tests;\n\n// Internal L4 host preparation source proposal; H1, no network/untrusted API.\n// Compilation and all normal tests remain UNRUN pending separate admission.\n#[cfg(test)]\nmod layout_a;\n\n#[cfg(test)]\nmod reference_stream_tests;\n\n// Private host arithmetic/fuel materialization; no constraint or wire ABI.\n#[cfg(test)]\nmod arithmetic_witness;\n#[cfg(test)]\nmod arithmetic_witness_normal_tests;"
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "Typed Sherlock profile literal is sherlock-k-a/1; Value/Type include UInt,Bool,List,Tree and Expr includes Literal/Var/Let/Binary/Unary/If/Call/Match. Function/Program are typed host declarations,distinct from Core Program/Statement declarations.",
+      "citations": [
+        {
+          "inputFile": "REFERENCE-TYPES.rs",
+          "sha256": "4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/reference_types.rs",
+          "lineStart": 4,
+          "lineEnd": 34,
+          "literal": "pub const PROFILE: &str = \"sherlock-k-a/1\";\npub const K_SOURCE_SHA256: &str =\n    \"b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41\";\n\n/// Opaque source symbol. K comparisons use canonical signed-decimal names.\n/// Other spellings belong to the typed host API, outside that common domain.\npub type Name = String;\npub type Environment = BTreeMap<Name, Value>;\npub type ExprRef = Arc<Expr>;\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Tree {\n    Leaf(u128),\n    Branch(Arc<Tree>, Arc<Tree>),\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Value {\n    UInt(u128),\n    Bool(bool),\n    List(Vec<u128>),\n    Tree(Tree),\n}\n\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum Type {\n    UInt,\n    Bool,\n    List,\n    Tree,\n}"
+        },
+        {
+          "inputFile": "REFERENCE-TYPES.rs",
+          "sha256": "4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/reference_types.rs",
+          "lineStart": 68,
+          "lineEnd": 99,
+          "literal": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Expr {\n    Literal(Value),\n    Var(Name),\n    Let(Name, ExprRef, ExprRef),\n    Binary(BinaryOp, ExprRef, ExprRef),\n    Unary(UnaryOp, ExprRef),\n    If(ExprRef, ExprRef, ExprRef),\n    Call(Name, Vec<ExprRef>),\n    Match(ExprRef, Vec<Arm>),\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Parameter {\n    pub name: Name,\n    pub ty: Type,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Function {\n    pub name: Name,\n    pub parameters: Vec<Parameter>,\n    pub return_type: Type,\n    pub body: ExprRef,\n}\n\n/// Function order is significant: lookup takes the first matching name.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Program {\n    pub functions: Vec<Function>,\n    pub entry: ExprRef,\n}"
+        },
+        {
+          "inputFile": "CORE-IR.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/ir.rs",
+          "lineStart": 170,
+          "lineEnd": 187,
+          "literal": "#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Action {\n    pub name: String,\n    pub inputs: Vec<InputDecl>,\n    pub statements: Vec<Statement>,\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Program {\n    pub language: String,\n    pub semantics: String,\n    pub name: String,\n    pub states: Vec<StateDecl>,\n    pub assets: Vec<AssetDecl>,\n    pub expressions: Vec<Expr>,\n    pub actions: Vec<Action>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "source_adapter public constants are FORMAT=moriarty-sherlock-scalar-source-projection/1 and MAX_PROJECTION_OCCURRENCES=Core MAX_EXPRESSIONS+MAX_STATEMENTS. The latter Core constants are8192 and1024; this records declarations,not budget adequacy.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 12,
+          "lineEnd": 23,
+          "literal": "pub const FORMAT: &str = \"moriarty-sherlock-scalar-source-projection/1\";\n\n/// Maintainer preparation budget: the maximum number of source occurrences a\n/// single report (summed across its actions) will materialize. Preparation\n/// expands the validated Core expression DAG once per traversed edge with no\n/// sharing, so a DAG of linear size can demand exponentially many occurrences\n/// (and matching generated AST nodes) even within the existing depth-64 and\n/// 8192-expression Core bounds. This ceiling is a representation-preparation\n/// limit only: it is not a Core schema rule, resource/circuit cost, or any\n/// change to the compiler's supported subset. Exhaustion is per-site\n/// `Unsupported` metadata, never a compiler refusal.\npub const MAX_PROJECTION_OCCURRENCES: usize = crate::MAX_EXPRESSIONS + crate::MAX_STATEMENTS;"
+        },
+        {
+          "inputFile": "CORE-IR.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/ir.rs",
+          "lineStart": 4,
+          "lineEnd": 9,
+          "literal": "pub const LANGUAGE: &str = \"moriarty/1\";\npub const SEMANTICS: &str = \"moriarty-core/1\";\npub const MAX_EXPRESSIONS: usize = 8192;\npub const MAX_STATEMENTS: usize = 1024;\npub const MAX_DECLARATIONS: usize = 256;\npub const MAX_TRACE_CELLS: usize = 65_536;"
+        }
+      ]
+    },
+    {
+      "id": "S05",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "Source adapter declares ProjectionDiagnostic,InputSite,LetSite,EmitSite,SourceOccurrence,ScalarActionReport,ScalarActionMap,ActionProjection and SourceProjectionReport. ScalarActionMap contains Function/report; ActionProjection variants are Prepared/Unsupported; these are data declarations,not Core compiler outcomes.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 25,
+          "lineEnd": 114,
+          "literal": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct ProjectionDiagnostic {\n    pub code: String,\n    pub construct: String,\n    pub action_index: usize,\n    pub statement_index: Option<usize>,\n    pub expression: Option<ExprId>,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct InputSite {\n    pub index: usize,\n    pub name: String,\n    pub ty: crate::Type,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct LetSite {\n    pub statement_index: usize,\n    pub name: String,\n    pub expression: ExprId,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct EmitSite {\n    pub statement_index: usize,\n    pub name: String,\n    pub expression: ExprId,\n    pub role: String,\n}\n\n/// Path is relative to the generated function body, not text or image row IDs.\n/// Every traversed source edge receives a separate occurrence, even for a DAG.\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct SourceOccurrence {\n    pub action_index: usize,\n    pub statement_index: usize,\n    pub expression: Option<ExprId>,\n    pub body_path: Vec<usize>,\n    pub node_kind: String,\n    pub source_expression: Option<CoreExpr>,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct ScalarActionReport {\n    pub action_index: usize,\n    pub action: String,\n    pub inputs: Vec<InputSite>,\n    pub lets: Vec<LetSite>,\n    pub emit: EmitSite,\n    /// Body preorder, with child positions matching ProgramImage's AST locators.\n    pub occurrences: Vec<SourceOccurrence>,\n    pub return_type: crate::Type,\n    pub generated_function_name: String,\n    pub symbol_domain: String,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct ScalarActionMap {\n    pub function: Function,\n    pub report: ScalarActionReport,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\n#[serde(tag = \"status\", rename_all = \"kebab-case\")]\npub enum ActionProjection {\n    Prepared { report: ScalarActionReport },\n    Unsupported { action_index: usize, action: String, diagnostic: ProjectionDiagnostic },\n}\n\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct SourceProjectionReport {\n    pub format: String,\n    pub source_language: String,\n    pub source_semantics: String,\n    pub agreement: String,\n    pub reference_profile: String,\n    pub qualification: String,\n    pub source_function_support: bool,\n    pub source_branch_support: bool,\n    pub source_recursion_support: bool,\n    pub source_data_support: bool,\n    pub evaluation_performed: bool,\n    pub source_expression_count: usize,\n    pub source_action_count: usize,\n    pub source_state_count: usize,\n    pub source_asset_count: usize,\n    pub coverage: String,\n    pub actions: Vec<ActionProjection>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "S06",
+      "classification": "CALL_EDGE",
+      "statement": "Public source_projection_report(&CoreProgram)->SourceProjectionReport calls crate::validate once,iterates actions,attempts prepare_validated_action on validation success,and converts each local Result into Prepared/Unsupported report entries. It returns report metadata rather than Result<Artifact,...>.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 116,
+          "lineEnd": 144,
+          "literal": "/// Report every action without changing the real compiler's supported subset.\npub fn source_projection_report(program: &Program) -> SourceProjectionReport {\n    let validation = crate::validate(program);\n    let mut remaining = MAX_PROJECTION_OCCURRENCES;\n    let actions = program.actions.iter().enumerate().map(|(index, action)| {\n        let result = match &validation {\n            Ok(()) => prepare_validated_action(program, index, &mut remaining),\n            Err(error) => Err(diagnostic(index, None, None, \"core-validation\", &error.code)),\n        };\n        match result {\n            Ok(map) => ActionProjection::Prepared { report: map.report },\n            Err(diagnostic) => ActionProjection::Unsupported {\n                action_index: index, action: action.name.clone(), diagnostic,\n            },\n        }\n    }).collect();\n    SourceProjectionReport {\n        format: FORMAT.into(), source_language: program.language.clone(),\n        source_semantics: program.semantics.clone(), agreement: program.name.clone(),\n        reference_profile: PROFILE.into(), qualification: \"source-static-scalar-projection-only\".into(),\n        source_function_support: false, source_branch_support: false,\n        source_recursion_support: false, source_data_support: false,\n        evaluation_performed: false, source_expression_count: program.expressions.len(),\n        source_action_count: program.actions.len(), source_state_count: program.states.len(),\n        source_asset_count: program.assets.len(),\n        coverage: \"direct scalar nodes; stateless actions; ordered lets and one final emit value; first unsupported site per action; no effects execution or unvisited-site mapping\".into(),\n        actions,\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "S07",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "source_projection_report assigns qualification source-static-scalar-projection-only,evaluation_performed=false,and source_function/branch/recursion/data_support=false fields. These are literal report assignments scoped to this adapter,not global language/20-family capability judgments.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 132,
+          "lineEnd": 143,
+          "literal": "    SourceProjectionReport {\n        format: FORMAT.into(), source_language: program.language.clone(),\n        source_semantics: program.semantics.clone(), agreement: program.name.clone(),\n        reference_profile: PROFILE.into(), qualification: \"source-static-scalar-projection-only\".into(),\n        source_function_support: false, source_branch_support: false,\n        source_recursion_support: false, source_data_support: false,\n        evaluation_performed: false, source_expression_count: program.expressions.len(),\n        source_action_count: program.actions.len(), source_state_count: program.states.len(),\n        source_asset_count: program.assets.len(),\n        coverage: \"direct scalar nodes; stateless actions; ordered lets and one final emit value; first unsupported site per action; no effects execution or unvisited-site mapping\".into(),\n        actions,\n    }"
+        }
+      ]
+    },
+    {
+      "id": "S08",
+      "classification": "CALL_EDGE",
+      "statement": "Public prepare_scalar_action(&CoreProgram,action_index)->Result<ScalarActionMap,ProjectionDiagnostic> calls Core validate,starts a local occurrence counter,and calls prepare_validated_action.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 146,
+          "lineEnd": 155,
+          "literal": "/// Compile a typed scalar body with dynamic ordered parameters. The generated\n/// function is a representation wrapper; it is not a source function feature.\npub fn prepare_scalar_action(program: &Program, action_index: usize)\n    -> Result<ScalarActionMap, ProjectionDiagnostic>\n{\n    crate::validate(program).map_err(|error|\n        diagnostic(action_index, None, None, \"core-validation\", &error.code))?;\n    let mut remaining = MAX_PROJECTION_OCCURRENCES;\n    prepare_validated_action(program, action_index, &mut remaining)\n}"
+        }
+      ]
+    },
+    {
+      "id": "S09",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "prepare_validated_action checks action index,Core LANGUAGE/SEMANTICS,and empty states/assets. It collects Lets before an Emit,accepts an Emit only at final statement position,and returns diagnostic metadata for other statement shapes or absent final Emit. No financial/program acceptance judgment is inferred.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 178,
+          "lineEnd": 205,
+          "literal": "fn prepare_validated_action(program: &Program, index: usize, remaining: &mut usize)\n    -> Result<ScalarActionMap, ProjectionDiagnostic>\n{\n    let action = program.actions.get(index).ok_or_else(||\n        diagnostic(index, None, None, \"action-index\", \"no-such-action\"))?;\n    if program.language != crate::LANGUAGE || program.semantics != crate::SEMANTICS {\n        return Err(diagnostic(index, None, None, \"source-profile\", \"unsupported-projection\"));\n    }\n    if !program.states.is_empty() || !program.assets.is_empty() {\n        return Err(diagnostic(index, None, None, \"state-or-asset-declaration\", \"unsupported-projection\"));\n    }\n    let mut lets = Vec::new();\n    let mut emit = None;\n    for (statement_index, statement) in action.statements.iter().enumerate() {\n        match statement {\n            Statement::Let { name, value } if emit.is_none() => lets.push(LetSite {\n                statement_index, name: name.clone(), expression: *value,\n            }),\n            Statement::Emit { name, value } if statement_index + 1 == action.statements.len() => {\n                emit = Some(EmitSite { statement_index, name: name.clone(), expression: *value,\n                    role: \"value-projection; ordered emit effect remains in Core\".into() });\n            }\n            other => return Err(diagnostic(index, Some(statement_index), None,\n                statement_kind(other), \"unsupported-projection\")),\n        }\n    }\n    let emit = emit.ok_or_else(|| diagnostic(index, None, None,\n        \"final-emit\", \"missing-projection-observation\"))?;"
+        }
+      ]
+    },
+    {
+      "id": "S10",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "The adapter maps input parameter declarations and wraps reversed mapped Lets into a typed Function with action name; report records inputs/lets/emit/occurrences/return type and a typed-host-symbols label. map_expression handles literal/name/not and Add/Sub/Mul/Eq/Lt branches; other binary operations and liability reads return local diagnostics.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 206,
+          "lineEnd": 242,
+          "literal": "    let mut types: std::collections::BTreeMap<String, crate::Type> = action.inputs.iter()\n        .map(|input| (input.name.clone(), input.ty)).collect();\n    let mut occurrences = Vec::new();\n    let mut mapped_lets = Vec::new();\n    let mut path = Vec::new();\n    for site in &lets {\n        charge(remaining, index, Some(site.statement_index), None)?;\n        occurrences.push(SourceOccurrence { action_index: index, statement_index: site.statement_index,\n            expression: None, body_path: path.clone(), node_kind: \"let\".into(), source_expression: None });\n        let mut value_path = path.clone(); value_path.push(0);\n        let value = map_expression(program, index, site.statement_index, site.expression,\n            value_path, &mut occurrences, remaining)?;\n        let ty = crate::runtime::expr_type(program, site.expression, &types, 0)\n            .map_err(|error| diagnostic(index, Some(site.statement_index), Some(site.expression),\n                \"expression-type\", &error.code))?;\n        types.insert(site.name.clone(), ty);\n        mapped_lets.push((site.name.clone(), value));\n        path.push(1);\n    }\n    let mut body = map_expression(program, index, emit.statement_index, emit.expression,\n        path, &mut occurrences, remaining)?;\n    let return_type = crate::runtime::expr_type(program, emit.expression, &types, 0)\n        .map_err(|error| diagnostic(index, Some(emit.statement_index), Some(emit.expression),\n            \"expression-type\", &error.code))?;\n    for (name, value) in mapped_lets.into_iter().rev() {\n        body = Arc::new(Expr::Let(name, value, body));\n    }\n    let inputs: Vec<_> = action.inputs.iter().enumerate().map(|(index, input)|\n        InputSite { index, name: input.name.clone(), ty: input.ty }).collect();\n    let function = Function { name: action.name.clone(),\n        parameters: inputs.iter().map(|input| Parameter {\n            name: input.name.clone(), ty: scalar_type(input.ty),\n        }).collect(), return_type: scalar_type(return_type), body };\n    let report = ScalarActionReport { action_index: index, action: action.name.clone(), inputs,\n        lets, emit, occurrences, return_type, generated_function_name: function.name.clone(),\n        symbol_domain: \"typed-host-symbols; no K numeric-name correspondence claimed\".into() };\n    Ok(ScalarActionMap { function, report })"
+        },
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 245,
+          "lineEnd": 288,
+          "literal": "fn map_expression(program: &Program, action: usize, statement: usize, id: ExprId,\n    path: Vec<usize>, occurrences: &mut Vec<SourceOccurrence>, remaining: &mut usize)\n    -> Result<ExprRef, ProjectionDiagnostic>\n{\n    let source = program.expressions.get(usize::from(id)).ok_or_else(||\n        diagnostic(action, Some(statement), Some(id), \"expression-index\", \"no-such-expression\"))?;\n    let kind = match source {\n        CoreExpr::Literal { .. } => \"literal\", CoreExpr::Name { .. } => \"name\",\n        CoreExpr::Binary { .. } => \"binary\", CoreExpr::Not { .. } => \"not\",\n        CoreExpr::LiabilityPresent { .. } => \"liability-present\",\n        CoreExpr::LiabilityAmount { .. } => \"liability-amount\",\n    };\n    charge(remaining, action, Some(statement), Some(id))?;\n    occurrences.push(SourceOccurrence { action_index: action, statement_index: statement,\n        expression: Some(id), body_path: path.clone(), node_kind: kind.into(),\n        source_expression: Some(source.clone()) });\n    let child = |id, position, occurrences: &mut Vec<SourceOccurrence>, remaining: &mut usize| {\n        let mut child_path = path.clone(); child_path.push(position);\n        map_expression(program, action, statement, id, child_path, occurrences, remaining)\n    };\n    let mapped = match source {\n        CoreExpr::Literal { value } => Expr::Literal(match value {\n            crate::Value::UInt(value) => Value::UInt(value.0),\n            crate::Value::Bool(value) => Value::Bool(*value),\n        }),\n        CoreExpr::Name { name } => Expr::Var(name.clone()),\n        CoreExpr::Not { value } => Expr::Unary(UnaryOp::Not, child(*value, 0, occurrences, remaining)?),\n        CoreExpr::Binary { op, lhs, rhs } => {\n            let op = match op {\n                CoreOp::Add => BinaryOp::Add, CoreOp::Sub => BinaryOp::Sub,\n                CoreOp::Mul => BinaryOp::Mul, CoreOp::Eq => BinaryOp::Eq,\n                CoreOp::Lt => BinaryOp::Lt,\n                other => return Err(diagnostic(action, Some(statement), Some(id),\n                    &format!(\"binary-{other:?}\"), \"unsupported-projection\")),\n            };\n            let left = child(*lhs, 0, occurrences, remaining)?;\n            let right = child(*rhs, 1, occurrences, remaining)?;\n            Expr::Binary(op, left, right)\n        }\n        CoreExpr::LiabilityPresent { .. } | CoreExpr::LiabilityAmount { .. } =>\n            return Err(diagnostic(action, Some(statement), Some(id), kind, \"unsupported-projection\")),\n    };\n    Ok(Arc::new(mapped))\n}"
+        }
+      ]
+    },
+    {
+      "id": "B01",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "Bounded API declares HostObservationBounds with explicit action/expression/statement/argument/occurrence/nesting/stack/record/slot fields; HostMeasure,HostObservationRefusal,HostExtent and BoundedSourceObservation store typed metadata and snapshots/records. No Default derive appears on these displayed bounds.",
+      "citations": [
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 24,
+          "lineEnd": 115,
+          "literal": "pub const QUALIFICATION: &str =\n    \"bounded-host-observation; stateless scalar Core/1 projection; operation, slot and nesting counts only\";\n\n/// Caller-stated finite extents. There is deliberately no `Default`.\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub struct HostObservationBounds {\n    /// Borrowed source shape, checked before Core validation walks it.\n    pub max_source_actions: usize,\n    pub max_source_expressions: usize,\n    /// Statements summed over every action; Core validation types each one.\n    pub max_source_statements: usize,\n    pub max_scalar_arguments: usize,\n    /// Unshared occurrences, checked before the adapter's own fixed budget.\n    pub max_projection_occurrences: usize,\n    /// Generated body nesting. This bounds derived Drop/Clone/PartialEq/Debug\n    /// recursion over the generated AST; its native stack use is unmeasured.\n    pub max_ast_nesting: usize,\n    /// The A frame cap `L`, passed unchanged to `Machine::new`. Reaching it is\n    /// the existing A `Rejected(4)` outcome, never a host refusal.\n    pub stack_limit: usize,\n    /// Retained step records. Admission requires `initial_fuel + 1 <= max_step_records`.\n    pub max_step_records: usize,\n    /// Ceiling on [`HostExtent::peak_slot_bound`].\n    pub max_retained_slots: u128,\n}\n\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum HostMeasure {\n    SourceActions,\n    SourceExpressions,\n    SourceStatements,\n    ScalarArguments,\n    ProjectionOccurrences,\n    AstNesting,\n    StepRecords,\n    RetainedSlots,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub enum HostObservationRefusal {\n    /// `required: None` means the checked count overflowed `u128`.\n    Exceeded { measure: HostMeasure, required: Option<u128>, bound: u128 },\n    /// The actual Core validation error, unchanged.\n    CoreValidation(crate::Error),\n    NoSuchAction { action_index: usize, action_count: usize },\n    /// Lists and trees are outside the scalar domain. Only the discriminant is read.\n    NonScalarArgument { index: usize },\n    /// The actual adapter diagnostic, unchanged; it is not a compiler refusal.\n    Projection(ProjectionDiagnostic),\n    /// Actual adapter output fell outside this consumer's admitted shape.\n    PreparationContract { detail: &'static str },\n    /// Defensive: admitted fuel guarantees publication within the admitted records.\n    UnpublishedOutcome,\n}\n\n/// Admission counts for one observation. The slot unit is one scalar value,\n/// environment entry, parameter or expression reference. Environment keys are\n/// Core identifiers of at most 64 bytes; no byte total is claimed. The shared\n/// generated program and report are bounded by occurrences and nesting instead.\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub struct HostExtent {\n    pub bounds: HostObservationBounds,\n    /// Lets plus unshared expression nodes over every let and emit value.\n    pub projected_occurrences: u128,\n    pub ast_nesting_bound: u128,\n    /// Measured iteratively on the actual generated body.\n    pub observed_ast_nesting: usize,\n    /// `initial_fuel + 1`: one per charged step plus one free publication.\n    pub step_record_bound: u128,\n    /// `min(stack_limit, initial_fuel)`: a step pushes at most one frame.\n    pub frame_bound: u128,\n    /// Arity plus lets: the distinct names any machine environment can hold.\n    pub environment_entry_bound: u128,\n    /// `(2 * initial_fuel + 6) * (frame_bound + 3) * (entries + 2 * arity + 1)`.\n    pub peak_slot_bound: u128,\n    pub argument_types_match_inputs: bool,\n}\n\n/// The actual adapter report, generated program and machine records.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct BoundedSourceObservation {\n    pub report: ScalarActionReport,\n    /// The same allocation every retained snapshot references.\n    pub program: Arc<Program>,\n    pub initial: Snapshot,\n    pub records: Vec<StepRecord>,\n    pub terminal: Snapshot,\n    /// Actual post-publication step probe; separate from the terminal snapshot.\n    pub terminal_has_next: bool,\n    pub extent: HostExtent,\n    pub qualification: &'static str,\n}"
+        }
+      ]
+    },
+    {
+      "id": "B02",
+      "classification": "CALL_EDGE",
+      "statement": "Public observe_scalar_action(&CoreProgram,action_index,&[SherlockValue],initial_fuel,bounds)->Result<BoundedSourceObservation,HostObservationRefusal> checks source shape/arguments/action,then calls Core validate before its count pass and local bounds.",
+      "citations": [
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 126,
+          "lineEnd": 171,
+          "literal": "pub fn observe_scalar_action(program: &crate::Program, action_index: usize, arguments: &[Value],\n    initial_fuel: u128, bounds: HostObservationBounds)\n    -> Result<BoundedSourceObservation, HostObservationRefusal>\n{\n    within(HostMeasure::SourceActions, Some(count(program.actions.len())),\n        count(bounds.max_source_actions))?;\n    within(HostMeasure::SourceExpressions, Some(count(program.expressions.len())),\n        count(bounds.max_source_expressions))?;\n    let statements = program.actions.iter()\n        .try_fold(0u128, |sum, action| sum.checked_add(count(action.statements.len())));\n    within(HostMeasure::SourceStatements, statements, count(bounds.max_source_statements))?;\n    within(HostMeasure::ScalarArguments, Some(count(arguments.len())),\n        count(bounds.max_scalar_arguments))?;\n    if let Some(index) = arguments.iter()\n        .position(|value| !matches!(value, Value::UInt(_) | Value::Bool(_)))\n    {\n        return Err(HostObservationRefusal::NonScalarArgument { index });\n    }\n    let action = program.actions.get(action_index).ok_or(HostObservationRefusal::NoSuchAction {\n        action_index, action_count: program.actions.len(),\n    })?;\n    crate::validate(program).map_err(HostObservationRefusal::CoreValidation)?;\n\n    // Validation orders every child before its parent, so one forward pass gives\n    // unshared tree sizes and node depths without recursion. Saturated sizes\n    // exceed every usize bound and are refused below.\n    let mut sizes: Vec<u128> = Vec::with_capacity(program.expressions.len());\n    let mut depths: Vec<u128> = Vec::with_capacity(program.expressions.len());\n    for expression in &program.expressions {\n        let (children, fanout): ([crate::ExprId; 2], usize) = match expression {\n            crate::Expr::Binary { lhs, rhs, .. } => ([*lhs, *rhs], 2),\n            crate::Expr::Not { value } => ([*value, 0], 1),\n            _ => ([0, 0], 0),\n        };\n        let (mut size, mut depth) = (1u128, 0u128);\n        for child in &children[..fanout] {\n            let index = usize::from(*child);\n            let (Some(child_size), Some(child_depth)) = (sizes.get(index), depths.get(index)) else {\n                return Err(contract(\"expression-order\"));\n            };\n            size = size.saturating_add(*child_size);\n            depth = depth.max(*child_depth);\n        }\n        sizes.push(size);\n        depths.push(depth + 1);\n    }"
+        }
+      ]
+    },
+    {
+      "id": "B03",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "Bounded source performs literal forward size/depth counting,occurrence/nesting/step/retained-slot comparisons and checked/saturating arithmetic before prepare_scalar_action. These are source operations only; count/resource/native-stack sufficiency is not assessed.",
+      "citations": [
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 172,
+          "lineEnd": 204,
+          "literal": "    // Conservative over the adapter: unsupported statements stop preparation early.\n    let (mut lets, mut occurrences, mut value_depth) = (0u128, 0u128, 0u128);\n    for statement in &action.statements {\n        let (value, binder) = match statement {\n            crate::Statement::Let { value, .. } => (*value, 1),\n            crate::Statement::Emit { value, .. } => (*value, 0),\n            _ => continue,\n        };\n        let index = usize::from(value);\n        let (Some(size), Some(depth)) = (sizes.get(index), depths.get(index)) else {\n            return Err(contract(\"statement-expression\"));\n        };\n        lets += binder;\n        occurrences = occurrences.saturating_add(binder).saturating_add(*size);\n        value_depth = value_depth.max(*depth);\n    }\n    within(HostMeasure::ProjectionOccurrences, Some(occurrences),\n        count(bounds.max_projection_occurrences))?;\n    // Let i sits at depth i; its deepest value node at i + depth(value).\n    let ast_nesting_bound = lets.saturating_add(value_depth);\n    within(HostMeasure::AstNesting, Some(ast_nesting_bound), count(bounds.max_ast_nesting))?;\n    let step_record_bound = within(HostMeasure::StepRecords, initial_fuel.checked_add(1),\n        count(bounds.max_step_records))?;\n    let events = usize::try_from(step_record_bound).map_err(|_| contract(\"step-record-width\"))?;\n    let arity = count(action.inputs.len()).max(count(arguments.len()));\n    let frame_bound = count(bounds.stack_limit).min(initial_fuel);\n    let environment_entry_bound = arity.saturating_add(lets);\n    let peak_slot_bound = within(HostMeasure::RetainedSlots,\n        peak_slots(initial_fuel, frame_bound, environment_entry_bound, arity),\n        bounds.max_retained_slots)?;\n\n    let mapped = prepare_scalar_action(program, action_index)\n        .map_err(HostObservationRefusal::Projection)?;"
+        },
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 254,
+          "lineEnd": 275,
+          "literal": "fn within(measure: HostMeasure, required: Option<u128>, bound: u128)\n    -> Result<u128, HostObservationRefusal>\n{\n    match required {\n        Some(value) if value <= bound => Ok(value),\n        required => Err(HostObservationRefusal::Exceeded { measure, required, bound }),\n    }\n}\n\nfn scalar(ty: Type) -> bool {\n    matches!(ty, Type::UInt | Type::Bool)\n}\n\n/// Snapshot units: initial, terminal, two per record, the live machine state\n/// and one transient control/frame copy inside a step. Per snapshot: its\n/// environment, a control holding at most a frame plus an environment, and\n/// each frame holding at most one environment, arity values and arity\n/// pending arguments. Lists, trees and match arms are unreachable here.\nfn peak_slots(fuel: u128, frames: u128, entries: u128, arity: u128) -> Option<u128> {\n    let per_unit = entries.checked_add(arity.checked_mul(2)?)?.checked_add(1)?;\n    let per_snapshot = frames.checked_add(3)?.checked_mul(per_unit)?;\n    fuel.checked_mul(2)?.checked_add(6)?.checked_mul(per_snapshot)"
+        }
+      ]
+    },
+    {
+      "id": "B04",
+      "classification": "CALL_EDGE",
+      "statement": "After preparation,observe_scalar_action checks generated signature/body extents,constructs one Expr::Call containing literal scalar arguments,constructs Sherlock Program,then calls Machine::new,snapshot,run_steps,snapshot and step. Pending returns UnpublishedOutcome; otherwise it returns BoundedSourceObservation with QUALIFICATION.",
+      "citations": [
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 203,
+          "lineEnd": 244,
+          "literal": "    let mapped = prepare_scalar_action(program, action_index)\n        .map_err(HostObservationRefusal::Projection)?;\n    if count(mapped.report.occurrences.len()) > occurrences {\n        return Err(contract(\"occurrence-precount\"));\n    }\n    let function = mapped.function;\n    if function.parameters.len() != action.inputs.len()\n        || !function.parameters.iter().all(|parameter| scalar(parameter.ty))\n        || !scalar(function.return_type)\n    {\n        return Err(contract(\"generated-signature\"));\n    }\n    // Each occurrence is exactly one fresh generated body node.\n    let (nodes, observed_ast_nesting) = admitted_body(&function.body, mapped.report.occurrences.len())\n        .map_err(contract)?;\n    if nodes != mapped.report.occurrences.len() || count(observed_ast_nesting) > ast_nesting_bound {\n        return Err(contract(\"generated-body-extent\"));\n    }\n    let argument_types_match_inputs = arguments.len() == action.inputs.len()\n        && arguments.iter().zip(&action.inputs).all(|(value, input)| matches!((value, input.ty),\n            (Value::UInt(_), crate::Type::UInt) | (Value::Bool(_), crate::Type::Bool)));\n\n    // The fixed diagnostic invocation of the returned real function.\n    let entry = Arc::new(Expr::Call(function.name.clone(), arguments.iter()\n        .map(|value| Arc::new(Expr::Literal(value.clone()))).collect()));\n    let generated = Arc::new(Program { functions: vec![function], entry });\n    let mut machine = Machine::new(generated.clone(), initial_fuel, bounds.stack_limit);\n    let initial = machine.snapshot();\n    let records = machine.run_steps(events);\n    let terminal = machine.snapshot();\n    if matches!(terminal.outcome, Outcome::Pending) {\n        return Err(HostObservationRefusal::UnpublishedOutcome);\n    }\n    let terminal_has_next = machine.step().is_some();\n    Ok(BoundedSourceObservation {\n        report: mapped.report, program: generated, initial, records, terminal, terminal_has_next,\n        extent: HostExtent { bounds, projected_occurrences: occurrences, ast_nesting_bound,\n            observed_ast_nesting, step_record_bound, frame_bound, environment_entry_bound,\n            peak_slot_bound, argument_types_match_inputs },\n        qualification: QUALIFICATION,\n    })\n}"
+        },
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 278,
+          "lineEnd": 305,
+          "literal": "/// Explicit-stack walk admitting only the forms the scalar adapter emits.\n/// Returns the node count and nesting, stopping once `node_limit` is passed.\nfn admitted_body(body: &ExprRef, node_limit: usize) -> Result<(usize, usize), &'static str> {\n    let mut pending = vec![(body, 1usize)];\n    let (mut nodes, mut nesting) = (0usize, 0usize);\n    while let Some((expr, depth)) = pending.pop() {\n        nodes += 1;\n        if nodes > node_limit {\n            return Err(\"generated-node-count\");\n        }\n        nesting = nesting.max(depth);\n        match &**expr {\n            Expr::Literal(Value::UInt(_) | Value::Bool(_)) | Expr::Var(_) => {}\n            Expr::Let(_, value, body) => {\n                pending.push((value, depth + 1));\n                pending.push((body, depth + 1));\n            }\n            Expr::Binary(BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Eq\n                | BinaryOp::Lt, left, right) => {\n                pending.push((left, depth + 1));\n                pending.push((right, depth + 1));\n            }\n            Expr::Unary(UnaryOp::Not, value) => pending.push((value, depth + 1)),\n            _ => return Err(\"generated-node-form\"),\n        }\n    }\n    Ok((nodes, nesting))\n}"
+        }
+      ]
+    },
+    {
+      "id": "C01",
+      "classification": "CALL_EDGE",
+      "statement": "The backend exposes source_projection as a public module without a test cfg in the inspected declaration block. compile_reported is a non-test public function; its local test module begins later under cfg(test).",
+      "citations": [
+        {
+          "inputFile": "BACKEND-LIB.rs",
+          "sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/lib.rs",
+          "lineStart": 17,
+          "lineEnd": 23,
+          "literal": "pub mod authorization;\npub mod replay;\npub mod schnorr;\npub mod sherlock_machine;\npub mod signed_relation;\npub mod stage;\npub mod source_projection;"
+        },
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 31,
+          "lineEnd": 47,
+          "literal": "pub fn compile_reported(program: &Program, target: &Target) -> Result<ReportedCompilation, Error> {\n    // Preserve the same signed/unsigned selection as the existing CLI.\n    let artifact = if target.signed_policy.is_some() {\n        crate::compile_signed(program, target)\n    } else {\n        crate::compile(program, target)\n    }?;\n    // An unsupported projection remains metadata after successful compilation.\n    let mut projection = source_projection_report(program);\n    bound_paths(&mut projection);\n    let source_projection = CompilationSourceProjectionReport {\n        compiled_program_hash: artifact.program_hash.clone(),\n        artifact_format: artifact.format.clone(), abi: artifact.abi.clone(),\n        relation: artifact.relation.clone(), projection,\n    };\n    Ok(ReportedCompilation { artifact, source_projection })\n}"
+        },
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 75,
+          "lineEnd": 79,
+          "literal": "#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n    fn reported_compile_preserves_target_artifact_and_contains_projection() {"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "classification": "CALL_EDGE",
+      "statement": "compile_reported first selects compile_signed or compile according to target.signed_policy and propagates any error. Only after that Artifact return does it call source_projection_report and bound_paths,then return ReportedCompilation{artifact,source_projection}.",
+      "citations": [
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 17,
+          "lineEnd": 47,
+          "literal": "#[derive(Serialize)]\npub struct CompilationSourceProjectionReport {\n    pub compiled_program_hash: String,\n    pub artifact_format: String,\n    pub abi: String,\n    pub relation: String,\n    pub projection: SourceProjectionReport,\n}\n\npub struct ReportedCompilation {\n    pub artifact: Artifact,\n    pub source_projection: CompilationSourceProjectionReport,\n}\n\npub fn compile_reported(program: &Program, target: &Target) -> Result<ReportedCompilation, Error> {\n    // Preserve the same signed/unsigned selection as the existing CLI.\n    let artifact = if target.signed_policy.is_some() {\n        crate::compile_signed(program, target)\n    } else {\n        crate::compile(program, target)\n    }?;\n    // An unsupported projection remains metadata after successful compilation.\n    let mut projection = source_projection_report(program);\n    bound_paths(&mut projection);\n    let source_projection = CompilationSourceProjectionReport {\n        compiled_program_hash: artifact.program_hash.clone(),\n        artifact_format: artifact.format.clone(), abi: artifact.abi.clone(),\n        relation: artifact.relation.clone(), projection,\n    };\n    Ok(ReportedCompilation { artifact, source_projection })\n}"
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "CompilationSourceProjectionReport copies Artifact program_hash/format/abi/relation plus projection. ReportedCompilation holds Artifact and separate CompilationSourceProjectionReport; bound_paths can replace a Prepared report entry with Unsupported metadata using checked path-element cost. The inspected wrapper passes no projected Function into the earlier compile call.",
+      "citations": [
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 14,
+          "lineEnd": 46,
+          "literal": "pub const MAX_PROJECTION_PATH_ELEMENTS: usize =\n    mori_core::sherlock_source::MAX_PROJECTION_OCCURRENCES * 66;\n\n#[derive(Serialize)]\npub struct CompilationSourceProjectionReport {\n    pub compiled_program_hash: String,\n    pub artifact_format: String,\n    pub abi: String,\n    pub relation: String,\n    pub projection: SourceProjectionReport,\n}\n\npub struct ReportedCompilation {\n    pub artifact: Artifact,\n    pub source_projection: CompilationSourceProjectionReport,\n}\n\npub fn compile_reported(program: &Program, target: &Target) -> Result<ReportedCompilation, Error> {\n    // Preserve the same signed/unsigned selection as the existing CLI.\n    let artifact = if target.signed_policy.is_some() {\n        crate::compile_signed(program, target)\n    } else {\n        crate::compile(program, target)\n    }?;\n    // An unsupported projection remains metadata after successful compilation.\n    let mut projection = source_projection_report(program);\n    bound_paths(&mut projection);\n    let source_projection = CompilationSourceProjectionReport {\n        compiled_program_hash: artifact.program_hash.clone(),\n        artifact_format: artifact.format.clone(), abi: artifact.abi.clone(),\n        relation: artifact.relation.clone(), projection,\n    };\n    Ok(ReportedCompilation { artifact, source_projection })"
+        },
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 52,
+          "lineEnd": 73,
+          "literal": "fn bound_paths(projection: &mut SourceProjectionReport) {\n    let mut remaining = MAX_PROJECTION_PATH_ELEMENTS;\n    for entry in &mut projection.actions {\n        let withheld = match entry {\n            ActionProjection::Prepared { report } => {\n                let cost = report.occurrences.iter().try_fold(0usize, |sum, occurrence|\n                    sum.checked_add(occurrence.body_path.len())?.checked_add(1));\n                match cost.and_then(|cost| remaining.checked_sub(cost)) {\n                    Some(left) => { remaining = left; None }\n                    None => Some((report.action_index, report.action.clone())),\n                }\n            }\n            ActionProjection::Unsupported { .. } => None,\n        };\n        if let Some((action_index, action)) = withheld {\n            *entry = ActionProjection::Unsupported { action_index, action,\n                diagnostic: ProjectionDiagnostic { action_index, statement_index: None,\n                    expression: None, construct: \"projection-path-budget\".into(),\n                    code: \"projection-path-budget-exhausted\".into() } };\n        }\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "classification": "CALL_EDGE",
+      "statement": "Backend compile/compile_signed both require Core1 and call compile_mode; compile_mode validates target/program,then calls lower_action for each Core action and constructs Artifact from circuits/resources. The metadata wrapper calls these functions; this observation does not establish lowering correctness or execution.",
+      "citations": [
+        {
+          "inputFile": "BACKEND-LIB.rs",
+          "sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/lib.rs",
+          "lineStart": 367,
+          "lineEnd": 425,
+          "literal": "pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {\n    stage::require_core1(program)?;\n    if target.signed_policy.is_some() {\n        return Err(error(\n            \"target\",\n            \"A signed Target requires the signed compiler; unsigned compilation refuses it.\",\n        ));\n    }\n    compile_mode(program, target)\n}\n/// Lower every action with the strict owner signature and checked caps in the\n/// same circuit. Source-wide signed admission precedes any layout allocation.\npub fn compile_signed(program: &Program, target: &Target) -> Result<Artifact, Error> {\n    stage::require_core1(program)?;\n    if target.signed_policy.is_none() {\n        return Err(error(\n            \"target\",\n            \"Signed compilation requires a Target signed_policy.\",\n        ));\n    }\n    compile_mode(program, target)\n}\npub(crate) fn compile_mode(program: &Program, target: &Target) -> Result<Artifact, Error> {\n    stage::require_core1(program)?;\n    target.validate()?;\n    mori_core::validate(program).map_err(|e| error(\"program\", e.to_string()))?;\n    if program\n        .assets\n        .iter()\n        .any(|asset| asset.identity.network != target.network)\n    {\n        return Err(error(\n            \"target\",\n            \"Asset network differs from the target domain; cross-domain assets are unsupported.\",\n        ));\n    }\n    // Signed label/owner admission precedes the registry's own refusals.\n    let signed = match &target.signed_policy {\n        Some(policy) => Some(signed_relation::admit(program, policy)?),\n        None => None,\n    };\n    let registry = liabilities::registry(program)?;\n    let hash = digest(program)?;\n    let program_hash = hash.iter().map(|b| format!(\"{b:02x}\")).collect();\n    let mut circuits = Vec::with_capacity(program.actions.len());\n    let mut resources = Resources {\n        instructions: 0,\n        zkir_bytes: 0,\n        artifact_bytes: 0,\n        public_values: 0,\n        max_replay_steps: 0,\n        circuit_k: None,\n        fraud_max_k: None,\n        cost_measured: false,\n        liability_registry_entries: registry.len() as u32,\n        max_liability_registry_entries: MAX_LIABILITY_REGISTRY_ENTRIES as u32,\n    };\n    for action in &program.actions {\n        let circuit = lower_action(program, action, target, &registry, signed.as_ref())?;"
+        },
+        {
+          "inputFile": "BACKEND-LIB.rs",
+          "sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/lib.rs",
+          "lineStart": 452,
+          "lineEnd": 464,
+          "literal": "        circuits.push(circuit);\n    }\n    let mut artifact = Artifact {\n        format: ARTIFACT_FORMAT.into(),\n        abi: PUBLIC_ABI_VERSION.into(),\n        relation: RELATION_VERSION.into(),\n        authorization_mode: target.authorization_mode().into(),\n        program_hash,\n        semantics: program.semantics.clone(),\n        target: target.clone(),\n        circuits,\n        resources,\n        gates: ["
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "classification": "CALL_EDGE",
+      "statement": "CLI commands::run routes Command::Compile to compile::run. compile::run checks a literal moriarty/2 route first and calls backend stage::compile_staged there; its other branch parses Core source then calls backend source_projection::compile_reported. These are inspected non-test command source calls.",
+      "citations": [
+        {
+          "inputFile": "CLI-COMMANDS.rs",
+          "sha256": "34ceaabb846836fad4b0df7ddc788dff37c786bfbed9397b8358330a87e3c081",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/mod.rs",
+          "lineStart": 10,
+          "lineEnd": 14,
+          "literal": "mod call_io;\npub mod check;\npub mod compile;\npub mod compile_call;\nmod core_io;"
+        },
+        {
+          "inputFile": "CLI-COMMANDS.rs",
+          "sha256": "34ceaabb846836fad4b0df7ddc788dff37c786bfbed9397b8358330a87e3c081",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/mod.rs",
+          "lineStart": 41,
+          "lineEnd": 45,
+          "literal": "pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {\n    match command {\n        Command::Init(args) => init::run(args, shell),\n        Command::Check(args) => check::run(args, shell),\n        Command::Compile(args) => compile::run(args, shell),"
+        },
+        {
+          "inputFile": "CLI-COMPILE.rs",
+          "sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/compile.rs",
+          "lineStart": 18,
+          "lineEnd": 41,
+          "literal": "pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {\n    let source = core_io::read_source(&args.file)?;\n    if mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\") {\n        let target: mori_backend::Target = core_io::read_json(&args.target)?;\n        let artifact = mori_backend::stage::compile_staged(&source, &target, &args.out)\n            .map_err(core_io::operation)?;\n        let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;\n        std::fs::create_dir(&args.out).map_err(|source| CliError::Write {\n            path: args.out.clone(),\n            source,\n        })?;\n        publish_staged_artifact(&artifact, &manifest, &args.out)?;\n        shell.status(\n            \"Compiled\",\n            format!(\"{} circuits into {}\", artifact.circuits.len(), args.out.display()),\n        );\n        return Ok(ExitCode::SUCCESS);\n    }\n    let program = mori_core::parse(&source).map_err(core_io::operation)?;\n    let target: mori_backend::Target = core_io::read_json(&args.target)?;\n    // The trusted Target selects the mode explicitly; a signed Target never\n    // reaches the unsigned compiler.\n    let reported = mori_backend::source_projection::compile_reported(&program, &target)\n        .map_err(core_io::operation)?;"
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "classification": "SOURCE_DECLARATION",
+      "statement": "In the nonstaged CLI branch,reported.artifact is taken as artifact; reported.source_projection is serialized with source_hash and published separately as source-projection.json. publish_artifact writes circuit.zkir values and artifact.json from Artifact. This is source consumer placement,not evidence that files were generated.",
+      "citations": [
+        {
+          "inputFile": "CLI-COMPILE.rs",
+          "sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/compile.rs",
+          "lineStart": 36,
+          "lineEnd": 80,
+          "literal": "    let program = mori_core::parse(&source).map_err(core_io::operation)?;\n    let target: mori_backend::Target = core_io::read_json(&args.target)?;\n    // The trusted Target selects the mode explicitly; a signed Target never\n    // reaches the unsigned compiler.\n    let reported = mori_backend::source_projection::compile_reported(&program, &target)\n        .map_err(core_io::operation)?;\n    let artifact = reported.artifact;\n    let projection = serde_json::to_string_pretty(&serde_json::json!({\n        \"source_hash\": mori_core::intent::hash_bytes(source.as_bytes()),\n        \"compilation\": reported.source_projection,\n    }))\n    .map_err(core_io::operation)?;\n    // Compile and serialize fully before touching the destination.\n    let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;\n    std::fs::create_dir(&args.out).map_err(|source| CliError::Write {\n        path: args.out.clone(),\n        source,\n    })?;\n    super::proof_io::publish_new(&args.out.join(\"source-projection.json\"), projection.as_bytes())?;\n    publish_artifact(&artifact, &manifest, &args.out)?;\n    shell.status(\n        \"Compiled\",\n        format!(\n            \"{} circuits into {}\",\n            artifact.circuits.len(),\n            args.out.display()\n        ),\n    );\n    Ok(ExitCode::SUCCESS)\n}\n\n// The caller has reserved a new directory after all input/compiler preflight.\nfn publish_artifact(\n    artifact: &mori_backend::Artifact,\n    manifest: &str,\n    out: &Path,\n) -> super::Result<()> {\n    for (index, circuit) in artifact.circuits.iter().enumerate() {\n        let path = out.join(format!(\"{index:03}-{}.zkir\", circuit.action));\n        super::proof_io::publish_new(&path, circuit.zkir.as_bytes())?;\n    }\n    let path = out.join(\"artifact.json\");\n    // The manifest is the completion marker; publish it after every circuit.\n    super::proof_io::publish_new(&path, manifest.as_bytes())?;\n    Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "classification": "CALL_EDGE",
+      "statement": "A separate models/sherlock/reference source producer imports observe_scalar_action,parses fixed included Core specimens in prepare,and calls observe_scalar_action(source,0,arguments,fuel,BOUNDS) from its observe function. It has a standalone main that loops fixed inputs/fuels. This is a non-test diagnostic source caller,not an observed installed/compiler/ledger entry.",
+      "citations": [
+        {
+          "inputFile": "MODEL-SOURCE-OBSERVATIONS.rs",
+          "sha256": "66bde18f5505eef625025f030107b3a54acd6b015e8bd80bef956f48125e8445",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "models/sherlock/reference/source_observations.rs",
+          "lineStart": 12,
+          "lineEnd": 25,
+          "literal": "use mori_core::sherlock::reference_display::{KDisplay, environment_to_k};\nuse mori_core::sherlock::{Snapshot, StepRecord, Value, K_SOURCE_SHA256, PROFILE};\nuse mori_core::sherlock_bounded_source::{BoundedSourceObservation, HostObservationBounds,\n                                        observe_scalar_action};\nuse mori_core::sherlock_source::ScalarActionReport;\nuse std::io::{self, BufWriter, Write};\n\nstruct Input {\n    case_id: &'static str,\n    source_path: &'static str,\n    source: &'static str,\n    arguments: &'static [u128],\n    max_fuel: u128,\n}"
+        },
+        {
+          "inputFile": "MODEL-SOURCE-OBSERVATIONS.rs",
+          "sha256": "66bde18f5505eef625025f030107b3a54acd6b015e8bd80bef956f48125e8445",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "models/sherlock/reference/source_observations.rs",
+          "lineStart": 49,
+          "lineEnd": 82,
+          "literal": "const BOUNDS: HostObservationBounds = HostObservationBounds {\n    max_source_actions: 8,\n    max_source_expressions: 64,\n    max_source_statements: 16,\n    max_scalar_arguments: 4,\n    max_projection_occurrences: 64,\n    max_ast_nesting: 16,\n    stack_limit: 8,\n    max_step_records: 64,\n    max_retained_slots: 1 << 20,\n};\n\nstruct Prepared {\n    source: mori_core::Program,\n    arguments: Vec<Value>,\n    zero_fuel: BoundedSourceObservation,\n}\n\nfn prepare(input: &Input) -> io::Result<Prepared> {\n    let source = mori_core::parse(input.source)\n        .map_err(|error| io::Error::other(format!(\"{}: parse: {error:?}\", input.case_id)))?;\n    let arguments: Vec<_> = input.arguments.iter().copied().map(Value::UInt).collect();\n    // The first actual bounded result supplies the program/preparation record\n    // and is reused as the fuel-zero run. No hand-built Sherlock AST is used.\n    let zero_fuel = observe(input.case_id, &source, &arguments, 0)?;\n    Ok(Prepared { source, arguments, zero_fuel })\n}\n\nfn observe(case_id: &str, source: &mori_core::Program, arguments: &[Value], fuel: u128)\n    -> io::Result<BoundedSourceObservation>\n{\n    observe_scalar_action(source, 0, arguments, fuel, BOUNDS)\n        .map_err(|error| io::Error::other(format!(\"{case_id}: bounded observation: {error:?}\")))\n}"
+        },
+        {
+          "inputFile": "MODEL-SOURCE-OBSERVATIONS.rs",
+          "sha256": "66bde18f5505eef625025f030107b3a54acd6b015e8bd80bef956f48125e8445",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "models/sherlock/reference/source_observations.rs",
+          "lineStart": 207,
+          "lineEnd": 221,
+          "literal": "fn main() -> io::Result<()> {\n    // Parse both real sources and retain their actual bounded fuel-zero results\n    // before emitting any observation document. There is no arbitrary input.\n    let prepared = INPUTS.iter().map(prepare).collect::<io::Result<Vec<_>>>()?;\n    let mut out = BufWriter::new(io::stdout().lock());\n    write!(out, \"{{\")?;\n    string_field(&mut out, \"producer\", \"sherlock-core-source-reference\")?;\n    write!(out, \",\")?;\n    string_field(&mut out, \"profile\", PROFILE)?;\n    write!(out, \",\")?;\n    string_field(&mut out, \"source_sha256\", K_SOURCE_SHA256)?;\n    write!(out, \",\")?;\n    string_field(&mut out, \"boundary\", \"post-startup\")?;\n    write!(out, \",\\\"programs\\\":[\")?;\n    for (index, (input, actual)) in INPUTS.iter().zip(&prepared).enumerate() {"
+        },
+        {
+          "inputFile": "MODEL-SOURCE-OBSERVATIONS.rs",
+          "sha256": "66bde18f5505eef625025f030107b3a54acd6b015e8bd80bef956f48125e8445",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "models/sherlock/reference/source_observations.rs",
+          "lineStart": 241,
+          "lineEnd": 262,
+          "literal": "    write!(out, \"],\\\"runs\\\":[\")?;\n    let mut first = true;\n    for (input, actual) in INPUTS.iter().zip(&prepared) {\n        for fuel in 0..=input.max_fuel {\n            let next_observation;\n            let observed = if fuel == 0 {\n                &actual.zero_fuel\n            } else {\n                next_observation = observe(input.case_id, &actual.source, &actual.arguments, fuel)?;\n                &next_observation\n            };\n            if !first { write!(out, \",\")?; }\n            first = false;\n            // Retain the unchanged common diagnostic shape. Extent and\n            // qualification are typed API metadata, not part of this codec.\n            observation(&mut out, input.case_id, &observed.initial, &observed.records,\n                        &observed.terminal, observed.terminal_has_next)?;\n        }\n    }\n    writeln!(out, \"]}}\")?;\n    out.flush()\n}"
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "classification": "INFERENCE",
+      "statement": "The inspected non-test command\u2192compile_reported\u2192source_projection_report edge defeats a blanket claim that these public adapters have no production source caller. Its returned projection is separate metadata after Artifact construction; this does not establish Sherlock-to-Cardano compilation,semantic correspondence or runtime behavior.",
+      "citations": [
+        {
+          "inputFile": "CLI-COMMANDS.rs",
+          "sha256": "34ceaabb846836fad4b0df7ddc788dff37c786bfbed9397b8358330a87e3c081",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/mod.rs",
+          "lineStart": 41,
+          "lineEnd": 45,
+          "literal": "pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {\n    match command {\n        Command::Init(args) => init::run(args, shell),\n        Command::Check(args) => check::run(args, shell),\n        Command::Compile(args) => compile::run(args, shell),"
+        },
+        {
+          "inputFile": "CLI-COMPILE.rs",
+          "sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/compile.rs",
+          "lineStart": 36,
+          "lineEnd": 55,
+          "literal": "    let program = mori_core::parse(&source).map_err(core_io::operation)?;\n    let target: mori_backend::Target = core_io::read_json(&args.target)?;\n    // The trusted Target selects the mode explicitly; a signed Target never\n    // reaches the unsigned compiler.\n    let reported = mori_backend::source_projection::compile_reported(&program, &target)\n        .map_err(core_io::operation)?;\n    let artifact = reported.artifact;\n    let projection = serde_json::to_string_pretty(&serde_json::json!({\n        \"source_hash\": mori_core::intent::hash_bytes(source.as_bytes()),\n        \"compilation\": reported.source_projection,\n    }))\n    .map_err(core_io::operation)?;\n    // Compile and serialize fully before touching the destination.\n    let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;\n    std::fs::create_dir(&args.out).map_err(|source| CliError::Write {\n        path: args.out.clone(),\n        source,\n    })?;\n    super::proof_io::publish_new(&args.out.join(\"source-projection.json\"), projection.as_bytes())?;\n    publish_artifact(&artifact, &manifest, &args.out)?;"
+        },
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 31,
+          "lineEnd": 47,
+          "literal": "pub fn compile_reported(program: &Program, target: &Target) -> Result<ReportedCompilation, Error> {\n    // Preserve the same signed/unsigned selection as the existing CLI.\n    let artifact = if target.signed_policy.is_some() {\n        crate::compile_signed(program, target)\n    } else {\n        crate::compile(program, target)\n    }?;\n    // An unsupported projection remains metadata after successful compilation.\n    let mut projection = source_projection_report(program);\n    bound_paths(&mut projection);\n    let source_projection = CompilationSourceProjectionReport {\n        compiled_program_hash: artifact.program_hash.clone(),\n        artifact_format: artifact.format.clone(), abi: artifact.abi.clone(),\n        relation: artifact.relation.clone(), projection,\n    };\n    Ok(ReportedCompilation { artifact, source_projection })\n}"
+        }
+      ]
+    },
+    {
+      "id": "U01",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "statement": "Machine::new/run_steps/snapshot/step implementation bodies remain uninspected; Machine and stream symbols are reexported by Sherlock mod and called by bounded source. No execution/arithmetic/resource-validity conclusion follows from those calls.",
+      "citations": [
+        {
+          "inputFile": "SHERLOCK-MOD.rs",
+          "sha256": "562f563d6f679d188bdb283d1dc191b34f19459a98d9c8a260911f16e7e367de",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/mod.rs",
+          "lineStart": 8,
+          "lineEnd": 16,
+          "literal": "pub mod compare;\nmod reference;\nmod reference_stream;\npub mod reference_display;\nmod reference_types;\n\npub use reference::Machine;\npub use reference_stream::{VisitResult, VisitStop};\npub use reference_types::*;"
+        },
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 225,
+          "lineEnd": 243,
+          "literal": "    // The fixed diagnostic invocation of the returned real function.\n    let entry = Arc::new(Expr::Call(function.name.clone(), arguments.iter()\n        .map(|value| Arc::new(Expr::Literal(value.clone()))).collect()));\n    let generated = Arc::new(Program { functions: vec![function], entry });\n    let mut machine = Machine::new(generated.clone(), initial_fuel, bounds.stack_limit);\n    let initial = machine.snapshot();\n    let records = machine.run_steps(events);\n    let terminal = machine.snapshot();\n    if matches!(terminal.outcome, Outcome::Pending) {\n        return Err(HostObservationRefusal::UnpublishedOutcome);\n    }\n    let terminal_has_next = machine.step().is_some();\n    Ok(BoundedSourceObservation {\n        report: mapped.report, program: generated, initial, records, terminal, terminal_has_next,\n        extent: HostExtent { bounds, projected_occurrences: occurrences, ast_nesting_bound,\n            observed_ast_nesting, step_record_bound, frame_bound, environment_entry_bound,\n            peak_slot_bound, argument_types_match_inputs },\n        qualification: QUALIFICATION,\n    })"
+        }
+      ]
+    },
+    {
+      "id": "U02",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "statement": "Core validate/runtime::expr_type implementations,CLI core_io/proof_io helpers,and backend staged compiler bodies are outside this packet. Local calls and module declarations are inspected; source loading,serialization/publication and staged lowering internals remain bounded gaps.",
+      "citations": [
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 148,
+          "lineEnd": 155,
+          "literal": "pub fn prepare_scalar_action(program: &Program, action_index: usize)\n    -> Result<ScalarActionMap, ProjectionDiagnostic>\n{\n    crate::validate(program).map_err(|error|\n        diagnostic(action_index, None, None, \"core-validation\", &error.code))?;\n    let mut remaining = MAX_PROJECTION_OCCURRENCES;\n    prepare_validated_action(program, action_index, &mut remaining)\n}"
+        },
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 216,
+          "lineEnd": 229,
+          "literal": "        let value = map_expression(program, index, site.statement_index, site.expression,\n            value_path, &mut occurrences, remaining)?;\n        let ty = crate::runtime::expr_type(program, site.expression, &types, 0)\n            .map_err(|error| diagnostic(index, Some(site.statement_index), Some(site.expression),\n                \"expression-type\", &error.code))?;\n        types.insert(site.name.clone(), ty);\n        mapped_lets.push((site.name.clone(), value));\n        path.push(1);\n    }\n    let mut body = map_expression(program, index, emit.statement_index, emit.expression,\n        path, &mut occurrences, remaining)?;\n    let return_type = crate::runtime::expr_type(program, emit.expression, &types, 0)\n        .map_err(|error| diagnostic(index, Some(emit.statement_index), Some(emit.expression),\n            \"expression-type\", &error.code))?;"
+        },
+        {
+          "inputFile": "CLI-COMPILE.rs",
+          "sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/compile.rs",
+          "lineStart": 18,
+          "lineEnd": 29,
+          "literal": "pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {\n    let source = core_io::read_source(&args.file)?;\n    if mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\") {\n        let target: mori_backend::Target = core_io::read_json(&args.target)?;\n        let artifact = mori_backend::stage::compile_staged(&source, &target, &args.out)\n            .map_err(core_io::operation)?;\n        let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;\n        std::fs::create_dir(&args.out).map_err(|source| CliError::Write {\n            path: args.out.clone(),\n            source,\n        })?;\n        publish_staged_artifact(&artifact, &manifest, &args.out)?;"
+        },
+        {
+          "inputFile": "CLI-COMPILE.rs",
+          "sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori/src/commands/compile.rs",
+          "lineStart": 48,
+          "lineEnd": 55,
+          "literal": "    // Compile and serialize fully before touching the destination.\n    let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;\n    std::fs::create_dir(&args.out).map_err(|source| CliError::Write {\n        path: args.out.clone(),\n        source,\n    })?;\n    super::proof_io::publish_new(&args.out.join(\"source-projection.json\"), projection.as_bytes())?;\n    publish_artifact(&artifact, &manifest, &args.out)?;"
+        },
+        {
+          "inputFile": "BACKEND-LIB.rs",
+          "sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/lib.rs",
+          "lineStart": 17,
+          "lineEnd": 23,
+          "literal": "pub mod authorization;\npub mod replay;\npub mod schnorr;\npub mod sherlock_machine;\npub mod signed_relation;\npub mod stage;\npub mod source_projection;"
+        }
+      ]
+    },
+    {
+      "id": "U03",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "statement": "The private draft/image/helper module declarations are cfg(test) in this main snapshot; their bodies and the external K source/fixture bodies are not opened here. Public typed Expr::Call/If/Match declarations and generated Function wrappers do not establish corresponding Core source grammar features.",
+      "citations": [
+        {
+          "inputFile": "CORE-LIB.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/lib.rs",
+          "lineStart": 10,
+          "lineEnd": 31,
+          "literal": "// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        },
+        {
+          "inputFile": "SHERLOCK-MOD.rs",
+          "sha256": "562f563d6f679d188bdb283d1dc191b34f19459a98d9c8a260911f16e7e367de",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/mod.rs",
+          "lineStart": 39,
+          "lineEnd": 79,
+          "literal": "// Host-only image proposal: exercised here without exporting a public runtime API.\n#[cfg(test)]\npub(crate) mod program_image;\n\n// Private flat-table consumer proposal, normal-oracle comparisons only.\n#[cfg(test)]\npub(crate) mod image_reference;\n\n// Host-only event grouping; every internal reference record stays observable.\n#[cfg(test)]\nmod reference_slice;\n\n// Unadopted host snapshot rows; normal materialization checks only.\n#[cfg(test)]\nmod machine_image;\n\n// Unadopted finite call-helper proposal; clock and handle adapters stay separate.\n#[cfg(test)]\nmod helper_schedule;\n\n// Host projection of helper completions to the unchanged A reference boundary.\n#[cfg(test)]\nmod helper_call_adapter;\n\n// Causal occurrence metadata on the private image execution path.\n#[cfg(test)]\nmod source_origin_normal_tests;\n\n// Internal L4 host preparation source proposal; H1, no network/untrusted API.\n// Compilation and all normal tests remain UNRUN pending separate admission.\n#[cfg(test)]\nmod layout_a;\n\n#[cfg(test)]\nmod reference_stream_tests;\n\n// Private host arithmetic/fuel materialization; no constraint or wire ABI.\n#[cfg(test)]\nmod arithmetic_witness;\n#[cfg(test)]\nmod arithmetic_witness_normal_tests;"
+        },
+        {
+          "inputFile": "REFERENCE-TYPES.rs",
+          "sha256": "4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/reference_types.rs",
+          "lineStart": 68,
+          "lineEnd": 99,
+          "literal": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Expr {\n    Literal(Value),\n    Var(Name),\n    Let(Name, ExprRef, ExprRef),\n    Binary(BinaryOp, ExprRef, ExprRef),\n    Unary(UnaryOp, ExprRef),\n    If(ExprRef, ExprRef, ExprRef),\n    Call(Name, Vec<ExprRef>),\n    Match(ExprRef, Vec<Arm>),\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Parameter {\n    pub name: Name,\n    pub ty: Type,\n}\n\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Function {\n    pub name: Name,\n    pub parameters: Vec<Parameter>,\n    pub return_type: Type,\n    pub body: ExprRef,\n}\n\n/// Function order is significant: lookup takes the first matching name.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Program {\n    pub functions: Vec<Function>,\n    pub entry: ExprRef,\n}"
+        },
+        {
+          "inputFile": "SOURCE-ADAPTER.rs",
+          "sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "lineStart": 235,
+          "lineEnd": 241,
+          "literal": "    let function = Function { name: action.name.clone(),\n        parameters: inputs.iter().map(|input| Parameter {\n            name: input.name.clone(), ty: scalar_type(input.ty),\n        }).collect(), return_type: scalar_type(return_type), body };\n    let report = ScalarActionReport { action_index: index, action: action.name.clone(), inputs,\n        lets, emit, occurrences, return_type, generated_function_name: function.name.clone(),\n        symbol_domain: \"typed-host-symbols; no K numeric-name correspondence claimed\".into() };"
+        }
+      ]
+    },
+    {
+      "id": "U04",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "statement": "Actual lower_action internals,authorization/ledger/native/proof dependencies,and target correspondence remain uninspected. Report flags,qualified strings and test assertions are source data only,not approvals or observed outcomes.",
+      "citations": [
+        {
+          "inputFile": "BACKEND-LIB.rs",
+          "sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/lib.rs",
+          "lineStart": 403,
+          "lineEnd": 425,
+          "literal": "    // Signed label/owner admission precedes the registry's own refusals.\n    let signed = match &target.signed_policy {\n        Some(policy) => Some(signed_relation::admit(program, policy)?),\n        None => None,\n    };\n    let registry = liabilities::registry(program)?;\n    let hash = digest(program)?;\n    let program_hash = hash.iter().map(|b| format!(\"{b:02x}\")).collect();\n    let mut circuits = Vec::with_capacity(program.actions.len());\n    let mut resources = Resources {\n        instructions: 0,\n        zkir_bytes: 0,\n        artifact_bytes: 0,\n        public_values: 0,\n        max_replay_steps: 0,\n        circuit_k: None,\n        fraud_max_k: None,\n        cost_measured: false,\n        liability_registry_entries: registry.len() as u32,\n        max_liability_registry_entries: MAX_LIABILITY_REGISTRY_ENTRIES as u32,\n    };\n    for action in &program.actions {\n        let circuit = lower_action(program, action, target, &registry, signed.as_ref())?;"
+        },
+        {
+          "inputFile": "BACKEND-PROJECTION.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-backend/src/source_projection.rs",
+          "lineStart": 75,
+          "lineEnd": 94,
+          "literal": "#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n    fn reported_compile_preserves_target_artifact_and_contains_projection() {\n        for specimen in [\n            \"language \\\"moriarty/1\\\"; agreement Reported { action quote(units: UInt, price: UInt) { let gross = units * price; let result = gross + 3; emit \\\"total\\\"(result); } }\",\n            \"language \\\"moriarty/1\\\"; agreement Predicate { action inspect(observed: UInt, threshold: UInt) { let below = observed < threshold; let result = not below; emit \\\"atOrAbove\\\"(result); } }\",\n        ] {\n        let program = mori_core::parse(specimen).unwrap();\n        let target = Target::ledger9(\"local\", \"reported\");\n        let old = crate::compile(&program, &target).unwrap();\n        let reported = compile_reported(&program, &target).unwrap();\n        assert_eq!(serde_json::to_value(&old).unwrap(),\n            serde_json::to_value(&reported.artifact).unwrap());\n        assert_eq!(reported.source_projection.compiled_program_hash, reported.artifact.program_hash);\n        assert!(!reported.source_projection.projection.evaluation_performed);\n        assert!(matches!(&reported.source_projection.projection.actions[0],\n            mori_core::sherlock_source::ActionProjection::Prepared { .. }));\n        }"
+        },
+        {
+          "inputFile": "BOUNDED-SOURCE.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "gitCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+          "gitPath": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "lineStart": 24,
+          "lineEnd": 25,
+          "literal": "pub const QUALIFICATION: &str =\n    \"bounded-host-observation; stateless scalar Core/1 projection; operation, slot and nesting counts only\";"
+        }
+      ]
+    }
+  ],
+  "claimCount": 26,
+  "scope": "Only exact listed claim objects reviewed; parent metadata/other parts not inherited.",
+  "sourceSnapshots": {
+    "main8174": "8174e52975d8db9bf59636fea0fa338c0f47c855"
+  },
+  "all20Families": "OPEN; reference-only, no new mappings or name validation from unprovided inventory",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true
+}

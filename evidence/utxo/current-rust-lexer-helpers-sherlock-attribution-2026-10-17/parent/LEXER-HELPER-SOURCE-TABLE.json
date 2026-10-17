@@ -1,0 +1,1548 @@
+{
+  "format": "moriarty-lexer-helper-source-observations/1",
+  "createdAt": "2026-10-17T19:05:15.306162+00:00",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true,
+  "reviewStatus": "UNREVIEWED_UNPUBLISHED; parent fresh Gemini4 Argon HIGH attribution review required before publication",
+  "author": {
+    "routedModel": "gpt-6.1-sol",
+    "requestedEffort": "high",
+    "effortIndependentlyAttested": false,
+    "role": "nonsecurity source observation/logistics"
+  },
+  "inputManifest": {
+    "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-lexer-helper-source-input/MANIFEST.json",
+    "sha256": "3b0f0212dcd4dbba96e573cc60a4d88fed942696312106bae7f31e9c577d083c",
+    "mainCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+    "utxoSnapshot": "9c861d945fc8b706d5e2ee132aab3230490ff72e"
+  },
+  "familyInventoryReference": {
+    "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-observations/ADMISSION-SOURCE-TABLE.json",
+    "sha256": "9c9b32c9ba160eabd2d4b6acd8ac4a63f04c11efa8852c14b6d4d0adff3d813e",
+    "jsonPointer": "/familyInventory",
+    "count": 20,
+    "readThisTask": false,
+    "qualification": "Reference to prior immutable20 exact IDs/names and UNLOCATED mappings; no reclassification,newmapping,case_file access or prior output edit"
+  },
+  "classifications": [
+    "SOURCE_DECLARATION",
+    "CALL_EDGE",
+    "INFERENCE",
+    "UNINSPECTED_BOUNDARY"
+  ],
+  "claims": [
+    {
+      "id": "L01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Constants declare source limit 65,536 bytes, token limit 8,192, identifier limit 64 bytes and decoded-string limit 1,024 UTF-8 bytes. lex checks source.len() before Lexer::run(false).",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 28,
+          "lineEnd": 35,
+          "literal": "/// Largest accepted source file, in bytes.\npub const MAX_SOURCE_BYTES: usize = 65_536;\n/// Most tokens in one file, including the end-of-file token.\npub const MAX_TOKENS: usize = 8_192;\n/// Longest identifier or keyword, in bytes.\npub const MAX_IDENT_BYTES: usize = 64;\n/// Longest decoded string, in UTF-8 bytes.\npub const MAX_STRING_BYTES: usize = 1_024;"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 28,
+          "lineEnd": 35,
+          "literal": "/// Largest accepted source file, in bytes.\npub const MAX_SOURCE_BYTES: usize = 65_536;\n/// Most tokens in one file, including the end-of-file token.\npub const MAX_TOKENS: usize = 8_192;\n/// Longest identifier or keyword, in bytes.\npub const MAX_IDENT_BYTES: usize = 64;\n/// Longest decoded string, in UTF-8 bytes.\npub const MAX_STRING_BYTES: usize = 1_024;"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 47,
+          "lineEnd": 53,
+          "literal": "/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 47,
+          "lineEnd": 53,
+          "literal": "/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}"
+        }
+      ]
+    },
+    {
+      "id": "L02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "run dispatches ASCII space/tab/CR/LF, slash line/block comments, double-quoted strings, digit-started numbers, ASCII-letter-started words, then single-byte punctuation or unexpected_character; EOF is appended after the loop.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 113,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });\n        Ok(Tokens {\n            tokens: self.tokens,\n            comments: self.comments,\n        })\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 113,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });\n        Ok(Tokens {\n            tokens: self.tokens,\n            comments: self.comments,\n        })\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "push refuses when existing token count is at least MAX_TOKENS-1, reserving EOF. Comments are appended to a separate collection, so they do not pass through push token counting.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 119,
+          "lineEnd": 138,
+          "literal": "    /// Records a token ending at `end` and moves past it.\n    fn push(&mut self, kind: TokenKind, start: usize, end: usize) -> Result<(), MoriDiagnostic> {\n        if self.tokens.len() >= MAX_TOKENS - 1 {\n            return Err(diagnostics::too_many_tokens(span(start, end)));\n        }\n        self.tokens.push(Token {\n            kind,\n            start: offset(start),\n        });\n        self.pos = end;\n        Ok(())\n    }\n\n    fn push_comment(&mut self, start: usize, end: usize) {\n        self.comments.push(Comment {\n            start: offset(start),\n            end: offset(end),\n        });\n        self.pos = end;\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 119,
+          "lineEnd": 138,
+          "literal": "    /// Records a token ending at `end` and moves past it.\n    fn push(&mut self, kind: TokenKind, start: usize, end: usize) -> Result<(), MoriDiagnostic> {\n        if self.tokens.len() >= MAX_TOKENS - 1 {\n            return Err(diagnostics::too_many_tokens(span(start, end)));\n        }\n        self.tokens.push(Token {\n            kind,\n            start: offset(start),\n        });\n        self.pos = end;\n        Ok(())\n    }\n\n    fn push_comment(&mut self, start: usize, end: usize) {\n        self.comments.push(Comment {\n            start: offset(start),\n            end: offset(end),\n        });\n        self.pos = end;\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Line-comment scanning ends before CR or LF, or source end. Block-comment scanning finds the first */ after its opening, with an error if absent; no nesting counter appears in this body.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 140,
+          "lineEnd": 156,
+          "literal": "    /// `//` up to, but not including, the next line break.\n    fn line_comment(&mut self, start: usize) {\n        let end = self.bytes[start..]\n            .iter()\n            .position(|&b| b == b'\\r' || b == b'\\n')\n            .map_or(self.bytes.len(), |len| start + len);\n        self.push_comment(start, end);\n    }\n\n    /// `/*` through the first `*/`. Block comments do not nest.\n    fn block_comment(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let body = start + 2;\n        let Some(len) = self.source[body..].find(\"*/\") else {\n            return Err(diagnostics::unterminated_block_comment(span(start, body)));\n        };\n        self.push_comment(start, body + len + 2);\n        Ok(())"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 140,
+          "lineEnd": 156,
+          "literal": "    /// `//` up to, but not including, the next line break.\n    fn line_comment(&mut self, start: usize) {\n        let end = self.bytes[start..]\n            .iter()\n            .position(|&b| b == b'\\r' || b == b'\\n')\n            .map_or(self.bytes.len(), |len| start + len);\n        self.push_comment(start, end);\n    }\n\n    /// `/*` through the first `*/`. Block comments do not nest.\n    fn block_comment(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let body = start + 2;\n        let Some(len) = self.source[body..].find(\"*/\") else {\n            return Err(diagnostics::unterminated_block_comment(span(start, body)));\n        };\n        self.push_comment(start, body + len + 2);\n        Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "L05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Word scan starts after its first byte and accepts ASCII alphanumeric or underscore thereafter. Lexer dispatch requires initial ASCII letter; word length over 64 is refused before keyword classification.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 92,
+          "lineEnd": 98,
+          "literal": "                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 92,
+          "lineEnd": 98,
+          "literal": "                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 210,
+          "lineEnd": 218,
+          "literal": "    /// An identifier, or a keyword when the text matches one.\n    fn word(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let end = scan::word_end(self.bytes, start);\n        if end - start > MAX_IDENT_BYTES {\n            return Err(diagnostics::identifier_too_long(span(start, end)));\n        }\n        let kind = TokenKind::keyword(&self.source[start..end]).unwrap_or(TokenKind::Ident);\n        self.push(kind, start, end)\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 210,
+          "lineEnd": 218,
+          "literal": "    /// An identifier, or a keyword when the text matches one.\n    fn word(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let end = scan::word_end(self.bytes, start);\n        if end - start > MAX_IDENT_BYTES {\n            return Err(diagnostics::identifier_too_long(span(start, end)));\n        }\n        let kind = TokenKind::keyword(&self.source[start..end]).unwrap_or(TokenKind::Ident);\n        self.push(kind, start, end)\n    }"
+        },
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 5,
+          "lineEnd": 17,
+          "literal": "pub fn is_word_byte(b: u8) -> bool {\n    b.is_ascii_alphanumeric() || b == b'_'\n}\n\n/// End of the identifier or keyword starting at `start`.\npub fn word_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| is_word_byte(b))\n            .count()\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 5,
+          "lineEnd": 17,
+          "literal": "pub fn is_word_byte(b: u8) -> bool {\n    b.is_ascii_alphanumeric() || b == b'_'\n}\n\n/// End of the identifier or keyword starting at `start`.\npub fn word_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| is_word_byte(b))\n            .count()\n}"
+        }
+      ]
+    },
+    {
+      "id": "L06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "keyword() maps profile/agreement/action/uses/true/false/None/SuccessOnly/domain/account/asset/const/intent/obligation/pool/instrument/observation/policy/grant/stage/episode/party/share_class; unmatched spelling returns None. is_word accepts Ident or keyword.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 68,
+          "lineEnd": 96,
+          "literal": "    pub fn keyword(text: &str) -> Option<Self> {\n        let kind = match text {\n            \"profile\" => Self::KwProfile,\n            \"agreement\" => Self::KwAgreement,\n            \"action\" => Self::KwAction,\n            \"uses\" => Self::KwUses,\n            \"true\" => Self::KwTrue,\n            \"false\" => Self::KwFalse,\n            \"None\" => Self::KwNone,\n            \"SuccessOnly\" => Self::KwSuccessOnly,\n            \"domain\" => Self::KwDomain,\n            \"account\" => Self::KwAccount,\n            \"asset\" => Self::KwAsset,\n            \"const\" => Self::KwConst,\n            \"intent\" => Self::KwIntent,\n            \"obligation\" => Self::KwObligation,\n            \"pool\" => Self::KwPool,\n            \"instrument\" => Self::KwInstrument,\n            \"observation\" => Self::KwObservation,\n            \"policy\" => Self::KwPolicy,\n            \"grant\" => Self::KwGrant,\n            \"stage\" => Self::KwStage,\n            \"episode\" => Self::KwEpisode,\n            \"party\" => Self::KwParty,\n            \"share_class\" => Self::KwShareClass,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 68,
+          "lineEnd": 96,
+          "literal": "    pub fn keyword(text: &str) -> Option<Self> {\n        let kind = match text {\n            \"profile\" => Self::KwProfile,\n            \"agreement\" => Self::KwAgreement,\n            \"action\" => Self::KwAction,\n            \"uses\" => Self::KwUses,\n            \"true\" => Self::KwTrue,\n            \"false\" => Self::KwFalse,\n            \"None\" => Self::KwNone,\n            \"SuccessOnly\" => Self::KwSuccessOnly,\n            \"domain\" => Self::KwDomain,\n            \"account\" => Self::KwAccount,\n            \"asset\" => Self::KwAsset,\n            \"const\" => Self::KwConst,\n            \"intent\" => Self::KwIntent,\n            \"obligation\" => Self::KwObligation,\n            \"pool\" => Self::KwPool,\n            \"instrument\" => Self::KwInstrument,\n            \"observation\" => Self::KwObservation,\n            \"policy\" => Self::KwPolicy,\n            \"grant\" => Self::KwGrant,\n            \"stage\" => Self::KwStage,\n            \"episode\" => Self::KwEpisode,\n            \"party\" => Self::KwParty,\n            \"share_class\" => Self::KwShareClass,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 122,
+          "lineEnd": 134,
+          "literal": "    pub fn is_keyword(self) -> bool {\n        (Self::KwProfile as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Keywords that start a declaration, such as `const` or `asset`.\n    pub fn is_declaration_kind(self) -> bool {\n        (Self::KwDomain as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Identifiers and keywords. Record fields and call names accept either.\n    pub fn is_word(self) -> bool {\n        self == Self::Ident || self.is_keyword()\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 122,
+          "lineEnd": 134,
+          "literal": "    pub fn is_keyword(self) -> bool {\n        (Self::KwProfile as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Keywords that start a declaration, such as `const` or `asset`.\n    pub fn is_declaration_kind(self) -> bool {\n        (Self::KwDomain as u8..=Self::KwShareClass as u8).contains(&(self as u8))\n    }\n\n    /// Identifiers and keywords. Record fields and call names accept either.\n    pub fn is_word(self) -> bool {\n        self == Self::Ident || self.is_keyword()\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L07",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "punctuation() maps { } [ ] ( ) : ; , = < > . + - * to single token kinds. Slash outside comment dispatch reaches unexpected_character and the division diagnostic; this is a local lexical branch, not a global family judgment.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 98,
+          "lineEnd": 120,
+          "literal": "    /// The punctuation token for byte `b`, if any.\n    pub fn punctuation(b: u8) -> Option<Self> {\n        let kind = match b {\n            b'{' => Self::LBrace,\n            b'}' => Self::RBrace,\n            b'[' => Self::LBracket,\n            b']' => Self::RBracket,\n            b'(' => Self::LParen,\n            b')' => Self::RParen,\n            b':' => Self::Colon,\n            b';' => Self::Semicolon,\n            b',' => Self::Comma,\n            b'=' => Self::Eq,\n            b'<' => Self::Lt,\n            b'>' => Self::Gt,\n            b'.' => Self::Dot,\n            b'+' => Self::Plus,\n            b'-' => Self::Minus,\n            b'*' => Self::Star,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 98,
+          "lineEnd": 120,
+          "literal": "    /// The punctuation token for byte `b`, if any.\n    pub fn punctuation(b: u8) -> Option<Self> {\n        let kind = match b {\n            b'{' => Self::LBrace,\n            b'}' => Self::RBrace,\n            b'[' => Self::LBracket,\n            b']' => Self::RBracket,\n            b'(' => Self::LParen,\n            b')' => Self::RParen,\n            b':' => Self::Colon,\n            b';' => Self::Semicolon,\n            b',' => Self::Comma,\n            b'=' => Self::Eq,\n            b'<' => Self::Lt,\n            b'>' => Self::Gt,\n            b'.' => Self::Dot,\n            b'+' => Self::Plus,\n            b'-' => Self::Minus,\n            b'*' => Self::Star,\n            _ => return None,\n        };\n        Some(kind)\n    }"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 89,
+          "lineEnd": 98,
+          "literal": "                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 89,
+          "lineEnd": 98,
+          "literal": "                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 220,
+          "lineEnd": 233,
+          "literal": "    fn unexpected_character(&self, start: usize) -> MoriDiagnostic {\n        let c = self.source[start..]\n            .chars()\n            .next()\n            .expect(\"a character remains at the current position\");\n        let at = span(start, start + c.len_utf8());\n        match c {\n            '/' => diagnostics::division(at),\n            '“' | '”' | '‘' | '’' => diagnostics::curly_quote(at),\n            '\\'' => diagnostics::single_quote(at),\n            '_' => diagnostics::leading_underscore(at),\n            c if !c.is_ascii() => diagnostics::non_ascii(at, c),\n            c => diagnostics::unexpected_character(at, c),\n        }"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 220,
+          "lineEnd": 233,
+          "literal": "    fn unexpected_character(&self, start: usize) -> MoriDiagnostic {\n        let c = self.source[start..]\n            .chars()\n            .next()\n            .expect(\"a character remains at the current position\");\n        let at = span(start, start + c.len_utf8());\n        match c {\n            '/' => diagnostics::division(at),\n            '“' | '”' | '‘' | '’' => diagnostics::curly_quote(at),\n            '\\'' => diagnostics::single_quote(at),\n            '_' => diagnostics::leading_underscore(at),\n            c if !c.is_ascii() => diagnostics::non_ascii(at, c),\n            c => diagnostics::unexpected_character(at, c),\n        }"
+        }
+      ]
+    },
+    {
+      "id": "L08",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Number extent includes digits, underscores and dots. validate checks a second dot first, leading-zero integer part second, integer underscore positions third, then optional nonempty fraction and its underscore positions. Underscores must have digits on both sides.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 19,
+          "lineEnd": 28,
+          "literal": "/// End of the number starting at `start`. Numbers extend over digits, `_`\n/// and `.`; spelling is validated separately.\npub fn number_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| b.is_ascii_digit() || b == b'_' || b == b'.')\n            .count()\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 19,
+          "lineEnd": 28,
+          "literal": "/// End of the number starting at `start`. Numbers extend over digits, `_`\n/// and `.`; spelling is validated separately.\npub fn number_end(bytes: &[u8], start: usize) -> usize {\n    start\n        + 1\n        + bytes[start + 1..]\n            .iter()\n            .take_while(|&&b| b.is_ascii_digit() || b == b'_' || b == b'.')\n            .count()\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 55,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())\n}\n\n/// `part` contains only digits and `_` and starts at `offset` in the number.\nfn check_underscores(part: &str, offset: usize) -> Result<(), NumberError> {\n    let bytes = part.as_bytes();\n    for (i, &b) in bytes.iter().enumerate() {\n        let between_digits = i > 0\n            && bytes[i - 1].is_ascii_digit()\n            && bytes.get(i + 1).is_some_and(u8::is_ascii_digit);\n        if b == b'_' && !between_digits {\n            return Err(NumberError::MisplacedUnderscore { at: offset + i });\n        }\n    }\n    Ok(())"
+        },
+        {
+          "file": "BACKEND-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 55,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())\n}\n\n/// `part` contains only digits and `_` and starts at `offset` in the number.\nfn check_underscores(part: &str, offset: usize) -> Result<(), NumberError> {\n    let bytes = part.as_bytes();\n    for (i, &b) in bytes.iter().enumerate() {\n        let between_digits = i > 0\n            && bytes[i - 1].is_ascii_digit()\n            && bytes.get(i + 1).is_some_and(u8::is_ascii_digit);\n        if b == b'_' && !between_digits {\n            return Err(NumberError::MisplacedUnderscore { at: offset + i });\n        }\n    }\n    Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "L09",
+      "classification": "CALL_EDGE",
+      "profile": "Core1/Staged2 parser",
+      "sourceObservation": "Core parse_profile and language call mori_lexer::lex, then recover token spans and decode String tokens. The inspected language body does not call first_token_text.",
+      "citations": [
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 14,
+          "lineEnd": 31,
+          "literal": "fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let tokens = (0..lexed.len())\n        .map(|i| {\n            let idx = TokenIdx::new(i);\n            let span = lexed.span(idx, source);\n            let raw = &source[span.start as usize..span.end as usize];\n            let text = if lexed.kind(idx) == TokenKind::String {\n                mori_lexer::decode_string(raw)\n            } else {\n                raw.to_owned()\n            };\n            Tok {\n                text,\n                kind: lexed.kind(idx),\n                start: span.start,\n            }\n        })"
+        },
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 352,
+          "lineEnd": 365,
+          "literal": "pub fn language(source: &str) -> Result<&'static str, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let mut tokens = Vec::new();\n    for i in 0..lexed.len() {\n        let idx = TokenIdx::new(i);\n        let span = lexed.span(idx, source);\n        let raw = &source[span.start as usize..span.end as usize];\n        let kind = lexed.kind(idx);\n        tokens.push(Tok {\n            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },\n            kind,\n            start: span.start,\n        });\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L10",
+      "classification": "INFERENCE",
+      "profile": "Core1/Staged2 parser",
+      "sourceObservation": "Lexical decimal spelling and Core UInt parsing are separate source gates: lexer validates optional fraction syntax, whereas Core literal strips underscores and calls parse::<u128>(). This statement does not report executed acceptance or rejection.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 41,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())"
+        },
+        {
+          "file": "BACKEND-lexer-src-number.rs",
+          "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+          "lineStart": 20,
+          "lineEnd": 41,
+          "literal": "/// Checks the spelling of a number scanned by `scan::number_end`.\npub fn validate(raw: &str) -> Result<(), NumberError> {\n    let mut dots = raw.match_indices('.').map(|(at, _)| at);\n    let dot = dots.next();\n    if let Some(at) = dots.next() {\n        return Err(NumberError::ExtraDot { at });\n    }\n\n    let integer = &raw[..dot.unwrap_or(raw.len())];\n    if integer.len() > 1 && integer.starts_with('0') {\n        return Err(NumberError::LeadingZero);\n    }\n    check_underscores(integer, 0)?;\n\n    if let Some(dot) = dot {\n        let fraction = &raw[dot + 1..];\n        if fraction.is_empty() {\n            return Err(NumberError::MissingFraction);\n        }\n        check_underscores(fraction, dot + 1)?;\n    }\n    Ok(())"
+        },
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 224,
+          "lineEnd": 242,
+          "literal": "    fn literal(&mut self) -> Result<Value, Error> {\n        if self.eat(\"true\") {\n            return Ok(Value::Bool(true));\n        }\n        if self.eat(\"false\") {\n            return Ok(Value::Bool(false));\n        }\n        if self.peek().kind != TokenKind::Number {\n            return Err(self.error(\"syntax\", \"Expected an unsigned integer or boolean literal.\"));\n        }\n        let raw = self.peek().text.replace('_', \"\");\n        let n = raw.parse::<u128>().map_err(|_| {\n            self.error(\n                \"number\",\n                \"UInt literal must fit u128; amounts use integral atomic units.\",\n            )\n        })?;\n        self.pos += 1;\n        Ok(Value::UInt(UInt(n)))"
+        }
+      ]
+    },
+    {
+      "id": "L11",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "string_end tracks escaped byte state until an unescaped quote; Lexer::string calls decode_with to count emitted character len_utf8 and compares against MAX_STRING_BYTES before pushing the String token.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 30,
+          "lineEnd": 41,
+          "literal": "/// End of the string starting with `\"` at `start`, just past the closing\n/// quote, or `None` if it is unterminated. A backslash escapes the next byte.\npub fn string_end(bytes: &[u8], start: usize) -> Option<usize> {\n    let mut escaped = false;\n    for (offset, &b) in bytes[start + 1..].iter().enumerate() {\n        if b == b'\"' && !escaped {\n            return Some(start + 1 + offset + 1);\n        }\n        escaped = b == b'\\\\' && !escaped;\n    }\n    None\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 30,
+          "lineEnd": 41,
+          "literal": "/// End of the string starting with `\"` at `start`, just past the closing\n/// quote, or `None` if it is unterminated. A backslash escapes the next byte.\npub fn string_end(bytes: &[u8], start: usize) -> Option<usize> {\n    let mut escaped = false;\n    for (offset, &b) in bytes[start + 1..].iter().enumerate() {\n        if b == b'\"' && !escaped {\n            return Some(start + 1 + offset + 1);\n        }\n        escaped = b == b'\\\\' && !escaped;\n    }\n    None\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 159,
+          "lineEnd": 184,
+          "literal": "    fn string(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let Some(end) = scan::string_end(self.bytes, start) else {\n            return Err(diagnostics::unterminated_string(span(start, start + 1)));\n        };\n        let raw = &self.source[start..end];\n        let mut decoded_len = 0;\n        if let Err(error) = string::decode_with(raw, |c| decoded_len += c.len_utf8()) {\n            let at = span(start + error.start, start + error.end);\n            return Err(match error.kind {\n                StringErrorKind::ControlCharacter('\\r' | '\\n') => {\n                    diagnostics::string_line_break(at)\n                }\n                StringErrorKind::ControlCharacter(c) => {\n                    diagnostics::string_control_character(at, c)\n                }\n                StringErrorKind::InvalidEscape => {\n                    diagnostics::invalid_escape(at, at.source_text(self.source))\n                }\n                StringErrorKind::InvalidUnicodeEscape => diagnostics::invalid_unicode_escape(at),\n                StringErrorKind::LoneSurrogate => diagnostics::lone_surrogate(at),\n            });\n        }\n        if decoded_len > MAX_STRING_BYTES {\n            return Err(diagnostics::string_too_long(span(start, end), decoded_len));\n        }\n        self.push(TokenKind::String, start, end)"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 159,
+          "lineEnd": 184,
+          "literal": "    fn string(&mut self, start: usize) -> Result<(), MoriDiagnostic> {\n        let Some(end) = scan::string_end(self.bytes, start) else {\n            return Err(diagnostics::unterminated_string(span(start, start + 1)));\n        };\n        let raw = &self.source[start..end];\n        let mut decoded_len = 0;\n        if let Err(error) = string::decode_with(raw, |c| decoded_len += c.len_utf8()) {\n            let at = span(start + error.start, start + error.end);\n            return Err(match error.kind {\n                StringErrorKind::ControlCharacter('\\r' | '\\n') => {\n                    diagnostics::string_line_break(at)\n                }\n                StringErrorKind::ControlCharacter(c) => {\n                    diagnostics::string_control_character(at, c)\n                }\n                StringErrorKind::InvalidEscape => {\n                    diagnostics::invalid_escape(at, at.source_text(self.source))\n                }\n                StringErrorKind::InvalidUnicodeEscape => diagnostics::invalid_unicode_escape(at),\n                StringErrorKind::LoneSurrogate => diagnostics::lone_surrogate(at),\n            });\n        }\n        if decoded_len > MAX_STRING_BYTES {\n            return Err(diagnostics::string_too_long(span(start, end), decoded_len));\n        }\n        self.push(TokenKind::String, start, end)"
+        }
+      ]
+    },
+    {
+      "id": "L12",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "decode_with maps quote,backslash,slash,b,f,n,r,t escapes, uses hex4 for u escape, rejects raw characters below space, and emits other characters. hex4 reads exactly four to_digit(16) characters.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 45,
+          "lineEnd": 55,
+          "literal": "    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 45,
+          "lineEnd": 55,
+          "literal": "    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;"
+        },
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 79,
+          "lineEnd": 100,
+          "literal": "            let decoded = match escape {\n                '\"' => '\"',\n                '\\\\' => '\\\\',\n                '/' => '/',\n                'b' => '\\u{8}',\n                'f' => '\\u{c}',\n                'n' => '\\n',\n                'r' => '\\r',\n                't' => '\\t',\n                _ => {\n                    let end = i + 1 + escape.len_utf8();\n                    return Err(error(StringErrorKind::InvalidEscape, i, end));\n                }\n            };\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(decoded);\n        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 79,
+          "lineEnd": 100,
+          "literal": "            let decoded = match escape {\n                '\"' => '\"',\n                '\\\\' => '\\\\',\n                '/' => '/',\n                'b' => '\\u{8}',\n                'f' => '\\u{c}',\n                'n' => '\\n',\n                'r' => '\\r',\n                't' => '\\t',\n                _ => {\n                    let end = i + 1 + escape.len_utf8();\n                    return Err(error(StringErrorKind::InvalidEscape, i, end));\n                }\n            };\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(decoded);\n        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }"
+        },
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 122,
+          "lineEnd": 131,
+          "literal": "/// Reads exactly four hexadecimal digits.\nfn hex4(chars: &mut Peekable<CharIndices<'_>>) -> Option<u32> {\n    let mut value = 0;\n    for _ in 0..4 {\n        let digit = chars.peek()?.1.to_digit(16)?;\n        chars.next();\n        value = value * 16 + digit;\n    }\n    Some(value)\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 122,
+          "lineEnd": 131,
+          "literal": "/// Reads exactly four hexadecimal digits.\nfn hex4(chars: &mut Peekable<CharIndices<'_>>) -> Option<u32> {\n    let mut value = 0;\n    for _ in 0..4 {\n        let digit = chars.peek()?.1.to_digit(16)?;\n        chars.next();\n        value = value * 16 + digit;\n    }\n    Some(value)\n}"
+        }
+      ]
+    },
+    {
+      "id": "L13",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Unicode escape handling stores a pending high surrogate, combines a following low surrogate into a scalar, records the first lone surrogate while emitting replacement characters, and returns that LoneSurrogate error after the loop unless an earlier immediate error returned.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 33,
+          "lineEnd": 77,
+          "literal": "pub fn decode_with(raw: &str, mut emit: impl FnMut(char)) -> Result<(), StringError> {\n    let body = &raw[1..raw.len() - 1];\n    let mut chars = body.char_indices().peekable();\n    let mut pending_high: Option<(u32, usize)> = None;\n    let mut first_lone: Option<(usize, usize)> = None;\n\n    let error = |kind, start: usize, end: usize| StringError {\n        kind,\n        start: start + 1,\n        end: end + 1,\n    };\n\n    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;\n                match (pending_high.take(), unit) {\n                    (Some((high, _)), 0xDC00..=0xDFFF) => {\n                        let scalar = 0x10000 + ((high - 0xD800) << 10) + (unit - 0xDC00);\n                        emit(char::from_u32(scalar).expect(\"surrogate pair is a scalar\"));\n                    }\n                    (pending, _) => {\n                        if let Some((_, start)) = pending {\n                            first_lone.get_or_insert((start, start + 6));\n                            emit(char::REPLACEMENT_CHARACTER);\n                        }\n                        match unit {\n                            0xD800..=0xDBFF => pending_high = Some((unit, i)),\n                            0xDC00..=0xDFFF => {\n                                first_lone.get_or_insert((i, end));\n                                emit(char::REPLACEMENT_CHARACTER);\n                            }\n                            _ => emit(char::from_u32(unit).expect(\"non-surrogate is a scalar\")),\n                        }\n                    }\n                }\n                continue;\n            }"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 33,
+          "lineEnd": 77,
+          "literal": "pub fn decode_with(raw: &str, mut emit: impl FnMut(char)) -> Result<(), StringError> {\n    let body = &raw[1..raw.len() - 1];\n    let mut chars = body.char_indices().peekable();\n    let mut pending_high: Option<(u32, usize)> = None;\n    let mut first_lone: Option<(usize, usize)> = None;\n\n    let error = |kind, start: usize, end: usize| StringError {\n        kind,\n        start: start + 1,\n        end: end + 1,\n    };\n\n    while let Some((i, c)) = chars.next() {\n        if c == '\\\\' {\n            let Some((_, escape)) = chars.next() else {\n                return Err(error(StringErrorKind::InvalidEscape, i, i + 1));\n            };\n            if escape == 'u' {\n                let unit = hex4(&mut chars).ok_or_else(|| {\n                    let end = chars.peek().map_or(body.len(), |&(j, _)| j);\n                    error(StringErrorKind::InvalidUnicodeEscape, i, end)\n                })?;\n                let end = i + 6;\n                match (pending_high.take(), unit) {\n                    (Some((high, _)), 0xDC00..=0xDFFF) => {\n                        let scalar = 0x10000 + ((high - 0xD800) << 10) + (unit - 0xDC00);\n                        emit(char::from_u32(scalar).expect(\"surrogate pair is a scalar\"));\n                    }\n                    (pending, _) => {\n                        if let Some((_, start)) = pending {\n                            first_lone.get_or_insert((start, start + 6));\n                            emit(char::REPLACEMENT_CHARACTER);\n                        }\n                        match unit {\n                            0xD800..=0xDBFF => pending_high = Some((unit, i)),\n                            0xDC00..=0xDFFF => {\n                                first_lone.get_or_insert((i, end));\n                                emit(char::REPLACEMENT_CHARACTER);\n                            }\n                            _ => emit(char::from_u32(unit).expect(\"non-surrogate is a scalar\")),\n                        }\n                    }\n                }\n                continue;\n            }"
+        },
+        {
+          "file": "MAIN-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 95,
+          "lineEnd": 119,
+          "literal": "        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }\n    }\n    flush_high(&mut pending_high, &mut first_lone, &mut emit);\n\n    match first_lone {\n        Some((start, end)) => Err(error(StringErrorKind::LoneSurrogate, start, end)),\n        None => Ok(()),\n    }\n}\n\n/// A high surrogate not followed by a low surrogate escape is lone.\nfn flush_high(\n    pending_high: &mut Option<(u32, usize)>,\n    first_lone: &mut Option<(usize, usize)>,\n    emit: &mut impl FnMut(char),\n) {\n    if let Some((_, start)) = pending_high.take() {\n        first_lone.get_or_insert((start, start + 6));\n        emit(char::REPLACEMENT_CHARACTER);\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-string.rs",
+          "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+          "lineStart": 95,
+          "lineEnd": 119,
+          "literal": "        } else if c < ' ' {\n            return Err(error(StringErrorKind::ControlCharacter(c), i, i + 1));\n        } else {\n            flush_high(&mut pending_high, &mut first_lone, &mut emit);\n            emit(c);\n        }\n    }\n    flush_high(&mut pending_high, &mut first_lone, &mut emit);\n\n    match first_lone {\n        Some((start, end)) => Err(error(StringErrorKind::LoneSurrogate, start, end)),\n        None => Ok(()),\n    }\n}\n\n/// A high surrogate not followed by a low surrogate escape is lone.\nfn flush_high(\n    pending_high: &mut Option<(u32, usize)>,\n    first_lone: &mut Option<(usize, usize)>,\n    emit: &mut impl FnMut(char),\n) {\n    if let Some((_, start)) = pending_high.take() {\n        first_lone.get_or_insert((start, start + 6));\n        emit(char::REPLACEMENT_CHARACTER);\n    }"
+        }
+      ]
+    },
+    {
+      "id": "L14",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Public decode_string calls decode_with and expect(\"lexed strings are valid\"). Its body does not return Result. first_token_text instead selects a bounded character-boundary prefix and calls run(true); run(true) stops after its first noncomment token and appends EOF.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 37,
+          "lineEnd": 63,
+          "literal": "/// The text of a string token, with escapes decoded.\n///\n/// `raw` must be the full text of a [`TokenKind::String`] token, quotes\n/// included, as produced by [`lex`].\npub fn decode_string(raw: &str) -> String {\n    let mut text = String::with_capacity(raw.len());\n    string::decode_with(raw, |c| text.push(c)).expect(\"lexed strings are valid\");\n    text\n}\n\n/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}\n\n/// Identify a leading profile token without requiring the remaining source to\n/// lex successfully. Inspect only a bounded prefix; full parsing retains all\n/// source and token limits.\npub fn first_token_text(source: &str) -> Result<&str, MoriDiagnostic> {\n    let end = source.floor_char_boundary(source.len().min(MAX_SOURCE_BYTES));\n    let prefix = &source[..end];\n    let tokens = Lexer::new(prefix).run(true)?;\n    Ok(tokens.span(TokenIdx::new(0), prefix).source_text(prefix))\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 37,
+          "lineEnd": 63,
+          "literal": "/// The text of a string token, with escapes decoded.\n///\n/// `raw` must be the full text of a [`TokenKind::String`] token, quotes\n/// included, as produced by [`lex`].\npub fn decode_string(raw: &str) -> String {\n    let mut text = String::with_capacity(raw.len());\n    string::decode_with(raw, |c| text.push(c)).expect(\"lexed strings are valid\");\n    text\n}\n\n/// Splits `source` into tokens and comments, or reports the first error.\npub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {\n    if source.len() > MAX_SOURCE_BYTES {\n        return Err(diagnostics::source_too_large(source.len()));\n    }\n    Lexer::new(source).run(false)\n}\n\n/// Identify a leading profile token without requiring the remaining source to\n/// lex successfully. Inspect only a bounded prefix; full parsing retains all\n/// source and token limits.\npub fn first_token_text(source: &str) -> Result<&str, MoriDiagnostic> {\n    let end = source.floor_char_boundary(source.len().min(MAX_SOURCE_BYTES));\n    let prefix = &source[..end];\n    let tokens = Lexer::new(prefix).run(true)?;\n    Ok(tokens.span(TokenIdx::new(0), prefix).source_text(prefix))\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 108,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 85,
+          "lineEnd": 108,
+          "literal": "    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {\n        while let Some(&b) = self.bytes.get(self.pos) {\n            let start = self.pos;\n            match b {\n                b' ' | b'\\t' | b'\\r' | b'\\n' => self.pos += 1,\n                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),\n                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,\n                b'\"' => self.string(start)?,\n                b'0'..=b'9' => self.number(start)?,\n                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,\n                _ => match TokenKind::punctuation(b) {\n                    Some(kind) => self.push(kind, start, start + 1)?,\n                    None => return Err(self.unexpected_character(start)),\n                },\n            }\n            if first_only && !self.tokens.is_empty() {\n                break;\n            }\n        }\n        // The end-of-file token is always pushed: the bound reserves room for it.\n        self.tokens.push(Token {\n            kind: TokenKind::Eof,\n            start: offset(self.pos),\n        });"
+        }
+      ]
+    },
+    {
+      "id": "L15",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer",
+      "sourceObservation": "Token stores kind and u32 start; TokenIdx wraps u16 via try_from/expect. Tokens::span calls scan::token_end, which re-scans word/number/string extents, uses zero length for EOF and one byte otherwise.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 137,
+          "lineEnd": 165,
+          "literal": "/// A token's kind and start offset. Its end is recovered by re-scanning.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Token {\n    pub kind: TokenKind,\n    pub start: u32,\n}\n\n/// A `//` or `/* */` comment, kept for the formatter.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Comment {\n    pub start: u32,\n    pub end: u32,\n}\n\n/// Index of a token in [`Tokens`]. Sources hold at most 8,192 tokens.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\npub struct TokenIdx(u16);\n\nimpl TokenIdx {\n    pub fn new(index: usize) -> Self {\n        Self(u16::try_from(index).expect(\"token index exceeds u16\"))\n    }\n\n    pub fn index(self) -> usize {\n        usize::from(self.0)\n    }\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 137,
+          "lineEnd": 165,
+          "literal": "/// A token's kind and start offset. Its end is recovered by re-scanning.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Token {\n    pub kind: TokenKind,\n    pub start: u32,\n}\n\n/// A `//` or `/* */` comment, kept for the formatter.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Soars)]\n#[soa_derive(Debug, PartialEq)]\npub struct Comment {\n    pub start: u32,\n    pub end: u32,\n}\n\n/// Index of a token in [`Tokens`]. Sources hold at most 8,192 tokens.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\npub struct TokenIdx(u16);\n\nimpl TokenIdx {\n    pub fn new(index: usize) -> Self {\n        Self(u16::try_from(index).expect(\"token index exceeds u16\"))\n    }\n\n    pub fn index(self) -> usize {\n        usize::from(self.0)\n    }\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 185,
+          "lineEnd": 205,
+          "literal": "    pub fn kind(&self, idx: TokenIdx) -> TokenKind {\n        self.tokens.kind()[idx.index()]\n    }\n\n    pub fn start(&self, idx: TokenIdx) -> u32 {\n        self.tokens.start()[idx.index()]\n    }\n\n    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 185,
+          "lineEnd": 205,
+          "literal": "    pub fn kind(&self, idx: TokenIdx) -> TokenKind {\n        self.tokens.kind()[idx.index()]\n    }\n\n    pub fn start(&self, idx: TokenIdx) -> u32 {\n        self.tokens.start()[idx.index()]\n    }\n\n    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }\n}"
+        },
+        {
+          "file": "MAIN-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 43,
+          "lineEnd": 55,
+          "literal": "/// Recovers the end offset of a token from its kind and start.\npub fn token_end(kind: TokenKind, bytes: &[u8], start: u32) -> u32 {\n    let start_index = start as usize;\n    let end = match kind {\n        TokenKind::Ident => word_end(bytes, start_index),\n        _ if kind.is_keyword() => word_end(bytes, start_index),\n        TokenKind::Number => number_end(bytes, start_index),\n        TokenKind::String => string_end(bytes, start_index).expect(\"lexed strings are terminated\"),\n        TokenKind::Eof => start_index,\n        _ => start_index + 1,\n    };\n    end as u32\n}"
+        },
+        {
+          "file": "BACKEND-lexer-src-scan.rs",
+          "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+          "lineStart": 43,
+          "lineEnd": 55,
+          "literal": "/// Recovers the end offset of a token from its kind and start.\npub fn token_end(kind: TokenKind, bytes: &[u8], start: u32) -> u32 {\n    let start_index = start as usize;\n    let end = match kind {\n        TokenKind::Ident => word_end(bytes, start_index),\n        _ if kind.is_keyword() => word_end(bytes, start_index),\n        TokenKind::Number => number_end(bytes, start_index),\n        TokenKind::String => string_end(bytes, start_index).expect(\"lexed strings are terminated\"),\n        TokenKind::Eof => start_index,\n        _ => start_index + 1,\n    };\n    end as u32\n}"
+        }
+      ]
+    },
+    {
+      "id": "L16",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer diagnostics",
+      "sourceObservation": "Diagnostics functions construct literal mori::lex::* codes; shown examples include source_too_large,too_many_tokens,invalid_escape,invalid_unicode_escape,lone_surrogate and division. Help-text claims are not adopted as runtime/correctness evidence.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 8,
+          "lineEnd": 25,
+          "literal": "pub fn source_too_large(len: usize) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file is {len} bytes, but a source file can be at most {MAX_SOURCE_BYTES} bytes.\"\n    ))\n    .with_code(\"mori::lex::source_too_large\")\n    .with_help(\"Agreements are kept small so every check stays bounded.\")\n}\n\npub fn too_many_tokens(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file has more than {MAX_TOKENS} tokens, counting the end of the file.\"\n    ))\n    .with_code(\"mori::lex::too_many_tokens\")\n    .with_label(span.label(\"the limit is reached here\"))\n    .with_help(\n        \"Agreements are kept small so every check stays bounded. \\\n         Comments and whitespace do not count toward this limit.\",\n    )"
+        },
+        {
+          "file": "BACKEND-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 8,
+          "lineEnd": 25,
+          "literal": "pub fn source_too_large(len: usize) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file is {len} bytes, but a source file can be at most {MAX_SOURCE_BYTES} bytes.\"\n    ))\n    .with_code(\"mori::lex::source_too_large\")\n    .with_help(\"Agreements are kept small so every check stays bounded.\")\n}\n\npub fn too_many_tokens(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\n        \"This file has more than {MAX_TOKENS} tokens, counting the end of the file.\"\n    ))\n    .with_code(\"mori::lex::too_many_tokens\")\n    .with_label(span.label(\"the limit is reached here\"))\n    .with_help(\n        \"Agreements are kept small so every check stays bounded. \\\n         Comments and whitespace do not count toward this limit.\",\n    )"
+        },
+        {
+          "file": "MAIN-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 73,
+          "lineEnd": 101,
+          "literal": "pub fn invalid_escape(span: Span, escape: &str) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\"`{escape}` is not an escape I know.\"))\n        .with_code(\"mori::lex::invalid_escape\")\n        .with_label(span.label(\"unknown escape\"))\n        .with_help_code(\n            \"Strings use JSON escapes. To write a backslash itself, use `\\\\\\\\`:\",\n            \"\\\\\\\"  \\\\\\\\  \\\\/  \\\\b  \\\\f  \\\\n  \\\\r  \\\\t  \\\\uXXXX\",\n        )\n}\n\npub fn invalid_unicode_escape(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"A `\\\\u` escape needs exactly four hexadecimal digits.\")\n        .with_code(\"mori::lex::invalid_unicode_escape\")\n        .with_label(span.label(\"this escape is incomplete\"))\n        .with_help_code(\n            \"Write all four digits, or write the character directly:\",\n            \"\\\"caf\\\\u00e9\\\"\",\n        )\n}\n\npub fn lone_surrogate(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"This escape is half of a surrogate pair.\")\n        .with_code(\"mori::lex::lone_surrogate\")\n        .with_label(span.label(\"this half has no partner\"))\n        .with_help_code(\n            \"A character above U+FFFF is written as a high escape followed by a low one, \\\n             or directly:\",\n            \"\\\"\\\\uD83D\\\\uDE00\\\"\",\n        )"
+        },
+        {
+          "file": "BACKEND-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 73,
+          "lineEnd": 101,
+          "literal": "pub fn invalid_escape(span: Span, escape: &str) -> MoriDiagnostic {\n    MoriDiagnostic::error(format!(\"`{escape}` is not an escape I know.\"))\n        .with_code(\"mori::lex::invalid_escape\")\n        .with_label(span.label(\"unknown escape\"))\n        .with_help_code(\n            \"Strings use JSON escapes. To write a backslash itself, use `\\\\\\\\`:\",\n            \"\\\\\\\"  \\\\\\\\  \\\\/  \\\\b  \\\\f  \\\\n  \\\\r  \\\\t  \\\\uXXXX\",\n        )\n}\n\npub fn invalid_unicode_escape(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"A `\\\\u` escape needs exactly four hexadecimal digits.\")\n        .with_code(\"mori::lex::invalid_unicode_escape\")\n        .with_label(span.label(\"this escape is incomplete\"))\n        .with_help_code(\n            \"Write all four digits, or write the character directly:\",\n            \"\\\"caf\\\\u00e9\\\"\",\n        )\n}\n\npub fn lone_surrogate(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"This escape is half of a surrogate pair.\")\n        .with_code(\"mori::lex::lone_surrogate\")\n        .with_label(span.label(\"this half has no partner\"))\n        .with_help_code(\n            \"A character above U+FFFF is written as a high escape followed by a low one, \\\n             or directly:\",\n            \"\\\"\\\\uD83D\\\\uDE00\\\"\",\n        )"
+        },
+        {
+          "file": "MAIN-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 150,
+          "lineEnd": 158,
+          "literal": "pub fn division(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"There is no division in Moriarty.\")\n        .with_code(\"mori::lex::division\")\n        .with_label(span.label(\"division is not supported\"))\n        .with_help_code(\n            \"Amounts are exact, so nothing is ever rounded behind your back. \\\n             Write the result directly, so instead of `1 USD / 4`:\",\n            \"0.25 USD\",\n        )"
+        },
+        {
+          "file": "BACKEND-lexer-src-diagnostics.rs",
+          "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+          "lineStart": 150,
+          "lineEnd": 158,
+          "literal": "pub fn division(span: Span) -> MoriDiagnostic {\n    MoriDiagnostic::error(\"There is no division in Moriarty.\")\n        .with_code(\"mori::lex::division\")\n        .with_label(span.label(\"division is not supported\"))\n        .with_help_code(\n            \"Amounts are exact, so nothing is ever rounded behind your back. \\\n             Write the result directly, so instead of `1 USD / 4`:\",\n            \"0.25 USD\",\n        )"
+        }
+      ]
+    },
+    {
+      "id": "L17",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared lexer dependencies",
+      "sourceObservation": "Cargo declares workspace mori-diagnostics,mori-span,soa-rs and dev dependencies indoc,insta,mori-diagnostics/fancy,proptest. Exact versions and workspace inheritance bodies are not supplied here.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 1,
+          "lineEnd": 19,
+          "literal": "[package]\nname = \"mori-lexer\"\nversion = \"0.1.0\"\ndescription = \"Lexer for Moriarty source\"\nedition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        },
+        {
+          "file": "BACKEND-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 1,
+          "lineEnd": 19,
+          "literal": "[package]\nname = \"mori-lexer\"\nversion = \"0.1.0\"\ndescription = \"Lexer for Moriarty source\"\nedition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        }
+      ]
+    },
+    {
+      "id": "B01",
+      "classification": "CALL_EDGE",
+      "profile": "Core1 backend",
+      "sourceObservation": "compile_selected creates explicit NotBound/TouchedOnly/GrossDebitAndFees options with CompilerBuild::embedded, then calls compile_source::<Fr>(...,SettlementHashV2). compile_source routes Core1 to compile and Staged2 to StagedNotLowered(lowering_plan()).",
+      "citations": [
+        {
+          "file": "S04-relation.rs",
+          "sha256": "e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5",
+          "lineStart": 258,
+          "lineEnd": 269,
+          "literal": "pub fn compile_selected(source: &str, selector: &RelationSelector) -> Result<SelectedRelation, DriverError> {\n    check_selector(selector)?;\n    let options = CompileOptions {\n        action: selector.action.clone(),\n        cap: CapBinding::NotBound,\n        frame: FrameCells::TouchedOnly,\n        accounting: AccountingBinding::GrossDebitAndFees,\n        compiler: CompilerBuild::embedded().map_err(DriverError::Compile)?,\n    };\n    let relation =\n        mori_r1cs::compile_source::<Fr>(source, options, StatementAdapter::SettlementHashV2).map_err(DriverError::Compile)?;\n    let descriptor = RelationDescriptor::of(&relation)?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 266,
+          "lineEnd": 271,
+          "literal": "pub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "B02",
+      "classification": "CALL_EDGE",
+      "profile": "Core1 backend",
+      "sourceObservation": "compile checks compiler identity,adapter admission,then ABI2 options for SettlementHashV2,then plans and builds layout; later it constructs ABI2 constants from identity.digest and invokes probe.",
+      "citations": [
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 212,
+          "lineEnd": 226,
+          "literal": "pub fn compile<F: PrimeField>(admitted: AdmittedCore1, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    if F::MODULUS_BIT_SIZE < crate::MIN_MODULUS_BITS {\n        return Err(CompileError::Field(format!(\n            \"scalar field has {} bits; the exact-integer gadgets need at least {}\",\n            F::MODULUS_BIT_SIZE,\n            crate::MIN_MODULUS_BITS\n        )));\n    }\n    let build = options.compiler.checked()?;\n    adapter.admits(admitted.program()).map_err(CompileError::Adapter)?;\n    if adapter == StatementAdapter::SettlementHashV2 {\n        abi2::options_ok(&options)?;\n    }\n    let plan = plan::plan_action(admitted.program(), &options)?;\n    let layout = StatementLayout::build(admitted.identity(), &plan, build)?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 254,
+          "lineEnd": 261,
+          "literal": "    let abi2 = if adapter == StatementAdapter::SettlementHashV2 {\n        Some(abi2::constants(admitted.program(), &plan, &layout, identity.digest()?.0)?)\n    } else {\n        None\n    };\n    let mut relation = CompiledRelation { admitted, options, plan, layout, identity, adapter, abi2, probe: placeholder };\n    relation.probe = probe::<F>(&relation)?;\n    Ok(relation)"
+        }
+      ]
+    },
+    {
+      "id": "ID01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "backend identity",
+      "sourceObservation": "CompilerBuild stores two Digest32 values. embedded delegates to embedded_build. checked rejects either zero digest, then compares self with recomputed embedded(), then returns self. No build routine was invoked by this inspection.",
+      "citations": [
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 126,
+          "lineEnd": 155,
+          "literal": "#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub struct CompilerBuild {\n    /// SHA-256 of the canonical `mori-r1cs-build-manifest/2` document of this crate's\n    /// Cargo.toml and src/ (no annotation fields; review R-04).\n    pub compiler_source_manifest_sha256: Digest32,\n    /// Core closure digest under the unchanged closure rule (`CORE-CLOSURE-PINS.json`\n    /// `closure_sha256`): the exact mori-core/lexer/diagnostics/span bytes embedded.\n    pub core_closure_sha256: Digest32,\n}\n\nimpl CompilerBuild {\n    /// The embedded byte-derived identity (the only one `compile` accepts).\n    pub fn embedded() -> Result<Self, CompileError> {\n        crate::build_identity::embedded_build()\n    }\n\n    /// Refuses a zero digest, then any value other than the embedded identity: an\n    /// arbitrary caller-supplied build digest is never taken as provenance.\n    pub fn checked(self) -> Result<Self, CompileError> {\n        if self.compiler_source_manifest_sha256.is_zero() || self.core_closure_sha256.is_zero() {\n            return Err(CompileError::Identity(\n                \"compiler build digests must be nonzero; use CompilerBuild::embedded()\".into(),\n            ));\n        }\n        if self != Self::embedded()? {\n            return Err(CompileError::Identity(\n                \"caller-supplied compiler build identity differs from the embedded byte-derived identity\".into(),\n            ));\n        }\n        Ok(self)"
+        }
+      ]
+    },
+    {
+      "id": "ID02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "backend identity",
+      "sourceObservation": "own! and core_file! expand include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"),...)). Paths are literal source declarations; no include target was followed. This explicitly records the compile-time env! macro instead of treating the prose comment about environment variables as executable truth.",
+      "citations": [
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 44,
+          "lineEnd": 54,
+          "literal": "macro_rules! own {\n    ($p:literal) => {\n        Embedded { path: $p, bytes: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", $p)) }\n    };\n}\n\nmacro_rules! core_file {\n    ($p:literal) => {\n        Embedded { path: $p, bytes: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/../../../moriarty/\", $p)) }\n    };\n}"
+        }
+      ]
+    },
+    {
+      "id": "ID03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "backend identity",
+      "sourceObservation": "OWN_FILES and CORE_FILES are literal Embedded member arrays; entries() hashes supplied embedded bytes, records path/sha256/bytes, sorts path bytes and rejects repeated paths. Declared membership is not a verified inventory of external target files.",
+      "citations": [
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 57,
+          "lineEnd": 77,
+          "literal": "pub const OWN_FILES: &[Embedded] = &[\n    own!(\"Cargo.toml\"),\n    own!(\"src/abi2.rs\"),\n    own!(\"src/adapter.rs\"),\n    own!(\"src/blake2b.rs\"),\n    own!(\"src/build_identity.rs\"),\n    own!(\"src/circuit.rs\"),\n    own!(\"src/coverage.rs\"),\n    own!(\"src/error.rs\"),\n    own!(\"src/frontend.rs\"),\n    own!(\"src/gadgets.rs\"),\n    own!(\"src/groth16.rs\"),\n    own!(\"src/identity.rs\"),\n    own!(\"src/lib.rs\"),\n    own!(\"src/lower.rs\"),\n    own!(\"src/plan.rs\"),\n    own!(\"src/r1cs.rs\"),\n    own!(\"src/staged.rs\"),\n    own!(\"src/statement.rs\"),\n    own!(\"src/witness.rs\"),\n];"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 80,
+          "lineEnd": 100,
+          "literal": "pub const CORE_FILES: &[Embedded] = &[\n    core_file!(\"Cargo.toml\"),\n    core_file!(\"crates/mori-core/Cargo.toml\"),\n    core_file!(\"crates/mori-core/src/intent.rs\"),\n    core_file!(\"crates/mori-core/src/ir.rs\"),\n    core_file!(\"crates/mori-core/src/json.rs\"),\n    core_file!(\"crates/mori-core/src/lib.rs\"),\n    core_file!(\"crates/mori-core/src/logical_cost.rs\"),\n    core_file!(\"crates/mori-core/src/parser.rs\"),\n    core_file!(\"crates/mori-core/src/policy.rs\"),\n    core_file!(\"crates/mori-core/src/replay.rs\"),\n    core_file!(\"crates/mori-core/src/runtime.rs\"),\n    core_file!(\"crates/mori-core/src/source_sponsor.rs\"),\n    core_file!(\"crates/mori-core/src/stage/admit.rs\"),\n    core_file!(\"crates/mori-core/src/stage/cost.rs\"),\n    core_file!(\"crates/mori-core/src/stage/decode.rs\"),\n    core_file!(\"crates/mori-core/src/stage/digest.rs\"),\n    core_file!(\"crates/mori-core/src/stage/mod.rs\"),\n    core_file!(\"crates/mori-core/src/stage/plan.rs\"),\n    core_file!(\"crates/mori-core/src/stage/profile.rs\"),\n    core_file!(\"crates/mori-core/src/stage/validate.rs\"),"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 145,
+          "lineEnd": 151,
+          "literal": "    core_file!(\"crates/mori-lexer/src/string.rs\"),\n    core_file!(\"crates/mori-lexer/src/tests.rs\"),\n    core_file!(\"crates/mori-lexer/src/token.rs\"),\n    core_file!(\"crates/mori-span/Cargo.toml\"),\n    core_file!(\"crates/mori-span/src/lib.rs\"),\n    core_file!(\"rust-toolchain.toml\"),\n];"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 173,
+          "lineEnd": 184,
+          "literal": "/// Entries sorted by path bytewise; a repeated path is refused.\npub fn entries(files: &[Embedded]) -> Result<Vec<Entry>, CompileError> {\n    let mut out: Vec<Entry> = files\n        .iter()\n        .map(|f| Entry { path: f.path.to_string(), sha256: identity::digest_bytes(f.bytes).hex(), bytes: f.bytes.len() as u64 })\n        .collect();\n    out.sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));\n    if out.windows(2).any(|w| w[0].path == w[1].path) {\n        return Err(CompileError::Identity(\"embedded build membership repeats a path\".into()));\n    }\n    Ok(out)\n}"
+        }
+      ]
+    },
+    {
+      "id": "ID04",
+      "classification": "CALL_EDGE",
+      "profile": "backend identity",
+      "sourceObservation": "build_manifest_bytes canonicalizes format/files from entries(OWN_FILES); build_manifest_digest hashes that output; core_closure_digest calls digest_of(entries(CORE_FILES)); embedded_build returns those two digests. CompilerBuild::digest uses BuildDigestInputV2.",
+      "citations": [
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 186,
+          "lineEnd": 204,
+          "literal": "/// Canonical bytes of the `mori-r1cs-build-manifest/2` document for `OWN_FILES`.\npub fn build_manifest_bytes() -> Result<Vec<u8>, CompileError> {\n    mori_core::intent::canonical(&BuildManifestV2 { format: BUILD_MANIFEST_FORMAT, files: entries(OWN_FILES)? }).map_err(CompileError::Core)\n}\n\n/// SHA-256 of the canonical build manifest.\npub fn build_manifest_digest() -> Result<Digest32, CompileError> {\n    Ok(identity::digest_bytes(&build_manifest_bytes()?))\n}\n\n/// The Core closure digest under the unchanged `/1` closure rule.\npub fn core_closure_digest() -> Result<Digest32, CompileError> {\n    identity::digest_of(&entries(CORE_FILES)?)\n}\n\n/// The only `CompilerBuild` that `compile` accepts.\npub fn embedded_build() -> Result<CompilerBuild, CompileError> {\n    Ok(CompilerBuild { compiler_source_manifest_sha256: build_manifest_digest()?, core_closure_sha256: core_closure_digest()? })\n}"
+        },
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 158,
+          "lineEnd": 166,
+          "literal": "    /// `mori-r1cs-build-identity/2`: SHA-256 of the canonical\n    /// `{format, compiler_source_manifest_sha256, core_closure_sha256}`.\n    pub fn digest(&self) -> Result<Digest32, CompileError> {\n        digest_of(&crate::build_identity::BuildDigestInputV2 {\n            format: crate::build_identity::BUILD_IDENTITY_FORMAT,\n            compiler_source_manifest_sha256: self.compiler_source_manifest_sha256,\n            core_closure_sha256: self.core_closure_sha256,\n        })\n    }"
+        }
+      ]
+    },
+    {
+      "id": "ID05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "backend identity",
+      "sourceObservation": "digest_of delegates to Core intent::canonical then digest_bytes; digest_bytes delegates to Core hash_bytes and Digest32::from_hex. from_hex requires64 bytes and nibble accepts digits/lowercase a-f. No digest result for embedded members is asserted.",
+      "citations": [
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 31,
+          "lineEnd": 45,
+          "literal": "impl Digest32 {\n    /// Parses exactly 64 lowercase hexadecimal characters.\n    pub fn from_hex(text: &str) -> Result<Self, CompileError> {\n        let bytes = text.as_bytes();\n        if bytes.len() != 64 {\n            return Err(CompileError::Identity(format!(\"digest must be 64 hex characters, got {}\", bytes.len())));\n        }\n        let mut out = [0u8; 32];\n        for (i, pair) in bytes.chunks(2).enumerate() {\n            let hi = nibble(pair[0])?;\n            let lo = nibble(pair[1])?;\n            out[i] = (hi << 4) | lo;\n        }\n        Ok(Self(out))\n    }"
+        },
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 72,
+          "lineEnd": 99,
+          "literal": "fn nibble(c: u8) -> Result<u8, CompileError> {\n    match c {\n        b'0'..=b'9' => Ok(c - b'0'),\n        b'a'..=b'f' => Ok(c - b'a' + 10),\n        _ => Err(CompileError::Identity(\"digest must be lowercase hexadecimal\".into())),\n    }\n}\n\n/// SHA-256 of `intent::canonical(value)`, reusing Core's canonical encoder and hash.\npub fn digest_of<T: Serialize>(value: &T) -> Result<Digest32, CompileError> {\n    let bytes = mori_core::intent::canonical(value).map_err(CompileError::Core)?;\n    Ok(digest_bytes(&bytes))\n}\n\n/// SHA-256 of raw bytes through Core's `hash_bytes`.\npub fn digest_bytes(bytes: &[u8]) -> Digest32 {\n    Digest32::from_hex(&mori_core::intent::hash_bytes(bytes)).expect(\"Core hash_bytes returns 64 lowercase hex characters\")\n}\n\n/// Canonical typed-Program identity (equals `CoreSourceExportV1.program_hash` and the\n/// owner-intent `program_hash` for the same Program).\npub fn program_hash(program: &Program) -> Result<Digest32, CompileError> {\n    digest_of(program)\n}\n\n/// Raw source identity; never bound in-circuit by this compiler.\npub fn source_hash(source: &str) -> Digest32 {\n    digest_bytes(source.as_bytes())"
+        }
+      ]
+    },
+    {
+      "id": "ID06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "backend identity",
+      "sourceObservation": "RelationIdentity fields include source_sha256; its digest constructs BoundIdentity without that field. Profile digest input names Core language/semantics/logical profile and relation format/version. This records serialized input selection, not binding adequacy.",
+      "citations": [
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 102,
+          "lineEnd": 120,
+          "literal": "#[derive(Serialize)]\nstruct ProfileDescriptor<'a> {\n    language: &'a str,\n    semantics: &'a str,\n    logical_cost_profile: &'a str,\n    relation_format: &'a str,\n    relation_version: u64,\n}\n\n/// Digest of the semantic profile a relation claims: Core language and semantics,\n/// logical-cost profile and this compiler's relation format/version.\npub fn profile_digest() -> Result<Digest32, CompileError> {\n    digest_of(&ProfileDescriptor {\n        language: mori_core::LANGUAGE,\n        semantics: mori_core::SEMANTICS,\n        logical_cost_profile: mori_core::LOGICAL_COST_PROFILE,\n        relation_format: crate::RELATION_FORMAT,\n        relation_version: crate::RELATION_VERSION,\n    })"
+        },
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 180,
+          "lineEnd": 231,
+          "literal": "#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct RelationIdentity {\n    pub relation_format: String,\n    pub relation_version: u64,\n    pub language: String,\n    pub semantics: String,\n    pub logical_cost_profile: String,\n    pub profile_digest: Digest32,\n    pub program_hash: Digest32,\n    pub source_sha256: Option<Digest32>,\n    pub action: String,\n    pub action_index: u16,\n    pub shape_digest: Digest32,\n    pub compiler_build: CompilerBuild,\n    pub compiler_build_digest: Digest32,\n    pub adapter: StatementAdapter,\n    pub logical_work: UInt,\n}\n\n#[derive(Serialize)]\nstruct BoundIdentity<'a> {\n    format: &'static str,\n    relation_format: &'a str,\n    relation_version: u64,\n    profile_digest: Digest32,\n    program_hash: Digest32,\n    action: &'a str,\n    action_index: u16,\n    shape_digest: Digest32,\n    compiler_build_digest: Digest32,\n    adapter: StatementAdapter,\n    logical_work: UInt,\n}\n\nimpl RelationIdentity {\n    /// Digest of the bound components only (never the raw source digest).\n    pub fn digest(&self) -> Result<Digest32, CompileError> {\n        digest_of(&BoundIdentity {\n            format: \"mori-r1cs-relation-identity/1\",\n            relation_format: &self.relation_format,\n            relation_version: self.relation_version,\n            profile_digest: self.profile_digest,\n            program_hash: self.program_hash,\n            action: &self.action,\n            action_index: self.action_index,\n            shape_digest: self.shape_digest,\n            compiler_build_digest: self.compiler_build_digest,\n            adapter: self.adapter,\n            logical_work: self.logical_work,\n        })\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "S01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 statement representation",
+      "sourceObservation": "SlotEncoding width is1 for Small/Bool,2 for Digest/UInt,3 for Wide; Type UInt/Bool maps to the corresponding encoding. Wide has lo:u128 and top:u16; plus uses overflowing_add and wrapping_add.",
+      "citations": [
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 29,
+          "lineEnd": 84,
+          "literal": "const MASK64: u128 = u64::MAX as u128;\n\n/// Exact integer `lo + 2^128 * top`, below 2^144.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub struct Wide {\n    pub lo: u128,\n    pub top: u16,\n}\n\nimpl Wide {\n    pub const ZERO: Wide = Wide { lo: 0, top: 0 };\n\n    /// Adds a u128. Callers sum at most 1,024 effect amounts (Core's statement bound),\n    /// so `top` stays below 2^10 and the wrapping add never wraps.\n    pub fn plus(self, x: u128) -> Wide {\n        let (lo, carry) = self.lo.overflowing_add(x);\n        Wide { lo, top: self.top.wrapping_add(u16::from(carry)) }\n    }\n\n    pub fn bit(self, i: u32) -> bool {\n        if i < 128 { (self.lo >> i) & 1 == 1 } else { (self.top >> (i - 128)) & 1 == 1 }\n    }\n\n    pub fn from_u128(v: u128) -> Wide {\n        Wide { lo: v, top: 0 }\n    }\n}\n\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub enum SlotEncoding {\n    /// One field holding a constant below 2^64.\n    Small,\n    /// Two fields `[hi128, lo128]`: big-endian halves of a 32-byte digest.\n    Digest,\n    /// Two fields `[lo64, hi64]`, each forced below 2^64.\n    UInt,\n    /// One field forced to {0, 1}.\n    Bool,\n    /// Three fields `[lo64, mid64, top16]` of an exact sum below 2^144.\n    Wide,\n}\n\nimpl SlotEncoding {\n    pub fn width(self) -> usize {\n        match self {\n            Self::Small | Self::Bool => 1,\n            Self::Digest | Self::UInt => 2,\n            Self::Wide => 3,\n        }\n    }\n    fn of(ty: Type) -> Self {\n        match ty {\n            Type::UInt => Self::UInt,\n            Type::Bool => Self::Bool,\n        }\n    }"
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 statement representation",
+      "sourceObservation": "StatementLayout holds header,slots,field_count; slots carry kind,encoding,offset,label. TransitionValues contains inputs,pre,post,effects,cap. BodyValues stores states,cells,duties; DutyValue stores present/amount.",
+      "citations": [
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 132,
+          "lineEnd": 196,
+          "literal": "#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct Slot {\n    pub kind: SlotKind,\n    pub encoding: SlotEncoding,\n    /// Index of the slot's first field in the encoded statement.\n    pub offset: usize,\n    pub label: String,\n}\n\n/// Header constants. All of them are bound in-circuit as constants.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct HeaderValues {\n    pub relation_version: u64,\n    pub program_hash: Digest32,\n    pub profile_digest: Digest32,\n    pub action_index: u16,\n    pub shape_digest: Digest32,\n    pub compiler_build_digest: Digest32,\n    pub logical_work: UInt,\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct StatementLayout {\n    pub header: HeaderValues,\n    pub slots: Vec<Slot>,\n    pub field_count: usize,\n}\n\n/// A claimed duty cell. Absent is exactly `(false, 0)`.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub struct DutyValue {\n    pub present: bool,\n    pub amount: UInt,\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct BodyValues {\n    /// Plan state order (by name).\n    pub states: Vec<Value>,\n    /// Plan cell order.\n    pub cells: Vec<UInt>,\n    /// Plan duty order.\n    pub duties: Vec<DutyValue>,\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub enum EffectValues {\n    State { before: Value, after: Value },\n    Amount(UInt),\n    Duty { before: UInt, after: UInt },\n    Emit(Value),\n}\n\n/// The claimed transition: everything a prover asserts and a verifier sees.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct TransitionValues {\n    /// Declaration order.\n    pub inputs: Vec<Value>,\n    pub pre: BodyValues,\n    pub post: BodyValues,\n    /// Statement order.\n    pub effects: Vec<EffectValues>,\n    /// Present exactly when the plan binds a public cap.\n    pub cap: Option<UInt>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 layout construction",
+      "sourceObservation": "build appends header fields in order relation version,program hash,profile digest,action index,shape digest,compiler build,logical work,optional public cap; then inputs; then pre followed by post states,cells,duty present/amount; then effects; then optional gross/fees per debit cell.",
+      "citations": [
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 230,
+          "lineEnd": 292,
+          "literal": "impl StatementLayout {\n    pub(crate) fn build(program: &ProgramIdentity, plan: &ActionPlan, build: CompilerBuild) -> Result<Self, CompileError> {\n        use HeaderField as H;\n        use SlotEncoding as E;\n        let mut b = Builder { slots: Vec::new(), offset: 0 };\n        b.push(SlotKind::Header(H::RelationVersion), E::Small, \"header.relation_version\".into());\n        b.push(SlotKind::Header(H::ProgramHash), E::Digest, \"header.program_hash\".into());\n        b.push(SlotKind::Header(H::ProfileDigest), E::Digest, \"header.profile_digest\".into());\n        b.push(SlotKind::Header(H::ActionIndex), E::Small, \"header.action_index\".into());\n        b.push(SlotKind::Header(H::ShapeDigest), E::Digest, \"header.shape_digest\".into());\n        b.push(SlotKind::Header(H::CompilerBuild), E::Digest, \"header.compiler_build\".into());\n        b.push(SlotKind::Header(H::LogicalWork), E::UInt, \"header.logical_work\".into());\n        if plan.cap == CapBinding::PublicCap {\n            b.push(SlotKind::Header(H::Cap), E::UInt, \"header.cap\".into());\n        }\n        for (i, s) in plan.inputs.iter().enumerate() {\n            b.push(SlotKind::Input { index: i }, E::of(s.ty), format!(\"input.{}\", s.name));\n        }\n        for (phase, post) in [(\"pre\", false), (\"post\", true)] {\n            for (i, s) in plan.states.iter().enumerate() {\n                let kind = if post { SlotKind::PostState { index: i } } else { SlotKind::PreState { index: i } };\n                b.push(kind, E::of(s.ty), format!(\"{phase}.state.{}\", s.name));\n            }\n            for (i, c) in plan.cells.iter().enumerate() {\n                let kind = if post { SlotKind::PostCell { index: i } } else { SlotKind::PreCell { index: i } };\n                b.push(kind, E::UInt, format!(\"{phase}.cell.{}.{}\", c.asset_name, c.account));\n            }\n            for (i, d) in plan.duties.iter().enumerate() {\n                let (p, a) = if post {\n                    (SlotKind::PostDutyPresent { index: i }, SlotKind::PostDutyAmount { index: i })\n                } else {\n                    (SlotKind::PreDutyPresent { index: i }, SlotKind::PreDutyAmount { index: i })\n                };\n                b.push(p, E::Bool, format!(\"{phase}.duty.{}.present\", d.name));\n                b.push(a, E::UInt, format!(\"{phase}.duty.{}.amount\", d.name));\n            }\n        }\n        for (i, e) in plan.effects.iter().enumerate() {\n            let label = effect_label(i, e);\n            match e {\n                EffectShape::State { ty, .. } => {\n                    b.push(SlotKind::Effect { index: i, role: EffectRole::StateBefore }, E::of(*ty), format!(\"{label}.before\"));\n                    b.push(SlotKind::Effect { index: i, role: EffectRole::StateAfter }, E::of(*ty), format!(\"{label}.after\"));\n                }\n                EffectShape::Transfer { .. } | EffectShape::Fee { .. } => {\n                    b.push(SlotKind::Effect { index: i, role: EffectRole::Amount }, E::UInt, format!(\"{label}.amount\"));\n                }\n                EffectShape::Liability { .. } => {\n                    b.push(SlotKind::Effect { index: i, role: EffectRole::DutyBefore }, E::UInt, format!(\"{label}.before\"));\n                    b.push(SlotKind::Effect { index: i, role: EffectRole::DutyAfter }, E::UInt, format!(\"{label}.after\"));\n                }\n                EffectShape::Emit { ty, .. } => {\n                    b.push(SlotKind::Effect { index: i, role: EffectRole::EmitValue }, E::of(*ty), format!(\"{label}.value\"));\n                }\n            }\n        }\n        if plan.accounting == AccountingBinding::GrossDebitAndFees {\n            for &cell in &plan.debit_cells {\n                let c = &plan.cells[cell];\n                b.push(SlotKind::GrossDebit { cell }, E::Wide, format!(\"accounting.{}.{}.gross_debit\", c.asset_name, c.account));\n                b.push(SlotKind::FeesPaid { cell }, E::Wide, format!(\"accounting.{}.{}.fees_paid\", c.asset_name, c.account));\n            }\n        }"
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "classification": "CALL_EDGE",
+      "profile": "Core1 layout construction",
+      "sourceObservation": "Builder::push records current offset and increments by encoding.width. Layout build computes ShapeDescriptor digest, calls profile_digest and build.digest for header, and returns field_count=offset.",
+      "citations": [
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 213,
+          "lineEnd": 217,
+          "literal": "impl Builder {\n    fn push(&mut self, kind: SlotKind, encoding: SlotEncoding, label: String) {\n        self.slots.push(Slot { kind, encoding, offset: self.offset, label });\n        self.offset += encoding.width();\n    }"
+        },
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 293,
+          "lineEnd": 311,
+          "literal": "        let Builder { slots, offset } = b;\n        let shape_digest = identity::digest_of(&ShapeDescriptor {\n            format: \"mori-r1cs-shape/1\",\n            relation_format: crate::RELATION_FORMAT,\n            relation_version: crate::RELATION_VERSION,\n            program_hash: program.program_hash,\n            plan,\n            slots: slots.iter().map(|s| (s.kind, s.encoding, s.label.as_str())).collect(),\n        })?;\n        let header = HeaderValues {\n            relation_version: crate::RELATION_VERSION,\n            program_hash: program.program_hash,\n            profile_digest: identity::profile_digest()?,\n            action_index: plan.action_index,\n            shape_digest,\n            compiler_build_digest: build.digest()?,\n            logical_work: plan.logical_work,\n        };\n        Ok(Self { header, slots, field_count: offset })"
+        }
+      ]
+    },
+    {
+      "id": "S05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 host encoding",
+      "sourceObservation": "encode calls check_values then accounting_summary, walks slots, maps values through field helpers, checks each field-vector width and returns the vector. UInt fields are low64/high64; digest fields use halves; Wide uses low64,high64,top.",
+      "citations": [
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 331,
+          "lineEnd": 360,
+          "literal": "    pub fn encode<F: PrimeField>(&self, plan: &ActionPlan, values: &TransitionValues) -> Result<Vec<F>, MappingError> {\n        check_values(plan, values)?;\n        let summary = accounting_summary(plan, values);\n        let mut out = Vec::with_capacity(self.field_count);\n        for slot in &self.slots {\n            let fields: Vec<F> = match slot.kind {\n                SlotKind::Header(HeaderField::Cap) => {\n                    uint_fields(values.cap.ok_or_else(|| MappingError::Cap(\"cap slot without a claimed cap\".into()))?.0)\n                }\n                SlotKind::Header(field) => self.header_fields(field).expect(\"non-cap header field\"),\n                SlotKind::Input { index } => value_fields(&values.inputs[index]),\n                SlotKind::PreState { index } => value_fields(&values.pre.states[index]),\n                SlotKind::PostState { index } => value_fields(&values.post.states[index]),\n                SlotKind::PreCell { index } => uint_fields(values.pre.cells[index].0),\n                SlotKind::PostCell { index } => uint_fields(values.post.cells[index].0),\n                SlotKind::PreDutyPresent { index } => vec![fe_bool(values.pre.duties[index].present)],\n                SlotKind::PreDutyAmount { index } => uint_fields(values.pre.duties[index].amount.0),\n                SlotKind::PostDutyPresent { index } => vec![fe_bool(values.post.duties[index].present)],\n                SlotKind::PostDutyAmount { index } => uint_fields(values.post.duties[index].amount.0),\n                SlotKind::Effect { index, role } => effect_fields(&values.effects[index], role)?,\n                SlotKind::GrossDebit { cell } => wide_fields(summary_for(&summary, cell)?.1),\n                SlotKind::FeesPaid { cell } => wide_fields(summary_for(&summary, cell)?.2),\n            };\n            if fields.len() != slot.encoding.width() {\n                return Err(MappingError::Shape(format!(\"slot {} encodes {} fields, layout says {}\", slot.label, fields.len(), slot.encoding.width())));\n            }\n            out.extend(fields);\n        }\n        debug_assert_eq!(out.len(), self.field_count);\n        Ok(out)"
+        },
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 396,
+          "lineEnd": 413,
+          "literal": "pub(crate) fn uint_fields<F: PrimeField>(v: u128) -> Vec<F> {\n    vec![fe(v & MASK64), fe(v >> 64)]\n}\n\npub(crate) fn digest_fields<F: PrimeField>(d: &Digest32) -> Vec<F> {\n    let (hi, lo) = d.halves();\n    vec![fe(hi), fe(lo)]\n}\n\nfn wide_fields<F: PrimeField>(w: Wide) -> Vec<F> {\n    vec![fe(w.lo & MASK64), fe(w.lo >> 64), fe(u128::from(w.top))]\n}\n\nfn value_fields<F: PrimeField>(v: &Value) -> Vec<F> {\n    match v {\n        Value::UInt(UInt(n)) => uint_fields(*n),\n        Value::Bool(b) => vec![fe_bool(*b)],\n    }"
+        }
+      ]
+    },
+    {
+      "id": "S06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 host shape checks",
+      "sourceObservation": "check_values checks input count/type,pre/post body counts/state types,absent duty with nonzero amount,effect count/variant types,then exact cap presence matching. This does not assert transition correctness.",
+      "citations": [
+        {
+          "file": "HELPER-statement.rs",
+          "sha256": "956b85251f1f9a8ed03617a58fff6e9ee6c388f3147dcb14b227f8555cd36df5",
+          "lineStart": 428,
+          "lineEnd": 476,
+          "literal": "fn check_type(v: &Value, ty: Type, what: &str) -> Result<(), MappingError> {\n    if v.ty() == ty { Ok(()) } else { Err(MappingError::Shape(format!(\"{what}: expected {ty:?}, got {:?}\", v.ty()))) }\n}\n\nfn check_body(plan: &ActionPlan, body: &BodyValues, phase: &str) -> Result<(), MappingError> {\n    if body.states.len() != plan.states.len() || body.cells.len() != plan.cells.len() || body.duties.len() != plan.duties.len() {\n        return Err(MappingError::Shape(format!(\"{phase} body counts differ from the plan\")));\n    }\n    for (v, s) in body.states.iter().zip(&plan.states) {\n        check_type(v, s.ty, &format!(\"{phase} state {}\", s.name))?;\n    }\n    for (d, k) in body.duties.iter().zip(&plan.duties) {\n        if !d.present && d.amount.0 != 0 {\n            return Err(MappingError::Shape(format!(\"{phase} duty {} is absent with a nonzero amount\", k.name)));\n        }\n    }\n    Ok(())\n}\n\npub(crate) fn check_values(plan: &ActionPlan, values: &TransitionValues) -> Result<(), MappingError> {\n    if values.inputs.len() != plan.inputs.len() {\n        return Err(MappingError::Shape(\"input count differs from the plan\".into()));\n    }\n    for (v, s) in values.inputs.iter().zip(&plan.inputs) {\n        check_type(v, s.ty, &format!(\"input {}\", s.name))?;\n    }\n    check_body(plan, &values.pre, \"pre\")?;\n    check_body(plan, &values.post, \"post\")?;\n    if values.effects.len() != plan.effects.len() {\n        return Err(MappingError::Shape(\"effect count differs from the plan\".into()));\n    }\n    for (i, (e, s)) in values.effects.iter().zip(&plan.effects).enumerate() {\n        let ok = match (s, e) {\n            (EffectShape::State { ty, .. }, EffectValues::State { before, after }) => before.ty() == *ty && after.ty() == *ty,\n            (EffectShape::Transfer { .. } | EffectShape::Fee { .. }, EffectValues::Amount(_)) => true,\n            (EffectShape::Liability { .. }, EffectValues::Duty { .. }) => true,\n            (EffectShape::Emit { ty, .. }, EffectValues::Emit(v)) => v.ty() == *ty,\n            _ => false,\n        };\n        if !ok {\n            return Err(MappingError::Shape(format!(\"effect {i} value does not match its shape\")));\n        }\n    }\n    match (plan.cap, values.cap) {\n        (CapBinding::PublicCap, Some(_)) | (CapBinding::NotBound, None) => Ok(()),\n        (CapBinding::PublicCap, None) => Err(MappingError::Cap(\"relation binds a public cap; none claimed\".into())),\n        (CapBinding::NotBound, Some(_)) => Err(MappingError::Cap(\"relation binds no cap; one was claimed\".into())),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "adapter variants",
+      "sourceObservation": "StatementAdapter declares DirectFieldV0,ClaimantBoundAbiV1Pending,SettlementHashV2. admits returns Ok for DirectFieldV0,Unadopted for pending v1,or calls initial_ledger_target_admits for SettlementHashV2.",
+      "citations": [
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 31,
+          "lineEnd": 46,
+          "literal": "#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub enum StatementAdapter {\n    /// TEST-ONLY direct field statement. Not a claim ABI (see module docs).\n    DirectFieldV0,\n    /// Placeholder for the frozen, unreviewed claimant-bound ABI v1. Always refuses.\n    ClaimantBoundAbiV1Pending,\n    /// P3S1 PROPOSED (unreviewed, unadopted): MRG16-PVC ABI v2. Two public inputs, the\n    /// big-endian halves of an in-circuit BLAKE2b-256 of the ABI v2 statement (constant\n    /// header, free context bytes, every body slot bound to its wire). See [`crate::abi2`]\n    /// and `candidate/docs/ABI-V2.md`. Compile options are fixed by\n    /// [`crate::abi2::options_ok`]; whole-program Emit is refused by\n    /// [`initial_ledger_target_admits`], which this variant calls (review F-10 wiring for\n    /// this adapter only). Proving needs a [`crate::abi2::ContextV2`]\n    /// ([`crate::CompiledRelation::assignment_v2`], [`crate::CompiledRelation::circuit_v2`]).\n    SettlementHashV2,\n}"
+        },
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 154,
+          "lineEnd": 163,
+          "literal": "impl StatementAdapter {\n    /// Adapter-level admission of a program. The direct test adapter admits every\n    /// program the compiler lowers (Emit included); the pending ABI admits none.\n    pub fn admits(&self, program: &Program) -> Result<(), AdapterError> {\n        match self {\n            Self::DirectFieldV0 => Ok(()),\n            Self::ClaimantBoundAbiV1Pending => Err(AdapterError::Unadopted(ABI_V1_PENDING)),\n            Self::SettlementHashV2 => initial_ledger_target_admits(program),\n        }\n    }"
+        }
+      ]
+    },
+    {
+      "id": "A02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "SettlementHashV2 admission",
+      "sourceObservation": "initial_ledger_target_admits scans every action and every statement; the first Emit returns TargetRefusal containing action/ordinal/name; if no such branch is taken the function returns Ok. No call was executed.",
+      "citations": [
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 228,
+          "lineEnd": 240,
+          "literal": "pub fn initial_ledger_target_admits(program: &Program) -> Result<(), AdapterError> {\n    for action in &program.actions {\n        for (ordinal, statement) in action.statements.iter().enumerate() {\n            if let Statement::Emit { name, .. } = statement {\n                return Err(AdapterError::TargetRefusal(format!(\n                    \"initial ledger target refuses whole-program Emit: action {:?} statement {ordinal} emits {name:?}\",\n                    action.name\n                )));\n            }\n        }\n    }\n    Ok(())\n}"
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "adapter outputs",
+      "sourceObservation": "public_input_count returns layout.field_count for DirectFieldV0,Unadopted for pending v1,and2 for SettlementHashV2. Generic public_inputs routes Direct to layout.encode but returns an error requesting context for SettlementHashV2.",
+      "citations": [
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 165,
+          "lineEnd": 181,
+          "literal": "    /// Number of public inputs a verifier supplies.\n    pub fn public_input_count(&self, layout: &StatementLayout) -> Result<usize, AdapterError> {\n        match self {\n            Self::DirectFieldV0 => Ok(layout.field_count),\n            Self::ClaimantBoundAbiV1Pending => Err(AdapterError::Unadopted(ABI_V1_PENDING)),\n            Self::SettlementHashV2 => Ok(2),\n        }\n    }\n\n    /// The public inputs of a claimed transition, in instance order.\n    pub fn public_inputs<F: PrimeField>(&self, layout: &StatementLayout, plan: &ActionPlan, values: &TransitionValues) -> Result<Vec<F>, MappingError> {\n        match self {\n            Self::DirectFieldV0 => layout.encode(plan, values),\n            Self::ClaimantBoundAbiV1Pending => Err(MappingError::Adapter(AdapterError::Unadopted(ABI_V1_PENDING))),\n            Self::SettlementHashV2 => Err(MappingError::Adapter(AdapterError::Unadopted(V2_NEEDS_CONTEXT))),\n        }\n    }"
+        }
+      ]
+    },
+    {
+      "id": "A04",
+      "classification": "CALL_EDGE",
+      "profile": "binding branches",
+      "sourceObservation": "Generic bind contains DirectFieldV0 slot/claim length checks and input/enforce_eq calls; pending v1 and SettlementHashV2 return errors. In circuit synthesis the SettlementHashV2 branch explicitly calls abi2::bind_v2, while other variants call adapter.bind.",
+      "citations": [
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 185,
+          "lineEnd": 216,
+          "literal": "    pub(crate) fn bind<F: PrimeField>(\n        &self,\n        cs: &mut Cs<F>,\n        layout: &StatementLayout,\n        wires: &[SlotWire<F>],\n        claimed: Option<&[F]>,\n    ) -> Result<(), BindError> {\n        match self {\n            Self::DirectFieldV0 => {\n                if wires.len() != layout.slots.len() {\n                    return Err(BindError::Adapter(AdapterError::Shape(\"wire count differs from slot count\".into())));\n                }\n                if claimed.is_some_and(|c| c.len() != layout.field_count) {\n                    return Err(BindError::Adapter(AdapterError::Shape(\"claimed public vector length differs from the layout\".into())));\n                }\n                let start = cs.num_constraints();\n                cs.push(\"bind\".into());\n                for (slot, wire) in layout.slots.iter().zip(wires) {\n                    let limbs = wire.limbs(slot.encoding).map_err(BindError::Adapter)?;\n                    for (k, limb) in limbs.iter().enumerate() {\n                        let x = cs.input(claimed.map(|c| c[slot.offset + k]))?;\n                        cs.enforce_eq(&Lc::var(x), limb)?;\n                    }\n                }\n                cs.pop();\n                cs.record(\"binding\".into(), start);\n                Ok(())\n            }\n            Self::ClaimantBoundAbiV1Pending => Err(BindError::Adapter(AdapterError::Unadopted(ABI_V1_PENDING))),\n            Self::SettlementHashV2 => Err(BindError::Adapter(AdapterError::Unadopted(V2_BINDS_IN_CIRCUIT))),\n        }\n    }"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 543,
+          "lineEnd": 556,
+          "literal": "    match relation.adapter {\n        StatementAdapter::SettlementHashV2 => {\n            let consts = relation.abi2.as_ref().ok_or_else(|| SynthFailure::Shape(\"missing ABI v2 constants\".into()))?;\n            let honest = match (assignment, context) {\n                (None, _) => None,\n                (Some(a), Some(ctx)) => {\n                    let body = abi2::body_bytes(layout, plan, &a.values).map_err(|e| SynthFailure::Shape(e.to_string()))?;\n                    Some(abi2::statement_bytes(consts, ctx, &body).map_err(|e| SynthFailure::Shape(e.to_string()))?)\n                }\n                (Some(_), None) => return Err(SynthFailure::Shape(\"SettlementHashV2 needs a ContextV2 to prove\".into())),\n            };\n            abi2::bind_v2(&mut cs, consts, layout, &wires, honest.as_deref(), assignment.map(|a| a.public.as_slice()))?;\n        }\n        _ => relation.adapter.bind(&mut cs, layout, &wires, assignment.map(|a| a.public.as_slice()))?,"
+        }
+      ]
+    },
+    {
+      "id": "V201",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "SettlementHashV2 ABI2",
+      "sourceObservation": "options_ok sequentially requires cap NotBound,accounting GrossDebitAndFees,frame TouchedOnly. The source error strings about target behavior are not independently verified here.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 83,
+          "lineEnd": 96,
+          "literal": "pub fn options_ok(options: &CompileOptions) -> Result<(), CompileError> {\n    if options.cap != CapBinding::NotBound {\n        return Err(CompileError::Option(\"SettlementHashV2 requires CapBinding::NotBound\".into()));\n    }\n    if options.accounting != AccountingBinding::GrossDebitAndFees {\n        return Err(CompileError::Option(\"SettlementHashV2 requires AccountingBinding::GrossDebitAndFees\".into()));\n    }\n    if options.frame != FrameCells::TouchedOnly {\n        return Err(CompileError::Option(\n            \"SettlementHashV2 requires FrameCells::TouchedOnly; the target enforces the frame over the complete datum\".into(),\n        ));\n    }\n    Ok(())\n}"
+        }
+      ]
+    },
+    {
+      "id": "V202",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "SettlementHashV2 ABI2",
+      "sourceObservation": "Constants declare STMT_TAG,FAMILY_V2,SHAPE_TAG and HEADER_LEN343. ContextV2 field lengths/types and bytes() append order are explicit, including consumed_ix and seq big-endian.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 33,
+          "lineEnd": 68,
+          "literal": "pub const STMT_TAG: &[u8; 16] = b\"MRG16-PVC-STMT-2\";\npub const FAMILY_V2: &[u8; 32] = b\"MRG16-PVC-FAM2-G16-BLS-ARK04-HL2\";\npub const SHAPE_TAG: &[u8; 16] = b\"MRG16-PVC-SHP-02\";\n/// Bytes before the body.\npub const HEADER_LEN: usize = 343;\n\n/// Per-proof context bytes: hashed into the statement, never interpreted in-circuit.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct ContextV2 {\n    pub vk_digest: [u8; 32],\n    pub claimant_vkh: [u8; 28],\n    pub network_id: u8,\n    pub settle_hash: [u8; 28],\n    pub thread_id: [u8; 32],\n    pub consumed_txid: [u8; 32],\n    pub consumed_ix: u16,\n    pub seq: u64,\n    pub catalogue_digest: [u8; 32],\n    pub intents_digest: [u8; 32],\n}\n\nimpl ContextV2 {\n    fn bytes(&self) -> Vec<u8> {\n        let mut out = Vec::with_capacity(HEADER_LEN - 116);\n        out.extend_from_slice(&self.vk_digest);\n        out.extend_from_slice(&self.claimant_vkh);\n        out.push(self.network_id);\n        out.extend_from_slice(&self.settle_hash);\n        out.extend_from_slice(&self.thread_id);\n        out.extend_from_slice(&self.consumed_txid);\n        out.extend_from_slice(&self.consumed_ix.to_be_bytes());\n        out.extend_from_slice(&self.seq.to_be_bytes());\n        out.extend_from_slice(&self.catalogue_digest);\n        out.extend_from_slice(&self.intents_digest);\n        out\n    }"
+        }
+      ]
+    },
+    {
+      "id": "V203",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "SettlementHashV2 shape serialization",
+      "sourceObservation": "shape_bytes appends shape tag,sorted/deduplicated assets,states,inputs,cells,duties,effects,debit cells,statement count,liability-statement count,action name/index; lengths/indices use u16 try_from and big-endian. Type tags are UInt0/Bool1; effect tags are State0/Transfer1/Fee2/Liability3 with origin0/1; Emit returns an error.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 102,
+          "lineEnd": 119,
+          "literal": "fn push_u16(out: &mut Vec<u8>, n: usize, what: &str) -> Result<(), CompileError> {\n    let n = u16::try_from(n).map_err(|_| too_long(what))?;\n    out.extend_from_slice(&n.to_be_bytes());\n    Ok(())\n}\n\nfn push_lp(out: &mut Vec<u8>, b: &[u8], what: &str) -> Result<(), CompileError> {\n    push_u16(out, b.len(), what)?;\n    out.extend_from_slice(b);\n    Ok(())\n}\n\nfn ty_byte(ty: Type) -> u8 {\n    match ty {\n        Type::UInt => 0,\n        Type::Bool => 1,\n    }\n}"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 123,
+          "lineEnd": 205,
+          "literal": "pub fn sorted_assets(program: &Program) -> Vec<AssetId> {\n    let mut ids: Vec<AssetId> = program.assets.iter().map(|a| a.identity.clone()).collect();\n    ids.sort();\n    ids.dedup();\n    ids\n}\n\n/// `MRG16-PVC-SHP-02` bytes (ABI-V2.md section 4) of a planned action.\npub fn shape_bytes(program: &Program, plan: &ActionPlan) -> Result<Vec<u8>, CompileError> {\n    let assets = sorted_assets(program);\n    let asset_index = |id: &AssetId| -> Result<usize, CompileError> {\n        assets.iter().position(|a| a == id).ok_or_else(|| CompileError::Bound(\"plan asset outside the program\".into()))\n    };\n    let mut out = SHAPE_TAG.to_vec();\n    push_u16(&mut out, assets.len(), \"asset list\")?;\n    for a in &assets {\n        push_lp(&mut out, a.network.as_bytes(), \"asset network\")?;\n        push_lp(&mut out, a.issuer.as_bytes(), \"asset issuer\")?;\n        push_lp(&mut out, a.reference.as_bytes(), \"asset reference\")?;\n        out.push(a.scale);\n    }\n    push_u16(&mut out, plan.states.len(), \"state list\")?;\n    for s in &plan.states {\n        push_lp(&mut out, s.name.as_bytes(), \"state name\")?;\n        out.push(ty_byte(s.ty));\n    }\n    push_u16(&mut out, plan.inputs.len(), \"input list\")?;\n    for s in &plan.inputs {\n        push_lp(&mut out, s.name.as_bytes(), \"input name\")?;\n        out.push(ty_byte(s.ty));\n    }\n    push_u16(&mut out, plan.cells.len(), \"cell list\")?;\n    for c in &plan.cells {\n        push_u16(&mut out, asset_index(&c.asset)?, \"asset index\")?;\n        push_lp(&mut out, c.account.as_bytes(), \"account\")?;\n    }\n    push_u16(&mut out, plan.duties.len(), \"duty list\")?;\n    for d in &plan.duties {\n        push_lp(&mut out, d.name.as_bytes(), \"duty name\")?;\n        push_u16(&mut out, asset_index(&d.asset)?, \"asset index\")?;\n        push_lp(&mut out, d.debtor.as_bytes(), \"debtor\")?;\n        push_lp(&mut out, d.creditor.as_bytes(), \"creditor\")?;\n    }\n    push_u16(&mut out, plan.effects.len(), \"effect list\")?;\n    for e in &plan.effects {\n        match e {\n            EffectShape::State { name, .. } => {\n                out.push(0);\n                let k = plan.state_index(name).ok_or_else(|| CompileError::Bound(\"state effect outside the plan\".into()))?;\n                push_u16(&mut out, k, \"state index\")?;\n            }\n            EffectShape::Transfer { from_cell, to_cell, .. } | EffectShape::Fee { from_cell, to_cell, .. } => {\n                out.push(if e.is_fee() { 2 } else { 1 });\n                push_u16(&mut out, *from_cell, \"cell index\")?;\n                push_u16(&mut out, *to_cell, \"cell index\")?;\n            }\n            EffectShape::Liability { duty, origin, .. } => {\n                out.push(3);\n                push_u16(&mut out, *duty, \"duty index\")?;\n                out.push(match origin {\n                    DutyOrigin::Accrue => 0,\n                    DutyOrigin::Discharge => 1,\n                });\n            }\n            EffectShape::Emit { .. } => {\n                return Err(CompileError::Unsupported {\n                    construct: \"Statement::Emit\",\n                    reason: \"SettlementHashV2 applies the initial ledger target Emit refusal\".into(),\n                });\n            }\n        }\n    }\n    push_u16(&mut out, plan.debit_cells.len(), \"debit cells\")?;\n    for c in &plan.debit_cells {\n        push_u16(&mut out, *c, \"cell index\")?;\n    }\n    out.extend_from_slice(&plan.statement_count.to_be_bytes());\n    let action = &program.actions[usize::from(plan.action_index)];\n    let liability_statements = action.statements.iter().filter(|s| matches!(s, Statement::Liability { .. })).count();\n    push_u16(&mut out, liability_statements, \"liability statements\")?;\n    push_lp(&mut out, plan.action.as_bytes(), \"action name\")?;\n    out.extend_from_slice(&plan.action_index.to_be_bytes());\n    Ok(out)"
+        }
+      ]
+    },
+    {
+      "id": "V204",
+      "classification": "CALL_EDGE",
+      "profile": "SettlementHashV2 constants",
+      "sourceObservation": "constants calls shape_bytes,then blake2b256(shape_bytes),then body_len converted to u32. body_len skips headers and uses UInt16/Bool1/Wide18 bytes, rejecting other nonheader encodings.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 208,
+          "lineEnd": 228,
+          "literal": "/// Body length in bytes of a layout (every non-header slot).\npub fn body_len(layout: &StatementLayout) -> Result<usize, CompileError> {\n    let mut n = 0usize;\n    for slot in &layout.slots {\n        n += match (slot.kind.is_header(), slot.encoding) {\n            (true, _) => 0,\n            (false, SlotEncoding::UInt) => 16,\n            (false, SlotEncoding::Bool) => 1,\n            (false, SlotEncoding::Wide) => 18,\n            (false, other) => return Err(CompileError::Bound(format!(\"unexpected body slot encoding {other:?}\"))),\n        };\n    }\n    Ok(n)\n}\n\npub(crate) fn constants(program: &Program, plan: &ActionPlan, layout: &StatementLayout, predicate: [u8; 32]) -> Result<AbiV2Constants, CompileError> {\n    let shape_bytes = shape_bytes(program, plan)?;\n    let shape_digest = blake2b::blake2b256(&shape_bytes);\n    let body_len = u32::try_from(body_len(layout)?).map_err(|_| CompileError::Bound(\"ABI v2 body exceeds u32\".into()))?;\n    Ok(AbiV2Constants { predicate_digest: predicate, shape_bytes, shape_digest, body_len })\n}"
+        }
+      ]
+    },
+    {
+      "id": "V205",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "SettlementHashV2 host bytes",
+      "sourceObservation": "body_bytes walks nonheader slots and appends input/pre/post/effect/accounting bytes; UInt uses16 big-endian bytes,Bool0/1,Wide top2 then lo16. statement_bytes checks exact body length then appends tag,family,predicate digest,shape digest,context,body length and body.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 230,
+          "lineEnd": 295,
+          "literal": "fn value_bytes(v: &Value) -> Vec<u8> {\n    match v {\n        Value::UInt(UInt(n)) => n.to_be_bytes().to_vec(),\n        Value::Bool(b) => vec![u8::from(*b)],\n    }\n}\n\nfn wide_bytes(w: Wide) -> Vec<u8> {\n    let mut out = w.top.to_be_bytes().to_vec();\n    out.extend_from_slice(&w.lo.to_be_bytes());\n    out\n}\n\n/// Host encoding of the statement body for a claimed transition (honest proposal only;\n/// the circuit binds every byte to its slot wire).\npub fn body_bytes(layout: &StatementLayout, plan: &ActionPlan, values: &TransitionValues) -> Result<Vec<u8>, MappingError> {\n    let summary = accounting_summary(plan, values);\n    let row = |cell: usize| summary.iter().find(|(c, _, _)| *c == cell).copied().ok_or_else(|| MappingError::Shape(format!(\"no accounting row for cell {cell}\")));\n    let mut out = Vec::new();\n    for slot in &layout.slots {\n        let bytes: Vec<u8> = match slot.kind {\n            SlotKind::Header(_) => continue,\n            SlotKind::Input { index } => value_bytes(&values.inputs[index]),\n            SlotKind::PreState { index } => value_bytes(&values.pre.states[index]),\n            SlotKind::PostState { index } => value_bytes(&values.post.states[index]),\n            SlotKind::PreCell { index } => values.pre.cells[index].0.to_be_bytes().to_vec(),\n            SlotKind::PostCell { index } => values.post.cells[index].0.to_be_bytes().to_vec(),\n            SlotKind::PreDutyPresent { index } => vec![u8::from(values.pre.duties[index].present)],\n            SlotKind::PreDutyAmount { index } => values.pre.duties[index].amount.0.to_be_bytes().to_vec(),\n            SlotKind::PostDutyPresent { index } => vec![u8::from(values.post.duties[index].present)],\n            SlotKind::PostDutyAmount { index } => values.post.duties[index].amount.0.to_be_bytes().to_vec(),\n            SlotKind::Effect { index, role } => {\n                use crate::statement::EffectRole as R;\n                match (&values.effects[index], role) {\n                    (EffectValues::State { before, .. }, R::StateBefore) => value_bytes(before),\n                    (EffectValues::State { after, .. }, R::StateAfter) => value_bytes(after),\n                    (EffectValues::Amount(a), R::Amount) => a.0.to_be_bytes().to_vec(),\n                    (EffectValues::Duty { before, .. }, R::DutyBefore) => before.0.to_be_bytes().to_vec(),\n                    (EffectValues::Duty { after, .. }, R::DutyAfter) => after.0.to_be_bytes().to_vec(),\n                    _ => return Err(MappingError::Shape(format!(\"effect {index} has no role {role:?}\"))),\n                }\n            }\n            SlotKind::GrossDebit { cell } => wide_bytes(row(cell)?.1),\n            SlotKind::FeesPaid { cell } => wide_bytes(row(cell)?.2),\n        };\n        out.extend(bytes);\n    }\n    Ok(out)\n}\n\n/// Complete statement bytes.\npub fn statement_bytes(consts: &AbiV2Constants, ctx: &ContextV2, body: &[u8]) -> Result<Vec<u8>, MappingError> {\n    if body.len() != consts.body_len as usize {\n        return Err(MappingError::Shape(format!(\"body has {} bytes, the relation fixes {}\", body.len(), consts.body_len)));\n    }\n    let mut s = Vec::with_capacity(HEADER_LEN + body.len());\n    s.extend_from_slice(STMT_TAG);\n    s.extend_from_slice(FAMILY_V2);\n    s.extend_from_slice(&consts.predicate_digest);\n    s.extend_from_slice(&consts.shape_digest);\n    s.extend(ctx.bytes());\n    s.extend_from_slice(&consts.body_len.to_be_bytes());\n    s.extend_from_slice(body);\n    debug_assert_eq!(s.len(), HEADER_LEN + body.len());\n    Ok(s)\n}"
+        }
+      ]
+    },
+    {
+      "id": "V206",
+      "classification": "CALL_EDGE",
+      "profile": "SettlementHashV2 call order",
+      "sourceObservation": "statement_v2 checks ABI2 presence→check_values→body_bytes→statement_bytes; public_inputs_v2 checks field then hashes statement. ABI2 public_inputs calls blake2b256 and converts first/last16 digest bytes as big-endian u128 values passed to fe.",
+      "citations": [
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 108,
+          "lineEnd": 127,
+          "literal": "    pub fn statement_v2(&self, values: &TransitionValues, context: &ContextV2) -> Result<Vec<u8>, MappingError> {\n        let consts = self\n            .abi2\n            .as_ref()\n            .ok_or(MappingError::Adapter(AdapterError::Unadopted(\"statement_v2 needs the SettlementHashV2 adapter\")))?;\n        crate::statement::check_values(&self.plan, values)?;\n        let body = abi2::body_bytes(&self.layout, &self.plan, values)?;\n        abi2::statement_bytes(consts, context, &body)\n    }\n\n    /// P3S1: the two ABI v2 public inputs of a claimed transition in a context.\n    pub fn public_inputs_v2<F: PrimeField>(&self, values: &TransitionValues, context: &ContextV2) -> Result<Vec<F>, MappingError> {\n        self.check_field::<F>().map_err(MappingError::Field)?;\n        Ok(abi2::public_inputs::<F>(&self.statement_v2(values, context)?))\n    }\n\n    /// P3S1: an ABI v2 assignment (public = the two digest halves).\n    pub fn assignment_v2<F: PrimeField>(&self, values: TransitionValues, context: &ContextV2) -> Result<Assignment<F>, MappingError> {\n        let public = self.public_inputs_v2::<F>(&values, context)?;\n        Ok(Assignment { values, public })"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 297,
+          "lineEnd": 305,
+          "literal": "/// The two public inputs `[int_be(d[0..16]), int_be(d[16..32])]`, d = BLAKE2b-256(stmt).\npub fn public_inputs<F: PrimeField>(statement: &[u8]) -> Vec<F> {\n    let d = blake2b::blake2b256(statement);\n    let mut hi = [0u8; 16];\n    let mut lo = [0u8; 16];\n    hi.copy_from_slice(&d[..16]);\n    lo.copy_from_slice(&d[16..]);\n    vec![fe(u128::from_be_bytes(hi)), fe(u128::from_be_bytes(lo))]\n}"
+        }
+      ]
+    },
+    {
+      "id": "V207",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "SettlementHashV2 binding source",
+      "sourceObservation": "bind_v2 checks wire count,honest statement length,and claimed length2; appends constant tag/family/digests,free context bytes112..339,constant body length,and nonheader wire-derived bits; checks total bit count; calls blake2b256_gadget; allocates2 inputs and enforce_eq with digest_half_lc.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 375,
+          "lineEnd": 439,
+          "literal": "pub(crate) fn bind_v2<F: PrimeField>(\n    cs: &mut Cs<F>,\n    consts: &AbiV2Constants,\n    layout: &StatementLayout,\n    wires: &[SlotWire<F>],\n    honest: Option<&[u8]>,\n    claimed: Option<&[F]>,\n) -> Result<(), BindError> {\n    if wires.len() != layout.slots.len() {\n        return Err(BindError::Adapter(AdapterError::Shape(\"wire count differs from slot count\".into())));\n    }\n    let total = HEADER_LEN + consts.body_len as usize;\n    if honest.is_some_and(|h| h.len() != total) {\n        return Err(BindError::Adapter(AdapterError::Shape(\"honest statement length differs from the relation\".into())));\n    }\n    if claimed.is_some_and(|c| c.len() != 2) {\n        return Err(BindError::Adapter(AdapterError::Shape(\"SettlementHashV2 has exactly two public inputs\".into())));\n    }\n    let start = cs.num_constraints();\n    cs.push(\"abi2\".into());\n    let mut bits: Vec<Bit<F>> = Vec::with_capacity(8 * total);\n    const_bytes(STMT_TAG, &mut bits);\n    const_bytes(FAMILY_V2, &mut bits);\n    const_bytes(&consts.predicate_digest, &mut bits);\n    const_bytes(&consts.shape_digest, &mut bits);\n    free_bytes(cs, honest.map(|h| &h[112..339]), 339 - 112, &mut bits)?;\n    const_bytes(&consts.body_len.to_be_bytes(), &mut bits);\n    let mut at = HEADER_LEN;\n    for (slot, wire) in layout.slots.iter().zip(wires) {\n        if slot.kind.is_header() {\n            continue;\n        }\n        let width = match slot.encoding {\n            SlotEncoding::UInt => 16,\n            SlotEncoding::Bool => 1,\n            SlotEncoding::Wide => 18,\n            _ => return Err(BindError::Adapter(AdapterError::Shape(\"unexpected body slot encoding\".into()))),\n        };\n        let h = honest.map(|h| &h[at..at + width]);\n        match (wire, slot.encoding) {\n            (SlotWire::U(u), SlotEncoding::UInt) => uint_bytes(cs, u, h, &mut bits)?,\n            (SlotWire::B(b), SlotEncoding::Bool) => {\n                // The Bool wire is already 0 or 1; its byte is (b, 0, ..., 0) LSB first.\n                bits.push(Bit { lc: b.lc.clone(), val: b.val, konst: b.konst });\n                for _ in 1..8 {\n                    bits.push(Bit::constant(false));\n                }\n            }\n            (SlotWire::W(w), SlotEncoding::Wide) => wide_bytes_in(cs, w, h, &mut bits)?,\n            _ => return Err(BindError::Adapter(AdapterError::Shape(format!(\"slot {} wire does not match its encoding\", slot.label)))),\n        }\n        at += width;\n    }\n    if bits.len() != 8 * total {\n        return Err(BindError::Adapter(AdapterError::Shape(\"statement bit count differs from the relation\".into())));\n    }\n    let digest = blake2b::blake2b256_gadget(cs, &bits)?;\n    for (k, from) in [0usize, 16].into_iter().enumerate() {\n        let x = cs.input(claimed.map(|c| c[k]))?;\n        cs.enforce_eq(&Lc::var(x), &blake2b::digest_half_lc(&digest, from))?;\n    }\n    cs.pop();\n    cs.record(\"abi2-binding\".into(), start);\n    Ok(())\n}"
+        }
+      ]
+    },
+    {
+      "id": "V208",
+      "classification": "CALL_EDGE",
+      "profile": "SettlementHashV2 binding helpers",
+      "sourceObservation": "free_bytes calls alloc_bit per context bit; limb_bytes either emits constants or allocates bits,adds weighted Lc terms,and calls enforce_eq. UInt serializes high limb then low; Wide top,mid,low. These are calls, not evidence that gadget/field constraints are adequate.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 309,
+          "lineEnd": 370,
+          "literal": "fn const_bytes<F: PrimeField>(bytes: &[u8], bits: &mut Vec<Bit<F>>) {\n    for b in bytes {\n        for j in 0..8 {\n            bits.push(Bit::constant((b >> j) & 1 == 1));\n        }\n    }\n}\n\n/// Free witness bytes (context): booleanized bits, honest values from `honest`.\nfn free_bytes<F: PrimeField>(cs: &mut Cs<F>, honest: Option<&[u8]>, n: usize, bits: &mut Vec<Bit<F>>) -> Result<(), BindError> {\n    for k in 0..n {\n        for j in 0..8 {\n            let val = honest.map(|h| (h[k] >> j) & 1 == 1);\n            bits.push(blake2b::alloc_bit(cs, \"abi2.ctx\", val)?);\n        }\n    }\n    Ok(())\n}\n\n/// Bytes of a limb (big-endian, `n` bytes) bound to its linear combination: booleanized\n/// bits whose weighted sum equals the limb. A constant limb yields constant bits.\nfn limb_bytes<F: PrimeField>(\n    cs: &mut Cs<F>,\n    limb: &Lc<F>,\n    konst: Option<u128>,\n    n: usize,\n    honest: Option<&[u8]>,\n    bits: &mut Vec<Bit<F>>,\n) -> Result<(), BindError> {\n    if let Some(k) = konst {\n        let be = k.to_be_bytes();\n        const_bytes(&be[16 - n..], bits);\n        return Ok(());\n    }\n    let mut sum = Lc::zero();\n    for k in 0..n {\n        for j in 0..8 {\n            let val = honest.map(|h| (h[k] >> j) & 1 == 1);\n            let bit = blake2b::alloc_bit(cs, \"abi2.body\", val)?;\n            let weight = 8 * (n - 1 - k) + j;\n            sum = sum.plus(&bit.lc.scaled(fe(1u128 << weight)));\n            bits.push(bit);\n        }\n    }\n    cs.enforce_eq(&sum, limb)?;\n    Ok(())\n}\n\nfn uint_bytes<F: PrimeField>(cs: &mut Cs<F>, u: &UIntW<F>, honest: Option<&[u8]>, bits: &mut Vec<Bit<F>>) -> Result<(), BindError> {\n    let (khi, klo) = match u.konst {\n        Some(k) => (Some(k >> 64), Some(k & u128::from(u64::MAX))),\n        None => (None, None),\n    };\n    limb_bytes(cs, &u.hi, khi, 8, honest.map(|h| &h[0..8]), bits)?;\n    limb_bytes(cs, &u.lo, klo, 8, honest.map(|h| &h[8..16]), bits)\n}\n\nfn wide_bytes_in<F: PrimeField>(cs: &mut Cs<F>, w: &WideW<F>, honest: Option<&[u8]>, bits: &mut Vec<Bit<F>>) -> Result<(), BindError> {\n    limb_bytes(cs, &w.top, None, 2, honest.map(|h| &h[0..2]), bits)?;\n    limb_bytes(cs, &w.mid, None, 8, honest.map(|h| &h[2..10]), bits)?;\n    limb_bytes(cs, &w.lo, None, 8, honest.map(|h| &h[10..18]), bits)\n}"
+        }
+      ]
+    },
+    {
+      "id": "ST01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 metadata",
+      "sourceObservation": "StagedAdmission stores StagedProgram and source digest. StagedLoweringPlan stores profile/format/hash fields,StoredCapParameter,actions and remaining strings. StoredCapParameter has only ExplicitPublicSlot; that enum label does not construct executable public slots.",
+      "citations": [
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 33,
+          "lineEnd": 49,
+          "literal": "#[derive(Debug, Clone)]\npub struct StagedAdmission {\n    staged: StagedProgram,\n    source_sha256: Digest32,\n}\n\n/// D-13 (canonical reconstruction cap) is split between two recorded votes:\n/// `Some(plan_total[a])` (pr54-stage-owner-tests-and-design DESIGN-VOTES D-13) and\n/// `None` (pr54-owner-suite independent Opus review §9). This compiler selects\n/// neither: a future staged relation carries the stored cap as a public, caller-chosen\n/// slot and never fabricates a reconstruction default.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub enum StoredCapParameter {\n    /// The continuation's stored cap (`Option<UInt>`) is a public statement slot:\n    /// a presence Bool and a UInt, absent exactly `(false, 0)`.\n    ExplicitPublicSlot,\n}"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 97,
+          "lineEnd": 111,
+          "literal": "#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct StagedLoweringPlan {\n    pub language: String,\n    pub semantics: String,\n    pub logical_cost_profile: String,\n    pub stage_plan_format: String,\n    pub continuation_format: String,\n    pub program_hash: Digest32,\n    pub plan_hash: Digest32,\n    pub source_sha256: Digest32,\n    pub stored_cap: StoredCapParameter,\n    pub actions: Vec<StagedActionPlan>,\n    /// Required before any staged relation exists; none is waived.\n    pub remaining: Vec<String>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "ST02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 metadata",
+      "sourceObservation": "SegmentEntry declares Start inputs or Resume site/label/guard ordinal/captures/binders; SegmentExit declares Await metadata or Complete; StagedSegmentShape stores source range,costs,effect kinds and has_emit.",
+      "citations": [
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 51,
+          "lineEnd": 95,
+          "literal": "#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub enum SegmentEntry {\n    /// Segment 0: inputs seed the environment; the pre frame is locally Idle.\n    Start { inputs: Vec<CaptureSlot> },\n    /// Segment `site`: captures and event binders seed the environment; the guard at\n    /// `guard_ordinal` must evaluate to true as its own Step.\n    Resume { site: u16, label: String, guard_ordinal: u16, captures: Vec<CaptureSlot>, binders: Vec<StageBinder> },\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub enum SegmentExit {\n    /// The next await is reached: entry charge 1, captures in that site's layout.\n    Await { site: u16, label: String, ordinal: u16, captures: Vec<CaptureSlot> },\n    /// The action completes; the post frame is Idle with no captures.\n    Complete,\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct StagedSegmentShape {\n    pub segment: u16,\n    pub entry: SegmentEntry,\n    /// Half-open source ordinals executed by this segment (a resume starts at its\n    /// guard; the exit await's ordinal is excluded).\n    pub statement_start: u16,\n    pub statement_end: u16,\n    pub exit: SegmentExit,\n    /// From the actual stage plan (`stage/cost.rs:70-145`).\n    pub segment_cost: UInt,\n    pub committed_before: UInt,\n    pub committed_after: UInt,\n    /// Attempted work of a false guard at this resume site (NotAdvanced relation).\n    pub not_advanced_attempted: Option<UInt>,\n    /// Effect kinds in statement order, including Emit (never dropped).\n    pub effect_kinds: Vec<String>,\n    pub has_emit: bool,\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct StagedActionPlan {\n    pub action: String,\n    pub action_index: u16,\n    pub statement_count: u16,\n    pub plan_total: UInt,\n    pub segments: Vec<StagedSegmentShape>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "ST03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 metadata construction",
+      "sourceObservation": "lowering_plan checks action/cost-vector lengths,derives segment start/end from source Await ordinals,collects effect-kind strings and has_emit,computes optional false-guard statement_cost and checked committed-after,then constructs StagedLoweringPlan including STAGED_REMAINING strings.",
+      "citations": [
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 156,
+          "lineEnd": 244,
+          "literal": "    pub fn lowering_plan(&self) -> Result<StagedLoweringPlan, CompileError> {\n        let program = self.staged.program();\n        let stage_plan = self.staged.plan();\n        let mut actions = Vec::with_capacity(stage_plan.actions.len());\n        for (index, (action, ap)) in program.actions.iter().zip(&stage_plan.actions).enumerate() {\n            if ap.action != action.name || ap.segment_cost.len() != ap.sites.len() + 1 || ap.committed_before.len() != ap.sites.len() + 1 {\n                return Err(CompileError::Bound(format!(\"stage plan for {:?} is not the admitted plan\", action.name)));\n            }\n            let action_index = u16::try_from(index).map_err(|_| CompileError::Bound(\"action index exceeds u16\".into()))?;\n            let inputs: Vec<CaptureSlot> = action\n                .inputs\n                .iter()\n                .enumerate()\n                .map(|(i, input)| CaptureSlot { name: input.name.clone(), ty: input.ty, origin: mori_core::stage::Origin::Input, ordinal: i as u16 })\n                .collect();\n            let mut segments = Vec::with_capacity(ap.sites.len() + 1);\n            for segment in 0..=ap.sites.len() {\n                let (entry, start) = if segment == 0 {\n                    (SegmentEntry::Start { inputs: inputs.clone() }, 0u16)\n                } else {\n                    let site = &ap.sites[segment - 1];\n                    (\n                        SegmentEntry::Resume {\n                            site: site.site,\n                            label: site.label.clone(),\n                            guard_ordinal: site.ordinal,\n                            captures: site.captures.clone(),\n                            binders: site.binders.clone(),\n                        },\n                        site.ordinal,\n                    )\n                };\n                let (exit, end) = match ap.sites.get(segment) {\n                    Some(next) => (\n                        SegmentExit::Await { site: next.site, label: next.label.clone(), ordinal: next.ordinal, captures: next.captures.clone() },\n                        next.ordinal,\n                    ),\n                    None => (SegmentExit::Complete, ap.statement_count),\n                };\n                let statements = action\n                    .statements\n                    .get(usize::from(start)..usize::from(end))\n                    .ok_or_else(|| CompileError::Bound(\"segment range outside the action\".into()))?;\n                let effect_kinds: Vec<String> = statements.iter().filter_map(effect_kind).collect();\n                let has_emit = statements.iter().any(|s| matches!(s, Statement::Emit { .. }));\n                let not_advanced_attempted = match statements.first() {\n                    Some(guard @ Statement::Await { .. }) if segment > 0 => Some(UInt(plan::statement_cost(program, guard)?)),\n                    _ => None,\n                };\n                let before = ap.committed_before[segment];\n                let cost = ap.segment_cost[segment];\n                let after = before.0.checked_add(cost.0).map(UInt).ok_or_else(|| CompileError::Bound(\"committed work exceeds u128\".into()))?;\n                segments.push(StagedSegmentShape {\n                    segment: segment as u16,\n                    entry,\n                    statement_start: start,\n                    statement_end: end,\n                    exit,\n                    segment_cost: cost,\n                    committed_before: before,\n                    committed_after: after,\n                    not_advanced_attempted,\n                    effect_kinds,\n                    has_emit,\n                });\n            }\n            actions.push(StagedActionPlan {\n                action: action.name.clone(),\n                action_index,\n                statement_count: ap.statement_count,\n                plan_total: ap.plan_total,\n                segments,\n            });\n        }\n        Ok(StagedLoweringPlan {\n            language: program.language.clone(),\n            semantics: program.semantics.clone(),\n            logical_cost_profile: mori_core::stage::LOGICAL_COST_PROFILE_2.into(),\n            stage_plan_format: mori_core::stage::STAGE_PLAN_FORMAT.into(),\n            continuation_format: mori_core::stage::CONTINUATION_FORMAT.into(),\n            program_hash: Digest32(self.staged.program_hash()),\n            plan_hash: Digest32(self.staged.plan_hash()),\n            source_sha256: self.source_sha256,\n            stored_cap: StoredCapParameter::ExplicitPublicSlot,\n            actions,\n            remaining: STAGED_REMAINING.iter().map(|s| (*s).to_string()).collect(),\n        })\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "ST04",
+      "classification": "INFERENCE",
+      "profile": "Staged2 vs Core1",
+      "sourceObservation": "Observed caller returns Err(StagedNotLowered(plan)) for Staged2. The inspected lowering_plan body creates metadata,not CompiledRelation or constraint-system calls. This is a bounded source distinction,not a global impossibility claim or executable staged lowering result.",
+      "citations": [
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 266,
+          "lineEnd": 271,
+          "literal": "pub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),\n    }\n}"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 156,
+          "lineEnd": 244,
+          "literal": "    pub fn lowering_plan(&self) -> Result<StagedLoweringPlan, CompileError> {\n        let program = self.staged.program();\n        let stage_plan = self.staged.plan();\n        let mut actions = Vec::with_capacity(stage_plan.actions.len());\n        for (index, (action, ap)) in program.actions.iter().zip(&stage_plan.actions).enumerate() {\n            if ap.action != action.name || ap.segment_cost.len() != ap.sites.len() + 1 || ap.committed_before.len() != ap.sites.len() + 1 {\n                return Err(CompileError::Bound(format!(\"stage plan for {:?} is not the admitted plan\", action.name)));\n            }\n            let action_index = u16::try_from(index).map_err(|_| CompileError::Bound(\"action index exceeds u16\".into()))?;\n            let inputs: Vec<CaptureSlot> = action\n                .inputs\n                .iter()\n                .enumerate()\n                .map(|(i, input)| CaptureSlot { name: input.name.clone(), ty: input.ty, origin: mori_core::stage::Origin::Input, ordinal: i as u16 })\n                .collect();\n            let mut segments = Vec::with_capacity(ap.sites.len() + 1);\n            for segment in 0..=ap.sites.len() {\n                let (entry, start) = if segment == 0 {\n                    (SegmentEntry::Start { inputs: inputs.clone() }, 0u16)\n                } else {\n                    let site = &ap.sites[segment - 1];\n                    (\n                        SegmentEntry::Resume {\n                            site: site.site,\n                            label: site.label.clone(),\n                            guard_ordinal: site.ordinal,\n                            captures: site.captures.clone(),\n                            binders: site.binders.clone(),\n                        },\n                        site.ordinal,\n                    )\n                };\n                let (exit, end) = match ap.sites.get(segment) {\n                    Some(next) => (\n                        SegmentExit::Await { site: next.site, label: next.label.clone(), ordinal: next.ordinal, captures: next.captures.clone() },\n                        next.ordinal,\n                    ),\n                    None => (SegmentExit::Complete, ap.statement_count),\n                };\n                let statements = action\n                    .statements\n                    .get(usize::from(start)..usize::from(end))\n                    .ok_or_else(|| CompileError::Bound(\"segment range outside the action\".into()))?;\n                let effect_kinds: Vec<String> = statements.iter().filter_map(effect_kind).collect();\n                let has_emit = statements.iter().any(|s| matches!(s, Statement::Emit { .. }));\n                let not_advanced_attempted = match statements.first() {\n                    Some(guard @ Statement::Await { .. }) if segment > 0 => Some(UInt(plan::statement_cost(program, guard)?)),\n                    _ => None,\n                };\n                let before = ap.committed_before[segment];\n                let cost = ap.segment_cost[segment];\n                let after = before.0.checked_add(cost.0).map(UInt).ok_or_else(|| CompileError::Bound(\"committed work exceeds u128\".into()))?;\n                segments.push(StagedSegmentShape {\n                    segment: segment as u16,\n                    entry,\n                    statement_start: start,\n                    statement_end: end,\n                    exit,\n                    segment_cost: cost,\n                    committed_before: before,\n                    committed_after: after,\n                    not_advanced_attempted,\n                    effect_kinds,\n                    has_emit,\n                });\n            }\n            actions.push(StagedActionPlan {\n                action: action.name.clone(),\n                action_index,\n                statement_count: ap.statement_count,\n                plan_total: ap.plan_total,\n                segments,\n            });\n        }\n        Ok(StagedLoweringPlan {\n            language: program.language.clone(),\n            semantics: program.semantics.clone(),\n            logical_cost_profile: mori_core::stage::LOGICAL_COST_PROFILE_2.into(),\n            stage_plan_format: mori_core::stage::STAGE_PLAN_FORMAT.into(),\n            continuation_format: mori_core::stage::CONTINUATION_FORMAT.into(),\n            program_hash: Digest32(self.staged.program_hash()),\n            plan_hash: Digest32(self.staged.plan_hash()),\n            source_sha256: self.source_sha256,\n            stored_cap: StoredCapParameter::ExplicitPublicSlot,\n            actions,\n            remaining: STAGED_REMAINING.iter().map(|s| (*s).to_string()).collect(),\n        })\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "PR01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "profile separation",
+      "sourceObservation": "Frontend branches on Core1 or Stage2 after language(); Core lib declares public Sherlock modules separately and private cfg(test) draft modules. None of these inspected dispatch bodies adds a Sherlock branch to compile_source.",
+      "citations": [
+        {
+          "file": "S06-frontend.rs",
+          "sha256": "039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9",
+          "lineStart": 29,
+          "lineEnd": 49,
+          "literal": "pub enum Admitted {\n    Core1(AdmittedCore1),\n    Staged2(StagedAdmission),\n}\n\n/// Route by `mori_core::language`, then admit with the profile's own Core entry point.\npub fn admit_source(source: &str) -> Result<Admitted, CompileError> {\n    let profile = mori_core::language(source).map_err(CompileError::Core)?;\n    let source_sha256 = identity::source_hash(source);\n    match profile {\n        mori_core::LANGUAGE => {\n            // `parse` validates before returning (parser.rs:157-159).\n            let program = mori_core::parse(source).map_err(CompileError::Core)?;\n            admit_checked(program, Some(source_sha256)).map(Admitted::Core1)\n        }\n        mori_core::stage::LANGUAGE_2 => {\n            let staged = mori_core::stage::load(source).map_err(CompileError::Core)?;\n            Ok(Admitted::Staged2(StagedAdmission::new(staged, source_sha256)))\n        }\n        other => Err(CompileError::Profile(other.to_string())),\n    }"
+        },
+        {
+          "file": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 370,
+          "lineEnd": 377,
+          "literal": "    parser.expect(\"language\")?;\n    let profile = parser.string()?;\n    match profile.as_str() {\n        LANGUAGE => Ok(LANGUAGE),\n        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),\n        _ => Err(parser.error(\"profile\", format!(\"Expected language \\\"{LANGUAGE}\\\"; found {profile:?}.\"))),\n    }\n}"
+        },
+        {
+          "file": "CORE-lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "lineStart": 8,
+          "lineEnd": 31,
+          "literal": "pub mod sherlock;\n\n// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 266,
+          "lineEnd": 271,
+          "literal": "pub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "U01",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "lexer external boundary",
+      "sourceObservation": "Span,Soa/Soars and MoriDiagnostic implementations plus inherited Cargo versions are absent. Token-span and diagnostic-construction call sites are inspected,not these dependency bodies.",
+      "citations": [
+        {
+          "file": "MAIN-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 19,
+          "lineEnd": 21,
+          "literal": "use mori_diagnostics::MoriDiagnostic;\nuse mori_span::Span;\nuse soa_rs::Soa;"
+        },
+        {
+          "file": "BACKEND-lexer-src-lib.rs",
+          "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+          "lineStart": 19,
+          "lineEnd": 21,
+          "literal": "use mori_diagnostics::MoriDiagnostic;\nuse mori_span::Span;\nuse soa_rs::Soa;"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 1,
+          "lineEnd": 2,
+          "literal": "use mori_span::Span;\nuse soa_rs::{Soa, Soars};"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 1,
+          "lineEnd": 2,
+          "literal": "use mori_span::Span;\nuse soa_rs::{Soa, Soars};"
+        },
+        {
+          "file": "MAIN-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 193,
+          "lineEnd": 204,
+          "literal": "    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }"
+        },
+        {
+          "file": "BACKEND-lexer-src-token.rs",
+          "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+          "lineStart": 193,
+          "lineEnd": 204,
+          "literal": "    /// The token's span, recovered by re-scanning `source` from its start.\n    pub fn span(&self, idx: TokenIdx, source: &str) -> Span {\n        let start = self.start(idx);\n        Span::new(\n            start,\n            scan::token_end(self.kind(idx), source.as_bytes(), start),\n        )\n    }\n\n    pub fn comment_span(&self, index: usize) -> Span {\n        Span::new(self.comments.start()[index], self.comments.end()[index])\n    }"
+        },
+        {
+          "file": "MAIN-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 5,
+          "lineEnd": 19,
+          "literal": "edition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        },
+        {
+          "file": "BACKEND-lexer-Cargo.toml",
+          "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+          "lineStart": 5,
+          "lineEnd": 19,
+          "literal": "edition.workspace = true\nrust-version.workspace = true\nlicense.workspace = true\nrepository.workspace = true\n\n[dependencies]\nmori-diagnostics.workspace = true\nmori-span.workspace = true\nsoa-rs.workspace = true\n\n[dev-dependencies]\nindoc.workspace = true\ninsta.workspace = true\nmori-diagnostics = { workspace = true, features = [\"fancy\"] }\nproptest.workspace = true"
+        }
+      ]
+    },
+    {
+      "id": "U02",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "identity external boundary",
+      "sourceObservation": "Core intent::canonical/hash_bytes and every include_bytes target not separately supplied remain external to this packet. Source declarations and helper call order do not prove actual embedded contents,build execution,binary identity or cryptographic behavior.",
+      "citations": [
+        {
+          "file": "HELPER-identity.rs",
+          "sha256": "4dd88ceb42b98ad32a4c8502de9be8469508e710293810c6ff16eb59b423a661",
+          "lineStart": 80,
+          "lineEnd": 99,
+          "literal": "/// SHA-256 of `intent::canonical(value)`, reusing Core's canonical encoder and hash.\npub fn digest_of<T: Serialize>(value: &T) -> Result<Digest32, CompileError> {\n    let bytes = mori_core::intent::canonical(value).map_err(CompileError::Core)?;\n    Ok(digest_bytes(&bytes))\n}\n\n/// SHA-256 of raw bytes through Core's `hash_bytes`.\npub fn digest_bytes(bytes: &[u8]) -> Digest32 {\n    Digest32::from_hex(&mori_core::intent::hash_bytes(bytes)).expect(\"Core hash_bytes returns 64 lowercase hex characters\")\n}\n\n/// Canonical typed-Program identity (equals `CoreSourceExportV1.program_hash` and the\n/// owner-intent `program_hash` for the same Program).\npub fn program_hash(program: &Program) -> Result<Digest32, CompileError> {\n    digest_of(program)\n}\n\n/// Raw source identity; never bound in-circuit by this compiler.\npub fn source_hash(source: &str) -> Digest32 {\n    digest_bytes(source.as_bytes())"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 44,
+          "lineEnd": 54,
+          "literal": "macro_rules! own {\n    ($p:literal) => {\n        Embedded { path: $p, bytes: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", $p)) }\n    };\n}\n\nmacro_rules! core_file {\n    ($p:literal) => {\n        Embedded { path: $p, bytes: include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/../../../moriarty/\", $p)) }\n    };\n}"
+        },
+        {
+          "file": "HELPER-build_identity.rs",
+          "sha256": "813b2b183309c6f8db8afa5e4a77e3fdc39c92fb8a5ea9eff6f76829157c7f3f",
+          "lineStart": 173,
+          "lineEnd": 204,
+          "literal": "/// Entries sorted by path bytewise; a repeated path is refused.\npub fn entries(files: &[Embedded]) -> Result<Vec<Entry>, CompileError> {\n    let mut out: Vec<Entry> = files\n        .iter()\n        .map(|f| Entry { path: f.path.to_string(), sha256: identity::digest_bytes(f.bytes).hex(), bytes: f.bytes.len() as u64 })\n        .collect();\n    out.sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));\n    if out.windows(2).any(|w| w[0].path == w[1].path) {\n        return Err(CompileError::Identity(\"embedded build membership repeats a path\".into()));\n    }\n    Ok(out)\n}\n\n/// Canonical bytes of the `mori-r1cs-build-manifest/2` document for `OWN_FILES`.\npub fn build_manifest_bytes() -> Result<Vec<u8>, CompileError> {\n    mori_core::intent::canonical(&BuildManifestV2 { format: BUILD_MANIFEST_FORMAT, files: entries(OWN_FILES)? }).map_err(CompileError::Core)\n}\n\n/// SHA-256 of the canonical build manifest.\npub fn build_manifest_digest() -> Result<Digest32, CompileError> {\n    Ok(identity::digest_bytes(&build_manifest_bytes()?))\n}\n\n/// The Core closure digest under the unchanged `/1` closure rule.\npub fn core_closure_digest() -> Result<Digest32, CompileError> {\n    identity::digest_of(&entries(CORE_FILES)?)\n}\n\n/// The only `CompilerBuild` that `compile` accepts.\npub fn embedded_build() -> Result<CompilerBuild, CompileError> {\n    Ok(CompilerBuild { compiler_source_manifest_sha256: build_manifest_digest()?, core_closure_sha256: core_closure_digest()? })\n}"
+        }
+      ]
+    },
+    {
+      "id": "U03",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "gadget and field boundary",
+      "sourceObservation": "blake2b256,blake2b256_gadget,alloc_bit,digest_half_lc,Cs/Lc/fe and UIntW/WideW implementation bodies are absent. Calls/types are recorded; no hash,field,proof,range or resource adequacy judgment is made.",
+      "citations": [
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 22,
+          "lineEnd": 29,
+          "literal": "use crate::adapter::{AdapterError, BindError, SlotWire};\nuse crate::blake2b::{self, Bit};\nuse crate::error::{CompileError, MappingError};\nuse crate::gadgets::{UIntW, WideW};\nuse crate::plan::{AccountingBinding, ActionPlan, CapBinding, CompileOptions, DutyOrigin, EffectShape, FrameCells};\nuse crate::r1cs::{Cs, Lc, fe};\nuse crate::statement::{EffectValues, SlotEncoding, SlotKind, StatementLayout, TransitionValues, Wide, accounting_summary};\nuse ark_ff::PrimeField;"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 297,
+          "lineEnd": 304,
+          "literal": "/// The two public inputs `[int_be(d[0..16]), int_be(d[16..32])]`, d = BLAKE2b-256(stmt).\npub fn public_inputs<F: PrimeField>(statement: &[u8]) -> Vec<F> {\n    let d = blake2b::blake2b256(statement);\n    let mut hi = [0u8; 16];\n    let mut lo = [0u8; 16];\n    hi.copy_from_slice(&d[..16]);\n    lo.copy_from_slice(&d[16..]);\n    vec![fe(u128::from_be_bytes(hi)), fe(u128::from_be_bytes(lo))]"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 343,
+          "lineEnd": 354,
+          "literal": "    let mut sum = Lc::zero();\n    for k in 0..n {\n        for j in 0..8 {\n            let val = honest.map(|h| (h[k] >> j) & 1 == 1);\n            let bit = blake2b::alloc_bit(cs, \"abi2.body\", val)?;\n            let weight = 8 * (n - 1 - k) + j;\n            sum = sum.plus(&bit.lc.scaled(fe(1u128 << weight)));\n            bits.push(bit);\n        }\n    }\n    cs.enforce_eq(&sum, limb)?;\n    Ok(())"
+        },
+        {
+          "file": "HELPER-abi2.rs",
+          "sha256": "51fa106305481cb6c48c9eeda0d2b24ae5e5f7b9816daa48b2b474b56e98debb",
+          "lineStart": 431,
+          "lineEnd": 435,
+          "literal": "    let digest = blake2b::blake2b256_gadget(cs, &bits)?;\n    for (k, from) in [0usize, 16].into_iter().enumerate() {\n        let x = cs.input(claimed.map(|c| c[k]))?;\n        cs.enforce_eq(&Lc::var(x), &blake2b::digest_half_lc(&digest, from))?;\n    }"
+        }
+      ]
+    },
+    {
+      "id": "U04",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "staged/backend boundaries",
+      "sourceObservation": "plan::statement_cost and Core StagedProgram accessors/types are called from lowering_plan but their implementations are outside this packet. S16 plan_action/probe calls are also boundary references here. Prior33-file analysis remains separately immutable.",
+      "citations": [
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 25,
+          "lineEnd": 29,
+          "literal": "use crate::error::CompileError;\nuse crate::identity::Digest32;\nuse crate::plan;\nuse mori_core::stage::{CaptureSlot, StageBinder, StagedProgram};\nuse mori_core::{Statement, UInt};"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 156,
+          "lineEnd": 169,
+          "literal": "    pub fn lowering_plan(&self) -> Result<StagedLoweringPlan, CompileError> {\n        let program = self.staged.program();\n        let stage_plan = self.staged.plan();\n        let mut actions = Vec::with_capacity(stage_plan.actions.len());\n        for (index, (action, ap)) in program.actions.iter().zip(&stage_plan.actions).enumerate() {\n            if ap.action != action.name || ap.segment_cost.len() != ap.sites.len() + 1 || ap.committed_before.len() != ap.sites.len() + 1 {\n                return Err(CompileError::Bound(format!(\"stage plan for {:?} is not the admitted plan\", action.name)));\n            }\n            let action_index = u16::try_from(index).map_err(|_| CompileError::Bound(\"action index exceeds u16\".into()))?;\n            let inputs: Vec<CaptureSlot> = action\n                .inputs\n                .iter()\n                .enumerate()\n                .map(|(i, input)| CaptureSlot { name: input.name.clone(), ty: input.ty, origin: mori_core::stage::Origin::Input, ordinal: i as u16 })"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 199,
+          "lineEnd": 207,
+          "literal": "                let effect_kinds: Vec<String> = statements.iter().filter_map(effect_kind).collect();\n                let has_emit = statements.iter().any(|s| matches!(s, Statement::Emit { .. }));\n                let not_advanced_attempted = match statements.first() {\n                    Some(guard @ Statement::Await { .. }) if segment > 0 => Some(UInt(plan::statement_cost(program, guard)?)),\n                    _ => None,\n                };\n                let before = ap.committed_before[segment];\n                let cost = ap.segment_cost[segment];\n                let after = before.0.checked_add(cost.0).map(UInt).ok_or_else(|| CompileError::Bound(\"committed work exceeds u128\".into()))?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 225,
+          "lineEnd": 226,
+          "literal": "    let plan = plan::plan_action(admitted.program(), &options)?;\n    let layout = StatementLayout::build(admitted.identity(), &plan, build)?;"
+        },
+        {
+          "file": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 260,
+          "lineEnd": 260,
+          "literal": "    relation.probe = probe::<F>(&relation)?;"
+        }
+      ]
+    },
+    {
+      "id": "U05",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "document-only claims",
+      "sourceObservation": "Adapter TARGET_OBLIGATIONS,SETTLEMENT_V2_TARGET_DISCHARGE and STAGED_REMAINING are source string arrays. Their presence is recorded; the text is not evidence that listed obligations are discharged or implemented. No referenced ledger/source paths are followed.",
+      "citations": [
+        {
+          "file": "HELPER-adapter.rs",
+          "sha256": "24dcee35856ee8bf6ef3dcde8be39b56692af34e99fc5975bd1230dc07a91b1d",
+          "lineStart": 89,
+          "lineEnd": 113,
+          "literal": "/// Obligations a pure transition proof does not discharge, whatever the adapter.\npub const TARGET_OBLIGATIONS: &[&str] = &[\n    \"Pre-state authenticity: pre states, cells and duties are statement inputs; a target must bind them to the consumed datum/UTxO (ScriptCustodied) or label them unauthenticated premises (KeyHeldExternal, projection.rs:415-430).\",\n    \"Balance-row existence (premise, review F-04): Core refuses a scenario that lacks an explicit balance row for a touched account (runtime.rs:609-627), but the layout has no balance presence bit, so a claimed pre-balance of 0 for a missing row satisfies the relation. A target must authenticate the existence of every represented balance row, or a reviewed presence bit must be added; until then this is an unauthenticated premise, not a relation constant.\",\n    \"Frame completeness: rows outside the represented cells are not in the statement; a target must represent them (FrameCells::Include) or establish that none exist, because Core's 65,536 trace bound counts every scenario row (runtime.rs:540-547). FrameCells::Include covers balance cells only: an unregistered incoming duty (no source Liability) cannot be represented at all (review F-05), so duty-frame completeness rests entirely on the target until a reviewed duty-frame option exists. No P3 or ABI mapping may claim a complete frame before then.\",\n    \"Physical asset delta: Transfer/Fee effects are bookkeeping; payouts, deposits, custody totals, conservation and tagged outputs are separate target relations (ABI-V1 VOTES.md P3).\",\n    \"Debit authority: authority for debited accounts and owner intent limits (intent::check_effects) are separate checks; the accounting summary only exposes gross debit and fees. The P3-7 scope is disputed and unreconciled: the later ABI review (f3ae8556, V6) requires authority for every debited account including custody-held balances, thread-advance authority and a signed intent in the statement, not only external (KeyHeldExternal) signers.\",\n    \"Replay and consumption: one-time use of the consumed thread/claim, nonce and predecessor history.\",\n    \"Ledger phases and failure outcomes: rejected executions have no success proof here; any charged failure transition needs its own relation.\",\n    \"Setup provenance: the R1CS digest names the matrices; a VK is trusted only with a reviewed setup transcript over exactly those matrices.\",\n];\n\n/// P3S1 PROPOSED: how the ABI v2 Cardano target (S2, `candidate/aiken/lib/pvc2/thread.ak`)\n/// takes over each [`TARGET_OBLIGATIONS`] entry for [`StatementAdapter::SettlementHashV2`].\n/// Source-level mapping only; nothing here is reviewed, compiled or executed.\npub const SETTLEMENT_V2_TARGET_DISCHARGE: &[(&str, &str)] = &[\n    (\"Pre-state authenticity\", \"S2 builds pre states, custody cells and duties from the spent thread datum; external cells use the canonical premise (gross debit in the step).\"),\n    (\"Balance-row existence (F-04)\", \"S2 refuses a represented custody cell without a datum row; external cells have no row by design.\"),\n    (\"Frame completeness (F-05)\", \"The datum is the complete snapshot; S2 copies every unrepresented custody row and liability (registered or not) into the continuation and checks Core's scenario bounds on the whole snapshot.\"),\n    (\"Physical asset delta\", \"S2 checks exact custody value before and after, tagged or pinned-datum payouts per external credit, global output allocation, reserve top-ups and no own-policy mint.\"),\n    (\"Debit authority\", \"S2 requires a verified Core owner intent from every debited account (custody included), every accrual debtor, every discharge creditor and one action advancer; Core check_effects runs on the bound effects and the complete closing duties.\"),\n    (\"Replay and consumption\", \"The intent binds the consumed outref and full pre-snapshot; the claim names the outref; the ledger consumes it once; seq and the event chain advance.\"),\n    (\"Ledger phases and failure outcomes\", \"Cardano transactions are atomic; phase-2 failure consumes only key-locked collateral; a refusal leaves the datum (and every duty) unchanged. No charged failure transition is modelled.\"),\n    (\"Setup provenance\", \"Unchanged: the catalogue pins (predicate, vk) per action; VK provenance needs a reviewed setup transcript.\"),\n];"
+        },
+        {
+          "file": "HELPER-staged.rs",
+          "sha256": "f8ba260a0672a891f98b3af5823ded5ae23e514760ae58816eb29a75cc8d1fc6",
+          "lineStart": 113,
+          "lineEnd": 127,
+          "literal": "/// Remaining staged obligations. Listing them waives none.\npub const STAGED_REMAINING: &[&str] = &[\n    \"segment relations for every (action, segment) with program and plan hash bound in-circuit\",\n    \"pre/post frame slots (Idle | Pending{site, captures}) in the exact capture layouts, captures prefix-monotone\",\n    \"event binder slots and the resumed guard as a constrained Step against the unchanged boundary\",\n    \"await entry charge and committed_before/committed_after/plan_total binding (logical-cost/2)\",\n    \"stored cap as an explicit public slot; D-13 canonical reconstruction value stays split\",\n    \"R7 canonical boundary predicates (states exact, balances strictly ascending, registry identities, trace bound)\",\n    \"residual duties and present-zero versus absent across segments\",\n    \"NotAdvanced (false guard) as a separate non-transaction relation with attempted work\",\n    \"Emit and every effect kind in staged segments (the staged UNIT codec admits Emit)\",\n    \"staged continuation codec correspondence (production codec 3b21... frozen; FREEZE-4 r2 result unadopted)\",\n    \"authentication and one-time consumption of continuations and events (STAGE_LABELS: none/untracked)\",\n    \"independent staged differential oracles and hostile witness mutations before any execution\",\n];"
+        }
+      ]
+    }
+  ],
+  "lexerByteComparisons": [
+    {
+      "main": "MAIN-lexer-Cargo.toml",
+      "backend": "BACKEND-lexer-Cargo.toml",
+      "byteIdentical": true,
+      "sha256": "1ae623c38bd4e5d83f691c01191e8f271a268c60913311a1ed62c4afeef88b68",
+      "bytes": 453,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    },
+    {
+      "main": "MAIN-lexer-src-lib.rs",
+      "backend": "BACKEND-lexer-src-lib.rs",
+      "byteIdentical": true,
+      "sha256": "5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7",
+      "bytes": 8944,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    },
+    {
+      "main": "MAIN-lexer-src-token.rs",
+      "backend": "BACKEND-lexer-src-token.rs",
+      "byteIdentical": true,
+      "sha256": "e7860a893c0827bbf362165438c67d621f229f0eacecb9175d959788687bc3db",
+      "bytes": 5490,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    },
+    {
+      "main": "MAIN-lexer-src-scan.rs",
+      "backend": "BACKEND-lexer-src-scan.rs",
+      "byteIdentical": true,
+      "sha256": "4119a98f6ade2d96cb1231b0531cdbb63d01663d24c7e2615ef5b74931db5637",
+      "bytes": 1822,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    },
+    {
+      "main": "MAIN-lexer-src-number.rs",
+      "backend": "BACKEND-lexer-src-number.rs",
+      "byteIdentical": true,
+      "sha256": "5826e09117b22505a74ab3144f4862445b513039bac275c88ace4d85331fad9a",
+      "bytes": 2329,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    },
+    {
+      "main": "MAIN-lexer-src-string.rs",
+      "backend": "BACKEND-lexer-src-string.rs",
+      "byteIdentical": true,
+      "sha256": "b94878f41914f56dfd4945ebb0b44690db541e77848817bc6e265dc422f88aaa",
+      "bytes": 4862,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    },
+    {
+      "main": "MAIN-lexer-src-diagnostics.rs",
+      "backend": "BACKEND-lexer-src-diagnostics.rs",
+      "byteIdentical": true,
+      "sha256": "df5fea8831841c47579a6f11d9d24eabf37c50274c1f4e2c1da78bd330230d35",
+      "bytes": 8121,
+      "qualification": "Mechanical equality of supplied captured bytes only; no equivalence/runtime conclusion"
+    }
+  ],
+  "previousGapDisposition": [
+    {
+      "previous": "U01 lexical body",
+      "now": "Named lexer/token/scan/number/string/diagnostics bodies inspected; external span/Soa/diagnostic and standard-library behavior remain boundaries",
+      "claims": [
+        "L01",
+        "L02",
+        "L03",
+        "L04",
+        "L05",
+        "L06",
+        "L07",
+        "L08",
+        "L09",
+        "L10",
+        "L11",
+        "L12",
+        "L13",
+        "L14",
+        "L15",
+        "L16",
+        "L17",
+        "U01"
+      ]
+    },
+    {
+      "previous": "U02 named helper bodies",
+      "now": "Named checked/admission/layout/ABI2 options/constants/staged plan bodies inspected; named external/gadget implementations remain boundaries",
+      "claims": [
+        "ID01",
+        "ID02",
+        "ID03",
+        "ID04",
+        "ID05",
+        "ID06",
+        "S03",
+        "A01",
+        "A02",
+        "V201",
+        "V204",
+        "ST03",
+        "ST04",
+        "U02",
+        "U03",
+        "U04"
+      ]
+    }
+  ],
+  "nextExactSourceTask": {
+    "pathsAsSourceNamesOnly": [
+      "src/blake2b.rs",
+      "src/r1cs.rs",
+      "src/gadgets.rs"
+    ],
+    "qualification": "Root must select and pin a bounded exact packet. Nonsecurity navigation may enumerate types/calls/byte order only; crypto/constraint adequacy belongs to authorized Opus. No follow or execution authorized by this record."
+  }
+}
