@@ -54,7 +54,7 @@ class RequirementEvidenceTests(unittest.TestCase):
             requirements=[row(item, original, index==0) for index,item in enumerate(trace['original35'])],
             refinementInventory=dict(**pinned(refinements), featureIds=[x['id'] for x in trace['refinementFeatures']], scenarioCount=68),
             refinementRequirements=[row(item, refinements) for item in trace['refinementFeatures']],
-            retainedInventory=[dict(family='synthetic retained family', catalogue=pinned(original), status='unassessed')],
+            retainedInventory=[dict(family='synthetic retained family', catalogue=pinned(original), status='unassessed', disposition='fixture only')],
             assessment=dict(status='PROPOSED_FOR_ROOT_SEMANTIC_ADOPTION', globalV1='open', adoption='pending-root'))
         self.path = self.root / 'current-evidence.json'
 
@@ -144,6 +144,28 @@ class RequirementEvidenceTests(unittest.TestCase):
         self.assertEqual(report['status'], 'mismatch')
         self.assertEqual(report['requirement_evidence']['requirements'][0]['integrity'], 'invalid')
         self.assertEqual(report['requirement_evidence']['refinement_requirements'][0]['integrity'], 'invalid')
+
+    def test_schema_incoherent_declarations_cannot_report_current(self):
+        self.assertEqual(self.report()['status'], 'pass')
+        baseline = copy.deepcopy(self.ledger)
+        cases = ('empty-evidence-classes', 'missing-adoption', 'invalid-adoption',
+                 'missing-disposition', 'invalid-disposition')
+        for case in cases:
+            with self.subTest(case=case):
+                self.ledger = copy.deepcopy(baseline)
+                if case == 'empty-evidence-classes':
+                    self.ledger['requirements'][0]['predicate']['applicableEvidenceClasses'] = []
+                elif case == 'missing-adoption':
+                    self.ledger['assessment'].pop('adoption')
+                elif case == 'invalid-adoption':
+                    self.ledger['assessment']['adoption'] = 'other'
+                elif case == 'missing-disposition':
+                    self.ledger['retainedInventory'][0].pop('disposition')
+                else:
+                    self.ledger['retainedInventory'][0]['disposition'] = []
+                report = self.report()
+                self.assertEqual(report['status'], 'mismatch')
+                self.assertEqual(report['requirement_evidence']['status'], 'invalid')
 
     def test_bare_checker_reads_no_ledger_and_preserves_existing_corpus_report(self):
         report = qa.run(REPO)
