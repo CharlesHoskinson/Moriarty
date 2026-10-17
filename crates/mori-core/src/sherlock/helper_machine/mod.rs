@@ -11,6 +11,7 @@ pub mod source_input_bridge;
 
 // Complete owned observations around the existing fixed host owner step.
 pub mod complete_observation;
+pub mod complete_comparison;
 
 // Source-only Core scalar consumer and diagnostic projections. No native
 // or whole-language acceptance is established by these registrations.
