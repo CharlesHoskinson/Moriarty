@@ -1,0 +1,367 @@
+{
+  "format": "sherlock-b-leaf-caller-contract/1",
+  "unit": "b_scalar_tag_add_positive",
+  "author": "Opus 5.5 (claude-opus-5-5), designated high-security source/contract author; authorship is not a vote",
+  "status": "PROPOSED_SOURCE_DESIGN_ONLY: unregistered, unreviewed; no ABI, width, layout, field or row adoption",
+  "governance": {
+    "native_authority": 0,
+    "c4_unchanged": true,
+    "execution_claims": [],
+    "rust_compiled": false,
+    "json_validated_by_tool": false,
+    "sdk_queried_or_executed": false,
+    "o_qa_map_tuple_or_host_trace_used": false
+  },
+  "target": {
+    "source_path": "crates/mori-backend/src/sherlock_machine/b_scalar_tag.rs",
+    "callable": "emit_b_scalar_tag_add",
+    "row": "rows-supplement.json /helper_events/1 (b.helper.Scalar.tag), template /templates/T-HELPER, overlay /helper_events/1 (C00, C14)",
+    "branch": "site RetRight, mode Add, phase First, kind(h.operandA) = UInt. Effects are /helper_events/1/effects/1/then/0/then: set h.regA := u128(a); set h.phase := Second. Base delta /helper_events/1/deltas/base = [-1,1,1,1,0,0,0,0,0,0,0]. cap_kinds_possible = [].",
+    "row_status_note": "Root designates this row as the adopted R4 row. The overlay file's own status field still reads PROPOSED_UNADOPTED. This contract does not decide adoption.",
+    "schema": "root-qualified-host09-adoption-01/schema-supplement.json, adopted only as qualified HostOnly source (ROOT-SOURCE-ADOPTION.json /decision, /scope/executionDomain)"
+  },
+  "normative_pointers": {
+    "ordinals": {
+      "HelperKind.Scalar=0": "schema /enums/HelperKind/0",
+      "SiteTag.RetRight=11": "schema /enums/SiteTag/11",
+      "ScalarMode.Add=0": "schema /enums/ScalarMode/0",
+      "ScalarPhase.First=0": "schema /enums/ScalarPhase/0",
+      "ScalarPhase.Second=1": "schema /enums/ScalarPhase/1",
+      "ConstTag.U128=0": "schema /enums/ConstTag/0",
+      "DataTag.U128=0": "schema /enums/DataTag/0",
+      "ordinal_rule": "schema /notation/Enum(E) (0-based declaration order). Width and packing are not selected.",
+      "ValueRef.space": "schema /records/ValueRef/encoding (0 Const, 1 Data)",
+      "Opt.present": "schema /notation/Opt<A>; inactive is zero (/notation/inactive). Zero is never a discriminator."
+    },
+    "UInt128": "schema /primitive_types/UInt128 (16 little-endian bytes, each in [0,255])",
+    "counter_host_type": "schema /primitive_types/Nat (u128 for work counters and fuel)",
+    "field_embedding_open": "schema /notation/field_embedding; /layout_schema/WidthTable; /derived_widths/WorkCounter; /derived_widths/HelperCounter",
+    "kind_projection": "schema /logical_kind/kind(ref), /logical_kind/u128(ref), /logical_kind/rule; RESOLUTION.md section 4 D-23",
+    "value_rows": "schema /records/ConstRow/variant/U128, /records/DataRow/variant/U128, /program_image_view/tables/prog.constants, /machine_image/tables/img.data",
+    "read_bound": "rows /helper_events/1/reads/0; schema /row_language/functions/deref(ref)",
+    "helper_payload": "schema /records/HelperControl/common, /records/HelperControl/variants/Scalar, /machine_image/registers/reg.helper",
+    "state_space": "schema /helper_state_space/Scalar/0 (S1), /helper_state_space/Scalar/1 (S2)",
+    "dispatch": "schema /dispatch/select/0, /dispatch/helper_groups/Scalar",
+    "precedence": "schema /precedence/steps/0 (AB) .. /precedence/steps/9 (P7)",
+    "step_constraints": "schema /step_constraints/constraints/0..9",
+    "step_inv": "schema /step_inv/clauses (SI-03 /2, SI-04 /3, SI-08 /7, SI-13 /12, SI-17 /16, SI-21 /20, SI-22 /22)",
+    "witness_rule": "sherlock-machine-circuit-layout/interfaces.md paragraph beginning 'SuppliedPost and auxiliaries are candidate witnesses, not host-computed truth'",
+    "cursor_rule": "RESOLUTION.md section 4 D-09R; schema /precedence/steps/9",
+    "canonical_points": "RESOLUTION.md section 4 D-30; schema /boundaries/canonical_boundary_points"
+  },
+  "carrier_answer": {
+    "question": "Is the existing 16-byte little-endian u128 carrier permissible for this local positive leaf without adopting a B serialized profile, limb width, counters or state caps?",
+    "answer": "YES, bounded as follows.",
+    "regA_and_payload": "h.regA and ConstRow/DataRow U128.n are UInt128. Their 16-byte little-endian encoding, with each byte in [0,255], is normative in /primitive_types/UInt128. The value is the sum of b_i * 256^i, which lies in [0, 2^128). The leaf copies bytes one for one and range-checks each to 8 bits. No packing, limb split or field selection is involved.",
+    "counters": "remainingWork, consumedWork, helperWork and helperVisits have host type u128 (/primitive_types/Nat), so their range is [0, 2^128 - 1]. A 16-byte LE carrier represents that range injectively. This is a LOCAL logical carrier only. It is NOT the WidthTable counterWidths, AD-2a, WorkCounter or HelperCounter serialized width. Connecting it to any serialized width is the caller's OBL-07.",
+    "semantic_subranges_not_enforced": "remainingWork + consumedWork = initialFuel <= maxReferenceWork and helperWork <= maxHelperWork (SI-03) are external. The leaf enforces only carrier range, exact +/-1, and no wrap at 2^128 (the final carry or borrow is 0).",
+    "gadget_style": "This is the literal_step.rs bytewise borrow chain (9-bit intermediates, carry = 256*next) plus its increment dual. The redundant all-zero chain of literal_step is omitted: a final borrow of 0 is equivalent under enable.",
+    "deviation_from_A_style": "literal_step range-checks every image cell unconditionally. This leaf instead checks its own helper and counter lanes through eff(x) = CondSelect(enable, x, 0), because the B register and counter layout (including any union overlay) is not frozen. Under enable = 1 the relation is identical. Unconditional ranging remains a composer option.",
+    "field_fact_relied_on": "SDK Native modulus p > 2^128. The reused emit_enabled_fetch_block already relies on this for LessThan{bits:128} and ConstrainBits 128. It implies p > 511, which the 9-bit byte equalities need. This is an unverified fact about the pinned SDK Fr, not a B fieldId selection; L04 stays open."
+  },
+  "enable_truth_scope": {
+    "owner_definition": "enable = 1 asserts, and only the composer's constrained dispatch over the bound pre-image may assert, that the step is the Applied event of b.helper.Scalar.tag on its RetRight/Add/First/UInt branch. Concretely: AB holds (host); outcome is Running (P0); P1 and P2 do not fire; PS selects Scalar.tag; P3 does not fire (helperWork < maxHelperWork); and kind(deref(h.operandA)) = UInt.",
+    "checked_in_leaf_under_enable": [
+      "helper present = 1, kind = Scalar, site = RetRight, mode = Add, phase = First. On a StepInv pre-image these make /dispatch/helper_groups/Scalar return Scalar.tag uniquely (construct and arithmetic select_when are false) and exclude P1.",
+      "remainingWork >= 1 (the final borrow is 0), so a P2 image is unsatisfiable when enabled",
+      "operandA.index < active length of its space, and that row's space tag = U128 (kind UInt, D-23 realized per space)"
+    ],
+    "external": [
+      "AB admission binding (host-only, SI-01)",
+      "P0 outcome Running",
+      "P3 helperWork < bounds.maxHelperWork",
+      "enable is derived from constrained pre-state, never a free witness",
+      "exactly one enable across every row, branch, publication and refusal of the step"
+    ],
+    "enable_zero": "Every leaf-emitted constraint is satisfiable for arbitrary helper and counter operands. The only unconditional requirements are those emit_enabled_fetch_block imposes on each nonzero-capacity value table: each projected cell < 2^128 and active_rows <= capacity. No canonical-inactive or zeroing rule is emitted, and none is claimed.",
+    "p6": "Vacuous: cap_kinds_possible is [] and the base delta has no positive alloc or task entry. Nothing is emitted for it."
+  },
+  "input_source_mapping": [
+    {
+      "field": "enable",
+      "class": "composer-derived bit",
+      "source": "constrained dispatch per enable_truth_scope"
+    },
+    {
+      "field": "constants.capacity",
+      "class": "host construction parameter",
+      "source": "bounds.constantNodes",
+      "pointer": "schema /bounds/fields/11; /program_image_view/tables/prog.constants/capacity"
+    },
+    {
+      "field": "constants.active_rows",
+      "class": "read alias",
+      "source": "active(prog.constants)",
+      "pointer": "schema /program_image_view/header/activeLengths"
+    },
+    {
+      "field": "constants.rows[j].tag / .n",
+      "class": "read alias",
+      "source": "prog.constants[j]: ConstTag ordinal lane and ConstRow.U128.n bytes",
+      "pointer": "schema /records/ConstRow/variant/U128"
+    },
+    {
+      "field": "data.capacity",
+      "class": "host construction parameter",
+      "source": "bounds.dataNodes (single segment)",
+      "pointer": "schema /machine_image/tables/img.data/capacity"
+    },
+    {
+      "field": "data.active_rows",
+      "class": "read alias",
+      "source": "pre reg.active.data",
+      "pointer": "schema /machine_image/registers/reg.active.data"
+    },
+    {
+      "field": "data.rows[j].tag / .n",
+      "class": "read alias",
+      "source": "pre img.data[j]: DataTag ordinal lane and DataRow.U128.n bytes",
+      "pointer": "schema /records/DataRow/variant/U128"
+    },
+    {
+      "field": "pre_helper.present, kind",
+      "class": "independent pre operand",
+      "source": "pre reg.helper Opt.present and the HelperControl variant discriminator",
+      "pointer": "schema /machine_image/registers/reg.helper"
+    },
+    {
+      "field": "pre_helper.site",
+      "class": "independent pre operand",
+      "source": "HelperControl.common.site",
+      "pointer": "schema /records/HelperControl/common/site"
+    },
+    {
+      "field": "pre_helper.mode, phase, operand_a, reg_a",
+      "class": "independent pre operand (reg_a unreferenced)",
+      "source": "HelperControl.variants.Scalar.{mode, phase, operandA, regA}",
+      "pointer": "schema /records/HelperControl/variants/Scalar"
+    },
+    {
+      "field": "pre_helper.rest",
+      "class": "independent pre operand",
+      "source": "every other lane of the reg.helper encoding: common.originReferenceCursor, common.parentResume, Scalar.operandB, Scalar.expected, Scalar.staged (tag and payload), and any further register lanes"
+    },
+    {
+      "field": "post_helper.*",
+      "class": "independent post witness",
+      "source": "the same lanes of the post-image reg.helper"
+    },
+    {
+      "field": "pre_counters.*",
+      "class": "independent pre operand",
+      "source": "reg.remainingWork, reg.consumedWork, reg.helperWork, reg.helperVisits",
+      "pointer": "schema /machine_image/registers; /row_language/deltas/vector_order entries 0-3"
+    },
+    {
+      "field": "post_counters.*",
+      "class": "independent post witness",
+      "source": "the same post-image registers"
+    },
+    {
+      "field": "scope",
+      "class": "host namespace",
+      "source": "composer allocates a non-nested namespace"
+    }
+  ],
+  "output_mapping": [
+    {
+      "field": "instructions",
+      "meaning": "Fragment to append after every input is bound. There is no PublicInput, Impact, Output or IrSource."
+    },
+    {
+      "field": "read_n",
+      "meaning": "Generated temporaries. They equal the bytes of u128(deref(operandA)) when enable = 1 and are 0 when enable = 0. A disabled zero is not a fetched, default or padding row."
+    },
+    {
+      "field": "preserved",
+      "meaning": "Exact clone of the input operands. These are aliases only, never a transition or acceptance result."
+    },
+    {
+      "field": "(absent)",
+      "meaning": "No success flag, computed post image, event envelope or rule tag is emitted."
+    }
+  ],
+  "operand_classes": {
+    "independent_pre": "pre_helper, pre_counters; operand_a also drives the read",
+    "independent_post_witness": "post_helper, post_counters. Supplied, never computed, and constrained under enable by K09, K10, K12 and K13.",
+    "read_only_aliases": "both value tables and their active lengths",
+    "constants": "the eight ordinal consts; immediates 0, 1, 255 and 256",
+    "generated": "s, en_const, eff lanes, fetch temporaries, read_n, borrow/carry chains",
+    "unchanged_within_leaf": "present, kind, site, mode, operandA and every rest lane (including staged, operandB, expected, originReferenceCursor, parentResume)",
+    "unchanged_outside_leaf": "see OBL-06"
+  },
+  "caller_obligations": [
+    {
+      "id": "OBL-01",
+      "text": "AB: step only with the image's own Admitted (SI-01, D-32). Host-only; the encoded form is open."
+    },
+    {
+      "id": "OBL-02",
+      "text": "enable = 0 unless pre.outcome = Running and pre.helperWork < bounds.maxHelperWork, which routes P0 and P3 to their own branches."
+    },
+    {
+      "id": "OBL-03",
+      "text": "enable is derived from the constrained pre-state selector, never from a free witness or expected data. Exactly one enable across the whole step relation."
+    },
+    {
+      "id": "OBL-04",
+      "text": "pre_helper and post_helper are exact aliases of the bound pre and post reg.helper lanes. The typed lanes are the named fields; rest is the complete remaining partition (nothing omitted or duplicated) in identical order pre and post. Discriminator lanes hold the schema Enum ordinals and the space lane holds the ValueRef bit; a layout using other codes invalidates this leaf until re-review."
+    },
+    {
+      "id": "OBL-05",
+      "text": "The value tables are all physical rows of the bound ProgramView prog.constants and the pre img.data, projected exactly to the variant tag ordinal lane and the U128.n byte lanes, with the true active lengths. Every projected cell is < 2^128 in every image where the fragment appears, whatever the value of enable."
+    },
+    {
+      "id": "OBL-06",
+      "text": "Every pre/post cell outside this leaf is equal under enable: reg.control, controlOrigin, envRoot, depth, stackLimit, outcome, initialFuel, referenceCursor (D-09R), alloc.*, active.*, taskLive, result, segBase, and every image table and slot. Delta entries 4-10 are zero."
+    },
+    {
+      "id": "OBL-07",
+      "text": "The counter and regA carriers are connected to the eventual serialized encodings by explicit constraints, because counterWidths and WidthTable are not frozen. Until then the carriers are local only."
+    },
+    {
+      "id": "OBL-08",
+      "text": "StepInv on the pre-image is external (SI-03, SI-04, SI-08 result absent, SI-13, SI-17, SI-21 including operandA = top.left and site coherence, and SI-22 S1). Post-StepInv preservation is not claimed."
+    },
+    {
+      "id": "OBL-09",
+      "text": "Program, pre and post statement binding and field embedding are external (L04 open). This is a mid-helper image, so it is never a canonical boundary (D-30); proof splits link physical images directly."
+    },
+    {
+      "id": "OBL-10",
+      "text": "Every operand is bound before the fragment. The composer reserves the %{scope}. namespace non-nested against all other blocks."
+    },
+    {
+      "id": "OBL-11",
+      "text": "Any bound event envelope or StepEvent records ruleId b.helper.Scalar.tag, HelperVisit, Applied, work/helperWork/helperVisits deltas 1/1/1, cursor delta 0, zero alloc and value-slot writes, and helperPhase First to Second. None of this is emitted here."
+    },
+    {
+      "id": "OBL-12",
+      "text": "When enable = 0 the post lanes are determined by whichever branch is enabled, not by this leaf."
+    }
+  ],
+  "nonclaims": [
+    "No SDK load, check, evaluation, compilation, proof, test or SDK query; no Rust compiled.",
+    "No mod.rs declaration, registration, dispatch, PublicInput or Output wiring.",
+    "No StepInv genesis or preservation, whole-transition, soundness proof, security or W_B correspondence claim.",
+    "No B layout, width table, counter width, field, limb, physical tag, cap, Bounds value or constructor semantics is adopted.",
+    "No behavior for any other operator, site, branch or row, and no negative or hostile tests.",
+    "No native authority; C4 unchanged."
+  ],
+  "forced_blockers": {
+    "source_construction": [],
+    "before_wiring_or_registration": [
+      "I-B-PAYLOAD-WIDTHS / layout: the reg.helper lane partition, the discriminator carriers, and the ConstRow/DataRow lane projection",
+      "counterWidths and the UInt128 serialized form, connected per OBL-07",
+      "L04 statement binding and fieldId (field fact p > 2^128)",
+      "a dispatch composer with exactly-one enable and the P0/P2/P3 branches",
+      "row and overlay adoption status (I-B-EVENT-ADOPTION; the overlay file still reads PROPOSED_UNADOPTED)",
+      "a fresh full-source Muse and Opus review of the actual bytes",
+      "a Root mod declaration"
+    ]
+  },
+  "rust_public_interface": {
+    "module_position": "Must be a child module of sherlock_machine, because it uses the parent-private fn immediate (accessed via use super::*, as fetch.rs and literal_step.rs do). Declaring mod b_scalar_tag and any pub use is a separate Root integration step. mod.rs is not edited here, and no dispatch registration exists.",
+    "imports": [
+      "use super::*;",
+      "names used: Operand, Instruction, Identifier, Type, Column, TableShape, ConstructionError, EnabledFetchInputs, emit_enabled_fetch_block, immediate; std::array::from_fn by path"
+    ],
+    "lifetimes": "None declared. The function borrows &BScalarTagAddInputs and &str only for the duration of the call. Every returned value is owned (cloned Operand or fresh Identifier), so no borrow escapes.",
+    "declarations": [
+      "//! Unregistered standalone B-core positive leaf: b.helper.Scalar.tag on",
+      "//! site RetRight, mode Add, phase First, kind(operandA) = UInt. Source only:",
+      "//! emits SDK instructions; no load, check, evaluation, compilation or proof.",
+      "//! Carriers are local logical lanes, NOT a B serialized profile or width table.",
+      "//! AB, P0, P3, exactly-one dispatch, StepInv, untouched-image preservation and",
+      "//! all program/image/statement binding remain caller obligations.",
+      "use super::*;",
+      "",
+      "pub const HELPER_PRESENT: u128 = 1;      // notation Opt<A>.present",
+      "pub const HELPER_KIND_SCALAR: u128 = 0;  // enums.HelperKind[0]",
+      "pub const SITE_RET_RIGHT: u128 = 11;     // enums.SiteTag[11]",
+      "pub const SCALAR_MODE_ADD: u128 = 0;     // enums.ScalarMode[0]",
+      "pub const SCALAR_PHASE_FIRST: u128 = 0;  // enums.ScalarPhase[0]",
+      "pub const SCALAR_PHASE_SECOND: u128 = 1; // enums.ScalarPhase[1]",
+      "pub const CONST_TAG_U128: u128 = 0;      // enums.ConstTag[0]",
+      "pub const DATA_TAG_U128: u128 = 0;       // enums.DataTag[0]",
+      "",
+      "/// UInt128 as 16 little-endian byte lanes; each enabled lane lies in [0, 255].",
+      "pub type BU128Lanes = [Operand; 16];",
+      "",
+      "#[derive(Clone, Copy, Debug, PartialEq, Eq)]",
+      "pub enum BValueSpace { Const, Data }",
+      "",
+      "/// records.ValueRef: space bit (0 Const, 1 Data) and index lane.",
+      "#[derive(Clone, Debug, PartialEq)]",
+      "pub struct BValueRef { pub space: Operand, pub index: Operand }",
+      "",
+      "/// Projection of one value-table row: variant tag ordinal lane and U128.n lanes.",
+      "#[derive(Clone, Debug, PartialEq)]",
+      "pub struct BValueRowLanes { pub tag: Operand, pub n: BU128Lanes }",
+      "",
+      "/// Every physical row of one value space, active or not; capacity may be 0.",
+      "#[derive(Clone, Debug, PartialEq)]",
+      "pub struct BValueTableRead {",
+      "    pub capacity: usize,",
+      "    pub active_rows: Operand,",
+      "    pub rows: Vec<BValueRowLanes>,",
+      "}",
+      "",
+      "/// reg.helper lanes in a Scalar view. rest holds every other register lane,",
+      "/// in the same order in pre and post. pre.reg_a is never referenced.",
+      "#[derive(Clone, Debug, PartialEq)]",
+      "pub struct BScalarRegister {",
+      "    pub present: Operand,",
+      "    pub kind: Operand,",
+      "    pub site: Operand,",
+      "    pub mode: Operand,",
+      "    pub phase: Operand,",
+      "    pub operand_a: BValueRef,",
+      "    pub reg_a: BU128Lanes,",
+      "    pub rest: Vec<Operand>,",
+      "}",
+      "",
+      "/// The four delta-vector entries this row changes, as local u128 carriers.",
+      "#[derive(Clone, Debug, PartialEq)]",
+      "pub struct BChargedCounters {",
+      "    pub remaining_work: BU128Lanes,",
+      "    pub consumed_work: BU128Lanes,",
+      "    pub helper_work: BU128Lanes,",
+      "    pub helper_visits: BU128Lanes,",
+      "}",
+      "",
+      "/// post_* are independent supplied witnesses; every enabled post lane named",
+      "/// here is constrained. Value tables are read-only aliases.",
+      "#[derive(Clone, Debug, PartialEq)]",
+      "pub struct BScalarTagAddInputs {",
+      "    pub enable: Operand,",
+      "    pub constants: BValueTableRead,",
+      "    pub data: BValueTableRead,",
+      "    pub pre_helper: BScalarRegister,",
+      "    pub post_helper: BScalarRegister,",
+      "    pub pre_counters: BChargedCounters,",
+      "    pub post_counters: BChargedCounters,",
+      "}",
+      "",
+      "/// Fragment only: no PublicInput, Output, success flag or after-state.",
+      "/// read_n is enable-effective (zero when disabled) and is not row data then.",
+      "pub struct BScalarTagAddBlock {",
+      "    pub instructions: Vec<Instruction>,",
+      "    pub read_n: BU128Lanes,",
+      "    pub preserved: BScalarTagAddInputs,",
+      "}",
+      "",
+      "#[derive(Clone, Debug, PartialEq, Eq)]",
+      "pub enum BScalarTagConstructionError {",
+      "    RowCount { space: BValueSpace },",
+      "    RestLaneCount,",
+      "    Fetch(ConstructionError),",
+      "}",
+      "pub fn emit_b_scalar_tag_add(",
+      "    input: &BScalarTagAddInputs,",
+      "    scope: &str,",
+      ") -> Result<BScalarTagAddBlock, BScalarTagConstructionError>;"
+    ]
+  },
+  "extract_scope": "Exact selected owner public declarations and caller contract only. Constraint-emission enumeration/private helpers/entrypoint sketch and From conversion body deliberately excluded; no implementation or O expectations/actual trace included."
+}
