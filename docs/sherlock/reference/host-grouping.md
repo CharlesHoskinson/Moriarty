@@ -37,6 +37,10 @@ B-profile helpers, persistent import and constrained/residual execution retain
 their separate requirements.
 
 The [recorded checks](../../results/sherlock-public-grouping-20261017/README.md)
-show a missing-public-module compile failure before the visibility change, then
-successful production and external-test metadata checks. The three fixed test
-functions typecheck but have not run. Fresh review remains pending.
+preserve the missing-public-module failure and initial metadata checks. The
+three fixed tests subsequently linked and passed against the frozen public
+production snapshot; fresh independent review approved that exact promotion
+and result. They cover the literal UInt7 at fuel0/1, stack8 and widths0/1/2/4/8.
+The composed current production Core also passed a separate metadata check.
+Generic caller/H1 admission, grouped callee-return coverage and full UIREQ-032 /
+SCON-015 acceptance remain open.
