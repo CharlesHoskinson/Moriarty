@@ -1,4 +1,12 @@
-# Sherlock completion roadmap proposal — 2026-10-17
+# Sherlock completion implementation plan — 2026-10-17
+
+Current execution follows [revision03](sherlock/design.md), the [OpenSpec/EARS adoption](../openspec/changes/sherlock-completion-convergence/ADOPTION.md), its [finite B00–B12 batches](../openspec/changes/sherlock-completion-convergence/batch-plan.json), and the [implementation loop](sherlock/implementation-loop.md). All25 SCON features,68 scenarios and35 original UIREQ remain required. The goal tool recorded the newly armed full implementation goal at epoch1792260805 after the ordinary entry conditions closed; this dated event does not attest future worker activity.
+
+PR168 merged the composed ledger source into `sherlock` at `01128456`. PR169 merged the reconciled design, ordinary QA, finite-model results, documentation and knowledge graphs into that branch at `3d3401ef`. Its recorded241 Python tests, eight Rust stream tests/216 independent normal runs, composed333 capture, and44 finite Quint tests/five runs retain their exact source and coverage. They do not close native/target or full-language acceptance. The next compiler increment is the real source-to-B preparation/admission path described in [FIRST-COMPILER-BATCH](../openspec/changes/sherlock-completion-convergence/FIRST-COMPILER-BATCH.md); The first production-library increment has compiled, passed seven positive tests and matched independently specified program tables for two sources; CLI execution, mandatory source-review corrections, full artifact/runtime comparisons and downstream acceptance remain open.
+
+The audit proposal below retains its original cut and sprint rationale. Its baseline, then-pending PR and cleared-goal statements describe that earlier cut. They do not override the adopted design, current batch contracts or the later results above. The [pre-review implementation plan](audits/2026-10-17/sherlock-plan-history/IMPLEMENTATION-PLAN-BEFORE-REVIEW.md) is preserved separately.
+
+## Historical audit proposal
 
 Baseline: clean public HEAD `628615a94d8a74837a1af510293927bb74d5c2b5`. Root supplies merged Sherlock `e34c34e0` and unmerged draft PR168; PR168 is uninspected here. Proposed sprint ordering stays inside U0–U7, with no new scheduler/authority/percentage. The old goal is CLEARED; older active-goal wording is historical.
 
