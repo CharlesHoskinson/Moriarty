@@ -1,5 +1,25 @@
 # Moriarty repository instructions
 
+## Latest review routing override — October 16
+
+The user now instructs: **“switch muse to opus5.5”**. Use `gpt-6.1-sol`
+implementation and a fresh non-author **Opus 5.5** nonsecurity audit, both at
+high effort. This replaces Muse for new nonsecurity review assignments.
+Security ownership remains Opus 5.5 high.
+
+The standing user instruction remains: **“if opus goes down switch to gemini or muse until its back up.”** Use an actual availability result, announce any
+fallback and retain the returned identity. Gemini 4 Argon high through AGY is
+the first standing outage route while Muse is quota-blocked; Muse high remains
+the other authorized outage option when available. No new permission is
+required for that standing fallback. Do not silently substitute a reviewer or
+duplicate an already assigned availability request.
+
+Preserve historical and frozen Muse identities and live assigned Argon tasks;
+never relabel them as Opus. Earlier dated routing below is historical where it
+conflicts with this latest override. Native authority remains zero; no gate,
+limit, counter, acceptance requirement or public developer permission changes.
+See [the user routing record](raw/assignments/moriarty-opus-nonsecurity-routing-2026-10-16.md).
+
 ## Current user workflow — October 16 DoctorWatson
 
 The user prohibits Foreman for current work. Use direct agent/model calls,
@@ -70,7 +90,7 @@ status; see [the routing record](raw/assignments/moriarty-argon-temporary-securi
 Restore Opus only after availability is observed, without interrupting a live
 assigned Argon task or relabelling its work as Opus.
 
-## Current model routing — October 14
+## Historical model routing — October 14
 
 Use `gpt-6.1-sol` at high effort for nonsecurity implementation.
 Use a fresh `muse-wonder-1.0` high audit for nonsecurity changes.

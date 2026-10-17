@@ -24,17 +24,9 @@ Read-only diagnosis and authorized source edits need no new campaign, runner, de
 
 ## Select the current scope and reviewers
 
-Temporary user override, 2026-10-15: use `gemini-4-argon-high` through AGY for
-all work otherwise assigned to Opus until Opus availability is observed again.
-This includes security work and its judgments. Keep Sol high implementation
-and Muse high nonsecurity review. Preserve original model identities on
-historical/frozen records, all acceptance gates and native authority zero.
-Read checkout `AGENTS.md` and
-`raw/assignments/moriarty-argon-temporary-security-2026-10-15.md` for the exact
-temporary scope. A failed request through a different provider does not
-establish AGY unavailability.
+Current nonsecurity language work uses `gpt-6.1-sol` authoring and a fresh non-author Opus 5.5 audit, both at high effort. The October 16 user instruction, “switch muse to opus5.5”, supersedes older Muse defaults. Read checkout `AGENTS.md` and `raw/assignments/moriarty-opus-nonsecurity-routing-2026-10-16.md`; later explicit user steering controls its scope.
 
-Current nonsecurity language work uses `gpt-6.1-sol` authoring and a fresh non-author `muse-wonder-1.0` audit, both at high effort. The standing October 14 assignment gives security work to Opus 5.5; for new work this is temporarily superseded by the October 15 AGY Argon assignment above until Opus availability is observed. Route all new security work and judgments to that current designated owner, preserving Opus identities and rosters on historical/frozen records. Later explicit user instructions control their stated scope. Preserve historical receipts and frozen task contracts with their original rosters; old Astra/Grok or paired-review defaults must not override current routing.
+Security ownership remains Opus 5.5 high. Preserve the standing instruction, “if opus goes down switch to gemini or muse until its back up.” Use actual availability, announce fallback and retain its returned identity; Gemini 4 Argon high through AGY is first while Muse is quota-blocked. No fresh permission or duplicate probe is required. Historical/frozen Muse records and live assigned Argon tasks keep their identities. Old rosters do not override current user steering.
 
 Give reviewers the exact full candidate, applicable requirements, independent expectations and actual results. Record requested/returned identities, effort, terminal status, dissent and limitations. Changed bytes need fresh audits; missing reviewers cannot approve or silently trigger substitution. Consequential design/resource choices retain two substantive agreeing votes; that decision rule is separate from the current result-review roster. The CLI does not enforce the reviewer roster; ingestion is not full approval.
 
