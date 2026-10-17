@@ -1,0 +1,137 @@
+{
+ "format": "r4-test-prefix-interface/1",
+ "status": "AUTHOR_PROPOSED source fragment interface by claude-opus-5-5 HIGH; nothing run, imported, compiled, hashed or reviewed; authority 0; not sourceReady; no RED/GREEN observed",
+ "fragment": "R4-TEST-PREFIX.py.part = head of the eventual isolated/test_c2_builder_r4.py; contains R00 only; no R01-R17 methods; no unittest.main footer",
+ "basis": "R4-CONTRACT.md CB401-CB412 and section 7/8; R4-API.json c2-builder-r4-api/2; ROOT-CP08-SOURCE-ADOPTION.json (r2 adopted for R4 test authoring only); ROOT-PUBLIC-FIXTURE-PINS.json; HISTORICAL-R3-test_c2_builder.py.txt formatters (reused with provenance; v1 import and 8-label map assumptions replaced)",
+ "assemblyOrder": [
+  "1 R4-TEST-PREFIX.py.part (this part, unchanged bytes)",
+  "2 part R01-R08: class TestR01ToR08(R4TestBase), methods test_r01_* .. test_r08_*",
+  "3 part R09-R13: class TestR09ToR13(R4TestBase), methods test_r09_* .. test_r13_*",
+  "4 part R14-R17: class TestR14ToR17(R4TestBase), methods test_r14_* .. test_r17_*",
+  "5 footer: if __name__ == \"__main__\": unittest.main(verbosity=2)  (owned by the last part or root; not in this prefix)"
+ ],
+ "partRules": [
+  "Later parts append only; they never edit prefix bytes, rebind prefix globals or redefine helpers.",
+  "Class names must sort after TestR00Prerequisites (unittest loads classes by sorted dir(module)); R00 assumes scratch is still empty when it runs.",
+  "Every R01-R17 method must call self.r4() (directly or via plan/run_main/run_argv) before any other assertion, so that at RED its only failure is the MISSING AssertionError.",
+  "Expected values come from prefix literals/formatters, r2/host_codec/legacy (pinned, independent of R4), or new literals copied from the frozen contract/API; never from R4 output.",
+  "Instrumentation only via wrapped/counted/faulted/consumer_wrapper on r2, host_codec or legacy; never patch os, builtins, json or R4.",
+  "Each filesystem test uses exactly one self.case_scratch() directory; writes stay under it; no network, subprocess, native, prover, key or VM action.",
+  "Do not design tests outside the frozen R01-R17 obligations."
+ ],
+ "discovery": {
+  "module": "test_c2_builder_r4 (run as __main__ by the envelope command)",
+  "r00": "TestR00Prerequisites.test_r00_prerequisites",
+  "envelopeCommand": "python3 -I -B isolated/test_c2_builder_r4.py (future, root-gated; not permitted now)"
+ },
+ "missingLoader": {
+  "function": "load_r4(case) -> module; base method self.r4()",
+  "phrase": "missing implementation: build_k10_inputs_r4.py",
+  "constant": "MISSING",
+  "behaviour": [
+   "If not os.path.lexists(HERE / 'build_k10_inputs_r4.py'): case.fail(MISSING) -> AssertionError (the only RED form).",
+   "Present (file, dangling symlink, directory, anything lexists sees): loaded once via importlib.util.spec_from_file_location('build_k10_inputs_r4', path) + exec_module; ImportError, SyntaxError or any exception propagates as unittest ERROR = STOP, never RED.",
+   "After one failed load attempt every later call raises RuntimeError('STOP: build_k10_inputs_r4.py is present but failed to load') so R4 module code executes at most once.",
+   "Module is not inserted into sys.modules; its own imports resolve to the same pinned legacy, host_codec and r2 objects the tests wrap."
+  ]
+ },
+ "stopBehaviour": "setUpModule raises RuntimeError('STOP: ...') for: v1 file present or in sys.modules (before and after imports); __pycache__ beside sources; any pinned file absent (B9 included; never synthesized), irregular, over cap or pin mismatch; scratch not an empty 700 directory; K6/K2 not JSON objects. Any R00 failure is STOP. No skip or tuning anywhere.",
+ "fixturePaths": {
+  "HERE": "Path(__file__).resolve().parent (isolated/)",
+  "SCRATCH": "HERE.parent / 'scratch' (700, empty)",
+  "R2": "c2_issue_artifacts_r2.py",
+  "host": "host_codec.py",
+  "legacy": "build_k10_inputs.py",
+  "B9": "inputs/b9-applied.json (308672 B 10baa179...; opaque, root-supplied)",
+  "EXP": "inputs/K6-PUBLIC-PROOF.json",
+  "SET": "inputs/K2-PUBLIC-SETUP-RECORD.json",
+  "HIST": "inputs/HIST-09-positive-script-context.txt"
+ },
+ "globals": {
+  "PINS": "dict relpath -> (bytes, sha256) for the 7 envelope files; checked in setUpModule and R00",
+  "ADOPTED_R2_PIN": "(21648, '67fb3b3e...') from ROOT-CP08 candidate",
+  "GOVERNANCE_PINS": "R4 contract/API, CP r2 contract/API, DOWNSTREAM-R4-CONDITIONAL-ADOPTION, ROOT-CP08 record (packet manifest pin): literals only; root-checked assembly prerequisites, not byte-checked by R00",
+  "V1, V1_FILE": "'c2_issue_artifacts', 'c2_issue_artifacts.py'",
+  "R4_FILE, R4_MODULE, MISSING, R4_SEAM": "CB401 literals",
+  "R4_IMPORTS": "9 CB401 import forms (R01)",
+  "R4_PUBLIC": "7 public names (R01)",
+  "B9_CAP, EXPORT_CAP, SETUP_CAP, READ_CHUNK": "16777216, 1048576, 65536, 65536",
+  "JSON_DEPTH, JSON_INT_CHARS, CONSUMER_MESSAGE_CHARS, U64_MAX": "16, 20, 1024, 2**64-1",
+  "REFUSAL_STAGES": "10 C2B stages",
+  "NONCONFORMING": "'C2B-CONSUMER: nonconforming consumer refusal'",
+  "READ_REFUSAL_ERRNO, OUTDIR_REFUSAL_ERRNO": "API errno name tuples",
+  "OPEN_FLAGS, DIR_FD_FUNCS": "platform STOP prerequisites (contract section 0)",
+  "R2_FORMAT, RESULT_KEYS, C2I_STAGES, CONSUMER_HOST_APIS, BUILDER_HOST_APIS": "API dependency literals",
+  "R2_LABELS": "16-entry map in API/S34 order",
+  "LABELS_8_V1": "historical v1 8-entry map (R11 refusal input)",
+  "LABELS_14_SUPERSEDED": "16 minus vkProfile/jsonParseLimits, rustAcceptance DECLARED_SUBSET_NOT_EQUIVALENT (R11 refusal input)",
+  "MANIFEST_FORMAT, BUILDER_REVISION": "'cardano-k2-k10-public-inputs/3', 'build_k10_inputs_r4'",
+  "MANIFEST_KEYS, CASE_KEYS": "33-key and 8-key sets from the R3 test",
+  "BUILDER_LABELS, LIMITATIONS, FLAGS": "9, 4, 10 API literals",
+  "AUDIT_SOURCE_PINS, SCRIPT_HASH_STRINGS": "verbatim copies from build_k10_inputs.py (keptFromR2)",
+  "K6_EXPIRY, K6_EXPIRY_TEXT, POLICY, K6_TOKEN, K6_PROOF_SHA, MINT_VALUE_CBOR_HEX, FAMILY, VK_BYTES, PROOF_BYTES": "historical K6 vectors",
+  "CASES, ROW_QUANTITIES, GAPS, GAP_STATUS, T1, ROSTER, INPUT_ROLES": "rows, gaps, the 6 API relpaths in API order, input roles",
+  "RAW": "MappingProxyType relpath -> pinned bytes (read-only)",
+  "EXPORT, SETUP": "parsed K6/K2, shared read-only; never mutate, use fresh_export()/fresh_setup()",
+  "legacy, host_codec, r2": "pinned modules bound by setUpModule"
+ },
+ "functions": {
+  "read_bounded(path, cap) -> bytes": "no-follow O_NONBLOCK bounded read of a regular file; RuntimeError STOP otherwise",
+  "setUpModule()": "pins, v1 absence, scratch, parse, imports",
+  "load_r4(case) -> module": "see missingLoader",
+  "fresh_export() -> dict / fresh_setup() -> dict": "new parse of pinned bytes",
+  "b2(data) -> bytes": "BLAKE2b-256 (R3)",
+  "flip1(data) -> bytes": "first-bit flip (R3)",
+  "swap1(hex_text) -> str": "first hex digit swap (R3 test_08 lambda)",
+  "dumps(obj) -> bytes": "compact json bytes (R3)",
+  "canonical_json(obj) -> bytes": "indent=2, sort_keys, newline (R3 test_02 inline)",
+  "uint(n) -> bytes": "CBOR uint head (R3)",
+  "env_cbor(pred, vkd, cl, tx, ix, sd, exp) -> bytes": "independent EnvV2 CBOR (R3)",
+  "ctx_text(token, qty, fields, vk_hex, proof_hex) -> bytes": "independent historical 09 context (R3)",
+  "k6_fields() -> tuple": "(pred, vkd, claimant 55*28, txid 22*32, 0, statement digest, K6_EXPIRY) (R3)",
+  "k6_rows() -> tuple": "T1/T5/T6/T7 as (case id, token, qty, fields) per R3 test_09",
+  "expected_context(row) -> bytes": "ctx_text for a row with the genuine VK and proof",
+  "expected_case(row) -> dict": "8-key manifest case entry from the row (legacy main layout)",
+  "expected_inputs() -> list": "[{role, sha256, bytes}] for b9-applied, proof-export, setup-record",
+  "expected_gaps() -> list": "[{id, status}] for T2-T4",
+  "walk_strings(obj)": "yields every str key/value in exact dict/list/str trees (R13 'subset' scan)",
+  "tree(root) -> list": "sorted os.walk no-follow listing, '/' dirs, '@' symlinks (replaces R3 rglob)",
+  "require_unprivileged()": "RuntimeError STOP on euid 0 (R16)"
+ },
+ "baseClass": {
+  "name": "R4TestBase(unittest.TestCase)",
+  "methods": {
+   "r4() -> module": "load_r4(self)",
+   "plan(export=None, setup=None, expiry=K6_EXPIRY, b9=None) -> dict": "r4.plan_outputs with pinned RAW defaults; non-None arguments passed as given",
+   "refused(code, fn, *args, **kwargs) -> str": "asserts ValueError, one exact str arg starting code + ': ' with no CR/LF; code like 'C2B-LINK'",
+   "run_argv(argv) -> (int, str, str)": "loads R4 first, then main(argv) with stdout/stderr redirected (contextlib); argv passed unchanged",
+   "run_main(*args) -> (int, str, str)": "run_argv([R4_FILE] + [str(a) for a in args])",
+   "assert_cli_refusal(result, code)": "exit 2, empty stdout, one stderr line starting code + ': '",
+   "assert_cli_success(result, output)": "exit 0, empty stderr, one stdout JSON line {output: str(output), cases: 4}",
+   "wrapped(module, name, replacement)": "context manager; module must be r2, host_codec or legacy; yields original; restores in finally",
+   "counted(module, name)": "delegating wrapper; yields list of (args, kwargs) per call",
+   "faulted(module, name, error)": "wrapper that records the call and raises error; yields call list",
+   "consumer_wrapper(after)": "wraps r2.prepare_c2_issue; after(result) runs before return (R10/R11/R16)",
+   "case_scratch() -> Path": "os.mkdir(SCRATCH/<test method name>, 0o700); once per test method",
+   "copy_inputs(dest) -> (Path, Path, Path)": "exclusive no-follow writes of b9-applied.json, proof-export.json, setup-record.json copies",
+   "assert_inputs_unchanged()": "re-reads the three pinned inputs and compares to RAW"
+  }
+ },
+ "r00Checks": [
+  "PINS[R2] == ADOPTED_R2_PIN; literal counts 12/16/11/7/8/14 and 33/9/4/10",
+  "every PINS entry bytes and sha256; r2/host_codec/legacy __file__ samefile the pinned paths",
+  "v1 file absent, not in sys.modules, find_spec None; scratch is a 700 directory and empty",
+  "OPEN_FLAGS present; os.open/mkdir/stat/unlink/rmdir/rename in os.supports_dir_fd",
+  "7 consumer host APIs callable; r2.prepare_c2_issue callable; legacy PIN_B9_APPLIED, FAMILY_V2, AUDIT_SOURCE_PINS equal literals",
+  "K6 setupRecordSha256 == K2 pin; legacy frozen_positive_cbor == env_cbor; token, proof sha, 488/192 lengths",
+  "HIST-09 bytes == ctx_text and == legacy script_context render",
+  "legacy.extract_compiled(B9) policy == POLICY and independent blake2b-224(0x03||code) == POLICY",
+  "r2 on deep-copied K6/K2: inputs unmutated, exact dict, 12 keys, /2, 16 labels in order, env CBOR, token, policy, expiry, setup digest, mint CBOR literals"
+ ],
+ "remainingParts": {
+  "R01-R08": "AST/imports/seam/v1; K6 golden; consumer-drawn fields; ARGV; OUTDIR; READ; JSON; LINK",
+  "R09-R13": "POLICY; CONSUMER; BRIDGE; legacy_env_from_host; T5-T7 and manifest literals",
+  "R14-R17": "CLI success; CLI refusals and precedence; 0555 WRITE and REREAD (unprivileged); counters and no outside effects"
+ },
+ "gates": {"sourceReady": false, "executed": false, "R4ExecutionPermitted": false, "builderReliancePermitted": false, "nativeAuthority": 0}
+}

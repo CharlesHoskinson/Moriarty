@@ -1,0 +1,143 @@
+{
+  "format": "r4-test-part-c-contract/1",
+  "status": "AUTHOR_PROPOSED independent source fragment by actual Opus 4.8 HIGH; nothing run, imported, compiled, hashed, reviewed or adopted; authority 0; not sourceReady; no RED or GREEN observed",
+  "scope": "Part C of isolated/test_c2_builder_r4.py: exactly the four R14-R17 unittest methods. Composes against the frozen R4-TEST-PREFIX.py.part shared API; owns the final module footer. Does not create build_k10_inputs_r4.py and never edits the prefix or other parts.",
+  "basis": [
+    "R4-CONTRACT.md CB401-CB412 and section 7 obligations R14-R17 and section 8 RED envelope (28131 B b0aa395e...)",
+    "R4-API.json c2-builder-r4-api/2 (13080 B 2cfefb33...)",
+    "R4-TEST-PREFIX.py.part shared literals/helpers/base class (27341 B 5d8c973b..., proposed not audited)",
+    "R4-TEST-INTERFACE.json assembly rules and base-class surface (11109 B f34196fa...)",
+    "ROOT-CP08-SOURCE-ADOPTION.json r2 adopted for R4 test authoring only (6721 B c322b2c2...)",
+    "ROOT-PUBLIC-FIXTURE-PINS.json (2945 B c13d856a...)",
+    "HISTORICAL-R3-test_c2_builder.py.txt test_10 CLI effect patterns (reused with provenance; v1 and the /1 manifest literals dropped)",
+    "c2_issue_artifacts_r2.py and host_codec.py bodies, read only to justify the R17 host-call counter derivation (independent of R4)"
+  ],
+  "assembly": {
+    "order": "appends byte for byte after prefix, part R01-R08 and part R09-R13, in prefix/A/B/C order",
+    "className": "TestR14ToR17",
+    "baseClass": "R4TestBase",
+    "sortsAfter": "TestR00Prerequisites, TestR01ToR08, TestR09ToR13 by sorted class name",
+    "footerOwned": "if __name__ == '__main__': unittest.main(verbosity=2) is written by this part only",
+    "localImports": "none added; uses only prefix module-level names (contextlib, os, stat, unittest) and builtins",
+    "rebinding": "no prefix global rebound, no helper redefined, no code under test imported to form expected values"
+  },
+  "methods": {
+    "count": 4,
+    "names": [
+      "test_r14_cli_success_tree_modes_stdout",
+      "test_r15_cli_refusals_and_precedence",
+      "test_r16_unprivileged_write_and_reread_cleanup",
+      "test_r17_host_call_counters_and_no_outside_effects"
+    ],
+    "firstStatementEach": "self.r4()",
+    "r4FirstRule": "every method's first statement is self.r4(); any later assertion or filesystem effect is unreachable until R4 loads"
+  },
+  "redBehaviour": {
+    "rule": "with build_k10_inputs_r4.py absent, self.r4() routes through load_r4, hits case.fail(MISSING), and raises the single AssertionError; no other assertion or effect executes",
+    "missingText": "missing implementation: build_k10_inputs_r4.py",
+    "exceptionType": "AssertionError",
+    "perMethod": "exactly one AssertionError, the same MISSING text, zero other assertions and zero filesystem or wrapper effects in each of the four methods",
+    "presentButBroken": "a present-but-unloadable build_k10_inputs_r4.py makes load_r4 raise RuntimeError STOP (unittest ERROR), never RED; that is the prefix loader's behaviour, not this part's"
+  },
+  "testR14": {
+    "obligation": "R14 CLI success: exact tree, mode 0o644 & ~umask, one stdout line, empty stderr, no .tmp left, inputs unchanged",
+    "stageExercised": "ARGV, OUTDIR, READ, plan (JSON/LINK/POLICY/CONSUMER/BRIDGE/RENDER), WRITE, REREAD, WRITE(manifest), success return 0",
+    "positiveCase": {
+      "argv": "[R4_FILE, str(HERE/B9), str(HERE/EXP), str(HERE/SET), K6_EXPIRY_TEXT, str(case_scratch/'out')]",
+      "inputs": "the three pinned envelope sources at HERE, read only",
+      "outputParent": "the single case_scratch() directory; basename 'out' matches [a-z0-9][a-z0-9._-]{0,99}"
+    },
+    "expectedResult": {
+      "exit": 0,
+      "stderr": "empty",
+      "stdout": "one JSON line equal to {\"output\": str(out), \"cases\": 4}, via assert_cli_success",
+      "tree": "tree(out) == sorted(ROSTER + ['contexts/']): script.hex, four context files, manifest.json and the contexts directory only",
+      "noTmp": "'manifest.json.tmp' absent from tree(out)",
+      "fileMode": "stat.S_IMODE == 0o644 & ~umask for every roster file (regular)",
+      "dirMode": "stat.S_IMODE == 0o755 & ~umask for out and out/contexts (directories)",
+      "inputsUnchanged": "assert_inputs_unchanged(): the three pinned inputs re-read equal to RAW"
+    },
+    "oracles": "ROSTER, CASES, K6_EXPIRY_TEXT, tree(), assert_cli_success and assert_inputs_unchanged from the prefix; mode literals 0o644 and 0o755 from CB404/CB411 and API openFlags/mkdirMode; umask read from the live process",
+    "umaskHandling": "umask observed by umask=os.umask(0o022) then os.umask(umask); net unchanged; the mask in force during main is the restored real umask; the transient set/restore is a disclosed source effect (no read-only umask API exists in the stdlib)"
+  },
+  "testR15": {
+    "obligation": "R15 CLI refusals: one stderr line, exit 2, no stdout, scratch unchanged; precedence ARGV > OUTDIR > READ",
+    "setup": "case_scratch() with one pre-existing 0o700 directory 'exists'; baseline = tree(scratch) captured before the refusals",
+    "cases": [
+      {"label": "ARGV-arity", "argv": "4 positional (len 6 missing output-dir)", "expectedStage": "C2B-ARGV", "effect": "none (pre-filesystem)"},
+      {"label": "ARGV-expiry", "argv": "expiry '01'", "expectedStage": "C2B-ARGV", "effect": "none (pre-filesystem)"},
+      {"label": "OUTDIR-exists", "argv": "output = scratch/'exists'", "expectedStage": "C2B-OUTDIR", "effect": "none (stat is not ENOENT)"},
+      {"label": "OUTDIR-badname", "argv": "output basename 'Bad Name'", "expectedStage": "C2B-OUTDIR", "effect": "none (basename off the regex)"},
+      {"label": "READ-absent", "argv": "argv[1] = scratch/'absent.json', output scratch/'n2'", "expectedStage": "C2B-READ", "effect": "none (READ is stage 3, before any mkdir)"},
+      {"label": "precedence-ARGV>OUTDIR>READ", "argv": "absent input, expiry '01', output scratch/'exists'", "expectedStage": "C2B-ARGV", "effect": "none"},
+      {"label": "precedence-OUTDIR>READ", "argv": "absent input, good expiry, output scratch/'exists'", "expectedStage": "C2B-OUTDIR", "effect": "none"}
+    ],
+    "expectedResult": {
+      "perCase": "assert_cli_refusal: exit 2, empty stdout, exactly one stderr line starting '<code>: '",
+      "scratchUnchanged": "tree(scratch) == baseline (only 'exists/'); no refusal created or wrote anything"
+    },
+    "oracles": "REFUSAL_STAGES, K6_EXPIRY_TEXT, assert_cli_refusal and tree() from the prefix; stage names and the ARGV>OUTDIR>READ order from CB403/CB404/CB405 and the section 3 stage table",
+    "precedenceDerivation": "ARGV is fully checked before any filesystem access (CB403); OUTDIR (CB404) precedes READ (CB405); each precedence argv is independently bad at two or three stages and must surface only the earliest"
+  },
+  "testR16": {
+    "obligation": "R16: a 0o555 parent gives C2B-WRITE with nothing created; a consumer wrapper edits a scratch input copy giving C2B-REREAD with the output removed; unprivileged uid required, uid 0 STOP",
+    "guard": "require_unprivileged() after self.r4(); euid 0 raises RuntimeError STOP, not RED and not a bypass",
+    "part1": {
+      "setup": "scratch/'ro' created 0o555; output = ro/'out'; inputs are the pinned HERE sources",
+      "expectedStage": "C2B-WRITE",
+      "mechanism": "OUTDIR opens the read-only parent fd and stats 'out' ENOENT; READ and plan succeed; the first os.mkdir(basename, dir_fd=ro) fails EACCES on the 0o555 parent, mapped to C2B-WRITE with no entry created",
+      "assertions": "assert_cli_refusal C2B-WRITE; tree(ro) == [] (nothing created)",
+      "restore": "os.chmod(ro, 0o700) in finally so the scratch subtree stays removable"
+    },
+    "part2": {
+      "setup": "copy_inputs(scratch) writes b9-applied.json, proof-export.json, setup-record.json copies; output = scratch/'out'",
+      "wrapper": "consumer_wrapper(after) delegates r2.prepare_c2_issue then after(result) rewrites the on-disk setup-record.json copy to RAW[SET] + b' ' via O_WRONLY|O_TRUNC|O_NOFOLLOW",
+      "expectedStage": "C2B-REREAD",
+      "mechanism": "stage 3 READ captures the original copy bytes; CONSUMER (stage 4) runs the wrapper, changing the on-disk copy; WRITE (stage 5) creates the full output; REREAD (stage 6) re-reads the copies, finds a byte difference and refuses C2B-REREAD, then cleanup removes exactly the entries this call created",
+      "assertions": "assert_cli_refusal C2B-REREAD; tree(scratch) == sorted(['ro/', 'b9-applied.json', 'proof-export.json', 'setup-record.json']): the output and contexts are gone, the three input copies and the emptied ro dir remain"
+    },
+    "oracles": "require_unprivileged, consumer_wrapper, copy_inputs, run_main, assert_cli_refusal, tree, RAW, SET from the prefix; the EACCES->C2B-WRITE and byte-difference->C2B-REREAD mappings and the cleanup rule from CB411 and the section 3 stage table",
+    "allowedWrappers": "only r2.prepare_c2_issue via consumer_wrapper; os, builtins, json and R4 are not patched"
+  },
+  "testR17": {
+    "obligation": "R17: counters show the consumer reaching all 7 host APIs and the builder's 4 host calls; parsed dicts unmutated; no file outside scratch touched",
+    "baseline": {
+      "action": "r2.prepare_c2_issue on deep copies fresh_export()/fresh_setup(), expiry K6_EXPIRY, policy_id = bytes.fromhex(POLICY), with counted() wrappers on all 7 host_codec APIs via contextlib.ExitStack",
+      "derives": "consumer_counts[name] per host API; the consumer alone",
+      "unmutated": "assertEqual((export, setup), (fresh_export(), fresh_setup())) after the call"
+    },
+    "run": {
+      "action": "run_main on the three pinned inputs into case_scratch/'out' with counted() wrappers on all 7 host_codec APIs; assert_cli_success",
+      "derives": "run_counts[name] = consumer-in-run + builder host calls (inputs identical, so the consumer component equals the baseline)"
+    },
+    "expectedResult": {
+      "consumerReachesSeven": "consumer_counts[name] >= 1 for every name in CONSUMER_HOST_APIS",
+      "builderFour": "{name : run_counts[name] > consumer_counts[name]} == set(BUILDER_HOST_APIS); the builder's own host calls are exactly its four APIs",
+      "consumerOnlyUntouchedByBuilder": "for parse_statement_header, statement_digest_hex, statement_public_inputs: run_counts == consumer_counts",
+      "noOutsideEffect": "assert_inputs_unchanged(); tree(out) == sorted(ROSTER + ['contexts/'])"
+    },
+    "oracles": "CONSUMER_HOST_APIS, BUILDER_HOST_APIS, counted(), fresh_export/fresh_setup, K6_EXPIRY, POLICY, run_main, assert_cli_success, assert_inputs_unchanged, tree from the prefix; the 7 consumer APIs from API dependency.consumerHostApis and the consumer BUILD/STATEMENT/DIGEST call sites; the builder's 4 from CB409/CB410 equality checks and API dependency.builderHostApis",
+    "callCountDerivation": "builder contribution is run_counts minus the identical consumer baseline, isolating the 4 shared APIs (build_env_data, encode_data, build_c2_mint_data, build_value_data) from the 3 consumer-only APIs; no blanket all-host or no-alias claim is made and no exact per-API total is asserted, since totals depend on R4 internals that must not seed expectations"
+  },
+  "proposedGreen": {
+    "precondition": "R00 passes with the root-adopted r2 and every pin; a reviewed build_k10_inputs_r4.py exists under isolated/; the envelope runs python3 -I -B once as an unprivileged uid; CB401-CB412 implemented as frozen",
+    "R14": "the four methods pass only if main produces the exact roster, applies 0o644/0o755 with the live umask, emits one stdout JSON line and empty stderr, removes the manifest tmp, and leaves inputs unchanged",
+    "R15": "passes only if every refusal yields exit 2 / one stderr line / no stdout and the earliest stage wins (ARGV>OUTDIR>READ) with nothing created",
+    "R16": "passes only when run unprivileged: EACCES on a 0o555 parent maps to C2B-WRITE with nothing created, and a mid-run input-copy edit maps to C2B-REREAD with the created output fully cleaned up",
+    "R17": "passes only if the consumer reaches all 7 host APIs, the builder adds exactly its 4, the deep-copied records are unmutated, and no file outside scratch is observed to change"
+  },
+  "effects": {
+    "filesystem": "each method uses exactly one case_scratch() directory; writes stay under it (and under its ro subdir / input copies); reads of the pinned HERE inputs are read only",
+    "transientGlobalState": "R14 reads the process umask with a set/restore pair (net unchanged); R16 chmods its own scratch subdir 0o555 then 0o700",
+    "network_subprocess_native_prover_vm_key": "none",
+    "touchedModules": "wraps r2.prepare_c2_issue (R16 consumer_wrapper) and host_codec host APIs (R17 counted); restores in finally; never patches os, builtins, json or R4"
+  },
+  "sourceOnlyGaps": [
+    "R14 cannot prove durability/fsync (none is claimed) and does not scan the whole filesystem; it checks the pinned inputs and the exact scratch output tree only.",
+    "R16 cannot observe internal cleanup order; it observes the post-refusal tree (no output) as the contract's incompleteness marker.",
+    "R17 cannot inspect the builder's internally parsed dicts for mutation; it checks the consumer's deep-copied records and the on-disk inputs, and asserts host-call presence by baseline difference rather than exact totals. Whole-filesystem non-touch beyond the pinned inputs and the scratch tree is a source-audit obligation that allowed instrumentation cannot fully observe.",
+    "Environmental exceptions not mapped by the contract (for example EMFILE during the counted runs) propagate per the API and are not manufactured by any forbidden patch."
+  ],
+  "prefixCompatibility": "no incompatibility found; the base-class helpers (r4, run_main, assert_cli_success, assert_cli_refusal, case_scratch, copy_inputs, assert_inputs_unchanged, consumer_wrapper, counted) and the module helpers (tree, require_unprivileged, fresh_export, fresh_setup) and literals (ROSTER, CASES, K6_EXPIRY/_TEXT, POLICY, CONSUMER_HOST_APIS, BUILDER_HOST_APIS, RAW, SET, HERE, B9, EXP) cover every R14-R17 need as composed. Any later finding would be stated here, not worked around.",
+  "gates": {"sourceReady": false, "executed": false, "adopted": false, "builderReliancePermitted": false, "nativeAuthority": 0}
+}
