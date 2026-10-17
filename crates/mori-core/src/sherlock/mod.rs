@@ -48,8 +48,7 @@ pub(crate) mod program_image;
 pub(crate) mod image_reference;
 
 // Host-only event grouping; every internal reference record stays observable.
-#[cfg(test)]
-mod reference_slice;
+pub mod reference_slice;
 
 // Unadopted host snapshot rows; normal materialization checks only.
 #[cfg(test)]
