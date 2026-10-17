@@ -1,0 +1,158 @@
+{
+  "source_oracle_decision": {
+    "verdict": "APPROVED_BOUNDED_SOURCE_WITH_MANDATORY_CONDITIONS",
+    "scope": "Exact R101 source-only candidate crates/mori-core/tests/sherlock_original_009_structural_sharing.rs, EXPECTED.json, R101/DERIVATION.md, and R101/FIELD-AND-SCOPE-ACCOUNTING.json for the single positive original UIREQ-009 repeated Leaf(4) fold specimen on the typed sherlock-k-a/1 host API against models/sherlock/k/main.k. Candidate remains UNCOMPILED and UNRUN.",
+    "mandatory_conditions": [
+      "Full 32-checkpoint and endpoint disposition: The test performs 35 complete 8-field Snapshot equality assertions (t.initial at prefix 0, 32 checkpoint() calls, prepublication t.records[60].before at prefix 60, and terminal t.final_state / t.records[60].after at prefix 61). Because four prefix boundaries (k in {36, 55, 59, 60}) are asserted on both records[k-1].after and records[k].before, these 35 assertions independently close 31 of the 62 boundary states (k in {0,4,5,6,7,8,19,23,25,26,27,32,34,35,36,37,38,42,44,45,46,51,53,54,55,56,57,58,59,60,61}).",
+      "Honest prefix-state gaps: The remaining 31 intermediate prefix boundary states (k in {1,2,3,9,10,11,12,13,14,15,16,17,18,20,21,22,24,28,29,30,31,33,39,40,41,43,47,48,49,50,52}) do not have independent complete expected control, environment, or frame-payload literals; at those indices only rule_start_line, charge, program Arc identity/equality, initial_fuel, stack_limit, remaining_fuel, frame depth, and outcome are independently constrained. Also t.initial is asserted at prefix 0 while t.records[0].before is constrained by per-event scalar/program/depth checks rather than an explicit assert_eq!(t.initial, t.records[0].before).",
+      "Supplemental checks non-promotion: Adjacent continuity (records.windows(2)) and pairwise shared-vs-distinct trace equality (shared_trace == distinct_trace) are supplemental internal consistency checks and MUST NOT be claimed as a complete 62-state independent prefix oracle.",
+      "Physical sharing vs value cloning boundary: Fixture construction genuinely distinguishes shared (1 Leaf(4) Arc cloned twice, 2 physical tree nodes) from distinct (2 separate Leaf(4) Arcs, 3 physical tree nodes) via Arc::ptr_eq(&left, &right). During Branch pattern matching (reference.rs line 397), a.as_ref().clone() and b.as_ref().clone() materialize owned Tree::Leaf(4) values in bindings 13 and 14 while binding 11 retains f.root with its physical child Arcs. This tests declared A-profile structural observation and traversal accounting, not absence of invisible host caches that preserve all declared observations.",
+      "Non-transfer and non-acceptance: Source sufficiency covers only this single fixed positive specimen on dedicated host Tree/UInt types. It does NOT establish general UIREQ-009 acceptance, negative/exhaustion/rejection cases, GenericNominal declaration/runtime support, Candidate B helper microstep schedules, K execution, formal proof, financial semantics, or native/circuit/ledger authority."
+    ]
+  },
+  "exact_runtime_eligibility": {
+    "verdict": "ELIGIBLE_EXACT_FIXED_HOST_TEST_CLOSURE_ONLY",
+    "scope": "Prospective Root-only external rustc --test compilation and single-selector execution of crates/mori-core/tests/sherlock_original_009_structural_sharing.rs (SHA256 570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1) linked against unchanged R83 normal production libmori_core.rlib (SHA256 909320dbd4e47f4c546ebfcb56e6cd007a4516b26ceee1e43bb94e3be4217561). Prior R87 eligibility does not transfer automatically; this classification is independently granted for this exact R101 closure only.",
+    "permitted_exact_selectors": [
+      "uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8"
+    ],
+    "required_limits": {
+      "fixed_fixture_construction": "Exactly one Code AST (code()) and two Fixture instances constructed via fixture(code.clone(), true) (shared child Arc<Tree::Leaf(4)>) and fixture(code, false) (distinct child Arc<Tree::Leaf(4)>), verified pre-run by Arc::ptr_eq.",
+      "machine_invocations": "Exactly two Machine invocations total: observe(&shared) and observe(&distinct), each calling Machine::new(f.program.clone(), 512, 32) once, Machine::snapshot() twice (initial and final_state), and Machine::run_steps(513) once (4 explicit snapshot() calls, 2 run_steps(513) calls, and 122 step() snapshot clones across 61 events per variant).",
+      "logical_bounds": {
+        "FUEL": 512,
+        "STACK": 32,
+        "MAX_EVENTS": 513,
+        "expected_charged_work_per_run": 60,
+        "expected_events_per_run": 61,
+        "expected_peak_frame_depth": 5,
+        "max_ast_and_value_tree_depth": 2
+      },
+      "execution_discipline": "Root-only selection; compile via external rustc --test against existing R83 libmori_core.rlib without rebuilding mori-core or enabling cfg(test) internals; verify --list outputs solely uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8; run with --exact --test-threads=1 under a Root-selected bounded host wall-time limit; failstop with no retry of an unchanged failing binary. Review transport timeouts (480s/GNU 600s) carry zero test runtime authority."
+    },
+    "H1_disposition": "OPEN: Machine in crates/mori-core/src/sherlock/reference.rs remains an unmetered host diagnostic evaluator with zero native authority and no general host wall-clock, heap allocation, or native call-stack admission bounds (clones Snapshot twice per step, clones Environment per pushed Frame, O(n) Cons, and recursive Drop/Clone/PartialEq over Arc<Expr> and Arc<Tree>). Safe execution of this R101 test relies strictly on its fixed finite literal AST, tree depth 2, FUEL=512, STACK=32, and MAX_EVENTS=513, and does NOT close H1 or authorize CLI/LSP/MCP, compiler-adapter, or untrusted inputs."
+  },
+  "findings": [
+    {
+      "severity": "INFO",
+      "claim": "Fixture construction creates a real physical representation difference between the shared and distinct variants (one shared Arc<Tree::Leaf(4)> vs two distinct Arcs) and verifies pointer identity before Machine creation while sharing the same recursive function body Arc.",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "sha256": "570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1",
+        "line": 55,
+        "exactquote": "assert_eq!(Arc::ptr_eq(&left, &right), shared, \"actual fixture sharing, not a label\");"
+      }
+    },
+    {
+      "severity": "INFO",
+      "claim": "All 20 symbols imported by the test from mori_core::sherlock match the public exports of crates/mori-core/src/sherlock/mod.rs and crates/mori-core/src/sherlock/reference_types.rs, and observe() uses only public Machine::new, Machine::snapshot, and Machine::run_steps APIs with fixed bounds 512/32/513.",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "sha256": "570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1",
+        "line": 95,
+        "exactquote": "let initial=machine.snapshot();let records=machine.run_steps(MAX_EVENTS);"
+      }
+    },
+    {
+      "severity": "INFO",
+      "claim": "Independent hand-step verification against models/sherlock/k/main.k confirms the exact 61-event rule sequence (8 top-call entry + 9 root Match with Leaf miss 214->217 then Branch hit 214->220->135 + 2 Binary Add push + 18 left Leaf call + 1 ReturnLeft 149 + 18 right Leaf call + 2 Add completion 153->223 + 2 outer Scope/Return 195->185 + 1 free publication 80), total work 60, remaining fuel 452, and peak depth 5.",
+      "anchor": {
+        "path": "models/sherlock/k/main.k",
+        "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+        "line": 305,
+        "exactquote": "rule uiMatching(uiPBranch(X, Y), uiBranch(L, R), Rho) => uiMatched(Rho[X <- L][Y <- R])"
+      }
+    },
+    {
+      "severity": "INFO",
+      "claim": "Both semantic Leaf(4) occurrences are independently visited, bound, matched, and evaluated at event ordinals 34 and 53 (with invocations at 23 and 42, bindings at 24 and 43, and returns at 36 and 55), discriminated by pending caller frames Left(Add, right_call, branch_env) vs Right(Add, UInt(4)).",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "sha256": "570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1",
+        "line": 137,
+        "exactquote": "assert_eq!(visits,vec![34,53],\"both semantic Leaf occurrences evaluate their selected body\");"
+      }
+    },
+    {
+      "severity": "INFO",
+      "claim": "The test and EXPECTED.json satisfy the original UIREQ-009 positive scenario requiring that a tree with two occurrences of Leaf(4), represented separately or by one shared node, folds to 8 and charges both semantic visits under the same traversal schedule.",
+      "anchor": {
+        "path": "original-UIREQ-009.md",
+        "sha256": "fc90db569fea721a4206d673e6565023066d8bc207dc88c5c785ce607c5db1e6",
+        "line": 6,
+        "exactquote": "- **THEN** Its fold returns 8 and charges both semantic visits under the same traversal schedule."
+      }
+    },
+    {
+      "severity": "LOW",
+      "claim": "Scope limitation: Pattern::Branch matching in reference.rs clones the child Tree payloads (a.as_ref().clone() and b.as_ref().clone()) into Value::Tree(Tree::Leaf(4)) bindings 13 and 14, while f.root in binding 11 retains the shared or distinct Arc<Tree> children; furthermore, black-box trace observations cannot rule out an invisible host memoization that faithfully replays every declared step and charge.",
+      "anchor": {
+        "path": "crates/mori-core/src/sherlock/reference.rs",
+        "sha256": "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81",
+        "line": 397,
+        "exactquote": "(Pattern::Branch(left, right), Value::Tree(Tree::Branch(a, b))) if left != right => {"
+      }
+    },
+    {
+      "severity": "LOW",
+      "claim": "Checkpoint coverage vs prefix gap: The 32 selected complete checkpoints plus initial, prepublication, and final endpoints assert 35 full Snapshots across 31 unique prefix indices (because indices 36, 55, 59, and 60 are checked on both adjacent after/before sides), leaving 31 intermediate prefix boundary states without independent full control/environment/frame literals.",
+      "anchor": {
+        "path": "R101/FIELD-AND-SCOPE-ACCOUNTING.json",
+        "sha256": "1b4c830c430a68318574b2794342d184ad3cfc814b7415ee750a3835c5fa54ac",
+        "line": 28,
+        "exactquote": "\"not_independently_closed\": \"Unlisted prefix control values, environment maps and full frame payloads; no complete prefix-state oracle claim\","
+      }
+    },
+    {
+      "severity": "LOW",
+      "claim": "Derivation prose accurately records that pointer-cache elision of declared visits/charges would fail the oracle, while acknowledging that invisible host optimizations preserving all declared observations and unmetered host allocation/time costs remain outside A-profile scope.",
+      "anchor": {
+        "path": "R101/DERIVATION.md",
+        "sha256": "875919f6d508f1b7ba89f06f08f7d9f7a3bfe66e97d7bfe543febc9c53e89bcf",
+        "line": 29,
+        "exactquote": "This does not prove the implementation contains no invisible cache that preserves every declared observation."
+      }
+    },
+    {
+      "severity": "MEDIUM",
+      "claim": "Security/resource boundary (H1): Machine::step and Machine::run_steps remain unmetered on host wall-clock time, heap allocations, and recursive Drop/Clone/PartialEq stack depth. Runtime eligibility is strictly confined to the two fixed Machine invocations in uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8.",
+      "anchor": {
+        "path": "crates/mori-core/src/sherlock/reference.rs",
+        "sha256": "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81",
+        "line": 8,
+        "exactquote": "/// heap, or native stack admission bounds. Do not expose it to untrusted inputs."
+      }
+    },
+    {
+      "severity": "INFO",
+      "claim": "Test entry point constructs exactly the two fixed fixtures (shared and distinct) and runs two bounded observations before comparing each to the independent oracle and supplementally comparing their traces.",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "sha256": "570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1",
+        "line": 172,
+        "exactquote": "let code=code();let shared=fixture(code.clone(),true);let distinct=fixture(code,false);"
+      }
+    }
+  ],
+  "abstentions": [
+    "Abstain from any claim of actual Rust compilation or runtime pass/fail observation because R101 is frozen prior to execution and no compiler or test runner was invoked in this review.",
+    "Abstain from full 62-prefix-state complete Snapshot closure because 31 intermediate boundary states omit independent expected control/environment/frame payloads.",
+    "Abstain from general UIREQ-009, GenericNominal, Candidate B helper-schedule, K-engine execution, formal proof, financial, or native/circuit/ledger acceptance from this fixed host source specimen.",
+    "Abstain from closing H1 or granting host runtime admission beyond the single fixed selector uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8."
+  ],
+  "read_coverage": {
+    "inline_sources_inspected_in_full": [
+      "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs (LINES 1..182, SHA256 570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1)",
+      "crates/mori-core/src/sherlock/reference.rs (LINES 1..404, SHA256 cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81)",
+      "crates/mori-core/src/sherlock/reference_types.rs (LINES 1..203, SHA256 4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f)",
+      "crates/mori-core/src/sherlock/mod.rs (LINES 1..81, SHA256 467eaf6382194217dbcfe6ab99be14ccf21aa81ebbb7ab4e91820ddceff94c0f)",
+      "models/sherlock/k/main.k (LINES 1..320, SHA256 b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41)",
+      "original-UIREQ-009.md (LINES 1..7, SHA256 fc90db569fea721a4206d673e6565023066d8bc207dc88c5c785ce607c5db1e6)",
+      "R101/DERIVATION.md (LINES 1..39, SHA256 875919f6d508f1b7ba89f06f08f7d9f7a3bfe66e97d7bfe543febc9c53e89bcf)",
+      "R101/FIELD-AND-SCOPE-ACCOUNTING.json (LINES 1..43, SHA256 1b4c830c430a68318574b2794342d184ad3cfc814b7415ee750a3835c5fa54ac)",
+      "EXPECTED.json (compact inline lossless JSON, original SHA256 c3e0aab4f43b304193e87b2f1ed575efdce3107b6d6d8680e61b43ab496799d4)",
+      "Retained H1 limitation (origin SHA256 d1f574cf0ad3b3f5616dc48ce804b1526cf319f2de850ca57679b13542f1a969) and factual R83 plan (rlib SHA256 909320dbd4e47f4c546ebfcb56e6cd007a4516b26ceee1e43bb94e3be4217561)"
+    ],
+    "tools_or_external_files_used": false
+  }
+}
