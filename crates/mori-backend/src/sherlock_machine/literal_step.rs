@@ -115,11 +115,16 @@ pub fn emit_literal_step(schema: &LiteralSchema, input: &LiteralStepInputs, scop
     check_image(&input.post, &schema.state_root, &schema.state_tables, "post")?;
     if scope.is_empty() { return Err(ConstructionError::EmptyScope.into()); }
     let local = format!("%{scope}.local.temp."); let fetch_namespace = format!("%{scope}.expression_fetch.temp.");
+    let ui_valid_scope = format!("{scope}.ui_valid");
+    let [k_cap, kf_cap] = [schema.capacities.program[13], schema.capacities.program[14]];
     for operand in [&input.enable, &input.envelope.rule_tag, &input.envelope.charge].into_iter()
         .chain(operands(&input.program)).chain(operands(&input.pre)).chain(operands(&input.post)) {
         if let Operand::Variable(name) = operand {
             if !name.0.starts_with('%') { return Err(ConstructionError::UnprefixedVariable.into()); }
-            if name.0.starts_with(&local) || name.0.starts_with(&fetch_namespace) {
+            if name.0.starts_with(&local)
+                || name.0.starts_with(&fetch_namespace)
+                || is_reserved_ui_valid_variable(&name.0, &ui_valid_scope, k_cap, kf_cap)
+            {
                 return Err(ConstructionError::TemporaryNameCollision.into());
             }
         }
@@ -160,8 +165,19 @@ pub fn emit_literal_step(schema: &LiteralSchema, input: &LiteralStepInputs, scop
     }
     b.gated_eq(enable, field(&expression.lanes, &selected, "occurrenceId"), expr_id);
     let constant_index = field(&expression.lanes, &selected, "valueRef.index");
-    let in_constants = b.less(constant_index, input.program.root[14].clone());
+    let in_constants = b.less(constant_index.clone(), input.program.root[14].clone());
     b.gated_eq(enable, in_constants, immediate(1));
+    let ui_valid = emit_literal_ui_valid_with_capacities(
+        &schema.capacities,
+        schema,
+        &LiteralUiValidInputs {
+            enable: enable.clone(),
+            program: input.program.clone(),
+            constant_index,
+        },
+        &ui_valid_scope,
+    )?;
+    b.code.extend(ui_valid.instructions);
 
     // Complete Root preservation, except precisely the two A102 write fields.
     for (lane, (pre, post)) in schema.state_root.iter().zip(input.pre.root.iter().zip(&input.post.root)) {
