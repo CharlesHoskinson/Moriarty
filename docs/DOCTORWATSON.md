@@ -52,7 +52,9 @@ The current full-Sherlock goal is active. The user directs the
 close every retained applicable EARS requirement. Select each next missing
 behavior or acceptance check from the current evidence report, preserve actual
 blockers on their consuming rows, and continue independent actionable work.
-Source, observed results and acceptance retain separate status. The updated
+Source, observed results and acceptance retain separate status. The [latest selected report](results/sherlock-structural-sharing-20261017/current-evidence/RESULT.json)
+verifies eight current adopted original host clauses;27 originals and all25
+refinements remain open. The updated
 default lane passed [252 local tests](results/sherlock-ears-closure-20261017/README.md).
 
 ## One delivery cycle

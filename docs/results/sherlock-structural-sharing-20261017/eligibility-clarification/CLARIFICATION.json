@@ -1,0 +1,71 @@
+{
+  "corrections": [
+    {
+      "old_field": "exact_runtime_eligibility.required_limits.logical_bounds.max_ast_and_value_tree_depth",
+      "withdrawn_or_corrected": "WITHDRAWN_AND_REPLACED_BY_LITERAL_SHAPE",
+      "replacement": "Withdrawn: the combined numeric bound max_ast_and_value_tree_depth=2 is false because it conflates the 2-level Tree value with the deeper Expr AST in code(). Using explicit depth conventions (constructor_depth = 1-based count of typed AST/Tree enum constructors along a root-to-leaf path; edge_depth = Arc<Expr>/Arc<Tree> indirection edges along that path), the fixed literal shapes in SHA256 570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1 are: (1) fixture data tree f.root = Tree::Branch(Arc<Tree::Leaf(4)>, Arc<Tree::Leaf(4)>) has Tree constructor_depth=2 (edge_depth=1); (2) recursive function body code().body = Expr::Match(Var(\"11\"), [Arm(Leaf(\"12\"), Var(\"12\")), Arm(Branch(\"13\",\"14\"), Binary(Add, Call(\"10\",[Var(\"13\")]), Call(\"10\",[Var(\"14\")])))]) has Expr constructor_depth=4 (edge_depth=3, plus Vec<Arm>/Arm container between Match and Binary) along Match -> Binary(Add) -> Call -> Var; (3) program.entry = Expr::Call(\"10\", [Expr::Literal(root)]) has Expr constructor_depth=2 (edge_depth=1) wrapping the 2-level Tree literal. No new numeric AST-depth admission limit is invented; eligibility is bound to these exact fixed literal constructors.",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "line": 39,
+        "exactquote": "let branch_body = Arc::new(Expr::Binary(BinaryOp::Add, left_call.clone(), right_call.clone()));"
+      }
+    },
+    {
+      "old_field": "exact_runtime_eligibility.H1_disposition (tree depth 2 clause)",
+      "withdrawn_or_corrected": "CORRECTED",
+      "replacement": "Corrected: replace the conflated phrase 'fixed finite literal AST, tree depth 2' with the separated literal structural bounds: fixed finite literal AST in code() (Match -> Branch arm Binary(Add) -> Call -> Var, 4 Expr constructor levels) and fixture() entry Call -> Literal(root), fixed data tree f.root = Branch(Leaf(4), Leaf(4)) (2 Tree constructor levels), FUEL=512, STACK=32, and MAX_EVENTS=513.",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "line": 56,
+        "exactquote": "let root = Value::Tree(Tree::Branch(left, right));"
+      }
+    },
+    {
+      "old_field": "exact_runtime_eligibility.required_limits.machine_invocations",
+      "withdrawn_or_corrected": "WITHDRAWN_AND_CORRECTED",
+      "replacement": "Withdrawn and corrected: '122 step() snapshot clones across 61 events per variant' mixed two-variant totals (4 explicit snapshot() calls, 2 run_steps(513) calls) with single-variant internal step() clones and treated 61 events as established. By static source accounting (not measured heap allocations): each Machine::step() clones Snapshot twice (before = self.snapshot() at line 40 and after: self.snapshot() at line 71), and each observe() call invokes machine.snapshot() twice explicitly (initial and final_state) around machine.run_steps(513). On the expected 60-work / 61-event K-oracle path (unestablished until executed), each variant executes 1 Machine::new, 1 run_steps(513), 61 step() transitions, 122 internal step() snapshot clones, and 2 explicit observe() snapshot clones = 124 Machine::snapshot() calls per variant; across both variants (shared and distinct) the expected path totals 2 Machine::new calls, 2 run_steps(513) calls, 122 step() calls, 244 internal step() snapshot clones, and 4 explicit observe() snapshot clones = 248 Machine::snapshot() calls. Under the enforced logical cap MAX_EVENTS=513 (with FUEL=512), each variant is bounded by at most 513 step() calls, 1,026 internal step() snapshot clones + 2 explicit = 1,028 Machine::snapshot() calls per variant (at most 1,026 step() calls, 2,052 internal + 4 explicit = 2,056 Machine::snapshot() calls across both variants).",
+      "anchor": {
+        "path": "crates/mori-core/src/sherlock/reference.rs",
+        "line": 40,
+        "exactquote": "let before = self.snapshot();"
+      }
+    },
+    {
+      "old_field": "exact_runtime_eligibility.required_limits.logical_bounds.expected_events_per_run",
+      "withdrawn_or_corrected": "CLARIFIED_EXPECTED_VS_CAP",
+      "replacement": "Clarified: 60 charged steps and 61 events per observe() run are static K-oracle expected-path targets asserted by assert_oracle(), not runtime-established observations (candidate remains uncompiled and unrun). Runtime execution is bounded by the logical caps FUEL=512, STACK=32, and MAX_EVENTS=513.",
+      "anchor": {
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "line": 95,
+        "exactquote": "let initial=machine.snapshot();let records=machine.run_steps(MAX_EVENTS);"
+      }
+    }
+  ],
+  "exact_runtime_eligibility": {
+    "verdict": "ELIGIBLE_EXACT_FIXED_HOST_TEST_CLOSURE_ONLY",
+    "source_sha256": "570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1",
+    "rlib_sha256": "909320dbd4e47f4c546ebfcb56e6cd007a4516b26ceee1e43bb94e3be4217561",
+    "exact_selector": "uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8",
+    "actual_fixed_scope": "Prospective Root-only external rustc --test compile and single-selector execution of unchanged crates/mori-core/tests/sherlock_original_009_structural_sharing.rs against unchanged R83 normal production libmori_core.rlib (31369804 bytes), exercising only the fixed literal code() AST and two fixed Leaf(4) Branch fixtures (shared=true and shared=false).",
+    "required_limits": {
+      "fixed_literal_ast_and_value_shape": "No generic numeric AST/tree depth limit is invented. Fixed literal structures only: code() constructs 1 recursive Function(\"10\") whose body has 4 Expr constructor levels (Match -> Branch Arm Binary(Add) -> Call(\"10\") -> Var(\"13\"|\"14\"), 3 ExprRef edges) and Leaf Arm Var(\"12\"); fixture() constructs f.root = Value::Tree(Tree::Branch(Arc<Tree::Leaf(4)>, Arc<Tree::Leaf(4)>)) (2 Tree constructor levels, 1 Arc<Tree> edge; 1 shared child Arc vs 2 distinct child Arcs verified by Arc::ptr_eq) and program.entry = Call(\"10\", [Literal(root)]) (2 Expr constructor levels, 1 ExprRef edge).",
+      "machine_invocations_and_snapshot_accounting": "Source/expected-path accounting only (not measured allocation counts): exactly 2 Machine instances total (observe(&shared) and observe(&distinct)). Per variant: 1 Machine::new(f.program.clone(), 512, 32), 2 explicit machine.snapshot() calls (initial, final_state), and 1 machine.run_steps(513) call. Expected path (WORK=60, 61 events/variant): 61 step() calls and 122 internal step() snapshot clones + 2 explicit = 124 Machine::snapshot() calls per variant (122 step() calls, 244 internal + 4 explicit = 248 Machine::snapshot() calls across both variants). Logical cap (MAX_EVENTS=513, FUEL=512): at most 513 step() calls and 1,026 internal step() snapshot clones + 2 explicit = 1,028 Machine::snapshot() calls per variant (at most 1,026 step() calls, 2,052 internal + 4 explicit = 2,056 Machine::snapshot() calls across both variants).",
+      "logical_bounds": {
+        "FUEL": 512,
+        "STACK": 32,
+        "MAX_EVENTS": 513,
+        "expected_charged_work_per_variant": 60,
+        "expected_events_per_variant": 61,
+        "expected_peak_frame_depth": 5
+      },
+      "execution_discipline": "Root sole execution selection; external rustc --test linked against existing R83 normal libmori_core.rlib with no Cargo, no normal core rebuild, no cfg(test) core internals, and no SDK/dev-SDK; verify --list outputs solely uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8; run that exact selector with --exact --test-threads=1 under a Root-selected bounded host wall-time limit; failstop with no retry of an unchanged failing binary."
+    },
+    "H1_disposition": "OPEN (native authority = 0): Machine in crates/mori-core/src/sherlock/reference.rs remains an unmetered host diagnostic reference with no general host wall-time, heap, or native call-stack admission bounds (clones Snapshot twice per step, clones Environment per pushed Frame, O(n) Cons, and recursive Drop/Clone/PartialEq over Arc<Expr> and Arc<Tree>). Prospective execution safety relies strictly on the fixed acyclic literal code() AST (4 Expr constructor levels), fixed 2-level Branch(Leaf(4), Leaf(4)) value tree, FUEL=512, STACK=32, and MAX_EVENTS=513 in this single test, and does NOT close H1 or authorize CLI/LSP/MCP, compiler-adapter, or untrusted inputs."
+  },
+  "source_oracle_disposition_unchanged": "UNCHANGED: R106 source_oracle_decision (APPROVED_BOUNDED_SOURCE_WITH_MANDATORY_CONDITIONS) and all five mandatory conditions remain intact without functional rereview (35 full Snapshot assertions closing 31 of 62 prefix states and leaving 31 intermediate prefix states without independent full control/environment/frame literals; supplemental-only status of windows(2) continuity and shared_trace==distinct_trace; Pattern::Branch child Tree cloning via a.as_ref().clone()/b.as_ref().clone() vs retained f.root Arcs; and strict non-transfer/non-acceptance beyond this fixed positive host specimen).",
+  "abstentions": [
+    "Abstain from any claim of actual compilation or runtime execution; candidate remains uncompiled and unrun, and the 61-event / 124-per-variant (248-total) snapshot figures are static source/expected-path calculations rather than observed runtime measurements.",
+    "Abstain from claiming direct inspection in this clarification turn of any file not provided inline here (only crates/mori-core/tests/sherlock_original_009_structural_sharing.rs, crates/mori-core/src/sherlock/reference.rs, and crates/mori-core/src/sherlock/reference_types.rs were inspected inline; no tools, shell, or filesystem access were used).",
+    "Abstain from inventing a replacement generic numeric AST/tree depth admission bound, increasing any resource cap, modifying candidate source, closing H1, or granting Cargo, SDK, K/Quint, formal proof, or native/circuit/ledger authority."
+  ]
+}

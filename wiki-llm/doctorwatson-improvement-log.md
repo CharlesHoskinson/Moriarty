@@ -975,3 +975,19 @@ tool metadata confirms the62 paths and summaries; it is not an independent byte
 attestation of the model's internal context. Additional required votes and native
 prerequisites remain open. Do not repeat unchanged oversized submissions or
 convert one conditional review into execution authority.
+
+### DW-53 — Adopt the clause without inflating the oracle
+
+The original shared/distinct Leaf4 pair passed once, and a fresh functional peer
+accepted original009. Root adopts it as the eighth typed A host clause. Both
+visits are charged, but only31 of62 logical boundaries have complete independent
+state literals. Preserve those gaps and the raw reviewer qualifications instead
+of turning pairwise equality or source review into a universal theorem. Do not
+repeat this unchanged passing case; select the next missing behavior. The
+[adoption and exact result](../docs/results/sherlock-structural-sharing-20261017/ROOT-ADOPTION.json)
+retain the historical consumed library separately from current source pins.
+
+The selected DoctorWatson report is an integrity check over declared evidence.
+It must verify all eight current adopted clauses and leave27 originals plus25
+refinements open. Reporting gaps, compiler integration and native prerequisites
+remain separate actionable work; an adopted host clause does not close them.

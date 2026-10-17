@@ -1,0 +1,304 @@
+{
+  "utc": "2026-10-17T22:55:23.375674+00:00",
+  "task": "One narrow factual correction of contradictory R106 required eligibility depth and clone count fields, same frozen source/runtime scope",
+  "coordinator_role": "Transport/byte/hash/literal membership only; no security interpretation/vote",
+  "actual_init": {
+    "event": "init",
+    "conversation_id": "fba36a82-831c-4b53-aa8d-c2567cec3406",
+    "init": {
+      "model": "gemini-4-argon-high",
+      "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01",
+      "tools": [
+        "ask_custom_permission",
+        "ask_permission",
+        "ask_question",
+        "browser_click_element",
+        "browser_drag_pixel_to_pixel",
+        "browser_get_dom",
+        "browser_get_network_request",
+        "browser_input",
+        "browser_list_network_requests",
+        "browser_mouse_down",
+        "browser_mouse_up",
+        "browser_move_mouse",
+        "browser_press_key",
+        "browser_refresh_page",
+        "browser_resize_window",
+        "browser_scroll",
+        "browser_scroll_dom",
+        "browser_select_option",
+        "browser_subagent",
+        "call_mcp_tool",
+        "capture_browser_console_logs",
+        "capture_browser_screenshot",
+        "click_browser_pixel",
+        "command_status",
+        "define_subagent",
+        "delete_knowledge",
+        "execute_browser_javascript",
+        "find_by_name",
+        "finish",
+        "generate_image",
+        "grep_search",
+        "invoke_subagent",
+        "list_browser_pages",
+        "list_dir",
+        "list_permissions",
+        "list_plugin_accounts",
+        "list_resources",
+        "manage_inbox",
+        "manage_subagents",
+        "manage_task",
+        "multi_replace_file_content",
+        "notebook_edit",
+        "notebook_execution",
+        "open_browser_url",
+        "read_browser_page",
+        "read_resource",
+        "read_url_content",
+        "replace_file_content",
+        "run_command",
+        "run_workflow",
+        "schedule",
+        "search_marketplace",
+        "search_web",
+        "sed_file",
+        "send_command_input",
+        "send_message",
+        "view_file",
+        "wait",
+        "wait_5_seconds",
+        "write_to_file"
+      ],
+      "permission_mode": "always-proceed"
+    }
+  },
+  "actual_CLI": {
+    "utc": "2026-10-17T22:54:49.054863+00:00",
+    "timeout_wrapper_CLI_exit": 0,
+    "elapsed_seconds": 138.52983371398295,
+    "timeout_wrapper_pid": 1166890,
+    "actual_AGY_pid": 1166892,
+    "requested_model": "gemini-4-argon-high",
+    "requested_effort": "HIGH explicit-high modelslug",
+    "OS_timeout_seconds": 600,
+    "CLI_print_timeout": "480s",
+    "manual_dispatches": 1,
+    "manual_retries": 0,
+    "retry_shutdown": null,
+    "actual_process_log": "/home/charl/.gemini/antigravity-cli/log/cli-20261017_165231.log"
+  },
+  "actual_provider": {
+    "conversation_id": "fba36a82-831c-4b53-aa8d-c2567cec3406",
+    "status": "SUCCESS",
+    "duration_seconds": 134.929709963,
+    "num_turns": 1,
+    "usage": {
+      "input_tokens": 32719,
+      "output_tokens": 12980,
+      "thinking_tokens": 10190,
+      "cache_read_tokens": 0,
+      "total_tokens": 45699
+    }
+  },
+  "actual_step_types": {
+    "user_input": 1,
+    "agent_response": 607
+  },
+  "no_tool_steps": true,
+  "one_dispatch_no_manual_retry": true,
+  "raw_response": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/CLARIFICATION.response.txt",
+    "bytes": 9685,
+    "sha256": "4aa45c8f13cc515231d4cd2104e7560ba0365d10cb1e6559cee9bbdd2923ae52",
+    "strict_JSON_parse": true,
+    "unchanged": true,
+    "requested_max_bytes": 5000,
+    "actual_exceeds_requested_max": true
+  },
+  "owner_clarification": {
+    "corrections": [
+      {
+        "old_field": "exact_runtime_eligibility.required_limits.logical_bounds.max_ast_and_value_tree_depth",
+        "withdrawn_or_corrected": "WITHDRAWN_AND_REPLACED_BY_LITERAL_SHAPE",
+        "replacement": "Withdrawn: the combined numeric bound max_ast_and_value_tree_depth=2 is false because it conflates the 2-level Tree value with the deeper Expr AST in code(). Using explicit depth conventions (constructor_depth = 1-based count of typed AST/Tree enum constructors along a root-to-leaf path; edge_depth = Arc<Expr>/Arc<Tree> indirection edges along that path), the fixed literal shapes in SHA256 570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1 are: (1) fixture data tree f.root = Tree::Branch(Arc<Tree::Leaf(4)>, Arc<Tree::Leaf(4)>) has Tree constructor_depth=2 (edge_depth=1); (2) recursive function body code().body = Expr::Match(Var(\"11\"), [Arm(Leaf(\"12\"), Var(\"12\")), Arm(Branch(\"13\",\"14\"), Binary(Add, Call(\"10\",[Var(\"13\")]), Call(\"10\",[Var(\"14\")])))]) has Expr constructor_depth=4 (edge_depth=3, plus Vec<Arm>/Arm container between Match and Binary) along Match -> Binary(Add) -> Call -> Var; (3) program.entry = Expr::Call(\"10\", [Expr::Literal(root)]) has Expr constructor_depth=2 (edge_depth=1) wrapping the 2-level Tree literal. No new numeric AST-depth admission limit is invented; eligibility is bound to these exact fixed literal constructors.",
+        "anchor": {
+          "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+          "line": 39,
+          "exactquote": "let branch_body = Arc::new(Expr::Binary(BinaryOp::Add, left_call.clone(), right_call.clone()));"
+        }
+      },
+      {
+        "old_field": "exact_runtime_eligibility.H1_disposition (tree depth 2 clause)",
+        "withdrawn_or_corrected": "CORRECTED",
+        "replacement": "Corrected: replace the conflated phrase 'fixed finite literal AST, tree depth 2' with the separated literal structural bounds: fixed finite literal AST in code() (Match -> Branch arm Binary(Add) -> Call -> Var, 4 Expr constructor levels) and fixture() entry Call -> Literal(root), fixed data tree f.root = Branch(Leaf(4), Leaf(4)) (2 Tree constructor levels), FUEL=512, STACK=32, and MAX_EVENTS=513.",
+        "anchor": {
+          "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+          "line": 56,
+          "exactquote": "let root = Value::Tree(Tree::Branch(left, right));"
+        }
+      },
+      {
+        "old_field": "exact_runtime_eligibility.required_limits.machine_invocations",
+        "withdrawn_or_corrected": "WITHDRAWN_AND_CORRECTED",
+        "replacement": "Withdrawn and corrected: '122 step() snapshot clones across 61 events per variant' mixed two-variant totals (4 explicit snapshot() calls, 2 run_steps(513) calls) with single-variant internal step() clones and treated 61 events as established. By static source accounting (not measured heap allocations): each Machine::step() clones Snapshot twice (before = self.snapshot() at line 40 and after: self.snapshot() at line 71), and each observe() call invokes machine.snapshot() twice explicitly (initial and final_state) around machine.run_steps(513). On the expected 60-work / 61-event K-oracle path (unestablished until executed), each variant executes 1 Machine::new, 1 run_steps(513), 61 step() transitions, 122 internal step() snapshot clones, and 2 explicit observe() snapshot clones = 124 Machine::snapshot() calls per variant; across both variants (shared and distinct) the expected path totals 2 Machine::new calls, 2 run_steps(513) calls, 122 step() calls, 244 internal step() snapshot clones, and 4 explicit observe() snapshot clones = 248 Machine::snapshot() calls. Under the enforced logical cap MAX_EVENTS=513 (with FUEL=512), each variant is bounded by at most 513 step() calls, 1,026 internal step() snapshot clones + 2 explicit = 1,028 Machine::snapshot() calls per variant (at most 1,026 step() calls, 2,052 internal + 4 explicit = 2,056 Machine::snapshot() calls across both variants).",
+        "anchor": {
+          "path": "crates/mori-core/src/sherlock/reference.rs",
+          "line": 40,
+          "exactquote": "let before = self.snapshot();"
+        }
+      },
+      {
+        "old_field": "exact_runtime_eligibility.required_limits.logical_bounds.expected_events_per_run",
+        "withdrawn_or_corrected": "CLARIFIED_EXPECTED_VS_CAP",
+        "replacement": "Clarified: 60 charged steps and 61 events per observe() run are static K-oracle expected-path targets asserted by assert_oracle(), not runtime-established observations (candidate remains uncompiled and unrun). Runtime execution is bounded by the logical caps FUEL=512, STACK=32, and MAX_EVENTS=513.",
+        "anchor": {
+          "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+          "line": 95,
+          "exactquote": "let initial=machine.snapshot();let records=machine.run_steps(MAX_EVENTS);"
+        }
+      }
+    ],
+    "exact_runtime_eligibility": {
+      "verdict": "ELIGIBLE_EXACT_FIXED_HOST_TEST_CLOSURE_ONLY",
+      "source_sha256": "570245dbb97dd268afdbfe76b665205da67aec528b0ab78ea0e34d48592e2cb1",
+      "rlib_sha256": "909320dbd4e47f4c546ebfcb56e6cd007a4516b26ceee1e43bb94e3be4217561",
+      "exact_selector": "uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8",
+      "actual_fixed_scope": "Prospective Root-only external rustc --test compile and single-selector execution of unchanged crates/mori-core/tests/sherlock_original_009_structural_sharing.rs against unchanged R83 normal production libmori_core.rlib (31369804 bytes), exercising only the fixed literal code() AST and two fixed Leaf(4) Branch fixtures (shared=true and shared=false).",
+      "required_limits": {
+        "fixed_literal_ast_and_value_shape": "No generic numeric AST/tree depth limit is invented. Fixed literal structures only: code() constructs 1 recursive Function(\"10\") whose body has 4 Expr constructor levels (Match -> Branch Arm Binary(Add) -> Call(\"10\") -> Var(\"13\"|\"14\"), 3 ExprRef edges) and Leaf Arm Var(\"12\"); fixture() constructs f.root = Value::Tree(Tree::Branch(Arc<Tree::Leaf(4)>, Arc<Tree::Leaf(4)>)) (2 Tree constructor levels, 1 Arc<Tree> edge; 1 shared child Arc vs 2 distinct child Arcs verified by Arc::ptr_eq) and program.entry = Call(\"10\", [Literal(root)]) (2 Expr constructor levels, 1 ExprRef edge).",
+        "machine_invocations_and_snapshot_accounting": "Source/expected-path accounting only (not measured allocation counts): exactly 2 Machine instances total (observe(&shared) and observe(&distinct)). Per variant: 1 Machine::new(f.program.clone(), 512, 32), 2 explicit machine.snapshot() calls (initial, final_state), and 1 machine.run_steps(513) call. Expected path (WORK=60, 61 events/variant): 61 step() calls and 122 internal step() snapshot clones + 2 explicit = 124 Machine::snapshot() calls per variant (122 step() calls, 244 internal + 4 explicit = 248 Machine::snapshot() calls across both variants). Logical cap (MAX_EVENTS=513, FUEL=512): at most 513 step() calls and 1,026 internal step() snapshot clones + 2 explicit = 1,028 Machine::snapshot() calls per variant (at most 1,026 step() calls, 2,052 internal + 4 explicit = 2,056 Machine::snapshot() calls across both variants).",
+        "logical_bounds": {
+          "FUEL": 512,
+          "STACK": 32,
+          "MAX_EVENTS": 513,
+          "expected_charged_work_per_variant": 60,
+          "expected_events_per_variant": 61,
+          "expected_peak_frame_depth": 5
+        },
+        "execution_discipline": "Root sole execution selection; external rustc --test linked against existing R83 normal libmori_core.rlib with no Cargo, no normal core rebuild, no cfg(test) core internals, and no SDK/dev-SDK; verify --list outputs solely uireq009_shared_leaf4_and_distinct_leaf4_occurrences_both_fold_to8; run that exact selector with --exact --test-threads=1 under a Root-selected bounded host wall-time limit; failstop with no retry of an unchanged failing binary."
+      },
+      "H1_disposition": "OPEN (native authority = 0): Machine in crates/mori-core/src/sherlock/reference.rs remains an unmetered host diagnostic reference with no general host wall-time, heap, or native call-stack admission bounds (clones Snapshot twice per step, clones Environment per pushed Frame, O(n) Cons, and recursive Drop/Clone/PartialEq over Arc<Expr> and Arc<Tree>). Prospective execution safety relies strictly on the fixed acyclic literal code() AST (4 Expr constructor levels), fixed 2-level Branch(Leaf(4), Leaf(4)) value tree, FUEL=512, STACK=32, and MAX_EVENTS=513 in this single test, and does NOT close H1 or authorize CLI/LSP/MCP, compiler-adapter, or untrusted inputs."
+    },
+    "source_oracle_disposition_unchanged": "UNCHANGED: R106 source_oracle_decision (APPROVED_BOUNDED_SOURCE_WITH_MANDATORY_CONDITIONS) and all five mandatory conditions remain intact without functional rereview (35 full Snapshot assertions closing 31 of 62 prefix states and leaving 31 intermediate prefix states without independent full control/environment/frame literals; supplemental-only status of windows(2) continuity and shared_trace==distinct_trace; Pattern::Branch child Tree cloning via a.as_ref().clone()/b.as_ref().clone() vs retained f.root Arcs; and strict non-transfer/non-acceptance beyond this fixed positive host specimen).",
+    "abstentions": [
+      "Abstain from any claim of actual compilation or runtime execution; candidate remains uncompiled and unrun, and the 61-event / 124-per-variant (248-total) snapshot figures are static source/expected-path calculations rather than observed runtime measurements.",
+      "Abstain from claiming direct inspection in this clarification turn of any file not provided inline here (only crates/mori-core/tests/sherlock_original_009_structural_sharing.rs, crates/mori-core/src/sherlock/reference.rs, and crates/mori-core/src/sherlock/reference_types.rs were inspected inline; no tools, shell, or filesystem access were used).",
+      "Abstain from inventing a replacement generic numeric AST/tree depth admission bound, increasing any resource cap, modifying candidate source, closing H1, or granting Cargo, SDK, K/Quint, formal proof, or native/circuit/ledger authority."
+    ]
+  },
+  "mechanical_quote_identity_check": {
+    "coordinator_security_vote": false,
+    "all_4_quotes_present": true,
+    "checks": [
+      {
+        "correction": 0,
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "literal": "let branch_body = Arc::new(Expr::Binary(BinaryOp::Add, left_call.clone(), right_call.clone()));",
+        "literal_present": true,
+        "claimed_line": 39,
+        "actual_lines": [
+          39
+        ],
+        "claimed_line_matches": true
+      },
+      {
+        "correction": 1,
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "literal": "let root = Value::Tree(Tree::Branch(left, right));",
+        "literal_present": true,
+        "claimed_line": 56,
+        "actual_lines": [
+          56
+        ],
+        "claimed_line_matches": true
+      },
+      {
+        "correction": 2,
+        "path": "crates/mori-core/src/sherlock/reference.rs",
+        "literal": "let before = self.snapshot();",
+        "literal_present": true,
+        "claimed_line": 40,
+        "actual_lines": [
+          42
+        ],
+        "claimed_line_matches": false
+      },
+      {
+        "correction": 3,
+        "path": "crates/mori-core/tests/sherlock_original_009_structural_sharing.rs",
+        "literal": "let initial=machine.snapshot();let records=machine.run_steps(MAX_EVENTS);",
+        "literal_present": true,
+        "claimed_line": 95,
+        "actual_lines": [
+          95
+        ],
+        "claimed_line_matches": true
+      }
+    ],
+    "same_source_identity": true,
+    "same_rlib_identity": true,
+    "same_selector": true
+  },
+  "additional_prose_location_only_notice": "Snapshot before expression is actual reference.rs line42, not40; after expression actual line72, not71. Exact source quotations are present; original report/prose unmodified.",
+  "inputs_and_original_R106_postcheck": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/INPUT.ndjson",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/MEMBERSHIP.json",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/PROMPT.txt",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/REQUEST.json",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/inputs/1-sherlock_original_009_structural_sharing.rs",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/inputs/2-reference.rs",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/inputs/3-reference_types.rs",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-eligibility-clarification-01/inputs/R106-ORIGINAL-REVIEW.json",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-source-review/inputs/1-sherlock_original_009_structural_sharing.rs",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-source-review/inputs/2-reference.rs",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-source-review/inputs/3-reference_types.rs",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/74-compiler-correction-review-packet/harness-clarification-02/prospective-run/libmori_core.rlib",
+      "unchanged": true
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/106-structural-sharing-source-review/REVIEW.response.txt",
+      "unchanged": true
+    }
+  ],
+  "inputfreeze_sha256": "24ffa7b78937c695ce5a1360cfacf8f849bb3450c56c4a4242b7789367316b3a",
+  "candidate_status": "UNCOMPILED_UNRUN in this lane; no subject/Cargo/SDK/native/private/WGit/model execution other than this source clarification call",
+  "old_report_preservation": "All R106 original report/result/freeze retained unchanged; this addendum explicitly supplies owner corrections rather than silently altering source eligibility requirements.",
+  "execution_selection": "Root alone; exact same candidate/rlib/selector/twoMachines/512fuel32stack513eventcap; actual source/oracle conditions unchanged; H1OPEN/native0; no generic UIREQ009 acceptance claim.",
+  "stderr_bytes": 0,
+  "AGY_runner_wrapper_live": false
+}
