@@ -435,3 +435,106 @@ pending unless separately recorded with its actual terminal and full scope.
 companion requirements and reserved dependencies before retrying a bounded
 packet. Preserve failures as nonvotes. This log changes no budget, execution
 guard, security policy or acceptance requirement.
+
+
+## 2026-10-17 UTC — fifth edition
+
+The [fourth edition](https://github.com/CharlesHoskinson/Moriarty/pull/136)
+remains byte-exact above. These entries distinguish published source, observed
+execution, review coverage and admitted reliance. They add no factory automation,
+security policy or execution-control implementation.
+
+### DW-21 — Follow source delivery through its real consumer
+
+**Observation/evidence:** [PR #137](https://github.com/CharlesHoskinson/Moriarty/pull/137),
+merge `1576682d24c291a5b086fdbc09a6c4f9c76c5680`, published six ADT source/map/
+metadata files and one dated journal append. The twelve pure Build/Plan helper
+bodies are 15,393 bytes, SHA-256
+`a73951c5be2484ffa2ade77f8b33cffbf5b5b7894c04ca9797d545c850094681`,
+with the designated ABI2 carriers. The default local CI summary records
+230 PASS / 9.701 seconds; it did not compile or execute the new ADT source.
+
+A separate 25-library-file SDK-free composition applies only five exact
+owner-authored namespace/module spans. It remains uncompiled preparation.
+Production `helper_machine` landing is separate: 19 files / 394,518 bytes are
+prepared, but are not Root-integrated or compiled. A missing unsafe-code
+prohibition was identified by designated security review and corrected by a
+separate designated owner; final source audits remain pending. Neither the
+publication nor the diagnostic composition establishes a ready production path.
+
+**Status:** published, reviewed source and prepared composition; actual ADT
+compilation, production integration and behavior remain pending.
+**Proposed / validation needed:** name the actual consumer and changed dependency
+closure at handoff, then record its own scoped result. A pure payload proposal,
+a namespace adaptation and a default QA pass answer different questions.
+
+### DW-22 — Correct the declared format without activating its consumer
+
+**Observation/evidence:** the strict QA09-r3 source corrects one declared
+structural `RunIntNat` carrier to use `n`; the other four declared formats use
+`value`. Fresh Muse source review agrees within scope. The v2 consumer remains
+inactive and no actual v2 QA comparison is established by that review.
+
+**Status:** applied source correction and scoped source review; activation and
+actual comparison remain pending. **Proposed / validation needed:** bind each
+carrier spelling to its exact declared format, preserve the earlier defect, and
+keep source review, transport checks and authorized actual comparison distinct.
+Do not generalize one format's repair across the other formats.
+
+### DW-23 — Preserve a failed preflight even when the later process succeeds
+
+**Observation/evidence:** Root recorded a failed ordered-list preflight assertion:
+the unordered source-pin sets matched, but the ordered lists did not. The outer
+tool call printed the failed command's output and then incorrectly awaited the
+dependent compile/run instead of stopping. The required new Root preconditions
+and grant had not been written. Root explicitly owns this dispatch error.
+
+The separate planned source05/v2 host attempt nevertheless completed: actual
+16 child exits were zero and its receipt reported success. Passive inventory
+recorded 62 regular files and eight directories. Those completion facts do not
+establish admission. The single ordinary attempt remains consumed, with no retry
+and no retroactive grant. Reliance, QA, publication and artifact reuse remain on
+hold; native authority remains zero and C4, limits and counters remain unchanged.
+
+**Actual review disposition:** the designated authorized Muse security fallback
+completed and confirmed **UNADMITTED / HOLD**, no retry and no retroactive grant.
+Its disposition permits only limited prospective passive incident read, hash,
+framing and inert preservation, and requires staged full-capture actual-result
+security review before reliance. The independent Muse
+nonsecurity review records factual completion and abstains from security
+judgment. Both read their complete supplied source packet, but runtime stdout
+was supplied as inventory only. No complete capture-content review, semantic
+comparison or permission to use the result follows. Root's subsequent recorded
+disposition adopts only the limited prospective passive preservation, read, hash,
+inventory, structural JSONL framing and staged-review preparation. The attempt
+remains **NOT ADMITTED / HOLD**, with no QA, result reliance, publication,
+comparison, retry, retroactive grant or artifact reuse. The admission directory
+remains empty. The earlier handoff's unadopted label remains historical metadata;
+it is not the current Root disposition.
+
+Both reviews also corrected an earlier materialization record: a recorded
+ordered tuple-equality claim was false, although unordered set equality held.
+The original record is preserved with its correction. The underlying incident
+facts, Root disposition, full reviews and retained outputs remain unpublished.
+
+**Status:** observed unadmitted execution and completed scoped incident reviews;
+result reliance remains held. **Proposed documentation improvement / validation
+needed:** report preflight failure, actual process terminal, packet coverage and
+admission status separately. Preserve the failed precondition and corrected
+facts alongside successful process exits. Any execution-control repair or further
+security disposition belongs to the designated owner; this log supplies neither.
+
+### DW-14 update — Preserve current provider failure and actual fallback identity
+
+**Observation/evidence:** a new Opus storage-source request exited 1 with a
+session-limit failure before a model identity or substantive result was returned.
+The standing user-authorized Muse security fallback was used for the incident
+review above. Existing in-flight Opus work retains its actual identity until its
+own terminal result; historical Opus and fallback records are not relabelled.
+
+**Status:** observed request failure and completed scoped Muse incident review.
+A separate fallback storage-source author request is live with no code result
+claimed here. **Proposed / validation needed:** update availability from each
+actual terminal, retain failed requests as nonvotes, and record the actual
+fallback identity and scope. One request's failure does not establish provider-wide
+health or change the standing fallback policy, native limits or acceptance gates.
