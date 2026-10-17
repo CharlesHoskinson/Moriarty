@@ -1,0 +1,365 @@
+image_reference.rs:429:         let program = Arc::new(Program { functions, entry: expressions[image.entry.0].clone() });
+image_reference.rs:430:         Self { expressions, program }
+image_reference.rs:431:     }
+image_reference.rs:432: 
+image_reference.rs:433:     fn expression(&self, id: ExprId) -> ExprRef {
+image_reference.rs:434:         self.expressions[id.0].clone()
+image_reference.rs:435:     }
+image_reference.rs:436: 
+image_reference.rs:437:     fn children(&self, image: &ProgramImageDraft, slice: TableSlice) -> Vec<ExprRef> {
+image_reference.rs:438:         image.ordered_children[slice.start..slice.start + slice.len].iter()
+image_reference.rs:439:             .map(|id| self.expression(*id)).collect()
+image_reference.rs:440:     }
+image_reference.rs:441: 
+image_reference.rs:442:     fn arms(&self, image: &ProgramImageDraft, slice: TableSlice) -> Vec<Arm> {
+image_reference.rs:443:         image.match_arms[slice.start..slice.start + slice.len].iter().map(|arm| Arm {
+image_reference.rs:444:             pattern: arm.pattern.clone(), body: self.expression(arm.body),
+image_reference.rs:445:         }).collect()
+image_reference.rs:446:     }
+image_reference.rs:447: }
+image_reference.rs:448: 
+image_reference.rs:449: /// Normal builder constants are preorder too. The typed runtime's recursive
+image_reference.rs:450: /// Values/Tree remain host values; this is neither a bounded arena nor native IR.
+image_reference.rs:451: fn decode_constants(image: &ProgramImageDraft) -> Vec<Value> {
+image_reference.rs:452:     let mut values: Vec<Option<Value>> = vec![None; image.constants.len()];
+image_reference.rs:453:     for index in (0..image.constants.len()).rev() {
+image_reference.rs:454:         let row = &image.constants[index];
+image_reference.rs:455:         let fields = &image.constant_fields[row.fields.start..row.fields.start + row.fields.len];
+image_reference.rs:456:         let field = |position: usize| values[fields[position].0].as_ref()
+image_reference.rs:457:             .expect("builder constant child follows parent");
+image_reference.rs:458:         let value = match row.payload {
+image_reference.rs:459:             ConstantPayload::UInt(value) => Value::UInt(value),
+image_reference.rs:460:             ConstantPayload::Bool(value) => Value::Bool(value),
+image_reference.rs:461:             ConstantPayload::List => Value::List((0..fields.len()).map(|position| match field(position) {
+image_reference.rs:462:                 Value::UInt(value) => *value,
+image_reference.rs:463:                 _ => unreachable!("builder list fields are UInt"),
+image_reference.rs:464:             }).collect()),
+image_reference.rs:465:             ConstantPayload::TreeLeaf(value) => Value::Tree(Tree::Leaf(value)),
+image_reference.rs:466:             ConstantPayload::TreeBranch => match (field(0), field(1)) {
+image_reference.rs:467:                 (Value::Tree(left), Value::Tree(right)) => Value::Tree(Tree::Branch(
+image_reference.rs:468:                     Arc::new(left.clone()), Arc::new(right.clone()))),
+image_reference.rs:469:                 _ => unreachable!("builder branch fields are trees"),
+image_reference.rs:470:             },
+image_reference.rs:471:         };
+image_reference.rs:472:         values[index] = Some(value);
+image_reference.rs:473:     }
+image_reference.rs:474:     values.into_iter().map(|value| value.expect("all builder constants decoded")).collect()
+image_reference.rs:475: }
+image_reference.rs:476: 
+image_reference.rs:477: // Mechanical K-A pure helpers, kept local rather than calling reference::Machine
+image_reference.rs:478: // or its helpers. These deliberately share the existing Value/Environment types
+image_reference.rs:479: // and mirror reference.rs's rule decomposition; that reduces independence.
+image_reference.rs:480: // Independent literal normal oracles remain the comparison authority.
+image_reference.rs:481: fn has_type(value: &Value, ty: Type) -> bool {
+image_reference.rs:482:     matches!((value, ty),
+image_reference.rs:483:         (Value::UInt(_), Type::UInt) | (Value::Bool(_), Type::Bool)
+image_reference.rs:484:         | (Value::List(_), Type::List) | (Value::Tree(_), Type::Tree))
+image_reference.rs:485: }
+image_reference.rs:486: 
+image_reference.rs:487: fn binary_result(op: BinaryOp, left: Value, right: Value) -> Result<Value, u8> {
+image_reference.rs:488:     match (op, left, right) {
+image_reference.rs:489:         (BinaryOp::Add, Value::UInt(a), Value::UInt(b)) => a.checked_add(b).map(Value::UInt).ok_or(10),
+image_reference.rs:490:         (BinaryOp::Sub, Value::UInt(a), Value::UInt(b)) => a.checked_sub(b).map(Value::UInt).ok_or(10),
+image_reference.rs:491:         (BinaryOp::Mul, Value::UInt(a), Value::UInt(b)) => a.checked_mul(b).map(Value::UInt).ok_or(10),
+image_reference.rs:492:         (BinaryOp::Lt, Value::UInt(a), Value::UInt(b)) => Ok(Value::Bool(a < b)),
+image_reference.rs:493:         (BinaryOp::Eq, left, right) => Ok(Value::Bool(left == right)),
+image_reference.rs:494:         (BinaryOp::Cons, Value::UInt(head), Value::List(mut tail)) => {
+image_reference.rs:495:             tail.insert(0, head);
+image_reference.rs:496:             Ok(Value::List(tail))
+image_reference.rs:497:         }
+image_reference.rs:498:         (BinaryOp::Branch, Value::Tree(left), Value::Tree(right)) => {
+image_reference.rs:499:             Ok(Value::Tree(Tree::Branch(Arc::new(left), Arc::new(right))))
+image_reference.rs:500:         }
+image_reference.rs:501:         _ => Err(11),
+image_reference.rs:502:     }
+image_reference.rs:503: }
+image_reference.rs:504: 
+image_reference.rs:505: fn unary_result(op: UnaryOp, value: Value) -> Result<Value, u8> {
+image_reference.rs:506:     match (op, value) {
+image_reference.rs:507:         (UnaryOp::Leaf, Value::UInt(value)) => Ok(Value::Tree(Tree::Leaf(value))),
+image_reference.rs:508:         (UnaryOp::Not, Value::Bool(value)) => Ok(Value::Bool(!value)),
+image_reference.rs:509:         _ => Err(11),
+image_reference.rs:510:     }
+image_reference.rs:511: }
+image_reference.rs:512: 
+image_reference.rs:513: fn bind(parameters: &[Parameter], values: &[Value]) -> Option<Environment> {
+image_reference.rs:514:     if parameters.len() != values.len() { return None; }
+image_reference.rs:515:     let mut environment = Environment::new();
+image_reference.rs:516:     for (parameter, value) in parameters.iter().zip(values).rev() {
+image_reference.rs:517:         if !has_type(value, parameter.ty) || environment.contains_key(&parameter.name) {
+image_reference.rs:518:             return None;
+image_reference.rs:519:         }
+image_reference.rs:520:         environment.insert(parameter.name.clone(), value.clone());
+image_reference.rs:521:     }
+image_reference.rs:522:     Some(environment)
+image_reference.rs:523: }
+image_reference.rs:524: 
+image_reference.rs:525: fn matching(pattern: &Pattern, value: &Value, saved: &Environment) -> Option<Environment> {
+image_reference.rs:526:     let mut environment = saved.clone();
+image_reference.rs:527:     match (pattern, value) {
+image_reference.rs:528:         (Pattern::Var(name), value) => { environment.insert(name.clone(), value.clone()); }
+image_reference.rs:529:         (Pattern::Nil, Value::List(values)) if values.is_empty() => {}
+image_reference.rs:530:         (Pattern::Cons(head, tail), Value::List(values)) if head != tail && !values.is_empty() => {
+image_reference.rs:531:             environment.insert(head.clone(), Value::UInt(values[0]));
+image_reference.rs:532:             environment.insert(tail.clone(), Value::List(values[1..].to_vec()));
+image_reference.rs:533:         }
+image_reference.rs:534:         (Pattern::Leaf(name), Value::Tree(Tree::Leaf(value))) => {
+image_reference.rs:535:             environment.insert(name.clone(), Value::UInt(*value));
+image_reference.rs:536:         }
+image_reference.rs:537:         (Pattern::Branch(left, right), Value::Tree(Tree::Branch(a, b))) if left != right => {
+image_reference.rs:538:             environment.insert(left.clone(), Value::Tree(a.as_ref().clone()));
+image_reference.rs:539:             environment.insert(right.clone(), Value::Tree(b.as_ref().clone()));
+image_reference.rs:540:         }
+image_reference.rs:541:         _ => return None,
+image_reference.rs:542:     }
+image_reference.rs:543:     Some(environment)
+image_reference.rs:544: }
+image_reference.rs:545: 
+image_reference.rs:546: #[cfg(test)]
+image_reference.rs:547: #[path = "image_reference_tests.rs"]
+image_reference.rs:548: mod tests;
+helper_schedule.rs:1: //! Source-only proposal for one call-helper slice, not an adopted B executor.
+helper_schedule.rs:2: //! No A evaluator, preparation, native code, dynamic allocation or recursive
+helper_schedule.rs:3: //! traversal is invoked by `step`. Table and handle adapters are still absent.
+helper_schedule.rs:4: pub const PROPOSED_PROFILE: &str = "sherlock-helper-microstep/1";
+helper_schedule.rs:5: 
+helper_schedule.rs:6: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:7: pub struct NameId(pub usize);
+helper_schedule.rs:8: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:9: pub struct ExprId(pub usize);
+helper_schedule.rs:10: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:11: pub struct ValueRef(pub usize);
+helper_schedule.rs:12: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:13: pub struct CellId(pub usize);
+helper_schedule.rs:14: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:15: pub struct Slice { pub start: usize, pub len: usize }
+helper_schedule.rs:16: 
+helper_schedule.rs:17: /// Only the existing four K-A sorts. No generic ADT declaration validation.
+helper_schedule.rs:18: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:19: pub enum Sort { UInt, Bool, List, Tree }
+helper_schedule.rs:20: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:21: pub struct Parameter { pub name: NameId, pub sort: Sort }
+helper_schedule.rs:22: /// An already evaluated immutable value handle and its existing K-A outer sort.
+helper_schedule.rs:23: /// A real value-table adapter must establish this association separately.
+helper_schedule.rs:24: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:25: pub struct Argument { pub value: ValueRef, pub sort: Sort }
+helper_schedule.rs:26: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:27: pub struct FunctionRow {
+helper_schedule.rs:28:     pub source_table_index: usize,
+helper_schedule.rs:29:     pub name: NameId,
+helper_schedule.rs:30:     pub parameters: Slice,
+helper_schedule.rs:31:     pub return_sort: Sort,
+helper_schedule.rs:32:     pub body: ExprId,
+helper_schedule.rs:33: }
+helper_schedule.rs:34: pub struct Tables<'a> {
+helper_schedule.rs:35:     /// Original source order, including repeated names; never sorted here.
+helper_schedule.rs:36:     pub functions: &'a [FunctionRow],
+helper_schedule.rs:37:     pub parameters: &'a [Parameter],
+helper_schedule.rs:38:     pub arguments: &'a [Argument],
+helper_schedule.rs:39: }
+helper_schedule.rs:40: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:41: pub struct PairTask { pub parameter: Parameter, pub argument: Argument }
+helper_schedule.rs:42: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:43: pub struct EnvCell { pub name: NameId, pub value: ValueRef, pub previous: Option<CellId> }
+helper_schedule.rs:44: pub struct Scratch<'a> {
+helper_schedule.rs:45:     /// Supplied zeroed storage. One saved pair per pair event; one release per event.
+helper_schedule.rs:46:     pub pairs: &'a mut [Option<PairTask>],
+helper_schedule.rs:47:     /// Fresh parameter environment only; caller cells are a distinct namespace.
+helper_schedule.rs:48:     pub cells: &'a mut [Option<EnvCell>],
+helper_schedule.rs:49: }
+helper_schedule.rs:50: 
+helper_schedule.rs:51: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:52: pub enum Binding { Fresh(Option<CellId>), Bad }
+helper_schedule.rs:53: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:54: pub enum LegacyControl {
+helper_schedule.rs:55:     Invoke { name: NameId, arguments: Slice },
+helper_schedule.rs:56:     Enter { function: Option<FunctionRow>, arguments: Slice },
+helper_schedule.rs:57:     Bound { binding: Binding, return_sort: Sort, body: ExprId },
+helper_schedule.rs:58: }
+helper_schedule.rs:59: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:60: pub enum BoundaryOutcome { Pending }
+helper_schedule.rs:61: /// Complete saved reference boundary by immutable handles. The handle resolver
+helper_schedule.rs:62: /// is outside this slice: program, caller env and every frame remain available.
+helper_schedule.rs:63: /// Top-first matches the actual A reference; the B bottom-first adapter is open.
+helper_schedule.rs:64: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:65: pub struct Boundary {
+helper_schedule.rs:66:     pub reference_profile: &'static str,
+helper_schedule.rs:67:     pub program_handle: usize,
+helper_schedule.rs:68:     pub source_binding_handle: usize,
+helper_schedule.rs:69:     pub control_origin_handle: usize,
+helper_schedule.rs:70:     pub control: LegacyControl,
+helper_schedule.rs:71:     pub caller_environment_handle: usize,
+helper_schedule.rs:72:     pub frames_top_first: Slice,
+helper_schedule.rs:73:     pub stack_limit: usize,
+helper_schedule.rs:74:     pub reference_initial_fuel: u128,
+helper_schedule.rs:75:     pub reference_remaining_fuel: u128,
+helper_schedule.rs:76:     pub outcome: BoundaryOutcome,
+helper_schedule.rs:77: }
+helper_schedule.rs:78: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:79: pub enum Rule { InvokeFind, EnterBind }
+helper_schedule.rs:80: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:81: pub struct Resume {
+helper_schedule.rs:82:     pub origin_rule: Rule,
+helper_schedule.rs:83:     pub origin_reference_cursor: u128,
+helper_schedule.rs:84:     pub result_slot: usize,
+helper_schedule.rs:85:     pub saved_pre_state: Boundary,
+helper_schedule.rs:86: }
+helper_schedule.rs:87: 
+helper_schedule.rs:88: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:89: pub enum Phase {
+helper_schedule.rs:90:     FindEntry, FindCursor, FindExit, CompleteFind,
+helper_schedule.rs:91:     BindEntry, PairCursor, Type, Duplicate, Insert, Release,
+helper_schedule.rs:92:     Propagate, BindExit, CompleteBind, Done,
+helper_schedule.rs:93: }
+helper_schedule.rs:94: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:95: pub enum EventKind {
+helper_schedule.rs:96:     FindEntry, FindRow { row: usize, matched: bool }, FindEmpty, FindExit,
+helper_schedule.rs:97:     CompleteFind, BindEntry, Pair { ordinal: usize }, EmptySeed, Arity,
+helper_schedule.rs:98:     Type { task: usize, accepted: bool },
+helper_schedule.rs:99:     Duplicate { cell: CellId, matched: bool }, Insert { cell: CellId },
+helper_schedule.rs:100:     Release { task: usize }, Propagate { task: usize }, BindExit, CompleteBind,
+helper_schedule.rs:101: }
+helper_schedule.rs:102: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:103: pub struct Event {
+helper_schedule.rs:104:     pub kind: EventKind,
+helper_schedule.rs:105:     pub work_delta: u8,
+helper_schedule.rs:106:     pub helper_work_delta: u8,
+helper_schedule.rs:107:     pub helper_visits: u8,
+helper_schedule.rs:108:     pub reference_cursor_delta: u8,
+helper_schedule.rs:109: }
+helper_schedule.rs:110: /// Local host counters; no native widths or maximum-work policy is selected.
+helper_schedule.rs:111: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:112: pub struct Work {
+helper_schedule.rs:113:     pub consumed: u128,
+helper_schedule.rs:114:     pub helper: u128,
+helper_schedule.rs:115:     pub helper_visits: u128,
+helper_schedule.rs:116:     pub reference_cursor: u128,
+helper_schedule.rs:117: }
+helper_schedule.rs:118: /// Missing adapters/policy are engineering holes, outside application Outcome.
+helper_schedule.rs:119: /// This is not B exhaustion, a new rejection reason, admission or cap policy.
+helper_schedule.rs:120: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:121: pub enum Unsupported {
+helper_schedule.rs:122:     SourceHandleAdapter, ScratchStateAdapter,
+helper_schedule.rs:123:     TaskCapacityPolicy, EnvironmentCapacityPolicy, CounterAdmission,
+helper_schedule.rs:124:     ReferenceFuelBoundary,
+helper_schedule.rs:125: }
+helper_schedule.rs:126: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+helper_schedule.rs:127: pub struct CallHelper {
+helper_schedule.rs:128:     pub resume: Resume,
+helper_schedule.rs:129:     pub boundary: Boundary,
+helper_schedule.rs:130:     pub phase: Phase,
+helper_schedule.rs:131:     pub function_name: NameId,
+helper_schedule.rs:132:     pub arguments: Slice,
+helper_schedule.rs:133:     pub row_cursor: usize,
+helper_schedule.rs:134:     pub selected: Option<FunctionRow>,
+helper_schedule.rs:135:     pub parameter_cursor: usize,
+helper_schedule.rs:136:     pub argument_cursor: usize,
+helper_schedule.rs:137:     pub task_len: usize,
+helper_schedule.rs:138:     pub pending: Option<PairTask>,
+helper_schedule.rs:139:     pub duplicate_cursor: Option<CellId>,
+helper_schedule.rs:140:     pub fresh_root: Option<CellId>,
+helper_schedule.rs:141:     pub cells_used: usize,
+helper_schedule.rs:142:     pub binding: Binding,
+helper_schedule.rs:143:     pub work: Work,
+helper_schedule.rs:144: }
+helper_schedule.rs:145: 
+helper_schedule.rs:146: impl CallHelper {
+helper_schedule.rs:147:     /// Entry preparation copies fixed host fields; no source record is visited.
+helper_schedule.rs:148:     /// Caller provides an actual Invoke boundary and externally retained handles.
+helper_schedule.rs:149:     pub fn begin(boundary: Boundary, reference_cursor: u128, result_slot: usize)
+helper_schedule.rs:150:         -> Result<Self, Unsupported>
+helper_schedule.rs:151:     {
+helper_schedule.rs:152:         let LegacyControl::Invoke { name, arguments } = boundary.control else {
+helper_schedule.rs:153:             return Err(Unsupported::SourceHandleAdapter);
+helper_schedule.rs:154:         };
+helper_schedule.rs:155:         Ok(Self {
+helper_schedule.rs:156:             resume: Resume { origin_rule: Rule::InvokeFind,
+helper_schedule.rs:157:                 origin_reference_cursor: reference_cursor, result_slot,
+helper_schedule.rs:158:                 saved_pre_state: boundary },
+helper_schedule.rs:159:             boundary, phase: Phase::FindEntry, function_name: name, arguments,
+helper_schedule.rs:160:             row_cursor: 0, selected: None, parameter_cursor: 0, argument_cursor: 0,
+helper_schedule.rs:161:             task_len: 0, pending: None, duplicate_cursor: None, fresh_root: None,
+helper_schedule.rs:162:             cells_used: 0, binding: Binding::Fresh(None),
+helper_schedule.rs:163:             work: Work { consumed: 0, helper: 0, helper_visits: 0, reference_cursor },
+helper_schedule.rs:164:         })
+helper_schedule.rs:165:     }
+helper_schedule.rs:166: 
+helper_schedule.rs:167:     /// One proposed event. No loops, iterator searches, recursive calls, map
+helper_schedule.rs:168:     /// operations, whole-value cloning, reallocation or global task cleanup.
+helper_schedule.rs:169:     /// All writes are deferred until fixed host arithmetic/handle checks finish.
+helper_schedule.rs:170:     /// Success events cost one; missing policy returns Unsupported with no change.
+helper_schedule.rs:171:     pub fn step(&mut self, tables: &Tables<'_>, scratch: &mut Scratch<'_>)
+helper_schedule.rs:172:         -> Result<Option<Event>, Unsupported>
+helper_schedule.rs:173:     {
+helper_schedule.rs:174:         if self.phase == Phase::Done { return Ok(None); }
+helper_schedule.rs:175:         let mut next = *self;
+helper_schedule.rs:176:         let mut pair_write: Option<(usize, Option<PairTask>)> = None;
+helper_schedule.rs:177:         let mut cell_write: Option<(usize, EnvCell)> = None;
+helper_schedule.rs:178:         let (kind, visits) = match self.phase {
+helper_schedule.rs:179:             Phase::FindEntry => { next.phase = Phase::FindCursor; (EventKind::FindEntry, 0) }
+helper_schedule.rs:180:             Phase::FindCursor => match tables.functions.get(self.row_cursor).copied() {
+helper_schedule.rs:181:                 Some(row) => {
+helper_schedule.rs:182:                     let matched = row.name == self.function_name;
+helper_schedule.rs:183:                     if matched { next.selected = Some(row); next.phase = Phase::FindExit; }
+helper_schedule.rs:184:                     else { next.row_cursor = add(self.row_cursor, 1)?; }
+helper_schedule.rs:185:                     (EventKind::FindRow { row: self.row_cursor, matched }, 1)
+helper_schedule.rs:186:                 }
+helper_schedule.rs:187:                 None => { next.phase = Phase::FindExit; (EventKind::FindEmpty, 0) }
+helper_schedule.rs:188:             },
+helper_schedule.rs:189:             Phase::FindExit => { next.phase = Phase::CompleteFind; (EventKind::FindExit, 0) }
+helper_schedule.rs:190:             Phase::CompleteFind => {
+helper_schedule.rs:191:                 next.boundary.reference_remaining_fuel = self.boundary.reference_remaining_fuel
+helper_schedule.rs:192:                     .checked_sub(1).ok_or(Unsupported::ReferenceFuelBoundary)?;
+helper_schedule.rs:193:                 next.boundary.control = LegacyControl::Enter {
+helper_schedule.rs:194:                     function: self.selected, arguments: self.arguments };
+helper_schedule.rs:195:                 next.phase = if self.selected.is_some() { Phase::BindEntry } else { Phase::Done };
+helper_schedule.rs:196:                 next.resume.origin_rule = Rule::EnterBind;
+helper_schedule.rs:197:                 next.resume.origin_reference_cursor = self.work.reference_cursor
+helper_schedule.rs:198:                     .checked_add(1).ok_or(Unsupported::CounterAdmission)?;
+helper_schedule.rs:199:                 next.resume.saved_pre_state = next.boundary;
+helper_schedule.rs:200:                 (EventKind::CompleteFind, 0)
+helper_schedule.rs:201:             }
+helper_schedule.rs:202:             Phase::BindEntry => { next.phase = Phase::PairCursor; (EventKind::BindEntry, 0) }
+helper_schedule.rs:203:             Phase::PairCursor => {
+helper_schedule.rs:204:                 let function = self.selected.ok_or(Unsupported::SourceHandleAdapter)?;
+helper_schedule.rs:205:                 let p_end = self.parameter_cursor == function.parameters.len;
+helper_schedule.rs:206:                 let a_end = self.argument_cursor == self.arguments.len;
+helper_schedule.rs:207:                 if p_end && a_end {
+helper_schedule.rs:208:                     next.fresh_root = None;
+helper_schedule.rs:209:                     next.binding = Binding::Fresh(None);
+helper_schedule.rs:210:                     next.phase = if self.task_len == 0 { Phase::BindExit } else { Phase::Type };
+helper_schedule.rs:211:                     (EventKind::EmptySeed, 0)
+helper_schedule.rs:212:                 } else if p_end || a_end {
+helper_schedule.rs:213:                     next.binding = Binding::Bad;
+helper_schedule.rs:214:                     next.phase = if self.task_len == 0 { Phase::BindExit } else { Phase::Propagate };
+helper_schedule.rs:215:                     (EventKind::Arity, 0)
+helper_schedule.rs:216:                 } else {
+helper_schedule.rs:217:                     let slot = scratch.pairs.get(self.task_len)
+helper_schedule.rs:218:                         .ok_or(Unsupported::TaskCapacityPolicy)?;
+helper_schedule.rs:219:                     if slot.is_some() { return Err(Unsupported::ScratchStateAdapter); }
+helper_schedule.rs:220:                     let parameter = *tables.parameters.get(add(function.parameters.start,
+helper_schedule.rs:221:                         self.parameter_cursor)?).ok_or(Unsupported::SourceHandleAdapter)?;
+helper_schedule.rs:222:                     let argument = *tables.arguments.get(add(self.arguments.start,
+helper_schedule.rs:223:                         self.argument_cursor)?).ok_or(Unsupported::SourceHandleAdapter)?;
+helper_schedule.rs:224:                     pair_write = Some((self.task_len, Some(PairTask { parameter, argument })));
+helper_schedule.rs:225:                     next.task_len = add(self.task_len, 1)?;
+helper_schedule.rs:226:                     next.parameter_cursor = add(self.parameter_cursor, 1)?;
+helper_schedule.rs:227:                     next.argument_cursor = add(self.argument_cursor, 1)?;
+helper_schedule.rs:228:                     (EventKind::Pair { ordinal: self.parameter_cursor }, 1)
+helper_schedule.rs:229:                 }
+helper_schedule.rs:230:             }
+helper_schedule.rs:231:             Phase::Type => {
+helper_schedule.rs:232:                 let task = self.task_len.checked_sub(1).ok_or(Unsupported::ScratchStateAdapter)?;
+helper_schedule.rs:233:                 let pair = scratch.pairs.get(task).copied().flatten()
+helper_schedule.rs:234:                     .ok_or(Unsupported::ScratchStateAdapter)?;
+helper_schedule.rs:235:                 let accepted = pair.parameter.sort == pair.argument.sort;
+helper_schedule.rs:236:                 next.pending = Some(pair);
+helper_schedule.rs:237:                 if accepted {
+helper_schedule.rs:238:                     next.duplicate_cursor = self.fresh_root;
+helper_schedule.rs:239:                     next.phase = if self.fresh_root.is_some() { Phase::Duplicate } else { Phase::Insert };
+helper_schedule.rs:240:                 } else { next.binding = Binding::Bad; next.phase = Phase::Release; }
+helper_schedule.rs:241:                 (EventKind::Type { task, accepted }, 1)
+helper_schedule.rs:242:             }
+helper_schedule.rs:243:             Phase::Duplicate => {
+helper_schedule.rs:244:                 let pair = self.pending.ok_or(Unsupported::ScratchStateAdapter)?;
+helper_schedule.rs:245:                 let id = self.duplicate_cursor.ok_or(Unsupported::ScratchStateAdapter)?;

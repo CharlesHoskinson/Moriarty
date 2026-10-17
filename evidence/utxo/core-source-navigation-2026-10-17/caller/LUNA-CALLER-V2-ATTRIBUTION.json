@@ -1,0 +1,110 @@
+{
+  "reviewer": {
+    "model": "gpt-6-luna",
+    "effort": "high",
+    "scope": "source attribution only"
+  },
+  "candidate": {
+    "graph": "current-core-comparison/bridge-caller-graph-output-v2/graph.json",
+    "sha256": "d07d1e31a1fca92dea942727f8f04ad7277b9d52196646f4a51c9fd1a3ff07ee",
+    "packet": "current-core-comparison/bridge-caller-graph-packet",
+    "packet_source_commit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+    "manifest_entries_checked": 12,
+    "manifest_byte_lengths_and_sha256_match": true
+  },
+  "judgments": [
+    {
+      "finding": "F1",
+      "status": "supported",
+      "label": "source_fact",
+      "judgment": "The graph locates the cfg(test) image bridge module declaration at N01-lib.rs:23. Its aggregate module relationship separately cites the cfg attribute at line 21, path attribute at line 22, and module declaration at line 23. Lines 12-14 instead declare sherlock_draft.",
+      "citations": [
+        "bridge-caller-graph-packet/N01-lib.rs:12-14",
+        "bridge-caller-graph-packet/N01-lib.rs:21-23",
+        "bridge-caller-graph-output-v2/graph.json edge source:N01-lib.rs -> draft-bridge-module"
+      ]
+    },
+    {
+      "finding": "F2",
+      "status": "supported",
+      "label": "source_fact",
+      "judgment": "The helper profile relationship originates at the distinct CallContext::proposed_profile method, whose body returns helper::PROPOSED_PROFILE at N07-helper_call_adapter.rs:157. CallContext::new is separately declared at line 82 and cites the K-A PROFILE at lines 91 and 132; line 157 is not part of that constructor.",
+      "citations": [
+        "bridge-caller-graph-packet/N07-helper_call_adapter.rs:82",
+        "bridge-caller-graph-packet/N07-helper_call_adapter.rs:91",
+        "bridge-caller-graph-packet/N07-helper_call_adapter.rs:132",
+        "bridge-caller-graph-packet/N07-helper_call_adapter.rs:157",
+        "bridge-caller-graph-packet/helper_schedule.rs:4",
+        "bridge-caller-graph-output-v2/graph.json edge call-context-proposed-profile -> helper-profile"
+      ]
+    },
+    {
+      "finding": "F3",
+      "status": "supported",
+      "label": "source_fact",
+      "judgment": "N09-reference_types.rs:4 declares PROFILE as a public constant. N02-mod.rs:12 declares reference_types and line 16 publicly re-exports its public items. N01-lib.rs:8 declares sherlock as a public module. The supplied declaration/re-export lines carry no cfg(test) attribute; the corrected graph records cfg as none shown on these declarations.",
+      "citations": [
+        "bridge-caller-graph-packet/N09-reference_types.rs:4",
+        "bridge-caller-graph-packet/N02-mod.rs:12",
+        "bridge-caller-graph-packet/N02-mod.rs:16",
+        "bridge-caller-graph-packet/N01-lib.rs:8",
+        "bridge-caller-graph-output-v2/graph.json node core-reference-profile and edge reference-types-public-reexport -> core-reference-profile"
+      ]
+    },
+    {
+      "finding": "F3-public-path",
+      "status": "supported",
+      "label": "inference",
+      "judgment": "Under Rust visibility rules, the public PROFILE item is reachable through the public sherlock module and its public glob re-export. The packet supports this path-level interpretation; no compilation or external-consumer check was performed.",
+      "citations": [
+        "bridge-caller-graph-packet/N01-lib.rs:8",
+        "bridge-caller-graph-packet/N02-mod.rs:12,16",
+        "bridge-caller-graph-packet/N09-reference_types.rs:4"
+      ]
+    },
+    {
+      "finding": "F4",
+      "status": "supported",
+      "label": "source_fact",
+      "judgment": "The helper_call_adapter inline module relationship cites its cfg(test) attribute and module declaration separately at N02-mod.rs:60-61. The sherlock_draft_tests path module relationship cites cfg(test), path, and declaration separately at N01-lib.rs:18-20. The image bridge independently carries its three distinct citations at N01-lib.rs:21-23. The graph does not conflate path attributes with module declarations.",
+      "citations": [
+        "bridge-caller-graph-packet/N02-mod.rs:60-61",
+        "bridge-caller-graph-packet/N01-lib.rs:18-20",
+        "bridge-caller-graph-packet/N01-lib.rs:21-23",
+        "bridge-caller-graph-output-v2/graph.json edges source:N02-mod.rs -> helper-adapter-module and source:N01-lib.rs -> draft-source-tests-module"
+      ]
+    },
+    {
+      "finding": "TYPE_COMPATIBLE-separation",
+      "status": "supported",
+      "label": "source_fact",
+      "judgment": "The two Arc<ProgramImageDraft> type relationships are represented as TYPE_COMPATIBLE edges with a note that no call edge is inferred. The test source separately contains actual calls to ImageMachine::new/run and Machine::new/run; the report describes these as test_calls. This review confirms attribution and labels from source; it does not claim those tests ran.",
+      "citations": [
+        "bridge-caller-graph-packet/draft_image_bridge.rs:12-16",
+        "bridge-caller-graph-packet/draft_image_bridge_tests.rs:66-72",
+        "bridge-caller-graph-output-v2/graph.json TYPE_COMPATIBLE edges from draft-preparation-image-field",
+        "bridge-caller-graph-output-v2/GRAPH_REPORT.md paragraph 2"
+      ]
+    }
+  ],
+  "coverage_gaps": [
+    {
+      "label": "source_fact",
+      "status": "not inspected in this packet",
+      "items": [
+        "The named parser/runtime/Machine implementation bodies identified in GRAPH_REPORT.md are outside the frozen packet.",
+        "The factorial.mori and treefold.mori fixture bodies named by include_str! in draft_source_tests.rs are outside the frozen packet."
+      ],
+      "limitation": "These are packet-boundary limitations; no global absence or behavior claim follows."
+    },
+    {
+      "label": "scope_limit",
+      "status": "not assessed",
+      "items": [
+        "No source execution, project build/test, security, crypto, semantic, runtime, ledger, proof, or adoption judgment was made.",
+        "No Graphify query/path traversal was needed for the four citation checks; judgments were checked against the frozen graph JSON and packet source bodies."
+      ]
+    }
+  ],
+  "overall": "The four citation repairs F1-F4 are supported by the exact frozen packet bodies. This is source attribution only and is not an execution or broader candidate approval."
+}

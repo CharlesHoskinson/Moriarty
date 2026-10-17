@@ -1,0 +1,309 @@
+N06-draft_typecheck.rs:175:             environment.insert(head.clone(), Type::UInt);
+N06-draft_typecheck.rs:176:             environment.insert(tail.clone(), Type::List);
+N06-draft_typecheck.rs:177:         }
+N06-draft_typecheck.rs:178:         Pattern::Leaf(name) => {
+N06-draft_typecheck.rs:179:             require(scrutinee, Type::Tree, source)?;
+N06-draft_typecheck.rs:180:             environment.insert(name.clone(), Type::UInt);
+N06-draft_typecheck.rs:181:         }
+N06-draft_typecheck.rs:182:         Pattern::Branch(left, right) => {
+N06-draft_typecheck.rs:183:             require(scrutinee, Type::Tree, source)?;
+N06-draft_typecheck.rs:184:             distinct(left, right, source)?;
+N06-draft_typecheck.rs:185:             environment.insert(left.clone(), Type::Tree);
+N06-draft_typecheck.rs:186:             environment.insert(right.clone(), Type::Tree);
+N06-draft_typecheck.rs:187:         }
+N06-draft_typecheck.rs:188:     }
+N06-draft_typecheck.rs:189:     Ok(environment)
+N06-draft_typecheck.rs:190: }
+N06-draft_typecheck.rs:191: 
+N06-draft_typecheck.rs:192: fn distinct(left: &str, right: &str, source: &SourceLocation) -> Result<(), DraftTypeError> {
+N06-draft_typecheck.rs:193:     if left == right { Err(error(source, DraftTypeErrorKind::DuplicatePatternBinder(left.into()))) }
+N06-draft_typecheck.rs:194:     else { Ok(()) }
+N06-draft_typecheck.rs:195: }
+N06-draft_typecheck.rs:196: 
+N06-draft_typecheck.rs:197: #[cfg(test)]
+N06-draft_typecheck.rs:198: #[path = "draft_typecheck_tests.rs"]
+N06-draft_typecheck.rs:199: mod tests;
+N07-helper_call_adapter.rs:1: //! Host adapter for the immutable helper proposal; normal comparisons only.
+N07-helper_call_adapter.rs:2: //! Preparation and observation may allocate/clone real host values; they are
+N07-helper_call_adapter.rs:3: //! outside helper events. This is an A boundary projection with H diagnostics,
+N07-helper_call_adapter.rs:4: //! not B budget/exhaustion semantics, schema, adoption or refinement evidence.
+N07-helper_call_adapter.rs:5: use super::program_image::{ExprId, ExprPayload, ProgramImageDraft, SourceLocator, SourceOwner};
+N07-helper_call_adapter.rs:6: use super::reference_types::*;
+N07-helper_call_adapter.rs:7: use std::sync::Arc;
+N07-helper_call_adapter.rs:8: 
+N07-helper_call_adapter.rs:9: pub(super) use super::helper_schedule as helper;
+N07-helper_call_adapter.rs:10: 
+N07-helper_call_adapter.rs:11: #[derive(Clone, Debug, PartialEq, Eq)]
+N07-helper_call_adapter.rs:12: pub(super) enum Gap {
+N07-helper_call_adapter.rs:13:     NotPendingInvoke,
+N07-helper_call_adapter.rs:14:     ImageSourceAssociation,
+N07-helper_call_adapter.rs:15:     ExplicitOriginAssociation,
+N07-helper_call_adapter.rs:16:     MissingRetainedHandle,
+N07-helper_call_adapter.rs:17:     Helper(helper::Unsupported),
+N07-helper_call_adapter.rs:18: }
+N07-helper_call_adapter.rs:19: 
+N07-helper_call_adapter.rs:20: pub(super) struct AdapterEvent {
+N07-helper_call_adapter.rs:21:     pub helper_event: helper::Event,
+N07-helper_call_adapter.rs:22:     /// Only legacy completion events produce a charged A record.
+N07-helper_call_adapter.rs:23:     pub reference_completion: Option<StepRecord>,
+N07-helper_call_adapter.rs:24: }
+N07-helper_call_adapter.rs:25: 
+N07-helper_call_adapter.rs:26: /// All helper handles are indices into this retained context. Distinct handle
+N07-helper_call_adapter.rs:27: /// namespaces each have one real program/image/origin/caller-environment slot;
+N07-helper_call_adapter.rs:28: /// frames and values are real retained sequences. No usize invents an object.
+N07-helper_call_adapter.rs:29: #[derive(Clone)]
+N07-helper_call_adapter.rs:30: pub(super) struct CallContext {
+N07-helper_call_adapter.rs:31:     original: Snapshot,
+N07-helper_call_adapter.rs:32:     image: Arc<ProgramImageDraft>,
+N07-helper_call_adapter.rs:33:     origin: (ExprId, SourceLocator),
+N07-helper_call_adapter.rs:34:     // Real machine captures retain the owners of every pending saved frame.
+N07-helper_call_adapter.rs:35:     // The frozen explicit-origin constructor cannot derive those owners.
+N07-helper_call_adapter.rs:36:     frame_origins: Option<Vec<ExprId>>,
+N07-helper_call_adapter.rs:37:     names: Vec<Name>,
+N07-helper_call_adapter.rs:38:     functions: Vec<helper::FunctionRow>,
+N07-helper_call_adapter.rs:39:     parameters: Vec<helper::Parameter>,
+N07-helper_call_adapter.rs:40:     arguments: Vec<helper::Argument>,
+N07-helper_call_adapter.rs:41:     values: Vec<Value>,
+N07-helper_call_adapter.rs:42:     pairs: Vec<Option<helper::PairTask>>,
+N07-helper_call_adapter.rs:43:     cells: Vec<Option<helper::EnvCell>>,
+N07-helper_call_adapter.rs:44:     result_slots: [Option<helper::LegacyControl>; 1],
+N07-helper_call_adapter.rs:45:     state: helper::CallHelper,
+N07-helper_call_adapter.rs:46: }
+N07-helper_call_adapter.rs:47: 
+N07-helper_call_adapter.rs:48: /// Owned typed helper cut: includes retained objects and the complete actual
+N07-helper_call_adapter.rs:49: /// helper cursor, scratch, resume and result-slot state. No wire format exists.
+N07-helper_call_adapter.rs:50: pub(super) struct CallCheckpoint {
+N07-helper_call_adapter.rs:51:     context: CallContext,
+N07-helper_call_adapter.rs:52: }
+N07-helper_call_adapter.rs:53: 
+N07-helper_call_adapter.rs:54: impl CallContext {
+N07-helper_call_adapter.rs:55:     /// Unmetered host cloning; no A completion, H event or source boundary.
+N07-helper_call_adapter.rs:56:     pub(super) fn checkpoint(&self) -> CallCheckpoint {
+N07-helper_call_adapter.rs:57:         CallCheckpoint { context: self.clone() }
+N07-helper_call_adapter.rs:58:     }
+N07-helper_call_adapter.rs:59: 
+N07-helper_call_adapter.rs:60:     /// Continue the exact saved helper phase without restarting Find or Bind.
+N07-helper_call_adapter.rs:61:     pub(super) fn resume(checkpoint: CallCheckpoint) -> Self {
+N07-helper_call_adapter.rs:62:         checkpoint.context
+N07-helper_call_adapter.rs:63:     }
+N07-helper_call_adapter.rs:64: 
+N07-helper_call_adapter.rs:65:     /// Capture the image, boundary and causal Call occurrence from one real
+N07-helper_call_adapter.rs:66:     /// immutable machine borrow. No caller-selected occurrence or name/value
+N07-helper_call_adapter.rs:67:     /// search establishes this origin. Existing host association/domain checks
+N07-helper_call_adapter.rs:68:     /// remain in new(); this supplies no authentication or digest binding.
+N07-helper_call_adapter.rs:69:     pub(super) fn from_image_machine(machine: &super::image_reference::ImageMachine)
+N07-helper_call_adapter.rs:70:         -> Result<Self, Gap>
+N07-helper_call_adapter.rs:71:     {
+N07-helper_call_adapter.rs:72:         let mut context = Self::new(
+N07-helper_call_adapter.rs:73:             machine.program_image().clone(), machine.snapshot(), machine.control_origin())?;
+N07-helper_call_adapter.rs:74:         context.frame_origins = Some(machine.frame_origins().to_vec());
+N07-helper_call_adapter.rs:75:         Ok(context)
+N07-helper_call_adapter.rs:76:     }
+N07-helper_call_adapter.rs:77: 
+N07-helper_call_adapter.rs:78:     /// Domain: an unchanged builder-produced image of `snapshot.program`, a
+N07-helper_call_adapter.rs:79:     /// real pending Invoke boundary, and its explicitly supplied source Call ID.
+N07-helper_call_adapter.rs:80:     /// Snapshot currently has no occurrence field; this API does not infer one
+N07-helper_call_adapter.rs:81:     /// from dynamic values or pretend to establish causal provenance.
+N07-helper_call_adapter.rs:82:     pub(super) fn new(image: Arc<ProgramImageDraft>, snapshot: Snapshot, origin: ExprId)
+N07-helper_call_adapter.rs:83:         -> Result<Self, Gap>
+N07-helper_call_adapter.rs:84:     {
+N07-helper_call_adapter.rs:85:         let (invoked_name, values) = match &snapshot.control {
+N07-helper_call_adapter.rs:86:             Some(Control::Invoke(name, values)) if snapshot.outcome == Outcome::Pending =>
+N07-helper_call_adapter.rs:87:                 (name.clone(), values.clone()),
+N07-helper_call_adapter.rs:88:             _ => return Err(Gap::NotPendingInvoke),
+N07-helper_call_adapter.rs:89:         };
+N07-helper_call_adapter.rs:90:         let reference_cursor = snapshot.checked_charged_steps().ok_or(Gap::NotPendingInvoke)?;
+N07-helper_call_adapter.rs:91:         if image.profile_id != PROFILE || image.functions.len() != snapshot.program.functions.len() {
+N07-helper_call_adapter.rs:92:             return Err(Gap::ImageSourceAssociation);
+N07-helper_call_adapter.rs:93:         }
+N07-helper_call_adapter.rs:94:         let locator = image.source_map.get(origin.0).ok_or(Gap::ExplicitOriginAssociation)?.clone();
+N07-helper_call_adapter.rs:95:         match image.expressions.get(origin.0).map(|row| &row.payload) {
+N07-helper_call_adapter.rs:96:             Some(ExprPayload::Call(name)) if name == &invoked_name => (),
+N07-helper_call_adapter.rs:97:             _ => return Err(Gap::ExplicitOriginAssociation),
+N07-helper_call_adapter.rs:98:         }
+N07-helper_call_adapter.rs:99:         match source_expression(&snapshot.program, &locator)?.as_ref() {
+N07-helper_call_adapter.rs:100:             Expr::Call(name, _) if name == &invoked_name => (),
+N07-helper_call_adapter.rs:101:             _ => return Err(Gap::ExplicitOriginAssociation),
+N07-helper_call_adapter.rs:102:         }
+N07-helper_call_adapter.rs:103:         let mut names = Vec::new();
+N07-helper_call_adapter.rs:104:         let mut functions = Vec::new();
+N07-helper_call_adapter.rs:105:         // Whole-table host preparation only. No selected-row lookup happens here.
+N07-helper_call_adapter.rs:106:         for (index, row) in image.functions.iter().enumerate() {
+N07-helper_call_adapter.rs:107:             let source = &snapshot.program.functions[index];
+N07-helper_call_adapter.rs:108:             let end = row.parameters.start.checked_add(row.parameters.len)
+N07-helper_call_adapter.rs:109:                 .ok_or(Gap::ImageSourceAssociation)?;
+N07-helper_call_adapter.rs:110:             let parameters = image.ordered_parameters.get(row.parameters.start..end)
+N07-helper_call_adapter.rs:111:                 .ok_or(Gap::ImageSourceAssociation)?;
+N07-helper_call_adapter.rs:112:             let body_source = image.source_map.get(row.body.0).ok_or(Gap::ImageSourceAssociation)?;
+N07-helper_call_adapter.rs:113:             if row.source_table_index != index || row.name != source.name
+N07-helper_call_adapter.rs:114:                 || row.return_type != source.return_type || parameters != source.parameters.as_slice()
+N07-helper_call_adapter.rs:115:                 || body_source.owner != SourceOwner::Function(index) || !body_source.ast_path.is_empty()
+N07-helper_call_adapter.rs:116:             { return Err(Gap::ImageSourceAssociation); }
+N07-helper_call_adapter.rs:117:             functions.push(helper::FunctionRow {
+N07-helper_call_adapter.rs:118:                 source_table_index: row.source_table_index,
+N07-helper_call_adapter.rs:119:                 name: intern(&mut names, &row.name),
+N07-helper_call_adapter.rs:120:                 parameters: helper::Slice { start: row.parameters.start, len: row.parameters.len },
+N07-helper_call_adapter.rs:121:                 return_sort: sort(row.return_type), body: helper::ExprId(row.body.0),
+N07-helper_call_adapter.rs:122:             });
+N07-helper_call_adapter.rs:123:         }
+N07-helper_call_adapter.rs:124:         let parameters = image.ordered_parameters.iter().map(|parameter| helper::Parameter {
+N07-helper_call_adapter.rs:125:             name: intern(&mut names, &parameter.name), sort: sort(parameter.ty),
+N07-helper_call_adapter.rs:126:         }).collect();
+N07-helper_call_adapter.rs:127:         let arguments = values.iter().enumerate().map(|(index, value)| helper::Argument {
+N07-helper_call_adapter.rs:128:             value: helper::ValueRef(index), sort: value_sort(value),
+N07-helper_call_adapter.rs:129:         }).collect();
+N07-helper_call_adapter.rs:130:         let arguments_slice = helper::Slice { start: 0, len: values.len() };
+N07-helper_call_adapter.rs:131:         let boundary = helper::Boundary {
+N07-helper_call_adapter.rs:132:             reference_profile: PROFILE,
+N07-helper_call_adapter.rs:133:             program_handle: 0, source_binding_handle: 0, control_origin_handle: 0,
+N07-helper_call_adapter.rs:134:             control: helper::LegacyControl::Invoke {
+N07-helper_call_adapter.rs:135:                 name: intern(&mut names, &invoked_name), arguments: arguments_slice },
+N07-helper_call_adapter.rs:136:             caller_environment_handle: 0,
+N07-helper_call_adapter.rs:137:             frames_top_first: helper::Slice { start: 0, len: snapshot.frames.len() },
+N07-helper_call_adapter.rs:138:             stack_limit: snapshot.stack_limit,
+N07-helper_call_adapter.rs:139:             reference_initial_fuel: snapshot.initial_fuel,
+N07-helper_call_adapter.rs:140:             reference_remaining_fuel: snapshot.remaining_fuel,
+N07-helper_call_adapter.rs:141:             outcome: helper::BoundaryOutcome::Pending,
+N07-helper_call_adapter.rs:142:         };
+N07-helper_call_adapter.rs:143:         let state = helper::CallHelper::begin(boundary, reference_cursor, 0).map_err(Gap::Helper)?;
+N07-helper_call_adapter.rs:144:         let scratch_len = values.len();
+N07-helper_call_adapter.rs:145:         Ok(Self { original: snapshot, image, origin: (origin, locator), frame_origins: None,
+N07-helper_call_adapter.rs:146:             names, functions,
+N07-helper_call_adapter.rs:147:             parameters, arguments, values, pairs: vec![None; scratch_len],
+N07-helper_call_adapter.rs:148:             cells: vec![None; scratch_len], result_slots: [None], state })
+N07-helper_call_adapter.rs:149:     }
+N07-helper_call_adapter.rs:150: 
+N07-helper_call_adapter.rs:151:     pub(super) fn work(&self) -> helper::Work { self.state.work }
+N07-helper_call_adapter.rs:152:     /// None only for the legacy explicit-origin constructor, whose Snapshot
+N07-helper_call_adapter.rs:153:     /// contains no frame-owner metadata. Actual machine captures retain all owners.
+N07-helper_call_adapter.rs:154:     pub(super) fn saved_frame_origins(&self) -> Option<&[ExprId]> {
+N07-helper_call_adapter.rs:155:         self.frame_origins.as_deref()
+N07-helper_call_adapter.rs:156:     }
+N07-helper_call_adapter.rs:157:     pub(super) fn proposed_profile(&self) -> &'static str { helper::PROPOSED_PROFILE }
+N07-helper_call_adapter.rs:158:     pub(super) fn resolve_program(&self, handle: usize) -> Result<&Arc<Program>, Gap> {
+N07-helper_call_adapter.rs:159:         if handle == 0 { Ok(&self.original.program) } else { Err(Gap::MissingRetainedHandle) }
+N07-helper_call_adapter.rs:160:     }
+N07-helper_call_adapter.rs:161:     pub(super) fn resolve_source(&self, handle: usize) -> Result<&ProgramImageDraft, Gap> {
+N07-helper_call_adapter.rs:162:         if handle == 0 { Ok(self.image.as_ref()) } else { Err(Gap::MissingRetainedHandle) }
+N07-helper_call_adapter.rs:163:     }
+N07-helper_call_adapter.rs:164:     pub(super) fn resolve_origin(&self, handle: usize) -> Result<&(ExprId, SourceLocator), Gap> {
+N07-helper_call_adapter.rs:165:         if handle == 0 { Ok(&self.origin) } else { Err(Gap::MissingRetainedHandle) }
+N07-helper_call_adapter.rs:166:     }
+N07-helper_call_adapter.rs:167:     pub(super) fn resolve_environment(&self, handle: usize) -> Result<&Environment, Gap> {
+N07-helper_call_adapter.rs:168:         if handle == 0 { Ok(&self.original.environment) } else { Err(Gap::MissingRetainedHandle) }
+N07-helper_call_adapter.rs:169:     }
+N07-helper_call_adapter.rs:170:     pub(super) fn resolve_frames(&self, slice: helper::Slice) -> Result<&[Frame], Gap> {
+N07-helper_call_adapter.rs:171:         let end = slice.start.checked_add(slice.len).ok_or(Gap::MissingRetainedHandle)?;
+N07-helper_call_adapter.rs:172:         self.original.frames.get(slice.start..end).ok_or(Gap::MissingRetainedHandle)
+N07-helper_call_adapter.rs:173:     }
+N07-helper_call_adapter.rs:174:     pub(super) fn resolve_value(&self, value: helper::ValueRef) -> Result<&Value, Gap> {
+N07-helper_call_adapter.rs:175:         self.values.get(value.0).ok_or(Gap::MissingRetainedHandle)
+N07-helper_call_adapter.rs:176:     }
+N07-helper_call_adapter.rs:177:     pub(super) fn resolve_name(&self, name: helper::NameId) -> Result<&Name, Gap> {
+N07-helper_call_adapter.rs:178:         self.names.get(name.0).ok_or(Gap::MissingRetainedHandle)
+N07-helper_call_adapter.rs:179:     }
+N07-helper_call_adapter.rs:180:     pub(super) fn resolve_result_slot(&self, slot: usize)
+N07-helper_call_adapter.rs:181:         -> Result<&Option<helper::LegacyControl>, Gap>
+N07-helper_call_adapter.rs:182:     {
+N07-helper_call_adapter.rs:183:         self.result_slots.get(slot).ok_or(Gap::MissingRetainedHandle)
+N07-helper_call_adapter.rs:184:     }
+N07-helper_call_adapter.rs:185:     fn resolve_function(&self, function: helper::FunctionRow) -> Result<Function, Gap> {
+N07-helper_call_adapter.rs:186:         let row = self.functions.get(function.source_table_index).ok_or(Gap::MissingRetainedHandle)?;
+N07-helper_call_adapter.rs:187:         if *row != function { return Err(Gap::MissingRetainedHandle); }
+N07-helper_call_adapter.rs:188:         self.original.program.functions.get(function.source_table_index).cloned()
+N07-helper_call_adapter.rs:189:             .ok_or(Gap::MissingRetainedHandle)
+N07-helper_call_adapter.rs:190:     }
+N07-helper_call_adapter.rs:191:     fn resolve_body(&self, body: helper::ExprId) -> Result<ExprRef, Gap> {
+N07-helper_call_adapter.rs:192:         let locator = self.image.source_map.get(body.0).ok_or(Gap::MissingRetainedHandle)?;
+N07-helper_call_adapter.rs:193:         source_expression(&self.original.program, locator)
+N07-helper_call_adapter.rs:194:     }
+N07-helper_call_adapter.rs:195:     fn resolve_arguments(&self, slice: helper::Slice) -> Result<Vec<Value>, Gap> {
+N07-helper_call_adapter.rs:196:         let end = slice.start.checked_add(slice.len).ok_or(Gap::MissingRetainedHandle)?;
+N07-helper_call_adapter.rs:197:         self.arguments.get(slice.start..end).ok_or(Gap::MissingRetainedHandle)?
+N07-helper_call_adapter.rs:198:             .iter().map(|argument| self.resolve_value(argument.value).cloned()).collect()
+N07-helper_call_adapter.rs:199:     }
+N07-helper_call_adapter.rs:200:     /// Host observation only: map materialization/cloning is deliberately not a
+N07-helper_call_adapter.rs:201:     /// helper event, native operation, or claimed bounded B/circuit computation.
+N07-helper_call_adapter.rs:202:     fn resolve_binding(&self, binding: helper::Binding) -> Result<Option<Environment>, Gap> {
+N07-helper_call_adapter.rs:203:         let helper::Binding::Fresh(mut cursor) = binding else { return Ok(None); };
+N07-helper_call_adapter.rs:204:         let mut environment = Environment::new();
+N07-helper_call_adapter.rs:205:         let mut remaining = self.cells.len();
+N07-helper_call_adapter.rs:206:         while let Some(id) = cursor {
+N07-helper_call_adapter.rs:207:             remaining = remaining.checked_sub(1).ok_or(Gap::MissingRetainedHandle)?;
+N07-helper_call_adapter.rs:208:             let cell = self.cells.get(id.0).copied().flatten().ok_or(Gap::MissingRetainedHandle)?;
+N07-helper_call_adapter.rs:209:             environment.insert(self.resolve_name(cell.name)?.clone(), self.resolve_value(cell.value)?.clone());
+N07-helper_call_adapter.rs:210:             cursor = cell.previous;
+N07-helper_call_adapter.rs:211:         }
+N07-helper_call_adapter.rs:212:         Ok(Some(environment))
+N07-helper_call_adapter.rs:213:     }
+N07-helper_call_adapter.rs:214:     fn materialize(&self, boundary: helper::Boundary) -> Result<Snapshot, Gap> {
+N07-helper_call_adapter.rs:215:         if boundary.reference_profile != PROFILE { return Err(Gap::MissingRetainedHandle); }
+N07-helper_call_adapter.rs:216:         self.resolve_source(boundary.source_binding_handle)?;
+N07-helper_call_adapter.rs:217:         self.resolve_origin(boundary.control_origin_handle)?;
+N07-helper_call_adapter.rs:218:         let control = match boundary.control {
+N07-helper_call_adapter.rs:219:             helper::LegacyControl::Invoke { name, arguments } =>
+N07-helper_call_adapter.rs:220:                 Control::Invoke(self.resolve_name(name)?.clone(), self.resolve_arguments(arguments)?),
+N07-helper_call_adapter.rs:221:             helper::LegacyControl::Enter { function, arguments } => Control::Enter(
+N07-helper_call_adapter.rs:222:                 function.map(|row| self.resolve_function(row)).transpose()?, self.resolve_arguments(arguments)?),
+N07-helper_call_adapter.rs:223:             helper::LegacyControl::Bound { binding, return_sort, body } =>
+N07-helper_call_adapter.rs:224:                 Control::Bound(self.resolve_binding(binding)?, unsort(return_sort), self.resolve_body(body)?),
+N07-helper_call_adapter.rs:225:         };
+N07-helper_call_adapter.rs:226:         Ok(Snapshot {
+N07-helper_call_adapter.rs:227:             program: self.resolve_program(boundary.program_handle)?.clone(), control: Some(control),
+N07-helper_call_adapter.rs:228:             environment: self.resolve_environment(boundary.caller_environment_handle)?.clone(),
+N07-helper_call_adapter.rs:229:             frames: self.resolve_frames(boundary.frames_top_first)?.to_vec(),
+N07-helper_call_adapter.rs:230:             stack_limit: boundary.stack_limit, remaining_fuel: boundary.reference_remaining_fuel,
+N07-helper_call_adapter.rs:231:             initial_fuel: boundary.reference_initial_fuel, outcome: Outcome::Pending,
+N07-helper_call_adapter.rs:232:         })
+N07-helper_call_adapter.rs:233:     }
+N07-helper_call_adapter.rs:234:     pub(super) fn snapshot(&self) -> Result<Snapshot, Gap> { self.materialize(self.state.boundary) }
+N07-helper_call_adapter.rs:235:     pub(super) fn resume_snapshot(&self) -> Result<Snapshot, Gap> {
+N07-helper_call_adapter.rs:236:         self.resolve_result_slot(self.state.resume.result_slot)?;
+N07-helper_call_adapter.rs:237:         self.materialize(self.state.resume.saved_pre_state)
+N07-helper_call_adapter.rs:238:     }
+N07-helper_call_adapter.rs:239: 
+N07-helper_call_adapter.rs:240:     /// Delegate one event to the unchanged helper. Only separately completed
+N07-helper_call_adapter.rs:241:     /// legacy rules emit real records, at A charge1 with exactly one A fuel unit.
+N07-helper_call_adapter.rs:242:     /// H is reported through work()/helper_event, never added to A fuel/work.
+N07-helper_call_adapter.rs:243:     pub(super) fn step(&mut self) -> Result<Option<AdapterEvent>, Gap> {
+N07-helper_call_adapter.rs:244:         let prior = self.state.boundary;
+N07-helper_call_adapter.rs:245:         let event = self.state.step(&helper::Tables { functions: &self.functions,
+N07-helper_call_adapter.rs:246:             parameters: &self.parameters, arguments: &self.arguments },
+N07-helper_call_adapter.rs:247:             &mut helper::Scratch { pairs: &mut self.pairs, cells: &mut self.cells })
+N07-helper_call_adapter.rs:248:             .map_err(Gap::Helper)?;
+N07-helper_call_adapter.rs:249:         let Some(event) = event else { return Ok(None); };
+N07-helper_call_adapter.rs:250:         let reference_completion = if event.reference_cursor_delta == 1 {
+N07-helper_call_adapter.rs:251:             self.result_slots[self.state.resume.result_slot] = Some(self.state.boundary.control);
+N07-helper_call_adapter.rs:252:             let line = match event.kind {
+N07-helper_call_adapter.rs:253:                 helper::EventKind::CompleteFind => 200,
+N07-helper_call_adapter.rs:254:                 helper::EventKind::CompleteBind => 204,
+N07-helper_call_adapter.rs:255:                 _ => return Err(Gap::MissingRetainedHandle),
+N07-helper_call_adapter.rs:256:             };
+N07-helper_call_adapter.rs:257:             Some(StepRecord { rule_start_line: line, charge: 1,
+N07-helper_call_adapter.rs:258:                 before: self.materialize(prior)?, after: self.snapshot()? })
+N07-helper_call_adapter.rs:259:         } else { None };
+N07-helper_call_adapter.rs:260:         Ok(Some(AdapterEvent { helper_event: event, reference_completion }))
+N07-helper_call_adapter.rs:261:     }
+N07-helper_call_adapter.rs:262: }
+N07-helper_call_adapter.rs:263: 
+N07-helper_call_adapter.rs:264: // Name interning and path resolution are host preparation/observation, not
+N07-helper_call_adapter.rs:265: // helper steps. String spelling/equality is preserved, with no new admission.
+N07-helper_call_adapter.rs:266: fn intern(names: &mut Vec<Name>, name: &str) -> helper::NameId {
+N07-helper_call_adapter.rs:267:     if let Some(index) = names.iter().position(|existing| existing == name) {
+N07-helper_call_adapter.rs:268:         helper::NameId(index)
+N07-helper_call_adapter.rs:269:     } else {
+N07-helper_call_adapter.rs:270:         let index = names.len(); names.push(name.into()); helper::NameId(index)
+N07-helper_call_adapter.rs:271:     }
+N07-helper_call_adapter.rs:272: }
+N07-helper_call_adapter.rs:273: fn sort(ty: Type) -> helper::Sort {
+N07-helper_call_adapter.rs:274:     match ty { Type::UInt => helper::Sort::UInt, Type::Bool => helper::Sort::Bool,
+N07-helper_call_adapter.rs:275:         Type::List => helper::Sort::List, Type::Tree => helper::Sort::Tree }
+N07-helper_call_adapter.rs:276: }
+N07-helper_call_adapter.rs:277: fn unsort(ty: helper::Sort) -> Type {
+N07-helper_call_adapter.rs:278:     match ty { helper::Sort::UInt => Type::UInt, helper::Sort::Bool => Type::Bool,
+N07-helper_call_adapter.rs:279:         helper::Sort::List => Type::List, helper::Sort::Tree => Type::Tree }
+N07-helper_call_adapter.rs:280: }
+N07-helper_call_adapter.rs:281: fn value_sort(value: &Value) -> helper::Sort {
+N07-helper_call_adapter.rs:282:     match value { Value::UInt(_) => helper::Sort::UInt, Value::Bool(_) => helper::Sort::Bool,
+N07-helper_call_adapter.rs:283:         Value::List(_) => helper::Sort::List, Value::Tree(_) => helper::Sort::Tree }
+N07-helper_call_adapter.rs:284: }
