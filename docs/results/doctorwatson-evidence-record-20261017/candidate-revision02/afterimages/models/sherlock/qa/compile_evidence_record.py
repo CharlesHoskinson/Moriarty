@@ -1,0 +1,145 @@
+"""Join an existing compiler capture's recorded identities; execute no producer.
+
+The fixed published capture package is the evidence-record boundary. Source
+inventory entries and library identities remain historical receipt declarations.
+Their links and supplied artifact/client bytes are checked; authenticity,
+current-source equality and semantic correctness are never inferred.
+"""
+from pathlib import Path
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError('compile evidence record: ' + message)
+
+
+def build_record(repo, package, case, *, read_file):
+    """Read the existing quote/eligibility package, returning one complete record.
+
+    read_file(path, json_document=bool) returns ({path, sha256, bytes}, value)
+    from one byte read. The existing checker supplies its strict JSON reader.
+    No receipt-selected path is opened: the supported package layout is fixed.
+    """
+    require(case in ('quote', 'eligibility'), 'supported case is quote or eligibility')
+    repo, package = Path(repo), Path(package)
+    if not package.is_absolute():
+        package = repo / package
+
+    def load(relative, *, json_document=True):
+        path = package / relative
+        identity, value = read_file(path, json_document=json_document)
+        try:
+            public_path = str(path.relative_to(repo))
+        except ValueError:
+            public_path = str(path)
+        return dict(path=public_path, sha256=identity['sha256']), identity['bytes'], value
+
+    inventory_ref, _, inventory = load('core-metadata-diagnostic-01/PREEXEC.json')
+    build_input_ref, _, build_input = load('core-rlib-01/PREEXEC.json')
+    build_result_ref, _, build_result = load('core-rlib-01/RESULT.json')
+    capture_input_ref, _, capture_input = load('actual-capture/PREEXEC.json')
+    capture_result_ref, _, capture_result = load('actual-capture/RESULT.json')
+    client_ref, client_bytes, _ = load('actual-capture/capture.rs', json_document=False)
+    artifact_ref, artifact_bytes, artifact = load('actual-capture/' + case + '.stdout')
+
+    require(build_input['input_snapshot'] == '../core-metadata-diagnostic-01/PREEXEC.json',
+            'build input snapshot must identify the published source inventory')
+    members = inventory['source_pins']
+    require(type(members) is list and bool(members), 'recorded source inventory is required')
+    require(all(type(member) is dict and all(key in member for key in ('path', 'sha256', 'bytes'))
+                for member in members), 'recorded source members require their identities')
+    require(build_result['exit_code'] == 0 and build_result['source_changed'] == [],
+            'recorded library build must have a zero exit and unchanged sources')
+    require(capture_result['status'] == 'CAPTURED' and capture_result['input_changed'] == [],
+            'capture must record captured output and unchanged inputs')
+    for phase in ('compile', case):
+        selected = [step for step in capture_result['steps'] if step['name'] == phase]
+        require(len(selected) == 1 and selected[0]['exit_code'] == 0,
+                'selected recorded compile/case exit must be zero')
+    output = capture_result['outputs'][case + '.stdout']
+    require(output['sha256'] == artifact_ref['sha256'] and output['bytes'] == artifact_bytes,
+            'captured artifact bytes must match the recorded output identity')
+    clients = [entry for entry in capture_input['inputs']
+               if entry['sha256'] == client_ref['sha256'] and entry['bytes'] == client_bytes]
+    require(len(clients) == 1, 'capture client bytes must match one recorded input identity')
+    library = capture_input['core_library']
+    require(type(library) is dict and all(key in library for key in ('path', 'sha256', 'bytes')),
+            'recorded core library identity is required')
+    require(sum(entry == library for entry in build_result['artifacts']) == 1,
+            'capture core library must match one successful recorded build artifact')
+    require(artifact['format'] == 'sherlock-host-artifact/1', 'unsupported captured artifact format')
+    require(type(artifact['config']) is dict and type(artifact['admission']['bounds']) is dict,
+            'complete supplied config and admission bounds must remain objects')
+    observation, evidence = artifact['observation'], artifact['evidence']
+    observed = observation['status'] == 'observed'
+    require(observation['status'] in ('not-requested', 'observed'), 'unsupported observation disposition')
+    require(observation['evaluation_performed'] is observed,
+            'observation disposition must preserve its reported evaluation flag')
+    require(evidence['host_observation'] == ('observed' if observed else 'unrun'),
+            'reported host evidence must agree with the observation disposition')
+
+    return {
+        'format': 'sherlock-compiler-evidence-record/1',
+        'status': 'linked-historical-records',
+        'record_boundary': 'captured artifact plus recorded capture/build/source receipts',
+        'predicate': {
+            'id': ('sherlock.compile_host.prepare_admit_observe/1' if observed
+                   else 'sherlock.compile_host.prepare_admit/1'),
+            'claim': ('receipt-declared host observation' if observed
+                      else 'receipt-declared source preparation and admission only'),
+        },
+        'source_tree': {
+            'kind': 'historical-recorded-source-inventory',
+            'inventory': inventory_ref,
+            'members': members,
+            'current_source_equality': 'not-checked',
+        },
+        'profile': artifact['execution_profile'],
+        'consumer': {
+            'id': 'mori_core::sherlock_compile_artifact::compile_host',
+            'capture_client': client_ref,
+            'argument_mode': 'observe=true' if observed else 'observe=false',
+            'invocation_authenticity': 'not-established',
+            'identity_basis': 'supported-capture-family-convention',
+            'argument_mode_basis': 'inferred-from-artifact-observation',
+            'client_call_route': 'not-checked',
+        },
+        'bounds': {'config': artifact['config'], 'admission': artifact['admission']['bounds']},
+        'target': {
+            'declared': artifact['target'],
+            'qualification': artifact['qualification'],
+            'native': evidence['native'],
+            'target': evidence['target'],
+        },
+        'evidence_class': {
+            'kind': ('recorded-host-observation-artifact' if observed
+                     else 'recorded-compile-only-artifact'),
+            'receipt_status': capture_result['status'],
+            'artifact_evidence': evidence,
+            'semantic_validity': 'not-established-by-this-reader',
+        },
+        'identities': {
+            'artifact': artifact_ref,
+            'core_library': library,
+            'capture_inputs': capture_input_ref,
+            'capture_result': capture_result_ref,
+            'build_inputs': build_input_ref,
+            'build_result': build_result_ref,
+        },
+        'bindings_checked': [
+            'captured artifact bytes equal recorded output identity',
+            'capture client bytes equal one recorded capture input identity',
+            'capture core-library identity equals recorded successful build artifact',
+            'recorded build input snapshot names the published source inventory',
+            'recorded selected compile/case exits are zero; source/input changed arrays are empty',
+        ],
+        'gaps': [
+            'Historical source inventory entries are recorded identities; source bytes are not reopened or claimed current.',
+            'Library identity is matched between receipts; binary bytes and source-to-binary authenticity are not established.',
+            'Capture executable identity at invocation time is unrecorded in this receipt format.',
+            'Invocation authenticity and independent semantic correctness are not established by a file reader.',
+            'No compiler, interpreter, model, SDK, proof or ledger is executed; native/target qualification and acceptance remain separate.',
+            'Consumer and argument mode are the supported-family convention and artifact-status inference; client call-route source is not checked.',
+        ],
+        'acceptance': 'none',
+    }

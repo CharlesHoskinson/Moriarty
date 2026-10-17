@@ -2,16 +2,21 @@
 
 Sherlock is the proposed universal interpreter for Moriarty. The user named it
 on 2026-10-15. The [Candidate B design](../../openspec/changes/sherlock-universal-interpreter-design/design.md)
-integrates the research into a final-design candidate awaiting fresh independent
-review. This directory's existing executable model sources and recorded
+integrates the earlier research. The [current adopted revision03](../../docs/sherlock/design.md)
+contains the subsequent design and review reconciliation. This directory's existing executable model sources and recorded
 observations remain Candidate A scope; they do not implement or validate B.
 The separate [B HOST payload source](b-core-host-source-20261016/README.md),
 merged in [PR #120](https://github.com/CharlesHoskinson/Moriarty/pull/120), compiled
 ten files with 96 Enabled row-effect payloads to metadata only, with six warnings.
-Nothing was linked, loaded, run or tested; its selector, driver, guards and
-admission remain unimplemented, and a later owner-driver body is authored only,
-incomplete and uncompiled. Its qualified R4 HOST Stage 1 basis is distinct from the
-unadopted proposed v3a interface amendment.
+At that PR120 source cut, nothing was linked, loaded, run or tested; selector,
+driver, guards and admission were then unimplemented. Later scoped work passed
+[four owned-observation tests](../../docs/results/sherlock-b-complete-observation-20261017/README.md)
+and [nine complete-comparison tests](../../docs/results/sherlock-b-trace-comparison-20261017/README.md).
+The latter do not execute owner steps. The separate
+[44-test finite model result](../../docs/results/sherlock-quint-design-20261017/README.md)
+is model evidence. These observations retain their exact source cuts; full B,
+generic, financial, native and target acceptance remain open. The qualified R4
+HOST Stage1 basis is distinct from the unadopted proposed v3a amendment.
 No production compiler backend or released Sherlock profile is supplied here.
 
 The proposed reference machine evaluates different supported programs using
