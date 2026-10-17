@@ -534,6 +534,151 @@ def source_read_inventory():
     return module.ReadInventory()
 
 
+def compile_evidence_record(repo, package, case):
+    """Identify seven evidence fields from recorded package files only.
+
+    All optional reporting logic lives inside this already snapshotted module.
+    Source/binary identities remain historical receipt declarations; current
+    equality, client route, invocation authenticity and semantics are not proved.
+    No compiler, interpreter, model, SDK or native operation is selected.
+    """
+    def require(condition, message):
+        if not condition:
+            raise ValueError('compile evidence record: ' + message)
+
+    def read_file(path, *, json_document):
+        raw = Path(path).read_bytes()
+        identity = dict(path=str(path), sha256=digest(raw), bytes=len(raw))
+        value = (json.loads(raw, object_pairs_hook=unique_members, parse_constant=nonfinite,
+                            parse_float=finite) if json_document else raw)
+        return identity, value
+
+    require(case in ('quote', 'eligibility'), 'supported case is quote or eligibility')
+    repo, package = Path(repo), Path(package)
+    if not package.is_absolute():
+        package = repo / package
+
+    def load(relative, *, json_document=True):
+        path = package / relative
+        identity, value = read_file(path, json_document=json_document)
+        try:
+            public_path = str(path.relative_to(repo))
+        except ValueError:
+            public_path = str(path)
+        return dict(path=public_path, sha256=identity['sha256']), identity['bytes'], value
+
+    inventory_ref, _, inventory = load('core-metadata-diagnostic-01/PREEXEC.json')
+    build_input_ref, _, build_input = load('core-rlib-01/PREEXEC.json')
+    build_result_ref, _, build_result = load('core-rlib-01/RESULT.json')
+    capture_input_ref, _, capture_input = load('actual-capture/PREEXEC.json')
+    capture_result_ref, _, capture_result = load('actual-capture/RESULT.json')
+    client_ref, client_bytes, _ = load('actual-capture/capture.rs', json_document=False)
+    artifact_ref, artifact_bytes, artifact = load('actual-capture/' + case + '.stdout')
+
+    require(build_input['input_snapshot'] == '../core-metadata-diagnostic-01/PREEXEC.json',
+            'build input snapshot must identify the published source inventory')
+    members = inventory['source_pins']
+    require(type(members) is list and bool(members), 'recorded source inventory is required')
+    require(all(type(member) is dict and all(key in member for key in ('path', 'sha256', 'bytes'))
+                for member in members), 'recorded source members require their identities')
+    require(build_result['exit_code'] == 0 and build_result['source_changed'] == [],
+            'recorded library build must have a zero exit and unchanged sources')
+    require(capture_result['status'] == 'CAPTURED' and capture_result['input_changed'] == [],
+            'capture must record captured output and unchanged inputs')
+    for phase in ('compile', case):
+        selected = [step for step in capture_result['steps'] if step['name'] == phase]
+        require(len(selected) == 1 and selected[0]['exit_code'] == 0,
+                'selected recorded compile/case exit must be zero')
+    output = capture_result['outputs'][case + '.stdout']
+    require(output['sha256'] == artifact_ref['sha256'] and output['bytes'] == artifact_bytes,
+            'captured artifact bytes must match the recorded output identity')
+    clients = [entry for entry in capture_input['inputs']
+               if entry['sha256'] == client_ref['sha256'] and entry['bytes'] == client_bytes]
+    require(len(clients) == 1, 'capture client bytes must match one recorded input identity')
+    library = capture_input['core_library']
+    require(type(library) is dict and all(key in library for key in ('path', 'sha256', 'bytes')),
+            'recorded core library identity is required')
+    require(sum(entry == library for entry in build_result['artifacts']) == 1,
+            'capture core library must match one successful recorded build artifact')
+    require(artifact['format'] == 'sherlock-host-artifact/1', 'unsupported captured artifact format')
+    require(type(artifact['config']) is dict and type(artifact['admission']['bounds']) is dict,
+            'complete supplied config and admission bounds must remain objects')
+    observation, evidence = artifact['observation'], artifact['evidence']
+    observed = observation['status'] == 'observed'
+    require(observation['status'] in ('not-requested', 'observed'), 'unsupported observation disposition')
+    require(observation['evaluation_performed'] is observed,
+            'observation disposition must preserve its reported evaluation flag')
+    require(evidence['host_observation'] == ('observed' if observed else 'unrun'),
+            'reported host evidence must agree with the observation disposition')
+
+    return {
+        'format': 'sherlock-compiler-evidence-record/1',
+        'status': 'linked-historical-records',
+        'record_boundary': 'captured artifact plus recorded capture/build/source receipts',
+        'predicate': {
+            'id': ('sherlock.compile_host.prepare_admit_observe/1' if observed
+                   else 'sherlock.compile_host.prepare_admit/1'),
+            'claim': ('receipt-declared host observation' if observed
+                      else 'receipt-declared source preparation and admission only'),
+        },
+        'source_tree': {
+            'kind': 'historical-recorded-source-inventory',
+            'inventory': inventory_ref,
+            'members': members,
+            'current_source_equality': 'not-checked',
+        },
+        'profile': artifact['execution_profile'],
+        'consumer': {
+            'id': 'mori_core::sherlock_compile_artifact::compile_host',
+            'capture_client': client_ref,
+            'argument_mode': 'observe=true' if observed else 'observe=false',
+            'invocation_authenticity': 'not-established',
+            'identity_basis': 'supported-capture-family-convention',
+            'argument_mode_basis': 'inferred-from-artifact-observation',
+            'client_call_route': 'not-checked',
+        },
+        'bounds': {'config': artifact['config'], 'admission': artifact['admission']['bounds']},
+        'target': {
+            'declared': artifact['target'],
+            'qualification': artifact['qualification'],
+            'native': evidence['native'],
+            'target': evidence['target'],
+        },
+        'evidence_class': {
+            'kind': ('recorded-host-observation-artifact' if observed
+                     else 'recorded-compile-only-artifact'),
+            'receipt_status': capture_result['status'],
+            'artifact_evidence': evidence,
+            'semantic_validity': 'not-established-by-this-reader',
+        },
+        'identities': {
+            'artifact': artifact_ref,
+            'core_library': library,
+            'capture_inputs': capture_input_ref,
+            'capture_result': capture_result_ref,
+            'build_inputs': build_input_ref,
+            'build_result': build_result_ref,
+        },
+        'bindings_checked': [
+            'captured artifact bytes equal recorded output identity',
+            'capture client bytes equal one recorded capture input identity',
+            'capture core-library identity equals recorded successful build artifact',
+            'recorded build input snapshot names the published source inventory',
+            'recorded selected compile/case exits are zero; source/input changed arrays are empty',
+        ],
+        'gaps': [
+            'Historical source inventory entries are recorded identities; source bytes are not reopened or claimed current.',
+            'Library identity is matched between receipts; binary bytes and source-to-binary authenticity are not established.',
+            'Capture executable identity at invocation time is unrecorded in this receipt format.',
+            'Invocation authenticity and independent semantic correctness are not established by a file reader.',
+            'No compiler, interpreter, model, SDK, proof or ledger is executed; native/target qualification and acceptance remain separate.',
+            'Consumer and argument mode are the supported-family convention and artifact-status inference; client call-route source is not checked.',
+        ],
+        'acceptance': 'none',
+    }
+
+
+
 def requirement_evidence_report(repo, path):
     """Validate declared row membership/currentness, never decide semantic acceptance.
 
@@ -770,8 +915,10 @@ def requirement_evidence_report(repo, path):
 
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
         lean_observations=None, quint_observations=None, image_observations=None, k_observations=None,
-        requirement_evidence=None):
+        requirement_evidence=None, compile_evidence_package=None, compile_evidence_case=None):
     repo = Path(repo)
+    require((compile_evidence_package is None) == (compile_evidence_case is None),
+            'compile evidence package and case must be supplied together')
     inventory = source_read_inventory()
     files = []
     totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
@@ -855,6 +1002,9 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                       'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'],
                 **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}),
                 **supplied_layers)
+    if compile_evidence_package is not None:
+        report['compile_evidence_record'] = compile_evidence_record(
+            repo, compile_evidence_package, compile_evidence_case)
     if requirement_evidence is not None:
         current = requirement_evidence_report(repo, requirement_evidence)
         report['requirement_evidence'] = current
@@ -870,6 +1020,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--observed-programs', type=Path)
+    parser.add_argument('--compile-evidence-record', type=Path,
+                        help='identify evidence fields from an existing compiler capture package; no producer execution')
+    parser.add_argument('--compile-evidence-case', choices=('quote', 'eligibility'),
+                        help='exact captured artifact for the optional companion record')
     parser.add_argument('--requirement-evidence', type=Path,
                         help='report explicitly selected owner-declared requirement evidence/currentness; no semantic acceptance')
     supplied = parser.add_mutually_exclusive_group()
@@ -881,6 +1035,8 @@ def main(argv=None):
     parser.add_argument('--observed-prefixes', type=Path)
     parser.add_argument('--family', choices=FAMILIES, default='normal')
     args = parser.parse_args(argv)
+    if (args.compile_evidence_record is None) != (args.compile_evidence_case is None):
+        parser.error('--compile-evidence-record and --compile-evidence-case must be supplied together')
     if any(getattr(args, layer + '_observations') is not None for layer in ('host', *LAYER_ARTIFACTS)) and (args.observed_programs is not None or args.observed_prefixes is not None):
         parser.error('layer observations and literal document observations are separate comparison modes')
     if (args.observed_programs is None) != (args.observed_prefixes is None):
@@ -890,7 +1046,9 @@ def main(argv=None):
                      observed_prefixes=args.observed_prefixes, family=args.family,
                      host_observations=args.host_observations, lean_observations=args.lean_observations,
                      quint_observations=args.quint_observations, image_observations=args.image_observations,
-                     k_observations=args.k_observations, requirement_evidence=args.requirement_evidence)
+                     k_observations=args.k_observations, requirement_evidence=args.requirement_evidence,
+                     compile_evidence_package=args.compile_evidence_record,
+                     compile_evidence_case=args.compile_evidence_case)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')

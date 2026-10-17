@@ -991,3 +991,23 @@ The selected DoctorWatson report is an integrity check over declared evidence.
 It must verify all eight current adopted clauses and leave27 originals plus25
 refinements open. Reporting gaps, compiler integration and native prerequisites
 remain separate actionable work; an adopted host clause does not close them.
+
+### DW-54 — Keep evidence joins honest and integration dependencies complete
+
+The compiler companion reports historical source/library/artifact links; matching
+a client file to a receipt does not verify its call route. A non-author source
+read caught that distinction before the final implementation. Preserve the
+original expectation freeze and explicitly freeze a qualified successor before
+changing code, rather than editing expectations to fit observed output.
+
+An optional sibling module then exposed an existing snapshot-membership failure:
+two of254 local tests failed because the declared helper set omitted that file.
+The repair moved the small pure function into the checker whose complete bytes
+are already snapshotted. The detector and guard stayed unchanged. Four targeted
+checks and then all254 local tests passed. Preserve the failed source and receipt;
+this was an actual integration defect, not a reason to weaken dependency checks.
+
+See the [source and actual CI records](../docs/results/doctorwatson-evidence-record-20261017/README.md).
+The companion's synthetic fixtures and historical file reads do not execute an
+interpreter or close the full original025 scenario. Model-only evidence and later
+B observations still need their separate complete reporting record and review.

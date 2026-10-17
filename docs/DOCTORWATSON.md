@@ -54,8 +54,11 @@ behavior or acceptance check from the current evidence report, preserve actual
 blockers on their consuming rows, and continue independent actionable work.
 Source, observed results and acceptance retain separate status. The [latest selected report](results/sherlock-structural-sharing-20261017/current-evidence/RESULT.json)
 verifies eight current adopted original host clauses;27 originals and all25
-refinements remain open. The updated
+refinements remain open. The earlier
 default lane passed [252 local tests](results/sherlock-ears-closure-20261017/README.md).
+After the optional evidence-record feature and an actual dependency-integration
+repair, the [updated local lane passed254 tests](results/doctorwatson-evidence-record-20261017/README.md).
+The feature review and whole025 acceptance are separate.
 
 ## One delivery cycle
 
