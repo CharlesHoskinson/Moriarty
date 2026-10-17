@@ -92,16 +92,15 @@ fn report_serializes_actual_mapping_and_explicit_coverage() {
 
 #[test]
 fn ordinary_valid_core_outside_projection_remains_explicitly_unmapped() {
-    let source = crate::parse("language \"moriarty/1\"; agreement Outside { action compare(a: UInt, b: UInt) { emit \"greater\"(a > b); } }").unwrap();
+    let source = crate::parse("language \"moriarty/1\"; agreement Outside { action compare(a: UInt, b: UInt) { emit \"first\"(a); emit \"second\"(b); } }").unwrap();
     crate::validate(&source).unwrap();
     let report = source_projection_report(&source);
     let ActionProjection::Unsupported { diagnostic, .. } = &report.actions[0] else {
-        panic!("Gt has no direct scalar projection in this slice");
+        panic!("ordered source effects remain outside a single final-value projection");
     };
-    assert_eq!(diagnostic.construct, "binary-Gt");
+    assert_eq!(diagnostic.construct, "nonfinal-emit");
     assert_eq!(diagnostic.statement_index, Some(0));
-    assert_eq!(diagnostic.expression, Some(2));
-    // Reporting is independent from the existing source language validation.
+    assert_eq!(diagnostic.expression, None);
     crate::validate(&source).unwrap();
 }
 
