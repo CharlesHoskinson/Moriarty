@@ -1,0 +1,11 @@
+# Normal capture comparison facts — 2026-10-16
+
+Exactly13 ordinary Python comparator invocations recorded **NO_MAPPED_DIFFERENCES**. Every invocation exited2 and retained **GAP**. Each used one unchanged Root-supplied actual capture at its recorded fuel and stack selection against independently frozen private expectations. No subject artifact was rerun.
+
+COMPARISON-RESULTS.json contains the complete selected result table. COMMANDS.json records original local argv, which are factual metadata rather than public file links. CONSUMER-PROVENANCE.json lists all six executed QA modules and all six config/reference manifests by hash. The generic public consumer is a distinct frozen selection; its four transport modules match the executed private core, while its generic envelope CLI omits the private frozen reader.
+
+This result is prepared for atomic publication with the exact corrected [actual raw capture package](../all13-host-observations-20261016/) and unchanged [generic QA consumer source05](../normal-comparison-consumer-20261016/). Root must integrate all three packages together; this preparation does not assert live availability before that transaction. ACTUAL-CAPTURE-PROVENANCE.json separately pins the historic initial raw membership, corrected seventeen-file membership and intended final nineteen-file membership. The thirteen raw capture hashes and original comparison evidence are unchanged; this revision only updates sibling metadata pins and publication status. No raw captures are duplicated here. The full operational receipt is retained privately and hash-pinned; curated actual provenance is in the raw selection. The independent expected corpus, full private QA reports and raw audit/provider bodies remain private.
+
+The result describes mapped DATA only. It makes no per-field or complete-state pass claim, no complete-envelope or B-semantic claim, and no exhaustive finite-fuel claim. Full raw capture content review belongs to the separate raw selection. Fresh review of these exact result files may inspect full source and operational receipt, but a compact table cannot independently recompute equality against withheld expected states.
+
+The remaining scope is recorded in SCOPE.json. Root owns source integration, publication and acceptance.
