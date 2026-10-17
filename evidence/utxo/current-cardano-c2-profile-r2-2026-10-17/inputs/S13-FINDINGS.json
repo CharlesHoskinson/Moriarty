@@ -1,0 +1,44 @@
+[
+  {
+    "id": "R01-rust-acceptance-superset",
+    "severity": "medium (non-blocking for narrow serializer adoption; blocks any Rust-acceptance or profile claim)",
+    "summary": "Admission checks a declared subset of Rust parse_setup_record + check_export, so the consumer accepts inputs Rust refuses. Missing checks: DRIVER_ID; relation deny_unknown_fields and check_profile (language, semantics, adapter, 9-hex set, logicalWork, instanceVariables==3, shape-bytes digest); provingKeyBytes u64 bound; decode_vk/decode_proof; parse_statement re-encode; the setupRecordSha256 byte link; UTF-8-valid strings. The output labels expose only groth16, vkCurveValidity and setupRecordLink.",
+    "evidence": "S04 _SETUP_RECORD 'driver': _TEXT, 'provingKeyBytes': ('int', 1, None), 'relation': ('object', _RELATION, False); _LABELS has 8 keys with no relationProfile, statementReencode or proofCurveValidity label; S09 parse_setup_record fixed(driver, DRIVER_ID) and check_profile(); S10 RelationDescriptor deny_unknown_fields and check_profile; S11 parse_statement rebuild; S12 decode_vk/decode_proof.",
+    "requiredFix": "Adoption record must state: 'structural serializer; NOT equivalent to Rust parse_setup_record/check_export acceptance; relation language/semantics/adapter/profile, driver identity, statement re-encode and proof/VK curve validity NOT_CHECKED'. A separately reviewed contract revision is required before builder integration treats admission as meaningful. It should pin DRIVER_ID, language moriarty/1, semantics moriarty-core/1, adapter SettlementHashV2, instanceVariables 3 and provingKeyBytes <= 2^64-1, and add labels relationProfile, statementReencode and proofCurveValidity. Optionally close the relation schema to all 30 Rust keys."
+  },
+  {
+    "id": "R02-parity-wording-overclaim",
+    "severity": "low",
+    "summary": "The module docstring 'checks the non-pairing consistency' and the DESIGN-POSITIONS rationales CI04 'Mirrors parse_setup_record where supplied' and CI09 'Covers the remaining non-pairing check_export steps in Rust order' overstate parity. Several non-pairing Rust steps are not mirrored.",
+    "evidence": "S04 docstring lines 4-6; S02 CI04 and CI09 rationale; S09 check_export performs setupRecordSha256, decode_proof, parse_u128_decimal and parse_statement (re-encode), none of which the consumer mirrors.",
+    "requiredFix": "Do not repeat these rationales in the adoption record. The next source revision should change the docstring to 'checks a declared subset of the non-pairing check_export consistency'. That edit changes bytes and needs a new root GREEN."
+  },
+  {
+    "id": "R03-untested-refusal-branches",
+    "severity": "medium (review attention; source-inspected only, not silently approved)",
+    "summary": "Ordinary GREEN does not exercise: the 'str' and malformed 'hex-or-null' refusal kinds; the missing-required-field and non-dict nested-object branches; most SETUP literals and leaves; nested extra keys outside top level and envV2; u8/u16/u64 upper bounds; premises variants; five of eight RELATION keys plus the export vkDigest alone; statement >524288 characters, non-hex, shape/tag/family flips and relation bodyLen mismatch; x2 alone; uppercase proof; most CARDANO fields; no-mutation on refusal paths. Only one real context is used.",
+    "evidence": "S03 TAMPER (29 entries), test_09 (8 cases), test_06 no-mutation on success only; S04 _admit/_admit_object branches for 'str', 'hex-or-null', missing field and non-dict.",
+    "requiredFix": "Record these as source-inspected-only. Before any claim of refusal completeness or builder reliance, run a separately reviewed supplementary test revision that adds one tamper per listed branch and kind, plus refusal-path deepcopy equality. Do not edit the frozen test in place."
+  },
+  {
+    "id": "R04-build-and-digest-rewrap-unreachable",
+    "severity": "info",
+    "summary": "C2I-BUILD and the C2I-DIGEST host-refusal rewraps cannot trigger for admitted inputs, because every host precondition is implied by earlier stages. They are defensive code with no ordinary test.",
+    "evidence": "S04 BUILD arguments come from hex64/hex56-checked fields, a 2-byte header ix, the ARG-checked expiry, a 976-hex VK, a 384-hex proof, a 28-byte policy, a 32-byte token and quantity 1; S05 build_env_data, build_c2_mint_data and build_value_data bounds; DIGEST reuses _admit_statement, already passed at STATEMENT.",
+    "requiredFix": "None for narrow adoption. Optionally, a separate reviewed test could exec the consumer against a refusing host proxy without displacing the pinned host."
+  },
+  {
+    "id": "R05-host-call-not-test-enforced",
+    "severity": "info",
+    "summary": "test_02 checks host identity and that no API was copied, but not that the seven APIs are invoked. A hashlib reimplementation of statement_digest_hex would still pass. Source inspection confirms all seven calls.",
+    "evidence": "S03 test_02 and test_11; S04 _host(...) calls to all seven host_codec attributes.",
+    "requiredFix": "Optional future test: a counting proxy module for a separate consumer exec. Not required for narrow adoption."
+  },
+  {
+    "id": "R06-historical-wording-and-mutable-module-tables",
+    "severity": "info",
+    "summary": "The author-time statements 'RED and GREEN unobserved' / 'not reviewed or adopted' (S01, S03, S04, S06) are historical snapshots; the actual root RED and GREEN are newer. Module-level schema and label dicts are mutable but only read or copied.",
+    "evidence": "S01 Status; S03 docstring; S06 F08; S07/S08 timestamps; S08 'unreviewed': true, 'adopted': false; S04 _LABELS and schema dicts.",
+    "requiredFix": "Keep the historical wording unchanged, and cite S07/S08 as the actual results. Optionally freeze the tables (tuples or mapping proxies) in a later revision; in-process tampering is out of scope."
+  }
+]

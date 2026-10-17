@@ -1,0 +1,82 @@
+{
+  "recordType": "C2_R2_REV4_SOURCE_POLICY_ADOPTION_FOR_TEST_AUTHORING_ONLY",
+  "createdAt": "2026-10-17T04:19:08.179591+00:00",
+  "candidatePins": {
+    "S33": {
+      "sha256": "6e2c3989ede633901d7d1a95ee3a081c8eb628fbea199c1aa2858a3eaa2cba34",
+      "bytes": 30809
+    },
+    "S34": {
+      "sha256": "0f592eea77df7531be1edf1685b2b7290add7f9873cda2e11f99c9aed436c3af",
+      "bytes": 8563
+    },
+    "S35": {
+      "sha256": "a863c35ba6b22a41c2d9a8a5d7f87c8a076b4cc92927cc4a10f71e1683cf5e44",
+      "bytes": 7631
+    }
+  },
+  "all40OriginalAndPacketPinsRevalidated": true,
+  "votes": [
+    {
+      "model": "claude-opus-5-5",
+      "review": "/home/charl/moriarty-c2-resume-20261017/jobs/CP-OPUS/REVIEW.json",
+      "sha256": "64f19dcb429e338addc88de24a0965574a7a3361b92493df2b6c8c0fc79bddae",
+      "positions": "CP01-CP08 exact literals AGREE",
+      "requestedEffort": "high",
+      "actualEffortIndependentlyObserved": false
+    },
+    {
+      "model": "muse-wonder-1.0",
+      "review": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-c2-profile-r2-revision4-fresh-muse-review-20261017/MODEL-REVIEW.json",
+      "sha256": "84b3d9de567c1068af16a40b257f80bd0b1fafe1d39734d0dab6cbfdc32b658f",
+      "positions": "CP01-CP08 exact literals AGREE",
+      "requestedEffort": "high",
+      "actualEffortIndependentlyObserved": false
+    }
+  ],
+  "decision": "Adopt exact policy solely as the basis for Opus-authored test source, followed by fresh nonauthor source review before ordinary execution. No implementation or runtime result adopted.",
+  "nonblockingDissent": [
+    {
+      "id": "R4-L01-section3-serde-wording",
+      "severity": "low",
+      "summary": "Section 3 lists 'serde DTO decoding' under Not performed. Yet r2 performs closed-key checks (12/29/export field names) and integer-width checks that are the Python analogue of serde deny_unknown_fields typed decoding. 'Each ... mirrors a named check' also maps the EXPORT-stage hex-width checks only onto later Rust equality comparisons. This is wording imprecision, not an admission-relation claim.",
+      "evidence": "S33 \u00a73 'Not performed: ... serde DTO decoding' versus CP02/CP03/CI05 closed schemas and u8/u16/u64 ranges. S18 SetupRecord/ProofExport #[serde(deny_unknown_fields)] decoded inside parse_json (S28). S18 check_export validates programHash, setupRecordSha256 and context hex only through same()/equality. The 'Added by r2' list already covers sourceSha256-key-required (the Option\u2192None serde difference) and the exact-int rules.",
+      "requiredFix": "Non-blocking. In test-review notes or a later text revision, say that serde mechanics (Option-missing\u2192None, numeric coercion, UTF-8 decoding) are not reproduced, and that the closed-key and width checks are r2 Python analogues. No clause change or re-vote is needed."
+    },
+    {
+      "id": "R4-L02-CP04-constraints-source-review-only",
+      "severity": "low",
+      "summary": "The CP04 scan constraints (no input-proportional copy, never str.encode, length-before-scan for abi2ShapeBytesHex/statementHex) cannot be discriminated by T00-T17 outcomes. T06 detects only wrong stages and subclass leaks, and an implementation that catches UnicodeEncodeError and re-raises ValueError would pass every test.",
+      "evidence": "S33 CP04 and stage notes; T06/T15 rows; the meaningfulness list covers only a no-scan mutant. The T15 token scan reuses v1 test_11 tokens (S23), which do not include 'encode('.",
+      "requiredFix": "The test reviewer and the later implementation reviewer must source-inspect these constraints. Optionally add '.encode(' to the T15 effect-token scan, since r2 needs no encode call. Non-blocking."
+    },
+    {
+      "id": "R4-I03-S31-scope",
+      "severity": "info",
+      "summary": "S31 supports 'the never-run docstrings are not evidence that nothing ran'. It records custody-only binary-source correspondence and does not pin the exact lib.rs (1b13cdc5\u2026) or abi2.rs (51fa1063\u2026) bytes as the compiled sources. So 'stale' is scoped history, not exact-byte provenance.",
+      "evidence": "S31 limitations.binarySourceCorrespondence 'custody evidence, not mathematical binary proof'; its pins cover only proofExport/setupRecord/vk/statement digests. S33 \u00a78 already keeps driverId DECLARED_NAME_NOT_PROVENANCE and circuitVkCorrespondence OPEN.",
+      "requiredFix": "None. Keep the labels and the scoped wording, and infer no universal correspondence."
+    },
+    {
+      "id": "R4-I04-test-authoring-precision",
+      "severity": "info",
+      "summary": "Some rows rely on the test author choosing schema-valid replacement values, so that the fault reaches the intended stage: T10 'each of the 10 context fields changed alone', the T13 field changes and the T08 'another valid value'. For T17, the 'literal expected envCborHex' that feeds the hashlib token is literal framing plus a test-computed NON-ORACLE statement-digest segment.",
+      "evidence": "S33 \u00a76 rows T08, T10, T13 and T17, and the token-expectation preamble. S11 shows EXPORT type/width checks precede CONTEXT/CARDANO.",
+      "requiredFix": "Test review must confirm that each replacement is in-range and of exact type. Keep the T17 digest segment labelled NON-ORACLE."
+    },
+    {
+      "id": "R4-I05-T16-duplication",
+      "severity": "info",
+      "summary": "T16 repeats v1-ADMIT assertions already made in the v1 columns of T04, T05b, T06 and T14. This is consistent and not a contradiction, and it does not affect the 18-method count.",
+      "evidence": "S33 T04/T05b/T06/T14 v1 cells versus the T16 enumerated list; API tests.T16StrictnessCases.",
+      "requiredFix": "None."
+    }
+  ],
+  "sourcePolicyAdoptedForTestAuthoring": true,
+  "implementationAdopted": false,
+  "testExecutionPermittedByThisRecord": false,
+  "builderReliancePermitted": false,
+  "nativeAuthority": 0,
+  "next": "Opus authors test_c2_issue_artifacts_r2.py with exactly 18 T00-T17 methods; fresh test-source review before RED.",
+  "retainedDependencyGap": "R4 downstream contract still pins revision3; revision4 requires explicit downstream reconciliation before builder adoption."
+}

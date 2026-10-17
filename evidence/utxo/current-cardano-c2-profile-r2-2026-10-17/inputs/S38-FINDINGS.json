@@ -1,0 +1,79 @@
+[
+  {
+    "id": "N01-T16-normative-contradiction",
+    "severity": "medium",
+    "summary": "REPAIRED. T16 no longer says 'every ADMIT cell above'. It lists exactly the cases v1 admits and r2 refuses, and excludes T02 and T17.",
+    "evidence": "Contract section 6 T16 row and API tests.T16StrictnessCases/T16Excludes. Listed cases: T04 driver one-char change (SETUP) and provingKeyBytes 2**64 (SETUP); every T05b case (PROFILE); T06 relationFormat/logicalCostProfile/fieldModulusLeHex, relation extra key, and consistent action/export action/catalogue name (PROFILE); T14 driver one-char change + language (SETUP).",
+    "requiredFix": "None further; fresh non-author vote."
+  },
+  {
+    "id": "N02-CP06-T16-sampling-attribution",
+    "severity": "medium",
+    "summary": "REPAIRED. CP06, section 5 and API compatibility now attribute subset and byte-equality sampling to T02 and T17 only. T16 is described as sampling strictness only.",
+    "evidence": "CP06 literal now ends 'a property that tests T02 and T17 only sample; T16 samples only strictness, that is v1-admitted inputs that r2 refuses, and is not evidence of that property.' Section 5 and API admissionVsV1/strictnessVsV1 match.",
+    "requiredFix": "Fresh non-author re-vote of the changed CP06 text."
+  },
+  {
+    "id": "N03-T05-grouping-vs-18-count",
+    "severity": "medium",
+    "summary": "REPAIRED. The file has 18 methods (T00-T17), and T05a/T05b/T05c are labelled subTests inside one T05 method. Any run count other than 18 is NOT RED at RED and STOP at GREEN. Meaningfulness results are identified by subTest label.",
+    "evidence": "Section 6 preamble and T05 row IDs; section 7 RED, NOT RED, GREEN and meaningfulness; API tests.methods/T05/runCountOtherThan18.",
+    "requiredFix": "None further."
+  },
+  {
+    "id": "N04-T07-top-level-list-misstaged",
+    "severity": "medium",
+    "summary": "REPAIRED. 'given as a list' now covers only the six nested objects (EXPORT). A list-valued export itself is ARG and belongs to T03.",
+    "evidence": "Section 6 T07 row; API tests.T07ListCase. No other stage expectation changed.",
+    "requiredFix": "None further."
+  },
+  {
+    "id": "N05-ambiguous-v1-cells-T04-T14",
+    "severity": "low",
+    "summary": "REPAIRED. In T04, '(v1 ADMIT)' now applies only to provingKeyBytes 2**64 and the driver one-char change. 0, -1, True and an int driver are v1 SETUP. T14 specifies a driver one-char change.",
+    "evidence": "Section 6 T04 row (v1 'SETUP unless noted') and T14 SETUP/PROFILE pair.",
+    "requiredFix": "None further."
+  },
+  {
+    "id": "N06-CP04-DIGEST-wording-and-allocation",
+    "severity": "low",
+    "summary": "REPAIRED. CP04 and the API now name the STATEMENT/PROOF length-first lowercase-hex checks and the DIGEST exact-string equality. The scan is defined as no input-proportional copy, never str.encode, with a str.isascii() fast path allowed.",
+    "evidence": "CP04 literal; stage note on deferred fields; API strRule and stageOwnership.deferredCheck. Outcomes (T06 stages) are unchanged.",
+    "requiredFix": "Fresh non-author re-vote of the changed CP04 text."
+  },
+  {
+    "id": "N07-section3-check-level-wording",
+    "severity": "low",
+    "summary": "REPAIRED. The text now reads 'Each, except the Added-by-r2 checks, mirrors'. 'Rust also admits ... networkId 1' is replaced by a source-reading statement that check_export has no networkId check (not executed). No acceptance claim is added.",
+    "evidence": "Section 3 Performed and Acceptance; API rust.checkLevel.",
+    "requiredFix": "None further."
+  },
+  {
+    "id": "N08-S31-stale-never-run-evidence",
+    "severity": "low",
+    "summary": "REPAIRED. S31 is cited as the one scoped historical current-Rust K6 round trip. The 'never compiled or run' docstrings in lib.rs and abi2.rs are stale comments, not evidence. driverId, circuitVkCorrespondence and statementReencode labels are kept, and no universal correspondence is inferred.",
+    "evidence": "Section 8 driver bullet; section 3 source-reading note; API history.scopedK6.",
+    "requiredFix": "None further."
+  },
+  {
+    "id": "N09-token-and-T17-expectation-independence",
+    "severity": "low",
+    "summary": "REPAIRED. The test computes hashlib.blake2b(digest_size=32) token expectations over literal envCborHex for the five non-historical T02 expiries and for T17. They are labelled NON-ORACLE, and the shared host is not treated as an oracle. T17 names statementDigestBlake2b256 and envV2.statementDigest among the updated fields and stays SYNTHETIC_NOT_PROOF_NOT_ORACLE; the fixture is not authenticated ledger data.",
+    "evidence": "Section 6 token-expectation note, T02 and T17 rows, closing paragraph; API tests.tokenExpectation and tests.T17.",
+    "requiredFix": "None further."
+  },
+  {
+    "id": "N10-manifest-and-process-notes",
+    "severity": "info",
+    "summary": "REPAIRED. The section 1 K2 row records 3926 B root-observed. The root manifest pins the contract, the API and this step's author positions. R4 stays incompatible, with no automatic mapping or builder reliance.",
+    "evidence": "Section 1 table and pin sentence; section 5 R4 bullet; API pins and compatibility.r4.",
+    "requiredFix": "Root pins all three when recording the manifest."
+  },
+  {
+    "id": "N11-T06-nondiscriminating-case",
+    "severity": "info",
+    "summary": "REPAIRED. The T06 relation extra-key surrogate case is kept and marked REDUNDANT. The scan mutant must fail through the relationFormat, logicalCostProfile, fieldModulusLeHex, export action or intentAnchor cases.",
+    "evidence": "Section 6 T06 row; section 7 meaningfulness; API tests.T06Redundant/meaningfulness.",
+    "requiredFix": "None further."
+  }
+]
