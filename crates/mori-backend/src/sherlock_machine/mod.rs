@@ -1,7 +1,9 @@
 //! Source-only bounded scalar fetch and composable A102 Literal instructions.
 //!
-//! These constructors emit pinned SDK instructions. They do not load, check,
-//! evaluate, compile or prove them. A caller supplies the table shape and all
+//! The fetch and Literal constructors emit pinned SDK instructions without
+//! loading, checking, evaluating, compiling or proving them. The separate child
+//! module literal_bridge adds a statement binding and native and ledger entry
+//! points around them; it is uncompiled and unobserved. A caller supplies the table shape and all
 //! witness cells; no program or machine transition is evaluated by this module.
 //! A102 registration is an uncompiled integration candidate. Full StepInv,
 //! canonical byte binding, F4 and exactly-one dispatch remain caller obligations.
@@ -23,6 +25,7 @@ pub use enabled_fetch::{
 };
 
 mod literal_step;
+pub mod literal_bridge;
 pub use literal_step::{
     emit_literal_step, literal_schema, LiteralCapacities, LiteralConstructionError,
     LiteralEnvelope, LiteralImage, LiteralLane, LiteralSchema, LiteralStepBlock,
