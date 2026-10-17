@@ -617,3 +617,108 @@ Report a successful reconstruction as reconstruction; further reliance or
 comparison remains dependent on its separate designated disposition and exact
 independent expectations. No expected observations or held captures are selected
 for publication by this log.
+
+## 2026-10-17 UTC — seventh edition: diagnostics and literal evidence
+
+Earlier editions remain byte-for-byte unchanged. This bounded consolidation of
+iteration notes records observed practice and proposed improvements; it implements
+no factory automation, security design, guard, policy or execution authority.
+
+### DW-26 — Exercise the real API and isolate the failure being tested
+
+**Observation/evidence:** ordinary diagnostics supplied evidence that source
+review could not: an exact 79-file metadata composition compiled; a separate
+Core operation compiled/linked and passed 47 unit tests. Their scopes remain
+distinct from independent semantic comparison. The published
+[production codec roundtrip](../docs/audits/2026-10-17/sherlock-production-codec-roundtrip/result.json)
+in [PR #153](https://github.com/CharlesHoskinson/Moriarty/pull/153), merge
+`6c9c7cd3836e9b4bc0ffb0288e83666031393e29`, built the real Core library,
+linked an external example and observed two canonical roundtrips. That internal
+encoder/decoder agreement is not an independent oracle or native witness.
+
+Source reviews then missed an incorrectly isolated producer capacity test:
+its expectation selected the wrong K/KF failure order. Two owner-specified typed
+assertions against real `prepare_a` passed, confirming production Core's correct
+source-derived order. This did not execute the producer or change Core. The
+capacity reproduction and earlier diagnostic receipts remain unpublished.
+
+**Status:** observed scoped compiler/unit/API/reproduction results.
+**Proposed / validation needed:** inspect real consumers and dependencies early;
+use eligible ordinary diagnostics for type/composition questions and isolate the
+intended failure before asserting its typed error. Retain separate source,
+compiler, unit, independent complete-output/prefix and native/target predicates.
+The implementation/result owners must validate later changed bytes and remaining
+semantic obligations; these observations are not a controlled performance study.
+
+### DW-27 — Check literal APIs and compute membership from actual files
+
+**Observation/evidence:** a literal preflight of an unadopted native-adapter
+candidate found unavailable type/import assumptions, inaccessible APIs and
+model-authored provenance rows that disagreed with acquired public-source pins.
+One claimed source was absent from the original packet; later acquisition also
+disagreed with its claimed hash. These are source/provenance findings, not
+compiler errors, a security verdict or an adopted adapter. The factual witness
+and provenance checks are retained privately; no original review body is selected.
+
+**Status:** observed factual preflight; candidate readiness remains qualified.
+**Proposed / validation needed:** bind actual declarations, visibility and caller
+signatures before integration. Compute membership and hashes mechanically from
+immutable bytes; model-written hash rows are claims, not computed membership.
+Use exact OLD/NEW spans for bounded corrections and preserve failed assertions.
+The source owner must supply corrected bytes and the applicable fresh checks.
+
+### DW-28 — Distinguish complete local packets from received review coverage
+
+**Observation/evidence:** a locally complete 206,846-byte inline ordinary data
+review returned a complete final answer but reported a 15,265-byte tail truncation.
+Its qualified data judgment did not establish full generator/final-metadata review.
+The coverage receipt retained that limitation; the underlying private data and
+review body remain unpublished. Other recorded reviews completed their tool reads
+yet misstated literal APIs, so read counts alone did not establish report fidelity.
+
+**Status:** observed transport/assessment limitations, preserved with the results.
+**Proposed / validation needed:** after repeated factual failures, change to
+smaller complete lossless units, explicit numbered read scope and literal
+signature witnesses. Recover missing permitted ranges and report any remaining
+tail gaps. Verify report claims against source separately from tool-read receipts;
+neither local prompt size nor a full final answer proves exhaustive assessment.
+Review owners must retain actual terminal, read extent and dissent without
+transferring a scoped judgment to unseen files or independent runtime comparison.
+
+### DW-29 — Preserve partial terminals and correct false diagnoses before edits
+
+**Observation/evidence:** one producer author exited CLI zero while its provider
+ended with an output-limit error. Three complete blocks were extracted unchanged;
+an incomplete duplicate was excluded. A separate three-file parser pass did not
+establish typechecking or runtime behavior. In another retained operation, N07
+reported individual `ok` while N08 had no terminal result before the aggregate
+timeout; the clarification preserved both facts without a two-test/full-suite pass.
+A suspected newline defect was independently disproved by actual AST codepoints
+and a synthetic parsing control before any source mutation or extra owner call.
+These historical receipts and explicit corrections remain unpublished.
+
+**Status:** observed extraction, parser-only check, partial result and corrected
+diagnosis; no current successor outcome is inferred here.
+**Proposed / validation needed:** report process exit, provider terminal, complete
+extraction, candidate readiness and aggregate completion separately. Inspect bytes
+or codepoints before repairing rendered escapes. Preserve the original failure
+and dated correction; future claims require their own exact successor results.
+
+### DW-30 — Keep local proof code distinct from versioned ledger acceptance
+
+**Observation/evidence:** the acquired official ledger source at
+`04c9c5d9bcebb8d4427d8589fb54d58a55599c14`
+[checks transcript presence](https://github.com/midnightntwrk/midnight-ledger/blob/04c9c5d9bcebb8d4427d8589fb54d58a55599c14/ledger/src/verify.rs#L1132-L1160)
+and returns `CallHasEmptyTranscripts` when both guaranteed and fallible transcripts
+are absent. This is a pinned public-source fact, not an observed submitted
+transaction or a new security judgment. Local proof/verification code alone does
+not supply a qualifying ledger call or actual settlement evidence.
+
+**Status:** observed public-source interface constraint; transaction/settlement
+acceptance is not established by this entry.
+**Proposed / validation needed:** pin the actual provider/ledger version and
+adapter interface, and keep local prove/verify, transaction acceptance and final
+settlement readback separate. The designated source/target owners retain the
+missing integration and actual-result work. The first real stagenet transaction
+remains the immediate priority within the full Sherlock obligations; no acceptance
+requirement, native limit, counter or prior held-attempt disposition changes here.
