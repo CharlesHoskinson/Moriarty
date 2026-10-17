@@ -32,3 +32,5 @@ python3 -I -B docs/results/sherlock-source-compile-20261017/independent/26-compi
 ```
 
 Relocation is archival packaging, not another execution. Original receipts/client include paths remain tied to their recorded checkout; the committed source/config fixtures are under crates/mori-core/tests/sherlock_compile_artifact_positive. Mandatory source-review corrections remain OPEN at this cut.
+
+The [ordinary result review](independent/32-compiler-ordinary-result-review/REVIEW.md) independently checked the selected values from retained JSON and supports this limited publication. It records the capture executable and dep-info hashes at audit time: the original capture result did not seal them at invocation time. That provenance limit is retained; no run is backdated or repeated. The review is advisory and does not approve the pending guard corrections.
