@@ -222,9 +222,7 @@ struct Prepared {
     private: Vec<Fr>,
     binding: Fr,
 }
-pub(crate) fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
-}
+pub(crate) use crate::sherlock_machine::literal_host::hex;
 pub(crate) fn value_fr(value: &Value) -> Fr {
     match value {
         Value::UInt(n) => Fr::from(n.0),
