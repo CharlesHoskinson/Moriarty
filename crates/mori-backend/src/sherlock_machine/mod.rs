@@ -1,12 +1,19 @@
-//! Source-only bounded scalar fetch and composable A102 Literal instructions.
+//! Source-only bounded scalar fetch, composable A102 Literal instructions, and
+//! trusted-source A102 witness construction.
 //!
-//! The fetch and Literal constructors emit pinned SDK instructions without
-//! loading, checking, evaluating, compiling or proving them. The separate child
-//! module literal_bridge adds a statement binding and native and ledger entry
-//! points around them; it is uncompiled and unobserved. A caller supplies the table shape and all
-//! witness cells; no program or machine transition is evaluated by this module.
-//! A102 registration is an uncompiled integration candidate. Full StepInv,
-//! canonical byte binding, F4 and exactly-one dispatch remain caller obligations.
+//! The `fetch`, `enabled_fetch`, and `literal_step` constructors emit pinned SDK
+//! instructions over caller-supplied table shapes and operands without loading,
+//! evaluating, compiling, or proving them. The child module `literal_bridge`
+//! adds statement binding and local native and ledger entry points around the
+//! unmodified `literal_step` fragment; it is uncompiled and unobserved. The child
+//! module `literal_witness` is a host diagnostic producer (H1, zero native
+//! authority) that invokes `mori_core::sherlock::layout_a::prepare_a`,
+//! `mori_core::sherlock::Machine::new(...).step()` for the first A102 `StepRecord`,
+//! `encode_observed_a` for the canonical pre-state, and an isolated Step-mode
+//! Constant-space post-state constructor without calling `decode_observed_a` on
+//! constructed Step-mode rows. Full `StepInv` (`O1`..`O4`), `uiValid`, `F4`,
+//! `OBL.G4` canonical byte binding, `projectA`, and exactly-one dispatch remain
+//! open caller obligations.
 
 use midnight_transient_crypto::curve::Fr;
 use midnight_zkir_v3::ir::Operand;
@@ -24,12 +31,21 @@ pub use enabled_fetch::{
     emit_enabled_fetch_block, EnabledFetchBlock, EnabledFetchInputs, EnabledTypedOperand,
 };
 
+pub mod literal_host;
 mod literal_step;
 pub mod literal_bridge;
+pub mod literal_witness;
 pub use literal_step::{
     emit_literal_step, literal_schema, LiteralCapacities, LiteralConstructionError,
     LiteralEnvelope, LiteralImage, LiteralLane, LiteralSchema, LiteralStepBlock,
     LiteralStepInputs, LiteralTable,
+};
+pub use literal_witness::{
+    build_checked_literal_transition_request, build_literal_transition_request,
+    core_program_capacities, core_state_capacities, encode_a102_step_post_state,
+    produce_a102_literal_transition, produce_a102_literal_transition_from_step,
+    program_block_to_image_values, state_block_to_image_values, validate_literal_schema,
+    ProducedLiteralTransition,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -47,18 +63,7 @@ pub struct TableShape {
     cells: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ConstructionError {
-    EmptyShape,
-    EmptyOrRepeatedColumnName,
-    SizeOverflow,
-    RowCount,
-    ColumnCount { row: usize },
-    CellType { row: usize, column: usize },
-    EmptyScope,
-    UnprefixedVariable,
-    TemporaryNameCollision,
-}
+pub use literal_host::ConstructionError;
 
 impl TableShape {
     pub fn new(capacity: usize, columns: Vec<Column>) -> Result<Self, ConstructionError> {
@@ -242,3 +247,9 @@ mod enabled_fetch_tests;
 
 #[cfg(test)]
 mod literal_step_normal_tests;
+
+#[cfg(test)]
+mod literal_witness_normal_tests;
+
+#[cfg(test)]
+mod literal_witness_native_tests;
