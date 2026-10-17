@@ -250,7 +250,8 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-backend/src/sherlock_machine/return_publication_step.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/return_publication_witness.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/literal_complete_execution.rs"),
-            include_str!("../../mori-backend/src/sherlock_machine/error_publication_step.rs")
+            include_str!("../../mori-backend/src/sherlock_machine/error_publication_step.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/fuel_exhaustion_step.rs")
         )
         .as_bytes(),
     )
