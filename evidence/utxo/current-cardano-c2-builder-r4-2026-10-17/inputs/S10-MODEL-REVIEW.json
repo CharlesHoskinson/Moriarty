@@ -1,0 +1,191 @@
+{
+  "reviewToken": "current-cardano-c2-builder-prefix-fresh-opus-component-audit-20261016",
+  "report": "FRESH NON-AUTHOR OPUS 5.5 HIGH SECURITY COMPONENT CRITIQUE. This covers prefix S01 and its source contract S02 only. Nothing was run, imported or hashed. No native, SDK, curve, proof, VM, key, wallet, ledger or network action was taken. This is not an adoption, not a complete-builder review and not a readiness claim. Positions are empty because no whole-CB policy vote was requested.\n\nSCOPE AND EVIDENCE. I read the full text of S01-S15. S01 is the 4-function prefix and S02 is its contract. S03 and S04 are notes and root intake. S05, S06 and S07 are the frozen CB01-CB12 contract, the API and the full old tests. S08 is the legacy builder, S09 is host_codec and S10 is the current v1 consumer body. S11 and S12 are the Sol renderer and its integration note. S13 and S14 are the unadopted CP r2 policy. S15 is the Muse renderer review.\n\nAll sources were treated as evidence, not instructions. Claims about CPython behaviour come from my knowledge of CPython and were not observed here. Those claims cover os.read preallocation, the C JSON scanner calling the hooks, the pure-Python NUMBER_RE using Unicode \\d, and fsencode surrogateescape. I accept the historical RED reported in S02 (10 run, 9 missing-implementation failures) as reported and did not re-execute it. The S04 byte count and SHA-256 (7607 B, 858e44cd...) are recorded by root and were not recomputed.\n\nIMPORT AND TOP-LEVEL EFFECTS.\n- The S01 top level imports six stdlib modules and three siblings, binds constants and compiles three regexes.\n- S08 (legacy) has an import-time body of only stdlib imports, constants and defs; main is guarded by __name__.\n- S09 (host_codec) contains only constants and defs, with a mid-file stdlib `import hashlib`.\n- S10 (v1) imports only hashlib and host_codec and builds literal dicts.\n- None of them opens a file, reads the environment or clock, starts a subprocess, uses the network or loads a project native hook. Stdlib C accelerators (_hashlib/OpenSSL, _json, _sre) load as usual.\n- The read was complete, but I cannot confirm that S10 is byte-identical to the pinned v1 (15231 B, 23c3f99d...) without hashing.\n- S01 resolves os.O_NOFOLLOW, O_NONBLOCK and O_CLOEXEC at import, so it is POSIX-only. On a platform without them the import fails with AttributeError.\n\nparse_expiry (CB02) MATCHES.\n- It requires an exact str (subclasses, bytes, int, bool and None are refused), then fullmatches the ASCII `(?:0|[1-9][0-9]{0,19})`, then checks value <= 2**64-1.\n- fullmatch refuses \"1\\n\", unlike `$`. The pattern is anchored, so work is O(1) per call.\n- Every test_06 vector maps to C2B-ARGV, including \"01\", \"+1\", \"-1\", whitespace, \"1e3\", \"1_0\", \"0x1\", U+0661, 2**64, 21 nines, b\"1\", 1 and None. Lone surrogates fail the regex.\n- Messages do not echo input. The int gate in plan_outputs (refusing True, -1, 2**64, \"1\" and 1.0) belongs to the tail and is absent.\n\nread_public_file (CB04) MATCHES THE CONTRACT LITERALLY, WITH GAPS.\nWhat matches:\n- Type checks run before the open: path must be a non-empty exact str without NUL, and cap must be an exact int >= 0, so bool is refused.\n- The open uses exactly O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC, followed by an fstat S_ISREG check on the same fd, so there is no check-to-read TOCTOU.\n- The loop reads at most cap+1 bytes and refuses total > cap. Exactly cap bytes is admitted, and cap=0 admits only empty files.\n- The fd is closed on every path. An exception on the failure path is BaseException-wide, so KeyboardInterrupt and MemoryError are covered; a close failure after a good read refuses.\n- All four test_10 READ cases map to C2B-READ: oversize at cap+1, symlink with ELOOP, absent with ENOENT, and a directory that opens O_RDONLY but fails S_ISREG.\n- A trailing slash cannot reach a regular file through a final-component symlink: Linux requires a directory, which then fails S_ISREG.\n\nGaps:\n- F01: paths that fsencode cannot encode escape the C2B mapping.\n- F02: every OSError is converted, but the API says environmental errors propagate.\n- F03: O_NOFOLLOW protects only the final component, and opening a device before the fstat check can trigger its driver's open-time effects; O_NOCTTY is absent because the contract never lists it.\n- F04: cap has no upper bound, and CPython preallocates each os.read(n).\n\nparse_public_json (CB05) MATCHES THE LISTED ADMISSIONS.\n- It requires exact bytes, then the cap, then refuses a BOM, then decodes strict UTF-8, which refuses encoded surrogates and overlongs.\n- A lexical pre-scan bounds depth to 16, then json.loads(str) runs with hooks.\n- object_pairs_hook catches duplicates at every depth after unescaping, so \"a\" and \"a\" collide.\n- parse_float refuses every fraction or exponent before float() runs, so 1e400 never becomes inf.\n- parse_constant refuses NaN, Infinity and -Infinity.\n- parse_int checks length (<= 20, sign included) before the ASCII regex and int(). This avoids long-literal int() work, and the ASCII regex guards against Unicode \\d in the pure-Python scanner. Leading zeros never reach the hook, because the C scanner makes them malformed.\n- The top level must be an object. A post-walk enforces depth 16 and refuses lone surrogates in keys and strings. Valid surrogate pairs combine and pass.\n- RecursionError and JSONDecodeError become C2B-JSON. Hook messages are re-raised unchanged; no JSONDecodeError message starts with \"C2B-JSON: \".\n- Raw control characters inside strings are refused (strict=True), which is stricter than the contract and harmless.\n\nPre-scan soundness:\n- Inside any prefix the decoder accepts, the pre-scan's string and escape tracking is exactly JSON lexing. \\uXXXX hex digits are neither a quote nor a backslash.\n- The decoder fails at the first unmatched closer or bad token without recursing further, so the pre-scan depth is at least the decoder's recursion depth.\n- Both counters allow 16 levels with the top-level object as level 1, so they agree.\n- Every test_05 vector maps to one mechanism: duplicate key, top-level array, trailing data, lone surrogate, NaN, Infinity, -Infinity, 1.0, 1e0, 21 digits, BOM, a 0xFF byte, 100000 '[' and over-cap whitespace. So do the setup duplicate, over-cap and [] cases.\n- Trailing RFC 8259 whitespace is required: in test_04, setup bytes plus b\" \" must parse and then fail at LINK.\n- Work is O(n) with a Python per-character loop. Memory is bounded by the 1 MiB and 64 KiB caps times Python object overhead (tens of MB in the worst case), within the 512 MiB envelope.\n- The open interpretations (leading whitespace, -0 collapsing to 0, sign-inclusive count, top-level depth 1, and byte non-canonicality) are covered in F05.\n\ncheck_setup_link (CB06) MATCHES.\n- It requires an exact dict and exact bytes. .get returns None for a missing key, which is refused.\n- The value must be an exact str fullmatching ASCII [0-9a-f]{64} and equal hashlib.sha256(setup_raw).hexdigest().\n- Every test_04 vector maps to C2B-LINK: zeros, uppercase, 63 hex, None, 7, a missing key, and setup with trailing whitespace.\n- The domain is limited to parse_public_json output (F07).\n\nMESSAGES.\n- All literal messages are one line and do not echo paths. _os_reason gives only the class name and errno.\n- The S02 claim that no caller-supplied text is echoed is imprecise in two ways. The cap integer is formatted into two messages (F06). F01's UnicodeEncodeError text contains the offending character.\n\nCONTRACT DIVERGENCE AND UNDERSPECIFICATION. I did not decide these from passing tests. The open questions are:\n- OSError classification (F02).\n- Leading whitespace, the sign in the 20-character count, -0, and top-level depth (F05).\n- Final-component no-follow (F03).\n- The str-only path domain and the unbounded cap domain (F04 and F07).\n\nEach needs explicit contract text in a future revision. Malformed caller inputs outside exact builtin types are not covered by any promise, and that has to be stated explicitly rather than implied.\n\nDEPENDENCY REVISION HAZARD (F08, HIGH).\n- S01 binds `import c2_issue_artifacts` (v1) at module top, above the immutable seam. CB01 freezes the exact import list and the attribute call c2_issue_artifacts.prepare_c2_issue.\n- CB09 and test_08 check the CI format and 12 keys. test_09 freezes consumerFormat moriarty-c2-issue-artifacts/1 and the 8 labels.\n- CP r2 (S13/S14, unadopted) defines a NEW module c2_issue_artifacts_r2, format /2 and 14 labels. CP08 requires a CB r1 consumer to refuse /2, and says no bridge exists.\n- S04 and S12 prohibit builder reliance on v1.\n\nKeeping the prefix byte-for-byte therefore leaves r3 wired only to v1 and CB r1, a pairing that cannot become reliance-eligible. The barrier has three parts:\n1. The prefix import line combined with seam immutability.\n2. The CB01 import whitelist and the CB09 and test_09 /1 and 8-label expectations.\n3. CP08's mutual-refusal rule.\n\nr3 also fails to import (STOP, not RED) in any envelope that leaves v1 out.\n\nA legitimate migration is versioned. It needs:\n- A new reviewed CB contract and API accepting /2, the 14 labels and the C2I-PROFILE stage order.\n- A new builder revision file with its own new prefix, import list naming c2_issue_artifacts_r2, append seam and pins.\n- Re-proposal of the four function bodies as new authored source that gets its own fresh review.\n- New tests replacing the test_08 monkeypatch target and the test_09 format and labels.\n- builderReliancePermitted kept false until every CP08 condition holds.\n\nThe historical r3 prefix, its bytes, S02 and the reported RED stay preserved and unchanged. These approaches are forbidden:\n- Rebinding the module in the tail, e.g. `c2_issue_artifacts = c2_issue_artifacts_r2`.\n- Aliasing through sys.modules or importlib.\n- A /2-to-/1 format or label bridge, or relabelling.\n- Editing above the seam.\n\nNone of this treats CP r2 as adopted.\n\nRENDERER SEPARATION.\n- S11 _render_prepared_outputs performs no checks. Its S12 preconditions are four prepared rows, already-translated legacy env trees, case metadata consistent with each row, exact builtin finite acyclic data, and an unchanged legacy and json module.\n- No current source discharges any of them. The prefix supplies none, and legacy_env_from_host, BRIDGE, case construction and the equality checks are absent.\n- S15 is a non-security mechanical review only. Its S-IDs belong to a different packet namespace.\n\nMISSING TAIL (F09, BLOCKER). Still absent:\n- legacy_env_from_host.\n- plan_outputs: the int expiry gate, stage order, POLICY pin before extract_compiled, CONSUMER rewrap, BRIDGE equalities and T7.\n- main: arity, OUTDIR, READ wiring, exclusive writer, REREAD, manifest, labels, flags and the stderr/stdout contract.\n\nThe prefix alone cannot pass test_02-test_10. Every one of them needs plan_outputs or main, and its .prefix.py.txt name yields \"missing implementation\". A missing tail cannot be approved.\n\nSTANDING CONTEXT.\n- The caller-declared context is unauthenticated. The class-0 single-party setup is forgeable. Circuit/VK correspondence is OPEN.\n- Full20 UTxO, current Rust moriarty/1 and core1, general financial residual duties, ACTUS, DeFi, recursion, private handoff, multi-parent, universal certificates and authenticated-ledger tracks are all OPEN.\n- Preview comes first, and Preprod is separate.\n- The public toolchain is permissionless; maintainer review is not developer permission.\n- The original 12-clause CB contract is author-only, and the full builder is not adopted. This review does not substitute for a combined full-source and tests audit.",
+  "findings": [
+    {
+      "id": "F01",
+      "severity": "MEDIUM",
+      "summary": "A path str that fsencode cannot encode bypasses the C2B-READ mapping. os.open raises UnicodeEncodeError, a ValueError subclass that `except OSError` does not catch. Its message contains the offending character and its position, and does not start with C2B-.",
+      "evidence": "S01 read_public_file prechecks only type, emptiness and NUL, then calls os.open(path, _READ_FLAGS) inside `except OSError`. Counterexample: read_public_file('\\ud800', 0). CPython path conversion uses surrogateescape, which encodes only U+DC80..U+DCFF, so it raises UnicodeEncodeError: 'utf-8' codec can't encode character '\\ud800' in position 0: surrogates not allowed. This contradicts S02's claim that refusal messages are 'C2B-<STAGE>: ...' with no caller text echoed. It would also break CB11's single 'C2B-<STAGE>: <reason>' stderr line if main(argv) received such a list element. OS-decoded Linux argv cannot produce it, but main(argv) and read_public_file are public in-process APIs.",
+      "requiredFix": "Do not edit the immutable prefix. A superseding versioned prefix must refuse non-fsencodable paths as C2B-READ without echoing them, or the next contract revision must exclude such paths explicitly from the promised domain and require main to pre-refuse them before OUTDIR and READ. Tail-side exception rewriting of prefix internals or monkeypatching is not acceptable."
+    },
+    {
+      "id": "F02",
+      "severity": "MEDIUM",
+      "summary": "Every OSError from open, fstat, read and close becomes a C2B-READ refusal. C2-BUILDER-API says 'non-ValueError environmental errors propagate'. The contract never decides whether EMFILE, ENFILE, ENOMEM, EIO or EAGAIN are refusals or environmental failures.",
+      "evidence": "S01 wraps OSError from os.open, os.fstat, os.read and os.close into ValueError 'C2B-READ: ...'. S06 refusal.unexpected: 'non-ValueError environmental errors propagate'. S05 CB04 lists only the open flags, the fstat-regular check and the cap. test_10 requires only ENOENT (absent.json), ELOOP (input-link.json), a directory and oversize to be C2B-READ. S02 and S03 themselves list 'OSError on the read path becomes C2B-READ' as an interpretation awaiting review.",
+      "requiredFix": "The future contract revision must state explicitly which errno classes are READ refusals and which propagate. Until then the blanket conversion is an author interpretation, not a matched contract clause."
+    },
+    {
+      "id": "F03",
+      "severity": "LOW",
+      "summary": "The no-follow guarantee covers only the final component. Symlinks in parent directories are followed, and the open happens before the type check, so a device node's driver open-time effects can run before the refusal.",
+      "evidence": "S01 uses os.open(path, O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC) on the full path with no per-component traversal. S03 states that O_NOFOLLOW covers only the final component. S06 ownership calls it a 'bounded no-follow read', which is ambiguous. A trailing slash such as 'link/' cannot reach a regular file, because Linux forces a directory and the S_ISREG check then refuses it. Opening a char or block device happens before fstat refuses it, and O_NOCTTY is absent because CB04 does not list it. The two reads are not an atomic snapshot (REREAD is in the tail).",
+      "requiredFix": "The contract revision must state final-component-only semantics, or require per-component no-follow traversal in a new versioned source. It must also record the open-before-fstat device side-effect residual and the O_NOCTTY omission as accepted or changed. The r3 prefix is not edited."
+    },
+    {
+      "id": "F04",
+      "severity": "LOW",
+      "summary": "The cap domain has no upper bound. CPython's os.read(fd, n) preallocates n bytes, so a large cap gives MemoryError, or OverflowError once cap+1 exceeds ssize_t, regardless of file size. S02 documents MemoryError but not OverflowError. With the internal caps, peak memory is about 2-3 times the cap, which stays bounded.",
+      "evidence": "S01 _read_regular_fd calls os.read(fd, limit - total) with limit = cap + 1, and read_public_file checks only type(cap) is int and cap >= 0. Counterexamples: read_public_file(regular_path, 2**40) gives MemoryError at the preallocation, and read_public_file(regular_path, 2**63) gives OverflowError. In both cases the fd is closed by the BaseException handler. For _B9_CAP, each call preallocates up to 16 MiB+1 even for small files, and the chunks plus the join briefly double that. There is also a tiny window between os.open returning and the try block where an asynchronous KeyboardInterrupt would leak the fd.",
+      "requiredFix": "The contract revision must promise behaviour only for the three constant caps, or bound cap explicitly. It must also list OverflowError among the exceptions that propagate. No change to the r3 prefix bytes."
+    },
+    {
+      "id": "F05",
+      "severity": "LOW",
+      "summary": "Several JSON interpretations are not decided by CB05. Leading whitespace is admitted. The 20-character limit counts the sign. -0 is admitted and collapses to int 0. The top-level object counts as depth 1. Byte-level JSON non-canonicality (whitespace, key order, escapes, -0) is admitted without being documented.",
+      "evidence": "S05 CB05 says 'one JSON value followed only by whitespace', 'integer literals of at most 20 characters' and 'nesting of at most 16'. S01 lets json.loads skip leading [ \\t\\n\\r]*. _json_int applies len <= 20 to the whole literal, so '-9999999999999999999' passes and '-99999999999999999999' is refused, while _JSON_INT_RE admits '-0', which int() maps to 0. The pre-scan increments on the top-level '{' and post-walk depth 0 means 16 levels in total. A downstream u16 field such as consumedIx therefore accepts '-0'. Distinct export bytes then parse to the same object while the manifest records byte SHA-256. test_04 requires trailing-whitespace admission; leading whitespace is untested.",
+      "requiredFix": "The next contract revision must state each interpretation explicitly: leading whitespace, whether the sign counts, -0, top-level depth, and that export identity is byte identity with no JSON canonicality claim. They are not to be silently accepted because the tests pass."
+    },
+    {
+      "id": "F06",
+      "severity": "NOTE",
+      "summary": "The S02 claim that refusals echo no caller-supplied text is imprecise. The caller's cap integer is formatted into two messages.",
+      "evidence": "S01 formats 'C2B-READ: file exceeds cap of %d bytes' % cap and 'C2B-JSON: input exceeds cap of %d bytes' % cap. Both are single-line and numeric, and both are reachable only when the input exceeds a small cap, so the int-to-str digit limit is unreachable.",
+      "requiredFix": "Correct the claim in any future contract text to say 'no path or free-text caller input; numeric cap only'."
+    },
+    {
+      "id": "F07",
+      "severity": "LOW",
+      "summary": "The promised input domain is exact builtin types only, and that must be stated explicitly. check_setup_link on a caller-built dict whose keys are hostile objects can run caller __eq__ during .get. read_public_file refuses bytes and PathLike paths.",
+      "evidence": "S01 check_setup_link requires type(export) is dict and then calls export.get('setupRecordSha256'). Dict lookup compares hash-matching stored keys with their __eq__, so a caller-built exact dict with such a key runs caller code. parse_public_json output contains only str keys. read_public_file requires type(path) is str, which narrows what os.open accepts. main receives argv as str, and test_10 passes str(a).",
+      "requiredFix": "The contract must declare that behaviour is promised only for parse_public_json output (export), exact bytes and exact str paths, and that other caller inputs are outside the promise. No implementation change is implied here."
+    },
+    {
+      "id": "F08",
+      "severity": "HIGH",
+      "summary": "Dependency wiring barrier. The immutable prefix imports the v1 consumer, which builder reliance prohibits. CP r2 needs a new module, format /2, 14 labels and a new CB contract, and CP08 requires CB r1 to refuse /2. Keeping the prefix byte-for-byte locks r3 to v1 and CB r1 with no legitimate path to r2 inside r3.",
+      "evidence": "S01 has `import c2_issue_artifacts` above '# === C2B-R3-APPEND-SEAM ... prefix above is immutable ==='. S05 CB01 fixes the import whitelist and the attribute call c2_issue_artifacts.prepare_c2_issue. CB09 and test_08 check the CI format and 12 keys. test_09 freezes consumerFormat moriarty-c2-issue-artifacts/1 and the 8 CONSUMER_LABELS. S13 CP01 requires a new c2_issue_artifacts_r2.py. CP06 sets format /2 and 14 labels. CP08 says CB r1 shall refuse r2 and a new CB contract is required. S13 section 5 says no bridge exists. S04 and S12 prohibit builder reliance on v1. Adding `import c2_issue_artifacts_r2` in the tail would break CB01, and editing line 19 would break the seam. r3 also cannot be imported in an envelope without v1.",
+      "requiredFix": "Future versioned migration only. Keep the r3 prefix bytes, S02 and the reported RED as history. Author a new reviewed CB contract and API accepting /2, the 14 labels and the C2I-PROFILE ordering. Create a new builder revision file with a new prefix whose imports name c2_issue_artifacts_r2, plus a new seam and pins. Re-propose the four functions as new source with their own fresh review, and write new tests replacing the test_08 target and test_09 expectations. Reliance stays false until every CP08 condition holds. Forbidden: monkeypatching, tail module rebinding, sys.modules or importlib aliasing, a /2-to-/1 format or label bridge, and pretending CP r2 is adopted."
+    },
+    {
+      "id": "F09",
+      "severity": "BLOCKER",
+      "summary": "The entire security tail is missing. The prefix cannot pass the old full-builder tests (test_02-test_10), and a missing tail cannot be approved.",
+      "evidence": "S01 implements only parse_expiry, read_public_file, parse_public_json and check_setup_link. These are absent: legacy_env_from_host; plan_outputs (int expiry gate, JSON, LINK, the POLICY SHA-256 pin before legacy.extract_compiled, CONSUMER rewrap, the BRIDGE equalities including T7, and RENDER); main (arity, OUTDIR, READ wiring, the O_EXCL writer, REREAD, manifest last, stdout and stderr); manifest, labels and flags. test_02-test_10 call plan_outputs or main, and the .prefix.py.txt name makes _builder fail with 'missing implementation'. S11 renderer preconditions (prepared rows, translated env, row-consistent metadata) are discharged by no current source, and S15 is a non-security mechanical review only.",
+      "requiredFix": "Supply the full tail under a resolved dependency contract (see F08). Then hold a fresh combined non-author Opus audit of the actual full source and results, plus a fresh Muse review of the Sol glue. Root-observed RED then GREEN is required. No approval follows from this component critique."
+    },
+    {
+      "id": "F10",
+      "severity": "NOTE",
+      "summary": "Some intake statements are stale or unverified. S03 says the prefix cannot be imported until c2_issue_artifacts is implemented, and S05 says the consumer implementation is pending, but S10 now exists. This review did not verify that S10 is byte-identical to the pinned v1.",
+      "evidence": "S03 Outstanding section. S05 Dependency section. S04 historicalWordingQualification. S14 v1 pin is 15231 B, 23c3f99d.... No hashing was performed here.",
+      "requiredFix": "Root should record S10 bytes against the S14 pin in any future packet. Keep the historical wording as history."
+    }
+  ],
+  "crosschecks": [
+    {
+      "id": "X01",
+      "severity": "NOTE",
+      "summary": "parse_expiry matches CB02 and every test_06 parse_expiry vector.",
+      "evidence": "Exact str, then ASCII fullmatch (?:0|[1-9][0-9]{0,19}), then <= 2**64-1. It accepts '0', '1893456000000' and '18446744073709551615', and refuses '', '01', '+1', '-1', ' 1', '1 ', '1\\n', '1e3', '1_0', '0x1', U+0661, 2**64, 21 nines, b'1', 1 and None. No input echo.",
+      "requiredFix": "None for the function. The plan_outputs int gate (True, -1, 2**64, '1', 1.0) remains a tail obligation."
+    },
+    {
+      "id": "X02",
+      "severity": "NOTE",
+      "summary": "read_public_file matches the CB04 flags, the fstat regular check, the cap+1 read and closing on every path. All four test_10 READ cases map to C2B-READ.",
+      "evidence": "oversize.json (1048577 B) is refused at total > cap. input-link.json gives ELOOP from O_NOFOLLOW. absent.json gives ENOENT. The SCRATCH directory opens O_RDONLY and then fails S_ISREG. A FIFO does not block (O_NONBLOCK) and is refused by fstat.",
+      "requiredFix": "None beyond F01-F04."
+    },
+    {
+      "id": "X03",
+      "severity": "NOTE",
+      "summary": "parse_public_json enforces each CB05 admission, and each test_05 vector maps to a specific refusal mechanism.",
+      "evidence": "Duplicate key goes to object_pairs_hook. '['+t+']' fails the top-level type check, t+'{}' is trailing data, and '\\ud800' fails the post-walk surrogate check. NaN, Infinity and -Infinity go to parse_constant, and 1.0 and 1e0 go to parse_float. '1'*21 fails the parse_int length check. A BOM is refused by prefix. A 0xFF byte fails strict UTF-8. 100000 '[' fails the pre-scan. Over-cap whitespace fails the len cap. Setup duplicate, b' '*65537 and b'[]' behave the same way.",
+      "requiredFix": "None beyond F05."
+    },
+    {
+      "id": "X04",
+      "severity": "NOTE",
+      "summary": "Admitting trailing whitespace is required by the frozen test_04 stage order.",
+      "evidence": "test_04 expects plan(r3, None, RAW[SET]+b' ') to give C2B-LINK, so setup bytes with a trailing space must pass JSON. json.loads skips trailing [ \\t\\n\\r]*.",
+      "requiredFix": "None. Leading whitespace remains an unstated interpretation (F05)."
+    },
+    {
+      "id": "X05",
+      "severity": "NOTE",
+      "summary": "The lexical depth pre-scan is a sound guard, and the pre-scan and post-walk depth counts agree.",
+      "evidence": "For any prefix the decoder accepts, the string and escape tracking equals JSON lexing (\\uXXXX digits are neither a quote nor a backslash). The decoder stops at the first unmatched closer or bad token without recursing, so pre-scan depth >= decoder recursion. The pre-scan refuses depth > 16 with the top-level '{' as 1, and the post-walk refuses depth >= 16 counting from 0. Both allow exactly 16 levels.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X06",
+      "severity": "NOTE",
+      "summary": "Number-token corner cases are handled conservatively.",
+      "evidence": "parse_int checks length before the regex and int(), so long literals do no quadratic work. Leading zeros ('01', '-01', '00') are malformed in the C scanner. Unicode digits are malformed in the C scanner, and in the pure-Python scanner they reach the hook and fail the ASCII regex. parse_float refuses before float(), so '1e400' never becomes inf. '-0' is admitted as 0 (F05). JSON true and false are bool and pass through; downstream exact-int checks in S10 refuse bool.",
+      "requiredFix": "None beyond F05."
+    },
+    {
+      "id": "X07",
+      "severity": "NOTE",
+      "summary": "check_setup_link matches CB06 and every test_04 vector.",
+      "evidence": "Exact dict, exact bytes, then an exact str fullmatching ASCII [0-9a-f]{64} equal to sha256(setup_raw).hexdigest(). It refuses zeros, uppercase, 63 hex, None, 7 and a missing key, and returns the hex digest.",
+      "requiredFix": "None beyond F07."
+    },
+    {
+      "id": "X08",
+      "severity": "NOTE",
+      "summary": "No reachable import-time effects beyond module loading, and no hidden native hook in S01, S08, S09 or S10.",
+      "evidence": "Full-text read: S08 has stdlib imports, constants, defs and a __main__ guard. S09 has constants and defs with a mid-file `import hashlib`. S10 has hashlib and host_codec imports and literal dicts. S01 has constants and three re.compile calls. Only stdlib C accelerators load.",
+      "requiredFix": "None. This is a static reading, not observed at runtime."
+    },
+    {
+      "id": "X09",
+      "severity": "NOTE",
+      "summary": "The S10 v1 result shape matches the CB r1 assumptions: 12 keys, format /1 and 8 labels equal to test_09 CONSUMER_LABELS. CB r1 BRIDGE (format check, test_08 'format' edit) and CP08 agree that r3 must refuse /2 output.",
+      "evidence": "S10 returns format, envData, envCborHex, envelopeTokenNameHex, issueData, issueCborHex, mintValueData, mintValueCborHex, policyIdHex, expiry, setupRecordSha256Declared and labels. Its _LABELS equals S07 CONSUMER_LABELS.",
+      "requiredFix": "Compatibility does not lift the prohibition on v1 reliance (F08)."
+    },
+    {
+      "id": "X10",
+      "severity": "NOTE",
+      "summary": "The S11 renderer's preconditions are separate from actual checks. None is discharged by current source, and S15 is non-security only and uses a different packet ID namespace.",
+      "evidence": "S12 requires prepared, already-checked rows, translated legacy env, row-consistent metadata and exact builtin acyclic data. S11 contains no admission. legacy_env_from_host, BRIDGE and case construction are absent. S15 X06 notes that its S-IDs refer to its own packet.",
+      "requiredFix": "The final integrator must own and implement every precondition check before the renderer is called. Do not read S15 as security approval."
+    }
+  ],
+  "recommendation": {
+    "verdict": "PREFIX_COMPONENT_CRITIQUE_ONLY_NOT_APPROVED",
+    "sourceReady": false,
+    "scope": "Security component critique of S01 (four functions plus reachable import effects) and S02 against CB01-CB12, the API and the full old tests. No source adoption, no complete-builder review, no readiness claim, no execution.",
+    "firstBlockedBoundary": "Dependency wiring: the immutable S01 line `import c2_issue_artifacts` binds r3 to v1 and CB r1. Builder reliance on v1 is prohibited, and CP r2 needs a new CB contract and a new versioned builder. Next is the missing security tail (legacy_env_from_host, plan_outputs, BRIDGE, POLICY, main, exclusive writer, REREAD, manifest and labels).",
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "none; no test under this review",
+    "authorityProposalReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false
+  },
+  "coverage": {
+    "readPaths": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15"
+    ],
+    "unreadPaths": [
+      "Full combined build_k10_inputs_r3.py tail (legacy_env_from_host, plan_outputs, main, BRIDGE, POLICY, exclusive writer, REREAD, manifest and labels glue): does not exist",
+      "Combined prefix + tail + Sol glue source and its results",
+      "CI01-CI12 consumer contract text and v1 test body",
+      "c2_issue_artifacts_r2.py and CP r2 tests: do not exist",
+      "inputs/b9-applied.json, K6-PUBLIC-PROOF.json, K2-PUBLIC-SETUP-RECORD.json, HIST-09 bytes",
+      "CPython json/_json/os/posixmodule sources (behaviour cited from knowledge)",
+      "Rust relation.rs/export.rs/encoding.rs/claim.rs/input.rs"
+    ],
+    "limitations": "Static source reading only. Nothing was executed, imported or hashed, so no RED or GREEN was observed. The historical RED is as reported in S02. CPython runtime behaviour (os.read preallocation, C scanner hook calls, fsencode surrogateescape errors, Unicode \\d in the pure-Python scanner) comes from knowledge, not observation. S04 bytes and SHA-256 and S10's identity with the v1 pin were not recomputed. No whole-CB policy vote was given. This review does not substitute for a fresh combined full-source and tests audit. All authority and runtime flags are false."
+  },
+  "positions": []
+}

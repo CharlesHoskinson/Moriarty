@@ -1,0 +1,74 @@
+[
+  {
+    "clauseId": "CB401",
+    "clause": "The builder shall be a new file build_k10_inputs_r4.py, consisting of a new R4 prefix ending in the line `# === C2B-R4-APPEND-SEAM: append tail below; prefix above is immutable ===` and a tail, whose only import statements are import hashlib, import json, import os, import re, import stat, import sys, import build_k10_inputs as legacy, import c2_issue_artifacts_r2 and import host_codec, which exposes exactly parse_expiry, read_public_file, parse_public_json, check_setup_link, legacy_env_from_host, plan_outputs and main, which calls c2_issue_artifacts_r2.prepare_c2_issue and host_codec APIs by module attribute at call time, and which never imports or binds the identifier c2_issue_artifacts, mutates sys.path or sys.modules, uses importlib, rebinds an imported module or attribute, or bridges format /2 to /1.",
+    "position": "FOR",
+    "rationale": "Versioned migration is the only legitimate way past the F08 barrier. It keeps R3 history immutable and makes v1 unreachable."
+  },
+  {
+    "clauseId": "CB402",
+    "clause": "Where any public function is called, the builder shall promise behaviour only for exact builtin arguments (str, bytes, int that is not bool, an exact list argv, and dicts returned by parse_public_json or first proven to have only exact str keys), shall invoke no caller-defined hook (subclass, PathLike, __fspath__, __index__, __eq__ or __hash__) before refusing, and shall raise every refusal as a ValueError with one exact str argument `C2B-<STAGE>: <reason>` on one line, where reason is a fixed literal optionally carrying a module constant, an errno class name and number, or, for CONSUMER only, a conforming C2I message, so that no path, argv text or other caller free text is echoed.",
+    "position": "FOR",
+    "rationale": "Resolves F06 and F07. An explicit domain stops caller code from running during refusal checks and keeps refusal messages free of caller text."
+  },
+  {
+    "clauseId": "CB403",
+    "clause": "When main(argv) is called, the builder shall refuse C2B-ARGV before any filesystem access unless type(argv) is list, len(argv) == 6 in the order prog b9-applied.json proof-export.json setup-record.json expiry-ms output-dir, every element is an exact str, argv[1], argv[2], argv[3] and argv[5] are each non-empty, NUL-free and accepted by os.fsencode (UnicodeEncodeError caught without echo), and parse_expiry admits argv[4] as an exact str fully matching ASCII (?:0|[1-9][0-9]{0,19}) with value <= 2**64-1, with no default, clock, environment or TEST_EXPIRY fallback.",
+    "position": "FOR",
+    "rationale": "Resolves F01 at the earliest stage, and keeps the expiry explicit and caller-supplied."
+  },
+  {
+    "clauseId": "CB404",
+    "clause": "When ARGV passes, the builder shall refuse C2B-OUTDIR, creating nothing, unless os.path.split(argv[5]) gives a basename fully matching ASCII [a-z0-9][a-z0-9._-]{0,99}, the parent (\".\" when empty) opens with O_RDONLY|O_DIRECTORY|O_CLOEXEC as a directory fd that main keeps as the pinned parent until it returns, and os.stat(basename, dir_fd=parent, follow_symlinks=False) fails with ENOENT, treating only the final component as no-follow and parent-path symlinks as the caller's trust.",
+    "position": "FOR",
+    "rationale": "Pinning the parent by fd closes path-rebinding races for later creation. The final-component-only policy is stated explicitly (F03)."
+  },
+  {
+    "clauseId": "CB405",
+    "clause": "When OUTDIR passes, main shall read argv[1], argv[2] and argv[3] in that order with read_public_file and the caps 16777216, 1048576 and 65536, and read_public_file(path, cap) shall refuse C2B-READ unless path is an exact non-empty NUL-free fsencode-encodable str, cap is one of those three constants, a no-follow lstat reports S_ISREG, os.open(os.fsencode(path), O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC|O_NOCTTY) succeeds, fstat of that fd reports S_ISREG, and os.read chunks of at most 65536 bytes until EOF or cap+1 total bytes give at most cap bytes, closing the fd on every path, mapping only the listed lstat/open errno classes to C2B-READ and letting every other OSError (including any from fstat, read or close), MemoryError, OverflowError and KeyboardInterrupt propagate unconverted after a best-effort close.",
+    "position": "FOR",
+    "rationale": "Resolves F01-F04: bounded preallocation, an explicit errno split, O_NOCTTY and an advisory device gate."
+  },
+  {
+    "clauseId": "CB406",
+    "clause": "When plan_outputs(b9_raw, export_raw, setup_raw, expiry) runs, it shall first refuse C2B-ARGV unless type(expiry) is int and 0 <= expiry <= 2**64-1, then refuse C2B-JSON for the export (cap 1048576) and then the setup (cap 65536) unless parse_public_json admits exact bytes no longer than cap, without a UTF-8 BOM, decoding as strict UTF-8 to exactly one top-level object with only space, tab, LF or CR before and after it, no raw control character in a string, no duplicate key after unescaping at any depth, no NaN, Infinity, fraction or exponent, every integer literal fully matching ASCII (?:0|-?[1-9][0-9]*) in at most 20 characters counting the sign (so -0 is refused), no lone surrogate in any key or string, and at most 16 nesting levels counting the top-level object as 1, enforced by a lexical pre-scan before decoding and a post-walk, with RecursionError and decode errors mapped to C2B-JSON and no JSON canonicality claimed beyond exact-byte SHA-256 identity.",
+    "position": "FOR",
+    "rationale": "Resolves every open F05 interpretation explicitly. Refusing -0 removes integer aliasing, and byte identity stays the provenance basis."
+  },
+  {
+    "clauseId": "CB407",
+    "clause": "When JSON passes, plan_outputs shall refuse C2B-LINK unless every key of the export is an exact str and export setupRecordSha256 is an exact str fully matching ASCII [0-9a-f]{64} equal to hashlib.sha256(setup_raw).hexdigest(), and shall then refuse C2B-POLICY unless b9_raw is exact bytes of at most 16777216 bytes whose SHA-256 equals legacy.PIN_B9_APPLIED before legacy.extract_compiled is called, the unchanged extract_compiled returns (code_hex, policy_hex) without ValueError, policy_hex is 56 lowercase hex, and hashlib.blake2b(bytes([3]) + bytes.fromhex(code_hex), digest_size=28).hexdigest() == policy_hex, using those 28 bytes as policy_id; the pin is wrapper integrity, not program admission.",
+    "position": "FOR",
+    "rationale": "Checking the pin before extract means only pinned bytes reach legacy parsing. The policy recomputation is independent, and the link is checked against file bytes."
+  },
+  {
+    "clauseId": "CB408",
+    "clause": "When POLICY passes, plan_outputs shall call c2_issue_artifacts_r2.prepare_c2_issue(export, setup, expiry, policy_id=policy) exactly once and, if it raises ValueError, shall refuse with `C2B-CONSUMER: ` followed by the message when the exception has exactly one exact str argument of at most 1024 characters, without CR or LF, beginning `C2I-<STAGE>: ` for a STAGE in ARG, SETUP, PROFILE, EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO or BUILD, and otherwise with `C2B-CONSUMER: nonconforming consumer refusal` without echo, letting every non-ValueError exception propagate.",
+    "position": "FOR",
+    "rationale": "Freezes the CP r2 stage set including PROFILE, and bounds consumer text instead of passing arbitrary messages through."
+  },
+  {
+    "clauseId": "CB409",
+    "clause": "When CONSUMER returns, plan_outputs shall refuse C2B-BRIDGE unless the result is an exact dict with exactly the 12 API resultKeys; format is exactly moriarty-c2-issue-artifacts/2; labels is an exact dict equal to the frozen 14-entry r2 label map; policyIdHex == policy.hex(), expiry is an exact int equal to the argument, and setupRecordSha256Declared equals the LINK digest; every *Hex value is an exact even-length lowercase hex str; envData equals host_codec.build_env_data over predicateDigest, vkDigestBlake2b256, context claimantVkh, consumedTxid, consumedIx and statementDigestBlake2b256 of the admitted export and expiry, legacy_env_from_host admits it, and legacy.cbor_encode of the translation, host_codec.encode_data(envData) and bytes.fromhex(envCborHex) are equal, with BLAKE2b-256 of them equal to envelopeTokenNameHex; mintValueData equals host_codec.build_value_data(None, [(policy, token, 1)]) and legacy.cbor_encode(legacy.value_map(policy, token, 1)), host_codec.encode_data(mintValueData) and bytes.fromhex(mintValueCborHex) are equal; issueData is exactly ('constr', 0, [('bytes', vk), ('bytes', proof)]) with exact types, vk the 488 setup VK bytes and proof the 192 export proof bytes, equal to host_codec.build_c2_mint_data('Issue', vk, proof), and host_codec.encode_data(issueData) == bytes.fromhex(issueCborHex), host-only because the legacy encoder fails closed above 64 bytes; and the T7 legacy env CBOR equals host_codec.encode_data of build_env_data with legacy.flip_first_bit(vk digest).",
+    "position": "FOR",
+    "rationale": "Preserves every original bridge equality and adds a frozen label and format check plus the declared link echo. No v1 equality is relied on."
+  },
+  {
+    "clauseId": "CB410",
+    "clause": "When BRIDGE passes, plan_outputs shall construct exactly the rows T1 (consumer env, consumer token, quantity 1), T5 (quantity 2), T6 (legacy.flip_first_bit of the token) and T7 (env with flipped vk digest and its recomputed token), all with the genuine VK and proof, compute each row's envelopeCborHex, tokenNameHex, quantity, envVkDigestHex, envStatementDigestHex and proofHexSha256 itself, assemble every other manifest field from the frozen API literals and the checked values, call the verbatim Sol helper _render_prepared_outputs only after all of this, and return its fresh dict of exactly the 6 API relpaths to bytes, with T2-T4 only as coverageGaps and no I/O, clock, randomness or environment access.",
+    "position": "FOR",
+    "rationale": "Opus discharges every renderer precondition, Sol's role stays mechanical, and the historical gaps are not synthesized."
+  },
+  {
+    "clauseId": "CB411",
+    "clause": "When planning succeeds, main shall create the output with os.mkdir(basename, 0o755, dir_fd=parent) and contexts with os.mkdir(\"contexts\", 0o755, dir_fd=out), pinning each by an O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC fd, write script.hex and then the T1, T5, T6 and T7 contexts each through os.open(name, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC|O_NOCTTY, 0o644, dir_fd=pinned) with a complete os.write loop and close, re-read the three inputs with read_public_file and the same caps refusing C2B-REREAD on any refusal or byte difference, write manifest.json.tmp the same way and publish it last by os.rename to manifest.json within the pinned output fd, print exactly one JSON line {\"output\": argv[5], \"cases\": 4} and return 0, mapping every OSError while creating, writing, closing or publishing to C2B-WRITE; after the first mkdir, any refusal or exception shall first trigger cleanup of exactly the entries this call created (unlink files, rmdir contexts, rmdir output, all by pinned dir fd, OSError ignored), and every refusal at any stage shall print exactly one stderr line, no stdout, and return 2, while non-refusal exceptions propagate.",
+    "position": "FOR",
+    "rationale": "Precise exclusive writes, fd pinning, cleanup scoped to created entries, and an atomic manifest publish, so a manifest exists only when complete."
+  },
+  {
+    "clauseId": "CB412",
+    "clause": "The builder and manifest shall claim nothing about Groth16, VK or proof curve validity, statement re-encode, circuit/VK correspondence, Rust acceptance equivalence, the ledger or provider, fees, min-ADA, collateral, ExUnits, fit, Preview, Preprod or operator compatibility, shall carry the frozen builderLabels, limitations and r2 consumerLabels, label the context FABRICATED_LOCAL_VM_TEST, the expiry caller-supplied and not proof-bound, the declared context unauthenticated and the setup single-party TEST ONLY and forgeable, and shall keep every flag and builderReliancePermitted false until CP08, an adopted reviewed R4 implementation, root-observed meaningful RED then GREEN and fresh non-author Opus plus Muse reviews all exist.",
+    "position": "FOR",
+    "rationale": "Keeps every standing residual explicit and prevents any readiness inference."
+  }
+]

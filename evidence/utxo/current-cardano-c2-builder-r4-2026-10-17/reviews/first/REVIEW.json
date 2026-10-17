@@ -1,0 +1,164 @@
+{
+  "reviewToken": "r4-cprev4-fresh-opus48-full-source-audit-20261017",
+  "report": "FRESH INDEPENDENT OPUS-4.8 HIGH SECURITY SOURCE AUDIT \u2014 K10 builder R4 contract (CB401-CB412), dependency-reconciled revision, against CP r2 revision 4 (S31/S32), root readoption (S39), S40 4.8 routing, and the actual pinned host/legacy/renderer source. No writes/shell/imports/execution/web; read-only frozen packet; actual files read, not author claims. Independent runtime behaviour remains prediction, not execution.\n\nSCOPE AND PROVENANCE\nS36/S37 are a mechanical delta-reconstruction of frozen S27/S28 (RECONSTRUCTION.json S41; deltaSha256 bcbb6b98\u2026; all12ClauseLiteralsUnchanged=true). I read the actual S36 (28131 B) and S37 (13080 B) bytes and confirmed the 12 clause literals are verbatim-identical to S38 (which shares sha 9db2ce53 with the S29 reconciled-candidate positions \u2014 author FOR only). The original candidate returned model claude-opus-4-8 while requesting 5.5 and was left unqualified/unadopted under then-5.5 routing; S40 now permits 4.8 prospectively. This review is fresh and prospective, not retroactive qualification.\n\nDEPENDENCY IDENTITY (checked against source, all pass)\n- 12 resultKeys, format moriarty-c2-issue-artifacts/2, 16-entry label map, 11 C2I stages (ARG\u2026BUILD), 7 consumer host APIs + 4 builder host APIs in S37 dependency match CP S31/S32 exactly. The 16 labels are byte-identical across S37, S32 and CP contract \u00a74 (adds vkProfile NOT_CHECKED and jsonParseLimits NOT_CHECKED; rustAcceptance NOT_ESTABLISHED; refuses the v1 8-entry and superseded 14-entry maps).\n- All 7 host APIs exist in actual host_codec.py (build_env_data, build_c2_mint_data, build_value_data, encode_data, parse_statement_header, statement_digest_hex, statement_public_inputs). No /2->/1 bridge; v1 c2_issue_artifacts.py prohibited and never imported; CB r1 not routed.\n\nENCODING / BRIDGE SUBSTANCE (CB407/CB409/CB410, all verified implementable)\n- CB407: legacy.PIN_B9_APPLIED=10baa179\u2026; extract_compiled returns (code_hex, 56-hex policy); policy = blake2b(bytes([3])+code, digest_size=28) identical to recompute_script_hash; pin checked before extract_compiled so only pinned bytes reach legacy JSON parsing.\n- CB409: host build_env_data yields exactly the 9-node ('constr',0,[I2,I0,B(FAMILY_V2),B(pred),B(vk),B(claimant),('constr',0,[B(txid),I(ix)]),B(stmt),I(expiry)]) tree matching legacy_env_from_host (S36 \u00a75) and legacy env_data; env and mintValue CBOR are byte-identical between host encode_data and legacy cbor_encode/value_map for the \u226464B leaves (definite map head a1/a0, indefinite arrays 9f\u2026ff, constr tag d879). The 488B VK / 192B proof issueData is correctly host-only: legacy cbor_encode fails closed on >64B byte strings (fail-closed ValueError), host _write_bytes chunks indefinitely; build_c2_mint_data accepts 1..65536B. mintValueCborHex = a1 581c<policy> a1 5820<token> 01, consistent with CP T02.\n- CB410: _render_prepared_outputs (S17) consumes exactly the 4 rows with env/token/quantity/vk/proof/manifest, calls legacy.script_context + legacy.uplc_term (text, so >64B VK/proof is fine), returns the 6 relpaths; matches the Sol INTEGRATION-CONTRACT.md preconditions; T2-T4 as coverageGaps only.\n\nJSON/FILESYSTEM GATES\n- CB406 depth-16/cap gates admit the genuine fixtures: K6 5800B<1 MiB with nesting \u22484; K2 3926B<64 KiB with nesting \u22482; x1/x2 are quoted strings (the 20-char JSON-int cap is inapplicable); all JSON integers \u22648 digits; statement 721B=343+378 satisfies host _admit_statement. The gate is explicitly the builder's own (not Rust parse_json/parse_limited depth-32/65536-node/1 MiB), so jsonParseLimits stays NOT_CHECKED with no Rust-acceptance inference.\n- CB403/CB404/CB405/CB411 filesystem, errno split, fd-pinning, exclusive O_EXCL|O_NOFOLLOW writes, re-read, atomic rename publication and created-only cleanup are internally coherent and text-identical to the earlier candidate.\n\nNON-CLAIMS (CB412) consistent with CP08/S39: adds VK profile, Rust parse_json limits and every Rust-acceptance relation to non-claims; no manifest string contains \"subset\"; consumerProfile=CP_R2_REV4_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED; all 10 flags including builderReliancePermitted false; reliance only by a separate root decision after CP08, fresh contract review, reviewed implementation, fresh non-author Opus audit + Muse Sol review and root-observed RED then GREEN \u2014 nothing automatic.\n\nVERDICT: 12/12 AGREE. The reconstructed contract/API is a sound, internally consistent basis for separately-reviewed R4 test authoring with the r2-adoption dependency still pending. sourceReady=true for that narrow purpose only. This is a single non-author vote; two substantively agreeing votes remain required for any consequential decision. No native/VM/proof/ledger/operator grant; nativeAuthority 0. driverId remains DECLARED_NAME, circuit/VK correspondence OPEN, class-0 single-party TEST setup forgeable, caller context unauthenticated, all 20 families / general-financial / recursion / private-handoff / multiparent OPEN. First blocked boundary: R00/meaningful RED \u2014 no reviewed+root-adopted c2_issue_artifacts_r2.py implementation exists (r2 source adopted for test authoring only).",
+  "findings": [
+    {
+      "id": "R4-F01-cb411-stage8-close-cleanup-asymmetry",
+      "severity": "low",
+      "evidence": "S36 \u00a73 stage 8: 'A close OSError is C2B-WRITE with cleanup. A print error propagates and the output stays complete.' Cleanup unlinks the files, contexts and output dir this call created. By stage 8 the manifest has already been published via os.rename (stage 7).",
+      "requiredFix": "Non-blocking. Implementation/test review should confirm that treating a post-publication dir-fd close OSError as C2B-WRITE-with-cleanup (tearing down an already-complete, atomically-published output) is the intended fail-safe. It never leaves an invalid/partial manifest, and a close on an O_RDONLY directory fd is practically unreachable in CPython, so this is a documented residual, not a defect. Consider recording explicitly that a close failure after rename removes a valid output."
+    },
+    {
+      "id": "R4-F02-cb409-env-crosscheck-is-consistency-not-oracle",
+      "severity": "low",
+      "evidence": "CB409 requires envData == host_codec.build_env_data over predicateDigest/vkDigest/claimantVkh/consumedTxid/consumedIx/statementDigest of the admitted export and expiry \u2014 the same host function the consumer used, over export fields the consumer already validated at its EXPORT/STATEMENT/DIGEST/CARDANO stages. Host build_env_data (S22 L621) and the consumer host path share host_codec.",
+      "requiredFix": "None to the clause. The equality is a consistency/byte-identity cross-check, not independent verification, and CB412 correctly disclaims all verification. Carry the NON-ORACLE framing into test authoring and the r2/combined audit so the cross-check is not read as establishing anything about the proof, VK or Rust acceptance."
+    },
+    {
+      "id": "R4-F03-cp04-scan-constraints-source-only",
+      "severity": "low",
+      "evidence": "S39/S35 carry R4-L02 and L02: CP04 scan constraints (no input-proportional copy, never str.encode, length-before-scan) are not behaviorally discriminable by T00-T17; R4 CONSUMER/BRIDGE relies on r2 for these. S36 CB412 keeps r2 reliance open pending CP08.",
+      "requiredFix": "Non-blocking for R4 source-readiness. The pending r2 implementation review (and the separate CP08 reliance decision) must source-inspect these constraints; R4 must not treat r2 admission as establishing them. Already consistent with CB412 and the contract's OPEN tracks."
+    },
+    {
+      "id": "R4-F04-cb406-not-rust-parse-json",
+      "severity": "info",
+      "evidence": "S36 CB406/\u00a710 and S37 constants: builder JSON gate is depth 16, no node bound; Rust parse_limited is depth 32, 65536 nodes, 1 MiB (CP \u00a73). jsonParseLimits label stays NOT_CHECKED.",
+      "requiredFix": "None. Verified internally consistent; no Rust-acceptance or parse-limit inference is drawn. Keep the label and \u00a710 non-claim."
+    },
+    {
+      "id": "R4-F05-reconstruction-and-routing-provenance",
+      "severity": "info",
+      "evidence": "S41 RECONSTRUCTION.json: S36/S37 built by applying R4-DEPENDENCY-DELTA-OPUS to frozen S27/S28; originalRequestedModel claude-opus-5-5, originalReturnedMainModel claude-opus-4-8, originalDisposition unqualified/unadopted. S40 permits 4.8 prospectively; sourceAdopted=false, implementationAuthored=false, nativeAuthority 0.",
+      "requiredFix": "None. I independently confirmed the 12 clause literals in actual S36/S38 are unchanged. Root should keep both this fresh vote and a second independent vote; neither is adoption."
+    }
+  ],
+  "positions": [
+    {
+      "clauseId": "CB401",
+      "clause": "The builder shall be a new file build_k10_inputs_r4.py, consisting of a new R4 prefix ending in the line `# === C2B-R4-APPEND-SEAM: append tail below; prefix above is immutable ===` and a tail, whose only import statements are import hashlib, import json, import os, import re, import stat, import sys, import build_k10_inputs as legacy, import c2_issue_artifacts_r2 and import host_codec, which exposes exactly parse_expiry, read_public_file, parse_public_json, check_setup_link, legacy_env_from_host, plan_outputs and main, which calls c2_issue_artifacts_r2.prepare_c2_issue and host_codec APIs by module attribute at call time, and which never imports or binds the identifier c2_issue_artifacts, mutates sys.path or sys.modules, uses importlib, rebinds an imported module or attribute, or bridges format /2 to /1.",
+      "position": "AGREE",
+      "rationale": "The corrected CP keeps module name c2_issue_artifacts_r2 (S31 CP01). The 9 imports, 7 public names and the immutable seam are a legitimate versioned migration that keeps v1 unreachable; the attribute-at-call-time rule matches the proxy-instrumentation obligations (R01/R17). No /2->/1 bridge is consistent with host_codec/legacy source and CB409. Implementable."
+    },
+    {
+      "clauseId": "CB402",
+      "clause": "Where any public function is called, the builder shall promise behaviour only for exact builtin arguments (str, bytes, int that is not bool, an exact list argv, and dicts returned by parse_public_json or first proven to have only exact str keys), shall invoke no caller-defined hook (subclass, PathLike, __fspath__, __index__, __eq__ or __hash__) before refusing, and shall raise every refusal as a ValueError with one exact str argument `C2B-<STAGE>: <reason>` on one line, where reason is a fixed literal optionally carrying a module constant, an errno class name and number, or, for CONSUMER only, a conforming C2I message, so that no path, argv text or other caller free text is echoed.",
+      "position": "AGREE",
+      "rationale": "Exact-type gating with type() checks before any lookup, and refusing before any caller-defined hook, is realizable in CPython and mirrors host_codec's own exact-tuple/exact-dict discipline. Fixed-literal reason text with no path/argv echo closes F06/F07 and prevents input leakage; CONSUMER-only conforming-message passthrough is bounded by CB408. Coherent."
+    },
+    {
+      "clauseId": "CB403",
+      "clause": "When main(argv) is called, the builder shall refuse C2B-ARGV before any filesystem access unless type(argv) is list, len(argv) == 6 in the order prog b9-applied.json proof-export.json setup-record.json expiry-ms output-dir, every element is an exact str, argv[1], argv[2], argv[3] and argv[5] are each non-empty, NUL-free and accepted by os.fsencode (UnicodeEncodeError caught without echo), and parse_expiry admits argv[4] as an exact str fully matching ASCII (?:0|[1-9][0-9]{0,19}) with value <= 2**64-1, with no default, clock, environment or TEST_EXPIRY fallback.",
+      "position": "AGREE",
+      "rationale": "ARGV refusal precedes any filesystem access, expiry is caller-supplied with no clock/env/TEST_EXPIRY fallback (correctly avoiding legacy's TEST_EXPIRY constant at S24 L95), and the u64 regex plus fsencode gate are precise and implementable. Resolves F01 at the earliest stage."
+    },
+    {
+      "clauseId": "CB404",
+      "clause": "When ARGV passes, the builder shall refuse C2B-OUTDIR, creating nothing, unless os.path.split(argv[5]) gives a basename fully matching ASCII [a-z0-9][a-z0-9._-]{0,99}, the parent (\".\" when empty) opens with O_RDONLY|O_DIRECTORY|O_CLOEXEC as a directory fd that main keeps as the pinned parent until it returns, and os.stat(basename, dir_fd=parent, follow_symlinks=False) fails with ENOENT, treating only the final component as no-follow and parent-path symlinks as the caller's trust.",
+      "position": "AGREE",
+      "rationale": "Pinning the parent directory fd and a no-follow ENOENT stat of the final component closes path-rebinding/TOCTOU races for later exclusive creation; the final-component-only policy with parent-path symlinks as operator trust is an explicitly documented residual (F03) appropriate for an operator-chosen, read-only envelope. The outdirRefusal errno split is sound."
+    },
+    {
+      "clauseId": "CB405",
+      "clause": "When OUTDIR passes, main shall read argv[1], argv[2] and argv[3] in that order with read_public_file and the caps 16777216, 1048576 and 65536, and read_public_file(path, cap) shall refuse C2B-READ unless path is an exact non-empty NUL-free fsencode-encodable str, cap is one of those three constants, a no-follow lstat reports S_ISREG, os.open(os.fsencode(path), O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC|O_NOCTTY) succeeds, fstat of that fd reports S_ISREG, and os.read chunks of at most 65536 bytes until EOF or cap+1 total bytes give at most cap bytes, closing the fd on every path, mapping only the listed lstat/open errno classes to C2B-READ and letting every other OSError (including any from fstat, read or close), MemoryError, OverflowError and KeyboardInterrupt propagate unconverted after a best-effort close.",
+      "position": "AGREE",
+      "rationale": "Advisory no-follow lstat + authoritative fstat on the opened fd, O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC|O_NOCTTY, bounded cap+1 read and fd-close on every path are standard-library realizable and resolve F01-F04. The errno split (resource/IO failures propagate as themselves, not as input verdicts) prevents refusals masquerading as admission; the raced-device residual is documented. Caps 16M/1M/64K exceed the genuine b9/K6/K2 sizes."
+    },
+    {
+      "clauseId": "CB406",
+      "clause": "When plan_outputs(b9_raw, export_raw, setup_raw, expiry) runs, it shall first refuse C2B-ARGV unless type(expiry) is int and 0 <= expiry <= 2**64-1, then refuse C2B-JSON for the export (cap 1048576) and then the setup (cap 65536) unless parse_public_json admits exact bytes no longer than cap, without a UTF-8 BOM, decoding as strict UTF-8 to exactly one top-level object with only space, tab, LF or CR before and after it, no raw control character in a string, no duplicate key after unescaping at any depth, no NaN, Infinity, fraction or exponent, every integer literal fully matching ASCII (?:0|-?[1-9][0-9]*) in at most 20 characters counting the sign (so -0 is refused), no lone surrogate in any key or string, and at most 16 nesting levels counting the top-level object as 1, enforced by a lexical pre-scan before decoding and a post-walk, with RecursionError and decode errors mapped to C2B-JSON and no JSON canonicality claimed beyond exact-byte SHA-256 identity.",
+      "position": "AGREE",
+      "rationale": "The gate is strict but realizable with a lexical pre-scan + json.loads(object_pairs_hook) + post-walk, and it admits the genuine K6 (nesting ~4, sizes <1 MiB) and K2 (nesting ~2, <64 KiB); x1/x2 are quoted strings so the 20-char int cap does not reject them. The contract correctly states this is the builder's own gate, not Rust parse_json, so jsonParseLimits stays NOT_CHECKED and no admission relation is inferred."
+    },
+    {
+      "clauseId": "CB407",
+      "clause": "When JSON passes, plan_outputs shall refuse C2B-LINK unless every key of the export is an exact str and export setupRecordSha256 is an exact str fully matching ASCII [0-9a-f]{64} equal to hashlib.sha256(setup_raw).hexdigest(), and shall then refuse C2B-POLICY unless b9_raw is exact bytes of at most 16777216 bytes whose SHA-256 equals legacy.PIN_B9_APPLIED before legacy.extract_compiled is called, the unchanged extract_compiled returns (code_hex, policy_hex) without ValueError, policy_hex is 56 lowercase hex, and hashlib.blake2b(bytes([3]) + bytes.fromhex(code_hex), digest_size=28).hexdigest() == policy_hex, using those 28 bytes as policy_id; the pin is wrapper integrity, not program admission.",
+      "position": "AGREE",
+      "rationale": "Verified against S24: PIN_B9_APPLIED=10baa179\u2026 (L58); extract_compiled returns (code_hex, recomputed_hash.hex()) with recomputed = blake2b(bytes([3])+compiled_raw, 28) (L180), 28 bytes = 56 hex, so the clause's recomputation is identical. Checking the SHA pin before extract_compiled ensures only pinned bytes reach legacy JSON parsing; K6 setupRecordSha256 equals the K2 pin, so LINK passes genuinely. Correctly framed as wrapper integrity, not program admission or Rust acceptance."
+    },
+    {
+      "clauseId": "CB408",
+      "clause": "When POLICY passes, plan_outputs shall call c2_issue_artifacts_r2.prepare_c2_issue(export, setup, expiry, policy_id=policy) exactly once and, if it raises ValueError, shall refuse with `C2B-CONSUMER: ` followed by the message when the exception has exactly one exact str argument of at most 1024 characters, without CR or LF, beginning `C2I-<STAGE>: ` for a STAGE in ARG, SETUP, PROFILE, EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO or BUILD, and otherwise with `C2B-CONSUMER: nonconforming consumer refusal` without echo, letting every non-ValueError exception propagate.",
+      "position": "AGREE",
+      "rationale": "The call signature matches CP CP01/S32 (3 positional + keyword-only policy_id, no defaults) and the 11-stage set matches CP S32 exactly. CP07 guarantees r2 raises exactly ValueError (never a subclass) with a C2I-<STAGE> prefix, so the conforming-message bound and nonconforming fallback are well-defined; non-ValueError (e.g. MemoryError) propagation preserves the environmental/input distinction."
+    },
+    {
+      "clauseId": "CB409",
+      "clause": "When CONSUMER returns, plan_outputs shall refuse C2B-BRIDGE unless the result is an exact dict with exactly the 12 API resultKeys; format is exactly moriarty-c2-issue-artifacts/2; labels is an exact dict equal to the frozen 16-entry r2 label map of API dependency.labels, so that the v1 8-entry map, the superseded 14-entry map and any missing, extra or changed entry are refused; policyIdHex == policy.hex(), expiry is an exact int equal to the argument, and setupRecordSha256Declared equals the LINK digest; every *Hex value is an exact even-length lowercase hex str; envData equals host_codec.build_env_data over predicateDigest, vkDigestBlake2b256, context claimantVkh, consumedTxid, consumedIx and statementDigestBlake2b256 of the admitted export and expiry, legacy_env_from_host admits it, and legacy.cbor_encode of the translation, host_codec.encode_data(envData) and bytes.fromhex(envCborHex) are equal, with BLAKE2b-256 of them equal to envelopeTokenNameHex; mintValueData equals host_codec.build_value_data(None, [(policy, token, 1)]) and legacy.cbor_encode(legacy.value_map(policy, token, 1)), host_codec.encode_data(mintValueData) and bytes.fromhex(mintValueCborHex) are equal; issueData is exactly ('constr', 0, [('bytes', vk), ('bytes', proof)]) with exact types, vk the 488 setup VK bytes and proof the 192 export proof bytes, equal to host_codec.build_c2_mint_data('Issue', vk, proof), and host_codec.encode_data(issueData) == bytes.fromhex(issueCborHex), host-only because the legacy encoder fails closed above 64 bytes; and the T7 legacy env CBOR equals host_codec.encode_data of build_env_data with legacy.flip_first_bit(vk digest).",
+      "position": "AGREE",
+      "rationale": "Independently verified the reworded clause against source: the 16-entry map equals S32/CP \u00a74 exactly and exact dict-equality refuses the 8- and 14-entry maps and any drift; host build_env_data (S22 L621) yields exactly the 9-node tree matching legacy_env_from_host and legacy env_data; env and mintValue CBOR are byte-identical between host encode_data and legacy cbor_encode/value_map for \u226464B leaves (definite maps, 9f\u2026ff arrays, d879 constr), while issueData (488B VK/192B proof) is correctly host-only because legacy cbor_encode fails closed >64B (S24 L244) and build_c2_mint_data accepts 1..65536B (S22 L649). T7 flipped-vk env and flip_first_bit (L433) check out. Every equality depends only on host_codec, legacy and admitted inputs, never on v1 or any Rust-acceptance claim. The env cross-check is a consistency check (noted low), not over-claimed."
+    },
+    {
+      "clauseId": "CB410",
+      "clause": "When BRIDGE passes, plan_outputs shall construct exactly the rows T1 (consumer env, consumer token, quantity 1), T5 (quantity 2), T6 (legacy.flip_first_bit of the token) and T7 (env with flipped vk digest and its recomputed token), all with the genuine VK and proof, compute each row's envelopeCborHex, tokenNameHex, quantity, envVkDigestHex, envStatementDigestHex and proofHexSha256 itself, assemble every other manifest field from the frozen API literals and the checked values, call the verbatim Sol helper _render_prepared_outputs only after all of this, and return its fresh dict of exactly the 6 API relpaths to bytes, with T2-T4 only as coverageGaps and no I/O, clock, randomness or environment access.",
+      "position": "AGREE",
+      "rationale": "The 4 rows and their metadata match the Sol renderer interface exactly: _render_prepared_outputs (S17) expects env/token/quantity/vk/proof/manifest per row and calls legacy.script_context + legacy.uplc_term, which render contexts as text (so the >64B VK/proof fail-closed CBOR path never applies to context files). Opus computes all byte/hash values before the purely mechanical render; T2-T4 remain non-synthesized coverage gaps. Pure, no I/O. Implementable."
+    },
+    {
+      "clauseId": "CB411",
+      "clause": "When planning succeeds, main shall create the output with os.mkdir(basename, 0o755, dir_fd=parent) and contexts with os.mkdir(\"contexts\", 0o755, dir_fd=out), pinning each by an O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC fd, write script.hex and then the T1, T5, T6 and T7 contexts each through os.open(name, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC|O_NOCTTY, 0o644, dir_fd=pinned) with a complete os.write loop and close, re-read the three inputs with read_public_file and the same caps refusing C2B-REREAD on any refusal or byte difference, write manifest.json.tmp the same way and publish it last by os.rename to manifest.json within the pinned output fd, print exactly one JSON line {\"output\": argv[5], \"cases\": 4} and return 0, mapping every OSError while creating, writing, closing or publishing to C2B-WRITE; after the first mkdir, any refusal or exception shall first trigger cleanup of exactly the entries this call created (unlink files, rmdir contexts, rmdir output, all by pinned dir fd, OSError ignored), and every refusal at any stage shall print exactly one stderr line, no stdout, and return 2, while non-refusal exceptions propagate.",
+      "position": "AGREE",
+      "rationale": "Exclusive O_CREAT|O_EXCL|O_NOFOLLOW creates through pinned dir fds, a complete write loop, REREAD byte-equality of the three inputs, and last-step atomic os.rename give an all-or-nothing manifest (present only when complete). Created-only cleanup through pinned fds with OSError ignored is sound. I note (low) the stage-8 post-publication close-OSError-triggers-cleanup path can tear down an already-complete output, but it is fail-safe and practically unreachable on an O_RDONLY dir fd; not blocking."
+    },
+    {
+      "clauseId": "CB412",
+      "clause": "The builder and manifest shall claim nothing about Groth16, VK or proof curve validity, VK profile, statement re-encode, Rust parse_json limits, circuit/VK correspondence, Rust acceptance of any admitted input (including any subset, equivalence or conditional-inclusion relation), the ledger or provider, fees, min-ADA, collateral, ExUnits, fit, Preview, Preprod or operator compatibility, and shall infer none of these from the r2 descriptor checks or the builder's own gates; shall carry the frozen builderLabels, limitations and the 16 r2 consumerLabels, label the context FABRICATED_LOCAL_VM_TEST, the expiry caller-supplied and not proof-bound, the declared context unauthenticated and the setup single-party TEST ONLY and forgeable; and shall keep every flag and builderReliancePermitted false, which may change only by a separate root source-adoption decision taken after the CP08 root decision for the reviewed r2, a fresh review of this contract, a reviewed R4 implementation, a fresh non-author Opus audit with a Muse review of the Sol glue, and root-observed meaningful RED then GREEN all exist, none of which grants it automatically.",
+      "position": "AGREE",
+      "rationale": "Independently verified the reworded clause: it adds VK profile, Rust parse_json limits and every Rust-acceptance relation to the non-claims, correctly withdrawing the earlier candidate's 'declared subset of Rust acceptance' (the exact CP04/CP05 error CP revision 4 fixed). S37 manifest carries all 9 builderLabels, 4 limitations (no 'subset' string), 16 consumerLabels and 10 false flags including builderReliancePermitted; reliance gating matches CP08 (S31/S32) and the S39 readoption (test-authoring-only adoption, nothing automatic). Consistent with the single-party forgeable TEST setup and OPEN circuit/VK correspondence. nativeAuthority stays 0."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "scope": "Fresh independent non-author Opus-4.8 HIGH source audit of the reconstructed CURRENT R4 builder contract/API (S36/S37) and the exact 12 clause literals (S38) against CP r2 revision 4 (S31/S32), root readoption (S39), S40 4.8 routing, and the actual pinned host_codec/legacy/renderer source. Single non-adoption vote: AGREE on CB401-CB412.",
+    "firstBlockedBoundary": "R00 / meaningful RED: no reviewed and root-adopted c2_issue_artifacts_r2.py implementation exists; r2 source is adopted for test authoring only. Downstream blocked on CP08 r2 reliance, a reviewed r2 implementation, a second agreeing vote on this contract, authored+reviewed R4 tests, a fresh non-author Opus audit + Muse Sol review, and root-observed RED then GREEN.",
+    "ordinarySelftestReady": false,
+    "operatorReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S36-C2-BUILDER-R4-CONTRACT.md",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S37-C2-BUILDER-R4-API.json",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S38-S29-DESIGN-POSITIONS.json",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S41-RECONSTRUCTION.json",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S22-host_codec.py",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S24-build_k10_inputs.py",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S17-C2-MECHANICAL-RENDERER.py.txt",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S18-INTEGRATION-CONTRACT.md",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S25-K2-PUBLIC-SETUP-RECORD.json",
+      "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S26-K6-PUBLIC-PROOF.json",
+      "S31-S33-C2-PROFILE-R2-CONTRACT.md (reviewed inline as provided DATA)",
+      "S32-S34-C2-PROFILE-R2-API.json (reviewed inline as provided DATA)",
+      "S39-POLICY-READOPTION.json (reviewed inline as provided DATA)",
+      "S40-moriarty-opus-4-8-security-routing (reviewed inline as provided DATA)"
+    ],
+    "unreadPaths": [
+      "S03-DESIGN-POSITIONS.json",
+      "S04-SOURCE-MANIFEST.json",
+      "S05-ROOT-DEPENDENCY-NOTICE.json",
+      "S08-DESIGN-POSITIONS.json",
+      "S09-SOURCE-MANIFEST.json",
+      "S10-MODEL-REVIEW.json",
+      "S11-ROOT-QUALIFICATION.json",
+      "S12-build_k10_inputs_r3.prefix.py.txt",
+      "S13-PREFIX-CONTRACT.json",
+      "S14-C2-BUILDER-CONTRACT.md",
+      "S15-C2-BUILDER-API.json",
+      "S16-test_c2_builder.py",
+      "S19-C2-PROFILE-R2-CONTRACT.md",
+      "S20-C2-PROFILE-R2-API.json",
+      "S21-SOURCE-ADOPTION.json",
+      "S23-c2_issue_artifacts.py",
+      "S27-C2-BUILDER-R4-CONTRACT.md",
+      "S28-C2-BUILDER-R4-API.json",
+      "S29-DESIGN-POSITIONS.json",
+      "S30-SOURCE-MANIFEST.json",
+      "S33-S35-DESIGN-POSITIONS.json",
+      "S34-POLICY-ADOPTION.json",
+      "S35-REVIEW.json"
+    ],
+    "limitations": "No writes/shell/imports/execution/web and no original-path following, per instruction: all SHA-256/byte pins in the MANIFEST and contracts were taken as root-mechanically verified and not recomputed; independent expected runtime behaviour is prediction, not execution (no RED/GREEN observed). I did not open S16 (R3 test_c2_builder.py), so the 33-key MANIFEST_KEYS set, CASE_KEYS and ROSTER that CB410/CB413 copy as literals were cross-referenced only via S37/S18 citations, not line-verified; this is a test/manifest-authoring detail, not a clause-literal correctness issue. The v1 body (S23), the old reconciled source (S27-S30, superseded by the S41 delta I read) and R3 history (S10-S15) were not opened because they are prohibited-for-reliance or immutable-history and not the current candidate. S31/S32/S39/S40 were reviewed from the inline DATA in the task (which the actual S36/S37/S38 files I opened corroborate), not re-opened as files. The reconstruction delta (S41) spans were accepted as mechanically applied; I confirmed the resulting 12 clause literals in actual S36/S38 are verbatim. r2 adoption, implementation, tests and Rust acceptance remain out of scope and OPEN."
+  }
+}
