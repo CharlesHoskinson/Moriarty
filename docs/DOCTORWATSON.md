@@ -27,6 +27,11 @@ Lean comparison are implemented consumers; their presence does not establish
 actual K or Lean execution. Source-Core and streaming execution are separate
 increments, outside those recorded captures.
 
+Lessons for the later factory update are kept in the
+[DoctorWatson improvement log](../wiki-llm/doctorwatson-improvement-log.md).
+Append after material Sherlock iterations; distinguish proposed changes, applied
+source and validated behavior.
+
 ## One delivery cycle
 
 1. Select an unchecked feature in the existing
