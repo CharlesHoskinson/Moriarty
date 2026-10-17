@@ -1,0 +1,428 @@
+helper_schedule.rs:246:                 let cell = scratch.cells.get(id.0).copied().flatten()
+helper_schedule.rs:247:                     .ok_or(Unsupported::ScratchStateAdapter)?;
+helper_schedule.rs:248:                 let matched = cell.name == pair.parameter.name;
+helper_schedule.rs:249:                 if matched { next.binding = Binding::Bad; next.phase = Phase::Release; }
+helper_schedule.rs:250:                 else {
+helper_schedule.rs:251:                     next.duplicate_cursor = cell.previous;
+helper_schedule.rs:252:                     next.phase = if cell.previous.is_some() { Phase::Duplicate } else { Phase::Insert };
+helper_schedule.rs:253:                 }
+helper_schedule.rs:254:                 (EventKind::Duplicate { cell: id, matched }, 1)
+helper_schedule.rs:255:             }
+helper_schedule.rs:256:             Phase::Insert => {
+helper_schedule.rs:257:                 let pair = self.pending.ok_or(Unsupported::ScratchStateAdapter)?;
+helper_schedule.rs:258:                 let destination = scratch.cells.get(self.cells_used)
+helper_schedule.rs:259:                     .ok_or(Unsupported::EnvironmentCapacityPolicy)?;
+helper_schedule.rs:260:                 if destination.is_some() { return Err(Unsupported::ScratchStateAdapter); }
+helper_schedule.rs:261:                 let cell = CellId(self.cells_used);
+helper_schedule.rs:262:                 cell_write = Some((cell.0, EnvCell { name: pair.parameter.name,
+helper_schedule.rs:263:                     value: pair.argument.value, previous: self.fresh_root }));
+helper_schedule.rs:264:                 next.cells_used = add(self.cells_used, 1)?;
+helper_schedule.rs:265:                 next.fresh_root = Some(cell);
+helper_schedule.rs:266:                 next.binding = Binding::Fresh(Some(cell));
+helper_schedule.rs:267:                 next.phase = Phase::Release;
+helper_schedule.rs:268:                 (EventKind::Insert { cell }, 1)
+helper_schedule.rs:269:             }
+helper_schedule.rs:270:             Phase::Release | Phase::Propagate => {
+helper_schedule.rs:271:                 let task = self.task_len.checked_sub(1).ok_or(Unsupported::ScratchStateAdapter)?;
+helper_schedule.rs:272:                 if scratch.pairs.get(task).copied().flatten().is_none() {
+helper_schedule.rs:273:                     return Err(Unsupported::ScratchStateAdapter);
+helper_schedule.rs:274:                 }
+helper_schedule.rs:275:                 pair_write = Some((task, None));
+helper_schedule.rs:276:                 next.task_len = task;
+helper_schedule.rs:277:                 next.pending = None;
+helper_schedule.rs:278:                 next.duplicate_cursor = None;
+helper_schedule.rs:279:                 next.phase = if task == 0 { Phase::BindExit }
+helper_schedule.rs:280:                     else if self.binding == Binding::Bad { Phase::Propagate } else { Phase::Type };
+helper_schedule.rs:281:                 if self.phase == Phase::Propagate { (EventKind::Propagate { task }, 1) }
+helper_schedule.rs:282:                 else { (EventKind::Release { task }, 0) }
+helper_schedule.rs:283:             }
+helper_schedule.rs:284:             Phase::BindExit => { next.phase = Phase::CompleteBind; (EventKind::BindExit, 0) }
+helper_schedule.rs:285:             Phase::CompleteBind => {
+helper_schedule.rs:286:                 let function = self.selected.ok_or(Unsupported::SourceHandleAdapter)?;
+helper_schedule.rs:287:                 next.boundary.reference_remaining_fuel = self.boundary.reference_remaining_fuel
+helper_schedule.rs:288:                     .checked_sub(1).ok_or(Unsupported::ReferenceFuelBoundary)?;
+helper_schedule.rs:289:                 next.boundary.control = LegacyControl::Bound { binding: self.binding,
+helper_schedule.rs:290:                     return_sort: function.return_sort, body: function.body };
+helper_schedule.rs:291:                 next.phase = Phase::Done;
+helper_schedule.rs:292:                 (EventKind::CompleteBind, 0)
+helper_schedule.rs:293:             }
+helper_schedule.rs:294:             Phase::Done => return Ok(None),
+helper_schedule.rs:295:         };
+helper_schedule.rs:296:         let reference = u8::from(matches!(kind, EventKind::CompleteFind | EventKind::CompleteBind));
+helper_schedule.rs:297:         let helper = 1 - reference;
+helper_schedule.rs:298:         next.work = Work {
+helper_schedule.rs:299:             consumed: self.work.consumed.checked_add(1).ok_or(Unsupported::CounterAdmission)?,
+helper_schedule.rs:300:             helper: self.work.helper.checked_add(helper as u128).ok_or(Unsupported::CounterAdmission)?,
+helper_schedule.rs:301:             helper_visits: self.work.helper_visits.checked_add(visits as u128)
+helper_schedule.rs:302:                 .ok_or(Unsupported::CounterAdmission)?,
+helper_schedule.rs:303:             reference_cursor: self.work.reference_cursor.checked_add(reference as u128)
+helper_schedule.rs:304:                 .ok_or(Unsupported::CounterAdmission)?,
+helper_schedule.rs:305:         };
+helper_schedule.rs:306:         if let Some((slot, value)) = pair_write { scratch.pairs[slot] = value; }
+helper_schedule.rs:307:         if let Some((slot, value)) = cell_write { scratch.cells[slot] = Some(value); }
+helper_schedule.rs:308:         *self = next;
+helper_schedule.rs:309:         Ok(Some(Event { kind, work_delta: 1, helper_work_delta: helper,
+helper_schedule.rs:310:             helper_visits: visits, reference_cursor_delta: reference }))
+helper_schedule.rs:311:     }
+helper_schedule.rs:312: }
+helper_schedule.rs:313: 
+helper_schedule.rs:314: fn add(a: usize, b: usize) -> Result<usize, Unsupported> {
+helper_schedule.rs:315:     a.checked_add(b).ok_or(Unsupported::CounterAdmission)
+helper_schedule.rs:316: }
+helper_schedule.rs:317: 
+helper_schedule.rs:318: #[cfg(test)]
+helper_schedule.rs:319: #[path = "helper_schedule_tests.rs"]
+helper_schedule.rs:320: mod tests;
+N01-lib.rs:1: //! Bounded composable Moriarty language and deterministic local semantics.
+N01-lib.rs:2: pub mod intent;
+N01-lib.rs:3: mod ir;
+N01-lib.rs:4: pub mod json;
+N01-lib.rs:5: mod logical_cost;
+N01-lib.rs:6: mod parser;
+N01-lib.rs:7: pub mod policy;
+N01-lib.rs:8: pub mod sherlock;
+N01-lib.rs:9: 
+N01-lib.rs:10: // Unregistered draft source capability: Core-only ordinary host test proposal.
+N01-lib.rs:11: // These lexer-dependent modules stay outside Sherlock's standalone Std graph.
+N01-lib.rs:12: #[cfg(test)]
+N01-lib.rs:13: #[path = "sherlock/draft_source.rs"]
+N01-lib.rs:14: mod sherlock_draft;
+N01-lib.rs:15: #[cfg(test)]
+N01-lib.rs:16: #[path = "sherlock/draft_typecheck.rs"]
+N01-lib.rs:17: mod sherlock_draft_types;
+N01-lib.rs:18: #[cfg(test)]
+N01-lib.rs:19: #[path = "sherlock/draft_source_tests.rs"]
+N01-lib.rs:20: mod sherlock_draft_tests;
+N01-lib.rs:21: #[cfg(test)]
+N01-lib.rs:22: #[path = "sherlock/draft_image_bridge.rs"]
+N01-lib.rs:23: mod sherlock_draft_image;
+N01-lib.rs:24: #[cfg(test)]
+N01-lib.rs:25: #[path = "sherlock/draft_image_bridge_tests.rs"]
+N01-lib.rs:26: mod sherlock_draft_image_tests;
+N01-lib.rs:27: #[path = "sherlock/source_adapter.rs"]
+N01-lib.rs:28: pub mod sherlock_source;
+N01-lib.rs:29: // Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.
+N01-lib.rs:30: #[path = "sherlock/bounded_scalar_source.rs"]
+N01-lib.rs:31: pub mod sherlock_bounded_source;
+N01-lib.rs:32: pub mod stage;
+N01-lib.rs:33: mod replay;
+N01-lib.rs:34: mod runtime;
+N01-lib.rs:35: mod source_sponsor;
+N01-lib.rs:36: pub use ir::*;
+N01-lib.rs:37: pub use logical_cost::*;
+N01-lib.rs:38: pub use parser::{language, parse};
+N01-lib.rs:39: pub use replay::{DetailedReplayError, ReplayDifference, compare_execution, replay_detailed};
+N01-lib.rs:40: pub use runtime::{replay, simulate, validate};
+N01-lib.rs:41: pub use source_sponsor::*;
+N02-mod.rs:1: //! Sherlock's `sherlock-k-a/1` host reference component.
+N02-mod.rs:2: //!
+N02-mod.rs:3: //! This typed API represents the valid-UInt128, nonnegative-budget common
+N02-mod.rs:4: //! domain of the frozen K reference. It does not change Moriarty source `/1`
+N02-mod.rs:5: //! or `/2`, implement the proposed B helper schedule, or produce constraints.
+N02-mod.rs:6: //! Pure helpers and host allocation remain unmetered in this A profile.
+N02-mod.rs:7: 
+N02-mod.rs:8: pub mod compare;
+N02-mod.rs:9: mod reference;
+N02-mod.rs:10: mod reference_stream;
+N02-mod.rs:11: pub mod reference_display;
+N02-mod.rs:12: mod reference_types;
+N02-mod.rs:13: 
+N02-mod.rs:14: pub use reference::Machine;
+N02-mod.rs:15: pub use reference_stream::{VisitResult, VisitStop};
+N02-mod.rs:16: pub use reference_types::*;
+N02-mod.rs:17: 
+N02-mod.rs:18: #[cfg(test)]
+N02-mod.rs:19: mod reference_tests;
+N02-mod.rs:20: 
+N02-mod.rs:21: #[cfg(test)]
+N02-mod.rs:22: mod reference_bounded_tests;
+N02-mod.rs:23: 
+N02-mod.rs:24: #[cfg(test)]
+N02-mod.rs:25: mod reference_bounded_extra_tests;
+N02-mod.rs:26: 
+N02-mod.rs:27: #[cfg(test)]
+N02-mod.rs:28: mod normal_oracle_inputs;
+N02-mod.rs:29: 
+N02-mod.rs:30: #[cfg(test)]
+N02-mod.rs:31: mod reference_oracles_tests;
+N02-mod.rs:32: 
+N02-mod.rs:33: #[cfg(test)]
+N02-mod.rs:34: mod resource_tests;
+N02-mod.rs:35: 
+N02-mod.rs:36: #[cfg(test)]
+N02-mod.rs:37: mod compare_tests;
+N02-mod.rs:38: 
+N02-mod.rs:39: // Host-only image proposal: exercised here without exporting a public runtime API.
+N02-mod.rs:40: #[cfg(test)]
+N02-mod.rs:41: pub(crate) mod program_image;
+N02-mod.rs:42: 
+N02-mod.rs:43: // Private flat-table consumer proposal, normal-oracle comparisons only.
+N02-mod.rs:44: #[cfg(test)]
+N02-mod.rs:45: pub(crate) mod image_reference;
+N02-mod.rs:46: 
+N02-mod.rs:47: // Host-only event grouping; every internal reference record stays observable.
+N02-mod.rs:48: #[cfg(test)]
+N02-mod.rs:49: mod reference_slice;
+N02-mod.rs:50: 
+N02-mod.rs:51: // Unadopted host snapshot rows; normal materialization checks only.
+N02-mod.rs:52: #[cfg(test)]
+N02-mod.rs:53: mod machine_image;
+N02-mod.rs:54: 
+N02-mod.rs:55: // Unadopted finite call-helper proposal; clock and handle adapters stay separate.
+N02-mod.rs:56: #[cfg(test)]
+N02-mod.rs:57: mod helper_schedule;
+N02-mod.rs:58: 
+N02-mod.rs:59: // Host projection of helper completions to the unchanged A reference boundary.
+N02-mod.rs:60: #[cfg(test)]
+N02-mod.rs:61: mod helper_call_adapter;
+N02-mod.rs:62: 
+N02-mod.rs:63: // Causal occurrence metadata on the private image execution path.
+N02-mod.rs:64: #[cfg(test)]
+N02-mod.rs:65: mod source_origin_normal_tests;
+N02-mod.rs:66: 
+N02-mod.rs:67: // Internal L4 host preparation source proposal; H1, no network/untrusted API.
+N02-mod.rs:68: // Compilation and all normal tests remain UNRUN pending separate admission.
+N02-mod.rs:69: #[cfg(test)]
+N02-mod.rs:70: mod layout_a;
+N02-mod.rs:71: 
+N02-mod.rs:72: #[cfg(test)]
+N02-mod.rs:73: mod reference_stream_tests;
+N02-mod.rs:74: 
+N02-mod.rs:75: // Private host arithmetic/fuel materialization; no constraint or wire ABI.
+N02-mod.rs:76: #[cfg(test)]
+N02-mod.rs:77: mod arithmetic_witness;
+N02-mod.rs:78: #[cfg(test)]
+N02-mod.rs:79: mod arithmetic_witness_normal_tests;
+N05-draft_source.rs:1: //! Unregistered draft syntax preparation using the real Moriarty lexer.
+N05-draft_source.rs:2: //! Integration proposal: a Core lib.rs path module outside Sherlock's standalone
+N05-draft_source.rs:3: //! pure-Std graph. No current export, profile registration or execution.
+N05-draft_source.rs:4: use crate::sherlock::{Arm, BinaryOp, Expr, ExprRef, Function, Name, Parameter,
+N05-draft_source.rs:5:     Pattern, Program, Type, UnaryOp, Value};
+N05-draft_source.rs:6: use mori_lexer::{TokenIdx, TokenKind, Tokens};
+N05-draft_source.rs:7: use std::sync::Arc;
+N05-draft_source.rs:8: 
+N05-draft_source.rs:9: pub const DRAFT_LANGUAGE: &str = "moriarty-sherlock-draft/1";
+N05-draft_source.rs:10: 
+N05-draft_source.rs:11: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+N05-draft_source.rs:12: pub struct SourceSpan { pub start: u32, pub end: u32 }
+N05-draft_source.rs:13: 
+N05-draft_source.rs:14: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:15: pub struct BinderSite { pub name: Name, pub span: SourceSpan }
+N05-draft_source.rs:16: 
+N05-draft_source.rs:17: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:18: pub struct ParameterSite { pub binder: BinderSite, pub type_span: SourceSpan }
+N05-draft_source.rs:19: 
+N05-draft_source.rs:20: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:21: pub struct FunctionSite {
+N05-draft_source.rs:22:     pub index: usize,
+N05-draft_source.rs:23:     pub span: SourceSpan,
+N05-draft_source.rs:24:     pub name_span: SourceSpan,
+N05-draft_source.rs:25:     pub parameters: Vec<ParameterSite>,
+N05-draft_source.rs:26:     pub return_type_span: SourceSpan,
+N05-draft_source.rs:27: }
+N05-draft_source.rs:28: 
+N05-draft_source.rs:29: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:30: pub struct SourceLocation {
+N05-draft_source.rs:31:     /// None is the entry; Some(i) is body i in the unchanged function table.
+N05-draft_source.rs:32:     pub function_index: Option<usize>,
+N05-draft_source.rs:33:     /// Existing AST child order, independent of storage/pointer sharing.
+N05-draft_source.rs:34:     pub child_path: Vec<usize>,
+N05-draft_source.rs:35: }
+N05-draft_source.rs:36: 
+N05-draft_source.rs:37: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:38: pub struct ExpressionSite {
+N05-draft_source.rs:39:     pub source: SourceLocation,
+N05-draft_source.rs:40:     pub span: SourceSpan,
+N05-draft_source.rs:41:     pub kind: &'static str,
+N05-draft_source.rs:42: }
+N05-draft_source.rs:43: 
+N05-draft_source.rs:44: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:45: pub struct PatternSite {
+N05-draft_source.rs:46:     pub match_source: SourceLocation,
+N05-draft_source.rs:47:     pub arm_index: usize,
+N05-draft_source.rs:48:     pub span: SourceSpan,
+N05-draft_source.rs:49:     pub binders: Vec<BinderSite>,
+N05-draft_source.rs:50: }
+N05-draft_source.rs:51: 
+N05-draft_source.rs:52: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:53: pub struct SourceProvenance {
+N05-draft_source.rs:54:     pub language_span: SourceSpan,
+N05-draft_source.rs:55:     pub program_name_span: SourceSpan,
+N05-draft_source.rs:56:     pub functions: Vec<FunctionSite>,
+N05-draft_source.rs:57:     // Image order: entry preorder, then bodies in original function order.
+N05-draft_source.rs:58:     pub expressions: Vec<ExpressionSite>,
+N05-draft_source.rs:59:     pub patterns: Vec<PatternSite>,
+N05-draft_source.rs:60: }
+N05-draft_source.rs:61: 
+N05-draft_source.rs:62: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:63: pub struct ParsedDraft {
+N05-draft_source.rs:64:     pub name: Name,
+N05-draft_source.rs:65:     pub program: Arc<Program>,
+N05-draft_source.rs:66:     pub provenance: SourceProvenance,
+N05-draft_source.rs:67: }
+N05-draft_source.rs:68: 
+N05-draft_source.rs:69: /// Preparation diagnostics only, never an existing machine Outcome/error code.
+N05-draft_source.rs:70: #[derive(Clone, Debug, PartialEq, Eq)]
+N05-draft_source.rs:71: pub enum DraftError {
+N05-draft_source.rs:72:     Lex(String),
+N05-draft_source.rs:73:     Syntax { span: SourceSpan, expected: &'static str, found: String },
+N05-draft_source.rs:74:     UIntLiteral { span: SourceSpan, text: String },
+N05-draft_source.rs:75: }
+N05-draft_source.rs:76: 
+N05-draft_source.rs:77: ///
+N05-draft_source.rs:78: /// # Security Warning (H1 — Unmetered Host Evaluator)
+N05-draft_source.rs:79: /// This machine is a host diagnostic reference with zero native authority and no host time,
+N05-draft_source.rs:80: /// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
+N05-draft_source.rs:81: pub fn parse_draft_source(source: &str) -> Result<ParsedDraft, DraftError> {
+N05-draft_source.rs:82:     let tokens = mori_lexer::lex(source).map_err(|error| DraftError::Lex(error.to_string()))?;
+N05-draft_source.rs:83:     Parser { source, tokens, cursor: 0, end: 0 }.program()
+N05-draft_source.rs:84: }
+N05-draft_source.rs:85: 
+N05-draft_source.rs:86: struct Node {
+N05-draft_source.rs:87:     expression: ExprRef,
+N05-draft_source.rs:88:     span: SourceSpan,
+N05-draft_source.rs:89:     children: Vec<Node>,
+N05-draft_source.rs:90:     patterns: Vec<(SourceSpan, Vec<BinderSite>)>,
+N05-draft_source.rs:91: }
+N05-draft_source.rs:92: 
+N05-draft_source.rs:93: impl Node {
+N05-draft_source.rs:94:     fn new(expression: Expr, span: SourceSpan, children: Vec<Node>) -> Self {
+N05-draft_source.rs:95:         Self { expression: Arc::new(expression), span, children, patterns: vec![] }
+N05-draft_source.rs:96:     }
+N05-draft_source.rs:97: }
+N05-draft_source.rs:98: 
+N05-draft_source.rs:99: struct Parser<'a> { source: &'a str, tokens: Tokens, cursor: usize, end: u32 }
+N05-draft_source.rs:100: 
+N05-draft_source.rs:101: impl Parser<'_> {
+N05-draft_source.rs:102:     fn index(&self, ahead: usize) -> TokenIdx {
+N05-draft_source.rs:103:         TokenIdx::new((self.cursor + ahead).min(self.tokens.len() - 1))
+N05-draft_source.rs:104:     }
+N05-draft_source.rs:105:     fn kind(&self, ahead: usize) -> TokenKind { self.tokens.kind(self.index(ahead)) }
+N05-draft_source.rs:106:     fn span(&self) -> SourceSpan {
+N05-draft_source.rs:107:         let span = self.tokens.span(self.index(0), self.source);
+N05-draft_source.rs:108:         SourceSpan { start: span.start, end: span.end }
+N05-draft_source.rs:109:     }
+N05-draft_source.rs:110:     fn text(&self) -> &str {
+N05-draft_source.rs:111:         let span = self.span();
+N05-draft_source.rs:112:         &self.source[span.start as usize..span.end as usize]
+N05-draft_source.rs:113:     }
+N05-draft_source.rs:114:     fn word(&self, word: &str) -> bool {
+N05-draft_source.rs:115:         self.kind(0).is_word() && self.text() == word
+N05-draft_source.rs:116:     }
+N05-draft_source.rs:117:     fn error(&self, expected: &'static str) -> DraftError {
+N05-draft_source.rs:118:         DraftError::Syntax { span: self.span(), expected, found: self.text().into() }
+N05-draft_source.rs:119:     }
+N05-draft_source.rs:120:     fn bump(&mut self) {
+N05-draft_source.rs:121:         self.end = self.span().end;
+N05-draft_source.rs:122:         if self.kind(0) != TokenKind::Eof { self.cursor += 1; }
+N05-draft_source.rs:123:     }
+N05-draft_source.rs:124:     fn expect(&mut self, kind: TokenKind, expected: &'static str) -> Result<(), DraftError> {
+N05-draft_source.rs:125:         if self.kind(0) != kind { return Err(self.error(expected)); }
+N05-draft_source.rs:126:         self.bump();
+N05-draft_source.rs:127:         Ok(())
+N05-draft_source.rs:128:     }
+N05-draft_source.rs:129:     fn expect_word(&mut self, word: &'static str) -> Result<(), DraftError> {
+N05-draft_source.rs:130:         if !self.word(word) { return Err(self.error(word)); }
+N05-draft_source.rs:131:         self.bump();
+N05-draft_source.rs:132:         Ok(())
+N05-draft_source.rs:133:     }
+N05-draft_source.rs:134:     fn name(&mut self) -> Result<BinderSite, DraftError> {
+N05-draft_source.rs:135:         if self.kind(0) != TokenKind::Ident || reserved(self.text()) {
+N05-draft_source.rs:136:             return Err(self.error("identifier"));
+N05-draft_source.rs:137:         }
+N05-draft_source.rs:138:         let site = BinderSite { name: self.text().into(), span: self.span() };
+N05-draft_source.rs:139:         self.bump();
+N05-draft_source.rs:140:         Ok(site)
+N05-draft_source.rs:141:     }
+N05-draft_source.rs:142:     fn ty(&mut self) -> Result<(Type, SourceSpan), DraftError> {
+N05-draft_source.rs:143:         let ty = match self.text() {
+N05-draft_source.rs:144:             "UInt" => Type::UInt, "Bool" => Type::Bool,
+N05-draft_source.rs:145:             "List" => Type::List, "Tree" => Type::Tree,
+N05-draft_source.rs:146:             _ => return Err(self.error("UInt, Bool, List or Tree")),
+N05-draft_source.rs:147:         };
+N05-draft_source.rs:148:         let span = self.span();
+N05-draft_source.rs:149:         self.bump();
+N05-draft_source.rs:150:         Ok((ty, span))
+N05-draft_source.rs:151:     }
+N05-draft_source.rs:152:     fn program(mut self) -> Result<ParsedDraft, DraftError> {
+N05-draft_source.rs:153:         self.expect_word("language")?;
+N05-draft_source.rs:154:         if self.kind(0) != TokenKind::String { return Err(self.error("draft language string")); }
+N05-draft_source.rs:155:         let language_span = self.span();
+N05-draft_source.rs:156:         if mori_lexer::decode_string(self.text()) != DRAFT_LANGUAGE {
+N05-draft_source.rs:157:             return Err(self.error(DRAFT_LANGUAGE));
+N05-draft_source.rs:158:         }
+N05-draft_source.rs:159:         self.bump();
+N05-draft_source.rs:160:         self.expect(TokenKind::Semicolon, ";")?;
+N05-draft_source.rs:161:         self.expect_word("program")?;
+N05-draft_source.rs:162:         let name = self.name()?;
+N05-draft_source.rs:163:         self.expect(TokenKind::LBrace, "{")?;
+N05-draft_source.rs:164:         let mut functions = Vec::new();
+N05-draft_source.rs:165:         let mut sites = Vec::new();
+N05-draft_source.rs:166:         let mut bodies = Vec::new();
+N05-draft_source.rs:167:         while self.word("fn") {
+N05-draft_source.rs:168:             let index = functions.len();
+N05-draft_source.rs:169:             let start = self.span().start;
+N05-draft_source.rs:170:             self.bump();
+N05-draft_source.rs:171:             let function_name = self.name()?;
+N05-draft_source.rs:172:             self.expect(TokenKind::LParen, "(")?;
+N05-draft_source.rs:173:             let mut parameters = Vec::new();
+N05-draft_source.rs:174:             let mut parameter_sites = Vec::new();
+N05-draft_source.rs:175:             if self.kind(0) != TokenKind::RParen {
+N05-draft_source.rs:176:                 loop {
+N05-draft_source.rs:177:                     let binder = self.name()?;
+N05-draft_source.rs:178:                     self.expect(TokenKind::Colon, ":")?;
+N05-draft_source.rs:179:                     let (ty, type_span) = self.ty()?;
+N05-draft_source.rs:180:                     parameters.push(Parameter { name: binder.name.clone(), ty });
+N05-draft_source.rs:181:                     parameter_sites.push(ParameterSite { binder, type_span });
+N05-draft_source.rs:182:                     if self.kind(0) != TokenKind::Comma { break; }
+N05-draft_source.rs:183:                     self.bump();
+N05-draft_source.rs:184:                 }
+N05-draft_source.rs:185:             }
+N05-draft_source.rs:186:             self.expect(TokenKind::RParen, ")")?;
+N05-draft_source.rs:187:             self.expect(TokenKind::Colon, ":")?;
+N05-draft_source.rs:188:             let (return_type, return_type_span) = self.ty()?;
+N05-draft_source.rs:189:             let body = self.block()?;
+N05-draft_source.rs:190:             functions.push(Function { name: function_name.name, parameters, return_type,
+N05-draft_source.rs:191:                 body: body.expression.clone() });
+N05-draft_source.rs:192:             sites.push(FunctionSite { index, span: SourceSpan { start, end: self.end },
+N05-draft_source.rs:193:                 name_span: function_name.span, parameters: parameter_sites, return_type_span });
+N05-draft_source.rs:194:             bodies.push(body);
+N05-draft_source.rs:195:         }
+N05-draft_source.rs:196:         self.expect_word("entry")?;
+N05-draft_source.rs:197:         let entry = self.expression(0)?;
+N05-draft_source.rs:198:         self.expect(TokenKind::Semicolon, ";")?;
+N05-draft_source.rs:199:         self.expect(TokenKind::RBrace, "}")?;
+N05-draft_source.rs:200:         self.expect(TokenKind::Eof, "end of draft program")?;
+N05-draft_source.rs:201:         let program = Arc::new(Program { functions, entry: entry.expression.clone() });
+N05-draft_source.rs:202:         let mut provenance = SourceProvenance { language_span, program_name_span: name.span,
+N05-draft_source.rs:203:             functions: sites, expressions: Vec::new(), patterns: Vec::new() };
+N05-draft_source.rs:204:         collect_sites(&entry, None, &mut provenance);
+N05-draft_source.rs:205:         for (index, body) in bodies.iter().enumerate() {
+N05-draft_source.rs:206:             collect_sites(body, Some(index), &mut provenance);
+N05-draft_source.rs:207:         }
+N05-draft_source.rs:208:         Ok(ParsedDraft { name: name.name, program, provenance })
+N05-draft_source.rs:209:     }
+N05-draft_source.rs:210:     fn block(&mut self) -> Result<Node, DraftError> {
+N05-draft_source.rs:211:         self.expect(TokenKind::LBrace, "{")?;
+N05-draft_source.rs:212:         let node = self.expression(0)?;
+N05-draft_source.rs:213:         self.expect(TokenKind::RBrace, "}")?;
+N05-draft_source.rs:214:         Ok(node)
+N05-draft_source.rs:215:     }
+N05-draft_source.rs:216:     fn expression(&mut self, minimum: u8) -> Result<Node, DraftError> {
+N05-draft_source.rs:217:         let mut left = self.atom()?;
+N05-draft_source.rs:218:         while let Some((op, precedence, width)) = self.binary() {
+N05-draft_source.rs:219:             if precedence < minimum { break; }
+N05-draft_source.rs:220:             for _ in 0..width { self.bump(); }
+N05-draft_source.rs:221:             let right = self.expression(precedence + 1)?;
+N05-draft_source.rs:222:             let span = SourceSpan { start: left.span.start, end: right.span.end };
+N05-draft_source.rs:223:             left = Node::new(Expr::Binary(op, left.expression.clone(), right.expression.clone()),
+N05-draft_source.rs:224:                 span, vec![left, right]);
+N05-draft_source.rs:225:         }
+N05-draft_source.rs:226:         Ok(left)
+N05-draft_source.rs:227:     }
+N05-draft_source.rs:228:     fn binary(&self) -> Option<(BinaryOp, u8, u8)> {
+N05-draft_source.rs:229:         Some(match self.kind(0) {
+N05-draft_source.rs:230:             TokenKind::Eq if self.kind(1) == TokenKind::Eq => (BinaryOp::Eq, 1, 2),
+N05-draft_source.rs:231:             TokenKind::Lt => (BinaryOp::Lt, 1, 1),
+N05-draft_source.rs:232:             TokenKind::Plus => (BinaryOp::Add, 2, 1),
+N05-draft_source.rs:233:             TokenKind::Minus => (BinaryOp::Sub, 2, 1),

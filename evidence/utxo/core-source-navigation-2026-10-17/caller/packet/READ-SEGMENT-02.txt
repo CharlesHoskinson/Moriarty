@@ -1,0 +1,347 @@
+image_reference.rs:82:     pub(crate) fn new(image: Arc<ProgramImageDraft>, fuel: u128, stack_limit: usize) -> Self {
+image_reference.rs:83:         let constants = decode_constants(&image);
+image_reference.rs:84:         let observations = Arc::new(SourceObservations::new(&image, &constants));
+image_reference.rs:85:         Self {
+image_reference.rs:86:             control: Some(ImageControl::Eval(image.entry)),
+image_reference.rs:87:             control_origin: image.entry,
+image_reference.rs:88:             image,
+image_reference.rs:89:             constants,
+image_reference.rs:90:             observations,
+image_reference.rs:91:             environment: Environment::new(),
+image_reference.rs:92:             frames: Vec::new(),
+image_reference.rs:93:             frame_origins: Vec::new(),
+image_reference.rs:94:             stack_limit,
+image_reference.rs:95:             remaining_fuel: fuel,
+image_reference.rs:96:             initial_fuel: fuel,
+image_reference.rs:97:             outcome: Outcome::Pending,
+image_reference.rs:98:         }
+image_reference.rs:99:     }
+image_reference.rs:100: 
+image_reference.rs:101:     /// Clone all actual execution state without stepping or charging work.
+image_reference.rs:102:     /// Immutable image/observation identities stay shared; values, controls,
+image_reference.rs:103:     /// environments, frames, origins, counters and outcome are retained in full.
+image_reference.rs:104:     pub(super) fn checkpoint(&self) -> ImageCheckpoint {
+image_reference.rs:105:         ImageCheckpoint { machine: self.clone() }
+image_reference.rs:106:     }
+image_reference.rs:107: 
+image_reference.rs:108:     /// Consume a typed cut and continue its saved execution directly. No source
+image_reference.rs:109:     /// reconstruction, Snapshot import, replay, or counter adjustment occurs.
+image_reference.rs:110:     pub(super) fn resume(checkpoint: ImageCheckpoint) -> Self {
+image_reference.rs:111:         checkpoint.machine
+image_reference.rs:112:     }
+image_reference.rs:113: 
+image_reference.rs:114:     pub(super) fn snapshot(&self) -> Snapshot {
+image_reference.rs:115:         Snapshot {
+image_reference.rs:116:             program: self.observations.program.clone(),
+image_reference.rs:117:             control: self.control.as_ref().map(|control| self.observe_control(control)),
+image_reference.rs:118:             environment: self.environment.clone(),
+image_reference.rs:119:             frames: self.frames.iter().map(|frame| self.observe_frame(frame)).collect(),
+image_reference.rs:120:             stack_limit: self.stack_limit,
+image_reference.rs:121:             remaining_fuel: self.remaining_fuel,
+image_reference.rs:122:             initial_fuel: self.initial_fuel,
+image_reference.rs:123:             outcome: self.outcome.clone(),
+image_reference.rs:124:         }
+image_reference.rs:125:     }
+image_reference.rs:126: 
+image_reference.rs:127:     /// Current scheduling occurrence, retained even after terminal publication.
+image_reference.rs:128:     /// This is an image-local source position, not authenticated program identity.
+image_reference.rs:129:     pub(super) fn control_origin(&self) -> ExprId { self.control_origin }
+image_reference.rs:130: 
+image_reference.rs:131:     /// Owners of pending frames in the same top-first order as snapshot().frames.
+image_reference.rs:132:     pub(super) fn frame_origins(&self) -> &[ExprId] { &self.frame_origins }
+image_reference.rs:133: 
+image_reference.rs:134:     /// The immutable image actually used for row fetches by this machine.
+image_reference.rs:135:     pub(super) fn program_image(&self) -> &Arc<ProgramImageDraft> { &self.image }
+image_reference.rs:136: 
+image_reference.rs:137:     /// One charged K-A rule, or free terminal publication. Snapshot conversion
+image_reference.rs:138:     /// and cloning are unmetered host work, as in the existing A reference.
+image_reference.rs:139:     pub(super) fn step(&mut self) -> Option<StepRecord> {
+image_reference.rs:140:         if self.outcome != Outcome::Pending {
+image_reference.rs:141:             return None;
+image_reference.rs:142:         }
+image_reference.rs:143:         let control = self.control.clone()?;
+image_reference.rs:144:         let before = self.snapshot();
+image_reference.rs:145:         let (rule_start_line, charge) = match control {
+image_reference.rs:146:             ImageControl::Return(value) if self.frames.is_empty() => {
+image_reference.rs:147:                 self.control = None;
+image_reference.rs:148:                 self.outcome = Outcome::Done(value);
+image_reference.rs:149:                 (80, 0)
+image_reference.rs:150:             }
+image_reference.rs:151:             ImageControl::Error(code) => {
+image_reference.rs:152:                 self.control = None;
+image_reference.rs:153:                 self.outcome = Outcome::Rejected(code);
+image_reference.rs:154:                 (82, 0)
+image_reference.rs:155:             }
+image_reference.rs:156:             _ if self.remaining_fuel == 0 => {
+image_reference.rs:157:                 self.control = None;
+image_reference.rs:158:                 self.outcome = Outcome::Exhausted;
+image_reference.rs:159:                 (84, 0)
+image_reference.rs:160:             }
+image_reference.rs:161:             control => {
+image_reference.rs:162:                 let (line, next) = self.transition(control);
+image_reference.rs:163:                 // Generated controls retain their scheduler. Only an actual
+image_reference.rs:164:                 // next Eval selects a new source occurrence from its row ID.
+image_reference.rs:165:                 if let ImageControl::Eval(id) = &next { self.control_origin = *id; }
+image_reference.rs:166:                 self.control = Some(next);
+image_reference.rs:167:                 self.remaining_fuel -= 1;
+image_reference.rs:168:                 (line, 1)
+image_reference.rs:169:             }
+image_reference.rs:170:         };
+image_reference.rs:171:         Some(StepRecord { rule_start_line, charge, before, after: self.snapshot() })
+image_reference.rs:172:     }
+image_reference.rs:173: 
+image_reference.rs:174:     pub(crate) fn run(&mut self) -> Snapshot {
+image_reference.rs:175:         while self.step().is_some() {}
+image_reference.rs:176:         self.snapshot()
+image_reference.rs:177:     }
+image_reference.rs:178: 
+image_reference.rs:179:     fn transition(&mut self, control: ImageControl) -> (usize, ImageControl) {
+image_reference.rs:180:         match control {
+image_reference.rs:181:             ImageControl::Eval(id) => self.evaluate(id),
+image_reference.rs:182:             ImageControl::Return(value) => self.return_value(value),
+image_reference.rs:183:             ImageControl::Push(frame, next, environment) => {
+image_reference.rs:184:                 if self.frames.len() < self.stack_limit {
+image_reference.rs:185:                     self.frames.insert(0, frame);
+image_reference.rs:186:                     self.frame_origins.insert(0, self.control_origin);
+image_reference.rs:187:                     self.environment = environment;
+image_reference.rs:188:                     (135, *next)
+image_reference.rs:189:                 } else {
+image_reference.rs:190:                     (140, ImageControl::Error(4))
+image_reference.rs:191:                 }
+image_reference.rs:192:             }
+image_reference.rs:193:             ImageControl::Invoke(name, values) => {
+image_reference.rs:194:                 // Preserve source order and first match, including duplicate names.
+image_reference.rs:195:                 let found = self.image.functions.iter().position(|function| function.name == name);
+image_reference.rs:196:                 (200, ImageControl::Enter(found, values))
+image_reference.rs:197:             }
+image_reference.rs:198:             ImageControl::Enter(None, _) => (202, ImageControl::Error(7)),
+image_reference.rs:199:             ImageControl::Enter(Some(index), values) => {
+image_reference.rs:200:                 let function = &self.image.functions[index];
+image_reference.rs:201:                 let parameters = &self.image.ordered_parameters[
+image_reference.rs:202:                     function.parameters.start..function.parameters.start + function.parameters.len];
+image_reference.rs:203:                 (204, ImageControl::Bound(bind(parameters, &values), function.return_type, function.body))
+image_reference.rs:204:             }
+image_reference.rs:205:             ImageControl::Bound(None, _, _) => (206, ImageControl::Error(8)),
+image_reference.rs:206:             ImageControl::Bound(Some(environment), ty, body) => {
+image_reference.rs:207:                 let frame = ImageFrame::Return(ty, self.environment.clone());
+image_reference.rs:208:                 (208, push(frame, ImageControl::Eval(body), environment))
+image_reference.rs:209:             }
+image_reference.rs:210:             ImageControl::Cases(_, arms, _) if arms.len == 0 => (212, ImageControl::Error(9)),
+image_reference.rs:211:             ImageControl::Cases(value, arms, environment) => {
+image_reference.rs:212:                 let arm = &self.image.match_arms[arms.start];
+image_reference.rs:213:                 let bindings = matching(&arm.pattern, &value, &environment);
+image_reference.rs:214:                 (214, ImageControl::CaseResult(bindings, value, arm.body, tail(arms), environment))
+image_reference.rs:215:             }
+image_reference.rs:216:             ImageControl::CaseResult(None, value, _, arms, environment) => {
+image_reference.rs:217:                 (217, ImageControl::Cases(value, arms, environment))
+image_reference.rs:218:             }
+image_reference.rs:219:             ImageControl::CaseResult(Some(bindings), _, body, _, environment) => {
+image_reference.rs:220:                 (220, push(ImageFrame::Scope(environment), ImageControl::Eval(body), bindings))
+image_reference.rs:221:             }
+image_reference.rs:222:             ImageControl::PrimitiveResult(Ok(value)) => (223, ImageControl::Return(value)),
+image_reference.rs:223:             ImageControl::PrimitiveResult(Err(code)) => (225, ImageControl::Error(code)),
+image_reference.rs:224:             ImageControl::Error(_) => unreachable!("error publication precedes charged rules"),
+image_reference.rs:225:         }
+image_reference.rs:226:     }
+image_reference.rs:227: 
+image_reference.rs:228:     fn evaluate(&self, id: ExprId) -> (usize, ImageControl) {
+image_reference.rs:229:         let row = &self.image.expressions[id.0];
+image_reference.rs:230:         let children = &self.image.ordered_children[
+image_reference.rs:231:             row.children.start..row.children.start + row.children.len];
+image_reference.rs:232:         let environment = &self.environment;
+image_reference.rs:233:         match &row.payload {
+image_reference.rs:234:             ExprPayload::Literal(constant) => (102, ImageControl::Return(self.constants[constant.0].clone())),
+image_reference.rs:235:             ExprPayload::Var(name) => match environment.get(name) {
+image_reference.rs:236:                 Some(value) => (108, ImageControl::Return(value.clone())),
+image_reference.rs:237:                 None => (111, ImageControl::Error(3)),
+image_reference.rs:238:             },
+image_reference.rs:239:             ExprPayload::Let(name) => {
+image_reference.rs:240:                 let frame = ImageFrame::Let(name.clone(), children[1], environment.clone());
+image_reference.rs:241:                 (114, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+image_reference.rs:242:             }
+image_reference.rs:243:             ExprPayload::Binary(op) => {
+image_reference.rs:244:                 let frame = ImageFrame::Left(*op, children[1], environment.clone());
+image_reference.rs:245:                 (117, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+image_reference.rs:246:             }
+image_reference.rs:247:             ExprPayload::Unary(op) => {
+image_reference.rs:248:                 (120, push(ImageFrame::Unary(*op), ImageControl::Eval(children[0]), environment.clone()))
+image_reference.rs:249:             }
+image_reference.rs:250:             ExprPayload::If => {
+image_reference.rs:251:                 let frame = ImageFrame::If(children[1], children[2], environment.clone());
+image_reference.rs:252:                 (123, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+image_reference.rs:253:             }
+image_reference.rs:254:             ExprPayload::Match(arms) => {
+image_reference.rs:255:                 let frame = ImageFrame::Match(*arms, environment.clone());
+image_reference.rs:256:                 (126, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+image_reference.rs:257:             }
+image_reference.rs:258:             ExprPayload::Call(name) if children.is_empty() => {
+image_reference.rs:259:                 (129, ImageControl::Invoke(name.clone(), Vec::new()))
+image_reference.rs:260:             }
+image_reference.rs:261:             ExprPayload::Call(name) => {
+image_reference.rs:262:                 let frame = ImageFrame::Args(name.clone(), Vec::new(), tail(row.children), environment.clone());
+image_reference.rs:263:                 (131, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+image_reference.rs:264:             }
+image_reference.rs:265:         }
+image_reference.rs:266:     }
+image_reference.rs:267: 
+image_reference.rs:268:     fn return_value(&mut self, value: Value) -> (usize, ImageControl) {
+image_reference.rs:269:         // Frames remain top first. Replacement rules keep their logical depth;
+image_reference.rs:270:         // failing if/return type tests keep every frame and saved environment.
+image_reference.rs:271:         // The consumed/replaced continuation owns this operation, including
+image_reference.rs:272:         // failed type checks which leave the logical frame in place.
+image_reference.rs:273:         self.control_origin = self.frame_origins[0];
+image_reference.rs:274:         match self.frames[0].clone() {
+image_reference.rs:275:             ImageFrame::Let(name, body, environment) => {
+image_reference.rs:276:                 self.frames[0] = ImageFrame::Scope(environment.clone());
+image_reference.rs:277:                 self.environment = environment;
+image_reference.rs:278:                 self.environment.insert(name, value);
+image_reference.rs:279:                 (145, ImageControl::Eval(body))
+image_reference.rs:280:             }
+image_reference.rs:281:             ImageFrame::Left(op, right, environment) => {
+image_reference.rs:282:                 self.frames[0] = ImageFrame::Right(op, value);
+image_reference.rs:283:                 self.environment = environment;
+image_reference.rs:284:                 (149, ImageControl::Eval(right))
+image_reference.rs:285:             }
+image_reference.rs:286:             ImageFrame::Right(op, left) => {
+image_reference.rs:287:                 self.remove_top_frame();
+image_reference.rs:288:                 (153, ImageControl::PrimitiveResult(binary_result(op, left, value)))
+image_reference.rs:289:             }
+image_reference.rs:290:             ImageFrame::Unary(op) => {
+image_reference.rs:291:                 self.remove_top_frame();
+image_reference.rs:292:                 (157, ImageControl::PrimitiveResult(unary_result(op, value)))
+image_reference.rs:293:             }
+image_reference.rs:294:             ImageFrame::If(yes, no, environment) => match value {
+image_reference.rs:295:                 Value::Bool(condition) => {
+image_reference.rs:296:                     self.remove_top_frame();
+image_reference.rs:297:                     self.environment = environment;
+image_reference.rs:298:                     if condition { (161, ImageControl::Eval(yes)) }
+image_reference.rs:299:                     else { (165, ImageControl::Eval(no)) }
+image_reference.rs:300:                 }
+image_reference.rs:301:                 _ => (169, ImageControl::Error(5)),
+image_reference.rs:302:             },
+image_reference.rs:303:             ImageFrame::Match(arms, environment) => {
+image_reference.rs:304:                 self.remove_top_frame();
+image_reference.rs:305:                 self.environment = environment.clone();
+image_reference.rs:306:                 (173, ImageControl::Cases(value, arms, environment))
+image_reference.rs:307:             }
+image_reference.rs:308:             ImageFrame::Args(name, mut values, rest, environment) => {
+image_reference.rs:309:                 values.push(value);
+image_reference.rs:310:                 self.environment = environment.clone();
+image_reference.rs:311:                 if rest.len == 0 {
+image_reference.rs:312:                     self.remove_top_frame();
+image_reference.rs:313:                     (181, ImageControl::Invoke(name, values))
+image_reference.rs:314:                 } else {
+image_reference.rs:315:                     let next = self.image.ordered_children[rest.start];
+image_reference.rs:316:                     self.frames[0] = ImageFrame::Args(name, values, tail(rest), environment);
+image_reference.rs:317:                     (177, ImageControl::Eval(next))
+image_reference.rs:318:                 }
+image_reference.rs:319:             }
+image_reference.rs:320:             ImageFrame::Return(ty, environment) => {
+image_reference.rs:321:                 if has_type(&value, ty) {
+image_reference.rs:322:                     self.remove_top_frame();
+image_reference.rs:323:                     self.environment = environment;
+image_reference.rs:324:                     (185, ImageControl::Return(value))
+image_reference.rs:325:                 } else {
+image_reference.rs:326:                     (190, ImageControl::Error(6))
+image_reference.rs:327:                 }
+image_reference.rs:328:             }
+image_reference.rs:329:             ImageFrame::Scope(environment) => {
+image_reference.rs:330:                 self.remove_top_frame();
+image_reference.rs:331:                 self.environment = environment;
+image_reference.rs:332:                 (195, ImageControl::Return(value))
+image_reference.rs:333:             }
+image_reference.rs:334:         }
+image_reference.rs:335:     }
+image_reference.rs:336: 
+image_reference.rs:337:     fn remove_top_frame(&mut self) {
+image_reference.rs:338:         self.frames.remove(0);
+image_reference.rs:339:         self.frame_origins.remove(0);
+image_reference.rs:340:     }
+image_reference.rs:341: 
+image_reference.rs:342:     fn observe_frame(&self, frame: &ImageFrame) -> Frame {
+image_reference.rs:343:         let source = &self.observations;
+image_reference.rs:344:         match frame {
+image_reference.rs:345:             ImageFrame::Let(name, body, environment) => Frame::Let(name.clone(), source.expression(*body), environment.clone()),
+image_reference.rs:346:             ImageFrame::Left(op, right, environment) => Frame::Left(*op, source.expression(*right), environment.clone()),
+image_reference.rs:347:             ImageFrame::Right(op, value) => Frame::Right(*op, value.clone()),
+image_reference.rs:348:             ImageFrame::Unary(op) => Frame::Unary(*op),
+image_reference.rs:349:             ImageFrame::If(yes, no, environment) => Frame::If(source.expression(*yes), source.expression(*no), environment.clone()),
+image_reference.rs:350:             ImageFrame::Match(arms, environment) => Frame::Match(source.arms(&self.image, *arms), environment.clone()),
+image_reference.rs:351:             ImageFrame::Args(name, values, rest, environment) => Frame::Args(
+image_reference.rs:352:                 name.clone(), values.clone(), source.children(&self.image, *rest), environment.clone()),
+image_reference.rs:353:             ImageFrame::Return(ty, environment) => Frame::Return(*ty, environment.clone()),
+image_reference.rs:354:             ImageFrame::Scope(environment) => Frame::Scope(environment.clone()),
+image_reference.rs:355:         }
+image_reference.rs:356:     }
+image_reference.rs:357: 
+image_reference.rs:358:     fn observe_control(&self, control: &ImageControl) -> Control {
+image_reference.rs:359:         let source = &self.observations;
+image_reference.rs:360:         match control {
+image_reference.rs:361:             ImageControl::Eval(id) => Control::Eval(source.expression(*id)),
+image_reference.rs:362:             ImageControl::Return(value) => Control::Return(value.clone()),
+image_reference.rs:363:             ImageControl::Push(frame, next, environment) => Control::Push(
+image_reference.rs:364:                 self.observe_frame(frame), Box::new(self.observe_control(next)), environment.clone()),
+image_reference.rs:365:             ImageControl::Invoke(name, values) => Control::Invoke(name.clone(), values.clone()),
+image_reference.rs:366:             ImageControl::Enter(index, values) => Control::Enter(
+image_reference.rs:367:                 index.map(|index| source.program.functions[index].clone()), values.clone()),
+image_reference.rs:368:             ImageControl::Bound(bindings, ty, body) => Control::Bound(bindings.clone(), *ty, source.expression(*body)),
+image_reference.rs:369:             ImageControl::Cases(value, arms, environment) => Control::Cases(
+image_reference.rs:370:                 value.clone(), source.arms(&self.image, *arms), environment.clone()),
+image_reference.rs:371:             ImageControl::CaseResult(bindings, value, body, rest, environment) => Control::CaseResult(
+image_reference.rs:372:                 bindings.clone(), value.clone(), source.expression(*body), source.arms(&self.image, *rest), environment.clone()),
+image_reference.rs:373:             ImageControl::PrimitiveResult(result) => Control::PrimitiveResult(result.clone()),
+image_reference.rs:374:             ImageControl::Error(code) => Control::Error(*code),
+image_reference.rs:375:         }
+image_reference.rs:376:     }
+image_reference.rs:377: }
+image_reference.rs:378: 
+image_reference.rs:379: fn push(frame: ImageFrame, next: ImageControl, environment: Environment) -> ImageControl {
+image_reference.rs:380:     ImageControl::Push(frame, Box::new(next), environment)
+image_reference.rs:381: }
+image_reference.rs:382: 
+image_reference.rs:383: /// Only applied to a nonempty ordered child or arm slice.
+image_reference.rs:384: fn tail(slice: TableSlice) -> TableSlice {
+image_reference.rs:385:     TableSlice { start: slice.start + 1, len: slice.len - 1 }
+image_reference.rs:386: }
+image_reference.rs:387: 
+image_reference.rs:388: /// Immutable observation cache: reverse preorder resolves children before their
+image_reference.rs:389: /// parents in builder-produced images. No recursive AST traversal or execution
+image_reference.rs:390: /// is used to construct it, and the transition methods never read this cache.
+image_reference.rs:391: struct SourceObservations {
+image_reference.rs:392:     expressions: Vec<ExprRef>,
+image_reference.rs:393:     program: Arc<Program>,
+image_reference.rs:394: }
+image_reference.rs:395: 
+image_reference.rs:396: impl SourceObservations {
+image_reference.rs:397:     fn new(image: &ProgramImageDraft, constants: &[Value]) -> Self {
+image_reference.rs:398:         let mut expressions: Vec<Option<ExprRef>> = vec![None; image.expressions.len()];
+image_reference.rs:399:         for index in (0..image.expressions.len()).rev() {
+image_reference.rs:400:             let row = &image.expressions[index];
+image_reference.rs:401:             let children = &image.ordered_children[row.children.start..row.children.start + row.children.len];
+image_reference.rs:402:             let child = |position: usize| expressions[children[position].0].as_ref()
+image_reference.rs:403:                 .expect("builder child follows its parent").clone();
+image_reference.rs:404:             let expression = match &row.payload {
+image_reference.rs:405:                 ExprPayload::Literal(id) => Expr::Literal(constants[id.0].clone()),
+image_reference.rs:406:                 ExprPayload::Var(name) => Expr::Var(name.clone()),
+image_reference.rs:407:                 ExprPayload::Let(name) => Expr::Let(name.clone(), child(0), child(1)),
+image_reference.rs:408:                 ExprPayload::Binary(op) => Expr::Binary(*op, child(0), child(1)),
+image_reference.rs:409:                 ExprPayload::Unary(op) => Expr::Unary(*op, child(0)),
+image_reference.rs:410:                 ExprPayload::If => Expr::If(child(0), child(1), child(2)),
+image_reference.rs:411:                 ExprPayload::Call(name) => Expr::Call(name.clone(), (0..children.len()).map(child).collect()),
+image_reference.rs:412:                 ExprPayload::Match(arms) => Expr::Match(child(0), image.match_arms[
+image_reference.rs:413:                     arms.start..arms.start + arms.len].iter().map(|arm| Arm {
+image_reference.rs:414:                         pattern: arm.pattern.clone(),
+image_reference.rs:415:                         body: expressions[arm.body.0].as_ref().expect("builder arm follows parent").clone(),
+image_reference.rs:416:                     }).collect()),
+image_reference.rs:417:             };
+image_reference.rs:418:             expressions[index] = Some(Arc::new(expression));
+image_reference.rs:419:         }
+image_reference.rs:420:         let expressions: Vec<ExprRef> = expressions.into_iter()
+image_reference.rs:421:             .map(|expression| expression.expect("all builder rows reconstructed")).collect();
+image_reference.rs:422:         let functions = image.functions.iter().map(|function| Function {
+image_reference.rs:423:             name: function.name.clone(),
+image_reference.rs:424:             parameters: image.ordered_parameters[
+image_reference.rs:425:                 function.parameters.start..function.parameters.start + function.parameters.len].to_vec(),
+image_reference.rs:426:             return_type: function.return_type,
+image_reference.rs:427:             body: expressions[function.body.0].clone(),
+image_reference.rs:428:         }).collect();

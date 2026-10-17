@@ -1,0 +1,385 @@
+N07-helper_call_adapter.rs:285: fn source_expression(program: &Program, locator: &SourceLocator) -> Result<ExprRef, Gap> {
+N07-helper_call_adapter.rs:286:     let mut expression = match locator.owner {
+N07-helper_call_adapter.rs:287:         SourceOwner::Entry => program.entry.clone(),
+N07-helper_call_adapter.rs:288:         SourceOwner::Function(index) => program.functions.get(index)
+N07-helper_call_adapter.rs:289:             .ok_or(Gap::ImageSourceAssociation)?.body.clone(),
+N07-helper_call_adapter.rs:290:     };
+N07-helper_call_adapter.rs:291:     for &child in &locator.ast_path {
+N07-helper_call_adapter.rs:292:         expression = match expression.as_ref() {
+N07-helper_call_adapter.rs:293:             Expr::Let(_, left, right) | Expr::Binary(_, left, right) => match child {
+N07-helper_call_adapter.rs:294:                 0 => left.clone(), 1 => right.clone(), _ => return Err(Gap::ImageSourceAssociation),
+N07-helper_call_adapter.rs:295:             },
+N07-helper_call_adapter.rs:296:             Expr::Unary(_, operand) if child == 0 => operand.clone(),
+N07-helper_call_adapter.rs:297:             Expr::If(condition, yes, no) => match child {
+N07-helper_call_adapter.rs:298:                 0 => condition.clone(), 1 => yes.clone(), 2 => no.clone(),
+N07-helper_call_adapter.rs:299:                 _ => return Err(Gap::ImageSourceAssociation),
+N07-helper_call_adapter.rs:300:             },
+N07-helper_call_adapter.rs:301:             Expr::Call(_, arguments) => arguments.get(child).ok_or(Gap::ImageSourceAssociation)?.clone(),
+N07-helper_call_adapter.rs:302:             Expr::Match(scrutinee, _) if child == 0 => scrutinee.clone(),
+N07-helper_call_adapter.rs:303:             Expr::Match(_, arms) => arms.get(child - 1).ok_or(Gap::ImageSourceAssociation)?.body.clone(),
+N07-helper_call_adapter.rs:304:             _ => return Err(Gap::ImageSourceAssociation),
+N07-helper_call_adapter.rs:305:         };
+N07-helper_call_adapter.rs:306:     }
+N07-helper_call_adapter.rs:307:     Ok(expression)
+N07-helper_call_adapter.rs:308: }
+N09-reference_types.rs:1: use std::collections::BTreeMap;
+N09-reference_types.rs:2: use std::sync::Arc;
+N09-reference_types.rs:3: 
+N09-reference_types.rs:4: pub const PROFILE: &str = "sherlock-k-a/1";
+N09-reference_types.rs:5: pub const K_SOURCE_SHA256: &str =
+N09-reference_types.rs:6:     "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41";
+N09-reference_types.rs:7: 
+N09-reference_types.rs:8: /// Opaque source symbol. K comparisons use canonical signed-decimal names.
+N09-reference_types.rs:9: /// Other spellings belong to the typed host API, outside that common domain.
+N09-reference_types.rs:10: pub type Name = String;
+N09-reference_types.rs:11: pub type Environment = BTreeMap<Name, Value>;
+N09-reference_types.rs:12: pub type ExprRef = Arc<Expr>;
+N09-reference_types.rs:13: 
+N09-reference_types.rs:14: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:15: pub enum Tree {
+N09-reference_types.rs:16:     Leaf(u128),
+N09-reference_types.rs:17:     Branch(Arc<Tree>, Arc<Tree>),
+N09-reference_types.rs:18: }
+N09-reference_types.rs:19: 
+N09-reference_types.rs:20: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:21: pub enum Value {
+N09-reference_types.rs:22:     UInt(u128),
+N09-reference_types.rs:23:     Bool(bool),
+N09-reference_types.rs:24:     List(Vec<u128>),
+N09-reference_types.rs:25:     Tree(Tree),
+N09-reference_types.rs:26: }
+N09-reference_types.rs:27: 
+N09-reference_types.rs:28: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+N09-reference_types.rs:29: pub enum Type {
+N09-reference_types.rs:30:     UInt,
+N09-reference_types.rs:31:     Bool,
+N09-reference_types.rs:32:     List,
+N09-reference_types.rs:33:     Tree,
+N09-reference_types.rs:34: }
+N09-reference_types.rs:35: 
+N09-reference_types.rs:36: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+N09-reference_types.rs:37: pub enum BinaryOp {
+N09-reference_types.rs:38:     Add,
+N09-reference_types.rs:39:     Sub,
+N09-reference_types.rs:40:     Mul,
+N09-reference_types.rs:41:     Eq,
+N09-reference_types.rs:42:     Lt,
+N09-reference_types.rs:43:     Cons,
+N09-reference_types.rs:44:     Branch,
+N09-reference_types.rs:45: }
+N09-reference_types.rs:46: 
+N09-reference_types.rs:47: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+N09-reference_types.rs:48: pub enum UnaryOp {
+N09-reference_types.rs:49:     Leaf,
+N09-reference_types.rs:50:     Not,
+N09-reference_types.rs:51: }
+N09-reference_types.rs:52: 
+N09-reference_types.rs:53: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:54: pub enum Pattern {
+N09-reference_types.rs:55:     Var(Name),
+N09-reference_types.rs:56:     Nil,
+N09-reference_types.rs:57:     Cons(Name, Name),
+N09-reference_types.rs:58:     Leaf(Name),
+N09-reference_types.rs:59:     Branch(Name, Name),
+N09-reference_types.rs:60: }
+N09-reference_types.rs:61: 
+N09-reference_types.rs:62: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:63: pub struct Arm {
+N09-reference_types.rs:64:     pub pattern: Pattern,
+N09-reference_types.rs:65:     pub body: ExprRef,
+N09-reference_types.rs:66: }
+N09-reference_types.rs:67: 
+N09-reference_types.rs:68: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:69: pub enum Expr {
+N09-reference_types.rs:70:     Literal(Value),
+N09-reference_types.rs:71:     Var(Name),
+N09-reference_types.rs:72:     Let(Name, ExprRef, ExprRef),
+N09-reference_types.rs:73:     Binary(BinaryOp, ExprRef, ExprRef),
+N09-reference_types.rs:74:     Unary(UnaryOp, ExprRef),
+N09-reference_types.rs:75:     If(ExprRef, ExprRef, ExprRef),
+N09-reference_types.rs:76:     Call(Name, Vec<ExprRef>),
+N09-reference_types.rs:77:     Match(ExprRef, Vec<Arm>),
+N09-reference_types.rs:78: }
+N09-reference_types.rs:79: 
+N09-reference_types.rs:80: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:81: pub struct Parameter {
+N09-reference_types.rs:82:     pub name: Name,
+N09-reference_types.rs:83:     pub ty: Type,
+N09-reference_types.rs:84: }
+N09-reference_types.rs:85: 
+N09-reference_types.rs:86: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:87: pub struct Function {
+N09-reference_types.rs:88:     pub name: Name,
+N09-reference_types.rs:89:     pub parameters: Vec<Parameter>,
+N09-reference_types.rs:90:     pub return_type: Type,
+N09-reference_types.rs:91:     pub body: ExprRef,
+N09-reference_types.rs:92: }
+N09-reference_types.rs:93: 
+N09-reference_types.rs:94: /// Function order is significant: lookup takes the first matching name.
+N09-reference_types.rs:95: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:96: pub struct Program {
+N09-reference_types.rs:97:     pub functions: Vec<Function>,
+N09-reference_types.rs:98:     pub entry: ExprRef,
+N09-reference_types.rs:99: }
+N09-reference_types.rs:100: 
+N09-reference_types.rs:101: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:102: pub enum Frame {
+N09-reference_types.rs:103:     Let(Name, ExprRef, Environment),
+N09-reference_types.rs:104:     Left(BinaryOp, ExprRef, Environment),
+N09-reference_types.rs:105:     Right(BinaryOp, Value),
+N09-reference_types.rs:106:     Unary(UnaryOp),
+N09-reference_types.rs:107:     If(ExprRef, ExprRef, Environment),
+N09-reference_types.rs:108:     Match(Vec<Arm>, Environment),
+N09-reference_types.rs:109:     Args(Name, Vec<Value>, Vec<ExprRef>, Environment),
+N09-reference_types.rs:110:     Return(Type, Environment),
+N09-reference_types.rs:111:     Scope(Environment),
+N09-reference_types.rs:112: }
+N09-reference_types.rs:113: 
+N09-reference_types.rs:114: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:115: pub enum Control {
+N09-reference_types.rs:116:     Eval(ExprRef),
+N09-reference_types.rs:117:     Return(Value),
+N09-reference_types.rs:118:     Push(Frame, Box<Control>, Environment),
+N09-reference_types.rs:119:     Invoke(Name, Vec<Value>),
+N09-reference_types.rs:120:     Enter(Option<Function>, Vec<Value>),
+N09-reference_types.rs:121:     Bound(Option<Environment>, Type, ExprRef),
+N09-reference_types.rs:122:     Cases(Value, Vec<Arm>, Environment),
+N09-reference_types.rs:123:     CaseResult(Option<Environment>, Value, ExprRef, Vec<Arm>, Environment),
+N09-reference_types.rs:124:     PrimitiveResult(Result<Value, u8>),
+N09-reference_types.rs:125:     Error(u8),
+N09-reference_types.rs:126: }
+N09-reference_types.rs:127: 
+N09-reference_types.rs:128: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:129: pub enum Outcome {
+N09-reference_types.rs:130:     Pending,
+N09-reference_types.rs:131:     Done(Value),
+N09-reference_types.rs:132:     Rejected(u8),
+N09-reference_types.rs:133:     Exhausted,
+N09-reference_types.rs:134: }
+N09-reference_types.rs:135: 
+N09-reference_types.rs:136: impl Outcome {
+N09-reference_types.rs:137:     /// Host-diagnostic classifier for the frozen `sherlock-k-a/1` A1 resource-limit partition.
+N09-reference_types.rs:138:     ///
+N09-reference_types.rs:139:     /// Returns `true` iff `self` is [`Outcome::Exhausted`] (zero-fuel termination) or
+N09-reference_types.rs:140:     /// [`Outcome::Rejected(4)`] (K-A frame-cap overflow at `D >=Int L`). All other outcomes—
+N09-reference_types.rs:141:     /// including [`Outcome::Pending`], [`Outcome::Done`], and all other [`Outcome::Rejected`]
+N09-reference_types.rs:142:     /// codes (such as semantic, typing, binding, pattern, or arithmetic errors `3, 5..=11` and
+N09-reference_types.rs:143:     /// unreachable literal code `2`)—return `false`.
+N09-reference_types.rs:144:     ///
+N09-reference_types.rs:145:     /// Scope: host diagnostic only on the `sherlock-k-a/1` typed common domain. This predicate
+N09-reference_types.rs:146:     /// carries zero native or cryptographic authority, does not transfer across Quint
+N09-reference_types.rs:147:     /// (`sherlock-quint-a/1`) or Candidate B (`sherlock-helper-microstep/1`), and does not make
+N09-reference_types.rs:148:     /// the unmetered host evaluator safe for untrusted inputs. No consumer may interpret a
+N09-reference_types.rs:149:     /// resource-limit outcome as a semantic, typing, or financial rejection.
+N09-reference_types.rs:150:     pub const fn is_resource_limit(&self) -> bool {
+N09-reference_types.rs:151:         matches!(self, Self::Exhausted | Self::Rejected(4))
+N09-reference_types.rs:152:     }
+N09-reference_types.rs:153: }
+N09-reference_types.rs:154: 
+N09-reference_types.rs:155: /// Complete post-startup K boundary state on the typed host common domain.
+N09-reference_types.rs:156: /// Frames are stored top first. `None` control represents K's `.K`.
+N09-reference_types.rs:157: /// Snapshots are observations; no arbitrary-state import is exposed.
+N09-reference_types.rs:158: ///
+N09-reference_types.rs:159: /// Machine invariant: every `Snapshot` produced by [`super::reference::Machine`] satisfies
+N09-reference_types.rs:160: /// `remaining_fuel <= initial_fuel`.
+N09-reference_types.rs:161: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:162: pub struct Snapshot {
+N09-reference_types.rs:163:     pub program: Arc<Program>,
+N09-reference_types.rs:164:     pub control: Option<Control>,
+N09-reference_types.rs:165:     pub environment: Environment,
+N09-reference_types.rs:166:     pub frames: Vec<Frame>,
+N09-reference_types.rs:167:     pub stack_limit: usize,
+N09-reference_types.rs:168:     pub remaining_fuel: u128,
+N09-reference_types.rs:169:     pub initial_fuel: u128,
+N09-reference_types.rs:170:     pub outcome: Outcome,
+N09-reference_types.rs:171: }
+N09-reference_types.rs:172: 
+N09-reference_types.rs:173: impl Snapshot {
+N09-reference_types.rs:174:     pub fn depth(&self) -> usize {
+N09-reference_types.rs:175:         self.frames.len()
+N09-reference_types.rs:176:     }
+N09-reference_types.rs:177: 
+N09-reference_types.rs:178:     /// Returns `initial_fuel - remaining_fuel` for machine-valid observations.
+N09-reference_types.rs:179:     ///
+N09-reference_types.rs:180:     /// # Preconditions
+N09-reference_types.rs:181:     /// Requires the machine invariant `self.remaining_fuel <= self.initial_fuel`.
+N09-reference_types.rs:182:     /// For hand-constructed snapshots where this invariant is not guaranteed, use
+N09-reference_types.rs:183:     /// [`Snapshot::checked_charged_steps`] so invalid counters are reported as `None`
+N09-reference_types.rs:184:     /// rather than silently clamped, wrapped, or panicked.
+N09-reference_types.rs:185:     pub fn charged_steps(&self) -> u128 {
+N09-reference_types.rs:186:         self.initial_fuel - self.remaining_fuel
+N09-reference_types.rs:187:     }
+N09-reference_types.rs:188: 
+N09-reference_types.rs:189:     /// Checked host-diagnostic step counter returning `None` if `remaining_fuel > initial_fuel`.
+N09-reference_types.rs:190:     pub const fn checked_charged_steps(&self) -> Option<u128> {
+N09-reference_types.rs:191:         self.initial_fuel.checked_sub(self.remaining_fuel)
+N09-reference_types.rs:192:     }
+N09-reference_types.rs:193: }
+N09-reference_types.rs:194: 
+N09-reference_types.rs:195: /// A source rule transition, including free terminal publication.
+N09-reference_types.rs:196: /// Line numbers refer only to `K_SOURCE_SHA256`, not to executed K rules.
+N09-reference_types.rs:197: #[derive(Clone, Debug, PartialEq, Eq)]
+N09-reference_types.rs:198: pub struct StepRecord {
+N09-reference_types.rs:199:     pub rule_start_line: usize,
+N09-reference_types.rs:200:     pub charge: u8,
+N09-reference_types.rs:201:     pub before: Snapshot,
+N09-reference_types.rs:202:     pub after: Snapshot,
+N09-reference_types.rs:203: }
+draft_image_bridge_tests.rs:1: //! SOURCE_ONLY / UNRUN: two ordinary Core-only host integration assertions.
+draft_image_bridge_tests.rs:2: //! Actual execution calls below are proposed test source, never executed here.
+draft_image_bridge_tests.rs:3: //! ASTs, provenance and result literals are independent handwritten expectations.
+draft_image_bridge_tests.rs:4: use crate::sherlock::{Environment, Machine, Outcome, Program, Snapshot, Type, Value};
+draft_image_bridge_tests.rs:5: use crate::sherlock::image_reference::ImageMachine;
+draft_image_bridge_tests.rs:6: use crate::sherlock::program_image::{ExprId, SourceLocator, SourceOwner};
+draft_image_bridge_tests.rs:7: use crate::sherlock_draft::SourceProvenance;
+draft_image_bridge_tests.rs:8: use crate::sherlock_draft_image::{prepare_draft_image, ImageSourceSite};
+draft_image_bridge_tests.rs:9: use crate::sherlock_draft_types::DraftTypeSummary;
+draft_image_bridge_tests.rs:10: use crate::sherlock_draft_tests::{FACTORIAL, TREEFOLD, factorial_expected,
+draft_image_bridge_tests.rs:11:     treefold_expected, factorial_provenance, treefold_provenance};
+draft_image_bridge_tests.rs:12: 
+draft_image_bridge_tests.rs:13: // Caller choices for these two positive normal examples only. These are not new
+draft_image_bridge_tests.rs:14: // host admission limits, a profile decision, recursion bounds or B capacities.
+draft_image_bridge_tests.rs:15: const CALLER_FUEL: u128 = 2_048;
+draft_image_bridge_tests.rs:16: const CALLER_STACK: usize = 64;
+draft_image_bridge_tests.rs:17: 
+draft_image_bridge_tests.rs:18: fn check_done(actual: Snapshot, expected_program: &Program, value: u128) {
+draft_image_bridge_tests.rs:19:     assert_eq!(actual.program.as_ref(), expected_program);
+draft_image_bridge_tests.rs:20:     assert_eq!(actual.outcome, Outcome::Done(Value::UInt(value)));
+draft_image_bridge_tests.rs:21:     assert_eq!(actual.control, None);
+draft_image_bridge_tests.rs:22:     assert_eq!(actual.environment, Environment::new());
+draft_image_bridge_tests.rs:23:     assert!(actual.frames.is_empty());
+draft_image_bridge_tests.rs:24:     assert_eq!(actual.initial_fuel, CALLER_FUEL);
+draft_image_bridge_tests.rs:25:     assert_eq!(actual.stack_limit, CALLER_STACK);
+draft_image_bridge_tests.rs:26:     // Exact charge/prefix clocks are deliberately not an oracle here. Existing
+draft_image_bridge_tests.rs:27:     // independent 8-program/216-prefix comparisons remain separate and intact.
+draft_image_bridge_tests.rs:28: }
+draft_image_bridge_tests.rs:29: 
+draft_image_bridge_tests.rs:30: fn check_pipeline(source: &str, expected: Program, provenance: SourceProvenance,
+draft_image_bridge_tests.rs:31:                   expected_value: u128) {
+draft_image_bridge_tests.rs:32:     let prepared = prepare_draft_image(source).expect("normal parse/typecheck/image preparation");
+draft_image_bridge_tests.rs:33:     assert_eq!(prepared.draft.program.as_ref(), &expected);
+draft_image_bridge_tests.rs:34:     assert_eq!(prepared.draft.provenance, provenance);
+draft_image_bridge_tests.rs:35:     assert_eq!(prepared.types, DraftTypeSummary {
+draft_image_bridge_tests.rs:36:         function_returns: vec![Type::UInt], entry_type: Type::UInt,
+draft_image_bridge_tests.rs:37:     });
+draft_image_bridge_tests.rs:38:     assert_eq!(prepared.image_sources.len(), provenance.expressions.len());
+draft_image_bridge_tests.rs:39:     assert_eq!(prepared.image.source_map.len(), provenance.expressions.len());
+draft_image_bridge_tests.rs:40:     for (index, expected_site) in provenance.expressions.iter().enumerate() {
+draft_image_bridge_tests.rs:41:         assert_eq!(prepared.image_sources[index], ImageSourceSite {
+draft_image_bridge_tests.rs:42:             expression: ExprId(index), source: expected_site.clone(),
+draft_image_bridge_tests.rs:43:         });
+draft_image_bridge_tests.rs:44:         assert_eq!(prepared.image.source_map[index], SourceLocator {
+draft_image_bridge_tests.rs:45:             owner: match expected_site.source.function_index {
+draft_image_bridge_tests.rs:46:                 None => SourceOwner::Entry,
+draft_image_bridge_tests.rs:47:                 Some(index) => SourceOwner::Function(index),
+draft_image_bridge_tests.rs:48:             },
+draft_image_bridge_tests.rs:49:             ast_path: expected_site.source.child_path.clone(),
+draft_image_bridge_tests.rs:50:         });
+draft_image_bridge_tests.rs:51:     }
+draft_image_bridge_tests.rs:52:     assert_eq!(prepared.image.functions.len(), 1);
+draft_image_bridge_tests.rs:53:     for (index, expected_function) in expected.functions.iter().enumerate() {
+draft_image_bridge_tests.rs:54:         let row = &prepared.image.functions[index];
+draft_image_bridge_tests.rs:55:         assert_eq!(row.source_table_index, index);
+draft_image_bridge_tests.rs:56:         assert_eq!(row.name, expected_function.name);
+draft_image_bridge_tests.rs:57:         assert_eq!(row.return_type, expected_function.return_type);
+draft_image_bridge_tests.rs:58:         assert_eq!(&prepared.image.ordered_parameters[
+draft_image_bridge_tests.rs:59:             row.parameters.start..row.parameters.start + row.parameters.len],
+draft_image_bridge_tests.rs:60:             expected_function.parameters.as_slice());
+draft_image_bridge_tests.rs:61:         assert_eq!(prepared.image.source_map[row.body.0], SourceLocator {
+draft_image_bridge_tests.rs:62:             owner: SourceOwner::Function(index), ast_path: vec![],
+draft_image_bridge_tests.rs:63:         });
+draft_image_bridge_tests.rs:64:     }
+draft_image_bridge_tests.rs:65: 
+draft_image_bridge_tests.rs:66:     // Distinct genuine consumers of the parsed, checked actual Program/image.
+draft_image_bridge_tests.rs:67:     // Each is compared to literal expectations, never to the other evaluator.
+draft_image_bridge_tests.rs:68:     let mut image_machine = ImageMachine::new(prepared.image, CALLER_FUEL, CALLER_STACK);
+draft_image_bridge_tests.rs:69:     check_done(image_machine.run(), &expected, expected_value);
+draft_image_bridge_tests.rs:70:     let mut ast_machine = Machine::new(prepared.draft.program, CALLER_FUEL, CALLER_STACK);
+draft_image_bridge_tests.rs:71:     check_done(ast_machine.run(), &expected, expected_value);
+draft_image_bridge_tests.rs:72: }
+draft_image_bridge_tests.rs:73: 
+draft_image_bridge_tests.rs:74: #[test]
+draft_image_bridge_tests.rs:75: fn factorial4_parser_checker_actual_image_and_host_consumers_expect24() {
+draft_image_bridge_tests.rs:76:     // Whole-integer oracle: 4*3*2*1*1 = 24; never obtained from a candidate run.
+draft_image_bridge_tests.rs:77:     check_pipeline(FACTORIAL, factorial_expected(), factorial_provenance(), 24);
+draft_image_bridge_tests.rs:78: }
+draft_image_bridge_tests.rs:79: 
+draft_image_bridge_tests.rs:80: #[test]
+draft_image_bridge_tests.rs:81: fn treefold_parser_checker_actual_image_and_host_consumers_expect7() {
+draft_image_bridge_tests.rs:82:     // Whole-integer oracle: leaf(3)+leaf(4) folds to 3+4 = 7.
+draft_image_bridge_tests.rs:83:     check_pipeline(TREEFOLD, treefold_expected(), treefold_provenance(), 7);
+draft_image_bridge_tests.rs:84: }
+draft_source_tests.rs:1: //! SOURCE_ONLY / UNRUN. Core lib.rs path module, outside standalone Sherlock.
+draft_source_tests.rs:2: //! Expected trees, source coordinates and paths below are handwritten literals.
+draft_source_tests.rs:3: //! These tests prepare source; they never evaluate a Sherlock expression.
+draft_source_tests.rs:4: use crate::sherlock_draft::*;
+draft_source_tests.rs:5: use crate::sherlock::{Arm, BinaryOp, Expr, ExprRef, Function, Parameter, Pattern,
+draft_source_tests.rs:6:     Program, Type, UnaryOp, Value};
+draft_source_tests.rs:7: use std::sync::Arc;
+draft_source_tests.rs:8: 
+draft_source_tests.rs:9: pub(crate) const FACTORIAL: &str = include_str!("specimens/factorial.mori");
+draft_source_tests.rs:10: pub(crate) const TREEFOLD: &str = include_str!("specimens/treefold.mori");
+draft_source_tests.rs:11: 
+draft_source_tests.rs:12: fn e(expression: Expr) -> ExprRef { Arc::new(expression) }
+draft_source_tests.rs:13: fn u(n: u128) -> ExprRef { e(Expr::Literal(Value::UInt(n))) }
+draft_source_tests.rs:14: fn b(value: bool) -> ExprRef { e(Expr::Literal(Value::Bool(value))) }
+draft_source_tests.rs:15: fn v(name: &str) -> ExprRef { e(Expr::Var(name.into())) }
+draft_source_tests.rs:16: fn binary(op: BinaryOp, left: ExprRef, right: ExprRef) -> ExprRef {
+draft_source_tests.rs:17:     e(Expr::Binary(op, left, right))
+draft_source_tests.rs:18: }
+draft_source_tests.rs:19: fn unary(op: UnaryOp, value: ExprRef) -> ExprRef { e(Expr::Unary(op, value)) }
+draft_source_tests.rs:20: fn call(name: &str, args: Vec<ExprRef>) -> ExprRef { e(Expr::Call(name.into(), args)) }
+draft_source_tests.rs:21: fn parameter(name: &str, ty: Type) -> Parameter { Parameter { name: name.into(), ty } }
+draft_source_tests.rs:22: 
+draft_source_tests.rs:23: pub(crate) fn factorial_expected() -> Program {
+draft_source_tests.rs:24:     Program {
+draft_source_tests.rs:25:         functions: vec![Function {
+draft_source_tests.rs:26:             name: "fact".into(), parameters: vec![parameter("n", Type::UInt)],
+draft_source_tests.rs:27:             return_type: Type::UInt,
+draft_source_tests.rs:28:             body: e(Expr::If(
+draft_source_tests.rs:29:                 binary(BinaryOp::Eq, v("n"), u(0)), u(1),
+draft_source_tests.rs:30:                 binary(BinaryOp::Mul, v("n"), call("fact", vec![
+draft_source_tests.rs:31:                     binary(BinaryOp::Sub, v("n"), u(1)),
+draft_source_tests.rs:32:                 ])),
+draft_source_tests.rs:33:             )),
+draft_source_tests.rs:34:         }],
+draft_source_tests.rs:35:         entry: call("fact", vec![u(4)]),
+draft_source_tests.rs:36:     }
+draft_source_tests.rs:37: }
+draft_source_tests.rs:38: 
+draft_source_tests.rs:39: pub(crate) fn treefold_expected() -> Program {
+draft_source_tests.rs:40:     Program {
+draft_source_tests.rs:41:         functions: vec![Function {
+draft_source_tests.rs:42:             name: "fold".into(), parameters: vec![parameter("t", Type::Tree)],
+draft_source_tests.rs:43:             return_type: Type::UInt,
+draft_source_tests.rs:44:             body: e(Expr::Match(v("t"), vec![
+draft_source_tests.rs:45:                 Arm { pattern: Pattern::Leaf("x".into()), body: v("x") },
+draft_source_tests.rs:46:                 Arm { pattern: Pattern::Branch("l".into(), "r".into()), body:
+draft_source_tests.rs:47:                     binary(BinaryOp::Add, call("fold", vec![v("l")]),
+draft_source_tests.rs:48:                         call("fold", vec![v("r")])) },
+draft_source_tests.rs:49:             ])),
+draft_source_tests.rs:50:         }],
+draft_source_tests.rs:51:         entry: call("fold", vec![binary(BinaryOp::Branch,
+draft_source_tests.rs:52:             unary(UnaryOp::Leaf, u(3)), unary(UnaryOp::Leaf, u(4)))]),
+draft_source_tests.rs:53:     }
+draft_source_tests.rs:54: }
+draft_source_tests.rs:55: 
+draft_source_tests.rs:56: // Coordinates are 1-based line numbers, 0-based UTF-8 byte columns, half-open.
+draft_source_tests.rs:57: // This helper translates literal coordinates only; it does not lex/parse source.
+draft_source_tests.rs:58: fn span(source: &str, line: usize, start: usize, end: usize) -> SourceSpan {
+draft_source_tests.rs:59:     let offset: usize = source.split_inclusive('\n').take(line - 1).map(str::len).sum();
+draft_source_tests.rs:60:     SourceSpan { start: (offset + start) as u32, end: (offset + end) as u32 }
+draft_source_tests.rs:61: }
+draft_source_tests.rs:62: fn location(function_index: Option<usize>, path: &[usize]) -> SourceLocation {
+draft_source_tests.rs:63:     SourceLocation { function_index, child_path: path.to_vec() }
+draft_source_tests.rs:64: }
+draft_source_tests.rs:65: fn site(source: &str, owner: Option<usize>, path: &[usize], line: usize,
+draft_source_tests.rs:66:         start: usize, end: usize, kind: &'static str) -> ExpressionSite {
+draft_source_tests.rs:67:     ExpressionSite { source: location(owner, path), span: span(source, line, start, end), kind }
+draft_source_tests.rs:68: }
+draft_source_tests.rs:69: fn binder(source: &str, name: &str, line: usize, start: usize, end: usize) -> BinderSite {
+draft_source_tests.rs:70:     BinderSite { name: name.into(), span: span(source, line, start, end) }
+draft_source_tests.rs:71: }
+draft_source_tests.rs:72: 
+draft_source_tests.rs:73: pub(crate) fn factorial_provenance() -> SourceProvenance {
+draft_source_tests.rs:74:     use std::option::Option::{None as E, Some as F};

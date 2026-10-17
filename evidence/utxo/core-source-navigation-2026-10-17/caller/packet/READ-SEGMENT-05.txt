@@ -1,0 +1,347 @@
+N05-draft_source.rs:234:             TokenKind::Star => (BinaryOp::Mul, 3, 1),
+N05-draft_source.rs:235:             _ => return None,
+N05-draft_source.rs:236:         })
+N05-draft_source.rs:237:     }
+N05-draft_source.rs:238:     fn atom(&mut self) -> Result<Node, DraftError> {
+N05-draft_source.rs:239:         let start = self.span().start;
+N05-draft_source.rs:240:         if self.word("let") {
+N05-draft_source.rs:241:             self.bump();
+N05-draft_source.rs:242:             let binder = self.name()?;
+N05-draft_source.rs:243:             self.expect(TokenKind::Eq, "=")?;
+N05-draft_source.rs:244:             let value = self.expression(0)?;
+N05-draft_source.rs:245:             self.expect_word("in")?;
+N05-draft_source.rs:246:             let body = self.expression(0)?;
+N05-draft_source.rs:247:             return Ok(Node::new(Expr::Let(binder.name, value.expression.clone(), body.expression.clone()),
+N05-draft_source.rs:248:                 SourceSpan { start, end: body.span.end }, vec![value, body]));
+N05-draft_source.rs:249:         }
+N05-draft_source.rs:250:         if self.word("if") {
+N05-draft_source.rs:251:             self.bump();
+N05-draft_source.rs:252:             let condition = self.expression(0)?;
+N05-draft_source.rs:253:             let yes = self.block()?;
+N05-draft_source.rs:254:             self.expect_word("else")?;
+N05-draft_source.rs:255:             let no = self.block()?;
+N05-draft_source.rs:256:             return Ok(Node::new(Expr::If(condition.expression.clone(), yes.expression.clone(), no.expression.clone()),
+N05-draft_source.rs:257:                 SourceSpan { start, end: self.end }, vec![condition, yes, no]));
+N05-draft_source.rs:258:         }
+N05-draft_source.rs:259:         if self.word("match") { return self.match_expression(start); }
+N05-draft_source.rs:260:         if self.kind(0) == TokenKind::LParen {
+N05-draft_source.rs:261:             self.bump();
+N05-draft_source.rs:262:             let mut node = self.expression(0)?;
+N05-draft_source.rs:263:             self.expect(TokenKind::RParen, ")")?;
+N05-draft_source.rs:264:             node.span = SourceSpan { start, end: self.end };
+N05-draft_source.rs:265:             return Ok(node);
+N05-draft_source.rs:266:         }
+N05-draft_source.rs:267:         if self.kind(0) == TokenKind::Number {
+N05-draft_source.rs:268:             let text = self.text().to_owned();
+N05-draft_source.rs:269:             let span = self.span();
+N05-draft_source.rs:270:             let value = text.replace('_', "").parse::<u128>()
+N05-draft_source.rs:271:                 .map_err(|_| DraftError::UIntLiteral { span, text })?;
+N05-draft_source.rs:272:             self.bump();
+N05-draft_source.rs:273:             return Ok(Node::new(Expr::Literal(Value::UInt(value)), span, vec![]));
+N05-draft_source.rs:274:         }
+N05-draft_source.rs:275:         if matches!(self.kind(0), TokenKind::KwTrue | TokenKind::KwFalse) {
+N05-draft_source.rs:276:             let value = self.kind(0) == TokenKind::KwTrue;
+N05-draft_source.rs:277:             self.bump();
+N05-draft_source.rs:278:             return Ok(Node::new(Expr::Literal(Value::Bool(value)), SourceSpan { start, end: self.end }, vec![]));
+N05-draft_source.rs:279:         }
+N05-draft_source.rs:280:         if self.word("nil") {
+N05-draft_source.rs:281:             self.bump();
+N05-draft_source.rs:282:             return Ok(Node::new(Expr::Literal(Value::List(vec![])), SourceSpan { start, end: self.end }, vec![]));
+N05-draft_source.rs:283:         }
+N05-draft_source.rs:284:         if ["cons", "leaf", "branch", "not"].iter().any(|word| self.word(word)) {
+N05-draft_source.rs:285:             let constructor = self.text().to_owned();
+N05-draft_source.rs:286:             self.bump();
+N05-draft_source.rs:287:             let children = self.arguments()?;
+N05-draft_source.rs:288:             let expression = match (constructor.as_str(), children.as_slice()) {
+N05-draft_source.rs:289:                 ("leaf", [child]) => Expr::Unary(UnaryOp::Leaf, child.expression.clone()),
+N05-draft_source.rs:290:                 ("not", [child]) => Expr::Unary(UnaryOp::Not, child.expression.clone()),
+N05-draft_source.rs:291:                 ("cons", [left, right]) => Expr::Binary(BinaryOp::Cons, left.expression.clone(), right.expression.clone()),
+N05-draft_source.rs:292:                 ("branch", [left, right]) => Expr::Binary(BinaryOp::Branch, left.expression.clone(), right.expression.clone()),
+N05-draft_source.rs:293:                 _ => return Err(self.error("constructor arguments in declared order/arity")),
+N05-draft_source.rs:294:             };
+N05-draft_source.rs:295:             return Ok(Node::new(expression, SourceSpan { start, end: self.end }, children));
+N05-draft_source.rs:296:         }
+N05-draft_source.rs:297:         let name = self.name()?;
+N05-draft_source.rs:298:         if self.kind(0) == TokenKind::LParen {
+N05-draft_source.rs:299:             let arguments = self.arguments()?;
+N05-draft_source.rs:300:             let expression = Expr::Call(name.name,
+N05-draft_source.rs:301:                 arguments.iter().map(|argument| argument.expression.clone()).collect());
+N05-draft_source.rs:302:             Ok(Node::new(expression, SourceSpan { start, end: self.end }, arguments))
+N05-draft_source.rs:303:         } else { Ok(Node::new(Expr::Var(name.name), name.span, vec![])) }
+N05-draft_source.rs:304:     }
+N05-draft_source.rs:305:     fn arguments(&mut self) -> Result<Vec<Node>, DraftError> {
+N05-draft_source.rs:306:         self.expect(TokenKind::LParen, "(")?;
+N05-draft_source.rs:307:         let mut arguments = Vec::new();
+N05-draft_source.rs:308:         if self.kind(0) != TokenKind::RParen {
+N05-draft_source.rs:309:             loop {
+N05-draft_source.rs:310:                 arguments.push(self.expression(0)?);
+N05-draft_source.rs:311:                 if self.kind(0) != TokenKind::Comma { break; }
+N05-draft_source.rs:312:                 self.bump();
+N05-draft_source.rs:313:             }
+N05-draft_source.rs:314:         }
+N05-draft_source.rs:315:         self.expect(TokenKind::RParen, ")")?;
+N05-draft_source.rs:316:         Ok(arguments)
+N05-draft_source.rs:317:     }
+N05-draft_source.rs:318:     fn match_expression(&mut self, start: u32) -> Result<Node, DraftError> {
+N05-draft_source.rs:319:         self.bump();
+N05-draft_source.rs:320:         let scrutinee = self.expression(0)?;
+N05-draft_source.rs:321:         self.expect(TokenKind::LBrace, "{")?;
+N05-draft_source.rs:322:         let mut arms = Vec::new();
+N05-draft_source.rs:323:         let mut patterns = Vec::new();
+N05-draft_source.rs:324:         let mut children = vec![scrutinee];
+N05-draft_source.rs:325:         loop {
+N05-draft_source.rs:326:             let (pattern, span, binders) = self.pattern()?;
+N05-draft_source.rs:327:             self.expect(TokenKind::Eq, "=>")?;
+N05-draft_source.rs:328:             self.expect(TokenKind::Gt, "=>")?;
+N05-draft_source.rs:329:             let body = self.expression(0)?;
+N05-draft_source.rs:330:             arms.push(Arm { pattern, body: body.expression.clone() });
+N05-draft_source.rs:331:             patterns.push((span, binders));
+N05-draft_source.rs:332:             children.push(body);
+N05-draft_source.rs:333:             if self.kind(0) != TokenKind::Comma { break; }
+N05-draft_source.rs:334:             self.bump();
+N05-draft_source.rs:335:         }
+N05-draft_source.rs:336:         self.expect(TokenKind::RBrace, "}")?;
+N05-draft_source.rs:337:         let mut node = Node::new(Expr::Match(children[0].expression.clone(), arms),
+N05-draft_source.rs:338:             SourceSpan { start, end: self.end }, children);
+N05-draft_source.rs:339:         node.patterns = patterns;
+N05-draft_source.rs:340:         Ok(node)
+N05-draft_source.rs:341:     }
+N05-draft_source.rs:342:     fn pattern(&mut self) -> Result<(Pattern, SourceSpan, Vec<BinderSite>), DraftError> {
+N05-draft_source.rs:343:         let start = self.span().start;
+N05-draft_source.rs:344:         if self.word("nil") {
+N05-draft_source.rs:345:             self.bump();
+N05-draft_source.rs:346:             return Ok((Pattern::Nil, SourceSpan { start, end: self.end }, vec![]));
+N05-draft_source.rs:347:         }
+N05-draft_source.rs:348:         if ["cons", "leaf", "branch"].iter().any(|word| self.word(word)) {
+N05-draft_source.rs:349:             let constructor = self.text().to_owned();
+N05-draft_source.rs:350:             self.bump();
+N05-draft_source.rs:351:             self.expect(TokenKind::LParen, "(")?;
+N05-draft_source.rs:352:             let first = self.name()?;
+N05-draft_source.rs:353:             let mut binders = vec![first];
+N05-draft_source.rs:354:             if constructor != "leaf" {
+N05-draft_source.rs:355:                 self.expect(TokenKind::Comma, ",")?;
+N05-draft_source.rs:356:                 binders.push(self.name()?);
+N05-draft_source.rs:357:             }
+N05-draft_source.rs:358:             self.expect(TokenKind::RParen, ")")?;
+N05-draft_source.rs:359:             let pattern = match constructor.as_str() {
+N05-draft_source.rs:360:                 "leaf" => Pattern::Leaf(binders[0].name.clone()),
+N05-draft_source.rs:361:                 "cons" => Pattern::Cons(binders[0].name.clone(), binders[1].name.clone()),
+N05-draft_source.rs:362:                 _ => Pattern::Branch(binders[0].name.clone(), binders[1].name.clone()),
+N05-draft_source.rs:363:             };
+N05-draft_source.rs:364:             Ok((pattern, SourceSpan { start, end: self.end }, binders))
+N05-draft_source.rs:365:         } else {
+N05-draft_source.rs:366:             let binder = self.name()?;
+N05-draft_source.rs:367:             Ok((Pattern::Var(binder.name.clone()), binder.span, vec![binder]))
+N05-draft_source.rs:368:         }
+N05-draft_source.rs:369:     }
+N05-draft_source.rs:370: }
+N05-draft_source.rs:371: 
+N05-draft_source.rs:372: fn reserved(name: &str) -> bool {
+N05-draft_source.rs:373:     matches!(name, "language" | "program" | "fn" | "entry" | "if" | "else" | "let" | "in"
+N05-draft_source.rs:374:         | "match" | "UInt" | "Bool" | "List" | "Tree" | "nil" | "cons" | "leaf" | "branch" | "not")
+N05-draft_source.rs:375: }
+N05-draft_source.rs:376: 
+N05-draft_source.rs:377: fn collect_sites(root: &Node, function_index: Option<usize>, provenance: &mut SourceProvenance) {
+N05-draft_source.rs:378:     let mut todo = vec![(root, Vec::new())];
+N05-draft_source.rs:379:     while let Some((node, path)) = todo.pop() {
+N05-draft_source.rs:380:         let source = SourceLocation { function_index, child_path: path.clone() };
+N05-draft_source.rs:381:         provenance.expressions.push(ExpressionSite { source: source.clone(), span: node.span,
+N05-draft_source.rs:382:             kind: node_kind(&node.expression) });
+N05-draft_source.rs:383:         for (arm_index, (span, binders)) in node.patterns.iter().enumerate() {
+N05-draft_source.rs:384:             provenance.patterns.push(PatternSite { match_source: source.clone(), arm_index,
+N05-draft_source.rs:385:                 span: *span, binders: binders.clone() });
+N05-draft_source.rs:386:         }
+N05-draft_source.rs:387:         for (index, child) in node.children.iter().enumerate().rev() {
+N05-draft_source.rs:388:             let mut child_path = path.clone();
+N05-draft_source.rs:389:             child_path.push(index);
+N05-draft_source.rs:390:             todo.push((child, child_path));
+N05-draft_source.rs:391:         }
+N05-draft_source.rs:392:     }
+N05-draft_source.rs:393: }
+N05-draft_source.rs:394: 
+N05-draft_source.rs:395: fn node_kind(expression: &Expr) -> &'static str {
+N05-draft_source.rs:396:     match expression {
+N05-draft_source.rs:397:         Expr::Literal(Value::UInt(_)) => "uint", Expr::Literal(Value::Bool(_)) => "bool",
+N05-draft_source.rs:398:         Expr::Literal(Value::List(_)) => "nil", Expr::Literal(Value::Tree(_)) => "tree-literal",
+N05-draft_source.rs:399:         Expr::Var(_) => "var", Expr::Let(..) => "let", Expr::If(..) => "if",
+N05-draft_source.rs:400:         Expr::Call(..) => "call", Expr::Match(..) => "match",
+N05-draft_source.rs:401:         Expr::Binary(op, ..) => match op { BinaryOp::Add => "add", BinaryOp::Sub => "sub",
+N05-draft_source.rs:402:             BinaryOp::Mul => "mul", BinaryOp::Eq => "eq", BinaryOp::Lt => "lt",
+N05-draft_source.rs:403:             BinaryOp::Cons => "cons", BinaryOp::Branch => "branch" },
+N05-draft_source.rs:404:         Expr::Unary(UnaryOp::Leaf, _) => "leaf", Expr::Unary(UnaryOp::Not, _) => "not",
+N05-draft_source.rs:405:     }
+N05-draft_source.rs:406: }
+N06-draft_typecheck.rs:1: //! SOURCE_ONLY / UNRUN: ordinary monomorphic typing proposal for the actual AST.
+N06-draft_typecheck.rs:2: //! No execution, source profile adoption, H1 admission or host resource guarantee.
+N06-draft_typecheck.rs:3: use crate::sherlock::{BinaryOp, Expr, Function, Name, Pattern, Program, Type, UnaryOp, Value};
+N06-draft_typecheck.rs:4: use crate::sherlock_draft::SourceLocation;
+N06-draft_typecheck.rs:5: use std::collections::BTreeMap;
+N06-draft_typecheck.rs:6: 
+N06-draft_typecheck.rs:7: #[derive(Clone, Debug, PartialEq, Eq)]
+N06-draft_typecheck.rs:8: pub struct DraftTypeSummary {
+N06-draft_typecheck.rs:9:     pub function_returns: Vec<Type>,
+N06-draft_typecheck.rs:10:     pub entry_type: Type,
+N06-draft_typecheck.rs:11: }
+N06-draft_typecheck.rs:12: 
+N06-draft_typecheck.rs:13: /// Local preparation diagnostics, not runtime Outcomes or existing error codes.
+N06-draft_typecheck.rs:14: #[derive(Clone, Debug, PartialEq, Eq)]
+N06-draft_typecheck.rs:15: pub struct DraftTypeError {
+N06-draft_typecheck.rs:16:     pub source: SourceLocation,
+N06-draft_typecheck.rs:17:     pub kind: DraftTypeErrorKind,
+N06-draft_typecheck.rs:18: }
+N06-draft_typecheck.rs:19: 
+N06-draft_typecheck.rs:20: #[derive(Clone, Debug, PartialEq, Eq)]
+N06-draft_typecheck.rs:21: pub enum DraftTypeErrorKind {
+N06-draft_typecheck.rs:22:     UnknownVariable(Name),
+N06-draft_typecheck.rs:23:     UnknownFunction(Name),
+N06-draft_typecheck.rs:24:     Arity { name: Name, expected: usize, actual: usize },
+N06-draft_typecheck.rs:25:     Expected { expected: Type, actual: Type },
+N06-draft_typecheck.rs:26:     BranchTypes { yes: Type, no: Type },
+N06-draft_typecheck.rs:27:     ArmTypes { expected: Type, actual: Type },
+N06-draft_typecheck.rs:28:     DuplicateParameter { name: Name, index: usize },
+N06-draft_typecheck.rs:29:     DuplicatePatternBinder(Name),
+N06-draft_typecheck.rs:30:     EmptyMatch,
+N06-draft_typecheck.rs:31: }
+N06-draft_typecheck.rs:32: 
+N06-draft_typecheck.rs:33: type Types = BTreeMap<Name, Type>;
+N06-draft_typecheck.rs:34: 
+N06-draft_typecheck.rs:35: /// Inspect every body under fresh parameter types, then entry under an empty
+N06-draft_typecheck.rs:36: /// environment. Named calls consult declarations, never recurse into callees.
+N06-draft_typecheck.rs:37: /// Thus mutual recursion requires no source unrolling or inferred recursion cap.
+N06-draft_typecheck.rs:38: /// This checker is a review-pending ordinary typed subset, not admission policy.
+N06-draft_typecheck.rs:39: ///
+N06-draft_typecheck.rs:40: /// # Security Warning (H1 — Unmetered Host Evaluator)
+N06-draft_typecheck.rs:41: /// This machine is a host diagnostic reference with zero native authority and no host time,
+N06-draft_typecheck.rs:42: /// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
+N06-draft_typecheck.rs:43: pub fn check_program_types(program: &Program) -> Result<DraftTypeSummary, DraftTypeError> {
+N06-draft_typecheck.rs:44:     let mut function_returns = Vec::new();
+N06-draft_typecheck.rs:45:     for (index, function) in program.functions.iter().enumerate() {
+N06-draft_typecheck.rs:46:         let source = SourceLocation { function_index: Some(index), child_path: vec![] };
+N06-draft_typecheck.rs:47:         let mut environment = Types::new();
+N06-draft_typecheck.rs:48:         for (parameter_index, parameter) in function.parameters.iter().enumerate() {
+N06-draft_typecheck.rs:49:             if environment.insert(parameter.name.clone(), parameter.ty).is_some() {
+N06-draft_typecheck.rs:50:                 return Err(error(&source, DraftTypeErrorKind::DuplicateParameter {
+N06-draft_typecheck.rs:51:                     name: parameter.name.clone(), index: parameter_index,
+N06-draft_typecheck.rs:52:                 }));
+N06-draft_typecheck.rs:53:             }
+N06-draft_typecheck.rs:54:         }
+N06-draft_typecheck.rs:55:         let actual = infer(program, &function.body, &environment, &source)?;
+N06-draft_typecheck.rs:56:         require(actual, function.return_type, &source)?;
+N06-draft_typecheck.rs:57:         function_returns.push(actual);
+N06-draft_typecheck.rs:58:     }
+N06-draft_typecheck.rs:59:     let source = SourceLocation { function_index: None, child_path: vec![] };
+N06-draft_typecheck.rs:60:     let entry_type = infer(program, &program.entry, &Types::new(), &source)?;
+N06-draft_typecheck.rs:61:     Ok(DraftTypeSummary { function_returns, entry_type })
+N06-draft_typecheck.rs:62: }
+N06-draft_typecheck.rs:63: 
+N06-draft_typecheck.rs:64: fn error(source: &SourceLocation, kind: DraftTypeErrorKind) -> DraftTypeError {
+N06-draft_typecheck.rs:65:     DraftTypeError { source: source.clone(), kind }
+N06-draft_typecheck.rs:66: }
+N06-draft_typecheck.rs:67: 
+N06-draft_typecheck.rs:68: fn child(source: &SourceLocation, index: usize) -> SourceLocation {
+N06-draft_typecheck.rs:69:     let mut source = source.clone();
+N06-draft_typecheck.rs:70:     source.child_path.push(index);
+N06-draft_typecheck.rs:71:     source
+N06-draft_typecheck.rs:72: }
+N06-draft_typecheck.rs:73: 
+N06-draft_typecheck.rs:74: fn require(actual: Type, expected: Type, source: &SourceLocation) -> Result<(), DraftTypeError> {
+N06-draft_typecheck.rs:75:     if actual == expected { Ok(()) }
+N06-draft_typecheck.rs:76:     else { Err(error(source, DraftTypeErrorKind::Expected { expected, actual })) }
+N06-draft_typecheck.rs:77: }
+N06-draft_typecheck.rs:78: 
+N06-draft_typecheck.rs:79: fn infer(program: &Program, expression: &Expr, environment: &Types,
+N06-draft_typecheck.rs:80:          source: &SourceLocation) -> Result<Type, DraftTypeError> {
+N06-draft_typecheck.rs:81:     match expression {
+N06-draft_typecheck.rs:82:         Expr::Literal(value) => Ok(match value {
+N06-draft_typecheck.rs:83:             Value::UInt(_) => Type::UInt, Value::Bool(_) => Type::Bool,
+N06-draft_typecheck.rs:84:             Value::List(_) => Type::List, Value::Tree(_) => Type::Tree,
+N06-draft_typecheck.rs:85:         }),
+N06-draft_typecheck.rs:86:         Expr::Var(name) => environment.get(name).copied()
+N06-draft_typecheck.rs:87:             .ok_or_else(|| error(source, DraftTypeErrorKind::UnknownVariable(name.clone()))),
+N06-draft_typecheck.rs:88:         Expr::Let(name, value, body) => {
+N06-draft_typecheck.rs:89:             let value_type = infer(program, value, environment, &child(source, 0))?;
+N06-draft_typecheck.rs:90:             let mut inner = environment.clone();
+N06-draft_typecheck.rs:91:             inner.insert(name.clone(), value_type);
+N06-draft_typecheck.rs:92:             infer(program, body, &inner, &child(source, 1))
+N06-draft_typecheck.rs:93:         }
+N06-draft_typecheck.rs:94:         Expr::Binary(op, left, right) => {
+N06-draft_typecheck.rs:95:             let left_source = child(source, 0);
+N06-draft_typecheck.rs:96:             let right_source = child(source, 1);
+N06-draft_typecheck.rs:97:             let left = infer(program, left, environment, &left_source)?;
+N06-draft_typecheck.rs:98:             let right = infer(program, right, environment, &right_source)?;
+N06-draft_typecheck.rs:99:             // Frozen A equality is structural across all existing value sorts,
+N06-draft_typecheck.rs:100:             // including unequal sorts. Do not silently copy Core's Eq rule.
+N06-draft_typecheck.rs:101:             if *op == BinaryOp::Eq { return Ok(Type::Bool); }
+N06-draft_typecheck.rs:102:             let (left_expected, right_expected, result) = match op {
+N06-draft_typecheck.rs:103:                 BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul => (Type::UInt, Type::UInt, Type::UInt),
+N06-draft_typecheck.rs:104:                 BinaryOp::Lt => (Type::UInt, Type::UInt, Type::Bool),
+N06-draft_typecheck.rs:105:                 BinaryOp::Cons => (Type::UInt, Type::List, Type::List),
+N06-draft_typecheck.rs:106:                 BinaryOp::Branch => (Type::Tree, Type::Tree, Type::Tree),
+N06-draft_typecheck.rs:107:                 BinaryOp::Eq => unreachable!("handled without imposing equal operand sorts"),
+N06-draft_typecheck.rs:108:             };
+N06-draft_typecheck.rs:109:             require(left, left_expected, &left_source)?;
+N06-draft_typecheck.rs:110:             require(right, right_expected, &right_source)?;
+N06-draft_typecheck.rs:111:             Ok(result)
+N06-draft_typecheck.rs:112:         }
+N06-draft_typecheck.rs:113:         Expr::Unary(op, operand) => {
+N06-draft_typecheck.rs:114:             let operand_source = child(source, 0);
+N06-draft_typecheck.rs:115:             let actual = infer(program, operand, environment, &operand_source)?;
+N06-draft_typecheck.rs:116:             let (expected, result) = match op {
+N06-draft_typecheck.rs:117:                 UnaryOp::Leaf => (Type::UInt, Type::Tree),
+N06-draft_typecheck.rs:118:                 UnaryOp::Not => (Type::Bool, Type::Bool),
+N06-draft_typecheck.rs:119:             };
+N06-draft_typecheck.rs:120:             require(actual, expected, &operand_source)?;
+N06-draft_typecheck.rs:121:             Ok(result)
+N06-draft_typecheck.rs:122:         }
+N06-draft_typecheck.rs:123:         Expr::If(condition, yes, no) => {
+N06-draft_typecheck.rs:124:             let condition_source = child(source, 0);
+N06-draft_typecheck.rs:125:             let condition = infer(program, condition, environment, &condition_source)?;
+N06-draft_typecheck.rs:126:             require(condition, Type::Bool, &condition_source)?;
+N06-draft_typecheck.rs:127:             let yes = infer(program, yes, environment, &child(source, 1))?;
+N06-draft_typecheck.rs:128:             let no = infer(program, no, environment, &child(source, 2))?;
+N06-draft_typecheck.rs:129:             if yes == no { Ok(yes) }
+N06-draft_typecheck.rs:130:             else { Err(error(source, DraftTypeErrorKind::BranchTypes { yes, no })) }
+N06-draft_typecheck.rs:131:         }
+N06-draft_typecheck.rs:132:         Expr::Call(name, arguments) => {
+N06-draft_typecheck.rs:133:             // Same first matching declaration rule as actual A lookup. Checking
+N06-draft_typecheck.rs:134:             // all bodies above does not reorder/deduplicate this original table.
+N06-draft_typecheck.rs:135:             let function: &Function = program.functions.iter().find(|function| &function.name == name)
+N06-draft_typecheck.rs:136:                 .ok_or_else(|| error(source, DraftTypeErrorKind::UnknownFunction(name.clone())))?;
+N06-draft_typecheck.rs:137:             if function.parameters.len() != arguments.len() {
+N06-draft_typecheck.rs:138:                 return Err(error(source, DraftTypeErrorKind::Arity { name: name.clone(),
+N06-draft_typecheck.rs:139:                     expected: function.parameters.len(), actual: arguments.len() }));
+N06-draft_typecheck.rs:140:             }
+N06-draft_typecheck.rs:141:             for (index, (argument, parameter)) in arguments.iter().zip(&function.parameters).enumerate() {
+N06-draft_typecheck.rs:142:                 let source = child(source, index);
+N06-draft_typecheck.rs:143:                 let actual = infer(program, argument, environment, &source)?;
+N06-draft_typecheck.rs:144:                 require(actual, parameter.ty, &source)?;
+N06-draft_typecheck.rs:145:             }
+N06-draft_typecheck.rs:146:             Ok(function.return_type)
+N06-draft_typecheck.rs:147:         }
+N06-draft_typecheck.rs:148:         Expr::Match(scrutinee, arms) => {
+N06-draft_typecheck.rs:149:             let scrutinee_type = infer(program, scrutinee, environment, &child(source, 0))?;
+N06-draft_typecheck.rs:150:             let mut result = None;
+N06-draft_typecheck.rs:151:             for (index, arm) in arms.iter().enumerate() {
+N06-draft_typecheck.rs:152:                 let body_source = child(source, index + 1);
+N06-draft_typecheck.rs:153:                 let inner = pattern_types(&arm.pattern, scrutinee_type, environment, &body_source)?;
+N06-draft_typecheck.rs:154:                 let actual = infer(program, &arm.body, &inner, &body_source)?;
+N06-draft_typecheck.rs:155:                 if let Some(expected) = result {
+N06-draft_typecheck.rs:156:                     if actual != expected {
+N06-draft_typecheck.rs:157:                         return Err(error(&body_source, DraftTypeErrorKind::ArmTypes { expected, actual }));
+N06-draft_typecheck.rs:158:                     }
+N06-draft_typecheck.rs:159:                 } else { result = Some(actual); }
+N06-draft_typecheck.rs:160:             }
+N06-draft_typecheck.rs:161:             result.ok_or_else(|| error(source, DraftTypeErrorKind::EmptyMatch))
+N06-draft_typecheck.rs:162:         }
+N06-draft_typecheck.rs:163:     }
+N06-draft_typecheck.rs:164: }
+N06-draft_typecheck.rs:165: 
+N06-draft_typecheck.rs:166: fn pattern_types(pattern: &Pattern, scrutinee: Type, saved: &Types,
+N06-draft_typecheck.rs:167:                  source: &SourceLocation) -> Result<Types, DraftTypeError> {
+N06-draft_typecheck.rs:168:     let mut environment = saved.clone();
+N06-draft_typecheck.rs:169:     match pattern {
+N06-draft_typecheck.rs:170:         Pattern::Var(name) => { environment.insert(name.clone(), scrutinee); }
+N06-draft_typecheck.rs:171:         Pattern::Nil => { require(scrutinee, Type::List, source)?; }
+N06-draft_typecheck.rs:172:         Pattern::Cons(head, tail) => {
+N06-draft_typecheck.rs:173:             require(scrutinee, Type::List, source)?;
+N06-draft_typecheck.rs:174:             distinct(head, tail, source)?;
