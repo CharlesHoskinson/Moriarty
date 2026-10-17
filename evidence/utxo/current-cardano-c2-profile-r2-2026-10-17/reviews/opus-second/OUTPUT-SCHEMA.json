@@ -1,0 +1,408 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewToken",
+    "report",
+    "findings",
+    "crosschecks",
+    "recommendation",
+    "coverage",
+    "positions"
+  ],
+  "properties": {
+    "reviewToken": {
+      "const": "c2-profile-r2-rev4-second-independent-opus-20261017"
+    },
+    "report": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "summary",
+          "evidence",
+          "requiredFix"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "requiredFix": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "crosschecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "summary",
+          "evidence",
+          "requiredFix"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "requiredFix": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verdict",
+        "sourceReady",
+        "scope",
+        "firstBlockedBoundary",
+        "operatorSourceReady",
+        "ordinarySelftestReady",
+        "ordinarySelftestScope",
+        "authorityProposalReady",
+        "nativeRoundtripPrerequisiteClosed",
+        "publicRecordExportPrerequisiteClosed",
+        "publicVerificationInputsPublishable"
+      ],
+      "properties": {
+        "verdict": {
+          "type": "string"
+        },
+        "sourceReady": {
+          "type": "boolean"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "firstBlockedBoundary": {
+          "type": "string"
+        },
+        "operatorSourceReady": {
+          "type": "boolean",
+          "const": false
+        },
+        "ordinarySelftestReady": {
+          "type": "boolean",
+          "const": false
+        },
+        "ordinarySelftestScope": {
+          "type": "string"
+        },
+        "authorityProposalReady": {
+          "type": "boolean",
+          "const": false
+        },
+        "nativeRoundtripPrerequisiteClosed": {
+          "type": "boolean",
+          "const": false
+        },
+        "publicRecordExportPrerequisiteClosed": {
+          "type": "boolean",
+          "const": false
+        },
+        "publicVerificationInputsPublishable": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readPaths",
+        "unreadPaths",
+        "limitations"
+      ],
+      "properties": {
+        "readPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unreadPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limitations": {
+          "type": "string"
+        }
+      }
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP01"
+              },
+              "clause": {
+                "const": "The r2 consumer shall be a new pure module c2_issue_artifacts_r2.py whose only import statements are import hashlib and import host_codec, whose only public function is prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults, which applies the CI02 ARG checks unchanged, and which calls build_env_data, build_c2_mint_data, build_value_data, encode_data, parse_statement_header, statement_digest_hex and statement_public_inputs only as attributes of the unchanged pinned host_codec (23252 B, SHA-256 3c18539ebb277595192769a0d0d245e34ef26601303df62366863b76c07b1459), never copying or re-implementing them; it shall not import, patch or replace the adopted v1 module c2_issue_artifacts.py (15231 B, SHA-256 23c3f99d5e0aacfdacc462803b605b5c3c47b6e7e2b5b18b217a562fa0e80f76), whose bytes, CI01-CI12 contract, format /1, eight labels and test history stay immutable."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP02"
+              },
+              "clause": {
+                "const": "When ARG passes, the consumer shall refuse with C2I-SETUP unless the setup record has exactly the 12 SetupRecord keys; format, trustProfile, notice, curve, snark and encoding equal the export.rs constants; driver equals DRIVER_ID mori-k2-driver/0.1.0-k2s1+k4h1; provingKeySha256 is 64 lowercase hex; provingKeyBytes is an exact int in 1..2**64-1; relation is an exact dict; verifyingKeyHex is an exact str of length 976, length-checked before its lowercase-hex scan; and unkeyed BLAKE2b-256 of the 488 VK bytes equals vkDigestBlake2b256; it shall decode no VK point, so the decode_vk IC-prefix, flag, field-range, curve, subgroup, identity and canonical-encoding checks are not performed."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP03"
+              },
+              "clause": {
+                "const": "When SETUP passes, the consumer shall refuse with C2I-PROFILE unless the relation has exactly the 29 RelationDescriptor keys with the kinds in C2-PROFILE-R2-API.json, including language moriarty/1, semantics moriarty-core/1 and adapter SettlementHashV2; the nine check_profile digests are 64 lowercase hex and sourceSha256 is present as 64 lowercase hex or null; logicalWork is an exact str of 1..39 characters, each in ASCII 0-9, with no leading zero unless it is 0, all checked before any int conversion, and value at most 2**128-1; statementTagHex and familyIdHex equal the ABI v2 literals; headerLen is 343, instanceVariables 3, publicInputCount 2 and bodyLen 0..261801; and abi2ShapeBytesHex is an exact str of even length at most 524288, length-checked before any scan, then lowercase hex whose unkeyed BLAKE2b-256 equals abi2ShapeDigest."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP04"
+              },
+              "clause": {
+                "const": "While admitting the setup record, its relation and the export, the consumer shall accept a key only as an exact str naming a field of the closed schema, an integer only as an exact int (never bool) within its kind range, and a str-kind value only as an exact str containing no code point in U+D800..U+DFFF, found by a code-point comparison scan that makes no input-proportional copy and never calls str.encode (a str.isascii() fast path is allowed) and that runs after any length check of that field; otherwise it shall refuse with C2I-SETUP for a setup top-level member, C2I-PROFILE for any relation key or member, and C2I-EXPORT for any export key or member at any depth, except that statementHex, proofHex, x1 and x2 are not scanned at EXPORT and are left to the length-first lowercase-hex checks of STATEMENT and PROOF and the exact-string equality of DIGEST."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP05"
+              },
+              "clause": {
+                "const": "When PROFILE passes, the consumer shall apply the CI05-CI09 checks, narrowed only by CP04, in the order EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO, and shall describe its admission only as the selected checks of contract section 3, stating that it performs no decode_vk or decode_proof point check (IC prefix, flags, field range, curve, subgroup, identity, canonical encoding), no setupRecordSha256 file-byte check, no parse_json byte, UTF-8, duplicate-key, trailing-data, depth or node limit, no parse_statement re-encode and no Groth16 pairing, that Rust acceptance of an r2-admitted input is not established, and never asserting any subset, equivalence or conditional-inclusion relation between r2 admission and Rust acceptance."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP06"
+              },
+              "clause": {
+                "const": "When every check passes, the consumer shall return an exact fresh dict with the 12 CI10 keys built as in CI10, except that format is moriarty-c2-issue-artifacts/2 and labels is exactly the 16-entry r2 label map of C2-PROFILE-R2-API.json, and shall retain every v1 check at equal or stricter strength, so that by source construction every r2-admitted input is v1-admitted with envCborHex, envelopeTokenNameHex, issueCborHex and mintValueCborHex equal to the v1 values, a property that tests T02 and T17 only sample; T16 samples only strictness, that is v1-admitted inputs that r2 refuses, and is not evidence of that property."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP07"
+              },
+              "clause": {
+                "const": "If any check fails, then the consumer shall raise exactly ValueError, never a subclass such as UnicodeEncodeError, whose message starts with C2I-<STAGE>: for the first failing stage in the order ARG, SETUP, PROFILE, EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO, BUILD; it shall rewrap a host ValueError with the current stage code, let non-ValueError environmental errors such as MemoryError propagate unconverted, return no partial result, never mutate either input, keep no input dict or list reachable from module state or from the result (immutable str and int leaves may be shared), and perform no I/O and use no clock, environment, randomness, logging, caching or global mutation."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clauseId",
+              "clause",
+              "position",
+              "rationale"
+            ],
+            "properties": {
+              "clauseId": {
+                "const": "CP08"
+              },
+              "clause": {
+                "const": "The r2 records shall keep builderReliancePermitted false and every native, operator, wallet, prover, VM, deploy, signing and network flag false; builderReliancePermitted may change only by a separate root source-adoption decision taken after a reviewed r2 implementation, a fresh non-author audit, root-observed meaningful RED then GREEN of the reviewed T00-T17 test and a reviewed downstream contract that explicitly consumes format moriarty-c2-issue-artifacts/2 with the 16 labels, and none of these prerequisites grants that permission automatically; r2 output is not CB-r1-compatible and shall not be routed to CB r1, and this contract imposes no obligation on CB r1."
+              },
+              "position": {
+                "enum": [
+                  "AGREE",
+                  "DISAGREE",
+                  "ABSTAIN"
+                ]
+              },
+              "rationale": {
+                "type": "string",
+                "minLength": 40
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 8,
+      "maxItems": 8
+    }
+  }
+}
