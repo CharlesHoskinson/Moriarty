@@ -1513,3 +1513,595 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
     fn run(&self, a: &Admitted, img: &mut MachineImage, sink: &mut dyn FnMut(&StepEventC)) -> Result<RunSummary, HostViolation> { owner_run(a, img, &self.families, &self.guards, sink) }
     fn check_step_inv(&self, pre: &PreImage<'_>) -> Result<(), Vec<StepInvViolation>> { owner_check_step_inv(pre.admitted, pre.img, &self.prepare.check_program_view) }
 }
+
+// ============================================================================
+// SC05 + R6 owner regression tests, repaired candidate02. SECURITY/hostile
+// regression repair author: fresh Muse Wonder 1.0 HIGH under the recorded
+// fallback (canonical Opus author call terminated on a session limit with
+// no code; no Opus authorship claimed). SOURCE ONLY: UNCOMPILED,
+// UNEXECUTED. Direct cells call the real owner_validate_plan with
+// test-constructed Selected values and are direct-validation only, never
+// selector or end-to-end coverage. Stepped cells call the real owner_step
+// via CheckedOwnerEngine::new_reviewed. Hostile plans delegate to the real
+// HostFamilyPlans and then mutate one written field; they never fake
+// selection, a view, a guard, or provenance.
+// ============================================================================
+#[cfg(test)]
+mod sc05_r6_owner_regression_tests {
+    use super::*;
+    use crate::sherlock::helper_machine::families::HostFamilyPlans;
+    use crate::sherlock::helper_machine::shared::i128_class::KIntC;
+    use crate::sherlock::helper_machine::shared::*;
+
+    // ---------------- fixtures: real admission through owner_prepare --------
+    fn bounds() -> BoundsC {
+        BoundsC { code_rows: 64, function_rows: 8, code_child_slots: 32,
+            parameter_slots: 16, pattern_rows: 16, match_plan_rows: 0,
+            match_arm_rows: 16, type_rows: 0, constructor_rows: 0,
+            constructor_field_slots: 0, max_arity: 4, constant_nodes: 64,
+            constant_field_slots: 64, data_nodes: 64, data_field_slots: 64,
+            environment_cells: 64, frames: 64, helper_tasks: 64,
+            serialization_bytes: 0, max_reference_work: 1000,
+            max_helper_work: 1000, step_cap: 1 }
+    }
+    fn layout(b: &BoundsC) -> LayoutSchemaC {
+        LayoutSchemaC { layout_version: ("owner-regression".to_string(), "sc05-r6".to_string()),
+            field_id: None, widths: None, scalar_layout_id: None, bounds: *b,
+            capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
+                occurrence_path_slots: 128, value_slots: 1000 },
+            boundary_capacities_present: false }
+    }
+    fn deps() -> PrepareDeps {
+        PrepareDeps { prepare_core: super::super::owner_prepare::prepare_core,
+            check_program_view: super::super::owner_prepare::check_program_view,
+            admit: super::super::owner_prepare::admit,
+            admit_run: super::super::owner_prepare::admit_run }
+    }
+    fn engine<F: FamilyPlans>(families: F) -> CheckedOwnerEngine<F> {
+        CheckedOwnerEngine::new_reviewed(families, deps())
+    }
+    fn admitted_image(p: &CoreProgram, fuel: u128) -> (Admitted, MachineImage) {
+        let b = bounds(); let l = layout(&b);
+        let admitted = super::super::owner_prepare::admit(p, &b, &l)
+            .unwrap_or_else(|_| panic!("fixture admission refused"));
+        let img = super::super::owner_prepare::admit_run(&admitted,
+            &RunIntC::Nat(fuel), &RunIntC::Nat(64), &FinanceInput::Absent)
+            .unwrap_or_else(|_| panic!("fixture admit_run refused"));
+        (admitted, img)
+    }
+    fn bind_pre<'a>(a: &'a Admitted, img: &'a MachineImage) -> PreImage<'a> {
+        match PreImage::bind(a, img) {
+            Ok(p) => p,
+            Err(e) => panic!("bind failed: {:?} {:?}", e.kind, e.locator),
+        }
+    }
+    fn lit(n: u128) -> CoreExpr { CoreExpr::Literal { value: CoreValue::UInt { n: KIntC::InRange(n) } } }
+    fn prog(entry: CoreExpr) -> CoreProgram { CoreProgram { functions: Vec::new(), entry } }
+    fn prog_literal() -> CoreProgram { prog(lit(7)) }
+    fn prog_list12() -> CoreProgram {
+        prog(CoreExpr::Literal { value: CoreValue::List {
+            elements: vec![KIntC::InRange(1), KIntC::InRange(2)] } })
+    }
+    fn prog_let() -> CoreProgram {
+        prog(CoreExpr::Let { name: "x".to_string(), value: Box::new(lit(1)),
+            body: Box::new(CoreExpr::Var { name: "x".to_string() }) })
+    }
+    fn prog_match(scrutinee: CoreExpr, pattern: CorePattern, body: CoreExpr) -> CoreProgram {
+        prog(CoreExpr::Match { scrutinee: Box::new(scrutinee),
+            arms: vec![CoreArm { pattern, body }] })
+    }
+    fn prog_nameless_nil() -> CoreProgram {
+        prog_match(CoreExpr::Literal { value: CoreValue::List { elements: Vec::new() } },
+            CorePattern::PNil, lit(7))
+    }
+    fn prog_with_function() -> CoreProgram {
+        CoreProgram { functions: vec![CoreFunction { name: "identity".to_string(),
+                parameters: vec![CoreParameter { name: "x".to_string(), sort: SortTag::UInt }],
+                return_type: SortTag::UInt,
+                body: CoreExpr::Var { name: "x".to_string() } }],
+            entry: CoreExpr::Call { name: "identity".to_string(), args: vec![lit(2)] } }
+    }
+
+    // ---------- full MachineImage field snapshot for preservation ---------
+    #[derive(Debug, PartialEq)]
+    enum SnapDataRow { U128(u128), Bool(bool), Nil,
+        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize) }
+    fn snap_data_row(r: &crate::sherlock::helper_machine::raw::DataRow) -> SnapDataRow {
+        match r {
+            crate::sherlock::helper_machine::raw::DataRow::U128 { n } => SnapDataRow::U128(*n),
+            crate::sherlock::helper_machine::raw::DataRow::Bool { b } => SnapDataRow::Bool(*b),
+            crate::sherlock::helper_machine::raw::DataRow::Nil => SnapDataRow::Nil,
+            crate::sherlock::helper_machine::raw::DataRow::Cons { fields } => SnapDataRow::Cons(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Leaf { fields } => SnapDataRow::Leaf(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
+        }
+    }
+    #[derive(Debug, PartialEq)]
+    struct FullImageSnap { admission_body: usize, run_id: RunIdC,
+        control: ControlC, control_origin: usize, env_root: EnvRootC,
+        stack_limit: usize, outcome: OutcomeC, initial_fuel: u128,
+        remaining: u128, consumed: u128, helper_work: u128,
+        helper_visits: u128, cursor: u128, alloc: AllocCounters,
+        active: ActiveLengths, helper: Option<HelperControlC>,
+        result: Option<HelperResultC>, data: Vec<SnapDataRow>,
+        data_fields: Vec<RefC>, env: Vec<EnvCellC>, frames: Vec<FrameRowC>,
+        tasks: Vec<HelperTaskC>, value_slots: Vec<RefC> }
+    fn snapshot(img: &MachineImage) -> FullImageSnap {
+        FullImageSnap {
+            admission_body: std::sync::Arc::as_ptr(&img.admission.body) as usize,
+            run_id: (*img.run_id).clone(),
+            control: img.control, control_origin: img.control_origin,
+            env_root: img.env_root, stack_limit: img.stack_limit,
+            outcome: img.outcome, initial_fuel: img.initial_fuel,
+            remaining: img.remaining_work, consumed: img.consumed_work,
+            helper_work: img.helper_work, helper_visits: img.helper_visits,
+            cursor: img.reference_cursor, alloc: img.alloc, active: img.active,
+            helper: img.helper, result: img.result,
+            data: img.data.iter().map(snap_data_row).collect(),
+            data_fields: img.data_fields.clone(), env: img.env.clone(),
+            frames: img.frames.clone(), tasks: img.tasks.clone(),
+            value_slots: img.value_slots.clone() }
+    }
+
+    // ---------------- direct owner_validate_plan helpers --------------------
+    // These construct Selected as a test fixture for owner_validate_plan
+    // only. They are not owner_select and are not end-to-end coverage.
+    fn plan_with(w: PlannedWrites) -> EffectPlan {
+        let mut d = PlanDelta::default();
+        d.alloc_data_nodes = if w.alloc_data.is_some() { 1 } else { 0 };
+        d.alloc_data_fields = w.alloc_data.map_or(0, |a| a.field_len() as i64);
+        d.alloc_environment_cells = if w.alloc_env.is_some() { 1 } else { 0 };
+        d.depth = match w.frame { Some(FrameWrite::Push(_)) => 1, Some(FrameWrite::Pop) => -1, _ => 0 };
+        d.task_live = match w.task_op { TaskOp::Push(_) => 1, TaskOp::Pop => -1, TaskOp::None => 0 };
+        d.active_value_slots = if w.alloc_value_slot.is_some() { 1 } else { 0 };
+        EffectPlan { delta_assert: d, writes: w }
+    }
+    fn fixture_selected(rule: RuleIdC, hk: Option<HelperKind>) -> Selected {
+        let ek = super::event_kind_of(&rule);
+        Selected { rule, event_kind: ek, site: None, helper_kind: hk,
+            helper_eligible: ek != EventKind::LegacyComplete,
+            helper_visits: super::visits_of(&rule) }
+    }
+    fn validate(pre: &PreImage, sel: &Selected, w: PlannedWrites,
+        refs: &[RefC], envs: &[usize]) -> Result<ValidatedPlan, HostViolation> {
+        owner_validate_plan(pre, sel, plan_with(w), refs, envs)
+    }
+    fn must_err_invalid(r: Result<ValidatedPlan, HostViolation>, msg: &str) -> HostViolation {
+        match r { Ok(_) => panic!("{}", msg), Err(e) => e }
+    }
+    fn common(site: SiteTag) -> HelperCommon {
+        HelperCommon { site, origin_reference_cursor: 0, parent_resume: None } }
+    fn assert_invalid_plan(e: &HostViolation) {
+        assert_eq!(e.kind, HostViolationKind::WrongVariant);
+        assert_eq!(e.clause, None); assert_eq!(e.rule, None);
+        assert_eq!(e.locator.as_deref(), Some("invalid plan"));
+    }
+    fn match_helper(phase: MatchPhase, tag: PatternTag, x: usize, y: usize) -> HelperControlC {
+        HelperControlC::Match { common: common(SiteTag::Cases), scrutinee: RefC::Const(0),
+            arm: 0, saved_env: None, partial: None, pat_tag: tag, x, y, field_idx: 0,
+            staged: None, phase, status: TriStatus::Pending }
+    }
+
+    // ---------------- real run through CheckedOwnerEngine -------------------
+    fn run_checked<F: FamilyPlans>(eng: &CheckedOwnerEngine<F>, a: &Admitted,
+        img: &mut MachineImage) -> OutcomeC {
+        for _ in 0..10000 {
+            if img.outcome != OutcomeC::Running { return img.outcome; }
+            match eng.step(a, img) {
+                Ok(StepResult::Event { .. }) => {
+                    let pre = bind_pre(a, img);
+                    assert!(eng.check_step_inv(&pre).is_ok(), "N07: StepInv after step");
+                }
+                Ok(StepResult::Terminal) => break,
+                Err(e) => panic!("normal run HostViolation {:?} {:?}", e.kind, e.locator),
+            }
+        }
+        panic!("run did not terminate");
+    }
+
+    // ============ SC05: Match active / inactive columns, nameless case ======
+    #[test]
+    fn sc05_inactive_match_columns_phase_arm_accepted_without_names() {
+        let (a, img) = admitted_image(&prog_nameless_nil(), 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.names.len(), 0);
+        assert_eq!(a.body.view.arms.len(), 1);
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(match_helper(MatchPhase::Arm, PatternTag::PVar, 0, 0)));
+        let sel = fixture_selected(RuleIdC::BHelperMatchEntry, Some(HelperKind::Match));
+        assert!(validate(&pre, &sel, w, &[RefC::Const(0)], &[]).is_ok(),
+            "inactive zero columns in phase Arm rejected");
+    }
+    #[test]
+    fn sc05_h04_active_match_xy_at_names_len_rejected() {
+        let (a, img) = admitted_image(&prog_nameless_nil(), 100);
+        let pre = bind_pre(&a, &img);
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(match_helper(MatchPhase::Tag, PatternTag::PVar, 0, 0)));
+        let sel = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));
+        let e = must_err_invalid(validate(&pre, &sel, w, &[RefC::Const(0)], &[]),
+            "active x at names len accepted");
+        assert_invalid_plan(&e);
+        let mut h = match_helper(MatchPhase::Arm, PatternTag::PVar, 0, 0);
+        if let HelperControlC::Match { arm, .. } = &mut h { *arm = a.body.view.arms.len(); }
+        let mut w2 = PlannedWrites::default(); w2.helper = Write::Set(Some(h));
+        let sel2 = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));
+        let e2 = must_err_invalid(validate(&pre, &sel2, w2, &[RefC::Const(0)], &[]),
+            "arm at arms len accepted");
+        assert_invalid_plan(&e2);
+    }
+    #[test]
+    fn sc05_n03_active_match_patterns_with_names_accepted() {
+        // One real arm exists, so Match.arm 0 is in range and cannot mask
+        // the x/y decision. Names are exactly a and b from the PCons arm.
+        let p = prog_match(lit(3),
+            CorePattern::PCons { x: "a".to_string(), y: "b".to_string() }, lit(1));
+        let (a, img) = admitted_image(&p, 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.names.len(), 2);
+        assert_eq!(a.body.view.arms.len(), 1);
+        for (tag, x, y) in [(PatternTag::PVar, 1usize, 0usize),
+            (PatternTag::PLeaf, 0, 0), (PatternTag::PCons, 0, 1),
+            (PatternTag::PBranch, 1, 0)] {
+            let mut w = PlannedWrites::default();
+            w.helper = Write::Set(Some(match_helper(MatchPhase::Tag, tag, x, y)));
+            let sel = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));
+            assert!(validate(&pre, &sel, w, &[RefC::Const(0)], &[]).is_ok(),
+                "active pattern x y rejected");
+        }
+    }
+    #[test]
+    fn sc05_n02_nameless_pnil_match_halts_and_miss_rejects_9() {
+        let eng = engine(HostFamilyPlans);
+        let (a, mut img) = admitted_image(&prog_nameless_nil(), 200);
+        match run_checked(&eng, &a, &mut img) {
+            OutcomeC::Halted { .. } => {}
+            other => panic!("nameless nil match outcome {:?}", other), }
+        let p = prog_match(CoreExpr::Literal { value: CoreValue::List {
+                elements: vec![KIntC::InRange(1)] } }, CorePattern::PNil, lit(0));
+        let (a2, mut img2) = admitted_image(&p, 400);
+        match run_checked(&eng, &a2, &mut img2) {
+            OutcomeC::Rejected { code: 9 } => {}
+            other => panic!("nil miss outcome {:?}", other), }
+    }
+
+    // ============ SC05: H01 ExprId / H02 FunctionRowId / H03 NameId =========
+    #[test]
+    fn sc05_h01_expr_id_at_len_rejected_last_accepted() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let n = a.body.view.expressions.len();
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        for (expr, ok) in [(n, false), (usize::MAX, false), (n - 1, true)] {
+            let mut w = PlannedWrites::default();
+            w.control = Write::Set(ControlC::Eval { expr });
+            w.result = Write::Set(None);
+            match validate(&pre, &sel, w, &[], &[]) {
+                Ok(_) => assert!(ok, "Eval expr accepted"),
+                Err(e) => { assert!(!ok); assert_invalid_plan(&e); } }
+        }
+        let frame = FrameRowC::ScopeF { saved_env: None, origin: n };
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::ScheduleNext { frame, next: 0, env: None });
+        w.result = Write::Set(None);
+        let e = must_err_invalid(validate(&pre, &sel, w, &[], &[]),
+            "frame origin at expressions len accepted");
+        assert_invalid_plan(&e);
+    }
+    #[test]
+    fn sc05_h02_function_id_at_len_rejected_last_accepted() {
+        let (a, img) = admitted_image(&prog_with_function(), 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.functions.len(), 1);
+        let sel = fixture_selected(RuleIdC::KMachineEnterMissing, None);
+        for (f, ok) in [(Some(1usize), false), (Some(usize::MAX), false), (Some(0usize), true)] {
+            let mut w = PlannedWrites::default();
+            w.control = Write::Set(ControlC::Enter { function: f, args: SliceC::empty() });
+            w.result = Write::Set(None);
+            match validate(&pre, &sel, w, &[], &[]) {
+                Ok(_) => assert!(ok, "Enter function accepted"),
+                Err(e) => { assert!(!ok); assert_invalid_plan(&e); } }
+        }
+    }
+    #[test]
+    fn sc05_h03_name_id_invoke_and_alloc_env_binder() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.names.len(), 1);
+        let sel = fixture_selected(RuleIdC::KMachineInvokeFind, None);
+        for (name, ok) in [(1usize, false), (usize::MAX, false), (0usize, true)] {
+            let mut w = PlannedWrites::default();
+            w.control = Write::Set(ControlC::Invoke { function_name: name, args: SliceC::empty() });
+            w.result = Write::Set(None);
+            match validate(&pre, &sel, w, &[], &[]) {
+                Ok(_) => assert!(ok, "Invoke name accepted"),
+                Err(e) => { assert!(!ok); assert_invalid_plan(&e); } }
+        }
+        let sel2 = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        let mut w = PlannedWrites::default();
+        w.alloc_env = Some(EnvCellC { binder: 1, value: RefC::Const(0), previous: None });
+        let e = must_err_invalid(validate(&pre, &sel2, w, &[RefC::Const(0)], &[]),
+            "alloc_env binder at names len accepted");
+        assert_invalid_plan(&e);
+    }
+    #[test]
+    fn sc05_h05_const_id_provenance_ok_but_range_rejected() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let n = a.body.view.constants.len(); assert!(n >= 1);
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        let bad = RefC::Const(n);
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Return { value: bad }); w.result = Write::Set(None);
+        let e = must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "Const at constants len accepted");
+        assert_invalid_plan(&e);
+        let good = RefC::Const(n - 1);
+        let mut w2 = PlannedWrites::default();
+        w2.control = Write::Set(ControlC::Return { value: good }); w2.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w2, &[good], &[]).is_ok());
+    }
+    #[test]
+    fn sc05_h05_const_id_other_holders_rejected() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        let n = a.body.view.constants.len(); assert!(n >= 1);
+        let bad = RefC::Const(n);
+        // Validate helper root holder, root supplied in provenance.
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(HelperControlC::Validate {
+            common: common(SiteTag::EvalLiteral), root: bad, status: TriStatus::Pending }));
+        let sel = fixture_selected(RuleIdC::BHelperValidateOccurrence, Some(HelperKind::Validate));
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "Validate root Const at len accepted"));
+        // Pushed ValidateTask holder.
+        let mut w = PlannedWrites::default();
+        w.task_op = TaskOp::Push(HelperTaskC::ValidateTask {
+            r: bad, visit: TaskVisitC::Unvisited, cursor: 0 });
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "ValidateTask Const at len accepted"));
+        // alloc_value_slot holder.
+        let mut w = PlannedWrites::default();
+        w.alloc_value_slot = Some(bad);
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "alloc_value_slot Const at len accepted"));
+        // alloc_env value holder, binder in range.
+        let mut w = PlannedWrites::default();
+        w.alloc_env = Some(EnvCellC { binder: 0, value: bad, previous: None });
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "alloc_env value Const at len accepted"));
+        // Pushed RightF frame left holder, origin in range.
+        let mut w = PlannedWrites::default();
+        w.frame = Some(FrameWrite::Push(FrameRowC::RightF {
+            op: BinaryOp::Add, left: bad, origin: 0 }));
+        w.result = Write::Set(None);
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "frame left Const at len accepted"));
+    }
+    #[test]
+    fn sc05_n05_boundary_last_ids_accepted() {
+        let (a, img) = admitted_image(&prog_with_function(), 100);
+        let pre = bind_pre(&a, &img);
+        let last_expr = a.body.view.expressions.len() - 1;
+        let last_const = a.body.view.constants.len() - 1;
+        let last_fn = a.body.view.functions.len() - 1;
+        let last_name = a.body.view.names.len() - 1;
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Eval { expr: last_expr }); w.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w, &[], &[]).is_ok());
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Enter { function: Some(last_fn), args: SliceC::empty() });
+        w.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w, &[], &[]).is_ok());
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Invoke { function_name: last_name, args: SliceC::empty() });
+        w.result = Write::Set(None);
+        assert!(validate(&pre, &fixture_selected(RuleIdC::KMachineInvokeFind, None), w, &[], &[]).is_ok());
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Return { value: RefC::Const(last_const) });
+        w.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w, &[RefC::Const(last_const)], &[]).is_ok());
+    }
+
+    // ============ SC05: H06 precedence, partial as labelled =================
+    #[test]
+    fn sc05_h06_parent_resume_si08_precedes_sc05() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let vh = HelperControlC::Validate { common: HelperCommon { site: SiteTag::EvalLiteral,
+            origin_reference_cursor: 0, parent_resume: Some(1) },
+            root: RefC::Const(0), status: TriStatus::Pending };
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(vh));
+        w.control = Write::Set(ControlC::Eval { expr: usize::MAX });
+        let sel = fixture_selected(RuleIdC::BHelperValidateOccurrence, Some(HelperKind::Validate));
+        let e = must_err_invalid(validate(&pre, &sel, w, &[RefC::Const(0)], &[]),
+            "parentResume plus bad ExprId accepted");
+        assert_eq!(e.kind, HostViolationKind::StepInvViolated);
+        assert_eq!(e.clause, Some(StepInvClauseId::SI08));
+    }
+    #[test]
+    fn sc05_h06_disabled_rule_still_disabled_not_invalid_plan() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutCell, Some(HelperKind::EnvPut));
+        let e = must_err_invalid(validate(&pre, &sel, PlannedWrites::default(), &[], &[]),
+            "disabled rule validated");
+        assert_eq!(e.kind, HostViolationKind::DisabledRuleReached);
+        let selx = fixture_selected(RuleIdC::BHelperValidateDeclaration, Some(HelperKind::Validate));
+        let ex = must_err_invalid(validate(&pre, &selx, PlannedWrites::default(), &[], &[]),
+            "extension rule validated");
+        assert_eq!(ex.kind, HostViolationKind::ExtensionRuleReached);
+    }
+
+    // ============ hostile FamilyPlans through the real owner_step ==========
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum Mutation { UnreadValidateRoot, UnreadLetEnv }
+    struct HostilePlans { inner: HostFamilyPlans, mutation: Mutation }
+    impl HostilePlans {
+        fn mutate(&self, plan: &mut EffectPlan) {
+            match self.mutation {
+                Mutation::UnreadValidateRoot => {
+                    if let Write::Set(Some(HelperControlC::Validate { root, .. })) = &mut plan.writes.helper {
+                        if *root != RefC::Const(0) { *root = RefC::Const(0); } }
+                }
+                Mutation::UnreadLetEnv => {
+                    if let Write::Set(ControlC::ScheduleNext { frame, env, .. }) = &mut plan.writes.control {
+                        if let FrameRowC::LetF { saved_env, .. } = frame { *saved_env = Some(0); }
+                        *env = Some(0); }
+                }
+            }
+        }
+        fn finish(&self, r: Result<EffectPlan, HostViolation>) -> Result<EffectPlan, HostViolation> {
+            let mut p = r?; self.mutate(&mut p); Ok(p) }
+    }
+    impl FamilyPlans for HostilePlans {
+        fn plan_legacy(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_legacy(s, p, g)) }
+        fn plan_scalar(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_scalar(s, p, g)) }
+        fn plan_env_get(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_env_get(s, p, g)) }
+        fn plan_env_put(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_env_put(s, p, g)) }
+        fn plan_find(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_find(s, p, g)) }
+        fn plan_bind(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bind(s, p, g)) }
+        fn plan_append(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_append(s, p, g)) }
+        fn plan_validate(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_validate(s, p, g)) }
+        fn plan_equal(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_equal(s, p, g)) }
+        fn plan_match(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_match(s, p, g)) }
+        fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
+    }
+    #[test]
+    fn r6_refc_unread_written_ref_rejected_step_unmutated() {
+        let (a, mut img) = admitted_image(&prog_list12(), 200);
+        let eng = engine(HostilePlans { inner: HostFamilyPlans, mutation: Mutation::UnreadValidateRoot });
+        let before = snapshot(&img);
+        let e = match eng.step(&a, &mut img) {
+            Ok(_) => panic!("unread RefC write applied"), Err(e) => e };
+        assert_invalid_plan(&e);
+        assert_eq!(snapshot(&img), before, "image mutated on SC-07 refusal");
+        assert_eq!(img.outcome, OutcomeC::Running);
+    }
+    #[test]
+    fn r6_env_unread_env_id_rejected_step_unmutated() {
+        let (a, mut img) = admitted_image(&prog_let(), 200);
+        let eng = engine(HostilePlans { inner: HostFamilyPlans, mutation: Mutation::UnreadLetEnv });
+        let before = snapshot(&img);
+        let e = match eng.step(&a, &mut img) {
+            Ok(_) => panic!("unread EnvId write applied"), Err(e) => e };
+        assert_invalid_plan(&e);
+        assert_eq!(snapshot(&img), before);
+    }
+    #[test]
+    fn sc05_r6_h06_hostile_step_precedes_p3_helper_work_refusal() {
+        // Repaired fixture: the Validate root for the list literal is the
+        // Cons head constant, not Const(0), so the mutation is effective.
+        let (a, mut img) = admitted_image(&prog_list12(), 200);
+        img.helper_work = bounds().max_helper_work;
+        let eng = engine(HostilePlans { inner: HostFamilyPlans, mutation: Mutation::UnreadValidateRoot });
+        let before = snapshot(&img);
+        match eng.step(&a, &mut img) {
+            Err(e) => assert_invalid_plan(&e),
+            Ok(_) => panic!("hostile plan reached P3 or outcome instead of PS refusal"), }
+        assert_eq!(snapshot(&img), before);
+        assert_eq!(img.outcome, OutcomeC::Running, "Exhausted HelperWork published");
+    }
+
+    // ============ R6 EnvId: fresh id, previous, below-active =================
+    #[test]
+    fn r6_env_alloc_previous_is_never_fresh_self_parent() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        let mut w = PlannedWrites::default();
+        w.alloc_env = Some(EnvCellC { binder: 0, value: RefC::Const(0), previous: Some(0) });
+        let e = must_err_invalid(validate(&pre, &sel, w, &[RefC::Const(0)], &[]),
+            "alloc_env previous equal to fresh id accepted");
+        assert_invalid_plan(&e);
+        let mut w2 = PlannedWrites::default();
+        w2.alloc_env = Some(EnvCellC { binder: 0, value: RefC::Const(0), previous: None });
+        assert!(validate(&pre, &sel, w2, &[RefC::Const(0)], &[]).is_ok());
+    }
+    #[test]
+    fn r6_env_fresh_id_only_under_alloc_env_and_below_active_rule() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        let mut w = PlannedWrites::default(); w.env_root = Write::Set(Some(0));
+        let e = must_err_invalid(validate(&pre, &sel, w, &[], &[]),
+            "would-be-next EnvId minted without alloc_env");
+        assert_invalid_plan(&e);
+        let mut w2 = PlannedWrites::default();
+        w2.alloc_env = Some(EnvCellC { binder: 0, value: RefC::Const(0), previous: None });
+        w2.env_root = Write::Set(Some(0));
+        assert!(validate(&pre, &sel, w2, &[RefC::Const(0)], &[]).is_ok());
+    }
+    #[test]
+    fn r6_refc_fresh_data_exception_and_unread_data_rejected() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperScalarExit, Some(HelperKind::Scalar));
+        let mut w = PlannedWrites::default();
+        w.alloc_data = Some(AllocDataWrite::U128 { n: 7 });
+        w.helper = Write::Set(None);
+        w.result = Write::Set(Some(HelperResultC::ScalarValue { value: RefC::Data(0) }));
+        assert!(validate(&pre, &sel, w, &[], &[]).is_ok(), "fresh Data exception refused");
+        let mut w2 = PlannedWrites::default();
+        w2.helper = Write::Set(None);
+        w2.result = Write::Set(Some(HelperResultC::ScalarValue { value: RefC::Data(0) }));
+        let e = must_err_invalid(validate(&pre, &sel, w2, &[], &[]),
+            "unread Data result accepted");
+        assert_invalid_plan(&e);
+    }
+
+    // ============ N04 / N06 / N07 normal cells ==============================
+    #[test]
+    fn sc05_n04_call_to_missing_function_rejected_7() {
+        let p = prog(CoreExpr::Call { name: "missing".to_string(), args: Vec::new() });
+        let eng = engine(HostFamilyPlans);
+        let (a, mut img) = admitted_image(&p, 200);
+        assert_eq!(a.body.view.functions.len(), 0);
+        match run_checked(&eng, &a, &mut img) {
+            OutcomeC::Rejected { code: 7 } => {}
+            other => panic!("missing function outcome {:?}", other), }
+    }
+    #[test]
+    fn sc05_n06_genesis_invalid_publish_unchanged() {
+        let eng = engine(HostFamilyPlans);
+        let b = bounds(); let l = layout(&b);
+        let a = match super::super::owner_prepare::admit(&prog_literal(), &b, &l) {
+            Ok(a) => a, Err(_) => panic!("admit refused") };
+        let mut img = match super::super::owner_prepare::admit_run(&a, &RunIntC::Negative,
+            &RunIntC::Nat(4), &FinanceInput::Absent) {
+            Ok(i) => i, Err(_) => panic!("admit_run refused") };
+        assert_eq!(img.control, ControlC::Error { code: 1 });
+        match eng.step(&a, &mut img) {
+            Ok(StepResult::Event { .. }) => {}
+            Ok(StepResult::Terminal) => panic!("genesis publish returned Terminal"),
+            Err(e) => panic!("genesis publish HostViolation {:?} {:?}", e.kind, e.locator), }
+        assert_eq!(img.outcome, OutcomeC::Rejected { code: 1 });
+        assert_eq!(img.consumed_work, 0);
+        assert!(matches!(eng.step(&a, &mut img), Ok(StepResult::Terminal)));
+    }
+    #[test]
+    fn sc05_n07_step_inv_ok_throughout_literal_run() {
+        let eng = engine(HostFamilyPlans);
+        let (a, mut img) = admitted_image(&prog_literal(), 200);
+        let pre = bind_pre(&a, &img);
+        assert!(eng.check_step_inv(&pre).is_ok());
+        match run_checked(&eng, &a, &mut img) {
+            OutcomeC::Halted { .. } => {}
+            other => panic!("literal outcome {:?}", other), }
+    }
+
+    // ============ N01: mandatory full96 differential, UNIMPLEMENTED ========
+    // Focused cells above do NOT substitute for this contract. It stays UNRUN
+    // until an independently authored candidate04 differential corpus exists.
+    #[test]
+    #[ignore = "UNIMPLEMENTED: full 96-Enabled positive differential corpus (N01) not supplied; focused regressions do not close it"]
+    fn n01_full96_enabled_differential_unimplemented() {
+        unimplemented!("UNIMPLEMENTED: all-96-Enabled event-stream and RunSummary differential vs candidate04")
+    }
+}
