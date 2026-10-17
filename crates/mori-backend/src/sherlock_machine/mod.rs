@@ -33,12 +33,17 @@ pub use enabled_fetch::{
 
 pub mod literal_host;
 mod literal_step;
+mod literal_ui_valid;
 pub mod literal_bridge;
 pub mod literal_witness;
 pub use literal_step::{
     emit_literal_step, literal_schema, LiteralCapacities, LiteralConstructionError,
     LiteralEnvelope, LiteralImage, LiteralLane, LiteralSchema, LiteralStepBlock,
     LiteralStepInputs, LiteralTable,
+};
+pub use literal_ui_valid::{
+    emit_literal_ui_valid, emit_literal_ui_valid_with_capacities, is_reserved_ui_valid_variable,
+    schema_capacities, LiteralUiValidBlock, LiteralUiValidInputs,
 };
 pub use literal_witness::{
     build_checked_literal_transition_request, build_literal_transition_request,

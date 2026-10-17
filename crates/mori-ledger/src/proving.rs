@@ -243,6 +243,7 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-backend/src/sherlock_machine/enabled_fetch.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/literal_host.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/literal_step.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_ui_valid.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/literal_bridge.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/literal_witness.rs")
         )
