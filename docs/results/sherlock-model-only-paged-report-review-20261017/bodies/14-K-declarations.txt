@@ -1,0 +1,74 @@
+EXACT SOURCE LINES 1..32
+
+requires "domains.md"
+
+module MORIARTY-UI-SYNTAX
+  imports DOMAINS-SYNTAX
+
+  syntax UIUInt ::= uiU(Int)
+  syntax UIListValue ::= uiNil() | uiCons(UIUInt, UIListValue)
+  syntax UITreeValue ::= uiLeaf(UIUInt) | uiBranch(UITreeValue, UITreeValue)
+  syntax UIValue ::= UIUInt | UIListValue | UITreeValue | uiB(Bool)
+  syntax UIType ::= uiUIntT() | uiBoolT() | uiListT() | uiTreeT()
+  syntax UIOp ::= uiAdd() | uiSub() | uiMul() | uiEq() | uiLt()
+                | uiConsOp() | uiBranchOp()
+  syntax UIUnaryOp ::= uiLeafOp() | uiNotOp()
+  syntax UIExpr ::= uiLiteral(UIValue)
+                  | uiVar(Int)
+                  | uiLet(Int, UIExpr, UIExpr)
+                  | uiBinary(UIOp, UIExpr, UIExpr)
+                  | uiUnary(UIUnaryOp, UIExpr)
+                  | uiIf(UIExpr, UIExpr, UIExpr)
+                  | uiCall(Int, UIExprs)
+                  | uiMatch(UIExpr, UICases)
+  syntax UIExprs ::= uiNoExprs() | uiExpr(UIExpr, UIExprs)
+  syntax UIValues ::= uiNoValues() | uiValue(UIValue, UIValues)
+  syntax UIPattern ::= uiPVar(Int) | uiPNil() | uiPCons(Int, Int)
+                     | uiPLeaf(Int) | uiPBranch(Int, Int)
+  syntax UICases ::= uiNoCases() | uiCase(UIPattern, UIExpr, UICases)
+  syntax UIParams ::= uiNoParams() | uiParam(Int, UIType, UIParams)
+  syntax UIFun ::= uiFun(Int, UIParams, UIType, UIExpr)
+  syntax UIFuns ::= uiNoFuns() | uiFunction(UIFun, UIFuns)
+  syntax UIRun ::= uiRun(UIFuns, UIExpr, Int, Int)
+  syntax KItem ::= UIRun
+endmodule
+
+EXACT SOURCE LINES 64..79
+
+  configuration
+    <k> $PGM:UIRun </k>
+    <env> .Map </env>
+    <stack> uiNoFrames() </stack>
+    <depth> 0 </depth> <stackLimit> 0 </stackLimit>
+    <code> uiNoFuns() </code>
+    <fuel> 0 </fuel> <initialFuel> 0 </initialFuel>
+    <out> uiPending() </out>
+
+  // Startup and terminal publication are administrative, with no fuel charge.
+  rule <k> uiRun(P, E, F, L) => uiEval(E) </k>
+       <code> _ => P </code> <fuel> _ => F </fuel>
+       <initialFuel> _ => F </initialFuel> <stackLimit> _ => L </stackLimit>
+    requires F >=Int 0 andBool L >=Int 0
+  rule <k> uiRun(_, _, F, L) => uiError(1) </k>
+    requires F <Int 0 orBool L <Int 0
+
+EXACT SOURCE LINES 229..236
+
+  syntax Bool ::= uiValid(UIValue) [function]
+  rule uiValid(uiU(N)) => 0 <=Int N andBool N <Int 340282366920938463463374607431768211456
+  rule uiValid(uiB(_)) => true
+  rule uiValid(uiNil()) => true
+  rule uiValid(uiCons(H, T)) => uiValid(H) andBool uiValid(T)
+  rule uiValid(uiLeaf(V)) => uiValid(V)
+  rule uiValid(uiBranch(L, R)) => uiValid(L) andBool uiValid(R)
+
+
+EXACT SOURCE LINES 247..253
+
+  syntax UIPrimitive ::= uiChecked(Int) [function]
+                       | uiBinaryResult(UIOp, UIValue, UIValue) [function]
+                       | uiUnaryResult(UIUnaryOp, UIValue) [function]
+  rule uiChecked(N) => uiPrimValue(uiU(N))
+    requires 0 <=Int N andBool N <Int 340282366920938463463374607431768211456
+  rule uiChecked(N) => uiPrimError(10)
+    requires N <Int 0 orBool N >=Int 340282366920938463463374607431768211456

@@ -1,0 +1,74 @@
+EXACT SOURCE LINES 179..185
+
+### Requirement: UIREQ-025 Evidence-class report
+WHEN an interpreter capability is reported, its evidence record SHALL identify predicate, source tree, profile, consumer, bounds, target and evidence class.
+
+#### Scenario: Pure models only
+- **WHEN** Unchanged Candidate A model observations accompany the new Candidate B design.
+- **THEN** The report identifies exactly the source-specific K frontend-only check and repaired scalar15 Quint tests/samples, then labels every new B helper/image/arithmetic/plan/residual/ADT acceptance scenario unexecuted. Old observations do not validate changed B semantics; compiler/circuit correspondence, native proof acceptance and ledger qualification remain open.
+
+
+EXACT SOURCE LINES 197..258
+
+### Requirement: UIREQ-027 Indexed program-image provenance
+WHEN preparation indexes a supported source program, it SHALL produce a ProgramImage preserving source membership, original function-table order and SourceOccurrenceId provenance.
+
+#### Scenario: Distinct occurrences and recursive references
+- **WHEN** Two source sites contain the same expression and a named function recursively calls itself.
+- **THEN** They retain distinct SourceOccurrenceId values while recursive calls remain function-table references; expanded implementation-step IDs map back to those sites. Ordered child/parameter slices and first-match lookup remain as in the source until a separately admitted unique-function profile applies; preparation neither evaluates the selected path nor unrolls recursion.
+
+### Requirement: UIREQ-028 Bounded helper microsteps
+WHEN the proposed sherlock-helper-microstep/1 profile performs helper work, it SHALL advance through explicit helper controls with a declared finite bound per transition.
+
+#### Scenario: Lookup and equality cursors
+- **WHEN** A lookup crosses two ordered entries or equality visits two occurrences of a shared subtree.
+- **THEN** Function/environment lookup, binding, validation, argument/field accumulation, equality and match cursors expose each bounded helper transition and complete resume state. The proposed schedule charges one per completed legacy machine transition and one per helper transition, with startup, terminal publication and error publication zero-cost; code/data/environment/frame/serialization/helper-work capacities are declared. The mapped A state remains at the origin until the helper interval completes. W_B = W_A + H_B is only a proposed completed-interval mapping under common-domain/cap premises, never a same-fuel or implemented-refinement claim.
+
+### Requirement: UIREQ-029 Bounded representation domain
+WHEN a ReferenceState is offered to the bounded representation adapter, it SHALL return a MachineImage Bounds F related by RepresentationRelation or an explicit out-of-domain result.
+
+#### Scenario: Complete pending-state encoding
+- **WHEN** An in-domain factorial state retains a pending multiplication, caller environment and a helper cursor.
+- **THEN** Partial encode/decode retain code references, ordered frames, control, reachable structural values, active lengths, fuel/work, outcome and helper state under the selected field/layout/capacities. A value outside those capacities has no represented-image claim; immutable sharing unfolds to structural occurrences and physical identity is not source equality. Encode/decode and circuit correspondence remain unimplemented/unproved.
+
+### Requirement: UIREQ-030 Typed arithmetic component API
+WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.
+
+#### Scenario: Carry, borrow and full product
+- **WHEN** b is 32 or 64 and checkedU128Add/Sub/Mul use little-endian limbs.
+- **THEN** addCarry_b(a,bv,carryIn) returns named {low,carryOut}, subBorrow_b(a,bv,borrowIn) returns {low,borrowOut}, and mulWide_b(a,bv) returns {low,high}; carry/borrow bits and multiply-accumulate whole-word carries have distinct types. The wrappers retain K mathematical-result/error10 meaning, including the full up-to-256-bit product before checked UInt128 selection. Independently specified normal results are (2^32−3)+8 = 2^32+5, (2^64+9)−7 = 2^64+2, and (2^48+1)·3 = 3·2^48+3; no layout or row-cost winner is selected.
+
+### Requirement: UIREQ-031 Separate compilation/export plans
+WHEN a bounded step is prepared for a backend, tooling SHALL report separate ConstraintPlan and WitnessPlan artifacts with their BackendCapabilities disposition.
+
+#### Scenario: Structured witness export and unsupported features
+- **WHEN** One step uses structured witness instructions and a requested export also encounters a native witness closure, lookup or interaction.
+- **THEN** OperationManifest identifies typed operations, ordered inputs/outputs, source/component membership and omissions; constraint export, witness-program export, lookup/interact/custom-gate support and field/layout support are listed separately. Unsupported features yield tooling Unsupported, with no claim that basic constraint JSON supplies witness computation or that any non-Midnight format is a Midnight/ZKIR exporter.
+
+### Requirement: UIREQ-032 Earliest-stop reference slices
+WHEN multiple reference transitions share one physical step or chunk, the implementation SHALL expose the ordered ReferenceSlice through its earliest reference stop.
+
+#### Scenario: Grouped pending return
+- **WHEN** A candidate groups up to 1, 2, 4 or 8 reference transitions around a callee return under the same schedule/bounds.
+- **THEN** StepRecord preserves each internal position, rule/source occurrence, prefix charge, logical frame check and first outcome. Under sherlock-k-a/1 zero-fuel terminal/error publication and frame-cap Rejected(error4) keep their original precedence; padding adds physical work only. Technical cuts retain complete resumable state and create no financial commit or movement of an existing Core/2 await prefix.
+
+### Requirement: UIREQ-033 Bounded static residualization
+WHEN a reference step is specialized, the specializer SHALL produce bounded ResidualStepIR preserving every dynamic reference boundary.
+
+#### Scenario: Three realization masks
+- **WHEN** Empty, fixed-family or fixed-ProgramImage static bindings are applied to the same reference step.
+- **THEN** Only immutable code/declarations/layout facts are folded; runtime control, data, environments, frames, fuel/work, capacity checks and outcomes remain dynamic. A finite worklist and residual-size limit fall back to generic dispatch without application exhaustion. Recursion remains runtime calls, with no depth/fuel/local-value specialization or source recursion unrolling; rule/source-occurrence maps retain intermediate stops and charges in universal, family and per-program realizations.
+
+### Requirement: UIREQ-034 Declaration-driven ordered matching
+WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.
+
+#### Scenario: New recursive Schedule declaration
+- **WHEN** Schedule = Done | Pay(UInt128,Schedule) | Both(Schedule,Schedule) is matched by ordered arms Both(Pay(x,_),_)→x; Both(_,r)→sum(r); Pay(x,t)→x+sum(t); Done→0 on Both(Pay(4,Done),Pay(5,Done)).
+- **THEN** The selected arm is source arm one and the result is 4; a separate structural sum is 9. Nominal/constructor identity, source field order, binder occurrence paths and workMap are retained independently of compact tags or arena indices. Closed monomorphic mutually recursive groups are the initial extension; parameterized specialization needs its own finite bound, and closures/GADTs/or-patterns remain outside this adapter. Existing dedicated list/tree forms do not count as this extension's implementation.
+
+### Requirement: UIREQ-035 Deterministic witness dataflow
+WHEN a WitnessPlan is evaluated, its baseline SHALL execute a typed dependency DAG in a deterministic uncached order to materialize complete StepRecords.
+
+#### Scenario: Independent normal comparison baseline
+- **WHEN** The same admitted factorial/list/tree or pending-caller state is materialized without caching, with cold caches and with warm caches.
+- **THEN** Stable dependency ordering and explicit bindings produce identical decoded reference prefixes, ordered frames/environments, outcomes and reference-work observations against independently authored expectations. Cache/lifetime/streaming variants retain the uncached baseline; reusable keys include exact program/profile/layout and immutable inputs, while helper visits, copies, live values and memory remain separate diagnostics. Neither those expectations nor semantic behavior are generated from the materializer/DAG metadata.
