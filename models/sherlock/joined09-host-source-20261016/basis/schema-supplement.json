@@ -1,0 +1,3019 @@
+{
+  "format": "sherlock-b-core-schema-supplement/2",
+  "author": "Opus 5.5 (claude-opus-5-5), high effort, sole security design author for this core repair",
+  "status": "PROPOSED_UNADOPTED_SPECIFIED_ONLY",
+  "governance": {
+    "native_authority": 0,
+    "c4_unchanged": true,
+    "schema_freeze": false,
+    "product_acceptance": false,
+    "decision_vote": false,
+    "execution_claims": [],
+    "json_validated_by_tool": false,
+    "note": "Author proposal only. Two substantive agreeing independent votes are required for every consequential choice in RESOLUTION.md section 8; votes cast on the earlier review-candidate bytes do not transfer. Physical numeric layout, field, limb packing, circuit family and Bounds values are not selected."
+  },
+  "revision": {
+    "supersedes": {
+      "path": "review-candidate/schema-supplement.json",
+      "sha256": "a1f996d11a042fa4b851954cf2d77ad220b5bc12b4a7447cd3c08a0700463e26",
+      "bytes_preserved": true
+    },
+    "reviews_answered": [
+      "security-opus-1/REPORT.md F1-F10",
+      "security-opus-2/REPORT.md H-1, M-1..M-3, L-1..L-9",
+      "schema-muse/REPORT.md F-01..F-11"
+    ],
+    "summary_of_normative_changes": [
+      "D-08R: value sequences move from logical Seq data rows to the physical img.valueSlots arena (schema-types.json valueSlots); DataTag.Seq removed; R5 admission valueSlots >= fuel.",
+      "D-09R: referenceCursor advances only on legacy completions; SI-04 is cursor = consumedWork - helperWork for every outcome.",
+      "D-11b restated: unfolding basis is MCL F3 under open L03; physical capacities separated from logical caps; SI-05 is relative to a segment base; canonical boundaries only at legacy points.",
+      "D-21: grammarDomain is part of every identity, StepEvent, evidence label and statement; profile identity itself is left to GC-2.",
+      "D-22: AD-5 program-view well-formedness; admit consumes a source program, never a hand-built view.",
+      "D-23: one logical kind projection over both value spaces; tag ordinals aligned with K uiKind.",
+      "D-24: typed row language: expression grammar, guard vocabulary, typed conditional deltas, typed effects, typed reads with bound sources.",
+      "D-26: the five administrative IDs are AdministrativeBoundary realizations; 96 Enabled step rows.",
+      "SI-20..SI-24 added: controlOrigin coherence, helper-legacy coherence, helper state space, value-slot discipline, program-view well-formedness.",
+      "Every type the earlier bytes left undefined (Bounds ranges, LayoutSchema, Identity, Digest, Id, RunId, ExpandedStepId, SourceOccurrenceId, Tooling, HostViolation, Selected, StepResult, ProgramView, Admitted) is defined."
+    ],
+    "targeted_correction": {
+      "id": "R2-T1",
+      "supersedes": {
+        "path": "review-candidate-r2/schema-supplement.json",
+        "sha256": "ab180b6f5cac62392fced9c095159342e09bea17f50fdcbd588ade86fbb154c3",
+        "bytes": 111892,
+        "bytes_preserved": true
+      },
+      "scope": "Only security-opus-r2-2 S1, S2, S3, S5 and security-opus-r2-1 R2-L1, R2-L2, R2-L3, R2-L5, R2-L6, plus StepInvViolation (R2-L7), which S1 needs. No row, delta, guard, effect, StepInv clause meaning or the 96 Enabled rows changes. No R2 vote covers these bytes.",
+      "reproduction_contracts": "REPRODUCTION-CONTRACTS.json (specified only, unexecuted)",
+      "changes": [
+        "D-32 (S1): MachineImage carries a host-only admission binding; step, select, run and check_step_inv check it first (precedence AB) and fail closed with HostViolation SI-01.",
+        "D-31 (S2, R2-L2, R2-L3): AD-0 retired; AD-1 StepCap, AD-2a CounterWidth{field} and AD-3 MaxArity fail with CapacityNotAdmitted; codeRows = 0 is C1 CapacityNotAdmitted{CodeRows}; AD-6 gets UnsupportedFeature{BoundarySection}; AdmissionReason.BoundsOutOfRange removed (no producer remains); admit's error type widening to Tooling recorded as an explicit amendment.",
+        "D-33 (R2-L1, R2-L5, S3/R2-L6, S5): dispatch.select step 2 conjoins the T-LEGACY result-slot rule; physical capacity checks run in PS, conditioned on P6; traversal rule for Stage 2 (C8); run stop rule."
+      ]
+    }
+  },
+  "sources": [
+    {
+      "path": "models/sherlock/k/main.k",
+      "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41"
+    },
+    {
+      "path": "models/sherlock/quint/universalMachine.qnt",
+      "sha256": "b7aadd991ff9fd1b0821dcf5d183191323406d923a7394ca464acf3a8565c506"
+    },
+    {
+      "path": "models/sherlock/reference/rules.json",
+      "sha256": "71b4e4e67173cf7da6fbff8cd7dfbb36533250278565469b67bfd0b77468ad2a"
+    },
+    {
+      "path": "models/sherlock/reference/README.md",
+      "sha256": "dc65a58436d1d2e6317957237731992b77253c3f2622db6aa8742b88bbc27699"
+    },
+    {
+      "path": "models/sherlock/reference/schema-types.json",
+      "sha256": "e347ad8863a418bf83c46661ba8d087aeed624bffb4a0201a860df83650ec69d"
+    },
+    {
+      "path": "models/sherlock/reference/security-phase0.md",
+      "sha256": "794b08fcab51642957822d6a5476a85fa65e27ba6349dc43fd049f71d790c05a"
+    },
+    {
+      "path": "models/sherlock/reference/security-legacy-rows-candidate.json",
+      "sha256": "d9d9b0a7e36457275a7900a9d54b83751efbd424b104df5d1470f3a15e3292e0"
+    },
+    {
+      "path": "openspec/changes/sherlock-universal-interpreter-design/interfaces.md",
+      "sha256": "bee739da090c41230adc6ebd711075d842ef127d7fed8d54276e9fb484d19536"
+    },
+    {
+      "path": "openspec/changes/sherlock-universal-interpreter-design/security-candidate-b.md",
+      "sha256": "128635e0d8d56b7e3985aeb85fc101dcbf5d25a531c1811e261e20806e7402df"
+    },
+    {
+      "path": "openspec/changes/sherlock-universal-interpreter-design/security-requirements.md",
+      "sha256": "dcd1527312768355eae494b28df02234d509a63acfee8ea62708fea186f91b89"
+    },
+    {
+      "path": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+      "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b"
+    },
+    {
+      "path": "openspec/changes/sherlock-machine-circuit-layout/design.md",
+      "sha256": "3738ca71fe8ad87d8ddba0f2251dcc54214a160b131550d5b8a49472763ade0e"
+    },
+    {
+      "path": "openspec/changes/sherlock-machine-circuit-layout/interfaces.md",
+      "sha256": "86c228a4f9c7ab68122eec3accf7193210793b46117ade8df543d52660839e6a"
+    },
+    {
+      "path": "openspec/changes/sherlock-machine-circuit-layout/extensions-and-obligations.md",
+      "sha256": "110772352b932f1e72bb54c5895bb6c180e0efe091189fb8606917e7d87e451f"
+    },
+    {
+      "path": "docs/SHERLOCK-IMPLEMENTATION-PLAN.md (composition-delta candidate)",
+      "sha256": "1e63734b4db0e284b24b96354ef74433e3aa1de6acff5f77b1969f97e2ad6853"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference_types.rs",
+      "sha256": "4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/mod.rs",
+      "sha256": "bb0752abf4065903fcd74cccd7c62783b88a17fc706b72c63e6b9e77e0f8aa39"
+    }
+  ],
+  "scope": {
+    "resolved_core_name": "B-core (pure finite helper machine), revision R2",
+    "profile_id": "sherlock-helper-microstep/1",
+    "profile_identity_decision": "OPEN (GC-2). Whatever profile ID is chosen, grammarDomain is bound into every identity, DetInput, StepEvent, evidence label and statement (D-21).",
+    "grammar_domain": "DedicatedSorts",
+    "resolved_core": "The exact K-A source grammar of main.k (UInt128, Bool, dedicated UInt list and UInt tree values, literals, variables, let, binary and unary primitives, if, named self and mutual recursive calls, five shallow patterns, ordered match), executed under the revised B-core schedule (catalog-revision-overlay.json, overlay B-CORE-R1) from canonical genesis through one uncut segment to a published outcome.",
+    "schedule_status": "This is a REVISED schedule relative to the rules.json proposed_b inventory. Exact-fuel oracles must be authored against catalog-revision-overlay.json, after I-B-EVENT-ADOPTION accepts that overlay, never against the raw catalog.",
+    "not_resolved_here_and_still_mandatory": [
+      "Generic declaration-driven nominal and mutual ADTs: TypeDecl, CtorLayout, ConstructorFields frame, Construct expressions, MatchPlan/workMap, generic validation and equality (rules.json:7371-7408 b.coverage.*; UIREQ-007/008/034; B-T10; UISEC-002; UISEC-B007).",
+      "Nested helper activation with resume rows and Option<ResumeId> (extensions-and-obligations.md:73-80).",
+      "Financial extension: committed and tentative state, ordered effects, residual duties, pending operations, SourceSuspension, Commit/Yield/Await, Core/2 successful-prefix await (UISEC-007/008, UISEC-B008, UIREQ-014/015/017-020, B-T12, interfaces.md:308).",
+      "Chunk, checkpoint, external-claim and recursive composition: constrained ProjectRel and Link, B002 codec laws, the open L03 boundary-sharing decision (section boundaries is specified and blocked).",
+      "L04 public/private/constant labels, statement binding and field embedding; L09; L10.",
+      "StepInv genesis and preservation proofs; K/Quint/Lean B projections; W_B = W_A + H_B (target only).",
+      "All U0-U7, M1-M17, MC, SP, G, ZR, MNR, OSR exits, ACTUS (277 fixtures) and DeFi (72 rows) denominators, composition, Preview, Fenrir and Midnight stagenet evidence."
+    ],
+    "disposition_of_out_of_scope_inputs": {
+      "generic_adt_source_via_an_adapter": "UnsupportedFeature{feature: GenericAdt, locator}; tooling outside Outcome",
+      "financial_source_via_an_adapter": "UnsupportedFeature{feature: FinancialSyntax, locator}",
+      "finance_input_not_absent_at_admitRun": "UnsupportedFeature{feature: FinancialInput, locator: None}",
+      "reserved_tag_or_reserved_field_in_an_image": "C-INV under grammarDomain DedicatedSorts",
+      "finance_not_absent_in_DetInput_or_statement": "C-INV (security-phase0.md:92)"
+    }
+  },
+  "dispositions": {
+    "source": "security-phase0.md:17-27 (unchanged)",
+    "C-INV": "malformed untrusted image, witness, boundary or statement: no accepting assignment, no Outcome, no statement. On the host, the same condition is HostViolation and step returns without mutating.",
+    "APP-R(c)": "valid execution, application error: Rejected(c) published",
+    "APP-X(k)": "valid execution, budget or capacity limit: Exhausted(k) published",
+    "TOOL": "AdmissionRejected, CapacityNotAdmitted, UnsupportedFeature: outside Outcome",
+    "PUB-REFUSE": "claim fails labelling or hygiene: not published"
+  },
+  "primitive_types": {
+    "Nat": "mathematical natural number (schema-types.json:47-49); no implicit host width. Host representation: usize for capacities, lengths and indices; u128 for work counters and fuel.",
+    "Bool": "0 or 1, distinct from UInt128",
+    "UInt128": "integer in [0, 2^128); bounded encoding is 16 little-endian bytes each in [0,255] (schema-types.json:30, 160-169); host representation u128",
+    "ErrorCode": "Nat in 1..11; 4-bit bounded encoding; any other value is C-INV",
+    "Text": "UTF-8 host metadata; never a circuit field",
+    "Id": {
+      "record": {
+        "namespace": "Text",
+        "name": "Text"
+      },
+      "meaning": "namespace-qualified identifier, not an address or commitment (interfaces.md:11)"
+    },
+    "Digest": {
+      "variant": {
+        "Unselected": {},
+        "Selected": {
+          "format": "Id",
+          "bytes": "byte sequence of the format's declared length"
+        }
+      },
+      "rule": "No digest format is selected by this supplement. Every digest field is Unselected until a separately reviewed format exists; a host or claim must never fabricate a Selected digest (UISEC-012, B009). Host identity equality is structural, field by field."
+    },
+    "RunInt": {
+      "variant": {
+        "Negative": {},
+        "Nat": {
+          "value": "u128"
+        },
+        "NatAboveU128": {}
+      },
+      "meaning": "host image of a K Int run input (fuel or stack limit). K Int is unbounded; only the class matters for admission, so the magnitude of negative or oversize values is not carried."
+    },
+    "KInt": {
+      "variant": {
+        "InRange": {
+          "value": "UInt128"
+        },
+        "Negative": {},
+        "AboveU128": {}
+      },
+      "meaning": "host image of a K literal integer uiU(N). Negative and AboveU128 fail uiValid (main.k:230) and are prepared as U128OutOfRange constant markers (D-13)."
+    },
+    "ResumeId": "Nat index into the extension Resume table (extensions-and-obligations.md:73-80). In B-core (grammarDomain = DedicatedSorts) no Resume table exists and HelperControl.common.parentResume is always absent (Opt<ResumeId> with present = 0 and value = 0; SI-08, HB-42). Core host representation: usize inside Option<usize>, always None in B-core; Some(_) is C-INV / HostViolation{StepInvViolated, clause: Some(SI-08)}. Core bounded width before X-05 adds resumeRows: 1-bit present flag (0) and 0-bit value payload."
+  },
+  "notation": {
+    "alignment": "Width, Option and slice conventions are taken unchanged from the A layout owner conventions (sherlock-machine-circuit-layout/design.md:44-50) so that A and B blocks share one rule set.",
+    "bitlen(n)": "max(1, ceil(log2(n + 1))) for natural n",
+    "id(Z)": "max(1, ceil(log2(max(1, Z)))) bits: an index below the active length of a table of capacity Z",
+    "count(Z)": "bitlen(Z) bits: a length, start position or active length that may equal Z",
+    "Index(T)": "Nat in [0, cap(T) - 1]",
+    "Opt<A>": "{present: Bool, value: A}; absent has present 0 and value all zero; index 0 is a valid present row",
+    "Slice(T)": "{start: count(cap(T)), len: count(cap(T))}; start + len <= active length of T; the empty slice is exactly (0, 0) (slice(s, 0) normalizes to (0, 0))",
+    "ActiveLen(T)": "Nat in [0, cap(T)]",
+    "Enum(E)": "0-based ordinal in declaration order; width max(1, ceil(log2(|E|))); unused codes invalid",
+    "inactive": "every column of an inactive variant, inactive row, absent option, cleared register payload and unused slot is zero",
+    "field_embedding": "Every stored integer of width w must embed injectively in the selected field or be limb-split; field and limb policy are open (schema-types.json:30, L04)."
+  },
+  "bounds": {
+    "source": "interfaces.md:18-23; all 22 fields retained (extensions-and-obligations.md:31-35)",
+    "type": "record of 22 Nat fields; host: 19 usize capacities plus maxReferenceWork, maxHelperWork and stepCap as u128",
+    "zero_meaning": "A zero capacity means the table holds no rows. Preparation that needs a row reports CapacityNotAdmitted; a runtime logical cap of zero makes the first allocation of that kind Exhausted(kind), charged.",
+    "fields": [
+      {
+        "name": "codeRows",
+        "range": ">= 1; 0 is refused by prepare_core C1 as CapacityNotAdmitted{CodeRows, needed 1, limit 0} (R2-T1 D-31; not by AD-0)",
+        "core_use": "capacity of prog.expressions and prog.occurrences (the entry occurrence needs one row)"
+      },
+      {
+        "name": "functionRows",
+        "range": ">= 0",
+        "core_use": "capacity of prog.functions"
+      },
+      {
+        "name": "codeChildSlots",
+        "range": ">= 0",
+        "core_use": "capacity of prog.children (call argument expression slots)"
+      },
+      {
+        "name": "parameterSlots",
+        "range": ">= 0",
+        "core_use": "capacity of prog.parameters"
+      },
+      {
+        "name": "patternRows",
+        "range": ">= 0",
+        "core_use": "capacity of prog.patterns"
+      },
+      {
+        "name": "matchPlanRows",
+        "range": "any",
+        "core_use": "no core table; carried in identity only (AD-4)"
+      },
+      {
+        "name": "matchArmRows",
+        "range": ">= 0",
+        "core_use": "capacity of prog.arms"
+      },
+      {
+        "name": "typeRows",
+        "range": "any",
+        "core_use": "no core table; carried in identity only (AD-4)"
+      },
+      {
+        "name": "constructorRows",
+        "range": "any",
+        "core_use": "no core table; carried in identity only (AD-4)"
+      },
+      {
+        "name": "constructorFieldSlots",
+        "range": "any",
+        "core_use": "no core table; carried in identity only (AD-4)"
+      },
+      {
+        "name": "maxArity",
+        "range": ">= 2; else AD-3 CapacityNotAdmitted{MaxArity, needed 2, limit maxArity}",
+        "core_use": "maximum call argument count, parameter count per function and value-sequence length"
+      },
+      {
+        "name": "constantNodes",
+        "range": ">= 0",
+        "core_use": "capacity of prog.constants"
+      },
+      {
+        "name": "constantFieldSlots",
+        "range": ">= 0",
+        "core_use": "capacity of prog.constantFields"
+      },
+      {
+        "name": "dataNodes",
+        "range": ">= 0",
+        "core_use": "logical cap for alloc.dataNodes; in a single segment also the physical capacity of img.data"
+      },
+      {
+        "name": "dataFieldSlots",
+        "range": ">= 0",
+        "core_use": "logical cap for alloc.dataFields; in a single segment also the physical capacity of img.dataFields"
+      },
+      {
+        "name": "environmentCells",
+        "range": ">= 0",
+        "core_use": "logical cap for alloc.environmentCells; in a single segment also the physical capacity of img.env"
+      },
+      {
+        "name": "frames",
+        "range": ">= 0",
+        "core_use": "physical capacity of img.frames; admitRun R4 requires stackLimit <= frames"
+      },
+      {
+        "name": "helperTasks",
+        "range": ">= 0",
+        "core_use": "cap for live taskLive and physical capacity of img.tasks"
+      },
+      {
+        "name": "serializationBytes",
+        "range": "any",
+        "core_use": "byte capacity of a projected canonical image at a boundary; unused inside a step and unused in single-segment B-core"
+      },
+      {
+        "name": "maxReferenceWork",
+        "range": ">= 0",
+        "core_use": "upper bound on admitted initial fuel"
+      },
+      {
+        "name": "maxHelperWork",
+        "range": ">= 0",
+        "core_use": "cap for helperWork; because helperWork <= consumedWork <= initialFuel <= maxReferenceWork, a value of at least maxReferenceWork makes Exhausted(HelperWork) unreachable (reaching it would need remainingWork = 0, where P2 fires first); no relation is required (answers Opus2 L-9)"
+      },
+      {
+        "name": "stepCap",
+        "range": ">= 1; else AD-1 CapacityNotAdmitted{StepCap, needed 1, limit 0} (security-candidate-b.md:46)",
+        "core_use": "per-step charge capacity; every core event charges 0 or 1, so the stepCap arm is unreachable"
+      }
+    ]
+  },
+  "layout_schema": {
+    "source": "interfaces.md:24-25 LayoutSchema = {layoutVersion, fieldId, indexWidths, counterWidths, scalarLayoutId, recordWidths, bounds}; capacities added under D-12 (extensions-and-obligations.md:36-39: explicit physical envelope parameters, never new application exhaustion reasons)",
+    "record": {
+      "layoutVersion": "Id",
+      "fieldId": "Opt<Id>; absent means no field selected (host-only run); required present for any encoding, circuit or native use (L04)",
+      "widths": "Opt<WidthTable>; absent means the host uses mathematical integers and no bounded encoding is claimed; an Admitted built with absent widths is tagged encoding = HostOnly and is refused by every encoder",
+      "scalarLayoutId": "Opt<Id>",
+      "bounds": "Bounds",
+      "capacities": "LayoutCapacities",
+      "boundaryCapacities": "Opt<BoundaryCapacities>; must be absent in single-segment B-core; reserved for the blocked boundary section"
+    },
+    "WidthTable": {
+      "indexWidths": "map from each Id type in derived_widths to a width in bits",
+      "counterWidths": "map from each counter in derived_widths to a width in bits",
+      "recordWidths": "map from each record and variant to its flattened width (MCL design.md:95-99 ordering rules)"
+    },
+    "LayoutCapacities": {
+      "nameRows": {
+        "range": ">= 0",
+        "meaning": "capacity of prog.names (one injective dictionary for function names and binders)",
+        "overflow": "prepare -> CapacityNotAdmitted{kind: NameRows}"
+      },
+      "nameBytes": {
+        "range": ">= 0",
+        "meaning": "total UTF-8 bytes of all distinct names (host metadata; MCL design.md:21 NB)",
+        "overflow": "prepare -> CapacityNotAdmitted{kind: NameBytes}"
+      },
+      "occurrencePathSlots": {
+        "range": ">= 0",
+        "meaning": "capacity of prog.occurrencePaths (MCL design.md:32 OP)",
+        "overflow": "prepare -> CapacityNotAdmitted{kind: OccurrencePathSlots}"
+      },
+      "valueSlots": {
+        "range": ">= 0",
+        "meaning": "physical capacity of img.valueSlots (schema-types.json:1603-1608 layout.valueSlots; MCL design.md:28 V)",
+        "overflow": "admitRun R5 -> CapacityNotAdmitted{kind: ValueSlots} when fuel > valueSlots; never an Outcome (D-08R)"
+      }
+    },
+    "BoundaryCapacities": {
+      "physDataNodes": "Nat >= bounds.dataNodes",
+      "physDataFieldSlots": "Nat >= bounds.dataFieldSlots",
+      "physEnvironmentCells": "Nat >= bounds.environmentCells",
+      "physValueSlots": "Nat >= layout.capacities.valueSlots",
+      "status": "blocked with the boundary section"
+    }
+  },
+  "derived_widths": {
+    "ExprId": "id(codeRows)",
+    "ChildPos": "count(codeChildSlots) (slice start into prog.children)",
+    "FunctionRowId": "id(functionRows)",
+    "FunctionCursor": "count(functionRows)",
+    "ParamPos": "count(parameterSlots)",
+    "ArmId": "id(matchArmRows)",
+    "ArmPos": "count(matchArmRows)",
+    "PatternRowId": "id(patternRows)",
+    "ConstId": "id(constantNodes)",
+    "ConstFieldPos": "count(constantFieldSlots)",
+    "DataId": "id(dataNodes)",
+    "FieldPos": "count(dataFieldSlots)",
+    "EnvId": "id(environmentCells)",
+    "NameId": "id(nameRows)",
+    "OccPathPos": "count(occurrencePathSlots)",
+    "ChildPosition": "count(max(maxArity, matchArmRows + 1)) (an occurrence-path component)",
+    "ValueSlotPos": "count(valueSlots)",
+    "ValueRef": "1 + max(id(constantNodes), id(dataNodes)) (space bit plus index, MCL design.md:193)",
+    "ArityCount": "count(maxArity)",
+    "Depth": "count(frames)",
+    "StackLimit": "count(frames)",
+    "TaskCount": "count(helperTasks)",
+    "WorkCounter": "bitlen(maxReferenceWork) (remainingWork, consumedWork, initialFuel)",
+    "HelperCounter": "bitlen(maxHelperWork) (helperWork, helperVisits)",
+    "ReferenceCursor": "bitlen(maxReferenceWork) (cursor <= consumedWork under D-09R)",
+    "AllocDataNodes": "bitlen(dataNodes)",
+    "AllocDataFields": "bitlen(dataFieldSlots)",
+    "AllocEnvCells": "bitlen(environmentCells)",
+    "ErrorCode": "4 bits; values 1..11 only",
+    "Bool": "1 bit"
+  },
+  "enums": {
+    "ProfileId": [
+      "sherlock-k-a/1",
+      "sherlock-quint-a/1",
+      "sherlock-helper-microstep/1"
+    ],
+    "GrammarDomain": [
+      "DedicatedSorts",
+      "GenericNominal_EXTENSION_RESERVED"
+    ],
+    "FinanceInput": [
+      "Absent",
+      "Typed_EXTENSION_RESERVED"
+    ],
+    "SortTag": [
+      "UInt",
+      "Bool",
+      "List",
+      "Tree"
+    ],
+    "BinaryOp": [
+      "Add",
+      "Sub",
+      "Mul",
+      "Eq",
+      "Lt",
+      "Cons",
+      "Branch"
+    ],
+    "UnaryOp": [
+      "Leaf",
+      "Not"
+    ],
+    "ExprTag": [
+      "Literal",
+      "Var",
+      "Let",
+      "Binary",
+      "Unary",
+      "If",
+      "Call",
+      "Match",
+      "Construct_EXTENSION_RESERVED"
+    ],
+    "PatternTag": [
+      "PVar",
+      "PNil",
+      "PCons",
+      "PLeaf",
+      "PBranch",
+      "Wildcard_EXTENSION_RESERVED",
+      "Constructor_EXTENSION_RESERVED"
+    ],
+    "LogicalKind": [
+      "UInt",
+      "Bool",
+      "Nil",
+      "Cons",
+      "Leaf",
+      "Branch",
+      "Marker",
+      "Constructor_EXTENSION_RESERVED"
+    ],
+    "ConstTag": [
+      "U128",
+      "Bool",
+      "Nil",
+      "Cons",
+      "Leaf",
+      "Branch",
+      "Constructor_EXTENSION_RESERVED",
+      "U128OutOfRange"
+    ],
+    "DataTag": [
+      "U128",
+      "Bool",
+      "Nil",
+      "Cons",
+      "Leaf",
+      "Branch",
+      "Constructor_EXTENSION_RESERVED"
+    ],
+    "FrameTag": [
+      "LetF",
+      "LeftF",
+      "RightF",
+      "UnaryF",
+      "IfF",
+      "MatchF",
+      "ArgsF",
+      "ReturnF",
+      "ScopeF",
+      "ConstructorFields_EXTENSION_RESERVED"
+    ],
+    "ControlTag": [
+      "Eval",
+      "Return",
+      "ScheduleNext",
+      "Invoke",
+      "Enter",
+      "Bound",
+      "Cases",
+      "CaseResult",
+      "PrimResult",
+      "Error"
+    ],
+    "HelperKind": [
+      "Scalar",
+      "EnvGet",
+      "EnvPut",
+      "Find",
+      "Bind",
+      "Append",
+      "Validate",
+      "Equal",
+      "Match"
+    ],
+    "SiteTag": [
+      "EvalLiteral",
+      "EvalVar",
+      "EvalLet",
+      "EvalBinary",
+      "EvalUnary",
+      "EvalIf",
+      "EvalMatch",
+      "EvalCall",
+      "Push",
+      "RetLet",
+      "RetLeft",
+      "RetRight",
+      "RetUnary",
+      "RetIf",
+      "RetMatch",
+      "RetArgs",
+      "RetCall",
+      "RetScope",
+      "Invoke",
+      "Enter",
+      "Bound",
+      "Cases",
+      "CaseResult",
+      "Prim"
+    ],
+    "ScalarMode": [
+      "Add",
+      "Sub",
+      "Mul",
+      "Lt",
+      "Cons",
+      "Branch",
+      "Leaf",
+      "Not",
+      "TestBool",
+      "TestType"
+    ],
+    "ScalarPhase": [
+      "First",
+      "Second",
+      "Done"
+    ],
+    "ScalarStagedTag": [
+      "None",
+      "U128Value",
+      "BoolValue",
+      "PendingNode",
+      "PrimError",
+      "Selector",
+      "TypeTest"
+    ],
+    "NodeKind": [
+      "Cons",
+      "Leaf",
+      "Branch"
+    ],
+    "BoolSelector": [
+      "True",
+      "False",
+      "NotBool"
+    ],
+    "TriStatus": [
+      "Pending",
+      "Positive",
+      "Negative"
+    ],
+    "BindPhase": [
+      "Pairing",
+      "UnwindType",
+      "UnwindDup",
+      "UnwindInsert",
+      "Propagate",
+      "Finished"
+    ],
+    "BindStatus": [
+      "Ok",
+      "Bad"
+    ],
+    "AppendPhase": [
+      "Copy",
+      "Tail",
+      "Done"
+    ],
+    "TaskVisit": [
+      "Unvisited",
+      "Fields"
+    ],
+    "MatchPhase": [
+      "Arm",
+      "Tag",
+      "Distinct",
+      "Field",
+      "Bind",
+      "Ready",
+      "NoMatchReady",
+      "Done"
+    ],
+    "HelperTaskTag": [
+      "ValidateTask",
+      "EqualTask",
+      "PairTask"
+    ],
+    "HelperResultTag": [
+      "Validated",
+      "EnvFound",
+      "EnvMissing",
+      "EnvUpdated",
+      "FindFound",
+      "FindMissing",
+      "BindOk",
+      "BindBad",
+      "AppendDone",
+      "ScalarValue",
+      "ScalarError",
+      "ScalarSelector",
+      "ScalarTypeTest",
+      "EqualDone",
+      "MatchMatched",
+      "MatchNoMatch"
+    ],
+    "OutcomeTag": [
+      "Running",
+      "Halted",
+      "Rejected",
+      "Exhausted"
+    ],
+    "ExhaustReason": [
+      "Fuel",
+      "DataNodes",
+      "DataFields",
+      "EnvironmentCells",
+      "HelperTasks",
+      "HelperWork",
+      "SerializationBytes"
+    ],
+    "StepDisposition": [
+      "Applied",
+      "Published",
+      "ExhaustedFuelUncharged",
+      "RefusedHelperWorkUncharged",
+      "RefusedCapCharged"
+    ],
+    "EventStatus": [
+      "Enabled",
+      "AdministrativeBoundary",
+      "Disabled",
+      "ExtensionOnly"
+    ],
+    "EventKind": [
+      "LegacyComplete",
+      "HelperEnter",
+      "HelperVisit",
+      "HelperExit",
+      "HelperFail",
+      "Bookkeeping",
+      "Publish",
+      "Startup"
+    ],
+    "BoundaryKind": [
+      "None",
+      "Terminal",
+      "TechnicalCut",
+      "SourceSuspension_EXTENSION_RESERVED"
+    ],
+    "ToolingTag": [
+      "AdmissionRejected",
+      "CapacityNotAdmitted",
+      "UnsupportedFeature"
+    ],
+    "CapacityKind": [
+      "CodeRows",
+      "FunctionRows",
+      "CodeChildSlots",
+      "ParameterSlots",
+      "PatternRows",
+      "MatchArmRows",
+      "ConstantNodes",
+      "ConstantFieldSlots",
+      "MaxArity",
+      "NameRows",
+      "NameBytes",
+      "OccurrencePathSlots",
+      "ValueSlots",
+      "MaxReferenceWork",
+      "Frames",
+      "SerializationBytes",
+      "PhysicalBoundaryEnvelope",
+      "StepCap",
+      "CounterWidth"
+    ],
+    "CapacityKind_payload": {
+      "CounterWidth": {
+        "field": "CounterWidthField"
+      },
+      "every other variant": {},
+      "added_by": "R2-T1 D-31 (S2): StepCap and CounterWidth appended at the end; earlier ordinals unchanged"
+    },
+    "CounterWidthField": [
+      "WorkCounter",
+      "HelperCounter",
+      "ReferenceCursor"
+    ],
+    "FeatureKind": [
+      "GenericAdt",
+      "FinancialSyntax",
+      "FinancialInput",
+      "BoundedEncodingWithoutWidths",
+      "BoundarySection"
+    ],
+    "AdmissionReason": [
+      "LayoutWidthTooSmall",
+      "ProgramViewMalformed",
+      "GrammarDomainMismatch",
+      "ProfileMismatch",
+      "LayoutBoundsMismatch"
+    ],
+    "AdmissionReason_note": "R2-T1 D-31 removes BoundsOutOfRange: its only producer, AD-0, is retired. R3-T1 D-34 appends LayoutBoundsMismatch at the end (produced by AD-0a when layout.bounds != bounds). GrammarDomainMismatch, ProfileMismatch and FeatureKind.BoundedEncodingWithoutWidths are reserved with no B-core producer (R3-I1/R3-6/R3-F05). Tooling is host-only and unencoded, so no encoded ordinal moves.",
+    "HostViolationKind": [
+      "StepInvViolated",
+      "SelectUndefined",
+      "ReadOutOfBounds",
+      "WrongVariant",
+      "DisabledRuleReached",
+      "ExtensionRuleReached",
+      "PhysicalCapacityExceeded",
+      "ArithmeticUndefined"
+    ],
+    "StepInvClauseId": [
+      "SI-01",
+      "SI-02",
+      "SI-03",
+      "SI-04",
+      "SI-05",
+      "SI-06",
+      "SI-07",
+      "SI-08",
+      "SI-09",
+      "SI-10",
+      "SI-11",
+      "SI-12",
+      "SI-13",
+      "SI-14",
+      "SI-15",
+      "SI-16",
+      "SI-17",
+      "SI-18",
+      "SI-19",
+      "SI-20",
+      "SI-21",
+      "SI-22",
+      "SI-23",
+      "SI-24"
+    ],
+    "RuleId": [
+      "k.machine.eval.literal.valid",
+      "k.machine.eval.literal.invalid",
+      "k.machine.eval.variable.present",
+      "k.machine.eval.variable.absent",
+      "k.machine.eval.let",
+      "k.machine.eval.binary",
+      "k.machine.eval.unary",
+      "k.machine.eval.if",
+      "k.machine.eval.match",
+      "k.machine.eval.call.empty",
+      "k.machine.eval.call.arguments",
+      "k.machine.push.accept",
+      "k.machine.push.refuse",
+      "k.machine.return.let",
+      "k.machine.return.left",
+      "k.machine.return.right",
+      "k.machine.return.unary",
+      "k.machine.return.if.true",
+      "k.machine.return.if.false",
+      "k.machine.return.if.invalid",
+      "k.machine.return.match",
+      "k.machine.return.arguments.next",
+      "k.machine.return.arguments.final",
+      "k.machine.return.call.valid",
+      "k.machine.return.call.invalid",
+      "k.machine.return.scope",
+      "k.machine.invoke.find",
+      "k.machine.enter.missing",
+      "k.machine.enter.bind",
+      "k.machine.bound.invalid",
+      "k.machine.bound.valid",
+      "k.machine.cases.empty",
+      "k.machine.cases.try",
+      "k.machine.cases.miss",
+      "k.machine.cases.hit",
+      "k.machine.primitive.value",
+      "k.machine.primitive.error",
+      "b.helper.Scalar.entry",
+      "b.helper.Scalar.tag",
+      "b.helper.Scalar.arithmetic",
+      "b.helper.Scalar.construct",
+      "b.helper.Scalar.exit",
+      "b.helper.Scalar.failure",
+      "b.helper.EnvGet.entry",
+      "b.helper.EnvGet.cell",
+      "b.helper.EnvGet.empty",
+      "b.helper.EnvGet.exit",
+      "b.helper.EnvGet.failure",
+      "b.helper.EnvPut.entry",
+      "b.helper.EnvPut.cell",
+      "b.helper.EnvPut.insert",
+      "b.helper.EnvPut.empty",
+      "b.helper.EnvPut.exit",
+      "b.helper.EnvPut.failure",
+      "b.helper.Find.entry",
+      "b.helper.Find.row",
+      "b.helper.Find.empty",
+      "b.helper.Find.exit",
+      "b.helper.Find.failure",
+      "b.helper.Bind.entry",
+      "b.helper.Bind.pair",
+      "b.helper.Bind.empty",
+      "b.helper.Bind.arity",
+      "b.helper.Bind.type",
+      "b.helper.Bind.duplicate",
+      "b.helper.Bind.insert",
+      "b.helper.Bind.propagate",
+      "b.helper.Bind.exit",
+      "b.helper.Bind.failure",
+      "b.helper.Append.entry",
+      "b.helper.Append.cell",
+      "b.helper.Append.empty",
+      "b.helper.Append.tail",
+      "b.helper.Append.copy",
+      "b.helper.Append.exit",
+      "b.helper.Append.failure",
+      "b.helper.Validate.entry",
+      "b.helper.Validate.occurrence",
+      "b.helper.Validate.field",
+      "b.helper.Validate.declaration",
+      "b.helper.Validate.empty",
+      "b.helper.Validate.invalid",
+      "b.helper.Validate.exit",
+      "b.helper.Validate.failure",
+      "b.helper.Equal.entry",
+      "b.helper.Equal.pair",
+      "b.helper.Equal.field",
+      "b.helper.Equal.empty",
+      "b.helper.Equal.different",
+      "b.helper.Equal.exit",
+      "b.helper.Equal.failure",
+      "b.helper.Match.entry",
+      "b.helper.Match.arm",
+      "b.helper.Match.occurrence",
+      "b.helper.Match.field",
+      "b.helper.Match.binding",
+      "b.helper.Match.distinct",
+      "b.helper.Match.discard",
+      "b.helper.Match.next",
+      "b.helper.Match.selected",
+      "b.helper.Match.empty",
+      "b.helper.Match.exit",
+      "b.helper.Match.failure",
+      "b.bookkeeping.task.enqueue",
+      "b.bookkeeping.task.release",
+      "b.bookkeeping.resume.store",
+      "b.bookkeeping.resume.restore",
+      "k.admin.startup.valid",
+      "k.admin.startup.invalid",
+      "k.admin.publish.value",
+      "k.admin.publish.error",
+      "k.admin.publish.exhausted"
+    ],
+    "RuleId_counts": {
+      "legacy_completion": 37,
+      "helper_events": 66,
+      "bookkeeping": 4,
+      "administrative": 5,
+      "total": 112,
+      "new_ids_added": 0,
+      "ids_split": 0,
+      "ids_renamed": 0
+    },
+    "status_counts": {
+      "Enabled": 96,
+      "AdministrativeBoundary": 5,
+      "Disabled": 7,
+      "ExtensionOnly": 4,
+      "total": 112
+    }
+  },
+  "logical_kind": {
+    "decision": "D-23 (answers Opus1 F2, Opus2 L-2)",
+    "rule": "Every tag test, sort test, shallow comparison and pattern test in this supplement and in rows-supplement.json is stated over kind(ref), never over a raw space-specific tag. The first six ordinals of ConstTag, DataTag and LogicalKind coincide with K uiKind (main.k:313-319: U=0, B=1, Nil=2, Cons=3, Leaf=4, Branch=5); this alignment is defence in depth, not a substitute for kind().",
+    "kind(ref)": "let row = deref(ref): ConstTag or DataTag U128 -> UInt; Bool -> Bool; Nil -> Nil; Cons -> Cons; Leaf -> Leaf; Branch -> Branch; ConstTag U128OutOfRange -> Marker; any reserved tag -> C-INV in core",
+    "arity(kind)": {
+      "UInt": 0,
+      "Bool": 0,
+      "Nil": 0,
+      "Cons": 2,
+      "Leaf": 1,
+      "Branch": 2,
+      "Marker": "undefined (HostViolation ArithmeticUndefined if ever evaluated)"
+    },
+    "sortOfKind(kind)": {
+      "UInt": "UInt",
+      "Bool": "Bool",
+      "Nil": "List",
+      "Cons": "List",
+      "Leaf": "Tree",
+      "Branch": "Tree",
+      "Marker": "undefined"
+    },
+    "field(ref, i)": "requires i < arity(kind(ref)). Const(j): Const(prog.constantFields[prog.constants[j].fields.start + i]). Data(j): img.dataFields[img.data[j].fields.start + i]. A Const row's field always yields a Const ref; a Data row's field may hold a Const or Data ref (MCL design.md:216-218).",
+    "u128(ref)": "the UInt128 payload of a kind UInt row",
+    "bool(ref)": "the Bool payload of a kind Bool row",
+    "shallowDiffer(a, b)": "kind(a) != kind(b) or (kind(a) = UInt and u128(a) != u128(b)) or (kind(a) = Bool and bool(a) != bool(b)); equals K ==K at one occurrence pair (main.k:258)",
+    "structurallyEqual(a, b)": "the K ==K relation on the decoded values of a and b (semantic predicate used only in StepInv coherence clauses)",
+    "markerFree(constId)": "Bool stored in prog.constants; true iff no U128OutOfRange row is reachable; verified by AD-5 V6; used only by SI-17 and SI-21, never to skip a Validate event"
+  },
+  "inspection_unit": {
+    "answers": "Muse F-11(a)",
+    "rule": "One inspected record is one occurrence row together with its own header columns and at most one of its field slots; a paired record (Equal.pair, Equal.field, Bind.pair) is one such record per side. One value-slot read (Append.cell) or one value-slot write destination (Append.copy, Append.tail) is one record. Reading registers (reg.*, h, r, c), the top frame, the top task and immutable program rows by index (code fetch) is never counted. helperVisits counts these records per the row constant; it is a diagnostic and never a charge (UISEC-B003)."
+  },
+  "records": {
+    "ValueRef": {
+      "variant": {
+        "Const": {
+          "id": "ConstId"
+        },
+        "Data": {
+          "id": "DataId"
+        }
+      },
+      "encoding": "1 space bit (0 Const, 1 Data) plus index",
+      "rule": "the referenced row must be a value row: kind in {UInt, Bool, Nil, Cons, Leaf, Branch}, or Marker only where SI-17 permits"
+    },
+    "ValSlice": {
+      "record": {
+        "start": "ValueSlotPos",
+        "len": "ArityCount"
+      },
+      "rule": "start + len <= reg.active.valueSlots; empty is (0, 0); len <= maxArity",
+      "source": "schema-types.json:1025-1034 ValueSlice"
+    },
+    "ExprSlice": {
+      "record": {
+        "start": "ChildPos",
+        "len": "ArityCount"
+      }
+    },
+    "ArmSlice": {
+      "record": {
+        "start": "ArmPos",
+        "len": "ArmPos"
+      }
+    },
+    "ParamSlice": {
+      "record": {
+        "start": "ParamPos",
+        "len": "ArityCount"
+      }
+    },
+    "FieldSlice": {
+      "record": {
+        "start": "FieldPos",
+        "len": "0..2"
+      }
+    },
+    "ConstFieldSlice": {
+      "record": {
+        "start": "ConstFieldPos",
+        "len": "0..2"
+      }
+    },
+    "OccPathSlice": {
+      "record": {
+        "start": "OccPathPos",
+        "len": "OccPathPos"
+      }
+    },
+    "EnvRoot": {
+      "type": "Opt<EnvId>",
+      "meaning": "head of a newest-first binding chain; absent is the empty environment"
+    },
+    "EnvCell": {
+      "record": {
+        "binder": "NameId",
+        "value": "ValueRef",
+        "previous": "Opt<EnvId>"
+      },
+      "rule": "previous < own index when present"
+    },
+    "ConstRow": {
+      "variant": {
+        "U128": {
+          "n": "UInt128"
+        },
+        "Bool": {
+          "b": "Bool"
+        },
+        "Nil": {},
+        "Cons": {
+          "fields": "ConstFieldSlice(len 2)"
+        },
+        "Leaf": {
+          "fields": "ConstFieldSlice(len 1)"
+        },
+        "Branch": {
+          "fields": "ConstFieldSlice(len 2)"
+        },
+        "U128OutOfRange": {}
+      },
+      "common": {
+        "markerFree": "Bool"
+      },
+      "field_kinds": {
+        "Cons": [
+          "UInt or Marker",
+          "Nil or Cons"
+        ],
+        "Leaf": [
+          "UInt or Marker"
+        ],
+        "Branch": [
+          "Leaf or Branch",
+          "Leaf or Branch"
+        ]
+      }
+    },
+    "DataRow": {
+      "variant": {
+        "U128": {
+          "n": "UInt128"
+        },
+        "Bool": {
+          "b": "Bool"
+        },
+        "Nil": {},
+        "Cons": {
+          "fields": "FieldSlice(len 2)"
+        },
+        "Leaf": {
+          "fields": "FieldSlice(len 1)"
+        },
+        "Branch": {
+          "fields": "FieldSlice(len 2)"
+        }
+      },
+      "field_kinds": {
+        "Cons": [
+          "UInt",
+          "Nil or Cons"
+        ],
+        "Leaf": [
+          "UInt"
+        ],
+        "Branch": [
+          "Leaf or Branch",
+          "Leaf or Branch"
+        ]
+      },
+      "note": "There is no Seq row in R2 (D-08R); value sequences live in img.valueSlots."
+    },
+    "FieldSlot": {
+      "type": "ValueRef"
+    },
+    "ValueSlot": {
+      "type": "ValueRef",
+      "rule": "a value ValueRef; never a Marker (SI-17)"
+    },
+    "FrameRow": {
+      "common": {
+        "origin": "ExprId (the expression that scheduled the frame)"
+      },
+      "variants": {
+        "LetF": {
+          "binder": "NameId",
+          "body": "ExprId",
+          "savedEnv": "EnvRoot",
+          "origin_tag": "Let",
+          "source": "main.k:48"
+        },
+        "LeftF": {
+          "op": "BinaryOp",
+          "right": "ExprId",
+          "savedEnv": "EnvRoot",
+          "origin_tag": "Binary",
+          "source": "main.k:49"
+        },
+        "RightF": {
+          "op": "BinaryOp",
+          "left": "ValueRef",
+          "origin_tag": "Binary",
+          "note": "no saved environment, exactly as K uiRightF (main.k:50); resolves the interfaces.md:72 sketch per extensions-and-obligations.md:104-107"
+        },
+        "UnaryF": {
+          "op": "UnaryOp",
+          "origin_tag": "Unary",
+          "source": "main.k:51"
+        },
+        "IfF": {
+          "thenExpr": "ExprId",
+          "elseExpr": "ExprId",
+          "savedEnv": "EnvRoot",
+          "origin_tag": "If",
+          "source": "main.k:52"
+        },
+        "MatchF": {
+          "arms": "ArmSlice",
+          "savedEnv": "EnvRoot",
+          "origin_tag": "Match",
+          "rule": "arms equals expr(origin).arms (eval.match copies it unchanged)",
+          "source": "main.k:53"
+        },
+        "ArgsF": {
+          "functionName": "NameId",
+          "completed": "ValSlice",
+          "rest": "ExprSlice",
+          "savedEnv": "EnvRoot",
+          "origin_tag": "Call",
+          "rule": "rest is a suffix of expr(origin).args; completed.len + rest.len + 1 = expr(origin).args.len",
+          "source": "main.k:54"
+        },
+        "ReturnF": {
+          "returnType": "SortTag",
+          "savedEnv": "EnvRoot",
+          "origin_tag": "Call",
+          "source": "main.k:55"
+        },
+        "ScopeF": {
+          "savedEnv": "EnvRoot",
+          "origin_tag": "Let or Match",
+          "source": "main.k:55"
+        },
+        "ConstructorFields_EXTENSION_RESERVED": {
+          "disposition": "C-INV in core"
+        }
+      }
+    },
+    "ControlRow": {
+      "source": "main.k:38-46; every K uiPush schedules uiEval(_) (main.k:115,118,121,124,127,132,209,221), so ScheduleNext.next is an ExprId",
+      "variants": {
+        "Eval": {
+          "expr": "ExprId"
+        },
+        "Return": {
+          "value": "ValueRef"
+        },
+        "ScheduleNext": {
+          "frame": "FrameRow",
+          "next": "ExprId",
+          "env": "EnvRoot"
+        },
+        "Invoke": {
+          "functionName": "NameId",
+          "args": "ValSlice"
+        },
+        "Enter": {
+          "function": "Opt<FunctionRowId>",
+          "args": "ValSlice"
+        },
+        "Bound": {
+          "binding": "BoundBinding",
+          "returnType": "SortTag",
+          "body": "ExprId"
+        },
+        "Cases": {
+          "value": "ValueRef",
+          "arms": "ArmSlice",
+          "savedEnv": "EnvRoot"
+        },
+        "CaseResult": {
+          "matching": "CaseMatching",
+          "value": "ValueRef",
+          "body": "ExprId",
+          "rest": "ArmSlice",
+          "savedEnv": "EnvRoot"
+        },
+        "PrimResult": {
+          "result": "PrimOutcome"
+        },
+        "Error": {
+          "code": "ErrorCode"
+        }
+      },
+      "BoundBinding": {
+        "variant": {
+          "Bad": {},
+          "Ok": {
+            "env": "EnvRoot"
+          }
+        },
+        "rule": "Ok with an absent env is the successful empty binding; it never collapses to Bad (MCL design.md:241-244)"
+      },
+      "CaseMatching": {
+        "variant": {
+          "NoMatch": {},
+          "Matched": {
+            "env": "EnvRoot"
+          }
+        },
+        "rule": "Matched with an absent env is distinct from NoMatch"
+      },
+      "PrimOutcome": {
+        "variant": {
+          "Value": {
+            "value": "ValueRef"
+          },
+          "Error": {
+            "code": "ErrorCode in {10, 11}"
+          }
+        },
+        "rule": "one discriminator; no both-or-neither state (extensions-and-obligations.md:114-116)"
+      }
+    },
+    "HelperControl": {
+      "common": {
+        "site": "SiteTag",
+        "originReferenceCursor": "ReferenceCursor",
+        "parentResume": "Opt<ResumeId> where ResumeId is primitive_types.ResumeId (host carrier Option<usize>, always None in B-core; present/Some is C-INV and HostViolation SI-08; Muse R3-F01, D-35)"
+      },
+      "variants": {
+        "Scalar": {
+          "mode": "ScalarMode",
+          "operandA": "ValueRef",
+          "operandB": "Opt<ValueRef>",
+          "expected": "Opt<SortTag>",
+          "phase": "ScalarPhase",
+          "regA": "UInt128",
+          "staged": "ScalarStaged"
+        },
+        "EnvGet": {
+          "binder": "NameId",
+          "cursor": "Opt<EnvId>",
+          "found": "Opt<ValueRef>",
+          "status": "TriStatus"
+        },
+        "EnvPut": {
+          "binder": "NameId",
+          "value": "ValueRef",
+          "base": "EnvRoot",
+          "newRoot": "Opt<EnvId>",
+          "status": "TriStatus (Pending or Positive only)"
+        },
+        "Find": {
+          "functionName": "NameId",
+          "rowCursor": "FunctionCursor",
+          "found": "Opt<FunctionRowId>",
+          "status": "TriStatus"
+        },
+        "Bind": {
+          "function": "FunctionRowId",
+          "params": "ParamSlice",
+          "args": "ValSlice",
+          "pCursor": "ArityCount",
+          "aCursor": "ArityCount",
+          "partial": "EnvRoot",
+          "dupCursor": "Opt<EnvId>",
+          "phase": "BindPhase",
+          "status": "BindStatus"
+        },
+        "Append": {
+          "src": "ValSlice",
+          "value": "ValueRef",
+          "srcCursor": "ArityCount",
+          "destStart": "ValueSlotPos",
+          "staged": "Opt<ValueRef>",
+          "phase": "AppendPhase"
+        },
+        "Validate": {
+          "root": "ValueRef (Const space in core)",
+          "status": "TriStatus"
+        },
+        "Equal": {
+          "left": "ValueRef",
+          "right": "ValueRef",
+          "status": "TriStatus"
+        },
+        "Match": {
+          "scrutinee": "ValueRef",
+          "arm": "ArmId",
+          "savedEnv": "EnvRoot",
+          "partial": "EnvRoot",
+          "patTag": "PatternTag (meaningful iff phase != Arm; zero in phase Arm)",
+          "x": "NameId",
+          "y": "NameId",
+          "fieldIdx": "0 or 1",
+          "staged": "Opt<ValueRef>",
+          "phase": "MatchPhase",
+          "status": "TriStatus"
+        }
+      },
+      "ScalarStaged": {
+        "variant": {
+          "None": {},
+          "U128Value": {
+            "n": "UInt128"
+          },
+          "BoolValue": {
+            "b": "Bool"
+          },
+          "PendingNode": {
+            "tag": "NodeKind"
+          },
+          "PrimError": {
+            "code": "ErrorCode in {10, 11}"
+          },
+          "Selector": {
+            "sel": "BoolSelector"
+          },
+          "TypeTest": {
+            "ok": "Bool"
+          }
+        },
+        "encoding": "tag plus union payload columns; inactive columns zero"
+      },
+      "nesting": "At most one HelperControl is live (register reg.helper). No helper activates another helper in core; resume.store and resume.restore are ExtensionOnly (D-04)."
+    },
+    "HelperTask": {
+      "variants": {
+        "ValidateTask": {
+          "ref": "ValueRef",
+          "visit": "TaskVisit",
+          "cursor": "ArityCount"
+        },
+        "EqualTask": {
+          "left": "ValueRef",
+          "right": "ValueRef",
+          "visit": "TaskVisit",
+          "cursor": "ArityCount"
+        },
+        "PairTask": {
+          "binder": "NameId",
+          "sort": "SortTag",
+          "arg": "ValueRef"
+        }
+      },
+      "discipline": "LIFO stack img.tasks[0 .. taskLive-1] (security-phase0.md:63-74, D-18). One event performs at most: a full rewrite of the pre-image top slot, then at most one of {push one slot at index pre.taskLive, pop the pre-image top slot to zero}. Slots below the pre-image top are never written. Tail replacement is a full rewrite of the top slot with the child task."
+    },
+    "HelperResult": {
+      "register": "reg.result (Opt); present only between a helper exit or failure and the legacy completion that consumes it",
+      "variants": {
+        "Validated": {
+          "ok": "Bool"
+        },
+        "EnvFound": {
+          "value": "ValueRef"
+        },
+        "EnvMissing": {},
+        "EnvUpdated": {
+          "cell": "EnvId"
+        },
+        "FindFound": {
+          "function": "FunctionRowId"
+        },
+        "FindMissing": {},
+        "BindOk": {
+          "env": "EnvRoot"
+        },
+        "BindBad": {},
+        "AppendDone": {
+          "seq": "ValSlice"
+        },
+        "ScalarValue": {
+          "value": "ValueRef (Data space; freshly allocated)"
+        },
+        "ScalarError": {
+          "code": "ErrorCode in {10, 11}"
+        },
+        "ScalarSelector": {
+          "sel": "BoolSelector"
+        },
+        "ScalarTypeTest": {
+          "ok": "Bool"
+        },
+        "EqualDone": {
+          "value": "ValueRef (Data space Bool row; freshly allocated)"
+        },
+        "MatchMatched": {
+          "env": "EnvRoot"
+        },
+        "MatchNoMatch": {}
+      },
+      "site_result_sets": {
+        "answers": "Opus2 L-1 (result set depends on site and top.op), Muse F-04",
+        "EvalLiteral": [
+          "Validated"
+        ],
+        "EvalVar": [
+          "EnvFound",
+          "EnvMissing"
+        ],
+        "RetLet": [
+          "EnvUpdated"
+        ],
+        "RetRight with top.op = Eq": [
+          "EqualDone"
+        ],
+        "RetRight with top.op in {Add, Sub, Mul}": [
+          "ScalarValue(kind UInt)",
+          "ScalarError(10)",
+          "ScalarError(11)"
+        ],
+        "RetRight with top.op = Lt": [
+          "ScalarValue(kind Bool)",
+          "ScalarError(11)"
+        ],
+        "RetRight with top.op = Cons": [
+          "ScalarValue(kind Cons)",
+          "ScalarError(11)"
+        ],
+        "RetRight with top.op = Branch": [
+          "ScalarValue(kind Branch)",
+          "ScalarError(11)"
+        ],
+        "RetUnary with top.op = Leaf": [
+          "ScalarValue(kind Leaf)",
+          "ScalarError(11)"
+        ],
+        "RetUnary with top.op = Not": [
+          "ScalarValue(kind Bool)",
+          "ScalarError(11)"
+        ],
+        "RetIf": [
+          "ScalarSelector"
+        ],
+        "RetArgs": [
+          "AppendDone"
+        ],
+        "RetCall": [
+          "ScalarTypeTest"
+        ],
+        "Invoke": [
+          "FindFound",
+          "FindMissing"
+        ],
+        "Enter with function present": [
+          "BindOk",
+          "BindBad"
+        ],
+        "Cases with arms.len > 0": [
+          "MatchMatched",
+          "MatchNoMatch"
+        ],
+        "every other site": []
+      }
+    },
+    "Outcome": {
+      "variants": {
+        "Running": {},
+        "Halted": {
+          "value": "ValueRef"
+        },
+        "Rejected": {
+          "code": "ErrorCode"
+        },
+        "Exhausted": {
+          "reason": "ExhaustReason"
+        }
+      },
+      "source": "interfaces.md:58-60; tag order per extensions-and-obligations.md:41-45",
+      "core_reachable_reasons": [
+        "Fuel",
+        "DataNodes",
+        "DataFields",
+        "EnvironmentCells",
+        "HelperTasks",
+        "HelperWork"
+      ],
+      "reserved_reason": "SerializationBytes is produced only by a SourceSuspension checkpoint in the financial extension; never by a technical cut and never inside the core step (D-11a)"
+    }
+  },
+  "identity": {
+    "decision": "D-21 (answers Opus1 F3, Muse F-02, F-08)",
+    "Identity": {
+      "record": {
+        "profileId": "ProfileId",
+        "grammarDomain": "GrammarDomain",
+        "finance": "FinanceInput",
+        "layoutVersion": "Id",
+        "layoutDigest": "Digest",
+        "boundsDigest": "Digest",
+        "fieldId": "Opt<Id>",
+        "programMembershipDigest": "Digest"
+      },
+      "host_equality": "structural over profileId, grammarDomain, finance, the full LayoutSchema value, the full Bounds value and the full ProgramView value; Digest fields stay Unselected and are not used for host equality"
+    },
+    "RunId": {
+      "record": {
+        "identity": "Identity",
+        "fuelInput": "RunInt",
+        "stackLimitInput": "RunInt"
+      },
+      "rule": "deterministic; contains no time, randomness, host address or counter"
+    },
+    "ExpandedStepId": {
+      "record": {
+        "runId": "RunId",
+        "ordinal": "Nat"
+      },
+      "source": "interfaces.md:16",
+      "rule": "ordinal = number of StepEvents emitted earlier in the run; because every uncharged event is terminal, ordinal equals pre.consumedWork"
+    },
+    "SourceOccurrenceId": {
+      "record": {
+        "programSourceDigest": "Digest",
+        "owner": "Entry | Function{index: FunctionRowId}",
+        "astPath": "sequence of ChildPosition"
+      },
+      "source": "interfaces.md:15; schema-types.json:170-192; MCL design.md:138-152 (G2)",
+      "materialization": "sourceOf(e) = {programSourceDigest: identity.programMembershipDigest, owner: prog.occurrences[e].owner, astPath: prog.occurrencePaths[prog.occurrences[e].path]}"
+    },
+    "label_rule": "Every B009 evidence label, StepEvent identity (through RunId) and native statement carries profileId and grammarDomain. A claim without grammarDomain, or whose grammarDomain differs from its trace identity, is PUB-REFUSE; such a statement is C-INV."
+  },
+  "core_program_input": {
+    "decision": "D-13 and D-22 (answers Opus2 M-3 and the hand-built-view gap)",
+    "CoreProgram": {
+      "functions": "ordered sequence of CoreFunction (duplicates retained)",
+      "entry": "CoreExpr",
+      "carrier_linearity": "R3-T1 D-36 (Opus1 R3-2): CoreProgram, CoreExpr and CoreTree host carriers must be uniquely owned trees with no shared subterm pointers (no Arc/Rc DAG sharing), so syntactic occurrence count equals allocated node count and prepare_core pass_B_names traversal work is linear in the caller's allocation before C1's incremental codeRows check."
+    },
+    "CoreFunction": {
+      "name": "Text",
+      "parameters": "ordered sequence of {name: Text, sort: SortTag}",
+      "returnType": "SortTag",
+      "body": "CoreExpr"
+    },
+    "CoreExpr": {
+      "variant": {
+        "Literal": {
+          "value": "CoreValue"
+        },
+        "Var": {
+          "name": "Text"
+        },
+        "Let": {
+          "name": "Text",
+          "value": "CoreExpr",
+          "body": "CoreExpr"
+        },
+        "Binary": {
+          "op": "BinaryOp",
+          "left": "CoreExpr",
+          "right": "CoreExpr"
+        },
+        "Unary": {
+          "op": "UnaryOp",
+          "operand": "CoreExpr"
+        },
+        "If": {
+          "cond": "CoreExpr",
+          "thenExpr": "CoreExpr",
+          "elseExpr": "CoreExpr"
+        },
+        "Call": {
+          "name": "Text",
+          "args": "ordered sequence of CoreExpr"
+        },
+        "Match": {
+          "scrutinee": "CoreExpr",
+          "arms": "ordered sequence of {pattern: CorePattern, body: CoreExpr}"
+        }
+      }
+    },
+    "CorePattern": {
+      "variant": {
+        "PVar": {
+          "x": "Text"
+        },
+        "PNil": {},
+        "PCons": {
+          "x": "Text",
+          "y": "Text"
+        },
+        "PLeaf": {
+          "x": "Text"
+        },
+        "PBranch": {
+          "x": "Text",
+          "y": "Text"
+        }
+      }
+    },
+    "CoreValue": {
+      "variant": {
+        "UInt": {
+          "n": "KInt"
+        },
+        "Bool": {
+          "b": "Bool"
+        },
+        "List": {
+          "elements": "ordered sequence of KInt"
+        },
+        "Tree": {
+          "tree": "CoreTree"
+        }
+      }
+    },
+    "CoreTree": {
+      "variant": {
+        "Leaf": {
+          "n": "KInt"
+        },
+        "Branch": {
+          "left": "CoreTree",
+          "right": "CoreTree"
+        }
+      }
+    },
+    "from_reference_types": "A total lossless conversion from crate::sherlock::reference_types::Program (reference_types.rs:94-99) exists: Value::UInt(n) -> UInt(InRange n), List(xs) -> List(map InRange), Tree -> CoreTree with InRange leaves, names copied, function order preserved. No reference_types value maps to Negative or AboveU128.",
+    "from_reference_types_stage_status": "R2-T1 (owner clarification S2-b; security-opus-r2-2 S3): reference_types uses Arc (reference_types.rs:12,17), so a reference Program can be a shared DAG whose unfolded occurrence count is exponential in its allocation count. The conversion above is semantically total but unbounded in host work and memory before any capacity check, which conflicts with C3. It is usable only inside Stage 1 cfg(test) code on test-authored inputs. It is not a Stage 2 entry point until a bounded, capacity-refusing form is specified and reviewed; its form is not decided here.",
+    "k_domain_note": "Negative and AboveU128 literals are reachable only through CoreProgram (or a future K-literal adapter). They prepare to U128OutOfRange marker constants, so K error 2 (main.k:105-107) is preserved without a hand-built ProgramView."
+  },
+  "program_image_view": {
+    "source": "interfaces.md:144-158; prepared once, immutable at runtime (security-phase0.md:65)",
+    "construction": "Only prepare_core produces a ProgramView. admit runs prepare_core and then check_program_view (AD-5). No API admits a caller-supplied ProgramView.",
+    "tables": {
+      "prog.expressions": {
+        "capacity": "codeRows",
+        "row": {
+          "variant": {
+            "Literal": {
+              "constant": "ConstId"
+            },
+            "Var": {
+              "binder": "NameId"
+            },
+            "Let": {
+              "binder": "NameId",
+              "value": "ExprId",
+              "body": "ExprId"
+            },
+            "Binary": {
+              "op": "BinaryOp",
+              "left": "ExprId",
+              "right": "ExprId"
+            },
+            "Unary": {
+              "op": "UnaryOp",
+              "operand": "ExprId"
+            },
+            "If": {
+              "cond": "ExprId",
+              "thenExpr": "ExprId",
+              "elseExpr": "ExprId"
+            },
+            "Call": {
+              "functionName": "NameId",
+              "args": "ExprSlice"
+            },
+            "Match": {
+              "scrutinee": "ExprId",
+              "arms": "ArmSlice"
+            }
+          }
+        },
+        "occurrence": "ExprId is the occurrence index: one row per syntactic occurrence, no interning (interfaces.md:49). Preorder, entry first (ExprId 0), then each function body in original function order, children in semantic source order; every child and arm body ExprId is greater than its parent's (MCL design.md:65, 138-141, 154)."
+      },
+      "prog.occurrences": {
+        "capacity": "codeRows",
+        "row": {
+          "owner": "Entry | Function{index: FunctionRowId}",
+          "path": "OccPathSlice"
+        },
+        "rule": "row i describes ExprId i; root occurrences (entry, function bodies) have the empty path; Entry has no index (MCL design.md:150)"
+      },
+      "prog.occurrencePaths": {
+        "capacity": "layout.capacities.occurrencePathSlots",
+        "row": "ChildPosition",
+        "rule": "Let value 0, body 1; Binary left 0, right 1; Unary operand 0; If cond 0, then 1, else 2; Call argument i at i; Match scrutinee 0, arm k body k+1 (MCL design.md:146-150 F1(b), G2). Each complete path is appended in occurrence order."
+      },
+      "prog.children": {
+        "capacity": "codeChildSlots",
+        "row": "ExprId",
+        "rule": "each Call row's args slice, appended in ExprId order"
+      },
+      "prog.functions": {
+        "capacity": "functionRows",
+        "row": {
+          "functionName": "NameId",
+          "params": "ParamSlice",
+          "returnType": "SortTag",
+          "body": "ExprId"
+        },
+        "rule": "row index equals sourceTableIndex; original order, duplicate names retained"
+      },
+      "prog.parameters": {
+        "capacity": "parameterSlots",
+        "row": {
+          "binder": "NameId",
+          "sort": "SortTag"
+        },
+        "rule": "parameter slices appended in function order"
+      },
+      "prog.arms": {
+        "capacity": "matchArmRows",
+        "row": {
+          "pattern": "PatternRowId",
+          "body": "ExprId"
+        },
+        "rule": "each Match's arms contiguous, appended in ExprId order"
+      },
+      "prog.patterns": {
+        "capacity": "patternRows",
+        "row": {
+          "variant": {
+            "PVar": {
+              "x": "NameId"
+            },
+            "PNil": {},
+            "PCons": {
+              "x": "NameId",
+              "y": "NameId"
+            },
+            "PLeaf": {
+              "x": "NameId"
+            },
+            "PBranch": {
+              "x": "NameId",
+              "y": "NameId"
+            }
+          }
+        },
+        "rule": "one pattern row per arm, in source arm order"
+      },
+      "prog.constants": {
+        "capacity": "constantNodes",
+        "row": "ConstRow",
+        "order": "constant subtrees in literal ExprId order, each left-to-right post-order, children before parent, no interning (MCL design.md:156-161 F1(c))",
+        "out_of_range": "KInt Negative or AboveU128 prepares to U128OutOfRange with zero payload (D-13)"
+      },
+      "prog.constantFields": {
+        "capacity": "constantFieldSlots",
+        "row": "ConstId",
+        "rule": "a node's field block is appended with the node, after its children (MCL design.md:200 G1)"
+      },
+      "prog.names": {
+        "capacity": "layout.capacities.nameRows",
+        "row": {
+          "bytes": "Text (host metadata; total bytes bounded by layout.capacities.nameBytes)"
+        },
+        "rule": "distinct exact names, strictly ascending UTF-8 byte order, containing exactly the names occurring in program syntax including unused code (MCL design.md:128-136 F1(a)); NameId is the index, so NameId equality is name equality; circuit views carry NameId only (schema-types.json:32-35)"
+      }
+    },
+    "declaration_tables": "Under DedicatedSorts the view has no types, constructors, constructorFields or matchPlans table. Bounds typeRows, constructorRows, constructorFieldSlots and matchPlanRows are carried in identity only (AD-4). The A node form's builtin rows are a physical layout choice (I/L01-L02), not a core table.",
+    "header": {
+      "entry": "ExprId, always 0",
+      "activeLengths": "one ActiveLen per table above"
+    }
+  },
+  "machine_image": {
+    "source": "interfaces.md:135-143; extensions-and-obligations.md:15-29",
+    "identity": "Identity (section identity) with profileId sherlock-helper-microstep/1, grammarDomain DedicatedSorts, finance Absent",
+    "admission_binding": {
+      "decision": "R2-T1 D-32 (answers security-opus-r2-2 S1)",
+      "field": "img.admission: a shared handle to the exact Admitted instance that admit_run consumed. Host-only: it is not a register, is never encoded, is not part of DetInput beyond identity and adds no row read.",
+      "identity_rule": "img.identity is admission.identity; the image holds no identity register. Its only other Identity value is img.runId.identity (machine_image.run_id), the by-value Identity inside RunId (identity.RunId), which admitRun copies once from admission.identity. It equals admission.identity by construction, is never written by step, is never consulted by AB and is never a binding authority. Admission binding is decided only by instance identity (equality).",
+      "equality": "Binding equality is instance identity: Admitted handles a and b are bound to the same admission iff they share one allocation (Rust: Arc::ptr_eq on the private body). Clones of one Admitted share it; a second admit call, even with byte-identical arguments, creates a different admission.",
+      "why_instance_identity": "Every Identity digest is Digest::Unselected (primitive_types.Digest), so no digest can bind an image to its program. Structural ProgramView equality on every call would cost work proportional to program size in a fixed-step API, and two identical admissions gain nothing from being interchangeable. Because the image holds a strong reference, the allocation cannot be freed and reused for another admission while the image exists, so pointer identity cannot alias. Scoped B host deviation (Opus1 R3-5): MCL design.md:15 forbids Arc pointer identity for semantic value equality; here Arc::ptr_eq is used solely as a fail-closed host API pairing guard between Admitted and MachineImage, never for value equality, trace observations, work counts or serialization. T's comparator must step each image with its own Admitted handle.",
+      "set_by": "admit_run only; step never changes it",
+      "checked_by": "precedence AB in step, select, run and check_step_inv"
+    },
+    "run_id": {
+      "decision": "HM-RUNID-01 (proposed; closes OPEN-RUNID-IDENTITY-COPY and OPEN-RUNID-PLACEMENT-NOTE)",
+      "field": "img.runId: the RunId (identity.RunId) of this run, held through a shared immutable host handle. Host-only: not a register, never encoded, not part of DetInput beyond identity, adds no row read.",
+      "set_by": "admitRun only, exactly once, after R1 and before R2 returns or R3/R4 convert any input: RunId{identity: admission.identity, fuelInput: the fuel RunInt as supplied, stackLimitInput: the stackLimit RunInt as supplied}. genesis_valid and genesis_invalid both carry it; a Tooling return carries none. step never changes it.",
+      "use": "read only to form StepEvent.stepId.runId; equality is structural over the RunId value, never over the handle (identity.RunId rule: no host address)",
+      "binding": "never consulted by precedence AB; machine_image.admission_binding remains the sole binding authority"
+    },
+    "registers": {
+      "reg.control": "ControlRow",
+      "reg.controlOrigin": "ExprId",
+      "reg.envRoot": "EnvRoot",
+      "reg.depth": "Depth (logical frame count; equals the physical active length of img.frames)",
+      "reg.stackLimit": "StackLimit (K stackLimit; run input)",
+      "reg.outcome": "Outcome",
+      "reg.initialFuel": "WorkCounter",
+      "reg.remainingWork": "WorkCounter",
+      "reg.consumedWork": "WorkCounter",
+      "reg.helperWork": "HelperCounter",
+      "reg.helperVisits": "HelperCounter (diagnostic; never a charge)",
+      "reg.referenceCursor": "ReferenceCursor",
+      "reg.alloc.dataNodes": "AllocDataNodes (logical, monotone)",
+      "reg.alloc.dataFields": "AllocDataFields (logical, monotone)",
+      "reg.alloc.environmentCells": "AllocEnvCells (logical, monotone)",
+      "reg.active.data": "ActiveLen(img.data) (physical)",
+      "reg.active.dataFields": "ActiveLen(img.dataFields) (physical)",
+      "reg.active.env": "ActiveLen(img.env) (physical)",
+      "reg.active.valueSlots": "ActiveLen(img.valueSlots) (physical only; no logical counter, D-08R)",
+      "reg.taskLive": "TaskCount (equals the physical active length of img.tasks)",
+      "reg.helper": "Opt<HelperControl>",
+      "reg.result": "Opt<HelperResult>",
+      "reg.segBase": "{active: {data, dataFields, env, valueSlots}, alloc: {dataNodes, dataFields, environmentCells}, consumedWork}; BOUNDARY RESERVED: all zero in B-core (SI-05); set only by a future canonical resume"
+    },
+    "tables": {
+      "img.data": {
+        "capacity": "bounds.dataNodes (single segment)",
+        "row": "DataRow",
+        "discipline": "append-only between canonical boundaries; write only at reg.active.data with exact +1"
+      },
+      "img.dataFields": {
+        "capacity": "bounds.dataFieldSlots (single segment)",
+        "row": "FieldSlot",
+        "discipline": "append-only; a node's field block is written in the same event as the node row, immediately before it (G1)"
+      },
+      "img.env": {
+        "capacity": "bounds.environmentCells (single segment)",
+        "row": "EnvCell",
+        "discipline": "append-only persistent cells; previous strictly below own index"
+      },
+      "img.valueSlots": {
+        "capacity": "layout.capacities.valueSlots",
+        "row": "ValueSlot",
+        "discipline": "append-only physical arena; one slot written per Append.copy or Append.tail event at reg.active.valueSlots; never rewritten or reused before projection; separate from constructor fields (MCL design.md:223-227)"
+      },
+      "img.frames": {
+        "capacity": "bounds.frames",
+        "row": "FrameRow",
+        "discipline": "bottom-first; slot depth-1 is top; push fully writes slot depth; replace fully rewrites slot depth-1; pop zeroes slot depth-1 in the same event"
+      },
+      "img.tasks": {
+        "capacity": "bounds.helperTasks",
+        "row": "HelperTask",
+        "discipline": "LIFO per records.HelperTask.discipline"
+      }
+    },
+    "storage_note": "A host may grow each table lazily up to its capacity; rows at or above the active length are zero by definition. This keeps host memory proportional to active lengths and does not change any rule.",
+    "logical_vs_physical": {
+      "semantic_counters": [
+        "reg.remainingWork",
+        "reg.consumedWork",
+        "reg.helperWork",
+        "reg.referenceCursor",
+        "reg.alloc.dataNodes",
+        "reg.alloc.dataFields",
+        "reg.alloc.environmentCells",
+        "reg.depth",
+        "reg.taskLive"
+      ],
+      "diagnostic_counter": [
+        "reg.helperVisits"
+      ],
+      "physical_prefixes": [
+        "reg.active.data",
+        "reg.active.dataFields",
+        "reg.active.env",
+        "reg.active.valueSlots",
+        "img.frames prefix = reg.depth",
+        "img.tasks prefix = reg.taskLive"
+      ],
+      "rules": [
+        "Exhaustion is decided only on logical counters against Bounds (P6), never on physical active lengths.",
+        "Within a segment each of data, dataFields and env advances its physical active length and its logical counter by the same delta in every event (SI-05). img.valueSlots has no logical counter; its writes are each one charged event, so its growth is bounded by charged work (SI-23).",
+        "Projection (blocked boundary section) may change physical active lengths; it never changes a logical counter."
+      ]
+    },
+    "semantic_environment": "The B environment is the ordered newest-first binding chain including shadowed cells; its K Map is the erasure where the first binding per binder wins (MCL design.md:239). Chain order determines EnvGet work, so it is part of the B reference state (D-05).",
+    "values_root": {
+      "answers": "Opus1 F10, Opus2 M-2 (F-15 part)",
+      "disposition": "interfaces.md ReferenceState.values has no K cell (main.k:64-71) and schema-types.json ReferenceState omits it. B-core stores every value sequence as a ValSlice into img.valueSlots, referenced from Invoke/Enter controls, ArgsF frames, the Bind/Append helper and AppendDone. decodeStep materializes ReferenceState.values as the list of those referenced sequences in root order (control, frames bottom to top, helper, result), so the observation field does not disappear (extensions-and-obligations.md:21). Per R3-T1 D-36 (Opus2 R3-L1), any host decoding or materialization of Data/Const values out of an image (decodeStep, materializeStep, comparator or example output) must either preserve sharing (memoized per row ID) or refuse incrementally at a declared capacity (MCL F5, C3). Whether the I-owned schema also stores a separate root ValueSlice is an integrator decision (OPEN-I-1), not a security decision; this supplement requires only that the materialized field is complete."
+    }
+  },
+  "admission": {
+    "prepare_core": {
+      "signature": "prepare_core(program: CoreProgram, bounds: Bounds, layout: LayoutSchema) -> Result<ProgramView, Tooling>",
+      "deterministic_order": {
+        "decision": "D-27 (answers Muse F-10)",
+        "rule": "Three passes in fixed order; the first failing check in pass order, and within a pass in traversal order, is the single reported Tooling value.",
+        "traversal": "Occurrence preorder: the entry expression, then for each function in table order its name, its parameter names in order, then its body. Within an expression node: the node's own names (Var binder, Let binder, Call functionName, each arm's pattern binders x then y in arm order) before its children in semantic source order.",
+        "pass_A_features": "For adapters from a richer AST only: the first generic or financial construct in traversal order yields UnsupportedFeature{feature, locator}. CoreProgram cannot express such constructs, so pass A is vacuous for CoreProgram.",
+        "pass_B_names": "Collect distinct names in traversal order; when the distinct count would exceed nameRows report CapacityNotAdmitted{NameRows}; when the cumulative distinct-name byte total would exceed nameBytes report CapacityNotAdmitted{NameBytes}. Sorting happens after the pass.",
+        "pass_C_emission": [
+          "C1 expressions and occurrences in occurrence preorder: each emitted row checks codeRows; each Call checks args count <= maxArity (CapacityNotAdmitted{MaxArity})",
+          "C2 children slots in ExprId order: codeChildSlots",
+          "C3 arms then their pattern rows in ExprId order: matchArmRows, then patternRows per arm",
+          "C4 occurrence paths in occurrence order: occurrencePathSlots",
+          "C5 functions in table order: functionRows; each function checks parameter count <= maxArity, then its parameters: parameterSlots",
+          "C6 constants in literal ExprId order, left-to-right post-order: constantNodes per node, constantFieldSlots per field block"
+        ],
+        "incremental": "every check happens at the emitting row, refusing at the first overflow, never after a complete traversal (F5)"
+      },
+      "never": "No preparation failure is an Outcome, error code or Exhausted reason."
+    },
+    "check_program_view": {
+      "decision": "D-22 AD-5 (answers Opus2 M-3)",
+      "signature": "check_program_view(view: ProgramView, bounds: Bounds, layout: LayoutSchema) -> Result<(), ProgramViewViolation>",
+      "checks": [
+        "V1 header: entry = 0; active(prog.expressions) >= 1; every active length <= its capacity",
+        "V2 expressions: every child ExprId and arm body ExprId is greater than its parent ExprId and < active(prog.expressions); every slice lies inside its table; Literal constant < active(prog.constants); every NameId < active(prog.names); inactive columns zero",
+        "V3 occurrences: row i has owner Entry for the entry tree and Function{f} for function f's body tree; the path of every child equals its parent's path plus its ChildPosition; roots have the empty path",
+        "V4 functions: params slices contiguous in function order; body ExprId is the root of owner Function{f}; returnType and parameter sorts valid",
+        "V5 patterns: PVar and PLeaf use x only, PCons and PBranch use x and y, PNil none; one pattern per arm",
+        "V6 constants: every ConstantFields entry of row j is < j; row typing per records.ConstRow.field_kinds; U128OutOfRange has zero payload; markerFree(j) = (tag != U128OutOfRange and every field markerFree)",
+        "V7 names: distinct, valid UTF-8, strictly ascending bytes, total bytes <= nameBytes, and every NameId is used by at least one row",
+        "V8 order: the view equals prepare_core applied to the CoreProgram it decodes to (bit for bit, MCL design.md:59)"
+      ],
+      "use": "admit calls it on prepare_core's output (defence in depth). Any test that constructs a view by hand must pass it before use; there is no admission path for a view that fails it."
+    },
+    "admit": {
+      "signature": "admit(program: CoreProgram, bounds: Bounds, layout: LayoutSchema) -> Result<Admitted, Tooling>",
+      "source": "interfaces.md:43-47; security-candidate-b.md:46; SHERLOCK-IMPLEMENTATION-PLAN.md:125-129",
+      "checks_in_order": [
+        "AD-0 RETIRED (R2-T1 D-31). Every Bounds and LayoutCapacities field is a Nat held in usize or u128, so ranges '>= 0' and 'any' hold by type. The three fields with a stronger range are classified by their own capacity checks: stepCap by AD-1, maxArity by AD-3 and codeRows by prepare_core C1. AD-0 produces nothing.",
+        "AD-0a (R3-T1 D-34; answers Opus2 R3-B1, Opus1 R3-1, Muse R3-F02) layout.bounds == bounds (structural equality across all 22 Bounds fields), else AdmissionRejected{reason: LayoutBoundsMismatch, detail: 'layout.bounds != bounds', locator: Field{name: 'layout.bounds'}}. Authoritative-copy rule: every unqualified Bounds field in derived_widths, prepare_core, check_program_view, admit (AD-1..AD-6), admitRun (R1..R6), rows, guards, StepInv and DetInput denotes the admitted bounds parameter (which equals layout.bounds on every Admitted value by AD-0a; direct calls to prepare_core(p, b, l) and check_program_view(v, b, l) read b).",
+        "AD-1 bounds.stepCap >= 1, else CapacityNotAdmitted{kind: StepCap, needed: 1, limit: bounds.stepCap, locator: Field{name: 'bounds.stepCap'}} (security-candidate-b.md:46; interfaces.md:47)",
+        "AD-2a if layout.widths is present, in this fixed order: counterWidths.WorkCounter >= bitlen(bounds.maxReferenceWork), counterWidths.HelperCounter >= bitlen(bounds.maxHelperWork), counterWidths.ReferenceCursor >= bitlen(bounds.maxReferenceWork); the first failure is CapacityNotAdmitted{kind: CounterWidth{field}, needed: the bitlen value, limit: the declared width, locator: Field{name: 'layout.widths.counterWidths.<field>'}}. An entry absent from counterWidths counts as width 0. These are exactly the counters A2 names (security-candidate-b.md:46: 'counter widths large enough for maxReferenceWork and maxHelperWork').",
+        "AD-2b if layout.widths is present: every other width >= its derived_widths formula evaluated at bounds and layout.capacities, checked in derived_widths order, else AdmissionRejected{LayoutWidthTooSmall, detail: the width name}; an absent entry counts as width 0. If layout.widths is absent, AD-2a and AD-2b are vacuous (host counters are u128 and every bound fits) and Admitted.encoding = HostOnly",
+        "AD-3 bounds.maxArity >= 2, else CapacityNotAdmitted{kind: MaxArity, needed: 2, limit: bounds.maxArity, locator: Field{name: 'bounds.maxArity'}}. Explicit conservative narrowing choice (Opus1 R3-6): ArityCount uses count(maxArity) and bounds Call/Function arity as well as value-sequence slices (interfaces.md:128; extensions-and-obligations.md:36-39)",
+        "AD-4 grammarDomain DedicatedSorts: no declaration table exists in the view; typeRows, constructorRows, constructorFieldSlots and matchPlanRows are carried in identity only. AD-4 is a statement and produces nothing",
+        "AD-5 view := prepare_core(program, bounds, layout), whose Tooling failure propagates unchanged (CapacityNotAdmitted, or UnsupportedFeature from pass A); then check_program_view(view), whose failure is AdmissionRejected{ProgramViewMalformed, detail: the ProgramViewViolation check id}",
+        "AD-6 layout.boundaryCapacities absent, else UnsupportedFeature{feature: BoundarySection, locator: Field{name: 'layout.boundaryCapacities'}} (the boundary section is blocked)"
+      ],
+      "error_type_amendment": {
+        "decision": "R2-T1 D-31 (answers security-opus-r2-1 R2-L3 and security-opus-r2-2 S2)",
+        "old_signature": "admit(program, bounds: Bounds, layout: LayoutSchema) -> Result<Admitted, CapacityNotAdmitted> (interfaces.md:43-44; SHERLOCK-IMPLEMENTATION-PLAN.md:129, the Opus profile-erratum handoff)",
+        "new_signature": "admit(program: CoreProgram, bounds: Bounds, layout: LayoutSchema) -> Result<Admitted, Tooling>",
+        "amendment": "This explicitly amends the erratum signature. The error type widens from CapacityNotAdmitted to Tooling, whose three variants are exactly interfaces.md:38-39 PreparationFailure. The widening is forced because admit now runs prepare_core and check_program_view (AD-5, D-22) and refuses boundaryCapacities (AD-6). Both A2 conditions (stepCap and the two named counter widths) still fail with exactly the CapacityNotAdmitted variant. Every Tooling value stays outside Outcome, error codes and Exhausted reasons, so the widening adds no application result.",
+        "integration": "interfaces.md and the plan are root/I-owned. This supplement does not edit them; root integrates the amended signature through the ordinary interface path."
+      },
+      "capacity_kind_producers": {
+        "rule": "Each CapacityKind is produced only at the sites listed; no core site produces any other kind.",
+        "CodeRows": "prepare_core C1 (including codeRows = 0 at the entry occurrence)",
+        "FunctionRows": "C5",
+        "CodeChildSlots": "C2",
+        "ParameterSlots": "C5",
+        "PatternRows": "C3",
+        "MatchArmRows": "C3",
+        "ConstantNodes": "C6",
+        "ConstantFieldSlots": "C6",
+        "MaxArity": "C1 (call argument count), C5 (parameter count), AD-3",
+        "NameRows": "pass B",
+        "NameBytes": "pass B",
+        "OccurrencePathSlots": "C4",
+        "ValueSlots": "admitRun R5",
+        "MaxReferenceWork": "admitRun R3",
+        "Frames": "admitRun R4",
+        "StepCap": "AD-1",
+        "CounterWidth": "AD-2a",
+        "SerializationBytes": "boundaries.occupancy_envelope only (blocked section); no core B-core function produces it",
+        "PhysicalBoundaryEnvelope": "boundaries.occupancy_envelope only (blocked section); no core B-core function produces it"
+      },
+      "Admitted": {
+        "record": {
+          "identity": "Identity",
+          "view": "ProgramView",
+          "bounds": "Bounds",
+          "layout": "LayoutSchema",
+          "encoding": "HostOnly | Bounded"
+        },
+        "rule": "opaque: constructible only by admit",
+        "handle": "R2-T1 D-32: an Admitted value is a handle to one shared, immutable admission body. Copying the handle shares the body and never deep-copies it. machine_image.admission_binding defines the binding equality."
+      },
+      "note": "Admitted does not imply closed-body or unique-name checks; K needs neither (first-match lookup and runtime error 3 are K semantics; interfaces.md:47)."
+    },
+    "admitRun": {
+      "signature": "admitRun(admitted: Admitted, fuel: RunInt, stackLimit: RunInt, finance: FinanceInput) -> Result<MachineImage, Tooling>",
+      "checks_in_order": [
+        "R1 finance != Absent -> UnsupportedFeature{FinancialInput}",
+        "R2 fuel = Negative or stackLimit = Negative -> genesis_invalid (K startup.invalid main.k:78-79; default cells main.k:66-71); not a refusal",
+        "R3 fuel = NatAboveU128 or fuel > bounds.maxReferenceWork -> CapacityNotAdmitted{MaxReferenceWork, needed, limit}",
+        "R4 stackLimit = NatAboveU128 or stackLimit > bounds.frames -> CapacityNotAdmitted{Frames} (D-03)",
+        "R5 fuel > layout.capacities.valueSlots -> CapacityNotAdmitted{ValueSlots} (D-08R)",
+        "R6 otherwise genesis_valid (K startup.valid main.k:74-77)"
+      ]
+    },
+    "genesis": {
+      "genesis_valid": "control Eval(0); controlOrigin 0; envRoot absent; depth 0; stackLimit L; outcome Running; initialFuel F; remainingWork F; consumedWork 0; helperWork 0; helperVisits 0; referenceCursor 0; every alloc and active counter 0; segBase zero; taskLive 0; helper absent; result absent; every table row zero",
+      "genesis_invalid": "as genesis_valid except control Error(1), stackLimit 0, initialFuel 0, remainingWork 0",
+      "canonical": "Both genesis images are canonical under any sharing policy because every arena is empty."
+    }
+  },
+  "error_table": [
+    {
+      "code": 1,
+      "meaning": "negative initial fuel or stack limit",
+      "k_producer": "k.admin.startup.invalid (main.k:78-79)",
+      "b_producer_event": "admitRun R2 genesis_invalid",
+      "producer_charge": 0,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 2,
+      "meaning": "literal fails recursive uiValid",
+      "k_producer": "k.machine.eval.literal.invalid",
+      "b_producer_event": "k.machine.eval.literal.invalid after Validated(false)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 3,
+      "meaning": "variable absent from current environment",
+      "k_producer": "k.machine.eval.variable.absent",
+      "b_producer_event": "k.machine.eval.variable.absent after EnvMissing",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 4,
+      "meaning": "push with depth >= stackLimit",
+      "k_producer": "k.machine.push.refuse",
+      "b_producer_event": "k.machine.push.refuse (no helper)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0,
+        "note": "even at zero fuel"
+      }
+    },
+    {
+      "code": 5,
+      "meaning": "if condition not Bool",
+      "k_producer": "k.machine.return.if.invalid",
+      "b_producer_event": "k.machine.return.if.invalid after ScalarSelector(NotBool)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 6,
+      "meaning": "returned value lacks declared return type",
+      "k_producer": "k.machine.return.call.invalid",
+      "b_producer_event": "k.machine.return.call.invalid after ScalarTypeTest(false)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 7,
+      "meaning": "function name not found",
+      "k_producer": "k.machine.enter.missing",
+      "b_producer_event": "k.machine.enter.missing (Enter with absent function, produced by invoke.find after FindMissing)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 8,
+      "meaning": "arity mismatch, duplicate parameter or argument type mismatch",
+      "k_producer": "k.machine.bound.invalid",
+      "b_producer_event": "k.machine.bound.invalid (Bound Bad, produced by enter.bind after BindBad)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 9,
+      "meaning": "case list exhausted (NoMatch mapping, UISEC-B007)",
+      "k_producer": "k.machine.cases.empty",
+      "b_producer_event": "k.machine.cases.empty (no helper)",
+      "producer_charge": 1,
+      "propagation_events": [],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 10,
+      "meaning": "checked arithmetic result outside [0, 2^128)",
+      "k_producer": "k.helper.uiChecked.02 inside k.machine.return.right, then k.machine.primitive.error",
+      "b_producer_event": "b.helper.Scalar.arithmetic stages PrimError(10)",
+      "producer_charge": 1,
+      "propagation_events": [
+        {
+          "rule": "b.helper.Scalar.failure",
+          "charge": 1
+        },
+        {
+          "rule": "k.machine.return.right",
+          "charge": 1
+        },
+        {
+          "rule": "k.machine.primitive.error",
+          "charge": 1
+        }
+      ],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    },
+    {
+      "code": 11,
+      "meaning": "primitive operand sort mismatch",
+      "k_producer": "k.helper.uiBinaryResult.08-13 or k.helper.uiUnaryResult.03-04, then k.machine.primitive.error",
+      "b_producer_event": "b.helper.Scalar.tag, b.helper.Scalar.arithmetic or b.helper.Scalar.construct stages PrimError(11)",
+      "producer_charge": 1,
+      "propagation_events": [
+        {
+          "rule": "b.helper.Scalar.failure",
+          "charge": 1
+        },
+        {
+          "rule": "k.machine.return.right or k.machine.return.unary",
+          "charge": 1
+        },
+        {
+          "rule": "k.machine.primitive.error",
+          "charge": 1
+        }
+      ],
+      "publication": {
+        "rule": "k.admin.publish.error",
+        "charge": 0
+      }
+    }
+  ],
+  "is_resource_limit": {
+    "signature": "isResourceLimit(profile: ProfileId, observation: Observation) -> Bool",
+    "source": "security-candidate-b.md:20-36; interfaces.md:109-122; reference_types.rs:136-153",
+    "table": {
+      "sherlock-k-a/1": "Exhausted(_) or Rejected(4)",
+      "sherlock-quint-a/1": "phase = Exhausted or (phase = Rejected and reason = StackBound); ConstructorMismatch, ScalarBound and MissingReference are not",
+      "sherlock-helper-microstep/1": "Exhausted(r) for every r in ExhaustReason, or Rejected(4); Rejected(c) for c in {1,2,3,5,6,7,8,9,10,11} is not"
+    },
+    "rules": [
+      "The classifier never rewrites a raw observation.",
+      "No consumer may read a resource-limit outcome as a semantic, typing or financial rejection.",
+      "No profile's value transfers to another without an OSR-1014-02 differential predicate.",
+      "Tooling results are not observations and are never classified."
+    ]
+  },
+  "precedence": {
+    "name": "A2-double-prime R2 (supersedes security-phase0.md:38-53 for sherlock-helper-microstep/1)",
+    "steps": [
+      {
+        "id": "AB",
+        "guard": "the supplied Admitted is not bound to img.admission (machine_image.admission_binding)",
+        "result": "HostViolation{kind: StepInvViolated, clause: SI-01, rule: none, locator: 'admission binding'}; no event; image unchanged. R2-T1 D-32 (security-opus-r2-2 S1). AB is an API precondition evaluated before P0 and before any program-table, image-table or register read other than the binding handle. It runs first in step, select, run and check_step_inv. It is not a schedule row and changes no row, charge or outcome on a bound pair."
+      },
+      {
+        "id": "P0",
+        "guard": "pre.outcome != Running",
+        "result": "no event; StepResult Terminal; image unchanged"
+      },
+      {
+        "id": "P1",
+        "guard": "pre.helper absent and pre.result absent and (pre.control is Error or (pre.control is Return and pre.depth = 0))",
+        "result": "outcome := Rejected(c.code) or Halted(c.value); cost 0; referenceCursor unchanged (D-09R); ruleId k.admin.publish.error or k.admin.publish.value; eventKind Publish; disposition Published"
+      },
+      {
+        "id": "P2",
+        "guard": "pre.remainingWork = 0",
+        "result": "outcome := Exhausted(Fuel); cost 0; referenceCursor unchanged; ruleId k.admin.publish.exhausted; eventKind Publish; disposition ExhaustedFuelUncharged; helper, result and tasks retained"
+      },
+      {
+        "id": "PS",
+        "guard": "always after P2",
+        "result": "E := select(prog, pre) and plan := rowPlan(E, prog, pre), both pure over the pre-image. Any failure (select undefined, out-of-bound read, wrong variant, Disabled or ExtensionOnly row) is HostViolation; the image is not mutated (answers Opus2 L-3). Physical capacity (R2-T1 D-33, security-opus-r2-1 R2-L5): rowPlan also computes, purely, capRefusal := the first kind in the P6 order whose final delta is positive and exceeds its cap, or none. If capRefusal is none, every arena position the plan's effects would write must be below that arena's physical capacity (img.data bounds.dataNodes, img.dataFields bounds.dataFieldSlots, img.env bounds.environmentCells, img.valueSlots layout.capacities.valueSlots, img.frames bounds.frames, img.tasks bounds.helperTasks); otherwise PS fails with HostViolation{PhysicalCapacityExceeded, rule: E.id}. If capRefusal is some, P6 writes nothing and no physical check applies, so a valid logical exhaustion is never turned into a HostViolation. On StepInv images this check never fails (SI-05, SI-06, SI-23 with R5, P6); it is defence in depth. No physical capacity check runs after P4; P6, the only check after P4, is the logical cap check and uses the capRefusal value computed here."
+      },
+      {
+        "id": "P3",
+        "guard": "E.helperEligible and pre.helperWork = bounds.maxHelperWork",
+        "result": "outcome := Exhausted(HelperWork); cost 0; no other change; ruleId E.id; disposition RefusedHelperWorkUncharged"
+      },
+      {
+        "id": "P4",
+        "guard": "always after P3",
+        "result": "remainingWork -= 1; consumedWork += 1; helperWork += 1 iff E.helperEligible"
+      },
+      {
+        "id": "P5",
+        "guard": "retired",
+        "result": "The A2-prime frame-capacity row is replaced by the ordinary legacy row k.machine.push.refuse selected by depth >= stackLimit; the physical frame capacity is unreachable because admitRun R4 requires stackLimit <= bounds.frames."
+      },
+      {
+        "id": "P6",
+        "guard": "for kind in [DataNodes, DataFields, EnvironmentCells, HelperTasks] in this fixed order: plan.finalDelta(kind) > 0 and counter(kind) + plan.finalDelta(kind) > cap(kind)",
+        "result": "outcome := Exhausted(kind) for the first such kind; only P4 effects persist; no write, no allocation-counter change, no helperVisits change, no referenceCursor change; ruleId E.id; disposition RefusedCapCharged",
+        "counters": {
+          "DataNodes": "reg.alloc.dataNodes vs bounds.dataNodes",
+          "DataFields": "reg.alloc.dataFields vs bounds.dataFieldSlots",
+          "EnvironmentCells": "reg.alloc.environmentCells vs bounds.environmentCells",
+          "HelperTasks": "reg.taskLive vs bounds.helperTasks"
+        },
+        "rule": "the checked kinds are exactly those whose final delta (base plus every applicable conditional add) is positive"
+      },
+      {
+        "id": "P7",
+        "guard": "always after P6",
+        "result": "apply plan.effects; helperVisits += E.helperVisits; referenceCursor += 1 iff E.eventKind = LegacyComplete; disposition Applied"
+      }
+    ],
+    "consequences": [
+      "helperWork <= maxHelperWork and remainingWork >= 0 are invariants.",
+      "Every event costs 0 or 1, so stepCap >= 1 makes the stepCap refusal unreachable.",
+      "A step that cannot be charged (P2, P3) performs no work.",
+      "Exhausted(SerializationBytes) is never produced by step.",
+      "img.valueSlots writes are never checked in P6 and can never exhaust: SI-23 and admitRun R5 make the physical capacity unreachable; a pre-image whose planned slot write would not fit is reported by PS as HostViolation{PhysicalCapacityExceeded} before P3, never after P4 (R2-T1 D-33).",
+      "On a bound pair, AB never fires, so every consequence above is unchanged by R2-T1."
+    ]
+  },
+  "row_language": {
+    "decision": "D-24 (answers Muse F-06, Opus1 F7, the user's mechanical-interpretability requirement)",
+    "evaluation": "Every Expr and guard is a pure function of (prog, bounds, layout, pre-image) plus row-local bindings. All reads observe the PRE-image. Effects are computed in full first and applied afterwards (deferred write, helper_schedule.rs:175-177 pattern). A read outside its bound, a projection of an inactive variant, unwrap of an absent option, arithmetic below zero, or an undefined function application means the pre-image is outside StepInv: HostViolation, no mutation.",
+    "grammar_ebnf": [
+      "Expr    ::= Or",
+      "Or      ::= And { 'or' And }",
+      "And     ::= Not { 'and' Not }",
+      "Not     ::= 'not' Not | Rel",
+      "Rel     ::= Add [ RelOp Add | 'in' '{' Expr { ',' Expr } '}' | 'is' Variant ]",
+      "RelOp   ::= '=' | '!=' | '<' | '<=' | '>' | '>='",
+      "Add     ::= Prim { ( '+' | '-' ) Prim }",
+      "Prim    ::= Atom { '.' Ident }",
+      "Atom    ::= Nat | 'true' | 'false' | 'none' | Root | Call | Ctor | Variant | 'if' Expr 'then' Expr 'else' Expr | '(' Expr ')'",
+      "Root    ::= 'pre' | 'bounds' | 'layout' | 'c' | 'X' | 'v' | 'top' | 'h' | 'T' | 'r' | Local",
+      "Call    ::= Fn '(' [ Expr { ',' Expr } ] ')'",
+      "Ctor    ::= Variant '{' [ Ident ':' Expr { ',' Ident ':' Expr } ] '}'",
+      "Variant ::= an enum value or record variant name from this schema (for example Add, Pending, Eval, LetF, ScalarValue, PrimError); a qualified form Enum::Name is accepted where a bare name is ambiguous",
+      "Local   ::= a lowercase identifier bound earlier in the same row by a let or bind effect"
+    ],
+    "ast": {
+      "Lit": "{k: 'lit', type, value}",
+      "Proj": "{k: 'proj', base: Expr, field: Ident} (a '.' projection after any atom, including a call result)",
+      "Root": "{k: 'root', name}",
+      "None": "{k: 'none'} (the absent option)",
+      "Call": "{k: 'call', fn, args: [Expr]}",
+      "Ctor": "{k: 'ctor', variant, fields: {Ident: Expr}}",
+      "Un": "{k: 'not', arg}",
+      "Bin": "{k: 'bin', op: one of = != < <= > >= + - and or, l, r}",
+      "In": "{k: 'in', arg, set: [Expr]}",
+      "Is": "{k: 'is', arg, variant}",
+      "If": "{k: 'if', cond, then, else}",
+      "rule": "The textual form in rows-supplement.json parses deterministically to this AST: precedence from lowest to highest is or, and, not, relational/in/is, additive, primary; binary operators associate left."
+    },
+    "roots": {
+      "pre": "the pre-image registers (pre.control, pre.depth, pre.taskLive, pre.envRoot, pre.controlOrigin, pre.referenceCursor, pre.active.*, pre.alloc.*, pre.helper, pre.result, pre.stackLimit)",
+      "bounds": "the admitted Bounds",
+      "layout": "the admitted LayoutSchema",
+      "c": "pre.control",
+      "X": "expr(c.expr); defined iff c is Eval",
+      "v": "c.value; defined iff c is Return",
+      "top": "img.frames[pre.depth - 1]; defined iff pre.depth > 0",
+      "h": "the payload of pre.helper; defined iff present",
+      "T": "img.tasks[pre.taskLive - 1]; defined iff pre.taskLive > 0",
+      "r": "the payload of pre.result; defined iff present"
+    },
+    "functions": {
+      "deref(ref)": "logical_kind section; bound active(prog.constants) or pre.active.data",
+      "kind(ref)": "logical_kind section",
+      "arity(k)": "logical_kind section",
+      "sortOfKind(k)": "logical_kind section",
+      "u128(ref)": "logical_kind section",
+      "bool(ref)": "logical_kind section",
+      "field(ref, i)": "logical_kind section; bound active(prog.constantFields) or pre.active.dataFields",
+      "shallowDiffer(a, b)": "logical_kind section",
+      "vslot(s, i)": "img.valueSlots[s.start + i]; requires i < s.len and s.start + s.len <= pre.active.valueSlots",
+      "cell(e)": "img.env[e]; requires e < pre.active.env",
+      "expr(e)": "prog.expressions[e]; requires e < active(prog.expressions)",
+      "fn(f)": "prog.functions[f]; requires f < active(prog.functions)",
+      "param(i)": "prog.parameters[i]; requires i < active(prog.parameters)",
+      "armRow(i)": "prog.arms[i]; requires i < active(prog.arms)",
+      "patRow(i)": "prog.patterns[i]; requires i < active(prog.patterns)",
+      "childAt(i)": "prog.children[i]; requires i < active(prog.children)",
+      "markerFree(j)": "prog.constants[j].markerFree",
+      "slice(s, n)": "{start: s, len: n} if n > 0 else {start: 0, len: 0}",
+      "some(x)": "present option holding x",
+      "none": "absent option",
+      "isSome(o)": "Bool",
+      "isNone(o)": "Bool",
+      "unwrap(o)": "the value of a present option; undefined if absent",
+      "checkedArith(mode, a, b)": "for mode in {Add, Sub, Mul}: the exact mathematical a op b (full 256-bit product for Mul); returns Value{n} if 0 <= result < 2^128, else Overflow (main.k:250-256; interfaces.md:202-207)",
+      "scalarModeOf(op)": "BinaryOp Add, Sub, Mul, Lt, Cons, Branch to the same-named ScalarMode; UnaryOp Leaf, Not to the same-named ScalarMode; undefined for Eq",
+      "patternKind(tag)": "PNil -> Nil; PCons -> Cons; PLeaf -> Leaf; PBranch -> Branch; undefined for PVar",
+      "tagOf(row)": "the variant tag of a variant row (for a pattern row, its PatternTag)",
+      "site(pre)": "dispatch.site"
+    },
+    "effects": {
+      "let": "{op: 'let', bind: Local, value: Expr} pure local binding",
+      "set": "{op: 'set', target: LValue, value: Expr}; LValue is reg.control, reg.controlOrigin, reg.envRoot, reg.result, reg.helper, or h.<field> (a field of the live helper)",
+      "framePush": "{op: 'framePush', value: Expr}: img.frames[pre.depth] := value (full write); reg.depth := pre.depth + 1",
+      "frameRewriteTop": "{op: 'frameRewriteTop', value: Expr}: img.frames[pre.depth - 1] := value (full write)",
+      "framePop": "{op: 'framePop'}: img.frames[pre.depth - 1] := zero; reg.depth := pre.depth - 1",
+      "taskRewriteTop": "{op: 'taskRewriteTop', value: Expr}: img.tasks[pre.taskLive - 1] := value (full write)",
+      "taskPush": "{op: 'taskPush', value: Expr}: img.tasks[pre.taskLive] := value (full write); reg.taskLive := pre.taskLive + 1",
+      "taskPop": "{op: 'taskPop'}: img.tasks[pre.taskLive - 1] := zero; reg.taskLive := pre.taskLive - 1",
+      "allocData": "{op: 'allocData', bind: Local, row: Expr}: position p = pre.active.data; img.data[p] := row; active.data and alloc.dataNodes += 1; Local := Data(p)",
+      "allocField": "{op: 'allocField', bind?: Local, value: Expr}: position p = pre.active.dataFields + (number of earlier allocField effects in this row); img.dataFields[p] := value; active.dataFields and alloc.dataFields += 1; Local := p",
+      "allocEnv": "{op: 'allocEnv', bind: Local, cell: Expr}: position p = pre.active.env; img.env[p] := cell; active.env and alloc.environmentCells += 1; Local := p",
+      "allocValueSlot": "{op: 'allocValueSlot', value: Expr}: position p = pre.active.valueSlots; img.valueSlots[p] := value; active.valueSlots += 1 (no logical counter)",
+      "clearHelper": "{op: 'clearHelper'}: reg.helper := absent, every payload column zero",
+      "clearResult": "{op: 'clearResult'}: reg.result := absent, every payload column zero",
+      "if": "{op: 'if', when: Expr, then: [Effect], else: [Effect]}",
+      "constraints": "At most one frame effect per row; at most one taskRewriteTop followed by at most one of taskPush or taskPop; at most one allocData, one allocEnv and one allocValueSlot, and at most two allocField, per row (SC-06)."
+    },
+    "deltas": {
+      "vector_order": [
+        "remainingWork",
+        "consumedWork",
+        "helperWork",
+        "helperVisits",
+        "referenceCursor",
+        "alloc.dataNodes",
+        "alloc.dataFields",
+        "alloc.environmentCells",
+        "depth",
+        "taskLive",
+        "active.valueSlots"
+      ],
+      "form": "{base: [11 integers], when: [{guard: GuardId, add: [11 integers]}]}",
+      "rule": "final delta = base + the sum of add over every listed guard that holds on the pre-image. The physical lengths active.data, active.dataFields and active.env move with alloc.dataNodes, alloc.dataFields and alloc.environmentCells (SC-01). On a P6 refusal the applied vector is P4 only: [-1, 1, helperEligible ? 1 : 0, 0, 0, 0, 0, 0, 0, 0, 0]. Extensions may append entries at the end, never reorder."
+    },
+    "reads": "Each row lists reads as {loc, index, bound}: loc is the table read, index an Expr, bound the active length or depth/taskLive that index must be below (SC-02, S-ROW boundSource)."
+  },
+  "guards": {
+    "rule": "Every conditional delta refers to one of these IDs; each is defined once here.",
+    "G-SCALAR-ALLOC-NODE": "h.staged is U128Value or h.staged is BoolValue or h.staged is PendingNode",
+    "G-SCALAR-FIELDS-1": "h.staged is PendingNode and h.staged.tag = Leaf",
+    "G-SCALAR-FIELDS-2": "h.staged is PendingNode and h.staged.tag in {Cons, Branch}",
+    "G-VALIDATE-OCC-LEAF": "arity(kind(T.ref)) = 0",
+    "G-VALIDATE-FIELD-NONTAIL": "T.cursor + 1 < arity(kind(T.ref))",
+    "G-EQUAL-PAIR-LEAF": "arity(kind(T.left)) = 0",
+    "G-EQUAL-FIELD-NONTAIL": "T.cursor + 1 < arity(kind(T.left))",
+    "G-BIND-TYPE-REJECT": "sortOfKind(kind(T.arg)) != T.sort",
+    "G-BIND-DUP-HIT": "cell(unwrap(h.dupCursor)).binder = T.binder"
+  },
+  "dispatch": {
+    "select": [
+      "if pre.helper is present: return the first row, in the listed helper_groups order for h's kind, whose select_when holds; if none holds: HostViolation{SelectUndefined}",
+      "else if pre.result is present: return the first row of legacy_groups[site(pre)] whose select_when holds and reads r (the rows-supplement T-LEGACY result_slot rule, conjoined here by R2-T1 D-33 for security-opus-r2-1 R2-L1); if none: HostViolation{SelectUndefined}. A row reads r iff its select_when expression AST (row_language.ast) contains a Root{name: 'r'} node (Muse R3-F03: AST root occurrence, never a raw substring search).",
+      "else: s := site(pre); if helperPlan(s, pre) = some(k): return b.helper.<k>.entry; else return the first row of legacy_groups[s] whose select_when holds and does not read r; if none: HostViolation{SelectUndefined}"
+    ],
+    "site": {
+      "c is Eval": "by expr(c.expr) variant: Literal EvalLiteral, Var EvalVar, Let EvalLet, Binary EvalBinary, Unary EvalUnary, If EvalIf, Call EvalCall, Match EvalMatch",
+      "c is ScheduleNext": "Push",
+      "c is Return and pre.depth > 0": "by top variant: LetF RetLet, LeftF RetLeft, RightF RetRight, UnaryF RetUnary, IfF RetIf, MatchF RetMatch, ArgsF RetArgs, ReturnF RetCall, ScopeF RetScope",
+      "c is Invoke": "Invoke",
+      "c is Enter": "Enter",
+      "c is Bound": "Bound",
+      "c is Cases": "Cases",
+      "c is CaseResult": "CaseResult",
+      "c is PrimResult": "Prim",
+      "c is Error, or c is Return and pre.depth = 0": "handled by P1 when helper and result are absent; with a helper or result present this is outside SI-08/SI-09 and select is HostViolation"
+    },
+    "helperPlan": {
+      "EvalLiteral": "Validate",
+      "EvalVar": "EnvGet",
+      "RetLet": "EnvPut",
+      "RetRight": "if top.op = Eq then Equal else Scalar",
+      "RetUnary": "Scalar",
+      "RetIf": "Scalar",
+      "RetArgs": "Append",
+      "RetCall": "Scalar",
+      "Invoke": "Find",
+      "Enter": "if isSome(c.function) then Bind else none",
+      "Cases": "if c.arms.len > 0 then Match else none",
+      "every other site": "none"
+    },
+    "helper_groups": {
+      "Scalar": [
+        "b.helper.Scalar.construct",
+        "b.helper.Scalar.arithmetic",
+        "b.helper.Scalar.tag",
+        "b.helper.Scalar.failure",
+        "b.helper.Scalar.exit"
+      ],
+      "EnvGet": [
+        "b.helper.EnvGet.exit",
+        "b.helper.EnvGet.failure",
+        "b.helper.EnvGet.cell",
+        "b.helper.EnvGet.empty"
+      ],
+      "EnvPut": [
+        "b.helper.EnvPut.insert",
+        "b.helper.EnvPut.exit"
+      ],
+      "Find": [
+        "b.helper.Find.exit",
+        "b.helper.Find.failure",
+        "b.helper.Find.row",
+        "b.helper.Find.empty"
+      ],
+      "Bind": [
+        "b.helper.Bind.exit",
+        "b.helper.Bind.failure",
+        "b.helper.Bind.pair",
+        "b.helper.Bind.empty",
+        "b.helper.Bind.arity",
+        "b.helper.Bind.type",
+        "b.helper.Bind.duplicate",
+        "b.helper.Bind.insert",
+        "b.helper.Bind.propagate"
+      ],
+      "Append": [
+        "b.helper.Append.copy",
+        "b.helper.Append.cell",
+        "b.helper.Append.empty",
+        "b.helper.Append.tail",
+        "b.helper.Append.exit"
+      ],
+      "Validate": [
+        "b.bookkeeping.task.release",
+        "b.helper.Validate.failure",
+        "b.helper.Validate.exit",
+        "b.helper.Validate.empty",
+        "b.helper.Validate.invalid",
+        "b.helper.Validate.occurrence",
+        "b.helper.Validate.field"
+      ],
+      "Equal": [
+        "b.bookkeeping.task.release",
+        "b.helper.Equal.exit",
+        "b.helper.Equal.empty",
+        "b.helper.Equal.different",
+        "b.helper.Equal.pair",
+        "b.helper.Equal.field"
+      ],
+      "Match": [
+        "b.helper.Match.exit",
+        "b.helper.Match.failure",
+        "b.helper.Match.arm",
+        "b.helper.Match.occurrence",
+        "b.helper.Match.distinct",
+        "b.helper.Match.field",
+        "b.helper.Match.binding",
+        "b.helper.Match.selected",
+        "b.helper.Match.next"
+      ]
+    },
+    "legacy_groups": {
+      "EvalLiteral": [
+        "k.machine.eval.literal.valid",
+        "k.machine.eval.literal.invalid"
+      ],
+      "EvalVar": [
+        "k.machine.eval.variable.present",
+        "k.machine.eval.variable.absent"
+      ],
+      "EvalLet": [
+        "k.machine.eval.let"
+      ],
+      "EvalBinary": [
+        "k.machine.eval.binary"
+      ],
+      "EvalUnary": [
+        "k.machine.eval.unary"
+      ],
+      "EvalIf": [
+        "k.machine.eval.if"
+      ],
+      "EvalMatch": [
+        "k.machine.eval.match"
+      ],
+      "EvalCall": [
+        "k.machine.eval.call.empty",
+        "k.machine.eval.call.arguments"
+      ],
+      "Push": [
+        "k.machine.push.accept",
+        "k.machine.push.refuse"
+      ],
+      "RetLet": [
+        "k.machine.return.let"
+      ],
+      "RetLeft": [
+        "k.machine.return.left"
+      ],
+      "RetRight": [
+        "k.machine.return.right"
+      ],
+      "RetUnary": [
+        "k.machine.return.unary"
+      ],
+      "RetIf": [
+        "k.machine.return.if.true",
+        "k.machine.return.if.false",
+        "k.machine.return.if.invalid"
+      ],
+      "RetMatch": [
+        "k.machine.return.match"
+      ],
+      "RetArgs": [
+        "k.machine.return.arguments.next",
+        "k.machine.return.arguments.final"
+      ],
+      "RetCall": [
+        "k.machine.return.call.valid",
+        "k.machine.return.call.invalid"
+      ],
+      "RetScope": [
+        "k.machine.return.scope"
+      ],
+      "Invoke": [
+        "k.machine.invoke.find"
+      ],
+      "Enter": [
+        "k.machine.enter.missing",
+        "k.machine.enter.bind"
+      ],
+      "Bound": [
+        "k.machine.bound.invalid",
+        "k.machine.bound.valid"
+      ],
+      "Cases": [
+        "k.machine.cases.empty",
+        "k.machine.cases.try"
+      ],
+      "CaseResult": [
+        "k.machine.cases.miss",
+        "k.machine.cases.hit"
+      ],
+      "Prim": [
+        "k.machine.primitive.value",
+        "k.machine.primitive.error"
+      ]
+    },
+    "totality": {
+      "answers": "Muse F-04 (dispatch totality was asserted, not established)",
+      "claim": "On every image satisfying StepInv (SI-01..SI-24) with outcome Running that P1 and P2 do not handle, exactly one select_when in the applicable group holds. Author argument (case enumeration against helper_state_space and SI-08/SI-09; not machine-checked): each group's guards partition that group's reachable states listed in helper_state_space; each legacy group's guards partition its site's result set in site_result_sets or, for helper-free sites, its control payload.",
+      "fallback": "On any other image select returns HostViolation{SelectUndefined}; on a witness or trace that is C-INV. Any witness, trace or post-image presenting a different RuleId for a pre-image is C-INV.",
+      "implementation": "Exhaustive matches over the core tags with an explicit HostViolation arm for states outside helper_state_space; no wildcard arm silently selects a row."
+    }
+  },
+  "helper_state_space": {
+    "decision": "SI-22 (answers Muse F-04, Opus2 L-1)",
+    "rule": "When reg.helper is present, its payload is exactly one of the states below for its kind, with every field not mentioned zero or determined as stated; any other payload violates SI-22.",
+    "Scalar": [
+      "S1 phase First; staged None; regA 0; any mode",
+      "S2 phase Second; staged None; mode in {Add, Sub, Mul, Lt}; kind(operandA) = UInt; regA = u128(operandA)",
+      "S3 phase Second; staged None; mode = Cons; kind(operandA) = UInt; regA 0",
+      "S4 phase Second; staged None; mode = Branch; kind(operandA) in {Leaf, Branch}; regA 0",
+      "S5 phase Done; mode in {Add, Sub, Mul}; staged U128Value or PrimError(code 10 or 11)",
+      "S6 phase Done; mode in {Lt, Not}; staged BoolValue or PrimError(11)",
+      "S7 phase Done; mode in {Cons, Branch, Leaf}; staged PendingNode(tag = mode) or PrimError(11)",
+      "S8 phase Done; mode = TestBool; staged Selector",
+      "S9 phase Done; mode = TestType; staged TypeTest",
+      "always: operandB present iff mode in {Add, Sub, Mul, Lt, Cons, Branch}; expected present iff mode = TestType; regA = u128(operandA) in phase Done iff mode in {Add, Sub, Mul, Lt} and kind(operandA) = UInt, else 0; taskLive = 0"
+    ],
+    "EnvGet": [
+      "Pending: found absent",
+      "Positive: found present; cursor present",
+      "Negative: found absent; cursor absent",
+      "always: taskLive = 0"
+    ],
+    "EnvPut": [
+      "Pending: newRoot absent",
+      "Positive: newRoot present",
+      "never Negative; taskLive = 0"
+    ],
+    "Find": [
+      "Pending: found absent; rowCursor <= active(prog.functions)",
+      "Positive: found = some(rowCursor); rowCursor < active(prog.functions)",
+      "Negative: found absent; rowCursor = active(prog.functions)",
+      "always: taskLive = 0"
+    ],
+    "Bind": [
+      "Pairing, Ok: pCursor = aCursor = taskLive; pCursor <= params.len; aCursor <= args.len; partial absent; dupCursor absent",
+      "UnwindType, Ok: pCursor = params.len = aCursor = args.len; taskLive >= 1; dupCursor absent",
+      "UnwindDup, Ok: as UnwindType but dupCursor present",
+      "UnwindInsert, Ok: as UnwindType; dupCursor absent",
+      "Propagate, Bad: taskLive >= 1; dupCursor absent",
+      "Finished, Ok or Bad: taskLive = 0; dupCursor absent",
+      "always: every live task is PairTask"
+    ],
+    "Append": [
+      "Copy: srcCursor <= src.len; staged absent, or staged present and srcCursor < src.len",
+      "Tail: srcCursor = src.len; staged absent",
+      "Done: srcCursor = src.len; staged absent",
+      "always: taskLive = 0; reg.active.valueSlots = destStart + srcCursor + (1 if phase = Done else 0)"
+    ],
+    "Validate": [
+      "Pending: any taskLive; every live task ValidateTask; Unvisited tasks have cursor 0; a Fields task has arity(kind(ref)) > 0 and cursor < arity(kind(ref))",
+      "Negative: any taskLive",
+      "Positive: taskLive = 0"
+    ],
+    "Equal": [
+      "Pending: any taskLive; every live task EqualTask; Unvisited tasks have cursor 0; a Fields task has kind(left) = kind(right), arity > 0 and cursor < arity",
+      "Negative: any taskLive",
+      "Positive: taskLive = 0"
+    ],
+    "Match": [
+      "Arm: status Pending; patTag, x, y, fieldIdx zero; staged absent; partial = savedEnv",
+      "Tag: Pending; patTag in {PNil, PCons, PLeaf, PBranch}; staged absent; partial = savedEnv",
+      "Distinct: Pending; patTag in {PCons, PBranch}; staged absent; partial = savedEnv",
+      "Field: Pending; patTag in {PLeaf, PCons, PBranch}; staged absent; fieldIdx 0 with partial = savedEnv, or fieldIdx 1 with patTag in {PCons, PBranch} and partial one cell newer than savedEnv",
+      "Bind: Pending; staged present; patTag = PVar with fieldIdx 0, or patTag in {PLeaf, PCons, PBranch}",
+      "Ready: Pending; staged absent",
+      "NoMatchReady: Pending; staged absent; partial = savedEnv",
+      "Done: Positive or Negative; staged absent; Negative implies partial = savedEnv",
+      "always: taskLive = 0"
+    ]
+  },
+  "step_inv": {
+    "status": "Specified obligation (security-candidate-b.md:68-79). genesis => StepInv and StepInv(pre) and the step constraints => StepInv(post) are unproved.",
+    "clauses": [
+      {
+        "id": "SI-01",
+        "fields": "identity",
+        "predicate": "identity equals the admitted identity; profileId sherlock-helper-microstep/1; grammarDomain DedicatedSorts; finance Absent. Host form (R2-T1 D-32): the supplied Admitted is bound to img.admission under machine_image.admission_binding; precedence AB checks this conjunct first in step, select, run and check_step_inv. The encoded-image form of this binding stays open with the digest format (no digest is selected)."
+      },
+      {
+        "id": "SI-02",
+        "fields": "reg.outcome",
+        "predicate": "Halted carries a valid ValueRef; Rejected code in 1..11; Exhausted reason in ExhaustReason minus SerializationBytes; inactive payload zero"
+      },
+      {
+        "id": "SI-03",
+        "fields": "work counters",
+        "predicate": "remainingWork + consumedWork = initialFuel <= maxReferenceWork; helperWork <= maxHelperWork; helperWork <= consumedWork; helperVisits <= helperWork; initialFuel <= layout.capacities.valueSlots"
+      },
+      {
+        "id": "SI-04",
+        "fields": "reg.referenceCursor",
+        "predicate": "referenceCursor = consumedWork - helperWork, for every outcome (D-09R)"
+      },
+      {
+        "id": "SI-05",
+        "fields": "allocation counters and physical lengths",
+        "predicate": "for X in {data/dataNodes, dataFields/dataFields, env/environmentCells}: active.X - segBase.active.X = alloc.X - segBase.alloc.X; alloc.X <= its Bounds cap; active.X <= the physical capacity of img.X. In B-core segBase is entirely zero, so active.X = alloc.X (answers Opus1 F4, Opus2 H-1)."
+      },
+      {
+        "id": "SI-06",
+        "fields": "reg.depth, reg.stackLimit",
+        "predicate": "depth <= stackLimit <= bounds.frames; img.frames[i] is an active frame for i < depth"
+      },
+      {
+        "id": "SI-07",
+        "fields": "reg.taskLive, img.tasks",
+        "predicate": "taskLive <= bounds.helperTasks; taskLive > 0 implies helper present; live tasks are ValidateTask iff helper kind Validate, EqualTask iff Equal, PairTask iff Bind; none for other kinds"
+      },
+      {
+        "id": "SI-08",
+        "fields": "reg.helper",
+        "predicate": "helper present implies: result absent; control is neither Error nor Return with depth 0; helper.site = site(pre); helper kind = helperPlan(site(pre), pre); originReferenceCursor = referenceCursor; parentResume absent; and SI-21 and SI-22 hold"
+      },
+      {
+        "id": "SI-09",
+        "fields": "reg.result",
+        "predicate": "result present implies helper absent, taskLive = 0, the variant is in site_result_sets for (site(pre), top.op where applicable), and SI-21R holds"
+      },
+      {
+        "id": "SI-10",
+        "fields": "zero storage",
+        "predicate": "img.data rows >= active.data, img.dataFields slots >= active.dataFields, img.env cells >= active.env, img.valueSlots slots >= active.valueSlots, img.frames slots >= depth and img.tasks slots >= taskLive are all zero; every inactive variant column, absent option and cleared register payload is zero"
+      },
+      {
+        "id": "SI-11",
+        "fields": "img.data typing (A4-1)",
+        "predicate": "every active row has a core DataTag; field slice length equals arity(kind); field slices lie below active.dataFields; field kinds per records.DataRow.field_kinds; scalar columns zero unless the tag is U128 or Bool"
+      },
+      {
+        "id": "SI-12",
+        "fields": "img.dataFields ownership",
+        "predicate": "every active field slot lies in the field block of exactly one active data row; each row's field block is contiguous and was appended in the same event as the row, immediately before it (G1); there is no pending or orphan field slot"
+      },
+      {
+        "id": "SI-13",
+        "fields": "references (A4-2)",
+        "predicate": "every Data ref held in a field slot of row j refers to an index < j; every ref held in a register, frame, env cell, value slot or task is below the active length of its space; every Const ref < active(prog.constants)"
+      },
+      {
+        "id": "SI-14",
+        "fields": "img.env",
+        "predicate": "every active cell: binder < active(prog.names); value per SI-13; previous absent or < own index"
+      },
+      {
+        "id": "SI-15",
+        "fields": "frames and code ids (A4-4)",
+        "predicate": "every ExprId < active(prog.expressions); every frame origin variant matches FrameRow origin_tag; MatchF.arms = expr(origin).arms; ArgsF.rest is a suffix of expr(origin).args and completed.len + rest.len + 1 = expr(origin).args.len; every FunctionRowId < active(prog.functions); every slice inside its table (MCL F2 suffix rule)"
+      },
+      {
+        "id": "SI-16",
+        "fields": "reg.control",
+        "predicate": "payload typed per ControlRow; ScheduleNext.frame satisfies SI-15; Cases.arms and CaseResult.rest are suffixes of expr(controlOrigin).arms; Invoke.args and Enter.args lie inside [0, active.valueSlots) with len <= maxArity; PrimResult Error code in {10, 11}"
+      },
+      {
+        "id": "SI-17",
+        "fields": "out-of-range markers",
+        "predicate": "a Const ref whose markerFree is false appears only in helper.Validate.root and in ValidateTask.ref; it never appears in control, envRoot, env cells, frames, data field slots, value slots, result, other helpers or other tasks"
+      },
+      {
+        "id": "SI-18",
+        "fields": "terminal coherence",
+        "predicate": "Halted or Rejected implies helper absent, result absent, taskLive = 0; Exhausted may retain helper, tasks and result exactly as at the refused step; no event follows any non-Running outcome"
+      },
+      {
+        "id": "SI-19",
+        "fields": "accounting prefix at cuts (boundary section, blocked)",
+        "predicate": "a BoundaryRecord carries consumedWork, remainingWork, initialFuel, helperWork, helperVisits, referenceCursor and the three logical allocation counters equal to the pre-cut image; the resumed image carries the same values (security-phase0.md:95-104)"
+      },
+      {
+        "id": "SI-20",
+        "fields": "reg.controlOrigin coherence (answers Muse F-04)",
+        "predicate": "c is Eval implies controlOrigin = c.expr. c is ScheduleNext implies controlOrigin = c.frame.origin. c is Invoke, Enter or Bound implies expr(controlOrigin) is Call. c is Cases or CaseResult implies expr(controlOrigin) is Match. c is PrimResult implies expr(controlOrigin) is Binary or Unary. c is Return with depth > 0 implies controlOrigin is in tailClosure(expectedChild(top)), where expectedChild is expr(top.origin).value for LetF, .left for LeftF, .right for RightF, .operand for UnaryF, .cond for IfF, .scrutinee for MatchF, childAt(expr(top.origin).args.start + top.completed.len) for ArgsF, and for ReturnF the body of some function row named expr(top.origin).functionName; for ScopeF expectedChild is expr(top.origin).body when the origin is Let and the body of some arm in expr(top.origin).arms when the origin is Match. tailClosure(e) is {e} united with tailClosure of both branches when expr(e) is If (If pops its frame before its branch runs)."
+      },
+      {
+        "id": "SI-21",
+        "fields": "helper-legacy payload coherence (answers Opus1 F5, Opus2 L-1)",
+        "predicate": "Scalar: (mode, operandA, operandB, expected) equal those Scalar.entry installs from the current site, top and v. EnvGet: binder = X.binder; cursor is absent or on the chain from pre.envRoot; no cell newer than cursor on that chain has binder; Positive implies cell(cursor).binder = binder and found = some(cell(cursor).value); Negative implies no cell on the chain has binder. EnvPut: binder = top.binder, value = v, base = top.savedEnv; Positive implies newRoot = some(active.env - 1) and that cell equals {binder, value, base}. Find: functionName = c.functionName; no row below rowCursor has that name; Positive implies fn(rowCursor).functionName = functionName. Bind: function = unwrap(c.function); params = fn(function).params; args = c.args; the i-th live task for i < taskLive equals PairTask{param(params.start + i).binder, param(params.start + i).sort, vslot(args, i)}; in Unwind and Finished-Ok phases partial is the chain of inserted cells for pairs taskLive .. params.len - 1, newest first. Append: src = top.completed; value = v; slots destStart + i equal vslot(src, i) for i < srcCursor; in Done the last slot equals value. Validate: root = Const(X.constant); every task ref is an occurrence descendant of root; Positive implies markerFree(X.constant); Negative implies not markerFree(X.constant). Equal: left = top.left and right = v; Positive implies structurallyEqual(left, right); Negative implies not. Match: scrutinee = c.value; arm = c.arms.start; savedEnv = c.savedEnv; outside phase Arm, (patTag, x, y) equal patRow(armRow(arm).pattern); partial extends savedEnv by exactly the bindings already made; Positive and Negative agree with uiMatching (main.k:299-312). ADJ-1 Scalar: in phase Done, staged equals the staging K assigns to (mode, operandA, operandB, expected): U128Value, BoolValue or PendingNode(tag) for a successful uiBinaryResult or uiUnaryResult, PrimError(10) for uiChecked overflow, PrimError(11) for sort mismatch, Selector for TestBool, TypeTest(uiHasType) for TestType. ADJ-2 Append: staged present implies phase Copy, srcCursor < src.len and staged = vslot(src, srcCursor)."
+      },
+      {
+        "id": "SI-21R",
+        "fields": "result coherence",
+        "predicate": "Validated(ok) implies ok = markerFree(X.constant). EnvFound(w) implies w is the first binding of X.binder on the chain from envRoot; EnvMissing implies none. EnvUpdated(e) implies e = active.env - 1 and cell(e) = {top.binder, v, top.savedEnv}. FindFound(f) implies f is the least row named c.functionName; FindMissing implies none. BindOk(env) and BindBad agree with uiBind (main.k:288-298). AppendDone(s) implies s.len = top.completed.len + 1, s.start + s.len = active.valueSlots, slots equal completed followed by v. ScalarValue(Data(j)) implies j = active.data - 1 and the row equals K uiBinaryResult or uiUnaryResult for (top.op, operands); ScalarError(c) agrees with K; ScalarSelector and ScalarTypeTest agree with uiHasType. EqualDone(Data(j)) implies j = active.data - 1 and the Bool row equals structurallyEqual(top.left, v). MatchMatched and MatchNoMatch agree with uiMatching."
+      },
+      {
+        "id": "SI-22",
+        "fields": "helper state space",
+        "predicate": "helper_state_space"
+      },
+      {
+        "id": "SI-23",
+        "fields": "img.valueSlots (D-08R)",
+        "predicate": "active.valueSlots - segBase.active.valueSlots <= consumedWork - segBase.consumedWork; active.valueSlots <= layout.capacities.valueSlots; every live ValSlice (in control, frames, helper, result) lies inside [0, active.valueSlots) with len <= maxArity; every active slot holds a value ref (SI-13, SI-17). In B-core segBase is zero."
+      },
+      {
+        "id": "SI-24",
+        "fields": "program view",
+        "predicate": "the view bound in identity passes check_program_view (AD-5)"
+      }
+    ],
+    "checker": "check_step_inv is a host diagnostic. It must check SI-01..SI-20, SI-22..SI-24 exactly. SI-21 and SI-21R are semantic coherence predicates; a host diagnostic checks them with bounded traversal of the pre-image. None of them is a per-step circuit call or a substitute for constraints.",
+    "checker_binding_first": "R2-T1 D-32: check_step_inv evaluates the SI-01 host binding (precedence AB) before any other clause. On a mismatch it returns exactly one StepInvViolation{clause: SI-01, locator: 'admission binding'} and evaluates no other clause, because the supplied tables do not describe the image.",
+    "traversal_rule": {
+      "decision": "R2-T1 D-33 (security-opus-r2-1 R2-L6; security-opus-r2-2 S3; owner clarification S2-a)",
+      "rule": "No traversal in prepare_core, check_program_view (V3, V6, V8), check_step_inv (SI-13 reachability, SI-17, SI-21 occurrence-descendant checks and structurallyEqual, SI-21R agreement with uiBind, uiMatching, uiBinaryResult and uiHasType) or any conversion into CoreProgram may use native recursion whose depth grows with caller-controlled nesting or value depth. Each uses an explicit heap worklist, so native stack depth is bounded by a constant.",
+      "dag_rule": "Traversals over image or constant values (Data or Const rows, which may share children) are memoized: reachability over visited row sets and structurallyEqual over visited (row, row) pairs, so host work is polynomial in active lengths and never proportional to an unfolded occurrence count. Out-of-image decoding and materialization (R3-T1 D-36, Opus2 R3-L1): any host function that decodes or materializes Data or Const values out of an image (decodeStep, materializeStep, T's comparator, or example output) must likewise either preserve sharing (memoized per row ID) or refuse incrementally at a declared capacity (MCL F5, C3), never unfolding a shared Branch/Cons DAG naively. This is a host/diagnostic rule only; the Validate and Equal helpers still charge per occurrence (HB-13).",
+      "no_depth_refusal": "No depth limit or depth refusal is added. An explicit worklist keeps the D-27 refusal order exact; a new depth refusal would need a new Tooling variant and a position in that order, which this correction does not create.",
+      "compiler_generated": "The rule covers compiler-generated code as well: Drop, Clone, PartialEq, Debug and Hash on any library-defined recursive type (CoreExpr, CoreTree, or whatever uniquely owned host carrier is chosen per core_program_input.CoreProgram.carrier_linearity) must not recurse natively with nesting depth. For Clone, PartialEq, Debug and Hash, either the impl is written iteratively or the trait is not implemented. Because Rust compiler-generated Drop glue cannot be opted out of for an owning recursive heap carrier, Drop on any owning recursive carrier MUST be an explicit iterative impl using a heap worklist unless children are flat arena indices (Opus2 R3-L2)."
+    }
+  },
+  "step_constraints": {
+    "source": "security-candidate-b.md:81-88; security-phase0.md:79-91",
+    "constraints": [
+      "SC-01 Every arena write is at the current physical active length with an exact +1; for data, dataFields and env the logical counter moves with it; valueSlots has only the physical length.",
+      "SC-02 Every read index is checked against the bound listed in the row's reads (active length of its table, depth or taskLive).",
+      "SC-03 Every written field is type-checked and range-checked against its declared width and variant set.",
+      "SC-04 Every popped frame or task slot and every cleared helper or result register is zeroed in the same event.",
+      "SC-05 Every ExprId, ArmId, FunctionRowId, ConstId and NameId written is range-checked against its program table.",
+      "SC-06 Frames: at most one of {push at depth, full rewrite of slot depth-1, pop of slot depth-1}. Tasks: at most a full rewrite of the pre-image top slot followed by at most one of {push, pop}. No slot below the pre-image top is written.",
+      "SC-07 Every reference written is fresh (allocated in this event) or copied from a location read in this event that is reachable from the pre-image roots.",
+      "SC-08 Counter deltas equal exactly the row's final delta vector after precedence P0-P7.",
+      "SC-09 The physical post-image is a deterministic function of DetInput; no prover choice of representation, allocation position, event or order exists.",
+      "SC-10 helperVisits increments only on Applied events, by the row constant."
+    ]
+  },
+  "determinism": {
+    "DetInput": "{identity (including grammarDomain and finance), layout (including capacities), bounds, preImage: MachineImage}",
+    "stepPhys": "stepPhys: DetInput -> (MachineImage, StepEvent), total on StepInv(preImage) with outcome Running",
+    "excluded": [
+      "time",
+      "randomness",
+      "cache state",
+      "backend id",
+      "chunk size m",
+      "host addresses"
+    ],
+    "auxiliary_witnesses": "allowed only when the post-image stays unique",
+    "finance": "finance != Absent is C-INV"
+  },
+  "step_event": {
+    "answers": "Muse F-02 (expanded-step identity), Opus2 L-7 (catalog record_fields), Opus1 F3 (grammarDomain in identity)",
+    "fields": {
+      "stepId": "ExpandedStepId {runId, ordinal}; runId carries profileId and grammarDomain",
+      "ruleId": "RuleId (the attempted rule on P3 and P6 refusals)",
+      "eventKind": "EventKind",
+      "site": "Opt<SiteTag> (absent for Publish events)",
+      "helperKind": "Opt<HelperKind>: interval kind, distinct from live-helper presence. Source in priority order: (1) kind of pre.helper if present; (2) kind of post.helper if present (Applied HelperEnter); (3) if pre.result is present, helperPlan(site(pre), pre), which is Some for every consuming site in site_result_sets (Applied LegacyComplete consuming a staged result); (4) if the Selected row is HelperEnter/HelperVisit/HelperExit/HelperFail/Bookkeeping under an Applied, RefusedHelperWorkUncharged or RefusedCapCharged disposition, Selected.helperKind (covers a P3/P6-refused entry with no helper installed); (5) otherwise absent. Publish uses branches (1) or (3) for a retained helper/result and is otherwise absent; a helper-free LegacyComplete is absent.",
+      "disposition": "StepDisposition",
+      "workDelta": "0 or 1",
+      "helperWorkDelta": "0 or 1",
+      "helperVisitsDelta": "0 or 1",
+      "referenceCursorDelta": "0 or 1 (1 only for an Applied LegacyComplete)",
+      "allocDeltas": "{dataNodes, dataFields, environmentCells}",
+      "valueSlotWrites": "0 or 1",
+      "logicalDepthBefore": "pre.depth",
+      "logicalDepthAfter": "post.depth",
+      "taskCursorBefore": "pre.taskLive (catalog taskCursor)",
+      "taskCursorAfter": "post.taskLive",
+      "helperPhaseBefore": "Opt<phase or status of pre.helper> (catalog phase): present iff pre.helper is present. Scalar maps to its ScalarPhase; EnvGet, EnvPut, Find, Validate and Equal map to TriStatus; Bind maps to BindPhase; Append maps to AppendPhase; Match maps to MatchPhase. Absent for HelperEnter, for LegacyComplete including staged-result consumption, and whenever pre.helper is absent. Never sourced from post.helper or from a staged result.",
+      "helperPhaseAfter": "Opt<phase or status of post.helper>: present iff post.helper is present, using the same per-kind phase/status mapping as helperPhaseBefore. Absent for Applied HelperExit and HelperFail (helper cleared), for LegacyComplete including staged-result consumption, and whenever post.helper is absent. Never sourced from pre.helper or from a staged result.",
+      "helperCursorBefore": "Opt<Nat> (catalog cursorBefore), sourced only from pre.helper: Scalar phase ordinal in declaration order (First=0, Second=1, Done=2); EnvGet cursor index (absent if its cursor is absent); EnvPut newRoot (absent if absent); Find rowCursor; Bind pCursor; Append srcCursor; Validate and Equal pre.taskLive; Match fieldIdx. Some(0) is a present zero and is distinct from absent. Absent if pre.helper is absent (including LegacyComplete consuming a staged result) or if the EnvGet/EnvPut mapped option is absent. Never sourced from post.helper or from a staged result.",
+      "helperCursorAfter": "Opt<Nat>: the same per-kind quantity sourced only from post.helper, with Validate and Equal using post.taskLive. Absent if post.helper is absent (including Applied HelperExit, HelperFail and LegacyComplete) or if the EnvGet/EnvPut mapped option is absent. Never sourced from pre.helper or from a staged result.",
+      "resultTag": "Opt<HelperResultTag>: the result staged by an exit or failure, or consumed by a legacy completion (catalog resultTag). On a P2 Publish retaining a staged pre.result, resultTag is Some(tag of pre.result) (identical in post.result, P2 changing only reg.outcome); this retention case is the sole exception to the preceding this-event staging/consumption rule, so P1 Publish, P2 retaining only a live helper, and RefusedHelperWorkUncharged/RefusedCapCharged events, which stage and consume no result, have resultTag absent.",
+      "originReferenceCursor": "Opt<ReferenceCursor>: interval origin, sourced in priority order: (1) pre.helper.originReferenceCursor if pre.helper is present; (2) post.helper.originReferenceCursor if post.helper is present (Applied HelperEnter; equals pre.referenceCursor by the .entry effects); (3) pre.referenceCursor if pre.result is present, or if the Selected row is a .entry row refused at P3 or P6 with no helper installed; (4) otherwise absent. In case (3), pre.referenceCursor equals the producer helper's stored origin because referenceCursor advances only on an Applied LegacyComplete (P7, SI-04) and no LegacyComplete intervenes between the staging HelperExit/HelperFail and the consuming LegacyComplete or a Publish event retaining the result. P1 Publish and a helper-free, result-free LegacyComplete or Publish are absent. P0 and Startup emit no StepEvent.",
+      "sourceExprId": "pre.controlOrigin; sourceOf(sourceExprId) resolves the SourceOccurrenceId (host metadata)",
+      "exhaustedKind": "ExhaustReason for ExhaustedFuelUncharged, RefusedHelperWorkUncharged or RefusedCapCharged; zero otherwise",
+      "outcomeTag": "post OutcomeTag",
+      "outcomePayload": "post outcome payload",
+      "boundary": "BoundaryKind (always None or Terminal in B-core)"
+    },
+    "diagnostics_only": [
+      "check_step_inv",
+      "rowGenerated",
+      "cacheHit",
+      "host equality"
+    ]
+  },
+  "api_types": {
+    "answers": "Muse F-03, F-08",
+    "Tooling": {
+      "variant": {
+        "AdmissionRejected": {
+          "reason": "AdmissionReason",
+          "detail": "Text",
+          "locator": "Opt<Locator>"
+        },
+        "CapacityNotAdmitted": {
+          "kind": "CapacityKind",
+          "needed": "NeededNat",
+          "limit": "Nat",
+          "locator": "Opt<Locator>"
+        },
+        "UnsupportedFeature": {
+          "feature": "FeatureKind",
+          "locator": "Opt<Locator>"
+        }
+      },
+      "rule": "never an Outcome, error code or Exhausted reason"
+    },
+    "Locator": {
+      "variant": {
+        "Occurrence": {
+          "owner": "Entry | Function{index}",
+          "astPath": "sequence of ChildPosition"
+        },
+        "Table": {
+          "table": "Text",
+          "row": "Nat"
+        },
+        "Field": {
+          "name": "Text"
+        }
+      }
+    },
+    "NeededNat": {
+      "variant": {
+        "Exact": {
+          "value": "u128"
+        },
+        "AboveU128": {}
+      },
+      "meaning": "host carrier of the mathematical Nat CapacityNotAdmitted.needed (shared NeededNatC)",
+      "Exact": "the exact needed Nat: a usize count widened to u128 (pass B, C1-C6), a bitlen value (AD-2a), the AD-1 minimum 1, the AD-3 minimum 2, or RunInt Nat{value} (admitRun R3, R4, R5)",
+      "AboveU128": "produced only by admitRun R3 (fuel NatAboveU128, kind MaxReferenceWork) and R4 (stackLimit NatAboveU128, kind Frames); it states only needed > 2^128 - 1 >= limit. RunInt NatAboveU128 never carries a magnitude, so none is carried, reconstructed, saturated or replaced by a finite value.",
+      "rule": "host-only Tooling metadata: never encoded, never an Outcome, error code or Exhausted reason; adds no capacity kind, cap, width, Tooling variant or admission condition"
+    },
+    "ProgramViewViolation": {
+      "record": {
+        "check": "V1..V8",
+        "table": "Text",
+        "row": "Opt<Nat>",
+        "detail": "Text"
+      }
+    },
+    "HostViolation": {
+      "record": {
+        "kind": "HostViolationKind",
+        "clause": "Opt<StepInvClauseId>",
+        "rule": "Opt<RuleId>",
+        "locator": "Opt<Text>"
+      },
+      "rule": "the pre-image is outside StepInv or the call is outside the admitted domain; step returns it without mutating; it is C-INV territory and never an Outcome",
+      "admission_mismatch": "R2-T1 D-32: exactly {kind: StepInvViolated, clause: some(SI-01), rule: none, locator: some('admission binding')}"
+    },
+    "StepInvViolation": {
+      "record": {
+        "clause": "StepInvClauseId",
+        "locator": "Opt<Text>",
+        "detail": "Text"
+      },
+      "rule": "the element type of check_step_inv's error vector (security-opus-r2-1 R2-L7; defined here because S1 needs a typed SI-01 mismatch return)",
+      "signature": "check_step_inv(admitted: Admitted, image: MachineImage) -> Result<(), sequence of StepInvViolation>"
+    },
+    "Selected": {
+      "record": {
+        "rule": "RuleId",
+        "eventKind": "EventKind",
+        "site": "Opt<SiteTag>",
+        "helperKind": "Opt<HelperKind>",
+        "helperEligible": "Bool",
+        "helperVisits": "0 or 1"
+      },
+      "non_running_rule": "R3-T1 D-36 (Opus1 R3-6): calling public select(a, img) when img.outcome != Running (after AB passes) fails closed with Err(HostViolation{kind: StepInvViolated, clause: some(SI-18), rule: none, locator: some('select on non-Running image')}) and mutates nothing."
+    },
+    "StepResult": {
+      "variant": {
+        "Terminal": {},
+        "Event": {
+          "event": "StepEvent"
+        }
+      },
+      "rule": "Terminal only when pre.outcome != Running (P0); every other successful call returns Event"
+    },
+    "RunSummary": {
+      "record": {
+        "outcome": "Outcome",
+        "events": "Nat",
+        "consumedWork": "Nat",
+        "helperWork": "Nat",
+        "helperVisits": "Nat",
+        "referenceCursor": "Nat"
+      },
+      "rule": "returned by run; the loop performs at most initialFuel + 1 step calls because every non-terminal event charges 1 and every uncharged event is terminal",
+      "stop_rule": "R2-T1 D-33 (security-opus-r2-2 S5). run(a, img, sink): (1) AB; on a mismatch return the SI-01 HostViolation with no step call and no sink call. (2) If img.outcome != Running, return the summary with no step call. (3) Loop: call step; on HostViolation return it at once (earlier events stay applied; the failing step mutated nothing); on Event(e) call sink(e) exactly once, then stop if img.outcome != Running. The loop never calls step on a non-Running image, so step's Terminal arm is unreachable from run. Calls are at most pre.remainingWork + 1, which is initialFuel + 1 from genesis."
+    }
+  },
+  "boundaries": {
+    "status": "Specified; NOT in the adoptable core. ChunkStore, checkpoints, external state claims and chunked or recursive claims stay blocked until ProjectRel and Link are constrained components (security-phase0.md:105-108), the B002 codec obligations are discharged, L03 is decided and the votes are cast.",
+    "canonical_boundary_points": {
+      "answers": "Opus1 F5",
+      "rule": "A canonical boundary (project, decodeCanonical, ChunkStore.put/get, checkpoint, external state claim) is permitted only at a legacy point: helper absent, result absent and taskLive = 0. decodeCanonical refuses any other image (C-INV). A requested canonical boundary at a mid-helper point is a tooling refusal: the cut is not taken and no Outcome changes. Proof-chunk splits inside a helper interval link physical digests directly (S_k.post = S_k+1.pre) with no projection, so B004-c still applies.",
+      "rationale": "B-T08's cuts around pending returns and helpers are satisfied at the legacy points on either side of a helper interval; admitting mid-helper canonical images would require the frontier coherence of SI-21 to be constrained in-circuit, which no component provides."
+    },
+    "BoundaryRecord": "{identity, stepIndex, kind: Terminal | TechnicalCut | SourceSuspension(reserved), physPost: Digest, canon: Digest, counters: SI-19 tuple, remainingWork, helperWork}",
+    "ProjectRel": "project(p,i,L) = Some(j) and decodeCanonical(p,j,L) = decodeStep(p,i,L) != None and counters, budgets, bounds and identity of j equal those of i (security-phase0.md:97-99)",
+    "Link": "S_k.post = B.physPost = DP(i) and ProjectRel(p,L,i,j) and B.canon = DC(j) and S_k+1.pre = DP(j)",
+    "segment_base": "After a canonical resume, reg.segBase := {active: the projected physical lengths, alloc: the unchanged logical counters, consumedWork: the unchanged consumedWork}; SI-05 and SI-23 then hold relative to it. In B-core segBase is zero.",
+    "physical_capacities": "layout.boundaryCapacities supplies physDataNodes, physDataFieldSlots, physEnvironmentCells and physValueSlots, each at least its logical counterpart; img.X then uses the physical capacity.",
+    "occupancy_envelope": {
+      "answers": "Opus1 F4, Opus2 H-1 (MCL F3 L05 envelope)",
+      "rule": "A canonical boundary is taken only if, for each arena: projected length P_data + (bounds.dataNodes - alloc.dataNodes) <= physDataNodes; P_dataFields + (bounds.dataFieldSlots - alloc.dataFields) <= physDataFieldSlots; P_env + (bounds.environmentCells - alloc.environmentCells) <= physEnvironmentCells; P_valueSlots + remainingWork <= physValueSlots; and the canonical encoding fits serializationBytes. Otherwise the cut is refused as tooling (CapacityNotAdmitted{PhysicalBoundaryEnvelope} or {SerializationBytes}), the cut is not taken and no Outcome changes (D-11a). Checks are incremental and refuse at the first overflow (F5).",
+      "consequence": "No post-boundary write can overflow physical storage before its logical cap, so exhaustion stays decided by logical counters alone and a cut cannot change a later Outcome (UIREQ-016)."
+    },
+    "canonical_projection": {
+      "basis": "MCL design.md:355-362 and extensions-and-obligations.md:202-207 (Opus F3: no-interning boundary traversal, a recommendation under the still-open L03), plus B002's requirement that canonical form be unique. spec.md:216 states the decoded meaning (immutable sharing unfolds to structural occurrences); it does not by itself decide the physical encoding. This corrects the earlier 'source-decided' wording (Opus1 F4, Opus2 L-5).",
+      "sharing_policy": "Unfold, no interning: every reachable Data-space value is emitted as its own structural occurrence. Const refs are not unfolded. Every env chain is emitted per root, oldest cell first, preserving its full newest-first order including shadowed cells (D-05), so EnvGet work is unchanged by a cut. Every live ValSlice is re-emitted as a contiguous block in root order.",
+      "logical_counters": "unchanged by projection; projected physical lengths may exceed them, which SI-05 and SI-23 permit through segBase",
+      "root_order": [
+        "reg.control payload refs in field order",
+        "reg.envRoot chain",
+        "img.frames from slot 0 to depth-1, each frame's refs in field order",
+        "reg.outcome Halted value"
+      ],
+      "emission": "post-order, left-to-right; a node's field block immediately precedes the node row (G1); value-slot blocks in root order",
+      "blocked_by": "B002 codec laws, constrained ProjectRel/Link, the L03 decision and reviewer votes on D-11b"
+    }
+  },
+  "extension_reservations": [
+    {
+      "item": "ExprTag.Construct, FrameTag.ConstructorFields, PatternTag.Wildcard/Constructor, ConstTag.Constructor, DataTag.Constructor, LogicalKind.Constructor, GrammarDomain.GenericNominal",
+      "core_disposition": "adapter UnsupportedFeature{GenericAdt}; image C-INV",
+      "retained_duty": "b.coverage.type-declarations, constructor-fields, match-plan, match-workmap, generic-validation-equality, additional-extensions (rules.json:7371-7408); UIREQ-007/008/034; B-T10; UISEC-002; UISEC-B007"
+    },
+    {
+      "item": "HelperControl.parentResume, ResumeId, b.bookkeeping.resume.store/restore",
+      "core_disposition": "parentResume absent; selecting resume rows is C-INV",
+      "retained_duty": "nested helper resume rows with Option<ResumeId> (extensions-and-obligations.md:73-80)"
+    },
+    {
+      "item": "b.helper.Validate.declaration, b.helper.Match.discard",
+      "core_disposition": "ExtensionOnly; selecting them is C-INV",
+      "retained_duty": "generic validation traversal; nested-pattern tentative cleanup"
+    },
+    {
+      "item": "FinanceInput.Typed, BoundaryKind.SourceSuspension, ExhaustReason.SerializationBytes at source checkpoints",
+      "core_disposition": "admitRun UnsupportedFeature{FinancialInput}; DetInput or image C-INV",
+      "retained_duty": "UISEC-007/008, UISEC-B008, UIREQ-014/015/017-020, B-T12, Core/2 successful-prefix await, interfaces.md:308"
+    },
+    {
+      "item": "reg.segBase, layout.boundaryCapacities",
+      "core_disposition": "zero / absent; nonzero or present is C-INV in B-core",
+      "retained_duty": "boundary section"
+    }
+  ],
+  "extension_interfaces": {
+    "purpose": "Exact dependency interfaces the parallel full-B extension author consumes; changing any of them requires a coordinated revision of this core.",
+    "X-01 profile and domain": "ProfileId and GrammarDomain (GC-2 open); D-21 labelling applies to every extension claim.",
+    "X-02 logical kinds": "LogicalKind gains Constructor{typeId, ctorId}; kind(), arity() and sortOfKind() extend to declaration rows; ordinal 6 is reserved in ConstTag, DataTag and LogicalKind.",
+    "X-03 declaration tables": "ProgramView gains types, constructors, constructorFields and matchPlans tables with active lengths; AD-4 is replaced by declaration admission; check_program_view gains declaration checks.",
+    "X-04 constructor-field accumulation": "ConstructorFields{typeId, ctorId, completed: ValSlice, rest: ExprSlice, savedEnv, origin} reuses img.valueSlots and the Append events, as the catalog states for generic constructor fields (rules.json:5923). Materializing the constructor node copies its fields from value slots into dataFields at one field per charged event and charges DataNodes and DataFields (interfaces.md:128 baseline).",
+    "X-05 nested helpers": "parentResume and a Resume table; resume.store and resume.restore rows; helper_state_space and SI-21 extended per nested kind; P3 and P6 apply unchanged to every nested event.",
+    "X-06 generic matching": "Match.discard and MatchPlan/workMap; tentative env cells stay append-only and counted (A3); discard removes them from partial, never reuses them.",
+    "X-07 row language": "Extension rows use this row_language unchanged; new delta entries are appended after active.valueSlots; new guards are added to the guards vocabulary.",
+    "X-08 cursor rule": "Only LegacyComplete advances referenceCursor (D-09R); extension helper and bookkeeping events never do.",
+    "X-09 finance": "FinanceInput.Typed, DetInput.finance, BoundaryKind.SourceSuspension, ExhaustReason.SerializationBytes at requested checkpoints, Commit/Yield/Await (open).",
+    "X-10 boundaries": "segBase, boundaryCapacities, canonical boundary points at legacy points only, occupancy envelope, ProjectRel/Link.",
+    "X-11 StepEvent and ExpandedStepId": "field set in step_event; extensions add fields at the end.",
+    "X-12 catalog overlay": "catalog-revision-overlay.json B-CORE-R1 scopes Disabled to DedicatedSorts. An extension overlay may enable ExtensionOnly IDs and re-enable Disabled IDs for GenericNominal only with complete rows, fresh votes and fresh exact-fuel oracles."
+  }
+}
