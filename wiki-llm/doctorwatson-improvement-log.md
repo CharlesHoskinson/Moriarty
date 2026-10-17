@@ -823,3 +823,12 @@ Observed October17: the first compiler-guard author call encountered two interna
 ## DW43 — Merge independent product slices separately
 
 Observed October17: the A complete-state continuity comparator passed48 focused tests and production metadata checking, received a fresh ArgonHIGH scoped non-author PASS, and merged through PR171. B complete typed observation source and four test functions also typecheck in separate PR172; their runtime tests remain pending scope review. Improvement: isolate dependencies in Git so the compiler's open guard findings do not hold reviewed independent observer work. Status: A merged; B and compiler remain draft. None closes full SCON-007, formal, native or stagenet acceptance.
+
+
+### DW-44 — Read test selectors from typed fields and retain local checker failures
+
+**Observation:** the B observer binary listed exactly four approved tests. Root's metadata checker compared those names with argv index4, which was `--exact`, and stopped before any product test ran. The corrected check used the owner's explicit selector list and retained the existing list output. The same sealed binary then passed all four exact tests, without repeating compilation, listing or tests.
+
+**Evidence:** [actual tests and the original checker erratum](../docs/results/sherlock-b-complete-observation-20261017/README.md). Source approval, the four-test execution classification and actual-result review remain distinct. This is a local metadata-reader defect; it did not change product source or the classified execution bounds.
+
+**Improvement:** use named selector fields or parse the value after a known flag when command metadata is needed. Check original command exits separately from later local assertions, preserve both outcomes, and continue from the precise cause when the already produced artifact remains valid. Passing test counts retain their exact source and selected branch scope. No new runner or execution policy is proposed.
