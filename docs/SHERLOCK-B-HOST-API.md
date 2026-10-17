@@ -54,10 +54,20 @@ The separate integration handoff records exact proposed file membership,
 namespace authorship and fresh source audits. Those records describe source
 preparation, not a compiler or execution result.
 
-This landing has not been compiled or run. The latest source05 ALL13 attempt
-had a dispatch admission incident: child exits are factual but are not admitted
-runtime evidence. Earlier D01 retention does not establish this module's build
-or execution. Native authority remains zero and C4 stays open.
+On 2026-10-17 UTC, an admitted SDK-free metadata-only check compiled the actual
+public non-test Sherlock A+B module tree at historical commit
+`06f7ff03a245e0ab6fae271f09cd75bf813f0330` under pinned rustc 1.99.0. Its version
+child and one metadata/dep-info compile exited 0. The normalized compiler read
+set is exactly 24 files: 23 production sources and a 67-byte root wrapper.
+Compiler stderr retains six warnings. The [selected evidence](audits/2026-10-17/sherlock-production-metadata/README.md)
+records exact source pins, declared normalization and the limited result.
+
+This checks module/name/type closure for that exact historical snapshot. It is
+not a whole-`mori-core` Cargo build, cfg(test) compilation, test execution or
+program-runtime result. Later source changes neither affect nor inherit it.
+The earlier source05 ALL13 dispatch incident remains not admitted runtime
+evidence, and D01 retention supplies no result for this new check. Native
+authority remains zero and C4 stays open.
 
 There is no existing production B consumer in Moriarty. The explicit library API
 is the integration delivered here; an application or compiler must separately
