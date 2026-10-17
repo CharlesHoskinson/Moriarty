@@ -1,0 +1,81 @@
+{
+ "format": "c2-builder-r4-api/1",
+ "status": "AUTHOR_PROPOSED_CONDITIONAL; not implemented, run, reviewed or adopted; authority 0",
+ "contract": "C2-BUILDER-R4-CONTRACT.md CB401-CB412",
+ "condition": {
+  "cpCandidate": ["current-cardano-c2-consumer-profile-policy-candidate-20261016/C2-PROFILE-R2-CONTRACT.md", "current-cardano-c2-consumer-profile-policy-candidate-20261016/C2-PROFILE-R2-API.json"],
+  "cpPins": "root-recorded bytes and SHA-256; not computed by the author",
+  "cpAdopted": false,
+  "onDivergence": "R4 void until explicit downstream reconciliation and fresh review"
+ },
+ "dependency": {
+  "call": "c2_issue_artifacts_r2.prepare_c2_issue(export, setup, expiry, policy_id=policy); once; by attribute at call time",
+  "resultKeys": ["format", "envData", "envCborHex", "envelopeTokenNameHex", "issueData", "issueCborHex", "mintValueData", "mintValueCborHex", "policyIdHex", "expiry", "setupRecordSha256Declared", "labels"],
+  "format": "moriarty-c2-issue-artifacts/2",
+  "c2iStages": ["ARG", "SETUP", "PROFILE", "EXPORT", "RELATION", "STATEMENT", "CONTEXT", "DIGEST", "PROOF", "CARDANO", "BUILD"],
+  "labels": {"expiry": "CALLER_SUPPLIED_NOT_PROOF_BOUND", "context": "CALLER_DECLARED_UNAUTHENTICATED", "policyId": "CALLER_SUPPLIED_UNAUTHENTICATED", "trustProfile": "single-party-test-setup/1", "setupRecordLink": "DECLARED_NOT_BYTE_CHECKED", "groth16": "NOT_VERIFIED", "vkCurveValidity": "NOT_CHECKED", "proofCurveValidity": "NOT_CHECKED", "statementReencode": "NOT_CHECKED", "relationProfile": "DESCRIPTOR_PROFILE_CHECKED_NOT_RECOMPILED", "driverId": "DECLARED_NAME_NOT_PROVENANCE", "rustAcceptance": "DECLARED_SUBSET_NOT_EQUIVALENT", "circuitVkCorrespondence": "OPEN", "ledger": "NO_CLAIM"},
+  "consumerHostApis": ["parse_statement_header", "statement_digest_hex", "statement_public_inputs", "build_env_data", "encode_data", "build_c2_mint_data", "build_value_data"],
+  "builderHostApis": ["build_env_data", "encode_data", "build_c2_mint_data", "build_value_data"],
+  "v1": "c2_issue_artifacts.py (15231 B, 23c3f99d...): prohibited, never imported, absent from envelope"
+ },
+ "module": {
+  "file": "build_k10_inputs_r4.py",
+  "imports": ["hashlib", "json", "os", "re", "stat", "sys", "build_k10_inputs as legacy", "c2_issue_artifacts_r2", "host_codec"],
+  "public": ["parse_expiry", "read_public_file", "parse_public_json", "check_setup_link", "legacy_env_from_host", "plan_outputs", "main"],
+  "seam": "# === C2B-R4-APPEND-SEAM: append tail below; prefix above is immutable ===",
+  "prefix": "imports, constants, parse_expiry, read_public_file, parse_public_json, check_setup_link",
+  "tail": "legacy_env_from_host, plan_outputs, main, private writer and cleanup, verbatim _render_prepared_outputs",
+  "pins": "root-recorded per phase",
+  "forbidden": ["v1 import or binding", "sys.path or sys.modules mutation", "importlib", "module or attribute rebinding", "/2-to-/1 format or label bridge", "edits above either seam"]
+ },
+ "platform": "POSIX; Linux envelope only; missing flags or dir_fd support is STOP",
+ "constants": {"b9Cap": 16777216, "exportCap": 1048576, "setupCap": 65536, "readChunk": 65536, "jsonDepth": 16, "jsonIntChars": 20, "consumerMessageChars": 1024, "u64Max": "2**64-1"},
+ "openFlags": {"read": "O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC|O_NOCTTY", "parentDir": "O_RDONLY|O_DIRECTORY|O_CLOEXEC", "pinnedDir": "O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC", "write": "O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC|O_NOCTTY, mode 0o644, umask applies", "mkdirMode": "0o755"},
+ "regexAsciiFullmatch": {"expiry": "(?:0|[1-9][0-9]{0,19})", "jsonInt": "(?:0|-?[1-9][0-9]*)", "hex64": "[0-9a-f]{64}", "basename": "[a-z0-9][a-z0-9._-]{0,99}"},
+ "errno": {
+  "readRefusal": ["ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM", "EISDIR", "ENAMETOOLONG", "ENXIO", "ENODEV", "EOVERFLOW"],
+  "outdirRefusal": ["ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM", "ENAMETOOLONG"],
+  "outdirNote": "parent open errors in outdirRefusal refuse; basename stat must fail ENOENT, while success or another outdirRefusal errno refuses",
+  "write": "every OSError in WRITE is C2B-WRITE with cleanup",
+  "propagate": "every other errno (EMFILE, ENFILE, ENOMEM, EIO, EINVAL, EAGAIN, ESTALE, ...), any fstat, read or close OSError in READ or REREAD, MemoryError, OverflowError, KeyboardInterrupt"
+ },
+ "functions": {
+  "parse_expiry(text) -> int": "ARGV",
+  "read_public_file(path, cap) -> bytes": "READ; cap in constants",
+  "parse_public_json(raw, cap) -> dict": "JSON; cap 1048576 or 65536",
+  "check_setup_link(export, setup_raw) -> str": "LINK",
+  "legacy_env_from_host(env_data) -> legacy Constr": "BRIDGE",
+  "plan_outputs(b9_raw, export_raw, setup_raw, expiry) -> dict[str, bytes]": "ARGV, JSON(export), JSON(setup), LINK, POLICY, CONSUMER, BRIDGE, RENDER; pure",
+  "main(argv) -> int": "ARGV, OUTDIR, READ, plan, WRITE, REREAD, WRITE(manifest)"
+ },
+ "refusal": {
+  "stages": ["ARGV", "OUTDIR", "READ", "JSON", "LINK", "POLICY", "CONSUMER", "BRIDGE", "WRITE", "REREAD"],
+  "form": "ValueError with one exact str arg 'C2B-<STAGE>: <reason>'; main prints one stderr line, no stdout, returns 2",
+  "consumerWrap": ["C2B-CONSUMER: <conforming C2I message>", "C2B-CONSUMER: nonconforming consumer refusal"],
+  "unexpected": "environmental and non-C2B exceptions propagate after any required cleanup"
+ },
+ "outputs": {
+  "files": ["script.hex", "contexts/K10-T1-positive-genuine-issue.uplc.txt", "contexts/K10-T5-quantity-two-reject.uplc.txt", "contexts/K10-T6-token-name-bitflip-reject.uplc.txt", "contexts/K10-T7-vk-digest-bitflip-reject.uplc.txt", "manifest.json"],
+  "encoding": "as S08 renderer: code_hex+newline; '(con data (' + legacy.uplc_term(ctx) + '))' + newline; json.dumps(indent=2, sort_keys=True) + newline; UTF-8",
+  "writeOrder": ["mkdir out", "mkdir contexts", "script.hex", "T1", "T5", "T6", "T7", "REREAD", "manifest.json.tmp", "rename to manifest.json"],
+  "stdout": "one JSON line {output: argv[5], cases: 4}"
+ },
+ "manifest": {
+  "format": "cardano-k2-k10-public-inputs/3",
+  "keys": "exactly the 33-key MANIFEST_KEYS set of R3 test_c2_builder.py, copied as literals",
+  "keptFromR2": "auditSourcePins and scriptHash* strings copied verbatim from build_k10_inputs.py main()",
+  "builderRevision": "build_k10_inputs_r4",
+  "consumerFormat": "moriarty-c2-issue-artifacts/2",
+  "consumerLabels": "dependency.labels exactly",
+  "builderLabels": {"contextProvenance": "FABRICATED_LOCAL_VM_TEST_NOT_A_CARDANO_TRANSACTION", "setupRecordLink": "FILE_BYTES_SHA256_EQUALS_EXPORT_DECLARATION", "policyId": "RECOMPUTED_FROM_PINNED_HISTORICAL_B9_WRAPPER", "uplcBridge": "LEGACY_RENDERER_UNCHANGED_PER_CALL_CBOR_EQUALITY", "issueEncoding": "HOST_ONLY_LEGACY_CANNOT_ENCODE_OVER_64_BYTES", "negativeCases": "BYTE_MUTATIONS_OF_ONE_GENUINE_PAYLOAD_NO_NEW_PROOFS", "consumerProfile": "CP_R2_CANDIDATE_DECLARED_SUBSET_NOT_ADOPTED", "transaction": "NO_FEE_MINADA_COLLATERAL_EXUNITS_FIT_OR_AUTHENTICITY_CLAIM", "operatorCompatibility": "NOT_CLAIMED"},
+  "limitations": ["Fabricated local VM test context (zero fee, empty inputs, zero txid, everything interval); not a Cardano transaction.", "Expiry is caller supplied and not proof bound; context is caller declared and unauthenticated.", "Single-party TEST ONLY setup; Groth16, curve validity, fees, min-ADA, ExUnits and ledger acceptance are not checked or claimed.", "Consumer profile r2 is an unadopted declared subset of Rust acceptance, not equivalence; circuit/VK correspondence is OPEN."],
+  "flags": {"native": false, "operator": false, "wallet": false, "prover": false, "vm": false, "deploy": false, "previewTested": false, "preprodTested": false, "groth16Verified": false, "builderReliancePermitted": false},
+  "other": "expiry; claimantVkhHex; settleOutref {transactionIdHex, outputIndex}; issueCborHex; mintValueCborHex; setupRecordSha256 = LINK digest; inputs [{role, sha256, bytes}] for b9-applied, proof-export, setup-record; coverageGaps T2-T4 status NOT_GENERATED_HISTORICAL_FIXTURE_ONLY",
+  "caseKeys": ["contextFile", "envStatementDigestHex", "envVkDigestHex", "envelopeCborHex", "id", "proofHexSha256", "quantity", "tokenNameHex"]
+ },
+ "cases": {"T1": "consumer env, token, qty 1", "T5": "qty 2", "T6": "token first bit flipped", "T7": "env vk digest first bit flipped, token recomputed", "T2-T4": "coverage gaps only; no synthetic proofs"},
+ "ownership": {"opus": "every policy, check, hash, equality, row, mutation, manifest value, stage order, exception mapping, writer and cleanup", "sol": "verbatim renderer after checks; argv dispatch skeleton; stdout/stderr printing", "review": "fresh non-author Opus on the combined actual source and results; fresh Muse on Sol glue"},
+ "envelope": {"layout": "isolated/ (555, files 444): test_c2_builder_r4.py, build_k10_inputs.py, host_codec.py, c2_issue_artifacts_r2.py, inputs/ with b9-applied.json, K6-PUBLIC-PROOF.json, K2-PUBLIC-SETUP-RECORD.json, HIST-09; no v1; r4 absent at RED; scratch/ 700 empty", "command": "python3 -I -B isolated/test_c2_builder_r4.py once, no retry", "limits": "CPU 10 s, wall 20 s, AS 512 MiB, fsize 2 MiB, core 0, env PATH/LANG/PYTHONDONTWRITEBYTECODE only", "grants": "no native, network, key or VM; rlimits are not a network sandbox"},
+ "red": "R00 passes; R01-R17 fail only with 'missing implementation: build_k10_inputs_r4.py'; 0 errors. Absent or mismatched r2, setUpModule error, ImportError, R00 failure or any error: STOP",
+ "gates": {"sourceReady": false, "adopted": false, "builderImplemented": false, "nativeAuthority": 0, "operatorAuthority": 0}
+}

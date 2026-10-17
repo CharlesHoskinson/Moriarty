@@ -1,0 +1,216 @@
+"""K10 public-input builder r3 (C2-BUILDER-CONTRACT.md CB01-CB12): SOURCE PREFIX ONLY.
+
+AUTHOR-PROPOSED by claude-opus-5-5 HIGH, tools off; never imported, run, hashed or
+reviewed, and not adopted. This prefix implements only parse_expiry (CB02),
+read_public_file (CB04), parse_public_json (CB05) and check_setup_link (CB06).
+legacy_env_from_host, plan_outputs and main are not implemented here; they are
+appended later below the seam marker at the end of this file. Public data only:
+the sole hash is SHA-256 provenance of exact public setup bytes. No Groth16, curve,
+key, proof, ledger, network or native action.
+"""
+import hashlib
+import json
+import os
+import re
+import stat
+import sys
+
+import build_k10_inputs as legacy
+import c2_issue_artifacts
+import host_codec
+
+_U64_MAX = 2 ** 64 - 1
+_B9_CAP = 16 * 1024 * 1024
+_EXPORT_CAP = 1024 * 1024
+_SETUP_CAP = 64 * 1024
+_JSON_MAX_DEPTH = 16
+_JSON_MAX_INT_CHARS = 20
+_READ_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+_UTF8_BOM = bytes.fromhex("efbbbf")
+_BACKSLASH = chr(92)
+_EXPIRY_RE = re.compile(r"(?:0|[1-9][0-9]{0,19})", re.ASCII)
+_JSON_INT_RE = re.compile(r"-?(?:0|[1-9][0-9]*)", re.ASCII)
+_HEX64_RE = re.compile(r"[0-9a-f]{64}", re.ASCII)
+
+
+def parse_expiry(text):
+    """CB02: exact str fully matching ASCII 0|[1-9][0-9]{0,19}, value <= 2**64-1."""
+    if type(text) is not str or _EXPIRY_RE.fullmatch(text) is None:
+        raise ValueError("C2B-ARGV: expiry must be an exact canonical ASCII decimal str")
+    value = int(text)
+    if value > _U64_MAX:
+        raise ValueError("C2B-ARGV: expiry exceeds 2**64-1")
+    return value
+
+
+def _os_reason(exc):
+    # Class name and errno only: no path or other caller text enters the one-line refusal.
+    return "%s errno %s" % (type(exc).__name__, exc.errno)
+
+
+def _close_after_failure(fd):
+    try:
+        os.close(fd)
+    except OSError:
+        pass  # the refusal already in flight is reported instead
+
+
+def _read_regular_fd(fd, cap):
+    try:
+        mode = os.fstat(fd).st_mode
+    except OSError as exc:
+        raise ValueError("C2B-READ: fstat failed (%s)" % _os_reason(exc)) from None
+    if not stat.S_ISREG(mode):
+        raise ValueError("C2B-READ: not a regular file")
+    limit = cap + 1
+    chunks, total = [], 0
+    while total < limit:
+        try:
+            chunk = os.read(fd, limit - total)
+        except OSError as exc:
+            raise ValueError("C2B-READ: read failed (%s)" % _os_reason(exc)) from None
+        if not chunk:
+            break
+        chunks.append(chunk)
+        total += len(chunk)
+    if total > cap:
+        raise ValueError("C2B-READ: file exceeds cap of %d bytes" % cap)
+    return b"".join(chunks)
+
+
+def read_public_file(path, cap):
+    """CB04: no-follow non-blocking open, fstat regular, read at most cap+1 bytes, always close."""
+    if type(path) is not str or not path or chr(0) in path:
+        raise ValueError("C2B-READ: path must be a non-empty str without NUL")
+    if type(cap) is not int or cap < 0:
+        raise ValueError("C2B-READ: cap must be a non-negative int")
+    try:
+        fd = os.open(path, _READ_FLAGS)
+    except OSError as exc:
+        raise ValueError("C2B-READ: open refused (%s)" % _os_reason(exc)) from None
+    try:
+        data = _read_regular_fd(fd, cap)
+    except BaseException:
+        _close_after_failure(fd)
+        raise
+    try:
+        os.close(fd)
+    except OSError as exc:
+        raise ValueError("C2B-READ: close failed (%s)" % _os_reason(exc)) from None
+    return data
+
+
+def _json_depth_within(text, limit):
+    # Lexical pre-scan so the recursive decoder never sees nesting beyond the limit.
+    depth = 0
+    in_string = escaped = False
+    for ch in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == _BACKSLASH:
+                escaped = True
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch == "[" or ch == "{":
+            depth += 1
+            if depth > limit:
+                return False
+        elif ch == "]" or ch == "}":
+            depth -= 1
+    return True
+
+
+def _json_object(pairs):
+    result = dict(pairs)
+    if len(result) != len(pairs):
+        raise ValueError("C2B-JSON: duplicate object key")
+    return result
+
+
+def _json_int(literal):
+    if len(literal) > _JSON_MAX_INT_CHARS or _JSON_INT_RE.fullmatch(literal) is None:
+        raise ValueError("C2B-JSON: integer literal refused")
+    return int(literal)
+
+
+def _json_float(literal):
+    raise ValueError("C2B-JSON: fraction or exponent refused")
+
+
+def _json_constant(name):
+    raise ValueError("C2B-JSON: non-finite constant refused")
+
+
+def _json_check_str(text):
+    try:
+        text.encode("utf-8", "strict")
+    except UnicodeEncodeError:
+        raise ValueError("C2B-JSON: lone surrogate refused") from None
+
+
+def _json_check_tree(value, depth):
+    kind = type(value)
+    if kind is dict or kind is list:
+        if depth >= _JSON_MAX_DEPTH:
+            raise ValueError("C2B-JSON: nesting exceeds %d" % _JSON_MAX_DEPTH)
+        if kind is dict:
+            for key, item in value.items():
+                _json_check_str(key)
+                _json_check_tree(item, depth + 1)
+        else:
+            for item in value:
+                _json_check_tree(item, depth + 1)
+    elif kind is str:
+        _json_check_str(value)
+
+
+def parse_public_json(raw, cap):
+    """CB05: strict bounded JSON object from exact public bytes; every refusal is C2B-JSON."""
+    if type(raw) is not bytes:
+        raise ValueError("C2B-JSON: input must be exact bytes")
+    if type(cap) is not int or cap < 0:
+        raise ValueError("C2B-JSON: cap must be a non-negative int")
+    if len(raw) > cap:
+        raise ValueError("C2B-JSON: input exceeds cap of %d bytes" % cap)
+    if raw.startswith(_UTF8_BOM):
+        raise ValueError("C2B-JSON: UTF-8 BOM refused")
+    try:
+        text = raw.decode("utf-8", "strict")
+    except UnicodeDecodeError:
+        raise ValueError("C2B-JSON: not strict UTF-8") from None
+    if not _json_depth_within(text, _JSON_MAX_DEPTH):
+        raise ValueError("C2B-JSON: nesting exceeds %d" % _JSON_MAX_DEPTH)
+    try:
+        value = json.loads(text, object_pairs_hook=_json_object, parse_float=_json_float,
+                           parse_int=_json_int, parse_constant=_json_constant)
+    except RecursionError:
+        raise ValueError("C2B-JSON: nesting too deep") from None
+    except ValueError as exc:
+        if str(exc).startswith("C2B-JSON: "):
+            raise
+        raise ValueError("C2B-JSON: malformed JSON or trailing data") from None
+    if type(value) is not dict:
+        raise ValueError("C2B-JSON: top-level value must be an object")
+    _json_check_tree(value, 0)
+    return value
+
+
+def check_setup_link(export, setup_raw):
+    """CB06: export setupRecordSha256 is exact lowercase hex64 equal to SHA-256(setup bytes)."""
+    if type(export) is not dict:
+        raise ValueError("C2B-LINK: export must be a parsed JSON object")
+    if type(setup_raw) is not bytes:
+        raise ValueError("C2B-LINK: setup must be exact bytes")
+    declared = export.get("setupRecordSha256")
+    if type(declared) is not str or _HEX64_RE.fullmatch(declared) is None:
+        raise ValueError("C2B-LINK: setupRecordSha256 must be an exact 64-lowercase-hex str")
+    actual = hashlib.sha256(setup_raw).hexdigest()
+    if declared != actual:
+        raise ValueError("C2B-LINK: setupRecordSha256 does not match SHA-256 of setup bytes")
+    return actual
+
+
+# === C2B-R3-APPEND-SEAM: append tail below; prefix above is immutable ===

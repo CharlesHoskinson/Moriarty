@@ -1,0 +1,81 @@
+{
+ "format": "c2-builder-r3-prefix-contract/1",
+ "reviewToken": "current-cardano-c2-builder-opus-io-prefix-20261016",
+ "status": "AUTHOR_PROPOSED_PARTIAL_PREFIX; not imported, executed, hashed, reviewed or adopted; not a substitute for the builder",
+ "author": "claude-opus-5-5 HIGH, tools off",
+ "contract": "C2-BUILDER-CONTRACT.md CB01-CB12 and C2-BUILDER-API.json, unchanged",
+ "predecessor": {
+  "token": "current-cardano-c2-builder-opus-security-implementation-20261016",
+  "exitCode": 124,
+  "schemaValid": false,
+  "disposition": "preserved; not resumed, restarted or salvaged; no source from it used"
+ },
+ "phase": "first smaller phase: four input functions only (CB02, CB04, CB05, CB06); full scope retained",
+ "file": {
+  "name": "build_k10_inputs_r3.prefix.py.txt",
+  "becomes": "the leading bytes of build_k10_inputs_r3.py",
+  "bytesAndSha256": "not computed by the author; root records them"
+ },
+ "imports": ["hashlib", "json", "os", "re", "stat", "sys", "build_k10_inputs as legacy", "c2_issue_artifacts", "host_codec"],
+ "importNotes": "sys, legacy, c2_issue_artifacts and host_codec are unused by the prefix and reserved for the tail. c2_issue_artifacts is imported as a module so the tail calls prepare_c2_issue by attribute at call time. sys.path is never mutated.",
+ "publicFunctions": {
+  "parse_expiry(text) -> int": "CB02. type(text) is str and fullmatch ASCII (?:0|[1-9][0-9]{0,19}) and int(text) <= 2**64-1; else ValueError 'C2B-ARGV: ...'. Pure.",
+  "read_public_file(path, cap) -> bytes": "CB04. type(path) is str, non-empty, no NUL; type(cap) is int >= 0. os.open(path, O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC); fstat S_ISREG; os.read loop of at most cap+1 bytes; more than cap bytes is refused; fd closed on every path. Policy violations and OSError from open/fstat/read/close become ValueError 'C2B-READ: ...' (class name and errno only). MemoryError and KeyboardInterrupt propagate.",
+  "parse_public_json(raw, cap) -> dict": "CB05. In order: type(raw) is bytes; type(cap) is int >= 0; len(raw) <= cap; no EF BB BF prefix; strict utf-8 decode; lexical depth pre-scan <= 16; json.loads(str) with hooks refusing duplicate keys (object_pairs_hook), fraction or exponent (parse_float), NaN/Infinity/-Infinity (parse_constant), integer literals over 20 characters (sign included) or not ASCII -?(?:0|[1-9][0-9]*) (parse_int); top-level dict; post-walk depth <= 16 and every key and string utf-8 encodable (no lone surrogate). RecursionError and all decode or hook ValueErrors become ValueError 'C2B-JSON: ...'. Pure.",
+  "check_setup_link(export, setup_raw) -> str": "CB06. type(export) is dict; type(setup_raw) is bytes; export.get('setupRecordSha256') is a str fullmatching [0-9a-f]{64} and equal to hashlib.sha256(setup_raw).hexdigest(); returns that hex; else ValueError 'C2B-LINK: ...'. Pure."
+ },
+ "privateHelpers": {
+  "_os_reason(exc) -> str": "'<ExceptionClass> errno <n>'",
+  "_close_after_failure(fd)": "os.close ignoring OSError, only while another exception is in flight",
+  "_read_regular_fd(fd, cap) -> bytes": "fstat S_ISREG check plus bounded read loop",
+  "_json_depth_within(text, limit) -> bool": "lexical container depth outside strings",
+  "_json_object(pairs) -> dict": "duplicate-key refusal",
+  "_json_int(literal) -> int": "length and ASCII-canonical check",
+  "_json_float(literal)": "always refuses",
+  "_json_constant(name)": "always refuses",
+  "_json_check_str(text)": "strict utf-8 encode; refuses surrogates",
+  "_json_check_tree(value, depth)": "authoritative depth and string walk; top-level object is depth 1, at most 16 nested containers"
+ },
+ "constants": {
+  "_U64_MAX": "2**64-1",
+  "_B9_CAP": 16777216,
+  "_EXPORT_CAP": 1048576,
+  "_SETUP_CAP": 65536,
+  "_JSON_MAX_DEPTH": 16,
+  "_JSON_MAX_INT_CHARS": 20,
+  "_READ_FLAGS": "os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC",
+  "_UTF8_BOM": "efbbbf",
+  "_BACKSLASH": "chr(92)",
+  "_EXPIRY_RE": "(?:0|[1-9][0-9]{0,19}) re.ASCII",
+  "_JSON_INT_RE": "-?(?:0|[1-9][0-9]*) re.ASCII",
+  "_HEX64_RE": "[0-9a-f]{64} re.ASCII"
+ },
+ "refusalMessages": "ValueError starting 'C2B-<STAGE>: '; always one line; no path or other caller-supplied text echoed",
+ "reachableEffects": {
+  "moduleImport": "executes the top level of build_k10_inputs, c2_issue_artifacts and host_codec; the prefix's own top level only binds constants and compiles three regexes",
+  "read_public_file": "exactly one os.open of the given path, then fstat, read of at most cap+1 bytes, and close; no other file, directory scan, write, environment, clock, network or subprocess",
+  "parse_expiry, parse_public_json, check_setup_link": "pure; check_setup_link computes one SHA-256 of public bytes",
+  "never": "VK/curve/Groth16/ledger verification, PK/SRS, key, proof, UPLC, VM, wallet, native or network actions"
+ },
+ "appendSeam": {
+  "marker": "# === C2B-R3-APPEND-SEAM: append tail below; prefix above is immutable ===",
+  "position": "last line of the prefix, followed by one newline",
+  "rule": "the tail is appended after the marker; the prefix bytes up to and including the marker are never edited"
+ },
+ "outstanding": {
+  "legacy_env_from_host(env_data)": "Opus security tail (CB09)",
+  "plan_outputs(b9_raw, export_raw, setup_raw, expiry)": "Opus stage order and BRIDGE; Sol case table, legacy render calls and manifest (CB05 expiry gate, CB07-CB10, CB12)",
+  "main(argv)": "Sol dispatch; Opus arity, OUTDIR, READ wiring, exclusive writer, REREAD (CB02, CB03, CB04, CB11)"
+ },
+ "tailObligations": [
+  "plan_outputs first refuses C2B-ARGV unless type(expiry) is int and 0 <= expiry <= _U64_MAX; parse_expiry is str-only and is not reused for this",
+  "plan_outputs then calls parse_public_json(export_raw, _EXPORT_CAP), then parse_public_json(setup_raw, _SETUP_CAP), then check_setup_link(export, setup_raw), before POLICY",
+  "main checks len(argv) == 6 and parse_expiry(argv[4]) before OUTDIR; after OUTDIR it reads argv[1], argv[2], argv[3] with read_public_file using _B9_CAP, _EXPORT_CAP and _SETUP_CAP",
+  "REREAD reuses read_public_file with the same caps and compares bytes exactly",
+  "main prints the ValueError message as exactly one stderr line"
+ ],
+ "interpretationsForReview": ["OSError on the read path becomes C2B-READ", "leading RFC 8259 whitespace is admitted", "the 20-character integer limit includes the sign; -0 is admitted", "the top-level object counts as depth 1"],
+ "tests": "not rewritten; no new expectations. Actual RED: 10 run, 9 missing-implementation failures. GREEN unobserved; the prefix alone cannot satisfy test_02-test_10.",
+ "review": "the combined prefix, tail and glue needs a fresh non-author Opus review and a fresh Muse review of the Sol glue; no approval now",
+ "flags": {"native": false, "operator": false, "wallet": false, "prover": false, "vm": false, "deploy": false, "builderImplemented": false, "prefixAdopted": false, "previewTested": false, "preprodTested": false, "groth16Verified": false, "publicVerificationInputsPublishable": false}
+}
