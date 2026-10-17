@@ -1,0 +1,897 @@
+{
+  "format": "sherlock-adt12-source-row-map/1",
+  "status": "SOURCE_PROPOSAL_ONLY_UNCOMPILED_UNINSTALLED_UNADOPTED",
+  "payload_file": "adt_payloads.proposed.rs",
+  "payload_sha256": "a73951c5be2484ffa2ade77f8b33cffbf5b5b7894c04ca9797d545c850094681",
+  "normative_basis": {
+    "file_kind": "join14 extension-rows.json",
+    "bytes": 127566,
+    "sha256": "0b25a5aa8c1f2a2bfc5f4f78dc73e253321addf3b485f26d9e8987f4a81c6871",
+    "root": "/adt_helper_rows",
+    "indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "source15_comparison": "Designated Opus actual-source review read-compared all normative fields of source15 rows 0..11, relevant helper carriers/functions and G-BUILD-LAST against this literal map; byte identity was not established by that source-only review.",
+  "rows": [
+    {
+      "pointer": "/adt_helper_rows/0",
+      "row": {
+        "id": "x.adt.helper.Build.entry",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperEnter",
+        "site": "Materialize",
+        "select_when": "dispatch.select step 3: helperPlan(Materialize) = some(Build)",
+        "helperVisits": 0,
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "reg.helper",
+            "value": "Build{site: Materialize, originReferenceCursor: pre.referenceCursor, parentResume: none, typeId: c.typeId, ctorId: c.ctorId, src: c.fields, srcCursor: 0, fieldStart: pre.active.dataFields, staged: none, node: none, phase: Copy}"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Build.cell"
+        ],
+        "semantic_failure": "none",
+        "sources": [
+          "R2 extension_interfaces X-04"
+        ]
+      },
+      "function": "build_entry",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 96
+    },
+    {
+      "pointer": "/adt_helper_rows/1",
+      "row": {
+        "id": "x.adt.helper.Build.cell",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Materialize",
+        "select_when": "h.phase = Copy and isNone(h.staged) and h.srcCursor < h.src.len",
+        "helperVisits": 1,
+        "inspected": "img.valueSlots[h.src.start + h.srcCursor]",
+        "reads": [
+          {
+            "loc": "img.valueSlots",
+            "index": "h.src.start + h.srcCursor",
+            "bound": "pre.active.valueSlots"
+          }
+        ],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "h.staged",
+            "value": "some(vslot(h.src, h.srcCursor))"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Build.field"
+        ],
+        "semantic_failure": "none",
+        "sources": [
+          "R2 inspection_unit (one value-slot read is one record)",
+          "b.helper.Append.cell pattern"
+        ]
+      },
+      "function": "build_cell",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 130
+    },
+    {
+      "pointer": "/adt_helper_rows/2",
+      "row": {
+        "id": "x.adt.helper.Build.field",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Materialize",
+        "select_when": "h.phase = Copy and isSome(h.staged)",
+        "helperVisits": 1,
+        "inspected": "one field-slot destination; on the last field also the node destination",
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": [
+            {
+              "guard": "G-BUILD-LAST",
+              "add": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "cap_kinds_possible": [
+          "DataNodes",
+          "DataFields"
+        ],
+        "effects": [
+          {
+            "op": "allocField",
+            "value": "unwrap(h.staged)"
+          },
+          {
+            "op": "set",
+            "target": "h.srcCursor",
+            "value": "h.srcCursor + 1"
+          },
+          {
+            "op": "set",
+            "target": "h.staged",
+            "value": "none"
+          },
+          {
+            "op": "if",
+            "when": "h.srcCursor + 1 = h.src.len",
+            "then": [
+              {
+                "op": "allocData",
+                "bind": "nv",
+                "row": "DataRow::Constructor{typeId: h.typeId, ctorId: h.ctorId, fields: slice(h.fieldStart, h.src.len)}"
+              },
+              {
+                "op": "set",
+                "target": "h.node",
+                "value": "some(nv)"
+              },
+              {
+                "op": "set",
+                "target": "h.phase",
+                "value": "Done"
+              }
+            ],
+            "else": []
+          }
+        ],
+        "next": [
+          "x.adt.helper.Build.cell",
+          "x.adt.helper.Build.exit"
+        ],
+        "semantic_failure": "none (field types were tested at RetCtorFields)",
+        "capacity_failure": "Exhausted(DataNodes) on the last field before Exhausted(DataFields) (P6 order); charged; nothing written; staged retained; the pending block written by earlier field events stays owned by the retained helper (CPA-04, SI-18)",
+        "sources": [
+          "interfaces.md:128",
+          "R2 X-04 (one field per charged event)",
+          "MCL design.md:200 G1 as amended by CPA-04"
+        ]
+      },
+      "function": "build_field",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 146
+    },
+    {
+      "pointer": "/adt_helper_rows/3",
+      "row": {
+        "id": "x.adt.helper.Build.exit",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperExit",
+        "site": "Materialize",
+        "select_when": "h.phase = Done",
+        "helperVisits": 0,
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "reg.result",
+            "value": "BuildDone{value: unwrap(h.node)}"
+          },
+          {
+            "op": "clearHelper"
+          }
+        ],
+        "next": [
+          "x.adt.materialize.done"
+        ],
+        "semantic_failure": "none",
+        "sources": [
+          "R2 F-05 exit/failure split"
+        ]
+      },
+      "function": "build_exit",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 190
+    },
+    {
+      "pointer": "/adt_helper_rows/4",
+      "row": {
+        "id": "x.adt.helper.Plan.entry",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperEnter",
+        "site": "Cases",
+        "select_when": "dispatch.select step 3: helperPlan(Cases) = some(Plan)",
+        "helperVisits": 0,
+        "reads": [
+          {
+            "loc": "prog.expressions",
+            "index": "pre.controlOrigin",
+            "bound": "active(prog.expressions)"
+          },
+          {
+            "loc": "prog.planNodes",
+            "index": "unwrap(expr(pre.controlOrigin).plan)",
+            "bound": "active(prog.planNodes)"
+          }
+        ],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "let",
+            "bind": "n0",
+            "value": "unwrap(expr(pre.controlOrigin).plan)"
+          },
+          {
+            "op": "set",
+            "target": "reg.helper",
+            "value": "Plan{site: Cases, originReferenceCursor: pre.referenceCursor, parentResume: none, match: pre.controlOrigin, scrutinee: c.value, savedEnv: c.savedEnv, partial: c.savedEnv, node: n0, phase: loadPhase(n0), afterWalk: loadAfter(n0), cur: c.value, path: loadPath(n0), pathCursor: 0, arm: loadArm(n0), status: Pending}"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Plan.walk",
+          "x.adt.helper.Plan.switch",
+          "x.adt.helper.Plan.bind",
+          "x.adt.helper.Plan.select",
+          "x.adt.helper.Plan.nomatch"
+        ],
+        "semantic_failure": "none",
+        "sources": [
+          "interfaces.md:298-302",
+          "main.k:214-216 (scrutinee evaluated once before Cases)"
+        ]
+      },
+      "function": "plan_entry",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 206
+    },
+    {
+      "pointer": "/adt_helper_rows/5",
+      "row": {
+        "id": "x.adt.helper.Plan.walk",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Cases",
+        "select_when": "h.phase = Walk",
+        "helperVisits": 1,
+        "inspected": "field(h.cur, prog.fieldPaths[h.path.start + h.pathCursor]) with its row header",
+        "reads": [
+          {
+            "loc": "prog.fieldPaths",
+            "index": "h.path.start + h.pathCursor",
+            "bound": "active(prog.fieldPaths)"
+          },
+          {
+            "loc": "field slot",
+            "index": "field(h.cur, prog.fieldPaths[h.path.start + h.pathCursor])",
+            "bound": "its space"
+          }
+        ],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "h.cur",
+            "value": "field(h.cur, prog.fieldPaths[h.path.start + h.pathCursor])"
+          },
+          {
+            "op": "set",
+            "target": "h.pathCursor",
+            "value": "h.pathCursor + 1"
+          },
+          {
+            "op": "if",
+            "when": "h.pathCursor + 1 = h.path.len",
+            "then": [
+              {
+                "op": "set",
+                "target": "h.phase",
+                "value": "h.afterWalk"
+              }
+            ],
+            "else": []
+          }
+        ],
+        "next": [
+          "x.adt.helper.Plan.walk",
+          "x.adt.helper.Plan.switch",
+          "x.adt.helper.Plan.bind"
+        ],
+        "semantic_failure": "none; the field index is below arity because every ancestor on the path was fixed by a Switch case (SI-X05); otherwise HostViolation",
+        "sources": [
+          "interfaces.md:306 (occurrence paths, never arena addresses)",
+          "rules.json:7384-7389 (one node/field per bounded visit)"
+        ]
+      },
+      "function": "plan_walk",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 250
+    },
+    {
+      "pointer": "/adt_helper_rows/6",
+      "row": {
+        "id": "x.adt.helper.Plan.switch",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Cases",
+        "select_when": "h.phase = Test",
+        "helperVisits": 1,
+        "inspected": "deref(h.cur): kind, typeId, ctorId",
+        "reads": [
+          {
+            "loc": "prog.planNodes",
+            "index": "h.node",
+            "bound": "active(prog.planNodes)"
+          },
+          {
+            "loc": "value row",
+            "index": "h.cur",
+            "bound": "its space"
+          },
+          {
+            "loc": "prog.types",
+            "index": "planNode(h.node).typeId",
+            "bound": "active(prog.types)"
+          },
+          {
+            "loc": "prog.planCases",
+            "index": "caseSlot(planNode(h.node), kind(h.cur))",
+            "bound": "active(prog.planCases)",
+            "when": "ctorClass(kind(h.cur)) and typeOfKind(kind(h.cur)) = planNode(h.node).typeId"
+          },
+          {
+            "loc": "prog.planNodes",
+            "index": "if ctorClass(kind(h.cur)) and typeOfKind(kind(h.cur)) = planNode(h.node).typeId and isSome(prog.planCases[caseSlot(planNode(h.node), kind(h.cur))]) then unwrap(prog.planCases[caseSlot(planNode(h.node), kind(h.cur))]) else planNode(h.node).default",
+            "bound": "active(prog.planNodes)"
+          }
+        ],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "let",
+            "bind": "nd",
+            "value": "planNode(h.node)"
+          },
+          {
+            "op": "let",
+            "bind": "k",
+            "value": "kind(h.cur)"
+          },
+          {
+            "op": "let",
+            "bind": "nx",
+            "value": "if ctorClass(k) and typeOfKind(k) = nd.typeId and isSome(prog.planCases[caseSlot(nd, k)]) then unwrap(prog.planCases[caseSlot(nd, k)]) else nd.default"
+          },
+          {
+            "op": "set",
+            "target": "h.node",
+            "value": "nx"
+          },
+          {
+            "op": "set",
+            "target": "h.cur",
+            "value": "h.scrutinee"
+          },
+          {
+            "op": "set",
+            "target": "h.path",
+            "value": "loadPath(nx)"
+          },
+          {
+            "op": "set",
+            "target": "h.pathCursor",
+            "value": "0"
+          },
+          {
+            "op": "set",
+            "target": "h.afterWalk",
+            "value": "loadAfter(nx)"
+          },
+          {
+            "op": "set",
+            "target": "h.arm",
+            "value": "loadArm(nx)"
+          },
+          {
+            "op": "set",
+            "target": "h.phase",
+            "value": "loadPhase(nx)"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Plan.walk",
+          "x.adt.helper.Plan.switch",
+          "x.adt.helper.Plan.bind",
+          "x.adt.helper.Plan.select",
+          "x.adt.helper.Plan.nomatch"
+        ],
+        "semantic_failure": "none: a scalar, a value of another type, or a constructor of the type without a case takes the default",
+        "sources": [
+          "interfaces.md:300",
+          "main.k:307-312 (dynamic NoMatch)",
+          "UISEC-002 (type confusion)"
+        ]
+      },
+      "function": "plan_switch",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 279
+    },
+    {
+      "pointer": "/adt_helper_rows/7",
+      "row": {
+        "id": "x.adt.helper.Plan.bind",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Cases",
+        "select_when": "h.phase = Bind",
+        "helperVisits": 1,
+        "inspected": "one binder insertion record",
+        "reads": [
+          {
+            "loc": "prog.planNodes",
+            "index": "h.node",
+            "bound": "active(prog.planNodes)"
+          },
+          {
+            "loc": "prog.planNodes",
+            "index": "planNode(h.node).next",
+            "bound": "active(prog.planNodes)"
+          }
+        ],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [
+          "EnvironmentCells"
+        ],
+        "effects": [
+          {
+            "op": "let",
+            "bind": "nd",
+            "value": "planNode(h.node)"
+          },
+          {
+            "op": "allocEnv",
+            "bind": "ce",
+            "cell": "EnvCell{binder: nd.binder, value: h.cur, previous: h.partial}"
+          },
+          {
+            "op": "set",
+            "target": "h.partial",
+            "value": "some(ce)"
+          },
+          {
+            "op": "set",
+            "target": "h.node",
+            "value": "nd.next"
+          },
+          {
+            "op": "set",
+            "target": "h.cur",
+            "value": "h.scrutinee"
+          },
+          {
+            "op": "set",
+            "target": "h.path",
+            "value": "loadPath(nd.next)"
+          },
+          {
+            "op": "set",
+            "target": "h.pathCursor",
+            "value": "0"
+          },
+          {
+            "op": "set",
+            "target": "h.afterWalk",
+            "value": "loadAfter(nd.next)"
+          },
+          {
+            "op": "set",
+            "target": "h.arm",
+            "value": "loadArm(nd.next)"
+          },
+          {
+            "op": "set",
+            "target": "h.phase",
+            "value": "loadPhase(nd.next)"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Plan.walk",
+          "x.adt.helper.Plan.bind",
+          "x.adt.helper.Plan.select"
+        ],
+        "semantic_failure": "none",
+        "capacity_failure": "Exhausted(EnvironmentCells), charged; no cell; registers unchanged",
+        "sources": [
+          "interfaces.md:306 (bind in the fresh arm scope)",
+          "UISEC-B007"
+        ]
+      },
+      "function": "plan_bind",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 321
+    },
+    {
+      "pointer": "/adt_helper_rows/8",
+      "row": {
+        "id": "x.adt.helper.Plan.select",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Cases",
+        "select_when": "h.phase = Ready",
+        "helperVisits": 0,
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "h.status",
+            "value": "Positive"
+          },
+          {
+            "op": "set",
+            "target": "h.phase",
+            "value": "Done"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Plan.exit"
+        ],
+        "semantic_failure": "none",
+        "sources": [
+          "rules.json:7019-7051 (Match.selected analogue)"
+        ]
+      },
+      "function": "plan_select",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 359
+    },
+    {
+      "pointer": "/adt_helper_rows/9",
+      "row": {
+        "id": "x.adt.helper.Plan.nomatch",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperVisit",
+        "site": "Cases",
+        "select_when": "h.phase = NoMatchReady",
+        "helperVisits": 0,
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "h.status",
+            "value": "Negative"
+          },
+          {
+            "op": "set",
+            "target": "h.phase",
+            "value": "Done"
+          }
+        ],
+        "next": [
+          "x.adt.helper.Plan.failure"
+        ],
+        "semantic_failure": "NoMatch staged",
+        "sources": [
+          "interfaces.md:301-304"
+        ]
+      },
+      "function": "plan_nomatch",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 375
+    },
+    {
+      "pointer": "/adt_helper_rows/10",
+      "row": {
+        "id": "x.adt.helper.Plan.exit",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperExit",
+        "site": "Cases",
+        "select_when": "h.phase = Done and h.status = Positive",
+        "helperVisits": 0,
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "reg.result",
+            "value": "PlanMatched{arm: unwrap(h.arm), env: h.partial}"
+          },
+          {
+            "op": "clearHelper"
+          }
+        ],
+        "next": [
+          "x.adt.cases.plan.hit"
+        ],
+        "semantic_failure": "none",
+        "sources": [
+          "R2 F-05"
+        ]
+      },
+      "function": "plan_exit",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 391
+    },
+    {
+      "pointer": "/adt_helper_rows/11",
+      "row": {
+        "id": "x.adt.helper.Plan.failure",
+        "status": "Enabled",
+        "template": "T-XHELPER",
+        "eventKind": "HelperFail",
+        "site": "Cases",
+        "select_when": "h.phase = Done and h.status = Negative",
+        "helperVisits": 0,
+        "reads": [],
+        "deltas": {
+          "base": [
+            -1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "when": []
+        },
+        "cap_kinds_possible": [],
+        "effects": [
+          {
+            "op": "set",
+            "target": "reg.result",
+            "value": "PlanNoMatch"
+          },
+          {
+            "op": "clearHelper"
+          }
+        ],
+        "next": [
+          "x.adt.cases.plan.miss"
+        ],
+        "semantic_failure": "NoMatch; no tentative cell exists because binding happens only after the arm is fixed",
+        "sources": [
+          "R2 F-05"
+        ]
+      },
+      "function": "plan_failure",
+      "source_file": "adt_payloads.proposed.rs",
+      "source_line": 407
+    }
+  ]
+}
