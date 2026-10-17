@@ -19,6 +19,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Components](reference/components.md)
 - [Profiles and results](reference/profiles-results.md)
 - [Host machine](reference/host-machine.md)
+- [K-A host event grouping](reference/host-grouping.md)
 - [HostOnly source compiler API and artifact](reference/host-source-compiler.md)
 - [HostOnly configuration and exact fixture](reference/host-source-config.md)
 - [Image layout](reference/image-layout.md)

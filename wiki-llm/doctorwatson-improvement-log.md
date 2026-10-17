@@ -943,3 +943,35 @@ ranges were inaccurate. Preserve raw reports and bind actual symbol anchors in
 a separate mechanical readback. Do not silently correct a review or transfer its
 scope to new native, generic, formal or financial requirements. See the
 [closure and selected-report record](../docs/results/sherlock-ears-host-closure-20261017/README.md).
+
+### DW-51 — Rebind compatible changes without rewriting execution history
+
+Promoting the existing grouping API changed module/leaf source bytes while
+preserving the entire advance_m body and machine relation. DoctorWatson correctly
+rejected those changed dependencies and removed three closures from its current
+count. Root adopted the independently reviewed compatible promotion explicitly,
+kept the original consumed private module as an immutable archive, and bound the
+current module separately. No old execution input was relabelled as the new one.
+
+The first reconciliation also exposed five additive refinement locators that
+still pointed at the old private leaf. Preserve that failed report, update the
+complete35-original/25-refinement inventory, and check whole-file line spans
+after removing source lines. The final selected report returned current with
+seven adopted original clauses; all25 refinements remain open. No unchanged
+nine-case or252-test cohort was rerun. The separate current production metadata
+check passed after composition, while full current CLI/runtime claims stay open.
+
+See the [composition and rebind evidence](../docs/results/sherlock-public-grouping-20261017/ROOT-COMPOSITION-ADOPTION.json).
+
+### DW-52 — Distinguish provider delivery from actual review coverage
+
+Three source-review requests accepted complete large inputs at the CLI boundary,
+but each model reported omitted context and returned incomplete full-source
+judgments. Preserve those abstentions; successful transport and provider status
+cannot establish a full review. A changed delivery used a small source index and
+62 actual bounded file reads of the same frozen public bodies. The reviewer then
+attributed full coverage and issued a conditional source/policy opinion. Actual
+tool metadata confirms the62 paths and summaries; it is not an independent byte
+attestation of the model's internal context. Additional required votes and native
+prerequisites remain open. Do not repeat unchanged oversized submissions or
+convert one conditional review into execution authority.

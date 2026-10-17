@@ -1,0 +1,77 @@
+--- a/crates/mori-core/src/sherlock/reference_slice.rs
++++ b/crates/mori-core/src/sherlock/reference_slice.rs
+@@ -1,4 +1,4 @@
+-//! Private host grouping proposal for the existing frozen K-A reference events.
++//! Public host grouping baseline for the existing frozen K-A reference events.
+ //!
+ //! This ordinary host baseline groups genuine Machine::step records; it does
+ //! not implement a new transition relation, helper clock or optimized machine.
+@@ -7,43 +7,41 @@
+ //! or new machine Outcome. Preparation and full observation cloning are unmetered
+ //! host work. This is no bounded B schema, native payload or capacity claim.
+ 
+-#![cfg(test)]
+-
+ use super::reference_types::*;
+ use super::Machine;
+ 
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+-pub(super) enum SliceBoundaryKind {
++pub enum SliceBoundaryKind {
+     Terminal,
+     TechnicalCut,
+ }
+ 
+ /// Position counts retained records, so zero names the slice's start state.
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+-pub(super) struct SliceBoundary {
+-    pub(super) position: usize,
+-    pub(super) kind: SliceBoundaryKind,
++pub struct SliceBoundary {
++    pub position: usize,
++    pub kind: SliceBoundaryKind,
+ }
+ 
+ #[derive(Clone, Debug, PartialEq, Eq)]
+-pub(super) enum SliceStop {
++pub enum SliceStop {
+     Outcome(Outcome),
+     TechnicalCut,
+ }
+ 
+-/// Host-only subset proposal of interfaces.md's ReferenceSlice. It carries only
+-/// fields available in the existing K-A machine; source suspension and proposed
+-/// B identities/layouts/helpers remain future work. It freezes no shared API.
++/// Host-only K-A ReferenceSlice observation. It carries only fields available
++/// in the existing K-A machine. Source suspension and proposed B identities,
++/// layouts and helpers remain separate from this host API.
+ #[derive(Clone, Debug, PartialEq, Eq)]
+-pub(super) struct ReferenceSlice {
+-    pub(super) profile_id: &'static str,
+-    pub(super) start: Snapshot,
+-    pub(super) records: Vec<StepRecord>,
++pub struct ReferenceSlice {
++    pub profile_id: &'static str,
++    pub start: Snapshot,
++    pub records: Vec<StepRecord>,
+     /// Length records.len()+1, starts zero, accumulates each actual record.charge.
+-    pub(super) prefix_work: Vec<u128>,
+-    pub(super) boundaries: Vec<SliceBoundary>,
+-    pub(super) end: Snapshot,
+-    pub(super) stop: SliceStop,
++    pub prefix_work: Vec<u128>,
++    pub boundaries: Vec<SliceBoundary>,
++    pub end: Snapshot,
++    pub stop: SliceStop,
+ }
+ 
+ /// Retain at most m reference events, including free publication as an event.
+@@ -60,7 +58,7 @@
+ /// Reaching a pending terminal control at the event budget leaves publication
+ /// for the next group; when the budget includes publication, its zero charge
+ /// is retained and the group stops immediately at that first published outcome.
+-pub(super) fn advance_m(machine: &mut Machine, m: usize) -> ReferenceSlice {
++pub fn advance_m(machine: &mut Machine, m: usize) -> ReferenceSlice {
+     let start = machine.snapshot();
+     let mut records = Vec::new();
+     let mut prefix_work = vec![0];
