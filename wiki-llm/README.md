@@ -36,6 +36,7 @@ percentage follows from this directory.
 
 | Record | Read it for | Currentness and evidence class |
 | --- | --- | --- |
+| [DoctorWatson improvement log](doctorwatson-improvement-log.md) | Factory lessons collected as Sherlock proceeds, for a later update | Observed practice and proposals; applied source and validated behavior remain separate |
 | [Sherlock implementation journal](sherlock-implementation-journal/README.md) | Findings, implementation choices, evidence and open questions recorded after each iteration | Dated working notes; source, local results and acceptance remain separate |
 | [Circuit atlas concept log](sherlock-circuit-atlas/README.md) | Opus-authored visual notes for Moriarty circuit and PCB scenes, updated with each frozen circuit iteration | Planning concepts grounded in source pins; no website implementation or circuit validation |
 | [Beta research and delivery](beta-language-2026-09-30/README.md) | Ten domain memos, design convergence, authoring package and six developer trials | September 30 research and captured local results; use the package/source for current behavior |
