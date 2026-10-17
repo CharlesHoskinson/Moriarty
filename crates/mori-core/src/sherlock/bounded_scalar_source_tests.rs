@@ -290,16 +290,136 @@ fn source_shape_is_refused_before_core_validation() {
 }
 
 #[test]
-fn unprojected_core_and_missing_actions_stay_metadata() {
+fn lowered_gt_runs_the_actual_projection_to_its_publication() {
     let source = crate::parse("language \"moriarty/1\"; agreement Outside { action compare(a: UInt, b: UInt) { emit \"greater\"(a > b); } }").unwrap();
+    let args = [Value::UInt(2), Value::UInt(1)];
+    let observation = observe_scalar_action(&source, 0, &args, 28, bounds(8)).unwrap();
+    assert_complete(&observation, 28, 8);
+    // Hand-derived from reference.rs, not an independent oracle: the S01 call
+    // prefix, then Let($0l, a, Let($0r, b, Binary(Lt, Var($0r), Var($0l)))).
+    assert_eq!(lines(&observation), joined(&S01_LINES[..10], &[114, 135, 108, 145, 114, 135,
+        108, 145, 117, 135, 108, 149, 108, 153, 223, 195, 195, 185, 80]));
+    assert_eq!(observation.terminal.outcome, Outcome::Done(Value::Bool(true)));
+    assert_eq!(observation.terminal.remaining_fuel, 0);
+    assert_eq!(observation.records.iter().map(|record| record.after.depth()).max(), Some(4));
+    let mapped = prepare_scalar_action(&source, 0).unwrap();
+    assert_eq!(observation.report, mapped.report);
+    assert_eq!(observation.program.functions, vec![mapped.function]);
+    // Seven generated nodes; two synthetic binders join the two parameters.
+    let peak = 62 * 11 * 9;
+    assert_eq!(observation.extent, HostExtent { bounds: bounds(8), projected_occurrences: 7,
+        ast_nesting_bound: 4, observed_ast_nesting: 4, step_record_bound: 29, frame_bound: 8,
+        environment_entry_bound: 4, peak_slot_bound: peak, argument_types_match_inputs: true });
+    // The former one-per-Binary count (3, nesting 2) fit these bounds and refused
+    // only after preparation; the exact count refuses before it.
+    let few = HostObservationBounds { max_projection_occurrences: 6, ..bounds(8) };
+    assert_eq!(observe_scalar_action(&source, 0, &args, 28, few),
+        Err(exceeded(HostMeasure::ProjectionOccurrences, Some(7), 6)));
+    let shallow = HostObservationBounds { max_ast_nesting: 3, ..bounds(8) };
+    assert_eq!(observe_scalar_action(&source, 0, &args, 28, shallow),
+        Err(exceeded(HostMeasure::AstNesting, Some(4), 3)));
+    let below = HostObservationBounds { max_retained_slots: peak - 1, ..bounds(8) };
+    assert_eq!(observe_scalar_action(&source, 0, &args, 28, below),
+        Err(exceeded(HostMeasure::RetainedSlots, Some(peak), peak - 1)));
+}
+
+#[test]
+fn unsupported_statements_and_missing_actions_stay_metadata() {
+    let source = crate::parse("language \"moriarty/1\"; agreement Outside { action compare(a: UInt, b: UInt) { requires a > b; emit \"greater\"(a > b); } }").unwrap();
     let args = [Value::UInt(2), Value::UInt(1)];
     let Err(HostObservationRefusal::Projection(diagnostic)) =
         observe_scalar_action(&source, 0, &args, 8, bounds(8)) else {
-        panic!("Gt has no direct scalar projection");
+        panic!("requires has no scalar projection");
     };
-    assert_eq!(diagnostic.construct, "binary-Gt");
+    assert_eq!(diagnostic.construct, "requires");
+    assert_eq!(diagnostic.code, "unsupported-projection");
+    assert_eq!(diagnostic.statement_index, Some(0));
     // The Core program itself remains valid source.
     crate::validate(&source).unwrap();
     assert_eq!(observe_scalar_action(&source, 1, &args, 8, bounds(8)),
         Err(HostObservationRefusal::NoSuchAction { action_index: 1, action_count: 1 }));
+}
+
+#[test]
+fn every_core_scalar_operator_is_counted_exactly_before_preparation() {
+    // (spelling, type, nodes, nesting, synthetic binders) of `left OP right`,
+    // hand-derived from the adapter's lowering table over two Name leaves.
+    let cases = [("+", "UInt", 3, 2, 0), ("-", "UInt", 3, 2, 0), ("*", "UInt", 3, 2, 0),
+        ("==", "UInt", 3, 2, 0), ("<", "UInt", 3, 2, 0), ("not =", "UInt", 4, 3, 0),
+        (">=", "UInt", 4, 3, 0), (">", "UInt", 7, 4, 2), ("<=", "UInt", 8, 5, 2),
+        ("and", "Bool", 8, 4, 2), ("or", "Bool", 8, 4, 2)];
+    for (spelling, ty, nodes, nesting, binders) in cases {
+        let source = crate::parse(&format!("language \"moriarty/1\"; agreement Operators {{ action inspect(left: {ty}, right: {ty}) {{ emit \"value\"(left {spelling} right); }} }}")).unwrap();
+        let args = if ty == "UInt" { [Value::UInt(3), Value::UInt(5)] }
+            else { [Value::Bool(true), Value::Bool(false)] };
+        let exact = HostObservationBounds { max_projection_occurrences: nodes,
+            max_ast_nesting: nesting, ..bounds(8) };
+        let observation = observe_scalar_action(&source, 0, &args, 0, exact).unwrap();
+        assert_complete(&observation, 0, 8);
+        assert_eq!(lines(&observation), vec![84]);
+        assert_eq!(observation.report.occurrences.len(), nodes);
+        assert_eq!(observation.extent.projected_occurrences, nodes as u128);
+        assert_eq!((observation.extent.ast_nesting_bound, observation.extent.observed_ast_nesting),
+            (nesting as u128, nesting));
+        assert_eq!(observation.extent.environment_entry_bound, 2 + binders);
+        // Fuel 0: six snapshot units of three units, each entries + 2 * 2 + 1.
+        assert_eq!(observation.extent.peak_slot_bound, 6 * 3 * (2 + binders + 5));
+        let fewer = HostObservationBounds { max_projection_occurrences: nodes - 1, ..exact };
+        assert_eq!(observe_scalar_action(&source, 0, &args, 0, fewer),
+            Err(exceeded(HostMeasure::ProjectionOccurrences, Some(nodes as u128), nodes as u128 - 1)));
+        let shallower = HostObservationBounds { max_ast_nesting: nesting - 1, ..exact };
+        assert_eq!(observe_scalar_action(&source, 0, &args, 0, shallower),
+            Err(exceeded(HostMeasure::AstNesting, Some(nesting as u128), nesting as u128 - 1)));
+    }
+}
+
+#[test]
+fn zero_input_lowered_conditional_counts_both_branch_references() {
+    let source = crate::parse(
+        "language \"moriarty/1\"; agreement Constant { action k() { emit \"k\"(true and false); } }").unwrap();
+    let observation = observe_scalar_action(&source, 0, &[], 21, bounds(8)).unwrap();
+    assert_complete(&observation, 21, 8);
+    // Hand-derived from reference.rs, not an independent oracle:
+    // Let($0l, true, Let($0r, false, If(Var($0l), Var($0r), false))).
+    assert_eq!(lines(&observation), vec![129, 200, 204, 208, 135, 114, 135, 102, 145, 114, 135,
+        102, 145, 123, 135, 108, 161, 108, 195, 195, 185, 80]);
+    assert_eq!(observation.terminal.outcome, Outcome::Done(Value::Bool(false)));
+    assert_eq!(observation.records.iter().map(|record| record.after.depth()).max(), Some(4));
+    // An If frame holds an environment plus two branch references: with no
+    // parameters each unit is entries + 2, not entries + 1.
+    let peak = 48 * 11 * 4;
+    assert_eq!((observation.extent.environment_entry_bound, observation.extent.peak_slot_bound),
+        (2, peak));
+    let below = HostObservationBounds { max_retained_slots: peak - 1, ..bounds(8) };
+    assert_eq!(observe_scalar_action(&source, 0, &[], 21, below),
+        Err(exceeded(HostMeasure::RetainedSlots, Some(peak), peak - 1)));
+}
+
+#[test]
+fn lowered_dag_fanout_is_counted_exactly_before_preparation() {
+    // e0 = true; e(k+1) = e(k) or e(k). Unshared: nodes 7 * 2^k - 6, nesting
+    // 2k + 2, and 2^k - 1 lowered Ors with two synthetic binders each.
+    let mut expressions = vec![crate::Expr::Literal { value: crate::Value::Bool(true) }];
+    for i in 0..4u16 {
+        expressions.push(crate::Expr::Binary { op: crate::BinaryOp::Or, lhs: i, rhs: i });
+    }
+    let program = hostile_core(expressions, crate::Action { name: "blow".into(), inputs: vec![],
+        statements: vec![crate::Statement::Emit { name: "out".into(), value: 4 }] });
+    crate::validate(&program).unwrap();
+    // The former one-per-Binary count (31, nesting 5) fit these bounds and
+    // refused only after preparation had allocated all 106 occurrences.
+    assert_eq!(observe_scalar_action(&program, 0, &[], 0, bounds(8)),
+        Err(exceeded(HostMeasure::ProjectionOccurrences, Some(106), 64)));
+    let wide = HostObservationBounds { max_projection_occurrences: 106, ..bounds(8) };
+    let shallow = HostObservationBounds { max_ast_nesting: 9, ..wide };
+    assert_eq!(observe_scalar_action(&program, 0, &[], 0, shallow),
+        Err(exceeded(HostMeasure::AstNesting, Some(10), 9)));
+    let observation = observe_scalar_action(&program, 0, &[], 0, wide).unwrap();
+    assert_complete(&observation, 0, 8);
+    assert_eq!(lines(&observation), vec![84]);
+    assert_eq!(observation.report.occurrences.len(), 106);
+    assert_eq!((observation.extent.ast_nesting_bound, observation.extent.observed_ast_nesting), (10, 10));
+    // Thirty distinct synthetic binders; with an If and no parameters each unit is entries + 2.
+    assert_eq!(observation.extent.environment_entry_bound, 30);
+    assert_eq!(observation.extent.peak_slot_bound, 6 * 3 * 32);
 }

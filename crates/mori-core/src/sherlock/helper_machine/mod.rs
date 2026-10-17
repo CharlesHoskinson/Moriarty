@@ -8,3 +8,22 @@ pub mod raw;
 pub mod shared;
 mod families;
 pub mod source_input_bridge;
+
+// Source-only Core scalar consumer and diagnostic projections. No native
+// or whole-language acceptance is established by these registrations.
+mod core_action_consumer_security;
+pub mod core_action_consumer;
+pub mod resource_report;
+pub mod resource_event_accounting;
+
+#[cfg(test)]
+mod core_action_consumer_tests;
+
+#[cfg(test)]
+mod core_action_consumer_security_operator_tests;
+
+#[cfg(test)]
+mod core_action_resource_integration_tests;
+
+#[cfg(test)]
+mod core_action_operator_pipeline_tests;
