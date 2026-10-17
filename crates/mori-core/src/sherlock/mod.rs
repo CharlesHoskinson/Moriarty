@@ -67,10 +67,9 @@ mod helper_call_adapter;
 #[cfg(test)]
 mod source_origin_normal_tests;
 
-// Internal L4 host preparation source proposal; H1, no network/untrusted API.
-// Compilation and all normal tests remain UNRUN pending separate admission.
-#[cfg(test)]
-mod layout_a;
+// SDK-free host L4 preparation and typed observation codec.
+// No native ABI, machine-state importer or transition acceptance is provided.
+pub mod layout_a;
 
 #[cfg(test)]
 mod reference_stream_tests;

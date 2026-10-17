@@ -250,7 +250,7 @@ fn pad<T:Default+Clone>(rows:&mut Vec<T>,capacity:usize,at:Locator)->StateResult
     rows.try_reserve_exact(extra).map_err(|_|host(at))?;rows.resize(capacity,T::default());Ok(())
 }
 
-pub(super) fn encode_observed_a(prepared:&PreparedA,caps:&StateCapacities,snapshot:&Snapshot)->StateResult<StateBlock> {
+pub fn encode_observed_a(prepared:&PreparedA,caps:&StateCapacities,snapshot:&Snapshot)->StateResult<StateBlock> {
     if caps.data!=prepared.capacities.data {
         return Err(StateFailure::WrongRepresentation{block:"StateBlock",table:"Root",row:0,column:"D",definition:"StateCapacities.data must equal PreparedA.capacities.data"});
     }

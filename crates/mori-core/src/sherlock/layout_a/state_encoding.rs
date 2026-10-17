@@ -176,8 +176,10 @@ fn expand_state(block: &StateBlock, program: &Capacities,
 }
 
 /// Expand an observed current-A Snapshot after actual canonical encoding.
-/// No byte parser, public importer, statement binding or native ABI is exposed.
-pub(super) fn observed_state_bytes_a(prepared: &PreparedA,
+/// No byte parser, statement binding or native ABI is exposed.
+/// No Machine-state importer; decode_observed_a is a public typed-row decoder
+/// under the trust preconditions documented by layout_a.
+pub fn observed_state_bytes_a(prepared: &PreparedA,
     capacities: &StateCapacities, snapshot: &Snapshot) -> StateResult<Vec<u8>> {
     let block = encode_observed_a(prepared, capacities, snapshot)?;
     expand_state(&block, &prepared.capacities, capacities)
