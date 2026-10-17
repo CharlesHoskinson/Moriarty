@@ -139,3 +139,8 @@ assets, rendered scene or deployment.
 ## Design companion 006
 
 [Design 006: source boards and host replay](DESIGN-006-SOURCE-BOARDS-AND-HOST-REPLAY.md) continues the concept log for the finished Sherlock v1 website. It develops the circuit assembly history: source-pinned additions and changes become cumulative Three.js board layers, with execution inspection and source clickthrough. Its visitor copy assumes the finished release. The [materializer record](DESIGN-006-STATUS-AND-PROVENANCE.md) and [factual source manifest](provenance/design-006-source-manifest.json) preserve actual author identity, source pins and current evidence scope. This companion does not add a circuit iteration; the latest actual circuit entry remains 004. Earlier entries remain unchanged.
+
+
+## Latest circuit iteration 005
+
+[Iteration 005: Scalar.tag and two-space fetch](ITERATION-005-SCALAR-TAG-AND-TWO-SPACE-FETCH.md) records the new handwritten positive RetRight/Add/First/UInt leaf and the board changes it adds to the assembly history. It stages operand A in sixteen byte lanes, advances the helper phase, preserves the helper complement and relates the work counters byte by byte. Its [materializer record](ITERATION-005-STATUS-AND-PROVENANCE.md) and [source manifest](provenance/iteration-005-source-manifest.json) bind the exact freeze and current audit scope. This is the latest actual circuit source iteration. Earlier latest-iteration labels retain their historical freeze context; Designs 005/006 remain visual companions. The website's visitor experience describes finished Sherlock v1 and launches when the complete goal is accepted.
