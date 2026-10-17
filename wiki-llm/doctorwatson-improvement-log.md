@@ -806,6 +806,24 @@ requirement, native limit, counter or prior held-attempt disposition changes her
 
 The stream realization/helper closure/source-read reporting are applied; [actual241 ordinary checks and stream8/216](../docs/results/sherlock-stream-20261017/README.md) and [actual333 same-carrier comparisons](../docs/results/sherlock-composed333-20261017/README.md) have retained scoped results. The old unoptimized N08 timeout remains historical; the later Optimized147 cohort passed all selected suites. The [graph refresh](../docs/audits/2026-10-17/sherlock-knowledge/manifest.json) preserves the October14 baseline and adds bounded Sherlock observations, without global freshness/native qualification. Five AstraHIGH final reviews support ordinary implementation under the [revision03 loop](../docs/sherlock/implementation-loop.md), preserving native blockers. The next source increment is the real public compiler preparation/admission path; further factory rebuilding is not a prerequisite. These notes do not themselves arm a goal.
 
+### DW-40 — Separate cold dependency build time from the compiler diagnostic
+
+The first B04 Cargo check timed out at30seconds while compiling normal dependencies. The next production rlib build timed out at180seconds after dependencies completed and core compilation began. Both results remain intact. Root then reused only completed normal dependency artifacts: a focused full-core metadata check passed in28.7567seconds and direct rlib code generation passed in45.6020seconds. All113 source pins were unchanged. The external harness compiled in3.2433seconds and all seven positive tests passed, including two actual source-to-B compile-only preparation/admission cases. No SDK target or owner.run was selected. These are cohort timings, not a benchmark or speedup ratio. See the [exact result](../docs/results/sherlock-source-compile-20261017/README.md).
+
+After repeated timeouts, isolate the unfinished phase and bind the artifacts that actually completed. Preserve failures, exact profiles and inputs; do not keep recompiling the cold dependency prefix to obtain the next diagnostic. Successful typing and normal tests remain distinct from guard acceptance: the focused owner review requested two concrete preflight/diagnostic corrections, now being authored before merge.
+
+## DW41 — Ground source-proposal coverage names in actual definitions
+
+Observed October17: the R33 native-prerequisite author proposal returned one README old-string that matched no pinned source paragraph and62 test-name tokens absent from the supplied definitions. The actual eight new test method names exist; source existence alone does not prove coverage. Mechanical readback withheld final materialization rather than guessing a replacement. Improvement: supply a closed definition catalog and exact source bodies to the designated owner, separate executed predicates from source-audit/unestablished rows, and require literal patch applicability. Status: one owner correction is in progress; no R2/native acceptance follows from these facts.
+
+## DW42 — Bound provider calls and preserve transport failures honestly
+
+Observed October17: the first compiler-guard author call encountered two internal AGY stream-idle retries and produced no source; the next timed out without source and its nominal600second outer bound overran. A narrowed inline-source diagnostic task later returned an exact1896byte owner edit response successfully. The A continuity reviewer also needed a corrected local duration argument/stderr transport after an initialCLI2 with no model initialization. Improvement: distinguish manual invocations from backend retries; use documented duration units, consistent text/binary capture and an independent OS timeout; preserve actual elapsed time, missing diagnostics and no-vote outcomes. Status: the changed inline method produced one exact diagnostic source correction; fresh audit/CLI execution and the separate preflight fix remain open. No native limit or counter changed.
+
+## DW43 — Merge independent product slices separately
+
+Observed October17: the A complete-state continuity comparator passed48 focused tests and production metadata checking, received a fresh ArgonHIGH scoped non-author PASS, and merged through PR171. B complete typed observation source and four test functions also typecheck in separate PR172; their runtime tests remain pending scope review. Improvement: isolate dependencies in Git so the compiler's open guard findings do not hold reviewed independent observer work. Status: A merged; B and compiler remain draft. None closes full SCON-007, formal, native or stagenet acceptance.
+
 
 ### DW-44 — Read test selectors from typed fields and retain local checker failures
 
@@ -823,3 +841,105 @@ The stream realization/helper closure/source-read reporting are applied; [actual
 **Evidence:** runtime `R50-one-file-test-api-repair`, `53-r2-integrated-source-candidate/STDLIB-NAMESPACE-READBACK.json`, and `R50-namespace-api-fix-01`; the final test afterimage is `4a91f6ffec061c78564d2bfbf6a13c2b5750d690d4570577e1ebfa5909273e54`. The driver and test repairs remain separate from an execution classification, R2 adoption and native permission.
 
 **Improvement:** enumerate imported modules used by a new test fixture alongside the local target module. Verify an unfamiliar namespace against its installed source or a read-only namespace probe before running the suite. Keep syntax/API scans, unchanged assertion inventories and actual behavior as separate evidence. This adds no new gate, runner or execution authority.
+### DW-46 — Include module visibility in function-level source tasks
+
+The compact preflight author returned applicable source edits, but the first
+production metadata check failed with three private-module import errors.
+Supplying the module declaration and public consumer exports let the owner
+return a two-file import/re-export repair while preserving the private module
+and guard bodies. Production metadata and all five new regression functions
+then typechecked. These are authored/compiled source results, not fresh review
+or executed regression results. [Exact attempts and limitations](../docs/results/sherlock-compiler-preflight-20261017/README.md).
+
+Include the relevant module boundary with full changed function bodies. Save
+each child result before subsequent collector assertions: the integrated-tree
+check emitted metadata but lost its child exit/timing values after a lexical
+path comparison failed. The normalized dep-info matches pinned files; the
+missing values remain unrecorded and the unchanged compilation was not retried.
+
+### DW-47 — Check review facts independently of model completion
+
+The B pairwise result reviewer returned provider SUCCESS and claimed approval
+after 101 recorded page reads, but invented material types, JSON fields, sizes
+and hashes. Root rejected that approval and held the merge. The request carried
+561,839 bytes across 72 units; that oversized context is an observed task
+property, not a proven cause of the factual errors. [Sealed failed disposition](../docs/results/sherlock-compiler-preflight-20261017/64-b-pairwise-actual-result-review/REVIEW-DISPOSITION.json).
+
+Keep raw reports and contradictions. Calculate literal membership, counts and
+hashes with inspectable code, then ask focused questions about source behavior
+and evidence limits. A smaller packet is a proposed improvement awaiting an
+actual reliable review; it does not automatically rehabilitate the failed vote.
+Provider success, read receipts, authored code, actual tests and accepted review
+remain separate observations. No security gate or model assignment changes.
+
+### DW-48 — Make current requirement closure a factory output
+
+The ordinary factory checker reported corpus consistency and execution-layer
+gaps, but did not consume current per-requirement acceptance evidence. The frozen
+design traceability record still labelled all 35 original requirements open;
+those historical labels were not a current implementation census. This made
+passing source and test batches difficult to reconcile with actual EARS closure.
+
+The user directs the existing loop to close retained requirements. Add a current
+evidence sidecar to the existing checker, preserving the frozen design bindings.
+Keep implementation, observed validation, owner-assessed acceptance and computed
+source/evidence currentness separate. Include the original 35 clauses, 25 additive
+features/68 scenarios and linked retained families. A changed supporting source
+must remove a prior declaration from the current closed count; matching hashes
+do not establish semantic acceptance.
+
+The first ordinary regression ran on October17 at21:58:48UTC and failed because
+the actual checker lacked the `requirement_evidence` interface. Its copied source
+remained unchanged. The regression describes a synthetic closure followed by a
+source edit; it is not evidence that an actual Sherlock requirement is closed.
+Implementation, green verification and fresh review follow this preserved red
+result. Select the next missing requirement behavior or exact acceptance scenario
+after the repair; do not build a replacement scheduler or repeat passing cohorts.
+
+### DW-49 — Close clauses from their own evidence and check report consistency
+
+The updated default factory passed 251 local tests and verified the complete
+declared requirement inventory. Fresh review and Root adoption then closed
+UIREQ-001, UIREQ-010 and UIREQ-011 on their supported typed A host scope, using
+unchanged generic machine source and independently checked historical fixture
+observations. The selected report shows three current adopted closures; the
+historical pre-adoption result still shows zero. Other original clauses,
+refinements and linked retained requirements remain open.
+
+Review found three schema checks missing from the reporter: a nonempty evidence
+class array, the required adoption enum and a retained-family disposition string.
+Root reproduced all five malformed-declaration cases, applied the three checks,
+and observed all eleven focused regressions pass. The final default factory
+passed 252 local tests and retained exactly three current closures. A reporting
+pass remains distinct from acceptance of its open requirements.
+
+The review also caught an imprecise pending-frame locator and an overstated
+Clean-stage implementation label. Exact factorial states 22/36 and list-sum
+states 91/92/93 now support the closed predicates; UIREQ-026 remains partial/open
+until its actual private-record and per-slice evidence exists. Use clause-specific
+dependencies rather than making every host clause wait for stagenet. Preserve
+failed runs and historical consumer versions when reusing their valid evidence.
+
+See the [closure record and actual factory results](../docs/results/sherlock-ears-closure-20261017/README.md).
+
+### DW-50 — Advance from passed scenarios to missing behavior
+
+Nine independently frozen normal host cases passed, then fresh review and Root
+adoption closed UIREQ-003/005/006/008 on the unchanged typed A host relation.
+The selected DoctorWatson report verifies seven current adopted clauses, while
+28 originals and all25 refinements remain open. The earlier252-test pass stays
+attached to its earlier three-closure sidecar; no passing cohort was repeated.
+
+A scenario pass does not settle a broader clause. UIREQ-004's nested arguments
+now return8 in the required order, but generic constructor-field evaluation is
+missing, so its next action is implementation of that behavior. Likewise all
+five compiler preflight bodies have exact preserved2+3 passes; the queue moves
+to public compiler qualification and recursive lowering rather than re-running
+the same five. Source analysis of checked operations is distinct from observed
+boundary execution; the direct A overflow/underflow paths remain unobserved.
+
+The fresh review's semantic descriptions were grounded, but its numerical source
+ranges were inaccurate. Preserve raw reports and bind actual symbol anchors in
+a separate mechanical readback. Do not silently correct a review or transfer its
+scope to new native, generic, formal or financial requirements. See the
+[closure and selected-report record](../docs/results/sherlock-ears-host-closure-20261017/README.md).

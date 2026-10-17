@@ -1,0 +1,17 @@
+{
+  "scope": "exact five SDK-free host-preparation tests only",
+  "review": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/74-compiler-correction-review-packet/harness-clarification-02/FINAL-RESPONSE.txt",
+  "plan": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/74-compiler-correction-review-packet/harness-clarification-02/PROSPECTIVE-EXACT-HARNESS.json",
+  "native_authority": 0,
+  "source_verdict": {
+    "source_disposition": "CONDITIONALLY_APPROVED_IN_INSPECTED_SCOPE",
+    "R23_mandatory_1": "RESOLVED_IN_INSPECTED_SOURCE",
+    "R23_mandatory_2": "RESOLVED_AT_CALLSITE_WITH_DOWNSTREAM_ROUTING_ABSTENTION",
+    "oracle_9_and_22": "Precounts 9/22 verified in inline guard math only; `source_adapter.rs` not an independent oracle."
+  },
+  "conditions": [
+    "Amended condition (replaces R74 Cargo syntax): run only the 4 serial direct-rustc phases (120s `mori_core` rlib no-cfg-test, 30s `--test` compile, 10s `--list`, five 10s serial `--exact <selector> --nocapture --test-threads=1` runs) via `timeout --signal=KILL` and rustc 1.99.0.",
+    "Use `prospective-run` cwd outside W and 3-key env (`PATH`,`LANG`,`TMPDIR`); check `FROZEN-SOURCE-DEP-TOOL-PINS.json` before/after each phase; normalize `core.d`/`tests.d` paths; stop on first nonzero/timeout/pin mismatch or if `--list`!=exact 5 selectors (no retries); keep logs/dep-info without inferring lost exits.",
+    "No Cargo, build.rs, git/pkg resolution, dev-deps, `--cfg test` on `mori_core`, `--observe` (`observe=false` only), CLI, `OwnerEngine::run`/`step`, or SDK/native/prover/keygen/target ops; not pass verdict, 9/22 oracle, or H1/native grant."
+  ]
+}

@@ -1,0 +1,74 @@
+--- a/models/sherlock/qa/check.py
++++ b/models/sherlock/qa/check.py
+@@ -627,7 +627,8 @@
+         issue(issues, 'invalid', '/refinementInventory', 'declared refinement inventory differs')
+     assessment = ledger.get('assessment')
+     if (type(assessment) is not dict or type(assessment.get('status')) is not str
+-            or not assessment['status'] or assessment.get('globalV1') not in ('open', 'closed')):
++            or not assessment['status'] or assessment.get('globalV1') not in ('open', 'closed')
++            or assessment.get('adoption') not in ('pending-root', 'adopted')):
+         issue(issues, 'invalid', '/assessment', 'explicit assessment disposition required')
+         assessment = assessment if type(assessment) is dict else {}
+ 
+@@ -667,8 +668,9 @@
+                 require(all(type(predicate[key]) is str and predicate[key] for key in ('id', 'description', 'domain'))
+                         and type(predicate['applicableEvidenceClasses']) is list,
+                         'explicit predicate/domain/evidence classes required')
+-                require(all(type(item) is str and item for item in predicate['applicableEvidenceClasses']),
+-                        'evidence classes must be named strings')
++                require(predicate['applicableEvidenceClasses']
++                        and all(type(item) is str and item for item in predicate['applicableEvidenceClasses']),
++                        'evidence classes must be nonempty named strings')
+                 for field, allowed, extra in (
+                         ('implementation', ('complete', 'partial', 'absent', 'unknown'), ('supportedScope', 'missing')),
+                         ('validation', ('observed', 'partial', 'unrun', 'unknown'), ('evidenceRefs', 'countercaseRefs', 'reviewRefs')),
+@@ -746,7 +748,8 @@
+     retained_issues = []
+     for index, item in enumerate(ledger.get('retainedInventory', [])):
+         findings = []
+-        if type(item) is dict and type(item.get('family')) is str and type(item.get('status')) is str:
++        if (type(item) is dict and type(item.get('family')) is str and type(item.get('status')) is str
++                and type(item.get('disposition')) is str):
+             pinned(item.get('catalogue'), f'/retainedInventory/{index}/catalogue', findings)
+         else:
+             issue(findings, 'invalid', f'/retainedInventory/{index}', 'retained family/status/catalogue required')
+--- a/models/sherlock/qa/test_requirement_evidence.py
++++ b/models/sherlock/qa/test_requirement_evidence.py
+@@ -54,7 +54,7 @@
+             requirements=[row(item, original, index==0) for index,item in enumerate(trace['original35'])],
+             refinementInventory=dict(**pinned(refinements), featureIds=[x['id'] for x in trace['refinementFeatures']], scenarioCount=68),
+             refinementRequirements=[row(item, refinements) for item in trace['refinementFeatures']],
+-            retainedInventory=[dict(family='synthetic retained family', catalogue=pinned(original), status='unassessed')],
++            retainedInventory=[dict(family='synthetic retained family', catalogue=pinned(original), status='unassessed', disposition='fixture only')],
+             assessment=dict(status='PROPOSED_FOR_ROOT_SEMANTIC_ADOPTION', globalV1='open', adoption='pending-root'))
+         self.path = self.root / 'current-evidence.json'
+ 
+@@ -145,6 +145,28 @@
+         self.assertEqual(report['requirement_evidence']['requirements'][0]['integrity'], 'invalid')
+         self.assertEqual(report['requirement_evidence']['refinement_requirements'][0]['integrity'], 'invalid')
+ 
++    def test_schema_incoherent_declarations_cannot_report_current(self):
++        self.assertEqual(self.report()['status'], 'pass')
++        baseline = copy.deepcopy(self.ledger)
++        cases = ('empty-evidence-classes', 'missing-adoption', 'invalid-adoption',
++                 'missing-disposition', 'invalid-disposition')
++        for case in cases:
++            with self.subTest(case=case):
++                self.ledger = copy.deepcopy(baseline)
++                if case == 'empty-evidence-classes':
++                    self.ledger['requirements'][0]['predicate']['applicableEvidenceClasses'] = []
++                elif case == 'missing-adoption':
++                    self.ledger['assessment'].pop('adoption')
++                elif case == 'invalid-adoption':
++                    self.ledger['assessment']['adoption'] = 'other'
++                elif case == 'missing-disposition':
++                    self.ledger['retainedInventory'][0].pop('disposition')
++                else:
++                    self.ledger['retainedInventory'][0]['disposition'] = []
++                report = self.report()
++                self.assertEqual(report['status'], 'mismatch')
++                self.assertEqual(report['requirement_evidence']['status'], 'invalid')
++
+     def test_bare_checker_reads_no_ledger_and_preserves_existing_corpus_report(self):
+         report = qa.run(REPO)
+         self.assertEqual(report['status'], 'pass')

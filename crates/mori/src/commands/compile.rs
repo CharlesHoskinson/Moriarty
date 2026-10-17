@@ -14,9 +14,25 @@ pub struct Args {
     /// New output directory; refuses to overwrite existing artifacts
     #[arg(long)]
     pub out: PathBuf,
+    /// Explicit Sherlock execution profile; omission preserves ordinary Core compilation
+    #[arg(long)]
+    pub execution_profile: Option<String>,
+    /// Exact parameter-free source action for selected Sherlock preparation
+    #[arg(long, requires = "execution_profile")]
+    pub action: Option<String>,
+    /// Exact sherlock-host-config/1 JSON; no numerical defaults
+    #[arg(long, requires = "execution_profile")]
+    pub execution_config: Option<PathBuf>,
+    /// Explicit host observation after actual preparation/admission
+    #[arg(long, requires = "execution_profile")]
+    pub observe: bool,
 }
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let source = core_io::read_source(&args.file)?;
+    // Selected HostOnly preparation returns before either native/backend path.
+    if args.execution_profile.is_some() {
+        return compile_sherlock(&args, &source, shell);
+    }
     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
         let target: mori_backend::Target = core_io::read_json(&args.target)?;
         let artifact = mori_backend::stage::compile_staged(&source, &target, &args.out)
@@ -62,6 +78,57 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         ),
     );
     Ok(ExitCode::SUCCESS)
+}
+
+/// Selected SDK-free host artifact path. Observation is explicit and retains
+/// its separate H1/command-closure dependency; flags confer no internal authority.
+fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Result<ExitCode> {
+    use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
+    let execute = || -> Result<(host::CompileArtifact, String), CompileFailure> {
+        let profile = args.execution_profile.as_deref().ok_or_else(||
+            CompileFailure::input("select", "missing --execution-profile"))?;
+        if profile != host::EXECUTION_PROFILE {
+            return Err(CompileFailure::input("select", format!("unsupported execution profile: {profile}")));
+        }
+        let action = args.action.as_deref().ok_or_else(||
+            CompileFailure::input("select", "selected Sherlock compilation requires --action"))?;
+        let config_path = args.execution_config.as_deref().ok_or_else(||
+            CompileFailure::input("config", "selected Sherlock compilation requires --execution-config"))?;
+        let config = core_io::read_source(config_path)
+            .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+        // Target bytes are an explicit descriptor and digest, not native support.
+        let target = core_io::read_source(&args.target)
+            .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+        let artifact = host::compile_host(source, action, &config, &target, args.observe)?;
+        let manifest = serde_json::to_string_pretty(&artifact)
+            .map_err(|error| artifact.failure("observation", error.to_string()))?;
+        Ok((artifact, manifest))
+    };
+    let (artifact, manifest) = match execute() {
+        Ok(result) => result,
+        Err(failure) => {
+            return Err(report_sherlock_failure(&failure));
+        }
+    };
+    // Complete preparation/optional observation and serialization before reserving
+    // NEWDIR. Existing publish_new never replaces a concurrently created leaf.
+    std::fs::create_dir(&args.out).map_err(|source| {
+        let actual = CliError::Write { path:args.out.clone(), source };
+        report_sherlock_failure(&artifact.failure("publish", actual.to_string()))
+    })?;
+    super::proof_io::publish_new(&args.out.join("sherlock-artifact.json"), manifest.as_bytes())
+        .map_err(|error| report_sherlock_failure(&artifact.failure("publish", error.to_string())))?;
+    shell.status("Prepared", format!("Sherlock HostOnly artifact into {}", args.out.display()));
+    Ok(ExitCode::SUCCESS)
+}
+
+fn report_sherlock_failure(
+    failure: &mori_core::sherlock_compile_artifact::CompileFailure,
+) -> mori_diagnostics::Report {
+    match mori_core::json::export(failure) {
+        Ok(diagnostic) => core_io::operation(diagnostic),
+        Err(error) => core_io::operation(error),
+    }
 }
 
 // The caller has reserved a new directory after all input/compiler preflight.

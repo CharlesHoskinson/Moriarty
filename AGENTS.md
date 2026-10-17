@@ -1,5 +1,19 @@
 # Moriarty repository instructions
 
+## Latest priority — DoctorWatson requirement closure
+
+The user instructs: update DoctorWatson, use it to close all retained Sherlock
+EARS, and rearm the existing implementation loop around that outcome. Follow
+the current priority in [the loop contract](docs/sherlock/implementation-loop.md).
+Repair the existing local checker's requirement-evidence reporting, then select
+actual missing requirement behavior or acceptance checks. Preserve the original
+35 UIREQ clauses, 25 additive features/68 scenarios and linked retained security,
+formal, financial, native and release requirements. Record implementation,
+observed validation and acceptance separately. A source or evidence change must
+invalidate a dependent current closure; a matching hash never approves semantics.
+Do not add another factory or requeue unchanged passing tests. Native-dependent
+clauses keep their actual dependencies; unrelated host clauses continue.
+
 ## Current assignment — October17 Sherlock completion revision03
 
 The user requests the reconciled Sherlock design be covered by OpenSpec/EARS,

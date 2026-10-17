@@ -1,0 +1,1968 @@
+{
+  "kind": "BODY_FREE_EXISTING_PUBLIC_TYPE_AND_COMMENT_INVENTORY",
+  "sources": [
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/ir.rs",
+      "source_sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "declarations": [
+        {
+          "start_line": 11,
+          "declaration": "/// Unsigned integral atomic units; JSON uses canonical decimal strings.\n#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]\npub struct UInt(pub u128);"
+        },
+        {
+          "start_line": 33,
+          "declaration": "#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\npub enum Type {\n    UInt,\n    Bool,\n}"
+        },
+        {
+          "start_line": 38,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"type\", content = \"value\", deny_unknown_fields)]\npub enum Value {\n    UInt(UInt),\n    Bool(bool),\n}"
+        },
+        {
+          "start_line": 53,
+          "declaration": "#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\npub enum BinaryOp {\n    Add,\n    Sub,\n    Mul,\n    Eq,\n    Ne,\n    Lt,\n    Le,\n    Gt,\n    Ge,\n    And,\n    Or,\n}"
+        },
+        {
+          "start_line": 67,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Expr {\n    LiabilityPresent {\n        name: String,\n    },\n    LiabilityAmount {\n        name: String,\n    },\n    Literal {\n        value: Value,\n    },\n    Name {\n        name: String,\n    },\n    Binary {\n        op: BinaryOp,\n        lhs: ExprId,\n        rhs: ExprId,\n    },\n    Not {\n        value: ExprId,\n    },\n}"
+        },
+        {
+          "start_line": 91,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct StateDecl {\n    pub name: String,\n    pub ty: Type,\n    pub initial: Value,\n}"
+        },
+        {
+          "start_line": 98,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct InputDecl {\n    pub name: String,\n    pub ty: Type,\n}"
+        },
+        {
+          "start_line": 104,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]\n#[serde(deny_unknown_fields)]\npub struct AssetId {\n    pub network: String,\n    pub issuer: String,\n    pub reference: String,\n    pub scale: u8,\n}"
+        },
+        {
+          "start_line": 112,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct AssetDecl {\n    pub name: String,\n    pub identity: AssetId,\n}"
+        },
+        {
+          "start_line": 118,
+          "declaration": "/// Serialize-only on the shared type: decoding always goes through the frozen\n/// `v1` wire, so JSON can never yield `Await`.\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Statement {\n    Await {\n        label: String,\n        binders: Vec<InputDecl>,\n        guard: ExprId,\n    },\n    Let {\n        name: String,\n        value: ExprId,\n    },\n    Requires {\n        predicate: ExprId,\n    },\n    Ensures {\n        predicate: ExprId,\n    },\n    Next {\n        state: String,\n        value: ExprId,\n    },\n    Emit {\n        name: String,\n        value: ExprId,\n    },\n    Transfer {\n        asset: String,\n        from: String,\n        to: String,\n        amount: ExprId,\n    },\n    Fee {\n        asset: String,\n        from: String,\n        to: String,\n        amount: ExprId,\n    },\n    Liability {\n        name: String,\n        asset: String,\n        debtor: String,\n        creditor: String,\n        amount: ExprId,\n    },\n    Discharge {\n        name: String,\n        amount: ExprId,\n    },\n}"
+        },
+        {
+          "start_line": 170,
+          "declaration": "#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Action {\n    pub name: String,\n    pub inputs: Vec<InputDecl>,\n    pub statements: Vec<Statement>,\n}"
+        },
+        {
+          "start_line": 177,
+          "declaration": "#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Program {\n    pub language: String,\n    pub semantics: String,\n    pub name: String,\n    pub states: Vec<StateDecl>,\n    pub assets: Vec<AssetDecl>,\n    pub expressions: Vec<Expr>,\n    pub actions: Vec<Action>,\n}"
+        },
+        {
+          "start_line": 188,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Balance {\n    pub account: String,\n    pub asset: AssetId,\n    pub amount: UInt,\n}"
+        },
+        {
+          "start_line": 195,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Liability {\n    pub name: String,\n    pub asset: AssetId,\n    pub debtor: String,\n    pub creditor: String,\n    pub amount: UInt,\n}"
+        },
+        {
+          "start_line": 204,
+          "declaration": "#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Scenario {\n    pub state: BTreeMap<String, Value>,\n    pub inputs: BTreeMap<String, Value>,\n    pub balances: Vec<Balance>,\n    pub liabilities: Vec<Liability>,\n}"
+        },
+        {
+          "start_line": 212,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Snapshot {\n    pub state: BTreeMap<String, Value>,\n    pub balances: Vec<Balance>,\n    pub liabilities: Vec<Liability>,\n}"
+        },
+        {
+          "start_line": 219,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Effect {\n    State {\n        name: String,\n        before: Value,\n        after: Value,\n    },\n    Transfer {\n        asset: AssetId,\n        from: String,\n        to: String,\n        amount: UInt,\n    },\n    Fee {\n        asset: AssetId,\n        from: String,\n        to: String,\n        amount: UInt,\n    },\n    Liability {\n        name: String,\n        asset: AssetId,\n        debtor: String,\n        creditor: String,\n        before: UInt,\n        after: UInt,\n    },\n    Emit {\n        name: String,\n        value: Value,\n    },\n}"
+        },
+        {
+          "start_line": 252,
+          "declaration": "#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Step {\n    pub index: u16,\n    pub statement: Statement,\n    pub value: Option<Value>,\n    pub snapshot: Snapshot,\n    pub effects: Vec<Effect>,\n}"
+        },
+        {
+          "start_line": 261,
+          "declaration": "#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Execution {\n    pub semantics: String,\n    pub action: String,\n    pub pre: Snapshot,\n    pub post: Snapshot,\n    pub steps: Vec<Step>,\n    pub effects: Vec<Effect>,\n}"
+        },
+        {
+          "start_line": 466,
+          "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, thiserror::Error)]\n#[error(\"{code}: {message}\")]\npub struct Error {\n    pub code: String,\n    pub message: String,\n    pub offset: Option<u32>,\n    pub step: Option<u16>,\n}"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 11,
+          "text": "/// Unsigned integral atomic units; JSON uses canonical decimal strings."
+        },
+        {
+          "line": 118,
+          "text": "/// Serialize-only on the shared type: decoding always goes through the frozen"
+        },
+        {
+          "line": 119,
+          "text": "/// `v1` wire, so JSON can never yield `Await`."
+        },
+        {
+          "line": 271,
+          "text": "/// Frozen `moriarty-core/1` decode wire: the baseline (fe01bc8b) derives,"
+        },
+        {
+          "line": 272,
+          "text": "/// moved verbatim. Type names are kept so serde's `expecting` text, unknown"
+        },
+        {
+          "line": 273,
+          "text": "/// variant lists and error messages stay byte-identical. There is no Await."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/reference_types.rs",
+      "source_sha256": "4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f",
+      "declarations": [
+        {
+          "start_line": 14,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Tree {\n    Leaf(u128),\n    Branch(Arc<Tree>, Arc<Tree>),\n}"
+        },
+        {
+          "start_line": 20,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Value {\n    UInt(u128),\n    Bool(bool),\n    List(Vec<u128>),\n    Tree(Tree),\n}"
+        },
+        {
+          "start_line": 28,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum Type {\n    UInt,\n    Bool,\n    List,\n    Tree,\n}"
+        },
+        {
+          "start_line": 36,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum BinaryOp {\n    Add,\n    Sub,\n    Mul,\n    Eq,\n    Lt,\n    Cons,\n    Branch,\n}"
+        },
+        {
+          "start_line": 47,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum UnaryOp {\n    Leaf,\n    Not,\n}"
+        },
+        {
+          "start_line": 53,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Pattern {\n    Var(Name),\n    Nil,\n    Cons(Name, Name),\n    Leaf(Name),\n    Branch(Name, Name),\n}"
+        },
+        {
+          "start_line": 62,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Arm {\n    pub pattern: Pattern,\n    pub body: ExprRef,\n}"
+        },
+        {
+          "start_line": 68,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Expr {\n    Literal(Value),\n    Var(Name),\n    Let(Name, ExprRef, ExprRef),\n    Binary(BinaryOp, ExprRef, ExprRef),\n    Unary(UnaryOp, ExprRef),\n    If(ExprRef, ExprRef, ExprRef),\n    Call(Name, Vec<ExprRef>),\n    Match(ExprRef, Vec<Arm>),\n}"
+        },
+        {
+          "start_line": 80,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Parameter {\n    pub name: Name,\n    pub ty: Type,\n}"
+        },
+        {
+          "start_line": 86,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Function {\n    pub name: Name,\n    pub parameters: Vec<Parameter>,\n    pub return_type: Type,\n    pub body: ExprRef,\n}"
+        },
+        {
+          "start_line": 94,
+          "declaration": "/// Function order is significant: lookup takes the first matching name.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Program {\n    pub functions: Vec<Function>,\n    pub entry: ExprRef,\n}"
+        },
+        {
+          "start_line": 101,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Frame {\n    Let(Name, ExprRef, Environment),\n    Left(BinaryOp, ExprRef, Environment),\n    Right(BinaryOp, Value),\n    Unary(UnaryOp),\n    If(ExprRef, ExprRef, Environment),\n    Match(Vec<Arm>, Environment),\n    Args(Name, Vec<Value>, Vec<ExprRef>, Environment),\n    Return(Type, Environment),\n    Scope(Environment),\n}"
+        },
+        {
+          "start_line": 114,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Control {\n    Eval(ExprRef),\n    Return(Value),\n    Push(Frame, Box<Control>, Environment),\n    Invoke(Name, Vec<Value>),\n    Enter(Option<Function>, Vec<Value>),\n    Bound(Option<Environment>, Type, ExprRef),\n    Cases(Value, Vec<Arm>, Environment),\n    CaseResult(Option<Environment>, Value, ExprRef, Vec<Arm>, Environment),\n    PrimitiveResult(Result<Value, u8>),\n    Error(u8),\n}"
+        },
+        {
+          "start_line": 128,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub enum Outcome {\n    Pending,\n    Done(Value),\n    Rejected(u8),\n    Exhausted,\n}"
+        },
+        {
+          "start_line": 155,
+          "declaration": "/// Complete post-startup K boundary state on the typed host common domain.\n/// Frames are stored top first. `None` control represents K's `.K`.\n/// Snapshots are observations; no arbitrary-state import is exposed.\n///\n/// Machine invariant: every `Snapshot` produced by [`super::reference::Machine`] satisfies\n/// `remaining_fuel <= initial_fuel`.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct Snapshot {\n    pub program: Arc<Program>,\n    pub control: Option<Control>,\n    pub environment: Environment,\n    pub frames: Vec<Frame>,\n    pub stack_limit: usize,\n    pub remaining_fuel: u128,\n    pub initial_fuel: u128,\n    pub outcome: Outcome,\n}"
+        },
+        {
+          "start_line": 195,
+          "declaration": "/// A source rule transition, including free terminal publication.\n/// Line numbers refer only to `K_SOURCE_SHA256`, not to executed K rules.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct StepRecord {\n    pub rule_start_line: usize,\n    pub charge: u8,\n    pub before: Snapshot,\n    pub after: Snapshot,\n}"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 8,
+          "text": "/// Opaque source symbol. K comparisons use canonical signed-decimal names."
+        },
+        {
+          "line": 9,
+          "text": "/// Other spellings belong to the typed host API, outside that common domain."
+        },
+        {
+          "line": 94,
+          "text": "/// Function order is significant: lookup takes the first matching name."
+        },
+        {
+          "line": 155,
+          "text": "/// Complete post-startup K boundary state on the typed host common domain."
+        },
+        {
+          "line": 156,
+          "text": "/// Frames are stored top first. `None` control represents K's `.K`."
+        },
+        {
+          "line": 157,
+          "text": "/// Snapshots are observations; no arbitrary-state import is exposed."
+        },
+        {
+          "line": 158,
+          "text": "///"
+        },
+        {
+          "line": 159,
+          "text": "/// Machine invariant: every `Snapshot` produced by [`super::reference::Machine`] satisfies"
+        },
+        {
+          "line": 160,
+          "text": "/// `remaining_fuel <= initial_fuel`."
+        },
+        {
+          "line": 195,
+          "text": "/// A source rule transition, including free terminal publication."
+        },
+        {
+          "line": 196,
+          "text": "/// Line numbers refer only to `K_SOURCE_SHA256`, not to executed K rules."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter.rs",
+      "source_sha256": "6fe7193e3e0132009b117a43ebad1bb1a247683dfa89105567c29b0166e6d02a",
+      "declarations": [
+        {
+          "start_line": 26,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct ProjectionDiagnostic {\n    pub code: String,\n    pub construct: String,\n    pub action_index: usize,\n    pub statement_index: Option<usize>,\n    pub expression: Option<ExprId>,\n}"
+        },
+        {
+          "start_line": 35,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct InputSite {\n    pub index: usize,\n    pub name: String,\n    pub ty: crate::Type,\n}"
+        },
+        {
+          "start_line": 42,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct LetSite {\n    pub statement_index: usize,\n    pub name: String,\n    pub expression: ExprId,\n}"
+        },
+        {
+          "start_line": 49,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct EmitSite {\n    pub statement_index: usize,\n    pub name: String,\n    pub expression: ExprId,\n    pub role: String,\n}"
+        },
+        {
+          "start_line": 57,
+          "declaration": "/// Path is relative to the generated function body, not text or image row IDs.\n/// Every traversed source edge receives a separate occurrence, even for a DAG.\n/// Every synthetic internal lowering node also receives one occurrence, marked\n/// by a `lowering-` node_kind. Its expression/source_expression identify the\n/// original binary requiring it, rather than another traversed source edge.\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct SourceOccurrence {\n    pub action_index: usize,\n    pub statement_index: usize,\n    pub expression: Option<ExprId>,\n    pub body_path: Vec<usize>,\n    pub node_kind: String,\n    pub source_expression: Option<CoreExpr>,\n}"
+        },
+        {
+          "start_line": 72,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct ScalarActionReport {\n    pub action_index: usize,\n    pub action: String,\n    pub inputs: Vec<InputSite>,\n    pub lets: Vec<LetSite>,\n    pub emit: EmitSite,\n    /// Body preorder, with child positions matching ProgramImage's AST locators.\n    pub occurrences: Vec<SourceOccurrence>,\n    pub return_type: crate::Type,\n    pub generated_function_name: String,\n    pub symbol_domain: String,\n}"
+        },
+        {
+          "start_line": 86,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub struct ScalarActionMap {\n    pub function: Function,\n    pub report: ScalarActionReport,\n}"
+        },
+        {
+          "start_line": 92,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\n#[serde(tag = \"status\", rename_all = \"kebab-case\")]\npub enum ActionProjection {\n    Prepared { report: ScalarActionReport },\n    Unsupported { action_index: usize, action: String, diagnostic: ProjectionDiagnostic },\n}"
+        },
+        {
+          "start_line": 99,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct SourceProjectionReport {\n    pub format: String,\n    pub source_language: String,\n    pub source_semantics: String,\n    pub agreement: String,\n    pub reference_profile: String,\n    pub qualification: String,\n    pub source_function_support: bool,\n    pub source_branch_support: bool,\n    pub source_recursion_support: bool,\n    pub source_data_support: bool,\n    pub evaluation_performed: bool,\n    pub source_expression_count: usize,\n    pub source_action_count: usize,\n    pub source_state_count: usize,\n    pub source_asset_count: usize,\n    pub coverage: String,\n    pub actions: Vec<ActionProjection>,\n}"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 1,
+          "text": "//! Source-static projection from current Rust Core to Sherlock's typed scalar AST."
+        },
+        {
+          "line": 2,
+          "text": "//!"
+        },
+        {
+          "line": 3,
+          "text": "//! Preparation evaluates no expression and calls no reference machine. A missing"
+        },
+        {
+          "line": 4,
+          "text": "//! projection is report metadata, not a refusal by the existing Core compiler."
+        },
+        {
+          "line": 5,
+          "text": "//! Only stateless `/1` actions with ordered lets and one final emit are mapped."
+        },
+        {
+          "line": 6,
+          "text": "//! The emit value is projected; its effect remains with the Core consumer."
+        },
+        {
+          "line": 14,
+          "text": "/// Maintainer preparation budget: the maximum number of mapping occurrences a"
+        },
+        {
+          "line": 15,
+          "text": "/// single report (summed across its actions) will materialize. Preparation"
+        },
+        {
+          "line": 16,
+          "text": "/// expands the validated Core expression DAG once per traversed edge with no"
+        },
+        {
+          "line": 17,
+          "text": "/// sharing, so a DAG of linear size can demand exponentially many occurrences"
+        },
+        {
+          "line": 18,
+          "text": "/// (and matching generated AST nodes) even within the existing depth-64 and"
+        },
+        {
+          "line": 19,
+          "text": "/// 8192-expression Core bounds. This ceiling is a representation-preparation"
+        },
+        {
+          "line": 20,
+          "text": "/// limit only: it is not a Core schema rule, resource/circuit cost, or any"
+        },
+        {
+          "line": 21,
+          "text": "/// change to the compiler's supported subset. Exhaustion is per-site"
+        },
+        {
+          "line": 22,
+          "text": "/// `Unsupported` metadata, never a compiler refusal. Synthetic scalar-lowering"
+        },
+        {
+          "line": 23,
+          "text": "/// nodes consume this same existing ceiling; it is not increased for lowering."
+        },
+        {
+          "line": 57,
+          "text": "/// Path is relative to the generated function body, not text or image row IDs."
+        },
+        {
+          "line": 58,
+          "text": "/// Every traversed source edge receives a separate occurrence, even for a DAG."
+        },
+        {
+          "line": 59,
+          "text": "/// Every synthetic internal lowering node also receives one occurrence, marked"
+        },
+        {
+          "line": 60,
+          "text": "/// by a `lowering-` node_kind. Its expression/source_expression identify the"
+        },
+        {
+          "line": 61,
+          "text": "/// original binary requiring it, rather than another traversed source edge."
+        },
+        {
+          "line": 120,
+          "text": "/// Report every action without changing the real compiler's supported subset."
+        },
+        {
+          "line": 159,
+          "text": "/// Compile a typed scalar body with dynamic ordered parameters. The generated"
+        },
+        {
+          "line": 160,
+          "text": "/// function is a representation wrapper; it is not a source function feature."
+        },
+        {
+          "line": 177,
+          "text": "/// Account one occurrence against the report budget BEFORE any occurrence/path/"
+        },
+        {
+          "line": 178,
+          "text": "/// AST allocation, preserving the failing site's identity."
+        },
+        {
+          "line": 328,
+          "text": "/// Lazy, action-local fresh symbols. Provenance lives in report occurrences,"
+        },
+        {
+          "line": 329,
+          "text": "/// so generated strings need carry only their unique preorder ordinal/side."
+        },
+        {
+          "line": 365,
+          "text": "/// Record a real internal AST node against the unchanged report budget before"
+        },
+        {
+          "line": 366,
+          "text": "/// allocating its path/record. The origin is the source binary requiring it."
+        },
+        {
+          "line": 380,
+          "text": "/// Existing Let sequencing forces both operands before a reversed comparison"
+        },
+        {
+          "line": 381,
+          "text": "/// or conditional. `$` is outside validated Core identifiers. The preorder"
+        },
+        {
+          "line": 382,
+          "text": "/// ordinal distinguishes each unshared source occurrence, including DAG edges."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared.rs",
+      "source_sha256": "479eb3983c81e9734d5bd427b68d735e627010368e6c992687c9ff5ff2dad3a9",
+      "declarations": [
+        {
+          "start_line": 25,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum GrammarDomain { DedicatedSorts, GenericNominalExtensionReserved }"
+        },
+        {
+          "start_line": 27,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum FinanceInput { Absent, TypedExtensionReserved }"
+        },
+        {
+          "start_line": 29,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum SortTag { UInt, Bool, List, Tree }"
+        },
+        {
+          "start_line": 31,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BinaryOp { Add, Sub, Mul, Eq, Lt, Cons, Branch }"
+        },
+        {
+          "start_line": 33,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum UnaryOp { Leaf, Not }"
+        },
+        {
+          "start_line": 35,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum PatternTag { PVar, PNil, PCons, PLeaf, PBranch,\n    WildcardExtensionReserved, ConstructorExtensionReserved } // L1 restored"
+        },
+        {
+          "start_line": 38,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BoundaryKind { None, Terminal, TechnicalCut,\n    SourceSuspensionExtensionReserved } // L1 restored; still refused in B-core"
+        },
+        {
+          "start_line": 41,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum LogicalKind { UInt, Bool, Nil, Cons, Leaf, Branch, Marker,\n    ConstructorExtensionReserved }"
+        },
+        {
+          "start_line": 44,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ScalarMode { Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType }"
+        },
+        {
+          "start_line": 46,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ScalarPhase { First, Second, Done }"
+        },
+        {
+          "start_line": 48,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum NodeKind { Cons, Leaf, Branch }"
+        },
+        {
+          "start_line": 50,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BoolSelector { True, False, NotBool }"
+        },
+        {
+          "start_line": 52,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum TriStatus { Pending, Positive, Negative }"
+        },
+        {
+          "start_line": 54,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BindPhase { Pairing, UnwindType, UnwindDup, UnwindInsert, Propagate, Finished }"
+        },
+        {
+          "start_line": 56,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BindStatus { Ok, Bad }"
+        },
+        {
+          "start_line": 58,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum AppendPhase { Copy, Tail, Done }"
+        },
+        {
+          "start_line": 60,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum MatchPhase { Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done }"
+        },
+        {
+          "start_line": 62,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperKind { Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match }"
+        },
+        {
+          "start_line": 64,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum FamilyId { Legacy, Scalar, EnvGet, EnvPut, Find, Bind, Append,\n    Validate, Equal, Match, BookkeepingRelease }"
+        },
+        {
+          "start_line": 67,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum EventKind { LegacyComplete, HelperEnter, HelperVisit, HelperExit,\n    HelperFail, Bookkeeping, Publish, Startup }"
+        },
+        {
+          "start_line": 70,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum SiteTag { EvalLiteral, EvalVar, EvalLet, EvalBinary, EvalUnary, EvalIf,\n    EvalMatch, EvalCall, Push, RetLet, RetLeft, RetRight, RetUnary, RetIf,\n    RetMatch, RetArgs, RetCall, RetScope, Invoke, Enter, Bound, Cases,\n    CaseResult, Prim }"
+        },
+        {
+          "start_line": 75,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum StepInvClauseId { SI01, SI02, SI03, SI04, SI05, SI06, SI07, SI08,\n    SI09, SI10, SI11, SI12, SI13, SI14, SI15, SI16, SI17, SI18, SI19, SI20,\n    SI21, SI22, SI23, SI24 }"
+        },
+        {
+          "start_line": 79,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ViewCheck { V1, V2, V3, V4, V5, V6, V7, V8 }"
+        },
+        {
+          "start_line": 81,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum CounterWidthField { WorkCounter, HelperCounter, ReferenceCursor }"
+        },
+        {
+          "start_line": 83,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum CapacityKind { CodeRows, FunctionRows, CodeChildSlots, ParameterSlots,\n    PatternRows, MatchArmRows, ConstantNodes, ConstantFieldSlots, MaxArity,\n    NameRows, NameBytes, OccurrencePathSlots, ValueSlots, MaxReferenceWork,\n    Frames, SerializationBytes, PhysicalBoundaryEnvelope, StepCap,\n    CounterWidth { field: CounterWidthField } }"
+        },
+        {
+          "start_line": 89,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum FeatureKind { GenericAdt, FinancialSyntax, FinancialInput,\n    BoundedEncodingWithoutWidths, BoundarySection }"
+        },
+        {
+          "start_line": 92,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum AdmissionReason { LayoutWidthTooSmall, ProgramViewMalformed,\n    GrammarDomainMismatch, ProfileMismatch, LayoutBoundsMismatch }"
+        },
+        {
+          "start_line": 96,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HostViolationKind { StepInvViolated, SelectUndefined, ReadOutOfBounds,\n    WrongVariant, DisabledRuleReached, ExtensionRuleReached,\n    PhysicalCapacityExceeded, ArithmeticUndefined }"
+        },
+        {
+          "start_line": 102,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum GuardId { GScalarAllocNode, GScalarFields1, GScalarFields2,\n    GValidateOccLeaf, GValidateFieldNontail, GEqualPairLeaf,\n    GEqualFieldNontail, GBindTypeReject, GBindDupHit }"
+        },
+        {
+          "start_line": 106,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum CapKind { DataNodes, DataFields, EnvironmentCells, HelperTasks }"
+        },
+        {
+          "start_line": 108,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ExhaustReason { Fuel, DataNodes, DataFields, EnvironmentCells,\n    HelperTasks, HelperWork, SerializationBytes }"
+        },
+        {
+          "start_line": 111,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum StepDisposition { Applied, Published, ExhaustedFuelUncharged,\n    RefusedHelperWorkUncharged, RefusedCapCharged }"
+        },
+        {
+          "start_line": 114,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum RunIntC { Negative, Nat(u128), NatAboveU128 }"
+        },
+        {
+          "start_line": 117,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum TaskVisitC { Unvisited, Fields }"
+        },
+        {
+          "start_line": 119,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum RuleIdC { KMachineEvalLiteralValid,KMachineEvalLiteralInvalid,KMachineEvalVariablePresent,KMachineEvalVariableAbsent,KMachineEvalLet,KMachineEvalBinary,KMachineEvalUnary,KMachineEvalIf,KMachineEvalMatch,KMachineEvalCallEmpty,KMachineEvalCallArguments,KMachinePushAccept,KMachinePushRefuse,KMachineReturnLet,KMachineReturnLeft,KMachineReturnRight,KMachineReturnUnary,KMachineReturnIfTrue,KMachineReturnIfFalse,KMachineReturnIfInvalid,KMachineReturnMatch,KMachineReturnArgumentsNext,KMachineReturnArgumentsFinal,KMachineReturnCallValid,KMachineReturnCallInvalid,KMachineReturnScope,KMachineInvokeFind,KMachineEnterMissing,KMachineEnterBind,KMachineBoundInvalid,KMachineBoundValid,KMachineCasesEmpty,KMachineCasesTry,KMachineCasesMiss,KMachineCasesHit,KMachinePrimitiveValue,KMachinePrimitiveError,BHelperScalarEntry,BHelperScalarTag,BHelperScalarArithmetic,BHelperScalarConstruct,BHelperScalarExit,BHelperScalarFailure,BHelperEnvGetEntry,BHelperEnvGetCell,BHelperEnvGetEmpty,BHelperEnvGetExit,BHelperEnvGetFailure,BHelperEnvPutEntry,BHelperEnvPutCell,BHelperEnvPutInsert,BHelperEnvPutEmpty,BHelperEnvPutExit,BHelperEnvPutFailure,BHelperFindEntry,BHelperFindRow,BHelperFindEmpty,BHelperFindExit,BHelperFindFailure,BHelperBindEntry,BHelperBindPair,BHelperBindEmpty,BHelperBindArity,BHelperBindType,BHelperBindDuplicate,BHelperBindInsert,BHelperBindPropagate,BHelperBindExit,BHelperBindFailure,BHelperAppendEntry,BHelperAppendCell,BHelperAppendEmpty,BHelperAppendTail,BHelperAppendCopy,BHelperAppendExit,BHelperAppendFailure,BHelperValidateEntry,BHelperValidateOccurrence,BHelperValidateField,BHelperValidateDeclaration,BHelperValidateEmpty,BHelperValidateInvalid,BHelperValidateExit,BHelperValidateFailure,BHelperEqualEntry,BHelperEqualPair,BHelperEqualField,BHelperEqualEmpty,BHelperEqualDifferent,BHelperEqualExit,BHelperEqualFailure,BHelperMatchEntry,BHelperMatchArm,BHelperMatchOccurrence,BHelperMatchField,BHelperMatchBinding,BHelperMatchDistinct,BHelperMatchDiscard,BHelperMatchNext,BHelperMatchSelected,BHelperMatchEmpty,BHelperMatchExit,BHelperMatchFailure,BBookkeepingTaskEnqueue,BBookkeepingTaskRelease,BBookkeepingResumeStore,BBookkeepingResumeRestore,KAdminStartupValid,KAdminStartupInvalid,KAdminPublishValue,KAdminPublishError,KAdminPublishExhausted }"
+        },
+        {
+          "start_line": 122,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub enum DigestC { Unselected, Selected { format: (String, String), bytes: Vec<u8> } }"
+        },
+        {
+          "start_line": 124,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub struct IdentityC { pub profile_id: u8, pub grammar_domain: GrammarDomain, pub finance: FinanceInput, pub layout_version: (String, String), pub layout_digest: DigestC, pub bounds_digest: DigestC, pub field_id: Option<(String, String)>, pub program_membership_digest: DigestC }"
+        },
+        {
+          "start_line": 127,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub struct RunIdC { pub identity: IdentityC, pub fuel_input: RunIntC, pub stack_limit_input: RunIntC }"
+        },
+        {
+          "start_line": 129,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub struct ExpandedStepIdC { pub run_id: std::sync::Arc<RunIdC>, pub ordinal: u128 }"
+        },
+        {
+          "start_line": 131,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperResultTagC { Validated,EnvFound,EnvMissing,EnvUpdated,FindFound,FindMissing,BindOk,BindBad,AppendDone,ScalarValue,ScalarError,ScalarSelector,ScalarTypeTest,EqualDone,MatchMatched,MatchNoMatch }"
+        },
+        {
+          "start_line": 133,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum OutcomeTagC { Running, Halted, Rejected, Exhausted }"
+        },
+        {
+          "start_line": 135,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperPhaseSummaryC { Scalar(ScalarPhase), Tri(TriStatus), Bind(BindPhase), Append(AppendPhase), Match(MatchPhase) }"
+        },
+        {
+          "start_line": 137,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct AllocDeltasC { pub data_nodes: i64, pub data_fields: i64, pub environment_cells: i64 }"
+        },
+        {
+          "start_line": 139,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub enum LocatorC { Occurrence { owner_is_function: bool, function: usize, ast_path: Vec<usize> }, Table { table: String, row: usize }, Field { name: String } }"
+        },
+        {
+          "start_line": 141,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub struct StepEventC { pub step_id: ExpandedStepIdC, pub rule_id: RuleIdC, pub event_kind: EventKind, pub site: Option<SiteTag>, pub helper_kind: Option<HelperKind>, pub disposition: StepDisposition, pub work_delta: u8, pub helper_work_delta: u8, pub helper_visits_delta: u8, pub reference_cursor_delta: u8, pub alloc_deltas: AllocDeltasC, pub value_slot_writes: u8, pub logical_depth_before: usize, pub logical_depth_after: usize, pub task_cursor_before: usize, pub task_cursor_after: usize, pub helper_phase_before: Option<HelperPhaseSummaryC>, pub helper_phase_after: Option<HelperPhaseSummaryC>, pub helper_cursor_before: Option<usize>, pub helper_cursor_after: Option<usize>, pub result_tag: Option<HelperResultTagC>, pub origin_reference_cursor: Option<u128>, pub source_expr_id: usize, pub source_occurrence: LocatorC, pub exhausted_kind: Option<ExhaustReason>, pub outcome_tag: OutcomeTagC, pub outcome_payload: OutcomeC, pub boundary: BoundaryKind }"
+        },
+        {
+          "start_line": 145,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]\npub struct BoundsC { pub code_rows: usize, pub function_rows: usize,\n    pub code_child_slots: usize, pub parameter_slots: usize,\n    pub pattern_rows: usize, pub match_plan_rows: usize,\n    pub match_arm_rows: usize, pub type_rows: usize,\n    pub constructor_rows: usize, pub constructor_field_slots: usize,\n    pub max_arity: usize, pub constant_nodes: usize,\n    pub constant_field_slots: usize, pub data_nodes: usize,\n    pub data_field_slots: usize, pub environment_cells: usize,\n    pub frames: usize, pub helper_tasks: usize,\n    pub serialization_bytes: usize, pub max_reference_work: u128,\n    pub max_helper_work: u128, pub step_cap: u128 } // all 22, schema #/bounds"
+        },
+        {
+          "start_line": 157,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]\npub struct LayoutCapacitiesC { pub name_rows: usize, pub name_bytes: usize,\n    pub occurrence_path_slots: usize, pub value_slots: usize }"
+        },
+        {
+          "start_line": 160,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum RefC { Const(usize), Data(usize) } // shared owned ref; owner maps to raw"
+        },
+        {
+          "start_line": 162,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct SliceC { pub start: usize, pub len: usize }"
+        },
+        {
+          "start_line": 172,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]\npub struct AllocCounters { pub data_nodes: usize, pub data_fields: usize,\n    pub environment_cells: usize }"
+        },
+        {
+          "start_line": 175,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]\npub struct ActiveLengths { pub data: usize, pub data_fields: usize,\n    pub env: usize, pub value_slots: usize }"
+        },
+        {
+          "start_line": 178,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct HelperCommon { pub site: SiteTag, pub origin_reference_cursor: u128,\n    pub parent_resume: Option<usize> }"
+        },
+        {
+          "start_line": 183,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ScalarStaged { None, U128Value { n: u128 }, BoolValue { b: bool },\n    PendingNode { tag: NodeKind }, PrimError { code: u8 }, // 10|11, owner-checked\n    Selector { sel: BoolSelector }, TypeTest { ok: bool } }"
+        },
+        {
+          "start_line": 187,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperControlC {\n    Scalar { common: HelperCommon, mode: ScalarMode, operand_a: RefC,\n        operand_b: Option<RefC>, expected: Option<SortTag>,\n        phase: ScalarPhase, reg_a: u128, staged: ScalarStaged },\n    EnvGet { common: HelperCommon, binder: usize, cursor: Option<usize>,\n        found: Option<RefC>, status: TriStatus },\n    EnvPut { common: HelperCommon, binder: usize, value: RefC, base: EnvRootC,\n        new_root: Option<usize>, status: TriStatus },\n    Find { common: HelperCommon, function_name: usize, row_cursor: usize,\n        found: Option<usize>, status: TriStatus },\n    Bind { common: HelperCommon, function: usize, params: SliceC, args: ValSliceC,\n        p_cursor: usize, a_cursor: usize, partial: EnvRootC,\n        dup_cursor: Option<usize>, phase: BindPhase, status: BindStatus },\n    Append { common: HelperCommon, src: ValSliceC, value: RefC,\n        src_cursor: usize, dest_start: usize, staged: Option<RefC>,\n        phase: AppendPhase },\n    Validate { common: HelperCommon, root: RefC, status: TriStatus },\n    Equal { common: HelperCommon, left: RefC, right: RefC, status: TriStatus },\n    Match { common: HelperCommon, scrutinee: RefC, arm: usize,\n        saved_env: EnvRootC, partial: EnvRootC, pat_tag: PatternTag,\n        x: usize, y: usize, field_idx: u8, staged: Option<RefC>,\n        phase: MatchPhase, status: TriStatus },\n}"
+        },
+        {
+          "start_line": 214,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum FrameRowC {\n    LetF { binder: usize, body: usize, saved_env: EnvRootC, origin: usize },\n    LeftF { op: BinaryOp, right: usize, saved_env: EnvRootC, origin: usize },\n    RightF { op: BinaryOp, left: RefC, origin: usize },\n    UnaryF { op: UnaryOp, origin: usize },\n    IfF { then_expr: usize, else_expr: usize, saved_env: EnvRootC, origin: usize },\n    MatchF { arms: SliceC, saved_env: EnvRootC, origin: usize },\n    ArgsF { function_name: usize, completed: ValSliceC, rest: SliceC,\n        saved_env: EnvRootC, origin: usize },\n    ReturnF { return_type: SortTag, saved_env: EnvRootC, origin: usize },\n    ScopeF { saved_env: EnvRootC, origin: usize },\n}"
+        },
+        {
+          "start_line": 227,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BoundBinding { Bad, Ok { env: EnvRootC } }"
+        },
+        {
+          "start_line": 229,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum CaseMatching { NoMatch, Matched { env: EnvRootC } }"
+        },
+        {
+          "start_line": 231,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum PrimOutcome { Value { value: RefC }, Error { code: u8 } }"
+        },
+        {
+          "start_line": 233,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ControlC { Eval { expr: usize }, Return { value: RefC },\n    ScheduleNext { frame: FrameRowC, next: usize, env: EnvRootC },\n    Invoke { function_name: usize, args: ValSliceC },\n    Enter { function: Option<usize>, args: ValSliceC },\n    Bound { binding: BoundBinding, return_type: SortTag, body: usize },\n    Cases { value: RefC, arms: SliceC, saved_env: EnvRootC },\n    CaseResult { matching: CaseMatching, value: RefC, body: usize,\n        rest: SliceC, saved_env: EnvRootC },\n    PrimResult { result: PrimOutcome }, Error { code: u8 } }"
+        },
+        {
+          "start_line": 243,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperTaskC {\n    ValidateTask { r: RefC, visit: TaskVisitC, cursor: usize },\n    EqualTask { left: RefC, right: RefC, visit: TaskVisitC, cursor: usize },\n    PairTask { binder: usize, sort: SortTag, arg: RefC },\n}"
+        },
+        {
+          "start_line": 249,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperResultC { Validated { ok: bool }, EnvFound { value: RefC },\n    EnvMissing, EnvUpdated { cell: usize }, FindFound { function: usize },\n    FindMissing, BindOk { env: EnvRootC }, BindBad, AppendDone { seq: ValSliceC },\n    ScalarValue { value: RefC }, ScalarError { code: u8 },\n    ScalarSelector { sel: BoolSelector }, ScalarTypeTest { ok: bool },\n    EqualDone { value: RefC }, MatchMatched { env: EnvRootC }, MatchNoMatch }"
+        },
+        {
+          "start_line": 256,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum OutcomeC { Running, Halted { value: RefC }, Rejected { code: u8 },\n    Exhausted { reason: ExhaustReason } }"
+        },
+        {
+          "start_line": 259,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct EnvCellC { pub binder: usize, pub value: RefC, pub previous: EnvRootC }"
+        },
+        {
+          "start_line": 267,
+          "declaration": "pub struct CoreProgram { pub functions: Vec<CoreFunction>, pub entry: CoreExpr }"
+        },
+        {
+          "start_line": 268,
+          "declaration": "pub struct CoreFunction { pub name: String, pub parameters: Vec<CoreParameter>,\n    pub return_type: SortTag, pub body: CoreExpr }"
+        },
+        {
+          "start_line": 270,
+          "declaration": "pub struct CoreParameter { pub name: String, pub sort: SortTag }"
+        },
+        {
+          "start_line": 271,
+          "declaration": "pub enum CoreExpr { Literal { value: CoreValue }, Var { name: String },\n    Let { name: String, value: Box<CoreExpr>, body: Box<CoreExpr> },\n    Binary { op: BinaryOp, left: Box<CoreExpr>, right: Box<CoreExpr> },\n    Unary { op: UnaryOp, operand: Box<CoreExpr> },\n    If { cond: Box<CoreExpr>, then_expr: Box<CoreExpr>, else_expr: Box<CoreExpr> },\n    Call { name: String, args: Vec<CoreExpr> },\n    Match { scrutinee: Box<CoreExpr>, arms: Vec<CoreArm> } }"
+        },
+        {
+          "start_line": 278,
+          "declaration": "pub struct CoreArm { pub pattern: CorePattern, pub body: CoreExpr }"
+        },
+        {
+          "start_line": 279,
+          "declaration": "pub enum CorePattern { PVar { x: String }, PNil,\n    PCons { x: String, y: String }, PLeaf { x: String },\n    PBranch { x: String, y: String } }"
+        },
+        {
+          "start_line": 282,
+          "declaration": "pub enum CoreValue { UInt { n: i128_class::KIntC }, Bool { b: bool },\n    List { elements: Vec<i128_class::KIntC> }, Tree { tree: CoreTree } }"
+        },
+        {
+          "start_line": 288,
+          "declaration": "pub enum CoreTree { Leaf { n: i128_class::KIntC },\n    Branch { left: Box<CoreTree>, right: Box<CoreTree> } }"
+        },
+        {
+          "start_line": 293,
+          "declaration": "pub enum ExpressionRowC { Literal { constant: usize }, Var { binder: usize },\n    Let { binder: usize, value: usize, body: usize },\n    Binary { op: BinaryOp, left: usize, right: usize },\n    Unary { op: UnaryOp, operand: usize },\n    If { cond: usize, then_expr: usize, else_expr: usize },\n    Call { function_name: usize, args: SliceC },\n    Match { scrutinee: usize, arms: SliceC } }"
+        },
+        {
+          "start_line": 300,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct FunctionRowC { pub function_name: usize, pub params: SliceC, pub return_type: SortTag, pub body: usize }"
+        },
+        {
+          "start_line": 302,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct ParameterRowC { pub binder: usize, pub sort: SortTag }"
+        },
+        {
+          "start_line": 304,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct ArmRowC { pub pattern: usize, pub body: usize }"
+        },
+        {
+          "start_line": 306,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum PatternRowC { PVar { x: usize }, PNil, PCons { x: usize, y: usize }, PLeaf { x: usize }, PBranch { x: usize, y: usize } }"
+        },
+        {
+          "start_line": 308,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub struct OccurrenceRowC { pub owner_is_function: bool, pub function: usize, pub path: SliceC }"
+        },
+        {
+          "start_line": 311,
+          "declaration": "pub struct ProgramView {\n    pub entry: usize,\n    pub expressions: Vec<ExpressionRowC>, pub occurrences: Vec<OccurrenceRowC>, pub occurrence_paths: Vec<usize>,\n    pub children: Vec<usize>, pub functions: Vec<FunctionRowC>,\n    pub parameters: Vec<ParameterRowC>, pub arms: Vec<ArmRowC>,\n    pub patterns: Vec<PatternRowC>,\n    pub constants: Vec<RawConstRow>, pub constant_fields: Vec<usize>,\n    pub names: Vec<String>,\n}"
+        },
+        {
+          "start_line": 327,
+          "declaration": "pub struct WidthTable { index_widths: Vec<(String, u32)>, counter_widths: Vec<(String, u32)>, record_widths: Vec<(String, u32)> }"
+        },
+        {
+          "start_line": 345,
+          "declaration": "pub struct LayoutSchemaC { pub layout_version: (String, String),\n    pub field_id: Option<(String, String)>, pub widths: Option<WidthTable>,\n    pub scalar_layout_id: Option<(String, String)>, pub bounds: BoundsC,\n    pub capacities: LayoutCapacitiesC,\n    pub boundary_capacities_present: bool } // must be false in B-core (AD-6)"
+        },
+        {
+          "start_line": 352,
+          "declaration": "pub struct HostViolation { pub kind: HostViolationKind,\n    pub clause: Option<StepInvClauseId>, pub rule: Option<RuleIdC>,\n    pub locator: Option<String> }"
+        },
+        {
+          "start_line": 355,
+          "declaration": "pub struct StepInvViolation { pub clause: StepInvClauseId,\n    pub locator: Option<String>, pub detail: String }"
+        },
+        {
+          "start_line": 357,
+          "declaration": "pub struct ProgramViewViolation { pub check: ViewCheck, pub table: String,\n    pub row: Option<usize>, pub detail: String }"
+        },
+        {
+          "start_line": 359,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug)]\npub enum NeededNatC { Exact(u128), AboveU128 }"
+        },
+        {
+          "start_line": 366,
+          "declaration": "pub enum Tooling { AdmissionRejected { reason: AdmissionReason,\n        detail: String, locator: Option<LocatorC> },\n    CapacityNotAdmitted { kind: CapacityKind, needed: NeededNatC, limit: u128,\n        locator: Option<LocatorC> },\n    UnsupportedFeature { feature: FeatureKind, locator: Option<LocatorC> } }"
+        },
+        {
+          "start_line": 373,
+          "declaration": "pub struct Selected { pub rule: RuleIdC, pub event_kind: EventKind,\n    pub site: Option<SiteTag>, pub helper_kind: Option<HelperKind>,\n    pub helper_eligible: bool, pub helper_visits: u8 }"
+        },
+        {
+          "start_line": 376,
+          "declaration": "pub struct RunSummary { pub outcome: OutcomeC, pub events: u128,\n    pub consumed_work: u128, pub helper_work: u128, pub helper_visits: u128,\n    pub reference_cursor: u128 }"
+        },
+        {
+          "start_line": 379,
+          "declaration": "pub enum StepResult { Terminal, Event { event: StepEventC } }"
+        },
+        {
+          "start_line": 385,
+          "declaration": "pub struct Admitted { body: Arc<AdmittedBody> }"
+        },
+        {
+          "start_line": 388,
+          "declaration": "pub struct MachineImage {\n    admission: Admitted, run_id: std::sync::Arc<RunIdC>, control: ControlC, control_origin: usize,\n    env_root: EnvRootC, stack_limit: usize, outcome: OutcomeC,\n    initial_fuel: u128, remaining_work: u128, consumed_work: u128,\n    helper_work: u128, helper_visits: u128, reference_cursor: u128,\n    alloc: AllocCounters, active: ActiveLengths,\n    helper: Option<HelperControlC>, result: Option<HelperResultC>,\n    data: Vec<RawDataRow>, data_fields: Vec<RefC>, env: Vec<EnvCellC>, frames: Vec<FrameRowC>,\n    tasks: Vec<HelperTaskC>, value_slots: Vec<RefC>,\n}"
+        },
+        {
+          "start_line": 409,
+          "declaration": "pub struct PreImage<'a> { admitted: &'a Admitted, img: &'a MachineImage }"
+        },
+        {
+          "start_line": 424,
+          "declaration": "pub struct OwnerGuards { _sealed: () }"
+        },
+        {
+          "start_line": 553,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum Write<T> { Keep, Set(T) }"
+        },
+        {
+          "start_line": 556,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum FrameWrite { Push(FrameRowC), RewriteTop(FrameRowC), Pop }"
+        },
+        {
+          "start_line": 558,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum TaskOp { None, Push(HelperTaskC), Pop }"
+        },
+        {
+          "start_line": 564,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum AllocDataWrite { U128 { n: u128 }, Bool { b: bool }, Nil,\n    Cons { fields: [RefC; 2] }, Leaf { field: RefC }, Branch { fields: [RefC; 2] } }"
+        },
+        {
+          "start_line": 574,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]\npub struct PlanDelta { // allocation/depth/task/slot assertion only\n    pub alloc_data_nodes: i64, pub alloc_data_fields: i64,\n    pub alloc_environment_cells: i64, pub depth: i64, pub task_live: i64,\n    pub active_value_slots: i64 }"
+        },
+        {
+          "start_line": 579,
+          "declaration": "#[derive(Clone, PartialEq, Eq, Debug, Default)]\npub struct PlannedWrites {\n    pub control: Write<ControlC>, pub control_origin: Write<usize>,\n    pub env_root: Write<EnvRootC>, pub result: Write<Option<HelperResultC>>,\n    pub helper: Write<Option<HelperControlC>>, pub frame: Option<FrameWrite>,\n    pub task_rewrite_top: Option<HelperTaskC>, pub task_op: TaskOp,\n    pub alloc_data: Option<AllocDataWrite>, pub alloc_env: Option<EnvCellC>,\n    pub alloc_value_slot: Option<RefC> }"
+        },
+        {
+          "start_line": 587,
+          "declaration": "pub struct EffectPlan { pub delta_assert: PlanDelta, pub writes: PlannedWrites }"
+        },
+        {
+          "start_line": 592,
+          "declaration": "pub struct ValidatedPlan { writes: PlannedWrites, delta: PlanDelta,\n    cap_first: Option<CapKind>, rule: RuleIdC }"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 1,
+          "text": "//! helper_machine::shared \u2014 PROPOSED v2, not installed, not adopted."
+        },
+        {
+          "line": 2,
+          "text": "//! Root placement proposal (bounded, no wildcard edit):"
+        },
+        {
+          "line": 3,
+          "text": "//!   crates/mori-core/src/sherlock/helper_machine/mod.rs        (Root/I only)"
+        },
+        {
+          "line": 4,
+          "text": "//!   crates/mori-core/src/sherlock/helper_machine/raw.rs        (frozen raw-104, unmutated)"
+        },
+        {
+          "line": 5,
+          "text": "//!   crates/mori-core/src/sherlock/helper_machine/shared.rs     (this file)"
+        },
+        {
+          "line": 6,
+          "text": "//!   crates/mori-core/src/sherlock/helper_machine/shared/owner.rs"
+        },
+        {
+          "line": 7,
+          "text": "//!        (child of `shared`; the ONLY module that may construct PreImage"
+        },
+        {
+          "line": 8,
+          "text": "//!         internals, OwnerGuards, ValidatedPlan, Admitted, MachineImage)"
+        },
+        {
+          "line": 9,
+          "text": "//!   crates/mori-core/src/sherlock/helper_machine/families/{legacy,scalar,"
+        },
+        {
+          "line": 10,
+          "text": "//!        env_get,env_put,find,bind,append,validate,equal,match,bookkeeping}.rs"
+        },
+        {
+          "line": 11,
+          "text": "//!        (siblings of `shared`, NOT descendants; private fields in `shared`"
+        },
+        {
+          "line": 12,
+          "text": "//!         are therefore inaccessible to family bodies)"
+        },
+        {
+          "line": 13,
+          "text": "//! Family bodies are given no typed means to admit, charge, set Outcome,"
+        },
+        {
+          "line": 14,
+          "text": "//!   or mutate MachineImage. A family body is ordinary reviewed Rust: it can"
+        },
+        {
+          "line": 15,
+          "text": "//!   loop, allocate, or return Err(HostViolation); the owner surfaces that Err"
+        },
+        {
+          "line": 16,
+          "text": "//!   with the image untouched. It cannot publish an Outcome."
+        },
+        {
+          "line": 17,
+          "text": "//! Callable surface = trait declarations below (future S-owned bodies in"
+        },
+        {
+          "line": 18,
+          "text": "//!   shared::owner) + the small implemented constructors/normalizers/leaves"
+        },
+        {
+          "line": 19,
+          "text": "//!   in this file. No engine, admission, StepInv, or apply body exists yet."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/raw.rs",
+      "source_sha256": "ef9c70a41933acf2c4310dab566c83fd72087b8ea435869a8c283f6c40aff7d1",
+      "declarations": [
+        {
+          "start_line": 19,
+          "declaration": "pub struct ErrorCode(pub u8);"
+        },
+        {
+          "start_line": 22,
+          "declaration": "pub struct Id {\n    pub namespace: Text,\n    pub name: Text,\n}"
+        },
+        {
+          "start_line": 28,
+          "declaration": "pub enum Digest {\n    Unselected,\n    Selected { format: Id, bytes: Vec<u8> },\n}"
+        },
+        {
+          "start_line": 34,
+          "declaration": "pub enum RunInt {\n    Negative,\n    Nat { value: u128 },\n    NatAboveU128,\n}"
+        },
+        {
+          "start_line": 41,
+          "declaration": "pub enum KInt {\n    InRange { value: UInt128 },\n    Negative,\n    AboveU128,\n}"
+        },
+        {
+          "start_line": 48,
+          "declaration": "pub struct ExprId(pub usize);"
+        },
+        {
+          "start_line": 51,
+          "declaration": "pub struct ChildPos(pub usize);"
+        },
+        {
+          "start_line": 54,
+          "declaration": "pub struct FunctionRowId(pub usize);"
+        },
+        {
+          "start_line": 57,
+          "declaration": "pub struct FunctionCursor(pub usize);"
+        },
+        {
+          "start_line": 60,
+          "declaration": "pub struct ParamPos(pub usize);"
+        },
+        {
+          "start_line": 63,
+          "declaration": "pub struct ArmId(pub usize);"
+        },
+        {
+          "start_line": 66,
+          "declaration": "pub struct ArmPos(pub usize);"
+        },
+        {
+          "start_line": 69,
+          "declaration": "pub struct PatternRowId(pub usize);"
+        },
+        {
+          "start_line": 72,
+          "declaration": "pub struct ConstId(pub usize);"
+        },
+        {
+          "start_line": 75,
+          "declaration": "pub struct ConstFieldPos(pub usize);"
+        },
+        {
+          "start_line": 78,
+          "declaration": "pub struct DataId(pub usize);"
+        },
+        {
+          "start_line": 81,
+          "declaration": "pub struct FieldPos(pub usize);"
+        },
+        {
+          "start_line": 84,
+          "declaration": "pub struct EnvId(pub usize);"
+        },
+        {
+          "start_line": 87,
+          "declaration": "pub struct NameId(pub usize);"
+        },
+        {
+          "start_line": 90,
+          "declaration": "pub struct OccPathPos(pub usize);"
+        },
+        {
+          "start_line": 93,
+          "declaration": "pub struct ChildPosition(pub usize);"
+        },
+        {
+          "start_line": 96,
+          "declaration": "pub struct ValueSlotPos(pub usize);"
+        },
+        {
+          "start_line": 99,
+          "declaration": "pub struct ArityCount(pub usize);"
+        },
+        {
+          "start_line": 102,
+          "declaration": "pub struct Depth(pub usize);"
+        },
+        {
+          "start_line": 105,
+          "declaration": "pub struct StackLimit(pub usize);"
+        },
+        {
+          "start_line": 108,
+          "declaration": "pub struct TaskCount(pub usize);"
+        },
+        {
+          "start_line": 111,
+          "declaration": "pub struct WorkCounter(pub u128);"
+        },
+        {
+          "start_line": 114,
+          "declaration": "pub struct HelperCounter(pub u128);"
+        },
+        {
+          "start_line": 117,
+          "declaration": "pub struct ReferenceCursor(pub u128);"
+        },
+        {
+          "start_line": 120,
+          "declaration": "pub enum ProfileId {\n    SherlockKA1,\n    SherlockQuintA1,\n    SherlockHelperMicrostep1,\n}"
+        },
+        {
+          "start_line": 127,
+          "declaration": "pub enum GrammarDomain {\n    DedicatedSorts,\n    GenericNominalExtensionReserved,\n}"
+        },
+        {
+          "start_line": 133,
+          "declaration": "pub enum FinanceInput {\n    Absent,\n    TypedExtensionReserved,\n}"
+        },
+        {
+          "start_line": 139,
+          "declaration": "pub enum SortTag {\n    UInt,\n    Bool,\n    List,\n    Tree,\n}"
+        },
+        {
+          "start_line": 147,
+          "declaration": "pub enum BinaryOp {\n    Add,\n    Sub,\n    Mul,\n    Eq,\n    Lt,\n    Cons,\n    Branch,\n}"
+        },
+        {
+          "start_line": 158,
+          "declaration": "pub enum UnaryOp {\n    Leaf,\n    Not,\n}"
+        },
+        {
+          "start_line": 164,
+          "declaration": "pub enum ExprTag {\n    Literal,\n    Var,\n    Let,\n    Binary,\n    Unary,\n    If,\n    Call,\n    Match,\n    ConstructExtensionReserved,\n}"
+        },
+        {
+          "start_line": 177,
+          "declaration": "pub enum PatternTag {\n    PVar,\n    PNil,\n    PCons,\n    PLeaf,\n    PBranch,\n    WildcardExtensionReserved,\n    ConstructorExtensionReserved,\n}"
+        },
+        {
+          "start_line": 188,
+          "declaration": "pub enum LogicalKind {\n    UInt,\n    Bool,\n    Nil,\n    Cons,\n    Leaf,\n    Branch,\n    Marker,\n    ConstructorExtensionReserved,\n}"
+        },
+        {
+          "start_line": 200,
+          "declaration": "pub enum ConstTag {\n    U128,\n    Bool,\n    Nil,\n    Cons,\n    Leaf,\n    Branch,\n    ConstructorExtensionReserved,\n    U128OutOfRange,\n}"
+        },
+        {
+          "start_line": 212,
+          "declaration": "pub enum DataTag {\n    U128,\n    Bool,\n    Nil,\n    Cons,\n    Leaf,\n    Branch,\n    ConstructorExtensionReserved,\n}"
+        },
+        {
+          "start_line": 223,
+          "declaration": "pub enum FrameTag {\n    LetF,\n    LeftF,\n    RightF,\n    UnaryF,\n    IfF,\n    MatchF,\n    ArgsF,\n    ReturnF,\n    ScopeF,\n    ConstructorFieldsExtensionReserved,\n}"
+        },
+        {
+          "start_line": 237,
+          "declaration": "pub enum ControlTag {\n    Eval,\n    Return,\n    ScheduleNext,\n    Invoke,\n    Enter,\n    Bound,\n    Cases,\n    CaseResult,\n    PrimResult,\n    Error,\n}"
+        },
+        {
+          "start_line": 251,
+          "declaration": "pub enum HelperKind {\n    Scalar,\n    EnvGet,\n    EnvPut,\n    Find,\n    Bind,\n    Append,\n    Validate,\n    Equal,\n    Match,\n}"
+        },
+        {
+          "start_line": 264,
+          "declaration": "pub enum SiteTag {\n    EvalLiteral,\n    EvalVar,\n    EvalLet,\n    EvalBinary,\n    EvalUnary,\n    EvalIf,\n    EvalMatch,\n    EvalCall,\n    Push,\n    RetLet,\n    RetLeft,\n    RetRight,\n    RetUnary,\n    RetIf,\n    RetMatch,\n    RetArgs,\n    RetCall,\n    RetScope,\n    Invoke,\n    Enter,\n    Bound,\n    Cases,\n    CaseResult,\n    Prim,\n}"
+        },
+        {
+          "start_line": 292,
+          "declaration": "pub enum ScalarMode {\n    Add,\n    Sub,\n    Mul,\n    Lt,\n    Cons,\n    Branch,\n    Leaf,\n    Not,\n    TestBool,\n    TestType,\n}"
+        },
+        {
+          "start_line": 306,
+          "declaration": "pub enum ScalarPhase {\n    First,\n    Second,\n    Done,\n}"
+        },
+        {
+          "start_line": 313,
+          "declaration": "pub enum ScalarStagedTag {\n    None,\n    U128Value,\n    BoolValue,\n    PendingNode,\n    PrimError,\n    Selector,\n    TypeTest,\n}"
+        },
+        {
+          "start_line": 324,
+          "declaration": "pub enum NodeKind {\n    Cons,\n    Leaf,\n    Branch,\n}"
+        },
+        {
+          "start_line": 331,
+          "declaration": "pub enum BoolSelector {\n    True,\n    False,\n    NotBool,\n}"
+        },
+        {
+          "start_line": 338,
+          "declaration": "pub enum TriStatus {\n    Pending,\n    Positive,\n    Negative,\n}"
+        },
+        {
+          "start_line": 345,
+          "declaration": "pub enum BindPhase {\n    Pairing,\n    UnwindType,\n    UnwindDup,\n    UnwindInsert,\n    Propagate,\n    Finished,\n}"
+        },
+        {
+          "start_line": 355,
+          "declaration": "pub enum BindStatus {\n    Ok,\n    Bad,\n}"
+        },
+        {
+          "start_line": 361,
+          "declaration": "pub enum AppendPhase {\n    Copy,\n    Tail,\n    Done,\n}"
+        },
+        {
+          "start_line": 368,
+          "declaration": "pub enum TaskVisit {\n    Unvisited,\n    Fields,\n}"
+        },
+        {
+          "start_line": 374,
+          "declaration": "pub enum MatchPhase {\n    Arm,\n    Tag,\n    Distinct,\n    Field,\n    Bind,\n    Ready,\n    NoMatchReady,\n    Done,\n}"
+        },
+        {
+          "start_line": 386,
+          "declaration": "pub enum HelperTaskTag {\n    ValidateTask,\n    EqualTask,\n    PairTask,\n}"
+        },
+        {
+          "start_line": 393,
+          "declaration": "pub enum HelperResultTag {\n    Validated,\n    EnvFound,\n    EnvMissing,\n    EnvUpdated,\n    FindFound,\n    FindMissing,\n    BindOk,\n    BindBad,\n    AppendDone,\n    ScalarValue,\n    ScalarError,\n    ScalarSelector,\n    ScalarTypeTest,\n    EqualDone,\n    MatchMatched,\n    MatchNoMatch,\n}"
+        },
+        {
+          "start_line": 413,
+          "declaration": "pub enum OutcomeTag {\n    Running,\n    Halted,\n    Rejected,\n    Exhausted,\n}"
+        },
+        {
+          "start_line": 421,
+          "declaration": "pub enum ExhaustReason {\n    Fuel,\n    DataNodes,\n    DataFields,\n    EnvironmentCells,\n    HelperTasks,\n    HelperWork,\n    SerializationBytes,\n}"
+        },
+        {
+          "start_line": 432,
+          "declaration": "pub enum StepDisposition {\n    Applied,\n    Published,\n    ExhaustedFuelUncharged,\n    RefusedHelperWorkUncharged,\n    RefusedCapCharged,\n}"
+        },
+        {
+          "start_line": 441,
+          "declaration": "pub enum EventStatus {\n    Enabled,\n    AdministrativeBoundary,\n    Disabled,\n    ExtensionOnly,\n}"
+        },
+        {
+          "start_line": 449,
+          "declaration": "pub enum EventKind {\n    LegacyComplete,\n    HelperEnter,\n    HelperVisit,\n    HelperExit,\n    HelperFail,\n    Bookkeeping,\n    Publish,\n    Startup,\n}"
+        },
+        {
+          "start_line": 461,
+          "declaration": "pub enum BoundaryKind {\n    None,\n    Terminal,\n    TechnicalCut,\n    SourceSuspensionExtensionReserved,\n}"
+        },
+        {
+          "start_line": 469,
+          "declaration": "pub enum RuleId {\n    KMachineEvalLiteralValid,\n    KMachineEvalLiteralInvalid,\n    KMachineEvalVariablePresent,\n    KMachineEvalVariableAbsent,\n    KMachineEvalLet,\n    KMachineEvalBinary,\n    KMachineEvalUnary,\n    KMachineEvalIf,\n    KMachineEvalMatch,\n    KMachineEvalCallEmpty,\n    KMachineEvalCallArguments,\n    KMachinePushAccept,\n    KMachinePushRefuse,\n    KMachineReturnLet,\n    KMachineReturnLeft,\n    KMachineReturnRight,\n    KMachineReturnUnary,\n    KMachineReturnIfTrue,\n    KMachineReturnIfFalse,\n    KMachineReturnIfInvalid,\n    KMachineReturnMatch,\n    KMachineReturnArgumentsNext,\n    KMachineReturnArgumentsFinal,\n    KMachineReturnCallValid,\n    KMachineReturnCallInvalid,\n    KMachineReturnScope,\n    KMachineInvokeFind,\n    KMachineEnterMissing,\n    KMachineEnterBind,\n    KMachineBoundInvalid,\n    KMachineBoundValid,\n    KMachineCasesEmpty,\n    KMachineCasesTry,\n    KMachineCasesMiss,\n    KMachineCasesHit,\n    KMachinePrimitiveValue,\n    KMachinePrimitiveError,\n    BHelperScalarEntry,\n    BHelperScalarTag,\n    BHelperScalarArithmetic,\n    BHelperScalarConstruct,\n    BHelperScalarExit,\n    BHelperScalarFailure,\n    BHelperEnvGetEntry,\n    BHelperEnvGetCell,\n    BHelperEnvGetEmpty,\n    BHelperEnvGetExit,\n    BHelperEnvGetFailure,\n    BHelperEnvPutEntry,\n    BHelperEnvPutCell,\n    BHelperEnvPutInsert,\n    BHelperEnvPutEmpty,\n    BHelperEnvPutExit,\n    BHelperEnvPutFailure,\n    BHelperFindEntry,\n    BHelperFindRow,\n    BHelperFindEmpty,\n    BHelperFindExit,\n    BHelperFindFailure,\n    BHelperBindEntry,\n    BHelperBindPair,\n    BHelperBindEmpty,\n    BHelperBindArity,\n    BHelperBindType,\n    BHelperBindDuplicate,\n    BHelperBindInsert,\n    BHelperBindPropagate,\n    BHelperBindExit,\n    BHelperBindFailure,\n    BHelperAppendEntry,\n    BHelperAppendCell,\n    BHelperAppendEmpty,\n    BHelperAppendTail,\n    BHelperAppendCopy,\n    BHelperAppendExit,\n    BHelperAppendFailure,\n    BHelperValidateEntry,\n    BHelperValidateOccurrence,\n    BHelperValidateField,\n    BHelperValidateDeclaration,\n    BHelperValidateEmpty,\n    BHelperValidateInvalid,\n    BHelperValidateExit,\n    BHelperValidateFailure,\n    BHelperEqualEntry,\n    BHelperEqualPair,\n    BHelperEqualField,\n    BHelperEqualEmpty,\n    BHelperEqualDifferent,\n    BHelperEqualExit,\n    BHelperEqualFailure,\n    BHelperMatchEntry,\n    BHelperMatchArm,\n    BHelperMatchOccurrence,\n    BHelperMatchField,\n    BHelperMatchBinding,\n    BHelperMatchDistinct,\n    BHelperMatchDiscard,\n    BHelperMatchNext,\n    BHelperMatchSelected,\n    BHelperMatchEmpty,\n    BHelperMatchExit,\n    BHelperMatchFailure,\n    BBookkeepingTaskEnqueue,\n    BBookkeepingTaskRelease,\n    BBookkeepingResumeStore,\n    BBookkeepingResumeRestore,\n    KAdminStartupValid,\n    KAdminStartupInvalid,\n    KAdminPublishValue,\n    KAdminPublishError,\n    KAdminPublishExhausted,\n}"
+        },
+        {
+          "start_line": 585,
+          "declaration": "pub struct Bounds {\n    pub code_rows: usize,\n    pub function_rows: usize,\n    pub code_child_slots: usize,\n    pub parameter_slots: usize,\n    pub pattern_rows: usize,\n    pub match_plan_rows: usize,\n    pub match_arm_rows: usize,\n    pub type_rows: usize,\n    pub constructor_rows: usize,\n    pub constructor_field_slots: usize,\n    pub max_arity: usize,\n    pub constant_nodes: usize,\n    pub constant_field_slots: usize,\n    pub data_nodes: usize,\n    pub data_field_slots: usize,\n    pub environment_cells: usize,\n    pub frames: usize,\n    pub helper_tasks: usize,\n    pub serialization_bytes: usize,\n    pub max_reference_work: u128,\n    pub max_helper_work: u128,\n    pub step_cap: u128,\n}"
+        },
+        {
+          "start_line": 611,
+          "declaration": "pub struct LayoutCapacities {\n    pub name_rows: usize,\n    pub name_bytes: usize,\n    pub occurrence_path_slots: usize,\n    pub value_slots: usize,\n}"
+        },
+        {
+          "start_line": 619,
+          "declaration": "pub enum ValueRef {\n    Const { id: ConstId },\n    Data { id: DataId },\n}"
+        },
+        {
+          "start_line": 625,
+          "declaration": "pub struct ValSlice {\n    pub start: ValueSlotPos,\n    pub len: ArityCount,\n}"
+        },
+        {
+          "start_line": 631,
+          "declaration": "pub struct ExprSlice {\n    pub start: ChildPos,\n    pub len: ArityCount,\n}"
+        },
+        {
+          "start_line": 637,
+          "declaration": "pub struct ArmSlice {\n    pub start: ArmPos,\n    pub len: ArmPos,\n}"
+        },
+        {
+          "start_line": 643,
+          "declaration": "pub struct ParamSlice {\n    pub start: ParamPos,\n    pub len: ArityCount,\n}"
+        },
+        {
+          "start_line": 649,
+          "declaration": "pub struct FieldSlice {\n    pub start: FieldPos,\n    pub len: usize,\n}"
+        },
+        {
+          "start_line": 655,
+          "declaration": "pub struct ConstFieldSlice {\n    pub start: ConstFieldPos,\n    pub len: usize,\n}"
+        },
+        {
+          "start_line": 661,
+          "declaration": "pub struct OccPathSlice {\n    pub start: OccPathPos,\n    pub len: OccPathPos,\n}"
+        },
+        {
+          "start_line": 670,
+          "declaration": "pub struct EnvCell {\n    pub binder: NameId,\n    pub value: ValueRef,\n    pub previous: Option<EnvId>,\n}"
+        },
+        {
+          "start_line": 677,
+          "declaration": "pub enum ConstRow {\n    U128 { marker_free: Bool, n: UInt128 },\n    Bool { marker_free: Bool, b: Bool },\n    Nil { marker_free: Bool },\n    Cons { marker_free: Bool, fields: ConstFieldSlice },\n    Leaf { marker_free: Bool, fields: ConstFieldSlice },\n    Branch { marker_free: Bool, fields: ConstFieldSlice },\n    U128OutOfRange { marker_free: Bool },\n}"
+        },
+        {
+          "start_line": 688,
+          "declaration": "pub enum DataRow {\n    U128 { n: UInt128 },\n    Bool { b: Bool },\n    Nil,\n    Cons { fields: FieldSlice },\n    Leaf { fields: FieldSlice },\n    Branch { fields: FieldSlice },\n}"
+        },
+        {
+          "start_line": 704,
+          "declaration": "pub enum BoundBinding {\n    Bad,\n    Ok { env: EnvRoot },\n}"
+        },
+        {
+          "start_line": 710,
+          "declaration": "pub enum CaseMatching {\n    NoMatch,\n    Matched { env: EnvRoot },\n}"
+        },
+        {
+          "start_line": 716,
+          "declaration": "pub enum PrimOutcome {\n    Value { value: ValueRef },\n    Error { code: ErrorCode },\n}"
+        },
+        {
+          "start_line": 722,
+          "declaration": "pub enum ScalarStaged {\n    None,\n    U128Value { n: UInt128 },\n    BoolValue { b: Bool },\n    PendingNode { tag: NodeKind },\n    PrimError { code: ErrorCode },\n    Selector { sel: BoolSelector },\n    TypeTest { ok: Bool },\n}"
+        },
+        {
+          "start_line": 733,
+          "declaration": "pub enum HelperTask {\n    ValidateTask { r#ref: ValueRef, visit: TaskVisit, cursor: ArityCount },\n    EqualTask { left: ValueRef, right: ValueRef, visit: TaskVisit, cursor: ArityCount },\n    PairTask { binder: NameId, sort: SortTag, arg: ValueRef },\n}"
+        },
+        {
+          "start_line": 740,
+          "declaration": "pub enum HelperResult {\n    Validated { ok: Bool },\n    EnvFound { value: ValueRef },\n    EnvMissing,\n    EnvUpdated { cell: EnvId },\n    FindFound { function: FunctionRowId },\n    FindMissing,\n    BindOk { env: EnvRoot },\n    BindBad,\n    AppendDone { seq: ValSlice },\n    ScalarValue { value: ValueRef },\n    ScalarError { code: ErrorCode },\n    ScalarSelector { sel: BoolSelector },\n    ScalarTypeTest { ok: Bool },\n    EqualDone { value: ValueRef },\n    MatchMatched { env: EnvRoot },\n    MatchNoMatch,\n}"
+        },
+        {
+          "start_line": 760,
+          "declaration": "pub enum Outcome {\n    Running,\n    Halted { value: ValueRef },\n    Rejected { code: ErrorCode },\n    Exhausted { reason: ExhaustReason },\n}"
+        },
+        {
+          "start_line": 768,
+          "declaration": "pub enum ExpressionRow {\n    Literal { constant: ConstId },\n    Var { binder: NameId },\n    Let { binder: NameId, value: ExprId, body: ExprId },\n    Binary { op: BinaryOp, left: ExprId, right: ExprId },\n    Unary { op: UnaryOp, operand: ExprId },\n    If { cond: ExprId, then_expr: ExprId, else_expr: ExprId },\n    Call { function_name: NameId, args: ExprSlice },\n    Match { scrutinee: ExprId, arms: ArmSlice },\n}"
+        },
+        {
+          "start_line": 780,
+          "declaration": "pub enum OccurrenceOwner {\n    Entry,\n    Function { index: FunctionRowId },\n}"
+        },
+        {
+          "start_line": 786,
+          "declaration": "pub struct OccurrenceRow {\n    pub owner: OccurrenceOwner,\n    pub path: OccPathSlice,\n}"
+        },
+        {
+          "start_line": 792,
+          "declaration": "pub struct FunctionRow {\n    pub function_name: NameId,\n    pub params: ParamSlice,\n    pub return_type: SortTag,\n    pub body: ExprId,\n}"
+        },
+        {
+          "start_line": 800,
+          "declaration": "pub struct ParameterRow {\n    pub binder: NameId,\n    pub sort: SortTag,\n}"
+        },
+        {
+          "start_line": 806,
+          "declaration": "pub struct ArmRow {\n    pub pattern: PatternRowId,\n    pub body: ExprId,\n}"
+        },
+        {
+          "start_line": 812,
+          "declaration": "pub enum PatternRow {\n    PVar { x: NameId },\n    PNil,\n    PCons { x: NameId, y: NameId },\n    PLeaf { x: NameId },\n    PBranch { x: NameId, y: NameId },\n}"
+        },
+        {
+          "start_line": 821,
+          "declaration": "pub struct NameRow {\n    pub bytes: Text,\n}"
+        },
+        {
+          "start_line": 826,
+          "declaration": "pub enum CorePattern {\n    PVar { x: Text },\n    PNil,\n    PCons { x: Text, y: Text },\n    PLeaf { x: Text },\n    PBranch { x: Text, y: Text },\n}"
+        },
+        {
+          "start_line": 835,
+          "declaration": "pub struct ProgramActiveLengths {\n    pub expressions: usize,\n    pub occurrences: usize,\n    pub occurrence_paths: usize,\n    pub children: usize,\n    pub functions: usize,\n    pub parameters: usize,\n    pub arms: usize,\n    pub patterns: usize,\n    pub constants: usize,\n    pub constant_fields: usize,\n    pub names: usize,\n}"
+        },
+        {
+          "start_line": 850,
+          "declaration": "pub struct ProgramHeader {\n    pub entry: ExprId,\n    pub active_lengths: ProgramActiveLengths,\n}"
+        },
+        {
+          "start_line": 856,
+          "declaration": "pub struct Identity {\n    pub profile_id: ProfileId,\n    pub grammar_domain: GrammarDomain,\n    pub finance: FinanceInput,\n    pub layout_version: Id,\n    pub layout_digest: Digest,\n    pub bounds_digest: Digest,\n    pub field_id: Option<Id>,\n    pub program_membership_digest: Digest,\n}"
+        },
+        {
+          "start_line": 868,
+          "declaration": "pub struct RunId {\n    pub identity: Identity,\n    pub fuel_input: RunInt,\n    pub stack_limit_input: RunInt,\n}"
+        },
+        {
+          "start_line": 875,
+          "declaration": "pub struct SourceOccurrenceId {\n    pub program_source_digest: Digest,\n    pub owner: OccurrenceOwner,\n    pub ast_path: Vec<ChildPosition>,\n}"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 1,
+          "text": "//! PROVISIONAL, UNINSTALLED raw type preparation from the pinned B-core R2 proposal."
+        },
+        {
+          "line": 2,
+          "text": "//! No schema freeze, adoption, product capability, bounded layout or wire ABI."
+        },
+        {
+          "line": 3,
+          "text": "//! All fields are unvalidated data. No admission tokens, MachineImage, checks,"
+        },
+        {
+          "line": 4,
+          "text": "//! constructors enforcing policy, defaults, conversions or behavioral methods."
+        },
+        {
+          "line": 5,
+          "text": "//! Compilation and all execution are UNRUN. See TYPE-MAPPING.json for exact"
+        },
+        {
+          "line": 6,
+          "text": "//! provenance and omitted dependent closures. Public visibility here does not"
+        },
+        {
+          "line": 7,
+          "text": "//! install or export this file in Moriarty."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security.rs",
+      "source_sha256": "969bc4285d54f9e2cbc07c7540e36e25ec171274ce16183c8b3fe7d44758e777",
+      "declarations": [
+        {
+          "start_line": 31,
+          "declaration": "/// Profile named by the caller. Only the B helper-microstep profile is\n/// admitted by this consumer contract; the other two frozen profile names are\n/// representable only so that naming one is an explicit, early rejection\n/// rather than a silent substitution.\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum ConsumerProfile {\n    SherlockKA1,\n    SherlockQuintA1,\n    SherlockHelperMicrostep1,\n}"
+        },
+        {
+          "start_line": 42,
+          "declaration": "/// Caller-stated finite host extents for preprocessing. There is deliberately\n/// no Default and no profile that supplies these numbers: the caller states\n/// every extent, and a normal envelope is a caller-specific operational\n/// choice, not a policy default.\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub struct SourceHostBounds {\n    pub max_source_actions: usize,\n    pub max_source_expressions: usize,\n    /// Statements summed over every action, because Core validation walks all.\n    pub max_source_statements: usize,\n    pub max_action_inputs: usize,\n    pub max_supplied_inputs: usize,\n    /// Unshared (per-edge) projection occurrences of the selected action,\n    /// including synthetic scalar-lowering nodes, counted before\n    /// prepare_scalar_action allocates them.\n    pub max_projection_occurrences: usize,\n    /// Generated A AST nodes (function body plus entry call and its literals),\n    /// counted iteratively before source_input_bridge allocates the B tree.\n    pub max_generated_ast_nodes: usize,\n    /// Generated A AST nesting. The B CoreProgram drop is owner-iterative; the\n    /// A Arc tree drop is not, so nesting is bounded explicitly. Native stack\n    /// bytes are not measured or claimed by this count.\n    pub max_ast_nesting: usize,\n    pub max_input_name_bytes: usize,\n    pub max_total_input_name_bytes: usize,\n}"
+        },
+        {
+          "start_line": 69,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum HostMeasure {\n    SourceActions,\n    SourceExpressions,\n    SourceStatements,\n    ActionInputs,\n    SuppliedInputs,\n    ProjectionOccurrences,\n    GeneratedAstNodes,\n    AstNesting,\n    InputNameBytes,\n    TotalInputNameBytes,\n}"
+        },
+        {
+          "start_line": 83,
+          "declaration": "/// New guard errors are HOST metadata only. They are never a B Outcome, never\n/// a Core compiler refusal, and never replace an owner Tooling/HostViolation.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub enum HostGuardError {\n    InvalidHostBounds { field: &'static str },\n    ProfileRejected { supplied: ConsumerProfile },\n    GrammarRejected { supplied: GrammarDomain },\n    FinanceRejected { supplied: FinanceInput },\n    Exceeded { measure: HostMeasure, required: Option<u128>, bound: u128 },\n    CountOverflow { measure: HostMeasure },\n    NoSuchAction { action_index: usize, action_count: usize },\n    MissingInput { name: String },\n    TypeMismatch { name: String, declared: crate::Type, supplied: crate::Type },\n    ExtraInput { name: String },\n    PreparationContract { detail: &'static str },\n}"
+        },
+        {
+          "start_line": 100,
+          "declaration": "/// Explicit operational configuration. fuel and stack are the exact RunIntC\n/// values handed to admit_run; Negative and NatAboveU128 keep their existing\n/// owner dispositions and are not guard-rejected or clamped.\n#[derive(Clone)]\npub struct ConsumerConfig {\n    pub bounds: BoundsC,\n    pub layout: LayoutSchemaC,\n    pub fuel: RunIntC,\n    pub stack: RunIntC,\n    pub profile: ConsumerProfile,\n    pub grammar: GrammarDomain,\n    pub finance: FinanceInput,\n    pub host: SourceHostBounds,\n}"
+        },
+        {
+          "start_line": 115,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq)]\npub struct DeclaredInput {\n    pub name: String,\n    pub ty: crate::Type,\n}"
+        },
+        {
+          "start_line": 121,
+          "declaration": "/// What a passed preflight hands to Sol: the declared inputs in declared\n/// order. Sol builds entry literals by looking each name up in the supplied\n/// map in exactly this order; map iteration order is never used.\n#[derive(Clone, Debug, PartialEq, Eq)]\npub struct SourcePreflight {\n    pub declared_inputs: Vec<DeclaredInput>,\n    pub projected_occurrences: u128,\n}"
+        },
+        {
+          "start_line": 130,
+          "declaration": "/// Staged consumer error. Tooling and HostViolation payloads are the actual\n/// owner values, unchanged. The stage tells the caller how far the real call\n/// sequence got and, for run/observation failures, what the sink has seen.\npub enum ConsumerError {\n    HostGuard(HostGuardError),\n    /// The actual crate validation error, unchanged. This is the existing\n    /// compiler's own refusal surface, not a new guard refusal.\n    CoreValidation(crate::Error),\n    /// The actual prepare_scalar_action diagnostic, unchanged. Per the\n    /// adapter contract this is projection metadata, not a compiler refusal.\n    SourceProjection(ProjectionDiagnostic),\n    Admit(Tooling),\n    AdmitRun(Tooling),\n    /// Owner run returned a HostViolation after earlier events were already\n    /// forwarded to the caller's sink. Those events are a partial prefix:\n    /// no RunSummary and no observation exist for this call.\n    Run {\n        violation: HostViolation,\n        events_forwarded: u128,\n    },\n    /// Run completed and the summary is real, but the bound observation was\n    /// refused. The summary and the already-forwarded events remain valid.\n    Observation {\n        violation: HostViolation,\n        summary: RunSummary,\n        events_forwarded: u128,\n    },\n}"
+        },
+        {
+          "start_line": 159,
+          "declaration": "/// A completed real owner run. The admitted bindings and the image are owned\n/// side by side (never a stored self-referential observation); observe()\n/// borrows both for the duration of one owner-bound read-only observation.\npub struct CompletedRun {\n    pub admitted: Admitted,\n    pub image: MachineImage,\n    pub summary: RunSummary,\n    pub events_forwarded: u128,\n}"
+        },
+        {
+          "start_line": 188,
+          "declaration": "/// Checked event counter for Sol's forwarding sink. The consumer retains no\n/// events itself; it forwards each real StepEventC to the caller's sink\n/// exactly once, in run order. Retention is therefore the caller's own\n/// choice and allocation, outside this module. One fresh counter is used\n/// for one owner run. The fixed owner `run` performs `checked_add(1)` on\n/// its own event count before invoking the sink, so it returns its\n/// unchanged HostViolation before forwarding an event that would overflow\n/// either count; sink invocations in one run therefore cannot exceed\n/// u128::MAX and `overflowed` cannot be set on that path. `overflowed`\n/// remains a defensive record only if this counter were reused outside\n/// that contract; it is not surfaced as a lower-bound count.\n#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]\npub struct EventForwarding {\n    pub forwarded: u128,\n    pub overflowed: bool,\n}"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 31,
+          "text": "/// Profile named by the caller. Only the B helper-microstep profile is"
+        },
+        {
+          "line": 32,
+          "text": "/// admitted by this consumer contract; the other two frozen profile names are"
+        },
+        {
+          "line": 33,
+          "text": "/// representable only so that naming one is an explicit, early rejection"
+        },
+        {
+          "line": 34,
+          "text": "/// rather than a silent substitution."
+        },
+        {
+          "line": 42,
+          "text": "/// Caller-stated finite host extents for preprocessing. There is deliberately"
+        },
+        {
+          "line": 43,
+          "text": "/// no Default and no profile that supplies these numbers: the caller states"
+        },
+        {
+          "line": 44,
+          "text": "/// every extent, and a normal envelope is a caller-specific operational"
+        },
+        {
+          "line": 45,
+          "text": "/// choice, not a policy default."
+        },
+        {
+          "line": 83,
+          "text": "/// New guard errors are HOST metadata only. They are never a B Outcome, never"
+        },
+        {
+          "line": 84,
+          "text": "/// a Core compiler refusal, and never replace an owner Tooling/HostViolation."
+        },
+        {
+          "line": 100,
+          "text": "/// Explicit operational configuration. fuel and stack are the exact RunIntC"
+        },
+        {
+          "line": 101,
+          "text": "/// values handed to admit_run; Negative and NatAboveU128 keep their existing"
+        },
+        {
+          "line": 102,
+          "text": "/// owner dispositions and are not guard-rejected or clamped."
+        },
+        {
+          "line": 121,
+          "text": "/// What a passed preflight hands to Sol: the declared inputs in declared"
+        },
+        {
+          "line": 122,
+          "text": "/// order. Sol builds entry literals by looking each name up in the supplied"
+        },
+        {
+          "line": 123,
+          "text": "/// map in exactly this order; map iteration order is never used."
+        },
+        {
+          "line": 130,
+          "text": "/// Staged consumer error. Tooling and HostViolation payloads are the actual"
+        },
+        {
+          "line": 131,
+          "text": "/// owner values, unchanged. The stage tells the caller how far the real call"
+        },
+        {
+          "line": 132,
+          "text": "/// sequence got and, for run/observation failures, what the sink has seen."
+        },
+        {
+          "line": 159,
+          "text": "/// A completed real owner run. The admitted bindings and the image are owned"
+        },
+        {
+          "line": 160,
+          "text": "/// side by side (never a stored self-referential observation); observe()"
+        },
+        {
+          "line": 161,
+          "text": "/// borrows both for the duration of one owner-bound read-only observation."
+        },
+        {
+          "line": 188,
+          "text": "/// Checked event counter for Sol's forwarding sink. The consumer retains no"
+        },
+        {
+          "line": 189,
+          "text": "/// events itself; it forwards each real StepEventC to the caller's sink"
+        },
+        {
+          "line": 190,
+          "text": "/// exactly once, in run order. Retention is therefore the caller's own"
+        },
+        {
+          "line": 191,
+          "text": "/// choice and allocation, outside this module. One fresh counter is used"
+        },
+        {
+          "line": 192,
+          "text": "/// for one owner run. The fixed owner `run` performs `checked_add(1)` on"
+        },
+        {
+          "line": 193,
+          "text": "/// its own event count before invoking the sink, so it returns its"
+        },
+        {
+          "line": 194,
+          "text": "/// unchanged HostViolation before forwarding an event that would overflow"
+        },
+        {
+          "line": 195,
+          "text": "/// either count; sink invocations in one run therefore cannot exceed"
+        },
+        {
+          "line": 196,
+          "text": "/// u128::MAX and `overflowed` cannot be set on that path. `overflowed`"
+        },
+        {
+          "line": 197,
+          "text": "/// remains a defensive record only if this counter were reused outside"
+        },
+        {
+          "line": 198,
+          "text": "/// that contract; it is not surfaced as a lower-bound count."
+        },
+        {
+          "line": 230,
+          "text": "/// Guard step 0: configuration shape, before the source is touched."
+        },
+        {
+          "line": 231,
+          "text": "/// Precedence inside this step: host-bound fields in declaration order, then"
+        },
+        {
+          "line": 232,
+          "text": "/// profile, then grammar, then finance. Bounds/Layout/fuel/stack values are"
+        },
+        {
+          "line": 233,
+          "text": "/// not judged here; the owner admit/admit_run lanes keep that authority,"
+        },
+        {
+          "line": 234,
+          "text": "/// including LayoutBoundsMismatch, CapacityNotAdmitted, the genesis-invalid"
+        },
+        {
+          "line": 235,
+          "text": "/// Negative disposition and the NatAboveU128 refusals."
+        },
+        {
+          "line": 267,
+          "text": "/// Guard steps 1-4, all before prepare_scalar_action allocates anything:"
+        },
+        {
+          "line": 268,
+          "text": "/// 1. O(1) source-shape counts against SourceHostBounds (actions, flat"
+        },
+        {
+          "line": 269,
+          "text": "///    expressions, summed statements), then action existence."
+        },
+        {
+          "line": 270,
+          "text": "/// 2. Exact input policy against the action's DECLARED inputs, in this"
+        },
+        {
+          "line": 271,
+          "text": "///    precedence: supplied/declared count extents, then MissingInput in"
+        },
+        {
+          "line": 272,
+          "text": "///    declared order, then TypeMismatch in declared order, then ExtraInput"
+        },
+        {
+          "line": 273,
+          "text": "///    in the supplied map's ascending key order. A scalar literal's type is"
+        },
+        {
+          "line": 274,
+          "text": "///    read from its discriminant only; nothing is cloned or evaluated."
+        },
+        {
+          "line": 275,
+          "text": "/// 3. The existing crate::validate, its error carried unchanged."
+        },
+        {
+          "line": 276,
+          "text": "/// 4. An iterative forward pass over the flat expression DAG (validation"
+        },
+        {
+          "line": 277,
+          "text": "///    guarantees children precede parents) computing unshared occurrence"
+        },
+        {
+          "line": 278,
+          "text": "///    sizes with checked arithmetic; the selected action's lets-plus-emit"
+        },
+        {
+          "line": 279,
+          "text": "///    total must fit max_projection_occurrences before the adapter expands"
+        },
+        {
+          "line": 280,
+          "text": "///    the same DAG per edge. Overflow of the count itself is CountOverflow,"
+        },
+        {
+          "line": 281,
+          "text": "///    never saturation-as-success."
+        },
+        {
+          "line": 282,
+          "text": "/// The sizes workspace is one u128 per flat expression; its length was"
+        },
+        {
+          "line": 283,
+          "text": "/// already bounded in step 1 by max_source_expressions."
+        },
+        {
+          "line": 453,
+          "text": "/// Guard step 5, after prepare_scalar_action and before Sol builds the"
+        },
+        {
+          "line": 454,
+          "text": "/// canonical A program or calls source_input_bridge: the adapter's actual"
+        },
+        {
+          "line": 455,
+          "text": "/// output must match the preflight's declared shape, and the generated body"
+        },
+        {
+          "line": 456,
+          "text": "/// must fit the node/nesting extents. Checks, in order: generated function"
+        },
+        {
+          "line": 457,
+          "text": "/// name equals the report name; parameter count, order, names and scalar"
+        },
+        {
+          "line": 458,
+          "text": "/// types equal report.inputs (which preflight already bound to the action's"
+        },
+        {
+          "line": 459,
+          "text": "/// declared order); return type is the report's scalar return type; the"
+        },
+        {
+          "line": 460,
+          "text": "/// emit role is exactly the fixed value-projection role; the report's"
+        },
+        {
+          "line": 461,
+          "text": "/// materialized occurrence count does not exceed the precount; then an"
+        },
+        {
+          "line": 462,
+          "text": "/// explicit-stack count of body nodes and nesting against SourceHostBounds."
+        },
+        {
+          "line": 463,
+          "text": "/// The traversal stack holds at most one entry per counted node, so its size"
+        },
+        {
+          "line": 464,
+          "text": "/// is itself bounded by max_generated_ast_nodes before the bridge runs."
+        },
+        {
+          "line": 505,
+          "text": "/// Iterative node/nesting count of one generated A expression tree. Sol"
+        },
+        {
+          "line": 506,
+          "text": "/// does not add body and entry counts itself: it passes the entry Call it"
+        },
+        {
+          "line": 507,
+          "text": "/// constructs (one Call node plus one Literal per declared input, in"
+        },
+        {
+          "line": 508,
+          "text": "/// declared order) to `check_combined_generated_ast_nodes`, which calls"
+        },
+        {
+          "line": 509,
+          "text": "/// this function on the entry and performs the checked combined-total"
+        },
+        {
+          "line": 510,
+          "text": "/// enforcement before the bridge. A Literal list/tree value cannot occur"
+        },
+        {
+          "line": 511,
+          "text": "/// here: entry literals are built only from the scalar supplied inputs."
+        },
+        {
+          "line": 569,
+          "text": "/// Guard step 6 (combined generated-AST enforcement), security-owned: given"
+        },
+        {
+          "line": 570,
+          "text": "/// the body node count returned by `check_generated`, count the constructed"
+        },
+        {
+          "line": 571,
+          "text": "/// entry expression with `count_ast`, checked-add body and entry node"
+        },
+        {
+          "line": 572,
+          "text": "/// counts, and enforce `host.max_generated_ast_nodes` on the combined total"
+        },
+        {
+          "line": 573,
+          "text": "/// before `source_input_bridge` allocates the B tree. The entry nesting"
+        },
+        {
+          "line": 574,
+          "text": "/// returned by `count_ast` is enforced against `host.max_ast_nesting`"
+        },
+        {
+          "line": 575,
+          "text": "/// inside `count_ast` for the entry tree itself; nesting is not added"
+        },
+        {
+          "line": 576,
+          "text": "/// across the separate body and entry trees. On success returns the"
+        },
+        {
+          "line": 577,
+          "text": "/// combined generated node total. Sol calls this helper only; it performs"
+        },
+        {
+          "line": 578,
+          "text": "/// no checked-add or bound comparison for this total itself."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+      "source_sha256": "b6d0524431df4e73898853b073ba9c3f5a212fd83f3dd4015c6a4e1eda1d0017",
+      "declarations": [
+        {
+          "start_line": 37,
+          "declaration": "#[derive(Clone, Copy)]\npub struct HostObservation<'a> {\n    pub admission: AdmissionObservation<'a>,\n    pub image: ImageObservation<'a>,\n    _sealed: (),\n}"
+        },
+        {
+          "start_line": 43,
+          "declaration": "#[derive(Clone, Copy)]\npub struct AdmissionObservation<'a> {\n    pub identity: &'a IdentityC,\n    pub bounds: &'a BoundsC,\n    pub view: &'a ProgramView,\n    pub layout: LayoutObservation<'a>,\n    _sealed: (),\n}"
+        },
+        {
+          "start_line": 51,
+          "declaration": "#[derive(Clone, Copy)]\npub struct LayoutObservation<'a> {\n    pub layout_version: &'a (String, String),\n    pub field_id: Option<&'a (String, String)>,\n    pub widths: Option<WidthTableObservation<'a>>,\n    pub scalar_layout_id: Option<&'a (String, String)>,\n    pub bounds: &'a BoundsC,\n    pub capacities: &'a LayoutCapacitiesC,\n    pub boundary_capacities_present: bool,\n    _sealed: (),\n}"
+        },
+        {
+          "start_line": 62,
+          "declaration": "#[derive(Clone, Copy)]\npub struct WidthTableObservation<'a> {\n    pub index_widths: &'a [(String, u32)],\n    pub counter_widths: &'a [(String, u32)],\n    pub record_widths: &'a [(String, u32)],\n    _sealed: (),\n}"
+        },
+        {
+          "start_line": 69,
+          "declaration": "#[derive(Clone, Copy)]\npub struct ImageObservation<'a> {\n    pub run_id: &'a RunIdC,\n    pub control: &'a ControlC,\n    pub control_origin: usize,\n    pub env_root: EnvRootC,\n    pub stack_limit: usize,\n    pub outcome: &'a OutcomeC,\n    pub initial_fuel: u128,\n    pub remaining_work: u128,\n    pub consumed_work: u128,\n    pub helper_work: u128,\n    pub helper_visits: u128,\n    pub reference_cursor: u128,\n    pub alloc: &'a AllocCounters,\n    pub active: &'a ActiveLengths,\n    pub helper: Option<&'a HelperControlC>,\n    pub result: Option<&'a HelperResultC>,\n    pub seg_base: SegBase,\n    pub data: &'a [RawDataRow],\n    pub data_fields: &'a [RefC],\n    pub env: &'a [EnvCellC],\n    pub frames: &'a [FrameRowC],\n    pub tasks: &'a [HelperTaskC],\n    pub value_slots: &'a [RefC],\n    _sealed: (),\n}"
+        }
+      ],
+      "public_comments": []
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared/host_implied_prefix.rs",
+      "source_sha256": "7a1cbeb98845afbf1f49a15887407f885e597213e31374ffad12d69804b48734",
+      "declarations": [
+        {
+          "start_line": 30,
+          "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct SegBase { active: ActiveLengths, alloc: AllocCounters, consumed_work: u128 }"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 1,
+          "text": "//! helper_machine::shared::host_implied_prefix \u2014 PROPOSED, not installed, not adopted."
+        },
+        {
+          "line": 2,
+          "text": "//! Placement: crates/mori-core/src/sherlock/helper_machine/shared/host_implied_prefix.rs"
+        },
+        {
+          "line": 3,
+          "text": "//!   (child of `shared`; reads private PreImage/Admitted fields, constructs"
+        },
+        {
+          "line": 4,
+          "text": "//!    no PreImage, Admitted, MachineImage, OwnerGuards or ValidatedPlan)."
+        },
+        {
+          "line": 5,
+          "text": "//! Sole source of the R4 `reg.segBase` observation for qualified HOST Stage 1"
+        },
+        {
+          "line": 6,
+          "text": "//!   B-core (DedicatedSorts, finance Absent, genesis through one uncut segment)."
+        },
+        {
+          "line": 7,
+          "text": "//!   MachineImage stores no seg_base: in B-core the register is a specified"
+        },
+        {
+          "line": 8,
+          "text": "//!   constant, derived here exactly as `shared` derives depth/task_live."
+        },
+        {
+          "line": 9,
+          "text": "//! Source (schema-supplement.json, R4):"
+        },
+        {
+          "line": 10,
+          "text": "//!   machine_image.registers reg.segBase: \"BOUNDARY RESERVED: all zero in"
+        },
+        {
+          "line": 11,
+          "text": "//!     B-core (SI-05); set only by a future canonical resume\";"
+        },
+        {
+          "line": 12,
+          "text": "//!   admission.genesis genesis_valid/genesis_invalid: \"segBase zero\";"
+        },
+        {
+          "line": 13,
+          "text": "//!   step_inv SI-05 \"In B-core segBase is entirely zero\", SI-23 \"In B-core"
+        },
+        {
+          "line": 14,
+          "text": "//!     segBase is zero\";"
+        },
+        {
+          "line": 15,
+          "text": "//!   extension_reservations reg.segBase: \"nonzero or present is C-INV in B-core\";"
+        },
+        {
+          "line": 16,
+          "text": "//!   row_language.effects.set: no LValue names segBase, so no row writes it;"
+        },
+        {
+          "line": 17,
+          "text": "//!   admission.admit AD-6: boundaryCapacities present is refused."
+        },
+        {
+          "line": 18,
+          "text": "//! NOT for extension, technical cut, canonical resume or projection: a resumed"
+        },
+        {
+          "line": 19,
+          "text": "//!   image needs a STORED segBase written by that resume (boundaries.segment_base,"
+        },
+        {
+          "line": 20,
+          "text": "//!   X-10). That revision replaces this helper; it must never extend it."
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/resource_report.rs",
+      "source_sha256": "ab71d54e84e9bf8c0110d9793d785437a33af848b9169778a3a71ad56aa72e56",
+      "declarations": [
+        {
+          "start_line": 16,
+          "declaration": "/// Exact owner u128 counter; decimal JSON strings avoid precision truncation.\n#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub struct Counter(pub u128);"
+        },
+        {
+          "start_line": 25,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(tag = \"kind\", rename_all = \"kebab-case\")]\npub enum ValueReference { Const { index: usize }, Data { index: usize } }"
+        },
+        {
+          "start_line": 35,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(rename_all = \"kebab-case\")]\npub enum Exhaustion {\n    Fuel, DataNodes, DataFields, EnvironmentCells, HelperTasks, HelperWork, SerializationBytes,\n}"
+        },
+        {
+          "start_line": 53,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(tag = \"status\", rename_all = \"kebab-case\")]\npub enum ReportOutcome {\n    Running, Halted { value: ValueReference }, Rejected { code: u8 },\n    Exhausted { reason: Exhaustion },\n}"
+        },
+        {
+          "start_line": 70,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(tag = \"status\", rename_all = \"kebab-case\")]\npub enum RunInput { Negative, Nat { value: Counter }, NatAboveU128 }"
+        },
+        {
+          "start_line": 81,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(rename_all = \"kebab-case\")]\npub enum ReportGrammar { DedicatedSorts, GenericNominalExtensionReserved }"
+        },
+        {
+          "start_line": 84,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(rename_all = \"kebab-case\")]\npub enum ReportFinance { Absent, TypedExtensionReserved }"
+        },
+        {
+          "start_line": 88,
+          "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct Profile {\n    pub profile_id: u8,\n    pub grammar: ReportGrammar,\n    pub finance: ReportFinance,\n    pub layout_version: (String, String),\n}"
+        },
+        {
+          "start_line": 95,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct RunInputs { pub fuel: RunInput, pub stack: RunInput }"
+        },
+        {
+          "start_line": 98,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct Observed {\n    pub outcome: ReportOutcome,\n    pub initial_fuel: Counter,\n    pub consumed_work: Counter,\n    pub remaining_work: Counter,\n    pub helper_work: Counter,\n    pub helper_visits: Counter,\n    pub reference_cursor: Counter,\n    pub logical_depth: usize,\n    pub helper_tasks: usize,\n    pub stack_limit: usize,\n    pub helper_present: bool,\n    pub result_present: bool,\n}"
+        },
+        {
+          "start_line": 113,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct Summary {\n    pub outcome: ReportOutcome,\n    pub events: Counter,\n    pub consumed_work: Counter,\n    pub helper_work: Counter,\n    pub helper_visits: Counter,\n    pub reference_cursor: Counter,\n}"
+        },
+        {
+          "start_line": 130,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct StoredActive { pub data: usize, pub data_fields: usize, pub env: usize, pub value_slots: usize }"
+        },
+        {
+          "start_line": 132,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct CurrentSlices {\n    pub data: usize, pub data_fields: usize, pub env: usize,\n    pub frames: usize, pub tasks: usize, pub value_slots: usize,\n}"
+        },
+        {
+          "start_line": 137,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct AllocationCounters { pub data_nodes: usize, pub data_fields: usize, pub environment_cells: usize }"
+        },
+        {
+          "start_line": 139,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct ProgramActive {\n    pub expressions: usize, pub occurrences: usize, pub occurrence_paths: usize,\n    pub children: usize, pub functions: usize, pub parameters: usize,\n    pub arms: usize, pub patterns: usize, pub constants: usize,\n    pub constant_fields: usize, pub names: usize,\n}"
+        },
+        {
+          "start_line": 147,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct SuppliedBounds {\n    pub code_rows: usize, pub function_rows: usize, pub code_child_slots: usize,\n    pub parameter_slots: usize, pub pattern_rows: usize, pub match_plan_rows: usize,\n    pub match_arm_rows: usize, pub type_rows: usize, pub constructor_rows: usize,\n    pub constructor_field_slots: usize, pub max_arity: usize, pub constant_nodes: usize,\n    pub constant_field_slots: usize, pub data_nodes: usize, pub data_field_slots: usize,\n    pub environment_cells: usize, pub frames: usize, pub helper_tasks: usize,\n    pub serialization_bytes: usize, pub max_reference_work: Counter,\n    pub max_helper_work: Counter, pub step_cap: Counter,\n}"
+        },
+        {
+          "start_line": 173,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct LayoutCapacities {\n    pub name_rows: usize, pub name_bytes: usize,\n    pub occurrence_path_slots: usize, pub value_slots: usize,\n}"
+        },
+        {
+          "start_line": 178,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct Supplied {\n    pub admission_bounds: SuppliedBounds,\n    pub layout_bounds: SuppliedBounds,\n    pub layout_capacities: LayoutCapacities,\n    pub boundary_capacities_present: bool,\n}"
+        },
+        {
+          "start_line": 186,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\n#[serde(rename_all = \"kebab-case\")]\npub enum UnmeasuredStatus { Unmeasured }"
+        },
+        {
+          "start_line": 189,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct UnmeasuredGroup {\n    pub status: UnmeasuredStatus,\n    pub reason: &'static str,\n    pub metrics: &'static [&'static str],\n}"
+        },
+        {
+          "start_line": 198,
+          "declaration": "#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]\npub struct Unmeasured {\n    pub peaks: UnmeasuredGroup,\n    pub physical: UnmeasuredGroup,\n    pub circuit: UnmeasuredGroup,\n    pub proof: UnmeasuredGroup,\n    pub host: UnmeasuredGroup,\n    pub overhead: UnmeasuredGroup,\n    pub financial_target: UnmeasuredGroup,\n    pub event_reconciliation: UnmeasuredGroup,\n    pub remaining_nonhelper_reference_work: UnmeasuredGroup,\n}"
+        },
+        {
+          "start_line": 234,
+          "declaration": "/// An owned, serializable diagnostic report, not a validated state or receipt.\n/// Snapshot/summary values remain distinct even if a caller supplies a stale\n/// summary. No check, subtraction, clamping, hidden total or peak is added.\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct ResourceReport {\n    pub format: &'static str,\n    pub profile: Profile,\n    pub run_inputs: RunInputs,\n    pub observed: Observed,\n    pub run_summary: Summary,\n    pub stored_active: StoredActive,\n    pub current_slices: CurrentSlices,\n    pub allocation_counters: AllocationCounters,\n    pub program_active: ProgramActive,\n    pub supplied: Supplied,\n    pub unmeasured: Unmeasured,\n}"
+        }
+      ],
+      "public_comments": [
+        {
+          "line": 1,
+          "text": "//! Typed diagnostic projection of actual owner observations, SOURCE_ONLY/UNRUN."
+        },
+        {
+          "line": 2,
+          "text": "//!"
+        },
+        {
+          "line": 3,
+          "text": "//! B consumed/remaining work includes this profile's helper charges. Preserve"
+        },
+        {
+          "line": 4,
+          "text": "//! helper counters and reference_cursor separately; this is no A/B cost match."
+        },
+        {
+          "line": 5,
+          "text": "//! This copies observations, never validates/adopts an image or estimates an"
+        },
+        {
+          "line": 6,
+          "text": "//! unobserved cost. In particular final depth is not maximum depth, slice len"
+        },
+        {
+          "line": 7,
+          "text": "//! is not allocator capacity, and allocation counters are not physical bytes."
+        },
+        {
+          "line": 16,
+          "text": "/// Exact owner u128 counter; decimal JSON strings avoid precision truncation."
+        },
+        {
+          "line": 234,
+          "text": "/// An owned, serializable diagnostic report, not a validated state or receipt."
+        },
+        {
+          "line": 235,
+          "text": "/// Snapshot/summary values remain distinct even if a caller supplies a stale"
+        },
+        {
+          "line": 236,
+          "text": "/// summary. No check, subtraction, clamping, hidden total or peak is added."
+        }
+      ]
+    }
+  ]
+}

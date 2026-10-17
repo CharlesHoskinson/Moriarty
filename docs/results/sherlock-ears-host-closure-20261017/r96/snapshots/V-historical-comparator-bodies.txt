@@ -1,0 +1,54 @@
+HELPERS = {
+    'check.py': '7a6d1bbca881f5c2b012278989dac600834d610986694e640da51a40b5a412e0',
+    'host_observations.py': '61b8258595a298231679362cb3974ae176b6970e7e4475388252d59da545fcdc',
+}
+FORMAT = 'sherlock-original-fixture-host-observations/1'
+
+def load_helpers(repo):
+    modules = []
+    for name, expected_sha in HELPERS.items():
+        path = Path(repo) / 'models/sherlock/qa' / name
+        raw = path.read_bytes()
+        require(sha(raw) == expected_sha, f'pinned comparison helper changed: {name}')
+        spec = importlib.util.spec_from_file_location('full_fixture_' + path.stem, path)
+        module = importlib.util.module_from_spec(spec)
+        exec(compile(raw, str(path), 'exec', dont_inherit=True), module.__dict__)
+        modules.append(module)
+    return tuple(modules)
+
+def compare_prepared(expected, artifact, qa, host, membership):
+    """Exact complete arrays; never select a common subset or observed fuel extent."""
+    qa.fields(artifact, ('format', 'observations', 'original_fixture_runs', 'projection'), 'fixture artifact')
+    require(artifact['format'] == FORMAT, 'fixture artifact: format mismatch')
+    qa.fields(artifact['projection'], ('inputs',), 'fixture projection')
+    qa.require(type(artifact['projection']['inputs']) is list, 'fixture inputs must be array')
+    identity_keys = ('case_id', 'fixture_path', 'declared_fixture_sha256', 'original_fuel', 'stack_limit')
+    identities = []
+    for row in artifact['projection']['inputs']:
+        qa.fields(row, identity_keys, 'fixture input')
+        identities.append({key: row[key] for key in identity_keys})
+    difference = qa.first_difference(expected['fixture_identities'], identities, '/fixture_identities')
+    if difference is None:
+        difference = host.compare_observations(expected['observations'], artifact['observations'], qa.first_difference)
+        if difference is not None:
+            difference['comparison_group'] = 'ordinary-prefixes'
+    original_delta = host.compare_observations(dict(runs=expected['original_fixture_runs']),
+                                              dict(runs=artifact['original_fixture_runs']), qa.first_difference)
+    if difference is None and original_delta is not None:
+        difference = original_delta
+        difference['comparison_group'] = 'original-fixture-runs'
+    if difference is not None:
+        case = difference.get('case_id')
+        difference['fixture_membership'] = next((row for row in membership if row['host_case_id'] == case), None)
+    return dict(status='mismatch' if difference else 'match', acceptance='none',
+                scope='complete-supplied-full-original-fixture-host-diagnostic-comparison-only',
+                first_difference=difference, expected_ordinary_prefix_runs=569,
+                expected_original_fixture_runs=8, membership=membership,
+                snapshot_fields=list(SNAPSHOT_FIELDS), normalization='none; exact frozen check.py host text convention',
+                semantic_selection=['observations (entire object)', 'original_fixture_runs (entire array)',
+                                    'projection.inputs: case_id, fixture_path, declared_fixture_sha256, original_fuel, stack_limit'],
+                retained_diagnostics={key: value for key, value in artifact.items()
+                                      if key not in ('observations', 'original_fixture_runs')},
+                subject_execution=False, producer_authenticity='not-established',
+                constructor_startup='outside-post-startup-comparison',
+                execution_evidence='not-established-by-this-consumer')

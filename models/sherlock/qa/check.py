@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import re
 from pathlib import Path
 import sys
 
@@ -533,8 +534,243 @@ def source_read_inventory():
     return module.ReadInventory()
 
 
+def requirement_evidence_report(repo, path):
+    """Validate declared row membership/currentness, never decide semantic acceptance.
+
+    The optional sidecar carries owner assessments. Reading matching files does
+    not authenticate an audit or execute a scenario. Bare corpus/snapshot checks
+    never call this function or read its catalogue/evidence dependencies.
+    """
+    path = Path(path)
+    if not path.is_absolute():
+        path = Path(repo) / path
+    reference, ledger = document(path, strict=True)
+    require(type(ledger) is dict and ledger.get('schema') == 'sherlock.current-requirement-evidence/1',
+            'unknown requirement evidence schema')
+    require(type(ledger.get('retainedInventory')) is list and ledger['retainedInventory'],
+            'retained requirement-family inventory required')
+    issues, cache = [], {}
+
+    def issue(findings, kind, location, message, **detail):
+        findings.append(dict(kind=kind, location=location, message=message, **detail))
+
+    def pinned(ref, location, findings):
+        if (type(ref) is not dict or type(ref.get('path')) is not str or not ref['path']
+                or type(ref.get('sha256')) is not str
+                or re.fullmatch('[0-9a-f]{64}', ref['sha256']) is None):
+            issue(findings, 'invalid', location, 'reference requires path and SHA-256')
+            return None
+        target = Path(ref['path'])
+        if not target.is_absolute():
+            target = Path(repo) / target
+        key = str(target)
+        if key not in cache:
+            try:
+                cache[key] = target.read_bytes()
+            except OSError as error:
+                cache[key] = error
+        raw = cache[key]
+        if isinstance(raw, OSError):
+            issue(findings, 'missing', location, 'declared file cannot be read', path=ref['path'])
+            return None
+        if any(key in ref for key in ('startLine', 'endLine')):
+            start = ref.get('startLine', 1)
+            end = ref.get('endLine', start)
+            if (type(start) is not int or type(end) is not int or start < 1
+                    or end < start or end > len(raw.splitlines())):
+                issue(findings, 'invalid', location, 'declared line span is outside the file', path=ref['path'])
+        if 'claim' in ref and type(ref['claim']) is not str:
+            issue(findings, 'invalid', location, 'reference claim must be a string', path=ref['path'])
+        actual = digest(raw)
+        if actual != ref['sha256']:
+            issue(findings, 'stale', location, 'declared file bytes changed', path=ref['path'],
+                  expected_sha256=ref['sha256'], actual_sha256=actual)
+        return raw
+
+    def integrity(findings):
+        return next((kind for kind in ('invalid', 'missing', 'stale')
+                     if any(row['kind'] == kind for row in findings)), 'current')
+
+    def declared_path(ref):
+        candidate = Path(ref['path'])
+        return candidate if candidate.is_absolute() else Path(repo) / candidate
+
+    catalogue_raw = pinned(ledger.get('requirementCatalogue'), '/requirementCatalogue', issues)
+    inventory = ledger.get('refinementInventory')
+    inventory_raw = pinned(inventory, '/refinementInventory', issues)
+    for ref, expected_path in (
+            (ledger.get('requirementCatalogue'), 'openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md'),
+            (inventory, 'openspec/changes/sherlock-completion-convergence/specs/sherlock-completion/spec.md')):
+        if type(ref) is dict and type(ref.get('path')) is str and declared_path(ref) != Path(repo) / expected_path:
+            issue(issues, 'invalid', '/inventory', 'catalogue must name the retained canonical specification', path=ref['path'])
+    require(catalogue_raw is not None and inventory_raw is not None,
+            'requirement catalogue or refinement inventory unavailable')
+    def sections(raw):
+        result = {}
+        for part in re.split(r'(?m)^### Requirement: ', raw.decode('utf-8'))[1:]:
+            heading = part.splitlines()[0]
+            identifier = heading.split(' ', 1)[0]
+            require(identifier not in result, 'duplicate requirement heading in catalogue')
+            result[identifier] = dict(heading=heading,
+                scenarios=re.findall(r'(?m)^#### Scenario: (.+)$', part))
+        return result
+
+    originals, refinements = sections(catalogue_raw), sections(inventory_raw)
+    required_ids, feature_ids = list(originals), list(refinements)
+    original_scenario_count = sum(len(row['scenarios']) for row in originals.values())
+    scenario_count = sum(len(row['scenarios']) for row in refinements.values())
+    if (required_ids != [f'UIREQ-{number:03}' for number in range(1, 36)]
+            or feature_ids != [f'SCON-{number:03}' for number in range(1, 26)]
+            or scenario_count != 68):
+        issue(issues, 'invalid', '/inventory', 'retained 35/25/68 named membership differs')
+    if inventory.get('featureIds') != feature_ids or inventory.get('scenarioCount') != scenario_count:
+        issue(issues, 'invalid', '/refinementInventory', 'declared refinement inventory differs')
+    assessment = ledger.get('assessment')
+    if (type(assessment) is not dict or type(assessment.get('status')) is not str
+            or not assessment['status'] or assessment.get('globalV1') not in ('open', 'closed')
+            or assessment.get('adoption') not in ('pending-root', 'adopted')):
+        issue(issues, 'invalid', '/assessment', 'explicit assessment disposition required')
+        assessment = assessment if type(assessment) is dict else {}
+
+    def rows(member, expected):
+        declared = ledger.get(member)
+        if type(declared) is not list:
+            issue(issues, 'invalid', '/' + member, 'complete row array required')
+            declared = []
+        ids = [row.get('id') if type(row) is dict else None for row in declared]
+        if ids != expected:
+            issue(issues, 'invalid', '/' + member, 'row membership/order differs', expected=expected, observed=ids)
+        results = []
+        for index, row in enumerate(declared):
+            location, findings = f'/{member}/{index}', []
+            try:
+                require(type(row) is dict, 'row must be an object')
+                fields(row, ('id', 'requirementSource', 'predicate', 'implementation', 'validation',
+                             'acceptance', 'currentness', 'nextDiscriminatingCheck', 'citations'), location)
+                source = row['requirementSource']
+                fields(source, ('path', 'sha256', 'heading', 'scenarioNames'), location + '/requirementSource')
+                raw = pinned(source, location + '/requirementSource', findings)
+                catalogue_ref = ledger['requirementCatalogue'] if member == 'requirements' else inventory
+                expected_section = (originals if member == 'requirements' else refinements).get(row['id'])
+                def source_path(ref):
+                    candidate = Path(ref['path'])
+                    return candidate if candidate.is_absolute() else Path(repo) / candidate
+                require(source_path(source) == source_path(catalogue_ref)
+                        and source['sha256'] == catalogue_ref['sha256'],
+                        'row source must bind its declared requirement catalogue')
+                if (expected_section is None or source['heading'] != expected_section['heading']
+                        or source['scenarioNames'] != expected_section['scenarios']):
+                    issue(findings, 'invalid', location + '/requirementSource',
+                          'row heading or named scenario membership differs from its ID',
+                          expected=expected_section, observed=source)
+                predicate = row['predicate']
+                fields(predicate, ('id', 'description', 'domain', 'applicableEvidenceClasses'), location + '/predicate')
+                require(all(type(predicate[key]) is str and predicate[key] for key in ('id', 'description', 'domain'))
+                        and type(predicate['applicableEvidenceClasses']) is list,
+                        'explicit predicate/domain/evidence classes required')
+                require(predicate['applicableEvidenceClasses']
+                        and all(type(item) is str and item for item in predicate['applicableEvidenceClasses']),
+                        'evidence classes must be nonempty named strings')
+                for field, allowed, extra in (
+                        ('implementation', ('complete', 'partial', 'absent', 'unknown'), ('supportedScope', 'missing')),
+                        ('validation', ('observed', 'partial', 'unrun', 'unknown'), ('evidenceRefs', 'countercaseRefs', 'reviewRefs')),
+                        ('acceptance', ('closed', 'open'), ('scope', 'reason'))):
+                    fields(row[field], ('status',) + extra, location + '/' + field)
+                    require(row[field]['status'] in allowed, f'unknown {field} status')
+                require(type(row['implementation']['supportedScope']) is str
+                        and type(row['implementation']['missing']) is str
+                        and all(type(row['acceptance'][key]) is str and row['acceptance'][key]
+                                for key in ('scope', 'reason')), 'explicit scope/gap/reason strings required')
+                fields(row['currentness'], ('sourcePins', 'comparedToCurrent', 'limitations'), location + '/currentness')
+                require(row['currentness']['comparedToCurrent'] in ('identical', 'changed', 'partial', 'unknown'),
+                        'unknown declared currentness')
+                require(type(row['currentness']['limitations']) is list
+                        and all(type(item) is str for item in row['currentness']['limitations']),
+                        'currentness limitations must be strings')
+                fields(row['nextDiscriminatingCheck'], ('consumer', 'input', 'expected', 'missingAuthorityOrOwner'),
+                       location + '/nextDiscriminatingCheck')
+                require(all(type(value) is str for value in row['nextDiscriminatingCheck'].values()),
+                        'next check fields must be explicit strings')
+                for field, refs in (
+                        ('sourcePins', row['currentness']['sourcePins']),
+                        ('evidenceRefs', row['validation']['evidenceRefs']),
+                        ('countercaseRefs', row['validation']['countercaseRefs']),
+                        ('reviewRefs', row['validation']['reviewRefs']), ('citations', row['citations']),
+                        ('sourceRefs', row['implementation'].get('sourceRefs', [])),
+                        ('recordedConsumerClosure', row['currentness'].get('recordedConsumerClosure', []))):
+                    require(type(refs) is list, field + ' must be an array')
+                    for ref_index, ref in enumerate(refs):
+                        pinned(ref, f'{location}/{field}/{ref_index}', findings)
+                if row['acceptance']['status'] == 'closed':
+                    require(row['validation']['evidenceRefs'] and row['validation']['reviewRefs']
+                            and row['currentness']['sourcePins'] and row['acceptance']['scope']
+                            and row['acceptance']['reason'], 'closed declaration needs scoped evidence, review and source references')
+                    require(row['implementation']['status'] == 'complete' and row['validation']['status'] == 'observed'
+                            and row['currentness']['comparedToCurrent'] == 'identical',
+                            'closed declaration requires complete/observed/current declarations')
+            except (ValueError, KeyError, TypeError, UnicodeError) as error:
+                issue(findings, 'invalid', location, str(error))
+            state = integrity(findings + issues)
+            results.append(dict(id=row.get('id') if type(row) is dict else None, declared=row,
+                                integrity=state, current_reportability=('current-owner-declaration' if state == 'current' else 'not-current'),
+                                findings=findings))
+        return results
+
+    original_rows = rows('requirements', required_ids)
+    feature_rows = rows('refinementRequirements', feature_ids)
+    # Later membership failures also invalidate earlier rows; no stale/invalid
+    # declaration enters a current subtotal merely because it appeared first.
+    if issues:
+        for row in original_rows + feature_rows:
+            row['integrity'] = integrity(row['findings'] + issues)
+            row['current_reportability'] = 'not-current'
+    combined = original_rows + feature_rows
+    def summarize(group):
+        def eligible(row):
+            declared = row['declared']
+            return (row['integrity'] == 'current' and type(declared) is dict
+                    and type(declared.get('acceptance')) is dict
+                    and declared['acceptance'].get('status') == 'closed'
+                    and type(declared.get('currentness')) is dict
+                    and declared['currentness'].get('comparedToCurrent') == 'identical')
+        result = dict(rows=len(group), current_owner_declared_closed=sum(eligible(row) for row in group),
+                      current_adopted_closed=0)
+        if assessment.get('adoption') == 'adopted':
+            result['current_adopted_closed'] = sum(eligible(row)
+                and row['declared']['acceptance'].get('adoption') == 'adopted' for row in group)
+        for field in ('implementation', 'validation', 'acceptance'):
+            states = [row['declared'][field].get('status') for row in group
+                      if type(row['declared']) is dict and type(row['declared'].get(field)) is dict]
+            result['declared_' + field] = {status: states.count(status) for status in sorted(
+                {state for state in states if type(state) is str})}
+        return result
+    retained = []
+    retained_issues = []
+    for index, item in enumerate(ledger.get('retainedInventory', [])):
+        findings = []
+        if (type(item) is dict and type(item.get('family')) is str and type(item.get('status')) is str
+                and type(item.get('disposition')) is str):
+            pinned(item.get('catalogue'), f'/retainedInventory/{index}/catalogue', findings)
+        else:
+            issue(findings, 'invalid', f'/retainedInventory/{index}', 'retained family/status/catalogue required')
+        retained.append(dict(declared=item, integrity=integrity(findings), findings=findings))
+        retained_issues.extend(findings)
+    summary = dict(original35=summarize(original_rows), refinement25=summarize(feature_rows))
+    return dict(status=integrity(issues + retained_issues + [finding for row in combined for finding in row['findings']]),
+                scope='declared-requirement-evidence-completeness-and-currentness-only',
+                semantic_assessment='owner-declared; file checks do not authenticate audits or decide acceptance',
+                dependency_closure='declared-only; undeclared dependencies are not established',
+                ledger=reference, assessment=assessment,
+                inventory=dict(original_requirement_ids=required_ids, refinement_feature_ids=feature_ids,
+                               original_scenario_count=original_scenario_count, scenario_count=scenario_count,
+                               scenario_execution='not-established-by-file-check'),
+                requirements=original_rows, refinement_requirements=feature_rows, retained_inventory=retained,
+                summary=summary, findings=issues)
+
+
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
-        lean_observations=None, quint_observations=None, image_observations=None, k_observations=None):
+        lean_observations=None, quint_observations=None, image_observations=None, k_observations=None,
+        requirement_evidence=None):
     repo = Path(repo)
     inventory = source_read_inventory()
     files = []
@@ -600,7 +836,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         difference, summary = compare_supplied_observations(artifact, list(frozen.values()), layer=layer)
         summary['file'] = ref
         supplied_layers['supplied_' + layer + '_observation'] = summary
-    return dict(status='mismatch' if difference else 'pass',
+    report = dict(status='mismatch' if difference else 'pass',
                 scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
                 profile=PROFILE, counts=totals, frozen_files=files,
                 rust_literal_transcriptions=transcriptions, observed_files=observed_files,
@@ -619,12 +855,23 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                       'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'],
                 **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}),
                 **supplied_layers)
+    if requirement_evidence is not None:
+        current = requirement_evidence_report(repo, requirement_evidence)
+        report['requirement_evidence'] = current
+        if current['status'] != 'current':
+            report['status'] = 'mismatch'
+            if report['first_difference'] is None:
+                report['first_difference'] = dict(path='/requirement_evidence',
+                    expected='complete current declared evidence', observed=current['status'])
+    return report
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--observed-programs', type=Path)
+    parser.add_argument('--requirement-evidence', type=Path,
+                        help='report explicitly selected owner-declared requirement evidence/currentness; no semantic acceptance')
     supplied = parser.add_mutually_exclusive_group()
     supplied.add_argument('--host-observations', type=Path,
                         help='compare a supplied complete normal host diagnostic artifact; does not execute it')
@@ -643,7 +890,7 @@ def main(argv=None):
                      observed_prefixes=args.observed_prefixes, family=args.family,
                      host_observations=args.host_observations, lean_observations=args.lean_observations,
                      quint_observations=args.quint_observations, image_observations=args.image_observations,
-                     k_observations=args.k_observations)
+                     k_observations=args.k_observations, requirement_evidence=args.requirement_evidence)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')
