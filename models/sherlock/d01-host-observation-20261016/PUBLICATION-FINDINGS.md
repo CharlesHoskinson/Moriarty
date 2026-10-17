@@ -1,0 +1,5 @@
+The corrected five-file selection received fresh security and nonsecurity publication approvals within the recorded scope. The initial selection and its nonsecurity dissent remain preserved separately; that earlier approval did not transfer. The corrected input digest identifies the actual original input-only packet. The actual capture remains byte-for-byte unchanged.
+
+Actual-result reviews approve retention and honest reporting of this invocation. They do not establish independent semantic comparison or product acceptance. The historical pending-review label in the initial freeze remains unchanged; later review facts appear only in PUBLICATION-RECEIPT.json.
+
+Root must verify exported membership, hashes and unintended-material exclusions. No private paths, full reviews, provider streams, binaries, dep-info or opaque run identifiers are selected. Publication grants no artifact reuse, retry, other invocation or native authority. All original qualification and remaining obligations in README.md remain.
