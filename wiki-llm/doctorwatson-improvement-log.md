@@ -805,3 +805,12 @@ requirement, native limit, counter or prior held-attempt disposition changes her
 ### Current integration disposition — October17
 
 The stream realization/helper closure/source-read reporting are applied; [actual241 ordinary checks and stream8/216](../docs/results/sherlock-stream-20261017/README.md) and [actual333 same-carrier comparisons](../docs/results/sherlock-composed333-20261017/README.md) have retained scoped results. The old unoptimized N08 timeout remains historical; the later Optimized147 cohort passed all selected suites. The [graph refresh](../docs/audits/2026-10-17/sherlock-knowledge/manifest.json) preserves the October14 baseline and adds bounded Sherlock observations, without global freshness/native qualification. Five AstraHIGH final reviews support ordinary implementation under the [revision03 loop](../docs/sherlock/implementation-loop.md), preserving native blockers. The next source increment is the real public compiler preparation/admission path; further factory rebuilding is not a prerequisite. These notes do not themselves arm a goal.
+
+
+### DW-44 — Read test selectors from typed fields and retain local checker failures
+
+**Observation:** the B observer binary listed exactly four approved tests. Root's metadata checker compared those names with argv index4, which was `--exact`, and stopped before any product test ran. The corrected check used the owner's explicit selector list and retained the existing list output. The same sealed binary then passed all four exact tests, without repeating compilation, listing or tests.
+
+**Evidence:** [actual tests and the original checker erratum](../docs/results/sherlock-b-complete-observation-20261017/README.md). Source approval, the four-test execution classification and actual-result review remain distinct. This is a local metadata-reader defect; it did not change product source or the classified execution bounds.
+
+**Improvement:** use named selector fields or parse the value after a known flag when command metadata is needed. Check original command exits separately from later local assertions, preserve both outcomes, and continue from the precise cause when the already produced artifact remains valid. Passing test counts retain their exact source and selected branch scope. No new runner or execution policy is proposed.
