@@ -225,3 +225,100 @@ and exact application against its base, then reconcile the reserved dependencies
 before composition. Keep later outputs pending until their actual terminal and
 artifact checks. No user budget, concurrency limit, execution guard or security
 policy is changed by this log.
+
+
+## 2026-10-17 UTC — third edition
+
+The [second edition](https://github.com/CharlesHoskinson/Moriarty/pull/127)
+was published at `750595ba668c4a4ddf9040658c0198af72fe1682`. Prior entries retain
+their freeze-time status. The entries below distinguish applied consumer source,
+observed practice and proposed factory improvements. This edition validates no
+new factory automation.
+
+### DW-11 — Exercise the real reader and retain incomplete results
+
+**Observation/evidence:** actual JSONL exposed a missing top-level rule lookup
+and a profile-carrier presentation mismatch in the previously source-reviewed
+consumer. Successor source uses the existing closed rule map and the explicitly
+adopted profile bijection, retaining raw integer lexemes and actual locators;
+other identity atoms remain separately compared. Root's exact format/profile
+adoption was source-only. Fresh full Muse HIGH source review qualified the
+successor; source publication remains pending at this freeze.
+
+Root independently read back an actual 13-case host attempt: all 16 children
+exited 0 and the immutable captures total 10,135,483 bytes. The ordinary QA reader
+then compared each supplied capture at its selected fuel. All 13 comparisons
+returned exit 2, **GAP**, **NO_MAPPED_DIFFERENCES**, with no first mapped difference.
+Complete carrier/reference/producer obligations remain open. These unpublished
+receipts do not establish full semantic agreement or exhaustive finite-fuel
+coverage; fresh actual-result reviews and Root acceptance remain pending here.
+
+**Status:** applied consumer fixes, fresh source review and observed ordinary DATA
+comparisons. **Proposed / validation needed:** retain raw capture and first
+mismatch, review a separate successor, then replay unchanged DATA. Track mapped
+field agreement and complete acceptance separately; finish the outstanding
+carrier checks and actual-result reviews before any stronger claim.
+
+### DW-12 — Obtain missing input from the producer
+
+**Observation/evidence:** the current v1 capture omits the actual constructor
+source-program carrier. New source-input capture/serialization work has been
+assigned; finalized implementation and an actual v2 observation remain pending.
+Independent expected observations cannot supply the missing actual input.
+
+**Status:** observed carrier gap; source work in progress. **Proposed / validation
+needed:** require the actual producer to emit and bind its genuine source input,
+then check exact consumed bytes through the consumer. Preserve the independent
+oracle and existing gaps while that work is incomplete. Expected-output equality
+cannot establish the producer's input or its origin.
+
+### DW-13 — Adopt only the premise actually recomputed and reviewed
+
+**Observation/evidence:** the retained standalone exact-16 SDK premise result was
+recomputed and received fresh actual-result reviews from two separate Argon
+instances and Muse. Root recorded only A4 row **P / PASS-EVIDENCE** and
+**R2-AMD-X16-01(ii)** for that single consumed execution. The two Argon instances
+share a model/provider; they are not cross-provider diversity. R5 remains a
+separate pending decision, P10 retains its historical blocked status, full native
+R2 remains unsatisfied, native authority remains zero and C4 remains open. The
+underlying adoption record is unpublished.
+
+**Status:** observed scoped premise adoption, reported without substitute security
+analysis. **Proposed / validation needed:** bind each adopted premise to the exact
+result, recomputation, actual reviewer identities and narrow predicate. Preserve
+separate downstream conditions; route further decisions to their designated owner.
+
+### DW-14 — Correct provenance and refresh availability from observed work
+
+**Observation/evidence:** [PR #128](https://github.com/CharlesHoskinson/Moriarty/pull/128),
+merge `8174e52975d8db9bf59636fea0fa338c0f47c855`, published the D01 host capture
+with a corrected input-only packet digest. The raw capture remained unchanged;
+earlier dissent and the superseded selection were retained, and the corrected
+selection received fresh reviews. This supplies the public locator that DW-07's
+second-edition freeze lacked, with semantic acceptance still separate.
+
+A completed request returned canonical Opus identity and new security assignments
+returned to Opus under the standing instruction. Existing fallback work keeps its
+actual identity and scope. The [restoration record](../raw/assignments/moriarty-opus-security-restored-2026-10-16.md)
+states that a completed request does not establish provider-wide health.
+
+**Status:** observed provenance correction, publication and provider recovery.
+**Proposed / validation needed:** check concrete digest/source claims before
+publication and use actual canonical terminal results to update availability.
+Retain old failures and fallback authorship; obtain fresh review for changed bytes.
+
+### DW-15 — Give creative authors current steering and preserve history
+
+**Observation/evidence:** the website brief now asks for confident finished-launch
+visitor copy alongside truthful internal cumulative source/evidence history.
+The creative author received the combined steering and returned an exact revised
+draft; earlier drafts and authorship remain preserved. Full-candidate non-author
+review included the creative reply and provenance/navigation additions. A design
+companion remains distinct from a frozen circuit iteration; website prose and
+source publication do not establish measured circuit activity.
+
+**Status:** observed author/reviewer practice; new website implementation remains
+separate. **Proposed / validation needed:** forward changed steering to the actual
+author, materialize its exact revision and add later factual evidence as dated
+provenance. Keep source publication, host observations and measured circuit
+activity independently bound. Integrate only the exact reviewed public selection.
