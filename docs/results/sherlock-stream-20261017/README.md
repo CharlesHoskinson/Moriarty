@@ -1,0 +1,7 @@
+# Actual streamed Sherlock host observations — October17
+
+The integrated DoctorWatson batch passed241 ordinary Python tests. A separate explicit SDK-free stream job compiled the real producer and test binary with installed Rust1.99.0, passed all8 selected Rust tests, invoked Machine::visit_steps for N01–N08 and matched all216 complete fuel runs against the previously frozen independent corpus. The capture retains5355 complete records across overlapping prefixes; these are not5355 distinct semantic rules. All26 source snapshot pins were unchanged. Producer/test rustc dep-info lists8/9 compile sources respectively.
+
+The exact actual result/receipt/comparison and raw Rust test output accompany this report. observations.json.gz losslessly stores the actual8003725-byte artifact, whose uncompressed SHA256 is cfdc36e0b513aa8370c6d1371bc40ff1e11675651d5843ea4da94f175b529da3. Receipts retain original local artifact locators; the published compressed copy is additional archival packaging. The raw child streams remain retained locally, with their recorded hashes.
+
+This post-startup diagnostic does not execute constructor startup, K, Quint, Lean/Clean, handwritten constraints, SDK/native proof or ledger operations. It supplies no general persistence, target qualification or memory improvement. The sink retains every record. Source, actual results and acceptance are separate; all required general-language/formal/native/financial/release exits remain open.

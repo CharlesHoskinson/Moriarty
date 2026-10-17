@@ -1,0 +1,5 @@
+# Actual ordinary DoctorWatson check — October17
+
+The integrated seven-file QA change passed241 Python tests on its recorded source snapshot. The command was `bash ./scripts/doctorwatson.sh`, exit0 in10.508seconds. [Source membership](SOURCE-MANIFEST.json), [result](RESULT.json), [stdout](stdout) and [stderr](stderr) retain the exact local bytes. Their original local paths remain historical locators. Source membership covers the seven changed files, rather than attesting the entire dependency closure.
+
+[Source reviews](../../sherlock/reviews/source-qa/doctorwatson-stream-integration-02-review.md) and the [source-read inventory review](../../sherlock/reviews/source-qa/doctorwatson-sourcefacts-review.md) retain exact scope and candidate hashes. The ordinary command executes no Rust, SDK, model, proof or target operation. The separately recorded [actual stream](../sherlock-stream-20261017/README.md), [composed333](../sherlock-composed333-20261017/README.md) and [finite Quint](../sherlock-quint-design-20261017/README.md) observations have their own commands and limits. These results establish no full Sherlock acceptance.

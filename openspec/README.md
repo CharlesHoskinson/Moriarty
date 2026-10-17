@@ -1,5 +1,17 @@
 # Moriarty specifications
 
+## Sherlock completion revision03 — October17
+
+The selected [completion convergence change](changes/sherlock-completion-convergence/ADOPTION.md)
+adds25 EARS refinements/68 scenarios and maps all35 original Sherlock requirements.
+Read the [concrete first compiler batch](changes/sherlock-completion-convergence/FIRST-COMPILER-BATCH.md),
+[finite tasks](changes/sherlock-completion-convergence/tasks.md),
+[final design](../docs/sherlock/design.md) and [implementation loop](../docs/sherlock/implementation-loop.md).
+Implementation/evidence/acceptance remain separate; full original scope and native
+owner boundaries remain in force. Draft labels in preserved author snapshots are
+historical; the adoption record identifies the controlling successor.
+
+
 The governing proposal is [consolidated language and kernel](changes/consolidated-language-kernel/proposal.md), with one [U0–U7 roadmap](../ROADMAP.md), [vision/design](../docs/MORIARTY-CONSOLIDATED-DESIGN.md), [next backend requirements](../docs/MORIARTY-BACKEND-REQUIREMENTS.md), [EARS](changes/consolidated-language-kernel/requirements.md), [traceability](changes/consolidated-language-kernel/traceability.md) and [Pel workflow](changes/consolidated-language-kernel/workflow.md). Links below preserve detailed requirements and historical evidence, not competing schedules.
 
 The [product contract](../docs/MORIARTY-PRODUCT-CONTRACT.md) defines the permissionless language boundary. It supersedes conflicting administrative deployment requirements.
