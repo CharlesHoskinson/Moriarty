@@ -180,7 +180,9 @@ pub(crate) fn source_closure() -> String {
             include_str!("static_compile.rs"),
             include_str!("call_artifacts.rs"),
             include_str!("sherlock_literal.rs"),
+            include_str!("sherlock_literal_complete.rs"),
             include_str!("sherlock_transaction.rs"),
+            include_str!("sherlock_transaction_complete.rs"),
             include_str!("../../mori/Cargo.toml"),
             include_str!("../../mori/src/cli.rs"),
             include_str!("../../mori/src/commands/mod.rs"),
@@ -250,6 +252,7 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-backend/src/sherlock_machine/return_publication_step.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/return_publication_witness.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/literal_complete_execution.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_complete_bridge.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/error_publication_step.rs"),
             include_str!("../../mori-backend/src/sherlock_machine/fuel_exhaustion_step.rs")
         )
