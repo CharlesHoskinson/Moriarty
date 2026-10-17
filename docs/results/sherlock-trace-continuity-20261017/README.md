@@ -1,0 +1,11 @@
+# A-profile complete trace continuity — October17
+
+The public `sherlock::compare::first_continuity_difference` checks supplied complete A snapshots at initial/first-before, every previous-after/next-before, and last-after/returned boundaries. Empty present records require initial equals returned. It compares all eight snapshot fields in their existing order and then checks the total recorded charge against checked endpoint remaining-fuel subtraction. Diagnostics retain the edge/index/field so callers can inspect both raw states. Existing pairwise comparison is unchanged.
+
+The exact candidate passed48 isolated Rust tests against independently specified N01 charged/free-publication states and explicit field/accounting variations. The initial stub compiled and failed43 checks while5 matched; original failures are retained. The final candidate compiled and passed48/48 with no warnings. Only the harness, production reference types, candidate comparator and new tests were compiled; no evaluator or SDK was invoked.
+
+Root also integrated the exact afterimages on an independent branch from `sherlock` at3d3401ef and checked the actual registered production Core module: exit0 in20.608seconds, six existing warnings. The production dep-info and input inventory are separately recorded; test inventory membership does not imply test compilation. No cfg(test), SDK/backend/ledger dependency or product-function execution was selected by that metadata command.
+
+This is an ordinary observation/aggregate-accounting check. It does not establish internal transition validity, per-rule charge validity, source authenticity, profile qualification, terminality, proof/native correspondence or full SCON-007 acceptance. B materialization and every retained formal/native/target predicate remain separate. The explicit overflow branch cannot be reached with an addressable u8-charge slice on this64-bit host and is not falsely reported as dynamically tested.
+
+The source/test receipts preserve original local paths and hashes. Compiled binaries are omitted from Git; their identities remain in the original freeze and publication manifest. This is archival packaging, not another execution. Fresh non-author review is pending at this cut.
