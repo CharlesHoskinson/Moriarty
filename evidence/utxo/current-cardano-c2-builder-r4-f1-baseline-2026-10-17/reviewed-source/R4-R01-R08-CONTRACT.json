@@ -1,0 +1,189 @@
+{
+  "format": "r4-test-part-a-source-contract/1",
+  "status": "AUTHOR_PROPOSED source fragment contract by Opus 4.8 HIGH; nothing run, imported, compiled, hashed, reviewed or adopted; authority 0; not sourceReady; no RED/GREEN observed",
+  "scope": "Part A of isolated/test_c2_builder_r4.py: exactly one class TestR01ToR08(R4TestBase) with exactly 8 test methods for R01-R08 of R4-CONTRACT.md section 7. Appends byte for byte after R4-TEST-PREFIX.py.part; no footer (last part owns the only unittest.main).",
+  "class": {"name": "TestR01ToR08", "base": "R4TestBase", "sortsAfter": "TestR00Prerequisites (dir() sort: Test R01 > Test R00)"},
+  "methodCount": 8,
+  "methodNames": [
+    "test_r01_module_surface_imports_seam_and_no_v1",
+    "test_r02_k6_golden_roster_and_manifest_literals",
+    "test_r03_fields_are_drawn_from_the_consumer_not_constants",
+    "test_r04_expiry_and_argv_gate_without_filesystem_effect",
+    "test_r05_outdir_refusals_create_nothing",
+    "test_r06_read_bounds_irregular_files_caps_and_path_types",
+    "test_r07_strict_bounded_json_and_consumer_boundary",
+    "test_r08_link_digest_vectors_and_hostile_keys"
+  ],
+  "firstCallInvariant": "Each method's first statement is r4 = self.r4(); no assertion or effect precedes it. At RED the file is absent, load_r4 calls case.fail(MISSING) and the method raises exactly one AssertionError with message 'missing implementation: build_k10_inputs_r4.py'. No other assertion, I/O or effect can run before that failure.",
+  "redEnvelope": "Each of the 8 methods, at RED, fails only with the single MISSING AssertionError; 0 errors. A present but broken R4 module (ImportError, SyntaxError, or any load exception) is unittest ERROR = STOP via load_r4, never RED. An R00/setUpModule failure is STOP.",
+  "localImports": [{"method": "test_r01_...", "import": "ast", "reason": "stdlib static-structure oracle for CB401 imports/seam/public-surface; placed after self.r4(); not the module under test and not used to derive expectations"}],
+  "sourceOracles": {
+    "prefixLiterals": ["R4_FILE", "R4_SEAM", "R4_IMPORTS (9)", "R4_PUBLIC (7)", "V1", "ROSTER", "T1", "RAW", "HIST", "B9/EXP/SET", "PINS", "B9_CAP/EXPORT_CAP/SETUP_CAP", "U64_MAX", "K6_EXPIRY/K6_EXPIRY_TEXT", "K6_TOKEN", "POLICY", "MINT_VALUE_CBOR_HEX"],
+    "prefixFormatters": ["plan", "refused", "run_argv", "run_main", "assert_cli_refusal", "case_scratch", "tree", "fresh_export", "fresh_setup", "b2", "env_cbor", "ctx_text", "k6_fields", "dumps", "canonical_json", "read_bounded"],
+    "pinnedModulesIndependentOfR4": {"legacy": ["extract_compiled (script.hex / R02)"], "host_codec": ["statement_digest_hex", "statement_public_inputs (R03 edited-statement consistency)"], "r2": ["prepare_c2_issue reached only through R4 plan for R07 CONSUMER boundary"]},
+    "newLiteralsFromContractApi": ["refusal stage codes C2B-ARGV/OUTDIR/READ/JSON/LINK/CONSUMER", "C2I-EXPORT consumer substring", "cap constants", "JSON depth 16/17", "20- vs 21-character integer-literal boundary"],
+    "neverFromR4": "No expected value is taken from build_k10_inputs_r4.py output; R4 output is only compared against independent expectations or asserted to refuse."
+  },
+  "methods": {
+    "test_r01_module_surface_imports_seam_and_no_v1": {
+      "obligation": "R01",
+      "oracle": "ast.parse of the R4 source bytes (read via read_bounded) plus prefix literals R4_IMPORTS/R4_PUBLIC/R4_SEAM/V1",
+      "positive": [
+        {"id": "seam-once", "check": "source.count(R4_SEAM) == 1", "greenStage": "static"},
+        {"id": "imports-exact", "check": "sorted of all ast.Import forms == sorted(R4_IMPORTS) (9 entries); no ast.ImportFrom anywhere", "greenStage": "static"},
+        {"id": "public-exact", "check": "top-level non-underscore FunctionDef names == set(R4_PUBLIC) and count == 7; each callable on the loaded module", "greenStage": "static"}
+      ],
+      "negativeControls": [
+        {"id": "no-v1-binding", "check": "'c2_issue_artifacts' not in import-bound names, ast.Name ids or Store targets (c2_issue_artifacts_r2 is distinct and allowed)"},
+        {"id": "no-importlib", "check": "'importlib' not in bound names, Name ids or Store targets"},
+        {"id": "no-sysmodules-syspath", "check": "no Attribute sys.modules or sys.path node"},
+        {"id": "v1-absent-after-import", "check": "V1 not in sys.modules after load"}
+      ],
+      "greenExpectation": "Exactly the 9 CB401 imports, one seam line, the 7 public functions, no forbidden binding/attribute, v1 not imported.",
+      "effects": "reads HERE/build_k10_inputs_r4.py only; no scratch write"
+    },
+    "test_r02_k6_golden_roster_and_manifest_literals": {
+      "obligation": "R02",
+      "oracle": "self.plan() on pinned RAW defaults; prefix formatters/literals and legacy.extract_compiled",
+      "positive": [
+        {"id": "roster", "check": "sorted(outputs) == sorted(ROSTER) (6 relpaths); every value exact bytes", "greenStage": "RENDER"},
+        {"id": "t1-eq-hist09", "check": "outputs[T1] == RAW[HIST]"},
+        {"id": "script-hex", "check": "outputs['script.hex'] == (legacy.extract_compiled(RAW[B9])[0] + newline).encode()"},
+        {"id": "canonical-manifest", "check": "outputs['manifest.json'] == canonical_json(json.loads(outputs['manifest.json']))  (indent=2, sort_keys, trailing newline)"},
+        {"id": "manifest-literals", "check": "positiveEnvelopeCborHex == env_cbor(*k6_fields()).hex(); positiveTokenNameHex == K6_TOKEN; policyIdHex == POLICY; mintValueCborHex == MINT_VALUE_CBOR_HEX"},
+        {"id": "deterministic", "check": "self.plan() == outputs on a second call"}
+      ],
+      "negativeControls": [],
+      "greenExpectation": "A pure, deterministic 6-file K6 golden whose T1 context equals the archived HIST-09 and whose manifest carries the independently reproduced envelope/token/policy/mint literals.",
+      "effects": "pure; no scratch write; inputs are immutable pinned bytes"
+    },
+    "test_r03_fields_are_drawn_from_the_consumer_not_constants": {
+      "obligation": "R03",
+      "oracle": "fresh_export() deep copy edited at the claim.rs statement offsets; host_codec.statement_digest_hex and statement_public_inputs for byte/profile consistency; prefix env_cbor/ctx_text/b2",
+      "negativeFixtureLabel": "edited-statement negative control: the unchanged genuine K6 proof is invalid for the edited statement; field drawing only; no new proof, no ledger state",
+      "editOffsets": {"claimantVkh": "[144:172] -> 0x66*28", "consumedTxid": "[233:265] -> 0x33*32", "consumedIx": "[265:267] -> 7 big-endian u16", "expiry": "1700000000000"},
+      "consistencyUpdates": ["statementHex", "statementDigestBlake2b256 = host digest", "publicInputs {x1,x2} = host halves", "context.{claimantVkh,consumedTxid,consumedIx}", "cardano.envV2.{claimantVkh,statementDigest,settleOutref}"],
+      "positive": [
+        {"id": "t1-drawn", "check": "outputs[T1] == ctx_text(token, 1, fields, SETUP verifyingKeyHex, edited proofHex) where token = b2(env_cbor(*fields))"},
+        {"id": "manifest-drawn", "check": "claimantVkhHex == claimant.hex(); settleOutref == {transactionIdHex: txid.hex(), outputIndex: 7}; expiry == 1700000000000; positiveEnvelopeCborHex == env_cbor(*fields).hex(); positiveTokenNameHex == token.hex()"}
+      ],
+      "negativeControls": [
+        {"id": "no-stale-constants", "check": "for stale in (b'55'*28, b'22'*32, b'1893456000000', K6_TOKEN bytes): assertNotIn stale in the concatenation of all outputs except script.hex"}
+      ],
+      "greenExpectation": "All drawn fields trace to the consumer-admitted edited export; no K6 default claimant, txid, expiry or token leaks into contexts or manifest.",
+      "sourceOnlyGaps": ["Whether r2 admits the edited export through STATEMENT/CONTEXT/DIGEST/CARDANO is established by the pinned r2 source and the R3 reference recipe, not executed here; consistency is constructed via the pinned host helpers so the expected pass is independent of R4."],
+      "effects": "pure; fresh parse; shared EXPORT/SETUP not mutated"
+    },
+    "test_r04_expiry_and_argv_gate_without_filesystem_effect": {
+      "obligation": "R04",
+      "oracle": "r4.parse_expiry; self.plan expiry gate; self.run_argv main ARGV; case_scratch for the no-effect proof",
+      "positive": [
+        {"id": "parse-ok", "cases": [["0", 0], ["1893456000000", 1893456000000], ["18446744073709551615", 18446744073709551615]], "check": "type int and exact value", "greenStage": "ARGV"}
+      ],
+      "negativeControls": [
+        {"id": "parse-refuse", "stage": "C2B-ARGV", "cases": ["empty", "01", "+1", "-1", "space1", "1space", "1 then LINE FEED U+000A", "1e3", "1_0", "0x1", "ARABIC-INDIC DIGIT ONE U+0661", "18446744073709551616", "nine times twenty-one", "bytes b'1'", "int 1", "None"]},
+        {"id": "plan-gate", "stage": "C2B-ARGV", "cases": ["True (bool not int)", "-1", "2**64", "'1' str", "1.0 float"], "note": "plan refuses on the expiry int check before any JSON parse"},
+        {"id": "main-argv", "stage": "C2B-ARGV", "cases": ["argv not a list (tuple)", "arity 5", "arity 7", "non-str element (int at index 4)", "embedded NUL U+0000 in argv[1]", "lone high surrogate U+D800 in argv[1] (os.fsencode refuses, value not echoed)"], "cli": "exit 2, empty stdout, one stderr line"}
+      ],
+      "extraAssertions": ["surrogate not echoed: U+D800 absent from stderr", "no filesystem effect: os.listdir(case_scratch) == [] and case_scratch/out does not lexist"],
+      "greenExpectation": "parse_expiry is canonical-u64-decimal only; the plan int gate and main ARGV refuse before any filesystem access and echo no caller text.",
+      "effects": "one case_scratch directory created and left empty"
+    },
+    "test_r05_outdir_refusals_create_nothing": {
+      "obligation": "R05",
+      "oracle": "self.run_main through main OUTDIR; prefix tree() before/after",
+      "fixtures": ["existingout/ (dir, valid name)", "preexisting/ (dir)", "linktarget/ (dir)", "outlink -> linktarget (symlink)"],
+      "negativeControls": [
+        {"id": "existing-output", "stage": "C2B-OUTDIR"},
+        {"id": "preexisting-directory", "stage": "C2B-OUTDIR"},
+        {"id": "final-symlink", "stage": "C2B-OUTDIR", "note": "no-follow stat succeeds on the symlink, so not ENOENT"},
+        {"id": "bad-name", "value": "Bad Name", "stage": "C2B-OUTDIR", "note": "space and uppercase fail the basename regex"},
+        {"id": "absent-parent", "value": "absentparent/child", "stage": "C2B-OUTDIR", "note": "parent open fails ENOENT"},
+        {"id": "trailing-slash", "stage": "C2B-OUTDIR", "note": "os.path.split basename is empty"},
+        {"id": "dot", "value": ".", "stage": "C2B-OUTDIR"}
+      ],
+      "extraAssertions": ["tree(case_scratch) unchanged vs before", "existingout and preexisting remain empty"],
+      "greenExpectation": "Every OUTDIR refusal is exit 2 with one C2B-OUTDIR stderr line and creates nothing.",
+      "effects": "one case_scratch directory with the four fixtures; no builder output created"
+    },
+    "test_r06_read_bounds_irregular_files_caps_and_path_types": {
+      "obligation": "R06",
+      "oracle": "r4.read_public_file directly; bounded writes under one case_scratch",
+      "positive": [
+        {"id": "exact-cap", "check": "read_public_file(exact, SETUP_CAP) == b'a'*SETUP_CAP", "greenStage": "READ"}
+      ],
+      "negativeControls": [
+        {"id": "over-cap", "stage": "C2B-READ", "note": "file of SETUP_CAP+1 bytes"},
+        {"id": "symlink", "stage": "C2B-READ"},
+        {"id": "absent", "stage": "C2B-READ"},
+        {"id": "directory", "stage": "C2B-READ"},
+        {"id": "fifo", "stage": "C2B-READ", "note": "no-follow lstat refuses before any open; must not block"},
+        {"id": "bad-caps", "stage": "C2B-READ", "cases": [0, 7, "True", "2**63"], "note": "cap must be one of B9_CAP/EXPORT_CAP/SETUP_CAP; bool rejected"},
+        {"id": "bytes-path", "stage": "C2B-READ"},
+        {"id": "pathlike", "stage": "C2B-READ", "note": "custom os.PathLike whose __fspath__ raises AssertionError if called proves no hook runs before refusal"},
+        {"id": "str-subclass", "stage": "C2B-READ"},
+        {"id": "unencodable", "stage": "C2B-READ", "value": "lone high surrogate U+D800", "note": "not echoed"}
+      ],
+      "extraAssertions": ["no path text in any READ message (checked for symlink, absent, directory, fifo and the surrogate)"],
+      "greenExpectation": "read_public_file admits exactly cap of a regular no-follow file and refuses irregular targets, bad caps and non-exact-str paths without invoking caller hooks or echoing the path.",
+      "sourceOnlyGaps": ["Whether O_NONBLOCK/O_NOFOLLOW/O_NOCTTY are actually set on the open and whether a raced device open-time effect occurs cannot be observed from allowed source instrumentation; the fifo case shows the no-follow lstat guard refuses before open. Capped to SETUP_CAP so writes stay within the 2 MiB fsize envelope; the 16 MiB B9_CAP boundary is not exercised with a real file."],
+      "effects": "one case_scratch directory with bounded regular files, a symlink and a fifo"
+    },
+    "test_r07_strict_bounded_json_and_consumer_boundary": {
+      "obligation": "R07",
+      "oracle": "self.plan JSON stage (export then setup); r4.parse_public_json directly for unit vectors; r2 CONSUMER reached only through plan",
+      "negativeControls": [
+        {"id": "r3-export-vectors", "stage": "C2B-JSON", "cases": ["duplicate action key", "top-level array", "trailing data", "escape REVERSE SOLIDUS U+005C followed by u d 8 0 0 decoding to a lone surrogate inside a string", "actionIndex NaN", "Infinity", "-Infinity", "1.0", "1e0", "twenty-one 1 digits", "UTF-8 BOM prefix EF BB BF", "raw byte 0xFF breaking UTF-8", "100000 open brackets (depth)", "EXPORT_CAP+1 spaces (over cap)"]},
+        {"id": "r3-setup-vectors", "stage": "C2B-JSON", "cases": ["duplicate curve key", "SETUP_CAP+1 spaces (over cap)", "top-level array []"]},
+        {"id": "control-and-int-vectors", "stage": "C2B-JSON", "cases": ["raw control char U+0001 in a string", "-0", "-01", "twenty-one 1 digits"]},
+        {"id": "depth-17", "stage": "C2B-JSON", "note": "object nested to 17 levels"}
+      ],
+      "positive": [
+        {"id": "leading-trailing-ws", "check": "parse_public_json(space+tab+CR+LF + RAW[EXP] + space+CR+LF, EXPORT_CAP) == fresh_export()"},
+        {"id": "depth-16", "check": "parse_public_json(object nested to 16 levels) is a dict"},
+        {"id": "signed-20char-passes-json", "check": "parse_public_json(dumps(export with actionIndex = -1234567890123456789)) is a dict"}
+      ],
+      "boundaryToConsumer": {"id": "signed-20char-refused-at-consumer", "stage": "C2B-CONSUMER", "check": "self.plan(export=that raw) refuses C2B-CONSUMER and the message contains 'C2I-EXPORT:' (r2 admits actionIndex only as a 0..65535 u16)"},
+      "greenExpectation": "The builder JSON gate is its own strict/bounded check (depth 16, 20-char signed-int limit, no BOM/control/trailing/duplicate/non-object); a literal that passes the gate can still be refused by the consumer, which is C2B-CONSUMER not C2B-JSON.",
+      "sourceOnlyGaps": ["The depth-16 admit and 20-char pass assert only that parse_public_json returns a dict; full JSON-value fidelity beyond the pinned fresh_export equality is not asserted here. The jsonParseLimits label stays NOT_CHECKED; this gate is not Rust parse_json."],
+      "effects": "pure; no scratch write"
+    },
+    "test_r08_link_digest_vectors_and_hostile_keys": {
+      "obligation": "R08",
+      "oracle": "r4.check_setup_link directly and through self.plan; prefix PINS/RAW/dumps/fresh_export",
+      "positive": [
+        {"id": "link-ok", "check": "check_setup_link(fresh_export(), RAW[SET]) == PINS[SET][1]", "greenStage": "LINK"}
+      ],
+      "negativeControls": [
+        {"id": "setup-bytes-changed", "stage": "C2B-LINK", "note": "RAW[SET] + one trailing space parses as JSON but changes the SHA-256"},
+        {"id": "bad-declared-digest", "stage": "C2B-LINK", "cases": ["64 zeros", "pinned digest uppercased", "pinned digest truncated to 63", "None", "7"]},
+        {"id": "missing-digest", "stage": "C2B-LINK", "note": "setupRecordSha256 key deleted"},
+        {"id": "non-str-key", "stage": "C2B-LINK", "note": "export with an int key 7; refused before any lookup"},
+        {"id": "hostile-key-zero-hooks", "stage": "C2B-LINK", "check": "hostile key counting __eq__/__hash__ records (0,0) during the refusal; the one insertion hash is discounted before the call"}
+      ],
+      "greenExpectation": "LINK admits only an exact-str-keyed export whose setupRecordSha256 is lowercase hex64 equal to SHA-256 of the raw setup bytes; the key-type scan precedes any lookup and invokes no caller hook.",
+      "effects": "pure; no scratch write"
+    }
+  },
+  "effectsSummary": {
+    "touchedModulesUnderTest": ["build_k10_inputs_r4 (loaded once by load_r4; functions parse_expiry, read_public_file, parse_public_json, check_setup_link, plan_outputs, main exercised)"],
+    "pinnedModulesRead": ["legacy.extract_compiled (R02)", "host_codec.statement_digest_hex/statement_public_inputs (R03)", "r2.prepare_c2_issue via plan (R03, R07)"],
+    "allowedWrappersUsed": [],
+    "wrappersAvailableUnused": ["wrapped", "counted", "faulted", "consumer_wrapper (reserved for R09-R17 parts)"],
+    "filesystem": ["R04, R05, R06 each create exactly one case_scratch directory; writes stay under it; R05/R06 create fixtures (dirs, symlink, fifo, bounded regular files <= SETUP_CAP+1 bytes); no cleanup performed by these methods (scratch is torn down by the envelope)"],
+    "neverPatched": ["os", "builtins", "json", "build_k10_inputs_r4"],
+    "noNetworkSubprocessNativeProverKeyVm": true,
+    "privilege": "R01-R08 require no uid gate; uid-0 STOP (require_unprivileged) belongs to R16"
+  },
+  "prefixCompatibility": {
+    "assessment": "The proposed/frozen prefix helpers compose with these 8 methods as written; no incompatibility found that requires a prefix edit.",
+    "reliedHelpers": ["r4", "plan (RAW defaults; export/setup/expiry overrides)", "refused (returns message; one-arg C2B-<CODE> ValueError; no CR/LF)", "run_argv (argv passed unchanged; needed for non-list/arity/non-str/NUL/surrogate argv)", "run_main (str-coerces args; used for OUTDIR paths)", "assert_cli_refusal", "case_scratch", "tree", "read_bounded", "fresh_export", "env_cbor/ctx_text/b2/k6_fields/dumps/canonical_json", "PINS/RAW/ROSTER/T1 and literal constants"],
+    "notes": ["refused() uses assertRaises(ValueError); because a RED self.r4() raises AssertionError (not ValueError) before any refused() call, the MISSING failure still surfaces as the method's single AssertionError.", "run_argv passes argv unchanged, which is required so the non-list and non-str-element argv vectors reach main with their exact types."]
+  },
+  "frozenContractCoverage": {
+    "section7Rows": ["R01", "R02", "R03", "R04", "R05", "R06", "R07", "R08"],
+    "noDroppedVectors": "All R04 parse/gate vectors, all R3 test_05 JSON vectors, all R3 test_04 LINK vectors and the new R4 additions (20-char vs 21-char, depth 16/17, non-str/hostile key, PathLike/str-subclass/bytes paths, fifo, trailing slash, dot) are present; no skip and no tuning.",
+    "outOfScope": ["R00 (prefix)", "R09-R17 (other parts)", "footer (last part)"]
+  },
+  "gates": {"sourceReady": false, "executed": false, "adopted": false, "R4ExecutionPermitted": false, "builderReliancePermitted": false, "nativeAuthority": 0}
+}

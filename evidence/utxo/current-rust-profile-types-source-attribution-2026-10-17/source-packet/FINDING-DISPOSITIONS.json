@@ -1,0 +1,349 @@
+{
+  "format": "moriarty-bounded-source-finding-dispositions/1",
+  "createdAt": "2026-10-17T19:54:13.710650+00:00",
+  "author": {
+    "routedModel": "gpt-6.1-sol",
+    "requestedEffort": "high",
+    "effortIndependentlyAttested": false,
+    "role": "nonsecurity bounded source-attribution correction"
+  },
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true,
+  "noAuthorityGranted": true,
+  "adopted": false,
+  "wholeReviewReference": {
+    "path": "/home/charl/moriarty-c2-opus55-restored-20261017/jobs/CORE-PROFILE-TYPES-PART1-REVIEW-GEMINI4-ARGON-HIGH/REVIEW.json",
+    "bytes": 10694,
+    "sha256": "940ac79aef542275458d71f0806f267770c39207bf1be28a17ef3c0e4d525d45",
+    "lines": 91
+  },
+  "wholeReviewPreserved": {
+    "coverage": [
+      {
+        "checked": "FULL_READ lines 1-61 of 61 (2607 bytes); verified 9-file Part 1 packet manifest and scope restriction to the 18 claims G01, P01-P10, T01-T07.",
+        "read": true,
+        "sourceId": "MANIFEST.json"
+      },
+      {
+        "checked": "FULL_READ lines 1-711 of 711 (48201 bytes, read in two slices lines 1-600 and 601-711); verified header metadata, 20 UNLOCATED familyInventory entries, all 18 claims (G01, P01-P10, T01-T07), and reviewPart metadata recording 18 claims here out of 61 in the unreviewed full table.",
+        "read": true,
+        "sourceId": "CANDIDATE-PART.json"
+      },
+      {
+        "checked": "FULL_READ lines 1-244 of 244 (11698 bytes); verified 33-file parent input manifest metadata pinning 18 CORE-*.rs files to mainCommit 8174e52975d8db9bf59636fea0fa338c0f47c855 alongside 15 non-Core files retaining their separate originalPublicSource provenance.",
+        "read": true,
+        "sourceId": "INPUT-MANIFEST.json"
+      },
+      {
+        "checked": "FULL_READ lines 1-484 of 484 (12823 bytes); verified citations and enclosing definitions for P01 (lines 4-9), T01 (lines 11-51), T02 (lines 52-90), T03 (lines 91-117), T04 (lines 118-187), T05 (lines 271-465), T06 (lines 188-211), and T07 (lines 212-270).",
+        "read": true,
+        "sourceId": "CORE-ir.rs"
+      },
+      {
+        "checked": "FULL_READ lines 1-42 of 42 (1277 bytes); verified citations and module/re-export context for P09 and P10 (lines 8-31 and 1-42).",
+        "read": true,
+        "sourceId": "CORE-lib.rs"
+      },
+      {
+        "checked": "FULL_READ lines 1-378 of 378 (14920 bytes); verified citations and full parser/routing context for P03 (lines 351-377), P07 (lines 5-161), and P10 (lines 351-377).",
+        "read": true,
+        "sourceId": "CORE-parser.rs"
+      },
+      {
+        "checked": "FULL_READ lines 1-188 of 188 (6169 bytes); verified citations and surrounding stage module definitions for P02 (lines 23-38) and P08 (lines 71-88).",
+        "read": true,
+        "sourceId": "CORE-stage-mod.rs"
+      },
+      {
+        "checked": "FULL_READ lines 1-32 of 32 (1237 bytes); verified citation and full profile isolation module context for P06 (lines 10-23) and require_core2 (lines 26-31).",
+        "read": true,
+        "sourceId": "CORE-stage-profile.rs"
+      },
+      {
+        "checked": "FULL_READ lines 1-69 of 69 (2585 bytes); verified citations and full frontend admission context for P04 (lines 34-50), P05 (lines 52-68), and P10 (lines 34-50).",
+        "read": true,
+        "sourceId": "S06-frontend.rs"
+      },
+      {
+        "checked": "PARTIAL_READ lines 1-60 of 1646 (60032 bytes total); verified G01 citation at lines 9-19 and enclosing metadata at lines 4-21 (source_head 54fc7a1a54106245abb1a5ef6e16407464e1b654). Lines 61-1646 were not read because G01 only asserts the remaining_uninspected_boundaries metadata block.",
+        "read": true,
+        "sourceId": "graph.json"
+      },
+      {
+        "checked": "NOT_IN_PART1_PACKET; listed in INPUT-MANIFEST.json (lines 236-240, 4701 bytes, sha256 8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997) and cited by CANDIDATE-PART.json familyInventory (lines 28-369), but not included in MANIFEST.json of this 9-file Part 1 review workspace; external originalPublicSource path was not followed.",
+        "read": false,
+        "sourceId": "PATTERN-INVENTORY.json"
+      }
+    ],
+    "findings": [
+      {
+        "evidence": "In CANDIDATE-PART.json lines 414-427, claim P02 summarizes the format string constants from CORE-stage-mod.rs lines 25-27 without their leading moriarty- prefix (writing stage-plan/1, continuation/1, and stage-event/1 instead of moriarty-stage-plan/1, moriarty-continuation/1, and moriarty-stage-event/1), and sets lineStart: 23, lineEnd: 34 on CORE-stage-mod.rs, which includes the doc comment and opening declaration line of STAGE_LABELS at lines 33-34 while omitting lines 35-38 and even though P02's statement only covers the constants declared on lines 23-32.",
+        "id": "F01-P02-CONSTANT-PREFIX-AND-LINE-SPAN",
+        "requiredFix": "In P02 (CANDIDATE-PART.json lines 417-425), state the exact string constant values moriarty-stage-plan/1, moriarty-continuation/1, and moriarty-stage-event/1 from CORE-stage-mod.rs lines 25-27, and either restrict the citation span to CORE-stage-mod.rs lines 23-32 or extend it to lines 23-38 if STAGE_LABELS is intended to be included.",
+        "severity": "low"
+      },
+      {
+        "evidence": "In CANDIDATE-PART.json lines 526-539, claim P09 states that the Sherlock module implementation bodies are absent from this 33-file packet, and familyInventory (CANDIDATE-PART.json lines 28-369) cites PATTERN-INVENTORY.json (lines 4-119, sha256 8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997), while P05/P07/P08 reference callees in other Core modules (validate, validate_v2, plan::build, plan_invariants, cost::fill, cost_invariants, digest::program_hash, digest::hex, digest::plan_hash). Those references reflect the 33-file parent packet described in INPUT-MANIFEST.json, whereas MANIFEST.json for this bounded Part 1 workspace supplies 9 files (CANDIDATE-PART.json, 5 of the 18 CORE-*.rs files, S06-frontend.rs, graph.json, and INPUT-MANIFEST.json).",
+        "id": "F02-P08-P09-PACKET-BOUNDARY-SCOPE",
+        "requiredFix": "Clarify in P09 and familyInventory metadata that the 33-file count and PATTERN-INVENTORY.json citations refer to the parent INPUT-MANIFEST.json inventory, whereas this Part 1 review workspace contains 9 files in MANIFEST.json and leaves PATTERN-INVENTORY.json and the other 13 CORE-*.rs modules outside the directly inspected Part 1 file set.",
+        "severity": "info"
+      },
+      {
+        "evidence": "In CANDIDATE-PART.json, the citations for T03 (CORE-ir.rs lines 92-117), T06 (CORE-ir.rs lines 189-211), and T07 (CORE-ir.rs lines 213-270) start on the serde attribute line rather than the preceding derive attribute line of the first struct in each block (CORE-ir.rs lines 91, 188, and 212 respectively), and the citations for P04 and P10 in S06-frontend.rs (lines 34-49) stop at the closing brace of the match expression on line 49 rather than the closing brace of admit_source on line 50. Additionally, T07's phrase ordered effects refers to the declaration order of Effect variants (CORE-ir.rs lines 221-251) and the Vec<Effect> fields on Step and Execution (CORE-ir.rs lines 259 and 269), as Effect does not derive PartialOrd or Ord.",
+        "id": "F03-T03-T06-T07-P04-SPAN-AND-ORDER-WORDING",
+        "requiredFix": "Include the leading derive attribute lines in CORE-ir.rs (lines 91, 188, and 212) and the function closing brace in S06-frontend.rs (line 50) in the citation ranges for T03, T06, T07, P04, and P10, and interpret ordered effects in T07 strictly as Vec<Effect> sequence and enum declaration order in CORE-ir.rs.",
+        "severity": "info"
+      }
+    ],
+    "recommendation": {
+      "firstBlockedBoundary": "Part 1 covers only 18 source-attribution claims (G01, P01-P10, T01-T07); the remaining 43 claims of the 61-claim table are not reviewed here. Uninspected boundaries remain at mori_lexer (lex, TokenKind, decode_string), Sherlock public and cfg(test) draft module bodies, the 13 other CORE-*.rs files listed in INPUT-MANIFEST.json but not packaged in this 9-file Part 1 workspace, backend implementation bodies outside S06-frontend.rs (identity::source_hash, identity::program_hash, StagedAdmission::new, StatementLayout::build, compiler/adapter/abi2/lowering helpers), the cross-snapshot gap between S06-frontend.rs/graph.json (backend head 54fc7a1a54106245abb1a5ef6e16407464e1b654) and CORE-*.rs (mainCommit 8174e52975d8db9bf59636fea0fa338c0f47c855), and all compilation, runtime, prover, cryptographic, security, and ledger execution boundaries.",
+      "ledgerReady": false,
+      "nativeAuthority": 0,
+      "operatorReady": false,
+      "runtimeReady": false,
+      "securityReady": false,
+      "sourceAttributionReady": true,
+      "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+    },
+    "reviewToken": "core-profile-types-part1-gemini4-argon-high-20261017",
+    "summary": "Fresh non-author source-attribution review of CANDIDATE-PART.json (Part 1, 18 claims: G01, P01-P10, T01-T07) conducted as Gemini 4 Argon (High) through Antigravity (model identity is a runtime self-report, not an independent provider cryptographic attestation). All 9 files in MANIFEST.json were inspected using read-only view tools only, with full line-by-line reads of MANIFEST.json (lines 1-61), CANDIDATE-PART.json (lines 1-711), INPUT-MANIFEST.json (lines 1-244), CORE-ir.rs (lines 1-484), CORE-lib.rs (lines 1-42), CORE-parser.rs (lines 1-378), CORE-stage-mod.rs (lines 1-188), CORE-stage-profile.rs (lines 1-32), and S06-frontend.rs (lines 1-69), and a bounded partial read of graph.json (lines 1-60 of 1646) covering the G01 citation and its enclosing metadata. Every literal excerpt, SHA-256 pin, line range, and classification (SOURCE_DECLARATION, CALL_EDGE, INFERENCE) across all 18 claims in CANDIDATE-PART.json was independently checked against the supplied files and verified to match the cited source lines verbatim. Snapshot provenance separation is preserved: the 5 supplied CORE-*.rs files are pinned to mainCommit 8174e52975d8db9bf59636fea0fa338c0f47c855 via INPUT-MANIFEST.json, whereas S06-frontend.rs and graph.json originate from the frozen backend navigation packet at source_head 54fc7a1a54106245abb1a5ef6e16407464e1b654, and no cross-snapshot semantic or runtime equivalence is inferred. Profile separation between Core1 (moriarty/1, moriarty-core/1), Staged2 (moriarty/2, moriarty-core/2), and Sherlock/draft modules is accurately represented, language() is solely a profile routing check rather than full Program parsing or validation, stage::load call ordering in CORE-stage-mod.rs (separated by ASCII U+2192 arrows in P08) is a source call-edge observation rather than compiled circuit lowering, and Core IR/v1 serde wire declarations do not establish third-party dependency or runtime behavior. All 20 pattern family IDs and names in familyInventory are preserved verbatim with UNINSPECTED_BOUNDARY and UNLOCATED_IN_THIS_PACKET status without following external case_file or originalPublicSource pointers. Three non-blocking findings (one low, two info) record minor precision notes on P02 constant prefix shorthand and lineEnd 34 vs 32/38, Part 1 9-file vs parent 33-file packet references in P09/familyInventory, and leading derive/closing-brace line spans in T03/T06/T07/P04/P10. This review approves source attribution for Part 1's 18 claims only; the remaining 43 claims of the 61-claim table are not reviewed here, and operatorReady, securityReady, runtimeReady, and ledgerReady remain false with nativeAuthority 0."
+  },
+  "scope": {
+    "parentSourcePacket": {
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-input/MANIFEST.json",
+      "sha256": "bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e",
+      "listedFiles": 33,
+      "listedCoreFiles": 18,
+      "inventoryIncludes": "PATTERN-INVENTORY.json",
+      "independentlyInspectedInventoryThisCorrection": true
+    },
+    "boundedOriginalReview": {
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/jobs/CORE-PROFILE-TYPES-PART1-REVIEW-GEMINI4-ARGON-HIGH/REVIEW.json",
+      "sha256": "940ac79aef542275458d71f0806f267770c39207bf1be28a17ef3c0e4d525d45",
+      "reviewToken": "core-profile-types-part1-gemini4-argon-high-20261017",
+      "claimIds": [
+        "G01",
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07"
+      ],
+      "claimCount": 18,
+      "remaining43ClaimsNotReviewedByPart1": true,
+      "reportedWorkspaceFileCount": 9,
+      "workspaceCountBasis": "Whole exported REVIEW.json coverage/summary/findings; bounded reviewer workspace manifest not opened in this correction",
+      "reportedSourceBodies": [
+        "CORE-ir.rs",
+        "CORE-lib.rs",
+        "CORE-parser.rs",
+        "CORE-stage-mod.rs",
+        "CORE-stage-profile.rs",
+        "S06-frontend.rs",
+        "graph.json (metadata slice only)"
+      ],
+      "PATTERN-INVENTORY.jsonDirectlyReadByBoundedReviewer": false,
+      "other13CoreBodiesDirectlyReadByBoundedReviewer": false,
+      "reviewerIdentityBasis": "Gemini4 Argon High self-report in whole public export; no independent provider identity attestation added",
+      "sourceAttributionReadyFieldIsNotAdoption": true,
+      "changedBytesFreshReviewRequired": true
+    },
+    "familyInventory": {
+      "scope": "All20 entries and exact prior citations retained from parent33-file packet, not claimed to be direct Part1 reviewer source reads",
+      "entriesUnchanged": true,
+      "caseFilePathsFollowed": false
+    }
+  },
+  "dispositions": [
+    {
+      "finding": {
+        "evidence": "In CANDIDATE-PART.json lines 414-427, claim P02 summarizes the format string constants from CORE-stage-mod.rs lines 25-27 without their leading moriarty- prefix (writing stage-plan/1, continuation/1, and stage-event/1 instead of moriarty-stage-plan/1, moriarty-continuation/1, and moriarty-stage-event/1), and sets lineStart: 23, lineEnd: 34 on CORE-stage-mod.rs, which includes the doc comment and opening declaration line of STAGE_LABELS at lines 33-34 while omitting lines 35-38 and even though P02's statement only covers the constants declared on lines 23-32.",
+        "id": "F01-P02-CONSTANT-PREFIX-AND-LINE-SPAN",
+        "requiredFix": "In P02 (CANDIDATE-PART.json lines 417-425), state the exact string constant values moriarty-stage-plan/1, moriarty-continuation/1, and moriarty-stage-event/1 from CORE-stage-mod.rs lines 25-27, and either restrict the citation span to CORE-stage-mod.rs lines 23-32 or extend it to lines 23-38 if STAGE_LABELS is intended to be included.",
+        "severity": "low"
+      },
+      "disposition": "SOURCE_ATTRIBUTION_CORRECTION_APPLIED",
+      "sourceOnly": true,
+      "noAuthorityGranted": true,
+      "changedClaims": [
+        "P02"
+      ],
+      "independentVerification": "Verified exact moriarty- string literals and constants-only lines23–32. The original text omitted prefixes; the original span ended within the unrelated STAGE_LABELS declaration.",
+      "evidence": [
+        {
+          "inputFile": "CORE-stage-mod.rs",
+          "sha256": "428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c",
+          "lineStart": 23,
+          "lineEnd": 38,
+          "literal": "pub const LANGUAGE_2: &str = \"moriarty/2\";\npub const SEMANTICS_2: &str = \"moriarty-core/2\";\npub const STAGE_PLAN_FORMAT: &str = \"moriarty-stage-plan/1\";\npub const CONTINUATION_FORMAT: &str = \"moriarty-continuation/1\";\npub const STAGE_EVENT_FORMAT: &str = \"moriarty-stage-event/1\";\npub const MAX_AWAITS_PER_ACTION: usize = 16;\npub const MAX_EVENT_BINDERS: usize = 16;\npub const MAX_CAPTURE_SLOTS: usize = 256;\npub const MAX_CONTINUATION_BYTES: usize = 4 * 1_048_576;\npub const MAX_EVENT_BYTES: usize = 65_536;\n/// Inserted verbatim into every `/2` output object.\npub const STAGE_LABELS: [(&str, &str); 3] = [\n    (\"qualification\", \"local-reference-stage\"),\n    (\"authentication\", \"none\"),\n    (\"consumption\", \"untracked\"),\n];"
+        }
+      ]
+    },
+    {
+      "finding": {
+        "evidence": "In CANDIDATE-PART.json lines 526-539, claim P09 states that the Sherlock module implementation bodies are absent from this 33-file packet, and familyInventory (CANDIDATE-PART.json lines 28-369) cites PATTERN-INVENTORY.json (lines 4-119, sha256 8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997), while P05/P07/P08 reference callees in other Core modules (validate, validate_v2, plan::build, plan_invariants, cost::fill, cost_invariants, digest::program_hash, digest::hex, digest::plan_hash). Those references reflect the 33-file parent packet described in INPUT-MANIFEST.json, whereas MANIFEST.json for this bounded Part 1 workspace supplies 9 files (CANDIDATE-PART.json, 5 of the 18 CORE-*.rs files, S06-frontend.rs, graph.json, and INPUT-MANIFEST.json).",
+        "id": "F02-P08-P09-PACKET-BOUNDARY-SCOPE",
+        "requiredFix": "Clarify in P09 and familyInventory metadata that the 33-file count and PATTERN-INVENTORY.json citations refer to the parent INPUT-MANIFEST.json inventory, whereas this Part 1 review workspace contains 9 files in MANIFEST.json and leaves PATTERN-INVENTORY.json and the other 13 CORE-*.rs modules outside the directly inspected Part 1 file set.",
+        "severity": "info"
+      },
+      "disposition": "SOURCE_ATTRIBUTION_CORRECTION_APPLIED",
+      "sourceOnly": true,
+      "noAuthorityGranted": true,
+      "changedClaims": [
+        "P09"
+      ],
+      "metadataChanges": [
+        "reviewScope.parentSourcePacket",
+        "reviewScope.boundedOriginalReview",
+        "reviewScope.familyInventory"
+      ],
+      "independentVerification": "Parent manifest independently lists33 files including18 CORE files and PATTERN-INVENTORY.json, and no Sherlock implementation filename. The nine-file bounded workspace and direct reviewer read limits are explicitly reviewer-reported, not independently re-attested here. P08 call-edge body itself is unchanged.",
+      "evidence": [
+        {
+          "inputFile": "CORE-lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "lineStart": 8,
+          "lineEnd": 31,
+          "literal": "pub mod sherlock;\n\n// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        },
+        {
+          "inputFile": "MANIFEST.json",
+          "sha256": "bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e",
+          "lineStart": 1,
+          "lineEnd": 243,
+          "literal": "{\n  \"format\": \"public-source-packet/1\",\n  \"createdAt\": \"2026-10-17T18:43:47.269292+00:00\",\n  \"mainCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n  \"remoteMainRevalidatedAt\": \"2026-10-17T18:43+00:00\",\n  \"files\": [\n    {\n      \"path\": \"CORE-intent.rs\",\n      \"bytes\": 14473,\n      \"sha256\": \"a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/intent.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-ir.rs\",\n      \"bytes\": 12823,\n      \"sha256\": \"0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/ir.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-json.rs\",\n      \"bytes\": 5391,\n      \"sha256\": \"faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/json.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-lib.rs\",\n      \"bytes\": 1277,\n      \"sha256\": \"df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/lib.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-logical_cost.rs\",\n      \"bytes\": 2683,\n      \"sha256\": \"0aa110259dbc7f5aad2b3d0edab95e7b40f63b704ce4c06eb971be2e7df5ee8d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/logical_cost.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-parser.rs\",\n      \"bytes\": 14920,\n      \"sha256\": \"83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/parser.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-policy.rs\",\n      \"bytes\": 8696,\n      \"sha256\": \"992e18f71e01ff4619512b9c9a0f7f4bbb92a9e31765edcac8cc5a6ff9667cdf\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/policy.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-replay.rs\",\n      \"bytes\": 3691,\n      \"sha256\": \"eb5e0219d543f41c8c5ae943be91dadadef7e14a1fd8f47993d5b181627de9d2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/replay.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-runtime.rs\",\n      \"bytes\": 37400,\n      \"sha256\": \"7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/runtime.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-source_sponsor.rs\",\n      \"bytes\": 11097,\n      \"sha256\": \"870e71ba219a5e8adaaff980d3757810c8e44c0047d770e93627ba4b0c34cfd2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/source_sponsor.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-admit.rs\",\n      \"bytes\": 14077,\n      \"sha256\": \"7d98472ec2d4bd151cb42682ed32deaff257d4b9746615a6453aad41b3f2ec10\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/admit.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-cost.rs\",\n      \"bytes\": 14352,\n      \"sha256\": \"6edebd925cdc8f775f9a0711775f6eca656e808f1c428bc389e21b4d0042eee2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/cost.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-decode.rs\",\n      \"bytes\": 8731,\n      \"sha256\": \"48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/decode.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-digest.rs\",\n      \"bytes\": 1206,\n      \"sha256\": \"8193f18852499f0e3d276e2187f57fbb1fc6bf5ea8faa51a40510919655fdf72\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/digest.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-mod.rs\",\n      \"bytes\": 6169,\n      \"sha256\": \"428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/mod.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-plan.rs\",\n      \"bytes\": 3881,\n      \"sha256\": \"e29954e5c5f028e75f4f4f74ccf86c4eeda8f59c0be6dbbe5714bf30a200d3d3\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/plan.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-profile.rs\",\n      \"bytes\": 1237,\n      \"sha256\": \"933560466065d78b0ce3f3559c2cf2bb9cbdc8eea45903af564cf1ab469cd59d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/profile.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-validate.rs\",\n      \"bytes\": 18435,\n      \"sha256\": \"5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/validate.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"S06-frontend.rs\",\n      \"bytes\": 2585,\n      \"sha256\": \"039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S06-frontend.rs\"\n    },\n    {\n      \"path\": \"S08-plan.rs\",\n      \"bytes\": 19278,\n      \"sha256\": \"a4e50be08727f3d89aedab66539498c0fc81e61e09a43005d274d12b63acc60f\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S08-plan.rs\"\n    },\n    {\n      \"path\": \"S09-lower.rs\",\n      \"bytes\": 12472,\n      \"sha256\": \"68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S09-lower.rs\"\n    },\n    {\n      \"path\": \"S16-circuit.rs\",\n      \"bytes\": 25657,\n      \"sha256\": \"3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S16-circuit.rs\"\n    },\n    {\n      \"path\": \"S03-input.rs\",\n      \"bytes\": 6262,\n      \"sha256\": \"646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S03-input.rs\"\n    },\n    {\n      \"path\": \"S04-relation.rs\",\n      \"bytes\": 14625,\n      \"sha256\": \"e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S04-relation.rs\"\n    },\n    {\n      \"path\": \"S10-installment-invoice.mori\",\n      \"bytes\": 1497,\n      \"sha256\": \"105137af8ac6a1f060ec7b634e3ec4aa913808e94bd1b7cffb736f8105d2cfc9\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S10-installment-invoice.mori\"\n    },\n    {\n      \"path\": \"S11-conditional-reserve.mori\",\n      \"bytes\": 1415,\n      \"sha256\": \"395e647534160fde45325232e5f1650a8bd48ce1455a68b28af203bf8bdbe357\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S11-conditional-reserve.mori\"\n    },\n    {\n      \"path\": \"S12-invoice-partial.selector.json\",\n      \"bytes\": 252,\n      \"sha256\": \"1f011dec179e394591a69859d06c999337ba45133d63627140a89c30fa591ee4\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S12-invoice-partial.selector.json\"\n    },\n    {\n      \"path\": \"S13-reserve-allocate.selector.json\",\n      \"bytes\": 253,\n      \"sha256\": \"4110ae0ca7031482155ad362a787b5fd76c59492eb045a840ee58deafef9556a\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S13-reserve-allocate.selector.json\"\n    },\n    {\n      \"path\": \"S14-invoice-partial.request.json\",\n      \"bytes\": 3008,\n      \"sha256\": \"aa1703e7b3aa2e0dd6288668cc871996fc1ee49ecc90861a3c4b40f02107f3cd\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S14-invoice-partial.request.json\"\n    },\n    {\n      \"path\": \"S15-reserve-allocate.request.json\",\n      \"bytes\": 4073,\n      \"sha256\": \"b949f44bac9b6f40bc6c780c1939fe4575f4cff70b0c8431c31df2924c2ecce7\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S15-reserve-allocate.request.json\"\n    },\n    {\n      \"path\": \"graph.json\",\n      \"bytes\": 60032,\n      \"sha256\": \"93d3042e2212417bbb2a43ed2a3555c880ecbffcba97786d3d2d99567ae0e0d7\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/graph.json\"\n    },\n    {\n      \"path\": \"SOURCE-MANIFEST.json\",\n      \"bytes\": 7131,\n      \"sha256\": \"f95f089ff505fd6d9ad97206ec32c6b6b57a9ea5d755e37b6a6389dd161ffd34\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/SOURCE-MANIFEST.json\"\n    },\n    {\n      \"path\": \"PATTERN-INVENTORY.json\",\n      \"bytes\": 4701,\n      \"sha256\": \"8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997\",\n      \"originalPublicSource\": \"/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/reports/PATTERN-INVENTORY.json\"\n    }\n  ],\n  \"scope\": \"Nonsecurity source topology/grammar/profile observations only. No execution or semantic/security/ledger acceptance. Never follow case_file/provenance paths.\"\n}"
+        }
+      ]
+    },
+    {
+      "finding": {
+        "evidence": "In CANDIDATE-PART.json, the citations for T03 (CORE-ir.rs lines 92-117), T06 (CORE-ir.rs lines 189-211), and T07 (CORE-ir.rs lines 213-270) start on the serde attribute line rather than the preceding derive attribute line of the first struct in each block (CORE-ir.rs lines 91, 188, and 212 respectively), and the citations for P04 and P10 in S06-frontend.rs (lines 34-49) stop at the closing brace of the match expression on line 49 rather than the closing brace of admit_source on line 50. Additionally, T07's phrase ordered effects refers to the declaration order of Effect variants (CORE-ir.rs lines 221-251) and the Vec<Effect> fields on Step and Execution (CORE-ir.rs lines 259 and 269), as Effect does not derive PartialOrd or Ord.",
+        "id": "F03-T03-T06-T07-P04-SPAN-AND-ORDER-WORDING",
+        "requiredFix": "Include the leading derive attribute lines in CORE-ir.rs (lines 91, 188, and 212) and the function closing brace in S06-frontend.rs (line 50) in the citation ranges for T03, T06, T07, P04, and P10, and interpret ordered effects in T07 strictly as Vec<Effect> sequence and enum declaration order in CORE-ir.rs.",
+        "severity": "info"
+      },
+      "disposition": "SOURCE_ATTRIBUTION_CORRECTION_APPLIED",
+      "sourceOnly": true,
+      "noAuthorityGranted": true,
+      "changedClaims": [
+        "T03",
+        "T06",
+        "T07",
+        "P04",
+        "P10"
+      ],
+      "independentVerification": "Verified leading derive lines91/188/212,function closing brace50,and Vec<Effect> fields259/269. T07 now describes sequences and enum declaration order without implying Effect ordering traits. No runtime ordering or compatibility claim was added.",
+      "evidence": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 91,
+          "lineEnd": 117,
+          "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct StateDecl {\n    pub name: String,\n    pub ty: Type,\n    pub initial: Value,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct InputDecl {\n    pub name: String,\n    pub ty: Type,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]\n#[serde(deny_unknown_fields)]\npub struct AssetId {\n    pub network: String,\n    pub issuer: String,\n    pub reference: String,\n    pub scale: u8,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct AssetDecl {\n    pub name: String,\n    pub identity: AssetId,\n}"
+        },
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 188,
+          "lineEnd": 270,
+          "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Balance {\n    pub account: String,\n    pub asset: AssetId,\n    pub amount: UInt,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Liability {\n    pub name: String,\n    pub asset: AssetId,\n    pub debtor: String,\n    pub creditor: String,\n    pub amount: UInt,\n}\n#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Scenario {\n    pub state: BTreeMap<String, Value>,\n    pub inputs: BTreeMap<String, Value>,\n    pub balances: Vec<Balance>,\n    pub liabilities: Vec<Liability>,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Snapshot {\n    pub state: BTreeMap<String, Value>,\n    pub balances: Vec<Balance>,\n    pub liabilities: Vec<Liability>,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Effect {\n    State {\n        name: String,\n        before: Value,\n        after: Value,\n    },\n    Transfer {\n        asset: AssetId,\n        from: String,\n        to: String,\n        amount: UInt,\n    },\n    Fee {\n        asset: AssetId,\n        from: String,\n        to: String,\n        amount: UInt,\n    },\n    Liability {\n        name: String,\n        asset: AssetId,\n        debtor: String,\n        creditor: String,\n        before: UInt,\n        after: UInt,\n    },\n    Emit {\n        name: String,\n        value: Value,\n    },\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Step {\n    pub index: u16,\n    pub statement: Statement,\n    pub value: Option<Value>,\n    pub snapshot: Snapshot,\n    pub effects: Vec<Effect>,\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Execution {\n    pub semantics: String,\n    pub action: String,\n    pub pre: Snapshot,\n    pub post: Snapshot,\n    pub steps: Vec<Step>,\n    pub effects: Vec<Effect>,\n}"
+        },
+        {
+          "inputFile": "S06-frontend.rs",
+          "sha256": "039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9",
+          "lineStart": 34,
+          "lineEnd": 50,
+          "literal": "/// Route by `mori_core::language`, then admit with the profile's own Core entry point.\npub fn admit_source(source: &str) -> Result<Admitted, CompileError> {\n    let profile = mori_core::language(source).map_err(CompileError::Core)?;\n    let source_sha256 = identity::source_hash(source);\n    match profile {\n        mori_core::LANGUAGE => {\n            // `parse` validates before returning (parser.rs:157-159).\n            let program = mori_core::parse(source).map_err(CompileError::Core)?;\n            admit_checked(program, Some(source_sha256)).map(Admitted::Core1)\n        }\n        mori_core::stage::LANGUAGE_2 => {\n            let staged = mori_core::stage::load(source).map_err(CompileError::Core)?;\n            Ok(Admitted::Staged2(StagedAdmission::new(staged, source_sha256)))\n        }\n        other => Err(CompileError::Profile(other.to_string())),\n    }\n}"
+        }
+      ]
+    }
+  ],
+  "changedClaimIds": [
+    "P02",
+    "P04",
+    "P09",
+    "P10",
+    "T03",
+    "T06",
+    "T07"
+  ],
+  "unchangedClaims": [
+    "G01",
+    "P01",
+    "P03",
+    "P05",
+    "P06",
+    "P07",
+    "P08",
+    "T01",
+    "T02",
+    "T04",
+    "T05",
+    "GR01",
+    "GR02",
+    "GR03",
+    "GR04",
+    "GR05",
+    "V01",
+    "V02",
+    "V03",
+    "V04",
+    "V05",
+    "V06",
+    "V07",
+    "J01",
+    "J02",
+    "J03",
+    "J04",
+    "J05",
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B06",
+    "B07",
+    "E01",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E06",
+    "E07",
+    "E08",
+    "E09",
+    "E10",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "W01",
+    "W02",
+    "W03",
+    "W04",
+    "W05"
+  ],
+  "all61IdsAndClassificationsPreserved": true,
+  "all20FamilyEntriesUnchanged": true,
+  "staleGraphRecommendationHandling": "No unrelated graph change or broad boundary reopening applied. Whole review recommendations retained as reviewer text only; later lexer/helper work remains a separate unreviewed source record.",
+  "limits": [
+    "Independent verification covers the three bounded findings and seven changed claims, not a fresh review of all61 claims.",
+    "No inherited original33-file coverage asserted as new reads this correction.",
+    "No original source packet,original observations,review job,CONT,Git or shared-session mutation.",
+    "Changed bytes need fresh nonauthor Gemini4 Argon High review before publication; no acceptance or security judgment."
+  ]
+}

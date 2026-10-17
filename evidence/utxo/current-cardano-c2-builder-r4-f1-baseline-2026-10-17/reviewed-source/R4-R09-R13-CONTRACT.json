@@ -1,0 +1,133 @@
+{
+  "format": "r4-test-part-b-source-contract/1",
+  "status": "AUTHOR_PROPOSED source fragment by claude-opus-4-8 HIGH; nothing run, imported, compiled, hashed, reviewed or adopted; authority 0; not sourceReady; no RED/GREEN observed",
+  "scope": "R09-R13 only, appended byte-for-byte after R4-TEST-PREFIX.py.part and the R01-R08 part; owns no footer; creates no build_k10_inputs_r4.py; edits no prefix/interface/other part",
+  "class": "TestR09ToR13(R4TestBase)",
+  "sortsAfter": "TestR00Prerequisites and TestR01ToR08 (unittest loads classes by sorted name; R00 still runs first with scratch empty)",
+  "methodCount": 5,
+  "methodNames": [
+    "test_r09_policy_pin_guards_extract_compiled",
+    "test_r10_consumer_messages_kept_verbatim_and_link_precedes",
+    "test_r11_bridge_rejects_every_consumer_disagreement",
+    "test_r12_legacy_env_from_host_tree_types_and_nonmutation",
+    "test_r13_contexts_manifest_literals_and_no_subset"
+  ],
+  "firstStatementPerMethod": "self.r4() (test_r12 binds it as r4 = self.r4()); only its absence yields the exact MISSING AssertionError at RED, no other assertion or effect runs first",
+  "redBehaviour": {
+    "everyMethod": "at RED build_k10_inputs_r4.py is absent, load_r4 does case.fail(MISSING) inside the leading self.r4(), raising exactly one AssertionError with message 'missing implementation: build_k10_inputs_r4.py'",
+    "noOtherAssertion": "no refused/assertEqual/counter/wrapper/plan runs before that fail; 0 errors contributed by this part",
+    "stopNotRed": "a present-but-unloadable module, any ImportError/SyntaxError, or a prerequisite/pin failure is a unittest ERROR = STOP, never produced or masked here"
+  },
+  "obligations": {
+    "R09": {
+      "method": "test_r09_policy_pin_guards_extract_compiled",
+      "contractClause": "CB407 (POLICY); contract section 7 R09",
+      "expectedStage": "POLICY (C2B-POLICY) for the negatives; full positive plan for the counter baseline",
+      "cases": [
+        {"sublabel": "pin mismatch", "input": "b9 = RAW[B9] + b\" \"", "expect": "ValueError 'C2B-POLICY: ...'", "oracle": "SHA-256 of the padded bytes cannot equal legacy.PIN_B9_APPLIED"},
+        {"sublabel": "not exact bytes", "input": "b9 = bytearray(RAW[B9])", "expect": "ValueError 'C2B-POLICY: ...'", "oracle": "CB407 requires exact bytes; bytearray type refused before extract"},
+        {"sublabel": "over cap", "input": "b9 = bytes(B9_CAP + 1)  (16777217 zero bytes)", "expect": "ValueError 'C2B-POLICY: ...'", "oracle": "CB407 'at most 16777216 bytes'"},
+        {"sublabel": "pin guards extract", "input": "all three negatives inside counted(legacy, 'extract_compiled')", "expect": "refused_calls == []", "oracle": "CB407 orders exact-bytes, cap and SHA checks before legacy.extract_compiled"},
+        {"sublabel": "counter is meaningful", "input": "genuine self.plan() inside counted(legacy, 'extract_compiled')", "expect": "len(ok_calls) == 1", "oracle": "CB407 calls the unchanged extract_compiled once on a passing pin"}
+      ]
+    },
+    "R10": {
+      "method": "test_r10_consumer_messages_kept_verbatim_and_link_precedes",
+      "contractClause": "CB408 (CONSUMER), CB407 (LINK before CONSUMER); contract section 7 R10",
+      "expectedStage": "CONSUMER (C2B-CONSUMER) for the wrap/collapse cases; LINK (C2B-LINK) for precedence",
+      "cases": [
+        {"sublabel": "verbatim EXPORT/SETUP/PROFILE", "input": "faulted(r2,'prepare_c2_issue', ValueError('C2I-<STAGE>: descriptor rejected by r2')) for STAGE in EXPORT, SETUP, PROFILE", "expect": "message == 'C2B-CONSUMER: ' + injected; len(calls)==1", "oracle": "CB408 echoes a conforming one-str-arg C2I-<STAGE> message verbatim behind the C2B-CONSUMER prefix"},
+        {"sublabel": "nonconforming -> literal", "input": "ValueError('boom'); ValueError('C2I-NOPE: unknown stage'); LF; CR; 'C2I-EXPORT: '+1024*'x' (over 1024 total); two args; bytes arg", "expect": "message == NONCONFORMING ('C2B-CONSUMER: nonconforming consumer refusal')", "oracle": "CB408 falls back when the arg is not one str, has CR/LF, exceeds 1024, or does not begin 'C2I-<STAGE>: ' for a STAGE in the 11 C2I stages"},
+        {"sublabel": "LINK precedes CONSUMER", "input": "export with setupRecordSha256 first hex digit swapped (swap1); r2 faulted to raise", "expect": "ValueError 'C2B-LINK: ...' and faulted calls == []", "oracle": "CB407 LINK gate runs before prepare_c2_issue is called"}
+      ]
+    },
+    "R11": {
+      "method": "test_r11_bridge_rejects_every_consumer_disagreement",
+      "contractClause": "CB409 (BRIDGE); contract section 7 R11",
+      "expectedStage": "BRIDGE (C2B-BRIDGE) for all 22 disagreements",
+      "oracleBase": "good = r2.prepare_c2_issue(fresh_export(), fresh_setup(), K6_EXPIRY, policy_id=bytes.fromhex(POLICY)); mutations injected in place by consumer_wrapper(after)",
+      "edits": [
+        "1 envCborHex swap1", "2 envelopeTokenNameHex swap1", "3 mintValueCborHex swap1",
+        "4 issueCborHex swap1", "5 expiry K6_EXPIRY+1", "6 policyIdHex '00'*28", "7 format 'x'",
+        "8 extra key added (13 result keys)", "9 envData tag ('constr',1,...)",
+        "10 envData 8 nodes", "11 envData node1 ('int', True) bool",
+        "12 issueData vk as bytearray", "13 issueData proof truncated to 191 bytes",
+        "14 format 'moriarty-c2-issue-artifacts/1'", "15 labels = v1 8-entry LABELS_8_V1",
+        "16 labels = superseded 14-entry LABELS_14_SUPERSEDED",
+        "17 labels rustAcceptance = DECLARED_SUBSET_NOT_EQUIVALENT (16 keys, changed value)",
+        "18 labels without vkProfile (15 keys)", "19 labels without jsonParseLimits (15 keys)",
+        "20 labels with a 17th key extraLabel", "21 setupRecordSha256Declared swap1",
+        "22 envData rebuilt with 9th node ('int', K6_EXPIRY+1)"
+      ],
+      "editCount": 22,
+      "note": "edits 1-13 are the R3 test_08 vectors reapplied to r2; 14-22 are the R4-specific additions named in contract R11; each uses swap1/LABELS_8_V1/LABELS_14_SUPERSEDED/R2_LABELS prefix literals, never R4 output"
+    },
+    "R12": {
+      "method": "test_r12_legacy_env_from_host_tree_types_and_nonmutation",
+      "contractClause": "contract section 5 and CB409; contract section 7 R12",
+      "expectedStage": "BRIDGE (C2B-BRIDGE) for every mutation; positive translation is not a refusal",
+      "cases": [
+        {"sublabel": "independent tree", "input": "good['envData']", "expect": "r4.legacy_env_from_host(env) == legacy.env_data(fields[1], fields[5])", "oracle": "R3 test_08 line and section 5; legacy.env_data(vkDigest, statementDigest) is the independent tree"},
+        {"sublabel": "non-mutation", "input": "copy.deepcopy(env) before the call", "expect": "env == before after the call", "oracle": "section 5 'never mutates its input'"},
+        {"sublabel": "wrong tag", "input": "('constr', 1, nodes)", "expect": "C2B-BRIDGE"},
+        {"sublabel": "too few nodes", "input": "('constr', 0, nodes[:8])", "expect": "C2B-BRIDGE"},
+        {"sublabel": "too many nodes", "input": "('constr', 0, nodes + [('int', 0)])", "expect": "C2B-BRIDGE"},
+        {"sublabel": "list not tuple", "input": "['constr', 0, nodes]", "expect": "C2B-BRIDGE", "oracle": "section 5 admits only an exact tuple"},
+        {"sublabel": "bool node", "input": "('constr', 0, [('int', True)] + nodes[1:])", "expect": "C2B-BRIDGE", "oracle": "section 5 bool is refused"},
+        {"sublabel": "non-allowed node type", "input": "('constr', 0, [None] + nodes[1:])", "expect": "C2B-BRIDGE", "oracle": "section 5 nodes must be tuple/list/str/bytes/int"},
+        {"sublabel": "float where int required", "input": "('constr', 0, nodes[:8] + [('int', 1.0)])", "expect": "C2B-BRIDGE", "oracle": "section 5 9th node must be an exact int in 0..2**64-1"}
+      ]
+    },
+    "R13": {
+      "method": "test_r13_contexts_manifest_literals_and_no_subset",
+      "contractClause": "CB410, CB412; contract section 7 R13",
+      "expectedStage": "RENDER success (self.plan() returns the dict of 6 relpaths to bytes); no refusal",
+      "cases": [
+        {"sublabel": "T5/T6/T7 contexts", "input": "k6_rows()[1:]", "expect": "outputs['contexts/<id>.uplc.txt'] == expected_context(row)", "oracle": "prefix ctx_text/env_cbor/k6_rows formatters (R3 test_09)"},
+        {"sublabel": "33 keys", "input": "json.loads(outputs['manifest.json'])", "expect": "set(manifest) == MANIFEST_KEYS", "oracle": "prefix MANIFEST_KEYS copied from the R3 test"},
+        {"sublabel": "format literals", "expect": "format/builderRevision/consumerFormat == MANIFEST_FORMAT/BUILDER_REVISION/R2_FORMAT"},
+        {"sublabel": "label/flag/limitation literals", "expect": "consumerLabels/builderLabels/flags/limitations == R2_LABELS/BUILDER_LABELS/FLAGS/LIMITATIONS (16/9/10/4)"},
+        {"sublabel": "pinned scalars", "expect": "expiry/policyIdHex/setupRecordSha256 == K6_EXPIRY/POLICY/PINS[SET][1]"},
+        {"sublabel": "gaps and inputs", "expect": "coverageGaps == expected_gaps(); inputs == expected_inputs()"},
+        {"sublabel": "cases", "expect": "cases == [expected_case(row) for row in k6_rows()]"},
+        {"sublabel": "no 'subset'", "input": "walk_strings(manifest)", "expect": "'subset' not in text.lower() for every manifest key/value string", "oracle": "CB412; LIMITATIONS and consumerProfile say 'selected checks', never 'subset'"}
+      ]
+    }
+  },
+  "sourceOracles": {
+    "prefixLiterals": ["RAW", "B9", "SET", "B9_CAP", "CONSUMER_MESSAGE_CHARS", "NONCONFORMING", "K6_EXPIRY", "POLICY", "R2_FORMAT", "R2_LABELS", "LABELS_8_V1", "LABELS_14_SUPERSEDED", "MANIFEST_KEYS", "MANIFEST_FORMAT", "BUILDER_REVISION", "BUILDER_LABELS", "FLAGS", "LIMITATIONS", "PINS"],
+    "prefixFormatters": ["fresh_export", "fresh_setup", "swap1", "dumps", "k6_fields", "k6_rows", "expected_context", "expected_case", "expected_gaps", "expected_inputs", "walk_strings"],
+    "prefixHelpers": ["self.r4", "self.plan", "self.refused", "self.counted", "self.faulted", "self.consumer_wrapper"],
+    "pinnedModules": ["r2 (c2_issue_artifacts_r2, root-adopted, independent dependency oracle, not code under test)", "legacy (build_k10_inputs: env_data, extract_compiled, PIN_B9_APPLIED)", "host_codec (not called directly in this part)"],
+    "never": "no expected value is derived from build_k10_inputs_r4.py output"
+  },
+  "effects": {
+    "filesystem": "none; no case_scratch, copy_inputs or run_main is used; scratch stays empty",
+    "network/subprocess/native/prover/key/VM": "none",
+    "touchedModules": "temporary attribute wrappers on r2 (prepare_c2_issue via faulted/consumer_wrapper) and legacy (extract_compiled via counted), each restored in finally by the prefix wrapped() context manager",
+    "neverPatched": "os, builtins, json, R4 itself; no sys.path/sys.modules/importlib use",
+    "purity": "all five methods exercise only plan_outputs/legacy_env_from_host, which the contract defines as pure (no I/O, clock, randomness or environment)"
+  },
+  "allowedWrappers": {
+    "faulted(r2,'prepare_c2_issue',error)": "R10 injects one labelled ValueError; records the call list",
+    "consumer_wrapper(after)": "R11 delegates to genuine r2 then mutates the result dict in place before BRIDGE checks it",
+    "counted(legacy,'extract_compiled')": "R09 counts calls to prove the pin guard"
+  },
+  "proposedLaterGreen": {
+    "condition": "requires the reviewed, root-adopted r2 bytes, the host_codec/legacy/fixture pins, an implemented build_k10_inputs_r4.py satisfying CB401-CB412, and R00 passing; only then do these assertions evaluate",
+    "R09": "three C2B-POLICY refusals; refused_calls == [] (extract not reached); ok_calls length 1 on a genuine plan",
+    "R10": "verbatim wrap for the three stages with one r2 call each; NONCONFORMING literal for all seven nonconforming shapes; C2B-LINK with zero r2 calls on a bad link",
+    "R11": "all 22 mutations refuse C2B-BRIDGE",
+    "R12": "positive translation equals legacy.env_data(vkDigest, statementDigest) with the input unmutated; all seven shape/type mutations refuse C2B-BRIDGE",
+    "R13": "T5/T6/T7 contexts equal the formatter; the 33-key manifest matches the 16/9/10/4 literals, pinned scalars, gaps, inputs and cases; no manifest string contains 'subset' in any case"
+  },
+  "sourceOnlyGaps": [
+    "R09 over-cap allocates 16777217 bytes; it exercises the cap branch but, like a source test, cannot prove the implementation avoids an input-proportional copy before the size check (CP04-style source-only limit).",
+    "R10 conformance is asserted through injected faults; genuine C2I-<STAGE> provenance inside r2 is r2's own obligation, not observable here.",
+    "R11/R12 use good = r2(...) as the independent oracle; r2 correctness itself is the separately reviewed r2 obligation, not retested here.",
+    "R13 asserts the 33 manifest keys but does not assert values for compiledValidatorTitle, scriptHexFile, scriptCompiledBytes or scriptInnerFlatBytes, which are not restated in the R4 API; R13 does not require their values, so they are left to a part that reads the pinned legacy main literals rather than guessed.",
+    "No proof, curve, Groth16, VK-profile, statement re-encode, Rust-acceptance, ledger, fee or ExUnits property is asserted; the K2 setup is single-party TEST ONLY and forgeable; the K6 proof is a captured local proof in an unauthenticated context."
+  ],
+  "prefixCompatibility": "the shared prefix helpers compose for all five methods as written; no incompatibility found; no prefix byte, global or helper is edited, rebound or worked around",
+  "gates": {"sourceReady": false, "executed": false, "R4ExecutionPermitted": false, "builderReliancePermitted": false, "nativeAuthority": 0}
+}

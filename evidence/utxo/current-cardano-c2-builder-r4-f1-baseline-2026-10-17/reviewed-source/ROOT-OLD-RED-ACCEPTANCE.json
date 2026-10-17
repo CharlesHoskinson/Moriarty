@@ -1,0 +1,69 @@
+{
+  "format": "root-r4-ordinary-red-acceptance/1",
+  "createdAt": "2026-10-17T19:25:56.737338+00:00",
+  "decision": "ACCEPT_SCOPED_MEANINGFUL_ORDINARY_RED_AND_PERMIT_CONSIDERATION_OF_OPUS_IMPLEMENTATION_SOURCE_AUTHORING",
+  "sourceTestSha256": "c9375097ccf1e98a84230619c3b2a8cdd611c8ec39fdc2d0d79e5aa4f76d02ad",
+  "actualResult": "/home/charl/moriarty-c2-opus55-restored-20261017/r4-ordinary-red-result/RESULT.json",
+  "actualResultSha256": "b8faf78062e1019edb74003d2018a389b88fe23c1248aa82604f11f3bdef3608",
+  "actualResultReview": "/home/charl/moriarty-c2-opus55-restored-20261017/jobs/R4-ORDINARY-RED-ACTUAL-RESULT-REVIEW-OPUS55/REVIEW.json",
+  "actualResultReviewSha256": "8d74df2a119b055d754ad72d0e0a30bd85ff3ac1e904dd19a5efb7d4c76d644f",
+  "requestedModel": "claude-opus-5-5",
+  "actualAssistantModels": {
+    "claude-opus-5-5": 37
+  },
+  "all31ReviewInputPinsUnchanged": true,
+  "rootDecisionBasis": "Two substantive freshsource/effects expectations preceded exactone ordinary18methodrun; freshnonauthoractualOpus5.5 actualresultreviewagreesAC01-08; rootreadfullstdout/stderr and source and rechecked pins.",
+  "measuredScope": "R00byte/CBOR/hash/fixture/source-consumer consistency on exactpinnedbytes; R01-R17onlymissing-filepath reached. All17methodbodies remainunexecuted; stubmeaningfulness onlysourceprediction.",
+  "reviewFindingsPreserved": [
+    {
+      "id": "RR-F01-FUTURE-GREEN-MANIFEST-VALUE-COVERAGE",
+      "severity": "low (blocks GREEN acceptance; does not block this RED)",
+      "evidence": "The test has 33 MANIFEST_KEYS (lines 108-116). Only 18 have their values asserted (R02 lines 611-614, R03 lines 649-653, R13 lines 969-981). The other 15 are checked for presence only, via set(manifest)==MANIFEST_KEYS at line 969: auditSourcePins, scriptHashAlgorithm, scriptHashClassification, scriptHashPreimage, scriptHashClaimedHex, scriptHashIndependentlyRecomputedHex, vkBytes, proofBytes, vkDigestHex, statementDigestHex, issueCborHex, compiledValidatorTitle, scriptHexFile, scriptCompiledBytes and scriptInnerFlatBytes. SCRIPT_HASH_STRINGS (lines 154-169) is never used in an assertion. AUDIT_SOURCE_PINS is compared only with the legacy module in R00 (line 519), never with the manifest. Both source audits carry the same gap (A F01, B F1), and the admission's knownFutureGreenBoundary records it.",
+      "requiredFix": "Before GREEN is accepted, either assert all 15 values against frozen literals and legacy-derived facts, or record each deferral explicitly in the R13 obligation and get fresh votes on it. The amended test bytes need a fresh non-author review and their own ordinary RED. This RED acceptance is bound to c9375097 and does not transfer to amended bytes. Do not waive this because this RED passed."
+    },
+    {
+      "id": "RR-F02-SOURCE-AUDIT-CITATION-INACCURACIES",
+      "severity": "info",
+      "evidence": "Source B puts R03's first self.r4() at line 622 (in its R03 assessment and its list of first lines); the source and the actual traceback both say 618. Source A F02 cites docstring line 557; the attribution is on line 558. Source B R07 says 'raw U+00FF'; the test inserts a raw 0xFF byte, invalid UTF-8, at line 766. Source B R13 says '4 kept-from-R2 fields', fewer than its own F1 list. Source A's 'test_r12 binds r4' is incomplete: R01-R08 and R12 bind it. The other spot-checked citations are correct, including host_codec lines 497-511, legacy lines 58, 90-91, 308-319 and 397-430, and r2 lines 83-100 and 495-508.",
+      "requiredFix": "No source change, and the original reviews stay unchanged. Downstream records should cite R03 at line 618 and should not rely on either audit's line numbers without checking them. Verdicts are unaffected."
+    },
+    {
+      "id": "RR-F03-ROOT-RECORDED-CAPTURE-AND-ENVIRONMENT-FIELDS",
+      "severity": "info",
+      "evidence": "RESULT and LAUNCH give stdout and stderr as file paths with bytes and SHA, and stdin as DEVNULL. Neither has an explicit field saying stdout and stderr were opened as exclusive regular files rather than PIPE; that comes only from the admission and envelope capturePlan. Directory modes (isolated and inputs 0555) and directory listings are covered only by the boolean allPinsModesListingsUnchanged. The interpreter hash 52e0a13e appears only in the pre-run envelope. stderr is complete (it ends with the final summary line) and far below 2 MiB, so nothing was truncated. bwrap --unshare-all is a captured argv only, not a platform attestation.",
+      "requiredFix": "Not blocking. For the GREEN result record, add explicit fields for capture mode (regular file vs PIPE, O_EXCL), directory modes and listings before and after, and an interpreter realpath and hash taken after the run."
+    },
+    {
+      "id": "RR-F04-R01-R17-BODIES-UNEXECUTED",
+      "severity": "info",
+      "evidence": "All 17 failures stop at load_r4 line 249, before any assertion in the method bodies. So the RED shows only that a missing file is detected. The test-side behaviour of the bodies has never run: mkfifo (line 734), the umask set-and-restore (lines 997-998), the 0555 parent WRITE refusal in R16 (lines 1052-1059), which depends on permission enforcement inside the bwrap user namespace, and the run-minus-baseline counters in R17.",
+      "requiredFix": "None now. At GREEN, any test-side error is STOP, not RED and not an implementation defect, with no retry and no tuning. The future result audit must check every body's actual outcome."
+    },
+    {
+      "id": "RR-F05-STALE-PROVENANCE-TEXT-IN-FROZEN-BYTES",
+      "severity": "info",
+      "evidence": "Lines 4, 558 and 835 say the fragments were 'never run, imported, compiled or reviewed'; that is now historical and untrue after the reviews and this run. There is also a missing blank line between line 983 and the class at line 984 (cosmetic).",
+      "requiredFix": "Do not edit the frozen bytes. Treat the text as historical. Fix it only in a separately reviewed amended revision, for example together with RR-F01."
+    },
+    {
+      "id": "RR-F06-SAME-PROVIDER-NONDIVERSITY",
+      "severity": "info",
+      "evidence": "This reviewer is claude-opus-5-5, the same model that wrote the prefix and R00, running in a fresh non-author context. The source audits A and B are claude-opus-4-8 (59 and 37 assistant envelopes), the same model that wrote Parts A/B/C. USER-BOTH-OPUS-RULE.md line 21 and the CP08 independence note say there is no provider diversity.",
+      "requiredFix": "Record the identities as stated. Claim no provider or model diversity. Keep the requirement for two substantive agreeing fresh votes on consequential decisions."
+    }
+  ],
+  "remainingGreenPrerequisites": [
+    "All15presence-onlymanifestvalues require independent assertions beforeGREENacceptance; F1sourcewriteralreadyassigned. No deferral chosen.",
+    "Any amendedtest needsfreshfullsource/effectsreview and itsownordinaryRED, no automatictransferofc937...result.",
+    "Implementation source plus freshnonauthorOpus andGeminiSolglue review, rootoneGREENdecision, freshactualGREENaudit, separateCP08r2reliance andR4adoption decisions.",
+    "GREENcapturemustexplicitrecord regular-file/O_EXCL modes, dir modes/listings before/after andinterpreter realpath/hash afterrun perRR-F03."
+  ],
+  "oldResultRecordUnchanged": true,
+  "implementationSourceAuthoringPermitted": true,
+  "implementationImportOrExecutionPermitted": false,
+  "greenExecutionPermitted": false,
+  "R4ImplementationAdopted": false,
+  "builderReliancePermitted": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true
+}
