@@ -1,0 +1,374 @@
+{
+  "main": {
+    "heroBody": "Moriarty is a language for financial contracts. Webs let a Cardano application attach proofs to a transaction, so its validator can check that the contract’s rules were followed.",
+    "heroExample": "For an invoice payment, that means checking how much reaches the seller and how much is still owed after the fee. The example below follows those amounts through a single payment.",
+    "explorerIntro": "An invoice is one use for a Web. Choose another application to see the conditions its contract checks. Select a condition to read the claim and where its inputs come from; remove proof coverage for it to see why an incomplete set cannot settle.",
+    "proofRoleExplanation": "A condition is something the contract requires, such as a correct fee calculation. A Strand contains a Groth16 proof, its public claim and the information tying it to this transaction. One proof can cover several conditions. The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified. An external price or delivery record still needs an authenticated source and a freshness rule.",
+    "definitions": [
+      {
+        "term": "Strand",
+        "body": "A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction. For an invoice, its claim might cover the payment calculation and the unpaid balance."
+      },
+      {
+        "term": "Web",
+        "body": "A Web collects the Strands a contract requires for a transaction. The contract sets those requirements. Settlement needs every required condition covered by a matching Strand."
+      },
+      {
+        "term": "Claim specification",
+        "body": "A claim specification describes a kind of claim: what it asserts, which inputs it uses and which compiled rules it must satisfy. It can be reused across transactions; a proof for an old state cannot simply be reused for a changed one."
+      }
+    ],
+    "assemblyComplete": "All required conditions are covered. The Web can be submitted for settlement; the validator still checks it against the actual transaction.",
+    "assemblyIncomplete": "A required condition has no proof coverage. This Web cannot authorize settlement. Any proof claims already issued remain locked until settlement or a claimant-signed reclaim after expiry.",
+    "worksheet": {
+      "title": "Choose how much to pay the seller",
+      "intro": "The invoice is for 100 CASH, with a separate reserve obligation of 10 CASH. The escrow—the account holding the funds—starts with {openingCash} CASH. Each partial payment costs a 2 CASH program fee.",
+      "modeLabel": "112 CASH · fee included",
+      "modeBody": "The extra 2 CASH funds the fee for this payment. Afterward, the remaining cash covers both the unpaid invoice and the reserve.",
+      "amountLabel": "Payment to the seller",
+      "amountRangeNote": "Choose 1–99 CASH for a partial payment. Paying the full invoice uses a separate action.",
+      "backingLine": "The remaining {cash} CASH covers {duties} CASH still owed.",
+      "feeRule": "The {amount} CASH payment reduces the invoice balance. The separate {fee} CASH fee does not.",
+      "oneStepNote": "This example funds one partial payment. Another partial payment would need another {fee} CASH fee allowance.",
+      "reserveNote": "The {reserveDuty} CASH reserve obligation remains.",
+      "proofSeparation": "A partial payment still needs all of its proofs. An unpaid balance does not make the Web incomplete.",
+      "assetNote": "CASH is an example unit in the invoice program.",
+      "networkFeeNote": "Cardano network fees, collateral and the minimum ADA held in proof-claim outputs are separate; this worksheet does not estimate them."
+    },
+    "lifecycleTitle": "How a Web reaches settlement",
+    "lifecycleIntro": "The example uses an issuance route: proofs are checked in earlier transactions, then their on-chain claim outputs are consumed together at settlement. Creating those outputs does not execute the invoice payment.",
+    "lifecycleSteps": [
+      {
+        "id": "authorize",
+        "title": "The owner signs limits",
+        "body": "Before proving, the owner signs an intent that limits what may leave the account and what each recipient must receive. It also identifies the permitted fees, validity window and proof relation. A one-time nonce prevents the same authorization being used again."
+      },
+      {
+        "id": "prove",
+        "title": "A prover builds the Web",
+        "body": "The prover runs the financial program and produces the required Strands. Each claim is tied to the state being spent, its sequence number, the settlement script, the catalogue of permitted claims and verification keys, signed intents and claimant. One execution proof can cover several required conditions."
+      },
+      {
+        "id": "issue",
+        "title": "Proof claims go on-chain",
+        "body": "An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA. This output records checked evidence for later settlement. It does not pay the seller or mint the application’s asset."
+      },
+      {
+        "id": "settle",
+        "title": "The transaction settles",
+        "body": "Settlement consumes every required claim output and burns its claim token. The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants’ signatures. The application then checks inclusion and its required finality, and reads back the payments and remaining obligations."
+      }
+    ],
+    "faqs": [
+      {
+        "id": "claim-vs-asset",
+        "question": "Does a proof claim mint my application’s token?",
+        "answer": "No. Issuing a proof claim creates an output that records checked evidence. Settlement consumes it and burns the claim token. Your application’s token has its own minting policy, which controls supply, recipients and any issuance cap.",
+        "technicalCardId": "issuance-route"
+      },
+      {
+        "id": "permission",
+        "question": "Do I need permission from Moriarty to build an application?",
+        "answer": "No. Developers can write, compile, prove and deploy programs in the supported language without approval from Moriarty maintainers. The application still has to follow the ledger’s rules and respect the authorization of anyone whose assets it moves. A contract may also define access rules for its own users.",
+        "technicalCardId": "scope-and-permission"
+      },
+      {
+        "id": "owner-approval",
+        "question": "What does the owner authorize?",
+        "answer": "The owner signs an intent before proving. It defines per-asset limits on gross debits, fees and new liabilities, as well as the minimum net amount each beneficiary must receive. Its validity window, one-time nonce and exact proof relation limit where and when it can be used. Network fees are shown separately.",
+        "technicalCardId": "effects-authority"
+      },
+      {
+        "id": "signers",
+        "question": "Who signs the settlement transaction?",
+        "answer": "Each proof-claim output names a claimant. Consuming it at settlement requires that claimant’s signature and burns the claim token. The validator also checks the prior signed intents of the accounts being debited. Those owner authorizations and the later claimant signatures serve different purposes.",
+        "technicalCardId": "signer-boundary"
+      },
+      {
+        "id": "readback",
+        "question": "How do I know the payment happened?",
+        "answer": "Check that the transaction was included, wait for the finality your application requires, then read back the actual outputs and remaining obligations. Reconcile those amounts with the owner’s signed intent. A timeout leaves the outcome unknown; it does not establish that the payment failed.",
+        "technicalCardId": "readback-boundary"
+      },
+      {
+        "id": "partial-vs-missing",
+        "question": "Can a partial payment have a complete Web?",
+        "answer": "Yes. Completeness means every required condition for this payment has proof coverage. It does not mean the entire invoice has been paid. The unpaid invoice balance and reserve obligation remain in the next state.",
+        "technicalCardId": "web-completeness"
+      },
+      {
+        "id": "unused-claims",
+        "question": "What if the Web never settles?",
+        "answer": "The issued claim outputs keep holding their minimum ADA. Their claimant can reclaim them after the chosen expiry by signing a reclaim transaction. If a catalogue account advances its sequence through revocation, or a competing settlement spends the same state, the old claims can no longer settle and must wait for expiry.",
+        "technicalCardId": "issuance-route"
+      },
+      {
+        "id": "cost",
+        "question": "Does splitting a Web into more Strands reduce the cost?",
+        "answer": "Each Strand needs its own Issue transaction on this route, and its claim output holds minimum ADA until settlement or reclaim. A single execution proof covering several conditions may be simpler. Comparing costs requires measuring complete transactions on the target network; splitting alone does not establish a saving.",
+        "technicalCardId": "page-scope"
+      }
+    ],
+    "caseCopy": [
+      {
+        "id": "invoice",
+        "summary": "Pay {amount} CASH toward an invoice held in escrow. The seller receives the payment and the fee recipient receives a separate {fee} CASH. The unpaid invoice balance and reserve obligation remain in the next state.",
+        "roles": [
+          {
+            "id": "invoice-payment",
+            "label": "Payment calculation",
+            "claim": "The seller receives the chosen partial payment.",
+            "statement": "Opening invoice duty 100 CASH; payment {amount} CASH; escrow debit for payment and fee {debit} CASH.",
+            "authentication": "The opening duty comes from the escrow state this transition spends, and CASH is the asset the invoice program declares."
+          },
+          {
+            "id": "invoice-fee",
+            "label": "Separate program fee",
+            "claim": "The escrow pays a separate {fee} CASH fee, which does not reduce the invoice balance.",
+            "statement": "Escrow pays the seller {amount} CASH and the fee recipient {fee} CASH; the fee does not reduce invoice duty.",
+            "authentication": "The consuming validator checks the actual seller and fee-recipient outputs against these amounts."
+          },
+          {
+            "id": "invoice-duty",
+            "label": "Remaining obligations",
+            "claim": "The next state records the unpaid invoice balance and the unchanged reserve obligation.",
+            "statement": "Invoice 100 − {amount} = {invoiceDuty} CASH; reserve duty stays {reserveDuty} CASH; total duties {duties} CASH; escrow keeps {cash} CASH.",
+            "authentication": "Duties carry over from the spent escrow state and change only through recorded accruals and discharges."
+          }
+        ]
+      },
+      {
+        "id": "dex",
+        "summary": "Exchange assets through a liquidity pool, combining two orders in one transaction. Each owner sets a minimum amount to receive. The contract must check both the pool calculation and what each owner actually receives.",
+        "roles": [
+          {
+            "id": "dex-orders",
+            "label": "Each owner’s result",
+            "claim": "Each owner receives at least the minimum amount they agreed to.",
+            "statement": "Two orders each offer 100 A and require at least 90 B net; each owner receives 92 B.",
+            "authentication": "Asset identities and each owner’s limits come from the owners’ signed intents; the validator checks the actual outputs."
+          },
+          {
+            "id": "dex-pool",
+            "label": "Pool update",
+            "claim": "The updated pool reserves follow the pool’s rules for fees and rounding.",
+            "statement": "The reserve update, fee rule and exact rounding agree with both orders.",
+            "authentication": "Pool reserves come from the pool state being spent; any outside price carries its named source and freshness limit."
+          },
+          {
+            "id": "dex-batch",
+            "label": "Combined order accounting",
+            "claim": "The combined transaction accounts for both orders without counting one payment toward two orders.",
+            "statement": "The amounts used for each owner’s result are the amounts in the batch accounting, and no payment counts toward two orders.",
+            "authentication": "The consuming validator allocates actual outputs under its profile’s rule: one output per order, or an exact partition that admits combined payments with every order allocated once."
+          }
+        ]
+      },
+      {
+        "id": "issuance",
+        "summary": "Create 300 units of an application token under a cap of 1,000, then distribute them to two recipients. The cap leaves room for up to 700 more units under the minting policy; that capacity is not an amount already owed.",
+        "roles": [
+          {
+            "id": "issuance-supply",
+            "label": "Supply limit",
+            "claim": "The number of tokens issued stays within the cap.",
+            "statement": "First issue: 300 units under a cap of 1,000; unissued capacity is 700.",
+            "authentication": "The application asset’s own minting policy enforces the cap and continues the supply state from its predecessor."
+          },
+          {
+            "id": "issuance-distribution",
+            "label": "Recipient amounts",
+            "claim": "The amounts sent to the recipients add up to the number of tokens issued.",
+            "statement": "Recipient one receives 180 units and recipient two receives 120 units; 180 + 120 = 300.",
+            "authentication": "The minting policy and the consuming validator check the actual mint and recipient outputs."
+          },
+          {
+            "id": "issuance-duties",
+            "label": "Separate token obligations",
+            "claim": "Issuing tokens creates a servicing obligation only if the program defines one.",
+            "statement": "The remaining 700 units of capacity are not debt. A redemption promise is a duty only when the program defines it.",
+            "authentication": "A servicing duty names its parties, its exact asset and its creation and discharge rules; eligibility documents keep their issuer and freshness limits."
+          }
+        ]
+      },
+      {
+        "id": "loan",
+        "summary": "A debt of 100 CASH grows by 5 CASH for the period. A 35 CASH repayment reduces it to 70 CASH. The borrower also pays a 2 CASH fee, which does not repay any debt.",
+        "roles": [
+          {
+            "id": "loan-accrual",
+            "label": "Updated debt",
+            "claim": "The debt increases by the period’s accrued amount.",
+            "statement": "Debt 100 CASH plus accrual 5 CASH gives a duty of 105 CASH.",
+            "authentication": "The loan agreement fixes period, rate and rounding; a variable rate carries its named observation source and freshness rule."
+          },
+          {
+            "id": "loan-payment",
+            "label": "Repayment and fee",
+            "claim": "The payer funds the debt repayment and its separate fee.",
+            "statement": "Debt payment 35 CASH plus separate fee 2 CASH gives payer gross debit 37 CASH.",
+            "authentication": "Payer, lender, fee recipient and asset match the payer’s signed intent and the transaction’s actual outputs."
+          },
+          {
+            "id": "loan-duty",
+            "label": "Remaining debt",
+            "claim": "Only the repayment reduces the debt; the fee is accounted for separately.",
+            "statement": "Duty 105 − repayment 35 = 70 CASH remaining; the 2 CASH fee is not repayment.",
+            "authentication": "The continuing debt carries over from the predecessor state through explicit accrual and discharge entries; collateral release follows its own policy."
+          }
+        ]
+      },
+      {
+        "id": "treasury",
+        "summary": "Allocate funds to two beneficiaries while paying a separate fee. The transaction also creates reserve and rebate obligations, so the treasury must retain enough of each asset to cover them.",
+        "roles": [
+          {
+            "id": "treasury-quotient",
+            "label": "Division and remainder",
+            "claim": "The allocation uses the correct quotient and remainder when dividing 23 by 3.",
+            "statement": "Dividing 23 by 3 gives 7 with a remainder of 2: 23 = 3 × 7 + 2, and the remainder is less than 3. The program call is allocate(true,23,7,2), where true supplies the approval flag.",
+            "authentication": "The allocation inputs, including approved=true, sit inside the intent the debited treasury account signs; a separate governance approver must itself be a required signer, an advancer or an authenticated input."
+          },
+          {
+            "id": "treasury-payments",
+            "label": "Beneficiary payments",
+            "claim": "The beneficiary payments and fee match the allocation calculation.",
+            "statement": "Alpha receives 14 A and 4 B; beta receives 7 A; fees receive 2 A. Total custody debit is 23 A and 4 B.",
+            "authentication": "Treasury custody, the identities of A and B and the beneficiary outputs are checked by the consuming validator."
+          },
+          {
+            "id": "treasury-reserve",
+            "label": "Funds retained for obligations",
+            "claim": "The treasury keeps enough of assets A and B to cover the new reserve and rebate obligations.",
+            "statement": "Allocation creates a reserve duty of 2 A and a rebate duty of 6 B. The treasury holds 25 A and 10 B before the step and keeps 2 A and 6 B against those duties.",
+            "authentication": "Opening custody comes from the treasury state being spent; the consumer enforces that custody covers the duties."
+          }
+        ]
+      }
+    ]
+  },
+  "sevenLayers": {
+    "kicker": "Architecture",
+    "title": "The parts of a zero-knowledge proof system",
+    "intro": "A proof is useful only if it checks the right program against the right inputs. These seven concerns explain the connection, from the financial rules a developer writes to the checks a Cardano validator performs. They influence one another; the numbers are not seven execution steps.",
+    "selectorLabel": "Choose a part of the proof system",
+    "panelLabel": "Explanation of the selected concern",
+    "artifactLabel": "Result",
+    "dependenciesLabel": "Related concerns",
+    "layers": [
+      {
+        "number": 1,
+        "headline": "Which keys does the circuit use?",
+        "subtitle": "Keys for the compiled circuit"
+      },
+      {
+        "number": 2,
+        "headline": "What rules does the contract enforce?",
+        "subtitle": "The financial program"
+      },
+      {
+        "number": 3,
+        "headline": "Which values satisfy those rules?",
+        "subtitle": "Values the prover supplies"
+      },
+      {
+        "number": 4,
+        "headline": "How are the rules expressed as constraints?",
+        "subtitle": "Equations the proof can check",
+        "plainLanguage": "The compiler translates the program into equations. A prover must supply values that satisfy all of them. Arithmetization is the name for this way of expressing the computation."
+      },
+      {
+        "number": 5,
+        "headline": "How does Groth16 prove the calculation?",
+        "subtitle": "The proof construction"
+      },
+      {
+        "number": 6,
+        "headline": "Which cryptographic assumptions does it rely on?",
+        "subtitle": "Curves, hashes and signatures"
+      },
+      {
+        "number": 7,
+        "headline": "Does this proof belong to this transaction?",
+        "subtitle": "The connection to Cardano"
+      }
+    ],
+    "relationshipsTitle": "How these concerns affect one another",
+    "mappingTitle": "Where each concern appears in a Web",
+    "mappingHeaders": [
+      "Concern",
+      "Moriarty example"
+    ],
+    "credit": "This explanation uses the seven-layer framework from Proving Nothing, a book about zero-knowledge systems. The application to Moriarty is developed here.",
+    "sourceLabel": "Read the framework and its source passages"
+  },
+  "groth16": {
+    "kicker": "The proof system",
+    "title": "Groth16 proofs and trusted setup",
+    "intro": "Groth16 lets a prover show that a computation satisfies a fixed set of constraints without publishing its private inputs. A Strand uses it to carry a compact proof that the financial calculation follows those rules. Here is what the proof contains, what the validator checks and why setup is needed.",
+    "concepts": [
+      {
+        "label": "Public information",
+        "title": "The statement",
+        "body": "The statement says what is being proved. In a Web, the public inputs carry a digest of the statement bytes. The validator rebuilds those bytes from the transaction, so a correct calculation cannot be attached to a different payment. A proof alone does not authenticate an external price or document."
+      },
+      {
+        "label": "Private information",
+        "title": "The witness",
+        "body": "The witness contains the other values needed to satisfy the circuit, including intermediate calculations. The proof hides those values. Anything already published in a Cardano output or the public statement remains public."
+      },
+      {
+        "label": "The check",
+        "title": "Proof and verification key",
+        "body": "The proving key lets a prover create a proof from the statement and witness. The validator uses the verification key and public inputs to check a proof of three group elements with a pairing equation. Both keys are public; the secret that must be destroyed belongs to setup."
+      }
+    ],
+    "setupTitle": "Why there is a trusted setup",
+    "setupIntro": "Groth16 needs parameters for the exact compiled circuit. Setup derives the proving and verification keys using secret randomness. If someone retains that randomness, they can forge proofs. A common ceremony divides this work into two phases so part of it can be shared.",
+    "setupStages": [
+      {
+        "label": "Phase 1",
+        "title": "Parameters that circuits can share",
+        "body": "Often called powers of tau, this phase prepares parameters for a particular curve and capacity. Circuits can reuse them when their curve and format are compatible and they fit within that capacity."
+      },
+      {
+        "label": "Phase 2",
+        "title": "Keys for one compiled circuit",
+        "body": "Each distinct circuit needs its own second phase. Its constraints, public-input layout and bounds determine which keys are valid. New values can reuse those keys; a changed circuit needs a new phase 2."
+      }
+    ],
+    "counter": {
+      "kicker": "Try a circuit count",
+      "title": "How many setup stages are needed?",
+      "body": "Assume these circuits share a compatible curve and format, and one phase-1 parameter set is large enough for all of them. Change the count to see what can be reused.",
+      "label": "Distinct compiled circuits",
+      "result": "For {K} distinct circuits, phase 1 can be shared and phase 2 runs {K} times. These are stages, not {K} + 1 complete ceremonies."
+    },
+    "reuseTitle": "When can the same keys be used again?",
+    "reuseExamples": [
+      {
+        "title": "The amounts or users change",
+        "body": "The keys can be reused if the compiled circuit stays the same. New transactions and different public-input values do not, by themselves, require setup again."
+      },
+      {
+        "title": "The compiled rules change",
+        "body": "A circuit with different constraints, bounds or public-input layout needs a new phase 2. A new Groth16 wrapper also has its own circuit. Aggregation does not remove setup for the base circuits."
+      },
+      {
+        "title": "One bounded circuit covers several kinds of claim",
+        "body": "A parameterized circuit can cover many claims within fixed bounds. That is how a catalogue can contain more claim types than circuits. It does not make the circuit unbounded."
+      }
+    ],
+    "trustTitle": "What makes a ceremony trustworthy?",
+    "cardanoTitle": "How many setups for all of Cardano?",
+    "cardanoCount": "There is no fixed Cardano-wide total. Count one phase 2 for each distinct compiled circuit, including wrappers. Count phase 1 separately for each compatible parameter set those circuits use; an existing set can be reused if its capacity is sufficient. Claim types and architectural layers do not determine the number of circuits. A total requires a frozen inventory of compiled circuits.",
+    "technicalLinkLabel": "Read the status of Moriarty’s current test setup"
+  },
+  "scenarioLabels": {
+    "invoice": "Invoice payment",
+    "dex": "Exchange orders",
+    "issuance": "Token issuance",
+    "loan": "Loan repayment",
+    "treasury": "Treasury allocation"
+  }
+}

@@ -1,0 +1,153 @@
+[
+  {
+    "reviewToken": "webs-readers-20261017-H03",
+    "persona": "A treasury governance participant",
+    "summary": "As a treasury governance reader I can follow the mechanics at the level of \"what is checked and where\": a Web is a set of Strands, each Strand carries one Groth16 proof plus the statement it proves, and settlement requires every required condition to be covered. The treasury example's arithmetic reconciles (23 A debited across alpha 14, beta 7, fees 2; 25 \u2212 23 = 2 A left against the reserve duty; 10 \u2212 4 = 6 B left against the rebate duty). The page does not show those reconciliations, though, and its treasury copy states things as settled fact that the technical notes say are only proposed or unimplemented: the 25 A / 10 B opening custody is described as what the treasury \"holds\" when the source only requires 23 A / 4 B; the reserve duty is shown as \"kept\" with no mention that nothing in the source can discharge it or close the thread. Most important for my role, the page never says who sets approved=true or whether a second approver exists, and the one sentence on that topic (\"a separate governance approver must itself be a required signer, an advancer or an authenticated input\") reads as a policy option rather than a statement of what this example does. The diagrams (hub-and-spoke \"Web / PROOF COLLECTION\" with three labelled cards) show the names of checks but no amounts, no approval input, no signer and no before/after custody, so they teach almost nothing that the inspector text does not already say.",
+    "comprehension": [
+      {
+        "task": "(1) What a Web and a Strand contain",
+        "myAnswer": "A Strand is one Groth16 proof plus its public claim and the data tying that claim to one transaction. A Web is the collection of Strands the contract requires for one transaction; settlement is all-or-nothing over that set. For treasury this means three treasury checks (division, beneficiary payments, reserved funds) must each be covered by some Strand before the allocation can settle.",
+        "pageEvidence": "Main text: 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' Web: 'collects the Strands a contract requires... Settlement needs every required condition covered by a matching Strand.' Treasury diagram: '3 of 3 conditions covered.'",
+        "whatIStillCannotExplain": "Whether one Strand covers several treasury checks or one per check. The page says one proof may cover several conditions but never shows which of the three treasury checks the allocation example uses. The 'three Strands' count in the earlier invoice/treasury diagrams is an inference from the number of cards, not something the page states. Also not explained: what 'the information that ties it' concretely contains beyond a digest."
+      },
+      {
+        "task": "(2) How a proof connects to real transaction inputs and outputs",
+        "myAnswer": "The proof attests the arithmetic over values the prover supplied. Connection to the ledger happens at settlement: the validator rebuilds each statement from the transaction and the spent state, and compares it to the claim that was checked at issuance. Amounts in outputs remain public. So a treasury allocation only binds to actual outputs through the validator, not through the proof.",
+        "pageEvidence": "Architecture/Verification: 'the validator rebuilds each statement from the transaction and spent state.' Invoice inspector: 'The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.' Treasury inspector: 'Treasury custody, the identities of A and B and the beneficiary outputs are checked by the consuming validator.'",
+        "whatIStillCannotExplain": "Which transaction fields go into the statement for the treasury allocation (inputs, outputs, asset identities, beneficiary addresses, fee output?) and in what order. Without that field list the reader cannot check that alpha's 4 B or the 2 A fee output are the ones the proof was about. The technical notes say the context fields are 'free booleanized witness bits that are hashed, not interpreted'; that is the opposite of what the main text implies, and the main page never says so."
+      },
+      {
+        "task": "(3) A complete concrete payment workflow",
+        "myAnswer": "Invoice: escrow state is spent with 110 or 112 CASH funding (the page uses 112), a 35 CASH partial moves 35 to the seller, 2 to the fee recipient, a 37 gross debit leaves 75 cash against 65 invoice plus 10 reserve. The four steps (owner signs limits, prover builds Strands, Issue transactions create claim outputs, settlement consumes and burns them) show the sequence. Treasury: owner signs intent with approved=true and caps; prover produces three Strands; three Issue transactions; one settlement pays alpha 14 A / 4 B, beta 7 A, fees 2 A and leaves 2 A and 6 B under duty.",
+        "pageEvidence": "Invoice worksheet: 'Opening escrow funding 112 CASH ... Cash remaining 75 CASH ... Total still owed 75.' Settlement stages: 'Step 1 The owner signs limits ... Step 4 The transaction settles.' Treasury result list: 'Alpha receives 14 A and 4 B; beta receives 7 A; fees receive 2 A. Total custody debit is 23 A and 4 B.'",
+        "whatIStillCannotExplain": "Who funds the 112 CASH opening (buyer? the page's own technical notes say no source specifies the buyer's opening debit). Who signs each of the three Issue transactions (the notes say the supplied material does not state this). Who signs the treasury settlement beyond 'claimants'. And, for treasury, how 4 B is derived: the formula only gives A-quotients; the B amount's source is not shown."
+      },
+      {
+        "task": "(4) The distinction between conditions, proofs and on-chain claim outputs",
+        "myAnswer": "A condition is something the contract requires (a required check card). A proof is a Groth16 proof carried in a Strand. A claim output is a UTxO that an Issue transaction creates after verifying one proof; it holds minimum ADA and records the checked claim; settlement burns its claim token. The claim output does not pay anyone and does not mint the application asset.",
+        "pageEvidence": "Settlement step 3: 'An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA. This output records checked evidence... It does not pay the seller or mint the application's asset.' FAQ: 'Does a proof claim mint my application's token? No.'",
+        "whatIStillCannotExplain": "Terminology drifts between 'claim output', 'proof-claim output', 'claim token' and 'claim' within a few paragraphs, so a governance reader cannot tell whether they are one object or two. For treasury, the most consequential fact is that an incomplete Web leaves claim outputs locking min-ADA until expiry, and only the claimant can reclaim them; the main page does not say that anywhere except the FAQ, and never says what that means for an approved allocation that never settles."
+      },
+      {
+        "task": "(5) What gets set up and how to count setups",
+        "myAnswer": "Groth16 needs one phase-2 setup per distinct compiled circuit, with phase 1 shareable. The page's example of 5 circuits gives 1 shared phase 1 and 5 phase 2 stages. The current test setup is forgeable by its operator, and no production ceremony is recorded.",
+        "pageEvidence": "Setup panel: 'Try a circuit count ... 1 shared phase 1 + 5 phase 2.' Technical notes: 'The current class-0 test setup is forgeable by its operator, so no production security claim follows.'",
+        "whatIStillCannotExplain": "Whether any setup I would rely on as a treasury participant exists; the main setup section does not say the current keys are a test setup. For a governance reader the count matters less than the question of who ran the ceremony, which the page does not answer. Total count for the treasury application is not stated."
+      }
+    ],
+    "missingDepth": [
+      {
+        "section": "Treasury allocation: approved flag",
+        "missingExplanation": "The page says approved=true 'sits inside the intent the debited treasury account signs' and then that a 'separate governance approver must itself be a required signer, an advancer or an authenticated input'. It never says whether this example has a second approver, what approved=false would do, or whether the debited account's own signature is the only consent.",
+        "concreteExampleNeeded": "A worked case with two rows: (a) approved=true signed only by the treasury account's required signers, showing the signer list; (b) the same allocation with a named governance approver as a required signer, showing that signer's key in the transaction. State what happens with approved=false.",
+        "whyItMatters": "A treasury governance participant needs to know whether a boolean in the intent is a governance decision or self-consent by the spending account. The page can be read either way."
+      },
+      {
+        "section": "Treasury allocation: quotient and beneficiary amounts",
+        "missingExplanation": "The page gives 23 = 3 \u00d7 7 + 2 and then lists alpha 14 A, beta 7 A, fees 2 A, plus alpha 4 B. It never says that 3 is the number of units, that alpha takes 2 units and beta 1, that the remainder goes to fees, or where the 4 B comes from. The 2 A remainder and the 2 A reserve duty are both '2' and the page does not say whether that is a coincidence.",
+        "concreteExampleNeeded": "A table: input, unit count, unit size, remainder, recipient, asset, amount, with the formula applied row by row, and a separate line showing the B amount's source.",
+        "whyItMatters": "Without this mapping the reader cannot verify that the beneficiary payments follow from the division, which is the very check the page calls 'the correct quotient and remainder'."
+      },
+      {
+        "section": "Treasury allocation: remaining reserves",
+        "missingExplanation": "The main text says the treasury 'keeps 2 A and 6 B against those duties'. The technical notes say the source has no action that discharges allocation_reserve, the rebate can be discharged with rebate(amount), and a nonzero duty blocks Close. None of that is on the main page.",
+        "concreteExampleNeeded": "A timeline: after allocate, the custody and duty state (25\u221223=2 A, 10\u22124=6 B; reserve duty 2 A, rebate duty 6 B); then the rebate(amount) call that reduces the B duty; then the statement that the 2 A reserve duty remains and the thread cannot close.",
+        "whyItMatters": "Treasury participants need to know whether a reserve can ever be released. The page implies it can by listing it as a retained amount."
+      },
+      {
+        "section": "Opening custody 25 A / 10 B",
+        "missingExplanation": "The page presents 25 A and 10 B as what the treasury 'holds' before the step. The technical notes say that is a PROPOSED full-backing policy; the source needs only 23 A and 4 B for non-negative custody.",
+        "concreteExampleNeeded": "State the opening custody as a labelled premise in the treasury card and show both numbers side by side: source minimum (23 A / 4 B) and proposed backing (25 A / 10 B).",
+        "whyItMatters": "A governance reader would otherwise read the 25/10 figures as enforced treasury backing."
+      },
+      {
+        "section": "Who signs what",
+        "missingExplanation": "No signer matrix. The settlement step says claimants sign; the Issue step does not say who signs; the intent signature is not observed in any record; there is no wallet display.",
+        "concreteExampleNeeded": "A table with rows for intent, each Issue, settlement, reclaim and revoke, and columns for who signs and what the validator checks.",
+        "whyItMatters": "Signer authority is the core of treasury governance. The page's settlement diagram has no signer element at all."
+      },
+      {
+        "section": "Revocation and orphaned claims",
+        "missingExplanation": "The notes say any catalogue account can Revoke, which advances seq and orphans issued claims, locking value until expiry. The main page does not mention this.",
+        "concreteExampleNeeded": "One scenario: allocation proofs issued, a Revoke by a catalogue account, the claim outputs now unsettleable, and the expiry date after which the claimant can reclaim.",
+        "whyItMatters": "A treasury can have funds locked by an action outside its own signers, which is a governance risk the page does not surface."
+      }
+    ],
+    "diagramFindings": [
+      {
+        "diagram": "Treasury allocation card diagram (treasury-diagram.png): three 'Required check' cards (Division and remainder; Beneficiary payments; Funds retained for obligations) with arrows into a central 'Web / PROOF COLLECTION' ellipse and a banner '3 of 3 conditions covered.'",
+        "whatIActuallyInspected": "Image read directly: layout, labels, arrows, banner and the selected-check inspector text visible in the image.",
+        "whatItTeaches": "That the allocation has three required checks and that all three must be covered before the Web is submittable. A reader can infer that the checks are the three obligations the contract enforces.",
+        "whatItFailsToShow": "No amounts, no approved flag, no beneficiary or fee outputs, no custody before and after, no duty before and after, no signer, no direction of value flow. The arrows are identical and unlabelled, so they do not show which check reads which input. 'Proof collection' suggests three proofs, which the page says is not necessarily true.",
+        "replacementOrRevision": "Replace the hub with a before/after table or flow: opening custody 25 A / 10 B (labelled premise), allocation 23 A / 4 B out (alpha 14/4, beta 7, fee 2), remaining custody 2 A / 6 B, duties reserve 2 A and rebate 6 B, with each check labelled by the numbers it constrains. Mark the approved input and the signer."
+      },
+      {
+        "diagram": "Invoice card diagram (invoice-diagram.png, and its mobile counterpart mobile-invoice-diagram.png which I read as the same layout stacked): three 'Required check' cards into the same Web hub, with the inspector text and 'Financial result' list below.",
+        "whatIActuallyInspected": "Image read directly for the desktop version and the mobile version, which I checked for the same labels and text.",
+        "whatItTeaches": "That the payment has three checks (payment calculation, separate fee, remaining obligations) and that the Web is 3 of 3 covered. The inspector text gives the 35/2/37/75 figures.",
+        "whatItFailsToShow": "Same gap as treasury: no flow of 112 CASH, no seller or fee outputs, no before/after state, no funding source. The 'Remove proof coverage' checkbox is not connected to any visible change in the Web, so the consumer rule is not shown.",
+        "replacementOrRevision": "A two-column state table: before (escrow 112, invoice duty 100, reserve 10) and after (escrow 75, invoice 65, reserve 10), with the 35 to seller and 2 to fee arrows labelled in CASH, and the removed check visibly turning the Web to incomplete."
+      },
+      {
+        "diagram": "Settlement stages (settlement-stages.png): four columns Step 1 to Step 4 with dots on a horizontal rule.",
+        "whatIActuallyInspected": "Image read directly: the four step labels, headings and body text.",
+        "whatItTeaches": "The sequence: owner signs limits, prover builds the Web, proof claims go on-chain, the transaction settles. It also shows that Issue creates a claim output and that settlement is the last step.",
+        "whatItFailsToShow": "No actor per step, no signature element, no transaction boundary between Issue and settlement, no statement of how many Issue transactions there are for n Strands, and no indication that step 3 can happen earlier and separately from step 4. A governance reader cannot see who signs step 3.",
+        "replacementOrRevision": "Add a row per step with 'Signed by', 'Transaction', 'State after step' and a count of transactions for a three-Strand Web (three Issue, one settlement)."
+      }
+    ],
+    "proseProblems": [
+      {
+        "location": "Treasury allocation, Funds retained for obligations inspector, 'What the claim says'",
+        "exactQuote": "The treasury holds 25 A and 10 B before the step and keeps 2 A and 6 B against those duties.",
+        "problem": "Presents the 25 A / 10 B opening custody as a fact about the treasury. The technical notes say the source only requires 23 A and 4 B, and 25/10 is a proposed full-backing policy. The sentence also says the treasury 'keeps' the amounts, which implies they are protected, not merely left over.",
+        "suggestedRewrite": "Premise: the treasury opens with 25 A and 10 B (an assumed opening balance). The source requires only 23 A and 4 B for non-negative custody; holding back 2 A and 6 B is a proposed backing policy, not something the program enforces. After the step, 2 A and 6 B remain as custody, and the duties of 2 A (reserve) and 6 B (rebate) are recorded against it."
+      },
+      {
+        "location": "Treasury allocation, Where the inputs come from",
+        "exactQuote": "The allocation inputs, including approved=true, sit inside the intent the debited treasury account signs; a separate governance approver must itself be a required signer, an advancer or an authenticated input.",
+        "problem": "Mixes what this example does with what a policy could require. A reader cannot tell whether a governance approver exists here. In this example the only consent seems to be the spending account's own signature, which is the outcome I would most want stated plainly.",
+        "suggestedRewrite": "In this example, approved=true is part of the intent signed by the treasury account, and the debited account's required signers are the only consent. If your policy needs a separate governance approval, the approver must be a required signer, an advancer or an authenticated input; this example does not include one. Say what approved=false does."
+      },
+      {
+        "location": "Treasury allocation intro card",
+        "exactQuote": "The transaction also creates reserve and rebate obligations, so the treasury must retain enough of each asset to cover them.",
+        "problem": "'Must retain' reads as an enforced rule. The notes say the source checks only non-negative custody, and that full backing is a consumer-enforced proposal. The sentence also does not say that the reserve and rebate duties can remain open indefinitely.",
+        "suggestedRewrite": "The transaction also creates a reserve duty of 2 A and a rebate duty of 6 B. The program checks only that custody stays non-negative; keeping enough to cover those duties is an application policy that the consumer must enforce."
+      },
+      {
+        "location": "Invoice payment, worksheet",
+        "exactQuote": "The escrow\u2014the account holding the funds\u2014starts with 112 CASH.",
+        "problem": "Stated as the design. The technical notes say the source funds 110, that 112 is a proposed backing policy, and that the buyer's opening debit under the 112 design is not specified by any source. A governance reader needs to know who puts in the extra 2 CASH.",
+        "suggestedRewrite": "The worksheet assumes the escrow opens with 112 CASH. The source funds 110; funding 112 is a proposed policy, and the page does not yet say which party provides the extra 2 CASH."
+      },
+      {
+        "location": "Treasury allocation, Division and remainder, claim text",
+        "exactQuote": "The program call is allocate(true,23,7,2), where true supplies the approval flag.",
+        "problem": "Gives the call without saying what 23, 7 and 2 represent. 7 and 2 look like quotient and remainder of 23 divided by 3, but 3 appears nowhere as an input. A reader cannot tell whether 3 is a unit count, a beneficiary count or a constant in the program.",
+        "suggestedRewrite": "allocate(approved=true, amount=23, unit=7, remainder=2). Here 23 is the amount to allocate, 7 is the size of one unit, and 2 is the remainder left for fees. The divisor 3 is the number of units (alpha takes 2, beta takes 1), and the program checks 23 = 3 \u00d7 7 + 2."
+      },
+      {
+        "location": "Settlement stages, Step 4 and Verification",
+        "exactQuote": "The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants' signatures.",
+        "problem": "Does not say which signed limits (gross cap, fee cap, net floor, liability cap) apply to the treasury allocation, nor what happens to a beneficiary whose net falls below its floor. For a treasury reader, the caps are the controls.",
+        "suggestedRewrite": "The validator checks each recipient's actual output against the owner's signed net floor and the per-asset gross and fee caps. For the allocation example, alpha's net must be at least its floor, and the total debit must stay within the gross cap."
+      }
+    ],
+    "priorityChanges": [
+      "Add one worked treasury table (before/after custody, duties, approved input, beneficiary and fee outputs) with the reconciliations 25\u221223=2 A and 10\u22124=6 B, and label the 25/10 opening balance as a premise rather than a fact.",
+      "State plainly who consents to approved=true in the example, whether a governance approver exists in it, and what approved=false does; separate the policy option from what the example does.",
+      "Explain how 23 = 3\u00d77+2 maps to alpha 14 A, beta 7 A and fee 2 A, and the source of alpha's 4 B; also say the reserve duty of 2 A equals the remainder by coincidence or by design.",
+      "Say on the main page that the reserve and rebate duties have no discharge action in the source example, the treasury cannot close while the reserve duty is nonzero, and rebate(amount) is the only discharge path shown in the notes.",
+      "Replace the hub-and-card diagrams with state or signer tables for settlement (who signs intent, each Issue, settlement, reclaim and revoke), since the current diagrams show labels and arrows but no amounts, signers or state changes."
+    ],
+    "inspectedImages": [
+      "invoice-diagram.png (desktop invoice card diagram)",
+      "treasury-diagram.png (desktop treasury card diagram, my role-relevant application)",
+      "settlement-stages.png (issuance-route four-step diagram)",
+      "mobile-invoice-diagram.png (mobile invoice layout, also matches the tall mobile image in the last message)"
+    ],
+    "limitations": "\"I read four images: the desktop invoice diagram, the desktop treasury diagram, the settlement-stages diagram and the mobile invoice diagram. I did not inspect dex-diagram.png, issuance-diagram.png, loan-diagram.png, invoice-missing-coverage.png, setup-counter.png, architecture.png or desktop-opening.png, so my diagram findings on those are text-only or absent. I did not navigate a browser; the states were captured by the root and I relied on the supplied text and images. The tall mobile image in the last message appeared to be the same invoice layout as mobile-invoice-diagram.png, and I did not separately re-inspect it beyond that match. My comments on the treasury arithmetic are reconciliations I derived from the page's own numbers, not something the page shows. I did not verify the source programs, the proofs, or any cryptographic claim. This is model-reader feedback, not human research or a security audit.\"",
+    "verdict": "NEEDS_MORE_DEPTH"
+  }
+]

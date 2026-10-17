@@ -1,0 +1,49 @@
+[
+  {
+    "reviewToken": "moriarty-webs-release-delta-O05",
+    "verdict": "READY",
+    "summary": "Fresh nonauthor Opus delta audit of the cryptographic and security wording. Base artifact: 1cb5a795\u202625cff4. Current artifact: 6756fbb74eaa8f02ac8651bf1d72a236eb5a64da7872b44564510d597db28973.\n\n**Hashes.** I compared recorded values only and recomputed nothing. The current artifact hash is the same in MANIFEST.json, PAGE-REPORT.json output.sha256 and app/ARTIFACT-CHECK.json. ARTIFACT-CHECK lists 101 PASS checks. The PAGE-REPORT pins for depth-2026-10-17/COPY.json (fb3196db\u2026) and app/src/DepthContent.jsx (9e0cd5aa\u2026) match MANIFEST.json.\n\n**Redline 1: setup row.** At /opus/lifecycle/stages/0/signersAndFunding, BASE COPY.json:658 had 'Each phase is sound only if its transcript verifies and at least one participant in it was honest.' Current COPY.json:658 has 'A phase can be relied on when its transcript verifies and at least one participant in it was honest and discarded their randomness.' This is the exact O04 text.\n- The row no longer treats transcript verification as what makes the keys sound. It is now a sufficiency condition for relying on the phase.\n- Soundness is placed in the absence of retained toxic waste: at least one honest participant discarded their randomness.\n- It agrees with the frozen setupExplanation[3] trust framing and the stage action ('the setup randomness is discarded').\n- It does not suggest that the recorded single-party test setup can be relied on. The SetupEvidence summary and sourceSetupStatus[1] still say its operator can forge proofs.\n- It renders through the CryptographicDetail.jsx:65 table. The frozen counter.conditions and groth16.trust were not edited. check-artifact.mjs:31 and :37 enforce them by equality, and both checks pass.\n\n**Redline 2: ProofPackaging.** In ProofPackaging (DepthContent.jsx:55), I compared the BASE and current files in full by reading them. Only this sentence changed: 'The issuance route then creates\u2026' became 'On the reviewed Issue route, one Issue transaction checks the proof and creates one claim output, and one settlement transaction later consumes it. A proof claim never mints the application's own token.'\n- It is now scoped to the reviewed source.\n- It names the Issue transaction as the place where the proof is checked. This matches proofExplanation[2], which says the check runs in the claim policy at issuance and not again at settlement.\n- It keeps the counts: one Issue, one claim output, one settlement.\n- It separates proof-claim minting from minting the application token. This matches stages[issue].action ('Issuing never mints the application's asset'), models[1].note and the issuance case details.\n- The proof-claim token itself is still shown as minted and then burned (invoiceModel invoice-claim lines; settle stage), so 'never mints the application's own token' does not contradict claim-token minting.\n- It does not claim that a proof checked under some other verification key is refused, and it adds no sponsor or funder.\n\n**Redline 3: loan title.** This is a nonsecurity referral. /models/2/title changed from 'Debt changes by 35 CASH\u2026' to 'Repayment discharges 35 CASH of debt while the payer spends 37 CASH'. It renders as the TransactionDiagram.jsx:28 h3. It is consistent with the nodes and checks: 100 + 5 \u2212 35 = 70, against a 37 gross debit.\n\n**Unchanged security scope.** The visible not-built list, the forgeable single-party setup disclosure, the source-reading qualifiers and the counter conditions all remain in the current COPY.json, which I read in full. The two lifecycle consumers in CryptographicDetail.jsx are unchanged in how they read these fields.\n\n**Dissent preserved.** My earlier O04 minor note stands as nonblocking: the onchain lane heading is unqualified present tense. It was retained under the user's presentation instruction and the integrationRule's one-disclosure-away allowance.\n\nI found no blocking or major issue in scope. READY is not protocol, production, security or ledger acceptance.",
+    "filesRead": [
+      "DELTA.json",
+      "BASE-OPUS-READY.json",
+      "BASE-GEMINI-READY.json",
+      "O04-APPLIED.json",
+      "MANIFEST.json",
+      "PAGE-REPORT.json",
+      "app/ARTIFACT-CHECK.json",
+      "app/check-artifact.mjs",
+      "app/src/DepthContent.jsx",
+      "BASE/app/src/DepthContent.jsx",
+      "app/src/CryptographicDetail.jsx",
+      "app/src/TransactionDiagram.jsx (lines 20-34)",
+      "depth-2026-10-17/COPY.json",
+      "BASE/depth-2026-10-17/COPY.json (lines 205-214 and 648-659)"
+    ],
+    "findings": [
+      {
+        "severity": "minor (nonblocking; retained dissent, unchanged from O04)",
+        "location": "app/src/CryptographicDetail.jsx:61 lane heading 'Onchain \u00b7 issue evidence, then spend it', rendering depth-2026-10-17/COPY.json opus.lifecycle.stages[id=issue|settle].action",
+        "problem": "The onchain Issue and Settle cards still describe the reviewed V2 claim policy and validator in unqualified present tense. The source-reading qualifier and the not-built inventory are one disclosure away. The user retained the heading under their presentation instruction, and O04 accepted this as nonblocking.",
+        "requiredChange": "None required for READY. Optional, as recorded in O04: add an inline source-reading qualifier to the lane heading or to lifecycle.intro.",
+        "source": "BASE-OPUS-READY.json finding 1; O04-APPLIED.json retainedNonblockingNote; COPY.json opus.groth16.sourceSetupStatus[2]-[3]"
+      },
+      {
+        "severity": "nit (nonblocking; provenance metadata, not security wording)",
+        "location": "PAGE-REPORT.json:354 authorship.securityCopy",
+        "problem": "The report still says the security exposition was 'corrected with exact O01-O03 reviewer wording'. The current candidate also contains two O04 security-scope redlines (setup row and ProofPackaging). Nothing rendered is affected.",
+        "requiredChange": "Optional: at the next metadata regeneration, change the authorship string to say O01-O04.",
+        "source": "O04-APPLIED.json changes; DELTA.json metadataChanges"
+      }
+    ],
+    "limits": [
+      "This is a bounded delta audit, not a fresh full reread. I read the four orientation files, MANIFEST, PAGE-REPORT, ARTIFACT-CHECK, check-artifact.mjs, both the current and BASE DepthContent.jsx in full, the current COPY.json in full, CryptographicDetail.jsx, and TransactionDiagram.jsx lines 20-34. In BASE COPY.json I read only the two changed pointers.",
+      "For COPY.json, I did not independently confirm that all other bytes are identical to BASE. I rely on DELTA.json's recorded exhaustive JSON-pointer comparison, plus the PAGE-REPORT and ARTIFACT-CHECK pins. For DepthContent.jsx, I compared BASE and current line by line by reading them, and only line 55 differs.",
+      "I recomputed no SHA-256 values. Hash agreement comes from reading the recorded values in MANIFEST, PAGE-REPORT and ARTIFACT-CHECK.",
+      "I did not reread files outside the changed surfaces: data.generated.json, V2-COPY.json, COUNT-CLARIFICATION.json, App.jsx, Groth16.jsx, the editorial copy and others. I relied on BASE-OPUS-READY and BASE-GEMINI-READY, the pinned hashes, and the passing equality checks for frozen trust and counter text.",
+      "I did not read or render index.html. I performed no browser, visual, shell, network, SDK, setup, proving, verification, key, wallet, signing or ledger action.",
+      "The loan title is outside security scope. I confirmed only that its arithmetic matches the nodes and checks.",
+      "READY covers only cryptographic and security explanatory wording. It is not product, protocol, production, security or ledger acceptance, and it authorizes no implementation or deployment.",
+      "Plan mode was active and only the Read and StructuredOutput tools were available, so I wrote no plan file. This structured review is the requested deliverable."
+    ]
+  }
+]

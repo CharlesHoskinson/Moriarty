@@ -1,0 +1,158 @@
+{
+  "reviewToken": "webs-readers-20261017-H09",
+  "persona": "A transaction builder concerned with costs and limits",
+  "summary": "As a transaction builder I can follow the logical shape of a Web: a set of required conditions, one Groth16 proof per Strand, an Issue transaction per Strand that mints a min-ADA claim output, and one settlement transaction that consumes all of them. The invoice worksheet arithmetic (35 paid, 2 fee, 37 gross debit, 75 remaining against 75 owed) is clear and checkable. What I cannot do from the page is estimate a single transaction count, fee, min-ADA lock, or ExUnit budget for a real Web, because the page never states a number for any of those. The only measured figures are raw local VM numbers that it says are not ledger cost. The invoice's 112 CASH funding is presented as the design even though the technical notes say the source program funds 110 and has no extra-funding action. The setup counter and the seven-layer section are clear about what counts as a setup stage but give no size, capacity, or cost figure a builder could plan with. Verdict: needs more depth for my role, and the diagrams do not carry any cost or count information.",
+  "comprehension": [
+    {
+      "task": "What a Web and a Strand contain",
+      "myAnswer": "A Web is the set of Strands a contract requires for one transaction; settlement needs a matching Strand for every required condition. A Strand is one Groth16 proof plus its public claim and the data tying it to this transaction (spent state, sequence, catalogue, claimant, intents). I can state this, but the page never says how many Strands a typical invoice Web has, so I cannot count transactions from the description.",
+      "pageEvidence": "Page text 'What are Webs and Strands?': 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' and 'A Web collects the Strands a contract requires for a transaction.' Settlement step text: 'Each claim is tied to the state being spent... One execution proof can cover several required conditions.'",
+      "whatIStillCannotExplain": "Whether three invoice conditions become three Strands (three Issue transactions) or one execution proof covering all three (one Issue transaction). The page says both and does not say which the invoice example uses. Also the byte size of a Strand, its datum, and its public-input count, which set the Issue transaction size."
+    },
+    {
+      "task": "How a proof connects to real transaction inputs and outputs",
+      "myAnswer": "The Issue transaction verifies the proof and creates a claim output; the settlement transaction consumes those claim outputs, rebuilds each statement from its own inputs and outputs, and checks it against the claim digest. So the link is by digest rebuilt from the settling transaction, and the proof itself is not re-verified at settlement. I can follow this from the page, but I cannot see which outputs of the settlement transaction must be present, in what order, or how many there must be per claim.",
+      "pageEvidence": "Settlement step: 'The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants' signatures.' Verification concern: 'the validator rebuilds each statement from the transaction and spent state.' Technical notes: 'settlement transaction consumes them, recomputes each statement and compares it with the digest checked at issuance; it does not verify the proof again.'",
+      "whatIStillCannotExplain": "The exact output layout the settlement transaction must produce for a payment (seller output, fee output, remaining-duty datum), and whether the settlement transaction's size and budget grow linearly with the number of claim inputs. The page does not give an example transaction with inputs, outputs and datums."
+    },
+    {
+      "task": "A complete concrete payment workflow",
+      "myAnswer": "Owner signs an intent limiting debits, fees and net floor; prover builds Strands; each Strand is issued in its own transaction, which locks min-ADA in a claim output; settlement consumes the claim outputs and burns their tokens, and the claimants sign it. The worksheet covers the CASH arithmetic. It does not cover the ADA side of the workflow at all, so I cannot price the workflow.",
+      "pageEvidence": "Four-step settlement section; invoice worksheet: 'Cardano network fees, collateral and the minimum ADA held in proof-claim outputs are separate; this worksheet does not estimate them.'",
+      "whatIStillCannotExplain": "Who pays the network fee and min-ADA for each Issue and for settlement, how many min-ADA deposits a 3-Strand payment locks at the peak, and whether the seller or buyer funds the opening 112 CASH. The technical notes say 'The buyer's opening debit under the 112 design is not specified by any source.'"
+    },
+    {
+      "task": "Conditions, proofs and on-chain claim outputs",
+      "myAnswer": "A condition is the rule the contract requires (for example, the fee calculation). A proof is the cryptographic evidence for one or more conditions. An on-chain claim output is the Issue-time record of a verified proof; it is evidence only, and does not pay or mint anything. The page keeps these three apart well, in the settlement text and the FAQ on minting.",
+      "pageEvidence": "'Does a proof claim mint my application's token? No. Issuing a proof claim creates an output that records checked evidence.' Step 3: 'It does not pay the seller or mint the application's asset.'",
+      "whatIStillCannotExplain": "What the claim output actually holds beyond min-ADA (the datum fields and their size), which determines its min-ADA. The page says the output 'holds minimum ADA' without giving the formula or the current value."
+    },
+    {
+      "task": "What gets set up and how to count setups",
+      "myAnswer": "One phase 2 per distinct compiled circuit (including wrappers), and phase 1 shared when curve, format and capacity fit. The counter's example, 5 circuits gives 1 phase 1 + 5 phase 2, is internally consistent. What I cannot do is map this to the invoice, the five applications, or the Issue wrapper. The counter defaults to five circuits without saying which application or wrapper they are.",
+      "pageEvidence": "Setup counter: 'For 5 distinct circuits, phase 1 can be shared and phase 2 runs 5 times. These are stages, not 5 + 1 complete ceremonies.' Technical notes: 'The required total setup count is unknown; predicate, catalogue and family counts do not determine it.'",
+      "whatIStillCannotExplain": "How many distinct circuits the invoice Web needs, whether the Issue wrapper counts as one, what phase-1 capacity (in constraints) the invoice circuit needs, and what the key sizes and verification cost are. For cost planning I need the verifying-key size and the pairing cost per Issue, neither of which is stated."
+    }
+  ],
+  "missingDepth": [
+    {
+      "section": "Transaction count and size for a Web",
+      "missingExplanation": "The page says n Strands mean n Issue transactions plus one settlement, but only in the technical notes and only as a structural reading. The main page never states the count or its size consequences.",
+      "concreteExampleNeeded": "A worked invoice table: 3 conditions, option A (3 Strands, 3 Issues + 1 settlement) vs option B (1 execution proof, 1 Issue + 1 settlement). For each transaction: inputs, outputs, datum bytes, witnesses, and whether it fits the per-transaction size limit. Mark any cell not measured as 'not measured'.",
+      "whyItMatters": "Transaction count is the first cost decision for a builder, and the page leaves it to be inferred."
+    },
+    {
+      "section": "Minimum ADA and locked capital",
+      "missingExplanation": "'Holds minimum ADA' is repeated but the amount, its formula, and the peak capital locked by a Web that is issued but not settled are absent. The reclaim expiry is claimant-chosen with no default or range.",
+      "concreteExampleNeeded": "One claim output's datum shown in bytes, the min-ADA it requires at current protocol parameters, and a line like '3 claim outputs \u00d7 X ADA locked until settlement or expiry = Y ADA peak' with the expiry used.",
+      "whyItMatters": "Locked capital decides whether a Web is affordable, and a failed Web locks it until expiry."
+    },
+    {
+      "section": "Execution budget and limits",
+      "missingExplanation": "Technical notes give S08 cpu 2222340191 and mem 205312 for the whole compiled C2 Issue evaluation, and say they are not ledger ExUnits. The page never states the target's per-transaction or per-block limit to compare against, nor what the cpu unit is.",
+      "concreteExampleNeeded": "A row showing the Issue evaluation and the settlement evaluation as a percentage of the target network's per-transaction ExUnit limit, with the limit's source cited and the unit defined.",
+      "whyItMatters": "Without a limit I cannot tell whether the Issue or settlement fits in one transaction at all."
+    },
+    {
+      "section": "Fees and who pays",
+      "missingExplanation": "The worksheet says network fees are separate but gives no range, and the main page never says who signs and pays the Issue transactions. The technical notes say there is no signer matrix.",
+      "concreteExampleNeeded": "A signer table with one row per transaction type (intent, Issue, settlement, reclaim): who signs, who pays the network fee, and who funds the min-ADA.",
+      "whyItMatters": "Fee payer and signer count set the transaction's witness size and the builder's wallet workflow."
+    },
+    {
+      "section": "Funding of the invoice escrow",
+      "missingExplanation": "The worksheet starts at 112 CASH and says 'Another partial payment would need another 2 CASH fee allowance,' but never says who funds the opening 112 or how a sequence of partials is funded. The technical notes say the source funds 110, not 112.",
+      "concreteExampleNeeded": "A three-partial schedule: opening funding, each partial's debit, the remaining cash after each step, and the unfunded shortfall after the third if the 112 rule is not extended.",
+      "whyItMatters": "A builder has to know the cost per partial and whether a sequence is fundable before committing to the design."
+    },
+    {
+      "section": "Setup costs for the invoice",
+      "missingExplanation": "The setup counter uses a generic 5 circuits and does not connect to any application. Phase-1 capacity, key sizes and the verification cost are absent.",
+      "concreteExampleNeeded": "For the invoice Web: number of distinct circuits, the phase-1 capacity in constraints each needs, verifying key size, and the Issue pairing cost, with the source of each figure.",
+      "whyItMatters": "Setup choice bounds which applications a builder can deploy on the same parameters and what each deployment costs."
+    }
+  ],
+  "diagramFindings": [
+    {
+      "diagram": "Invoice proof-collection diagram (invoice-diagram.png, desktop 'What each application needs to prove')",
+      "whatIActuallyInspected": "Screenshot of the invoice panel with three numbered 'Required check' boxes on the left, connectors into a 'Web / PROOF COLLECTION' node, the selected 'Payment calculation' inspector on the right, the status box reading '3 of 3 conditions covered', and the financial result list below.",
+      "whatItTeaches": "The diagram shows three checks feeding one Web, and that the Web can settle once all three are covered. It makes the all-or-nothing rule clear at a glance.",
+      "whatItFailsToShow": "It shows no transaction count, no Strand count, no size or fee, no min-ADA, and no difference between one proof and three proofs. A builder reading it cannot tell whether the three arrows are three transactions or one. The 'Remove proof coverage' checkbox has no visible before-and-after state in this capture.",
+      "replacementOrRevision": "Add a second lane beneath the Web showing Issue transactions and the settlement transaction, with a count label such as 'Issue \u00d73 (one per Strand) + settle \u00d71' and a min-ADA label per claim output. Show the one-proof alternative as a second, labelled configuration with its count."
+    },
+    {
+      "diagram": "Four-step settlement sequence (settlement-stages.png, 'How a Web reaches settlement')",
+      "whatIActuallyInspected": "Four columns, Step 1 to Step 4, with dotted timeline markers, each with prose. No numbers, arrows between transactions, or icons for transaction boundaries.",
+      "whatItTeaches": "The order: intent signed, Web built, claim outputs issued on-chain, settlement consumes them. The step that is a separate on-chain event (Step 3, Issue) is clearly distinguished from settlement.",
+      "whatItFailsToShow": "It does not show transaction boundaries, which steps are separate transactions, how many of each, or which step costs the builder. Step 1 (intent) is off-chain and Steps 3 and 4 are on-chain, but the columns look equal.",
+      "replacementOrRevision": "Mark each step as off-chain or on-chain and draw the transaction boundaries, with counts that follow the Strand count. Put a value or a 'not measured' cell under each on-chain step."
+    },
+    {
+      "diagram": "Setup stage counter (setup-counter.png, 'Try a circuit count')",
+      "whatIActuallyInspected": "A stepper set to 5 distinct compiled circuits showing '1 shared phase 1 + 5 phase 2' and the explanatory text on the right.",
+      "whatItTeaches": "The counter correctly teaches that phase 1 can be shared and phase 2 counts per circuit, and it states that these are stages, not complete ceremonies.",
+      "whatItFailsToShow": "It does not connect the count to any application, does not show phase-1 capacity or the constraint count that would change it, and does not show what the count costs. Changing the count changes only the label, so the stepper has no bearing on a builder's transaction cost.",
+      "replacementOrRevision": "Let the user choose an application (invoice, DEX, issuance) and see its circuit list, each with a constraint count and a phase-1 capacity requirement, plus the verifying-key size. Keep the stage label."
+    },
+    {
+      "diagram": "Mobile invoice diagram (mobile-invoice-diagram.png)",
+      "whatIActuallyInspected": "The same invoice panel in a single narrow column, with the Web node and the inspector stacked below.",
+      "whatItTeaches": "The same content as desktop, in order. Nothing is lost, and the cost-relevant content is the same (none).",
+      "whatItFailsToShow": "The same omissions as the desktop diagram. The Web node's label is cramped at this width.",
+      "replacementOrRevision": "Apply the desktop revision, and keep the count label visible at narrow width."
+    }
+  ],
+  "proseProblems": [
+    {
+      "location": "Invoice worksheet, below the figures",
+      "exactQuote": "Cardano network fees, collateral and the minimum ADA held in proof-claim outputs are separate; this worksheet does not estimate them.",
+      "problem": "This is the single most important sentence for my role, and it is an exclusion with no reference to where the numbers are. It names three cost items and gives none of them a size, so the reader cannot tell whether they are cents or most of the budget.",
+      "suggestedRewrite": "Cardano network fees, collateral and the minimum ADA in each proof-claim output are not included here. For this payment, three claim outputs would each lock minimum ADA until settlement; the amount at current parameters is not yet stated on this page (see the cost table)."
+    },
+    {
+      "location": "Invoice worksheet, the 112 CASH funding",
+      "exactQuote": "The extra 2 CASH funds the fee for this payment. Afterward, the remaining cash covers both the unpaid invoice and the reserve.",
+      "problem": "The sentence reads as a settled design. The technical notes say the source program funds 110 with a 3 CASH opening fee and has no extra-funding action, so 112 is a proposed policy. A builder reading the main page would plan against a balance the program cannot currently reach.",
+      "suggestedRewrite": "The worksheet uses a proposed funding of 112 CASH: that is 2 CASH above the 110 CASH in the current source, which has no extra-funding action. With 112, one partial is fully funded; each further partial needs another 2 CASH."
+    },
+    {
+      "location": "Settlement step 3",
+      "exactQuote": "An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA.",
+      "problem": "'Holding minimum ADA' is the only description of the cost. The reader cannot tell the amount, how it is computed, or what the output's datum adds to it. The sentence also implies one Issue per proof without saying how many proofs a payment uses.",
+      "suggestedRewrite": "An Issue transaction verifies one Groth16 proof and creates one claim output. The output must hold the ledger's minimum ADA for its datum size (bytes shown in the cost table). A payment with three Strands therefore has three Issue transactions and three locked deposits."
+    },
+    {
+      "location": "Strand and Web definitions",
+      "exactQuote": "One execution proof can cover several required conditions.",
+      "problem": "This sentence is placed next to 'Each Strand carries one proof', so a reader cannot tell whether three conditions in one execution proof become one Strand, and therefore one Issue transaction, or three Strands in three transactions.",
+      "suggestedRewrite": "One execution proof can cover several required conditions and then forms one Strand, so the invoice's three conditions need one Issue transaction; splitting them into three Strands needs three Issue transactions instead."
+    },
+    {
+      "location": "Setup counter",
+      "exactQuote": "The count holds only if every circuit uses the same curve and format and fits the shared phase-1 capacity. Smaller circuits need no extra phase 1.",
+      "problem": "'Fits the shared phase-1 capacity' is never given a unit, and 'Smaller circuits need no extra phase 1' does not say what size counts as small. A builder cannot check whether the invoice circuit fits.",
+      "suggestedRewrite": "The count holds only if every circuit uses the same curve and format and has at most the shared phase-1 capacity, measured in constraints (for example 2^k). A circuit within the capacity needs no new phase 1."
+    },
+    {
+      "location": "Cost question in the FAQ",
+      "exactQuote": "Comparing costs requires measuring complete transactions on the target network; splitting alone does not establish a saving.",
+      "problem": "The answer is correct but leaves the reader with no measurement, no example of what a complete-transaction measurement would contain, and no statement of whether any measurement exists yet. It answers the question and then stops.",
+      "suggestedRewrite": "Splitting into more Strands adds one Issue transaction and one min-ADA deposit per Strand. No complete-transaction measurement has been recorded for the invoice; the table below lists what would be measured for each option."
+    }
+  ],
+  "priorityChanges": [
+    "Add a cost-and-count table for the invoice Web with one column per option (3 Strands vs 1 execution proof). Rows: Issue transactions, settlement transactions, claim outputs, min-ADA per output, peak locked ADA, and tx size/ExUnits, each either a number with its source or the words 'not measured'.",
+    "State the ledger limits next to the S08 figures. Give the per-transaction ExUnit limit used as the comparison, the unit of the cpu figure, and whether the 2.2e9 figure is for the full Issue (including pairing) or the verification alone.",
+    "Reconcile the 112 CASH funding with the 110 CASH source on the main page. Say plainly that 112 is proposed, who funds the opening amount, and what a three-partial sequence costs in extra fees and where the shortfall falls.",
+    "Add a signer and payer table with one row per transaction type (intent, Issue, settlement, reclaim) showing who signs, who pays the network fee and who funds min-ADA.",
+    "Revise the invoice diagram and settlement steps so each on-chain step is shown as a separate transaction with a count, and the one-proof and three-proof configurations are both visible."
+  ],
+  "inspectedImages": [
+    "invoice-diagram.png",
+    "settlement-stages.png",
+    "setup-counter.png",
+    "mobile-invoice-diagram.png"
+  ],
+  "limitations": "\"Images read: invoice-diagram.png, settlement-stages.png, setup-counter.png and mobile-invoice-diagram.png. Not read as images: invoice-missing-coverage.png, dex-diagram.png, issuance-diagram.png, loan-diagram.png, treasury-diagram.png, architecture.png and desktop-opening.png; for those applications and the architecture panels I relied on the supplied state text only, and I say nothing about their visual layout. I did not drive a browser, and the captured states were chosen by the root. I did not read the S07/S08 source records or the V2 sources; my statements about them come only from the page text. I cannot measure any transaction cost, so every cost judgment here is a judgment about what the page does and does not state. Plan mode was active during this review; I did not write a plan file and made no changes, because this is a read-only review task. The reviewer persona is a model reader, not human research or a security audit.\"",
+  "verdict": "NEEDS_MORE_DEPTH"
+}

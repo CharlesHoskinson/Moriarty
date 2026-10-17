@@ -1,0 +1,161 @@
+[
+  {
+    "reviewToken": "webs-readers-20261017-H01",
+    "persona": "A token issuer building a capped asset",
+    "summary": "As an issuer I can follow the central model: a Web is the set of Strands a contract requires, a Strand is one Groth16 proof plus its public claim and transaction binding, and settlement needs every required claim present. The page is clearest on the separation that matters most to me: the proof-claim output records checked evidence and does not mint my token, and my token's minting policy controls supply, recipients and the cap. The invoice worked example arithmetic is consistent (112 \u2212 37 = 75; 65 + 10 = 75). Where it fails for an issuer is in the concrete transaction. I still cannot tell from the page which transactions consume which inputs, what datum carries the 300-of-1,000 supply forward, how many Strands the issuance Web contains, or who signs a mint. The same five-card \"What the validator receives\" text and generic 7-layer architecture panel do not answer those questions. The diagrams show the structure of a checklist but not the state changes that matter for supply and servicing.",
+    "comprehension": [
+      {
+        "task": "(1) What a Web and a Strand contain",
+        "myAnswer": "A Strand carries one Groth16 proof, the claim it proves, and the information tying it to one transaction. A Web is the collection of Strands a contract requires for a transaction; settlement needs every required condition covered by a matching Strand. For my issuance case the page implies the Web should hold a supply-limit proof, a recipient-amounts proof and a separate-obligations proof.",
+        "pageEvidence": "Main text 'What are Webs and Strands?': 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' Web: 'Settlement needs every required condition covered by a matching Strand.' Issuance inspector: 'The application asset's own minting policy enforces the cap and continues the supply state from its predecessor.'",
+        "whatIStillCannotExplain": "Whether the three issuance conditions are three Strands or one whole-execution proof covering three conditions. The invoice page says 'A proof can cover more than one condition' while the technical notes say 'n required Strands mean n Issue transactions plus one settlement'. The page never states the count for either case. Also unclear: what the supply-limit Strand adds if the minting policy already enforces the cap."
+      },
+      {
+        "task": "(2) How a proof connects to real transaction inputs and outputs",
+        "myAnswer": "The settlement validator rebuilds each statement from the transaction and the spent thread state, then compares it with the claim whose proof was verified. Amounts in outputs and in the rebuilt statement are public; only the witness is hidden.",
+        "pageEvidence": "Invoice 'How the proof connects to the transaction': 'The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.' Verification row: 'the validator rebuilds each statement from the transaction and spent state.' Step 4: 'The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants' signatures.'",
+        "whatIStillCannotExplain": "Which fields of the statement come from which input or output. I cannot tell whether the supply value 300 is read from a datum on the spent UTxO, from a reference input (the technical notes mark reference-input reads as PROPOSED), or from the minted quantity. No example shows the statement bytes or which outref, output index or datum field they are built from."
+      },
+      {
+        "task": "(3) A complete concrete payment or issuance workflow",
+        "myAnswer": "From the four steps: owner signs limits; prover builds Strands; each Issue transaction verifies one proof and mints a claim output with min-ADA; a settlement transaction consumes all claim outputs, burns their tokens, checks signed caps, requires claimant signatures, and the application reads back outputs. I can narrate that sequence but cannot write the transactions.",
+        "pageEvidence": "Settlement page Steps 1\u20134. Invoice worksheet: 112 CASH opening, seller 35, fee 2, debit 37, remaining 75. Issuance intro: 300 units under a cap of 1,000, recipients 180 and 120.",
+        "whatIStillCannotExplain": "No transaction list. For the 300-unit issuance I need: the predecessor supply UTxO and its datum before issuance; the mint transaction (quantity, policy redeemer, recipients); the successor supply datum (300 issued, 700 unissued); the Issue transaction(s) and claim output(s); the settlement transaction's inputs, outputs and burned claim tokens; and who signs each. The page gives none of these, and the signer matrix is listed as open in the technical notes."
+      },
+      {
+        "task": "(4) Distinction between conditions, proofs and on-chain claim outputs",
+        "myAnswer": "A condition is what the contract requires (e.g., a correct fee calculation). A proof is a Groth16 object that may cover several conditions. A claim output is an on-chain UTxO that records a checked proof until settlement consumes it. The page separates these in prose.",
+        "pageEvidence": "Invoice inspector: 'A condition is something the contract requires... A Strand contains a Groth16 proof... One proof can cover several conditions.' Settlement Step 3: 'creates a claim output holding minimum ADA. This output records checked evidence... It does not pay the seller or mint the application's asset.'",
+        "whatIStillCannotExplain": "How the three buttons in the invoice and issuance Web map onto proofs and claim outputs. The button UI reads as one Strand per check, but the text permits one proof for all. Nothing states how many claim outputs one issuance Web creates, or whether an unused claim output for one of three conditions blocks settlement of the others."
+      },
+      {
+        "task": "(5) What gets set up and how to count setups",
+        "myAnswer": "Each distinct compiled circuit needs its own phase-2 setup; phase 1 is shared when compatible and large enough. For five circuits: one shared phase 1 plus five phase 2 runs. Changing a rule (new bound, new public-input layout) needs a new phase 2. Keys can be reused when only values change.",
+        "pageEvidence": "Setup section: 'For 5 distinct circuits, phase 1 can be shared and phase 2 runs 5 times.' 'The keys can be reused if the compiled circuit stays the same.' Technical notes: 'The required total setup count is unknown.'",
+        "whatIStillCannotExplain": "Whether my token issuance needs a separate circuit at all, or only the mint policy and claim policy. The page says a Groth16 wrapper is its own circuit but does not say how many circuits a single capped-issuance application compiles to, or whether the supply-limit proof reuses a catalogue entry. For planning I cannot tell whether one issuance app implies one phase 2 or several."
+      }
+    ],
+    "missingDepth": [
+      {
+        "section": "Issuance route (applications tab, token issuance card and settlement steps)",
+        "missingExplanation": "The page says the application's minting policy enforces the cap and continues supply from its predecessor, but never shows the supply state's datum shape, how the predecessor is identified, or whether it is read as a reference input or spent.",
+        "concreteExampleNeeded": "A before/after table: supply UTxO datum {issued: 0, cap: 1000} spent; successor datum {issued: 300, cap: 1000} at the script address; mint of 300 AppToken with recipient outputs 180 and 120; the statement fields that carry 300 and the datum field they came from.",
+        "whyItMatters": "As a capped-asset issuer I need to know exactly where the cap and running supply live, because that determines what a proof can and cannot protect."
+      },
+      {
+        "section": "How a Web reaches settlement (four steps)",
+        "missingExplanation": "Steps 2 and 3 name the Issue transaction and claim output but do not state the number of Issue transactions or claim outputs for a three-condition Web, nor whether one proof can span the three.",
+        "concreteExampleNeeded": "A numbered transaction list for the issuance Web: T1 Issue (proof A, claim output A, min-ADA locked), T2 Issue (proof B), T3 settlement consuming claim outputs A and B and burning their tokens, with a note on how many proofs were used and who signed each.",
+        "whyItMatters": "Claim outputs lock min-ADA until settlement or reclaim, so the count changes my operating cost and my exposure if a Web never settles."
+      },
+      {
+        "section": "Who signs what (Q&A 'Who signs the settlement transaction?')",
+        "missingExplanation": "The page separates owner intent signatures from claimant signatures but does not say who signs the mint, the Issue transactions or a reclaim for an issuance Web, and the technical notes say no signer matrix is published.",
+        "concreteExampleNeeded": "A signer table with rows for intent signing, mint, Issue, settlement and post-expiry reclaim, and columns for owner, claimant, issuer, minting-policy key; one example row filled in for the 300-unit issuance.",
+        "whyItMatters": "The owner who authorizes issuance may not be the same party who receives the claim output. I need to know which key controls supply and which key can release an unused claim."
+      },
+      {
+        "section": "Servicing duties for issued tokens",
+        "missingExplanation": "The page says 'A redemption promise is a duty only when the program defines it' and 'a servicing duty names its parties, its exact asset and its creation and discharge rules', but gives no example of what a redemption duty would look like or how it is discharged.",
+        "concreteExampleNeeded": "A redemption duty example: holders may redeem 1 token for 1 CASH at the issuer's address; duty created at issuance as 300 units; each redemption burns tokens and discharges duty; leftover duty blocks Close; who signs the redemption and where the duty datum lives.",
+        "whyItMatters": "Servicing and redemption are the duties I must run; the page defines them only by negation."
+      },
+      {
+        "section": "Setup count for an issuance application",
+        "missingExplanation": "The setup section explains counting with a five-circuit example, but does not say how many circuits a capped-issuance application compiles to or whether the claim policy and mint policy add circuits.",
+        "concreteExampleNeeded": "A small table: circuits for supply-limit, recipient-amounts, separate-obligations, plus any wrapper; phase-2 runs per circuit; whether phase 1 is shared; what changes if the cap value changes (value vs compiled bound).",
+        "whyItMatters": "Phase 2 is per circuit, and a changed bound needs a new setup. I cannot judge my ceremony cost or re-key risk without knowing whether a cap change alters the circuit."
+      }
+    ],
+    "diagramFindings": [
+      {
+        "diagram": "Invoice 'Contract requirements' panel (invoice-diagram.png)",
+        "whatIActuallyInspected": "The screenshot of the Applications section with invoice payment selected: three required-check buttons on the left, a 'Web / PROOF COLLECTION' hub circle, a selected-check inspector on the right, the '3 of 3 conditions covered' banner.",
+        "whatItTeaches": "Three checks feed one Web hub; selecting a check populates the inspector; a complete set is shown as 3 of 3 covered and ready for submission.",
+        "whatItFailsToShow": "No transaction, no input or output UTxO, no datum, no count of Strands or Issue transactions. The arrows connect checks to the hub but do not show whether the hub is one proof or three. The 112/37/75 numbers appear only in text, not in the diagram. In the 'What the validator receives' column the sentence runs past the panel's right edge. The 'Web' label overlaps the ring outline.",
+        "replacementOrRevision": "Replace with a transaction diagram for one settlement: escrow input (datum 100 invoice / 10 reserve / 112 CASH), outputs to seller (35), fee recipient (2), successor escrow (75, datum 65 / 10), and the claim outputs consumed, each labelled with which check's proof it carries. Annotate the count of Strands and Issue transactions."
+      },
+      {
+        "diagram": "Token issuance panel (issuance-diagram.png)",
+        "whatIActuallyInspected": "The same layout as the invoice panel with token issuance selected: Supply limit, Recipient amounts and Separate token obligations checks; the inspector showing '300 units under a cap of 1,000; unissued capacity is 700'.",
+        "whatItTeaches": "Three checks cover the issuance; the cap is 1,000 and 700 remains unissued; recipient amounts sum to 300.",
+        "whatItFailsToShow": "The supply state before and after (what the datum holds), the mint transaction, the recipient outputs as transaction outputs, and who holds the minting authority. The diagram is the invoice layout with new labels, so the picture of the issuance route is effectively the same as the invoice picture. Nothing shows the 700 unissued as a state that carries forward.",
+        "replacementOrRevision": "Replace with a before/after supply diagram: supply UTxO {issued 0, cap 1000} spent, mint 300, recipient outputs 180 and 120, successor supply UTxO {issued 300, cap 1000}; mark which values come from the spent datum, which from the minted quantity, and which from the proof's public statement."
+      },
+      {
+        "diagram": "Settlement stages (settlement-stages.png)",
+        "whatIActuallyInspected": "The four-column 'How a Web reaches settlement' section: Steps 1 to 4 with text, dots on a horizontal rule, and an 'Issuance assumptions and funding' link.",
+        "whatItTeaches": "A reader can see the order: sign limits, build Strands, put claims on-chain, settle. Step 3 is marked as not executing the payment.",
+        "whatItFailsToShow": "Which transaction each step is, what each consumes and produces, how many transactions there are for a multi-condition Web, and where the claim token is burned. The four columns are equal-weight text blocks, so the diagram carries no numbers and no state change.",
+        "replacementOrRevision": "Replace with a transaction timeline: T1..Tn Issue (each input: none or fee UTxO; output: claim UTxO with min-ADA; proof reference), then Tsettle (inputs: claim UTxOs plus escrow state; burn: claim tokens; outputs: seller, fee, successor state), with signers marked on each row."
+      },
+      {
+        "diagram": "Seven-layer architecture panel (architecture.png)",
+        "whatIActuallyInspected": "The architecture section with Verification (7) selected: a numbered list of seven layers on the left and the Verification explanation with 'Result: Issue and settlement transactions' on the right.",
+        "whatItTeaches": "The seven concerns are listed in order and one can be selected; Verification is the connection to Cardano.",
+        "whatItFailsToShow": "Any mapping to the issuance case: which layer decides the cap, which decides recipient amounts, which decides servicing. The layers are generic; a capped-asset issuer cannot tell from the diagram what the architecture changes for their asset.",
+        "replacementOrRevision": "Replace with a three-row table for issuance: supply-limit check (layers 2 and 4), mint policy (layer 7), setup for the issuance circuit (layer 1), with one line each on what a change would require."
+      },
+      {
+        "diagram": "Mobile invoice diagram and other application screenshots (mobile-invoice-diagram.png, dex-diagram.png, loan-diagram.png, treasury-diagram.png, invoice-missing-coverage.png, setup-counter.png, desktop-opening.png)",
+        "whatIActuallyInspected": "Not opened. The role does not depend on these; I relied on the page text and the three panels above.",
+        "whatItTeaches": "Not assessed.",
+        "whatItFailsToShow": "Not assessed.",
+        "replacementOrRevision": "None proposed from these."
+      }
+    ],
+    "proseProblems": [
+      {
+        "location": "Applications > Token issuance intro",
+        "exactQuote": "The cap leaves room for up to 700 more units under the minting policy; that capacity is not an amount already owed.",
+        "problem": "Says the cap sits under the minting policy but never says who holds minting authority or what the policy checks beyond the cap. For an issuer this is the central control and it is stated only by reference.",
+        "suggestedRewrite": "The minting policy holds the cap of 1,000 and the current issued amount in the supply datum. Only a transaction signed by [named authority] can mint; each mint must spend the previous supply UTxO and produce a successor with issued = previous + minted. The 700 remaining units are capacity, not a liability."
+      },
+      {
+        "location": "Applications > Token issuance, check 1 'Supply limit', 'Where the inputs come from'",
+        "exactQuote": "The application asset\u2019s own minting policy enforces the cap and continues the supply state from its predecessor.",
+        "problem": "If the minting policy enforces the cap, the page does not say what the Strand adds for supply, and the 'predecessor' is not identified (spent datum, reference input or both). The technical notes mark reference-input reads as PROPOSED, which this card does not disclose.",
+        "suggestedRewrite": "The minting policy checks issued + minted <= cap against the spent supply datum. The supply-limit Strand proves the arithmetic of that bound from the same datum; it does not enforce the cap on-chain by itself. [Say which of the two is the enforcing check.]"
+      },
+      {
+        "location": "Applications > each case, 'What the validator receives'",
+        "exactQuote": "A Web covering these conditions, bound to the transaction that spends the contract state.",
+        "problem": "Identical sentence in all five cases. It tells me nothing about what the validator actually receives for supply, distribution or servicing.",
+        "suggestedRewrite": "The validator receives the Strand references for the three checks, the statement digest of each, the spent supply UTxO reference, and the claimant and intent identifiers, and it rebuilds the statement from the mint, recipient outputs and successor datum."
+      },
+      {
+        "location": "Applications > Token issuance, check 3 'What the claim says'",
+        "exactQuote": "A redemption promise is a duty only when the program defines it.",
+        "problem": "Defines a redemption duty only by negation. For a capped-token issuer the question is what a redemption promise looks like once defined, who must discharge it and where its balance lives. The sentence is true but gives no way to act on it.",
+        "suggestedRewrite": "A redemption promise becomes a servicing duty only if the program records it in a duty field, naming the redeeming asset, the rate and the party who must pay. Example: 1 AppToken redeemable for 1 CASH; creating 300 tokens records a duty of 300 CASH; each redemption burns a token and reduces the duty; a nonzero duty blocks closing."
+      },
+      {
+        "location": "Applications > Invoice payment intro and worksheet",
+        "exactQuote": "The escrow\u2014the account holding the funds\u2014starts with 112 CASH.",
+        "problem": "Presented as the normal opening state, but the technical notes say the source program funds 110, the buyer's opening debit under the 112 design is not specified by any source, and 112 needs a program change. A reader from a funding perspective would take 112 as the designed funding amount.",
+        "suggestedRewrite": "Show the 112 funding as the proposed backing policy in the worked example, and name the funding action that creates it, or say the source program is 110 and link to the funding note."
+      },
+      {
+        "location": "Settlement stages, Step 4",
+        "exactQuote": "Settlement consumes every required claim output and burns its claim token.",
+        "problem": "Gives the action but not the count or the transaction. For a three-condition Web I cannot tell if this is one transaction consuming three claim outputs.",
+        "suggestedRewrite": "Settlement is one transaction that consumes all claim outputs for this Web (for the invoice example, three of them if each condition has its own Strand) and burns three claim tokens. Each claimant signs that transaction."
+      }
+    ],
+    "priorityChanges": [
+      "Add one complete worked issuance transaction set (predecessor supply UTxO and datum, mint of 300, recipient outputs 180 and 120, successor datum 300/1000, Issue transactions with claim outputs, settlement with burns and signers). This is the single change that most helps an issuer and it is absent.",
+      "State the Strand and Issue-transaction count for each application and reconcile 'one proof can cover several conditions' with 'n Strands mean n Issue transactions'. The button layout currently implies one Strand per check.",
+      "Explain the supply-limit check against the minting policy: which one enforces the cap, what the Strand adds, and how the predecessor supply state is read (spent datum or reference input), disclosing that reference-input reads are proposed.",
+      "Replace the identical 'What the validator receives' sentence in all five cases and the generic seven-layer panel with concrete per-case content: the references, digests and identifiers the validator reads, and what each layer means for a capped token.",
+      "Add a signer table (intent, mint, Issue, settlement, reclaim) and a short redemption-duty example, since servicing and who can release value are the parts an issuer must operate."
+    ],
+    "inspectedImages": [
+      "invoice-diagram.png",
+      "settlement-stages.png",
+      "issuance-diagram.png",
+      "architecture.png"
+    ],
+    "limitations": "\"Read the four screenshots listed above with the Read tool; the other seven packet images were not opened and I did not assess dex, loan, treasury, mobile or setup-counter views. Reviewed the complete supplied page text and state JSON. I did not navigate a browser or run the page, so interactions (remove coverage, slider, circuit counter) are judged from their text and captured states only. This is model reader feedback on comprehension and depth, not a security audit or cryptographic review. Some statements about what the page means are inferred from the technical notes, which I read as part of the page; I did not verify them against source. Plan mode was active in this session; I performed read-only actions only and wrote no files.\"",
+    "verdict": "NEEDS_MORE_DEPTH"
+  }
+]
