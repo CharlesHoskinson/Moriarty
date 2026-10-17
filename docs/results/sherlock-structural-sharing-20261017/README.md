@@ -24,6 +24,12 @@ The [actual result](actual/attempt-01/RESULT.json) retains compilation, exact
 single-selector listing and one passed test against the unchanged original R83
 normal production library, with292 input pins unchanged. No Core rebuild,
 Cargo/dev-SDK, K engine, proof or ledger operation ran. Native authority stays0.
-General requirement acceptance is pending fresh functional/result review and
-Root adoption. Dedicated typed A evidence cannot close B/generic/constraint,
+The [fresh functional/result review](review/r111/REPORT.md) approves the actual
+result binding and accepts original009. [Root adopts](ROOT-ADOPTION.json) that
+original host clause with the explicit coverage limits above. Dedicated typed A evidence cannot close B/generic/constraint,
 formal, financial or target requirements.
+
+The [selected current-evidence report](current-evidence/RESULT.json) verifies
+eight adopted current original clauses,27 open originals and25 open refinements.
+It is a file/JSON integrity observation; no unchanged subject test or default
+252-test cohort was rerun for this adoption.
