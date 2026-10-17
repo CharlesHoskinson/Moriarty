@@ -802,6 +802,131 @@ pub fn verify_extracted_call_from_bytes(
     )
 }
 
+fn verify_expected_raw_entry_point_and_envelope(
+    keys: &SherlockLedgerKeys,
+    contract_address: ContractAddress,
+    entry_point: &str,
+    pre_call_state: &ChargedState<InMemoryDB>,
+    cost_model: &CostModel,
+    expected_raw: &RawIntent,
+    opening: &SherlockCallOpening,
+) -> Result<()> {
+    if expected_raw.actions.len() != 1 || expected_raw.calls().count() != 1 {
+        return Err(refusal("call-action-arity-mismatch"));
+    }
+    let Some(raw_call) = expected_raw.calls().next() else {
+        return Err(refusal("expected-call-action"));
+    };
+    let midnight_ledger::structure::ProofPreimageVersioned::V2(preimage) = &raw_call.proof else {
+        return Err(refusal("native-preimage-version"));
+    };
+    if preimage.key_location.0.as_ref() != entry_point {
+        return Err(refusal("call-entry-point-mismatch"));
+    }
+    let canonical_raw = sherlock_literal::raw_call_intent(
+        keys,
+        contract_address,
+        pre_call_state,
+        cost_model,
+        opening,
+        expected_raw.ttl,
+        expected_raw.binding_commitment,
+    )?;
+    if canonical_raw.erase_proofs().erase_signatures()
+        != expected_raw.erase_proofs().erase_signatures()
+    {
+        return Err(refusal("call-entry-point-mismatch"));
+    }
+    Ok(())
+}
+
+/// Extract the installed [`ContractOperation`] for `entry_point` from a caller-supplied
+/// [`ContractState<InMemoryDB>`] and verify canonical tagged call transaction bytes
+/// against that same state's [`ContractState::data`] (`&contract_state.data`),
+/// explicit expected [`ContractAddress`], [`SherlockLedgerKeys`], runtime [`CostModel`],
+/// `expected_raw`, and `opening`.
+///
+/// Does not accept a separate [`ChargedState`] argument and never calls
+/// [`ChargedState::new`] or reconstructs/normalizes `contract_state.data`.
+///
+/// Trust qualification: caller-supplied `contract_state`, `contract_address`,
+/// `cost_model`, state/source freshness, and chain association remain external
+/// assumptions. This helper neither fetches nor authenticates chain state, nor
+/// establishes full transaction balancing, [`LedgerState`] application, network
+/// inclusion/finality/settlement, full Sherlock correctness, or native acceptance.
+/// State identity is NOT established by transcript gas equality, and existing
+/// companion-transcript restrictions remain scoped.
+pub fn verify_extracted_call_from_contract_state(
+    keys: &SherlockLedgerKeys,
+    contract_state: &ContractState<InMemoryDB>,
+    contract_address: ContractAddress,
+    entry_point: &str,
+    cost_model: &CostModel,
+    expected_raw: &RawIntent,
+    call_tx_bytes: &[u8],
+    opening: &SherlockCallOpening,
+    call_segment: Segment,
+) -> Result<SherlockExtractedCallVerification> {
+    let operation = extract_operation_from_contract_state(contract_state, entry_point)?;
+    let call_tx: SealedTransaction = codec::decode_artifact(call_tx_bytes)?;
+    let extracted = verify_extracted_call(
+        keys,
+        &operation,
+        &contract_state.data,
+        cost_model,
+        expected_raw,
+        &call_tx,
+        opening,
+        call_segment,
+        Some(contract_address),
+    )?;
+    verify_operation_against_keys(keys, &extracted.operation)?;
+    verify_expected_raw_entry_point_and_envelope(
+        keys,
+        contract_address,
+        entry_point,
+        &contract_state.data,
+        cost_model,
+        expected_raw,
+        opening,
+    )?;
+    Ok(extracted)
+}
+
+/// Decode a canonical tagged [`ContractState<InMemoryDB>`] (`contract-state[v8]` at
+/// this pinned ledger-v9 source revision, with embedded `charged-state[v1]`)
+/// via [`codec::decode_artifact`] and verify canonical tagged call transaction
+/// bytes against that decoded state via [`verify_extracted_call_from_contract_state`].
+///
+/// Serialization tags identify per-type binary encodings, not ledger major versions,
+/// and Rust tagged decoding does not establish TypeScript, indexer, or provider
+/// envelope interoperability. All external trust boundary qualifications of
+/// [`verify_extracted_call_from_contract_state`] apply.
+pub fn verify_extracted_call_from_contract_state_bytes(
+    keys: &SherlockLedgerKeys,
+    contract_state_bytes: &[u8],
+    contract_address: ContractAddress,
+    entry_point: &str,
+    cost_model: &CostModel,
+    expected_raw: &RawIntent,
+    call_tx_bytes: &[u8],
+    opening: &SherlockCallOpening,
+    call_segment: Segment,
+) -> Result<SherlockExtractedCallVerification> {
+    let contract_state: ContractState<InMemoryDB> = codec::decode_artifact(contract_state_bytes)?;
+    verify_extracted_call_from_contract_state(
+        keys,
+        &contract_state,
+        contract_address,
+        entry_point,
+        cost_model,
+        expected_raw,
+        call_tx_bytes,
+        opening,
+        call_segment,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
