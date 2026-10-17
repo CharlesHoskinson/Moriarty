@@ -12,12 +12,15 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Find the first difference](how-to/find-first-difference.md)
 - [Add a normal case](how-to/add-normal-case.md)
 - [Check the stream realization](how-to/check-stream-realization.md)
+- [Prepare a compile-only HostOnly source artifact](how-to/prepare-host-source-artifact.md)
 
 ## Reference
 
 - [Components](reference/components.md)
 - [Profiles and results](reference/profiles-results.md)
 - [Host machine](reference/host-machine.md)
+- [HostOnly source compiler API and artifact](reference/host-source-compiler.md)
+- [HostOnly configuration and exact fixture](reference/host-source-config.md)
 - [Image layout](reference/image-layout.md)
 - [Bridges and ledger](reference/bridges-ledger.md)
 - [DoctorWatson](reference/doctorwatson.md)
