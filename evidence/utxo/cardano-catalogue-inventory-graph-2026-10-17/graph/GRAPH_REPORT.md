@@ -1,0 +1,11 @@
+# Catalogue row inventory map v2 — Graphify identity repair
+
+The first map’s 590 raw nodes became 558 nodes under the installed Graphify default build. I reproduced this with the installed `graphifyy` 0.9.91 API. The builder defaults to `dedup=True`; for nodes with a source location, it groups non-AST nodes by `(source_file, stripped label)` and remaps duplicates. The original map had 32 such groups containing 80 nodes. Exactly one ID per group disappeared (32 total); those IDs are listed in `SOURCE-CHECKS.json`. There were no extra built node IDs. Although both graphs contained 1,494 edges, 32 raw edge identities were replaced by 32 endpoint-remapped identities. `dedup=False` retained the original 590 node IDs and 1,494 raw edge identities.
+
+V2 changes only 48 duplicate display labels: it keeps the lexicographically first label in each group and appends a suffix from each other node’s existing ID. Each changed node preserves its former label in `properties.sourceLabel`. The source assertions, statuses, node IDs, edge identities and citation arrays are unchanged.
+
+The installed Graphify default API roundtrip now retains all 590/590 node IDs and all 1,494/1,494 edge identities. Every node and edge citation array matches the input graph byte-for-byte after roundtrip. The graph retains all 143 versioned rows, 20 pattern-family IDs and four identity-layer nodes.
+
+The first four output files remain unchanged. Their source-check record reported Graphify 0.9.44 from the system Python metadata; the actual installed CLI/API used here identify as 0.9.91. V2 records the installed package metadata and source hashes.
+
+All nodes and edges remain classified `DOCUMENT_ASSERTION` / `DRAFT`; Graphify’s confidence enum is `EXTRACTED` because each record is directly cited. The candidate is unreviewed and unpublished pending independent nonauthor attribution review. It claims no exhaustiveness, proof, ledger truth, security, admission, recovered bridge rows or current-language support. Missing 42 Cardano / 52 Midnight source material remains missing according to the cited document. No locator or auditRef value was followed or copied. Actual author identity: gpt-6-luna; no provider receipt path was supplied.
