@@ -1,0 +1,824 @@
+{
+  "format": "sherlock-b-validate-k-scoped-projection/1",
+  "comparison_rule": "Compare included/constant/derived fields exactly within the explicit normal domain. Partial components compare only named subfields. Excluded fields are unobserved, never equality or omitted-field matches.",
+  "machine": [
+    {
+      "field": "reg.control",
+      "projection": "included",
+      "term": "BVControl",
+      "limitation": ""
+    },
+    {
+      "field": "reg.controlOrigin",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.envRoot",
+      "projection": "constant",
+      "term": "absent",
+      "limitation": ""
+    },
+    {
+      "field": "reg.depth",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.stackLimit",
+      "projection": "included",
+      "term": "BVFixed.stackLimit",
+      "limitation": ""
+    },
+    {
+      "field": "reg.outcome",
+      "projection": "included",
+      "term": "BVOutcome; Running | Halted(Const)",
+      "limitation": ""
+    },
+    {
+      "field": "reg.initialFuel",
+      "projection": "included",
+      "term": "BVFixed.initialFuel",
+      "limitation": ""
+    },
+    {
+      "field": "reg.remainingWork",
+      "projection": "included",
+      "term": "BVClocks[0]",
+      "limitation": ""
+    },
+    {
+      "field": "reg.consumedWork",
+      "projection": "included",
+      "term": "BVClocks[1]",
+      "limitation": ""
+    },
+    {
+      "field": "reg.helperWork",
+      "projection": "included",
+      "term": "BVClocks[2]",
+      "limitation": ""
+    },
+    {
+      "field": "reg.helperVisits",
+      "projection": "included",
+      "term": "BVClocks[3]",
+      "limitation": ""
+    },
+    {
+      "field": "reg.referenceCursor",
+      "projection": "included",
+      "term": "BVClocks[4]",
+      "limitation": ""
+    },
+    {
+      "field": "reg.alloc.dataNodes",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.alloc.dataFields",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.alloc.environmentCells",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.active.data",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.active.dataFields",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.active.env",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.active.valueSlots",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "reg.taskLive",
+      "projection": "derived",
+      "term": "bvTaskLive(tasks)",
+      "limitation": ""
+    },
+    {
+      "field": "reg.helper",
+      "projection": "included",
+      "term": "BVHelper(site,originReferenceCursor,parentResume,root,status)",
+      "limitation": ""
+    },
+    {
+      "field": "reg.result",
+      "projection": "included",
+      "term": "BVResult",
+      "limitation": ""
+    },
+    {
+      "field": "reg.segBase",
+      "projection": "constant",
+      "term": "all 8 nested fields zero",
+      "limitation": ""
+    },
+    {
+      "field": "img.data",
+      "projection": "constant",
+      "term": "empty active prefix; inactive storage implicit zero",
+      "limitation": "No padded-array serialization or physical capacity encoding"
+    },
+    {
+      "field": "img.dataFields",
+      "projection": "constant",
+      "term": "empty active prefix; inactive storage implicit zero",
+      "limitation": "No padded-array serialization or physical capacity encoding"
+    },
+    {
+      "field": "img.env",
+      "projection": "constant",
+      "term": "empty active prefix; inactive storage implicit zero",
+      "limitation": "No padded-array serialization or physical capacity encoding"
+    },
+    {
+      "field": "img.valueSlots",
+      "projection": "constant",
+      "term": "empty active prefix; inactive storage implicit zero",
+      "limitation": "No padded-array serialization or physical capacity encoding"
+    },
+    {
+      "field": "img.frames",
+      "projection": "constant",
+      "term": "empty active prefix; inactive storage implicit zero",
+      "limitation": "No padded-array serialization or physical capacity encoding"
+    },
+    {
+      "field": "img.tasks",
+      "projection": "included",
+      "term": "reverse(BVTasks); top task full (Const ref ID, TaskVisit, cursor)",
+      "limitation": "No padded-array serialization or physical capacity encoding"
+    },
+    {
+      "field": "img.admission",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No host instance identity/API pairing check or authenticity claim"
+    },
+    {
+      "field": "img.runId",
+      "projection": "partial",
+      "term": "BVRun",
+      "limitation": "See identity projection; no full RunId comparison"
+    }
+  ],
+  "event": [
+    {
+      "field": "stepId",
+      "projection": "partial",
+      "term": "BVStepId(BVRun, pre.consumedWork); ordinal is exact in domain; RunId partial",
+      "limitation": "Identity exclusions apply"
+    },
+    {
+      "field": "ruleId",
+      "projection": "included",
+      "term": "BVEvent[1] exact adopted row ID",
+      "limitation": ""
+    },
+    {
+      "field": "eventKind",
+      "projection": "included",
+      "term": "BVEvent[2]",
+      "limitation": ""
+    },
+    {
+      "field": "site",
+      "projection": "included",
+      "term": "bvSite(kind); None for Publish, EvalLiteral otherwise",
+      "limitation": ""
+    },
+    {
+      "field": "helperKind",
+      "projection": "included",
+      "term": "bvIntervalKind(kind); None for P1 Publish, Validate otherwise (includes result consumption)",
+      "limitation": ""
+    },
+    {
+      "field": "disposition",
+      "projection": "included",
+      "term": "Applied or Published",
+      "limitation": ""
+    },
+    {
+      "field": "workDelta",
+      "projection": "included",
+      "term": "BVDeltas[0] = post.consumed-pre.consumed",
+      "limitation": ""
+    },
+    {
+      "field": "helperWorkDelta",
+      "projection": "included",
+      "term": "BVDeltas[1]",
+      "limitation": ""
+    },
+    {
+      "field": "helperVisitsDelta",
+      "projection": "included",
+      "term": "BVDeltas[2]",
+      "limitation": ""
+    },
+    {
+      "field": "referenceCursorDelta",
+      "projection": "included",
+      "term": "BVDeltas[3]",
+      "limitation": ""
+    },
+    {
+      "field": "allocDeltas",
+      "projection": "included",
+      "term": "BVDeltas[4..6] = 0",
+      "limitation": ""
+    },
+    {
+      "field": "valueSlotWrites",
+      "projection": "included",
+      "term": "BVDeltas[7] = 0",
+      "limitation": ""
+    },
+    {
+      "field": "logicalDepthBefore",
+      "projection": "included",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "logicalDepthAfter",
+      "projection": "included",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "taskCursorBefore",
+      "projection": "included",
+      "term": "bvTaskLive(pre.tasks)",
+      "limitation": ""
+    },
+    {
+      "field": "taskCursorAfter",
+      "projection": "included",
+      "term": "bvTaskLive(post.tasks)",
+      "limitation": ""
+    },
+    {
+      "field": "helperPhaseBefore",
+      "projection": "included",
+      "term": "bvPhase(pre.helper) only",
+      "limitation": ""
+    },
+    {
+      "field": "helperPhaseAfter",
+      "projection": "included",
+      "term": "bvPhase(post.helper) only",
+      "limitation": ""
+    },
+    {
+      "field": "helperCursorBefore",
+      "projection": "included",
+      "term": "bvCursor(pre.helper,pre.tasks) only; Some(0) distinct",
+      "limitation": ""
+    },
+    {
+      "field": "helperCursorAfter",
+      "projection": "included",
+      "term": "bvCursor(post.helper,post.tasks) only; Some(0) distinct",
+      "limitation": ""
+    },
+    {
+      "field": "resultTag",
+      "projection": "included",
+      "term": "bvResultTag(pre.result,post.result); includes staging/consumption",
+      "limitation": ""
+    },
+    {
+      "field": "originReferenceCursor",
+      "projection": "included",
+      "term": "bvOrigin: pre.helper, else post.helper, else pre.referenceCursor if pre.result, else None",
+      "limitation": ""
+    },
+    {
+      "field": "sourceExprId",
+      "projection": "included",
+      "term": "0; literal entry occurrence",
+      "limitation": ""
+    },
+    {
+      "field": "exhaustedKind",
+      "projection": "included",
+      "term": "absent (bvNoTag)",
+      "limitation": ""
+    },
+    {
+      "field": "outcomeTag",
+      "projection": "included",
+      "term": "BVOutcome constructor",
+      "limitation": ""
+    },
+    {
+      "field": "outcomePayload",
+      "projection": "included",
+      "term": "BVOutcome payload",
+      "limitation": ""
+    },
+    {
+      "field": "boundary",
+      "projection": "included",
+      "term": "None for Running, Terminal for Halted",
+      "limitation": ""
+    }
+  ],
+  "identity": [
+    {
+      "field": "Identity.profileId",
+      "projection": "constant",
+      "term": "sherlock-helper-microstep/1",
+      "limitation": ""
+    },
+    {
+      "field": "Identity.grammarDomain",
+      "projection": "constant",
+      "term": "DedicatedSorts",
+      "limitation": ""
+    },
+    {
+      "field": "Identity.finance",
+      "projection": "constant",
+      "term": "Absent",
+      "limitation": ""
+    },
+    {
+      "field": "Identity.layoutVersion",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No equality/membership claim"
+    },
+    {
+      "field": "Identity.layoutDigest",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No equality/membership claim"
+    },
+    {
+      "field": "Identity.boundsDigest",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No equality/membership claim"
+    },
+    {
+      "field": "Identity.fieldId",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No equality/membership claim"
+    },
+    {
+      "field": "Identity.programMembershipDigest",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No equality/membership claim"
+    },
+    {
+      "field": "RunId.fuelInput",
+      "projection": "partial",
+      "term": "BVFixed.initialFuel",
+      "limitation": "Only Nat in u128; Negative/NatAboveU128 omitted"
+    },
+    {
+      "field": "RunId.stackLimitInput",
+      "projection": "partial",
+      "term": "BVFixed.stackLimit",
+      "limitation": "Only nonnegative mathematical Int; no host usize width validation"
+    },
+    {
+      "field": "SourceOccurrenceId",
+      "projection": "partial",
+      "term": "Entry, empty astPath, sourceExprId 0",
+      "limitation": "Digest and physical occurrence/path tables excluded"
+    }
+  ],
+  "program": [
+    {
+      "field": "prog.expressions",
+      "projection": "constant",
+      "term": "only row 0 = Literal(root)",
+      "limitation": "No other expression grammar"
+    },
+    {
+      "field": "prog.occurrences",
+      "projection": "partial",
+      "term": "Entry and empty root path",
+      "limitation": "No physical occurrence/path rows or digest"
+    },
+    {
+      "field": "prog.occurrencePaths",
+      "projection": "partial",
+      "term": "Entry and empty root path",
+      "limitation": "No physical occurrence/path rows or digest"
+    },
+    {
+      "field": "prog.children",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "Only literal source; unused code outside domain"
+    },
+    {
+      "field": "prog.functions",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "Only literal source; unused code outside domain"
+    },
+    {
+      "field": "prog.parameters",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "Only literal source; unused code outside domain"
+    },
+    {
+      "field": "prog.arms",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "Only literal source; unused code outside domain"
+    },
+    {
+      "field": "prog.patterns",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "Only literal source; unused code outside domain"
+    },
+    {
+      "field": "prog.constants",
+      "projection": "partial",
+      "term": "BVRows row IDs, dedicated tag and exact payload",
+      "limitation": "markerFree implicit true; marker rows excluded; prepared allocation/source membership unproven"
+    },
+    {
+      "field": "prog.constantFields",
+      "projection": "partial",
+      "term": "ordered inline BVRef fields",
+      "limitation": "No physical field-block start/length/ownership encoding"
+    },
+    {
+      "field": "prog.names",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "Only literal source; unused code outside domain"
+    },
+    {
+      "field": "prog.header.entry",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.declaration_tables",
+      "projection": "constant",
+      "term": "absent under DedicatedSorts",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.expressions",
+      "projection": "constant",
+      "term": "1",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.occurrences",
+      "projection": "constant",
+      "term": "1",
+      "limitation": "Physical occurrence-row encoding still excluded"
+    },
+    {
+      "field": "prog.header.activeLengths.constants",
+      "projection": "derived",
+      "term": "bvRowsLength(BVRows)",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.constantFields",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Inline ordered references included, but flattening adapter and physical field count not supplied"
+    },
+    {
+      "field": "prog.header.activeLengths.occurrencePaths",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.children",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.functions",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.parameters",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.arms",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.patterns",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    },
+    {
+      "field": "prog.header.activeLengths.names",
+      "projection": "constant",
+      "term": "0",
+      "limitation": ""
+    }
+  ],
+  "other": [
+    {
+      "field": "Bounds.maxHelperWork",
+      "projection": "included",
+      "term": "BVFixed.maxHelperWork",
+      "limitation": ""
+    },
+    {
+      "field": "Bounds.helperTasks",
+      "projection": "included",
+      "term": "BVFixed.helperTasks",
+      "limitation": ""
+    },
+    {
+      "field": "ReferenceState.values",
+      "projection": "constant",
+      "term": "empty",
+      "limitation": "No ValSlice roots in scoped control/frames/helper/result"
+    },
+    {
+      "field": "admit/prepare/check_program_view/AB/StepInv/refusal policy",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No validation or security judgment; these supplied normal states are not evidence of admitted producers"
+    },
+    {
+      "field": "Bounds.codeRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.functionRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.codeChildSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.parameterSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.patternRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.matchPlanRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.matchArmRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.typeRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.constructorRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.constructorFieldSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.maxArity",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.constantNodes",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.constantFieldSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.dataNodes",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.dataFieldSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.environmentCells",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.frames",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.serializationBytes",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.maxReferenceWork",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "Bounds.stepCap",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "No comparison/validation; normal-input assumptions do not replace admission."
+    },
+    {
+      "field": "LayoutSchema.layoutVersion",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutSchema.fieldId",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutSchema.widths",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutSchema.scalarLayoutId",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutSchema.bounds",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutSchema.capacities",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutSchema.boundaryCapacities",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "WidthTable.indexWidths",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "WidthTable.counterWidths",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "WidthTable.recordWidths",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutCapacities.nameRows",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutCapacities.nameBytes",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutCapacities.occurrencePathSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "LayoutCapacities.valueSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "BoundaryCapacities.physDataNodes",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "BoundaryCapacities.physDataFieldSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "BoundaryCapacities.physEnvironmentCells",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    },
+    {
+      "field": "BoundaryCapacities.physValueSlots",
+      "projection": "excluded",
+      "term": "none",
+      "limitation": "Unobserved; no equality, encoding or validation claim."
+    }
+  ]
+}
