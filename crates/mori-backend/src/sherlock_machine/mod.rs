@@ -36,6 +36,8 @@ mod literal_step;
 mod literal_ui_valid;
 pub mod literal_bridge;
 pub mod literal_witness;
+pub mod return_publication_step;
+pub mod return_publication_witness;
 pub use literal_step::{
     emit_literal_step, literal_schema, LiteralCapacities, LiteralConstructionError,
     LiteralEnvelope, LiteralImage, LiteralLane, LiteralSchema, LiteralStepBlock,
@@ -258,3 +260,9 @@ mod literal_witness_normal_tests;
 
 #[cfg(test)]
 mod literal_witness_native_tests;
+
+#[cfg(test)]
+mod return_publication_step_normal_tests;
+
+#[cfg(test)]
+mod return_publication_witness_normal_tests;
