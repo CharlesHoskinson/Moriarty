@@ -1,0 +1,35 @@
+"""Unreviewed mechanical render fragment for an Opus-owned R3 tail.
+
+The existing prefix supplies legacy and json. This file supplies no imports.
+Arguments have already passed the integrator's checks. No admission is done here.
+Consumer format and labels are opaque supplied manifest values.
+"""
+
+
+def _render_prepared_outputs(code_hex, policy, case_rows, manifest_fields):
+    """Render four prepared rows without modifying their metadata or nested values."""
+    t1, t5, t6, t7 = case_rows
+    render_rows = (
+        ("K10-T1-positive-genuine-issue", t1),
+        ("K10-T5-quantity-two-reject", t5),
+        ("K10-T6-token-name-bitflip-reject", t6),
+        ("K10-T7-vk-digest-bitflip-reject", t7),
+    )
+    files = {"script.hex": (code_hex + "\n").encode("utf-8")}
+    manifest_cases = []
+    for case_id, row in render_rows:
+        context = legacy.script_context(
+            policy, row["env"], row["token"], row["quantity"],
+            row["vk"], row["proof"])
+        relative = "contexts/%s.uplc.txt" % case_id
+        files[relative] = ("(con data (%s))\n" %
+                           legacy.uplc_term(context)).encode("utf-8")
+        case_manifest = dict(row["manifest"])
+        case_manifest["id"] = case_id
+        case_manifest["contextFile"] = relative
+        manifest_cases.append(case_manifest)
+    manifest = dict(manifest_fields)
+    manifest["cases"] = manifest_cases
+    files["manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) +
+                              "\n").encode("utf-8")
+    return files
