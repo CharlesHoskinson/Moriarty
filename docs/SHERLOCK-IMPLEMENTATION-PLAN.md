@@ -1,6 +1,15 @@
 # Sherlock Candidate B Implementation Plan
 
-Routing for new work: [AGENTS.md](../AGENTS.md#security-ownership-restored--october-16) records restored Opus 5.5 high security ownership. GPT-6.1 Sol high implements nonsecurity work; a fresh non-author Muse Wonder1.0 high audits it. Historical Argon/Opus requirements, results and frozen gates retain their actual identities and scope.
+Routing for new work: [AGENTS.md](../AGENTS.md#latest-review-routing-override--october-16) records GPT-6.1 Sol high implementation and fresh non-author Opus 5.5 high audits, with Opus owning security. Historical reviewer identities and frozen task contracts remain unchanged.
+
+**Immediate priority (October 17):** drive the existing active goal toward the first
+real Sherlock transition on Midnight stagenet. Connect the handwritten instruction
+fragment to its explicit public statement and actual ledger-9 proof consumer;
+resolve existing native-build prerequisites in parallel; prove and independently
+verify locally; then submit and read back settlement on stagenet. Record each
+observed stage separately. This changes work order, not the full acceptance scope
+or any execution authority. See the [user assignment](../raw/assignments/sherlock-stagenet-priority-2026-10-17.md).
+
 
 > **For agentic workers:** Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` for authorized implementation packages. Checkboxes below track planned delivery; none records execution in this design edit. Retain existing execution authority and resource limits.
 
@@ -19,12 +28,12 @@ Routing for new work: [AGENTS.md](../AGENTS.md#security-ownership-restored--octo
 - No external implementation is copied or selected as a dependency. Rebuild useful algorithms independently regardless of donor license/backend. See [concept adoption](research/sherlock/CONCEPT-ADOPTION.md) and [ten primary-source studies](research/sherlock/papers/README.md).
 - Required Clean implementation stays in existing private Fenrir. Public documents describe scope and dependency; private paths, pins, source and witness material remain privately retained. Public component inventory pins upstream Clean `1a6c28426372bb99af79e533aa7b9a0788eff0d7`.
 - Current implementation fact: Fenrir PR1 merged the generic pure Lean reference foundation with eight normal and exact-remaining-zero publication checks and independent scoped source approval. That child result supplies no Clean step circuit, K/Lean refinement, soundness/completeness, native exporter or financial acceptance. Extend and reconcile that foundation; do not start a duplicate implementation or report zero Lean implementation.
-- Nonsecurity authors are GPT-6.1 Sol high; fresh non-author nonsecurity audits use Muse Wonder 1.0 high. All security analysis, requirements, hostile tests, theorems and judgments belong to Opus 5.5. Security packages below identify ownership only and do not supply substitute requirements.
+- Nonsecurity authors are GPT-6.1 Sol high; fresh non-author nonsecurity audits use Opus 5.5 high. All security analysis, requirements, hostile tests, theorems and judgments belong to Opus 5.5. Security packages below identify ownership only and do not supply substitute requirements.
 - U0–U7, M1–M17, MC01–08, SP01–12, G01–24 and retained UNI/MOR/MPLR/AEO/ZR/MNR requirements remain in force. Source/child success closes no full parent exit. Moriarty remains permissionless; maintainer controls never become developer compile/prove/deploy approval.
 
 ## Correctness loop within every phase
 
-Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the restored Opus 5.5 high assignment in [AGENTS.md](../AGENTS.md#security-ownership-restored--october-16). GPT-6.1 Sol high implements nonsecurity work, and fresh Muse Wonder1.0 high reviews it. Historical Argon and Opus records retain their actual identities and scopes.
+Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the restored Opus 5.5 high assignment in [AGENTS.md](../AGENTS.md#security-ownership-restored--october-16). GPT-6.1 Sol high implements nonsecurity work, and fresh Opus 5.5 high reviews it. Historical Argon and Opus records retain their actual identities and scopes.
 
 ## File and ownership map
 
@@ -217,7 +226,7 @@ Opus 5.5's Phase 3 gate, reproduced verbatim from the handoff for [A4/B002](../o
 
 ### Phase 8 — native integration and retained full delivery
 
-**Owners:** I/E/H plus independent Muse result review and S's exclusive security ownership. **Depends:** actual released native capabilities, all applicable semantic/component evidence and existing execution admission. **Files:** existing native consumer and private Fenrir integration, assigned exactly by I. **Consumes/produces:** actual Clean relation/export mapping → pinned ZKIR/native relation and qualified target observations.
+**Owners:** I/E/H plus independent Opus 5.5 high result review and S's exclusive security ownership. **Depends:** actual released native capabilities, all applicable semantic/component evidence and existing execution admission. **Files:** existing native consumer and private Fenrir integration, assigned exactly by I. **Consumes/produces:** actual Clean relation/export mapping → pinned ZKIR/native relation and qualified target observations.
 
 - [ ] Inventory the real Clean-to-native/ZKIR translation and existing ledger-9 custom-decider consumer. A VerifyProof instruction is not a prerequisite. Do not assume any donor backend or generic exporter port.
 - [ ] Obtain separately authorized exact candidate execution evidence under unchanged resource/debit limits. Bind compiler, instruction surface, field, circuit/key/relation and target/verifier/ledger identities without inventing Fenrir version/configuration.
@@ -280,4 +289,4 @@ their existing requirements.
 | Clean/circuit | Public API inventory and planned required components | Actual bounded step circuit, separate plans/exports and S-owned proofs/security evidence |
 | Native/target | Existing historical results retain their own exact scope | Sherlock-native exporter/relation, actual native recursive evidence and independently qualified Preview/Fenrir target results |
 
-Fresh full-candidate Muse nonsecurity and Opus security review is required before Candidate B adoption, with actual identities, scope, terminal status, limitations and dissent retained. Changed integrated bytes need fresh applicable audits. The existing two substantive agreeing votes for consequential decisions remain distinct from source review, implementation tests and release acceptance.
+Fresh full-candidate Opus 5.5 high nonsecurity and separate Opus security review is required before Candidate B adoption, with actual identities, scope, terminal status, limitations and dissent retained. Changed integrated bytes need fresh applicable audits. The existing two substantive agreeing votes for consequential decisions remain distinct from source review, implementation tests and release acceptance.
