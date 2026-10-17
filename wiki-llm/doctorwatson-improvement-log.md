@@ -1011,3 +1011,28 @@ See the [source and actual CI records](../docs/results/doctorwatson-evidence-rec
 The companion's synthetic fixtures and historical file reads do not execute an
 interpreter or close the full original025 scenario. Model-only evidence and later
 B observations still need their separate complete reporting record and review.
+
+### DW-55 — Close reporting with complete records; keep capability acceptance separate
+
+The complete historical C1–C4 model record supplies all seven reporting fields
+and explicitly marks the nine new-B scenarios unexecuted by that historical cut.
+A fresh review read all42 supplied pages and accepted the original reporting
+scenario. Root combined it with the qualified compiler companion and its actual
+local checks, then adopted original UIREQ-025. The selected requirement reader
+now reports nine current adopted originals,26 open originals and25 open
+refinements. The original clauses and scenario wording are unchanged.
+
+The [reporting adoption](../docs/results/sherlock-model-only-evidence-record-20261017/ROOT-ADOPTION.json)
+does not validate the capabilities named in those records. Historical source
+identity stays historical; inferred consumer metadata and unchecked authenticity
+stay explicit. The raw review exceeded its requested output length and is
+preserved alongside the complete page-read evidence. No unchanged model or
+254-test cohort was rerun to obtain this closure.
+
+The [grouped recursive-return case](../docs/results/sherlock-grouped-return-20261017/README.md)
+passed once across twelve fixed combinations and received fresh result review.
+Full UIREQ-032 remains open. A postcheck incorrectly assumed dependency-target
+order; the data-only correction preserved the original result and performed no
+subject rerun. Reported dependency membership never becomes an I/O attestation.
+Next work is the real recursive compiler and resource-report chunk behavior,
+with complete independently frozen expectations and the existing consumers.
