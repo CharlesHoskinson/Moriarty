@@ -46,8 +46,10 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def document(path, *, strict=False):
+def document(path, *, strict=False, inventory=None, reference_path=None):
     raw = Path(path).read_bytes()
+    if inventory is not None:
+        inventory.record(reference_path if reference_path is not None else str(path), raw)
     value = (json.loads(raw, object_pairs_hook=unique_members, parse_constant=nonfinite,
                         parse_float=finite) if strict else json.loads(raw))
     return {'path': str(path), 'sha256': digest(raw)}, value
@@ -311,7 +313,7 @@ def compare_documents(expected_programs, expected_prefixes, observed_programs, o
     return None
 
 
-def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None):
+def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None, inventory=None):
     """Call the pinned existing serializer only, never its rustc/test entry point.
 
     Its bytes are hashed before any execution and exactly those verified bytes
@@ -320,6 +322,8 @@ def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None
     """
     helper = repo / SERIALIZER['path']
     helper_raw = helper.read_bytes()
+    if inventory is not None:
+        inventory.record(SERIALIZER['path'], helper_raw)
     require(digest(helper_raw) == SERIALIZER['sha256'], f'{helper}: serializer digest mismatch; not executed')
     spec = importlib.util.spec_from_file_location('sherlock_literal_serializer', helper)
     require(spec is not None and spec.loader is not None, 'serializer unavailable')
@@ -331,6 +335,8 @@ def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None
                                         constant_prefix='EXTRA_' if extra else '')
     path = repo / 'crates/mori-core/src/sherlock' / ('extra_normal_oracles.rs' if extra else 'normal_oracles.rs')
     actual = read_text(path).encode('utf-8') if read_text is not None else path.read_bytes()
+    if inventory is not None:
+        inventory.record(str(path.relative_to(repo)), actual)
     require(actual == expected.encode('utf-8'), f'{path}: committed Rust literal transcription differs from frozen JSON')
     return dict(path=str(path.relative_to(repo)), sha256=digest(actual),
                 serializer_sha256=digest(helper_raw), status='literal-transcription-match',
@@ -516,14 +522,27 @@ def compare_supplied_observations(artifact, families, *, layer):
     return difference, summary
 
 
+def source_read_inventory():
+    """Load the sibling facts helper without relying on Python's script path."""
+    path = Path(__file__).resolve().with_name('source_reference_facts.py')
+    raw = path.read_bytes()
+    spec = importlib.util.spec_from_file_location('sherlock_source_reference_facts', path)
+    require(spec is not None and spec.loader is not None, 'source facts helper unavailable')
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(raw, str(path), 'exec', dont_inherit=True), module.__dict__)
+    return module.ReadInventory()
+
+
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
         lean_observations=None, quint_observations=None, image_observations=None, k_observations=None):
     repo = Path(repo)
+    inventory = source_read_inventory()
     files = []
     totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
     transcriptions = []
     frozen = {}
     source_raw = (repo / SOURCE['path']).read_bytes()
+    inventory.record(SOURCE['path'], source_raw)
     require(digest(source_raw) == SOURCE['sha256'], 'frozen K source changed')
     files.append(dict(path=SOURCE['path'], sha256=digest(source_raw)))
     for member in FAMILIES:
@@ -531,7 +550,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         for suffix in ('programs', 'prefixes'):
             name = member + '-' + suffix + '.json'
             path = repo / 'models/sherlock/oracles' / name
-            ref, value = document(path)
+            ref, value = document(path, inventory=inventory, reference_path=str(path.relative_to(repo)))
             require(ref['sha256'] == FROZEN[name], f'frozen oracle changed: {name}')
             ref['path'] = str(path.relative_to(repo))
             files.append(ref)
@@ -539,7 +558,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         counts = validate_pair(*docs, family=member)
         for key, count in counts.items():
             totals[key] += count
-        transcriptions.append(check_rust_transcription(repo, *docs, member))
+        transcriptions.append(check_rust_transcription(repo, *docs, member, inventory=inventory))
         frozen[member] = docs
     require((observed_programs is None) == (observed_prefixes is None),
             'observed-programs and observed-prefixes must be supplied together')
@@ -585,6 +604,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                 scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
                 profile=PROFILE, counts=totals, frozen_files=files,
                 rust_literal_transcriptions=transcriptions, observed_files=observed_files,
+                source_reference_facts=inventory.report(),
                 supplied_observation_status=('mismatch' if difference else 'match') if observed_files else 'not-supplied',
                 supplied_observation_family=family if observed_files else None,
                 supplied_comparison_gaps={'K': dict(

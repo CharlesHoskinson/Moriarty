@@ -722,3 +722,86 @@ settlement readback separate. The designated source/target owners retain the
 missing integration and actual-result work. The first real stagenet transaction
 remains the immediate priority within the full Sherlock obligations; no acceptance
 requirement, native limit, counter or prior held-attempt disposition changes here.
+
+
+## 2026-10-17 — source audit lessons
+
+### DW-31 — Make exact source witnesses a prerequisite for API advice
+
+**Observation:** the current B consumer is public in `crates/mori-core/src/sherlock/helper_machine/mod.rs:15`; `core_action_consumer.rs:76` declares `run_scalar_action`, which calls real source preparation, AST bridging, admission and owner execution. Meanwhile `docs/SHERLOCK-B-HOST-API.md:72` still says there is no production B consumer. The separately published [Core47 result](../docs/audits/2026-10-17/sherlock-core47-resource-result/README.md) records real ordinary tests, while leaving independent complete-state and full financial/native acceptance open. A dated API absence statement is no longer a reliable map of current source.
+
+**Proposed:** every API claim supplies the exact declaration, visibility, import/reexport and a real caller at one pinned commit. Resolve `#[path]` explicitly: `mori_core::sherlock_source` is declared through `lib.rs:27–28` and implemented in `sherlock/source_adapter.rs`, not a same-named file. Inspect source read-only before proposing a correction. Distinguish “not present,” “present but private,” “public diagnostic callable,” “called by production CLI,” and “observed in an exact run.” Mechanically derive source membership and hashes; a model-authored row is a claim until checked against bytes.
+
+**Status / validation:** observed source/document mismatch; factory enforcement proposed. Update the dated document with a current scoped note, preserve its historical 24-file metadata result, and have the source owner review the exact declarations and affected caller closure. A source check does not establish a compiler or execution result.
+
+### DW-32 — Deliver complete review inputs in explicit pages
+
+**Observation:** [DW-28](../wiki-llm/doctorwatson-improvement-log.md#dw-28--distinguish-complete-local-packets-from-received-review-coverage) records a locally complete 206,846-byte packet whose review reported a 15,265-byte missing tail. Complete local assembly and a complete final answer did not establish complete received context. The same log records factual API mistakes after successful tool reads.
+
+**Proposed:** after truncation, split a packet at whole source/document boundaries. Each page states page number/total, immutable membership, exact byte or line coverage and digest. Separate independent oracle inputs from implementation-author packets. Finish with a coverage matrix naming pages actually read, missing ranges and literal declaration witnesses used in each material claim. Recover permitted missing pages before making an exhaustive judgment. Record both the provider terminal and the review's declared read extent.
+
+**Status / validation:** proposed delivery discipline built from a recorded transport failure. This audit used bounded source reads and generated source-located graph facts; it did not re-review held/private inputs. Successful page delivery still needs factual claim checking and cannot widen the review's semantic or execution scope.
+
+### DW-33 — Record a result lattice, not a single completion flag
+
+**Observation:** the [145-test result](../docs/audits/2026-10-17/sherlock-production-normal-tests/README.md) concerns a standalone 72-source composition. A [later attempt](../docs/audits/2026-10-17/sherlock-normal-n07-n08-timeout/README.md) reports N07 individually `ok`, N08 without a terminal result and aggregate timeout after 30.001 seconds. Core47 is another cohort. The [external codec result](../docs/audits/2026-10-17/sherlock-production-codec-roundtrip/README.md) establishes two trusted roundtrips with shared codec logic; it is not an independent semantic oracle.
+
+**Proposed:** represent source present, metadata compiled, linked, selected test terminal, aggregate terminal, independently compared complete observations, layer correspondence, native proof, ledger acceptance and settlement readback separately. Attach each to its candidate, attempt, profile, exact selected membership and original evidence. A historical pass never transfers to changed source. Keep observed partial terminals and consumed failures visible; do not sum unrelated test cohorts into a parent percentage.
+
+**Status / validation:** existing reports already preserve these distinctions; a consistent factory presentation remains proposed. Verify the new presentation against the literal selected result files and exact stdout, including explicit missing rows. Retain N08's missing terminal without inventing a retry or new budget. Complete-state/normal-O, full B/ADT/finance, formal/circuit and target obligations stay open.
+
+### DW-34 — Refresh the graph by changed source closure and explicit meanings
+
+**Observation:** `.obsidian/graph.json` contains only viewer settings. The existing substantive graph is the dated `docs/audits/2026-10-14/knowledge-graph.json.gz`, schema `moriarty-combined-context-graph/1`, pinned to `cb8280ef54082853dd8bb6c6a52050328d0fc6fa`. Its 46,421 nodes and 57,298 parallel-preserving links contain no Sherlock or DoctorWatson match. The semantic companion likewise has none. Large graph counts therefore do not establish current Sherlock coverage.
+
+**Proposed:** add a bounded Sherlock overlay with source hashes and `source_location`; label direct extraction, inference and unresolved interpretation as `EXTRACTED`, `INFERRED` and `AMBIGUOUS`. Refresh module exports, `#[path]` inclusions, cfg(test) membership and real call sites structurally. Refresh profile meanings, input domains, independent oracles, exact historical result scopes, missing consumers and blocker-to-requirement links semantically. Preserve parallel relations and original pins. Do not stamp the untouched historical graph as current merely by adding a delta.
+
+**Status / validation:** a proposed compatible delta and read-only integrity facts accompany this audit. No canonical graph was replaced, no global graph build ran and no external provider was invoked. Before applying, check source/base hashes and every endpoint; after applying, preserve scoped provenance and invalidate affected stale meanings. The delta is not a complete `graph-ready.json` bundle for `build_task_context.py`, whose inventory and digest gates must remain in force.
+
+### DW-35 — Choose the next useful end-to-end path while preserving the full target
+
+**Observation:** the public scalar B consumer now reaches the actual owner; the default CLI still calls Core `simulate` at `crates/mori/src/commands/simulate.rs:126`. Scalar source preparation explicitly does not execute ordered effects. The [correctness loop](../docs/SHERLOCK-CORRECTNESS-LOOP.md) requires independent complete states/prefixes across declared K, Quint, Lean/Clean and handwritten domains. A public-input copier, resource report or a finite normal test pass does not supply the missing financial/proof/settlement path.
+
+**Proposed:** after reconciling the five audits, select one existing requirement and source-to-consumer slice with an independent input/oracle owner, a real consumer, a falsifiable full observation and the first concrete blocker. Source preparation for the transition/public-statement/native boundary can proceed within its authorized scope; execution stays separate. Compare complete prefixes with explicit profile/clock transport before optimizing. Retain the complete language, generic data, finance/lifecycle, composition, formal, resource, native and qualified-target requirements in the completion roadmap. Prioritize the already requested first real stagenet path where eligible without presenting its narrow first transition as full interpreter completion.
+
+**Status / validation:** next-sprint recommendation, not implementation or a replacement queue. Root should combine source, normal evidence, requirements and designated security-owner findings, then name the next observable capability and dependencies. This audit changes no native authority, C4 disposition, counter, terminal attempt, security ownership or public developer permission.
+
+
+## 2026-10-17 — actual consumer sprint lessons
+
+### DW-36 — Finish the actual consumer increment once, then move downstream
+
+**Observation:** S1 now has actual source-to-consumer evidence: the existing `run_host.py --realization stream` compiled the real `Machine::visit_steps` path, ran eight Rust tests and compared all eight normal programs/216 complete runs with independently frozen expectations. Its 26 source pins match before, snapshot-after and checkout-after; this audit rehashed the same 26 current W/snapshot pairs. The source observer retains records, so no memory/allocation improvement follows. The separate integrated ordinary CI reported 241 tests OK; those are Python regressions, not another Rust/model/native result.
+
+**Evidence:** `checks/stream-actual-01/{result.json,receipt.json,comparison.json,logs/run-tests.stdout}` and `checks/integration-ordinary-01/{RESULT.json,SOURCE-MANIFEST.json,stderr}` under the October 17 review runtime. The seven QA afterimages match current W; they are additional/current inputs beyond the original graph audit's 39 pins. Only `docs/DOCTORWATSON.md` changed among those original 39. Base commit/tree remain `628615a94d8a74837a1af510293927bb74d5c2b5` / `6b7f5964f7de2a711b820af011f5df2be0c59ecc`; current dirty QA afterimages need their own hashes.
+
+**Proposed:** mark the exact S1 and ordinary-regression predicates observed, preserve all higher-layer gaps, and advance the next real consumer dependency. Do not redispatch unchanged 241-test or 216-run work solely to refresh presentation. Reuse the existing runner; no new shell mode, daemon or scheduler is needed.
+
+### DW-37 — Preserve a failed check and continue from its precise cause
+
+**Observation:** S2's host compile exited 0. Its following literal dep-info spelling check failed on one retained `../../../../models/sherlock/literal-step/MAPPING.md` include path, leaving the initial RESULT as FAILED. A separately recorded continuation normalized paths to exactly the ten frozen members without changing source/membership or recompiling that host artifact. It then linked the client, captured the real A102→A80 producer and passed named and ordered comparisons of the SAME 333 noncontext carriers. The continuation records 117 unchanged pins. The independent ordinary result review approved this narrow publication scope.
+
+**Evidence:** `checks/composed-actual-01/RESULT.json`, `continuation-01/RESULT.json`, both comparison stdout files, and `01-implementation/composed-actual-result-review.md`. Named/ordered counts are 86 Program +81 Init +81 intermediate +81 Done +4 envelope. The two context limbs were absent and unbound from the agreed interface; extraction did not trim them from a 335-lane statement.
+
+**Proposed:** retain both result identities and distinguish compiler outcome, path-set postcheck and continuation terminal. Diagnose exact bytes/path normalization before rerunning a successful compiler. Record reused artifact identity explicitly. Report two views of 333 as 333, not 666; no checked335/context, constraint, native, proof or target result follows.
+
+### DW-38 — Resolve stale blocker status with later evidence before proposing another run
+
+**Observation:** the later optimized147 operation already compiled its standalone 72-source cohort and passed all 147 selected tests, including terminal `ok` for every N03–N08 all-frozen-prefixes-and-cuts test. The earlier unoptimized two-test attempt still timed out after N07 individually `ok` and no N08 terminal. These are different binaries/selections. The old graph/lesson's “N08 missing” correctly describes that older attempt but is insufficient for today's next-work selection.
+
+**Evidence:** `sherlock-parallel-20261016/b-normal-optimized147-operation-preparation-01/ROOT-OBSERVED-RESULT-01.json` and its original `candidate/optimized147-test-attempt-01/logs/test-harness.stdout`. They record compile 2.774 seconds, selected harness 3.834 seconds, 147 passed/0 failed/0 ignored. These are cohort timings, not an isolated N08 benchmark or speedup ratio. The result does not qualify current Core/full B or downstream layers.
+
+**Proposed:** query later exact-scope results before opening a new optimization or missing-test task. Keep the original failure unchanged and add a later-evidence relation. An already successful exact selection is not next work unless changed inputs, a reproduced defect or a new required predicate justifies a fresh check.
+
+### DW-39 — Freeze the design/specification before rearming the cleared goal
+
+**Observation:** Root reports PR #168 merged at `011284561884346412a7c7eaa36a195310924878`, 17:38 UTC. This is source publication, distinct from the later dirty QA afterimages and ordinary host observations. Five Astra HIGH loop reviews were conditional; their earlier source/result statuses require reconciliation against subsequent S1/S2/CI receipts. At this handoff, final design03 still awaits three Astra/Gemini integration outcomes. The user requests rearming AFTER final design and specification; this pass does not rearm it.
+
+**Proposed:** integrate current result pins, retained dissent, exact finite next batch and requirement exits into the final design/specification, then record Root's actual adoption/rearm action separately. An unchanged blocked dependency must not become a recurring task. An empty ready queue is not full completion. Keep native authority 0, C4/open gates, consumed attempts and all language/financial/formal/proof/qualified-target/release requirements intact.
+
+**Status:** source/evidence reconciliation and bounded next-path recommendation only. Root-supplied merge/pending facts are explicitly distinguished from independently inspected runtime receipts; this agent made no GitHub/provider query or runtime goal mutation.
+
+
+### Current integration disposition — October17
+
+The stream realization/helper closure/source-read reporting are applied; [actual241 ordinary checks and stream8/216](../docs/results/sherlock-stream-20261017/README.md) and [actual333 same-carrier comparisons](../docs/results/sherlock-composed333-20261017/README.md) have retained scoped results. The old unoptimized N08 timeout remains historical; the later Optimized147 cohort passed all selected suites. The [graph refresh](../docs/audits/2026-10-17/sherlock-knowledge/manifest.json) preserves the October14 baseline and adds bounded Sherlock observations, without global freshness/native qualification. Five AstraHIGH final reviews support ordinary implementation under the [revision03 loop](../docs/sherlock/implementation-loop.md), preserving native blockers. The next source increment is the real public compiler preparation/admission path; further factory rebuilding is not a prerequisite. These notes do not themselves arm a goal.

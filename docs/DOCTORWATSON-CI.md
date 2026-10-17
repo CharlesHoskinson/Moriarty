@@ -60,6 +60,58 @@ source membership; the existing frozen expectations are unchanged.
 Python QA. A host pass completes this local host job, not full Sherlock or any
 Moriarty roadmap exit.
 
+## Explicit stream observation job
+
+The existing host wrapper has a separate stream realization. It is selected
+through the wrapper; `scripts/doctorwatson.sh` continues to accept only its
+existing `--host` and `--design` modes.
+
+```bash
+python3 -I -B models/sherlock/qa/run_host.py \
+  --rustc /absolute/path/to/1.99.0/bin/rustc \
+  --output-dir /absolute/path/to/new-stream-attempt \
+  --realization stream
+```
+
+Use a fresh attempt directory and the same existing scoped execution conditions
+as the host job. This fixed SDK-free producer calls real `Machine::visit_steps`,
+cycles observer widths 1/2/4/8, and compares each complete normal run against the
+independent N01–N08 corpus. Semantic fuel is not refilled between observation
+calls. The job compiles and runs eight named normal stream tests, including
+zero-budget calls, observer break/resume, terminal precedence and zero-fuel free
+publication. Constructor startup remains outside this post-startup comparison.
+It shares the wrapper's 30-second child limits and exact compiler/source receipts.
+
+On October 17 the integrated ordinary shell passed 241 Python tests (exit 0,
+10.508 seconds). A separate actual stream job completed every stage with exit 0,
+passed all eight selected Rust tests and matched all 216 complete normal runs,
+with no first difference. The compiler read eight producer inputs and nine test
+inputs; the full comparison/source snapshot contained 26 files. These are distinct
+memberships. Both actual checker helpers were included in that snapshot.
+The retained local receipts are currently unpublished; historical captures above
+keep their original source bytes and counts.
+
+The stream producer deliberately retains callback records for full comparison.
+No memory, allocation or performance improvement was measured. The checker still
+reports its own execution layers as `not-run` and producer authenticity as
+`not-established`: it compares supplied bytes. The wrapper's separate compiler,
+Rust-test and producer receipts establish this actual local host execution.
+Neither result supplies K/Quint/Lean/Clean, constraints, native or target evidence.
+
+## Source-read report
+
+The ordinary checker's `source_reference_facts` reports bytes explicitly recorded
+as inputs by that checker: sorted paths, SHA-256, byte lengths, read counts and
+any changed snapshots between repeated reads. In the current default corpus check
+it has eight unique paths and nine read events because the existing serializer is
+read once for each oracle family. These counts describe this recorded input set;
+they are not a new acceptance limit.
+
+This is not the Python import/dependency closure, compiler membership, supplied
+observation-file inventory, reviewer read extent or execution evidence. Those
+are separately reported or unestablished. The helper itself opens no files and
+runs no subject. See the [QA report details](../models/sherlock/qa/README.md#source-reference-facts).
+
 ## Workflow design commands
 
 ```bash
@@ -103,6 +155,7 @@ checks for the current source.
 |---|---|---|
 | Ordinary QA | Frozen normal expectations, supplied complete prefix/state comparisons and committed oracle readback through the commands above | Yes; Python standard library only |
 | Sherlock host | Actual source compilation, fourteen bounded normal tests, fixed-input execution and all complete prefix observations | Only explicit `--host`; post-startup normal A-profile domain |
+| Sherlock stream | Actual `visit_steps` producer/test build, eight normal Rust tests and complete independent normal-run comparison | Only wrapper `--realization stream`; post-startup A-profile, retained QA records |
 | DoctorWatson design | Workflow state machine, deterministic scenarios and bounded sampled invariants | Only with explicit `--design`; separate from interpreter semantic QA |
 | Developer semantic checks | Required K execution and explicit finite Quint projection, with actual traces, bounds, clocks and first divergences | No; unrun by this entrypoint |
 | Lean/Clean and handwritten circuits | Required reference/component observations, separate witness and constraint dispositions, and cross-layer correspondence evidence | No; unrun by this entrypoint; existing private Fenrir integration remains separate |

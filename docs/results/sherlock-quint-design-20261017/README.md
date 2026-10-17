@@ -1,0 +1,11 @@
+# Actual finite Sherlock design validation — October17
+
+Revision03’s first bounded interpreter/observer/helper/chunk model passed44 selected tests and five directed/sampled runs using actual Node24.21.0/Quint0.32.0 with the explicit TypeScript backend. All38 requested witnesses were reached. See the [full report](recorded/REPORT.md), [results](recorded/RESULTS.json), [commands](recorded/COMMANDS-06.json), [source freeze](recorded/SOURCE-FREEZE-06.json) and [independent narrow review](MODEL-RESULT-ADDENDUM.md).
+
+The tests comprise33 A,8 B and3 directed finish tests. A’s116 fuel-prefix cases derive from four preexisting independent complete normal literal traces. Random runs sampled100 traces each (A max160 transitions, B max24, seed1); three directed runs reached13/12/3states. All requested witnesses had positive hits and no invariant violation was reported. The wrong-successor-value control reaches the valid literal/publication case, coherently changes value7 to0, satisfies bookkeeping and fails the independent complete expectation.
+
+Earlier parse/type/test-selection failures and narrow repairs remain preserved. Final sources matched their successful frontend closures. Each child used30seconds and256MiB Node old-space; no native backend or exhaustive verify was selected. The49 final ITFs (28,860,178 uncompressed bytes) are in itf-traces.tar.gz, with original root-execution-06 paths. Extract into recorded/ to match RESULTS.json. These are44 test traces and five sampled examples, not all200 random traces. Two earlier failure-history ITFs are separately retained in historical-itf-traces.tar.gz. source-package.json binds both archives and public model copies.
+
+Original author README/sketch source-only labels under recorded/ retain earlier history; REPORT/RESULTS and the addendum give current observations. Relocating source does not claim another execution. Recorded receipts retain original local paths and toolchain-trust limits.
+
+This closes finite entry validation only. Full39/full96/ADTs, shared-tree physical unfolding, complete Core/2 finance, constructors, composition, residual/internal widths, exhaustive field coverage/replay, K/Lean/Clean/handwritten/native proof and settlement remain unvalidated. No native authority or full acceptance follows.

@@ -69,9 +69,15 @@ The earlier source05 ALL13 dispatch incident remains not admitted runtime
 evidence, and D01 retention supplies no result for this new check. Native
 authority remains zero and C4 stays open.
 
-There is no existing production B consumer in Moriarty. The explicit library API
-is the integration delivered here; an application or compiler must separately
-choose and supply the B input contract before it can use it. Generic ADTs,
+The registered production `helper_machine::core_action_consumer::run_scalar_action`
+now prepares a supported Core/1 scalar action, constructs its actual Sherlock
+program, admits it through the fixed owner and runs it. Its
+`core_action_consumer_security::ConsumerConfig` remains the actual supplied
+configuration contract. This source API is not yet called by the public compiler:
+ordinary `mori compile` currently adds projection metadata to its Core artifact.
+The [selected first compiler increment](../openspec/changes/sherlock-completion-convergence/FIRST-COMPILER-BATCH.md)
+connects that missing edge with explicit HostOnly scope and separate preparation
+and observation predicates. Its specified flags are not installed by this note. Generic ADTs,
 finance-present execution, complete financial/lifecycle semantics, model and
 Lean/Clean correspondence, circuits, native proof and target qualification remain
 separate obligations. The independent ADT source proposal is not included.

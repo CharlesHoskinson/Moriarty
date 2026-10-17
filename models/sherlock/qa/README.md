@@ -15,6 +15,26 @@ calls that helper's compiler/test entry point. It reads 208 complete state rows,
 prefixes. Expected values remain the independently authored committed corpus;
 this tool cannot update them. The pre-implementation contract is [CONTRACT.md](CONTRACT.md).
 
+## Source-reference facts
+
+Each successful checker report includes `source_reference_facts` for explicitly
+recorded checker input-byte reads. It records SHA-256 and length of the same byte
+objects consumed, without reopening files. Paths are sorted, repeated reads are
+counted, and differing byte snapshots of one path remain visible. The helper
+opens no files and adds no execution result.
+
+For the current default corpus check, the recorded set contains eight unique
+paths and nine reads: frozen K source, four oracle documents, two committed Rust
+literal transcriptions and the serializer read for each family. This partial
+inventory does not cover the checker/helper imports or supplied observation files;
+it is not a dependency-closure, reviewer-coverage or producer-authenticity claim.
+The report retains `dependency_closure: not-established`,
+`reviewer_read_extent: not-observed` and `execution_evidence: none`.
+
+The [local CI guide](../../../docs/DOCTORWATSON-CI.md#explicit-stream-observation-job)
+also documents the explicit real stream wrapper job. Its actual Rust execution
+receipt remains separate from the supplied-file comparison reported here.
+
 Compare a supplied readback in the **existing corpus document shapes**:
 
 ```sh
