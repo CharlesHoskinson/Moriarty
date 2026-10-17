@@ -427,6 +427,7 @@ impl LiteralLayout {
             include_str!("enabled_fetch.rs"),
             include_str!("literal_host.rs"),
             include_str!("literal_step.rs"),
+            include_str!("literal_ui_valid.rs"),
             include_str!("literal_bridge.rs"),
             include_str!("literal_witness.rs"),
             include_str!("../../../../models/sherlock/literal-step/MAPPING.md"),
