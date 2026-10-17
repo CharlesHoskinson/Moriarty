@@ -1,0 +1,747 @@
+{
+  "format": "sherlock-b-scalar-tag-k-projection/1",
+  "rule": "b.helper.Scalar.tag / RetRight Add First kind(operandA)=UInt",
+  "comparison_rule": "Concrete carriers compare exactly in stated domain. Abstract-preserved means exact K token forwarding only, never a decoded underlying field match. Excluded fields are unobserved, never matched. Actual comparisons need a separately observed lossless/bound adapter.",
+  "machine": [
+    {
+      "field": "reg.control",
+      "status": "abstract-preserved",
+      "carrier": "framing.control",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "reg.controlOrigin",
+      "status": "concrete-preserved",
+      "carrier": "framing.controlOrigin",
+      "limit": "Exact Int; source occurrence decoding/binding external"
+    },
+    {
+      "field": "reg.envRoot",
+      "status": "abstract-preserved",
+      "carrier": "framing.envRoot",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "reg.depth",
+      "status": "concrete-preserved",
+      "carrier": "framing.depth",
+      "limit": ""
+    },
+    {
+      "field": "reg.stackLimit",
+      "status": "concrete-preserved",
+      "carrier": "framing.stackLimit",
+      "limit": ""
+    },
+    {
+      "field": "reg.outcome",
+      "status": "concrete-preserved",
+      "carrier": "framing.outcome=btRunning()",
+      "limit": "No other outcome branch"
+    },
+    {
+      "field": "reg.initialFuel",
+      "status": "concrete-preserved",
+      "carrier": "framing.initialFuel: BTUInt128",
+      "limit": "Pre-StepInv and maximum-work coherence external"
+    },
+    {
+      "field": "reg.remainingWork",
+      "status": "concrete-changed",
+      "carrier": "counters.remaining_work",
+      "limit": "post=pre-1; pre in [1,2^128-1]"
+    },
+    {
+      "field": "reg.consumedWork",
+      "status": "concrete-changed",
+      "carrier": "counters.consumed_work",
+      "limit": "post=pre+1; pre in [0,2^128-2]"
+    },
+    {
+      "field": "reg.helperWork",
+      "status": "concrete-changed",
+      "carrier": "counters.helper_work",
+      "limit": "post=pre+1; pre in [0,2^128-2], pre<params.max_helper_work"
+    },
+    {
+      "field": "reg.helperVisits",
+      "status": "concrete-changed",
+      "carrier": "counters.helper_visits",
+      "limit": "post=pre+1; pre in [0,2^128-2]; diagnostic, not another charge"
+    },
+    {
+      "field": "reg.referenceCursor",
+      "status": "concrete-preserved",
+      "carrier": "framing.referenceCursor: BTUInt128",
+      "limit": "No legacy completion"
+    },
+    {
+      "field": "reg.alloc.dataNodes",
+      "status": "concrete-preserved",
+      "carrier": "framing.alloc[0]",
+      "limit": ""
+    },
+    {
+      "field": "reg.alloc.dataFields",
+      "status": "concrete-preserved",
+      "carrier": "framing.alloc[1]",
+      "limit": ""
+    },
+    {
+      "field": "reg.alloc.environmentCells",
+      "status": "concrete-preserved",
+      "carrier": "framing.alloc[2]",
+      "limit": ""
+    },
+    {
+      "field": "reg.active.data",
+      "status": "concrete-preserved",
+      "carrier": "data.active_rows",
+      "limit": "Same alias as read bound; not duplicated"
+    },
+    {
+      "field": "reg.active.dataFields",
+      "status": "concrete-preserved",
+      "carrier": "framing.activeRest[0]",
+      "limit": ""
+    },
+    {
+      "field": "reg.active.env",
+      "status": "concrete-preserved",
+      "carrier": "framing.activeRest[1]",
+      "limit": ""
+    },
+    {
+      "field": "reg.active.valueSlots",
+      "status": "concrete-preserved",
+      "carrier": "framing.activeRest[2]",
+      "limit": ""
+    },
+    {
+      "field": "reg.taskLive",
+      "status": "concrete-preserved",
+      "carrier": "framing.taskLive",
+      "limit": "Normal coherent S1 supplies zero; not a new row guard"
+    },
+    {
+      "field": "reg.helper",
+      "status": "concrete-and-abstract",
+      "carrier": "BTScalarRegister + BTScalarRest",
+      "limit": "See every helper field below"
+    },
+    {
+      "field": "reg.result",
+      "status": "abstract-preserved",
+      "carrier": "framing.result",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. Coherent pre-state supplies absent."
+    },
+    {
+      "field": "reg.segBase",
+      "status": "concrete-preserved",
+      "carrier": "framing.segBase: 4 active, 3 alloc, consumedWork",
+      "limit": "Eight supplied components forwarded; B-core zero coherence external"
+    },
+    {
+      "field": "img.data",
+      "status": "concrete-and-abstract-preserved",
+      "carrier": "data table capacity,active_rows,all projected rows; each row.rest token",
+      "limit": "No physical column layout selected; adapter must bind exact full table and abstract row rest."
+    },
+    {
+      "field": "img.dataFields",
+      "status": "abstract-preserved",
+      "carrier": "framing.outsideTables.dataFields",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "img.env",
+      "status": "abstract-preserved",
+      "carrier": "framing.outsideTables.env",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "img.valueSlots",
+      "status": "abstract-preserved",
+      "carrier": "framing.outsideTables.valueSlots",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "img.frames",
+      "status": "abstract-preserved",
+      "carrier": "framing.outsideTables.frames",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "img.tasks",
+      "status": "abstract-preserved",
+      "carrier": "framing.outsideTables.tasks",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "img.admission",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. AB remains host-owned/external."
+    },
+    {
+      "field": "img.runId",
+      "status": "abstract-preserved",
+      "carrier": "framing.runId",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No full RunId/StepId comparison."
+    }
+  ],
+  "helper": [
+    {
+      "field": "reg.helper.present",
+      "status": "concrete-preserved",
+      "carrier": "helper.present=true",
+      "limit": ""
+    },
+    {
+      "field": "reg.helper.kind",
+      "status": "concrete-preserved",
+      "carrier": "helper.kind=Scalar",
+      "limit": ""
+    },
+    {
+      "field": "reg.helper.site",
+      "status": "concrete-preserved",
+      "carrier": "helper.site=RetRight",
+      "limit": ""
+    },
+    {
+      "field": "reg.helper.mode",
+      "status": "concrete-preserved",
+      "carrier": "helper.mode=Add",
+      "limit": ""
+    },
+    {
+      "field": "reg.helper.operandA",
+      "status": "concrete-preserved",
+      "carrier": "helper.operand_a: exact BTValueRef(space,index)",
+      "limit": ""
+    },
+    {
+      "field": "reg.helper.phase",
+      "status": "concrete-changed",
+      "carrier": "helper.phase",
+      "limit": "First -> Second"
+    },
+    {
+      "field": "reg.helper.regA",
+      "status": "concrete-changed",
+      "carrier": "helper.reg_a: BTUInt128",
+      "limit": "Copied from the selected row.n; pre.reg_a not read"
+    },
+    {
+      "field": "reg.helper.originReferenceCursor",
+      "status": "concrete-preserved",
+      "carrier": "helper.rest.origin_reference_cursor: BTUInt128",
+      "limit": ""
+    },
+    {
+      "field": "reg.helper.parentResume",
+      "status": "concrete-preserved",
+      "carrier": "helper.rest.parent_resume",
+      "limit": "BTResume option; coherent core supplies None externally"
+    },
+    {
+      "field": "reg.helper.operandB",
+      "status": "concrete-preserved",
+      "carrier": "helper.rest.operand_b",
+      "limit": "BTOptValueRef; coherent Add supplies Some externally"
+    },
+    {
+      "field": "reg.helper.expected",
+      "status": "concrete-preserved",
+      "carrier": "helper.rest.expected",
+      "limit": "BTOptSort; coherent Add supplies absent externally"
+    },
+    {
+      "field": "reg.helper.staged",
+      "status": "concrete-or-abstract-preserved",
+      "carrier": "helper.rest.staged",
+      "limit": "None is explicit; other variants opaque; coherent S1 supplies None externally"
+    },
+    {
+      "field": "reg.helper.further_lanes",
+      "status": "abstract-preserved",
+      "carrier": "helper.rest.further_lanes",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. Complete remaining encoding partition, identical order pre/post; no lane layout adopted."
+    }
+  ],
+  "program": [
+    {
+      "field": "prog.constants",
+      "status": "concrete-and-abstract-preserved",
+      "carrier": "constants: capacity,active_rows,all projected rows; each row.rest token",
+      "limit": "Logical kind UInt is btUIntTag. Separate Const/Data tag ordinal mapping is external; no raw tag-equality shortcut."
+    },
+    {
+      "field": "prog.expressions",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.expressions",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.occurrences",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.occurrences",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.occurrencePaths",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.occurrencePaths",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.children",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.children",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.functions",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.functions",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.parameters",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.parameters",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.arms",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.arms",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.patterns",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.patterns",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.constantFields",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.constantFields",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.names",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.prog.names",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. This entire named table belongs to programRest; constants do not."
+    },
+    {
+      "field": "prog.header.entry",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.entry",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "prog.header.activeLengths.constants",
+      "status": "concrete-preserved",
+      "carrier": "constants.active_rows",
+      "limit": ""
+    },
+    {
+      "field": "prog.declaration_tables",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.declaration_tables",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "prog.header.activeLengths.expressions",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.expressions",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.occurrences",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.occurrences",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.occurrencePaths",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.occurrencePaths",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.children",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.children",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.functions",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.functions",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.parameters",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.parameters",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.arms",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.arms",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.patterns",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.patterns",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.constantFields",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.constantFields",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    },
+    {
+      "field": "prog.header.activeLengths.names",
+      "status": "abstract-preserved",
+      "carrier": "framing.programRest.header.activeLengths.names",
+      "limit": "Exact opaque token forwarding only; active length not independently decoded or compared."
+    }
+  ],
+  "owner_public_interface": [
+    {
+      "field": "enable",
+      "status": "excluded-other-branches",
+      "carrier": "implicit Applied-positive domain",
+      "limit": "No enable witness or disabled semantics in K; owner dispatch/enable obligations external"
+    },
+    {
+      "field": "constants",
+      "status": "logical-carrier",
+      "carrier": "state.constants",
+      "limit": "BValueTableRead capacity/active_rows/rows; tags and n exact as named above, other columns abstract"
+    },
+    {
+      "field": "data",
+      "status": "logical-carrier",
+      "carrier": "state.data",
+      "limit": "Same mapping; true active_rows alias also supplies reg.active.data"
+    },
+    {
+      "field": "pre_helper",
+      "status": "logical-carrier",
+      "carrier": "pre.helper",
+      "limit": "BScalarRegister field names align through helper table; reg_a exact Int versus BU128Lanes"
+    },
+    {
+      "field": "post_helper",
+      "status": "logical-semantic-output",
+      "carrier": "computed post.helper",
+      "limit": "K computes the reference post-state; no supplied-witness constraint verification"
+    },
+    {
+      "field": "pre_counters",
+      "status": "logical-carrier",
+      "carrier": "pre.counters",
+      "limit": "BChargedCounters names remaining_work,consumed_work,helper_work,helper_visits"
+    },
+    {
+      "field": "post_counters",
+      "status": "logical-semantic-output",
+      "carrier": "computed post.counters",
+      "limit": "Exact Int +/-1, no modulo; no byte-lane constraint checking"
+    },
+    {
+      "field": "scope",
+      "status": "excluded",
+      "carrier": "K module namespace",
+      "limit": "No circuit instruction namespace or identifier binding"
+    },
+    {
+      "field": "instructions",
+      "status": "excluded",
+      "carrier": "none",
+      "limit": "No SDK instructions emitted"
+    },
+    {
+      "field": "read_n",
+      "status": "logical-meaning-only",
+      "carrier": "selected BTUInt128 payload",
+      "limit": "No generated SDK temporary or disabled zero carrier"
+    },
+    {
+      "field": "preserved",
+      "status": "logical-meaning-only",
+      "carrier": "whole pre retained in btApplied; framed components reused",
+      "limit": "Not circuit preserved aliases, acceptance, or binding evidence"
+    }
+  ],
+  "external_and_excluded": [
+    {
+      "field": "Identity.profileId",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.grammarDomain",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.finance",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.layoutVersion",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.layoutDigest",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.boundsDigest",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.fieldId",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "Identity.programMembershipDigest",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission identity; framing.runId identity",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No independent field decoding or full identity match."
+    },
+    {
+      "field": "RunId.fuelInput",
+      "status": "abstract-preserved",
+      "carrier": "framing.runId.fuelInput",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "RunId.stackLimitInput",
+      "status": "abstract-preserved",
+      "carrier": "framing.runId.stackLimitInput",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established."
+    },
+    {
+      "field": "Bounds.codeRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.codeRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.functionRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.functionRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.codeChildSlots",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.codeChildSlots",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.parameterSlots",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.parameterSlots",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.patternRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.patternRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.matchPlanRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.matchPlanRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.matchArmRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.matchArmRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.typeRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.typeRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.constructorRows",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.constructorRows",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.constructorFieldSlots",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.constructorFieldSlots",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.maxArity",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.maxArity",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.constantNodes",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.constantNodes",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.constantFieldSlots",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.constantFieldSlots",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.dataNodes",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.dataNodes",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.dataFieldSlots",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.dataFieldSlots",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.environmentCells",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.environmentCells",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.frames",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.frames",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.helperTasks",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.helperTasks",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.serializationBytes",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.serializationBytes",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.maxReferenceWork",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.maxReferenceWork",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.maxHelperWork",
+      "status": "external-parameter",
+      "carrier": "params.max_helper_work",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "Bounds.stepCap",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.bounds.stepCap",
+      "limit": "No admission validation or new cap. Values/shape/binding remain externally supplied."
+    },
+    {
+      "field": "LayoutSchema.layoutVersion",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.layoutVersion",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "LayoutSchema.fieldId",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.fieldId",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "LayoutSchema.widths",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.widths",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "LayoutSchema.scalarLayoutId",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.scalarLayoutId",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "LayoutSchema.bounds",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.bounds",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "LayoutSchema.capacities",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.capacities",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "LayoutSchema.boundaryCapacities",
+      "status": "abstract-preserved",
+      "carrier": "framing.admission.layout.boundaryCapacities",
+      "limit": "Uninterpreted supplied token is reused exactly; no decoded physical field match, authenticity or StepInv is established. No encoding/width/field selected."
+    },
+    {
+      "field": "AB, StepInv, dispatch, exactly-one enable, statement binding",
+      "status": "excluded",
+      "carrier": "owner caller obligations OBL-01..12",
+      "limit": "Neither checked nor inferred; security judgments remain Opus."
+    },
+    {
+      "field": "StepEvent.*",
+      "status": "excluded",
+      "carrier": "none",
+      "limit": "btApplied carries only rule ID and projected pre/post; no StepEvent envelope, RunId/ordinal, event metadata binding or results asserted."
+    },
+    {
+      "field": "physical serialized bytes / widths / field embedding",
+      "status": "excluded",
+      "carrier": "none",
+      "limit": "Separate lossless adapter and correspondence required."
+    },
+    {
+      "field": "negative/refusal/overflow/disabled/other-helper branches",
+      "status": "excluded",
+      "carrier": "none",
+      "limit": "No behavior or security judgment authored."
+    }
+  ]
+}
