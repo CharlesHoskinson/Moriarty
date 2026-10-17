@@ -1,0 +1,1026 @@
+[
+  {
+    "role": "01-setup",
+    "proposal": {
+      "id": "setup-strand-provenance",
+      "title": "Show setup provenance on the Strand that depends on it",
+      "bookReference": "B08, lines 272\u2013298 (Layer 1 overview); lines 396\u2013420 (SRS and shared infrastructure); lines 609\u2013621 (circuit-specific versus universal setup).",
+      "sourceSupport": "BOOK_FACT: the book explains setup parameters and trust, distinguishes the SRS from a proof, and describes Groth16 setup as circuit-specific. PRIMARY_SOURCE_SUPPORT: G02, headings 'Setup', 'Verify the latest zkey', and 'Export the verification key', demonstrates an R1CS plus powers-of-tau input, a circuit-checked zkey, and a separately exported verification key. These are explanatory sources, not evidence of Moriarty's pipeline.",
+      "websiteMapping": "Candidate Moriarty/Webs mapping (INFERENCE): attach a provenance panel to each relevant Strand, connecting its circuit or compiled artifact to parameter-set, proving-key, verification-key, and source/transcript identifiers. Label absent fields unknown until the Strand inventory and primary artifacts support them.",
+      "readerCopy": "Setup produces public mathematical parameters that a proof system needs. Follow a Strand's link to see which computation its parameters support, which keys are associated with them, and what records document their origin.",
+      "interaction": "Select a Strand to expand a compact lineage: computation artifact \u2192 setup parameter set \u2192 proving and verification keys \u2192 available source and verification records. Hide unsupported links as 'not documented here' rather than filling them in.",
+      "diagram": "A Strand node linked to a circuit/compiled-artifact node, parameter-set node, proving-key and verification-key nodes, and provenance-record nodes. Use arrows labeled 'derived for', 'associated key', and 'evidence for'; render unknown edges as absent, not implied.",
+      "questions": [
+        "Which concrete Cardano proof relation and Strand should anchor the first real lineage?",
+        "Which parameter and key identifiers, artifact digests, and provenance records are public and reviewed?",
+        "What exact predicate does the site's verification badge represent? Route the security wording to Opus 5.5."
+      ],
+      "limits": "No inspected input identifies a current Moriarty Strand schema, setup artifact, or verified key lineage. This proposal does not claim one exists."
+    }
+  },
+  {
+    "role": "01-setup",
+    "proposal": {
+      "id": "setup-groth16-lineage-example",
+      "title": "Make Groth16 setup concrete with a sourced lineage example",
+      "bookReference": "B08, lines 609\u2013621: Groth16 circuit-specific setup and the contrast with universal setup; lines 396\u2013420: shared SRS as infrastructure, not a proof.",
+      "sourceSupport": "PRIMARY_SOURCE_SUPPORT: G02, 'Setup' and 'Verify the latest zkey', shows Groth16 setup taking circuit.r1cs and pot14_final.ptau, creating an initial zkey, accepting phase-two contributions, and checking the result against the circuit and powers-of-tau file. G04, 'Phase2 Ceremonies' and 'Phase2 Validation', describes Filecoin's circuit-specific phase two and published records. The Filecoin example is not Cardano evidence.",
+      "websiteMapping": "Offer a clearly labeled tutorial path beside, but distinct from, any Moriarty Strand data. Use the example to teach artifact relationships, then show the actual Strand lineage only when project-specific sources substantiate it.",
+      "readerCopy": "In this Groth16 example, a circuit and shared phase-one parameters feed setup. The circuit-specific key artifact can be checked against those inputs, and the verification key can be exported for checking proofs.",
+      "interaction": "Step through the example artifacts. Selecting the circuit shows which setup command consumes it; selecting the resulting key shows the documented circuit-match check and verification-key export.",
+      "diagram": "powers-of-tau material + circuit description \u2192 circuit-specific Groth16 parameter/key artifact \u2192 circuit-match check \u2192 exported verification key. Label the diagram 'snarkjs example'; keep Filecoin's published contribution records in an optional provenance branch.",
+      "questions": [
+        "Should the website show the snarkjs tutorial as a general example, or use only an independently sourced Cardano example?",
+        "Which version/date of the external example should be pinned in the UI?",
+        "Does the planned lineage distinguish the parameter artifact from proving and verification keys clearly enough?"
+      ],
+      "limits": "G02 and G04 describe snarkjs and Filecoin, respectively. Do not present their filenames, process, keys, or contribution records as Moriarty/Cardano facts."
+    }
+  },
+  {
+    "role": "01-setup",
+    "proposal": {
+      "id": "setup-visible-groth16-and-count",
+      "title": "Give setup and Groth16 a visible explainer with a scoped count",
+      "bookReference": "B08, lines 272\u2013298 (purpose and trust); lines 609\u2013621 (Groth16 circuit-specific setup).",
+      "sourceSupport": "BOOK_FACT: the book makes setup one of seven named explanatory layers and says Groth16 setup is circuit-specific. PRIMARY_SOURCE_SUPPORT: G02, 'Setup', explicitly distinguishes its Groth16 circuit-specific ceremony from its PLONK/FFLONK universal powers-of-tau example; G04, 'Phase2 Ceremonies', explains Filecoin's per-circuit phase two. Neither source counts Moriarty/Cardano setups.",
+      "websiteMapping": "Reserve a visible Webs section for setup concepts and the Groth16 relationship to concrete Strands. A deployed-system count is a separate factual field and must remain unpublished until a source-backed inventory defines what is counted.",
+      "readerCopy": "Groth16 setup is tied to a particular circuit. If the circuit changes, its setup parameters need to be addressed again. The project inventory below names each documented Strand and its parameter source.",
+      "interaction": "Provide a circuit-specific versus universal setup toggle with a short example. If a future inventory supports a count, let readers open the exact listed Strands behind it.",
+      "diagram": "Two columns: 'Circuit-specific example: each circuit has its own setup output' and 'Universal example: shared setup material is reused within its supported scope'. Add no numeric total unless the linked inventory itself establishes scope and date.",
+      "questions": [
+        "Does the Cardano/Moriarty inventory establish any Groth16 use, and what is the exact unit to count: circuits, parameter sets, ceremonies, or keys?",
+        "Which date and source commit define a public count?",
+        "What change conditions require new parameters in the actual project? Opus 5.5 to review the technical wording."
+      ],
+      "limits": "No exact Cardano or Moriarty setup count is supported by the inspected inputs. Do not use Ethereum KZG ceremony participant counts as Groth16 setup evidence."
+    }
+  },
+  {
+    "role": "01-setup",
+    "proposal": {
+      "id": "setup-trust-model-comparison",
+      "title": "Explain setup models without implying that shared means setup-free",
+      "bookReference": "B08, lines 396\u2013420 (SRS and setup trust); lines 609\u2013621 (universal versus circuit-specific setups).",
+      "sourceSupport": "BOOK_FACT: the book distinguishes circuit-specific Groth16 from a universal SRS example. PRIMARY_SOURCE_SUPPORT: G02, 'Setup', says its Groth16 path requires a circuit-specific trusted ceremony while its PLONK and FFLONK paths use universal powers-of-tau material. G04 distinguishes Filecoin's shared phase one from per-circuit phase two. These are protocol-specific examples.",
+      "websiteMapping": "Use a comparison to teach the choice behind the relevant Strand's proof system, but populate the deployed-model label only from a primary source for that Strand. Treat setup choice as related to other layer choices, not as an independent checkbox.",
+      "readerCopy": "Some systems reuse setup material across supported circuits; others require parameters for each circuit. Reuse changes how setup work is scoped. It does not, by itself, describe every trust assumption or identify Moriarty's system.",
+      "interaction": "Let readers compare scope (one circuit or many), what inputs are reused, what new artifacts are produced, and which evidence is available. Selecting a concrete Strand opens only source-backed project details.",
+      "diagram": "A small scope comparison: one circuit \u2192 circuit-specific setup output; shared material \u2192 several supported circuits. Add a note that the examples use different proof systems and cannot be treated as interchangeable deployments.",
+      "questions": [
+        "Which proof system is attached to each concrete Strand, and what setup category does its primary documentation specify?",
+        "Which claims about trust assumptions should appear only after Opus 5.5 review?",
+        "How should the comparison show co-design and dependencies with Layers 4\u20136?"
+      ],
+      "limits": "Do not infer Cardano or Moriarty setup design from Midnight, Filecoin, Ethereum KZG, or the snarkjs tutorial."
+    }
+  },
+  {
+    "role": "02-language",
+    "proposal": {
+      "id": "L2-P01",
+      "title": "Describe financial intent in the language",
+      "bookReference": "Proving Nothing, Chapter 3, \u2018The Four Philosophies\u2019 and \u2018The Running Example: A Sudoku Proof\u2019 (exact chapter excerpt L2-EXACT-CHAPTER.md). The chapter frames Layer 2 as how developers express a computation and its public/private boundary.",
+      "sourceSupport": [
+        {
+          "type": "BOOK_FACT",
+          "reference": "Chapter 3, \u2018The Four Philosophies\u2019; \u2018The Running Example: A Sudoku Proof\u2019",
+          "note": "The book presents distinct language approaches and uses a running example to distinguish public input from private witness."
+        },
+        {
+          "type": "PRIMARY_SOURCE_SUPPORT",
+          "reference": "S03-MORIARTY-PRODUCT-CONTRACT.md, \u2018What provable intention means\u2019",
+          "note": "The contract says developers specify invariants and transition rules, while users authorize exact outcome and authority constraints."
+        }
+      ],
+      "websiteMapping": "Introduce Moriarty's language by the financial conditions a developer can express: exact assets, recipients, gross limits, fees, minimum net outcomes, authorization, and continuing duties. Keep developer-authored program rules distinct from the user's signed authorization.",
+      "readerCopy": "Write the financial rules for an action: which assets may move, who may receive them, what fees and limits apply, and what duties remain afterward. The user authorizes the allowed outcome separately.",
+      "interaction": "A proposed side-by-side inspector highlights program rules, user-authorized limits, and unresolved duties for a small partial-payment example. Each field links to its source expression or signed-intent item; label the display as a concept until implemented.",
+      "diagram": "Program rules + signed authorization \u2192 candidate action \u2192 required proof relation \u2192 actual consumer. Add an explicit boundary between the first two inputs; mark the latter handoff as target-dependent.",
+      "questions": [
+        "Which language constructs and target profiles currently express and enforce each listed financial condition?",
+        "How should a signing display explain a condition whose meaning depends on versioned semantics?"
+      ],
+      "limits": "The product contract states requirements and boundaries; it does not show that all constructs are implemented or accepted on Cardano. The book's Sudoku boundary is an educational example, not a Moriarty feature claim."
+    }
+  },
+  {
+    "role": "02-language",
+    "proposal": {
+      "id": "L2-P02",
+      "title": "Show compiler and relation as an artifact handoff",
+      "bookReference": "Proving Nothing, Chapter 3, \u2018From Circuits to Virtual Machines: A Brief Evolution\u2019; Chapter 10, \u2018The Causal Web: Why It Is a DAG, Not a Stack\u2019 (B08 exact sections, lines 4460\u20134479).",
+      "sourceSupport": [
+        {
+          "type": "BOOK_FACT",
+          "reference": "Chapter 3, \u2018From Circuits to Virtual Machines\u2019; Chapter 10, lines 4460\u20134479",
+          "note": "The book describes compiler-mediated translation and says engineering pressures connect language with lower layers; its layer ordering is pedagogical rather than a clean architecture of independent modules."
+        },
+        {
+          "type": "PRIMARY_SOURCE_SUPPORT",
+          "reference": "S03-MORIARTY-PRODUCT-CONTRACT.md, \u2018Execution target and certified basis\u2019",
+          "note": "The contract requires target and compiler identities to be pinned separately and says compilation must preserve the intended relation; correspondence remains open until established."
+        },
+        {
+          "type": "MORIARTY_MAPPING",
+          "reference": "integrated-r2/CONCEPT.md, \u2018How an application would use a Web\u2019",
+          "note": "The concept proposes an artifact-first handoff with program, semantics/compiler versions, proof identities, context, consumer, and evidence stage."
+        }
+      ],
+      "websiteMapping": "Use an artifact map between source language and the named proof/consumer target. Show identifiers and evidence stage at each edge; do not imply compiler correctness from the existence of an output artifact.",
+      "readerCopy": "The compiler translates a program for a named target. Its output is handed to the proof and verification parts of the system. Each handoff should identify the program, semantics, compiler, target, and evidence available for that link.",
+      "interaction": "A proposed expandable handoff view lets a reader select source, compiled artifact, relation identity, proof instance, and consumer. For the current experiment it should display only fields and stages supported by the cited evidence, with unknown links marked open.",
+      "diagram": "Source program \u2192 compiler/version \u2192 target artifact and relation \u2192 proof instance \u2192 named consumer \u2192 ledger outcome. Add a feedback arrow from proof/arithmetization constraints to language design, labeled \u2018engineering influence\u2019.",
+      "questions": [
+        "For the current Rust/Cardano route, which exact artifact identities and correspondence links can the site show from the supplied evidence?",
+        "Which specific book statements should be presented as general taxonomy rather than as a description of Moriarty?"
+      ],
+      "limits": "This is an explanatory UX proposal, not a claim that a supported SDK handoff or end-to-end compiler correspondence exists. Chapter 10 describes interdependence; it does not establish a formal DAG for Moriarty."
+    }
+  },
+  {
+    "role": "02-language",
+    "proposal": {
+      "id": "L2-P03",
+      "title": "Keep fees and residual duties in the language story",
+      "bookReference": "Proving Nothing, Chapter 3, \u2018The Running Example: A Sudoku Proof\u2019 (exact chapter excerpt); cross-layer context from Chapter 10, lines 4460\u20134479.",
+      "sourceSupport": [
+        {
+          "type": "PRIMARY_SOURCE_SUPPORT",
+          "reference": "S03-MORIARTY-PRODUCT-CONTRACT.md, \u2018What provable intention means\u2019 and \u2018Partial transactions and conditional settlement\u2019",
+          "note": "The contract binds fees, gross and net outcomes, liabilities, and allowed partial completion/recovery; composition preserves residual duties."
+        },
+        {
+          "type": "MORIARTY_MAPPING",
+          "reference": "integrated-r2/CONCEPT.md, \u2018A first reference app that teaches the model\u2019",
+          "note": "The concept proposes an invoice example in which partial payment retains duties, and distinguishes financial partial progress from missing proof evidence."
+        }
+      ],
+      "websiteMapping": "Make financial meaning part of the language introduction, rather than treating a program as an abstract computation. Use one sourced partial-invoice specimen to demonstrate gross debit, fee, net payment, and remaining duty, with the source behavior and proposed policy clearly separated.",
+      "readerCopy": "A partial action can pay part of an obligation and leave the rest due. Fees count toward the amount authorized, and a successful local step does not erase duties that continue afterward.",
+      "interaction": "A proposed slider for a labelled invoice fixture recalculates gross debit, fee, recipient amount, and remaining duty. Clearly separate recorded source behavior from a proposed full-backing policy; do not present the calculation as executed ledger evidence.",
+      "diagram": "Opening assets and duties \u2192 partial action (payment + fee) \u2192 remaining assets and duties. Show proof requirements on a parallel lane so incomplete evidence is not confused with an authorized partial financial outcome.",
+      "questions": [
+        "Which partial-payment figures are approved for direct reader display, and which remain source worksheets only?",
+        "What named target evidence is required before the example can be labeled an implemented financial workflow?"
+      ],
+      "limits": "The contract's semantics are requirements, not proof of full implementation. The concept's invoice worksheet is source-level analysis; it is not an executed transaction or measured performance result."
+    }
+  },
+  {
+    "role": "02-language",
+    "proposal": {
+      "id": "L2-P04",
+      "title": "Separate current Rust/Cardano evidence from the Midnight target",
+      "bookReference": "Proving Nothing, Chapter 3, \u2018The Four Philosophies\u2019 and \u2018From Circuits to Virtual Machines: A Brief Evolution\u2019. The chapter surveys multiple language and execution approaches; Chapter 10, lines 4460\u20134479, cautions that the layers influence one another.",
+      "sourceSupport": [
+        {
+          "type": "PRIMARY_SOURCE_SUPPORT",
+          "reference": "S03-MORIARTY-PRODUCT-CONTRACT.md, \u2018Execution target and certified basis\u2019",
+          "note": "The target architecture names Midnight ZKIRv3 and native proof infrastructure, while explicitly separating non-Midnight routes and incomplete capabilities."
+        },
+        {
+          "type": "MORIARTY_MAPPING",
+          "reference": "integrated-r2/CONCEPT.md, \u2018Developer experience and ecosystem delivery\u2019 and \u2018Later-source readings and their limits\u2019",
+          "note": "The integrated concept proposes separate Cardano experimental and Midnight target guides and describes the Rust/Cardano route as a frozen experimental path."
+        }
+      ],
+      "websiteMapping": "Give each example a visible target badge and evidence stage. Keep the current Rust/Cardano experiment distinct from the specified Midnight ZKIRv3 target. Do not use Compact or Midnight implementation details as support for the Rust/Cardano route.",
+      "readerCopy": "Moriarty has separate target routes. The Rust/Cardano path described here is experimental. The specified Midnight target has its own compiler, proof, and ledger requirements. Evidence for one route does not establish the other.",
+      "interaction": "A proposed target switcher changes only the explanatory artifact map and evidence labels for the selected target. If a field is unknown for that target, show \u2018not established in this source\u2019 rather than carrying it across from another route.",
+      "diagram": "Shared language concepts branch into separately labeled Rust/Cardano experimental and Midnight ZKIRv3 target routes, each with its own compiler, proof interface, consumer, and evidence status.",
+      "questions": [
+        "Which page and artifact currently own the authoritative current Rust/Cardano support inventory?",
+        "What is the exact maturity label and evidence path for each target-specific claim on the website?"
+      ],
+      "limits": "The supplied concept gives a bounded evidence summary, not a complete inventory of current support. The proposal makes no claim of Cardano deployment, verified compiler correspondence, or Midnight acceptance."
+    }
+  },
+  {
+    "role": "03-witness",
+    "proposal": {
+      "id": "witness-definition",
+      "title": "What the witness contains",
+      "bookReference": "L3-EXACT-CHAPTER.md:25-44, Execution Traces; B08-EXACT-MANUSCRIPT-SECTIONS.json, section 'The Seven Layers at a Glance' (source lines 272-298).",
+      "sourceSupport": "Chapter 4 calls the witness the recording of a computation, including intermediate values. It distinguishes the computation from its recording and says later layers prove properties without revealing the witness contents.",
+      "websiteMapping": "Introduce witness generation as the data-preparation part of a proof explanation. Use the invoice example to distinguish selected inputs from intermediate arithmetic, while labeling the mapping as an illustration rather than an implemented invoice circuit.",
+      "readerCopy": "A witness is the data and intermediate values used to show that a computation can satisfy its rules. A proof can let someone check a statement about that computation without receiving the witness itself.",
+      "interaction": "Click 'Show the example' to reveal payment 35, seller receipt 35, fee 2, remaining invoice duty 65, and reserve duty 10. Each number is labeled input, intermediate result, or carried-forward value.",
+      "diagram": "User input \u2192 candidate witness values \u2192 constraints for a statement; a separate proof arrow leads to a verifier. Do not depict the witness itself flowing to the verifier.",
+      "questions": [
+        "Which values, if any, are witness inputs in an actual Moriarty invoice relation?",
+        "Does the implemented relation expose intermediate values or only selected public inputs?"
+      ],
+      "limits": "The invoice fixture is local arithmetic, not proof generation or verification. Do not say the listed amounts are currently private."
+    }
+  },
+  {
+    "role": "03-witness",
+    "proposal": {
+      "id": "private-public-boundary",
+      "title": "Separate witness from statement",
+      "bookReference": "L3-EXACT-CHAPTER.md:19-31 and 309-337, 'The disclose() Boundary: Midnight's Witness Architecture'; B08 section 'The Seven Layers at a Glance'.",
+      "sourceSupport": "The chapter explains that a proof may establish a property without revealing witness contents, and separately describes a target-specific disclosure mechanism. The supplied V2-COPY technical trust note says a proof over supplied values does not authenticate them or turn them into authenticated ledger facts.",
+      "websiteMapping": "Add an explanatory two-column panel: 'Backstage values' and 'Statement the verifier checks'. State that public inputs, transaction data, and public outputs may remain visible even when a witness value is not disclosed.",
+      "readerCopy": "The witness and the statement are different. A proof can hide witness values while checking a statement, but it does not hide information already published in a transaction or output.",
+      "interaction": "A 'Show example values / Show the boundary' toggle changes only the explanatory labels. The boundary view tags each item as possible witness, public statement input, public transaction/history data, or unresolved. Add a fixed note: 'This control does not change privacy or run a proof.'",
+      "diagram": "Two boxes: prover-side candidate witness and verifier-side public statement. A proof connects them; public chain/history/output data sits outside both boxes and is labeled visible where published.",
+      "questions": [
+        "What exact values are public inputs to the deployed verifier?",
+        "Which claims are bound to transaction and spent-state data by the consumer, and which remain caller-supplied?",
+        "What data remains visible through public history and outputs?"
+      ],
+      "limits": "No automatic privacy claim for public-chain data, history, outputs, or caller-provided values. Exact boundary requires Opus security review of the target relation and consumer."
+    }
+  },
+  {
+    "role": "03-witness",
+    "proposal": {
+      "id": "invoice-input-to-constraints",
+      "title": "Trace an invoice choice into a proposed relation",
+      "bookReference": "L3-EXACT-CHAPTER.md:25-44, 'Execution Traces'; B08 section 'The Seven Layers at a Glance'.",
+      "sourceSupport": "The invoice fixture gives a source-funded 110 CASH opening, a 35 CASH partial payment, a separate 2 CASH fee, 65 CASH remaining invoice duty, and 10 CASH reserve duty. It labels the worksheet local arithmetic and records a 2 CASH backing gap for source funding.",
+      "websiteMapping": "Use the existing staged-invoice scenario to demonstrate user input \u2192 candidate witness/intermediate arithmetic \u2192 constraints. Preserve the source-funded case's 2 CASH backing gap. Label any circuit formulation proposed and unimplemented.",
+      "readerCopy": "Choose 35 CASH. The example sends 35 to the seller and 2 to the fee recipient; 65 of invoice duty and 10 of reserve duty remain. A proposed relation could check these arithmetic rules, but this worksheet does not make or check a proof.",
+      "interaction": "Let the existing amount slider update the arithmetic panel. An optional 'View the rule' control shows: 0 < payment < 100; payment reduces invoice duty; fee is separate; reserve duty carries forward. A funding selector may show the source 110 case and the separately labeled proposed 112 case.",
+      "diagram": "Payment input 35 \u2192 calculations (seller 35, fee 2, remaining invoice 65, reserve 10) \u2192 proposed constraint checks; show no proof-verified or ledger-settled state.",
+      "questions": [
+        "Would the deployed relation prove only arithmetic, or also bind input values to a particular spent invoice state and exact asset?",
+        "Which outputs and actual state checks belong to the consumer rather than the proof?",
+        "Does the target actually carry all required duties through this step?"
+      ],
+      "limits": "The 110 CASH worksheet result leaves cash 73 against duties 75, a 2 CASH gap. Funding 112 is a proposed policy with no S12 extra-funding action. Do not imply the example is private or implemented as a proof."
+    }
+  },
+  {
+    "role": "03-witness",
+    "proposal": {
+      "id": "privacy-has-process-boundaries",
+      "title": "Distinguish proof privacy from process privacy",
+      "bookReference": "L3-EXACT-CHAPTER.md:195-257, 'Side-Channel Attacks: When the Walls Leak'; lines 381-387, 'The Witness as a Multi-Dimensional Problem'.",
+      "sourceSupport": "Chapter 4 separates the mathematical zero-knowledge property of a proof from leaks during proof generation, including timing and other implementation channels. It treats side-channel risks as implementation-specific concerns.",
+      "websiteMapping": "In a technical explainer drawer, distinguish what a proof reveals from what an observer might learn from the proving process or public transaction activity. Present these as questions to assess for each implementation, not as findings about Moriarty.",
+      "readerCopy": "A proof's privacy property describes what the proof reveals. The process that creates it and the public activity around it can expose other information, so those need separate review.",
+      "interaction": "Expandable 'What else can be observed?' panel with categories: proof contents, proving-process signals such as timing, and public transaction/history/output data. No risk meter or pass/fail badge without assessed evidence.",
+      "diagram": "Three labeled observation paths: proof \u2192 verifier; prover process \u2192 potential observer; public transaction/history/output \u2192 public observer.",
+      "questions": [
+        "Have timing or other side channels been examined for the actual prover and deployment path?",
+        "What public transaction structure or history remains observable?"
+      ],
+      "limits": "Chapter examples do not establish that a particular Moriarty implementation has or lacks a leak. Security judgments and exact wording belong to Opus 5.5."
+    }
+  },
+  {
+    "role": "03-witness",
+    "proposal": {
+      "id": "witness-cost-and-correctness",
+      "title": "Witness generation has cost and correctness questions",
+      "bookReference": "L3-EXACT-CHAPTER.md:72-94, 'Witness Generation Costs'; lines 297-305, 'Closing the Correctness Gap'; lines 371-383, 'The Witness as a Multi-Dimensional Problem'.",
+      "sourceSupport": "The chapter discusses witness-generation performance and memory, and the risk that the witness generator and constraints do not compute the same intended function. Its quantitative performance claims refer to cited systems and workloads, not Moriarty benchmarks.",
+      "websiteMapping": "Provide a concise Layer 3 technical card with two checks: how the witness is generated and what evidence supports its agreement with the constraints. Keep chapter benchmarks clearly attributed and separate from Moriarty implementation evidence.",
+      "readerCopy": "Preparing a witness can take time and memory. The witness generator must also agree with the rules the proof checks; if they differ, a proof may faithfully attest to the wrong computation.",
+      "interaction": "A small 'Inputs \u2192 generated values \u2192 checked rules' inspection diagram, with optional source/evidence labels such as specified, source reading, or recorded result. Do not add unprovided Moriarty timing or memory values.",
+      "questions": [
+        "What measured witness-generation cost exists for the exact Moriarty target and workload?",
+        "What independent evidence checks that the witness generator and constraints agree?"
+      ],
+      "limits": "Do not transfer ZKPoG or other system measurements to Moriarty. The supplied contribution does not establish a measured Moriarty witness-cost result or complete correctness audit."
+    }
+  },
+  {
+    "role": "04-arithmetization",
+    "proposal": {
+      "id": "l4-rule-to-constraints",
+      "title": "Turn the financial rule into checkable relationships",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 17-78 (finite-field equations and spreadsheet analogy); lines 86-110 (R1CS form).",
+      "sourceSupport": [
+        {
+          "classification": "BOOK_FACT",
+          "reference": "The chapter frames arithmetization as representing computation with polynomial relationships over a finite field and uses rows and columns as an introductory analogy."
+        },
+        {
+          "classification": "PRIMARY_SOURCE_SUPPORT",
+          "reference": "G05.txt, abstract and \u00a71: the paper describes an argument for arithmetic-circuit satisfiability and polynomial equations; this does not identify Moriarty's circuit format."
+        },
+        {
+          "classification": "MORIARTY_MAPPING",
+          "reference": "invoice-fixtures.json, /opening and /partial: invoice amount rules, the separate fee, and the unchanged reserve duty."
+        }
+      ],
+      "websiteMapping": "Introduce Layer 4 as the step that writes down what must be true of the values in a financial transition. Keep the consumer's financial rule distinct from the particular constraint system used to encode it. Do not claim that an identified Web or Strand has a recovered circuit.",
+      "readerCopy": "A financial rule names what a payment must do. Arithmetization writes relationships that can check the payment, fee, and remaining duties together. The equations describe the values in a statement; the transaction and its validator still determine which real state those values refer to.",
+      "interaction": "Expand a simple relation sketch for the invoice example: gross debit equals seller payment plus program fee; closing cash equals opening cash minus gross debit; invoice duty falls by the seller payment; reserve duty stays the same. Label this a teaching sketch built from the supplied fixture.",
+      "diagram": "Rule \u2192 named values \u2192 polynomial constraints \u2192 checked relation. Place 'transaction/validator premises' beside the relation as a separate input boundary, not as another arithmetic equation.",
+      "questions": [
+        "Opus: Does the sentence about proof statements and transaction premises match the approved security wording?",
+        "Opus: Does any displayed equation need an explicit range or equality condition to avoid suggesting that a few sample arithmetic rows fully define the relation?"
+      ],
+      "limits": [
+        "No supplied circuit inventory ties this example to a compiled Moriarty/Web relation.",
+        "Do not imply that a proof establishes authenticity, signatures, delivery, or settlement."
+      ]
+    }
+  },
+  {
+    "role": "04-arithmetization",
+    "proposal": {
+      "id": "l4-invoice-arithmetic",
+      "title": "Follow one payment and keep the amounts separate",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 37-78 (variables and rules in rows); lines 747-773 (limits of analogy and field arithmetic).",
+      "sourceSupport": [
+        {
+          "classification": "MORIARTY_MAPPING",
+          "reference": "invoice-fixtures.json, /opening: 110 CASH source opening cash, 100 invoice duty, 10 reserve duty; /partial: amount must be >0 and <100, with a separate fee of 2 CASH."
+        },
+        {
+          "classification": "MORIARTY_MAPPING",
+          "reference": "invoice-fixtures.json, fixture for source110-amount35 and proposed112-amount35: amount 35, seller receipt 35, fee receipt 2, gross debit 37, invoice duty 65, reserve duty 10; source110 closes with cash 73 and a backing gap of 2, while proposed112 closes with cash 75 and duties 75."
+        },
+        {
+          "classification": "MORIARTY_MAPPING",
+          "reference": "invoice-fixtures.json, /fundingModes and /limitations: 112 assumes two extra CASH and supports one partial only; S12 has no extra-funding action; later partials incur another fee."
+        }
+      ],
+      "websiteMapping": "Use the supplied invoice worksheet as the concrete value source. Explain that payment reduces invoice duty, the program fee is a separate receipt and debit, and reserve duty survives. Show source funding and extra funding as distinct assumptions. Avoid treating the backing gap as the source action's amount-rule refusal.",
+      "readerCopy": "For a 35 CASH payment, the seller receives 35 and the fee recipient receives 2, so escrow pays out 37. The invoice duty falls from 100 to 65; the 10 CASH reserve duty stays. With 110 CASH in source funding, 73 remains against 75 of duties. A separate example adds 2 CASH to cover this one fee, leaving 75 against 75.",
+      "interaction": "An amount control from 1 through 99 updates seller receipt, fee, gross debit, closing cash, invoice duty, reserve duty and total duties. A funding selector switches between 110 source CASH and 112 with the explicitly assumed extra allowance. Display backing gap separately from the partial-payment rule. Mark the view as browser arithmetic, not a proof or transaction.",
+      "diagram": "Opening cash \u2192 seller payment + program fee \u2192 closing cash; in parallel, opening invoice duty \u2192 payment reduces duty, while reserve duty continues unchanged. Show backing comparison as a separate policy check.",
+      "questions": [
+        "Opus: Confirm the distinction between source-valid partial amount and a separate backing-policy condition in final copy.",
+        "Opus: Confirm that 'extra funding' is clearly described as an assumption, because the source action has no extra-funding action.",
+        "Should the page use the source 110 mode alone or show the proposed 112 comparison alongside it?"
+      ],
+      "limits": [
+        "CASH is the fixture's example unit, not a Cardano token.",
+        "The extra 2 CASH assumption covers one partial only; repeated partials require a funding rule.",
+        "The fixture's network fees, collateral, min-ADA, and thread reserve are separate from its CASH arithmetic.",
+        "A worksheet calculation is not a compiled constraint, Groth16 proof, validator execution, or ledger result."
+      ]
+    }
+  },
+  {
+    "role": "04-arithmetization",
+    "proposal": {
+      "id": "l4-integer-ranges",
+      "title": "A field value needs a range rule to mean an amount",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 37-78 (field elements and polynomial relationships); lines 635-685 (chapter's ZKIR range-constraint discussion); lines 747-760 (field arithmetic differs from native integer arithmetic).",
+      "sourceSupport": [
+        {
+          "classification": "BOOK_FACT",
+          "reference": "The chapter says field arithmetic is modulo a prime and its ZKIR discussion distinguishes field-valued operations from bounded integer types, naming constrain_bits as a range enforcement mechanism."
+        },
+        {
+          "classification": "MORIARTY_MAPPING",
+          "reference": "invoice-fixtures.json uses bounded integer CASH amounts and a slider range of 1..99 for the partial-payment example."
+        },
+        {
+          "classification": "INFERENCE",
+          "reference": "An educational display should show that arithmetic equality alone does not express every application-level range or comparison rule."
+        }
+      ],
+      "websiteMapping": "Connect the book's finite-field explanation to financial amounts without asserting a Moriarty encoding. Explain that field arithmetic wraps modulo the field size, while the worksheet intends bounded nonnegative integer amounts. Range and comparison checks are additional parts of a relation where required.",
+      "readerCopy": "A proof circuit does arithmetic in a finite field, where values wrap around at the field size. An invoice rule uses ordinary bounded amounts. The relation must also constrain values to the intended range before its field equations can stand for that financial rule.",
+      "interaction": "Show the amount 35 first as an ordinary fixture amount and then as a field element with a separate range-check badge. Let the reader expand the badge to see the idea of constraining a value to a permitted interval. Avoid showing a specific bit-decomposition or claiming it matches an implementation.",
+      "diagram": "Field equation + required range rule + required comparison rule \u2192 intended bounded financial relation.",
+      "questions": [
+        "Opus: Confirm the proposed plain-language explanation of field wraparound and range checks.",
+        "Opus: Review any specific bound or arithmetic claim against the exact target proof system before adoption."
+      ],
+      "limits": [
+        "The chapter's implementation-specific ZKIR claims are not independently established by the supplied Groth paper.",
+        "Do not imply a specific range-check gadget, circuit cost, opcode inventory, or field for Moriarty Webs."
+      ]
+    }
+  },
+  {
+    "role": "04-arithmetization",
+    "proposal": {
+      "id": "l4-constraint-layouts",
+      "title": "One computation can have different constraint layouts",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 80-270 (R1CS, AIR, PLONKish and shared computation example); lines 270-342 (CCS).",
+      "sourceSupport": [
+        {
+          "classification": "BOOK_FACT",
+          "reference": "The chapter presents R1CS, AIR, and PLONKish as different organizations for constraints and introduces CCS as a framework expressing those forms."
+        },
+        {
+          "classification": "PRIMARY_SOURCE_SUPPORT",
+          "reference": "G05.txt, abstract and \u00a71, scopes its construction to arithmetic-circuit satisfiability. It does not validate every later taxonomy or claim in the book."
+        },
+        {
+          "classification": "UNRESOLVED",
+          "reference": "No supplied Moriarty source names the constraint format for this invoice example or maps it to R1CS, AIR, PLONKish, or CCS."
+        }
+      ],
+      "websiteMapping": "If a layout comparison is useful, use the chapter's small arithmetic example and label it as general ZK education. Keep it separate from the invoice worksheet and from any asserted Moriarty architecture. Avoid unsupported language that one format is selected or universally dominant for Moriarty.",
+      "readerCopy": "Constraint systems organize the same required relationships in different ways. R1CS uses multiplication-shaped rows; AIR describes repeated transitions; PLONKish systems combine gates and wiring rules. CCS gives a shared way to describe several of these forms. The layout changes how the relation is represented, not the financial rule it is meant to express.",
+      "interaction": "Offer a static tab switch for the book's x\u00b7(x+1) example: show the R1CS rows, AIR trace idea, and PLONKish gates. Do not present constraint counts as a benchmark or map these layouts onto a Web.",
+      "diagram": "Same rule \u2192 three illustrative organizations (R1CS / AIR / PLONKish); CCS shown as a unifying description. Add a note that the choice can be coupled to other proof-core design choices.",
+      "questions": [
+        "Opus: Fact-check taxonomy and comparative copy, especially claims that sound universal or current-market-wide.",
+        "Is a comparison useful on this product page, or should it remain in a technical explainer?"
+      ],
+      "limits": [
+        "A layout comparison is general book material, not evidence of a Moriarty backend.",
+        "The chapter's wider performance, adoption, and convergence claims remain outside this scoped translation."
+      ]
+    }
+  },
+  {
+    "role": "04-arithmetization",
+    "proposal": {
+      "id": "l4-proof-boundary",
+      "title": "Correct arithmetic does not supply its own premises",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 17-35 and 747-773; connect to B08 exact manuscript sections for Chapter 12 / trust and verification boundary where adopted copy requires it.",
+      "sourceSupport": [
+        {
+          "classification": "BOOK_FACT",
+          "reference": "The chapter describes constraints as checking whether encoded relationships hold and warns that its analogies have limits."
+        },
+        {
+          "classification": "MORIARTY_MAPPING",
+          "reference": "V2-COPY.json, main.proofRoleExplanation and lifecycleSteps: supplied proposed copy distinguishes proof computation from transaction facts and validator rebuilding of statements."
+        },
+        {
+          "classification": "UNRESOLVED",
+          "reference": "V2-COPY is authored security copy, not an independent fact-check or evidence that a particular Layer 4 relation is implemented."
+        }
+      ],
+      "websiteMapping": "Use a boundary card beside any arithmetic demo: the demo illustrates the relation's math; real application use also depends on its statement, transaction premises, owner authorization, and the consumer's acceptance logic. Opus owns approval of the exact security wording.",
+      "readerCopy": "A constraint relation can check arithmetic over the values it receives. It does not decide by itself which ledger state those values describe or whether the application should accept a transition. Those questions belong to the statement and the system that consumes it.",
+      "interaction": "Let a reader remove the 'statement and transaction context' panel from a diagram. The display then shows that the equations still have numbers to calculate but no link to a particular real transition. This is a conceptual diagram only; do not simulate a proof pass/fail.",
+      "diagram": "Values in a statement \u2192 arithmetic relation; transaction and validator \u2192 premises and acceptance. Connect them with an explicit binding step, pending Opus-approved exact wording.",
+      "questions": [
+        "Opus: Approve or replace every security-boundary sentence before it appears as product copy.",
+        "Which exact approved references support the statement-binding and validator-rebuilding language?"
+      ],
+      "limits": [
+        "Do not say that arithmetic constraints prove ledger truth, authorization, external facts, or settlement.",
+        "Do not imply the worksheet produces a Strand, proof claim, Groth16 proof, or on-chain effect."
+      ]
+    }
+  },
+  {
+    "role": "05-proofsystem",
+    "proposal": {
+      "id": "statement-proof-verifier",
+      "title": "Show what each proof is about",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, \u2018Sealing the Certificate\u2019 (supplied excerpt lines 9\u201325); G05.txt, pp. 16\u201318, QAP relation and Prove/Vfy algorithms.",
+      "sourceSupport": [
+        "BOOK_FACT: The chapter frames a proof system as producing a certificate for a claim about a computation.",
+        "PRIMARY_SOURCE_SUPPORT: G05 defines a relation over public statement values and a witness and describes proving and verifying a proof against them.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/proofRoleExplanation says a Strand proof attests computation over its statement values, while ledger facts come from the transaction and the validator rebuilds the statement."
+      ],
+      "websiteMapping": "Make the four elements visible together: relation (the rule), statement (the public values), witness (the private values satisfying the rule), and proof (the verifier's checkable evidence). For the invoice, show that the arithmetic statement is distinct from the validator's authentication of the spent escrow state and actual outputs.",
+      "readerCopy": "A proof is checked against a particular statement and relation. It supports the claim that the encoded computation has a satisfying witness. The transaction and the consuming validator establish which state and outputs that statement refers to.",
+      "interaction": "Select a Strand role to highlight the statement fields and the rule they enter. Toggle \u2018proof checks\u2019 versus \u2018transaction supplies\u2019 to distinguish the computed relationship from ledger facts such as the spent state, outputs and signatures.",
+      "diagram": "Relation + statement + witness \u2192 proof; verifier checks proof against statement and verification key. Beside it, transaction/state \u2192 validator rebuilds and scopes the statement.",
+      "questions": [
+        "Opus: approve the exact statement\u2013witness terminology and the conditions under which a verifying Groth16 proof implies knowledge of a satisfying witness.",
+        "Opus: confirm the plain-language boundary between proof validity, authenticated inputs and truth of outside observations."
+      ],
+      "limits": [
+        "This is an explanatory rendering of supplied v2 copy; the complete Web consumer and statement-binding path are not recorded as implemented.",
+        "Do not imply a proof authenticates ledger facts, an issuer, a claimant's identity, or an outside observation."
+      ]
+    }
+  },
+  {
+    "role": "05-proofsystem",
+    "proposal": {
+      "id": "required-strands",
+      "title": "Collect the Strands a transition requires",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, \u2018Sealing the Certificate\u2019; Chapter 10 dependency DAG excerpt in B08-EXACT-MANUSCRIPT-SECTIONS.json, section \u2018The Causal Web: Why It Is a DAG, Not a Stack.\u2019",
+      "sourceSupport": [
+        "BOOK_FACT: Layer 5 follows the prior work of expressing computation and its witness as something a verifier can check; Chapter 10 warns that dependencies cross the numbered layers.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/definitions defines a Web as the full required Strand set and a Strand as proof plus claim, statement and binding metadata. /technical/summary says all-or-nothing enforcement is not yet built.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/explorerIntro allows one whole-execution proof to cover several roles; it does not posit a separate producer for every role."
+      ],
+      "websiteMapping": "Use the invoice transition to show required Strand roles and their statements. Present completeness as the Web design rule. Make clear that several named roles do not imply several independent circuits or proof producers; one whole-execution proof may cover several roles.",
+      "readerCopy": "A Web names the proof obligations for one transition. Each required Strand must match the statement rebuilt for that transition. One proof may cover several roles; the role list does not determine how many proof systems or producers are used.",
+      "interaction": "Display the required Strand list for the partial invoice step. Remove a Strand and show the design outcome \u2018incomplete\u2019; restore it to show the full set. The technical status panel identifies this as a design illustration because consumer enforcement is not yet implemented.",
+      "diagram": "Transaction + spent state \u2192 rebuilt statements \u2190 required Strands; all required matches \u2192 eligible-for-settlement design state. Cross-link Layers 3\u20137 as dependencies rather than a one-way pipeline.",
+      "questions": [
+        "Opus: confirm that \u2018one proof may cover several roles\u2019 is worded without implying cryptographic aggregation or a deployed multi-relation system.",
+        "Opus: review whether the page's term \u2018complete Web\u2019 is sufficiently separated from cryptographic proof verification and ledger settlement."
+      ],
+      "limits": [
+        "The remove/restore state is a product-design illustration, not an observed validator result.",
+        "Do not claim independent producers, general role cardinality, implementation of partial-step enforcement, or a measured cost advantage."
+      ]
+    }
+  },
+  {
+    "role": "05-proofsystem",
+    "proposal": {
+      "id": "groth16-setup-evidence",
+      "title": "Groth16 and its setup belong in the visible story",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, \u2018Groth16: The Gold Standard for Size\u2019 (supplied excerpt lines 35\u201345); B08-EXACT-MANUSCRIPT-SECTIONS.json, Chapter 2 \u2018Universal versus Circuit-Specific Setups\u2019 excerpt.",
+      "sourceSupport": [
+        "BOOK_FACT: The supplied chapter describes Groth16 as a three-group-element proof with a circuit-specific setup ceremony and discusses the tradeoff between compact proof and setup requirements.",
+        "PRIMARY_SOURCE_SUPPORT: G05.txt, pp. 16\u201318, specifies two G1 elements and one G2 element, and one pairing-product verification equation evaluated with three pairings under the stated setup.",
+        "PRIMARY_SOURCE_SUPPORT: G02.txt \u00a7\u00a715 and 23\u201324 describe Groth16 per-circuit ceremony, proof/public-input outputs and verification against a verification key; \u00a715 warns the zero-contribution initial key is unsafe for production.",
+        "MORIARTY_MAPPING: V2-COPY.json /technical/summary and trustNotes.recorded-evidence report one invoice-partial roundtrip, one local C2 wrapper with 1 acceptance and 6 mutation rejections, caller-fabricated contexts, a forgeable single-party test setup and no on-chain transaction. trustNotes.setup-keys says no production ceremony is recorded and the total setup count is unknown."
+      ],
+      "websiteMapping": "Add a dedicated Groth16/setup section to the technical area. Explain the general circuit-specific setup tradeoff and show the current record separately: one scoped invoice relation and local wrapper evidence; forgeable test setup; no on-chain transaction; total setup count unknown.",
+      "readerCopy": "Groth16 uses a compact proof and a setup tied to a compiled circuit. Moriarty's supplied records cover one invoice-partial relation and local wrapper checks with a test setup its operator could forge. They record no on-chain transaction or production ceremony. The total number of setups a future design requires is unknown.",
+      "interaction": "Use a setup-scope selector with labels \u2018one compiled circuit\u2019, \u2018observed test setup\u2019, and \u2018future total: unknown\u2019. Show that changing the compiled relation may change setup scope; do not derive a count from role, predicate or catalogue totals.",
+      "diagram": "Compiled relation + setup parameters \u2192 proving/verification keys \u2192 proof checked with public statement. Mark the supplied test setup as forgeable and production setup as not recorded.",
+      "questions": [
+        "Opus: approve exact setup/trapdoor wording and distinguish setup soundness assumptions from proof-system correctness.",
+        "Opus: confirm how to state that setup scope tracks compiled circuits without implying one ceremony per logical predicate or Strand.",
+        "Opus: verify whether any numeric proof-size example should be shown, and pin it to curve, encoding and implementation if so. The book excerpt juxtaposes a BLS12-381 192-byte example with Ethereum alt_bn128/BN254 gas discussion; confirm how to separate those comparisons."
+      ],
+      "limits": [
+        "Do not transfer the book's 192-byte figure to Moriarty without a named curve and serialization.",
+        "Do not estimate a universal setup count or infer it from the number of Strands, properties or catalogue identifiers.",
+        "Local wrapper figures are not ledger ExUnits, fees, transaction fit, production security or on-chain acceptance."
+      ]
+    }
+  },
+  {
+    "role": "05-proofsystem",
+    "proposal": {
+      "id": "composition-terms",
+      "title": "Separate Web composition from proof composition",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, \u2018The Hybrid Pipeline\u2019 and \u2018Recursion vs. Folding: Russian Dolls and Snowballs\u2019 (supplied excerpt lines 91\u2013170).",
+      "sourceSupport": [
+        "BOOK_FACT: The chapter describes recursion as a proof verifying an earlier proof and folding as combining claims during accumulation, with a final proof at the end.",
+        "BOOK_FACT: The chapter's hybrid example wraps a STARK proof in Groth16; this is one architecture example, not a universal product path.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/explorerIntro and /technical/trustNotes.web-completeness describe Web role coverage and one proof potentially serving several roles; /technical/summary retains recursion and bounded multiparent PCD as future tracks.",
+        "UNRESOLVED: The supplied Layer 5 excerpt does not define proof aggregation as a distinct formal operation."
+      ],
+      "websiteMapping": "Provide separate labels for (1) a Web combining application obligations, (2) one proof attesting several roles, (3) aggregation of proofs, if the selected system supports it, (4) recursion that verifies earlier proofs, and (5) folding claims before a final proof. Do not present them as synonyms or imply Moriarty implements them.",
+      "readerCopy": "A Web combines the conditions an application requires for one transition. Proof aggregation, recursive verification and folding describe different cryptographic designs. The supplied Moriarty records do not establish those designs as implemented features.",
+      "interaction": "Offer a side-by-side concept switch. For recursion, nest \u2018current proof checks prior proof\u2019; for folding, join step claims and show the final proof comes later; for Web composition, group required Strand obligations. Keep aggregation disabled or marked \u2018definition under review\u2019 pending Opus wording.",
+      "diagram": "Three distinct sketches: obligations grouped for one transition; proof N verifies proof N\u22121; claims 1\u2026N fold into an accumulator followed by a final proof. Add aggregation only after a reviewer-approved definition and an identified supported construction.",
+      "questions": [
+        "Opus: provide the adopted definition of aggregation and how it differs from recursive composition for this page.",
+        "Opus: approve the simplest accurate comparison of recursion and folding, including that folding alone is not the final proof-system soundness check.",
+        "Opus: state which, if any, aggregation/recursion/folding mechanisms are supported by the described Moriarty design and evidence."
+      ],
+      "limits": [
+        "Do not imply that a set of Strands is a recursively composed proof, a folded proof, or an aggregated proof.",
+        "Do not present the book's STARK-to-Groth16 hybrid pipeline as Moriarty's architecture.",
+        "The supplied records list recursion and bounded multiparent PCD as future tracks; no implementation or cost claim follows."
+      ]
+    }
+  },
+  {
+    "role": "06-bedrock",
+    "proposal": {
+      "id": "bedrock-primitives",
+      "title": "The ingredients under the proof core",
+      "bookReference": "Chapter 7, \u2018Three Hardness Assumptions, Three Worlds\u2019 and \u2018Four Families of Commitment Schemes\u2019 in L6-EXACT-CHAPTER.md (pinned book commit 2789e5a63972276e20bc6144733ef9824ced9e49; manuscript excerpt lines 3015\u20133545). The book names discrete-log, collision-resistant-hash, and Module-SIS assumptions and discusses fields, groups, curves, and commitments.",
+      "sourceSupport": "G05, abstract and sections 1.1 and \u2018Technique\u2019: pairing-based arguments work over a finite field and use bilinear groups; this particular 2016 construction uses three group elements and a pairing-product equation. G06-CIP0381.md, \u2018Specification\u2019 and \u2018Names and types/kinds\u2019: the Plutus proposal describes BLS12-381 G1/G2 group operations, Miller loop and final verification, as well as serialization and hash-to-curve functions. These sources support examples of primitives, not a complete security comparison of all proof systems.",
+      "websiteMapping": "Use a selectable diagram with four visible labels: field arithmetic, curve/group operations, hash functions, and the proof relation that combines them. Connect field/group/commitment choices to Layers 4 and 5. Keep setup as a separate Layer 1 concern, even when a system's cryptographic choices make setup relevant.",
+      "readerCopy": "A proof system uses mathematical building blocks. Its arithmetic lives in a field. Some systems also use curve groups and pairings; others rely on hashes. These choices shape how the computation is encoded and how a verifier checks it. The seven layers help us inspect those connections; they are not separate boxes that every system must fill in the same way.",
+      "interaction": "Let readers toggle field, curve/group, and hash labels to highlight the parts of the proof-core diagram each primitive participates in. The diagram must say \u2018illustrative relationships\u2019 and must not imply that every system uses every primitive.",
+      "diagram": "Three linked Layer 4/5/6 circles around a center labeled \u2018proof core\u2019, with small field, group/curve, and hash icons attached to the relevant edges. A note says \u2018system-dependent; choices co-design across layers.\u2019",
+      "questions": [
+        "Which primitive combinations are actually used by the specific Moriarty proof path described on the page, and which are only background examples from the book?",
+        "Does Opus agree with the book's classification and wording for the named hardness assumptions before any security comparison is adopted?"
+      ],
+      "limits": "Do not present the three assumptions in the book as an exhaustive taxonomy. Do not assign security levels or assert that one family is categorically safer. The supplied material does not establish a complete Moriarty primitive inventory."
+    }
+  },
+  {
+    "role": "06-bedrock",
+    "proposal": {
+      "id": "curve-capability-vs-acceptance",
+      "title": "A curve operation is not proof acceptance",
+      "bookReference": "Chapter 7, \u2018KZG (Kate-Zaverucha-Goldberg)\u2019 and \u2018The Laws That Break\u2019 in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015\u20133545), which connect pairing-based cryptography and hardness assumptions to proof systems.",
+      "sourceSupport": "G06-CIP0381.md, \u2018Specification\u2019 lists BLS12-381 group operations, Miller loops, final verification and serialization; \u2018Path to Active\u2019 records inclusion in a scheduled Plutus release, with Chang #1 hardfork noted. This establishes documented Cardano Plutus primitive support. It does not, by itself, establish that a particular application verifier accepts a particular proof. V2-COPY.json /technical/summary records one local compiled-C2-wrapper acceptance among seven cases, with caller-fabricated context and a forgeable test setup; it says no on-chain transaction is recorded and that the V2 source readings are uncompiled. This is scoped local evidence, not production acceptance.",
+      "websiteMapping": "Show three gates in sequence: primitive available; verifier relation and inputs match; consumer accepts in the intended execution context. On the Moriarty evidence card, identify the recorded local acceptance as such and keep production setup and chain acceptance visibly separate.",
+      "readerCopy": "A chain may provide curve and pairing operations. A proof verifier still has to use compatible parameters, encodings, keys, and verification equations. Then the intended consumer must accept that proof in its real context. Evidence for the curve operations alone does not show that all of these steps are in place.",
+      "interaction": "A three-step reveal control lets the reader open \u2018primitive\u2019, \u2018verifier\u2019, and \u2018consumer acceptance\u2019. The final step displays the evidence stage available for Moriarty: one local wrapper acceptance with fabricated context; no on-chain transaction recorded; test setup forgeable by its operator.",
+      "diagram": "Three boxes labeled \u2018curve primitives\u2019, \u2018complete verifier\u2019, and \u2018consumer accepts\u2019. A solid connection from CIP-0381 to the first box; a dashed, clearly scoped evidence marker at the local-wrapper stage; no arrow labeled production or deployment.",
+      "questions": [
+        "Which exact deployed target, verifier implementation, curve, key, encoding, and consumer are meant by any future claim of Moriarty proof acceptance?",
+        "Does Opus approve the wording around the recorded C2 case and its setup limitation?"
+      ],
+      "limits": "CIP-0381 is a Cardano/Plutus source and does not establish Midnight support. Do not convert local wrapper acceptance into an on-chain, production, or real-context claim."
+    }
+  },
+  {
+    "role": "06-bedrock",
+    "proposal": {
+      "id": "curve-compatibility-boundary",
+      "title": "Compatibility belongs to a named target",
+      "bookReference": "Chapter 7, \u2018Four Families of Commitment Schemes\u2019 and \u2018KZG (Kate-Zaverucha-Goldberg)\u2019 in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015\u20133545), where the book describes pairing-based constructions and named curve examples.",
+      "sourceSupport": "G06-CIP0381.md is explicitly titled \u2018Plutus support for Pairings over BLS12-381\u2019; its specification names BLS12-381 types and functions. V2-COPY.json /technical/trustNotes and /technical/summary distinguish the current local proof record, the forgeable class-0 test setup, and the broader Midnight ZKIRv3 target. Those supplied records do not establish that Cardano's BLS12-381 support ports unchanged to Midnight or that a BN254 verifier is interchangeable with BLS12-381.",
+      "websiteMapping": "Give each target its own compatibility card. For Cardano, identify the documented BLS12-381 Plutus primitive support. For Moriarty's broader Midnight target, state that this Cardano evidence does not qualify it. Require curve and verifier details before showing a compatibility badge.",
+      "readerCopy": "Cryptographic support is target-specific. The supplied Cardano document describes BLS12-381 operations for Plutus. That does not establish the same operations, proof verifier, or acceptance path on Midnight. A proof and verifier must agree on their curve and other parameters.",
+      "interaction": "A target selector switches between \u2018Cardano\u2019 and \u2018Midnight\u2019. The Cardano view shows only the documented Plutus BLS12-381 primitive capability. The Midnight view says \u2018not established by this Cardano source\u2019 and links the reader to the separate evidence status.",
+      "diagram": "Two target columns, each with independent boxes for primitive set, proof/verifier, and acceptance evidence. A one-way dotted annotation says \u2018Cardano evidence does not transfer automatically\u2019; no shared curve badge.",
+      "questions": [
+        "What curve and proof-verifier parameters are actually in the claimed Moriarty path on each target?",
+        "Is there any primary evidence that a Midnight path uses these Cardano Plutus built-ins, or would that be a different implementation?"
+      ],
+      "limits": "No BN254 or Midnight compatibility assumption. Do not infer support from similar APIs, proof-system names, or diagrams."
+    }
+  },
+  {
+    "role": "06-bedrock",
+    "proposal": {
+      "id": "kzg-groth16-source-check",
+      "title": "Separate pairings, KZG, and Groth16",
+      "bookReference": "Chapter 7, \u2018KZG (Kate-Zaverucha-Goldberg)\u2019, especially the sentence \u2018KZG powers Groth16, PLONK, Marlin\u2026\u2019 in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015\u20133545).",
+      "sourceSupport": "G05 is Jens Groth's 2016 \u2018On the Size of Pairing-based Non-interactive Arguments?\u2019 Its abstract describes a three-group-element pairing-based argument for arithmetic-circuit satisfiability and one pairing-product equation. In the supplied paper text, that construction is not identified as Groth16 and the source does not establish the chapter's statement that Groth16 uses KZG. G06-CIP0381 supplies BLS12-381 primitive details but does not adjudicate that scheme-history claim.",
+      "websiteMapping": "Keep \u2018pairing-based proof systems\u2019, \u2018KZG polynomial commitments\u2019, and \u2018Groth16\u2019 as distinct labels. Mark the book sentence for an Opus fact-check before it is used as a technical assertion. If retained, provide a primary source for the exact relationship and clarify whether the statement is scheme-specific or historical shorthand.",
+      "readerCopy": "Pairings are a cryptographic operation used by several proof systems. KZG is one polynomial commitment built with pairings. Groth16 is a distinct proof system. The exact relationship between a named system and a commitment scheme should be checked before treating the names as interchangeable.",
+      "interaction": "Hovering over each of the three terms reveals its role: operation, commitment, or proof system. A small \u2018source check\u2019 marker points to the unresolved wording in the book rather than silently changing it.",
+      "diagram": "Nested but distinct labels: \u2018pairing operation\u2019 supports a pairing-based construction; \u2018polynomial commitment\u2019 is one possible component; \u2018proof system\u2019 is the larger protocol. Use a dotted edge from KZG to Groth16 labeled \u2018relationship needs primary-source confirmation\u2019 until Opus resolves it.",
+      "questions": [
+        "Does the book intend \u2018KZG powers Groth16\u2019 to mean Groth16 uses KZG, or that both are pairing-based constructions?",
+        "What primary source should support the exact relationship if the sentence is kept?"
+      ],
+      "limits": "This proposal flags a source mismatch for adjudication; it does not declare the book wrong or supply final crypto wording. G05 is not evidence about Groth16 merely because the paper's author is named Groth."
+    }
+  },
+  {
+    "role": "06-bedrock",
+    "proposal": {
+      "id": "assumptions-and-setup-boundary",
+      "title": "State what the guarantee depends on",
+      "bookReference": "Chapter 7, \u2018Three Hardness Assumptions, Three Worlds\u2019 and the chapter's concluding discussion of cryptographic assumptions in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015\u20133545).",
+      "sourceSupport": "G05, abstract and section 1.1, explicitly frames its construction's security through particular assumptions and a generic bilinear-group-model argument; the abstract says it also gives a symmetric-pairing security proof. V2-COPY.json /technical/trustNotes says the recorded Groth16 meaning is conditional on an honest setup and knowledge soundness, and says the current class-0 setup operator can forge proofs. Its /technical/summary records no production ceremony. These are distinct source statements and should not be collapsed into one generic \u2018secure\u2019 label.",
+      "websiteMapping": "Pair a concise \u2018what this guarantee assumes\u2019 note with the proof-system example. Distinguish mathematical assumptions, setup ceremony trust, circuit/verifier correspondence, and evidence of acceptance. Keep detailed setup history in the dedicated visible setup section required by the site brief.",
+      "readerCopy": "A proof's guarantee depends on the assumptions and setup used by that proof system, and on the verifier checking the intended relation. For the supplied Moriarty example, the recorded test setup can be forged by its operator, so it does not support a production security claim.",
+      "interaction": "A reader can open four short cards: \u2018hardness assumption\u2019, \u2018setup\u2019, \u2018compiled relation and key\u2019, and \u2018acceptance evidence\u2019. Each card states what its evidence can and cannot establish.",
+      "diagram": "Four linked condition cards feeding into \u2018claim justified?\u2019 rather than a single green \u2018secure\u2019 badge. Mark the Moriarty test setup card \u2018forgeable test setup\u2019 and the production ceremony \u2018not recorded in supplied sources.\u2019",
+      "questions": [
+        "Which exact scheme-specific assumptions and setup conditions should Opus approve for the final Moriarty wording?",
+        "Is the exact setup count or production ceremony status available in an approved source? The current supplied context says total required setups are unknown and no production ceremony is recorded."
+      ],
+      "limits": "Do not state quantified security bits, quantum timelines, or a blanket post-quantum claim. Do not imply that a local proof or primitive operation settles setup trust, circuit correspondence, or production acceptance."
+    }
+  },
+  {
+    "role": "07-verification",
+    "proposal": {
+      "id": "L7-verdicts",
+      "title": "Show the three verdicts separately",
+      "bookReference": "L7-EXACT-CHAPTER.md, Chapter 8 \u201cThe Social Layer\u201d and \u201cWho Verifies the Verifier?\u201d; exact manuscript chapter excerpt covers source lines 3546\u20134018. Cross-link Chapter 10 \u201cThe Causal Web: Why It Is a DAG, Not a Stack\u201d (B08 extracted lines 4460\u20134479).",
+      "sourceSupport": "BOOK_FACT: Chapter 8 frames verification as software reading a proof and returning yes/no, and discusses implementation, governance and economics. PRIMARY_SOURCE_SUPPORT: CIP-0038, \u201cSpecification\u201d and \u201cTrustworthiness of implementations,\u201d describes Plutus curve operations and the need to retain compatibility for uses on-chain. MORIARTY_MAPPING: V2-COPY main.proofRoleExplanation and main.lifecycleSteps separate proof checking at issuance, transaction-derived statement checks at settlement, and application readback. INFERENCE: presenting these as separate verdicts will help readers see what each layer of checking establishes.",
+      "websiteMapping": "Use a compact sequence: (1) claim policy checks proof at issuance; (2) settling validator collects every required Strand and rebuilds its statement from the spending transaction; (3) ledger acceptance and application readback establish whether the intended effects appeared. Keep proof correctness, authorization and authenticated ledger facts distinct.",
+      "readerCopy": "A proof claim records a checked proof. At settlement, the validator requires every Strand named by the Web, rebuilds each statement from the transaction, and checks the signed financial effects. The application then confirms inclusion, waits for its required finality, and reads back outputs and remaining duties.",
+      "interaction": "An expandable three-step trace. Selecting each step highlights its input, checker and result. A \u201cwhat this proves\u201d toggle shows the narrow claim for that step; a \u201cwhat it does not decide\u201d toggle distinguishes proof validity from owner authorization, ledger acceptance and application readback.",
+      "diagram": "Transaction and proof \u2192 claim policy checks proof \u2192 proof-claim output; settlement consumes all required claims \u2192 validator rebuilds statements and checks signed effects \u2192 ledger accepts or rejects; application confirms inclusion, finality and actual outputs/duties.",
+      "questions": [
+        "Opus: confirm the exact adopted wording for the relationship between claim-policy verification, proof-claim creation and settlement validation.",
+        "Does the final Cardano design bind each issued claim to exactly the statement and context that the settlement validator rebuilds?",
+        "Which signer, validator and ledger conditions must pass at each transaction boundary?"
+      ],
+      "limits": "This proposal describes the supplied V2 design. Supplied records do not show an on-chain transaction or end-to-end Cardano settlement."
+    }
+  },
+  {
+    "role": "07-verification",
+    "proposal": {
+      "id": "L7-web-completeness",
+      "title": "Make required-Web collection visible",
+      "bookReference": "L7-EXACT-CHAPTER.md, \u201cThe Social Layer\u201d and \u201cWho Verifies the Verifier?\u201d; Chapter 1 \u201cThe Seven Layers at a Glance,\u201d original manuscript lines 272\u2013298, establishes that the layers are interdependent.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 says a verifier\u2019s verdict depends on the software that receives and checks a proof; it also separates logically distinct Layer 7 concerns. PRIMARY_SOURCE_SUPPORT: V2-COPY main.definitions defines a Web as the complete set of Strands required by a consuming contract, with all-or-nothing acceptance. MORIARTY_MAPPING: V2-COPY main.explorerIntro and assemblyIncomplete describe listing required Strands and the effect of a missing Strand. INFERENCE: an explicit collection step makes the application\u2019s required set legible before the settlement verdict.",
+      "websiteMapping": "Use the Web explorer to display the consuming contract\u2019s required Strand set, each Strand\u2019s statement and whether it is present. Treat complete collection as an input to settlement, not as settlement acceptance.",
+      "readerCopy": "The contract names the Strands required for this transition. The validator needs the complete set, and each claim must match the statement rebuilt for the transaction. A complete Web is ready for the settlement check; it has not settled yet.",
+      "interaction": "Allow one required Strand to be removed and restored. Show the collection as incomplete while it is absent, then show the settlement check become available when all required claims are present. Do not simulate cryptographic verification.",
+      "diagram": "Contract\u2019s required set \u2192 collect matching claim outputs \u2192 complete Web \u2192 settlement validator.",
+      "questions": [
+        "Is the required set fixed entirely by the consuming contract for each supported transition?",
+        "Which mismatches besides a missing Strand cause rejection, and what user-facing reason can the interface safely show?",
+        "Can one proof serve multiple roles in the exact adopted design, and how is that represented without implying multiple independent proofs?"
+      ],
+      "limits": "The V2 source reading is uncompiled and the all-or-nothing consumer is listed as not built in the supplied technical status."
+    }
+  },
+  {
+    "role": "07-verification",
+    "proposal": {
+      "id": "L7-effects-and-claims",
+      "title": "Keep proof claims separate from financial effects",
+      "bookReference": "L7-EXACT-CHAPTER.md, \u201cThe Social Layer\u201d and \u201cThe Price of a Verdict\u201d; Layer 7\u2019s verdict is the end of a proof check, while the chapter treats economics as a separate concern.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 treats the proof verdict and the economics of rendering it as distinct concerns. PRIMARY_SOURCE_SUPPORT: V2-COPY main.lifecycleSteps issue/settle and main.faqs claim-vs-asset state that proof-claim issuance records checked evidence, does not mint the application asset or move application funds, and that settlement burns claims while enforcing effects. MORIARTY_MAPPING: the Cardano design places claim checking in an Issue transaction and application effects in a later settlement transaction. INFERENCE: a paired visual can prevent readers from treating a proof-claim token as the financial asset.",
+      "websiteMapping": "At issuance, show only proof-claim output creation. At settlement, show the required claims consumed and burned alongside the separately authorized application-asset and custody effects.",
+      "readerCopy": "Issuing a proof claim records checked evidence in its own output. It does not mint the application asset or move application funds. The later settlement consumes the required claims and applies only the financial effects allowed by the validator and the signed intents.",
+      "interaction": "A two-panel before/after view. The first panel highlights the claim output and its min-ADA; the second shows that output consumed and the claim token burned, beside the distinct application-asset movement. A switch hides the application-asset route to make the separation explicit.",
+      "diagram": "Issue: proof + claim policy \u2192 claim output. Settlement: claim output consumed and burned; validator-approved financial effects occur separately.",
+      "questions": [
+        "Opus: confirm whether \u201crecords checked evidence\u201d is the preferred exact phrase for proof-claim issuance.",
+        "Which claim-output fields are user-visible and which remain implementation details?",
+        "For each supported profile, what confirms the application-asset minting or transfer route independently of proof-claim issuance?"
+      ],
+      "limits": "The source design and local wrapper evidence do not establish actual on-chain claim issuance or financial settlement."
+    }
+  },
+  {
+    "role": "07-verification",
+    "proposal": {
+      "id": "L7-cost-context",
+      "title": "Explain verifier cost in the target ledger\u2019s units",
+      "bookReference": "L7-EXACT-CHAPTER.md, \u201cThe Price of a Verdict\u201d and \u201cOn-Chain Verification in 2026\u201d; source claims about Ethereum gas, BN254 and rollup data availability are examples from that environment.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 compares Ethereum verification, data-availability and aggregation costs. PRIMARY_SOURCE_SUPPORT: CIP-0038, \u201cCosting of function,\u201d gives preliminary Plutus built-in costs and says its Groth16 estimate was about 23% of the execution budget; \u201cTrustworthiness of implementations\u201d discusses preserving compatibility of existing on-chain uses. MORIARTY_MAPPING: Cardano cost and acceptance questions concern Plutus execution units, transaction size, fees, collateral and claim-output min-ADA, as distinguished in V2-COPY technical.networkFeeNote. INFERENCE: the chapter\u2019s Ethereum figures cannot stand in for costs of the Cardano Web design.",
+      "readerCopy": "A verifier has a cost in the ledger where it runs. For Cardano, that means measuring the actual script and transaction under the relevant Plutus and ledger rules. Ethereum gas figures do not give the cost of this Web.",
+      "interaction": "Offer a labeled \u201ccost components\u201d panel that separates proof-check script execution, transaction size and network fee, collateral, and ADA held by a claim output. Until measured on the exact candidate and ledger rules, display \u201cnot measured\u201d rather than a number.",
+      "diagram": "Proof check \u2192 script execution units; transaction data \u2192 size and fee; claim output \u2192 min-ADA held; all assessed under the target ledger rules.",
+      "questions": [
+        "Does the source-era CIP-0038 cost estimate remain comparable to current Plutus and ledger rules?",
+        "What exact compiled policy, proof shape, public inputs, transaction context and protocol parameters define a representative verification-cost measurement?",
+        "What proof-claim output min-ADA and transaction-size costs apply to the adopted design?"
+      ],
+      "limits": "No cost, latency or portability advantage is measured in the supplied V2 technical status. Do not publish a Cardano number based on the book\u2019s Ethereum examples or CIP preliminary estimate.",
+      "websiteMapping": "Keep this in the technical status panel. Describe Cardano resource units and transaction costs only when tied to the exact compiled candidate and current ledger parameters."
+    }
+  },
+  {
+    "role": "07-verification",
+    "proposal": {
+      "id": "L7-dag-and-governance",
+      "title": "Map trust boundaries without importing another chain\u2019s governance",
+      "bookReference": "L7-EXACT-CHAPTER.md, \u201cThe Social Layer\u201d and \u201cWho Verifies the Verifier?\u201d; B08 extracted Chapter 10 \u201cThe Causal Web: Why It Is a DAG, Not a Stack,\u201d lines 4460\u20134479.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 discusses replaceable verifier software, implementation and governance risks. Chapter 10 describes pressures from Layer 7 back into proof-system choices. PRIMARY_SOURCE_SUPPORT: CIP-0038\u2019s \u201cTrustworthiness of implementations\u201d concerns compatibility and long-term support of Cardano node verification formats; it does not specify Moriarty claim-policy governance. MORIARTY_MAPPING: the V2 technical section distinguishes planned behavior and records no deployed verifier identity or on-chain transaction. INFERENCE: the product can explain the governance question as an open trust boundary without asserting Ethereum-style multisig or upgrade behavior for Cardano.",
+      "readerCopy": "A proof\u2019s verdict depends on the checker and the rules that run it. The seven layers influence one another: the target ledger\u2019s costs and interfaces can shape proof choices, and those choices shape what the checker must do. The specific authority to change or replace a Cardano verifier must be described from the deployed system\u2019s evidence.",
+      "interaction": "A small influence map lets readers select \u201cledger cost,\u201d \u201cproof system,\u201d or \u201cchecker\u201d and follow the design pressure to the related layer. A separate technical-status drawer identifies what checker and deployment evidence are available; no governance controls are implied by the diagram.",
+      "diagram": "Layer 7 verifier needs \u2194 Layer 5 proof-system choices \u2194 Layer 6 cryptographic primitives, with ledger rules and costs feeding into Layer 7; arrows denote design pressure, not a formal dependency theorem.",
+      "questions": [
+        "Does the adopted chapter text present the seven layers as interdependent without asserting they are independent assumptions?",
+        "Which Cardano governance, upgrade, versioning and node-compatibility mechanisms actually control the verifier used by this design?",
+        "How should Chapter 10 distinguish a DAG of described design pressures from possible co-design cycles or feedback loops?",
+        "Opus: review all cryptographic and security claims before adoption."
+      ],
+      "limits": "No claim is made that Cardano uses an Ethereum proxy, multisig, immutable verifier, L2Beat stage, or Ethereum data-availability architecture. Governance and security judgments remain with Opus.",
+      "websiteMapping": "Use a trust-boundary map for the Cardano verifier path and a separate influence map for cross-layer design pressures. Do not import Ethereum upgrade or rollup claims into the Cardano story."
+    }
+  },
+  {
+    "role": "08-setupcount",
+    "proposal": {
+      "id": "setupcount-layer1",
+      "title": "What a Groth16 setup is tied to",
+      "bookReference": "B08-EXACT-MANUSCRIPT-SECTIONS.json: source B07-proving-nothing.md lines 272-298 (seven-layer overview) and 609-621 (Universal versus Circuit-Specific Setups); B05, same heading.",
+      "sourceSupport": "G02 (snarkjs README and guide) uses compiled circuits and describes common Phase 1 plus circuit-specific Phase 2. G04 (Filecoin Phase2 Attestations README) says Phase 2 is per circuit. G05 (Groth 2016 paper abstract) supports proof shape, not a Webs circuit inventory.",
+      "websiteMapping": "Make Layer 1 a visible technical section. Explain setup parameters and keys in plain language, then make circuit-specific versus shared setup material explicit. Distinguish circuit structure from statement and witness values.",
+      "readerCopy": "Groth16 setup is tied to a compiled circuit. Reusing that circuit for different inputs does not by itself require a new setup. Change its constraints or supported bounds, and you may have a different circuit that needs its own Phase 2 setup.",
+      "interaction": "Expandable two-column explainer: 'same circuit, new inputs' versus 'changed compiled constraints'; show whether the example changes the circuit-specific setup count, with a note that the compiled artifact determines the answer.",
+      "diagram": "Circuit source and compiler -> compiled circuit C1 -> Phase 2 setup and keys for C1. Two different statement/witness instances enter the same C1 box and share its circuit identity. A changed compiled circuit C2 branches to its own Phase 2 setup.",
+      "questions": [
+        "Which compilation artifact and compatibility criteria will the site treat as identifying a distinct circuit?",
+        "Does the supported toolchain expose a reliable circuit digest for readers to inspect?"
+      ],
+      "limits": "Do not imply input-value changes trigger setup. Do not present source-code equality alone as proof of compiled-circuit identity. Final cryptographic wording belongs to Opus 5.5."
+    }
+  },
+  {
+    "role": "08-setupcount",
+    "proposal": {
+      "id": "setupcount-phases",
+      "title": "One shared Phase 1 can feed many Phase 2 setups",
+      "bookReference": "B05, 'Universal versus Circuit-Specific Setups'; B08 source lines 609-621. The book\u2019s contrast is between circuit-specific Groth16 setup and universal-SRS proof systems.",
+      "sourceSupport": "G02 says projects can pick a round from common Phase 1 for circuit-specific Phase 2. G04 says Filecoin ran Phase 1 once and uses its output for each circuit\u2019s Phase 2. These support the phase distinction for the cited workflows, not universal compatibility across arbitrary curves or parameter sizes.",
+      "websiteMapping": "Show ceremony counts by phase rather than a single unlabeled 'setup count'. Allow a compatible shared Phase 1 row and a per-distinct-circuit Phase 2 row, with compatibility assumptions visible.",
+      "readerCopy": "A compatible Phase 1 transcript can be shared. Groth16 still needs a circuit-specific Phase 2 setup for each distinct compiled circuit. Sharing Phase 1 does not turn Groth16 into a universal per-circuit key system.",
+      "interaction": "For a hypothetical K, show K Phase 2 setups and one shared Phase 1 only when the selected circuits fit the same Phase 1 domain. Let the reader toggle separate Phase 1 domains to see the count change.",
+      "diagram": "Compatible Phase 1 transcript -> parallel branches to Circuit A / Phase 2 A, Circuit B / Phase 2 B, ... Circuit K / Phase 2 K. Caption: 'Illustrative; K is user supplied; compatibility must be established.'",
+      "questions": [
+        "What curve, size bound, and setup implementation would define a compatible Phase 1 domain for the intended example?",
+        "Should page terminology count phases, ceremonies, or ceremony rounds separately?"
+      ],
+      "limits": "The K calculator is hypothetical only. Do not claim one Phase 1 covers all Cardano circuits or combine incompatible setup domains."
+    }
+  },
+  {
+    "role": "08-setupcount",
+    "proposal": {
+      "id": "cardano-inventory",
+      "title": "Why the Cardano-wide setup total is unknown",
+      "bookReference": "B08 source lines 272-298 and 609-621; the chapter presents setup as one layer of a broader, interdependent system.",
+      "sourceSupport": "V2-COPY.json says the 235 identifiers are pre-dedup review identifiers, not proven properties, and labels retained families as requirements rather than supported ports; it explicitly says required setup count is unknown. G04 illustrates that a circuit inventory must account for variants: its note distinguishes 32GiB and 64GiB phase2 setups.",
+      "websiteMapping": "Place a short inventory status beside the calculator. Explain that a count needs a defined scope, a compiled-circuit inventory, versions/variants, and setup-domain compatibility. Keep Cardano ecosystem scope separate from the Webs catalogue.",
+      "readerCopy": "We cannot give a reliable setup total for all Cardano applications from this catalogue. The 235 review identifiers and 20 families are not compiled-circuit counts. The total remains unknown until the scope and circuit inventory are established.",
+      "interaction": "A transparent inventory worksheet can accept named circuits and variants as hypothetical entries, then calculate Phase 2 counts and shared Phase 1 domains. Default to an empty inventory and show 'No audited total available.'",
+      "diagram": "Scope definition -> deduplicated compiled-circuit inventory -> group by compatible Phase 1 domain -> count one Phase 2 per distinct circuit; display unknown until the inventory is sourced.",
+      "questions": [
+        "What exact boundary does 'entire Cardano' mean: deployed applications at a date, one protocol family, or future application possibilities?",
+        "Which deployed circuits, versions, parameter variants, curves, and ceremony records can be sourced and verified?",
+        "How will identical circuits reused by multiple applications be deduplicated?"
+      ],
+      "limits": "Do not infer a total from review IDs, project families, applications, or transaction instances. Do not claim the website has surveyed Cardano\u2019s deployed circuits."
+    }
+  },
+  {
+    "role": "08-setupcount",
+    "proposal": {
+      "id": "bounded-circuit-design",
+      "title": "Bundling cases can change the count, within explicit bounds",
+      "bookReference": "B08 source lines 272-298 on layer interdependence and lines 609-621 on circuit-specific setup and alternatives.",
+      "sourceSupport": "G02 and G04 support that Phase 2 is tied to a circuit in their Groth16 workflows. The supplied materials do not demonstrate a Moriarty generic circuit or prove that bundling would be efficient or safe.",
+      "websiteMapping": "Offer parameterized and bundled relations as design options in a clearly hypothetical panel. Describe the tradeoff between fewer compiled circuits and a broader/larger relation; require explicit limits and do not claim future-proof coverage.",
+      "readerCopy": "A single circuit can sometimes express several bounded cases, which may reduce the number of circuit-specific setups. It covers only the cases and limits encoded in that circuit. New cases outside those limits still need a changed circuit and setup.",
+      "interaction": "Compare K separate hypothetical circuits with one hypothetical bounded bundle. Show the assumed relation coverage and mark circuit size, performance, auditability, and setup suitability as unknown until measured and reviewed.",
+      "diagram": "Option A: Relation 1 -> Circuit 1 / Phase 2; Relation 2 -> Circuit 2 / Phase 2. Option B: bounded Relation 1+2 -> Circuit B / Phase 2, with the bound and selector logic drawn inside the circuit box.",
+      "questions": [
+        "Can the intended relation safely encode the cases behind this proposed bundle, including selector and range checks?",
+        "What resource, review, and maintenance costs would bundling add?",
+        "Would a bound change alter the compiled constraints and require a new Phase 2 setup?"
+      ],
+      "limits": "Present as a design possibility, not an existing Webs capability or a solution for all future Cardano programs. No universal bounded circuit can be assumed to cover unspecified future relations."
+    }
+  },
+  {
+    "role": "09-financialcases",
+    "proposal": {
+      "id": "connected-seven-layer-map",
+      "title": "Seven questions around one transition",
+      "bookReference": [
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Seven Layers at a Glance, lines 272-298",
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Causal Web: Why It Is a DAG, Not a Stack, lines 4460-4479"
+      ],
+      "sourceSupport": "The manuscript calls the layers interdependent and later describes a graph with pressures in multiple directions. V2-COPY describes the Web as a complete set of required Strands for one transition and says a whole-execution proof can cover several proof roles.",
+      "websiteMapping": "Let a visitor select invoice, DEX, capped issuance, loan, or treasury, then highlight the seven layer questions around the selected financial transition. Draw explicit cross-links and group Layers 4\u20136 as a coupled proof-core teaching concept.",
+      "readerCopy": "Explore one financial transition through seven connected questions: how its setup is formed, how its rule is expressed, what inputs it uses, how the rule is encoded, what proof is checked, which cryptographic assumptions support it, and what the consumer verifies against the transaction.",
+      "interaction": "Select a case; focus each layer to reveal its question and a case-specific example. Selecting a different layer preserves the case and makes the cross-links visible.",
+      "diagram": "One central transition card linked to seven labeled nodes, with visible cross-links among Layers 2\u20136 and a highlighted 4\u20136 group. Avoid vertical numbered floors or arrows that imply a fixed runtime sequence.",
+      "questions": [
+        "Which layer relationships should the page draw after Opus's security fact-check?",
+        "Does the manuscript's specific fourteen-edge DAG have a sufficiently reviewed mapping for a product illustration?"
+      ],
+      "limits": "Educational mapping only. It does not establish seven implementation modules, a formal dependency graph for Moriarty, or an accepted proof architecture."
+    }
+  },
+  {
+    "role": "09-financialcases",
+    "proposal": {
+      "id": "invoice-one-partial",
+      "title": "One invoice partial, with payment and duties separated",
+      "bookReference": [
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Seven Layers at a Glance, lines 272-298",
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Proof Core: Layers 4, 5, and 6, lines 2340-2353"
+      ],
+      "sourceSupport": "invoice-fixtures.json specifies opening duties of 100 CASH invoice and 10 CASH reserve, default partial 35, fee 2, and source-versus-proposed funding. scenarios.json specifies 110\u221235\u22122=73 against 65+10=75, versus proposed 112\u221235\u22122=75. V2-COPY says the fee discharges no debt and a remaining duty is financial progress, not a missing proof.",
+      "websiteMapping": "Connect Layer 2's financial rule and Layer 4's arithmetic to Layer 7's transaction consumer. Present Layer 5 and Layer 6 as the proof and cryptographic questions whose exact adopted wording remains a security review matter.",
+      "readerCopy": "The seller receives 35 CASH. The fee recipient receives 2 CASH, making the escrow debit 37 CASH. The fee repays nothing: invoice duty falls from 100 to 65 CASH, reserve duty stays at 10 CASH, and total duties are 75 CASH. With 110 CASH funded, 73 remains, 2 short of those duties. With a proposed 112 CASH funding mode, 75 remains against 75 of duties for this one partial. The 112 mode is a proposed funding policy, not an S12 action. The remaining invoice duty is debt still owed, not a missing proof.",
+      "interaction": "Use payment 35 as the initial worksheet value. Keep 110 and 112 funding modes visibly distinct. Show seller receipt, fee receipt, gross debit, closing cash, invoice duty, reserve duty, total duties, and backing gap as separate values. Add an explanation that each further partial costs another 2 CASH and that full payment uses finish().",
+      "diagram": "Two parallel funds-flow rows: 35 CASH to seller and 2 CASH to fee recipient, both leaving escrow as a 37 CASH gross debit. A separate duties panel moves invoice 100\u219265 and leaves reserve at 10; compare remaining cash 73 or proposed 75 with total duty 75.",
+      "questions": [
+        "Should the page label the 112 mode 'proposed extra fee budget' consistently with the source fixture?",
+        "Confirm final wording around backing policy and the source's non-negative-custody rule with the financial/security owners."
+      ],
+      "limits": "Local arithmetic from supplied fixtures only. It does not run Moriarty, create or verify a proof, settle a transaction, or establish ledger state. S12 has no 112-funding action or reserve-duty-return action; each later partial needs another fee allowance. Network fees, collateral, proof-claim min-ADA, and the V2 thread reserve are separate."
+    }
+  },
+  {
+    "role": "09-financialcases",
+    "proposal": {
+      "id": "five-financial-case-selector",
+      "title": "Use the same layer questions across five cases",
+      "bookReference": [
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Seven Layers at a Glance, lines 272-298",
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Proof Core: Why Layers 4, 5, and 6 Are Inseparable, lines 2831-2848"
+      ],
+      "sourceSupport": "scenarios.json provides the illustrative invoice, DEX, issuance, loan, and treasury values, financial effects, and dependencies. It explicitly says these are future proof roles rather than separate existing proof producers; DEX, issuance, and loan have no supplied source program.",
+      "websiteMapping": "A five-card selector reuses the same educational layer questions while changing the financial story: fee and residual duty for invoice; per-order limits, pool rounding, and allocation for DEX; supply, distribution, and separate duties for issuance; accrual, repayment, and fee for loan; quotient, transfers, and reserve duties for treasury.",
+      "readerCopy": "Follow the amounts that define each transition: two DEX owners offer 100 A each and require at least 90 B net; an issuance example creates 300 units under a cap of 1,000 and distributes 180 plus 120; a loan example moves from 100 debt to 105 after accrual, then to 70 after a 35 repayment; a treasury example checks 23 = 3\u00d77 + 2 and shows the resulting transfers and duties. Unissued capacity is not debt, and a fee is not repayment.",
+      "interaction": "For each case, expose four tabs or highlights: authorized inputs, arithmetic/constraints, proof question, and consumer/financial effects. Keep the exact-case values visible and mark values requiring a source or external observation as unavailable until supplied.",
+      "diagram": "Five case cards feed into one reusable seven-question map; each card has a short funds-and-duties strip. Do not draw one producer icon per named Strand role.",
+      "questions": [
+        "Which exact amount examples are retained after financial and security review?",
+        "What exact asset identities and allocation rules would a DEX example need before it can be more than illustrative?",
+        "What signed policy and actual mint-policy behavior would an issuance example need?"
+      ],
+      "limits": "Worked examples only. No live price, source program for DEX/issuance/loan, independent proof producer, application mint policy, or ACTUS conformance is established."
+    }
+  },
+  {
+    "role": "09-financialcases",
+    "proposal": {
+      "id": "witness-and-premise-boundaries",
+      "title": "Show inputs, private witness, and authenticated premises",
+      "bookReference": [
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Seven Layers at a Glance, lines 272-298",
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: Trust Decomposition: Seven Weaker Assumptions, lines 4502-4527"
+      ],
+      "sourceSupport": "The manuscript treats witness handling as Layer 3. V2-COPY distinguishes computation over supplied values from authenticated ledger facts and outside observations, and records privacy and implementation limitations as technical matters.",
+      "websiteMapping": "Pair Layer 3 with Layer 7 for all five cases: identify the values a calculation consumes, the private data intended to stay private, the state that must be tied to a transaction, and any external fact that needs an issuer, authentication path, or freshness rule. Example: loan accrual needs a period/rate and any variable-rate provenance; DEX pool arithmetic needs pool state and exact rounding; invoice payment uses predecessor duties and actual outputs.",
+      "readerCopy": "A proof checks a calculation over the values it receives. The application still needs to show where those values came from. The transaction supplies ledger facts; an outside price, delivery record, or other observation needs a named source and a rule for when it is current.",
+      "interaction": "Open an input drawer with columns 'calculation input', 'where it comes from', and 'who or what must authenticate it'. Let each case expose its own unknowns without implying a value is known or current.",
+      "diagram": "Inputs flow into a witness-and-constraint panel; a separate transaction and source panel feeds the consumer's binding checks. Never portray the proof alone as authenticating a price, delivery, signer, or ledger state.",
+      "questions": [
+        "What exact user-facing distinction between private witness, public statement, transaction fact, and external observation is approved?",
+        "Which witness side-channel wording is accurate for this project's implemented prover path?"
+      ],
+      "limits": "This is conceptual education, not a privacy guarantee, side-channel assessment, source authentication, or evidence that an external observation exists."
+    }
+  },
+  {
+    "role": "09-financialcases",
+    "proposal": {
+      "id": "proof-core-and-status",
+      "title": "Connect encoding, proof system, cryptography, and setup",
+      "bookReference": [
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: Universal versus Circuit-Specific Setups, lines 609-621",
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The Proof Core: Layers 4, 5, and 6, lines 2340-2353",
+        "B08-EXACT-MANUSCRIPT-SECTIONS.json: The 'Proof Core' Triad, lines 4710-4735"
+      ],
+      "sourceSupport": "The manuscript explains coupling across arithmetic representation, proof-system design, and cryptographic primitives. V2-COPY reports a forgeable single-party current test setup, unknown total setup count, no production ceremony in supplied records, local invoice proof evidence, and open source-to-circuit/VK correspondence.",
+      "websiteMapping": "Link Layers 1 and 4\u20136 to each financial example's relation, but keep claims about Groth16, ceremony structure, concrete setup count, cryptographic guarantees, and measured costs in a technical status section pending the assigned security review.",
+      "readerCopy": "The financial rule, the way it is encoded, the proof system, and the cryptographic building blocks shape one another. The seven labels help explain those concerns; in an implemented system, several choices are closely coupled.",
+      "interaction": "Show a compact 'design and evidence' panel with distinct statuses for source-level description, local proof evidence, design proposal, and open technical questions. Link this panel to each case without adding a live cost or setup estimator.",
+      "diagram": "Layers 4\u20136 appear as a connected design group, with links to setup (Layer 1) and consumer verification (Layer 7). A separate evidence panel states current status and unknowns.",
+      "questions": [
+        "Which security claims from the manuscript survive Opus 5.5 review for this product and implementation?",
+        "What precise wording should describe the class-0 forgeable test setup, unknown circuit/setup count, and open T3 correspondence?",
+        "Should the main page name Groth16, or reserve it for the technical section with its exact limitations?"
+      ],
+      "limits": "No production setup, circuit inventory, setup count, proving/verification cost, cryptographic audit, or independent source-to-circuit proof is established by this educational mapping."
+    }
+  },
+  {
+    "role": "10-visual-devex",
+    "proposal": {
+      "id": "VDX-01",
+      "title": "Seven-layer causal navigator",
+      "bookReference": "Pinned Proving Nothing, Chapter 1, 'The Seven Layers at a Glance' (B07 lines 272-298); Chapter 10, 'The Causal Web: Why It Is a DAG, Not a Stack' (B07 lines 4460-4479); exact supplied excerpts in B08-EXACT-MANUSCRIPT-SECTIONS.json.",
+      "sourceSupport": "The book names seven concerns and says their dependencies do not follow the numbering. It describes cross-layer design pressures, a DAG, and a coupled 4-5-6 proof core. It also distinguishes design-time constraints from runtime transaction flow.",
+      "websiteMapping": "Add a navigator to the existing Webs explainer. Map the book's concerns to questions readers can ask about a Moriarty financial transition, and link back to Webs, Strands, statements, proofs, and the consuming contract. These links are explanatory product mappings, not evidence that Moriarty implements a ZK stack matching each node.",
+      "readerCopy": "A proof system is shaped by connected choices. Choose a layer to see what question it answers and how that question relates to a financial transition.",
+      "interaction": "Seven keyboard-selectable nodes open a detail panel. Selecting a node highlights only documented, labeled connections and displays related layers as text. Include an always-visible legend distinguishing book description, Webs mapping, and implementation status.",
+      "diagram": "A labeled directed dependency map, not a seven-step rail. Visually cluster Layers 4, 5, and 6 as the proof core. Include at least the source's Layer 7-to-5/6, Layer 4-to-2, and Layer 3/4 fusion examples. Label this a conceptual book map, and keep runtime transaction flow in a separate view.",
+      "questions": [
+        "Which exact Chapter 10 edges and labels will the security/editorial owner approve for publication?",
+        "Which Webs concepts are adopted copy versus explanatory mapping, and which are still unknown?"
+      ],
+      "limits": "The book calls its dependency model a DAG while also describing bidirectional pressures. Do not claim the website resolves that distinction or independently validates every edge. The seven nodes do not establish proof coverage, security, or implementation support."
+    }
+  },
+  {
+    "role": "10-visual-devex",
+    "proposal": {
+      "id": "VDX-02",
+      "title": "Always-findable setup and Groth16 facts",
+      "bookReference": "Pinned Proving Nothing, Chapter 2, 'Universal versus Circuit-Specific Setups' (B07 lines 609-621; B05); setup participant statement in Chapter 1, 'The Seven Layers at a Glance' (B07 lines 272-298). Groth16 concept reference B06.",
+      "sourceSupport": "The supplied book text says Groth16 proofs in the cited construction are 192 bytes and its setup is circuit-specific. It separately names 141,416 participants in the Ethereum KZG Summoning of 2023. These facts refer to different setups and must not be merged.",
+      "websiteMapping": "Put a setup facts card inside the navigator and link it from the existing Implementation navigation. Add a technical-status appendix with explicit unknown values where the supplied product evidence gives no current inventory/count.",
+      "readerCopy": "Groth16: 192 bytes in the cited construction; setup is circuit-specific. Ethereum KZG Summoning (2023): 141,416 participants. These describe different systems. Moriarty setup and circuit counts are not established by this page's source packet.",
+      "interaction": "Expose a persistent 'Setup & proof size' link. Expand the setup card in place; provide source citations next to each number and a separate 'Moriarty implementation status' link to the appendix.",
+      "diagram": "Two clearly separated fact blocks\u2014Groth16 and Ethereum KZG ceremony\u2014with distinct labels, units, and source references. No combined counter, inferred total, or product status badge.",
+      "questions": [
+        "Can the book's cited Groth16 size statement be retained verbatim after the assigned cryptographic fact-check?",
+        "Is there an approved, current source for Moriarty setup counts, circuit inventory, or supported proof APIs?"
+      ],
+      "limits": "This is a visual placement proposal, not independent cryptographic verification. Do not imply the KZG participant count is a Groth16 count or either is a Moriarty count. The current product counts remain unknown in the inputs read."
+    }
+  },
+  {
+    "role": "10-visual-devex",
+    "proposal": {
+      "id": "VDX-03",
+      "title": "Connect the seven-layer explainer to the invoice anchor",
+      "bookReference": "Pinned Proving Nothing, Chapter 1 layer descriptions (B07 lines 272-298); Chapter 10 runtime/design distinction (B07 lines 4460-4479). Product anchor observed in supplied qa-v2-intermediate/explorer.png and desktop-top.png.",
+      "sourceSupport": "The book presents the layers as a way to reason about proof systems and distinguishes design-time dependencies from runtime flow. The supplied Webs explorer shows staged invoice escrow, a payment amount control, required roles for payment arithmetic, fee accounting, and duty continuation, plus statement/context details.",
+      "websiteMapping": "Preserve staged invoice escrow as the default concrete case and the existing Explore/Follow-the-value navigation. Let a reader open a role, see the statement/context, then follow an explanatory link to relevant layer concepts and return to the same invoice state.",
+      "readerCopy": "Start with the transition: the invoice example shows the required proof roles. The layer map explains connected design choices behind proof systems; it does not replace the transition's required roles.",
+      "interaction": "Keep the amount-change control and required-role selection available. Add contextual 'How this relates to the proof layers' links that open the navigator without losing the chosen amount or selected role. Retain a clear route back to the invoice example.",
+      "diagram": "Two adjacent but distinct visuals: the current required-role Web and the book's layer-dependency map. A labeled connector may show 'product example' to 'background concept'; do not draw a direct one-to-one line from each role to one layer.",
+      "questions": [
+        "Does the existing invoice amount/CTA remain the primary first interaction in the adopted page copy?",
+        "Which exact role-to-layer contextual links does the product owner want to present, if any?"
+      ],
+      "limits": "Screenshot inspection does not establish runtime behavior or acceptance. No role-to-layer equivalence is evidenced. Preserve the Webs distinction between computed proof roles and authenticated transaction premises as stated in the supplied explorer."
+    }
+  },
+  {
+    "role": "10-visual-devex",
+    "proposal": {
+      "id": "VDX-04",
+      "title": "Five financial-case selector with layer context",
+      "bookReference": "Pinned Proving Nothing, Chapter 10 causal examples and layer interactions (B07 lines 4460-4479). Five case labels observed in supplied qa-v2-intermediate/explorer.png.",
+      "sourceSupport": "The existing explorer screenshot names Staged invoice escrow, Batched DEX orders, Capped issuance, Loan servicing, and Treasury allocation. The book says design pressures vary across proof architectures. The supplied materials do not establish a verified seven-layer implementation map for any of the five cases.",
+      "websiteMapping": "Retain the five-case selector. Allow a user to switch the financial example and separately select a layer for general explanation. Populate per-case links only when adopted product copy supplies and verifies them.",
+      "readerCopy": "Explore five financial examples. The layer navigator describes proof-system design questions; case-specific implementation details appear only where documented.",
+      "interaction": "Keep the current scenario tabs. Selecting a case updates its existing role/statement detail; selecting a layer opens generic book-derived context. Show an explicit 'No case-specific mapping supplied' state rather than guessed layer assignments.",
+      "diagram": "Scenario strip above the invoice/explorer details; layer map is a separate component with its own selection. Avoid a seven-by-five matrix that implies unsupported coverage.",
+      "questions": [
+        "Are the five screenshot labels the final public case names?",
+        "Which scenario-to-layer mappings have approved source evidence?"
+      ],
+      "limits": "The screenshot is a visual artifact, not implementation evidence. Do not claim that any case exercises every layer or is verified by a particular layer."
+    }
+  },
+  {
+    "role": "10-visual-devex",
+    "proposal": {
+      "id": "VDX-05",
+      "title": "Accessible responsive graph and reduced-motion mode",
+      "bookReference": "Pinned Proving Nothing, Chapter 1 says the layer ordering is explanatory and interdependent (B07 lines 272-298); Chapter 10 supplies the dependency-web framing (B07 lines 4460-4479).",
+      "sourceSupport": "The source structure contains seven named layers and directed/cross-layer examples. The interaction and accessibility behavior here are design recommendations, not claims from the book or current product behavior.",
+      "websiteMapping": "Adapt the navigator to the supplied desktop and narrow-screen Webs layouts while preserving access to the invoice case, navigation, layer labels, and status appendix.",
+      "readerCopy": "Choose a layer or follow a labeled connection. Every relationship is also available in text.",
+      "interaction": "Use at least 44 CSS-pixel touch targets for graph controls and case selectors; keyboard-operable selection and visible focus; no horizontal scrolling at mobile widths; an equivalent text list; honor prefers-reduced-motion and avoid essential animated tracing.",
+      "diagram": "Desktop: labeled map and detail panel. Mobile: simplified responsive SVG or stacked list with a Related Layers disclosure. Preserve edge direction and proof-core grouping; do not rely on hover, color alone, or animation.",
+      "questions": [
+        "Which supported viewport widths and accessibility checks are part of the website's existing review process?"
+      ],
+      "limits": "These are proposed interaction requirements. The supplied screenshots show previews only; no browser, assistive-technology, or responsive tests were run."
+    }
+  }
+]

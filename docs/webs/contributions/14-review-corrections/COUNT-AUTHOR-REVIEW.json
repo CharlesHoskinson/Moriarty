@@ -1,0 +1,44 @@
+{
+  "reviewToken": "webs-v2-phase1-count-clarification",
+  "report": "Varying circuit sizes or bounds do not need extra phase 1 runs. If one compatible phase-1 parameter set (same curve and format, with enough capacity for the largest circuit) covers every circuit, there is one phase 1. Each distinct compiled circuit still needs its own phase 2. So OP-03's \"one phase 1 per distinct curve and capacity\" could count a phase 1 for every circuit size. The replacement counts phase-1 parameter sets that are actually used. Whether a setup is sound is a separate question: its transcript must verify and at least one participant must be honest. No total can be given until the circuit inventory is frozen.",
+  "findings": [],
+  "crosschecks": [
+    {
+      "id": "CC-OP03-PHASE1",
+      "severity": "LOW",
+      "summary": "OP-03's fix, 'plus one phase 1 per distinct curve and capacity', can be read as one phase 1 for each circuit size.",
+      "evidence": "snarkjs step 1: the phase-1 power sets the maximum number of constraints. Step 9: the circuit size may be anything below that number. The NOTE under step 7 says one 54-contribution ceremony is published as 'a file truncated for each power of two'. Filecoin: 'Phase1 is run once and is used for all Filecoin circuits'. Each circuit's phase 2 starts from 'the phase1 file phase1radix2m<exp> corresponding to the circuit's size'. These files are phase-1.5 outputs from that single phase 1.",
+      "requiredFix": "Use approvedCardanoCount and approvedCounterConditions from COUNT-CLARIFICATION.json. They count one phase 1 per compatible parameter set used, where one set covers the largest circuit, and one phase 2 per distinct compiled circuit."
+    }
+  ],
+  "recommendation": {
+    "verdict": "CONCEPT_COPY_READY",
+    "sourceReady": true,
+    "scope": "Text-only replacement for cardanoCount and counter.conditions in GROTH16-SECTION.json, refining OP-03. It covers only the common multi-party two-phase architecture. It makes no claim about inventory, totals, ceremonies, implementation or authority.",
+    "firstBlockedBoundary": "There is no frozen compiled-circuit inventory, so no Cardano-wide total can be assigned.",
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "None. This is a wording review only.",
+    "authorityProposalReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/final-reviews/opus-v2/FINDINGS.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/contributions/12-groth16/GROTH16-SECTION.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/webs-groth16-research-20261017/G02.txt",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/webs-groth16-research-20261017/G04.txt"
+    ],
+    "unreadPaths": [],
+    "limitations": "The Groth (2016) paper text was not supplied, so it is cited only as an existing sourceRef from the section. No frozen circuit inventory exists. Only the supplied public inputs were reviewed. No tools were run."
+  },
+  "positions": [],
+  "files": [
+    {
+      "path": "COUNT-CLARIFICATION.json",
+      "content": "{\n  \"question\": \"Do differing circuit sizes or bounds need extra phase 1 runs when one compatible phase 1 with enough capacity covers every circuit?\",\n  \"answer\": \"No. Phase 1 is counted per compatible parameter set used, not per circuit size. A changed size or bound makes a new compiled circuit, which adds only a phase 2. Compatibility sets the count. Soundness requires verified transcripts, each with at least one honest participant.\",\n  \"approvedCardanoCount\": \"In the common two-phase architecture, the exact count is one phase 2 per distinct compiled circuit, including any wrappers, in a frozen circuit inventory, plus one phase 1 per compatible parameter set the inventory uses. Circuits on one curve and format share a phase 1 whose capacity covers the largest of them. An existing compatible phase 1 can be reused. The 235 pre-dedup review identifiers, 20 families and seven layers describe review scope, not a setup count. The inventory is not frozen, so no total can be assigned yet.\",\n  \"approvedCounterConditions\": \"The count holds only if every circuit uses the same curve and format and fits the shared phase-1 capacity. Smaller circuits need no extra phase 1. Each stage yields sound keys only if its transcript verifies and at least one participant in it was honest.\",\n  \"sourceRefs\": [\n    {\"label\": \"snarkjs README\", \"url\": \"https://github.com/iden3/snarkjs\", \"pointer\": \"Steps 1, 7 (truncated ptau per power of two), 9\"},\n    {\"label\": \"Filecoin phase 2 attestations\", \"url\": \"https://github.com/filecoin-project/phase2-attestations#description-of-trusted-setup-phases\", \"pointer\": \"Phase1 run once for all circuits; phase1radix2m file by circuit size\"}\n  ],\n  \"scope\": \"Text-only replacement for cardanoCount and counter.conditions under OP-03. No inventory, total or implementation claim.\"\n}\n"
+    }
+  ]
+}

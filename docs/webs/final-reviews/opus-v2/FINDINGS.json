@@ -1,0 +1,51 @@
+[
+  {
+    "id": "OP-01",
+    "severity": "MEDIUM",
+    "summary": "The page equates a role with a Strand (proof instance) while also saying one proof can cover several roles.",
+    "evidence": "The hero says the contract 'names every Strand it needs \u2014 the payment arithmetic, the fee, the duties that continue', so it counts three Strands. The Strand definition says a Strand is 'One proof together with its claim\u2026', and the lifecycle and explorer intro say 'one whole-execution proof can serve several roles'. The omit control says 'Omit this required role', but assemblyIncomplete says 'A required Strand is missing' and the explorer intro says 'Remove a Strand'. The lifecycle then gives one Issue transaction per proof. A reader cannot tell whether a three-role Web needs one Strand or three, or one Issue transaction or three.",
+    "requiredFix": "Make the role the unit of the required set and the Strand the unit of proof. Hero: 'names every condition it needs proved \u2014 \u2026 \u2014 and accepts the transition only when a Strand covering each one is present and matches\u2026'. assemblyIncomplete: 'A required role has no Strand covering it, so\u2026'. Explorer intro: 'Remove a role's Strand to see\u2026'. Leave the definitions unchanged."
+  },
+  {
+    "id": "OP-02",
+    "severity": "LOW",
+    "summary": "Layer 7 says settlement 'consumes every Strand', but the page's own definition says proof-claim outputs are not Strands.",
+    "evidence": "Layer 7 body reads 'One settlement transaction consumes every Strand the Web requires'. The Strand definition reads '\u2026proof-claim outputs, validators and catalogue entries are not Strands.' The lifecycle 'settle' step correctly says it 'consumes every required proof-claim output'.",
+    "requiredFix": "Change the Layer 7 wording to 'consumes the proof-claim output of every Strand the Web requires'."
+  },
+  {
+    "id": "OP-03",
+    "severity": "LOW",
+    "summary": "The counter's conditions make the stage count depend on honest participants, which mixes up counting with soundness. The Cardano-wide count also leaves out phase-1 distinctness.",
+    "evidence": "counter.conditions reads 'This holds only if every circuit uses the same curve, fits the phase-1 capacity\u2026, and only if each phase has a verified transcript with at least one honest participant.' The number of stages does not depend on honesty; whether the resulting keys are sound does. cardanoCount equates the exact count with the number of distinct circuits, which strictly gives the phase-2 count. Different curves or capacities would add further phase-1 runs.",
+    "requiredFix": "Split the sentence: 'The count holds only if every circuit uses the same curve, fits the phase-1 capacity and accepts its format. Each stage yields sound keys only if its transcript verifies and at least one participant in it was honest.' In cardanoCount, say 'the number of phase-2 setups is the number of distinct compiled circuits\u2026, plus one phase 1 per distinct curve and capacity'."
+  },
+  {
+    "id": "OP-04",
+    "severity": "LOW",
+    "summary": "The unused-claims FAQ understates who can orphan issued claims.",
+    "evidence": "The FAQ says 'If the owners' intents are revoked\u2026'. The issuance-route card says 'any catalogue account may Revoke (advancing seq)', and doing so orphans every outstanding intent and claim, not only the revoker's.",
+    "requiredFix": "Change to 'If any catalogue account revokes (advancing the sequence), or another settlement spends the same state first, those claims\u2026'."
+  },
+  {
+    "id": "OP-05",
+    "severity": "LOW",
+    "summary": "The Groth16 source note for Filecoin points to the file host, but the cited heading is in a different document.",
+    "evidence": "The source note uses the URL https://trusted-setup.filecoin.io with the pointer 'Description of Trusted-Setup Phases'. That heading appears in the Filecoin phase-2 attestations repository README (supplied as G04), not on the file host.",
+    "requiredFix": "Change the URL to https://github.com/filecoin-project/phase2-attestations#description-of-trusted-setup-phases, or keep the host URL and change the pointer to 'published ceremony files'."
+  },
+  {
+    "id": "OP-06",
+    "severity": "INFO",
+    "summary": "Layer 1 says each relation needs 'its own setup', which is looser than the Groth16 section's model of one shared phase 1 plus a phase 2 per circuit.",
+    "evidence": "Layer 1 reads 'Each distinct compiled relation needs its own setup', while the Groth16 setup stages read 'One per compiled circuit' for phase 2.",
+    "requiredFix": "Optional: 'needs its own phase-2 setup'."
+  },
+  {
+    "id": "OP-07",
+    "severity": "INFO",
+    "summary": "The Groth16 'Statement' concept equates public inputs with the statement. In a Web, the public inputs carry a digest of the statement bytes.",
+    "evidence": "The concept reads 'Together they form the statement'. Layer 4 reads 'The public inputs carry a statement digest; an in-circuit BLAKE2b gadget ties them to the statement bytes.'",
+    "requiredFix": "Optional: add 'In a Web, the public inputs carry a digest of the statement bytes the validator rebuilds.'"
+  }
+]

@@ -1,0 +1,130 @@
+{
+  "persona": {
+    "id": "03",
+    "role": "Asset issuer",
+    "goals": [
+      "Examine capped issuance",
+      "Separate cap capacity from debt",
+      "Identify the app-asset mint policy and developer handoff"
+    ]
+  },
+  "artifact": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/index.html",
+    "sha256": "f5aa9fceb5a0ff4c174617aa7bbd7bbf73a51866e6829bee5f4dde83637eab9d"
+  },
+  "screenshotsInspected": [
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/desktop-top.png",
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/mobile-top.png",
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/explorer.png",
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/reviews/03-issuer/capped-issuance.png"
+  ],
+  "viewport": {
+    "width": 1440,
+    "height": 1000,
+    "browser": "Playwright sync_api, Chromium 1223, explicit executable path, headless, --no-sandbox"
+  },
+  "actions": [
+    {
+      "action": "Open local frozen HTML in fresh browser context",
+      "observed": "Page loaded; only request was local index.html.",
+      "taskOutcome": "Live page available.",
+      "evidence": "navigation.json"
+    },
+    {
+      "action": "Select Capped issuance",
+      "observed": "Future roles are Supply arithmetic, Distribution arithmetic, Duty accounting. Example: 300 units issued under cap 1,000; distribution 180/120; 700 unissued capacity; text says no debt inferred.",
+      "taskOutcome": "Cap/debt distinction answered for the example.",
+      "evidence": "capped-issuance.png; explorer FOLLOW THE VALUE"
+    },
+    {
+      "action": "Select Supply arithmetic role",
+      "observed": "Inspector says issuer policy, exact application asset, and supply predecessor need an actual authenticated path; no concrete proof or independent producer is supplied.",
+      "taskOutcome": "Role is an illustration, not an implemented mint path.",
+      "evidence": "capped-issuance.png; role inspector"
+    },
+    {
+      "action": "Open What this case still needs",
+      "observed": "Calls for app mint/burn semantics and actual mint-policy enforcement; also continued supply state, exact recipients/assets, and any separate redemption duty.",
+      "taskOutcome": "Found app mint policy is missing.",
+      "evidence": "navigation.json"
+    },
+    {
+      "action": "Follow Developer journey; open Current source commands & proposed interfaces",
+      "observed": "Handoff is not a shipping SDK/wallet integration. mori-k2 compile/inspect/setup/prove/verify are documented in source README but not run here. Future Web and transaction commands are proposals, not runnable here.",
+      "taskOutcome": "Conceptual handoff found; no issuer-specific live mint interface.",
+      "evidence": "navigation.json"
+    },
+    {
+      "action": "Follow Evidence; open issuance, authority/allocation, and duties/backing disclosures",
+      "observed": "C2 claim policy is described as issuing proof-claim outputs and labeled V2 source reading, not on-chain observation. Case says proof claim token does not mint app asset. Full backing is a proposed app policy.",
+      "taskOutcome": "Separated proof claim from app asset; actual app policy unidentified.",
+      "evidence": "Evidence disclosures; navigation.json"
+    }
+  ],
+  "questions": [
+    {
+      "question": "Is the unused 700 below the cap debt?",
+      "whereItArose": "Capped issuance example, cap 1,000 and issue 300.",
+      "answeredOnPage": true,
+      "answerLocation": "FOLLOW THE VALUE explicitly says no debt is inferred from unissued capacity.",
+      "remainingClarification": "Any redemption/servicing duty is separate; case says define it separately."
+    },
+    {
+      "question": "Which actual policy authorizes/mints the application asset under this cap?",
+      "whereItArose": "Supply arithmetic inspector and missing-work disclosure.",
+      "answeredOnPage": false,
+      "answerLocation": "Evidence names C2 claim policy for proof claims; case says those do not mint app asset.",
+      "remainingClarification": "No app-asset mint policy, issuer path or runnable implementation is identified."
+    },
+    {
+      "question": "Can I use this handoff to issue the asset today?",
+      "whereItArose": "Developer journey and command disclosure.",
+      "answeredOnPage": true,
+      "answerLocation": "Page says no shipping SDK; future Web/transaction commands are proposals, not runnable here.",
+      "remainingClarification": "No issuer-specific mint interface is shown."
+    },
+    {
+      "question": "Does proof-claim issuance mint the application asset?",
+      "whereItArose": "Evidence heading “Where proofs are checked: the issuance route.”",
+      "answeredOnPage": true,
+      "answerLocation": "Case FOLLOW THE VALUE says no; Evidence says C2 issues a claim output.",
+      "remainingClarification": "App-asset policy remains unspecified."
+    }
+  ],
+  "findings": [
+    {
+      "id": "03-01",
+      "type": "CLARIFICATION_REQUEST",
+      "impact": "High: issuer cannot identify actual policy that mints the app asset.",
+      "observation": "Inspector requires issuer policy/authenticated path; missing-work disclosure calls for actual policy enforcement. C2 policy mints proof claims, a different asset.",
+      "evidence": "Capped issuance role inspector, What this case still needs, FOLLOW THE VALUE; Evidence issuance route.",
+      "suggestedChange": "Say app-asset policy is unspecified/not demonstrated; label C2 flow proof-claim issuance and link exact app policy only if available."
+    },
+    {
+      "id": "03-02",
+      "type": "CONFUSION",
+      "impact": "Medium: “issuance” can mean app-asset supply or proof-claim output.",
+      "observation": "Evidence route title may sound like app-asset mint route; distinction requires following sections, though case explicitly clarifies claim token is separate.",
+      "evidence": "Capped issuance FOLLOW THE VALUE; Evidence issuance route.",
+      "suggestedChange": "Rename Evidence disclosure “Where proof claims are issued and checked” and link the app-asset policy gap."
+    },
+    {
+      "id": "03-03",
+      "type": "CLARIFICATION_REQUEST",
+      "impact": "Medium: conceptual handoff does not lead to actionable issuer integration.",
+      "observation": "No shipping SDK/integration; source command names are not executed here; proposed Web/transaction commands are not runnable here.",
+      "evidence": "Developer journey disclosure Current source commands & proposed interfaces.",
+      "suggestedChange": "Link supported issuer workflow if available, otherwise state no supported app-asset issuance workflow is shown."
+    }
+  ],
+  "teachBack": "A Web is proposed required proof roles for a transition. This example illustrates 300 app-asset units under a 1,000 cap, split 180/120; unused 700 is not debt. Proof-claim output is separate and does not mint the app asset. The real app mint policy, authenticated issuer path, proof production, validator enforcement and settlement are not established. The developer handoff is conceptual; Web/transaction commands are future proposals.",
+  "limits": [
+    "Bounded model persona, not real issuer research.",
+    "Only frozen HTML and supplied screenshots; no external navigation or network retrieval.",
+    "Only local index.html request.",
+    "No source implementation, external source docs, or other persona reviews inspected.",
+    "No security/cryptographic judgment.",
+    "Viewed own full-page screenshot with image tool."
+  ],
+  "completed": true
+}

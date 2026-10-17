@@ -1,0 +1,129 @@
+{
+  "persona": {
+    "id": "02",
+    "role": "Wallet UX integrator",
+    "goals": [
+      "Explain what an owner is being asked to approve.",
+      "Distinguish gross debit, application/program fees, and network fees.",
+      "Explain which duties remain after a partial payment."
+    ]
+  },
+  "artifact": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/index.html",
+    "sha256": "f5aa9fceb5a0ff4c174617aa7bbd7bbf73a51866e6829bee5f4dde83637eab9d"
+  },
+  "screenshotsInspected": [
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/desktop-top.png",
+      "observation": "Top section labels this a proposed Cardano concept and says no proofs, signatures, or transactions run on the page."
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/mobile-top.png",
+      "observation": "The same scope caveat and invoice worksheet link are visible at the 390-pixel mobile layout."
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/worksheet.png",
+      "observation": "The worksheet shows 35 CASH seller payment, 2 CASH program fee, 73 CASH remaining against 75 CASH duties, and a 2 CASH backing gap for source behavior."
+    },
+    {
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/reviews/02-wallet/screenshots/wallet-proposed-policy.png",
+      "observation": "Captured in the browser after changing the payment to 38 CASH and selecting the proposed full-backing policy: 112 CASH funding leaves 72 CASH against 72 CASH duties for this one partial. I viewed this screenshot."
+    }
+  ],
+  "viewport": {
+    "width": 1440,
+    "height": 1000,
+    "browser": "Playwright Python sync_api; Chromium executable /home/charl/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome; headless; fresh context; no profile or cookies; external requests not used"
+  },
+  "actions": [
+    {
+      "action": "Opened the exact local frozen index.html and focused the seller-payment range control, initially 35 CASH; pressed ArrowRight three times.",
+      "observed": "Displayed payment changed to 38 CASH. Source behavior showed funding 110, seller receipt 38, fee-recipient receipt 2, cash remaining 70, invoice duty 62, reserve duty 10, total duties 72, and a 2 CASH backing gap. Gross escrow debit was 40 CASH.",
+      "taskOutcome": "Helpful: the worksheet recalculated gross debit and the remaining invoice and reserve duties in place.",
+      "evidence": "Visible text under 02 THE FINANCIAL WORKSHEET; captured live state in screenshots/wallet-proposed-policy.png."
+    },
+    {
+      "action": "Selected the PROPOSED full-backing policy button.",
+      "observed": "Funding changed to 112 CASH and remaining cash to 72 CASH, matching total duties of 72 for this one partial. The text says the extra 2 CASH is an assumption, S12 has no extra-funding action, 112 is not an S12 action and requires a program change, and later partials need another fee allowance.",
+      "taskOutcome": "Helpful: the control distinguishes an application policy proposal from the source behavior and limits the matched-backing result to one partial.",
+      "evidence": "Visible policy explanation and cash/duty totals in the worksheet; screenshots/wallet-proposed-policy.png."
+    },
+    {
+      "action": "Selected 04 / PROPOSED Loan servicing in the Web explorer.",
+      "observed": "Explorer described the case as separating principal, accrual, payment, fee, and remaining debt. Selecting Payment accounting showed a 35 CASH debt payment plus separate 2 CASH fee for payer gross debit 37 CASH; actual payer, lender, fee recipient, and exact asset must agree with owner authorization and effects. It states that no concrete proof instance or independent producer is supplied and that actual signatures and validator enforcement remain separate.",
+      "taskOutcome": "Helpful for translating fee separation into a wallet approval summary, while reinforcing this is illustrative rather than an approval/signature flow.",
+      "evidence": "Visible case 04 explorer text and INSPECT AN ILLUSTRATED ROLE panel."
+    },
+    {
+      "action": "Opened the Exact asset, opening costs & lifecycle limits and Duties, backing and fees disclosures, then opened the visible Effects, allocation and authority disclosure and FAQ Is a remaining payment duty a missing proof?.",
+      "observed": "The asset disclosure identifies CASH as a fixture asset and separates network fees, collateral, claim-output min-ADA, and thread reserve from worksheet CASH fees. The fee disclosure says program-asset fee is not debt repayment or a network fee, the reserve duty persists after finish, and no reserve-duty-return action is present. The authority disclosure is a V2 source reading: it describes signed gross_cap, fee_cap, net_floor and liability_cap, beneficiary, validity window, nonce and target predicate; no genuine intent signature is observed. The FAQ says a remaining financial duty and a missing required proof are separate states.",
+      "taskOutcome": "Helpful for answering the distinctions, but the signing and network-fee details require opening several collapsed disclosures and still do not specify actual wallet display or fee estimates.",
+      "evidence": "Named visible disclosures and FAQ in the local page."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What exactly would I be approving as the asset owner, and what appears on the signing screen?",
+      "whereItArose": "While moving from the worksheet's arithmetic to an owner-facing wallet confirmation.",
+      "answeredOnPage": "Partly",
+      "answerLocation": "Collapsed Effects, allocation and authority disclosure: V2 SOURCE READING lists per-asset gross_cap, fee_cap, net_floor, liability_cap, beneficiary, validity window, nonce and target predicate. The top maturity note says no signatures run on the page; the disclosure says no genuine intent signature is observed.",
+      "remainingClarification": "The page does not show a wallet approval screen, the exact human-readable intent presented to the owner, or which concrete signers and transaction effects would be requested in a real transaction. The V2 description is an uncompiled-source reading, not demonstrated wallet behavior."
+    },
+    {
+      "question": "Is the 2 CASH fee the application fee or the network fee, and who pays each amount?",
+      "whereItArose": "The worksheet lists a 2 CASH Program fee while a wallet user normally needs to distinguish all outgoing amounts.",
+      "answeredOnPage": "Partly",
+      "answerLocation": "Worksheet labels the 2 CASH amount Program fee and Fee recipient receives; Duties, backing and fees says a program-asset fee is not a network fee and names network fees as separate. Exact asset, opening costs & lifecycle limits lists network fees among costs outside the CASH worksheet.",
+      "remainingClarification": "No network fee estimate, fee asset/units, payer, or total wallet debit including network costs is shown. The 3 CASH buyer opening fee is separately described for source open(90,10), with gross buyer debit 113."
+    },
+    {
+      "question": "After a 35 CASH partial payment, what is still owed, and can the reserve duty be returned at completion?",
+      "whereItArose": "The worksheet's gross-debit calculation and the separate reserve duty.",
+      "answeredOnPage": "Mostly",
+      "answerLocation": "Worksheet shows invoice duty 65, reserve duty 10, total duties 75 after payment 35 plus program fee 2; Exact asset, opening costs & lifecycle limits and Duties, backing and fees say the reserve duty persists after finish, no reserve-duty-return action exists, and nonzero duty blocks V2 Close.",
+      "remainingClarification": "The page says discharge or migration requires a program change but does not specify a supported wallet recovery path, responsible party, or timing. The Close condition is identified as an uncompiled-source reading."
+    },
+    {
+      "question": "Does the proof itself mean that the payment was authorized or settled?",
+      "whereItArose": "The page's proof-oriented headline and transition from arithmetic to a proposed Web.",
+      "answeredOnPage": "Yes, as a limitation",
+      "answerLocation": "Top page says no proofs, signatures or transactions run. Explorer says assembly is not proof verification, acceptance or settlement; role details separate proof arithmetic from actual signatures and validator enforcement. What a verifying proof shows says supplied bytes are not thereby authenticated ledger facts.",
+      "remainingClarification": "A concrete consumer and wallet signing-to-ledger sequence are not demonstrated, so the page does not provide a real approval or settlement walkthrough."
+    }
+  ],
+  "findings": [
+    {
+      "id": "WALLET-01",
+      "type": "CONFUSION",
+      "impact": "A wallet integrator could mistake the worksheet's 2 CASH program fee for the complete fee burden, because network costs are separate but only named in a deeper disclosure.",
+      "observation": "The worksheet presents gross escrow debit as payment plus 2 CASH fee. The Duties, backing and fees disclosure later says a program-asset fee is not a network fee and identifies network fees, collateral, claim-output min-ADA and thread reserve as separate funding items. No network fee amount is calculated.",
+      "evidence": "Worksheet visible labels Program fee and Gross escrow debit; collapsed Duties, backing and fees disclosure; viewed live screenshot wallet-proposed-policy.png.",
+      "suggestedChange": "Add a compact wallet-facing amount breakdown next to gross debit: payment, application/program fee, network fee (not estimated here), and total known/unknown outgoing amount. Keep the separate asset/unit and uncertainty visible."
+    },
+    {
+      "id": "WALLET-02",
+      "type": "CONFUSION",
+      "impact": "The intended owner consent may be read as a capability of the current prototype even though the relevant explanation is a collapsed source reading and no genuine intent signature is observed.",
+      "observation": "The homepage clearly says no signatures or transactions run. The owner-intent fields and approved=true interpretation appear only after opening Effects, allocation and authority; that text labels itself V2 SOURCE READING and says no genuine intent signature is observed.",
+      "evidence": "Top page scope text; Effects, allocation and authority disclosure text. The same page labels the explorer role as planned and says actual signatures and validator enforcement remain separate.",
+      "suggestedChange": "Add a short wallet-consent explainer near the worksheet or maturity note, labeled as a design/source reading, with the fields an owner would review and a direct statement that the current page has no signing flow."
+    },
+    {
+      "id": "WALLET-03",
+      "type": "PREFERENCE",
+      "impact": "A wallet integrator needs to communicate residual duties alongside outgoing amounts; the worksheet already does this clearly for the selected partial.",
+      "observation": "At 35 CASH the worksheet shows invoice duty 65, reserve duty 10, total duties 75, and says only the payment discharges invoice duty. The proposed 112 CASH funding matches this one partial, while lifecycle text says later partials need another fee allowance and the reserve duty persists after finish.",
+      "evidence": "Worksheet totals and gross-debit note; Exact asset, opening costs & lifecycle limits; Duties, backing and fees.",
+      "suggestedChange": "Preserve this per-duty presentation in any wallet summary and pair it with the relevant continuation/close limitation when a duty remains."
+    }
+  ],
+  "teachBack": "I understand a Web as a proposed collection of required Strand roles, with a Strand representing a claim, statement and binding metadata consumed by a script. The page's invoice arithmetic says a 35 CASH payment with a 2 CASH program fee has 37 CASH gross escrow debit; only 35 discharges invoice duty, leaving invoice duty 65 plus reserve duty 10. Network fees are separate from that worksheet amount. The page describes owner intent fields in a V2 source reading, but it shows no owner signature, proof verification, transaction, or settlement. The local page can illustrate amounts and planned requirements; it does not establish an actual wallet approval or ledger flow.",
+  "limits": [
+    "This is a model persona usability review, not real human user research or a security audit.",
+    "Used the exact frozen HTML in a fresh local Playwright Chromium context; no external navigation or network retrieval was used.",
+    "I did not inspect React source, other persona feedback, wallet/provider material, or private captures.",
+    "Screenshot inspection does not establish interactions; reported interactions were performed in the local browser.",
+    "V2 source-reading statements are reported as page text and are not treated as verified behavior or cryptographic conclusions."
+  ],
+  "completed": true
+}
