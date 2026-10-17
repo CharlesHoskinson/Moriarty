@@ -1,0 +1,152 @@
+
+
+# === R4 TEST PART B: R09-R13 (POLICY, CONSUMER, BRIDGE, legacy_env_from_host, rows/manifest) ===
+# AUTHOR-PROPOSED source fragment by claude-opus-4-8 HIGH; never run, imported, compiled or
+# reviewed. Appended byte-for-byte after R4-TEST-PREFIX.py.part and the R01-R08 part. Defines
+# exactly one class with five methods; adds no imports, rebinds no prefix global, redefines no
+# helper. Expected values come only from prefix literals/formatters and the pinned r2/host_codec/
+# legacy modules (independent of R4), never from build_k10_inputs_r4.py output. Each method calls
+# self.r4() first so that at RED its sole failure is the MISSING AssertionError.
+
+
+class TestR09ToR13(R4TestBase):
+    """Contract section 7 R09-R13. Wrappers touch only r2, host_codec and legacy; the plan path
+    is pure (no filesystem, scratch, clock, randomness or environment access)."""
+
+    def test_r09_policy_pin_guards_extract_compiled(self):
+        # R09 POLICY: b9 + b" " (pin mismatch), a bytearray (not exact bytes) and over-cap bytes
+        # all refuse C2B-POLICY with the genuine export/setup/link; a counter proves the pin guards
+        # legacy.extract_compiled so a mismatched wrapper never reaches it, while a genuine plan
+        # calls it exactly once.
+        self.r4()
+        with self.counted(legacy, "extract_compiled") as refused_calls:
+            self.refused("C2B-POLICY", self.plan, b9=RAW[B9] + b" ")
+            self.refused("C2B-POLICY", self.plan, b9=bytearray(RAW[B9]))
+            self.refused("C2B-POLICY", self.plan, b9=bytes(B9_CAP + 1))
+        self.assertEqual(refused_calls, [])
+        with self.counted(legacy, "extract_compiled") as ok_calls:
+            self.plan()
+        self.assertEqual(len(ok_calls), 1)
+
+    def test_r10_consumer_messages_kept_verbatim_and_link_precedes(self):
+        # R10 CONSUMER: a conforming C2I-<STAGE> refusal is wrapped verbatim as
+        # "C2B-CONSUMER: " + message; nonconforming consumer refusals collapse to the fixed
+        # literal; LINK comes before CONSUMER so a bad link refuses before r2 is ever called.
+        self.r4()
+        for stage in ("EXPORT", "SETUP", "PROFILE"):
+            message = "C2I-%s: descriptor rejected by r2" % stage
+            with self.faulted(r2, "prepare_c2_issue", ValueError(message)) as calls:
+                got = self.refused("C2B-CONSUMER", self.plan)
+            self.assertEqual(got, "C2B-CONSUMER: " + message)
+            self.assertEqual(len(calls), 1)
+        nonconforming = (
+            ValueError("boom"),                                   # no C2I- prefix
+            ValueError("C2I-NOPE: unknown stage"),                # stage not in the 11
+            ValueError("C2I-EXPORT: two" + chr(10) + "lines"),    # contains LF
+            ValueError("C2I-EXPORT:" + chr(13) + " cr"),          # contains CR
+            ValueError("C2I-EXPORT: " + "x" * CONSUMER_MESSAGE_CHARS),  # over 1024 characters
+            ValueError("C2I-EXPORT: ok", "second"),               # not exactly one argument
+            ValueError(b"C2I-EXPORT: bytes"),                     # argument not an exact str
+        )
+        for error in nonconforming:
+            with self.subTest(error=repr(error.args)):
+                with self.faulted(r2, "prepare_c2_issue", error):
+                    self.assertEqual(self.refused("C2B-CONSUMER", self.plan), NONCONFORMING)
+        bad_link = fresh_export()
+        bad_link["setupRecordSha256"] = swap1(bad_link["setupRecordSha256"])
+        with self.faulted(r2, "prepare_c2_issue", ValueError("C2I-EXPORT: never reached")) as calls:
+            self.refused("C2B-LINK", self.plan, export=dumps(bad_link))
+        self.assertEqual(calls, [])
+
+    def test_r11_bridge_rejects_every_consumer_disagreement(self):
+        # R11 BRIDGE: the 13 R3 test_08 edits reapplied to the root-adopted r2 result, plus the
+        # R4-specific disagreements - format /1, the v1 8-entry and superseded 14-entry label maps,
+        # a stale DECLARED_SUBSET_NOT_EQUIVALENT rustAcceptance, vkProfile or jsonParseLimits
+        # removed, a 17th label, a changed setupRecordSha256Declared and an envData built for
+        # another expiry. Each disagreement must fail closed with C2B-BRIDGE.
+        self.r4()
+        good = r2.prepare_c2_issue(fresh_export(), fresh_setup(), K6_EXPIRY,
+                                   policy_id=bytes.fromhex(POLICY))
+        env, iss = good["envData"], good["issueData"]
+        edits = [
+            ("envCborHex", swap1(good["envCborHex"])),
+            ("envelopeTokenNameHex", swap1(good["envelopeTokenNameHex"])),
+            ("mintValueCborHex", swap1(good["mintValueCborHex"])),
+            ("issueCborHex", swap1(good["issueCborHex"])),
+            ("expiry", K6_EXPIRY + 1),
+            ("policyIdHex", "00" * 28),
+            ("format", "x"),
+            ("extra", 1),
+            ("envData", ("constr", 1, env[2])),
+            ("envData", ("constr", 0, env[2][:8])),
+            ("envData", ("constr", 0, [("int", True)] + env[2][1:])),
+            ("issueData", ("constr", 0, [("bytes", bytearray(iss[2][0][1])), iss[2][1]])),
+            ("issueData", ("constr", 0, [iss[2][0], ("bytes", iss[2][1][1][:191])])),
+            ("format", "moriarty-c2-issue-artifacts/1"),
+            ("labels", dict(LABELS_8_V1)),
+            ("labels", dict(LABELS_14_SUPERSEDED)),
+            ("labels", {**R2_LABELS, "rustAcceptance": "DECLARED_SUBSET_NOT_EQUIVALENT"}),
+            ("labels", {k: v for k, v in R2_LABELS.items() if k != "vkProfile"}),
+            ("labels", {k: v for k, v in R2_LABELS.items() if k != "jsonParseLimits"}),
+            ("labels", {**R2_LABELS, "extraLabel": "X"}),
+            ("setupRecordSha256Declared", swap1(good["setupRecordSha256Declared"])),
+            ("envData", ("constr", 0, env[2][:8] + [("int", K6_EXPIRY + 1)])),
+        ]
+        for i, (key, value) in enumerate(edits):
+            with self.subTest(i=i, key=key):
+                def after(result, _k=key, _v=value):
+                    result[_k] = _v
+                with self.consumer_wrapper(after):
+                    self.refused("C2B-BRIDGE", self.plan)
+
+    def test_r12_legacy_env_from_host_tree_types_and_nonmutation(self):
+        # R12 legacy_env_from_host: the admitted consumer envData translates to the independent
+        # legacy env tree without mutating its input, and every shape or type mutation refuses
+        # C2B-BRIDGE.
+        r4 = self.r4()
+        good = r2.prepare_c2_issue(fresh_export(), fresh_setup(), K6_EXPIRY,
+                                   policy_id=bytes.fromhex(POLICY))
+        fields, env = k6_fields(), good["envData"]
+        before = copy.deepcopy(env)
+        self.assertEqual(r4.legacy_env_from_host(env), legacy.env_data(fields[1], fields[5]))
+        self.assertEqual(env, before)
+        nodes = env[2]
+        mutations = [
+            ("constr", 1, nodes),                                 # wrong constructor tag
+            ("constr", 0, nodes[:8]),                             # too few nodes
+            ("constr", 0, nodes + [("int", 0)]),                  # too many nodes
+            ["constr", 0, nodes],                                 # list, not an exact tuple
+            ("constr", 0, [("int", True)] + nodes[1:]),           # bool is refused
+            ("constr", 0, [None] + nodes[1:]),                    # node not tuple/list/str/bytes/int
+            ("constr", 0, nodes[:8] + [("int", 1.0)]),            # float where an int is required
+        ]
+        for i, mutant in enumerate(mutations):
+            with self.subTest(i=i):
+                self.refused("C2B-BRIDGE", r4.legacy_env_from_host, mutant)
+
+    def test_r13_contexts_manifest_literals_and_no_subset(self):
+        # R13: the T5, T6 and T7 contexts equal the independent formatter; the manifest carries the
+        # 33 keys, the 16 consumerLabels, the 9 builderLabels, the 4 limitations and the 10 false
+        # flags as literals, plus the coverage gaps, inputs and cases; and no manifest string
+        # contains 'subset' in any letter case.
+        self.r4()
+        outputs = self.plan()
+        rows = k6_rows()
+        for row in rows[1:]:
+            self.assertEqual(outputs["contexts/%s.uplc.txt" % row[0]], expected_context(row))
+        manifest = json.loads(outputs["manifest.json"])
+        self.assertEqual(set(manifest), MANIFEST_KEYS)
+        self.assertEqual((manifest["format"], manifest["builderRevision"],
+                          manifest["consumerFormat"]),
+                         (MANIFEST_FORMAT, BUILDER_REVISION, R2_FORMAT))
+        self.assertEqual((manifest["consumerLabels"], manifest["builderLabels"],
+                          manifest["flags"], manifest["limitations"]),
+                         (R2_LABELS, BUILDER_LABELS, FLAGS, LIMITATIONS))
+        self.assertEqual((manifest["expiry"], manifest["policyIdHex"],
+                          manifest["setupRecordSha256"]),
+                         (K6_EXPIRY, POLICY, PINS[SET][1]))
+        self.assertEqual(manifest["coverageGaps"], expected_gaps())
+        self.assertEqual(manifest["inputs"], expected_inputs())
+        self.assertEqual(manifest["cases"], [expected_case(row) for row in rows])
+        for text in walk_strings(manifest):
+            self.assertNotIn("subset", text.lower())
