@@ -1,5 +1,16 @@
 # Moriarty repository instructions
 
+## Current priority — October 17 Midnight stagenet
+
+The user makes the first real Sherlock Midnight stagenet transaction the immediate
+priority. Keep the existing full Sherlock goal active and order new work toward:
+handwritten Sherlock transition/public-statement bridge → ledger-9 native build
+and local prove/independent verify → stagenet submission and full settlement readback.
+Resolve source gaps and existing build prerequisites in parallel. Preserve the full
+interpreter, formal, financial and release requirements; a limited first transition
+is scoped evidence. Existing native authority, limits, counters and private-fork
+boundaries stay in force. Use the [current assignment](raw/assignments/sherlock-stagenet-priority-2026-10-17.md).
+
 ## Latest review routing override — October 16
 
 The user now instructs: **“switch muse to opus5.5”**. Use `gpt-6.1-sol`
