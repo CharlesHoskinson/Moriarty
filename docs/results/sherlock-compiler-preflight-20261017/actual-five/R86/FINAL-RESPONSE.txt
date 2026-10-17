@@ -1,0 +1,70 @@
+{
+  "reviewer": "Gemini 4 Argon (High) standing fallback during observed Opus outage (never Opus)",
+  "changed_test_source_decision": {
+    "disposition": "APPROVED_IN_INSPECTED_TEST_DIFF_SCOPE",
+    "unchanged_production_scope_disposition": "CONDITIONALLY_APPROVED_IN_INSPECTED_SCOPE",
+    "path": "crates/mori-core/tests/sherlock_compile_preflight_regressions.rs",
+    "test_function": "selected_input_count_and_name_byte_extents_precede_parameterized_diagnostic",
+    "literal_source_anchors": {
+      "changed_test_block": [
+        "let name_33 = \"x\".repeat(33);",
+        "let long_name_cfg = with_host_bounds(&[(\"max_input_name_bytes\", \"32\")]);",
+        "let name_err = compile_err(&long_name_src, \"take\", &long_name_cfg);",
+        "assert_exceeded(&name_err, \"InputNameBytes\", 33, 32);"
+      ],
+      "lexer_guard": [
+        "pub const MAX_IDENT_BYTES: usize = 64;",
+        "fn word(&mut self, start: usize) -> Result<(), MoriDiagnostic>",
+        "if end - start > MAX_IDENT_BYTES { return Err(diagnostics::identifier_too_long(span(start, end))); }"
+      ],
+      "host_guard": [
+        "pub fn preflight_action_inputs<'a>",
+        "let bytes = count(input.name.len());",
+        "within(HostMeasure::InputNameBytes, bytes, host.max_input_name_bytes)",
+        "if required <= bound as u128 { Ok(required) } else { Err(exceeded(measure, Some(required), bound)) }"
+      ]
+    },
+    "substantive_review": "In R83, test 3 used a 65-byte identifier against default max_input_name_bytes=64, which trapped in lexer word() at end - start > MAX_IDENT_BYTES (65 > 64) with stage=\"parse\" before AST host-guard preflight ran. The R84 change substitutes a 33-byte identifier (33 <= MAX_IDENT_BYTES=64, passing lexing/parsing and global preflight) and overrides max_input_name_bytes to 32 via with_host_bounds. In preflight_action_inputs, ActionInputs (1 <= 8) and SuppliedInputs (0 <= 8) pass, and within(HostMeasure::InputNameBytes, 33, 32) fails on the exact bound+1 edge (33 > 32), returning ConsumerError::HostGuard(HostGuardError::Exceeded { measure: InputNameBytes, required: Some(33), bound: 32 }) prior to parameterized-action selection rejection. All other assertions in test 3 (ActionInputs 9>8, unselected sibling admission, precedence ActionInputs 2>1 -> InputNameBytes 5>4 -> TotalInputNameBytes 9>6, and TotalInputNameBytes 8>7 at exact 4-byte item bound) and all of tests 1, 2, 4, and 5 remain byte-identical without weakening. All helpers still call host::compile_host(source, action, config, TARGET, false)."
+  },
+  "remaining_three_harness_classification": {
+    "status": "ELIGIBLE_FOR_DIRECT_RUSTC_REMAINING_THREE_HARNESS_UNDER_EXACT_CONDITIONS",
+    "execution_state": "PROSPECTIVE_ONLY_NOT_EXECUTED",
+    "native_authority": 0,
+    "test_state": {
+      "selectors_1_and_2": "PASSED_IN_R83_DO_NOT_RERUN",
+      "selector_3_r83_old_candidate": "FAILED_IN_R83_AT_LEXER_64B_CAP",
+      "selector_3_r84_new_candidate": "UNRUN",
+      "selectors_4_and_5": "UNRUN"
+    },
+    "list_must_equal_exact_five_selectors": [
+      "config_and_zero_host_bounds_precede_parse_and_unknown_action_scan",
+      "global_counts_precede_unknown_action_scan_and_respect_order_and_boundaries",
+      "selected_input_count_and_name_byte_extents_precede_parameterized_diagnostic",
+      "within_bounds_parameterized_action_is_select_unsupported_not_missing_input",
+      "ordinary_parameter_free_compile_yields_actual_admission_and_occurrence_bounds"
+    ],
+    "do_not_rerun_first_two": [
+      "config_and_zero_host_bounds_precede_parse_and_unknown_action_scan",
+      "global_counts_precede_unknown_action_scan_and_respect_order_and_boundaries"
+    ],
+    "remaining_three_exact_selectors": [
+      "selected_input_count_and_name_byte_extents_precede_parameterized_diagnostic",
+      "within_bounds_parameterized_action_is_select_unsupported_not_missing_input",
+      "ordinary_parameter_free_compile_yields_actual_admission_and_occurrence_bounds"
+    ],
+    "exact_conditions": [
+      "Reuse unchanged R83 production libmori_core.rlib (compiled without --cfg test) and frozen libserde_json-76dc87088753b61e.rlib with the same normal -L dependency namespace; do not rebuild mori_core. Current rlib size/sha256 is pinned prospectively now, not added retroactively to R83 receipt.",
+      "Execute in fresh isolated cwd (/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/86-compiler-fixture-review/prospective-run) with 3-key env (PATH, LANG, TMPDIR); verify immutable production source, 273 normal deps, rustc 1.99.0 tool pins, new test pin, and R83 rlib pin before/after each phase.",
+      "Run only the 5 serial commands via /usr/bin/timeout --signal=KILL: (1) 30s rustc --edition=2024 --test compile of changed sherlock_compile_preflight_regressions.rs (-C debuginfo=0, --emit=link,dep-info=.../tests.d), (2) 10s preflight-tests --list verifying exact 5-selector equality, (3) three 10s serial --exact <selector> --nocapture --test-threads=1 runs for selectors 3, 4, and 5 only.",
+      "Fail-stop on first nonzero exit, timeout, pin mismatch, or unexpected --list output; no retries or timeout resets; preserve R83 records (1/2 PASS, old-3 FAIL, 4/5 UNRUN) and capture full argv/env/cwd/exit/timing/stdout/stderr/normalized tests.d.",
+      "No Cargo, dev-dependencies, build.rs, network/pkg resolution, CLI, --observe (observe=false only), OwnerEngine::run/step, H1, Am10/T3, or SDK/native/prover/keygen/target operations."
+    ]
+  },
+  "mandatory_corrections": [],
+  "abstentions": [
+    "CLI routing (core_io, Shell, mori_diagnostics) and uninspected transitive modules (config.rs, wire.rs, parser.rs, runtime.rs, source_adapter.rs, source_input_bridge.rs, owner_host.rs) remain under prior ABSTAIN.",
+    "Occurrence precounts 9 and 22 are not independently adopted or rewritten as a source_adapter.rs oracle beyond previously inspected inline guard arithmetic.",
+    "Execution outcomes of UNRUN R84 selector 3 and UNRUN selectors 4 and 5.",
+    "Cargo/dev-deps (proptest, midnight-base-crypto, midnight-serialize), --observe/observe=true, OwnerEngine::run/step, H1, stopped Am10/T3 content or acceptance waiver, and any SDK/native/prover/target authority."
+  ]
+}

@@ -895,3 +895,29 @@ source edit; it is not evidence that an actual Sherlock requirement is closed.
 Implementation, green verification and fresh review follow this preserved red
 result. Select the next missing requirement behavior or exact acceptance scenario
 after the repair; do not build a replacement scheduler or repeat passing cohorts.
+
+### DW-49 — Close clauses from their own evidence and check report consistency
+
+The updated default factory passed 251 local tests and verified the complete
+declared requirement inventory. Fresh review and Root adoption then closed
+UIREQ-001, UIREQ-010 and UIREQ-011 on their supported typed A host scope, using
+unchanged generic machine source and independently checked historical fixture
+observations. The selected report shows three current adopted closures; the
+historical pre-adoption result still shows zero. Other original clauses,
+refinements and linked retained requirements remain open.
+
+Review found three schema checks missing from the reporter: a nonempty evidence
+class array, the required adoption enum and a retained-family disposition string.
+Root reproduced all five malformed-declaration cases, applied the three checks,
+and observed all eleven focused regressions pass. The final default factory
+passed 252 local tests and retained exactly three current closures. A reporting
+pass remains distinct from acceptance of its open requirements.
+
+The review also caught an imprecise pending-frame locator and an overstated
+Clean-stage implementation label. Exact factorial states 22/36 and list-sum
+states 91/92/93 now support the closed predicates; UIREQ-026 remains partial/open
+until its actual private-record and per-slice evidence exists. Use clause-specific
+dependencies rather than making every host clause wait for stagenet. Preserve
+failed runs and historical consumer versions when reusing their valid evidence.
+
+See the [closure record and actual factory results](../docs/results/sherlock-ears-closure-20261017/README.md).

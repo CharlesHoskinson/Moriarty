@@ -627,7 +627,8 @@ def requirement_evidence_report(repo, path):
         issue(issues, 'invalid', '/refinementInventory', 'declared refinement inventory differs')
     assessment = ledger.get('assessment')
     if (type(assessment) is not dict or type(assessment.get('status')) is not str
-            or not assessment['status'] or assessment.get('globalV1') not in ('open', 'closed')):
+            or not assessment['status'] or assessment.get('globalV1') not in ('open', 'closed')
+            or assessment.get('adoption') not in ('pending-root', 'adopted')):
         issue(issues, 'invalid', '/assessment', 'explicit assessment disposition required')
         assessment = assessment if type(assessment) is dict else {}
 
@@ -667,8 +668,9 @@ def requirement_evidence_report(repo, path):
                 require(all(type(predicate[key]) is str and predicate[key] for key in ('id', 'description', 'domain'))
                         and type(predicate['applicableEvidenceClasses']) is list,
                         'explicit predicate/domain/evidence classes required')
-                require(all(type(item) is str and item for item in predicate['applicableEvidenceClasses']),
-                        'evidence classes must be named strings')
+                require(predicate['applicableEvidenceClasses']
+                        and all(type(item) is str and item for item in predicate['applicableEvidenceClasses']),
+                        'evidence classes must be nonempty named strings')
                 for field, allowed, extra in (
                         ('implementation', ('complete', 'partial', 'absent', 'unknown'), ('supportedScope', 'missing')),
                         ('validation', ('observed', 'partial', 'unrun', 'unknown'), ('evidenceRefs', 'countercaseRefs', 'reviewRefs')),
@@ -746,7 +748,8 @@ def requirement_evidence_report(repo, path):
     retained_issues = []
     for index, item in enumerate(ledger.get('retainedInventory', [])):
         findings = []
-        if type(item) is dict and type(item.get('family')) is str and type(item.get('status')) is str:
+        if (type(item) is dict and type(item.get('family')) is str and type(item.get('status')) is str
+                and type(item.get('disposition')) is str):
             pinned(item.get('catalogue'), f'/retainedInventory/{index}/catalogue', findings)
         else:
             issue(findings, 'invalid', f'/retainedInventory/{index}', 'retained family/status/catalogue required')

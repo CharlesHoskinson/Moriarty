@@ -1,8 +1,16 @@
 # Current35 EARS assessment
 
-Proposal for Root semantic adoption. Three proposed closures concern the exact fixed-relation, pending-return and pure-result predicates. UIREQ-025 remains open pending the reporting proof review. None closes global v1, missing native/circuit/formal features or the 25 refinement features/68 scenarios. UIREQ-026 remains open: a document requiring a private record is not proof that the record exists.
+Three of the 35 original requirements are closed on their supported typed A host
+scope: UIREQ-001, UIREQ-010 and UIREQ-011. Their original scenarios, unchanged
+source dependencies and independent historical observations received fresh
+review and [Root adoption](../results/sherlock-ears-closure-20261017/acceptance/ROOT-ADOPTION.json).
+DoctorWatson reports all three as current. The remaining 32 original requirements
+and all 25 refinements/68 scenarios remain open. These inventories are separate
+from the linked security, financial, formal, native and release requirements.
+UIREQ-025 still needs its reporting proof; UIREQ-026 lacks the private-record and
+per-slice evidence. Matching files alone cannot close a requirement.
 
-| ID | Implementation | Validation | Proposed acceptance | Exact missing work / next discriminator |
+| ID | Implementation | Validation | Acceptance | Exact missing work / next discriminator |
 |---|---|---|---|---|
 | UIREQ-001 | complete | observed | closed | None for this exact host predicate: adopt exact scenario/current source evidence; do not repeat unchanged passing fixtures. |
 | UIREQ-002 | partial | partial | open | Use real current selected compiler/report API on one named-call/constructor/match admitted program; compare every required grammar/domain/bound/disposition field, or located Unsupported, against independent declaration. |
@@ -29,7 +37,7 @@ Proposal for Root semantic adoption. Three proposed closures concern the exact f
 | UIREQ-023 | partial | partial | open | Complete full39/native consumer inventory, then only original separately admitted build/proof/target stages with exact relation/key/statement/network/effects. Do not close from333 host carriers. |
 | UIREQ-024 | partial | partial | open | Select one actual frame/sharing optimization proposal, freeze complete preservation predicate and independently compare its declared observations/costs; unmeasured physical/native costs remain unknown rather than mandatory native run for host-only proposal. |
 | UIREQ-025 | complete | observed | open | Review the exact seven-field reporting proof and original scenario distinctions; historical compiler captures do not establish current compiler execution. |
-| UIREQ-026 | complete | partial | open | Request only authorized owner shareable record/existence and public semantic/model binding plus exact per-slice comparison/gap record; verify both scenarios. No new private checkout, Lean/model/native execution is authorized here. |
+| UIREQ-026 | partial | partial | open | Request only authorized owner shareable record/existence and public semantic/model binding plus exact per-slice comparison/gap record; verify both scenarios. No new private checkout, Lean/model/native execution is authorized here. |
 | UIREQ-027 | partial | partial | open | Promote/reuse actual producer with declared profile mapping; two equal source sites plus named recursion must retain distinct occurrence IDs, ordered tables and actual expanded-step origin. No execution during preparation. |
 | UIREQ-028 | partial | partial | open | Capture actual permitted lookup-deeper and repeated-subtree equality owner steps with owned full before/event/after, independently frozen counters/resume/origin. Keep B erasure observational and no equal-fuel claim. |
 | UIREQ-029 | partial | partial | open | Implement partial bounded image representation/codec for exact admitted layout/domain; independently compare factorial pending Mul/caller/helper state and explicit out-of-domain refusal; constraints/theorems remain distinct. |

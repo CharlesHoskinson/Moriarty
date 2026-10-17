@@ -22,12 +22,22 @@ close those requirements. An earlier selected report failed on 25 missing
 refinement evidence-class declarations; the corrected data and failure remain
 separate records.
 
-UIREQ-001, UIREQ-010 and UIREQ-011 are the first proposed host closures.
-Their exact original scenarios, unchanged engine/producer/fixture dependencies,
-independent expectations and historical actual observations are under review.
-UIREQ-025 and UIREQ-026 remain open. The historical full-fixture comparison used
+UIREQ-001, UIREQ-010 and UIREQ-011 are now closed on their supported typed A host
+scope. Fresh review supports their exact original scenarios, unchanged
+engine/producer/fixture dependencies, independent expectations and historical
+actual observations. [Root adoption](acceptance/ROOT-ADOPTION.json) records the
+scope; a subsequent selected checker run reports three current adopted closures.
+The original pre-adoption factory snapshot remains unchanged. UIREQ-025 and
+UIREQ-026 remain open. The historical full-fixture comparison used
 its recorded checker/helper versions; this update does not rerun that capture
 or claim that the current checker reproduces it.
+
+The review's three schema-consistency corrections now have a preserved RED
+regression and passing eleven-test focused check. The final default factory
+passed 252 tests in 34.875 seconds, with all recorded input pins unchanged and
+exactly three current adopted original closures. See the
+[final receipts](factory/schema-followup/COPY-MANIFEST.json). The 25 refinement
+requirements and 32 remaining original requirements are still open.
 
 See the [current checklist](../../sherlock/requirements-status.md),
 [canonical sidecar](../../../openspec/changes/sherlock-completion-convergence/current-evidence.json),
