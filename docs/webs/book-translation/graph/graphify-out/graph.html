@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>graphify - graphify-out/graph.html</title>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f0f1a; --panel: #1a1a2e; --border: #2a2a4e; --input-border: #3a3a5e;
+    --text: #e0e0e0; --text-2: #aaa; --text-3: #ccc; --muted: #555; --count: #666;
+    --neighbor-border: #333; --node-label: #ffffff;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --panel: #f8f9fa; --border: #d9dee5; --input-border: #c3cad4;
+    --text: #222222; --text-2: #666666; --text-3: #333333; --muted: #888888; --count: #777777;
+    --neighbor-border: #ccc; --node-label: #222222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph { flex: 1; }
+  #sidebar { width: 280px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; background: var(--bg); border: 1px solid var(--input-border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid var(--border); display: none; }
+  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-item:hover { background: var(--border); }
+  #info-panel { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  #info-panel h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #info-content { font-size: 13px; color: var(--text-3); line-height: 1.6; }
+  #info-content .field { margin-bottom: 5px; }
+  #info-content .field b { color: var(--text); }
+  #info-content .empty { color: var(--muted); font-style: italic; }
+  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--neighbor-border); }
+  .neighbor-link:hover { background: var(--border); }
+  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
+  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
+  #legend-wrap h3 { font-size: 13px; color: var(--text-2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .legend-item:hover { background: var(--border); padding-left: 4px; }
+  .legend-item.dimmed { opacity: 0.35; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-count { color: var(--count); font-size: 11px; }
+  #stats { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
+  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-2); user-select: none; }
+  #legend-controls label:hover { color: var(--text); }
+  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--input-border); border-radius: 3px; background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0; }
+  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
+  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  #theme-wrap { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
+  #theme-wrap button:hover { color: var(--text); }
+  #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+</style>
+<script id="graphify-theme-init">
+// Apply the saved theme before first paint (#3894). No saved choice keeps the
+// historical dark look; "system" follows prefers-color-scheme.
+(function () {
+  var pref = null;
+  try { pref = localStorage.getItem('graphify-theme'); } catch (e) {}
+  var t = pref === 'light' ? 'light'
+    : pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light'
+    : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</head>
+<body>
+<div id="graph"></div>
+<div id="sidebar">
+  <div id="theme-wrap" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="light">Light</button>
+    <button type="button" data-theme-choice="dark">Dark</button>
+    <button type="button" data-theme-choice="system">System</button>
+  </div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Node Info</h3>
+    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Communities</h3>
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+    </div>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">78 nodes &middot; 74 edges &middot; 14 communities</div>
+</div>
+<script>
+const RAW_NODES = [{"id": "book:layer-1", "label": "Layer 1 \u2014 Setup", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Layer 1 \u2014 Setup", "community": 13, "community_name": "Layer 1 \u2014 Setup", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 0}, {"id": "book:layer-2", "label": "Layer 2 \u2014 Language", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Layer 2 \u2014 Language", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 1}, {"id": "book:layer-3", "label": "Layer 3 \u2014 Witness", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Layer 3 \u2014 Witness", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 1}, {"id": "book:layer-4", "label": "Layer 4 \u2014 Arithmetization", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 23.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Layer 4 \u2014 Arithmetization", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 4}, {"id": "book:layer-5", "label": "Layer 5 \u2014 Proof System", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 23.3, "font": {"size": 12, "color": "#ffffff"}, "title": "Layer 5 \u2014 Proof System", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 4}, {"id": "book:layer-6", "label": "Layer 6 \u2014 Cryptographic Bedrock", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Layer 6 \u2014 Cryptographic Bedrock", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 3}, {"id": "book:layer-7", "label": "Layer 7 \u2014 Verification", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 16.7, "font": {"size": 12, "color": "#ffffff"}, "title": "Layer 7 \u2014 Verification", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 2}, {"id": "book:proof-core", "label": "Proof core: coupled Layers 4\u20136", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Proof core: coupled Layers 4\u20136", "community": 1, "community_name": "Layer 4 \u2014 Arithmetization", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 3}, {"id": "book:dependency-web", "label": "Design-time dependency web", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 10.0, "font": {"size": 0, "color": "#ffffff"}, "title": "Design-time dependency web", "community": 12, "community_name": "Design-time dependency web", "source_file": "proving-nothing-website-20261017/B08-EXACT-MANUSCRIPT-SECTIONS.json", "file_type": "concept", "degree": 0}, {"id": "product:webs", "label": "Webs: complete required set for one transition", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 40.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Webs: complete required set for one transition", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 9}, {"id": "product:required-proof-role", "label": "Required proof role / condition", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Required proof role / condition", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 3}, {"id": "product:strand-instance", "label": "Concrete Strand instance", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 30.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Concrete Strand instance", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 6}, {"id": "product:proof-artifact", "label": "Proof carried by a Strand", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Proof carried by a Strand", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 3}, {"id": "product:statement", "label": "Statement bound to a Strand", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 20.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Statement bound to a Strand", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 3}, {"id": "product:consumer", "label": "Consuming contract and validator", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 16.7, "font": {"size": 12, "color": "#ffffff"}, "title": "Consuming contract and validator", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 2}, {"id": "product:claim-spec", "label": "Reusable claim specification", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Reusable claim specification", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/contributions/11-v2-security/V2-COPY.json", "file_type": "concept", "degree": 1}, {"id": "product:layer-map", "label": "Proposed educational mapping from layers to Webs concepts", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 30.0, "font": {"size": 12, "color": "#ffffff"}, "title": "Proposed educational mapping from layers to Webs concepts", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "10-visual-devex/PROPOSALS.json", "file_type": "concept", "degree": 6}, {"id": "case:invoice", "label": "Staged invoice escrow", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Staged invoice escrow", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/qa-v2-intermediate/explorer.png", "file_type": "concept", "degree": 1}, {"id": "case:dex", "label": "Batched DEX orders", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Batched DEX orders", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/qa-v2-intermediate/explorer.png", "file_type": "concept", "degree": 1}, {"id": "case:issuance", "label": "Capped issuance", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Capped issuance", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/qa-v2-intermediate/explorer.png", "file_type": "concept", "degree": 1}, {"id": "case:loan", "label": "Loan servicing", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Loan servicing", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/qa-v2-intermediate/explorer.png", "file_type": "concept", "degree": 1}, {"id": "case:treasury", "label": "Treasury allocation", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Treasury allocation", "community": 0, "community_name": "Webs: complete required set for one transition", "source_file": "moriarty-webs-react-draft-20261016/qa-v2-intermediate/explorer.png", "file_type": "concept", "degree": 1}, {"id": "role:01-setup", "label": "01-setup", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 23.3, "font": {"size": 12, "color": "#ffffff"}, "title": "01-setup", "community": 11, "community_name": "01-setup", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 4}, {"id": "role:02-language", "label": "02-language", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 23.3, "font": {"size": 12, "color": "#ffffff"}, "title": "02-language", "community": 8, "community_name": "02-language", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 4}, {"id": "role:03-witness", "label": "03-witness", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 26.7, "font": {"size": 12, "color": "#ffffff"}, "title": "03-witness", "community": 6, "community_name": "03-witness", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 5}, {"id": "role:04-arithmetization", "label": "04-arithmetization", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 26.7, "font": {"size": 12, "color": "#ffffff"}, "title": "04-arithmetization", "community": 7, "community_name": "04-arithmetization", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 5}, {"id": "role:05-proofsystem", "label": "05-proofsystem", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 23.3, "font": {"size": 12, "color": "#ffffff"}, "title": "05-proofsystem", "community": 10, "community_name": "05-proofsystem", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 4}, {"id": "role:06-bedrock", "label": "06-bedrock", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 26.7, "font": {"size": 12, "color": "#ffffff"}, "title": "06-bedrock", "community": 4, "community_name": "06-bedrock", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 5}, {"id": "role:07-verification", "label": "07-verification", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 26.7, "font": {"size": 12, "color": "#ffffff"}, "title": "07-verification", "community": 2, "community_name": "07-verification", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 5}, {"id": "role:08-setupcount", "label": "08-setupcount", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 23.3, "font": {"size": 12, "color": "#ffffff"}, "title": "08-setupcount", "community": 9, "community_name": "08-setupcount", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 4}, {"id": "role:09-financialcases", "label": "09-financialcases", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 26.7, "font": {"size": 12, "color": "#ffffff"}, "title": "09-financialcases", "community": 5, "community_name": "09-financialcases", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 5}, {"id": "role:10-visual-devex", "label": "10-visual-devex", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 26.7, "font": {"size": 12, "color": "#ffffff"}, "title": "10-visual-devex", "community": 3, "community_name": "10-visual-devex", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 5}, {"id": "proposal:setup-strand-provenance", "label": "Show setup provenance on the Strand that depends on it", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Show setup provenance on the Strand that depends on it", "community": 11, "community_name": "01-setup", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:setup-groth16-lineage-example", "label": "Make Groth16 setup concrete with a sourced lineage example", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Make Groth16 setup concrete with a sourced lineage example", "community": 11, "community_name": "01-setup", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:setup-visible-groth16-and-count", "label": "Give setup and Groth16 a visible explainer with a scoped count", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Give setup and Groth16 a visible explainer with a scoped count", "community": 11, "community_name": "01-setup", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:setup-trust-model-comparison", "label": "Explain setup models without implying that shared means setup-free", "color": {"background": "#F28E2B", "border": "#F28E2B", "highlight": {"background": "#ffffff", "border": "#F28E2B"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Explain setup models without implying that shared means setup-free", "community": 11, "community_name": "01-setup", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L2-P01", "label": "Describe financial intent in the language", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Describe financial intent in the language", "community": 8, "community_name": "02-language", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L2-P02", "label": "Show compiler and relation as an artifact handoff", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Show compiler and relation as an artifact handoff", "community": 8, "community_name": "02-language", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L2-P03", "label": "Keep fees and residual duties in the language story", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Keep fees and residual duties in the language story", "community": 8, "community_name": "02-language", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L2-P04", "label": "Separate current Rust/Cardano evidence from the Midnight target", "color": {"background": "#9C755F", "border": "#9C755F", "highlight": {"background": "#ffffff", "border": "#9C755F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Separate current Rust/Cardano evidence from the Midnight target", "community": 8, "community_name": "02-language", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:witness-definition", "label": "What the witness contains", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "What the witness contains", "community": 6, "community_name": "03-witness", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:private-public-boundary", "label": "Separate witness from statement", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Separate witness from statement", "community": 6, "community_name": "03-witness", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:invoice-input-to-constraints", "label": "Trace an invoice choice into a proposed relation", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Trace an invoice choice into a proposed relation", "community": 6, "community_name": "03-witness", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:privacy-has-process-boundaries", "label": "Distinguish proof privacy from process privacy", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Distinguish proof privacy from process privacy", "community": 6, "community_name": "03-witness", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:witness-cost-and-correctness", "label": "Witness generation has cost and correctness questions", "color": {"background": "#B07AA1", "border": "#B07AA1", "highlight": {"background": "#ffffff", "border": "#B07AA1"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Witness generation has cost and correctness questions", "community": 6, "community_name": "03-witness", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:l4-rule-to-constraints", "label": "Turn the financial rule into checkable relationships", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Turn the financial rule into checkable relationships", "community": 7, "community_name": "04-arithmetization", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:l4-invoice-arithmetic", "label": "Follow one payment and keep the amounts separate", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Follow one payment and keep the amounts separate", "community": 7, "community_name": "04-arithmetization", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:l4-integer-ranges", "label": "A field value needs a range rule to mean an amount", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "A field value needs a range rule to mean an amount", "community": 7, "community_name": "04-arithmetization", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:l4-constraint-layouts", "label": "One computation can have different constraint layouts", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "One computation can have different constraint layouts", "community": 7, "community_name": "04-arithmetization", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:l4-proof-boundary", "label": "Correct arithmetic does not supply its own premises", "color": {"background": "#FF9DA7", "border": "#FF9DA7", "highlight": {"background": "#ffffff", "border": "#FF9DA7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Correct arithmetic does not supply its own premises", "community": 7, "community_name": "04-arithmetization", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:statement-proof-verifier", "label": "Show what each proof is about", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Show what each proof is about", "community": 10, "community_name": "05-proofsystem", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:required-strands", "label": "Collect the Strands a transition requires", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Collect the Strands a transition requires", "community": 10, "community_name": "05-proofsystem", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:groth16-setup-evidence", "label": "Groth16 and its setup belong in the visible story", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Groth16 and its setup belong in the visible story", "community": 10, "community_name": "05-proofsystem", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:composition-terms", "label": "Separate Web composition from proof composition", "color": {"background": "#4E79A7", "border": "#4E79A7", "highlight": {"background": "#ffffff", "border": "#4E79A7"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Separate Web composition from proof composition", "community": 10, "community_name": "05-proofsystem", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:bedrock-primitives", "label": "The ingredients under the proof core", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "The ingredients under the proof core", "community": 4, "community_name": "06-bedrock", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:curve-capability-vs-acceptance", "label": "A curve operation is not proof acceptance", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "A curve operation is not proof acceptance", "community": 4, "community_name": "06-bedrock", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:curve-compatibility-boundary", "label": "Compatibility belongs to a named target", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Compatibility belongs to a named target", "community": 4, "community_name": "06-bedrock", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:kzg-groth16-source-check", "label": "Separate pairings, KZG, and Groth16", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Separate pairings, KZG, and Groth16", "community": 4, "community_name": "06-bedrock", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:assumptions-and-setup-boundary", "label": "State what the guarantee depends on", "color": {"background": "#59A14F", "border": "#59A14F", "highlight": {"background": "#ffffff", "border": "#59A14F"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "State what the guarantee depends on", "community": 4, "community_name": "06-bedrock", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L7-verdicts", "label": "Show the three verdicts separately", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Show the three verdicts separately", "community": 2, "community_name": "07-verification", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L7-web-completeness", "label": "Make required-Web collection visible", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Make required-Web collection visible", "community": 2, "community_name": "07-verification", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L7-effects-and-claims", "label": "Keep proof claims separate from financial effects", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Keep proof claims separate from financial effects", "community": 2, "community_name": "07-verification", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L7-cost-context", "label": "Explain verifier cost in the target ledger\u2019s units", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Explain verifier cost in the target ledger\u2019s units", "community": 2, "community_name": "07-verification", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:L7-dag-and-governance", "label": "Map trust boundaries without importing another chain\u2019s governance", "color": {"background": "#E15759", "border": "#E15759", "highlight": {"background": "#ffffff", "border": "#E15759"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Map trust boundaries without importing another chain\u2019s governance", "community": 2, "community_name": "07-verification", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:setupcount-layer1", "label": "What a Groth16 setup is tied to", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "What a Groth16 setup is tied to", "community": 9, "community_name": "08-setupcount", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:setupcount-phases", "label": "One shared Phase 1 can feed many Phase 2 setups", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "One shared Phase 1 can feed many Phase 2 setups", "community": 9, "community_name": "08-setupcount", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:cardano-inventory", "label": "Why the Cardano-wide setup total is unknown", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Why the Cardano-wide setup total is unknown", "community": 9, "community_name": "08-setupcount", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:bounded-circuit-design", "label": "Bundling cases can change the count, within explicit bounds", "color": {"background": "#BAB0AC", "border": "#BAB0AC", "highlight": {"background": "#ffffff", "border": "#BAB0AC"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Bundling cases can change the count, within explicit bounds", "community": 9, "community_name": "08-setupcount", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:connected-seven-layer-map", "label": "Seven questions around one transition", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Seven questions around one transition", "community": 5, "community_name": "09-financialcases", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:invoice-one-partial", "label": "One invoice partial, with payment and duties separated", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "One invoice partial, with payment and duties separated", "community": 5, "community_name": "09-financialcases", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:five-financial-case-selector", "label": "Use the same layer questions across five cases", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Use the same layer questions across five cases", "community": 5, "community_name": "09-financialcases", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:witness-and-premise-boundaries", "label": "Show inputs, private witness, and authenticated premises", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Show inputs, private witness, and authenticated premises", "community": 5, "community_name": "09-financialcases", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:proof-core-and-status", "label": "Connect encoding, proof system, cryptography, and setup", "color": {"background": "#EDC948", "border": "#EDC948", "highlight": {"background": "#ffffff", "border": "#EDC948"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Connect encoding, proof system, cryptography, and setup", "community": 5, "community_name": "09-financialcases", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:VDX-01", "label": "Seven-layer causal navigator", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Seven-layer causal navigator", "community": 3, "community_name": "10-visual-devex", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:VDX-02", "label": "Always-findable setup and Groth16 facts", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Always-findable setup and Groth16 facts", "community": 3, "community_name": "10-visual-devex", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:VDX-03", "label": "Connect the seven-layer explainer to the invoice anchor", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Connect the seven-layer explainer to the invoice anchor", "community": 3, "community_name": "10-visual-devex", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:VDX-04", "label": "Five financial-case selector with layer context", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Five financial-case selector with layer context", "community": 3, "community_name": "10-visual-devex", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}, {"id": "proposal:VDX-05", "label": "Accessible responsive graph and reduced-motion mode", "color": {"background": "#76B7B2", "border": "#76B7B2", "highlight": {"background": "#ffffff", "border": "#76B7B2"}}, "size": 13.3, "font": {"size": 0, "color": "#ffffff"}, "title": "Accessible responsive graph and reduced-motion mode", "community": 3, "community_name": "10-visual-devex", "source_file": "sevenlayer-translation-20261017/ALL-PROPOSALS.json", "file_type": "concept", "degree": 1}];
+const RAW_EDGES = [{"from": "book:layer-3", "to": "book:layer-4", "label": "witness and arithmetization can fuse (Jolt example)", "title": "witness and arithmetization can fuse (Jolt example) [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-4", "to": "book:layer-2", "label": "constraint costs can shape language design", "title": "constraint costs can shape language design [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-4", "to": "book:proof-core", "label": "member of coupled proof core", "title": "member of coupled proof core [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-5", "to": "book:layer-4", "label": "proof-system choice shapes arithmetization", "title": "proof-system choice shapes arithmetization [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-5", "to": "book:proof-core", "label": "member of coupled proof core", "title": "member of coupled proof core [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-6", "to": "book:layer-5", "label": "cryptographic choice constrains proof system", "title": "cryptographic choice constrains proof system [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-6", "to": "book:proof-core", "label": "member of coupled proof core", "title": "member of coupled proof core [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-7", "to": "book:layer-5", "label": "verification economics can motivate wrapping", "title": "verification economics can motivate wrapping [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "book:layer-7", "to": "book:layer-6", "label": "verification economics can constrain cryptography", "title": "verification economics can constrain cryptography [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:webs", "to": "product:required-proof-role", "label": "lists conditions/roles the transition must prove", "title": "lists conditions/roles the transition must prove [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:webs", "to": "product:strand-instance", "label": "contains required concrete Strands for a transition", "title": "contains required concrete Strands for a transition [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:required-proof-role", "to": "product:strand-instance", "label": "possible requirement-to-instance mapping; exact satisfaction depends on profile/consumer policy", "title": "possible requirement-to-instance mapping; exact satisfaction depends on profile/consumer policy [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "product:strand-instance", "to": "product:proof-artifact", "label": "includes one proof", "title": "includes one proof [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:strand-instance", "to": "product:statement", "label": "includes a statement", "title": "includes a statement [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:proof-artifact", "to": "product:statement", "label": "checks that the bound statement holds over supplied values", "title": "checks that the bound statement holds over supplied values [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:consumer", "to": "product:webs", "label": "names/consumes required Web", "title": "names/consumes required Web [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:claim-spec", "to": "product:strand-instance", "label": "specifies reusable claim type; each instance binds its own step", "title": "specifies reusable claim type; each instance binds its own step [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "product:layer-map", "to": "product:consumer", "label": "explanatory product mapping, not implementation equivalence", "title": "explanatory product mapping, not implementation equivalence [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "product:layer-map", "to": "product:proof-artifact", "label": "explanatory product mapping, not implementation equivalence", "title": "explanatory product mapping, not implementation equivalence [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "product:layer-map", "to": "product:required-proof-role", "label": "explanatory product mapping, not implementation equivalence", "title": "explanatory product mapping, not implementation equivalence [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "product:layer-map", "to": "product:statement", "label": "explanatory product mapping, not implementation equivalence", "title": "explanatory product mapping, not implementation equivalence [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "product:layer-map", "to": "product:strand-instance", "label": "explanatory product mapping, not implementation equivalence", "title": "explanatory product mapping, not implementation equivalence [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "product:layer-map", "to": "product:webs", "label": "explanatory product mapping, not implementation equivalence", "title": "explanatory product mapping, not implementation equivalence [INFERRED]", "dashes": true, "width": 1, "color": {"opacity": 0.35}, "confidence": "INFERRED"}, {"from": "case:invoice", "to": "product:webs", "label": "listed example in Webs explorer", "title": "listed example in Webs explorer [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "case:dex", "to": "product:webs", "label": "listed example in Webs explorer", "title": "listed example in Webs explorer [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "case:issuance", "to": "product:webs", "label": "listed example in Webs explorer", "title": "listed example in Webs explorer [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "case:loan", "to": "product:webs", "label": "listed example in Webs explorer", "title": "listed example in Webs explorer [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "case:treasury", "to": "product:webs", "label": "listed example in Webs explorer", "title": "listed example in Webs explorer [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:01-setup", "to": "proposal:setup-groth16-lineage-example", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:01-setup", "to": "proposal:setup-strand-provenance", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:01-setup", "to": "proposal:setup-trust-model-comparison", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:01-setup", "to": "proposal:setup-visible-groth16-and-count", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:02-language", "to": "proposal:L2-P01", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:02-language", "to": "proposal:L2-P02", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:02-language", "to": "proposal:L2-P03", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:02-language", "to": "proposal:L2-P04", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:03-witness", "to": "proposal:invoice-input-to-constraints", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:03-witness", "to": "proposal:privacy-has-process-boundaries", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:03-witness", "to": "proposal:private-public-boundary", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:03-witness", "to": "proposal:witness-cost-and-correctness", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:03-witness", "to": "proposal:witness-definition", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:04-arithmetization", "to": "proposal:l4-constraint-layouts", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:04-arithmetization", "to": "proposal:l4-integer-ranges", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:04-arithmetization", "to": "proposal:l4-invoice-arithmetic", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:04-arithmetization", "to": "proposal:l4-proof-boundary", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:04-arithmetization", "to": "proposal:l4-rule-to-constraints", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:05-proofsystem", "to": "proposal:composition-terms", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:05-proofsystem", "to": "proposal:groth16-setup-evidence", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:05-proofsystem", "to": "proposal:required-strands", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:05-proofsystem", "to": "proposal:statement-proof-verifier", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:06-bedrock", "to": "proposal:assumptions-and-setup-boundary", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:06-bedrock", "to": "proposal:bedrock-primitives", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:06-bedrock", "to": "proposal:curve-capability-vs-acceptance", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:06-bedrock", "to": "proposal:curve-compatibility-boundary", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:06-bedrock", "to": "proposal:kzg-groth16-source-check", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:07-verification", "to": "proposal:L7-cost-context", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:07-verification", "to": "proposal:L7-dag-and-governance", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:07-verification", "to": "proposal:L7-effects-and-claims", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:07-verification", "to": "proposal:L7-verdicts", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:07-verification", "to": "proposal:L7-web-completeness", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:08-setupcount", "to": "proposal:bounded-circuit-design", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:08-setupcount", "to": "proposal:cardano-inventory", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:08-setupcount", "to": "proposal:setupcount-layer1", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:08-setupcount", "to": "proposal:setupcount-phases", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:09-financialcases", "to": "proposal:connected-seven-layer-map", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:09-financialcases", "to": "proposal:five-financial-case-selector", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:09-financialcases", "to": "proposal:invoice-one-partial", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:09-financialcases", "to": "proposal:proof-core-and-status", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:09-financialcases", "to": "proposal:witness-and-premise-boundaries", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:10-visual-devex", "to": "proposal:VDX-01", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:10-visual-devex", "to": "proposal:VDX-02", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:10-visual-devex", "to": "proposal:VDX-03", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:10-visual-devex", "to": "proposal:VDX-04", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}, {"from": "role:10-visual-devex", "to": "proposal:VDX-05", "label": "contains proposal assigned to this role", "title": "contains proposal assigned to this role [EXTRACTED]", "dashes": false, "width": 2, "color": {"opacity": 0.7}, "confidence": "EXTRACTED"}];
+const LEGEND = [{"cid": 0, "color": "#4E79A7", "label": "Webs: complete required set for one transition", "count": 13}, {"cid": 1, "color": "#F28E2B", "label": "Layer 4 \u2014 Arithmetization", "count": 7}, {"cid": 2, "color": "#E15759", "label": "07-verification", "count": 6}, {"cid": 3, "color": "#76B7B2", "label": "10-visual-devex", "count": 6}, {"cid": 4, "color": "#59A14F", "label": "06-bedrock", "count": 6}, {"cid": 5, "color": "#EDC948", "label": "09-financialcases", "count": 6}, {"cid": 6, "color": "#B07AA1", "label": "03-witness", "count": 6}, {"cid": 7, "color": "#FF9DA7", "label": "04-arithmetization", "count": 6}, {"cid": 8, "color": "#9C755F", "label": "02-language", "count": 5}, {"cid": 9, "color": "#BAB0AC", "label": "08-setupcount", "count": 5}, {"cid": 10, "color": "#4E79A7", "label": "05-proofsystem", "count": 5}, {"cid": 11, "color": "#F28E2B", "label": "01-setup", "count": 5}, {"cid": 12, "color": "#E15759", "label": "Design-time dependency web", "count": 1}, {"cid": 13, "color": "#76B7B2", "label": "Layer 1 \u2014 Setup", "count": 1}];
+
+// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Build vis datasets
+const nodesDS = new vis.DataSet(RAW_NODES.map((n, i) => ({
+  id: n.id, label: n.label, color: n.color, size: n.size,
+  font: n.font, title: n.title,
+  // Fermat/golden-angle spiral seed positions (#3699): spreading nodes out
+  // before physics runs keeps avoidOverlap from computing near-zero-distance
+  // repulsion that blows the BarnesHut recursion into a stack overflow on large
+  // graphs. `i` is the map index — physics still settles small graphs identically.
+  x: 30 * Math.sqrt(i) * Math.cos(i * 2.4),
+  y: 30 * Math.sqrt(i) * Math.sin(i * 2.4),
+  community: n.community, community_name: n.community_name,
+  source_file: n.source_file, file_type: n.file_type, degree: n.degree,
+  member_count: n.member_count,
+})));
+
+const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({
+  id: i, from: e.from, to: e.to,
+  label: '',
+  title: e.title,
+  dashes: e.dashes,
+  width: e.width,
+  color: e.color,
+  arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+})));
+
+const container = document.getElementById('graph');
+const network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, {
+  physics: {
+    enabled: true,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.005,
+      springLength: 120,
+      springConstant: 0.08,
+      damping: 0.4,
+      avoidOverlap: 0.8,
+    },
+    stabilization: { iterations: 200, fit: true },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 100,
+    hideEdgesOnDrag: true,
+    navigationButtons: false,
+    keyboard: false,
+  },
+  nodes: { shape: 'dot', borderWidth: 1.5 },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 }, selectionWidth: 3 },
+});
+
+// Theme toggle (#3894): Light / Dark / System, persisted in localStorage.
+const THEME_KEY = 'graphify-theme';
+const themeMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+let themeLabelColor = '#ffffff';  // matches the per-node font color set in Python
+function themePref() {
+  let p = null;
+  try { p = localStorage.getItem(THEME_KEY); } catch (e) {}
+  return (p === 'light' || p === 'dark' || p === 'system') ? p : null;
+}
+function applyTheme(pref) {
+  const t = pref === 'light' ? 'light' : (pref === 'system' && themeMQ && themeMQ.matches) ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (!root) return;
+  root.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-choice]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === (pref || 'dark')));
+  });
+  const labelColor = getComputedStyle(root).getPropertyValue('--node-label').trim();
+  if (labelColor && labelColor !== themeLabelColor) {
+    themeLabelColor = labelColor;
+    nodesDS.update(nodesDS.get().map(n => ({ id: n.id, font: Object.assign({}, n.font, { color: labelColor }) })));
+  }
+}
+document.querySelectorAll('[data-theme-choice]').forEach(b => {
+  b.addEventListener('click', () => {
+    const pref = b.dataset.themeChoice;
+    try { localStorage.setItem(THEME_KEY, pref); } catch (e) {}
+    applyTheme(pref);
+  });
+});
+if (themeMQ) {
+  const onSchemeChange = () => { if (themePref() === 'system') applyTheme('system'); };
+  if (themeMQ.addEventListener) themeMQ.addEventListener('change', onSchemeChange);
+  else if (themeMQ.addListener) themeMQ.addListener(onSchemeChange);
+}
+applyTheme(themePref());
+
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+});
+
+function showInfo(nodeId) {
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const neighborIds = network.getConnectedNodes(nodeId);
+  const neighborItems = neighborIds.map(nid => {
+    const nb = nodesDS.get(nid);
+    const color = nb ? nb.color.background : '#555';
+    return `<span class="neighbor-link" style="border-left-color:${esc(color)}" data-nid="${esc(nid)}">${esc(nb ? nb.label : nid)}</span>`;
+  }).join('');
+  const isMetaNode = !n.file_type && !n.source_file;
+  let html = `<div class="field"><b>${esc(n.label)}</b></div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Type: ${esc(n.file_type || 'unknown')}</div>`;
+  }
+  html += `<div class="field">Community: ${esc(n.community_name || '')}</div>`;
+  if (!isMetaNode) {
+    html += `<div class="field">Source: ${esc(n.source_file || '-')}</div>`;
+  } else if (n.member_count !== undefined && n.member_count !== null) {
+    html += `<div class="field">Members: ${esc(n.member_count)}</div>`;
+  }
+  html += `<div class="field">Degree: ${n.degree}</div>`;
+  if (neighborIds.length) {
+    html += `<div class="field" style="margin-top:8px;color:var(--text-2);font-size:11px">Neighbors (${neighborIds.length})</div><div id="neighbors-list">${neighborItems}</div>`;
+  }
+  document.getElementById('info-content').innerHTML = html;
+}
+
+function focusNode(nodeId) {
+  network.focus(nodeId, { scale: 1.4, animation: true });
+  network.selectNodes([nodeId]);
+  showInfo(nodeId);
+}
+
+// Neighbor links use a data attribute + one delegated listener rather than an
+// inline onclick. A node id/label sourced from a document or a scraped URL
+// (graphify add) can contain a double-quote; dropping the stringified id
+// unescaped into a quoted onclick both broke every link and allowed a hostile
+// source to inject an event handler into the local report (stored XSS, #1838).
+// esc() on data-nid keeps the value inside the attribute; the listener reads it
+// back verbatim. Bound to document so it survives the innerHTML rebuild that
+// recreates #neighbors-list on each showInfo().
+document.addEventListener('click', e => {
+  const el = e.target.closest('.neighbor-link');
+  if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
+});
+
+// Sidebar tooltips reuse vis-network's .vis-tooltip style and 100ms tooltipDelay.
+// Names get one only when CSS ellipsis truncates them (the full text is still in
+// the DOM); counts always get one, to say what the number is. Text is set with
+// textContent only (labels are untrusted). Delegated on document so rows rebuilt
+// later (search results, showInfo()) are covered.
+const sidebarTip = document.createElement('div');
+sidebarTip.className = 'vis-tooltip';
+sidebarTip.style.cssText = 'white-space: normal; max-width: 360px; overflow-wrap: break-word;';
+document.body.appendChild(sidebarTip);
+let sidebarTipTimer = null;
+let sidebarTipEl = null;    // element whose text the tooltip shows
+let sidebarTipZone = null;  // element the pointer must leave to hide it
+function hideSidebarTip() {
+  clearTimeout(sidebarTipTimer);
+  sidebarTip.style.visibility = 'hidden';
+  sidebarTip.textContent = '';
+  sidebarTipEl = sidebarTipZone = null;
+}
+document.addEventListener('mouseover', e => {
+  const zone = e.target.closest && e.target.closest('.legend-count, .legend-item, .search-item, .neighbor-link');
+  // Anywhere on a legend row except its count (dot, checkbox, gaps, padding)
+  // stands for the row's name, so moving within the row never re-triggers it.
+  const el = zone && zone.classList.contains('legend-item') ? zone.querySelector('.legend-label') : zone;
+  if (!el || el === sidebarTipEl) return;
+  hideSidebarTip();
+  const isCount = el.classList.contains('legend-count');
+  if (!isCount && el.scrollWidth <= el.clientWidth) return;
+  const text = isCount ? `${el.textContent} ${el.textContent === '1' ? 'node' : 'nodes'}` : el.textContent;
+  sidebarTipEl = el;
+  sidebarTipZone = zone;
+  const x = e.clientX, y = e.clientY;
+  sidebarTipTimer = setTimeout(() => {
+    sidebarTip.textContent = text;
+    sidebarTip.style.left = sidebarTip.style.top = '0px';  // measure at full max-width
+    sidebarTip.style.visibility = 'visible';
+    const w = sidebarTip.offsetWidth, h = sidebarTip.offsetHeight;
+    sidebarTip.style.left = Math.max(4, Math.min(x + 12, window.innerWidth - w - 4)) + 'px';
+    sidebarTip.style.top = (y + 16 + h > window.innerHeight ? Math.max(4, y - h - 8) : y + 16) + 'px';
+  }, 100);
+});
+document.addEventListener('mouseout', e => {
+  if (sidebarTipZone && !sidebarTipZone.contains(e.relatedTarget)) hideSidebarTip();
+});
+// A click rebuilds or hides the row (showInfo(), search pick) without a mouseout.
+document.addEventListener('mousedown', hideSidebarTip);
+
+// Track hovered node — hover detection is more reliable than click params
+let hoveredNodeId = null;
+network.on('hoverNode', params => {
+  hoveredNodeId = params.node;
+  container.style.cursor = 'pointer';
+});
+network.on('blurNode', () => {
+  hoveredNodeId = null;
+  container.style.cursor = 'default';
+});
+container.addEventListener('click', () => {
+  if (hoveredNodeId !== null) {
+    showInfo(hoveredNodeId);
+    network.selectNodes([hoveredNodeId]);
+  }
+});
+network.on('click', params => {
+  if (params.nodes.length > 0) {
+    showInfo(params.nodes[0]);
+  } else if (hoveredNodeId === null) {
+    document.getElementById('info-content').innerHTML = '<span class="empty">Click a node to inspect it</span>';
+  }
+});
+
+const searchInput = document.getElementById('search');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  searchResults.innerHTML = '';
+  if (!q) { searchResults.style.display = 'none'; return; }
+  const matches = RAW_NODES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 20);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.style.display = 'block';
+  matches.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'search-item';
+    el.textContent = n.label;
+    el.style.borderLeft = `3px solid ${n.color.background}`;
+    el.style.paddingLeft = '8px';
+    el.onclick = () => {
+      network.focus(n.id, { scale: 1.5, animation: true });
+      network.selectNodes([n.id]);
+      showInfo(n.id);
+      searchResults.style.display = 'none';
+      searchInput.value = '';
+    };
+    searchResults.appendChild(el);
+  });
+});
+document.addEventListener('click', e => {
+  if (!searchResults.contains(e.target) && e.target !== searchInput)
+    searchResults.style.display = 'none';
+});
+
+const hiddenCommunities = new Set();
+
+const selectAllCb = document.getElementById('select-all-cb');
+
+function updateSelectAllState() {
+  const total = LEGEND.length;
+  const hidden = hiddenCommunities.size;
+  selectAllCb.checked = hidden === 0;
+  selectAllCb.indeterminate = hidden > 0 && hidden < total;
+}
+
+function toggleAllCommunities(hide) {
+  document.querySelectorAll('.legend-item').forEach(item => {
+    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
+  });
+  document.querySelectorAll('.legend-cb').forEach(cb => {
+    cb.checked = !hide;
+  });
+  LEGEND.forEach(c => {
+    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
+  });
+  const updates = RAW_NODES.map(n => ({ id: n.id, hidden: hide }));
+  nodesDS.update(updates);
+  updateSelectAllState();
+}
+
+const legendEl = document.getElementById('legend');
+LEGEND.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'legend-cb';
+  cb.checked = true;
+  cb.addEventListener('change', (e) => {
+    e.stopPropagation();
+    if (cb.checked) {
+      hiddenCommunities.delete(c.cid);
+      item.classList.remove('dimmed');
+    } else {
+      hiddenCommunities.add(c.cid);
+      item.classList.add('dimmed');
+    }
+    const updates = RAW_NODES
+      .filter(n => n.community === c.cid)
+      .map(n => ({ id: n.id, hidden: !cb.checked }));
+    nodesDS.update(updates);
+    updateSelectAllState();
+  });
+  item.innerHTML = `<div class="legend-dot" style="background:${c.color}"></div>
+    <span class="legend-label">${c.label}</span>
+    <span class="legend-count">${c.count}</span>`;
+  item.prepend(cb);
+  item.onclick = (e) => {
+    if (e.target === cb) return;
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  };
+  legendEl.appendChild(item);
+});
+</script>
+<script>
+// Render hyperedges as shaded regions
+const hyperedges = [];
+// afterDrawing passes ctx already transformed to network coordinate space.
+// Draw node positions raw — no manual pan/zoom/DPR math needed.
+
+// Andrew's monotone chain. Returns the hull in counter-clockwise order, which
+// is what the perimeter must be traced in. Collinear and duplicate points
+// collapse to the extremes, so degenerate member sets render as a segment
+// rather than a zero-area crossed path.
+function convexHull(pts) {
+    const p = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (p.length < 3) return p;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const build = seq => {
+        const out = [];
+        for (const q of seq) {
+            while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+            out.push(q);
+        }
+        out.pop();
+        return out;
+    };
+    const hull = build(p).concat(build(p.slice().reverse()));
+    return hull.length >= 3 ? hull : p;
+}
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+        const positions = h.nodes
+            .map(nid => network.getPositions([nid])[nid])
+            .filter(p => p !== undefined);
+        if (positions.length < 2) return;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#6366f1';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // Centroid and expanded hull in network coordinates.
+        // The perimeter must follow hull order, not h.nodes order: tracing the
+        // raw member order self-intersects whenever the layout does not happen
+        // to place members in angular order, filling as crossed wedges.
+        const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+        const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+        const hull = convexHull(positions);
+        const expanded = hull.map(p => ({
+            x: cx + (p.x - cx) * 1.15,
+            y: cy + (p.y - cy) * 1.15
+        }));
+        ctx.moveTo(expanded[0].x, expanded[0].y);
+        expanded.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+        // Label
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#4f46e5';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(h.label, cx, cy - 5);
+        ctx.restore();
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+[
+  {
+    "id": "invoice",
+    "title": "Staged invoice escrow",
+    "kicker": "Pay part. Keep the remainder visible.",
+    "summary": "Follow one payment through seller receipt, the source fee, and the duties left in escrow.",
+    "utility": "Explain exactly what the buyer funds, what the seller receives, and what is still owed.",
+    "status": "PROPOSED",
+    "strands": [
+      {
+        "id": "invoice-payment",
+        "label": "Payment arithmetic",
+        "claim": "The seller payment matches the chosen partial amount.",
+        "statement": "Opening invoice duty 100 CASH; payment 35 CASH; escrow debit for payment and fee 37 CASH.",
+        "authentication": "The worksheet supplies an illustrative opening state; an application would need its actual predecessor and exact CASH identity.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "invoice-fee",
+        "label": "Fee accounting",
+        "claim": "The 2 CASH source fee is a separate payment.",
+        "statement": "Escrow pays seller 35 CASH and fees 2 CASH; the fee does not discharge invoice duty.",
+        "authentication": "Source S12 names escrow, seller, fees, and CASH; actual outputs still need the consuming validator.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "invoice-duty",
+        "label": "Duty continuation",
+        "claim": "Partial payment preserves the unpaid invoice and reserve duty.",
+        "statement": "Invoice 100 − 35 = 65 CASH; reserve duty remains 10 CASH; total duties 75 CASH.",
+        "authentication": "The starting duty amounts are worksheet premises; a real application must bind them to its predecessor.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      }
+    ],
+    "effects": [
+      "Source-funded cash 110 − payment 35 − fee 2 = 73 CASH; duties total 75 CASH, a backing gap of 2 CASH.",
+      "Proposed extra funding gives cash 112 − 35 − 2 = 75 CASH, matching duties for this one partial.",
+      "The source partial action requires 0 < amount < opening invoice duty. Paying the whole invoice uses finish(), which has different fee behavior."
+    ],
+    "dependencies": [
+      "These are future proof roles, not three existing proof producers.",
+      "Funding 112 is a proposed backing policy; S12 contains no extra-funding action.",
+      "Every further partial charges another 2 CASH. One extra fee budget does not fund a sequence of partials.",
+      "The source has no reserve-duty-return action. Staged delivery and recovery need additional implementation."
+    ],
+    "sourceRefs": [
+      {
+        "label": "Invoice source: open / partial / finish",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S12-installment-invoice.mori",
+        "pointer": "actions open, partial, finish"
+      },
+      {
+        "label": "Selected invoice walkthrough",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CONCEPT.md",
+        "pointer": "#a-first-reference-app-that-teaches-the-model"
+      },
+      {
+        "label": "Invoice page copy",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/MESSAGING.md",
+        "pointer": "#show-the-payment-show-the-fee-show-what-remains"
+      },
+      {
+        "label": "CL-20",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/19"
+      },
+      {
+        "label": "CL-26",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/25"
+      },
+      {
+        "label": "Opus 5.5 ERR-22",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/21"
+      },
+      {
+        "label": "Opus 5.5 ERR-28",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/27"
+      }
+    ]
+  },
+  {
+    "id": "dex",
+    "title": "Batched DEX orders",
+    "kicker": "Give every order its own outcome.",
+    "summary": "Connect each order’s exact assets and minimum net receipt to a specified pool transition.",
+    "utility": "Let a batch builder explain each owner’s result alongside the shared pool arithmetic.",
+    "status": "PROPOSED",
+    "strands": [
+      {
+        "id": "dex-orders",
+        "label": "Order arithmetic",
+        "claim": "Each illustrated order meets its own amount bounds.",
+        "statement": "Two orders each offer 100 A and require at least 90 B net; the illustration assigns each owner 92 B.",
+        "authentication": "Exact asset identities, owner limits, and actual outputs must be supplied and bound by a real application.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "dex-pool",
+        "label": "Pool arithmetic",
+        "claim": "A supported pool relation explains the pool continuation.",
+        "statement": "The chosen reserve update, fee rule, and exact rounding must agree with the two illustrated orders.",
+        "authentication": "No pool reserve or price observation is supplied here; pool state provenance remains a required input.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. No pool computation or verified price is shown.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "dex-batch",
+        "label": "Batch accounting",
+        "claim": "Order and pool amounts agree across the batch.",
+        "statement": "The same amounts used for each owner’s result must appear in the batch accounting.",
+        "authentication": "Actual output allocation belongs to the consuming validator under its selected profile.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. The strict illustration uses a separate output per order; coalesced-payment partition is a separate policy choice.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      }
+    ],
+    "effects": [
+      "Each illustrated owner gives 100 A and receives 92 B net against a minimum of 90 B.",
+      "Pool balances, fees, and rounding need a complete independent worksheet before execution.",
+      "A partial fill must retain unfilled quantity and duties; cancellation is a separate action."
+    ],
+    "dependencies": [
+      "Identify supported order and pool relations and their actual proof producers.",
+      "Choose and enforce actual-output allocation for the consumer’s profile.",
+      "Supply exact asset, recipient, fee, rounding, continuation, and cancellation rules."
+    ],
+    "sourceRefs": [
+      {
+        "label": "Two-order allocation target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/11"
+      },
+      {
+        "label": "Pool rounding target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/9"
+      },
+      {
+        "label": "Order cancellation target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/10"
+      },
+      {
+        "label": "Selected DEX case",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CONCEPT.md",
+        "pointer": "#five-application-cases"
+      },
+      {
+        "label": "CL-22",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/21"
+      },
+      {
+        "label": "CL-51",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/50"
+      },
+      {
+        "label": "Opus 5.5 ERR-08",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/7"
+      },
+      {
+        "label": "Opus 5.5 ERR-23",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/22"
+      }
+    ]
+  },
+  {
+    "id": "issuance",
+    "title": "Capped issuance",
+    "kicker": "Show where every issued unit goes.",
+    "summary": "Keep application-asset supply, recipient distribution, and any servicing promises distinct.",
+    "utility": "Give an issuer an inspectable account of new supply and the obligations attached to it.",
+    "status": "PROPOSED",
+    "strands": [
+      {
+        "id": "issuance-supply",
+        "label": "Supply arithmetic",
+        "claim": "The proposed supply update stays within the cap.",
+        "statement": "Illustrative first issue: 300 application-asset units under a cap of 1,000; unissued capacity is 700.",
+        "authentication": "The issuer policy, exact application asset, and supply predecessor need an actual authenticated path.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "issuance-distribution",
+        "label": "Distribution arithmetic",
+        "claim": "The recipient allocation totals the issued amount.",
+        "statement": "Recipient one receives 180 units and recipient two receives 120 units; 180 + 120 = 300.",
+        "authentication": "Recipient identities and actual mint and payment outputs must be enforced by the applicable policies and validators.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "issuance-duties",
+        "label": "Duty accounting",
+        "claim": "Servicing duties remain separate from token supply.",
+        "statement": "The remaining 700 units of issue capacity are not debt. A redemption promise is a duty only when explicitly defined.",
+        "authentication": "Any servicing promise needs named parties, an exact asset, and a defined creation and discharge rule.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. This illustration supplies no redemption agreement.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      }
+    ],
+    "effects": [
+      "Application-asset issuance is 300 units: 180 to one recipient and 120 to the other.",
+      "Unissued capacity is 700 units, with no debt inferred from that capacity.",
+      "Issuing a proof claim token does not mint the application asset."
+    ],
+    "dependencies": [
+      "Implement supported application mint/burn semantics and actual mint-policy enforcement.",
+      "Continue supply state and bind exact recipients and assets.",
+      "Define any separate redemption duty; external eligibility documents retain their issuer and freshness assumptions."
+    ],
+    "sourceRefs": [
+      {
+        "label": "Supply and liability meanings",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S03-MORIARTY-PRODUCT-CONTRACT.md",
+        "pointer": "#what-provable-intention-means"
+      },
+      {
+        "label": "Selected issuance case",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CONCEPT.md",
+        "pointer": "#five-application-cases"
+      },
+      {
+        "label": "Issuance page card",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/MESSAGING.md",
+        "pointer": "#five-use-case-cards"
+      },
+      {
+        "label": "CL-23",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/22"
+      }
+    ]
+  },
+  {
+    "id": "loan",
+    "title": "Loan servicing",
+    "kicker": "Separate repayment from its fee.",
+    "summary": "Show principal, accrual, payment, fee, and remaining debt as different amounts.",
+    "utility": "Help borrower and lender inspect how a payment changes the outstanding duty.",
+    "status": "PROPOSED",
+    "strands": [
+      {
+        "id": "loan-accrual",
+        "label": "Accrual arithmetic",
+        "claim": "The defined period’s accrual updates opening debt.",
+        "statement": "Illustrative debt 100 CASH plus accrual 5 CASH gives a duty of 105 CASH.",
+        "authentication": "The agreement must supply the period, rate, rounding, and provenance of any variable-rate observation.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. No rate source or live accrual is supplied.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "loan-payment",
+        "label": "Payment accounting",
+        "claim": "Payment and fee retain their different meanings.",
+        "statement": "Debt payment 35 CASH plus separate fee 2 CASH gives payer gross debit 37 CASH.",
+        "authentication": "The actual payer, lender, fee recipient, and exact asset must agree with owner authorization and transaction effects.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "loan-duty",
+        "label": "Debt continuation",
+        "claim": "Only the payment discharges the debt.",
+        "statement": "Duty 105 − repayment 35 = 70 CASH remaining; the fee 2 is not repayment.",
+        "authentication": "A real continuation must bind the predecessor duty and its explicit accrual and discharge entries.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      }
+    ],
+    "effects": [
+      "Opening debt 100 + accrual 5 = 105 CASH.",
+      "Payer gross debit is 37 CASH: repayment 35 and fee 2.",
+      "Closing debt is 70 CASH. Collateral release requires its own policy."
+    ],
+    "dependencies": [
+      "Define period, rate, rounding, and any observation freshness rule.",
+      "Bind actual loan payments and the continuing debt to the authorized transition.",
+      "Supply separate origination and collateral policies; this lesson establishes no ACTUS conformance."
+    ],
+    "sourceRefs": [
+      {
+        "label": "Origination target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/12"
+      },
+      {
+        "label": "Interest-period target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/13"
+      },
+      {
+        "label": "Partial repayment target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/14"
+      },
+      {
+        "label": "Gross/fee/net target",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S02-PATTERN-INVENTORY.json",
+        "pointer": "/15"
+      },
+      {
+        "label": "Typed duty accounting",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S03-MORIARTY-PRODUCT-CONTRACT.md",
+        "pointer": "#what-provable-intention-means"
+      },
+      {
+        "label": "Selected loan case",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CONCEPT.md",
+        "pointer": "#five-application-cases"
+      },
+      {
+        "label": "CL-24",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/23"
+      }
+    ]
+  },
+  {
+    "id": "treasury",
+    "title": "Treasury allocation",
+    "kicker": "Follow the amounts into the reserve.",
+    "summary": "Separate allocation arithmetic, actual transfers, and the duties that remain afterward.",
+    "utility": "Make the beneficiary amounts, fee budget, and reserve or rebate duties visible to owners.",
+    "status": "PROPOSED",
+    "strands": [
+      {
+        "id": "treasury-quotient",
+        "label": "Quotient arithmetic",
+        "claim": "The allocation inputs satisfy the source arithmetic.",
+        "statement": "For allocate(true,23,7,2): 23 = 3 × 7 + 2 and 2 < 3. The units input is checked, not debited.",
+        "authentication": "The approved input is a supplied parameter in S13; separate governance authentication remains a dependency.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "treasury-payments",
+        "label": "Transfer accounting",
+        "claim": "The allocation amounts match the quotient.",
+        "statement": "Alpha receives 14 A and 4 B; beta receives 7 A; fees receive 2 A. Total custody debit is 23 A and 4 B.",
+        "authentication": "Actual vault custody, exact A and B identities, recipient outputs, and owner authorization need the consuming profile.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      },
+      {
+        "id": "treasury-reserve",
+        "label": "Reserve accounting",
+        "claim": "New duties remain explicit after allocation.",
+        "statement": "Create allocation reserve duty 2 A and rebate duty 6 B. Proposed backing 25 A / 10 B leaves cash 2 A / 6 B.",
+        "authentication": "Opening custody is an explicit premise; proposed full backing needs a consumer-enforced policy.",
+        "limits": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. Source minimum custody is 23 A / 4 B; backing is a separate policy.",
+        "status": "ILLUSTRATIVE_FUTURE_PROOF_ROLE"
+      }
+    ],
+    "effects": [
+      "Source custody minimum for this step: 23 A and 4 B.",
+      "Proposed full backing: begin with 25 A and 10 B to retain 2 A and 6 B after the step.",
+      "The allocation creates duties of 2 A and 6 B; it does not discharge them.",
+      "rebate(amount) can discharge the B rebate. S13 has no allocation_reserve discharge action."
+    ],
+    "dependencies": [
+      "Give a distinct governance decision its named authentication path where the policy requires one.",
+      "Bind actual beneficiaries, fees, custody, and the continuing reserve duties.",
+      "Full backing is proposed application policy, beyond source non-negative custody.",
+      "A reserve-duty discharge or migration requires additional program work."
+    ],
+    "sourceRefs": [
+      {
+        "label": "Conditional reserve source",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S13-conditional-reserve.mori",
+        "pointer": "actions allocate, rebate"
+      },
+      {
+        "label": "Selected treasury case",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CONCEPT.md",
+        "pointer": "#five-application-cases"
+      },
+      {
+        "label": "Treasury page card",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/MESSAGING.md",
+        "pointer": "#five-use-case-cards"
+      },
+      {
+        "label": "CL-25",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/24"
+      },
+      {
+        "label": "CL-52",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+        "pointer": "/claims/51"
+      },
+      {
+        "label": "Opus 5.5 ERR-09",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/8"
+      },
+      {
+        "label": "Opus 5.5 ERR-21",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/20"
+      },
+      {
+        "label": "Opus 5.5 ERR-24",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/23"
+      },
+      {
+        "label": "Opus 5.5 ERR-28",
+        "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+        "pointer": "/rows/27"
+      }
+    ]
+  }
+]

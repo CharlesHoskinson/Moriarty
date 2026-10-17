@@ -1,0 +1,87 @@
+{
+  "layer": 7,
+  "name": "Verification",
+  "proposals": [
+    {
+      "id": "L7-verdicts",
+      "title": "Show the three verdicts separately",
+      "bookReference": "L7-EXACT-CHAPTER.md, Chapter 8 “The Social Layer” and “Who Verifies the Verifier?”; exact manuscript chapter excerpt covers source lines 3546–4018. Cross-link Chapter 10 “The Causal Web: Why It Is a DAG, Not a Stack” (B08 extracted lines 4460–4479).",
+      "sourceSupport": "BOOK_FACT: Chapter 8 frames verification as software reading a proof and returning yes/no, and discusses implementation, governance and economics. PRIMARY_SOURCE_SUPPORT: CIP-0038, “Specification” and “Trustworthiness of implementations,” describes Plutus curve operations and the need to retain compatibility for uses on-chain. MORIARTY_MAPPING: V2-COPY main.proofRoleExplanation and main.lifecycleSteps separate proof checking at issuance, transaction-derived statement checks at settlement, and application readback. INFERENCE: presenting these as separate verdicts will help readers see what each layer of checking establishes.",
+      "websiteMapping": "Use a compact sequence: (1) claim policy checks proof at issuance; (2) settling validator collects every required Strand and rebuilds its statement from the spending transaction; (3) ledger acceptance and application readback establish whether the intended effects appeared. Keep proof correctness, authorization and authenticated ledger facts distinct.",
+      "readerCopy": "A proof claim records a checked proof. At settlement, the validator requires every Strand named by the Web, rebuilds each statement from the transaction, and checks the signed financial effects. The application then confirms inclusion, waits for its required finality, and reads back outputs and remaining duties.",
+      "interaction": "An expandable three-step trace. Selecting each step highlights its input, checker and result. A “what this proves” toggle shows the narrow claim for that step; a “what it does not decide” toggle distinguishes proof validity from owner authorization, ledger acceptance and application readback.",
+      "diagram": "Transaction and proof → claim policy checks proof → proof-claim output; settlement consumes all required claims → validator rebuilds statements and checks signed effects → ledger accepts or rejects; application confirms inclusion, finality and actual outputs/duties.",
+      "questions": [
+        "Opus: confirm the exact adopted wording for the relationship between claim-policy verification, proof-claim creation and settlement validation.",
+        "Does the final Cardano design bind each issued claim to exactly the statement and context that the settlement validator rebuilds?",
+        "Which signer, validator and ledger conditions must pass at each transaction boundary?"
+      ],
+      "limits": "This proposal describes the supplied V2 design. Supplied records do not show an on-chain transaction or end-to-end Cardano settlement."
+    },
+    {
+      "id": "L7-web-completeness",
+      "title": "Make required-Web collection visible",
+      "bookReference": "L7-EXACT-CHAPTER.md, “The Social Layer” and “Who Verifies the Verifier?”; Chapter 1 “The Seven Layers at a Glance,” original manuscript lines 272–298, establishes that the layers are interdependent.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 says a verifier’s verdict depends on the software that receives and checks a proof; it also separates logically distinct Layer 7 concerns. PRIMARY_SOURCE_SUPPORT: V2-COPY main.definitions defines a Web as the complete set of Strands required by a consuming contract, with all-or-nothing acceptance. MORIARTY_MAPPING: V2-COPY main.explorerIntro and assemblyIncomplete describe listing required Strands and the effect of a missing Strand. INFERENCE: an explicit collection step makes the application’s required set legible before the settlement verdict.",
+      "websiteMapping": "Use the Web explorer to display the consuming contract’s required Strand set, each Strand’s statement and whether it is present. Treat complete collection as an input to settlement, not as settlement acceptance.",
+      "readerCopy": "The contract names the Strands required for this transition. The validator needs the complete set, and each claim must match the statement rebuilt for the transaction. A complete Web is ready for the settlement check; it has not settled yet.",
+      "interaction": "Allow one required Strand to be removed and restored. Show the collection as incomplete while it is absent, then show the settlement check become available when all required claims are present. Do not simulate cryptographic verification.",
+      "diagram": "Contract’s required set → collect matching claim outputs → complete Web → settlement validator.",
+      "questions": [
+        "Is the required set fixed entirely by the consuming contract for each supported transition?",
+        "Which mismatches besides a missing Strand cause rejection, and what user-facing reason can the interface safely show?",
+        "Can one proof serve multiple roles in the exact adopted design, and how is that represented without implying multiple independent proofs?"
+      ],
+      "limits": "The V2 source reading is uncompiled and the all-or-nothing consumer is listed as not built in the supplied technical status."
+    },
+    {
+      "id": "L7-effects-and-claims",
+      "title": "Keep proof claims separate from financial effects",
+      "bookReference": "L7-EXACT-CHAPTER.md, “The Social Layer” and “The Price of a Verdict”; Layer 7’s verdict is the end of a proof check, while the chapter treats economics as a separate concern.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 treats the proof verdict and the economics of rendering it as distinct concerns. PRIMARY_SOURCE_SUPPORT: V2-COPY main.lifecycleSteps issue/settle and main.faqs claim-vs-asset state that proof-claim issuance records checked evidence, does not mint the application asset or move application funds, and that settlement burns claims while enforcing effects. MORIARTY_MAPPING: the Cardano design places claim checking in an Issue transaction and application effects in a later settlement transaction. INFERENCE: a paired visual can prevent readers from treating a proof-claim token as the financial asset.",
+      "websiteMapping": "At issuance, show only proof-claim output creation. At settlement, show the required claims consumed and burned alongside the separately authorized application-asset and custody effects.",
+      "readerCopy": "Issuing a proof claim records checked evidence in its own output. It does not mint the application asset or move application funds. The later settlement consumes the required claims and applies only the financial effects allowed by the validator and the signed intents.",
+      "interaction": "A two-panel before/after view. The first panel highlights the claim output and its min-ADA; the second shows that output consumed and the claim token burned, beside the distinct application-asset movement. A switch hides the application-asset route to make the separation explicit.",
+      "diagram": "Issue: proof + claim policy → claim output. Settlement: claim output consumed and burned; validator-approved financial effects occur separately.",
+      "questions": [
+        "Opus: confirm whether “records checked evidence” is the preferred exact phrase for proof-claim issuance.",
+        "Which claim-output fields are user-visible and which remain implementation details?",
+        "For each supported profile, what confirms the application-asset minting or transfer route independently of proof-claim issuance?"
+      ],
+      "limits": "The source design and local wrapper evidence do not establish actual on-chain claim issuance or financial settlement."
+    },
+    {
+      "id": "L7-cost-context",
+      "title": "Explain verifier cost in the target ledger’s units",
+      "bookReference": "L7-EXACT-CHAPTER.md, “The Price of a Verdict” and “On-Chain Verification in 2026”; source claims about Ethereum gas, BN254 and rollup data availability are examples from that environment.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 compares Ethereum verification, data-availability and aggregation costs. PRIMARY_SOURCE_SUPPORT: CIP-0038, “Costing of function,” gives preliminary Plutus built-in costs and says its Groth16 estimate was about 23% of the execution budget; “Trustworthiness of implementations” discusses preserving compatibility of existing on-chain uses. MORIARTY_MAPPING: Cardano cost and acceptance questions concern Plutus execution units, transaction size, fees, collateral and claim-output min-ADA, as distinguished in V2-COPY technical.networkFeeNote. INFERENCE: the chapter’s Ethereum figures cannot stand in for costs of the Cardano Web design.",
+      "readerCopy": "A verifier has a cost in the ledger where it runs. For Cardano, that means measuring the actual script and transaction under the relevant Plutus and ledger rules. Ethereum gas figures do not give the cost of this Web.",
+      "interaction": "Offer a labeled “cost components” panel that separates proof-check script execution, transaction size and network fee, collateral, and ADA held by a claim output. Until measured on the exact candidate and ledger rules, display “not measured” rather than a number.",
+      "diagram": "Proof check → script execution units; transaction data → size and fee; claim output → min-ADA held; all assessed under the target ledger rules.",
+      "questions": [
+        "Does the source-era CIP-0038 cost estimate remain comparable to current Plutus and ledger rules?",
+        "What exact compiled policy, proof shape, public inputs, transaction context and protocol parameters define a representative verification-cost measurement?",
+        "What proof-claim output min-ADA and transaction-size costs apply to the adopted design?"
+      ],
+      "limits": "No cost, latency or portability advantage is measured in the supplied V2 technical status. Do not publish a Cardano number based on the book’s Ethereum examples or CIP preliminary estimate.",
+      "websiteMapping": "Keep this in the technical status panel. Describe Cardano resource units and transaction costs only when tied to the exact compiled candidate and current ledger parameters."
+    },
+    {
+      "id": "L7-dag-and-governance",
+      "title": "Map trust boundaries without importing another chain’s governance",
+      "bookReference": "L7-EXACT-CHAPTER.md, “The Social Layer” and “Who Verifies the Verifier?”; B08 extracted Chapter 10 “The Causal Web: Why It Is a DAG, Not a Stack,” lines 4460–4479.",
+      "sourceSupport": "BOOK_FACT: Chapter 8 discusses replaceable verifier software, implementation and governance risks. Chapter 10 describes pressures from Layer 7 back into proof-system choices. PRIMARY_SOURCE_SUPPORT: CIP-0038’s “Trustworthiness of implementations” concerns compatibility and long-term support of Cardano node verification formats; it does not specify Moriarty claim-policy governance. MORIARTY_MAPPING: the V2 technical section distinguishes planned behavior and records no deployed verifier identity or on-chain transaction. INFERENCE: the product can explain the governance question as an open trust boundary without asserting Ethereum-style multisig or upgrade behavior for Cardano.",
+      "readerCopy": "A proof’s verdict depends on the checker and the rules that run it. The seven layers influence one another: the target ledger’s costs and interfaces can shape proof choices, and those choices shape what the checker must do. The specific authority to change or replace a Cardano verifier must be described from the deployed system’s evidence.",
+      "interaction": "A small influence map lets readers select “ledger cost,” “proof system,” or “checker” and follow the design pressure to the related layer. A separate technical-status drawer identifies what checker and deployment evidence are available; no governance controls are implied by the diagram.",
+      "diagram": "Layer 7 verifier needs ↔ Layer 5 proof-system choices ↔ Layer 6 cryptographic primitives, with ledger rules and costs feeding into Layer 7; arrows denote design pressure, not a formal dependency theorem.",
+      "questions": [
+        "Does the adopted chapter text present the seven layers as interdependent without asserting they are independent assumptions?",
+        "Which Cardano governance, upgrade, versioning and node-compatibility mechanisms actually control the verifier used by this design?",
+        "How should Chapter 10 distinguish a DAG of described design pressures from possible co-design cycles or feedback loops?",
+        "Opus: review all cryptographic and security claims before adoption."
+      ],
+      "limits": "No claim is made that Cardano uses an Ethereum proxy, multisig, immutable verifier, L2Beat stage, or Ethereum data-availability architecture. Governance and security judgments remain with Opus.",
+      "websiteMapping": "Use a trust-boundary map for the Cardano verifier path and a separate influence map for cross-layer design pressures. Do not import Ethereum upgrade or rollup claims into the Cardano story."
+    }
+  ]
+}

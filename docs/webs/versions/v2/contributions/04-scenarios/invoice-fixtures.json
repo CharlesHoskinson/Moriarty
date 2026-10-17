@@ -1,0 +1,413 @@
+{
+  "format": "moriarty-webs-invoice-worksheet/1",
+  "status": "INDEPENDENT_EXPECTED_ARITHMETIC_ONLY",
+  "title": "One partial payment, shown in full",
+  "description": "Local arithmetic from the supplied source, not Moriarty execution, proof verification, or settlement.",
+  "sourceRefs": [
+    {
+      "label": "Invoice source",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/sources/S12-installment-invoice.mori",
+      "pointer": "actions open, partial, finish"
+    },
+    {
+      "label": "CL-20",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+      "pointer": "/claims/19"
+    },
+    {
+      "label": "CL-26",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+      "pointer": "/claims/25"
+    },
+    {
+      "label": "CL-52",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/integrated-r2/CLAIMS-REGISTER.json",
+      "pointer": "/claims/51"
+    },
+    {
+      "label": "Opus 5.5 ERR-22",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+      "pointer": "/rows/21"
+    },
+    {
+      "label": "Opus 5.5 ERR-25",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+      "pointer": "/rows/24"
+    },
+    {
+      "label": "Opus 5.5 ERR-28",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json",
+      "pointer": "/rows/27"
+    }
+  ],
+  "asset": {
+    "symbol": "CASH",
+    "network": "oracle-unit",
+    "issuer": "invoice-issuer",
+    "reference": "cash",
+    "scale": 0
+  },
+  "opening": {
+    "opened": true,
+    "paid": 0,
+    "marker": 7,
+    "invoiceDuty": 100,
+    "reserveDuty": 10,
+    "sourceOpenInputs": {
+      "principal": 90,
+      "reserve": 10
+    },
+    "sourceOpeningTransfer": 110,
+    "sourceOpeningFee": 3,
+    "sourceOpeningBuyerGrossDebit": 113
+  },
+  "partial": {
+    "sourceFee": 2,
+    "sourceConstraint": "opened and amount > 0 and amount < opening invoice duty",
+    "slider": {
+      "min": 1,
+      "max": 99,
+      "step": 1,
+      "default": 35
+    },
+    "dutyRule": "The payment discharges invoice duty; its fee does not. Reserve duty stays 10."
+  },
+  "fundingModes": [
+    {
+      "id": "source110",
+      "label": "Source funding · 110 CASH",
+      "openingCash": 110,
+      "proposedAdditionalFunding": 0,
+      "description": "The source open action transfers 110 CASH into escrow and charges the buyer a separate 3 CASH opening fee."
+    },
+    {
+      "id": "proposed112",
+      "label": "Proposed extra fee budget · 112 CASH",
+      "openingCash": 112,
+      "proposedAdditionalFunding": 2,
+      "description": "Assume 2 CASH extra funding beyond source open. S12 has no extra-funding action. This proposal backs one partial only."
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "source110-amount0",
+      "fundingMode": "source110",
+      "openingCash": 110,
+      "amount": 0,
+      "sourceWorksheetAdmitted": false,
+      "expectation": "SOURCE_PARTIAL_REFUSED",
+      "reason": "Amount must be greater than zero.",
+      "arithmeticStatus": "HYPOTHETICAL_ONLY_NO_SOURCE_VALID_PARTIAL",
+      "arithmetic": {
+        "sellerReceipt": 0,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 2,
+        "closingCash": 108,
+        "closingInvoiceDuty": 100,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 110,
+        "backingGap": 2,
+        "closingPaid": 0,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": null
+    },
+    {
+      "id": "source110-amount1",
+      "fundingMode": "source110",
+      "openingCash": 110,
+      "amount": 1,
+      "sourceWorksheetAdmitted": true,
+      "expectation": "SOURCE_VALID_PARTIAL_EXPECTATION",
+      "reason": "Amount is strictly between 0 and opening invoice duty 100.",
+      "arithmeticStatus": "EXPECTED_SINGLE_STEP_VALUES",
+      "arithmetic": {
+        "sellerReceipt": 1,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 3,
+        "closingCash": 107,
+        "closingInvoiceDuty": 99,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 109,
+        "backingGap": 2,
+        "closingPaid": 1,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": {
+        "sellerReceipt": 1,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 3,
+        "closingCash": 107,
+        "closingInvoiceDuty": 99,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 109,
+        "backingGap": 2,
+        "closingPaid": 1,
+        "closingOpened": true,
+        "preservedMarker": 7
+      }
+    },
+    {
+      "id": "source110-amount35",
+      "fundingMode": "source110",
+      "openingCash": 110,
+      "amount": 35,
+      "sourceWorksheetAdmitted": true,
+      "expectation": "SOURCE_VALID_PARTIAL_EXPECTATION",
+      "reason": "Amount is strictly between 0 and opening invoice duty 100.",
+      "arithmeticStatus": "EXPECTED_SINGLE_STEP_VALUES",
+      "arithmetic": {
+        "sellerReceipt": 35,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 37,
+        "closingCash": 73,
+        "closingInvoiceDuty": 65,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 75,
+        "backingGap": 2,
+        "closingPaid": 35,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": {
+        "sellerReceipt": 35,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 37,
+        "closingCash": 73,
+        "closingInvoiceDuty": 65,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 75,
+        "backingGap": 2,
+        "closingPaid": 35,
+        "closingOpened": true,
+        "preservedMarker": 7
+      }
+    },
+    {
+      "id": "source110-amount99",
+      "fundingMode": "source110",
+      "openingCash": 110,
+      "amount": 99,
+      "sourceWorksheetAdmitted": true,
+      "expectation": "SOURCE_VALID_PARTIAL_EXPECTATION",
+      "reason": "Amount is strictly between 0 and opening invoice duty 100.",
+      "arithmeticStatus": "EXPECTED_SINGLE_STEP_VALUES",
+      "arithmetic": {
+        "sellerReceipt": 99,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 101,
+        "closingCash": 9,
+        "closingInvoiceDuty": 1,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 11,
+        "backingGap": 2,
+        "closingPaid": 99,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": {
+        "sellerReceipt": 99,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 101,
+        "closingCash": 9,
+        "closingInvoiceDuty": 1,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 11,
+        "backingGap": 2,
+        "closingPaid": 99,
+        "closingOpened": true,
+        "preservedMarker": 7
+      }
+    },
+    {
+      "id": "source110-amount100",
+      "fundingMode": "source110",
+      "openingCash": 110,
+      "amount": 100,
+      "sourceWorksheetAdmitted": false,
+      "expectation": "SOURCE_PARTIAL_REFUSED",
+      "reason": "Partial amount must be less than opening invoice duty; finish() is a separate action.",
+      "arithmeticStatus": "HYPOTHETICAL_ONLY_NO_SOURCE_VALID_PARTIAL",
+      "arithmetic": {
+        "sellerReceipt": 100,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 102,
+        "closingCash": 8,
+        "closingInvoiceDuty": 0,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 10,
+        "backingGap": 2,
+        "closingPaid": 100,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": null
+    },
+    {
+      "id": "proposed112-amount0",
+      "fundingMode": "proposed112",
+      "openingCash": 112,
+      "amount": 0,
+      "sourceWorksheetAdmitted": false,
+      "expectation": "SOURCE_PARTIAL_REFUSED",
+      "reason": "Amount must be greater than zero.",
+      "arithmeticStatus": "HYPOTHETICAL_ONLY_NO_SOURCE_VALID_PARTIAL",
+      "arithmetic": {
+        "sellerReceipt": 0,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 2,
+        "closingCash": 110,
+        "closingInvoiceDuty": 100,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 110,
+        "backingGap": 0,
+        "closingPaid": 0,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": null
+    },
+    {
+      "id": "proposed112-amount1",
+      "fundingMode": "proposed112",
+      "openingCash": 112,
+      "amount": 1,
+      "sourceWorksheetAdmitted": true,
+      "expectation": "SOURCE_VALID_PARTIAL_EXPECTATION",
+      "reason": "Amount is strictly between 0 and opening invoice duty 100.",
+      "arithmeticStatus": "EXPECTED_SINGLE_STEP_VALUES",
+      "arithmetic": {
+        "sellerReceipt": 1,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 3,
+        "closingCash": 109,
+        "closingInvoiceDuty": 99,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 109,
+        "backingGap": 0,
+        "closingPaid": 1,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": {
+        "sellerReceipt": 1,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 3,
+        "closingCash": 109,
+        "closingInvoiceDuty": 99,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 109,
+        "backingGap": 0,
+        "closingPaid": 1,
+        "closingOpened": true,
+        "preservedMarker": 7
+      }
+    },
+    {
+      "id": "proposed112-amount35",
+      "fundingMode": "proposed112",
+      "openingCash": 112,
+      "amount": 35,
+      "sourceWorksheetAdmitted": true,
+      "expectation": "SOURCE_VALID_PARTIAL_EXPECTATION",
+      "reason": "Amount is strictly between 0 and opening invoice duty 100.",
+      "arithmeticStatus": "EXPECTED_SINGLE_STEP_VALUES",
+      "arithmetic": {
+        "sellerReceipt": 35,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 37,
+        "closingCash": 75,
+        "closingInvoiceDuty": 65,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 75,
+        "backingGap": 0,
+        "closingPaid": 35,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": {
+        "sellerReceipt": 35,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 37,
+        "closingCash": 75,
+        "closingInvoiceDuty": 65,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 75,
+        "backingGap": 0,
+        "closingPaid": 35,
+        "closingOpened": true,
+        "preservedMarker": 7
+      }
+    },
+    {
+      "id": "proposed112-amount99",
+      "fundingMode": "proposed112",
+      "openingCash": 112,
+      "amount": 99,
+      "sourceWorksheetAdmitted": true,
+      "expectation": "SOURCE_VALID_PARTIAL_EXPECTATION",
+      "reason": "Amount is strictly between 0 and opening invoice duty 100.",
+      "arithmeticStatus": "EXPECTED_SINGLE_STEP_VALUES",
+      "arithmetic": {
+        "sellerReceipt": 99,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 101,
+        "closingCash": 11,
+        "closingInvoiceDuty": 1,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 11,
+        "backingGap": 0,
+        "closingPaid": 99,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": {
+        "sellerReceipt": 99,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 101,
+        "closingCash": 11,
+        "closingInvoiceDuty": 1,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 11,
+        "backingGap": 0,
+        "closingPaid": 99,
+        "closingOpened": true,
+        "preservedMarker": 7
+      }
+    },
+    {
+      "id": "proposed112-amount100",
+      "fundingMode": "proposed112",
+      "openingCash": 112,
+      "amount": 100,
+      "sourceWorksheetAdmitted": false,
+      "expectation": "SOURCE_PARTIAL_REFUSED",
+      "reason": "Partial amount must be less than opening invoice duty; finish() is a separate action.",
+      "arithmeticStatus": "HYPOTHETICAL_ONLY_NO_SOURCE_VALID_PARTIAL",
+      "arithmetic": {
+        "sellerReceipt": 100,
+        "feeRecipientReceipt": 2,
+        "grossEscrowDebit": 102,
+        "closingCash": 10,
+        "closingInvoiceDuty": 0,
+        "closingReserveDuty": 10,
+        "totalClosingDuties": 10,
+        "backingGap": 0,
+        "closingPaid": 100,
+        "closingOpened": true,
+        "preservedMarker": 7
+      },
+      "expectedSourcePartialEffects": null
+    }
+  ],
+  "limitations": [
+    "One step only. Each further partial has another 2 CASH source fee, so a sequence needs a further funding rule.",
+    "Amounts 0 and 100 are refused by partial against opening duty 100. Their arithmetic rows are hypothetical only.",
+    "finish() is a different source action: it transfers the closing invoice amount without the partial fee.",
+    "After source funding 110, partial(35), then finish(): cash is 8, invoice duty is present at zero, and reserve duty remains 10.",
+    "S12 contains no reserve-duty-return action.",
+    "Network fees, collateral, claim-output min-ADA, and the V2 thread reserve are separate from the worksheet’s CASH source fees."
+  ]
+}

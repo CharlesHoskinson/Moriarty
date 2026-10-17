@@ -1,0 +1,80 @@
+{
+  "role": "06 Cryptographic Bedrock",
+  "proposals": [
+    {
+      "id": "bedrock-primitives",
+      "title": "The ingredients under the proof core",
+      "bookReference": "Chapter 7, ‘Three Hardness Assumptions, Three Worlds’ and ‘Four Families of Commitment Schemes’ in L6-EXACT-CHAPTER.md (pinned book commit 2789e5a63972276e20bc6144733ef9824ced9e49; manuscript excerpt lines 3015–3545). The book names discrete-log, collision-resistant-hash, and Module-SIS assumptions and discusses fields, groups, curves, and commitments.",
+      "sourceSupport": "G05, abstract and sections 1.1 and ‘Technique’: pairing-based arguments work over a finite field and use bilinear groups; this particular 2016 construction uses three group elements and a pairing-product equation. G06-CIP0381.md, ‘Specification’ and ‘Names and types/kinds’: the Plutus proposal describes BLS12-381 G1/G2 group operations, Miller loop and final verification, as well as serialization and hash-to-curve functions. These sources support examples of primitives, not a complete security comparison of all proof systems.",
+      "websiteMapping": "Use a selectable diagram with four visible labels: field arithmetic, curve/group operations, hash functions, and the proof relation that combines them. Connect field/group/commitment choices to Layers 4 and 5. Keep setup as a separate Layer 1 concern, even when a system's cryptographic choices make setup relevant.",
+      "readerCopy": "A proof system uses mathematical building blocks. Its arithmetic lives in a field. Some systems also use curve groups and pairings; others rely on hashes. These choices shape how the computation is encoded and how a verifier checks it. The seven layers help us inspect those connections; they are not separate boxes that every system must fill in the same way.",
+      "interaction": "Let readers toggle field, curve/group, and hash labels to highlight the parts of the proof-core diagram each primitive participates in. The diagram must say ‘illustrative relationships’ and must not imply that every system uses every primitive.",
+      "diagram": "Three linked Layer 4/5/6 circles around a center labeled ‘proof core’, with small field, group/curve, and hash icons attached to the relevant edges. A note says ‘system-dependent; choices co-design across layers.’",
+      "questions": [
+        "Which primitive combinations are actually used by the specific Moriarty proof path described on the page, and which are only background examples from the book?",
+        "Does Opus agree with the book's classification and wording for the named hardness assumptions before any security comparison is adopted?"
+      ],
+      "limits": "Do not present the three assumptions in the book as an exhaustive taxonomy. Do not assign security levels or assert that one family is categorically safer. The supplied material does not establish a complete Moriarty primitive inventory."
+    },
+    {
+      "id": "curve-capability-vs-acceptance",
+      "title": "A curve operation is not proof acceptance",
+      "bookReference": "Chapter 7, ‘KZG (Kate-Zaverucha-Goldberg)’ and ‘The Laws That Break’ in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015–3545), which connect pairing-based cryptography and hardness assumptions to proof systems.",
+      "sourceSupport": "G06-CIP0381.md, ‘Specification’ lists BLS12-381 group operations, Miller loops, final verification and serialization; ‘Path to Active’ records inclusion in a scheduled Plutus release, with Chang #1 hardfork noted. This establishes documented Cardano Plutus primitive support. It does not, by itself, establish that a particular application verifier accepts a particular proof. V2-COPY.json /technical/summary records one local compiled-C2-wrapper acceptance among seven cases, with caller-fabricated context and a forgeable test setup; it says no on-chain transaction is recorded and that the V2 source readings are uncompiled. This is scoped local evidence, not production acceptance.",
+      "websiteMapping": "Show three gates in sequence: primitive available; verifier relation and inputs match; consumer accepts in the intended execution context. On the Moriarty evidence card, identify the recorded local acceptance as such and keep production setup and chain acceptance visibly separate.",
+      "readerCopy": "A chain may provide curve and pairing operations. A proof verifier still has to use compatible parameters, encodings, keys, and verification equations. Then the intended consumer must accept that proof in its real context. Evidence for the curve operations alone does not show that all of these steps are in place.",
+      "interaction": "A three-step reveal control lets the reader open ‘primitive’, ‘verifier’, and ‘consumer acceptance’. The final step displays the evidence stage available for Moriarty: one local wrapper acceptance with fabricated context; no on-chain transaction recorded; test setup forgeable by its operator.",
+      "diagram": "Three boxes labeled ‘curve primitives’, ‘complete verifier’, and ‘consumer accepts’. A solid connection from CIP-0381 to the first box; a dashed, clearly scoped evidence marker at the local-wrapper stage; no arrow labeled production or deployment.",
+      "questions": [
+        "Which exact deployed target, verifier implementation, curve, key, encoding, and consumer are meant by any future claim of Moriarty proof acceptance?",
+        "Does Opus approve the wording around the recorded C2 case and its setup limitation?"
+      ],
+      "limits": "CIP-0381 is a Cardano/Plutus source and does not establish Midnight support. Do not convert local wrapper acceptance into an on-chain, production, or real-context claim."
+    },
+    {
+      "id": "curve-compatibility-boundary",
+      "title": "Compatibility belongs to a named target",
+      "bookReference": "Chapter 7, ‘Four Families of Commitment Schemes’ and ‘KZG (Kate-Zaverucha-Goldberg)’ in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015–3545), where the book describes pairing-based constructions and named curve examples.",
+      "sourceSupport": "G06-CIP0381.md is explicitly titled ‘Plutus support for Pairings over BLS12-381’; its specification names BLS12-381 types and functions. V2-COPY.json /technical/trustNotes and /technical/summary distinguish the current local proof record, the forgeable class-0 test setup, and the broader Midnight ZKIRv3 target. Those supplied records do not establish that Cardano's BLS12-381 support ports unchanged to Midnight or that a BN254 verifier is interchangeable with BLS12-381.",
+      "websiteMapping": "Give each target its own compatibility card. For Cardano, identify the documented BLS12-381 Plutus primitive support. For Moriarty's broader Midnight target, state that this Cardano evidence does not qualify it. Require curve and verifier details before showing a compatibility badge.",
+      "readerCopy": "Cryptographic support is target-specific. The supplied Cardano document describes BLS12-381 operations for Plutus. That does not establish the same operations, proof verifier, or acceptance path on Midnight. A proof and verifier must agree on their curve and other parameters.",
+      "interaction": "A target selector switches between ‘Cardano’ and ‘Midnight’. The Cardano view shows only the documented Plutus BLS12-381 primitive capability. The Midnight view says ‘not established by this Cardano source’ and links the reader to the separate evidence status.",
+      "diagram": "Two target columns, each with independent boxes for primitive set, proof/verifier, and acceptance evidence. A one-way dotted annotation says ‘Cardano evidence does not transfer automatically’; no shared curve badge.",
+      "questions": [
+        "What curve and proof-verifier parameters are actually in the claimed Moriarty path on each target?",
+        "Is there any primary evidence that a Midnight path uses these Cardano Plutus built-ins, or would that be a different implementation?"
+      ],
+      "limits": "No BN254 or Midnight compatibility assumption. Do not infer support from similar APIs, proof-system names, or diagrams."
+    },
+    {
+      "id": "kzg-groth16-source-check",
+      "title": "Separate pairings, KZG, and Groth16",
+      "bookReference": "Chapter 7, ‘KZG (Kate-Zaverucha-Goldberg)’, especially the sentence ‘KZG powers Groth16, PLONK, Marlin…’ in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015–3545).",
+      "sourceSupport": "G05 is Jens Groth's 2016 ‘On the Size of Pairing-based Non-interactive Arguments?’ Its abstract describes a three-group-element pairing-based argument for arithmetic-circuit satisfiability and one pairing-product equation. In the supplied paper text, that construction is not identified as Groth16 and the source does not establish the chapter's statement that Groth16 uses KZG. G06-CIP0381 supplies BLS12-381 primitive details but does not adjudicate that scheme-history claim.",
+      "websiteMapping": "Keep ‘pairing-based proof systems’, ‘KZG polynomial commitments’, and ‘Groth16’ as distinct labels. Mark the book sentence for an Opus fact-check before it is used as a technical assertion. If retained, provide a primary source for the exact relationship and clarify whether the statement is scheme-specific or historical shorthand.",
+      "readerCopy": "Pairings are a cryptographic operation used by several proof systems. KZG is one polynomial commitment built with pairings. Groth16 is a distinct proof system. The exact relationship between a named system and a commitment scheme should be checked before treating the names as interchangeable.",
+      "interaction": "Hovering over each of the three terms reveals its role: operation, commitment, or proof system. A small ‘source check’ marker points to the unresolved wording in the book rather than silently changing it.",
+      "diagram": "Nested but distinct labels: ‘pairing operation’ supports a pairing-based construction; ‘polynomial commitment’ is one possible component; ‘proof system’ is the larger protocol. Use a dotted edge from KZG to Groth16 labeled ‘relationship needs primary-source confirmation’ until Opus resolves it.",
+      "questions": [
+        "Does the book intend ‘KZG powers Groth16’ to mean Groth16 uses KZG, or that both are pairing-based constructions?",
+        "What primary source should support the exact relationship if the sentence is kept?"
+      ],
+      "limits": "This proposal flags a source mismatch for adjudication; it does not declare the book wrong or supply final crypto wording. G05 is not evidence about Groth16 merely because the paper's author is named Groth."
+    },
+    {
+      "id": "assumptions-and-setup-boundary",
+      "title": "State what the guarantee depends on",
+      "bookReference": "Chapter 7, ‘Three Hardness Assumptions, Three Worlds’ and the chapter's concluding discussion of cryptographic assumptions in L6-EXACT-CHAPTER.md (manuscript excerpt lines 3015–3545).",
+      "sourceSupport": "G05, abstract and section 1.1, explicitly frames its construction's security through particular assumptions and a generic bilinear-group-model argument; the abstract says it also gives a symmetric-pairing security proof. V2-COPY.json /technical/trustNotes says the recorded Groth16 meaning is conditional on an honest setup and knowledge soundness, and says the current class-0 setup operator can forge proofs. Its /technical/summary records no production ceremony. These are distinct source statements and should not be collapsed into one generic ‘secure’ label.",
+      "websiteMapping": "Pair a concise ‘what this guarantee assumes’ note with the proof-system example. Distinguish mathematical assumptions, setup ceremony trust, circuit/verifier correspondence, and evidence of acceptance. Keep detailed setup history in the dedicated visible setup section required by the site brief.",
+      "readerCopy": "A proof's guarantee depends on the assumptions and setup used by that proof system, and on the verifier checking the intended relation. For the supplied Moriarty example, the recorded test setup can be forged by its operator, so it does not support a production security claim.",
+      "interaction": "A reader can open four short cards: ‘hardness assumption’, ‘setup’, ‘compiled relation and key’, and ‘acceptance evidence’. Each card states what its evidence can and cannot establish.",
+      "diagram": "Four linked condition cards feeding into ‘claim justified?’ rather than a single green ‘secure’ badge. Mark the Moriarty test setup card ‘forgeable test setup’ and the production ceremony ‘not recorded in supplied sources.’",
+      "questions": [
+        "Which exact scheme-specific assumptions and setup conditions should Opus approve for the final Moriarty wording?",
+        "Is the exact setup count or production ceremony status available in an approved source? The current supplied context says total required setups are unknown and no production ceremony is recorded."
+      ],
+      "limits": "Do not state quantified security bits, quantum timelines, or a blanket post-quantum claim. Do not imply that a local proof or primitive operation settles setup trust, circuit correspondence, or production acceptance."
+    }
+  ]
+}
