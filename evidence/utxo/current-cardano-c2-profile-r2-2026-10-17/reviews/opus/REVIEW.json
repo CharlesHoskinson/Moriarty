@@ -1,0 +1,262 @@
+{
+  "reviewToken": "c2-profile-r2-rev4-restored-opus-owner-20261017",
+  "report": "Fresh non-author source-policy review (claude-opus-5-5, Read-only). I read all 40 packet files and MANIFEST.json in full. I executed, imported, hashed and compiled nothing; pins are as root-revalidated, not recomputed. Author FOR is not adoption. No test or implementation exists, so every runtime expectation is a prediction.\n\nVERDICT: SOURCE_POLICY_READY. This approves only the exact policy text, as the basis for authoring tests that are then reviewed separately. All 8 clauses AGREE. CP04 and CP06 are the changed literals; the other six are byte-identical to the rev3 text S32 agreed.\n\nN01-N11 are verified closed against S11/S17/S18/S20/S22/S23/S26/S27/S31:\n- T16 is exactly the set v1 admits and r2 refuses; T02 and T17 are excluded.\n- Subset/byte-equality sampling is attributed to T02 and T17 only; T16 shows strictness only.\n- There are 18 methods. T05a/b/c are labelled subTests obtained after r2, and a run count other than 18 means STOP.\n- T07's list cases cover the six nested objects only; a list-valued export is ARG.\n- The T04 and T14 cells are exact.\n- CP04 is length-first, never calls str.encode and makes no proportional copy. DIGEST uses exact-string equality.\n- The Rust correspondence is check-level only.\n- S31 is cited as scoped history.\n- Token expectations are hashlib NON-ORACLE.\n- T17 is synthetic and names every dependent field.\n- T06 marks its redundant case.\n\nI independently re-derived these: the 13/16 key split, all nine T14 pairs, the T02 CBOR heads, the T17 dependency closure, the statement offsets, the v1 stage of every row, and the mutant outcomes.\n\nAlso retained: 16 labels, frozen v1, no /1\u2192/2 bridge, CB r1 non-routing, builderReliancePermitted false, all 20 families, and the financial/recursion/private/multiparent scope.\n\nResidual items are low/info and non-blocking:\n- \u00a73 lists 'serde DTO decoding' as not performed, while r2 performs Python closed-key and integer-width analogues of it.\n- The CP04 copy/encode/ordering constraints are enforced only at source review.\n- S31 custody does not pin the exact lib.rs/abi2.rs bytes.\n\nThere is no contradiction that blocks test authoring. Every operator, native, selftest, authority and publication flag stays false. nativeRoundtripPrerequisiteClosed=false is this review's zero grant and does not negate S31. This is a fresh context from the same provider, not provider diversity. I did not see the Meta Wonder review.",
+  "findings": [
+    {
+      "id": "R4-L01-section3-serde-wording",
+      "severity": "low",
+      "summary": "Section 3 lists 'serde DTO decoding' under Not performed. Yet r2 performs closed-key checks (12/29/export field names) and integer-width checks that are the Python analogue of serde deny_unknown_fields typed decoding. 'Each ... mirrors a named check' also maps the EXPORT-stage hex-width checks only onto later Rust equality comparisons. This is wording imprecision, not an admission-relation claim.",
+      "evidence": "S33 \u00a73 'Not performed: ... serde DTO decoding' versus CP02/CP03/CI05 closed schemas and u8/u16/u64 ranges. S18 SetupRecord/ProofExport #[serde(deny_unknown_fields)] decoded inside parse_json (S28). S18 check_export validates programHash, setupRecordSha256 and context hex only through same()/equality. The 'Added by r2' list already covers sourceSha256-key-required (the Option\u2192None serde difference) and the exact-int rules.",
+      "requiredFix": "Non-blocking. In test-review notes or a later text revision, say that serde mechanics (Option-missing\u2192None, numeric coercion, UTF-8 decoding) are not reproduced, and that the closed-key and width checks are r2 Python analogues. No clause change or re-vote is needed."
+    },
+    {
+      "id": "R4-L02-CP04-constraints-source-review-only",
+      "severity": "low",
+      "summary": "The CP04 scan constraints (no input-proportional copy, never str.encode, length-before-scan for abi2ShapeBytesHex/statementHex) cannot be discriminated by T00-T17 outcomes. T06 detects only wrong stages and subclass leaks, and an implementation that catches UnicodeEncodeError and re-raises ValueError would pass every test.",
+      "evidence": "S33 CP04 and stage notes; T06/T15 rows; the meaningfulness list covers only a no-scan mutant. The T15 token scan reuses v1 test_11 tokens (S23), which do not include 'encode('.",
+      "requiredFix": "The test reviewer and the later implementation reviewer must source-inspect these constraints. Optionally add '.encode(' to the T15 effect-token scan, since r2 needs no encode call. Non-blocking."
+    },
+    {
+      "id": "R4-I03-S31-scope",
+      "severity": "info",
+      "summary": "S31 supports 'the never-run docstrings are not evidence that nothing ran'. It records custody-only binary-source correspondence and does not pin the exact lib.rs (1b13cdc5\u2026) or abi2.rs (51fa1063\u2026) bytes as the compiled sources. So 'stale' is scoped history, not exact-byte provenance.",
+      "evidence": "S31 limitations.binarySourceCorrespondence 'custody evidence, not mathematical binary proof'; its pins cover only proofExport/setupRecord/vk/statement digests. S33 \u00a78 already keeps driverId DECLARED_NAME_NOT_PROVENANCE and circuitVkCorrespondence OPEN.",
+      "requiredFix": "None. Keep the labels and the scoped wording, and infer no universal correspondence."
+    },
+    {
+      "id": "R4-I04-test-authoring-precision",
+      "severity": "info",
+      "summary": "Some rows rely on the test author choosing schema-valid replacement values, so that the fault reaches the intended stage: T10 'each of the 10 context fields changed alone', the T13 field changes and the T08 'another valid value'. For T17, the 'literal expected envCborHex' that feeds the hashlib token is literal framing plus a test-computed NON-ORACLE statement-digest segment.",
+      "evidence": "S33 \u00a76 rows T08, T10, T13 and T17, and the token-expectation preamble. S11 shows EXPORT type/width checks precede CONTEXT/CARDANO.",
+      "requiredFix": "Test review must confirm that each replacement is in-range and of exact type. Keep the T17 digest segment labelled NON-ORACLE."
+    },
+    {
+      "id": "R4-I05-T16-duplication",
+      "severity": "info",
+      "summary": "T16 repeats v1-ADMIT assertions already made in the v1 columns of T04, T05b, T06 and T14. This is consistent and not a contradiction, and it does not affect the 18-method count.",
+      "evidence": "S33 T04/T05b/T06/T14 v1 cells versus the T16 enumerated list; API tests.T16StrictnessCases.",
+      "requiredFix": "None."
+    }
+  ],
+  "crosschecks": [
+    {
+      "id": "X-N01",
+      "severity": "pass",
+      "summary": "T16 is exactly the set of v1-ADMIT cases that r2 refuses: T04 driver one-char change and provingKeyBytes 2**64; every T05b case; the three T06 relation-str cases, the relation extra-key case and the consistent action/catalogue case; the T14 driver+language pair. T02 and T17 are excluded.",
+      "evidence": "Checked each against S11: driver is _TEXT and provingKeyBytes ('int',1,None); the relation is open with only the 13 consumed keys; CARDANO name is derived from the relation action. T05a is v1 SETUP and T05c is v1 RELATION, so no other v1 ADMIT exists.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N02",
+      "severity": "pass",
+      "summary": "CP06, \u00a75 and API compatibility attribute subset/byte-equality sampling to T02 and T17 only, and describe T16 as strictness only.",
+      "evidence": "S33 CP06 literal and \u00a75; S34 admissionVsV1/strictnessVsV1.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N03",
+      "severity": "pass",
+      "summary": "18 methods T00-T17, with T05a/b/c as subTests labelled inside T05. r2 is obtained before any subTest, so RED yields one phrase failure per method. unittest testsRun counts methods (18). A count other than 18 is NOT RED at RED and STOP at GREEN.",
+      "evidence": "S33 \u00a76 preamble and \u00a77; S34 tests.methods/T05/runCountOtherThan18.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N04",
+      "severity": "pass",
+      "summary": "T07 list cases cover the six nested objects (v1 _admit_object refuses them with C2I-EXPORT). A list-valued export is C2I-ARG under CI02 and is placed in T03.",
+      "evidence": "S11 prepare_c2_issue ARG check and _admit_object; S33 T07; S34 T07ListCase.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N05",
+      "severity": "pass",
+      "summary": "T04 v1 cells are exact: 0, -1, True and an int driver are v1 SETUP; 2**64 and a driver one-char change are v1 ADMIT. T14 uses a driver one-char change.",
+      "evidence": "S11 _SETUP_RECORD; S33 T04/T14.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N06",
+      "severity": "pass",
+      "summary": "CP04 names the deferred checks correctly. statementHex: the v1 length test (>524288) short-circuits before set(). proofHex: _is_hex checks length 384 first. x1/x2: exact equality with the host str(int) decimals; CPython str equality compares length first. str.isascii is a flag check, and an iteration scan makes no proportional copy.",
+      "evidence": "S11 STATEMENT/DIGEST/PROOF code; S22 statement_public_inputs; S34 strRule/deferredCheck.",
+      "requiredFix": "See R4-L02 (source-review only)."
+    },
+    {
+      "id": "X-N07",
+      "severity": "pass",
+      "summary": "\u00a73 is check-level ('Each, except the Added-by-r2 checks'). The networkId statement is a source reading: S18 parse_setup_record/check_export contain no network check. No admission-set statement survives.",
+      "evidence": "S18 check_export lines; S33 \u00a73; S34 rust.checkLevel.",
+      "requiredFix": "See R4-L01 wording note."
+    },
+    {
+      "id": "X-N08",
+      "severity": "pass",
+      "summary": "S31 is cited as one scoped, class-0, fabricated-context round trip whose pins equal K6/K2. Labels are unchanged and no universal correspondence is inferred.",
+      "evidence": "S31 scope/acceptedObservations/limitations; S33 \u00a78; S34 history.scopedK6.",
+      "requiredFix": "None (R4-I03 info)."
+    },
+    {
+      "id": "X-N09",
+      "severity": "pass",
+      "summary": "Token expectations are the historical literal or hashlib.blake2b(digest_size=32) over the literal env bytes, labelled NON-ORACLE. They are independent of host_codec but not of hashlib, matching v1's own hashlib token rule. T17 names statementDigestBlake2b256 and envV2.statementDigest.",
+      "evidence": "S11 token = hashlib.blake2b(env_cbor, digest_size=32); S33 \u00a76.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N10",
+      "severity": "pass",
+      "summary": "K2 is 3926 B root-observed. The S37 root manifest pins the contract, API and positions plus the S01-S32 sources. R4 (14 labels) stays incompatible.",
+      "evidence": "S04 setupPublicFixtureRootObserved; S37 files; S33 \u00a71/\u00a75.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-N11",
+      "severity": "pass",
+      "summary": "The T06 relation-extra-key surrogate case is marked REDUNDANT. The scan mutant must fail via the relationFormat, logicalCostProfile, fieldModulusLeHex, export action or intentAnchor cases; each of those changes stage without the scan.",
+      "evidence": "S33 T06 and \u00a77; derived: without the scan, relationFormat\u2192admit, export action\u2192RELATION, intentAnchor\u2192CARDANO.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-T02-T14-T17",
+      "severity": "pass",
+      "summary": "T02 heads 00/17/1818/1b0000000100000000/1bffffffffffffffff and the HIST 1b000001b8dac5b400 are correct (2**32 needs an 8-byte head). All nine T14 pairs and their v1 cells are correct. T17's updated-field set is the complete dependency closure of offsets 144/173/233/265/267: context fields, digest, x1/x2, envV2 claimant/settleOutref/statementDigest, intentAnchor. catalogueActionEntry and intentTargetHashV2 are unaffected.",
+      "evidence": "S22 _head and _STATEMENT_FIELDS; S23 HIST_ENV_CBOR/ENV_PREFIX; S18 cardano_export; S26 offsets; S29 statement_bytes order.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-CP06-subset",
+      "severity": "pass",
+      "summary": "Every v1 check is retained at equal or stricter strength (driver fixed, provingKeyBytes bounded, relation closed at PROFILE, CP04 narrowing at EXPORT). By source construction, r2-admitted inputs are therefore v1-admitted, with four equal byte fields built by the same host calls.",
+      "evidence": "S11 _SETUP_RECORD/_RELATION/_PROOF_EXPORT and BUILD versus S33 CP02-CP06 and S34.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "X-rust-omissions-labels-flags",
+      "severity": "pass",
+      "summary": "The not-performed list is complete. It covers the IC prefix at 336, the flag/field/curve/subgroup/identity/canonical checks for seven VK points and A/B/C, the setupRecordSha256 file link, the 1 MiB/UTF-8/duplicate/trailing/depth-32/65536-node limits, the re-encode and the pairing. The 16 labels are identical in \u00a74 and the API, and the 8 v1 labels are a value-identical subset. Every flag is false.",
+      "evidence": "S27 decode_vk/decode_proof/vk_profile_ok; S18; S28; S30; S26 parse_statement; S34 labels/flags.",
+      "requiredFix": "None."
+    }
+  ],
+  "recommendation": {
+    "verdict": "SOURCE_POLICY_READY: AGREE on all CP01-CP08 exact literals. The N01-N11 repairs are verified, and the residual items are low/info only. This approves the policy only as a basis for separately reviewed test authoring.",
+    "sourceReady": true,
+    "scope": "Exact source-policy review of the revision-4 C2 r2 profile contract, API and positions (S33-S35) against S01-S32 and S36-S40. It means only that the policy is approved for authoring test_c2_issue_artifacts_r2.py, which must then be reviewed separately. It grants no implementation, test execution, adoption, builder reliance, Rust acceptance, proof verification or authority. Author FOR and this single vote are not adoption.",
+    "firstBlockedBoundary": "Root adoption decision on the exact policy, then authoring of test_c2_issue_artifacts_r2.py (18 methods) from this contract and a separate fresh non-author review of that test source. No root RED, implementation, GREEN or builder reliance before then.",
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "None now. After the authored test is separately reviewed: root observes r2 absence, then runs one ordinary RED (18 methods; T00 passes; T01-T17 phrase failures; 0 errors) once in the read-only pinned envelope. GREEN only after a reviewed implementation, followed by the meaningfulness mutants in a separate envelope. No native, curve, prove, verify, VM, wallet, signing or network action.",
+    "authorityProposalReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-resume-20261017/packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S01-C2-PROFILE-R2-CONTRACT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S02-C2-PROFILE-R2-API.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S03-DESIGN-POSITIONS.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S04-SOURCE-MANIFEST.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S05-MODEL-REVIEW.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S06-ROOT-QUALIFICATION.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S07-C2-PROFILE-R2-CONTRACT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S08-C2-PROFILE-R2-API.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S09-DESIGN-POSITIONS.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S10-C2-ISSUE-ARTIFACT-CONTRACT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S11-c2_issue_artifacts.py",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S12-REPORT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S13-FINDINGS.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S14-SOURCE-ADOPTION.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S15-K2-PUBLIC-SETUP-RECORD.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S16-K6-PUBLIC-PROOF.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S17-relation.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S18-export.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S19-lib.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S20-hexutil.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S21-PROCESS.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S22-host_codec.py",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S23-test_c2_issue_artifacts.py",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S24-C2-BUILDER-CONTRACT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S25-C2-BUILDER-API.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S26-claim.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S27-encoding.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S28-input.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S29-abi2.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S30-json.rs",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S31-K6-ACTUAL-ADOPTION.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S32-MODEL-REVIEW.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S33-C2-PROFILE-R2-CONTRACT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S34-C2-PROFILE-R2-API.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S35-DESIGN-POSITIONS.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S36-ROOT-INTAKE.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S37-SOURCE-MANIFEST.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S38-FINDINGS.json",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S39-REPORT.md",
+      "/home/charl/moriarty-c2-resume-20261017/packet/S40-USER-AUTHORIZATION.json"
+    ],
+    "unreadPaths": [
+      "All original host paths outside the packet (provenance only; not followed by instruction)",
+      "k2/src/error.rs, setup.rs, prove.rs, verify.rs, fixed.rs, inspect.rs",
+      "mori_r1cs blake2b, identity, statement, plan and adapter modules; mori_core intent::hex",
+      "ABI-V2.md and DESIGN.md",
+      "the running downstream R4 contract (14-label attempt-2 target)",
+      "CB r1 test_c2_builder.py and legacy build_k10_inputs.py",
+      "the v1 root RED/GREEN RESULT.json",
+      "the S31-referenced PUBLIC-RESULT-MANIFEST.json and Muse actual REPORT.md",
+      "the independent Meta Wonder review of this candidate and any Gemini/Muse fallback outputs (not supplied)",
+      "the original author structured object with crosschecks-carried file bodies (only the root-exported S33-S35 were read)"
+    ],
+    "limitations": "Text-only Read of the 41 packet files. Nothing was executed, imported, compiled or hashed, and every byte count and SHA-256 is as declared and root-revalidated, not recomputed by me. I did not compute BLAKE2b-256 of the K2 VK or shape bytes. That Rust blake2b256 equals hashlib.blake2b(digest_size=32) rests on v1's root GREEN on K6 (S14) and S31's scoped record, not on my work. CPython behaviour (str.isascii flag, iteration without proportional copy, int() digit limit and Unicode-digit acceptance, length-first str equality, unittest testsRun counting methods) is stated from language knowledge, not observed. All runtime expectations are predictions; no test or implementation exists. The candidate reached root through crosschecks because of the disclosed author-schema mistake; I reviewed the root-exported verbatim files only. Author and reviewer share a provider (fresh context, not provider diversity). nativeRoundtripPrerequisiteClosed=false reflects this review's zero grant and does not negate S31. No abstentions."
+  },
+  "positions": [
+    {
+      "clauseId": "CP01",
+      "clause": "The r2 consumer shall be a new pure module c2_issue_artifacts_r2.py whose only import statements are import hashlib and import host_codec, whose only public function is prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults, which applies the CI02 ARG checks unchanged, and which calls build_env_data, build_c2_mint_data, build_value_data, encode_data, parse_statement_header, statement_digest_hex and statement_public_inputs only as attributes of the unchanged pinned host_codec (23252 B, SHA-256 3c18539ebb277595192769a0d0d245e34ef26601303df62366863b76c07b1459), never copying or re-implementing them; it shall not import, patch or replace the adopted v1 module c2_issue_artifacts.py (15231 B, SHA-256 23c3f99d5e0aacfdacc462803b605b5c3c47b6e7e2b5b18b217a562fa0e80f76), whose bytes, CI01-CI12 contract, format /1, eight labels and test history stay immutable.",
+      "position": "AGREE",
+      "rationale": "All seven named APIs exist in S22 with the bounds v1 relies on, and the v1 pins match S11, S14 and S37. CI02 is reused unchanged: S11 checks exact types before touching any record. v1 bytes, format /1 and the 8 labels stay immutable, with no /1\u2192/2 bridge. T01 tests the import lines, the signature and the seven-API counting proxy. The text is byte-identical to the rev3 CP01."
+    },
+    {
+      "clauseId": "CP02",
+      "clause": "When ARG passes, the consumer shall refuse with C2I-SETUP unless the setup record has exactly the 12 SetupRecord keys; format, trustProfile, notice, curve, snark and encoding equal the export.rs constants; driver equals DRIVER_ID mori-k2-driver/0.1.0-k2s1+k4h1; provingKeySha256 is 64 lowercase hex; provingKeyBytes is an exact int in 1..2**64-1; relation is an exact dict; verifyingKeyHex is an exact str of length 976, length-checked before its lowercase-hex scan; and unkeyed BLAKE2b-256 of the 488 VK bytes equals vkDigestBlake2b256; it shall decode no VK point, so the decode_vk IC-prefix, flag, field-range, curve, subgroup, identity and canonical-encoding checks are not performed.",
+      "position": "AGREE",
+      "rationale": "It matches S18 parse_setup_record field by field: the 12 deny_unknown_fields keys, fixed() literals, DRIVER_ID from S19, decode_exact::<488>, decode_exact::<32> for provingKeySha256, u64 with !=0, and the VK digest equality. The decode_vk omission list matches S27: the IC prefix at 336, flags/field/curve/subgroup, identity refusal and canonical round trip. K2 (S15) satisfies every rule. Unchecked points are a labelled non-claim, which is acceptable for a structural serializer with builder reliance false."
+    },
+    {
+      "clauseId": "CP03",
+      "clause": "When SETUP passes, the consumer shall refuse with C2I-PROFILE unless the relation has exactly the 29 RelationDescriptor keys with the kinds in C2-PROFILE-R2-API.json, including language moriarty/1, semantics moriarty-core/1 and adapter SettlementHashV2; the nine check_profile digests are 64 lowercase hex and sourceSha256 is present as 64 lowercase hex or null; logicalWork is an exact str of 1..39 characters, each in ASCII 0-9, with no leading zero unless it is 0, all checked before any int conversion, and value at most 2**128-1; statementTagHex and familyIdHex equal the ABI v2 literals; headerLen is 343, instanceVariables 3, publicInputCount 2 and bodyLen 0..261801; and abi2ShapeBytesHex is an exact str of even length at most 524288, length-checked before any scan, then lowercase hex whose unkeyed BLAKE2b-256 equals abi2ShapeDigest.",
+      "position": "AGREE",
+      "rationale": "It matches S17: 29 struct fields and the nine check_profile digests. logicalWork mirrors S20 parse_u128_decimal (ASCII, \u226439, no leading zero); length-first rules out the int() digit-limit error, and 2**128 is 39 digits, so it is refused by value. The shape bound equals decode_bounded(262144). The tag and family hex decode to S29 STMT_TAG/FAMILY_V2. The bodyLen narrowing is declared Added-by-r2. moriarty/1 and moriarty-core/1 are kept as descriptor checks, not recompilation. API kinds are unchanged from rev3."
+    },
+    {
+      "clauseId": "CP04",
+      "clause": "While admitting the setup record, its relation and the export, the consumer shall accept a key only as an exact str naming a field of the closed schema, an integer only as an exact int (never bool) within its kind range, and a str-kind value only as an exact str containing no code point in U+D800..U+DFFF, found by a code-point comparison scan that makes no input-proportional copy and never calls str.encode (a str.isascii() fast path is allowed) and that runs after any length check of that field; otherwise it shall refuse with C2I-SETUP for a setup top-level member, C2I-PROFILE for any relation key or member, and C2I-EXPORT for any export key or member at any depth, except that statementHex, proofHex, x1 and x2 are not scanned at EXPORT and are left to the length-first lowercase-hex checks of STATEMENT and PROOF and the exact-string equality of DIGEST.",
+      "position": "AGREE",
+      "rationale": "The changed text accurately names the deferred checks. In S11, statementHex's length test short-circuits before set() and proofHex's _is_hex checks length 384 first. x1/x2 are refused by exact equality with the host str(int) decimals; CPython compares length first, so no length check is needed. Stage ownership agrees with T04-T07 and S34. The str.isascii fast path plus an iteration scan makes no proportional copy, and the encode ban rules out UnicodeEncodeError. The constraints are source-review only (R4-L02)."
+    },
+    {
+      "clauseId": "CP05",
+      "clause": "When PROFILE passes, the consumer shall apply the CI05-CI09 checks, narrowed only by CP04, in the order EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO, and shall describe its admission only as the selected checks of contract section 3, stating that it performs no decode_vk or decode_proof point check (IC prefix, flags, field range, curve, subgroup, identity, canonical encoding), no setupRecordSha256 file-byte check, no parse_json byte, UTF-8, duplicate-key, trailing-data, depth or node limit, no parse_statement re-encode and no Groth16 pairing, that Rust acceptance of an r2-admitted input is not established, and never asserting any subset, equivalence or conditional-inclusion relation between r2 admission and Rust acceptance.",
+      "position": "AGREE",
+      "rationale": "The omission list is complete against S27, S18 (setupRecordSha256), S28/S30 (1 MiB, UTF-8, duplicates, trailing data, depth 32, 65536 nodes), S26 (re-encode) and the pairing. No subset, equivalence or conditional-inclusion wording survives in S33 or S34. The N07 networkId sentence is a verified source reading, since S18 has no network check. Partial Rust source checks are never relabelled as proof verification. The \u00a73 serde wording note (R4-L01) is low and non-blocking."
+    },
+    {
+      "clauseId": "CP06",
+      "clause": "When every check passes, the consumer shall return an exact fresh dict with the 12 CI10 keys built as in CI10, except that format is moriarty-c2-issue-artifacts/2 and labels is exactly the 16-entry r2 label map of C2-PROFILE-R2-API.json, and shall retain every v1 check at equal or stricter strength, so that by source construction every r2-admitted input is v1-admitted with envCborHex, envelopeTokenNameHex, issueCborHex and mintValueCborHex equal to the v1 values, a property that tests T02 and T17 only sample; T16 samples only strictness, that is v1-admitted inputs that r2 refuses, and is not evidence of that property.",
+      "position": "AGREE",
+      "rationale": "Compared against S11, every v1 check is retained or stricter (driver fixed, provingKeyBytes bounded, relation closed, CP04 at EXPORT), so the subset and byte-equality property holds by construction, using the same host calls. The changed evidence attribution is now correct: T16 inputs are r2-refused and give zero samples of the implication, while T02 and T17 are both-admit samples. This closes S32 N02/F05. The 12 keys, /2 and the 16 labels are unchanged."
+    },
+    {
+      "clauseId": "CP07",
+      "clause": "If any check fails, then the consumer shall raise exactly ValueError, never a subclass such as UnicodeEncodeError, whose message starts with C2I-<STAGE>: for the first failing stage in the order ARG, SETUP, PROFILE, EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO, BUILD; it shall rewrap a host ValueError with the current stage code, let non-ValueError environmental errors such as MemoryError propagate unconverted, return no partial result, never mutate either input, keep no input dict or list reachable from module state or from the result (immutable str and int leaves may be shared), and perform no I/O and use no clock, environment, randomness, logging, caching or global mutation.",
+      "position": "AGREE",
+      "rationale": "It is consistent with CI11 and the S11 _host rewrap; S22 raises only plain ValueError. Length-first logicalWork and the encode ban prevent unprefixed errors and subclass leaks. Aliasing is scoped to mutable containers, which fits CI10 sharing the setupRecordSha256 str and the expiry int. T15 can test it. BUILD and the DIGEST rewraps are unreachable for admitted input (S13 R04) and are correctly excluded from T14/T15. The text is unchanged from rev3."
+    },
+    {
+      "clauseId": "CP08",
+      "clause": "The r2 records shall keep builderReliancePermitted false and every native, operator, wallet, prover, VM, deploy, signing and network flag false; builderReliancePermitted may change only by a separate root source-adoption decision taken after a reviewed r2 implementation, a fresh non-author audit, root-observed meaningful RED then GREEN of the reviewed T00-T17 test and a reviewed downstream contract that explicitly consumes format moriarty-c2-issue-artifacts/2 with the 16 labels, and none of these prerequisites grants that permission automatically; r2 output is not CB-r1-compatible and shall not be routed to CB r1, and this contract imposes no obligation on CB r1.",
+      "position": "AGREE",
+      "rationale": "Every flag is false in S34. A separate root decision is required and nothing happens automatically. CB r1 is handled by non-routing, since S24 CB09 refuses /2 by format, and no obligation is imposed on it. The 16-label /2 downstream gate means the attempt-2 14-label R4 cannot qualify without an explicit reviewed reconciliation, so there is no silent mapping. The text is unchanged from rev3, and this review grants no reliance."
+    }
+  ]
+}
