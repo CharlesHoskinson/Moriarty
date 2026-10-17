@@ -1,15 +1,15 @@
 # Current35 EARS assessment
 
-Seven of the 35 original requirements are closed on their supported typed A host
-scope: UIREQ-001, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008, UIREQ-010 and UIREQ-011.
+Eight of the 35 original requirements are closed on their supported typed A host
+scope: UIREQ-001, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008, UIREQ-009, UIREQ-010 and UIREQ-011.
 The latest [independent review and Root adoption](../results/sherlock-ears-host-closure-20261017/README.md)
 bind the unchanged generic source, original scenarios, independent expectations
-and actual host observations. DoctorWatson's selected report verifies all seven
-as current. The remaining 28 original requirements and all 25 refinements/68
+and actual host observations. DoctorWatson's selected report verifies all eight
+as current. The remaining 27 original requirements and all 25 refinements/68
 scenarios remain open. These are separate inventories from the retained security,
 financial, formal, native and release requirements. UIREQ-025 still needs its
 reporting proof; UIREQ-026 lacks the private-record and per-slice evidence.
-Matching files alone cannot close a requirement.
+The [sharing review and adoption](../results/sherlock-structural-sharing-20261017/ROOT-ADOPTION.json) adds UIREQ-009. Matching files alone cannot close a requirement.
 
 | ID | Implementation | Validation | Acceptance | Exact missing work / next discriminator |
 |---|---|---|---|---|
@@ -21,7 +21,7 @@ Matching files alone cannot close a requirement.
 | UIREQ-006 | complete | observed | closed | Checked UInt128/Bool source plus all four original normal cases accepted; direct A overflow/underflow runtime remains unobserved, with circuit/B obligations separate. |
 | UIREQ-007 | partial | partial | open | Implement owner-adopted nominal ListUInt128 declaration/constructor continuation and construct Cons1(Cons2Nil); compare actual identity/ordered fields/type before claiming generic support. |
 | UIREQ-008 | complete | observed | closed | Generic ordered-match source, complete historical F04 tree-fold comparison and discriminating N06 first-match evidence accepted; generic nominal matches remain034. |
-| UIREQ-009 | partial | partial | open | Ordinary normal paired shared/unshared tree fold8 with independent complete visit/work expectations, using identical profile/bounds; compare both occurrence visits, not just decoded rows. |
+| UIREQ-009 | complete | observed | closed | Both shared/distinct Leaf4 occurrences fold8 with60 charged steps; fresh result review and Root adoption.31/62 complete boundaries independently checked; broader refinements remain open. |
 | UIREQ-010 | complete | observed | closed | None for exact host pending-return clause: adopt factorial3 independent prefix locator and unchanged current reference source; no native prerequisite. |
 | UIREQ-011 | complete | observed | closed | None for exact pure-result clause: adopt complete list-sum terminal/pending evidence and Done/Halted mapping, retaining no-next/publication. |
 | UIREQ-012 | partial | partial | open | Complete existing owner-defined B capacity outcome matrix and its already specified ordinary/owner cases; preserve A Exhausted(Fuel)/Rejected4 and tooling outside Outcome. No blanket stagenet gate. |
