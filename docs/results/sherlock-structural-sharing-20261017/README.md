@@ -7,7 +7,7 @@ The test verifies a real Arc pointer distinction before observation, uses one
 recursive function, and compares the complete actual structural traces.
 
 The [independent oracle](independent/DERIVATION.md) froze before execution.
-For each variant, its35 complete Snapshot assertions cover31 unique boundary states;31 further
+For each variant, complete independent Snapshot checks cover31 unique boundary states;31 further
 intermediate boundaries lack full independent control/environment/frame payload
 literals. All events independently check their rule, charge, fuel, depth, program
 and outcome. Pairwise full-trace equality and adjacency are supplementary.
