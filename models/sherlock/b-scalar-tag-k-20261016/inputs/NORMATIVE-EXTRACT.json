@@ -1,0 +1,284 @@
+{
+  "row_pointer": "/helper_events/1",
+  "row": {
+    "id": "b.helper.Scalar.tag",
+    "catalog": "rules.json:4737-4769",
+    "status": "Enabled",
+    "eventKind": "HelperVisit",
+    "template": "T-HELPER",
+    "sites": [
+      "RetRight",
+      "RetIf",
+      "RetCall"
+    ],
+    "select_when": "h.phase = First and not (h.mode in {Leaf, Not})",
+    "helperVisits": 1,
+    "inspected": "deref(h.operandA): one value row (tag and scalar payload)",
+    "reads": [
+      {
+        "loc": "value row",
+        "index": "h.operandA",
+        "bound": "active(prog.constants) for Const, pre.active.data for Data"
+      }
+    ],
+    "deltas": {
+      "base": [
+        -1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "when": []
+    },
+    "cap_kinds_possible": [],
+    "effects": [
+      {
+        "op": "let",
+        "bind": "a",
+        "value": "h.operandA"
+      },
+      {
+        "op": "if",
+        "when": "h.mode in {Add, Sub, Mul, Lt}",
+        "then": [
+          {
+            "op": "if",
+            "when": "kind(a) = UInt",
+            "then": [
+              {
+                "op": "set",
+                "target": "h.regA",
+                "value": "u128(a)"
+              },
+              {
+                "op": "set",
+                "target": "h.phase",
+                "value": "Second"
+              }
+            ],
+            "else": [
+              {
+                "op": "set",
+                "target": "h.staged",
+                "value": "ScalarStaged::PrimError{code: 11}"
+              },
+              {
+                "op": "set",
+                "target": "h.phase",
+                "value": "Done"
+              }
+            ]
+          }
+        ],
+        "else": [
+          {
+            "op": "if",
+            "when": "h.mode = Cons",
+            "then": [
+              {
+                "op": "if",
+                "when": "kind(a) = UInt",
+                "then": [
+                  {
+                    "op": "set",
+                    "target": "h.phase",
+                    "value": "Second"
+                  }
+                ],
+                "else": [
+                  {
+                    "op": "set",
+                    "target": "h.staged",
+                    "value": "ScalarStaged::PrimError{code: 11}"
+                  },
+                  {
+                    "op": "set",
+                    "target": "h.phase",
+                    "value": "Done"
+                  }
+                ]
+              }
+            ],
+            "else": [
+              {
+                "op": "if",
+                "when": "h.mode = Branch",
+                "then": [
+                  {
+                    "op": "if",
+                    "when": "kind(a) in {Leaf, Branch}",
+                    "then": [
+                      {
+                        "op": "set",
+                        "target": "h.phase",
+                        "value": "Second"
+                      }
+                    ],
+                    "else": [
+                      {
+                        "op": "set",
+                        "target": "h.staged",
+                        "value": "ScalarStaged::PrimError{code: 11}"
+                      },
+                      {
+                        "op": "set",
+                        "target": "h.phase",
+                        "value": "Done"
+                      }
+                    ]
+                  }
+                ],
+                "else": [
+                  {
+                    "op": "if",
+                    "when": "h.mode = TestBool",
+                    "then": [
+                      {
+                        "op": "set",
+                        "target": "h.staged",
+                        "value": "ScalarStaged::Selector{sel: if kind(a) = Bool then (if bool(a) then True else False) else NotBool}"
+                      },
+                      {
+                        "op": "set",
+                        "target": "h.phase",
+                        "value": "Done"
+                      }
+                    ],
+                    "else": [
+                      {
+                        "op": "set",
+                        "target": "h.staged",
+                        "value": "ScalarStaged::TypeTest{ok: sortOfKind(kind(a)) = unwrap(h.expected)}"
+                      },
+                      {
+                        "op": "set",
+                        "target": "h.phase",
+                        "value": "Done"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "next": [
+      "b.helper.Scalar.arithmetic",
+      "b.helper.Scalar.construct",
+      "b.helper.Scalar.exit",
+      "b.helper.Scalar.failure"
+    ],
+    "semantic_failure": "operand sort mismatch stages PrimError(11) (main.k:261-272)",
+    "sources": [
+      "main.k:237-245",
+      "main.k:254-272",
+      "main.k:313-319"
+    ],
+    "catalog_delta": "kind() replaces raw tag comparison (D-23)"
+  },
+  "template_pointer": "/templates/T-HELPER",
+  "template": {
+    "eventKind": "HelperEnter for .entry, HelperExit for .exit, HelperFail for .failure, HelperVisit otherwise",
+    "helperEligible": true,
+    "charge": 1,
+    "base_deltas": "[-1, 1, 1, helperVisits, 0, 0, 0, 0, 0, 0, 0] unless the row lists its own",
+    "failure_exits": [
+      {
+        "at": "P2",
+        "outcome": "Exhausted(Fuel)",
+        "charged": false
+      },
+      {
+        "at": "P3",
+        "outcome": "Exhausted(HelperWork)",
+        "charged": false,
+        "when": "pre.helperWork = bounds.maxHelperWork"
+      }
+    ],
+    "cap_failure": "for each kind in the row's cap_kinds_possible whose final delta is positive, in the fixed P6 order: Exhausted(kind), charged (P4 effects only); no write, no allocation-counter change, helperVisits unchanged; reg.helper, img.tasks, reg.taskLive and reg.result exactly as in the pre-image",
+    "preserved": "reg.control, reg.controlOrigin, reg.envRoot, reg.depth, img.frames, reg.stackLimit, reg.initialFuel, reg.referenceCursor, every arena row below its pre-image active length, and every register or helper field not written by the row",
+    "erasure": "an image with helper or result present erases to its legacy pre-state: drop reg.helper, reg.result, img.tasks and reg.taskLive; rows and value slots written during the interval are unreachable from legacy roots and ignored by decodeStep (rules.json:7323; interfaces.md:126)"
+  },
+  "delta_order": [
+    "remainingWork",
+    "consumedWork",
+    "helperWork",
+    "helperVisits",
+    "referenceCursor",
+    "alloc.dataNodes",
+    "alloc.dataFields",
+    "alloc.environmentCells",
+    "depth",
+    "taskLive",
+    "active.valueSlots"
+  ],
+  "schema_fields": {
+    "UInt128": "integer in [0, 2^128); bounded encoding is 16 little-endian bytes each in [0,255] (schema-types.json:30, 160-169); host representation u128",
+    "Nat": "mathematical natural number (schema-types.json:47-49); no implicit host width. Host representation: usize for capacities, lengths and indices; u128 for work counters and fuel.",
+    "helper_common": {
+      "site": "SiteTag",
+      "originReferenceCursor": "ReferenceCursor",
+      "parentResume": "Opt<ResumeId> where ResumeId is primitive_types.ResumeId (host carrier Option<usize>, always None in B-core; present/Some is C-INV and HostViolation SI-08; Muse R3-F01, D-35)"
+    },
+    "Scalar": {
+      "mode": "ScalarMode",
+      "operandA": "ValueRef",
+      "operandB": "Opt<ValueRef>",
+      "expected": "Opt<SortTag>",
+      "phase": "ScalarPhase",
+      "regA": "UInt128",
+      "staged": "ScalarStaged"
+    },
+    "ScalarPhase": [
+      "First",
+      "Second",
+      "Done"
+    ],
+    "Scalar_state": [
+      "S1 phase First; staged None; regA 0; any mode",
+      "S2 phase Second; staged None; mode in {Add, Sub, Mul, Lt}; kind(operandA) = UInt; regA = u128(operandA)",
+      "S3 phase Second; staged None; mode = Cons; kind(operandA) = UInt; regA 0",
+      "S4 phase Second; staged None; mode = Branch; kind(operandA) in {Leaf, Branch}; regA 0",
+      "S5 phase Done; mode in {Add, Sub, Mul}; staged U128Value or PrimError(code 10 or 11)",
+      "S6 phase Done; mode in {Lt, Not}; staged BoolValue or PrimError(11)",
+      "S7 phase Done; mode in {Cons, Branch, Leaf}; staged PendingNode(tag = mode) or PrimError(11)",
+      "S8 phase Done; mode = TestBool; staged Selector",
+      "S9 phase Done; mode = TestType; staged TypeTest",
+      "always: operandB present iff mode in {Add, Sub, Mul, Lt, Cons, Branch}; expected present iff mode = TestType; regA = u128(operandA) in phase Done iff mode in {Add, Sub, Mul, Lt} and kind(operandA) = UInt, else 0; taskLive = 0"
+    ],
+    "machine_registers": {
+      "reg.control": "ControlRow",
+      "reg.controlOrigin": "ExprId",
+      "reg.envRoot": "EnvRoot",
+      "reg.depth": "Depth (logical frame count; equals the physical active length of img.frames)",
+      "reg.stackLimit": "StackLimit (K stackLimit; run input)",
+      "reg.outcome": "Outcome",
+      "reg.initialFuel": "WorkCounter",
+      "reg.remainingWork": "WorkCounter",
+      "reg.consumedWork": "WorkCounter",
+      "reg.helperWork": "HelperCounter",
+      "reg.helperVisits": "HelperCounter (diagnostic; never a charge)",
+      "reg.referenceCursor": "ReferenceCursor",
+      "reg.alloc.dataNodes": "AllocDataNodes (logical, monotone)",
+      "reg.alloc.dataFields": "AllocDataFields (logical, monotone)",
+      "reg.alloc.environmentCells": "AllocEnvCells (logical, monotone)",
+      "reg.active.data": "ActiveLen(img.data) (physical)",
+      "reg.active.dataFields": "ActiveLen(img.dataFields) (physical)",
+      "reg.active.env": "ActiveLen(img.env) (physical)",
+      "reg.active.valueSlots": "ActiveLen(img.valueSlots) (physical only; no logical counter, D-08R)",
+      "reg.taskLive": "TaskCount (equals the physical active length of img.tasks)",
+      "reg.helper": "Opt<HelperControl>",
+      "reg.result": "Opt<HelperResult>",
+      "reg.segBase": "{active: {data, dataFields, env, valueSlots}, alloc: {dataNodes, dataFields, environmentCells}, consumedWork}; BOUNDARY RESERVED: all zero in B-core (SI-05); set only by a future canonical resume"
+    }
+  }
+}
