@@ -1,0 +1,17 @@
+# About relations, witnesses and ledger evidence
+
+Draft, 2026-10-17. This page explains component roles and captured scope; it makes no native proof-soundness judgment.
+
+A witness producer computes values. A handwritten relation constrains an admitted transition and its preserved fields. A public statement identifies what a proof is meant to establish to its consumer. A ledger adapter packages that statement and proof into the target's actual acceptance path. These components can share representations while still requiring separate implementation and evidence.
+
+This distinction explains why a host output match is useful but insufficient for a circuit result. The host can compute a successor even when a corresponding constraint component is absent. Likewise, emitted instruction text, Rust parsing and registered tests do not establish that the SDK has compiled or executed those instructions. A proof and independent verification, when actually observed, still leave target deployment, call and complete settlement readback to be evidenced separately.
+
+Current handwritten source covers A102 Literal, A80 Return, A82 Error and A84 Exhausted. The positive-fuel literal composer joins A102 to A80 using one immutable Program and a shared intermediate image. Standalone error/exhaustion fragments do not add general dispatch or zero-fuel startup to that composer. The remaining charged rule emitters, full dispatcher and complete correspondence stay open. Final03 retains separate planned A/B implementation maps; B's HostOnly carrier is not a bounded native encoding.
+
+PR168's composed statement/ledger source is now merged on Sherlock at `011284561884346412a7c7eaa36a195310924878`; SDK compilation remains unrun. The [actual composed-host result](../../results/sherlock-composed333-20261017/README.md) closes the fixed UInt7/fuel1/stack16 capture gap: the same 333 non-context carriers match independent expectations in named and ordered forms, not 666 distinct values. The initial host compile succeeded, then a lexical dependency-path check failed. That failure is preserved; the continuation normalized the exact ten-member set and reused the host artifact without recompilation. Independent ordinary result review approved scoped publication. The client never creates a 335-lane statement; both context limbs remain absent and unbound, without zeros or stripping. This is carrier-adapter evidence, not a full StepRecord trace, checked335/context, canonical projection, circuit/native or target result. Earlier source-only and synthetic-sensitivity records retain their dated scope.
+
+The target design uses Midnight ledger-9 for stagenet. It assumes no new `verifyProof` primitive or replacement proving stack. Ordinary named-call recursion, chunking and two-instruction composition do not establish native recursive proofs, history compliance or private multi-parent composition. Required proof/target obligations remain in the existing contract.
+
+Existing Opus-owned requirements govern StepInv, representation/constraint obligations, context binding, native/resource admission and the retained cases. This explanation reports their ownership and open status; it neither changes them nor supplies substitute tests or judgments. Maintainer execution controls do not become public developer permission requirements.
+
+The [bridge and ledger reference](../reference/bridges-ledger.md) locates these seams. [Evidence and acceptance](evidence-and-acceptance.md) explains how the different results fit together without transferring a pass between layers.

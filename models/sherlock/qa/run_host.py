@@ -12,7 +12,8 @@ are not run and no acceptance is claimed.
 The default `host` realization runs the existing Machine producer and its
 fourteen bounded tests. `--realization image` runs the fixed ImageMachine
 producer instead; it has no unit suite, so its test steps are recorded as
-not-selected rather than as an empty pass.
+not-selected rather than as an empty pass. The stream realization visits the same
+normal inputs through visit_steps and runs its eight independent normal tests.
 """
 import argparse
 from collections import namedtuple
@@ -51,7 +52,8 @@ IMAGE_CLOSURE = (IMAGE_PRODUCER,) + tuple(SHERLOCK + name for name in (
     'reference_types.rs', 'reference_display.rs', 'program_image.rs', 'image_reference.rs',
     'normal_oracle_inputs.rs', 'extra_oracle_programs.rs'))
 # Exactly the sibling modules check.py loads by literal with_name(); see comparison_helpers.
-CHECK_HELPERS = ('models/sherlock/qa/host_observations.py',)
+CHECK_HELPERS = ('models/sherlock/qa/host_observations.py',
+                 'models/sherlock/qa/source_reference_facts.py')
 # Complete known read+compile closure. Membership is a local pin, not schema authenticity.
 COMMON_PATHS = (CHECK,) + CHECK_HELPERS + (
     'models/sherlock/qa/run_host.py', 'models/sherlock/qa/HOST-OBSERVATIONS.md', SERIALIZER,
@@ -62,6 +64,21 @@ COMMON_PATHS = (CHECK,) + CHECK_HELPERS + (
     SHERLOCK + 'normal_oracles.rs', SHERLOCK + 'extra_normal_oracles.rs',
     'rust-toolchain.toml', 'Cargo.toml', 'crates/mori-core/Cargo.toml',
     'scripts/doctorwatson.sh')
+STREAM_PRODUCER = 'models/sherlock/qa/stream_observations.rs'
+STREAM_CLOSURE = (STREAM_PRODUCER,) + tuple(SHERLOCK + name for name in (
+    'reference_types.rs', 'reference.rs', 'reference_display.rs', 'compare.rs',
+    'normal_oracle_inputs.rs', 'extra_oracle_programs.rs', 'reference_stream.rs'))
+STREAM_TEST_CLOSURE = STREAM_CLOSURE + (SHERLOCK + 'reference_stream_tests.rs',)
+STREAM_SOURCE_PATHS = tuple(dict.fromkeys(STREAM_TEST_CLOSURE + COMMON_PATHS))
+STREAM_TESTS = tuple('reference_stream_tests::' + name for name in (
+    'visit_n01_full_typed_records_and_terminal_precedence',
+    'visit_n02_full_typed_records_across_budgets',
+    'visit_zero_budget_is_inert_before_and_after_terminal',
+    'visit_positive_budget_on_terminal_has_no_callback',
+    'visit_observer_break_resumes_after_delivered_record',
+    'visit_budget_cut_preserves_pending_zero_fuel_publication',
+    'visit_zero_fuel_exhaustion_is_one_free_terminal_record',
+    'visit_n05_recursive_cut_keeps_full_caller_environments'))
 SOURCE_PATHS = tuple(dict.fromkeys(TEST_CLOSURE + COMMON_PATHS))
 IMAGE_SOURCE_PATHS = tuple(dict.fromkeys(IMAGE_CLOSURE + COMMON_PATHS))
 EXPECTED_TESTS = tuple('reference_bounded_tests::' + name for name in (
@@ -97,6 +114,9 @@ IMAGE_CLAIMS = dict(
     constructor_startup='not-executed; ImageMachine::new constructs the post-startup state',
     tests='not-selected; no unit suite is compiled or run, and none is reported as passing',
     independence='compile closure excludes reference.rs (Machine); a closure boundary, not a proof of independence')
+STREAM_CLAIMS = dict(
+    CLAIMS, observed='Rust-host compile, eight normal visit_steps tests, streaming API producer execution and complete diagnostic comparison of this attempt only',
+    retention='producer observer retains all records for comparison; no streaming memory or allocation bound is claimed')
 Realization = namedtuple('Realization', 'format producer crate producer_closure test_closure tests sources '
                                         'compare_flag report_key output claims')
 REALIZATIONS = dict(
@@ -105,7 +125,11 @@ REALIZATIONS = dict(
                      'host-observations', CLAIMS),
     image=Realization(IMAGE_FORMAT, IMAGE_PRODUCER, 'sherlock_image_observations', IMAGE_CLOSURE, None,
                       (), IMAGE_SOURCE_PATHS, '--image-observations', 'supplied_image_observation',
-                      'image-observations', IMAGE_CLAIMS))
+                      'image-observations', IMAGE_CLAIMS),
+    stream=Realization('sherlock-stream-host-run/1', STREAM_PRODUCER, 'sherlock_stream_observations',
+                       STREAM_CLOSURE, STREAM_TEST_CLOSURE, STREAM_TESTS, STREAM_SOURCE_PATHS,
+                       '--host-observations', 'supplied_host_observation',
+                       'stream-observations', STREAM_CLAIMS))
 
 
 class Failure(Exception):
@@ -442,7 +466,7 @@ def main(argv=None):
     parser.add_argument('--rustc', required=True, help='absolute path of the installed pinned rustc binary')
     parser.add_argument('--output-dir', required=True, help='absolute, not yet existing attempt directory')
     parser.add_argument('--realization', choices=sorted(REALIZATIONS), default='host',
-                        help='fixed producer: host Machine with its tests (default) or ImageMachine without tests')
+                        help='fixed producer: host (default), image without tests, or stream with visit_steps tests')
     args = parser.parse_args(argv)
     if not (sys.flags.isolated and sys.flags.dont_write_bytecode):
         parser.error('run as: python3 -I -B models/sherlock/qa/run_host.py')

@@ -1,5 +1,23 @@
 # Moriarty repository instructions
 
+## Current assignment — October17 Sherlock completion revision03
+
+The user requests the reconciled Sherlock design be covered by OpenSpec/EARS,
+then a newly armed completion loop through DoctorWatson with iterative
+Diátaxis documentation. The old stopped/cleared goal is historical. Check the
+actual goal tool before claiming the new loop is armed. Current work follows
+[revision03](docs/sherlock/design.md), the [adoption record](openspec/changes/sherlock-completion-convergence/ADOPTION.md),
+and [implementation loop](docs/sherlock/implementation-loop.md).
+
+Five AstraHIGH final reviewers support ordinary implementation; preserve their
+native/full-completion qualifications. Next source capability is the concrete
+public compile-to-admitted B host route, not another factory rebuild. Completed
+241 ordinary tests, stream8/216 and composed333 observations retain exact scoped
+receipts and are not requeued unchanged. Continue eligible disjoint source work
+while native authority0/C4/R2/60460 and the stopped amendment retain their existing
+boundaries. Latest model/security routing below remains controlling.
+
+
 ## Current priority — October 17 Midnight stagenet
 
 The user makes the first real Sherlock Midnight stagenet transaction the immediate

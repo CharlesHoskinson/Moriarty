@@ -10,8 +10,12 @@ records the nine planning reviews and ten online research assignments.
 The default executable lane checks the independent A-profile corpus and its
 committed source transcription. The explicit `--host` lane builds and executes
 the actual Sherlock host reference, exercises bounded stepping and compares its
-complete normal observations with those expectations. These are distinct
-developer QA jobs; neither establishes the remaining cross-layer correspondence.
+complete normal observations with those expectations. The wrapper's explicit
+`--realization stream` instead exercises `Machine::visit_steps` through the same
+normal comparison. The checker also reports exact recorded input-byte reads;
+this partial inventory is separate from compiler dependencies and reviewer coverage.
+These are distinct developer QA observations; none establishes the remaining
+cross-layer correspondence.
 See the [local commands](DOCTORWATSON-CI.md), the QA
 [contract](../models/sherlock/qa/CONTRACT.md), and the
 [factory EARS](../openspec/changes/doctorwatson/requirements.md).
@@ -25,12 +29,21 @@ every event cut and widths 1/2/4/8. A captured regression also fixes selection o
 the correct fuel run in raw divergence diagnostics. K decoding and supplied
 Lean comparison are implemented consumers; their presence does not establish
 actual K or Lean execution. Source-Core and streaming execution are separate
-increments, outside those recorded captures.
+increments, outside those recorded captures. A later October 17 integrated local
+check passed 241 Python tests; the separate stream wrapper compiled its producer
+and test binary, passed all eight selected Rust tests and matched all 216 normal
+runs. Those new receipts remain local and unpublished. The stream QA observer
+retains records for complete comparison; no memory or allocation improvement was
+measured. See the [stream command and scope](DOCTORWATSON-CI.md#explicit-stream-observation-job).
 
 Lessons for the later factory update are kept in the
 [DoctorWatson improvement log](../wiki-llm/doctorwatson-improvement-log.md).
 Append after material Sherlock iterations; distinguish proposed changes, applied
 source and validated behavior.
+
+The historical automatic goal remains cleared. A later implementation loop must
+follow Root's new design and EARS/OpenSpec integration decision; this documentation
+update arms no loop. Source, observed results and acceptance retain separate status.
 
 ## One delivery cycle
 
@@ -100,7 +113,7 @@ no execution authority or resource counter.
 | Nonsecurity implementation | GPT-6.1 Sol high | Precisely specified fixture transcription and narrow leaf changes under an expert contract |
 | Independent normal expectations | Non-author oracle owner | Hand calculations from frozen semantics, checked independently before use |
 | Security work and judgments | Opus 5.5, with the existing outage fallback | Gather exact source locators; do not decide constraints or security outcomes |
-| Nonsecurity candidate/result audit | Fresh Muse Wonder 1.0 high | Link/coverage inventories; no substitute approval |
+| Nonsecurity candidate/result audit | Fresh Opus 5.5 high (standing Gemini/Muse outage fallback) | Link/coverage inventories; no substitute approval |
 | Private Lean/Clean integration | Existing Fenrir fork owner | Public scope crosswalks; private sources and paths stay private |
 
 Each assignment records the requirement, predicate, exact paths, consumer,

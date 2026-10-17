@@ -149,3 +149,7 @@ assets, rendered scene or deployment.
 ## Source and evidence update 006
 
 [Update 006: statement boundary and settlement route](UPDATE-006-STATEMENT-BOUNDARY-AND-SETTLEMENT-ROUTE.md) is the preserved Opus-authored source/evidence note that followed circuit iteration 005. It adds no circuit iteration and is distinct from Design 006 above. It proposes complete logical program/pre/post pin banks and an off-board statement, native proof, verification and settlement route for the finished Moriarty Tron/PCB and Three.js experience. Read its [editorial status and provenance](UPDATE-006-STATUS-AND-PROVENANCE.md) alongside it: the historical author freeze is preserved, two wording/binding passages are explicitly qualified, and later public bridge and actual codec observations have their own limited scope. Its [factual manifest](provenance/update-006-source-manifest.json) records actual authorship and exact source pins. The latest actual circuit entry remains 005. The site launches when the complete Sherlock v1 goal is accepted; this append publishes a design-log entry only.
+
+## Editorial update007 — actual host observations and revision03
+
+[Host observation and completion design](UPDATE-007-HOST-OBSERVATION-AND-COMPLETION-DESIGN.md) links the actual stream and composed carrier results to the existing assembly-history concept. It is a Root/Sol factual editorial update, not a new circuit-source iteration or Opus creative note. Latest actual circuit-source entry remains005. The finished website launches after full Sherlock v1 acceptance.
