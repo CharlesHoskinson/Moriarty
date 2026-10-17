@@ -1,0 +1,111 @@
+{
+  "ordinary_decision": {
+    "verdict": "REQUEST_CHANGES",
+    "scope": "Ordinary source/API/CLI/config/wire review of the 6 changed B04 afterimages against FIRST-COMPILER-BATCH.md and execution-config.schema.json within the 19-file/30-page packet; excludes omitted 72 type declarations, transitive module bodies, and Cargo/typecheck execution."
+  },
+  "security_decision": {
+    "verdict": "REQUEST_CHANGES",
+    "scope": "Designated B04 security/composition review of the affected host compiler, config adapter, CLI diagnostic/publication surface, and core_action_consumer preparation refactoring; excludes uninspected transitive owner/bridge/parser bodies and separate H1 public CLI observe disposition."
+  },
+  "findings": [
+    {
+      "severity": "mandatory",
+      "claim": "compile_host parses source, linearly searches program.actions, and on non-empty action.inputs serializes the unbounded declared_inputs vector into CompileFailure before calling prepare_scalar_action_host/run_scalar_action (which invokes preflight_source). This bypasses Guard step 0 (validate_config rejecting zero SourceHostBounds before touching source), Guard step 1 (SourceActions, SourceExpressions, SourceStatements, ActionInputs, InputNameBytes, TotalInputNameBytes bounds), and Guard step 3 (crate::validate) on the action-lookup and parameterized-action paths; config.consumer() is also called redundantly in parse_config and compile_host without calling validate_config.",
+      "anchor_ids": [
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "severity": "mandatory",
+      "claim": "report_sherlock_failure serializes CompileFailure with raw serde_json::to_string and writes directly to stderr via eprintln!(\"{diagnostic}\"), bypassing mori_core::json::export and crate::display::text terminal-control escaping as well as Shell quiet-mode routing. Unlike json::export and core_io::key_export_identity, serde_json::to_string does not escape DEL (\\u007f), C1 controls (e.g. \\u0085), or Unicode BiDi controls (e.g. \\u202e) echoed from untrusted --execution-profile, --action, or source diagnostics.",
+      "anchor_ids": [
+        1,
+        3
+      ]
+    },
+    {
+      "severity": "nonblocking",
+      "claim": "In commands::compile::run, core_io::read_source(&args.file) executes before checking args.execution_profile.is_some(). When --execution-profile is supplied and FILE is missing, unreadable, or exceeds 1 MiB, the command exits with an ordinary CliError::Read/operation error rather than emitting a structured Sherlock CompileFailure diagnostic on stderr as done for unreadable --execution-config or --target.",
+      "anchor_ids": [
+        2
+      ]
+    },
+    {
+      "severity": "nonblocking",
+      "claim": "CompileFailure omits the status:\"failed\" tag shown in FIRST-COMPILER-BATCH.md's failed diagnostic shape, and wire::admission includes an extra \"bounds\" key alongside identity, program_view, and layout (matching AdmissionObservation.bounds); additionally, compile_sherlock labels post-compile serde_json::to_string_pretty(&artifact) errors with stage \"observation\" even when args.observe is false.",
+      "anchor_ids": [
+        6,
+        8
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "id": 1,
+      "path": "candidate/crates/mori/src/commands/compile.rs",
+      "sha": "37c94c4812981115235faa324796fc987e72949f076b42f02a47141a5f406dfe",
+      "line": 130,
+      "exactquote": "eprintln!(\"{diagnostic}\");"
+    },
+    {
+      "id": 2,
+      "path": "candidate/crates/mori/src/commands/compile.rs",
+      "sha": "37c94c4812981115235faa324796fc987e72949f076b42f02a47141a5f406dfe",
+      "line": 31,
+      "exactquote": "let source = core_io::read_source(&args.file)?;"
+    },
+    {
+      "id": 3,
+      "path": "baseline/crates/mori-core/src/json.rs",
+      "sha": "faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183",
+      "line": 117,
+      "exactquote": "pub fn export(value: &impl serde::Serialize) -> Result<String, Error>"
+    },
+    {
+      "id": 4,
+      "path": "candidate/crates/mori-core/src/sherlock/compile_artifact.rs",
+      "sha": "9951f7c5a7fba980900922a04ca05b129497e0dcf3a8668c455e7f8bfcc89978",
+      "line": 151,
+      "exactquote": "\"declared_inputs\":action.inputs}), evaluation_performed:false,"
+    },
+    {
+      "id": 5,
+      "path": "baseline/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security.rs",
+      "sha": "969bc4285d54f9e2cbc07c7540e36e25ec171274ce16183c8b3fe7d44758e777",
+      "line": 236,
+      "exactquote": "pub fn validate_config(config: &ConsumerConfig) -> Result<(), HostGuardError>"
+    },
+    {
+      "id": 6,
+      "path": "candidate/crates/mori-core/src/sherlock/compile_artifact.rs",
+      "sha": "9951f7c5a7fba980900922a04ca05b129497e0dcf3a8668c455e7f8bfcc89978",
+      "line": 174,
+      "exactquote": "let prepared = prepare_scalar_action_host(&program, action_index, &inputs, &consumer)"
+    },
+    {
+      "id": 7,
+      "path": "candidate/crates/mori-core/src/sherlock/helper_machine/core_action_consumer.rs",
+      "sha": "4f60d9d12bcc2ac94b11dd8af6fd8385ae0c7a16d282aa679e9da6cd6a101c21",
+      "line": 87,
+      "exactquote": "let preflight = preflight_source(source, action_index, inputs, config)?;"
+    },
+    {
+      "id": 8,
+      "path": "contract/openspec/changes/sherlock-completion-convergence/FIRST-COMPILER-BATCH.md",
+      "sha": "971543bc76e472cb831f69ea3f53ac9623fa5c2464f0c44d363800b1a97f0aba",
+      "line": 85,
+      "exactquote": "| {status:\"failed\", evaluation_performed:true, stage, actual_error,"
+    }
+  ],
+  "abstentions": [
+    "ABSTAIN on 72-type OwnerWire field/variant exhaustiveness and full Rust typecheck correspondence in candidate/crates/mori-core/src/sherlock/compile_artifact/wire.rs beyond ProgramView (12 fields verified against declarations/ProgramView.actual.rs) and the supplied observation/guard/resource structs; requires crates/mori-core/src/sherlock/helper_machine/shared.rs, crates/mori-core/src/sherlock/helper_machine/raw.rs, crates/mori-core/src/ir.rs, and crates/mori-core/src/sherlock/source_adapter.rs.",
+    "ABSTAIN on internal correctness, memory/termination bounds, and transitive SDK-freedom of uninspected callees crate::parse, crate::validate, crate::intent::hash_bytes, prepare_scalar_action, source_input_bridge::from_program, families::HostFamilyPlans, owner_prepare::{prepare_core, check_program_view, admit, admit_run}, PreImage::bind, and owner_runtime::CheckedOwnerEngine; requires their full source bodies and Cargo.toml dependency manifests.",
+    "ABSTAIN on Cargo compilation/typecheck closure, CLI subcommand wiring outside compile.rs, and runtime test behavior; requires crates/mori/src/cli.rs, crates/mori/src/shell.rs, crates/mori/src/display.rs, crates/mori-core/src/sherlock.rs, and Root's separate production-lib build/test verification.",
+    "ABSTAIN on H1 public CLI --observe execution authorization and general Sherlock/canonical/proof/financial/target completion, which remain separate and unapproved."
+  ],
+  "compile_only_test_source_classification": "In inspected source, compile_host(..., observe=false) calls parse_config (json::parse, serde_json::from_value, ExecutionConfig::consumer), json::parse(target_source), crate::parse(source), prepare_scalar_action_host (preflight_source -> validate_config + crate::validate, prepare_scalar_action, check_generated, check_combined_generated_ast_nodes, source_input_bridge::from_program, host_owner_engine, engine.admit, engine.admit_run), CoreActionPrepared::observe (observe_bound_image -> PreImage::bind, implied_seg_base), wire::admission, and intent::hash_bytes; it never calls run_scalar_action, OwnerEngine::run, mori_backend, or mori_ledger. Uninspected dependencies in this chain are crate::parse, crate::validate, crate::intent::hash_bytes, prepare_scalar_action, source_input_bridge::from_program, HostFamilyPlans, owner_prepare::{prepare_core, check_program_view, admit, admit_run}, CheckedOwnerEngine::{new_reviewed, admit, admit_run}, PreImage::bind, and Cargo.toml manifests; no execution, SDK-freedom, native, or H1 authorization is granted.",
+  "read_coverage": "Read MEMBERSHIP.json and all 30 required pages across all 19 pinned files (212130B total, candidate 92383B); omitted repository files, 72 shared/raw/IR type declarations, and transitive owner_prepare/owner_runtime/source_adapter/bridge/Cargo bodies were not read."
+}
