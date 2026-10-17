@@ -1,0 +1,169 @@
+{
+  "format": "mhash-independent-script-hash-proposal/1",
+  "status": "PROPOSED SOURCE ONLY (primary-reconciled revision); not executed, not reviewed, not adopted; author is not a vote; source readiness false",
+  "revision": {
+    "supersedesProposal": {"MHASH-CONTRACT.md": {"bytes": 7359, "sha256": "fedf74ffed52c935227498d12dcf40cdffc5950a26f3b8e2683f6ffc5dfbcf9b"}, "MHASH-API.json": {"bytes": 14378, "sha256": "c8d5bc8608ce73e5e11435201cd2c7fa58cd59eb72cb2121a088e2d8e17be45c"}, "note": "preserved immutable as history"},
+    "pairedUnchangedTest": {"path": "test_independent_script_hash.py", "bytes": 28091, "sha256": "a1c00918e8988bf94fef03fee17b164852a6f95c6af5b20bdfc5e85d36ff1fcf", "note": "not written, copied or edited by this revision"},
+    "changed": "source grounding only: C3, C1/C2/C6 citations, sourceDerivation, missingPrimarySymbols, limits, supplementalSources, historicalGaps",
+    "unchanged": "C1-C8 semantics, algorithm, API, v2/v3 scope, bounds, 19 test IDs, frozen expected values, stop conditions, purity, effects, pins, predictions, non-claims"
+  },
+  "author": {"requestedModel": "claude-opus-5-5", "effort": "high", "role": "security owner, source authoring only"},
+  "contract": "MHASH-CONTRACT.md (C1-C8)",
+  "futureModule": {
+    "path": "mhash-source-output/independent_script_hash.py",
+    "written": false,
+    "reason": "meaningful reviewed RED precedes implementation",
+    "kind": "standalone pure stdlib module; deterministic; no I/O",
+    "allowedImports": ["hashlib", "json", "re", "typing", "__future__"],
+    "forbidden": ["open/eval/exec/compile/__import__/input/breakpoint/globals/locals/vars", "subprocess/socket/os/ctypes/importlib/urllib/http", "Aiken, cardano-cli, Pallas, any SDK, VM/CEK, flat decoder", "EXISTING-TOOL-CHAIN-CHECK.py (hash_chain4.py), hosthash helpers, C2r2 suite/host/builder"]
+  },
+  "api": {
+    "constants": {
+      "MAX_COMPILED_CODE_BYTES": {"value": 32768, "label": "local tool bound on decoded compiledCode bytes incl. CBOR header; not a Cardano protocol limit; unrelated to the 14336 B working target"},
+      "MAX_BLUEPRINT_BYTES": {"value": 1048576, "label": "local tool bound on raw blueprint bytes"},
+      "MAX_VALIDATORS": {"value": 64, "label": "local tool bound on validators[] entries"},
+      "ADMITTED_PLUTUS_VERSIONS": {"value": ["v2", "v3"], "label": "tool scope: only versions with a packet vector; v1/v4 source-known but unvectored, native scripts out of scope"}
+    },
+    "exceptions": {
+      "ScriptHashInputError": "ValueError subclass; malformed/out-of-domain input (type, hex, framing, bound, JSON, schema, declared-hash format)",
+      "ScriptHashMismatchError": "ValueError subclass, disjoint from ScriptHashInputError; well-formed declared hash differs from recomputed"
+    },
+    "functions": {
+      "script_hash(plutus_version: str, compiled_code_hex: str) -> str": "Blake2b-224(tag || bytes.fromhex(compiled_code_hex)), tag v2=0x02 v3=0x03; 56 lowercase hex; raises ScriptHashInputError outside C4 domain",
+      "check_blueprint(raw: bytes) -> dict[str, str]": "strict CIP-57 subset per C5; recomputes every entry with preamble.plutusVersion; returns {title: hash}; ScriptHashInputError or ScriptHashMismatchError"
+    }
+  },
+  "supplementalSources": {
+    "pinnedBy": "root, SUPPLEMENT-SOURCES.json in mhash-primary-reconciliation-packet (originals mhash-primary-supplement/); Scrapling 0.4.15, HTTP 200, retrieved 2026-10-17T08:33:48Z",
+    "role": "source-grounding references only; NOT T00 runtime expectations; not read by the test; not added to test PINS or MANIFEST",
+    "qualification": "public primary bodies at pinned repository HEAD commits; NOT a claim that ledger d6eec237, Aiken v1.1.24 or any installed binary/lockfile used these commits",
+    "files": [
+      {"path": "SUPPLEMENT-Plutus-SerialisedScript.hs", "repository": "IntersectMBO/plutus", "commit": "3de6f245d086d5fee0e0c3324340193127e16257", "sourcePath": "plutus-ledger-api/src/PlutusLedgerApi/Common/SerialisedScript.hs", "bytes": 11405, "sha256": "4405a526a7d6e62ae26f2a9a7d7685a0533ddc1b2df426d3e9706048fa0109d1"},
+      {"path": "SUPPLEMENT-Plutus-Common.hs", "repository": "IntersectMBO/plutus", "commit": "3de6f245d086d5fee0e0c3324340193127e16257", "sourcePath": "plutus-ledger-api/src/PlutusLedgerApi/Common.hs", "bytes": 4227, "sha256": "5b48f1f5cdec5e38cd6aea694a79d81872dd1e7c81d995eaec928c2aa4043efa"},
+      {"path": "SUPPLEMENT-Cardano-Base-Blake2b.hs", "repository": "IntersectMBO/cardano-base", "commit": "5813d21182c91fa00f8e799a787ef1759d469b26", "sourcePath": "cardano-crypto-class/src/Cardano/Crypto/Hash/Blake2b.hs", "bytes": 5538, "sha256": "753ac37835e991c8de629d96b4c99bf24bb1cefa0a2cf09b04915588958307f4"}
+    ]
+  },
+  "sourceDerivation": {
+    "citationKey": "Lang=Ledger-Plutus-Language.hs, Hashes=Ledger-Hashes.hs, Keys=Ledger-Keys-Internal.hs, CIP=CIP-0057.md (original packet); SS=SUPPLEMENT-Plutus-SerialisedScript.hs, PC=SUPPLEMENT-Plutus-Common.hs, B2b=SUPPLEMENT-Cardano-Base-Blake2b.hs",
+    "sourceFacts": {
+      "algorithm": "ScriptHash (Hash.Hash ADDRHASH EraIndependentScript) (Hashes:181-182); ADDRHASH imported from Keys (Hashes:105); type ADDRHASH = Hash.Blake2b_224, Hash = Cardano.Crypto.Hash (Keys:37,131-132); CIP:102 blake2b-224",
+      "width": "HashSize Blake2b_224 = 28; digest _ = blake2b_libsodium 28 (B2b:53,56-59); blake2b_libsodium calls c_crypto_generichash_blake2b with outlen = size, key nullPtr/0 'unkeyed' (B2b:148-162); Blake2b_256 = 32 is the distinct HASH (Hashes:125, B2b:61-64)",
+      "hashInput": "BS.singleton (plutusLanguageTag s) <> originalBytes s, hashWith id (Lang:199-205); plutusLanguageTag is the ScriptHash prefix tag (Lang:471-472); originalBytes PlutusBinary = fromShort (Lang:251,261-262)",
+      "languageTags": {"PlutusV1": "0x01 (Lang:525, unvectored, rejected)", "PlutusV2": "0x02 (Lang:545)", "PlutusV3": "0x03 (Lang:565)", "PlutusV4": "0x04 (Lang:586, unvectored, rejected)"},
+      "tagTrap": "encodeEnum constructor index (V1=0,V2=1,V3=2,V4=3; Lang:273-278,329-330) is the envelope encoding, never the hash tag",
+      "sameBytesHashedAndDecoded": "decodePlutusRunnable passes the PlutusBinary bs to PV2/PV3.deserialiseScript alongside hashPlutusScript p (Lang:546-547,566-567)",
+      "serialisedScript": "type SerialisedScript = ShortByteString (SS:124); serialiseUPLC = toShort . BSL.toStrict . serialise . SerialiseViaFlat . UPLC.UnrestrictedProgram (SS:155-160, Note SS:126-137); uncheckedDeserialiseUPLC inverse (SS:164-166)",
+      "deserialiseScript": "CBOR.deserialiseFromBytes (scriptCBORDecoder ll pv) on fromShort sScript from offset 0 (SS:265-269); decoder = decodeViaFlatWith flatDecoder (SS:233-236); returns UnsafeScriptForEvaluation sScript unmodified (SS:263)",
+      "decodeErrors": "Lang P.CBORDeserialiseError/P.RemainderError (Lang:117-118,156-163) = ScriptDecodeError re-exported PC:12, defined SS:55-63",
+      "remainderRule": "RemainderError only when ll not in {PlutusV1, PlutusV2} (SS:259-261); V1/V2 trailing bytes are tolerated by deserialisation and would be hashed by the ledger",
+      "envelope": "encodeListLen 2 <> encodeEnum lang <> encCBOR binaryScript (Lang:227-229); PlutusBinary EncCBOR newtype-derived (Lang:253); transport encoding, not originalBytes",
+      "cipField": "compiledCode = 'The full compiled and cbor-encoded serialized flat script' (CIP:101)"
+    },
+    "derivedRule": "hash input = tag || compiledCode bytes as given; no strip, no extra wrap, not the [enum, bytes] envelope: the ledger hashes exactly the bytes Plutus decodes from offset 0 as one CBOR-encoded Flat script",
+    "inferences": [
+      "CIP-57 compiledCode denotes exactly SerialisedScript/PlutusBinary bytes (prose CIP:101 matched to SS:155-160; CIP names no symbol)",
+      "Ledger Hash.Blake2b_224 (via Cardano.Crypto.Hash re-export) is the B2b type",
+      "hashWith id applies digest to the concatenated bytes unchanged; castHash only re-indexes the phantom type (Cardano.Crypto.Hash.Class uninspected)",
+      "PV2/PV3.deserialiseScript are Common.deserialiseScript at that ledger language (PlutusLedgerApi.V2/V3 uninspected)",
+      "outer CBOR item is a minimal definite-length major-2 byte string (SerialiseViaFlat Serialise instance and cborg encodeBytes uninspected); affects C4 admissibility only, never the hash rule",
+      "libsodium crypto_generichash_blake2b with outlen 28, unkeyed = RFC 7693 BLAKE2b-224 (not truncated 256) = CPython hashlib.blake2b(digest_size=28); not formalised or proven",
+      "ledger d6eec237 depends on plutus-ledger-api/cardano-crypto-class versions matching plutus 3de6f245 / cardano-base 5813d211 (dependency pins uninspected)"
+    ],
+    "runtimeCrosschecks": {
+      "status": "frozen required cross-checks, not executed; not authority to choose or refit the boundary; a pass is not proof of the source chain, dependency correspondence or primitive equivalence",
+      "primary": "T01.3 CIP-57 hello_world v2 58ad... -> 5e1e8fa8...0a02 (CIP:382,425-426)",
+      "fixtures": "T01.4/T02.1 seven Aiken receipts over 16 B9 handlers (same-run comparison values)",
+      "corroboratedHeaders": "CIP vector 58ad + 173 B; seven B9 codes 59 L16 with L+3 == SIZES appliedBytes == compiledCodeHexCharacters/2 (2770,13018,12784,6859,9940,10832,10825)"
+    },
+    "toolVsLedger": "C4 rejects trailing bytes for v2 and v3; for v2 this is stricter than SS:259-261 (refusal, never a different hash); tool-domain restriction, not a protocol claim",
+    "connectionStatus": "sufficient for the C3 hash rule at the pinned HEAD commits with the listed inferences; not a STOP for source authoring; if a reviewer judges any listed inference required for C3 itself, STOP and request that exact symbol rather than relying on the vector"
+  },
+  "historicalGaps": [
+    {"inInitialProposal": "PlutusLedgerApi.Common.SerialisedScript (SerialisedScript, serialiseUPLC, deserialiseScript) absent", "now": "acquired as SUPPLEMENT-Plutus-SerialisedScript.hs + SUPPLEMENT-Plutus-Common.hs at plutus 3de6f245 (HEAD, not dependency-matched)"},
+    {"inInitialProposal": "Cardano.Crypto.Hash.Blake2b (cardano-base) absent", "now": "acquired as SUPPLEMENT-Cardano-Base-Blake2b.hs at cardano-base 5813d211 (HEAD, not dependency-matched)"},
+    {"inInitialProposal": "Cardano.Ledger.Core.Script 404", "now": "unchanged: failed receipt preserved, not a source"}
+  ],
+  "missingPrimarySymbols": [
+    {"symbol": "cardano-ledger-core.cabal / cabal.project / flake.lock at ledger d6eec237 (plutus-ledger-api and cardano-crypto-class versions)", "effect": "supplement-to-ledger dependency correspondence unproven; first request if T01.3 fails"},
+    {"symbol": "Cardano.Crypto.Hash.Class (hashWith, castHash, Hash, hashFromPackedBytes) and Cardano.Crypto.Hash umbrella re-export of Blake2b_224 (cardano-crypto-class)", "effect": "hashWith id / castHash byte-identity and type resolution are inferences"},
+    {"symbol": "Codec.Extras.SerialiseViaFlat (instance Serialise (SerialiseViaFlat a), decodeViaFlatWith) (plutus-core) and Codec.Serialise.serialise / cborg encodeBytes", "effect": "major-2 minimal-header form is inferred plus fixture-corroborated; affects C4 admissibility only"},
+    {"symbol": "PlutusLedgerApi.V2.deserialiseScript, PlutusLedgerApi.V3.deserialiseScript", "effect": "assumed to be Common.deserialiseScript at that language; byte flow (same bs) is source-shown regardless"},
+    {"symbol": "Cardano.Crypto.Libsodium.C c_crypto_generichash_blake2b binding and libsodium crypto_generichash_blake2b body", "effect": "native-224 parameterisation and CPython equivalence not source-shown; bridged only empirically by Aiken-produced vectors"},
+    {"symbol": "PlutusLedgerApi.Common.Hash (hashScript, plutusVersionTag)", "effect": "plutus-side hash definition exported (PC:36-39) but body not acquired; not relied on"},
+    {"symbol": "Aiken v1.1.24 source and Cargo.lock (UPLC CBOR/Flat serialisation, BLAKE2b crate)", "effect": "producer of every positive vector uninspected; shared-primitive limitation stands"},
+    {"symbol": "Cardano.Ledger.Core.Script (hashScript, native-script tag)", "effect": "acquisition 404 preserved; native scripts out of scope"}
+  ],
+  "stopRule": "If test_cip57_primary_vector fails with C2+C3 framing, M-HASH stays OPEN; request the first missing symbol; do not refit boundary, tag or width; do not soften M-HASH. A pass is a required cross-check, not proof.",
+  "test": {
+    "path": "mhash-source-output/test_independent_script_hash.py",
+    "invocation": "python3 -I -B <abs path>/test_independent_script_hash.py -v",
+    "loader": "lazy: _impl() raises AssertionError('M-HASH-RED: independent_script_hash.py is absent; ...') inside each test method; when present, AST import allowlist + banned-name guard runs BEFORE exec via spec_from_file_location (no sys.path, no sys.modules insertion)",
+    "expectedValueSources": "frozen literals only: CIP-57 compiledCode/hash/plutusVersion (transcription re-verified against pinned CIP-0057.md in T00), 7 receipt hashes (re-verified against receipt files and B9 in T00); no BLAKE2b computed by tests; sha256 only for pins",
+    "methodCount": 19,
+    "methods": [
+      {"id": "T00.1", "name": "T00FixtureProvenance.test_t00_packet_pins", "needsImpl": false, "checks": "18 file sizes+sha256 vs frozen pins and MANIFEST; ledger/CIPs commits; Core/Script 404 preserved and absent from packet"},
+      {"id": "T00.2", "name": "T00FixtureProvenance.test_t00_primary_source_anchors", "needsImpl": false, "checks": "exact ledger text: hash formula, originalBytes, V2 0x02, V3 0x03, envelope, CBOR decode errors, enum order; Blake2b_224 ADDRHASH; CIP field text and vector literals"},
+      {"id": "T00.3", "name": "T00FixtureProvenance.test_t00_cip57_vector_framing", "needsImpl": false, "checks": "58 ad, 175 B; example JSON sliced from CIP parses strictly, v2, single hello_world entry"},
+      {"id": "T00.4", "name": "T00FixtureProvenance.test_t00_b9_structure_and_receipts", "needsImpl": false, "checks": "v3; 16 unique titles; 7 groups identical code/hash/no params; receipts == B9 == FIXTURE-STRUCTURE; hex length, prefix, SIZES, 59 L16 framing; 7 distinct hashes and codes"},
+      {"id": "T00.5", "name": "T00FixtureProvenance.test_t00_existing_tool_leaves_mhash_open", "needsImpl": false, "checks": "existing tool says M-HASH open and contains no blake2; adoption notEstablished M-HASH; README open"},
+      {"id": "T01.1", "name": "T01ScriptHash.test_api_surface", "needsImpl": true, "checks": "callables, disjoint ValueError subclasses, bound constants, admitted versions"},
+      {"id": "T01.2", "name": "T01ScriptHash.test_static_purity", "needsImpl": true, "checks": "import allowlist and banned names"},
+      {"id": "T01.3", "name": "T01ScriptHash.test_cip57_primary_vector", "needsImpl": true, "checks": "v2 CIP vector == 5e1e8fa8...0a02; 56 lowercase hex; deterministic"},
+      {"id": "T01.4", "name": "T01ScriptHash.test_b9_all_sixteen_handlers_v3", "needsImpl": true, "checks": "each of 16 handlers' own compiledCode -> its group receipt"},
+      {"id": "T01.5", "name": "T01ScriptHash.test_language_tag_sensitivity", "needsImpl": true, "checks": "v3 on CIP != literal; v2 on 7 B9 codes != receipt and != v3; 13 bad versions rejected (v1, v4, case, whitespace, non-str)"},
+      {"id": "T01.6", "name": "T01ScriptHash.test_cbor_boundary_variants", "needsImpl": true, "checks": "double-wrap accepted but != literal (CIP, c2); stripped payload, [1|2, bstr] envelope, text-string major, indefinite, 4-byte header, non-minimal header rejected"},
+      {"id": "T01.7", "name": "T01ScriptHash.test_length_and_trailing", "needsImpl": true, "checks": "8 truncation/trailing/length-field cases rejected"},
+      {"id": "T01.8", "name": "T01ScriptHash.test_hex_and_type_inputs", "needsImpl": true, "checks": "15 hex/type cases rejected (upper/mixed case, whitespace, 0x, odd, non-hex, fullwidth, empty, bytes, bytearray, None, int, list)"},
+      {"id": "T01.9", "name": "T01ScriptHash.test_tool_bounds", "needsImpl": true, "checks": "exactly 32768 B accepted; 32769 B, 1e6 hex chars, short form, non-minimal 58/59, empty bstr rejected"},
+      {"id": "T01.10", "name": "T01ScriptHash.test_single_byte_substitution", "needsImpl": true, "checks": "one payload byte flipped at 3 positions in CIP, c2, s2p -> accepted, != literal"},
+      {"id": "T02.1", "name": "T02Blueprint.test_b9_blueprint_all_sixteen_grouped_seven", "needsImpl": true, "checks": "check_blueprint(B9 raw) -> 16 titles, each group == its receipt, 7 distinct"},
+      {"id": "T02.2", "name": "T02Blueprint.test_cip57_example_blueprint_and_bound_controls", "needsImpl": true, "checks": "verbatim CIP example -> {hello_world: literal}; parameters [] accepted; exactly 1 MiB and exactly 64 validators accepted"},
+      {"id": "T02.3", "name": "T02Blueprint.test_code_hash_substitution", "needsImpl": true, "checks": "ScriptHashMismatchError (not InputError) for c2 code from vi, s2p hash from vs3, one-handler byte flip, one-handler hash nibble, B9 preamble v2, CIP preamble v3; consistent c2/vi swap passes and is caught only by receipts"},
+      {"id": "T02.4", "name": "T02Blueprint.test_blueprint_malformed", "needsImpl": true, "checks": "32 cases -> ScriptHashInputError incl. hash width 32/27 B, duplicate JSON keys (last-wins would pass), remaining parameters, over-size, 65 validators"}
+    ],
+    "predictedRED": {"ran": 19, "pass": 5, "failures": 14, "errors": 0, "exit": 1, "passing": "T00.1-T00.5", "failingMessage": "M-HASH-RED: independent_script_hash.py is absent; no implementation has been written", "invalidRED": "any T00 failure/error (fixture or transcription defect: stop, fix source, re-review), any error other than the RED AssertionError, any import-time failure"},
+    "predictedGREEN": {"ran": 19, "pass": 19, "failures": 0, "errors": 0, "exit": 0, "condition": "after a reviewed implementation; if T01.3 fails apply stopRule"},
+    "meaningfulnessControls": {
+      "note": "mutants of the future implementation; root-run only after implementation review; each must turn the named tests red",
+      "mutants": [
+        {"id": "MC1", "mutation": "tag = encodeEnum index (v2->0x01, v3->0x02)", "mustFail": ["T01.3", "T01.4", "T02.1", "T02.2"]},
+        {"id": "MC2", "mutation": "no tag prefix", "mustFail": ["T01.3", "T01.4", "T02.1", "T02.2"]},
+        {"id": "MC3", "mutation": "strip CBOR header before hashing", "mustFail": ["T01.3", "T01.4", "T02.1"]},
+        {"id": "MC4", "mutation": "hash an extra CBOR wrap / [enum, bstr] envelope", "mustFail": ["T01.3", "T01.4", "T02.1"]},
+        {"id": "MC5", "mutation": "blake2b digest_size 32, or 32 truncated to 28, or sha3_224/sha224", "mustFail": ["T01.3", "T01.4", "T02.1"]},
+        {"id": "MC6", "mutation": "accept trailing bytes / skip length check", "mustFail": ["T01.7"]},
+        {"id": "MC7", "mutation": "no framing check (accept any bytes)", "mustFail": ["T01.6", "T01.7", "T01.9"]},
+        {"id": "MC8", "mutation": "bytes.fromhex without strict regex", "mustFail": ["T01.8"]},
+        {"id": "MC9", "mutation": "bound off by one (< 32768 or <= 32769)", "mustFail": ["T01.9"]},
+        {"id": "MC10", "mutation": "check_blueprint returns declared hash / checks only first handler per group", "mustFail": ["T02.3"]},
+        {"id": "MC11", "mutation": "plain json.loads (last-wins duplicate keys)", "mustFail": ["T02.4"]},
+        {"id": "MC12", "mutation": "ignore preamble.plutusVersion, default v3", "mustFail": ["T02.2", "T02.3"]},
+        {"id": "MC13", "mutation": "mismatch raised as ScriptHashInputError or vice versa", "mustFail": ["T02.3", "T02.4"]},
+        {"id": "MC14", "mutation": "add import subprocess or open()", "mustFail": ["all 14 impl tests (guard refuses exec)"]},
+        {"id": "MC15", "mutation": "admit v1/v4", "mustFail": ["T01.5"]}
+      ]
+    }
+  },
+  "effects": {
+    "proposedEnvelope": "ordinary: 10 s CPU and wall, 512 MiB, python3 -I -B, no network, no home beyond the exact read-only public files below, read-only filesystem view, no writes",
+    "reads": ["mhash-author-packet/{MANIFEST.json, SOURCES.json, Ledger-Plutus-Language.hs, Ledger-Hashes.hs, Ledger-Keys-Internal.hs, CIP-0057.md, FOUR-PIECE-README.md, ACTUAL-ADOPTION.json, EXISTING-TOOL-CHAIN-CHECK.py (text only, never executed), B9-APPLIED-BLUEPRINT.json, SIZES.json, FIXTURE-STRUCTURE.json, 7 hash-*.txt}", "mhash-source-output/test_independent_script_hash.py", "mhash-source-output/independent_script_hash.py (only once it exists; text read, AST-guarded, then exec)"],
+    "env": ["MHASH_PACKET_DIR (optional override; pins still enforced)"],
+    "writes": "none (-B; spec_from_file_location writes no cache under -B)",
+    "network": "none", "subprocess": "none", "estimatedCost": "<1 s CPU, <50 MiB (about 0.3 MB blueprint, about 1 MB largest synthetic string)"
+  },
+  "pins": {"packetCheckoutHead": "2b83a8c33b2a9d4e4e2a32f702d028a7e7243204", "ledgerCommit": "d6eec237df7884aa7ee9854b4b1a83679d9eb99b", "cipsCommit": "befcdb75289cb6571ffba6dbece3249ad2bfd491", "b9Sha256": "10baa1794e0ae286cd780978408552fc0e994426367c2b92117e2c4b46ad1d36", "fileSha256": "frozen in test PINS (18 files) and MANIFEST.json", "preservedFailedReceipt": "SOURCES.json Ledger-Core-Script.hs status 404, 14 B, d5558cd4...", "supplementPins": "separately pinned by root (supplementalSources); not test PINS"},
+  "limits": [
+    "Identifier recomputation from frozen bytes only; no UPLC/flat validity or behaviour, parameter-application semantics, proof/signature/VK/matrix correspondence, deployability, tx size/fees/ExUnits, registration or ledger acceptance",
+    "Shared-primitive: all positive vectors are Aiken-produced; checker uses CPython hashlib BLAKE2b-224; cardano-base Blake2b_224 source shows unkeyed libsodium outlen 28, but libsodium/CPython equivalence is inferred, not proven; a defect common to both is undetected; no ledger/chain-produced vector in packet",
+    "7 receipts are same-run tool comparison values, not independent oracles",
+    "C3 hash rule is now derived from ledger d6eec237 plus plutus 3de6f245 HEAD source; the CIP-57 vector is a required cross-check, not the deciding authority; the CIP compiledCode = SerialisedScript identification is a prose-level inference",
+    "Supplemental sources are repository-HEAD bodies; correspondence to ledger d6eec237 dependencies, Aiken v1.1.24 or any installed binary/lockfile is unproven",
+    "Uninspected: Cardano.Crypto.Hash.Class, Cardano.Crypto.Hash re-export, Cardano.Crypto.Libsodium.C/libsodium, Codec.Extras.SerialiseViaFlat, cborg/serialise, PlutusLedgerApi.V2/V3, PlutusLedgerApi.Common.Hash, Aiken source, ledger dependency pins",
+    "C4 trailing-byte rejection for v2 is stricter than plutus deserialiseScript (SS:259-261); tool-domain restriction, not a protocol claim",
+    "Static AST guard is not a sandbox",
+    "Bounds and v2/v3 scope are tool choices, not protocol facts",
+    "All 20 UTxO families, financial/ACTUS/DeFi, PCD/recursion, X1/PX04/M-EU, FX1, FV-01, FV-02 remain open; native authority ZERO; no source or runtime readiness granted"
+  ],
+  "readiness": {"sourceReady": false, "runtimeReady": false, "requiredBeforeRED": "root full-effects inspection plus two fresh agreeing independent Opus 5.5 design/test-source audits of this revision paired with the unchanged test; author is not a vote"},
+  "nextSteps": ["root inspects full effects", "two fresh agreeing independent Opus 5.5 design/test-source audits of this revision with the unchanged test (author FOR is not a vote); consequential choices need the existing two substantive agreeing reviews", "root-run RED and compare with predictedRED", "only then author implementation, separately reviewed", "GREEN plus meaningfulness controls; result adoption is a separate decision"]
+}
