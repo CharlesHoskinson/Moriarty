@@ -1,0 +1,51 @@
+{
+  "format": "source-to-adopted-row/1",
+  "included": [
+    {
+      "row": "b.helper.Validate.entry",
+      "source": "source/validate.k:bvNext -> bvEnter",
+      "meaning": "push root Unvisited cursor0; install Pending helper; charge helper; visits0"
+    },
+    {
+      "row": "b.helper.Validate.occurrence",
+      "source": "source/validate.k:bvOccurrence",
+      "meaning": "leaf pop or Fields cursor0; charge helper; visits1"
+    },
+    {
+      "row": "b.helper.Validate.field",
+      "source": "source/validate.k:bvFieldStep",
+      "meaning": "non-tail parent cursor+1 then child push; tail replace; visits1"
+    },
+    {
+      "row": "b.helper.Validate.empty",
+      "source": "source/validate.k:bvNext Pending/tasksNil",
+      "meaning": "set Positive; charge helper; visits0"
+    },
+    {
+      "row": "b.helper.Validate.exit",
+      "source": "source/validate.k:bvNext Positive",
+      "meaning": "stage Validated(true), clear helper; charge helper; visits0"
+    },
+    {
+      "row": "k.machine.eval.literal.valid",
+      "source": "source/validate.k:bvLiteral",
+      "meaning": "Return(root), clear result; charge only reference; referenceCursor+1"
+    },
+    {
+      "row": "k.admin.publish.value",
+      "source": "source/validate.k:bvNext Return",
+      "meaning": "Halted(root); all clocks/storage preserved; free"
+    }
+  ],
+  "excluded_rows": {
+    "b.helper.Validate.invalid": "Marker/Negative path outside normal domain; security owner",
+    "b.helper.Validate.failure": "Negative path outside normal domain; security owner",
+    "b.bookkeeping.task.release": "Negative task draining outside normal domain; security owner",
+    "b.helper.Validate.declaration": "ExtensionOnly DedicatedSorts exclusion retained",
+    "k.machine.eval.literal.invalid": "Invalid path outside normal domain; security owner",
+    "k.admin.publish.error": "No Error control in domain",
+    "k.admin.publish.exhausted": "Sufficient supplied fuel domain, not a refusal policy"
+  },
+  "precedence": "Only Applied positive rows and P1 value publication are represented. No semantics for AB, P0 API, P2/P3/P6 outside declared domain. Positive bounds guards copy row applicability, not new policies.",
+  "execution": "UNCOMPILED_UNEXECUTED; not machine-checked correspondence"
+}
