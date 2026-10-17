@@ -15,6 +15,7 @@ pub mod prepare;
 pub mod profile;
 pub mod proving;
 pub mod relation;
+pub mod sherlock_literal;
 pub mod signed;
 pub mod static_compile;
 
