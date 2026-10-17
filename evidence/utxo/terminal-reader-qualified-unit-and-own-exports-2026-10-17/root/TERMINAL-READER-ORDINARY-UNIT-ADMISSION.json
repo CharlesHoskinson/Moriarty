@@ -1,0 +1,255 @@
+{
+  "format": "root-terminal-reader-one-ordinary-unit-admission/1",
+  "createdAt": "2026-10-17T19:30:21.489475+00:00",
+  "decision": "PERMIT_EXACT_ONE_ISOLATED_29_METHOD_ORDINARY_UNIT_ONLY",
+  "sourceSha256": "74048a17b1ba4a06763fcd06e0c6b401bf733746161bab5a17f0e79baa5b4b77",
+  "testSha256": "f5380f6130ed5530148f115b9f4e7f92e48745a7260ea26a21e7adccce55e037",
+  "proposal": "/home/charl/moriarty-c2-opus55-restored-20261017/TERMINAL-READER-PROPOSED-ORDINARY-UNIT.json",
+  "proposalSha256": "e47df385d67d54a53f40efdeadb615bfc269220d0b35a2ceb486c5afac653095",
+  "reviews": [
+    {
+      "seat": "A",
+      "review": "/home/charl/moriarty-c2-opus55-restored-20261017/jobs/TERMINAL-READER-CORRECTED-SOURCE-REVIEW-A-OPUS55/REVIEW.json",
+      "reviewSha256": "576e4ec0b010370dda9047ae6f0b2a0706fdc8075dc50e10b652078429185ee3",
+      "requestedModel": "claude-opus-5-5",
+      "assistantEnvelopeModelCounts": {
+        "claude-opus-5-5": 1,
+        "claude-opus-4-8": 34
+      },
+      "exclusiveActualModel": null,
+      "modelQualification": "Both5.5and4.8authorizedbylatestuserrule; Arecordsone5.5and34fourpoint8assistantframes, reportselfidentifies4.8. Noexclusive4.8or5.5claimforA. Onevoteperfreshjob, notpermodel/frame.",
+      "findings": [
+        {
+          "id": "PRIOR-ER08-EMPTY-ASSISTANT-FIXED",
+          "severity": "info",
+          "evidence": "Prior A/B high finding (empty-assistant IndexError) is resolved: the stream builder emits the DRAFT-carrying nested/quoted carrier frames only inside an 'if assistant_models:' guard (test file line 129), so _stream(assistant_models=()) no longer indexes element zero of an empty tuple. test_reject_no_actual_assistant_frames now reaches the selector and asserts NO_ACTUAL_ASSISTANT_MODEL_FRAMES (source step 6, lines 59-64), and that branch is genuinely reachable because the init frame is type:system and the result text is not an assistant frame.",
+          "requiredFix": "None (verified fixed). Do not reintroduce unconditional element-zero indexing in the fixture builder."
+        },
+        {
+          "id": "PRIOR-ER04-MODEL-GATE-FIXED",
+          "severity": "info",
+          "evidence": "Prior A/B medium finding (hardcoded 5.5-only gate vs USER-BOTH-OPUS-RULE.md) is resolved by parameterization: select_terminal_structured_review takes allowed_models (default ('claude-opus-5-5',)); the wrapper reads T.get('terminalReviewAllowedModels',['claude-opus-5-5']) (candidate line 135); the receipt records exclusiveActualAssistantModel honestly and never relabels (line 93); requested and the single actual assistant-envelope model must both be in the allowed set, else REQUESTED_MODEL_NOT_ALLOWED or MIXED_OR_WRONG_ACTUAL_ASSISTANT_MODEL (lines 51,65). Tests 6,12,22 cover these.",
+          "requiredFix": "None for the corrected source. Any future reuse on a 4.8-authored subject still requires a fresh model-compatibility review before widening the allowed set; keep the honest exclusiveActualAssistantModel record."
+        },
+        {
+          "id": "PRIOR-ER03-LIVENESS-PARSE-FIXED",
+          "severity": "low",
+          "evidence": "Terminal branch now mirrors the ordinary --export-only live-PID probe without mutating PROCESS.json (candidate lines 114-117) and degrades a live/missing process to effective exit None -> NON_ZERO_OR_MISSING_TERMINAL_EXIT (line 118, selector step 3); malformed capture lines are counted into capture_parse_errors (lines 119-124) and the selector STOPs on any (step 5, line 57). A dropped line can only reduce events seen, so it can only cause a STOP, never a wrong EXPORT.",
+          "requiredFix": "None for GREEN. Residual: a process dying between the probe and the read is a named source-only race; document it, do not treat it as unit-tested."
+        },
+        {
+          "id": "WRAPPER-ONLY-NOT-UNIT-OBSERVED",
+          "severity": "low",
+          "evidence": "The live-PID probe, malformed-line counting and the two exclusive-create writes live in the --export-terminal-review branch (candidate lines 101-142), not in the pure selector; the unit AST-extracts and execs only the selector FunctionDef, so it cannot and must not exercise the wrapper directly (that would require importing the module or reading private files).",
+          "requiredFix": "Keep these behaviours source-only. Their outcomes are covered at the selector level (effective-exit None; capture_parse_errors>0); do not claim the unit observed them."
+        },
+        {
+          "id": "ASSEMBLY-NOT-RAW-AUTHOR-BYTES",
+          "severity": "info",
+          "evidence": "ROOT-MECHANICAL-ASSEMBLY records rawAuthorLegacyTailByteIdentical=false: the author's raw file (7e487049...) re-encoded two legacy Unicode-ellipsis literals in the tail from ASCII-escape spelling to the literal UTF-8 ellipsis, contradicting the author byte-for-byte claim. The assembled source (74048a17...) uses the trusted tail; I confirmed candidate lines 178/185 carry the ASCII-escape form matching CURRENT-READER 42/49, and line 247 carries the literal ellipsis in both files.",
+          "requiredFix": "Do not relabel the assembled candidate as unaltered raw author bytes; it is a literal prefix+trusted-tail assembly. The two escape forms are semantically identical Python literals, but the author's byte-for-byte assertion must not be adopted."
+        },
+        {
+          "id": "EXPECTED-RED-DOC-IMPRECISE",
+          "severity": "info",
+          "evidence": "The unit docstring and EXPORT-POLICY state the selector-absent RED makes 'every method error'. In fact methods 1 (test_derived_fixture_has_prefix_stream_multiplicity), 25, 26 and 29 do not invoke _load_selector and would pass (25/26/29 when the packet is present) even with the selector absent; only selector-invoking methods error. This does not affect the GREEN prediction because the selector is present in the assembly.",
+          "requiredFix": "Reword the EXPECTED RED note to 'every selector-invoking method errors' in a future revision. Label-only; no code change."
+        },
+        {
+          "id": "DIFF-PATH-LABEL-NIT",
+          "severity": "info",
+          "evidence": "ASSEMBLED-READER-PATCH.diff headers read a/run_source_task.py and b/run_source_task.py, while the subject file is run_source_task_candidate.py and EXPORT-POLICY sec 1.3 describes the diff as relative to CURRENT-READER.py. The diff is proposal-only and not applied.",
+          "requiredFix": "None functional. Optionally align the diff path labels with the actual filename in a future revision."
+        },
+        {
+          "id": "AUTHOR-IDENTITY-DISCREPANCY-PRESERVED",
+          "severity": "info",
+          "evidence": "ROOT-CORRECTED-INTAKE and the prior B audit record the historical author ran as actual claude-opus-4-8 while an author metadata object elsewhere self-reports 5.5; EXPORT-POLICY sec 2 preserves this discrepancy without adopting it.",
+          "requiredFix": "None. Preserve the actual-4.8 record; never relabel; neither author metadata object is a vote or adoption."
+        },
+        {
+          "id": "INTERPRETER-AND-JSONSCHEMA-UNINSPECTED",
+          "severity": "info",
+          "evidence": "GREEN depends on jsonschema being importable from the read-only /usr and on /usr/bin/python3 (realpath python3.14 per ROOT-UNIT-PROPOSAL) running ast.parse/compile/exec, jsonschema.validate, unittest and bwrap/kernel correctly; none of these internals were inspected (read-only source audit, no execution).",
+          "requiredFix": "Treat any interpreter/import/startup/timeout/crash or any extra stderr line as a STOP with no retry and a re-review; do not loosen the expected-output envelope after the run."
+        }
+      ],
+      "predictedUnitResult": "GREEN under the exact ROOT-UNIT-PROPOSAL envelope (python3.14 -I -B /input/test_terminal_review_selection.py -v, with the two plain-named 0444 source files at /input and the PUBLIC correction packet bind-mounted READ-ONLY at its exact hardcoded absolute path matching the test's PACKET constant, all three real fixtures present). All 29 methods PASS \u2014 24 always-run derived/pure methods plus the 5 real-fixture methods RUNNING (not skipped, because B_PRESENT and A_PRESENT are True): 0 failures, 0 errors, 0 skips; exit code 0; stdout empty; stderr = 29 verbose per-method 'ok' lines + the standard separator + 'Ran 29 tests in <t>' + 'OK'; and all 2 source + 17 public packet pins/modes/listings unchanged (the unit writes nothing; -B suppresses pyc; -I isolates sys.path). Derived independently by tracing each method against the selector as written, not taken from author/policy metadata. Conditioning: this holds only because the proposal mounts the correction packet at the test's hardcoded path and requires the fixtures present (STOP on missing); were that path absent the 5 real-fixture methods would instead SKIP (24 pass + 5 skip, still OK) and, in the review-packet directory where the sources are ASSEMBLED-prefixed, _load_selector could not find run_source_task_candidate.py and every selector-invoking method would error \u2014 but neither degraded case can occur under the proposal as written. Final result is conditional on jsonschema importing and python3.14 running cleanly; any interpreter/import/timeout/crash or any extra stderr line is a STOP, not a GREEN. No unit was run and none is authorized here.",
+      "coverage": {
+        "readPaths": [
+          "terminal-reader-corrected-review-packet/MANIFEST.json (full)",
+          "terminal-reader-corrected-review-packet/USER-BOTH-OPUS-RULE.md (full)",
+          "terminal-reader-corrected-review-packet/ASSEMBLED-run_source_task_candidate.py (full, 287 lines)",
+          "terminal-reader-corrected-review-packet/ASSEMBLED-test_terminal_review_selection.py (full, 378 lines)",
+          "terminal-reader-corrected-review-packet/CURRENT-READER.py (full, 151 lines; baseline comparison for ER01)",
+          "terminal-reader-corrected-review-packet/B-WHOLE-OBJECTS.json (full; both objects compared, B-I6 difference confirmed)",
+          "terminal-reader-corrected-review-packet/B-OUTPUT-SCHEMA.json (full)",
+          "terminal-reader-corrected-review-packet/SINGLE-REVIEW-A.json (full)",
+          "terminal-reader-corrected-review-packet/ROOT-UNIT-PROPOSAL.json (full)",
+          "terminal-reader-corrected-review-packet/ROOT-MECHANICAL-ASSEMBLY.json (full)",
+          "terminal-reader-corrected-review-packet/ROOT-CORRECTED-INTAKE.json (full)",
+          "terminal-reader-corrected-review-packet/FRESH-SOURCE-AUDIT-A.json (full)",
+          "terminal-reader-corrected-review-packet/FRESH-SOURCE-AUDIT-B.json (full)",
+          "terminal-reader-corrected-review-packet/ASSEMBLED-EXPORT-POLICY.md (full, 294 lines)",
+          "terminal-reader-corrected-review-packet/ASSEMBLED-READER-PATCH.diff (lines 1-149 of ~157; the single additive hunk and all inserted content read)",
+          "terminal-reader-corrected-review-packet/OFFICIAL-STRUCTURED-OUTPUTS.md (lines 48-65 and 375-396 only, for ER02 grounding)"
+        ],
+        "unreadPaths": [
+          "terminal-reader-corrected-review-packet/PROPOSED-READER.py and PROPOSED-UNIT.py (old proposed; verified the corrected assembly directly and cross-checked prior findings via the audits' line citations, so not independently re-read)",
+          "terminal-reader-corrected-review-packet/B-PROCESS.json, B-TASK.json, SINGLE-PROCESS-A.json, PUBLIC-DIFFERENCE.json (PUBLIC-DIFFERENCE's B-I6 claim verified directly from B-WHOLE-OBJECTS instead)",
+          "terminal-reader-corrected-review-packet/STRUCTURED-OUTPUTS-SOURCE.json and the remainder of OFFICIAL-STRUCTURED-OUTPUTS.md (SDK tutorial prose)",
+          "terminal-reader-corrected-review-packet/CORRECTION-AUTHOR-REVIEW.json and CORRECTION-AUTHOR-PROCESS.json (author's own job records; author is not a vote)",
+          "the tail of ASSEMBLED-READER-PATCH.diff beyond line 149",
+          "All originalPublicSource provenance paths in the MANIFEST (treated as inert data, not opened)",
+          "Any private capture/provider.private.jsonl/stderr.private/log/auth/config/key/wallet/PK/SRS/cache/home/jobs/research-root path (forbidden; not read)"
+        ],
+        "limitations": [
+          "Read-only source audit as actual claude-opus-4-8; nothing executed, imported, compiled, hashed, AST-run, unit-run, linted or dispatched. All unit and runtime outcomes are source-level predictions.",
+          "sha256, byte and line counts are the packet's own MANIFEST/root figures; I did not compute or verify any hash (no hashing authorized). Truncation is not a full read; the diff and the official doc were read only partially as noted.",
+          "ER01 byte-identity was confirmed by full-text line-by-line comparison of the displayed content (both ellipsis escape forms and structure match), not by an independent byte/sha computation.",
+          "jsonschema availability in the read-only /usr and CPython 3.14 internals (ast/compile/exec, jsonschema validator, unittest, bwrap, kernel) are uninspected; any import/startup/timeout/crash is a STOP, not a result.",
+          "The provider-envelope contract (uniqueness of result.structured_output; the origin of B's second whole object) lives only in private capture and is named, not read or assumed.",
+          "Wrapper-only behaviours (live-PID probe, malformed-line counting, exclusive writes, record pins) are not unit-observed and must remain source-only; their outcomes are covered only at the selector level.",
+          "One vote in a fresh same-provider context: context independence only, not provider diversity; different Opus models are not provider diversity. The author does not vote and no history or prior rejection is relabeled.",
+          "Plan mode: the sole deliverable is this structured object; no plan-file edit or ExitPlanMode was applicable to this read-only audit, and no new agents were started."
+        ]
+      }
+    },
+    {
+      "seat": "B",
+      "review": "/home/charl/moriarty-c2-opus55-restored-20261017/jobs/TERMINAL-READER-CORRECTED-SOURCE-REVIEW-B-OPUS55/REVIEW.json",
+      "reviewSha256": "6d1676e8e2128aa991307ec117b246376decaafb9a515d0136ef05e23e82ac74",
+      "requestedModel": "claude-opus-5-5",
+      "assistantEnvelopeModelCounts": {
+        "claude-opus-5-5": 35
+      },
+      "exclusiveActualModel": "claude-opus-5-5",
+      "modelQualification": "Both5.5and4.8authorizedbylatestuserrule; Arecordsone5.5and34fourpoint8assistantframes, reportselfidentifies4.8. Noexclusive4.8or5.5claimforA. Onevoteperfreshjob, notpermodel/frame.",
+      "findings": [
+        {
+          "id": "SB-F1-RED-CLAIM-FALSE",
+          "severity": "low",
+          "evidence": "The test docstring (test:34-35), EXPORT-POLICY.md:206-207 and the author review all claim that with the selector absent every method errors. In the actual bodies, four methods never call _load_selector: test_derived_fixture_has_prefix_stream_multiplicity (test:210-212, naive walk only), test_real_b_objects_validate_against_real_schema (334-338), test_real_b_objects_differ_only_at_b_i6_binding (340-346) and test_real_a_is_single_object_distinct_token (368-374). Predicted RED with the packet present is Ran 29, 4 ok, errors=25. With the packet absent it is 1 ok, 23 errors, 5 skipped. Both prior audits accepted the 'every method errors' wording for the old unit; I dissent for the assembled unit.",
+          "requiredFix": "Record an errata in the root decision record stating the correct RED expectation. Do not edit the pinned test/policy source to fix the wording, since that would change the pins and require re-review. No RED run is needed or authorized. The GREEN prediction is unaffected."
+        },
+        {
+          "id": "SB-F2-SKIP-VS-ROOT-PREDICATE",
+          "severity": "low",
+          "evidence": "test:61-62 and 334-369 make the five real-fixture methods skipUnless the packet is present. EXPORT-POLICY.md:195-197 and 241-243 call 'OK-or-skipped' acceptable. ROOT-UNIT-PROPOSAL preconditions and expected say a missing fixture is a STOP and require zero skips. A misconfigured mount would therefore degrade silently to an 'OK (skipped=5)' summary unless root checks for it.",
+          "requiredFix": "Root's predicate governs. Before launch, confirm all three fixtures exist at the hardcoded absolute packet path. Treat any 'skipped' token or any summary line other than exactly OK as a STOP with no retry. Treat the policy's OK-or-skipped wording as superseded."
+        },
+        {
+          "id": "SB-F3-STALE-AUTHOR-ASSERTIONS",
+          "severity": "info",
+          "evidence": "EXPORT-POLICY.md:35-37 and the author review claim that current-reader lines 7-152 reappear byte-for-byte; CURRENT-READER.py has 151 lines. The raw author file re-encoded the two U+2026 escape spellings, as ROOT-MECHANICAL-ASSEMBLY rawTailDelta and the +6 byte difference (24896 to 24902) show. EXPORT-POLICY.md:45 claims two hunks, but ASSEMBLED-READER-PATCH.diff has one hunk (-1,9 +1,145). The assembled tail (candidate 143-287) matches current 7-151 on my visual line-by-line comparison, including the escape spellings at 178/185 and the literal ellipsis at 247.",
+          "requiredFix": "Keep root's assembly record as the authoritative description. Never describe the assembly as unaltered raw author bytes. Carry the author claim as false-for-raw and true-only-for-assembly. Root's before/after sha pins remain the byte-identity evidence; my comparison was visual, not hashed."
+        },
+        {
+          "id": "SB-F4-UNRECOGNIZED-ASSISTANT-MODEL-IGNORED",
+          "severity": "low",
+          "evidence": "Selector line 63 counts only assistant frames whose message.model starts with claude-, gemini- or muse-. Frames with a missing or other model name, for example synthetic frames, are dropped silently and do not appear in assistantEnvelopeModelCounts. So 'exclusive actual identity' means exclusive among recognized-prefix names. This mirrors legacy line 216. For the current subjects, B-PROCESS shows 29 assistant envelope events equal to 29 counted, and SINGLE-PROCESS-A shows 28 equal to 28, so nothing is affected now.",
+          "requiredFix": "No change is required for the current B/A scope. Before any broader or 4.8 reuse, a separately reviewed revision should count assistant frames with an unrecognized or missing model, and either STOP or record them in the receipt. Until then, root should compare receipt assistantEnvelopeModelCounts totals with the legacy providerEnvelopeEventCounts.assistant for the same job."
+        },
+        {
+          "id": "SB-F5-RECEIPT-DOES-NOT-BIND-REVIEW-BYTES",
+          "severity": "low",
+          "evidence": "Lines 138-140 write TERMINAL-REVIEW.json and then TERMINAL-EXPORT.json, both with open('x'). The receipt has no sha256 of the review file. If the review write fails partway (fsize or ENOSPC), a partial TERMINAL-REVIEW.json is left with no receipt, and line 109 refuses every rerun. This is fail-closed, but the state needs manual handling and a review file could be mistaken for valid without its receipt. This is wrapper-only and not unit-observed.",
+          "requiredFix": "Root post-check duty for any future real export: accept TERMINAL-REVIEW.json only if TERMINAL-EXPORT.json exists with decision EXPORT, and only if the review parses and is canonical-sorted-key-JSON equal to exactly one retained candidate; compute and record its sha256 externally. Treat review-without-receipt as STOP. A future revision may add the review sha to the receipt, which needs fresh review."
+        },
+        {
+          "id": "SB-F6-WRAPPER-EXCEPTION-PATHS",
+          "severity": "info",
+          "evidence": "Several conditions raise uncaught exceptions before any write, so no artifact is created and the process exits non-zero (fail-closed): os.kill PermissionError (line 115), UnicodeDecodeError on read_text (line 120), RecursionError on deeply nested lines (line 123 catches only ValueError), and a missing PROCESS.json or packet file. Non-dict JSON lines are kept as events but ignored by the selector, and are not counted as parse errors. A reused PID causes a false-live refusal (fail-closed). The probe-to-read liveness race is named in policy section 7.",
+          "requiredFix": "None in source. These stay source-only, wrapper-only gaps that the unit does not observe. Any traceback during a future real export is a STOP with no retry."
+        },
+        {
+          "id": "SB-F7-UNTESTED-BRANCH-VARIANTS",
+          "severity": "low",
+          "evidence": "The 29 methods leave these selector paths unobserved, though each is source-correct on inspection:\n- a single out-of-set actual model under the default set (the WRONG half of line 65);\n- is_error true with subtype success, and subtype non-success with is_error false (line 73, tested only jointly);\n- an empty-list retained set (line 88; only None is tested);\n- non-dict events;\n- require_retained_membership False with retained None (line 89 skipped, matched False). The wrapper never takes this path because line 136 passes True;\n- requested 5.5 with actual 4.8 under both-allowed, which exports and records both honestly.",
+          "requiredFix": "Do not cite the unit as evidence for these variants. They are source-inspected only. Add tests only in a separately reviewed revision with its own RED/GREEN and root decision. Not required for the single scoped unit."
+        },
+        {
+          "id": "SB-F8-UNIT-ENVIRONMENT-PRECONDITIONS",
+          "severity": "low",
+          "evidence": "ROOT-UNIT-PROPOSAL runs /usr/bin/python3 (realpath python3.14) with -I -B under bwrap, with only /usr, /input and the packet mounted and no home. The test imports jsonschema at test:50, and the installed jsonschema stack (attrs, referencing, rpds, jsonschema-specifications) was not inspected. If it lives only in a user site, or emits DeprecationWarnings under 3.14, the predicted clean stderr fails. bwrap has no --remount-ro /, so its tmpfs root is writable but ephemeral, the same as prior B-I2. The unit itself writes nothing.",
+          "requiredFix": "Before launch, root confirms by read-only filesystem inspection, without executing anything, that jsonschema and its dependencies resolve under /usr for python3.14. Any ImportError, warning, extra stderr line or start failure is a STOP with no retry and no source edit. Record the no-persistent-host-writes property accurately."
+        },
+        {
+          "id": "SB-F9-MEMBERSHIP-IS-CONSISTENCY-NOT-INDEPENDENT-AUTHORITY",
+          "severity": "info",
+          "evidence": "Lines 125-129 take the retained set from the first file that exists, in the order AMBIGUOUS-COMPLETE-REVIEWS, WHOLE-SCHEMA-VALID-CANDIDATES, REVIEW. All three were produced by the legacy recursive walk over the same capture, and that walk also visits result.structured_output. Membership is therefore a consistency cross-check with the preserved legacy record, not an independent oracle. For B the AMBIGUOUS record holds 2 objects that are distinct canonical values, so the two values are never conflated. Retained candidates that are not dicts are dropped at line 90.",
+          "requiredFix": "Label any future export as provider-artifact identity plus legacy-record consistency only. It is not a vote, not a choice between B's two objects made outside the typed result, and not a closure of B's multiplicity STOP."
+        }
+      ],
+      "predictedUnitResult": "All 29 methods PASS: 28 in TerminalReviewSelection and 1 in SeatAGrounding, including the five real-fixture methods, which run and are not skipped (tests 25-29). Zero failures, errors and skips. Exit 0, stdout empty. Stderr contains only the 29 verbose 'name (__main__.Class.name) ... ok' lines, with SeatAGrounding first because loader order is alphabetical, followed by unittest's standard blank line and separator, 'Ran 29 tests in <time>s', a blank line and 'OK'. All 2 source and 17 packet pins, modes and listings are unchanged, because the unit writes nothing.\n\nThe prediction depends on three things: the packet at /home/charl/moriarty-c2-opus55-restored-20261017/terminal-reader-correction-packet holds the same B/A/schema content I read in this review packet; jsonschema imports from /usr under -I for python3.14; and the installed stack emits no warnings. Any deviation is a STOP with no retry.\n\nFor contrast, the author's RED claim is wrong: with the selector absent, RED would be Ran 29 with 4 ok and errors=25, not all errors.",
+      "coverage": {
+        "readPaths": [
+          "/home/charl/moriarty-c2-opus55-restored-20261017/terminal-reader-corrected-review-packet/MANIFEST.json (full)",
+          "ASSEMBLED-run_source_task_candidate.py (full, lines 1-287)",
+          "ASSEMBLED-test_terminal_review_selection.py (full, lines 1-378)",
+          "ASSEMBLED-EXPORT-POLICY.md (full, lines 1-294)",
+          "ASSEMBLED-READER-PATCH.diff (full, lines 1-148)",
+          "CURRENT-READER.py (full, lines 1-151)",
+          "ROOT-MECHANICAL-ASSEMBLY.json (full)",
+          "ROOT-CORRECTED-INTAKE.json (full)",
+          "ROOT-UNIT-PROPOSAL.json (full)",
+          "FRESH-SOURCE-AUDIT-A.json (full)",
+          "FRESH-SOURCE-AUDIT-B.json (full)",
+          "USER-BOTH-OPUS-RULE.md (full)",
+          "B-WHOLE-OBJECTS.json (full, lines 1-358)",
+          "B-OUTPUT-SCHEMA.json (full)",
+          "B-PROCESS.json (full)",
+          "B-TASK.json (full)",
+          "SINGLE-PROCESS-A.json (full)",
+          "PUBLIC-DIFFERENCE.json (full)",
+          "STRUCTURED-OUTPUTS-SOURCE.json (full)",
+          "CORRECTION-AUTHOR-REVIEW.json (full)",
+          "CORRECTION-AUTHOR-PROCESS.json (full)",
+          "OFFICIAL-STRUCTURED-OUTPUTS.md (PARTIAL: offsets 40-69 and 365-404 only, covering cited lines 57, 381, 388 and 390)",
+          "SINGLE-REVIEW-A.json (PARTIAL: lines 1-4 only, enough to confirm a single top-level dict and the distinct seat-A reviewToken)"
+        ],
+        "unreadPaths": [
+          "PROPOSED-READER.py and PROPOSED-UNIT.py (old proposal): not read. Prior findings were re-verified against the new assembled source and the audits' line citations instead.",
+          "OFFICIAL-STRUCTURED-OUTPUTS.md outside the two bounded ranges",
+          "SINGLE-REVIEW-A.json beyond line 4",
+          "All originalPublicSource provenance paths, including the raw author file 7e487049..., the correction-packet originals at the unit's hardcoded path, and the jobs directories",
+          "provider.private.jsonl, stderr.private and any private capture, log, auth, config, env, key, wallet, PK, SRS, cache, home or research-root path",
+          "The installed jsonschema stack, the python3.14 stdlib/unittest internals, bwrap and the kernel"
+        ],
+        "limitations": [
+          "Read tool only. Nothing was executed, imported, AST-parsed, compiled, hashed, linted or unit-run, and nothing was written. All RED/GREEN, time and memory statements are source-level predictions.",
+          "Byte identity between the assembled tail and CURRENT-READER, and between this packet's fixture copies and the correction-packet originals at the unit path, comes from visual comparison plus manifest and root pins. I recomputed no hashes.",
+          "The private provider-envelope contract (whether structured_output is unique per stream, and which event produced B's second object) remains a named gap that was not read.",
+          "Wrapper-only behaviour (PID probe, parse counting, exclusive writes, partial-write failure) is source-inspected only and is not observable by the unit.",
+          "One vote from actual claude-opus-5-5. Same-provider context is not provider diversity. Author metadata is not a vote.",
+          "Plan-mode plan file and ExitPlanMode were not used, because the only deliverable is this structured object and no write was requested or permitted."
+        ]
+      }
+    }
+  ],
+  "all24ReviewPacketPinsUnchanged": true,
+  "dependencyLayoutRecord": "/home/charl/moriarty-c2-opus55-restored-20261017/TERMINAL-READER-UNIT-DEPENDENCY-LAYOUT.json",
+  "unitExecutionApproved": true,
+  "maximumAttempts": 1,
+  "retries": 0,
+  "preconditions": "Twoindependentfullsource/unit/effectsvotesallER01-10AGREE; twoactualmodelidentitiesauthorizedhonestlyrecorded; all2source+17publicpayload+manifest pins/modes/listings and3realfixturepresencechecked; staticjsonschema/depsunder/usr, actualimportstillunobserved/STOPonfailure.",
+  "rootErrata": [
+    "SelectorabsenceREDwithrealpacketpresent would4ok25errors, notall29errors; absentpacket1ok23errors5skipped. NoabsenceRED runauthorizedorneeded. GREENprediction29allpass unaffected.",
+    "PolicyOK-or-skipped supersededbystrictrootzero-skippredicate. MissingfixturebeforelaunchSTOP; anyskippedorwarning/unexpectedstderr/timeout/error/failureSTOPnoretry.",
+    "Assembledsource74048... is literalrawprefix+trustedbaseline-tail, NOTrawauthor7e487...; mechanicaldiffonehunk/twoadditiveblocks, baseline151lines not152.",
+    "FewerMiB/under1secondauthorpredictions are notbindingresults. ActualCPU10/wall20/AS512MiB/fsize2MiB/core0 envelope governs.",
+    "Unitobservesonlypureselector and realpublicschemafixturebinding; wrapperPID/parselines/exclusivewrites untested/sourceonly.",
+    "Same-providerfreshcontextsincludingAmodelmix, no provider/modeldiversityclaimed. MixedidsacceptedforSOURCEreviewbecausebothuserauthorized; this DOESNOTbroadenlegacy5.5-onlyexportsubjectscope orpermitmixed-identityexports."
+  ],
+  "futureExportConditions": [
+    "Neverexportnow. Afteractualunitresultreview+separaterootadoption, onlyexistingownreaderitsowncapturedjobs. Currentdefaultsactual5.5B/A/D7only; noGemini/currentmixedA/no4.8wideningwithoutnewcompatibilityreview.",
+    "Futureexistingrecord/schema/sourcebeforeafterpins. RequirebothTERMINAL-EXPORTdecisionEXPORT andcompleteparsedwholeTERMINAL-REVIEWcanonicalJSONvalueequalsONEretainedcandidate; hash externally. ReviewwithoutreceiptSTOP.",
+    "Before/aftercountcomparison receiptassistantcounts total equals legacyproviderEnvelopeEventCounts.assistant; unrecognized/missingmodelsorwrongactualsubjectSTOP. Membershipconsistencyisnotindependentauthority oradmittedfavorablevote.",
+    "Anyfuturewrapperexception orpartialwriteSTOPnoretry; no privatecaptures read byhumans/otheragents."
+  ],
+  "trustedReaderStillUnchanged": true,
+  "sourceAdopted": false,
+  "realExportPermitted": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true
+}

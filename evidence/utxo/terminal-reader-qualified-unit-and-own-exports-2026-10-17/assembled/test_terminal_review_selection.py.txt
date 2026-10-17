@@ -1,0 +1,378 @@
+"""Unit preparation for the opt-in terminal structured_output selector.
+
+SCOPE AND SAFETY
+  This file is SOURCE PREPARATION ONLY. It is authored, not executed, now.
+  Running it is a *future* ordinary unit verification that is gated on two fresh
+  agreeing non-author Opus audits plus a root decision (see EXPORT-POLICY.md).
+  Do not run it as part of authoring.
+
+  The test exercises ONLY the pure function
+  `select_terminal_structured_review` from run_source_task_candidate.py. It
+  loads that one function by AST-extracting its single top-level FunctionDef
+  node and exec'ing *that node alone* in an isolated namespace that provides
+  json and jsonschema. It never imports or runs the whole candidate module,
+  its top-level job/dispatch logic, or any private-file logic.
+
+FIXTURES
+  Two kinds, both clearly labeled:
+  (A) DERIVED UNIT envelopes modeled on the public B whole objects (the B-I6
+      `0`-style vs `\\u0030`-style difference). They are NOT real provider
+      records and NOT Cardano ledger data. A compact UNIT schema stands in for
+      the frozen OUTPUT-SCHEMA so the derived tests are self-contained.
+  (B) REAL public packet fixtures: the two public B whole objects
+      (B-WHOLE-OBJECTS.json) and the real frozen B OUTPUT-SCHEMA
+      (B-OUTPUT-SCHEMA.json), and the single public A review (SINGLE-REVIEW-A.json),
+      read read-only from the correction packet. The stream frames wrapping them
+      are still DERIVED UNIT frames, not provider events. These bind the real
+      objects/schema the future bound run must use. If the packet is absent at
+      the pinned path the (B) tests SKIP (a defined outcome), never fail.
+
+FROZEN METHOD COUNT: 29 (24 always-run derived/pure methods + 5 real-fixture
+  methods: 4 real-B + 1 real-A, which run when the packet is present at the
+  pinned path and otherwise SKIP). See EXPORT-POLICY.md for the frozen
+  name/outcome table.
+EXPECTED RED: with no `select_terminal_structured_review` in the candidate,
+  `_load_selector` raises AssertionError and every method errors.
+EXPECTED GREEN: all 24 always-run methods pass against the candidate as written;
+  the 5 real-fixture methods pass when the packet is present and SKIP otherwise.
+BOUNDED EFFECTS: the test reads one public code file (the candidate) to AST
+  extract one function, and, when present, three public packet JSON fixtures; it
+  writes nothing, opens no socket, imports no new dependency beyond stdlib +
+  jsonschema, and reads no private capture/stream/auth/key/cache.
+NOT RUN NOW: outcomes above are recorded expectations, not observed results.
+"""
+import ast
+import copy
+import json
+import pathlib
+import unittest
+
+import jsonschema
+
+CANDIDATE = pathlib.Path(__file__).resolve().parent / "run_source_task_candidate.py"
+
+# Real public packet fixtures (read-only, bound by the future run; SKIP if absent).
+PACKET = pathlib.Path(
+    "/home/charl/moriarty-c2-opus55-restored-20261017/terminal-reader-correction-packet"
+)
+B_OBJECTS_PATH = PACKET / "B-WHOLE-OBJECTS.json"
+B_SCHEMA_PATH = PACKET / "B-OUTPUT-SCHEMA.json"
+A_REVIEW_PATH = PACKET / "SINGLE-REVIEW-A.json"
+B_PRESENT = B_OBJECTS_PATH.exists() and B_SCHEMA_PATH.exists()
+A_PRESENT = A_REVIEW_PATH.exists()
+B_TOKEN = "mhash-checker-addendum-fresh-b-opus55-20261017"
+if B_PRESENT:
+    B_OBJECTS = json.loads(B_OBJECTS_PATH.read_text())
+    B_SCHEMA = json.loads(B_SCHEMA_PATH.read_text())
+else:  # pragma: no cover - exercised only when the packet is absent
+    B_OBJECTS = []
+    B_SCHEMA = {}
+
+# --- derived UNIT schema (stands in for the frozen OUTPUT-SCHEMA) -----------
+UNIT_TOKEN = "unit-terminal-review-token"
+UNIT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["reviewToken", "findings"],
+    "properties": {
+        "reviewToken": {"const": UNIT_TOKEN},
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["id", "evidence"],
+                "properties": {"id": {"type": "string"}, "evidence": {"type": "string"}},
+            },
+        },
+    },
+}
+
+# The canonical typed object (what the provider carries on result.structured_output)
+# and a contradictory-but-valid draft that differs only at the B-I6 escape, exactly
+# as the two public B whole objects differ. The draft is what the buggy recursive
+# walk would also have collected from quoted/nested text.
+CANON = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6", "evidence": "lost a \\u0030-style escape"}]}
+DRAFT = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6", "evidence": "lost a 0-style escape"}]}
+
+
+def _load_selector():
+    """AST-extract and exec ONLY the pure selector function; nothing else."""
+    tree = ast.parse(CANDIDATE.read_text())
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "select_terminal_structured_review":
+            module = ast.Module(body=[node], type_ignores=[])
+            namespace = {"json": json, "jsonschema": jsonschema}
+            exec(compile(module, str(CANDIDATE), "exec"), namespace)
+            return namespace["select_terminal_structured_review"]
+    raise AssertionError("select_terminal_structured_review not found in candidate")
+
+
+def _assistant(model):
+    return {"type": "assistant", "message": {"model": model}}
+
+
+def _stream(structured_output=CANON, include_structured=True, subtype="success",
+            is_error=False, result_events=1, assistant_models=("claude-opus-5-5",)):
+    """Build a derived UNIT stream.
+
+    When assistant_models is non-empty, the DRAFT appears as a non-canonical
+    duplicate: once as a nested tool_use argument and once as quoted ```json```
+    text, plus once more in the terminal result's `result` text. Only CANON is
+    ever on result.structured_output. When assistant_models is empty, NO
+    model-bearing assistant frame is emitted at all, so the empty case genuinely
+    reaches the NO_ACTUAL_ASSISTANT_MODEL_FRAMES branch (ER08 fix).
+    """
+    events = [{"type": "system", "subtype": "init", "model": "claude-opus-5-5"}]
+    for m in assistant_models:
+        events.append(_assistant(m))
+    if assistant_models:
+        carrier = assistant_models[0]
+        # a nested tool_use argument carrying the contradictory DRAFT object
+        events.append({"type": "assistant", "message": {"model": carrier,
+                      "content": [{"type": "tool_use", "name": "Read", "input": {"draft": DRAFT}}]}})
+        # an assistant text block quoting the DRAFT object as fenced JSON
+        events.append({"type": "assistant", "message": {"model": carrier,
+                      "content": [{"type": "text", "text": "```json\n" + json.dumps(DRAFT) + "\n```"}]}})
+    events.append({"type": "user", "message": {"role": "user"}})
+    for _ in range(result_events):
+        result = {"type": "result", "subtype": subtype, "is_error": is_error,
+                  "result": "```json\n" + json.dumps(DRAFT) + "\n```"}
+        if include_structured:
+            result["structured_output"] = structured_output
+        events.append(result)
+    return events
+
+
+def _real_stream(obj, assistant_model="claude-opus-5-5"):
+    """DERIVED UNIT envelope (NOT a provider record) carrying a real public whole
+    object on the single success result.structured_output."""
+    return [
+        {"type": "system", "subtype": "init", "model": assistant_model},
+        _assistant(assistant_model),
+        {"type": "user", "message": {"role": "user"}},
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "", "structured_output": obj},
+    ]
+
+
+def _naive_whole_stream_candidates(events, token, schema):
+    """Mimic the pre-fix recursive walk, to show the derived fixture's multiplicity."""
+    found = {}
+
+    def walk(x):
+        if isinstance(x, dict):
+            if x.get("reviewToken") == token:
+                try:
+                    jsonschema.validate(x, schema)
+                except jsonschema.ValidationError:
+                    pass
+                else:
+                    found[json.dumps(x, sort_keys=True)] = x
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        elif isinstance(x, str):
+            z = x.strip()
+            if z.startswith("```"):
+                z = z.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            if z.startswith("{") and z.endswith("}"):
+                try:
+                    walk(json.loads(z))
+                except (ValueError, RecursionError):
+                    pass
+
+    for e in events:
+        walk(e)
+    return list(found.values())
+
+
+def _select(events, **overrides):
+    kwargs = dict(review_token=UNIT_TOKEN, schema=UNIT_SCHEMA, requested_model="claude-opus-5-5",
+                  exit_code=0, provider="claude", input_pins_unchanged=True,
+                  retained_whole_candidates=[CANON, DRAFT])
+    kwargs.update(overrides)
+    return _load_selector()(events, **kwargs)
+
+
+def _select_real(events, **overrides):
+    kwargs = dict(review_token=B_TOKEN, schema=B_SCHEMA, requested_model="claude-opus-5-5",
+                  exit_code=0, provider="claude", input_pins_unchanged=True,
+                  retained_whole_candidates=B_OBJECTS)
+    kwargs.update(overrides)
+    return _load_selector()(events, **kwargs)
+
+
+class TerminalReviewSelection(unittest.TestCase):
+    # --- 1. the derived fixture reproduces the pre-fix multiplicity ---------
+    def test_derived_fixture_has_prefix_stream_multiplicity(self):
+        found = _naive_whole_stream_candidates(_stream(), UNIT_TOKEN, UNIT_SCHEMA)
+        self.assertEqual(len(found), 2)  # CANON + DRAFT, exactly the B shape
+
+    # --- 2-4. canonical selection ignores draft/quoted/internal-tool text ---
+    def test_exports_single_canonical_structured_output(self):
+        out = _select(_stream())
+        self.assertEqual(out["decision"], "EXPORT")
+        self.assertEqual(out["review"], CANON)
+
+    def test_ignores_quoted_and_nested_draft(self):
+        out = _select(_stream())
+        self.assertNotEqual(out["review"], DRAFT)
+
+    def test_contradictory_valid_nested_cannot_override_typed_object(self):
+        # DRAFT is schema-valid and present nested + quoted, yet CANON wins.
+        self.assertIn(DRAFT, _naive_whole_stream_candidates(_stream(), UNIT_TOKEN, UNIT_SCHEMA))
+        self.assertEqual(_select(_stream())["review"], CANON)
+
+    # --- 5-21. STOP rejections, no partial salvage / no text fallback -------
+    def test_reject_non_claude_provider(self):
+        self.assertEqual(_select(_stream(), provider="gemini")["reason"], "NON_CLAUDE_PROVIDER")
+
+    def test_reject_requested_model_not_allowed(self):
+        # default allowed set is the historical 5.5-only scope; 4.8 is out of set here.
+        self.assertEqual(_select(_stream(), requested_model="claude-opus-4-8")["reason"],
+                         "REQUESTED_MODEL_NOT_ALLOWED")
+
+    def test_reject_non_zero_exit(self):
+        self.assertEqual(_select(_stream(), exit_code=1)["reason"], "NON_ZERO_OR_MISSING_TERMINAL_EXIT")
+
+    def test_reject_missing_exit(self):
+        self.assertEqual(_select(_stream(), exit_code=None)["reason"], "NON_ZERO_OR_MISSING_TERMINAL_EXIT")
+
+    def test_reject_pins_changed(self):
+        self.assertEqual(_select(_stream(), input_pins_unchanged=False)["reason"], "INPUT_PINS_CHANGED")
+
+    def test_reject_capture_parse_errors(self):
+        # a corrupted capture line fails closed before any selection.
+        self.assertEqual(_select(_stream(), capture_parse_errors=1)["reason"], "CAPTURE_PARSE_ERRORS")
+
+    def test_reject_no_actual_assistant_frames(self):
+        # ER08/F1-F2 fix: empty assistant set now reaches the selector and the branch.
+        out = _select(_stream(assistant_models=()))
+        self.assertEqual(out["reason"], "NO_ACTUAL_ASSISTANT_MODEL_FRAMES")
+
+    def test_reject_mixed_actual_48(self):
+        out = _select(_stream(assistant_models=("claude-opus-5-5", "claude-opus-4-8")))
+        self.assertEqual(out["reason"], "MIXED_OR_WRONG_ACTUAL_ASSISTANT_MODEL")
+
+    def test_reject_no_terminal_result_event(self):
+        self.assertEqual(_select(_stream(result_events=0))["reason"], "NO_TERMINAL_RESULT_EVENT")
+
+    def test_reject_multiple_terminal_result_events(self):
+        self.assertEqual(_select(_stream(result_events=2))["reason"], "MULTIPLE_TERMINAL_RESULT_EVENTS")
+
+    def test_reject_failed_terminal_result(self):
+        out = _select(_stream(subtype="error_during_execution", is_error=True))
+        self.assertEqual(out["reason"], "FAILED_OR_NON_SUCCESS_TERMINAL_RESULT")
+
+    def test_reject_structured_output_absent(self):
+        self.assertEqual(_select(_stream(include_structured=False))["reason"], "STRUCTURED_OUTPUT_ABSENT")
+
+    def test_reject_structured_output_string(self):
+        out = _select(_stream(structured_output=json.dumps(CANON)))
+        self.assertEqual(out["reason"], "STRUCTURED_OUTPUT_NOT_DICT")
+
+    def test_reject_review_token_mismatch(self):
+        bad = {"reviewToken": "some-other-token", "findings": []}
+        self.assertEqual(_select(_stream(structured_output=bad))["reason"], "REVIEW_TOKEN_MISMATCH")
+
+    def test_reject_schema_invalid(self):
+        bad = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6"}]}  # missing 'evidence'
+        # schema invalidity STOPs before membership, so retained=None here is irrelevant.
+        self.assertEqual(_select(_stream(structured_output=bad),
+                                 retained_whole_candidates=None)["reason"], "SCHEMA_INVALID")
+
+    def test_reject_retained_set_absent(self):
+        # F-RETAINED-NONE fix: a valid object with no retained record fails closed.
+        self.assertEqual(_select(_stream(), retained_whole_candidates=None)["reason"],
+                         "RETAINED_SET_ABSENT")
+
+    def test_reject_canonical_not_in_retained(self):
+        other = {"reviewToken": UNIT_TOKEN, "findings": [{"id": "B-I6", "evidence": "a third unseen variant"}]}
+        out = _select(_stream(structured_output=other))
+        self.assertEqual(out["reason"], "CANONICAL_OBJECT_NOT_IN_RETAINED")
+
+    # --- 22. both-Opus reconciliation with honest actual identity -----------
+    def test_both_opus_authorized_actual_48_honest_identity(self):
+        # ER04/F3 fix: when the caller authorizes both models, an actual-4.8 run
+        # EXPORTs and the receipt records the REAL identity, never relabeled to 5.5.
+        out = _select(_stream(assistant_models=("claude-opus-4-8",)),
+                      requested_model="claude-opus-4-8",
+                      allowed_models=("claude-opus-5-5", "claude-opus-4-8"))
+        self.assertEqual(out["decision"], "EXPORT")
+        self.assertEqual(out["review"], CANON)
+        self.assertEqual(out["receipt"]["exclusiveActualAssistantModel"], "claude-opus-4-8")
+        self.assertEqual(out["receipt"]["requestedModel"], "claude-opus-4-8")
+
+    # --- 23. the EXPORT receipt is bounded / allowlisted (no raw, no partials)
+    def test_export_receipt_bounded_fields(self):
+        receipt = _select(_stream())["receipt"]
+        allowed = {"policy", "decision", "reason", "reviewToken", "requestedModel",
+                   "exclusiveActualAssistantModel", "allowedModels",
+                   "assistantEnvelopeModelCounts", "terminalResultEvents",
+                   "structuredOutputKind", "terminalExitCode", "inputPinsUnchanged",
+                   "captureParseErrors", "provider", "identityMatchedRetainedCandidate",
+                   "identityMatchRule", "retainedMembershipRequired",
+                   "noTextOrPartialFallback", "selection"}
+        self.assertTrue(set(receipt).issubset(allowed))
+        self.assertTrue(receipt["noTextOrPartialFallback"])
+        self.assertEqual(receipt["exclusiveActualAssistantModel"], "claude-opus-5-5")
+        self.assertEqual(receipt["identityMatchRule"], "canonical-sorted-key-JSON-value-identity")
+
+    # --- 24. membership is canonical-serialization, not raw-byte (ER05/F6) --
+    def test_membership_is_canonical_serialization_not_raw_byte(self):
+        # two raw-byte-different but canonical-JSON-value-identical encodings match.
+        reordered = {"findings": CANON["findings"], "reviewToken": CANON["reviewToken"]}
+        self.assertNotEqual(json.dumps(reordered), json.dumps(CANON))  # raw bytes differ
+        out = _select(_stream(structured_output=reordered), retained_whole_candidates=[CANON])
+        self.assertEqual(out["decision"], "EXPORT")
+        self.assertTrue(out["receipt"]["identityMatchedRetainedCandidate"])
+
+    # --- 25-28. REAL public B/A fixture binding (SKIP if packet absent) ------
+    @unittest.skipUnless(B_PRESENT, "public B packet fixtures not present at pinned path")
+    def test_real_b_objects_validate_against_real_schema(self):
+        self.assertEqual(len(B_OBJECTS), 2)
+        for obj in B_OBJECTS:
+            jsonschema.validate(obj, B_SCHEMA)  # must not raise
+
+    @unittest.skipUnless(B_PRESENT, "public B packet fixtures not present at pinned path")
+    def test_real_b_objects_differ_only_at_b_i6_binding(self):
+        a, b = B_OBJECTS
+        self.assertNotEqual(a["findings"][5]["evidence"], b["findings"][5]["evidence"])
+        b_swapped = copy.deepcopy(b)
+        b_swapped["findings"][5]["evidence"] = a["findings"][5]["evidence"]
+        self.assertEqual(a, b_swapped)  # the single differing leaf is the only difference
+
+    @unittest.skipUnless(B_PRESENT, "public B packet fixtures not present at pinned path")
+    def test_real_b_selects_whichever_object_is_on_structured_output(self):
+        # Do NOT assume which B object is canonical. Enumerate both alternatives:
+        # the selector exports exactly whichever whole object the provider carried
+        # on result.structured_output, by typed selection + membership, no vote.
+        for obj in B_OBJECTS:
+            out = _select_real(_real_stream(obj), retained_whole_candidates=B_OBJECTS)
+            self.assertEqual(out["decision"], "EXPORT")
+            self.assertEqual(out["review"], obj)
+            self.assertTrue(out["receipt"]["identityMatchedRetainedCandidate"])
+
+    @unittest.skipUnless(B_PRESENT, "public B packet fixtures not present at pinned path")
+    def test_real_b_third_variant_not_in_retained_stops(self):
+        third = copy.deepcopy(B_OBJECTS[0])
+        third["findings"][5]["evidence"] = third["findings"][5]["evidence"] + " THIRD-UNSEEN-VARIANT"
+        jsonschema.validate(third, B_SCHEMA)  # still schema-valid and token-matching
+        out = _select_real(_real_stream(third), retained_whole_candidates=B_OBJECTS)
+        self.assertEqual(out["reason"], "CANONICAL_OBJECT_NOT_IN_RETAINED")
+
+
+class SeatAGrounding(unittest.TestCase):
+    @unittest.skipUnless(A_PRESENT, "public A review fixture not present at pinned path")
+    def test_real_a_is_single_object_distinct_token(self):
+        a = json.loads(A_REVIEW_PATH.read_text())
+        self.assertIsInstance(a, dict)  # A produced a single whole object, not a list
+        self.assertIn("reviewToken", a)
+        self.assertNotEqual(a["reviewToken"], B_TOKEN)  # A and B are distinct seats
+
+
+if __name__ == "__main__":  # pragma: no cover - not executed during authoring
+    unittest.main()
