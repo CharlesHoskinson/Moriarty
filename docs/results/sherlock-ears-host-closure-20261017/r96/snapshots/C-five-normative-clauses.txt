@@ -1,0 +1,39 @@
+### Requirement: UIREQ-003 Lexical call scope
+WHEN a named call enters its body, the interpreter SHALL evaluate it under the declared parameter bindings and global function table.
+
+#### Scenario: Caller-local preservation
+- **WHEN** An outer let binds x=7 while a called function binds its own x=2 and returns 2.
+- **THEN** The caller still reads x=7 after return.
+
+
+### Requirement: UIREQ-004 Strict evaluation order
+WHEN an expression has multiple evaluated operands or fields, the interpreter SHALL evaluate them once each from left to right.
+
+#### Scenario: Nested arguments
+- **WHEN** add(double(2),increment(3)) executes.
+- **THEN** The trace finishes double(2) before starting increment(3), returning 8.
+
+
+### Requirement: UIREQ-005 Named recursive calls
+WHEN a named function calls itself or another named function, the interpreter SHALL apply the ordinary call/return relation.
+
+#### Scenario: Self and mutual recursion
+- **WHEN** factorial(3), even(4), and odd(5) execute within declared bounds.
+- **THEN** They return 6, true, and true without adding program-specific rules.
+
+
+### Requirement: UIREQ-006 Exact scalar arithmetic
+WHEN a scalar primitive executes, the interpreter SHALL produce its declared checked UInt128 or Bool outcome.
+
+#### Scenario: Normal arithmetic
+- **WHEN** add(2,3), sub(7,2), mul(3,4), and lt(2,3) execute.
+- **THEN** Their results are 5, 5, 12, and true under the selected primitive table.
+
+
+### Requirement: UIREQ-008 Selected match branch
+WHEN an ordered constructor match completes its scrutinee, the interpreter SHALL evaluate the first matching source arm under its declared field bindings.
+
+#### Scenario: Tree fold
+- **WHEN** sum(Node(Leaf(4),Leaf(5))) executes.
+- **THEN** Both leaves are visited through their selected cases and the result is 9; the scrutinee is evaluated once and unselected arm bodies do not execute.
+

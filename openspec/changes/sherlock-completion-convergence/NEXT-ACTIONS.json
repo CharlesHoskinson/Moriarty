@@ -14,45 +14,12 @@
       "readiness": "Root must use existing exact operation classification; no implicit execution grant"
     },
     {
-      "id": "UIREQ-003",
-      "implementationStatus": "complete",
-      "consumer": "Machine::step / Frame::Return + Scope",
-      "action": "Ordinary fixed A caller-local input: outer x7, callee parameter x2 returns2, then caller reads7. Freeze exact saved environments/return and verify the complete trace, expected combined sum9 if expressed as addition.",
-      "passCriterion": "WHEN a named call enters its body, the interpreter SHALL evaluate it under the declared parameter bindings and global function table.",
-      "allOriginalScenarios": "WHEN a named call enters its body, the interpreter SHALL evaluate it under the declared parameter bindings and global function table.\n\n#### Scenario: Caller-local preservation\n- **WHEN** An outer let binds x=7 while a called function binds its own x=2 and returns 2.\n- **THEN** The caller still reads x=7 after return.",
-      "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
-      "nativeRequiredByOriginal": false,
-      "readiness": "Root must use existing exact operation classification; no implicit execution grant"
-    },
-    {
       "id": "UIREQ-004",
       "implementationStatus": "partial",
       "consumer": "Machine::step / Frame::Args and owner-defined future ConstructorFields",
-      "action": "First close A strict-argument predicate with add(double2,increment3)->8 and exact call-order trace. Separately implement/check ConstructorFields first/last recursive-field cases without hiding field evaluation in Build.",
+      "action": "Exact nested-argument add(double2,increment3)->8 scenario is observed in R92. Implement generic ConstructorFields first/last recursive-field continuations and independent strict-field observations; do not rerun the unchanged nested-argument test.",
       "passCriterion": "WHEN an expression has multiple evaluated operands or fields, the interpreter SHALL evaluate them once each from left to right.",
       "allOriginalScenarios": "WHEN an expression has multiple evaluated operands or fields, the interpreter SHALL evaluate them once each from left to right.\n\n#### Scenario: Nested arguments\n- **WHEN** add(double(2),increment(3)) executes.\n- **THEN** The trace finishes double(2) before starting increment(3), returning 8.",
-      "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
-      "nativeRequiredByOriginal": false,
-      "readiness": "Root must use existing exact operation classification; no implicit execution grant"
-    },
-    {
-      "id": "UIREQ-005",
-      "implementationStatus": "complete",
-      "consumer": "Machine::step / Invoke\u2013Enter\u2013Return",
-      "action": "Add only fixed ordinary odd5 input to the same observed generic mutual-recursion table/consumer, compare independently expected true and complete call/return/frame prefix. No native requirement.",
-      "passCriterion": "WHEN a named function calls itself or another named function, the interpreter SHALL apply the ordinary call/return relation.",
-      "allOriginalScenarios": "WHEN a named function calls itself or another named function, the interpreter SHALL apply the ordinary call/return relation.\n\n#### Scenario: Self and mutual recursion\n- **WHEN** factorial(3), even(4), and odd(5) execute within declared bounds.\n- **THEN** They return 6, true, and true without adding program-specific rules.",
-      "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
-      "nativeRequiredByOriginal": false,
-      "readiness": "Root must use existing exact operation classification; no implicit execution grant"
-    },
-    {
-      "id": "UIREQ-006",
-      "implementationStatus": "complete",
-      "consumer": "Machine::step / binary_result checked primitive table",
-      "action": "Ordinary fixed typed A add2,3/sub7,2/mul3,4/lt2,3 cases must yield5/5/12/true with declared error mapping. Retain existing independently owned error10 boundary cases rather than invent new security tests.",
-      "passCriterion": "WHEN a scalar primitive executes, the interpreter SHALL produce its declared checked UInt128 or Bool outcome.",
-      "allOriginalScenarios": "WHEN a scalar primitive executes, the interpreter SHALL produce its declared checked UInt128 or Bool outcome.\n\n#### Scenario: Normal arithmetic\n- **WHEN** add(2,3), sub(7,2), mul(3,4), and lt(2,3) execute.\n- **THEN** Their results are 5, 5, 12, and true under the selected primitive table.",
       "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
       "nativeRequiredByOriginal": false,
       "readiness": "Root must use existing exact operation classification; no implicit execution grant"
@@ -64,17 +31,6 @@
       "action": "Implement owner-adopted nominal ListUInt128 declaration/constructor continuation and construct Cons1(Cons2Nil); compare actual identity/ordered fields/type before claiming generic support.",
       "passCriterion": "WHEN a declared constructor is evaluated, the interpreter SHALL produce a finite immutable value of its declared nominal type.",
       "allOriginalScenarios": "WHEN a declared constructor is evaluated, the interpreter SHALL produce a finite immutable value of its declared nominal type.\n\n#### Scenario: Recursive list value\n- **WHEN** Cons(1,Cons(2,Nil)) is built under ListUInt128 declarations.\n- **THEN** The result has the stated ordered fields and recursive list type.",
-      "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
-      "nativeRequiredByOriginal": false,
-      "readiness": "Root must use existing exact operation classification; no implicit execution grant"
-    },
-    {
-      "id": "UIREQ-008",
-      "implementationStatus": "complete",
-      "consumer": "Machine::step / Cases\u2013CaseResult\u2013matching",
-      "action": "Root can adjudicate A tree-fold/ordered-match host closure using exact F04 and N06 evidence; explicit additional generic scope remains034. Kept open here pending full-clause scope adjudication, not stagenet.",
-      "passCriterion": "WHEN an ordered constructor match completes its scrutinee, the interpreter SHALL evaluate the first matching source arm under its declared field bindings.",
-      "allOriginalScenarios": "WHEN an ordered constructor match completes its scrutinee, the interpreter SHALL evaluate the first matching source arm under its declared field bindings.\n\n#### Scenario: Tree fold\n- **WHEN** sum(Node(Leaf(4),Leaf(5))) executes.\n- **THEN** Both leaves are visited through their selected cases and the result is 9; the scrutinee is evaluated once and unselected arm bodies do not execute.",
       "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
       "nativeRequiredByOriginal": false,
       "readiness": "Root must use existing exact operation classification; no implicit execution grant"
@@ -159,7 +115,7 @@
     {
       "id": "UIREQ-018",
       "implementationStatus": "partial",
-      "consumer": "Core/2 load/start/resume \u2192 missing Sherlock financial lowering",
+      "consumer": "Core/2 load/start/resume → missing Sherlock financial lowering",
       "action": "Implement the actual Core/2-to-Sherlock await-prefix field/control map and compare exact committed snapshots/duties/captures/work at await, retaining false-guard semantics and selected opcode disposition.",
       "passCriterion": "WHEN existing Core/2 typed-await behavior is lowered to the universal machine, the adapter SHALL preserve its successful-prefix effects, duties and checkpoint atomicity.",
       "allOriginalScenarios": "WHEN existing Core/2 typed-await behavior is lowered to the universal machine, the adapter SHALL preserve its successful-prefix effects, duties and checkpoint atomicity.\n\n#### Scenario: Await after partial payment\n- **WHEN** The preceding successful prefix reaches a typed await.\n- **THEN** Its committed prefix and residual duty remain the same as Core/2; exact universal Commit/Yield/Await opcodes remain an open design choice.",
@@ -204,7 +160,7 @@
       "id": "UIREQ-022",
       "implementationStatus": "partial",
       "consumer": "Current compile_host + exact sherlock_compile_preflight_regressions; public mori compile separate",
-      "action": "Use actual owner-corrected65-byte identifier fixture under existing R74/R83 classification, preserving the original parse-vs-hostguard failure and unrun last2. Then run only affected exact compiler preflight/positive cases; public CLI and observe remain separate scopes.",
+      "action": "Five current preflight regressions are complete via preserved R83 two plus corrected R90 three results. Next qualify the public two-program scalar compile pipeline, then implement nested-call/list public grammar/lowering with named semantic correspondence and complete applicable observations; no evaluated-literal proof.",
       "passCriterion": "WHEN compilation claims support for a construct, its lowering SHALL have a named semantic correspondence obligation.",
       "allOriginalScenarios": "WHEN compilation claims support for a construct, its lowering SHALL have a named semantic correspondence obligation.\n\n#### Scenario: New supported program\n- **WHEN** A new nested-call/list program is compiled through the public pipeline.\n- **THEN** The mapping covers returned values, defined failures, order, resource observations and applicable effects/duties; host evaluation does not supply missing circuit evidence.",
       "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
@@ -294,7 +250,7 @@
       "consumer": "Named addCarry_b/subBorrow_b/mulWide_b API (missing) + checked wrapper",
       "action": "Implement specified typed32/64 limb components; independent cross-limb normal values2^32+5,2^64+2,3*2^48+3 plus full high/low product and checkedU128 wrapper mapping. Source-only host tests do not establish circuit constraints.",
       "passCriterion": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.",
-      "allOriginalScenarios": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.\n\n#### Scenario: Carry, borrow and full product\n- **WHEN** b is 32 or 64 and checkedU128Add/Sub/Mul use little-endian limbs.\n- **THEN** addCarry_b(a,bv,carryIn) returns named {low,carryOut}, subBorrow_b(a,bv,borrowIn) returns {low,borrowOut}, and mulWide_b(a,bv) returns {low,high}; carry/borrow bits and multiply-accumulate whole-word carries have distinct types. The wrappers retain K mathematical-result/error10 meaning, including the full up-to-256-bit product before checked UInt128 selection. Independently specified normal results are (2^32\u22123)+8 = 2^32+5, (2^64+9)\u22127 = 2^64+2, and (2^48+1)\u00b73 = 3\u00b72^48+3; no layout or row-cost winner is selected.",
+      "allOriginalScenarios": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.\n\n#### Scenario: Carry, borrow and full product\n- **WHEN** b is 32 or 64 and checkedU128Add/Sub/Mul use little-endian limbs.\n- **THEN** addCarry_b(a,bv,carryIn) returns named {low,carryOut}, subBorrow_b(a,bv,borrowIn) returns {low,borrowOut}, and mulWide_b(a,bv) returns {low,high}; carry/borrow bits and multiply-accumulate whole-word carries have distinct types. The wrappers retain K mathematical-result/error10 meaning, including the full up-to-256-bit product before checked UInt128 selection. Independently specified normal results are (2^32−3)+8 = 2^32+5, (2^64+9)−7 = 2^64+2, and (2^48+1)·3 = 3·2^48+3; no layout or row-cost winner is selected.",
       "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
       "nativeRequiredByOriginal": false,
       "readiness": "Root must use existing exact operation classification; no implicit execution grant"
@@ -338,7 +294,7 @@
       "consumer": "Generic TypeDecl/CtorLayout/MatchPlan runtime (missing)",
       "action": "Implement owner-adopted declaration/register/check two-stage pipeline and actual ordered runtime; Schedule Both(Pay4Done,Pay5Done) selects first arm4, separate sum9, with type/constructor/binder/workMap retained. No dedicated-sort substitution.",
       "passCriterion": "WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.",
-      "allOriginalScenarios": "WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.\n\n#### Scenario: New recursive Schedule declaration\n- **WHEN** Schedule = Done | Pay(UInt128,Schedule) | Both(Schedule,Schedule) is matched by ordered arms Both(Pay(x,_),_)\u2192x; Both(_,r)\u2192sum(r); Pay(x,t)\u2192x+sum(t); Done\u21920 on Both(Pay(4,Done),Pay(5,Done)).\n- **THEN** The selected arm is source arm one and the result is 4; a separate structural sum is 9. Nominal/constructor identity, source field order, binder occurrence paths and workMap are retained independently of compact tags or arena indices. Closed monomorphic mutually recursive groups are the initial extension; parameterized specialization needs its own finite bound, and closures/GADTs/or-patterns remain outside this adapter. Existing dedicated list/tree forms do not count as this extension's implementation.",
+      "allOriginalScenarios": "WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.\n\n#### Scenario: New recursive Schedule declaration\n- **WHEN** Schedule = Done | Pay(UInt128,Schedule) | Both(Schedule,Schedule) is matched by ordered arms Both(Pay(x,_),_)→x; Both(_,r)→sum(r); Pay(x,t)→x+sum(t); Done→0 on Both(Pay(4,Done),Pay(5,Done)).\n- **THEN** The selected arm is source arm one and the result is 4; a separate structural sum is 9. Nominal/constructor identity, source field order, binder occurrence paths and workMap are retained independently of compact tags or arena indices. Closed monomorphic mutually recursive groups are the initial extension; parameterized specialization needs its own finite bound, and closures/GADTs/or-patterns remain outside this adapter. Existing dedicated list/tree forms do not count as this extension's implementation.",
       "owner": "Existing assigned ordinary source/QA owner; designated security/private/native owners unchanged",
       "nativeRequiredByOriginal": false,
       "readiness": "Root must use existing exact operation classification; no implicit execution grant"
@@ -357,7 +313,7 @@
   ],
   "retainedAdditionalObligations": [
     {
-      "family": "U0\u2013U7/M1\u2013M17/MC01\u201308/SP01\u201312",
+      "family": "U0–U7/M1–M17/MC01–08/SP01–12",
       "catalogue": {
         "path": "openspec/changes/consolidated-language-kernel/traceability.md",
         "sha256": "d549f31a16e3b7c1ef0f1de6a58812f9084aace273939190ff10b3529c84ded0",
@@ -369,7 +325,7 @@
       "disposition": "All original predicates remain. No closure/implementation judgment inferred from inventory or original35. Security content and judgments are excluded from this audit and referred unchanged to designated owner."
     },
     {
-      "family": "G01\u2013G24",
+      "family": "G01–G24",
       "catalogue": {
         "path": "openspec/sprints/legacy-release-gates.json",
         "sha256": "718d169ff0969848ba5f65cdb3941890c6eaf4dfd41820fe169f52205d09caeb",
@@ -499,7 +455,7 @@
       "disposition": "All original predicates remain. No closure/implementation judgment inferred from inventory or original35. Security content and judgments are excluded from this audit and referred unchanged to designated owner."
     },
     {
-      "family": "ZR01\u201316/MNR01\u201308",
+      "family": "ZR01–16/MNR01–08",
       "catalogue": {
         "path": "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
         "sha256": "0e8ebd913c21cf095dc2c50cf170baf3a0ffddef09d9c8a10ec7c10540c57ad1",
@@ -511,7 +467,7 @@
       "disposition": "All original predicates remain. No closure/implementation judgment inferred from inventory or original35. Security content and judgments are excluded from this audit and referred unchanged to designated owner."
     },
     {
-      "family": "SF01\u201315 DoctorWatson",
+      "family": "SF01–15 DoctorWatson",
       "catalogue": {
         "path": "openspec/changes/doctorwatson/requirements.md",
         "sha256": "01d1a4e4215d851b3cc0bd1bc5cf15cb7b70fb3a80796c21d9683e5b85ca852b",

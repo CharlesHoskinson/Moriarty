@@ -43,9 +43,15 @@ from another clause. Requirements that explicitly demand native, formal or
 target evidence retain those obligations. A blocked row names its missing
 premise and the event that can make work actionable; independent rows continue.
 
-The first factory repair is the existing checker/DoctorWatson integration and a
-regression proving that changing a pinned source cannot retain current closure.
-Then use the reconciled requirement rows to perform actual closure work. Avoid
+The factory repair is complete: the existing checker consumes current evidence,
+and its regression demonstrates that a source edit invalidates closure. Seven
+original host clauses are now adopted and current. Select the remaining missing
+behavior from the [current checklist](requirements-status.md) and
+`NEXT-ACTIONS.json`: structural sharing observations, the public recursive
+compiler producer, public grouping, then the remaining persistent, plan/DAG,
+generic, financial and formal predicates. Native work retains its actual separate
+prerequisites. Do not repeat the passed nine host cases or five compiler
+preflight bodies without a relevant change. Avoid
 further factory expansion unless a concrete closure attempt demonstrates a
 defect. Finish only when every retained applicable EARS has complete current
 acceptance evidence; do not weaken a clause to make the count increase.

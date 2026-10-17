@@ -921,3 +921,25 @@ dependencies rather than making every host clause wait for stagenet. Preserve
 failed runs and historical consumer versions when reusing their valid evidence.
 
 See the [closure record and actual factory results](../docs/results/sherlock-ears-closure-20261017/README.md).
+
+### DW-50 — Advance from passed scenarios to missing behavior
+
+Nine independently frozen normal host cases passed, then fresh review and Root
+adoption closed UIREQ-003/005/006/008 on the unchanged typed A host relation.
+The selected DoctorWatson report verifies seven current adopted clauses, while
+28 originals and all25 refinements remain open. The earlier252-test pass stays
+attached to its earlier three-closure sidecar; no passing cohort was repeated.
+
+A scenario pass does not settle a broader clause. UIREQ-004's nested arguments
+now return8 in the required order, but generic constructor-field evaluation is
+missing, so its next action is implementation of that behavior. Likewise all
+five compiler preflight bodies have exact preserved2+3 passes; the queue moves
+to public compiler qualification and recursive lowering rather than re-running
+the same five. Source analysis of checked operations is distinct from observed
+boundary execution; the direct A overflow/underflow paths remain unobserved.
+
+The fresh review's semantic descriptions were grounded, but its numerical source
+ranges were inaccurate. Preserve raw reports and bind actual symbol anchors in
+a separate mechanical readback. Do not silently correct a review or transfer its
+scope to new native, generic, formal or financial requirements. See the
+[closure and selected-report record](../docs/results/sherlock-ears-host-closure-20261017/README.md).

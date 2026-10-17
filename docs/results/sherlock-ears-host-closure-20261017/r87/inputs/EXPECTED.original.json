@@ -1,0 +1,470 @@
+{
+  "format": "sherlock-original-ears-positive-host-expectations/1",
+  "status": "INDEPENDENT_HAND_DERIVED_SOURCE_ONLY_BEFORE_SUBJECT_EXECUTION",
+  "profile": "sherlock-k-a/1",
+  "K_source_sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+  "fixed_inputs": {
+    "fuel": "512",
+    "stack_limit": "32",
+    "event_budget": "513",
+    "host_domain": "fixed well-formed typed A ASTs; source names are ordinary host strings, no actual K numeric-name correspondence claimed"
+  },
+  "case_count": 9,
+  "cases": [
+    {
+      "id": "UIREQ003-lexical",
+      "requirement": "UIREQ-003",
+      "test": "uireq003_callee_local_x2_preserves_caller_x7",
+      "result": {
+        "UInt": "7"
+      },
+      "charged": 22,
+      "input": "let x=7 in let ignored=callee() in x; callee()=let x=2 in x",
+      "critical": {
+        "complete_rule_sequence": [
+          114,
+          135,
+          102,
+          145,
+          114,
+          135,
+          129,
+          200,
+          204,
+          208,
+          135,
+          114,
+          135,
+          102,
+          145,
+          108,
+          195,
+          185,
+          145,
+          108,
+          195,
+          195,
+          80
+        ],
+        "callee_enter_record_index": 10,
+        "callee_body_initial_environment": {},
+        "callee_return_record_index": 17,
+        "callee_return_value": {
+          "UInt": "2"
+        },
+        "restored_caller_environment": {
+          "x": {
+            "UInt": "7"
+          }
+        },
+        "caller_read_record_index": 19,
+        "caller_read_environment": {
+          "ignored": {
+            "UInt": "2"
+          },
+          "x": {
+            "UInt": "7"
+          }
+        },
+        "caller_read_value": {
+          "UInt": "7"
+        }
+      },
+      "events": 23,
+      "remaining_fuel": 490,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq003_callee_local_x2_preserves_caller_x7",
+      "source_line": 128
+    },
+    {
+      "id": "UIREQ004-nested",
+      "requirement": "UIREQ-004",
+      "test": "uireq004_double_completes_before_increment_starts_and_add_returns8",
+      "result": {
+        "UInt": "8"
+      },
+      "charged": 48,
+      "input": "add(double(2),increment(3)); named add(left,right)=left+right; double(n)=n*2; increment(n)=n+1",
+      "critical": {
+        "ordered_calls_and_returns": [
+          [
+            "Invoke",
+            "double",
+            [
+              2
+            ]
+          ],
+          [
+            "Returned",
+            {
+              "n": 2
+            },
+            4
+          ],
+          [
+            "Invoke",
+            "increment",
+            [
+              3
+            ]
+          ],
+          [
+            "Returned",
+            {
+              "n": 3
+            },
+            4
+          ],
+          [
+            "Invoke",
+            "add",
+            [
+              4,
+              4
+            ]
+          ],
+          [
+            "Returned",
+            {
+              "left": 4,
+              "right": 4
+            },
+            8
+          ]
+        ],
+        "each_nested_operand_call_count": 1
+      },
+      "events": 49,
+      "remaining_fuel": 464,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq004_double_completes_before_increment_starts_and_add_returns8",
+      "source_line": 156
+    },
+    {
+      "id": "UIREQ005-factorial3",
+      "requirement": "UIREQ-005",
+      "test": "uireq005_factorial3_uses_generic_calls_and_returns6",
+      "result": {
+        "UInt": "6"
+      },
+      "charged": 113,
+      "input": "factorial(3); factorial(n)=if n==0 then1 else n*factorial(n-1)",
+      "critical": {
+        "invocations": [
+          [
+            "factorial",
+            3
+          ],
+          [
+            "factorial",
+            2
+          ],
+          [
+            "factorial",
+            1
+          ],
+          [
+            "factorial",
+            0
+          ]
+        ],
+        "return_parameter_n_and_value": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            6
+          ]
+        ],
+        "ordering": "all listed invocations, then all listed returns"
+      },
+      "events": 114,
+      "remaining_fuel": 399,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq005_factorial3_uses_generic_calls_and_returns6",
+      "source_line": 187
+    },
+    {
+      "id": "UIREQ005-even4",
+      "requirement": "UIREQ-005",
+      "test": "uireq005_even4_uses_mutual_calls_and_returns_true",
+      "result": {
+        "Bool": true
+      },
+      "charged": 120,
+      "input": "even(4); even(n)=if n==0 then true else odd(n-1); odd(n)=if n==0 then false else even(n-1)",
+      "critical": {
+        "invocations": [
+          [
+            "even",
+            4
+          ],
+          [
+            "odd",
+            3
+          ],
+          [
+            "even",
+            2
+          ],
+          [
+            "odd",
+            1
+          ],
+          [
+            "even",
+            0
+          ]
+        ],
+        "return_parameter_n_and_value": [
+          [
+            0,
+            true
+          ],
+          [
+            1,
+            true
+          ],
+          [
+            2,
+            true
+          ],
+          [
+            3,
+            true
+          ],
+          [
+            4,
+            true
+          ]
+        ],
+        "ordering": "all listed invocations, then all listed returns"
+      },
+      "events": 121,
+      "remaining_fuel": 392,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq005_even4_uses_mutual_calls_and_returns_true",
+      "source_line": 217
+    },
+    {
+      "id": "UIREQ005-odd5",
+      "requirement": "UIREQ-005",
+      "test": "uireq005_odd5_uses_mutual_calls_and_returns_true",
+      "result": {
+        "Bool": true
+      },
+      "charged": 145,
+      "input": "odd(5); same even/odd global declarations as even4",
+      "critical": {
+        "invocations": [
+          [
+            "odd",
+            5
+          ],
+          [
+            "even",
+            4
+          ],
+          [
+            "odd",
+            3
+          ],
+          [
+            "even",
+            2
+          ],
+          [
+            "odd",
+            1
+          ],
+          [
+            "even",
+            0
+          ]
+        ],
+        "return_parameter_n_and_value": [
+          [
+            0,
+            true
+          ],
+          [
+            1,
+            true
+          ],
+          [
+            2,
+            true
+          ],
+          [
+            3,
+            true
+          ],
+          [
+            4,
+            true
+          ],
+          [
+            5,
+            true
+          ]
+        ],
+        "ordering": "all listed invocations, then all listed returns"
+      },
+      "events": 146,
+      "remaining_fuel": 367,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq005_odd5_uses_mutual_calls_and_returns_true",
+      "source_line": 234
+    },
+    {
+      "id": "UIREQ006-add2_3",
+      "requirement": "UIREQ-006",
+      "test": "uireq006_add2_3_returns5",
+      "result": {
+        "UInt": "5"
+      },
+      "charged": 7,
+      "input": {
+        "binary": "Add",
+        "left": "2",
+        "right": "3"
+      },
+      "critical": {
+        "complete_rule_sequence": [
+          117,
+          135,
+          102,
+          149,
+          102,
+          153,
+          223,
+          80
+        ],
+        "primitive_result_after_record_index": 5,
+        "return_after_record_index": 6,
+        "publication_record_index": 7
+      },
+      "events": 8,
+      "remaining_fuel": 505,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq006_add2_3_returns5",
+      "source_line": 259
+    },
+    {
+      "id": "UIREQ006-sub7_2",
+      "requirement": "UIREQ-006",
+      "test": "uireq006_sub7_2_returns5",
+      "result": {
+        "UInt": "5"
+      },
+      "charged": 7,
+      "input": {
+        "binary": "Sub",
+        "left": "7",
+        "right": "2"
+      },
+      "critical": {
+        "complete_rule_sequence": [
+          117,
+          135,
+          102,
+          149,
+          102,
+          153,
+          223,
+          80
+        ],
+        "primitive_result_after_record_index": 5,
+        "return_after_record_index": 6,
+        "publication_record_index": 7
+      },
+      "events": 8,
+      "remaining_fuel": 505,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq006_sub7_2_returns5",
+      "source_line": 260
+    },
+    {
+      "id": "UIREQ006-mul3_4",
+      "requirement": "UIREQ-006",
+      "test": "uireq006_mul3_4_returns12",
+      "result": {
+        "UInt": "12"
+      },
+      "charged": 7,
+      "input": {
+        "binary": "Mul",
+        "left": "3",
+        "right": "4"
+      },
+      "critical": {
+        "complete_rule_sequence": [
+          117,
+          135,
+          102,
+          149,
+          102,
+          153,
+          223,
+          80
+        ],
+        "primitive_result_after_record_index": 5,
+        "return_after_record_index": 6,
+        "publication_record_index": 7
+      },
+      "events": 8,
+      "remaining_fuel": 505,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq006_mul3_4_returns12",
+      "source_line": 261
+    },
+    {
+      "id": "UIREQ006-lt2_3",
+      "requirement": "UIREQ-006",
+      "test": "uireq006_lt2_3_returns_true",
+      "result": {
+        "Bool": true
+      },
+      "charged": 7,
+      "input": {
+        "binary": "Lt",
+        "left": "2",
+        "right": "3"
+      },
+      "critical": {
+        "complete_rule_sequence": [
+          117,
+          135,
+          102,
+          149,
+          102,
+          153,
+          223,
+          80
+        ],
+        "primitive_result_after_record_index": 5,
+        "return_after_record_index": 6,
+        "publication_record_index": 7
+      },
+      "events": 8,
+      "remaining_fuel": 505,
+      "final": "None control, empty environment and frames, original complete Program, stack32, initialfuel512, Done(result)",
+      "source_locator": "proposal/crates/mori-core/tests/sherlock_original_ears_host_positive.rs::uireq006_lt2_3_returns_true",
+      "source_line": 262
+    }
+  ],
+  "shared_assertions": "complete initial/final snapshots; full Program unchanged at every boundary; exact per-record fuel/charge/outcome, one free line80 publication; generic rule line set",
+  "critical_selector": "Raw before Control::Invoke at line200; raw return environment/value at line185 with Return frame; case-specific lexical and scalar checkpoints",
+  "not_a_full_intermediate_state_oracle": true,
+  "expected_values_from_actual_Machine_or_helper_evaluator": false
+}
