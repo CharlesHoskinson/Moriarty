@@ -1,6 +1,6 @@
 # C2 serializer r2 policy, revision 4
 
-**Qualification correction:** The original policy adoption is suspended. The stored Muse review does not match the digest in its producer completion record. Root omitted that comparison during intake. It cannot count as a qualified second vote. See [the correction](POLICY-QUALIFICATION-CORRECTION.json). The original records below remain immutable history; no r2 source or test execution was adopted. A fresh second independent Opus policy review is pending.
+**Digest representation erratum:** The stored producer digest matches the report text plus newline, not the whole JSON file. Root compared the wrong representations; the apparent mismatch finding is withdrawn. See [the erratum](REVIEW-DIGEST-REPRESENTATION-ERRATUM.json). A fresh second Opus policy review is already pending; the temporary root suspension remains until its re-adoption decision. No r2 source or test execution has been adopted. [The mistaken correction](POLICY-QUALIFICATION-CORRECTION.json) and original records remain preserved.
 
 The exact CP01–CP08 policy is adopted only as a basis for test source authoring. Fresh Opus 5.5 and Meta Muse Wonder reviews agree on all eight literal clauses. Root rechecked all 40 frozen input files against their original public sources before this decision. Requested effort was high; actual effort was not independently observed. See [the decision](POLICY-ADOPTION.json), [Opus review](reviews/opus/REVIEW.json) and [Muse review](reviews/muse/MODEL-REVIEW.json).
 
