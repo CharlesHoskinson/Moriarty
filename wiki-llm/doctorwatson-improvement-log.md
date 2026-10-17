@@ -322,3 +322,116 @@ separate. **Proposed / validation needed:** forward changed steering to the actu
 author, materialize its exact revision and add later factual evidence as dated
 provenance. Keep source publication, host observations and measured circuit
 activity independently bound. Integrate only the exact reviewed public selection.
+
+
+## 2026-10-17 UTC — fourth edition
+
+The [third edition](https://github.com/CharlesHoskinson/Moriarty/pull/131)
+remains unchanged above. [PR #132](https://github.com/CharlesHoskinson/Moriarty/pull/132)
+published the handwritten scalar-tag leaf source, and
+[PR #133](https://github.com/CharlesHoskinson/Moriarty/pull/133) published the
+independent K/Quint sources. Those new circuit/model sources remain uncompiled
+and unexecuted. The following lessons record this iteration's frozen status;
+they implement no new factory automation.
+
+### DW-16 — Capture genuine typed inputs and inspect retained results passively
+
+**Observation/evidence:** the v2 six-input carrier reached an actual SDK-free
+library compile, binary link and one D01 host run, each exiting 0. Root read back
+seven inert JSONL records, 31,436 bytes, SHA-256
+`12820350e75c6e7d37be799671fb1c5f942eda57491629719325c59c6a9d59a3`.
+The initial record contains genuine constructor inputs. Later R2/R3 factual
+attachments inventory the attempt tree and current pins without re-executing the
+subject or reusing artifacts. These receipts remain unpublished.
+
+**Status:** observed host capture, passive readback and retained scoped actual-result
+reviews. Root's retention decision, v2 QA comparison and complete acceptance
+remain pending at this freeze.
+**Proposed / validation needed:** retain typed inputs from the actual producer,
+then bind passive inventories and consumer comparison to the same immutable
+capture. File-tree and hash facts cannot supply semantic or format judgments.
+
+### DW-17 — Count bodies actually supplied separately from pinned closure
+
+**Observation/evidence:** Root's coverage correction records that an actual
+operation-review packet supplied 22 literal Rust bodies and two reconstructed
+bodies. Separate full-body addenda supplied the missing two literal bodies and
+received scoped reviews; their combined coverage is not one original whole-body
+audit. A complete membership manifest alone did not mean every body had been
+supplied. The original packet and correction remain retained separately; their
+underlying reports are unpublished.
+
+A reported `PlanDelta: Copy` mismatch was also withdrawn after checking the
+literal declarations: all three inspected `PlanDelta` declarations derive Copy;
+the adjacent `PlannedWrites` does not. Both shared revisions already derive Copy.
+The original incorrect note and factual correction remain preserved. No compile
+occurred and no compiler failure or confirmed source mismatch was established.
+
+**Status:** observed packet-coverage correction. **Proposed / validation needed:**
+account separately for literal body, reconstructed body, excerpt and pin-only
+coverage in each exact reviewer packet. Bind later addenda and their review to
+their supplied bytes; preserve the original coverage limits and dissent. Do not
+infer full-body reading from a manifest or a successful provider exit.
+
+### DW-18 — Keep cross-package publication pins coherent
+
+**Observation/evidence:** immutable links among raw capture, QA summary and
+consumer source required narrow I5 metadata repins. The dated joint handoff
+selects one atomic publication of 19 raw-package files, seven QA files and
+11 consumer files. All 13 raw captures remain unchanged. The QA metadata
+successor preserves historical consumed membership separately from intended
+publication membership. Root subsequently merged the selection in
+[PR #134](https://github.com/CharlesHoskinson/Moriarty/pull/134), commit
+`e3a274c448a44ed29fd78bd1ca7d7314a4ab358c`. The original 13 comparisons remain
+GAP, with no new run or semantic result from publication.
+
+**Status:** observed metadata repair, exact selection and source/data publication.
+**Proposed / validation needed:** update only the affected provenance/status
+metadata, check all linked selections together and verify the exact committed
+blobs. Preserve immutable consumed-result identities; unchanged capture bytes and
+result rows do not become a fresh execution or a stronger comparison.
+
+### DW-19 — Carry the owner's exact preimage contract into source handoff
+
+**Observation/evidence:** the adopted source04 helper contract records that
+`alloc_env.previous`, when present, must be a recorded preimage EnvId below
+`pre.img.active.env`. Root adopted the exact corrected source dependency only.
+That adoption does not
+establish Stage2 acceptance, a compiler result, execution eligibility or full B
+behavior; its receipt remains unpublished.
+
+**Status:** applied source correction and scoped source adoption.
+**Proposed / validation needed:** retain the exact owner-authored preimage/index
+condition with the candidate and its consumers. Keep source adoption and later
+actual behavior separately evidenced; further contract judgments remain with
+the designated owner.
+
+### DW-20 — Preserve an incomplete physical partition as a gap
+
+**Observation/evidence:** independent normal physical QA maps 296 known lanes per
+case, with the named helper/counter lanes recorded. The exact remaining physical
+partition is still an explicit **GAP**; complete physical inputs are **NOT_READY**.
+The missing partition and Operand construction/import declarations prevented a
+complete typed fixture harness. The retained handoff records this without an
+invented empty rest, zero lanes or harness. No expected tuples are published here.
+
+**Status:** observed bounded normal-data preparation; complete physical fixture
+and harness remain pending. **Proposed / validation needed:** obtain the missing
+exact declarations from their owner, then validate the complete partition before
+claiming a callable physical fixture. Known-lane coverage is a separate result.
+
+### DW-10 update — Reduce duplicate context without dropping current obligations
+
+**Observation/evidence:** another Muse request reported 472,889 context tokens
+against 460,800; a FullB16 Opus request reported 1,081,472 against 1,000,000.
+Both failed without a substantive vote. The failures remain preserved. The
+coordinator's changed approach uses exact-SHA deduplication and companion-specific
+packets retaining full current requirements and dependencies. These are observed
+provider-attempt limits, not universal model or concurrency limits.
+
+**Status:** observed failures and packet revision; any resulting review remains
+pending unless separately recorded with its actual terminal and full scope.
+**Proposed / validation needed:** verify the deduplicated membership, full current
+companion requirements and reserved dependencies before retrying a bounded
+packet. Preserve failures as nonvotes. This log changes no budget, execution
+guard, security policy or acceptance requirement.
