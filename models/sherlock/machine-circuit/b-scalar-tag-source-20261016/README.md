@@ -1,0 +1,13 @@
+# B Scalar.tag/Add positive circuit source
+
+This package retains an unregistered handwritten Rust constructor, `emit_b_scalar_tag_add`, for one positive B helper branch: RetRight / Add / First / UInt. This is the operand-read and staging row, not the arithmetic row. It constructs SDK Instruction values using the existing handwritten builder style; it returns no host acceptance bit or computed post state.
+
+The source emits the owner-specified enabled Const/Data fetches and read bound, sixteen-byte payload copy into regA, phase Second, helper-complement preservation, and bytewise remainingWork−1 / consumedWork+1 / helperWork+1 / helperVisits+1 with final no-wrap constraints. The supplied post operands are independent witnesses. Sixteen-byte counter carriers are local logical carriers, not a B serialized width table or profile.
+
+`COLUMN-MAPPING.json` records the exact inputs, reads, writes, preservation partition, K01–K13 and all twelve external caller obligations. Its publication display removes origin-path metadata only; source bytes and cosmetic mapping labels/line notes remain unchanged. A future physical adapter must bind true tables/active lengths, complete helper lanes and local-to-serialized carriers. A future dispatcher must constrain branch provenance/exactly-one enable, P0/P3, all other row/refusal branches and the complete outside-leaf image complement. Program/state/statement and event-envelope binding remain external. Returned preserved fields are operand aliases only.
+
+Fresh Muse nonsecurity and Opus source/constraint-security readings approved this exact source scope with no forced construction correction. They read the complete actual-source reading set and applicable extract, not the full 249 KB normative bodies. REVIEW-METADATA.json retains the explicit normative abstentions. SDK semantics and the modulus fact p>2^128 remain unverified assumptions; all twelve caller obligations remain open. The original contract is a proposed local source design, not an adopted B codec.
+
+Rust compilation, SDK loading/checking/evaluation, normal and hostile tests, models, proof and native execution are all UNRUN. Independent normal QA remains separate and supplies no expected data to the source author. Security cases and judgments stay with the designated owner. No O, actual host trace or next-circuit expected tuple was used.
+
+No module registration, backend export, PublicInput/Output wiring, full B dispatcher, physical-codec adoption, StepInv preservation, whole-transition validity or source-to-circuit correspondence is delivered. Source publication is not an installed capability or an execution grant. C4, native authority zero and all U0–U7/M1–M17/MC/SP/G gates remain unchanged. The complete B goal remains open.
