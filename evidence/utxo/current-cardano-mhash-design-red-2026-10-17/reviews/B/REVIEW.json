@@ -1,0 +1,137 @@
+{
+  "reviewToken": "mhash-reconciled-design-tests-independent-b-opus55-20261017",
+  "report": "SEAT B, independent non-author review (Opus 5.5). This is one substantive vote. I did not see any other vote or author report. I executed, hashed, imported and compiled nothing.\n\nREAD ROUTE. I read MANIFEST.json, SEGMENT-INDEX.json and all eight READ-SEGMENT files in full. Segments 06 and 07 hit the display cap, and I reread their remaining lines (06:525-640, 07:472-575) before reaching any judgment. That covers the whole bodies of the contract, API, test (566 lines), Ledger Language/Hashes/Keys, CIP-0057, SOURCES, README, adoption, tool checker, SIZES, routing, the 7 receipts, FIXTURE-STRUCTURE, the three supplements, SUPPLEMENT-SOURCES and the envelope. For the opaque B9 blueprint I read only raw lines 1-40: the preamble (plutusVersion v3, Aiken v1.1.24+bacbeb3) and the first two handlers, c2.c2.mint then c2.c2.spend. Both carry prefix 590acf, the c2 receipt hash and no parameters key. The rest of B9 is unread. I relied on FIXTURE-STRUCTURE and the test transcriptions for all 16 handlers' metadata. The original MANIFEST.json body (5602 B, 2f91b6fc\u2026) is not in the segments and I did not read it. I treated the segments as exact transcriptions of the pinned originals but did not hash them.\n\nALGORITHM, DIGEST WIDTH AND TAGS (C1/C2). Every citation checks out line by line:\n- Hashes:181-182 ScriptHash over ADDRHASH; Hashes:105 imports ADDRHASH; Keys:132 defines it as Hash.Blake2b_224.\n- B2b:56-59 sets HashSize 28 and blake2b_libsodium 28; B2b:148-162 is unkeyed (nullPtr/0); CIP:102 says blake2b-224.\n- Blake2b_256 appears only as HASH (Hashes:125) and is correctly excluded.\n- Lang:199-205 hashes BS.singleton tag <> originalBytes with hashWith id. Lang:185 newtype-derives SafeToHash on Plutus; Lang:261-262 gives originalBytes = fromShort.\n- Tags are V1 0x01 (:525), V2 0x02 (:545), V3 0x03 (:565), V4 0x04 (:586). The CBOR encodeEnum index (:273-278, :329-330) is used only in the envelope (:227-229). The tag trap is correctly called out.\n- The [I] links are labelled honestly: the Cardano.Crypto.Hash re-export, Hash.Class hashWith/castHash, the libsodium body, and CPython equivalence.\n\nLEDGER BYTE BOUNDARY (C3). [S] Lang:546-547 and :566-567 hash and deserialise the same PlutusBinary bs. [S at plutus HEAD] SS:265-269 decodes fromShort sScript from offset 0 with CBOR.deserialiseFromBytes; SS:263 returns sScript unmodified; SS:155-160 shows SerialisedScript is serialise . SerialiseViaFlat. So the ledger hashes tag || bs with no strip and no extra wrap, and the [enum, bytes] envelope is transport only. The remaining inferences are:\n- CIP compiledCode = SerialisedScript (prose-level);\n- PV2/PV3.deserialiseScript = Common.deserialiseScript;\n- the outer header form;\n- dependency correspondence;\n- libsodium/CPython equivalence.\n\nNone of these is required for the C3 hash rule itself. The header form affects only C4 refusal. Primitive equivalence and dependency correspondence are honestly labelled and backed only by the empirical cross-check, and they do not change the rule. So I do not invoke STOP and request no missing symbol. One labelling nit is finding F2: the 'Therefore [S]' at contract line 43 inherits two [I] premises.\n\nThe supplements' HEAD commits are correctly not claimed as qualified ledger or installed-dependency correspondence (contract lines 9 and 57; API line 39). The ledger-vs-tool remainder note is accurate: SS:259-261 tolerates V1/V2 trailing bytes. C4 refuses such inputs for v2 locally; it never hashes them differently, and it makes no protocol claim.\n\nLOCAL ADMISSION DOMAIN (C4). Admission is a local tool rule only, not maxTxSize or ExUnits:\n- hex must be lowercase ASCII, at most 65536 characters, checked before decoding;\n- header must be 0x58 with 24 \u2264 L \u2264 255, or 0x59 with L \u2265 256;\n- total length must be exactly header + L and at most 32768 bytes;\n- only v2 and v3 are admitted.\n\nThe fixtures are consistent with this. CIP58ad gives 175 B = 2 + 173. The seven B9 L16 values + 3 equal SIZES appliedBytes: 0x0acf=2767, 0x32d7=13015, 0x31ed=12781, 0x1ac8=6856, 0x26d1=9937, 0x2a4d=10829, 0x2a46=10822. Hex character counts equal 2 \u00d7 appliedBytes.\n\nBLUEPRINT CHECK (C5). Covered: strict UTF-8, a duplicate-key hook (both the entry and preamble cases defeat last-wins), schema checks, remaining-parameters refusal, all 16 entries recomputed individually, and disjoint ValueError subclasses asserted in both directions (assertInputError/assertMismatch with assertNotIsInstance). 32 malformed cases and 13 bad versions are counted correctly. Gaps (non-blocking): which error wins when one entry is malformed and another mismatched is unspecified (F3), and there is no test for UTF-16/BOM input or for returning a fresh result dict (F4).\n\nVECTORS AND FROZEN EXPECTATIONS (C6). I compared CIP57_CODE against CIP:425 in 5\u00d770-character chunks: identical, 350 hex characters. CIP57_HASH equals CIP:426. All 7 RECEIPTS equal the hash-*.txt bodies and FIXTURE expectedHashes. The handler-to-group assignment, prefixes and lengths all match FIXTURE. Expected values are frozen literals; hashlib is used only for sha256 pins (test:209), and the tests compute no BLAKE2b. The same-run Aiken receipt limitation and the shared-primitive limitation are stated honestly. There is no authenticated ledger oracle and no formal proof of the primitive.\n\nTEST AUDIT: exactly 19 methods. Five T00 methods need no implementation; 14 implementation methods each call _impl() or _impl_source() first:\n- T01: api_surface, static_purity, cip57, b9_16, tag, cbor, length, hex, bounds, flip;\n- T02: b9, cip_bounds, substitution, malformed.\n\nWhile the implementation is absent, _impl_source raises AssertionError(RED). That is a unittest failure, not an error, and is never cached, so all 14 fail with the exact phrase that predictedRED expects. Module import pulls in stdlib only and reads no files, so there is no ImportError-only RED.\n\nLoader effects: spec_from_file_location/module_from_spec/exec_module neither touch sys.path nor insert into sys.modules. -B blocks pyc writes. -I drops the script directory from sys.path and ignores PYTHON* variables but keeps MHASH_PACKET_DIR. None of the loader path runs at RED.\n\nT00 runtime prediction from the transcribed bodies: every anchor substring is present (including the multi-line '\\n' anchors at Lang:544-545, 564-565 and 274-277). The CIP slice markers are present (CIP:363, 365, 430), and the JSON parses strictly with one hello_world entry and no parameters. SOURCES statuses and shas match PINS. The tool contains '(M-HASH open)' and no 'blake2'. The adoption and README phrases are present. The B9 checks are consistent with FIXTURE and the 40 lines I read. Residual T00 risk is limited to the unread MANIFEST.json (F5) and the opaque remainder of B9. Any T00 failure or error means STOP.\n\nThe 15 meaningfulness controls are sound against the tests. MC10 depends on handler order: B9 confirms c2.c2.spend is not first; the vs4 position is unverified (F6). The static AST guard is not a sandbox and is trivially bypassable through attribute chains (F1). That does not matter at RED; it matters before any implementation is executed.\n\nPURITY (C7) AND NON-CLAIMS (C8). C7 is accurate as worded, since it already says 'guard, not a sandbox'. C8's non-claims and open scope are complete. All 20 UTxO families, general financial obligations, ACTUS, DeFi, recursion, PCD, private handoff, multi-parent composition, residuals, X1/PX04/M-EU, FX1, FV-01/FV-02 and real Preprod stay open. Native authority is 0.\n\nENVELOPE. The argv matches the requested envelope exactly:\n- timeout 10s with --kill-after=2s; prlimit cpu 10:10, as 512 MiB, fsize 2 MiB, core 0;\n- bwrap --unshare-all --die-with-parent --new-session;\n- read-only /usr with /bin, /lib and /lib64 symlinks; /proc; minimal /dev;\n- read-only /input holding only the pinned test (0444, directory 0555);\n- read-only /packet holding the 20 known files, including the original MANIFEST.json and the routing file (the routing file is never read by the test);\n- --clearenv, then PATH, LANG, PYTHONDONTWRITEBYTECODE and MHASH_PACKET_DIR=/packet;\n- python3 -I -B -v, with no home, no network, no writable mount and no subprocess;\n- maximumAttempts 1.\n\nThe tool checker is read only as text. The test never touches any SDK, VM, prover, native crypto, private key or ledger. Notes (F7): -S is absent, so system .pth files under the read-only /usr still run; a bwrap or userns startup failure must count as STOP, not as RED.\n\nRECOMMENDATION. I recommend authorising exactly one root-run ordinary RED under this exact envelope, once root has repeated its before-run checks (pins, modes, implementation absence, the F5 manifest precheck). This vote alone does not authorise it: a second fresh agreeing review and root's decision are still required.\n\nAccept the RED only if all of the following hold:\n- 'Ran 19 tests' and 'FAILED (failures=14)' with no errors;\n- the 5 T00 methods report ok;\n- each of the 14 failures ends with the exact M-HASH-RED phrase;\n- exit code is 1;\n- pins and modes are unchanged afterwards, and no new files exist.\n\nAny other outcome means STOP with no retry. This vote grants nothing for implementation, GREEN, mutants, operator, builder or native work.",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "medium",
+      "evidence": "test_independent_script_hash.py:88-90,155-165. _static_problems checks only top-level import names and ast.Name in BANNED_NAMES. Attribute chains on allowed modules get past it, for example typing.sys.modules, json.codecs.builtins.open, re.functools, getattr(...), __builtins__ and dunder traversal ().__class__.__mro__. MC14 (API:142) therefore proves only lint-level refusal. Contract C7 (line 99) honestly says 'guard, not a sandbox'. This does not affect RED, where no implementation exists.",
+      "requiredFix": "Not a RED blocker. Before any implementation is executed (GREEN), choose one: (a) revise the guard to ban ast.Attribute names starting with '_', add getattr/setattr/delattr/__builtins__/type/object/super to BANNED_NAMES, and allowlist module attribute access (hashlib.blake2b, json.loads/JSONDecodeError, re.compile/fullmatch, typing names), then get fresh two-review re-approval and re-run RED; or (b) amend C7/API to require line-by-line review of the implementation before root execution, state that the envelope is the only containment, and relabel MC14 as lint-only."
+    },
+    {
+      "id": "F2",
+      "severity": "low",
+      "evidence": "MHASH-CONTRACT.md:43 'Therefore [S] no layer is removed or added\u2026' depends on PV2/PV3.deserialiseScript = Common.deserialiseScript (an inference: API:67 and missingPrimarySymbols #4) and on plutus HEAD 3de6f245 versus the ledger's dependency version (API:70). The ledger-side byte flow (Lang:205, 546-547, 566-567) is [S] on its own.",
+      "requiredFix": "Label precision only; the C3 rule is unchanged. Relabel line 43 as: '[S] at ledger d6eec237 for the identity of hashed and decoded bytes; [S-at-plutus-HEAD]+[I] (PV2/PV3 re-export, dependency pins) for the CBOR-encoded-Flat characterisation'. No STOP and no symbol request is needed."
+    },
+    {
+      "id": "F3",
+      "severity": "low",
+      "evidence": "MHASH-CONTRACT.md:79-80 and MHASH-API.json:28-29,33 do not say which exception is raised when one entry is malformed and another has a well-formed but wrong hash. No test mixes the two (test:464-562).",
+      "requiredFix": "For the implementation phase: specify validate-all-then-compare, so any malformed entry raises ScriptHashInputError whatever the entry order, and MismatchError is raised only when every entry is well-formed. Add a mixed-order test in a future re-reviewed revision."
+    },
+    {
+      "id": "F4",
+      "severity": "low",
+      "evidence": "test:527-528 covers only str input and a b'\\xff\\xfe' prefix. Nothing checks that a valid UTF-16/UTF-32 or UTF-8-BOM blueprint is rejected (json.loads(bytes) auto-detects these encodings), or how lone surrogate escapes are handled. Nothing checks for a fresh result: that mutating the returned dict cannot affect a later call, or that the input is left untouched. C5 at contract line 72 requires strict UTF-8.",
+      "requiredFix": "Not a RED blocker. In a future re-reviewed revision, add: a valid UTF-16-LE-BOM blueprint and a UTF-8-BOM-prefixed blueprint, both expecting ScriptHashInputError; and a call to check_blueprint twice that mutates the first result and asserts the second is unchanged."
+    },
+    {
+      "id": "F5",
+      "severity": "low",
+      "evidence": "test:204-211 indexes manifest[name] for all 18 PINS and asserts 'Ledger-Core-Script.hs' is absent. The original MANIFEST.json (5602 B, 2f91b6fc\u2026, PROPOSED-ORDINARY-RED-ENVELOPE.json:131-136) is not included in the review segments, so this reviewer could not check it. A missing entry would raise KeyError, an error rather than a failure, and the RED would be invalid.",
+      "requiredFix": "Root mechanical precheck before RED: strict-parse MANIFEST.json and confirm all 18 PINS paths are present with identical bytes and sha256, no Ledger-Core-Script.hs entry, and no duplicate keys. On any mismatch, STOP and run nothing."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "evidence": "MC10 'checks only first handler per group' (API:138) is caught by T02.3 only if c2.c2.spend and vs4.vs4.else are not first in their groups (test:481-483). B9 lines 15 and 26 confirm c2.c2.mint comes first and c2.c2.spend second. The vs4 order was not checked (opaque).",
+      "requiredFix": "Nothing is needed for RED. Record the order dependence. A future revision could perturb a first handler and a non-first handler separately."
+    },
+    {
+      "id": "F7",
+      "severity": "info",
+      "evidence": "PROPOSED-ORDINARY-RED-ENVELOPE.json:149-194. python3 -I does not imply -S, so the system site module and .pth files under read-only /usr still run. /etc is not mounted. bwrap --unshare-all needs unprivileged user namespaces.",
+      "requiredFix": "Nothing is needed for RED. Root must treat any startup or bwrap failure, a timeout (124/137) or any exit code other than 1 as STOP, not as RED. Consider adding -S in a future envelope only after fresh review."
+    },
+    {
+      "id": "F8",
+      "severity": "info",
+      "evidence": "predictedRED (API:124) and envelope expectedResult (envelope:205) define the RED in prose.",
+      "requiredFix": "Root acceptance check: 'Ran 19 tests'; 'FAILED (failures=14)' with no 'errors='; 5 T00 tests 'ok'; each of the 14 tracebacks ends with the exact RED string; exit code 1; pins and modes unchanged before and after; implementation still absent; no __pycache__ or new files. One attempt only."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "ordinarySelftestReady": true,
+    "ordinarySelftestScope": "Exactly one root-executed ordinary RED of the unchanged test (28091 B, a1c00918\u2026) under the exact PROPOSED-ORDINARY-RED-ENVELOPE argv, with no implementation present. Read-only /input holds only the test; read-only /packet holds the 20 pinned files including the original MANIFEST.json. Preconditions: a second fresh agreeing independent vote and root's decision, root's before-run checks of pins/modes/absence, and the F5 manifest precheck. Expected: 19 ran, 5 T00 pass, 14 failures carrying the exact 'M-HASH-RED: independent_script_hash.py is absent; no implementation has been written', 0 errors, exit 1, pins unchanged afterwards. One attempt, no retry; any other result means STOP. Not covered: implementation, GREEN, mutants, operator, builder or native work.",
+    "firstBlockedBoundary": "Authoring and executing the checker implementation (independent_script_hash.py) and any GREEN or meaningfulness-mutant run. These stay blocked until the single RED matches predictedRED, the implementation is separately reviewed, and F1's guard/containment decision is resolved. M-HASH itself stays OPEN until a reviewed GREEN, the 15 meaningfulness controls and a separate adoption decision.",
+    "operatorReady": false,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/SEGMENT-INDEX.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-01.txt (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-02.txt (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-03.txt (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-04.txt (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-05.txt (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-06.txt (full: lines 1-524, then 525-640 after the truncation)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-07.txt (full: lines 1-471, then 472-575 after the truncation)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-08.txt (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/B9-APPLIED-BLUEPRINT.json (PARTIAL: raw lines 1-40 only \u2014 preamble plus c2.c2.mint and c2.c2.spend)"
+    ],
+    "unreadPaths": [
+      "B9-APPLIED-BLUEPRINT.json beyond line 40 (opaque runtime bytes; the remaining 14 handlers and definitions were not read)",
+      "Original author-packet MANIFEST.json (5602 B, 2f91b6fc\u2026), which T00.1 depends on; it is not in the review segments",
+      "Raw original files of the 26 non-opaque bodies (only the segment transcriptions were read; neither was hashed)",
+      "Anything outside the review packet: private files, provenance, provider logs, auth, config, keys, wallets, caches, PK/SRS"
+    ],
+    "limitations": [
+      "No hashing, execution, import, compilation or test run. Every runtime outcome (T00 passes, RED shape) is a source-level prediction.",
+      "Segment transcriptions are trusted as exact; their sha256 values and the original bodies were not independently verified by this reviewer.",
+      "The B9 opaque body was only partly read. All-16-handler metadata comes from FIXTURE-STRUCTURE and the test literals, not from the full B9 body; duplicate-key absence and parameters-key absence across all of B9 are unverified.",
+      "The MANIFEST.json body is unverified (F5), so T00.1's manifest equality depends on a root precheck.",
+      "The LF line-ending assumption for the multi-line T00.2 anchors comes from the segment rendering; a CRLF original would break them (T00 failure, then STOP).",
+      "The source chain stops at the listed uninspected symbols (Cardano.Crypto.Hash.Class/re-export, Libsodium.C/libsodium body, Codec.Extras.SerialiseViaFlat, cborg, PlutusLedgerApi.V2/V3, PlutusLedgerApi.Common.Hash, Aiken source and lockfile, ledger dependency pins). Supplement HEAD commits are not qualified ledger correspondence.",
+      "Shared-primitive limitation: every positive vector is Aiken-produced and the receipts are same-run comparison values. There is no authenticated ledger or chain oracle and no formal BLAKE2b-224 equivalence proof.",
+      "Same-provider context independence only, not provider diversity. This is one vote of the two fresh agreeing votes required."
+    ]
+  },
+  "clauseAssessment": [
+    {
+      "id": "C1",
+      "stance": "AGREE",
+      "reason": "BLAKE2b-224 with a 28-byte digest rendered as 56 lowercase hex is source-shown: Hashes:181-182, Hashes:105, Keys:37 and 131-132, B2b:53 and 56-59 (outlen 28), B2b:148-162 (unkeyed), CIP:102. Blake2b_256/HASH (Hashes:125) and truncation are correctly ruled out. The three [I] links (re-export resolution, libsodium native-224, CPython equivalence) are labelled honestly and not overclaimed."
+    },
+    {
+      "id": "C2",
+      "stance": "AGREE",
+      "reason": "The hash input tag || originalBytes via hashWith id is at Lang:199-205; originalBytes comes through newtype-derived SafeToHash (Lang:185) and fromShort (Lang:261-262). The language tags 0x02/0x03 (Lang:545, 565) are correctly distinguished from the encodeEnum index (Lang:273-278, 329-330) used only in the envelope. The v2/v3-only scope, with v1/v4 known but unvectored and native scripts out of scope, is a legitimate tool restriction. PC:36-39 is correctly marked as not relied on."
+    },
+    {
+      "id": "C3",
+      "stance": "AGREE",
+      "reason": "The rule 'hash tag || compiledCode bytes as given; no strip, no extra wrap, not the [enum, bytes] envelope' is grounded at the ledger: the same bs is hashed and passed to PVx.deserialiseScript (Lang:546-547, 566-567). At plutus HEAD, deserialiseScript decodes from offset 0 and returns sScript unmodified (SS:263, 265-269), and SerialisedScript = serialise . SerialiseViaFlat (SS:155-160). No listed missing symbol is required for the C3 rule itself; header form affects only C4 refusal, and primitive and dependency correspondence are labelled residuals. So no STOP and no symbol request. Minor labelling nit F2 at line 43. HEAD supplements are correctly not claimed as dependency-qualified. The vector is properly a cross-check, not a refit authority."
+    },
+    {
+      "id": "C4",
+      "stance": "AGREE",
+      "reason": "This is a local admission domain only: lowercase ASCII hex of at most 65536 characters checked before decoding; one minimal definite major-2 header (58 with L 24-255, or 59 with L \u2265 256); exact header+L with no trailing or missing bytes; total at most 32768 B. It is explicitly not a protocol, maxTxSize or ExUnits limit, and it is consistent with every fixture (CIP 58ad = 175 B; seven 59 L16 + 3 = SIZES appliedBytes). V2 trailing-byte refusal is stricter than SS:259-261 and is correctly framed as refusal that never changes a hash. The opaque payload is never decoded. Tests T01.6, T01.7, T01.8 and T01.9 cover every rejected form and the exact bound."
+    },
+    {
+      "id": "C5",
+      "stance": "AGREE",
+      "reason": "Strict UTF-8 JSON with a duplicate-key error (both entry and preamble cases defeat last-wins), required plutusVersion, 1-64 validators, unique non-empty titles, C4 framing, a 56-hex hash, parameters absent or [] (remaining parameters refused), every one of the 16 entries recomputed, InputError and MismatchError as disjoint ValueError subclasses asserted both ways, and a {title: hash} return with the consistent-swap limitation stated. Non-blocking gaps: precedence when both error kinds are present (F3), and UTF-16/BOM and fresh-result tests (F4)."
+    },
+    {
+      "id": "C6",
+      "stance": "AGREE",
+      "reason": "The CIP-57 primary vector transcription matches CIP:425-426 exactly (350 hex characters checked in chunks). All 16 B9 handlers fall into 7 groups with per-group identical code and hash. The 7 receipts match the hash files, FIXTURE and the tool-checker parent values for c2/vi. Expected values are frozen literals and no BLAKE2b is computed in the tests. The same-run Aiken receipt status, the shared-primitive limitation and the absence of a ledger vector are stated honestly."
+    },
+    {
+      "id": "C7",
+      "stance": "AGREE",
+      "reason": "The planned standalone pure stdlib module and the forbidden list are appropriate. The loader is lazy and runs the AST guard before spec_from_file_location without touching sys.path or sys.modules, and -B prevents pyc writes. None of this runs at RED. The contract correctly calls the guard 'not a sandbox' and makes the envelope the containment. F1 notes that the guard is trivially bypassable through attribute chains and must be resolved before any implementation is executed."
+    },
+    {
+      "id": "C8",
+      "stance": "AGREE",
+      "reason": "The non-claims are complete: no UPLC validity, behaviour, deployability, ExUnits, ledger acceptance or dependency correspondence. All 20 UTxO families, financial/ACTUS/DeFi obligations, PCD/recursion, X1/PX04/M-EU, FX1, FV-01/FV-02 and real Preprod stay open; native authority is zero. Outcomes are predictions. Two fresh agreeing reviews plus root effects inspection are required before RED, and author FOR is not a vote. Adoption is kept as a separate decision."
+    }
+  ]
+}
