@@ -134,3 +134,8 @@ iteration. The latest circuit iteration remains 004. Read the adjacent
 the historical candidate labels, later source adoption and exact captures.
 Earlier notes remain unchanged. This folder still contains no website code,
 assets, rendered scene or deployment.
+
+
+## Design companion 006
+
+[Design 006: source boards and host replay](DESIGN-006-SOURCE-BOARDS-AND-HOST-REPLAY.md) continues the concept log for the finished Sherlock v1 website. It develops the circuit assembly history: source-pinned additions and changes become cumulative Three.js board layers, with execution inspection and source clickthrough. Its visitor copy assumes the finished release. The [materializer record](DESIGN-006-STATUS-AND-PROVENANCE.md) and [factual source manifest](provenance/design-006-source-manifest.json) preserve actual author identity, source pins and current evidence scope. This companion does not add a circuit iteration; the latest actual circuit entry remains 004. Earlier entries remain unchanged.
