@@ -12,12 +12,15 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Find the first difference](how-to/find-first-difference.md)
 - [Add a normal case](how-to/add-normal-case.md)
 - [Check the stream realization](how-to/check-stream-realization.md)
+- [Prepare a compile-only HostOnly source artifact](how-to/prepare-host-source-artifact.md)
 
 ## Reference
 
 - [Components](reference/components.md)
 - [Profiles and results](reference/profiles-results.md)
 - [Host machine](reference/host-machine.md)
+- [HostOnly source compiler API and artifact](reference/host-source-compiler.md)
+- [HostOnly configuration and exact fixture](reference/host-source-config.md)
 - [Image layout](reference/image-layout.md)
 - [Bridges and ledger](reference/bridges-ledger.md)
 - [DoctorWatson](reference/doctorwatson.md)
@@ -42,3 +45,5 @@ The [OpenSpec](../../openspec/changes/sherlock-universal-interpreter-design/requ
 [Revision03](design.md), [OpenSpec/EARS adoption](../../openspec/changes/sherlock-completion-convergence/ADOPTION.md), [implementation plan](../SHERLOCK-IMPLEMENTATION-PLAN.md), [loop contract](implementation-loop.md) and [independent reviews](reviews/README.md) define the current work. [Actual stream results](../results/sherlock-stream-20261017/README.md) and [composed333 results](../results/sherlock-composed333-20261017/README.md) retain their exact observed scope.
 
 At the October17 integration cut, [finite Quint validation](../results/sherlock-quint-design-20261017/README.md) records44 passing tests, five passing directed/sampled runs and38 reached witnesses. The independent result review closes that ordinary entry condition. Root subsequently armed the new full implementation goal (creation epoch1792260805); this dated observation does not attest that a worker is running when this page is read. Compiler implementation and native/target acceptance remain separate work.
+
+The [first compiler-core result](../results/sherlock-source-compile-20261017/README.md) adds actual production-library compilation and seven positive tests, including two source-to-B preparation/admission cases. Mandatory guard/diagnostic corrections and complete independent artifact comparison remain open. This is a source increment; public CLI and native/target acceptance are separate.

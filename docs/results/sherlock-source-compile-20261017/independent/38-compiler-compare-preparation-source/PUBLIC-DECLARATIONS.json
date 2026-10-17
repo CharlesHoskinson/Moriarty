@@ -1,0 +1,85 @@
+{
+  "origin": "Already frozen R20 body-free declaration snapshot; no new producer or owner body read",
+  "declarations": [
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/ir.rs",
+      "source_sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "start_line": 33,
+      "declaration": "#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\npub enum Type {\n    UInt,\n    Bool,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/ir.rs",
+      "source_sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "start_line": 38,
+      "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"type\", content = \"value\", deny_unknown_fields)]\npub enum Value {\n    UInt(UInt),\n    Bool(bool),\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/ir.rs",
+      "source_sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "start_line": 53,
+      "declaration": "#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\npub enum BinaryOp {\n    Add,\n    Sub,\n    Mul,\n    Eq,\n    Ne,\n    Lt,\n    Le,\n    Gt,\n    Ge,\n    And,\n    Or,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/ir.rs",
+      "source_sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "start_line": 67,
+      "declaration": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Expr {\n    LiabilityPresent {\n        name: String,\n    },\n    LiabilityAmount {\n        name: String,\n    },\n    Literal {\n        value: Value,\n    },\n    Name {\n        name: String,\n    },\n    Binary {\n        op: BinaryOp,\n        lhs: ExprId,\n        rhs: ExprId,\n    },\n    Not {\n        value: ExprId,\n    },\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter.rs",
+      "source_sha256": "6fe7193e3e0132009b117a43ebad1bb1a247683dfa89105567c29b0166e6d02a",
+      "start_line": 35,
+      "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct InputSite {\n    pub index: usize,\n    pub name: String,\n    pub ty: crate::Type,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter.rs",
+      "source_sha256": "6fe7193e3e0132009b117a43ebad1bb1a247683dfa89105567c29b0166e6d02a",
+      "start_line": 42,
+      "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct LetSite {\n    pub statement_index: usize,\n    pub name: String,\n    pub expression: ExprId,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter.rs",
+      "source_sha256": "6fe7193e3e0132009b117a43ebad1bb1a247683dfa89105567c29b0166e6d02a",
+      "start_line": 49,
+      "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct EmitSite {\n    pub statement_index: usize,\n    pub name: String,\n    pub expression: ExprId,\n    pub role: String,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter.rs",
+      "source_sha256": "6fe7193e3e0132009b117a43ebad1bb1a247683dfa89105567c29b0166e6d02a",
+      "start_line": 57,
+      "declaration": "/// Path is relative to the generated function body, not text or image row IDs.\n/// Every traversed source edge receives a separate occurrence, even for a DAG.\n/// Every synthetic internal lowering node also receives one occurrence, marked\n/// by a `lowering-` node_kind. Its expression/source_expression identify the\n/// original binary requiring it, rather than another traversed source edge.\n#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct SourceOccurrence {\n    pub action_index: usize,\n    pub statement_index: usize,\n    pub expression: Option<ExprId>,\n    pub body_path: Vec<usize>,\n    pub node_kind: String,\n    pub source_expression: Option<CoreExpr>,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter.rs",
+      "source_sha256": "6fe7193e3e0132009b117a43ebad1bb1a247683dfa89105567c29b0166e6d02a",
+      "start_line": 72,
+      "declaration": "#[derive(Clone, Debug, PartialEq, Eq, Serialize)]\npub struct ScalarActionReport {\n    pub action_index: usize,\n    pub action: String,\n    pub inputs: Vec<InputSite>,\n    pub lets: Vec<LetSite>,\n    pub emit: EmitSite,\n    /// Body preorder, with child positions matching ProgramImage's AST locators.\n    pub occurrences: Vec<SourceOccurrence>,\n    pub return_type: crate::Type,\n    pub generated_function_name: String,\n    pub symbol_domain: String,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared.rs",
+      "source_sha256": "479eb3983c81e9734d5bd427b68d735e627010368e6c992687c9ff5ff2dad3a9",
+      "start_line": 31,
+      "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BinaryOp { Add, Sub, Mul, Eq, Lt, Cons, Branch }"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared.rs",
+      "source_sha256": "479eb3983c81e9734d5bd427b68d735e627010368e6c992687c9ff5ff2dad3a9",
+      "start_line": 145,
+      "declaration": "#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]\npub struct BoundsC { pub code_rows: usize, pub function_rows: usize,\n    pub code_child_slots: usize, pub parameter_slots: usize,\n    pub pattern_rows: usize, pub match_plan_rows: usize,\n    pub match_arm_rows: usize, pub type_rows: usize,\n    pub constructor_rows: usize, pub constructor_field_slots: usize,\n    pub max_arity: usize, pub constant_nodes: usize,\n    pub constant_field_slots: usize, pub data_nodes: usize,\n    pub data_field_slots: usize, pub environment_cells: usize,\n    pub frames: usize, pub helper_tasks: usize,\n    pub serialization_bytes: usize, pub max_reference_work: u128,\n    pub max_helper_work: u128, pub step_cap: u128 } // all 22, schema #/bounds"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/raw.rs",
+      "source_sha256": "ef9c70a41933acf2c4310dab566c83fd72087b8ea435869a8c283f6c40aff7d1",
+      "start_line": 147,
+      "declaration": "pub enum BinaryOp {\n    Add,\n    Sub,\n    Mul,\n    Eq,\n    Lt,\n    Cons,\n    Branch,\n}"
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+      "source_sha256": "b6d0524431df4e73898853b073ba9c3f5a212fd83f3dd4015c6a4e1eda1d0017",
+      "start_line": 43,
+      "declaration": "#[derive(Clone, Copy)]\npub struct AdmissionObservation<'a> {\n    pub identity: &'a IdentityC,\n    pub bounds: &'a BoundsC,\n    pub view: &'a ProgramView,\n    pub layout: LayoutObservation<'a>,\n    _sealed: (),\n}"
+    }
+  ],
+  "unresolved": "CoreUInt payload serializer is not present in selected frozen declarations; no payload shape invented.",
+  "additional_alias_declaration": "PUBLIC-BINDINGS.json: crate::ir::ExprId=u16; existing serde JSON integer"
+}

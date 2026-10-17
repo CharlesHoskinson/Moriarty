@@ -37,7 +37,8 @@ if "$design"; then
   fi
 fi
 
-python3 models/sherlock/qa/check.py
+python3 models/sherlock/qa/check.py --requirement-evidence \
+  openspec/changes/sherlock-completion-convergence/current-evidence.json
 python3 -m unittest discover -s models/sherlock/qa -p 'test_*.py' -v
 
 if "$host"; then

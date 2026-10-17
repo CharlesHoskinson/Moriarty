@@ -281,12 +281,10 @@ pub fn validate_config(config: &ConsumerConfig) -> Result<(), HostGuardError> {
 ///    never saturation-as-success.
 /// The sizes workspace is one u128 per flat expression; its length was
 /// already bounded in step 1 by max_source_expressions.
-pub fn preflight_source(
+pub fn preflight_source_global(
     program: &crate::Program,
-    action_index: usize,
-    supplied: &BTreeMap<String, crate::Value>,
     config: &ConsumerConfig,
-) -> Result<SourcePreflight, ConsumerError> {
+) -> Result<(), ConsumerError> {
     validate_config(config).map_err(ConsumerError::HostGuard)?;
     let host = &config.host;
     within(HostMeasure::SourceActions, count(program.actions.len()), host.max_source_actions)
@@ -307,6 +305,17 @@ pub fn preflight_source(
     }
     within(HostMeasure::SourceStatements, statements, host.max_source_statements)
         .map_err(ConsumerError::HostGuard)?;
+    Ok(())
+}
+
+pub fn preflight_action_inputs<'a>(
+    program: &'a crate::Program,
+    action_index: usize,
+    supplied: &BTreeMap<String, crate::Value>,
+    config: &ConsumerConfig,
+) -> Result<&'a crate::Action, ConsumerError> {
+    validate_config(config).map_err(ConsumerError::HostGuard)?;
+    let host = &config.host;
     let action = program.actions.get(action_index).ok_or(ConsumerError::HostGuard(
         HostGuardError::NoSuchAction { action_index, action_count: program.actions.len() },
     ))?;
@@ -334,6 +343,18 @@ pub fn preflight_source(
     }
     within(HostMeasure::TotalInputNameBytes, total_name_bytes, host.max_total_input_name_bytes)
         .map_err(ConsumerError::HostGuard)?;
+    Ok(action)
+}
+
+pub fn preflight_source(
+    program: &crate::Program,
+    action_index: usize,
+    supplied: &BTreeMap<String, crate::Value>,
+    config: &ConsumerConfig,
+) -> Result<SourcePreflight, ConsumerError> {
+    preflight_source_global(program, config)?;
+    let action = preflight_action_inputs(program, action_index, supplied, config)?;
+    let host = &config.host;
     // Exact input policy: no missing, no type mismatch, no extra. A complete
     // MissingInput pass in declared order precedes a complete TypeMismatch
     // pass in declared order; nothing is defaulted or coerced.

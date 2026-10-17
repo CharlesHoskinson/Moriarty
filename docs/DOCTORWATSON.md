@@ -1,14 +1,19 @@
 # DoctorWatson: the Sherlock software factory
 
-Current working plan, 2026-10-16. The user names the factory **DoctorWatson**;
+Current working plan, updated 2026-10-17. The user names the factory **DoctorWatson**;
 Sherlock is the universal interpreter it builds. The user authorizes building and running this
 factory and requires **local CI**, because hosted CI is too expensive. GitHub
 stores source, PRs and result summaries. No Foreman or replacement scheduler is
 used. The [research review](research/sherlock/factory-2026-10-16/README.md)
 records the nine planning reviews and ten online research assignments.
 
-The default executable lane checks the independent A-profile corpus and its
-committed source transcription. The explicit `--host` lane builds and executes
+The default executable lane checks the independent A-profile corpus, its
+committed source transcription and the current Sherlock EARS evidence report.
+The report separates implementation, validation, acceptance and source/evidence
+currentness for the original requirements, refinements and retained families.
+See the [current checklist](sherlock/requirements-status.md) and
+[report contract](DOCTORWATSON-CI.md#current-ears-evidence-report).
+The explicit `--host` lane builds and executes
 the actual Sherlock host reference, exercises bounded stepping and compares its
 complete normal observations with those expectations. The wrapper's explicit
 `--realization stream` instead exercises `Machine::visit_steps` through the same
@@ -32,7 +37,8 @@ actual K or Lean execution. Source-Core and streaming execution are separate
 increments, outside those recorded captures. A later October 17 integrated local
 check passed 241 Python tests; the separate stream wrapper compiled its producer
 and test binary, passed all eight selected Rust tests and matched all 216 normal
-runs. Those new receipts remain local and unpublished. The stream QA observer
+runs. The [stream receipts](results/sherlock-stream-20261017/README.md) are published.
+The stream QA observer
 retains records for complete comparison; no memory or allocation improvement was
 measured. See the [stream command and scope](DOCTORWATSON-CI.md#explicit-stream-observation-job).
 
@@ -41,13 +47,19 @@ Lessons for the later factory update are kept in the
 Append after material Sherlock iterations; distinguish proposed changes, applied
 source and validated behavior.
 
-The historical automatic goal remains cleared. A later implementation loop must
-follow Root's new design and EARS/OpenSpec integration decision; this documentation
-update arms no loop. Source, observed results and acceptance retain separate status.
+The current full-Sherlock goal is active. The user directs the
+[implementation loop](sherlock/implementation-loop.md) to use DoctorWatson to
+close every retained applicable EARS requirement. Select each next missing
+behavior or acceptance check from the current evidence report, preserve actual
+blockers on their consuming rows, and continue independent actionable work.
+Source, observed results and acceptance retain separate status. The updated
+default lane passed [252 local tests](results/sherlock-ears-closure-20261017/README.md).
 
 ## One delivery cycle
 
-1. Select an unchecked feature in the existing
+1. Select an open requirement's exact next action from the
+   [current evidence](../openspec/changes/sherlock-completion-convergence/current-evidence.json)
+   and its remaining work in the existing
    [Sherlock plan](SHERLOCK-IMPLEMENTATION-PLAN.md) or current
    [A-machine status](../openspec/changes/sherlock-machine-circuit-layout/IMPLEMENTATION-STATUS-2026-10-16.md).
    Name its existing requirement/rule, actual consumer and observable result.
@@ -61,7 +73,9 @@ update arms no loop. Source, observed results and acceptance retain separate sta
    Repair from the semantic contract, rather than replacing the expected result.
 5. Give a fresh non-author reviewer the full candidate and actual results.
    Integrate through a normal GitHub PR; repeat affected local checks after
-   integration changes. Report source, observations and acceptance separately.
+   integration changes. Update the requirement row and its supporting pins;
+   close only the complete reviewed predicate. Report source, observations and
+   acceptance separately. Stale evidence cannot retain a current closure.
 
 Local CI is an explicit command, not a daemon. Agents run it when their changed
 closure requires it. It never dispatches model/proof/ledger work implicitly.
