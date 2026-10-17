@@ -1,0 +1,9 @@
+# All13 SDK-free HOST observations — 2026-10-16
+
+This folder preserves the exact raw JSONL stdout from one reviewed all13 HOST operation. The operation compiled the frozen library and generic caller once, then invoked the same caller for each case in `INPUTS.json`. All 16 direct children exited 0; all 13 runtime stderr streams were empty. Build exits and emitted observations are evidence of this operation, not semantic acceptance.
+
+`OBSERVED-RESULT.json` lists each capture, exact bytes/hash, observed record count and caller arguments. `PROVENANCE.json` records source and operational evidence digests. Capture files are unmodified; no record or state field is removed. The initial record is a bound observation, not a Startup event.
+
+The 21 library source files are [qualified HOST09](../joined09-host-source-20261016/); its public SOURCE-MEMBERSHIP.json is a curated inventory. The separate frozen caller main.rs and original operational source composition are retained by digest in PROVENANCE.json and are not claimed to exist in that public library directory. This selection preserves the DedicatedSorts, financeAbsent, HostOnly, genesis-one-uncut-segment scope. It neither installs a product entrypoint nor grants artifact execution. R1–R7 source repairs remain separate proposals. The earlier D01 attempt remains separate historical evidence.
+
+The separately reviewed [comparison result](../all13-normal-comparison-20261016/) must be integrated atomically with this package. It records consumer exit 2 / GAP / NO_MAPPED_DIFFERENCES for all thirteen cases; carrier gaps prevent a full semantic pass. This folder claims no semantic pass, all-fuel-prefix coverage, recursion, generic ADT, finance, formal/circuit/native or target acceptance. Read integer tokens exactly; JSON numbers may exceed JavaScript safe-integer range.
