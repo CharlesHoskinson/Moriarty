@@ -1,0 +1,817 @@
+diff --git a/experiments/moriarty-language/regressions/README.md b/experiments/moriarty-language/regressions/README.md
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/README.md
+@@ -0,0 +1,27 @@
++# Public Rust Source/6 financial consumer regression
++
++UNRUN source proposal. Predicate: for the frozen Invoice and NEW custodian-chosen Workshop scenarios, a reviewed feature-enabled Rust `mori --quiet --color never expand FILE --action pay --scenario JSON --emit-source6-transfer` emits bytes consumed unchanged by the existing experimental TypeScript Source/6 parser/lowerer and provisional local Core/5 preparer. The comparator checks the independent financial/input projection only.
++
++Run explicitly from the repository root with Node.js24, after reviewing the exact binary and source candidate:
++
++```sh
++MORI_RUST_BIN=/absolute/reviewed/target/debug/mori MORI_SOURCE6_OBSERVATIONS=/absolute/existing-parent/new-observations node --test experiments/moriarty-language/regressions/rust-source6-transfer.mjs
++```
++
++Both environment paths are required. The observations directory must not exist; its parent must exist. A missing feature, failed invocation, rejected local consumer or financial mismatch fails rather than skipping. This separate opt-in directory is outside `npm test`'s `tests/*.test.mjs` glob; it neither changes normal package tests nor automatically builds Rust. Node24 strips the existing TypeScript files directly, without npm installation or SDK use.
++
++If a reviewed binary is not already available, the integrator can separately inspect and authorize this ordinary nonnative build, with its final lock and dependency availability established first:
++
++```sh
++cargo build --locked --offline -p mori --bin mori --no-default-features --features source6-expansion
++```
++
++Do not omit `--no-default-features`: this crate defaults to `native`. The regression invokes exactly the supplied absolute executable and records its SHA256; the integrator must bind that binary to the reviewed source/build receipt. It cannot infer its source tree or build features from the file digest. This proposal executes neither command.
++
++Each case records process.json, exact stdout.source6/stderr.txt and actual-consumer.json (actual parsed/lowered/prepared values, including observed work fields). Stdout is UTF8 decoded with fatal errors, without trimming, JSON unwrapping, replacement or host-generated Source/6. The unmodified string reaches both `parseAndLowerSource6` and `prepareSource6S0Unqualified`. The two calls share the actual lowerer; agreement between them is not an independent oracle. The financial comparator uses the independently frozen data, never the Node beta emitter or the Rust library emitter to generate expectations.
++
++The fixture subset preserves exact input/fact bytes from custodian freeze `64a6b4a6e454bbc6bc2cf3582581e81e3dd5fd379f9ed3fc89bbfc8051180269`. FIXTURE-PINS.json pins all six selected files and identifies the full external freeze; it is not a replacement whole-packet freeze. The complete original packet is available under custodian-packet/ in the review handoff. Workshop is a newly chosen input, not a recovered missing historical scenario. The source/test adapters are author material, not independent goldens.
++
++Assertions cover opening balances/allowance/head/round/replay and work counters; exact decimal/addition value, fee, caps and floor; ordered debit/credit/allowance/replay/head effects; and conditional provisional-S0 local post balances, allowance, replay, head and absent obligation. The effect adapter only renames fields into the custodian constructor/arguments shape and decodes the documented replay tuple. It calculates no expected effect or post-state. PreparedUnqualified is the callable local-classification predicate required to inspect a candidate, not a custodian-supplied accepted flag or actual admission. Its named external premises remain unresolved. Full nominal mapping, whole wire/DTO/origin golden, successful work policy/cost/post counters, a duty DTO, authenticated global frame and native/proof/ledger results remain absent. No complete UNI-019/020 observation or parent exit closes.
++
++Full source-after/ includes the exact prior adopted30 plus nine new regression/fixture files. The delta patch applies only those nine files to an integrated adopted candidate; use it when root combines the security owner's separate repair. The combined39-file patch also includes the frozen adopted30 patch and applies to that proposal's reconstructed reviewed base; it is not a patch against current main. No production Rust/TypeScript/helper, lock, manifest or prior fixture is changed by this delta. The separately owned presentation repair is not included or judged. Final integrated source identity and fresh applicable audits are root-owned.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/FINANCIAL-PRE-POST.json b/experiments/moriarty-language/regressions/fixtures/source6-transfer/FINANCIAL-PRE-POST.json
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/FINANCIAL-PRE-POST.json
+@@ -0,0 +1,447 @@
++{
++  "cases": [
++    {
++      "action": "pay",
++      "balance_deltas": [
++        "-1010",
++        "1000",
++        "10"
++      ],
++      "balance_order": [
++        "Owner",
++        "Recipient",
++        "Fee"
++      ],
++      "balance_sum_closing": "10000",
++      "balance_sum_opening": "10000",
++      "effect_record_format": "constructor/arguments is this independent facts schema, not product DTO/Source6 text serialization",
++      "exact_quantities": {
++        "burn_atomic": "0",
++        "fee_atomic": "10",
++        "fee_cap_atomic": "10",
++        "fee_display": "0.10 USD",
++        "fee_recipient_net_receipt_atomic": "10",
++        "gross_cap_atomic": "1010",
++        "mint_atomic": "0",
++        "net_floor_atomic": "1000",
++        "operation_fee_atomic": "10",
++        "operation_value_atomic": "1000",
++        "payer_gross_debit_atomic": "1010",
++        "payer_net_change_atomic": "-1010",
++        "price_atomic": "1000",
++        "price_display": "10.00 USD",
++        "recipient_fee_paid_atomic": "0",
++        "recipient_gross_receipt_atomic": "1000",
++        "recipient_net_receipt_atomic": "1000",
++        "refunds_atomic": "0",
++        "rounding_dust_atomic": "0"
++      },
++      "financial_post_if_local_S0_transfer_admitted": {
++        "allowance": {
++          "owner": "Owner",
++          "remaining": "8990",
++          "spent": "1010"
++        },
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "8990"
++          },
++          {
++            "account": "Recipient",
++            "amount": "1000"
++          },
++          {
++            "account": "Fee",
++            "amount": "10"
++          }
++        ],
++        "domain": "Midnight",
++        "head": "h1",
++        "obligation": "absent in closed transfer input",
++        "positive_residual_duties": [],
++        "replay": {
++          "key_components": [
++            "Midnight",
++            "Owner",
++            "n1"
++          ],
++          "status": "consumed"
++        }
++      },
++      "financial_pre": {
++        "allowance": {
++          "owner": "Owner",
++          "remaining": "10000",
++          "spent": "0"
++        },
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "10000"
++          },
++          {
++            "account": "Recipient",
++            "amount": "0"
++          },
++          {
++            "account": "Fee",
++            "amount": "0"
++          }
++        ],
++        "domain": "Midnight",
++        "head": "h0",
++        "obligation": "absent in closed transfer input",
++        "positive_residual_duties": [],
++        "replay": {
++          "key_components": [
++            "Midnight",
++            "Owner",
++            "n1"
++          ],
++          "status": "unused"
++        }
++      },
++      "input_origin": "byte-preserved original invoice scenario",
++      "name": "invoice",
++      "ordered_semantic_effects": [
++        {
++          "arguments": [
++            "Owner",
++            "1010"
++          ],
++          "constructor": "Debit"
++        },
++        {
++          "arguments": [
++            "Recipient",
++            "1000"
++          ],
++          "constructor": "Credit"
++        },
++        {
++          "arguments": [
++            "Fee",
++            "10"
++          ],
++          "constructor": "Credit"
++        },
++        {
++          "arguments": [
++            "Owner",
++            "1010"
++          ],
++          "constructor": "UseAllowance"
++        },
++        {
++          "arguments": [
++            [
++              "Midnight",
++              "Owner",
++              "n1"
++            ]
++          ],
++          "constructor": "UseReplay"
++        },
++        {
++          "arguments": [
++            "h0",
++            "h1"
++          ],
++          "constructor": "AdvanceHead"
++        }
++      ],
++      "preserved_context": {
++        "agreementId_scale_predecessor": "AST read/retention premises only; public Source6 contract explicitly says current local preparer does not bind these three",
++        "current_round": "1",
++        "domain_asset_parties_source_intent_claims": "retained exactly as above; source claims not authenticated or replaced by file hashes",
++        "predecessor_read_claim": "genesis",
++        "unlisted_cells": "every unlisted authenticated cell unchanged under named S0 frame rule; wider authenticated world not supplied"
++      },
++      "qualification": "exact nominal monetary arithmetic; allowance/replay/head/residual consequences CONDITIONAL on named provisional local S0 rules and actual admission/external premises; no generated or observed post-state",
++      "scenario": "invoice.scenario.json",
++      "source": "invoice.mori",
++      "source_facts": {
++        "accounts": {
++          "Buyer": "Owner",
++          "Seller": "Recipient",
++          "Treasury": "Fee"
++        },
++        "agreement": "Invoice",
++        "asset": {
++          "alias": "USD",
++          "domain_alias": "Preview",
++          "id": "A",
++          "representation": "canonical",
++          "scale": 2,
++          "symbol": "USD",
++          "symbol_meaning": "display metadata only"
++        },
++        "domain": {
++          "alias_in_source": "Preview",
++          "chain": "midnight",
++          "id": "Midnight",
++          "network": "preview"
++        },
++        "source_claims": {
++          "claim_qualification": "copied source claims only; no key possession/signature/authority/freshness/digest authentication asserted",
++          "delegation": "None",
++          "disclosures": [],
++          "failure": "SuccessOnly",
++          "key": "key1",
++          "nonce": "n1",
++          "observations": [],
++          "policy_digest_claim": "policy1",
++          "pre_head": "h0",
++          "recovery": "None",
++          "retained_duties": [],
++          "retained_effects": [],
++          "source_hash_claim": "src1",
++          "valid_round_from": "0",
++          "valid_round_to": "10"
++        },
++        "source_profile": "moriarty-beta/1"
++      },
++      "work": {
++        "opening_remaining": "10",
++        "opening_spent": "0",
++        "post_remaining": "UNASSERTED",
++        "post_spent": "UNASSERTED",
++        "primitive_cost": "UNASSERTED",
++        "reason": "No adopted success work policy selected; diagnostic1 is abstract rejection observation, not success charge; no Core1/Core2 inheritance"
++      }
++    },
++    {
++      "action": "pay",
++      "balance_deltas": [
++        "-242",
++        "235",
++        "7"
++      ],
++      "balance_order": [
++        "Owner",
++        "Recipient",
++        "Fee"
++      ],
++      "balance_sum_closing": "1028",
++      "balance_sum_opening": "1028",
++      "effect_record_format": "constructor/arguments is this independent facts schema, not product DTO/Source6 text serialization",
++      "exact_quantities": {
++        "base_atomic": "200",
++        "base_display": "2.00 USD",
++        "burn_atomic": "0",
++        "fee_atomic": "7",
++        "fee_cap_atomic": "7",
++        "fee_display": "0.07 USD",
++        "fee_recipient_net_receipt_atomic": "7",
++        "gross_cap_atomic": "242",
++        "mint_atomic": "0",
++        "net_floor_atomic": "235",
++        "operation_fee_atomic": "7",
++        "operation_value_atomic": "235",
++        "payer_gross_debit_atomic": "242",
++        "payer_net_change_atomic": "-242",
++        "price_atomic": "235",
++        "recipient_fee_paid_atomic": "0",
++        "recipient_gross_receipt_atomic": "235",
++        "recipient_net_receipt_atomic": "235",
++        "refunds_atomic": "0",
++        "rounding_dust_atomic": "0",
++        "supplement_atomic": "35",
++        "supplement_display": "0.35 USD"
++      },
++      "financial_post_if_local_S0_transfer_admitted": {
++        "allowance": {
++          "owner": "Owner",
++          "remaining": "758",
++          "spent": "259"
++        },
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "758"
++          },
++          {
++            "account": "Recipient",
++            "amount": "260"
++          },
++          {
++            "account": "Fee",
++            "amount": "10"
++          }
++        ],
++        "domain": "Midnight",
++        "head": "s1",
++        "obligation": "absent in closed transfer input",
++        "positive_residual_duties": [],
++        "replay": {
++          "key_components": [
++            "Midnight",
++            "Owner",
++            "n2"
++          ],
++          "status": "consumed"
++        }
++      },
++      "financial_pre": {
++        "allowance": {
++          "owner": "Owner",
++          "remaining": "1000",
++          "spent": "17"
++        },
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1000"
++          },
++          {
++            "account": "Recipient",
++            "amount": "25"
++          },
++          {
++            "account": "Fee",
++            "amount": "3"
++          }
++        ],
++        "domain": "Midnight",
++        "head": "s0",
++        "obligation": "absent in closed transfer input",
++        "positive_residual_duties": [],
++        "replay": {
++          "key_components": [
++            "Midnight",
++            "Owner",
++            "n2"
++          ],
++          "status": "unused"
++        }
++      },
++      "input_origin": "NEW custodian-chosen WorkshopReceipt scenario; not recovered missing original",
++      "name": "workshop",
++      "ordered_semantic_effects": [
++        {
++          "arguments": [
++            "Owner",
++            "242"
++          ],
++          "constructor": "Debit"
++        },
++        {
++          "arguments": [
++            "Recipient",
++            "235"
++          ],
++          "constructor": "Credit"
++        },
++        {
++          "arguments": [
++            "Fee",
++            "7"
++          ],
++          "constructor": "Credit"
++        },
++        {
++          "arguments": [
++            "Owner",
++            "242"
++          ],
++          "constructor": "UseAllowance"
++        },
++        {
++          "arguments": [
++            [
++              "Midnight",
++              "Owner",
++              "n2"
++            ]
++          ],
++          "constructor": "UseReplay"
++        },
++        {
++          "arguments": [
++            "s0",
++            "s1"
++          ],
++          "constructor": "AdvanceHead"
++        }
++      ],
++      "preserved_context": {
++        "agreementId_scale_predecessor": "AST read/retention premises only; public Source6 contract explicitly says current local preparer does not bind these three",
++        "current_round": "5",
++        "domain_asset_parties_source_intent_claims": "retained exactly as above; source claims not authenticated or replaced by file hashes",
++        "predecessor_read_claim": "workshop_prior",
++        "unlisted_cells": "every unlisted authenticated cell unchanged under named S0 frame rule; wider authenticated world not supplied"
++      },
++      "qualification": "exact nominal monetary arithmetic; allowance/replay/head/residual consequences CONDITIONAL on named provisional local S0 rules and actual admission/external premises; no generated or observed post-state",
++      "scenario": "workshop.chosen.scenario.json",
++      "source": "workshop.mori",
++      "source_facts": {
++        "accounts": {
++          "Buyer": "Owner",
++          "Seller": "Recipient",
++          "Treasury": "Fee"
++        },
++        "agreement": "WorkshopReceipt",
++        "asset": {
++          "alias": "USD",
++          "domain_alias": "Local",
++          "id": "A",
++          "representation": "canonical",
++          "scale": 2,
++          "symbol": "absent in source; do not invent one"
++        },
++        "domain": {
++          "alias_in_source": "Local",
++          "chain": "midnight",
++          "id": "Midnight",
++          "network": "preview"
++        },
++        "source_claims": {
++          "claim_qualification": "copied source claims only; no key possession/signature/authority/freshness/digest authentication asserted",
++          "delegation": "None",
++          "disclosures": [],
++          "failure": "SuccessOnly",
++          "key": "key2",
++          "nonce": "n2",
++          "observations": [],
++          "policy_digest_claim": "policy2",
++          "pre_head": "s0",
++          "recovery": "None",
++          "retained_duties": [],
++          "retained_effects": [],
++          "source_hash_claim": "src2",
++          "valid_round_from": "2",
++          "valid_round_to": "20"
++        },
++        "source_profile": "moriarty-beta/1"
++      },
++      "work": {
++        "opening_remaining": "12",
++        "opening_spent": "4",
++        "post_remaining": "UNASSERTED",
++        "post_spent": "UNASSERTED",
++        "primitive_cost": "UNASSERTED",
++        "reason": "No adopted success work policy selected; diagnostic1 is abstract rejection observation, not success charge; no Core1/Core2 inheritance"
++      }
++    }
++  ],
++  "external_premises": [
++    "actual source/check/selection/Source6 formation and genuine lowerer consumption succeed",
++    "signed/submitted actions and full effects agree under local S0 rules",
++    "snapshot/head/round/authentication/signature/authority/replay/successor premises established where actual admission requires them",
++    "all unlisted cells preserved; supplied three-cell projection is not an authenticated global frame"
++  ],
++  "format": "doctorwatson-independent-source6-complete-chosen-financial-inputs/1",
++  "not_supplied": [
++    "accepted flag",
++    "full AST/Core5Observation",
++    "generated Source6 text or full nominal wire mapping",
++    "work cost/post counters",
++    "security/native/proof/ledger result"
++  ],
++  "status": "two complete chosen financial frames; ordinary interface adopted; local S0 consequences conditional as named public docs remain provisional"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/FIXTURE-PINS.json b/experiments/moriarty-language/regressions/fixtures/source6-transfer/FIXTURE-PINS.json
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/FIXTURE-PINS.json
+@@ -0,0 +1,16 @@
++{
++  "format": "source6-public-financial-regression-input-pins/1",
++  "custodianFreezeSha256": "64a6b4a6e454bbc6bc2cf3582581e81e3dd5fd379f9ed3fc89bbfc8051180269",
++  "custodianFreezeMeaning": "SHA256 of original FREEZE.sha256; this is a byte-identical selected subset, not a complete freeze copy",
++  "custodianRoot": "/home/charl/moriarty-c2-opus55-restored-20261017/source6-transfer-complete-financial-inputs",
++  "originalProvenanceSha256": "718dc0e40aa1bb50622515b2a68750499ef558d3a4b0ecb9b543f29df1763405",
++  "files": {
++    "invoice.mori": "73b9b232917555a6853e33add5f9b790e9fff955294aecac27f6083666507d81",
++    "invoice.scenario.json": "4ea5b81e292cffef8449d6b57b9f9c487b11bead13b7d9d9321f9123789f462e",
++    "workshop.mori": "c837e1a29af61b171761f1de60b5d6af0764a3fc4e759cd5cb7032e06d4640c8",
++    "workshop.chosen.scenario.json": "8c805fc2cfaf54f8673adc652c5123b2667f9bf4675d0f295ba9e6652fe10560",
++    "FINANCIAL-PRE-POST.json": "3e8951a4b6a04dbce2289f25a6d69c1fc6ad1a4d7bb0a9c03a944d39c6bdcb12",
++    "MISSING-OUTPUT-PREMISES.json": "9a055d59829724740c7bf5f9f77168f7f89d0058b198c44624bcaa60e1795abc"
++  },
++  "independence": "financial/input facts copied from independently authored custodian packet; script, assertions/adapters and any observed results are author material, not independent full wire oracles"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/MISSING-OUTPUT-PREMISES.json b/experiments/moriarty-language/regressions/fixtures/source6-transfer/MISSING-OUTPUT-PREMISES.json
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/MISSING-OUTPUT-PREMISES.json
+@@ -0,0 +1,46 @@
++{
++  "not_supplied": [
++    "full wire/stdout/lowered AST golden",
++    "work policy",
++    "hostile/security/refusal/resource judgment",
++    "native/proof/ledger/parent acceptance"
++  ],
++  "ordinary_regression_scope": "Missing full wire goldens does not block independently inspected narrower ordinary checks with precise claims. Full actual producer\u2192existing real lowerer coverage retains these gaps and missing native embedding.",
++  "remaining": [
++    {
++      "id": "N01",
++      "missing": "Target EBNF and Source6-to-Core5 meanings do not choose complete beta agreement/domain/asset/party alias-versus-ID/selected-action/source-claim/origin mapping. Candidate producer/output/snapshots remain unread.",
++      "subject": "Exact beta-to-Source6 nominal bridge",
++      "unasserted": [
++        "whole emitted invoice/workshop Source6 files",
++        "full exact lowered nominal identities and origin maps"
++      ]
++    },
++    {
++      "id": "N02",
++      "missing": "Interface adoption fixes raw stdout+single final LF/qualified status, but EBNF alone does not fix producer spacing/quoting/return DTO bytes. No complete stdout/library golden is supplied.",
++      "subject": "Full deterministic emitted text/library return encoding"
++    },
++    {
++      "id": "N03",
++      "missing": "No independent complete AST/Core5Observation field/order/default/ID recipe or qualified agreementId/scale/predecessor/intent binding is adopted here. Public Source6 spec retains those unverified local bindings.",
++      "subject": "Complete lowerer DTO identity/binding representation"
++    },
++    {
++      "id": "N04",
++      "missing": "Input counters10/0 and12/4 are explicit. No adopted success-work schedule, post-work counters or costs selected; diagnostic rejection1 cannot supply them.",
++      "subject": "Accepted transfer/expansion logical work"
++    },
++    {
++      "id": "N05",
++      "missing": "Source6/S0 docs remain provisional, not MIL/4 adoption. Allowance/replay/head/residual facts are conditional on those named local rules and actual admission/external premises; no successful execution/authentication/ledger result supplied.",
++      "subject": "Conditional local S0 recipe and real external admission"
++    }
++  ],
++  "resolved_since_baseline": [
++    "option/feature/ordered scenario subset/selection precedence/raw-output qualification adopted",
++    "NEW Workshop scenario explicitly chosen, not missing original recovered",
++    "complete three-cell financial arithmetic and named conditional S0 allowance/replay/head/residual facts independently specified"
++  ],
++  "status": "ordinary interface adopted; chosen financial inputs complete; full output representation/work unasserted"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/invoice.mori b/experiments/moriarty-language/regressions/fixtures/source6-transfer/invoice.mori
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/invoice.mori
+@@ -0,0 +1,18 @@
++profile "moriarty-beta/1";
++agreement Invoice {
++ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Preview, id: "Owner" };
++ account Seller = { domain: Preview, id: "Recipient" };
++ account Treasury = { domain: Preview, id: "Fee" };
++ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
++ const price: Qty<USD> = 10.00 USD;
++ const fee = 0.10 USD;
++ intent Payment = {
++  domain: Preview, asset: USD, signer: Buyer, key: "key1", nonce: "n1", pre_head: "h0",
++  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
++  source_hash: "src1", policy_digest: "policy1", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay uses Payment;
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/invoice.scenario.json b/experiments/moriarty-language/regressions/fixtures/source6-transfer/invoice.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/invoice.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "h0",
++  "predecessor": "genesis",
++  "round": "1",
++  "balances": [
++    { "account": "Owner", "amount": "10000" },
++    { "account": "Recipient", "amount": "0" },
++    { "account": "Fee", "amount": "0" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "10000", "spent": "0" },
++  "replay": "unused",
++  "work_remaining": "10",
++  "work_spent": "0",
++  "post_head": "h1"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/workshop.chosen.scenario.json b/experiments/moriarty-language/regressions/fixtures/source6-transfer/workshop.chosen.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/workshop.chosen.scenario.json
+@@ -0,0 +1,32 @@
++{
++  "allowance": {
++    "owner": "Owner",
++    "remaining": "1000",
++    "spent": "17"
++  },
++  "asset": "A",
++  "balances": [
++    {
++      "account": "Owner",
++      "amount": "1000"
++    },
++    {
++      "account": "Recipient",
++      "amount": "25"
++    },
++    {
++      "account": "Fee",
++      "amount": "3"
++    }
++  ],
++  "domain": "Midnight",
++  "head": "s0",
++  "kind": "local-stipulation",
++  "post_head": "s1",
++  "predecessor": "workshop_prior",
++  "profile": "moriarty-local-scenario/1",
++  "replay": "unused",
++  "round": "5",
++  "work_remaining": "12",
++  "work_spent": "4"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-transfer/workshop.mori b/experiments/moriarty-language/regressions/fixtures/source6-transfer/workshop.mori
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-transfer/workshop.mori
+@@ -0,0 +1,20 @@
++profile "moriarty-beta/1";
++agreement WorkshopReceipt {
++ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Local, id: "Owner" };
++ account Seller = { domain: Local, id: "Recipient" };
++ account Treasury = { domain: Local, id: "Fee" };
++ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
++ const base = 2.00 USD;
++ const supplement = 0.35 USD;
++ const price = base + supplement;
++ const fee = 0.07 USD;
++ intent Payment = {
++  domain: Local, asset: USD, signer: Buyer, key: "key2", nonce: "n2", pre_head: "s0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: price + fee, fee_cap: fee, net_floor: price,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
++  source_hash: "src2", policy_digest: "policy2", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay uses Payment;
++}
+diff --git a/experiments/moriarty-language/regressions/rust-source6-transfer.mjs b/experiments/moriarty-language/regressions/rust-source6-transfer.mjs
+new file mode 100644
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/rust-source6-transfer.mjs
+@@ -0,0 +1,147 @@
++// Opt-in public Rust CLI -> existing experimental Source/6/Core/5 consumer.
++// This is a local, provisional, unqualified comparison; never ledger admission.
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { spawnSync } from 'node:child_process';
++import { createHash } from 'node:crypto';
++import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
++import { isAbsolute, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { parseAndLowerSource6 } from '../src/successor/financial-agreement-source-v6-frontend.ts';
++import { prepareSource6S0Unqualified } from '../src/successor/mil4-s0-source-v6.ts';
++
++const fixtures = fileURLToPath(new URL('./fixtures/source6-transfer/', import.meta.url));
++const binary = process.env.MORI_RUST_BIN;
++const observations = process.env.MORI_SOURCE6_OBSERVATIONS;
++assert.ok(binary && isAbsolute(binary), 'MORI_RUST_BIN must name the absolute reviewed Rust binary');
++assert.ok(observations && isAbsolute(observations), 'MORI_SOURCE6_OBSERVATIONS must name a fresh absolute directory');
++// Refuse an existing destination so a run cannot overwrite earlier observations.
++mkdirSync(observations);
++const json = (name) => JSON.parse(readFileSync(join(fixtures, name), 'utf8'));
++const pins = json('FIXTURE-PINS.json');
++for (const [name, expected] of Object.entries(pins.files)) {
++  const actual = createHash('sha256').update(readFileSync(join(fixtures, name))).digest('hex');
++  assert.equal(actual, expected, `custodian fixture bytes changed: ${name}`);
++}
++const facts = json('FINANCIAL-PRE-POST.json');
++writeFileSync(join(observations, 'run.json'), JSON.stringify({
++  node: process.version, binary,
++  binarySha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
++  financialFreezeSha256: pins.custodianFreezeSha256,
++  qualification: 'local-stipulation-only; provisional S0; no runtime qualification beyond recorded checks',
++  unasserted: ['whole emitted wire golden', 'success work policy/cost/post counters',
++    'authentication', 'native embedding', 'proof', 'ledger', 'parent acceptance'],
++}, null, 2) + '\n');
++
++// Only a field-name adapter into the independent constructor/arguments schema.
++// No quantities, effects or post-state are calculated for the product here.
++function semanticEffects(effects, asset) {
++  return effects.map((effect) => {
++    let args;
++    switch (effect.kind) {
++      case 'Debit':
++      case 'Credit':
++        assert.equal(effect.asset, asset);
++        args = [effect.account, effect.amount];
++        break;
++      case 'UseAllowance': args = [effect.owner, effect.amount]; break;
++      // The public Source/6 contract defines the Core replay tuple encoding.
++      case 'UseReplay': args = [JSON.parse(effect.key)]; break;
++      case 'AdvanceHead': args = [effect.predecessor, effect.successor]; break;
++      default: assert.fail(`unexpected effect in transfer-only case: ${effect.kind}`);
++    }
++    return { constructor: effect.kind, arguments: args };
++  });
++}
++
++for (const expected of facts.cases) {
++  test(`${expected.name}: public Rust output through provisional real Source/6/Core/5 consumer`, () => {
++    const scenario = json(expected.scenario);
++    const quantities = expected.exact_quantities;
++    const pre = expected.financial_pre;
++    const post = expected.financial_post_if_local_S0_transfer_admitted;
++    const args = ['--quiet', '--color', 'never', 'expand', join(fixtures, expected.source),
++      '--action', expected.action, '--scenario', join(fixtures, expected.scenario),
++      '--emit-source6-transfer'];
++    const output = spawnSync(binary, args, {
++      cwd: fixtures, stdio: ['ignore', 'pipe', 'pipe'], shell: false,
++      timeout: 30_000, maxBuffer: 1024 * 1024,
++    });
++    // Capture bytes before any result assertion. Never substitute fixture Source/6.
++    const destination = join(observations, expected.name);
++    mkdirSync(destination);
++    writeFileSync(join(destination, 'stdout.source6'), output.stdout ?? Buffer.alloc(0));
++    writeFileSync(join(destination, 'stderr.txt'), output.stderr ?? Buffer.alloc(0));
++    writeFileSync(join(destination, 'process.json'), JSON.stringify({
++      executable: binary, args, cwd: fixtures, status: output.status, signal: output.signal,
++      error: output.error ? { code: output.error.code, message: output.error.message } : null,
++    }, null, 2) + '\n');
++    assert.ifError(output.error);
++    assert.equal(output.signal, null);
++    assert.equal(output.status, 0, output.stderr.toString('utf8'));
++    assert.equal(output.stderr.length, 0, '--quiet must suppress the status line');
++    assert.ok(output.stdout.length > 0);
++    assert.equal(output.stdout.at(-1), 10, 'adopted public output includes its final LF');
++    assert.notEqual(output.stdout.at(-2), 10, 'adopted public output has a single final LF');
++    const source6 = new TextDecoder('utf-8', { fatal: true }).decode(output.stdout);
++    // No trim, JSON unwrap, AST fabrication, Node beta expansion or regeneration.
++    const lowered = parseAndLowerSource6(source6);
++    const outcome = prepareSource6S0Unqualified(source6);
++    writeFileSync(join(destination, 'actual-consumer.json'), JSON.stringify({
++      lowered, outcome,
++    }, null, 2) + '\n');
++
++    const { ast, state, intent } = lowered;
++    assert.equal(ast.domain, pre.domain);
++    assert.equal(ast.settlement.asset, pre.asset);
++    assert.equal(ast.authenticated.head, pre.head);
++    assert.equal(ast.authenticated.predecessor, scenario.predecessor);
++    assert.equal(ast.authenticated.round, scenario.round);
++    assert.deepEqual(ast.authenticated.balances, pre.balances);
++    assert.deepEqual(ast.authenticated.allowance, pre.allowance);
++    assert.equal(ast.authenticated.replay, pre.replay.status);
++    assert.equal(ast.authenticated.workRemaining, expected.work.opening_remaining);
++    assert.equal(ast.authenticated.workSpent, expected.work.opening_spent);
++    assert.equal(state.domain, pre.domain);
++    assert.equal(state.asset, pre.asset);
++    assert.equal(state.head, pre.head);
++    assert.equal(state.round, scenario.round);
++    assert.deepEqual(state.balances, pre.balances);
++    assert.deepEqual(state.allowances, [pre.allowance]);
++    assert.deepEqual(state.obligations, []);
++    assert.deepEqual(state.consumedReplay, []);
++    assert.equal(state.workRemaining, expected.work.opening_remaining);
++    assert.equal(state.workSpent, expected.work.opening_spent);
++    for (const action of [ast.intent.signedAction, ast.submitted.action]) {
++      assert.equal(action.kind, 'Transfer');
++      assert.equal(action.value, quantities.operation_value_atomic);
++      assert.equal(action.fee, quantities.operation_fee_atomic);
++    }
++    assert.equal(intent.kind, 'Transfer');
++    assert.equal(intent.amount, quantities.operation_value_atomic);
++    assert.equal(intent.fee, quantities.operation_fee_atomic);
++    assert.equal(intent.grossCap, quantities.gross_cap_atomic);
++    assert.equal(intent.feeCap, quantities.fee_cap_atomic);
++    assert.equal(intent.netFloor, quantities.net_floor_atomic);
++    assert.deepEqual(semanticEffects(lowered.submittedEffects, pre.asset), expected.ordered_semantic_effects);
++    assert.equal(lowered.proposedPostHead, post.head);
++
++    // This classification is the provisional local consumer's callable predicate,
++    // not an independently frozen accepted flag or real admission assertion.
++    assert.equal(outcome.status, 'PreparedUnqualified', JSON.stringify(outcome));
++    const candidate = outcome.candidate;
++    assert.equal(candidate.status, 'PreparedUnqualified');
++    assert.deepEqual(semanticEffects(candidate.effects, pre.asset), expected.ordered_semantic_effects);
++    assert.equal(candidate.preHead, pre.head);
++    assert.equal(candidate.candidatePost.domain, post.domain);
++    assert.equal(candidate.candidatePost.asset, post.asset);
++    assert.equal(candidate.candidatePost.head, post.head);
++    assert.deepEqual(candidate.candidatePost.balances, post.balances);
++    assert.deepEqual(candidate.candidatePost.allowances, [post.allowance]);
++    assert.deepEqual(candidate.candidatePost.obligations, []);
++    assert.deepEqual(candidate.candidatePost.consumedReplay.map((key) => JSON.parse(key)),
++      [post.replay.key_components]);
++    // Work post counters/cost are observed in actual-consumer.json, never asserted.
++    // Residual duties have no independent DTO field in this S0State projection.
++  });
++}

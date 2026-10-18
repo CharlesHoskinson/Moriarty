@@ -1,0 +1,198 @@
+{
+  "schema": "moriarty-fresh-input-only-extra-financial-oracle/1",
+  "case": "repay-debt-20-amount-30",
+  "language": "moriarty/1",
+  "semantics": "moriarty-core/1",
+  "action": "repay",
+  "source_file": "/home/charl/moriarty-c2-opus55-restored-20261017/clean-devex-starter-inputs/repay.mori",
+  "source_sha256": "f619527f31a8d535e9a5708971345e4844752c1dbb5356e326f0a079f9fe37be",
+  "scenario_file": "repay-debt-20-amount-30.scenario.json",
+  "scenario_sha256": "18709f6ed1a7d6786d0860d4a0c5ec09254171219701a55e602f1acd5116f88e",
+  "pre": {
+    "state": {},
+    "balances": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "100"
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "0"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "20"
+      }
+    ]
+  },
+  "selected_amount": "30",
+  "expected_result": "local semantic refusal",
+  "logical_work": {
+    "assertion_status": "unasserted for this packet"
+  },
+  "presentation_unasserted": [
+    "exact error code",
+    "error text",
+    "exit code",
+    "renderer",
+    "exact full Execution wire bytes",
+    "step ExprId allocations"
+  ],
+  "frame_premises": {
+    "exact_balance_domain": [
+      "alice TEST",
+      "bob TEST"
+    ],
+    "exact_liability_names": [
+      "debt"
+    ],
+    "state_domain": [],
+    "implicit_account_creation": false,
+    "implicit_mint_burn": false,
+    "explicit_fee_statements": [],
+    "explicit_fee_amount": "0",
+    "reserve_or_custody_rows": [],
+    "native_fee_or_DUST_cost": "unasserted"
+  },
+  "post": null,
+  "post_status": "No successful post snapshot is returned or asserted on local refusal. Atomicity preserves the supplied opening financial state.",
+  "effects": [],
+  "committed_effects": [],
+  "atomic_state_after_refusal": {
+    "state": {},
+    "balances": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "100"
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "0"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "20"
+      }
+    ]
+  },
+  "refusal_source_statement_ordinal": 3,
+  "refusal_reason_basis": "The positive-amount requirement passes and transfer 30 is locally fundable, but discharge 30 from debt 20 requires unsigned subtraction 20-30 and therefore refuses.",
+  "financial_accounting": {
+    "scope": "Committed outcome only; attempted prefix is not a committed payment.",
+    "asset": {
+      "network": "local",
+      "issuer": "mori-init-example",
+      "reference": "TEST",
+      "scale": 0
+    },
+    "opening_total_balance": "100",
+    "committed_total_balance": "100",
+    "alice": {
+      "opening_balance": "100",
+      "committed_gross_debit": "0",
+      "committed_fee_debit": "0",
+      "committed_gross_receipt": "0",
+      "committed_net_change": "0",
+      "preserved_balance": "100"
+    },
+    "bob": {
+      "opening_balance": "0",
+      "committed_gross_debit": "0",
+      "committed_fee_debit": "0",
+      "committed_gross_receipt": "0",
+      "committed_net_receipt": "0",
+      "preserved_balance": "0"
+    },
+    "committed_explicit_fee_total": "0",
+    "fee_recipients": [],
+    "liability_evolution": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "opening": "20",
+        "committed_created": "0",
+        "committed_accrued": "0",
+        "committed_discharged": "0",
+        "preserved_closing": "20",
+        "present_after_refusal": true
+      }
+    ],
+    "residual_duties": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "20"
+      }
+    ]
+  },
+  "complete_frame": {
+    "preserved_rows_exact": true,
+    "preserved_state": {},
+    "present_zero_balances": [
+      "bob TEST"
+    ],
+    "present_zero_liabilities": [],
+    "absent_liabilities": "all names except debt",
+    "absent_balance_rows": "all rows except alice TEST and bob TEST",
+    "other_committed_effects": []
+  },
+  "prefix_limit": "No partial execution/effect sequence or successful post is asserted; internal transient prefix mutations are outside this committed-outcome oracle."
+}

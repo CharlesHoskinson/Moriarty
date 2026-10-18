@@ -1,0 +1,11 @@
+language "moriarty/1";
+agreement PublicationFlag {
+  state ready: Bool = false;
+  action acknowledge(accepted: Bool) {
+    requires accepted;
+    let observed = ready;
+    next ready = accepted;
+    ensures ready;
+    emit "prior"(observed);
+  }
+}

@@ -1,0 +1,88 @@
+[
+  {
+    "filesRead": [
+      "inline-primary-bundle:core2-partial-delivery-result-review-packet",
+      "full-source/crates/mori/tests/core2_partial_delivery_complete.rs",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.mori",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.scenario.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.program.expected.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.plan.expected.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/FINANCIAL-AND-WORK.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/FREEZE.sha256",
+      "full-source/crates/mori-core/src/stage/mod.rs",
+      "full-source/crates/mori-core/src/stage/report.rs",
+      "full-source/crates/mori-core/src/stage/admit.rs",
+      "full-source/crates/mori-core/src/stage/cost.rs",
+      "full-source/crates/mori-core/src/stage/plan.rs",
+      "full-source/crates/mori-core/src/runtime.rs",
+      "full-source/crates/mori/src/commands/simulate.rs",
+      "full-source/crates/mori/src/commands/core_io.rs",
+      "INLINE-CUSTODY.json",
+      "actual-cycle/attempt-1/START.json",
+      "actual-cycle/attempt-1/RESULT.json",
+      "GUARDED-INTEGRATION-SUMMARY.json"
+    ],
+    "findings": [
+      "Formatted test crates/mori/tests/core2_partial_delivery_complete.rs (SHA256 a0f5ddc8b0957c90b3c9fae78dfd561aa8dde80e222b6fad17ac142b16edbb16) differs from unformatted SHA256 ff2c0b5a7181c61ad50f224969b84789e408dcb633910228b614d02541f6ca4d solely by a 4-line-to-1-line rustfmt call-layout fold on project.assert_case(\"start\", ...) in FORMATTING.diff; all 3 test functions exercise genuine public stage::load, stage::start, stage::resume, stage::outcome_report, and CARGO_BIN_EXE_mori simulate paths without mocks, shadow evaluators, or projection filters.",
+      "Independent oracle bundle (34 members + FREEZE.sha256 23cd81709767468984fe4f2f2bdbcf7902e67b9f1bc9f91ce69d700d26695212) is byte-intact (including the disclosed verbatim EOF blank-line exception on basis/partial-conditional-transactions-spec.md SHA256 dc9423f021fefe67a131ea8ca5e6b6ccc764429729519a19a0f2c2d5c169c319) and accurately encodes the 14-expression/10-statement PartialDelivery program, 2-site StagePlan (segment_cost 13/7/6, committed_before 0/13/20, plan_total 26), balance conservation (sum 34 across S0..S6), liability evolution (absent -> 10 -> 6 -> present-zero with residual 10 -> 6 -> 6 -> []), and work accounting (attempted 13/7/2/6, committed 13/20/20/26).",
+      "Both library and CLI test paths enforce strict actual predecessor continuation chaining (start -> approval-true -> receipt-false -> receipt-true) where expected continuations are never used as execution inputs, receipt-false returns advanced=false/segment=null with an unchanged site-2 continuation, and advancing segments verify exact segment.execution.pre == continuation.boundary and segment.frame_pre == (site, captures) linkage.",
+      "Actual single-attempt execution (START.json / RESULT.json on commit 078047940fb76e1ef62842f45dadd41a6592f99a, tree 1639828b943114f96fefe5861dae18b9abca44b7, clean worktree, offline, 13 explicit env vars, no HOME) exited 0 in 52.89805956999771s with all 3 test functions passing (STDOUT.log SHA256 672dd0157863c46ad1cef6095c80299dd2781b751f3a39649971601d3388abd4, STDERR.log SHA256 3a1fde475ad5f8ca8be347e6412ed86e385f671d6980d97883ff679f970871d0), owned temp root removed (existsAfter: false), and owned session 577676 empty (members: []).",
+      "Guarded integration against assessed origin/main e3eb6d12aba0c301d32b278bf9bdd6f98155308f (tree 2d4bddedb32182737e5536996a411317d44d8763) confirms only RUST_GUIDELINES.md (M) and crates/mori-backend/tests/financial_observation_relation.rs (A) changed since base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb, all 36 candidate paths remain absent on main, and all 436 other pinned files are byte-identical with zero changes to selected mori/mori-core runtime, dependencies, manifests, or lockfile."
+    ],
+    "limitations": [
+      "All 14 original staged gaps (GAP-01..GAP-14) and broader U0-U7, M1-M17, MC/SP/G, full-financial/ACTUS/DeFi, and MPLR-001/004/012/017 conditional settlement/proof/ledger exits remain OPEN; outputs carry local-reference-stage / authentication:none / consumption:untracked qualifications and provide no security, authority, or conservation certification.",
+      "Selected scenario scope covers only a finite positive already-admitted no-cap execution path (cap: null, no incoming scenario liabilities, no Fee/Mint/Burn/accrual statements, and no rejection, cap-refusal, replay, cancellation, or hostile inputs).",
+      "Oracle custody reflects independent paper/literal derivation from public normative/DTO premises with disclosed prior repository/DTO exposure in PROVENANCE.json (not globally blinded), and test-author source exposure is not independent proof.",
+      "Per-invocation mori CLI stdout/stderr streams were asserted in-process rather than archived as separate external files, process cleanup covers owned session 577676 and temp root deletion rather than kernel-wide detached-process exclusion, and guarded integration requires root to recheck current main and all selected source/dependency/fixture/test bytes before merge.",
+      "Model attestation limit: review performed in a fresh non-author context under requested Gemini HIGH tier (environment setting reported as Gemini 4 Argon (High)); runtime model self-reporting is not an external cryptographic provider attestation."
+    ],
+    "reason": "Independent whole-packet review of the current rustfmt-formatted test (SHA256 a0f5ddc8b0957c90b3c9fae78dfd561aa8dde80e222b6fad17ac142b16edbb16), the 34-member frozen oracle bundle + FREEZE.sha256 (SHA256 23cd81709767468984fe4f2f2bdbcf7902e67b9f1bc9f91ce69d700d26695212), the inspected mori-core/mori consumer implementations (stage::load, stage::start, stage::resume, stage::outcome_report, runtime::run_segment, commands::simulate), the single-attempt execution receipts (exit 0, 3 passed in 52.898s on commit 078047940fb76e1ef62842f45dadd41a6592f99a), and the guarded integration diff against origin/main e3eb6d12aba0c301d32b278bf9bdd6f98155308f verifies exact source, result, and guarded-integration soundness within bounded local Core/2 scope.",
+    "reviewToken": "doctorwatson-core2-partial-delivery-result-ordinary-20261018-a1-whole-review",
+    "summary": "Approve exact formatted source (a0f5ddc8b0957c90b3c9fae78dfd561aa8dde80e222b6fad17ac142b16edbb16), frozen independent oracle (23cd81709767468984fe4f2f2bdbcf7902e67b9f1bc9f91ce69d700d26695212), actual single-attempt test result (exit 0, 3/3 passed on 078047940fb76e1ef62842f45dadd41a6592f99a), and guarded integration onto origin/main (e3eb6d12aba0c301d32b278bf9bdd6f98155308f) without rerun for unrelated PR 210 doc/unselected-backend-test changes, subject to pre-merge byte verification of main and all selected paths.",
+    "toolAction": "Completing whole source and result review",
+    "toolSummary": "Complete whole review JSON",
+    "verdict": "approve-exact-source-and-result-and-guarded-integration"
+  },
+  {
+    "filesRead": [
+      "inline-primary-bundle:core2-partial-delivery-result-review-packet",
+      "full-source/crates/mori/tests/core2_partial_delivery_complete.rs",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.mori",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.scenario.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.program.expected.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/partial-delivery.plan.expected.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/FINANCIAL-AND-WORK.json",
+      "full-source/crates/fixtures/core2-partial-delivery-complete/FREEZE.sha256",
+      "full-source/crates/mori-core/src/stage/mod.rs",
+      "full-source/crates/mori-core/src/stage/report.rs",
+      "full-source/crates/mori-core/src/stage/admit.rs",
+      "full-source/crates/mori-core/src/stage/cost.rs",
+      "full-source/crates/mori-core/src/stage/plan.rs",
+      "full-source/crates/mori-core/src/runtime.rs",
+      "full-source/crates/mori/src/commands/simulate.rs",
+      "full-source/crates/mori/src/commands/core_io.rs",
+      "INLINE-CUSTODY.json",
+      "actual-cycle/attempt-1/START.json",
+      "actual-cycle/attempt-1/RESULT.json",
+      "GUARDED-INTEGRATION-SUMMARY.json"
+    ],
+    "findings": [
+      "Formatted test crates/mori/tests/core2_partial_delivery_complete.rs (SHA256 a0f5ddc8b0957c90b3c9fae78dfd561aa8dde80e222b6fad17ac142b16edbb16) differs from unformatted SHA256 ff2c0b5a7181c61ad50f224969b84789e408dcb633910228b614d02541f6ca4d solely by a 4-line-to-1-line rustfmt call-layout fold on project.assert_case(\"start\", ...) in FORMATTING.diff; all 3 test functions exercise genuine public stage::load, stage::start, stage::resume, stage::outcome_report, and CARGO_BIN_EXE_mori simulate paths without mocks, shadow evaluators, or projection filters.",
+      "Independent oracle bundle (34 members + FREEZE.sha256 23cd81709767468984fe4f2f2bdbcf7902e67b9f1bc9f91ce69d700d26695212) is byte-intact (including the disclosed verbatim EOF blank-line exception on basis/partial-conditional-transactions-spec.md SHA256 dc9423f021fefe67a131ea8ca5e6b6ccc764429729519a19a0f2c2d5c169c319) and accurately encodes the 14-expression/10-statement PartialDelivery program, 2-site StagePlan (segment_cost 13/7/6, committed_before 0/13/20, plan_total 26), balance conservation (sum 34 across S0..S6), liability evolution (absent -> 10 -> 6 -> present-zero with residual 10 -> 6 -> 6 -> []), and work accounting (attempted 13/7/2/6, committed 13/20/20/26).",
+      "Both library and CLI test paths enforce strict actual predecessor continuation chaining (start -> approval-true -> receipt-false -> receipt-true) where expected continuations are never used as execution inputs, receipt-false returns advanced=false/segment=null with an unchanged site-2 continuation, and advancing segments verify exact segment.execution.pre == continuation.boundary and segment.frame_pre == (site, captures) linkage.",
+      "Actual single-attempt execution (START.json / RESULT.json on commit 078047940fb76e1ef62842f45dadd41a6592f99a, tree 1639828b943114f96fefe5861dae18b9abca44b7, clean worktree, offline, 13 explicit env vars, no HOME) exited 0 in 52.89805956999771s with all 3 test functions passing (STDOUT.log SHA256 672dd0157863c46ad1cef6095c80299dd2781b751f3a39649971601d3388abd4, STDERR.log SHA256 3a1fde475ad5f8ca8be347e6412ed86e385f671d6980d97883ff679f970871d0), owned temp root removed (existsAfter: false), and owned session 577676 empty (members: []).",
+      "Guarded integration against assessed origin/main e3eb6d12aba0c301d32b278bf9bdd6f98155308f (tree 2d4bddedb32182737e5536996a411317d44d8763) confirms only RUST_GUIDELINES.md (M) and crates/mori-backend/tests/financial_observation_relation.rs (A) changed since base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb, all 36 candidate paths remain absent on main, and all 436 other pinned files are byte-identical with zero changes to selected mori/mori-core runtime, dependencies, manifests, or lockfile."
+    ],
+    "limitations": [
+      "All 14 original staged gaps (GAP-01..GAP-14) and broader U0-U7, M1-M17, MC/SP/G, full-financial/ACTUS/DeFi, and MPLR-001/004/012/017 conditional settlement/proof/ledger exits remain OPEN; outputs carry local-reference-stage / authentication:none / consumption:untracked qualifications and provide no security, authority, or conservation certification.",
+      "Selected scenario scope covers only a finite positive already-admitted no-cap execution path (cap: null, no incoming scenario liabilities, no Fee/Mint/Burn/accrual statements, and no rejection, cap-refusal, replay, cancellation, or hostile inputs).",
+      "Oracle custody reflects independent paper/literal derivation from public normative/DTO premises with disclosed prior repository/DTO exposure in PROVENANCE.json (not globally blinded), and test-author source exposure is not independent proof.",
+      "Per-invocation mori CLI stdout/stderr streams were asserted in-process rather than archived as separate external files, process cleanup covers owned session 577676 and temp root deletion rather than kernel-wide detached-process exclusion, and guarded integration requires root to recheck current main and all selected source/dependency/fixture/test bytes before merge.",
+      "Model attestation limit: review performed in a fresh non-author context under requested Gemini HIGH tier (environment setting reported as Gemini 4 Argon (High)); runtime model self-reporting is not an external cryptographic provider attestation."
+    ],
+    "reason": "Independent whole-packet review of the current rustfmt-formatted test (SHA256 a0f5ddc8b0957c90b3c9fae78dfd561aa8dde80e222b6fad17ac142b16edbb16), the 34-member frozen oracle bundle + FREEZE.sha256 (SHA256 23cd81709767468984fe4f2f2bdbcf7902e67b9f1bc9f91ce69d700d26695212), the inspected mori-core/mori consumer implementations (stage::load, stage::start, stage::resume, stage::outcome_report, runtime::run_segment, commands::simulate), the single-attempt execution receipts (exit 0, 3 passed in 52.898s on commit 078047940fb76e1ef62842f45dadd41a6592f99a), and the guarded integration diff against origin/main e3eb6d12aba0c301d32b278bf9bdd6f98155308f verifies exact source, result, and guarded-integration soundness within bounded local Core/2 scope.",
+    "reviewToken": "doctorwatson-core2-partial-delivery-result-ordinary-20261018-a1-whole-review",
+    "summary": "Approve exact formatted source (a0f5ddc8b0957c90b3c9fae78dfd561aa8dde80e222b6fad17ac142b16edbb16), frozen independent oracle (23cd81709767468984fe4f2f2bdbcf7902e67b9f1bc9f91ce69d700d26695212), actual single-attempt test result (exit 0, 3/3 passed on 078047940fb76e1ef62842f45dadd41a6592f99a), and guarded integration onto origin/main (e3eb6d12aba0c301d32b278bf9bdd6f98155308f) without rerun for unrelated PR 210 doc/unselected-backend-test changes, subject to pre-merge byte verification of main and all selected paths.",
+    "verdict": "approve-exact-source-and-result-and-guarded-integration"
+  }
+]

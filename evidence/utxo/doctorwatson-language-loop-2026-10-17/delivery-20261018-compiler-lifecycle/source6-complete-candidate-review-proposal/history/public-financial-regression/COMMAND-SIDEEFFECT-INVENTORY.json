@@ -1,0 +1,66 @@
+{
+  "status": "UNRUN inventory, not authorization or actual result",
+  "commands": [
+    {
+      "id": "optional-reviewed-build",
+      "executed": false,
+      "command": "cargo build --locked --offline -p mori --bin mori --no-default-features --features source6-expansion",
+      "owner": "root after final candidate/lock and ordinary resource/source checks",
+      "reads": [
+        "workspace/manifests/lock/source",
+        "already available Cargo/Rust dependency/toolchain inputs"
+      ],
+      "writes": [
+        "Cargo target artifacts and ordinary build bookkeeping/cache if needed"
+      ],
+      "subprocesses": [
+        "Cargo",
+        "Rust compiler/build scripts as resolved by final dependency closure"
+      ],
+      "network": "offline; no installation or dependency resolution requested",
+      "native": "feature explicitly disabled; source6-expansion enabled; dependency closure must be checked by root"
+    },
+    {
+      "id": "regression",
+      "executed": false,
+      "command": "MORI_RUST_BIN=/absolute/reviewed/target/debug/mori MORI_SOURCE6_OBSERVATIONS=/absolute/existing-parent/new-observations node --test experiments/moriarty-language/regressions/rust-source6-transfer.mjs",
+      "runtime": "Node24 native TS stripping; no npm install/build",
+      "reads": [
+        "new fixture subset and pins",
+        "exact supplied binary bytes for SHA256",
+        "existing three Source6/S0 TypeScript consumer modules"
+      ],
+      "writes": [
+        "one required fresh observations directory",
+        "run.json",
+        "invoice/{process.json,stdout.source6,stderr.txt,actual-consumer.json}",
+        "workshop/{process.json,stdout.source6,stderr.txt,actual-consumer.json}",
+        "Node test TAP to stdout/stderr"
+      ],
+      "subprocesses": [
+        "Node test worker as used by Node --test",
+        "exactly one reviewed Rust emit-source6-transfer process per case, total two"
+      ],
+      "spawnOptions": {
+        "shell": false,
+        "timeoutMsPerRustProcess": 30000,
+        "maxBufferBytesPerStream": 1048576,
+        "stdin": "ignored"
+      },
+      "RustSideEffects": "reads source+scenario; real beta parse/check/selection and transfer emission; stdout bytes/status suppressed by quiet; no target/prove/VM/SDK call on inspected selected branch",
+      "TSCalls": [
+        "parseAndLowerSource6(actualStdout)",
+        "prepareSource6S0Unqualified(actualStdout) -> same lowerer -> prepareMil4S0"
+      ],
+      "TSsideEffects": "synchronous in-memory parse/checked ordinary local computation; observed values serialized only by regression",
+      "notInvoked": [
+        "Node beta expand/emitter",
+        "mori compile",
+        "mori simulate",
+        "Cargo from within test",
+        "native/SDK/VM/proof/key/wallet/network operations"
+      ],
+      "failure": "captures process outputs before assertions; nonzero/signal/timeout/feature absence/parser refusal/provisional local rejection/mismatch fails without skip; earlier artifacts never overwritten"
+    }
+  ]
+}

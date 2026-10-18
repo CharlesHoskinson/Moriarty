@@ -1,0 +1,226 @@
+{
+  "schema": "moriarty-fresh-input-only-extra-financial-oracle/1",
+  "case": "repay-full-100",
+  "language": "moriarty/1",
+  "semantics": "moriarty-core/1",
+  "action": "repay",
+  "source_file": "/home/charl/moriarty-c2-opus55-restored-20261017/clean-devex-starter-inputs/repay.mori",
+  "source_sha256": "f619527f31a8d535e9a5708971345e4844752c1dbb5356e326f0a079f9fe37be",
+  "scenario_file": "repay-full-100.scenario.json",
+  "scenario_sha256": "c7438113f9d43db3ebdcacd122332a004ab042e366c047a65468d7a858573833",
+  "pre": {
+    "state": {},
+    "balances": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "100"
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "0"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "100"
+      }
+    ]
+  },
+  "selected_amount": "100",
+  "expected_result": "success",
+  "logical_work": {
+    "assertion_status": "unasserted for this packet"
+  },
+  "presentation_unasserted": [
+    "exact error code",
+    "error text",
+    "exit code",
+    "renderer",
+    "exact full Execution wire bytes",
+    "step ExprId allocations"
+  ],
+  "frame_premises": {
+    "exact_balance_domain": [
+      "alice TEST",
+      "bob TEST"
+    ],
+    "exact_liability_names": [
+      "debt"
+    ],
+    "state_domain": [],
+    "implicit_account_creation": false,
+    "implicit_mint_burn": false,
+    "explicit_fee_statements": [],
+    "explicit_fee_amount": "0",
+    "reserve_or_custody_rows": [],
+    "native_fee_or_DUST_cost": "unasserted"
+  },
+  "post": {
+    "state": {},
+    "balances": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "0"
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "100"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "0"
+      }
+    ]
+  },
+  "effects": [
+    {
+      "kind": "Transfer",
+      "asset": {
+        "network": "local",
+        "issuer": "mori-init-example",
+        "reference": "TEST",
+        "scale": 0
+      },
+      "from": "alice",
+      "to": "bob",
+      "amount": "100"
+    },
+    {
+      "kind": "Liability",
+      "name": "debt",
+      "asset": {
+        "network": "local",
+        "issuer": "mori-init-example",
+        "reference": "TEST",
+        "scale": 0
+      },
+      "debtor": "alice",
+      "creditor": "bob",
+      "before": "100",
+      "after": "0"
+    }
+  ],
+  "financial_accounting": {
+    "asset": {
+      "network": "local",
+      "issuer": "mori-init-example",
+      "reference": "TEST",
+      "scale": 0
+    },
+    "opening_total_balance": "100",
+    "closing_total_balance": "100",
+    "alice": {
+      "opening_balance": "100",
+      "gross_transfer_debit": "100",
+      "gross_debit": "100",
+      "fee_debit": "0",
+      "gross_receipt": "0",
+      "net_change": "-100",
+      "closing_balance": "0"
+    },
+    "bob": {
+      "opening_balance": "0",
+      "gross_debit": "0",
+      "fee_debit": "0",
+      "gross_receipt": "100",
+      "net_receipt": "100",
+      "net_change": "100",
+      "closing_balance": "100"
+    },
+    "explicit_fee_total": "0",
+    "fee_recipients": [],
+    "debt": {
+      "asset": {
+        "network": "local",
+        "issuer": "mori-init-example",
+        "reference": "TEST",
+        "scale": 0
+      },
+      "debtor": "alice",
+      "creditor": "bob",
+      "opening": "100",
+      "created": "0",
+      "accrued": "0",
+      "discharged": "100",
+      "closing": "0",
+      "present_after": true
+    },
+    "residual_duties": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "0"
+      }
+    ]
+  },
+  "complete_frame": {
+    "post_rows_exact": true,
+    "state": {},
+    "present_zero_balances": [
+      "alice TEST"
+    ],
+    "absent_balance_rows": "all rows except alice TEST and bob TEST",
+    "present_zero_liabilities": [
+      "debt"
+    ],
+    "absent_liabilities": "all names except debt",
+    "other_effects": []
+  },
+  "derivation": [
+    "100 > 0 passes requires",
+    "Alice has exactly 100 TEST, sufficient for transfer 100",
+    "Alice 100-100=0 and Bob 0+100=100",
+    "Debt 100-100=0; normative zero residual duty remains in snapshot",
+    "Discharge does not initiate a second payment; effects occur Transfer then Liability reduction"
+  ]
+}

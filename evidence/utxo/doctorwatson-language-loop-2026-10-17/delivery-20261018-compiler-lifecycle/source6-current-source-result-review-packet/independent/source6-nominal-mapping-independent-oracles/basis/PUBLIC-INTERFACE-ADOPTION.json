@@ -1,0 +1,81 @@
+{
+  "decidedAt": "2026-10-18T09:35:31.008971+00:00",
+  "decision": "ADOPT EXACT ORDINARY SOURCE6 PUBLIC TRANSFER INTERFACE",
+  "patchSha256": "706b188950e78e9eddd505e9b5440a72cee33653aa2d6eb9cccea0bfa3d29a46",
+  "independentContexts": [
+    {
+      "job": "doctorwatson-source6-public-consumer-design-interface-20261018-a2",
+      "reviewToken": "doctorwatson-source6-public-consumer-design-interface-20261018-a2-whole-review",
+      "reviewSha256": "4c8c09c928a1236169d6b04beabd1a170637eed4028c74ae0b8eface0ff0bfff",
+      "decisionVotes": [
+        {
+          "decisionId": "selection_option_feature",
+          "reason": "Gating `--emit-source6-transfer` behind the non-default `source6-expansion` feature (activating `mori-source6/source6-transfer-slice`) cleanly isolates the transfer-only Source/6 consumer from default `moriarty-core/1` `mori expand` and the Node beta package, returns `mori::command::source6-unavailable` before any file I/O when disabled, and scopes CLI help to the flag without marking default Core expansion unavailable. Remains unadopted until two substantive agreeing votes are recorded.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        },
+        {
+          "decisionId": "scenario_profile_subset",
+          "reason": "Reusing `moriarty-local-scenario/1` (`local-stipulation`) with canonical decimal `UInt` decoding and `[owner, recipient, fee_recipient]` balance ordering avoids inventing a parallel wire format while explicitly classifying missing/foreign profile or kind (`source6-scenario-profile`), unsupported `obligation`/`candidate_effects` fields (`source6-scenario-unsupported`), non-three balance arrays (`source6-scenario-cells`), remaining DTO schema errors (`source6-scenario-shape`), and source-vs-scenario cell mismatches (`mori::source6::scenario_shape`).",
+          "requiredFix": "none",
+          "vote": "adopt"
+        },
+        {
+          "decisionId": "raw_output_qualification",
+          "reason": "Emitting raw generated Source/6 text with a single trailing newline on stdout, printing `Expanded Source/6 transfer proposal (local-stipulation-only)` on non-quiet stderr, suppressing stderr under `--quiet`, and writing no stdout bytes on failure provides a clean CLI contract that preserves `local-stipulation-only` qualification without claiming Node `BetaExpansion` JSON parity or Core/5 preparation.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        },
+        {
+          "decisionId": "existing_refusal_precedence",
+          "reason": "Splitting `mori-source6` into `select_transfer` (owning validated private `Terms` after real `mori-parser` and `mori-checker` acceptance plus `LocalS0` transfer selection) and `SelectedTransfer::expand` (with `expand_transfer` delegating to both) repairs CLI precedence so source syntax/checker errors, `mori::source6::unknown_action`, and `mori::source6::unsupported_operation` (repay/family) win before any scenario file read, while relying on existing lexer/checker invariants for `.id`/agreement lexical and reserved-word rules, distinct same-domain transfer accounts, `scale <= 18`, and `rounds` `from <= to`.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        }
+      ]
+    },
+    {
+      "job": "doctorwatson-source6-public-consumer-design-consumer-20261018-a2",
+      "reviewToken": "doctorwatson-source6-public-consumer-design-consumer-20261018-a2-whole-review",
+      "reviewSha256": "160c4baf15c8fb0bdfbb58fe771d17d2f69296a407e49fe3fdda0cec50f7d17e",
+      "decisionVotes": [
+        {
+          "decisionId": "selection_option_feature",
+          "reason": "Exposing --emit-source6-transfer on mori expand behind non-default source6-expansion (forwarding to mori-source6/source6-transfer-slice) keeps default Core expand and Node beta unchanged, avoids marking default expand unavailable in CLI help, and returns mori::command::source6-unavailable before file I/O when disabled. Suitable for adoption pending root's two substantive agreeing votes.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        },
+        {
+          "decisionId": "scenario_profile_subset",
+          "reason": "Reusing moriarty-local-scenario/1 and local-stipulation for the closed transfer subset with mori_core::UInt canonical decimal decoding and 3 ordered balances [owner, recipient, fee_recipient] is well-scoped; read_scenario checks profile/kind (source6-scenario-profile), obligation/candidate_effects (source6-scenario-unsupported), and balance count != 3 (source6-scenario-cells) after strict JSON parsing and before serde DTO decoding (source6-scenario-shape) and SelectedTransfer::expand cell validation (mori::source6::scenario_shape). Suitable for adoption pending root's two substantive agreeing votes.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        },
+        {
+          "decisionId": "raw_output_qualification",
+          "reason": "Writing raw Source/6 proposal text with its single trailing newline to stdout and reporting Expanded Source/6 transfer proposal (local-stipulation-only) on stderr (suppressed by --quiet, with empty stdout on failure) truthfully reflects the local-stipulation-only proposal boundary without claiming Core/5 preparation or Node JSON wrapper parity. Suitable for adoption pending root's two substantive agreeing votes.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        },
+        {
+          "decisionId": "existing_refusal_precedence",
+          "reason": "Factoring mori_source6::select_transfer -> SelectedTransfer::expand (with expand_transfer delegating to both) and invoking select_transfer in crates/mori/src/commands/expand/source6.rs before read_scenario ensures source parse/check diagnostics, mori::source6::unknown_action, and mori::source6::unsupported_operation (for repay and SpecifiedOnly family actions) win before scenario file I/O. Routine conformance repair requiring no new feature vote.",
+          "requiredFix": "none",
+          "vote": "adopt"
+        }
+      ]
+    }
+  ],
+  "source": "source6-public-consumer-revised-proposal/FINAL-DESIGN-CHOICES.md",
+  "scope": "Optional source6-expansion explicit --emit-source6-transfer; closed existing local scenario transfer subset; raw Source6 stdout/local-stipulation-only status; real source/action selection before scenario I/O",
+  "preserved": "Original26proposal,a1falseformationclaims/timeouts,correctedcheckerfacts,authorbaselinefixturesandallroadmapobligations",
+  "notGranted": [
+    "nativeembedding",
+    "completeindependentwire/workgoldens",
+    "compiler/proof/ledgerqualification",
+    "securitytopicapproval",
+    "parentacceptance"
+  ],
+  "next": "Promote exact adopted interface source, independently complete chosen-input financial/output premises, run inspected ordinary tests and genuine TypeScript lowerer on actual Rust output",
+  "wholeGoalClosed": false
+}

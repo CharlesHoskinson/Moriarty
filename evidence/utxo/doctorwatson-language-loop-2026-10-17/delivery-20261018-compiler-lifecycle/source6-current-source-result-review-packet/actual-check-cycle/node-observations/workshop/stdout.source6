@@ -1,0 +1,45 @@
+profile "moriarty-financial-agreement-source/6";
+agreement WorkshopReceipt {
+domain Midnight;
+settlement A scale 2;
+selected TransferLiteralFee source_hash "src2" digest "policy2";
+intent {
+signer Owner key "key2";
+nonce "n2";
+pre_head "s0";
+valid 2..20;
+gross_cap 242;
+fee_cap 7;
+net_floor 235;
+failure success_only;
+signed_action transfer from Owner to Recipient fee_to Fee value 235 fee 7;
+observations empty;
+disclosures empty;
+retained_effects empty;
+retained_duties empty;
+delegation none;
+recovery none;
+}
+authenticated {
+head "s0";
+predecessor "workshop_prior";
+round 5;
+balance Owner 1000;
+balance Recipient 25;
+balance Fee 3;
+allowance Owner remaining 1000 spent 17;
+replay unused;
+work_remaining 12;
+work_spent 4;
+}
+submit transfer from Owner to Recipient fee_to Fee value 235 fee 7;
+effects {
+debit Owner 242;
+credit Recipient 235;
+credit Fee 7;
+use_allowance Owner 242;
+use_replay "n2";
+advance_head "s0" "s1";
+}
+post_head "s1";
+}

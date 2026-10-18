@@ -1,0 +1,114 @@
+--- a/crates/mori/src/commands/init.rs
++++ b/crates/mori/src/commands/init.rs
+@@ -47,7 +47,7 @@
+ 
+ /// Prepare all bytes before reserving the destination. Expectations are literal
+ /// financial examples, never outputs obtained from running the interpreter.
+-fn project(template: Template) -> super::Result<Vec<(&'static str, Vec<u8>)>> {
++fn project(template: Template, executable: &str) -> super::Result<Vec<(&'static str, Vec<u8>)>> {
+     use super::core_io::operation;
+     let (source, action, amount, alice, bob) = match template {
+         Template::Transfer => (TRANSFER, "pay", "25", "75", "25"),
+@@ -90,7 +90,7 @@
+     let scenario = mori_core::json::export(&scenario).map_err(operation)?;
+     let manifest = mori_core::json::export(&manifest).map_err(operation)?;
+     let readme = format!(
+-        "# Moriarty starter\n\nThis project uses `language \"moriarty/1\"` and local reference execution.\nThe TEST asset and accounts are examples. Simulation does not settle a ledger transaction or produce a proof.\n\nRun these commands from this directory with `mori` on your PATH:\n\n```sh\nmori check source.mori --json\nmori simulate source.mori --action {action} --scenario scenario.json\nmori test .\n```\n\nThe manifest checks the complete expected post-state and ordered effects.\n\nInitialization requires a new destination and an existing parent directory.\nAn I/O failure can leave an incomplete project. Choose a new destination before retrying.\n"
++        "# Moriarty starter\n\nThis project uses `language \"moriarty/1\"` and `moriarty-core/1` local reference execution.\nThe TEST asset and accounts are examples. Simulation does not settle a ledger transaction or produce a proof.\n\nThe commands below use the Rust CLI that created this project. If you move that executable, update its absolute path below.\nRun these commands from this directory in a POSIX shell:\n\n```sh\n{executable} check source.mori --json\n{executable} simulate source.mori --action {action} --scenario scenario.json\n{executable} test .\n```\n\nThe manifest checks the complete expected post-state and ordered effects.\n\nInitialization requires a new destination and an existing parent directory.\nAn I/O failure can leave an incomplete project. Choose a new destination before retrying.\n"
+     );
+     Ok(vec![
+         ("source.mori", source.as_bytes().to_vec()),
+@@ -101,7 +101,14 @@
+ }
+ 
+ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+-    let files = project(args.template)?;
++    // Keep generated commands on this Rust CLI even when another `mori` is on PATH.
++    // Quote the complete absolute executable as one POSIX shell word.
++    let executable = std::env::current_exe().map_err(super::core_io::operation)?;
++    let executable = executable.to_str().ok_or_else(|| {
++        super::core_io::operation("starter commands require a UTF-8 Rust executable path")
++    })?;
++    let executable = format!("'{}'", executable.replace('\'', "'\\''"));
++    let files = project(args.template, &executable)?;
+     // create_dir atomically refuses existing files, directories and symlinks.
+     // Do not create ancestors or remove this directory after a later failure.
+     std::fs::create_dir(&args.dir).map_err(|source| CliError::Write {
+--- a/crates/mori/tests/init.rs
++++ b/crates/mori/tests/init.rs
+@@ -321,3 +321,75 @@
+         assert!(report(&o).get("execution").is_none());
+     }
+ }
++
++#[cfg(unix)]
++#[test]
++fn generated_commands_use_the_creating_rust_cli_without_path_lookup() {
++    use std::os::unix::fs::PermissionsExt;
++
++    // Resolve the host tool before clearing PATH in the external project children.
++    let shell = std::env::var_os("PATH")
++        .and_then(|path| {
++            std::env::split_paths(&path)
++                .map(|directory| directory.join("sh"))
++                .find(|candidate| {
++                    fs::metadata(candidate).is_ok_and(|metadata| {
++                        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
++                    })
++                })
++        })
++        .expect("the test host PATH must supply a POSIX sh");
++    let shell = fs::canonicalize(shell).expect("resolve the host shell before changing directory");
++    let f = Files::new();
++    let tools = f.path("Rust CLI's tools 🧪");
++    fs::create_dir(&tools).unwrap();
++    let executable = tools.join("mori");
++    fs::copy(env!("CARGO_BIN_EXE_mori"), &executable).unwrap();
++    for template in ["transfer", "repay"] {
++        let dir = f.path(template);
++        let mut c = Command::new(&executable);
++        c.current_dir(&f.0)
++            .env("PATH", "")
++            .arg("init")
++            .arg(&dir)
++            .args(["--template", template]);
++        success(&invoke(c));
++        let readme = fs::read_to_string(dir.join("README.md")).unwrap();
++        let commands = readme
++            .split_once("```sh\n")
++            .unwrap()
++            .1
++            .split_once("```")
++            .unwrap()
++            .0;
++        let mut c = Command::new(&shell);
++        c.current_dir(&dir)
++            .env("PATH", "")
++            .args(["-c", &format!("set -e\n{commands}")]);
++        let o = invoke(c);
++        success(&o);
++        let reports: Vec<Value> = serde_json::Deserializer::from_slice(&o.stdout)
++            .into_iter()
++            .collect::<Result<_, _>>()
++            .unwrap();
++        assert_eq!(reports.len(), 3);
++        assert!(readme.contains("Rust CLI"));
++        assert!(readme.contains("moriarty-core/1"));
++        assert_eq!(reports[0]["status"], "accepted");
++        assert_eq!(reports[0]["language"], "moriarty/1");
++        assert_eq!(reports[1]["status"], "accepted");
++        assert_eq!(reports[1]["qualification"], "local-reference-execution");
++        assert_eq!(reports[1]["execution"]["semantics"], "moriarty-core/1");
++        let (post, effects) = if template == "transfer" {
++            expected("25", "75", "25", None)
++        } else {
++            expected("30", "70", "30", Some("70"))
++        };
++        assert_eq!(reports[1]["execution"]["post"], post);
++        assert_eq!(reports[1]["execution"]["effects"], effects);
++        assert_eq!(reports[2]["status"], "passed");
++        assert_eq!(reports[2]["cases"][0]["actual"]["Ok"]["post"], post);
++        assert_eq!(reports[2]["cases"][0]["actual"]["Ok"]["effects"], effects);
++        assert_eq!(project_bytes(&dir).len(), 4);
++    }
++}

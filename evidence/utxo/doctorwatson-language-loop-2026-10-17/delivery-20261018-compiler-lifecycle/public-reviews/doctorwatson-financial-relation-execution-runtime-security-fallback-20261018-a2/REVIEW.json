@@ -1,0 +1,53 @@
+{
+  "filesRead": [
+    "MANIFEST.json",
+    "EXECUTION-CONTRACT.json",
+    "FRESH-METADATA-PREFLIGHT.json",
+    "CURRENT-SOURCE-PINS.json",
+    "FIXTURE-CUSTODY.json",
+    "INPUT-SHAPES.json",
+    "PRIMARY.md",
+    "original-inputs/sdk-runtime/OMITTED-FUNCTIONS.json",
+    "original-inputs/sdk-runtime/full-originals/midnight-ledger-04c9c5d/zkir-v3/src/ir.rs",
+    "original-inputs/sdk-runtime/full-originals/midnight-ledger-04c9c5d/zkir-v3/src/ir_instructions/encode.rs",
+    "original-inputs/sdk-runtime/full-originals/midnight-ledger-04c9c5d/base-crypto/src/data_provider.rs",
+    "original-inputs/source/crates/mori-backend/src/lib.rs",
+    "original-inputs/source/crates/mori-backend/src/liabilities.rs",
+    "original-inputs/source/crates/mori-core/src/ir.rs",
+    "original-inputs/source/RUST_GUIDELINES.md",
+    "original-inputs/blst-package-root/build.rs",
+    "original-inputs/fixtures/CASES.json",
+    "original-inputs/fixtures/PROVENANCE.json",
+    "original-inputs/fixtures/installment-invoice.mori",
+    "original-inputs/fixtures/conditional-reserve.mori",
+    "original-inputs/integration/CURRENT-SOURCE.json",
+    "original-inputs/prior/FINANCIAL-OWNER-RESULTS-AND-CORRECTIONS.json",
+    "original-inputs/prior/CONSUMED-COMPILER-ONLY-RESULT.json",
+    "original-inputs/prior/CONSUMED-COMPILER-ONLY-ADMISSION.json",
+    "original-inputs/prior/COMPILER-TCB-REVIEW-PACKET.md",
+    "original-inputs/supporting-public-source/sdk-field-scalar-excerpts/PRIMARY-SOURCES.md",
+    "original-inputs/supporting-public-source/compiler-build-root-owner-packet/public-code/aws-lc-sys-0.45.0/builder/main.rs",
+    "original-inputs/supporting-public-source/compiler-build-root-owner-packet/public-code/aws-lc-sys-0.45.0/builder/system_detect.rs",
+    "original-inputs/supporting-public-source/compiler-admission-helper-sources/full-originals/ff-0.13.1/src/lib.rs",
+    "preserved-runtime-a1/PROCESS.json",
+    "preserved-runtime-a1/OUTPUT-SCHEMA.json"
+  ],
+  "findings": [
+    "1. Target, Source & Fixture Independence: Commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763) changes only financial_observation_relation.rs (650 lines/21573B, SHA bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-identical to 368-line draft f6fb7fd9...) and RUST_GUIDELINES.md (SHA 972ea86f...). The test reads 10 frozen payloads (FREEZE 5fca1721..., 39 statements, 23 effects) via v1 DTOs without calling simulate, proving::*, or signed_relation::*, and injectively binds all 26/39 and 32/51 public_inputs slots.",
+    "2. Call-Graph & Emitted ZKIR Subset: Unfiltered execution runs 2 parse calls, 2 compile calls (4 actions), 7 IrSource::load calls (4 in lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. In mori-backend/src/lib.rs:519-1231, unsigned Core/1 compilation builds IrSource with inputs=[], outputs=Native, do_communications_commitment=false, emitting only 14 Instruction variants over IrType::Native (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, TestEq, LessThan(128), DivModPowerOfTwo(64), Assert, Output).",
+    "3. Inspected Runtime Bodies vs Unreached Branches: Direct inspection of proofs.rs:739-741, ir.rs:75-80, ir_vm.rs:185-691, ir_types.rs, ir_instructions/*.rs, curve.rs, fq.rs, ff/lib.rs, and exports.c shows ProofPreimage::check calls only IrSource::preprocess(preimage)?.pi_skips, ignoring key_location and never calling prove/k/keygen/model/cost_model/optimal_k/MidnightDataProvider. All 14 emitted arms run pure in-memory Native field arithmetic with zero SRS/file/network I/O or OsRng; unsupplied helpers (OMITTED-FUNCTIONS.json:82-142) are in unreached arms.",
+    "4. Build/Tool Preflight & Explicit TCB: FRESH-METADATA-PREFLIGHT.json pins all 7 host binaries by SHA-256 (cargo, rustc, rustdoc, timeout, cc, c++, ar), verifies 14 ancestor Cargo configs are absent, and confirms blst-0.3.17 package root has libblst.a absent, build.rs SHA 3b0a6eea..., Cargo.toml SHA 4702ed65..., and blst/ present. Inspecting blst/build.rs and aws-lc-sys/builder/{main.rs,system_detect.rs} confirms blst compiles server.c and assembly.S via cc::Build and AWS_LC_SYS_USE_SYSTEM=0 disables system/pkg-config probing. Host tools, C/ASM, macros, and FFI are TCB.",
+    "5. Execution Contract & Resource Eligibility: EXECUTION-CONTRACT.json (2677B, SHA 482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562) bounds one cold attempt (maximumAttempts=1, retryAllowed=false, cacheWarmingAllowed=false, fetchInstallAllowed=false, admitted=false) in exclusive /tmp/doctorwatson-financial-relation-4f83f0f6-20261018-a1 with 18 argv elements, 17 env keys (inheritParentEnvironment=false, CARGO_NET_OFFLINE=true, CARGO_INCREMENTAL=0), -j1, --test-threads=1, and 600s TERM + 5s KILL. Prior compiler-only 169.10s run is consumed; runtime a1 (exit 124) is no vote."
+  ],
+  "limitations": [
+    "1. Static Review & Unread Non-Emitted SDK Helpers: No compiler, Cargo, SDK, VM, or test execution occurred. External SDK helpers in OMITTED-FUNCTIONS.json:82-142 (ec_mul_offcircuit, into/from_coordinates, into/from_bytes32, transient_hash/commit, hash_to_curve, AlignmentExt, ParamsKZG::read_custom) are not in this packet; effect absence relies on unsigned Core/1 never emitting their IR arms.",
+    "2. Explicit Build, Toolchain & FFI TCB: The 7 pinned host binaries, blst C/assembly compilation (server.c, assembly.S) and FFI limb routines (mul_mont_sparse_256, from_mont_256, add/sub/cneg_mod_256), aws-lc-sys C build, proc-macros, and uninspected transitive crates in /home/charl/.cargo/{registry,git} are accepted as explicit TCB assumptions rather than source-certified proofs.",
+    "3. Post-Adoption Fixture Custody & Context Constants: Per fixtures/PROVENANCE.json, the 32 frozen payloads (FREEZE 5fca1721...) were authored post-adoption with public source/DTO visibility rather than blind custody. Context slots (program_target_action.0/1) copy compiler-emitted entry.constant and are not an independent context-hash or full-artifact/IR golden oracle.",
+    "4. Positive Preprocess Scope & Harness Premises: The test runs IrSource::preprocess on 3 positive transcripts (collect x2, allocate x1) without testing register transcripts, negative witness rejection, circuit k/row cost_model measurement, SRS loading, or Halo2/KZG keygen/proving. Outside-frame balance preservation and first.post==second.pre linkage are harness checks, not circuit constraints.",
+    "5. Null OS Resource Caps, Launch Preflight & Open Gates: RAMCapClaimed, diskCapClaimed, and aggregateProcessThreadCapClaimed are null (no cgroup/rlimit cap beyond 600s TERM + 5s KILL, -j1, and --test-threads=1). Root must re-verify all source/lock/tool/config/blst pins and exclusive /tmp root creation at launch. No U0-U7, M1-M17, MC, SP, G, C4, k17, or release gate closes here."
+  ],
+  "reviewToken": "doctorwatson-financial-relation-execution-runtime-security-fallback-20261018-a2-whole-review",
+  "reviewedExecutionContractSha256": "482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562",
+  "summary": "Independent Gemini HIGH runtime owner a2 approves EXECUTION-CONTRACT.json (SHA-256 482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562) for commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763). Read-only inspection of formatted financial_observation_relation.rs (SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03), mori-backend/src/{lib.rs,liabilities.rs}, frozen fixtures (FREEZE 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d), Midnight SDK runtime/scalar sources, blst/aws-lc-sys build scripts, and FRESH-METADATA-PREFLIGHT.json confirms: (1) independence from simulate/proving/signed_relation and injective ABI binding across all 26/39 and 32/51 public slots; (2) unsigned Core/1 lowering emits 14 Native-only ZKIR instructions with inputs=[], do_communications_commitment=false; (3) ProofPreimage::check -> IrSource::preprocess on this subset runs pure in-memory scalar/field logic with zero SRS/file/network I/O, zero OsRng, and zero Halo2/KZG keygen/proving, leaving non-emitted helpers unreached; and (4) the single cold 600s+5s/-j1/--test-threads=1 attempt is eligible.",
+  "verdict": "approve-exact-contract"
+}

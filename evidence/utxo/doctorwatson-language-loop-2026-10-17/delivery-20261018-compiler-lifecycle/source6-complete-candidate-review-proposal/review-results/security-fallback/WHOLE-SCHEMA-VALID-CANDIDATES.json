@@ -1,0 +1,146 @@
+[
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "CANDIDATE-MANIFEST.json",
+      "PROPOSED-CHECKS.json",
+      "OWNER-SOURCE.patch",
+      "source-after/Cargo.toml",
+      "source-after/crates/mori/Cargo.toml",
+      "source-after/crates/mori-source6/Cargo.toml",
+      "source-after/crates/mori-source6/src/diagnostics.rs",
+      "source-after/crates/mori-source6/src/transfer.rs",
+      "source-after/crates/mori-source6/tests/transfer.rs",
+      "source-after/crates/mori/src/commands/expand.rs",
+      "source-after/crates/mori/src/commands/expand/source6.rs",
+      "source-after/crates/mori/tests/source6_expand.rs",
+      "source-after/experiments/moriarty-language/regressions/rust-source6-transfer.mjs",
+      "current-W-context/crates/mori/src/display.rs"
+    ],
+    "findings": [
+      "ELIGIBILITY: eligible-scoped \u2014 The 4 commands in `PROPOSED-CHECKS.json` (`cargo test --locked --offline -p mori-source6 --features source6-transfer-slice --test transfer`, `cargo test --locked --offline -p mori --no-default-features --features source6-expansion --test source6_expand`, `cargo build --locked --offline -p mori --bin mori --no-default-features --features source6-expansion`, `MORI_RUST_BIN=/absolute/reviewed/target/debug/mori MORI_SOURCE6_OBSERVATIONS=/absolute/existing-parent/new-observations n\u2026",
+      "In `crates/mori-source6/src/diagnostics.rs:4-22`, owner hunk 1 defines `text(value: &str) -> String` matching `current-W-context/crates/mori/src/display.rs:2-12` (`character.is_ascii() && !character.is_control()` preserved; ASCII controls and non-ASCII scalars escaped via `char::escape_default()`) and applies it to `name` in `diagnostics::action` (`diagnostics.rs:16-22`), preventing raw control/bidi injection in `mori::source6::unknown_action` messages while keeping printable ASCII unescaped.",
+      "In `crates/mori/src/commands/expand/source6.rs:81-87,125-150`, owner hunks 3 and 4 wrap `scenario_error` messages in `crate::display::text(&message.into())` (`source6.rs:84`, matching `core_io::operation` in `crates/mori/src/commands/core_io.rs:158-164`) to escape untrusted JSON/serde error text from `read_scenario` (`source6.rs:120-122`), and bind `let name = crate::display::text(&input.file.display().to_string())` once (`source6.rs:127`) for both `NamedSource::new(&name, source.clone())` (`source6.rs:132-\u2026",
+      "Semantic action selection, scenario validation, and Source/6 proposal emission remain unchanged: `core_io::read_source(&input.file)` (`crates/mori/src/commands/expand/source6.rs:126`) reads the unescaped `PathBuf`, `select_transfer(&source, &input.action)` (`crates/mori-source6/src/transfer.rs:83-94,185-190`) compares the raw `action` token text before reading the scenario file, and `SelectedTransfer::expand`, `validate_scenario`, `emit` (`transfer.rs:68-78,245-357`), raw stdout output (`source6.rs:152-155`\u2026",
+      "The 2 owner-authored tests in `crates/mori-source6/tests/transfer.rs:70-81` (`unknown_action_diagnostic_escapes_control_and_non_ascii_characters`) and `crates/mori/tests/source6_expand.rs:166-218` (`diagnostic_presentation_escapes_filename_action_and_scenario_shape_errors`) accurately cover all 3 escaped presentation sites (`unknown_action` with printable `'s` and `\\n\\u{1b}\\u{202e}`, hostile filename `invoice\\u{1b}\\u{202e}.mori` on `unknown_action` and `scenario_shape`, and hostile `replay` input on `source\u2026"
+    ],
+    "limitations": [
+      "All Rust, Cargo, and Node checks remain UNRUN (`PROPOSED-CHECKS.json:1-14`, `CANDIDATE-MANIFEST.json:199-202`); static source inspection is not observed test execution or runtime protection, and this fresh non-author Gemini HIGH outage-fallback review (`gemini-4-argon-high`, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) retains explicit fallback model/canonical metadata limitations and is never relabeled as Opus.",
+      "Pre-renderer escaping in `crates/mori-source6/src/diagnostics.rs:4-22` and `crates/mori/src/commands/expand/source6.rs:84,127` covers only the 3 identified diagnostic/header sites; `NamedSource::new` (`source6.rs:132-135,144-147`) still receives raw `source` text so `mori_span::Span` byte offsets remain aligned, and external `miette`/`anstream` rendering behavior (`current-W-context/crates/mori/src/shell.rs:76-79`) is uninspected.",
+      "Transitive Cargo dependency resolution, build scripts, and `Cargo.lock` (`f47f1f3e04111a50134656dce0e9d278e19a6c162aaf06cdd5f79fceead68ff3`, `history/adopted30/LOCK-DISPOSITION.json:1-24`, `source-after/Cargo.toml:14-75`) were not executed or resolved; root owns post-merge lock verification and offline cache availability prior to running scoped checks.",
+      "`mori-source6` (`crates/mori-source6/src/lib.rs:1-17`, `transfer.rs:68-78`) emits only a `local-stipulation-only` Source/6 proposal, and the TS consumer (`experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:254-292`, `mil4-s0-source-v6.ts:27-59`, `mil4-s0-core-v5.ts:127-302`) returns only `PreparedUnqualified` with `unverifiedBindings` (`agreement-id`, `selected-program`, `asset-scale`, `authenticated-predecessor`) and `requiredPremises` (`canonical-intent-signature`, `snap\u2026",
+      "Independent whole emitted wire/DTO/origin goldens and accepted logical-work schedule/post-work counters (`workRemaining`/`workSpent`) remain missing (`experiments/moriarty-language/regressions/rust-source6-transfer.mjs:27-34,144-145`, `MISSING-OUTPUT-PREMISES.json:1-46`), leaving full `UNI-018`\u2013`UNI-021` observations and all original `U0`\u2013`U7`, `M1`\u2013`M17`, `MC`, `SP`, `G`, finance, composition, native, and target exits open."
+    ],
+    "reviewToken": "doctorwatson-source6-complete-source-security-fallback-20261018-a1-whole-review",
+    "summary": "Fresh independent non-author Gemini HIGH outage-fallback (`gemini-4-argon-high`, never relabeled as Opus, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) read-only source review of the 39-file candidate (`CANDIDATE-MANIFEST.json` digest `3735e1579f2e3a70f6378f4348a53a679e932e78d5e793b5faf924797a13a0d6`) and verbatim patch `OWNER-SOURCE.patch` (`4289747c35eeef1461d5d19715212c479e6ee67252a14b757b1bf90547f1803e`, 4 files, 5 hunks, 2 tests). All 3 p\u2026",
+    "verdict": "approve-scoped-source"
+  },
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "CANDIDATE-MANIFEST.json",
+      "PROPOSED-CHECKS.json",
+      "OWNER-SOURCE.patch",
+      "source-after/Cargo.toml",
+      "source-after/crates/mori/Cargo.toml",
+      "source-after/crates/mori-source6/Cargo.toml",
+      "source-after/crates/mori-source6/src/diagnostics.rs",
+      "source-after/crates/mori-source6/src/transfer.rs",
+      "source-after/crates/mori-source6/tests/transfer.rs",
+      "source-after/crates/mori/src/commands/expand.rs",
+      "source-after/crates/mori/src/commands/expand/source6.rs",
+      "source-after/crates/mori/tests/source6_expand.rs",
+      "source-after/experiments/moriarty-language/regressions/rust-source6-transfer.mjs",
+      "current-W-context/crates/mori/src/display.rs"
+    ],
+    "findings": [
+      "ELIGIBILITY: eligible-scoped \u2014 The 4 commands in `PROPOSED-CHECKS.json` (`cargo test --locked --offline -p mori-source6 --features source6-transfer-slice --test transfer`, `cargo test --locked --offline -p mori --no-default-features --features source6-expansion --test source6_expand`, `cargo build --locked --offline -p mori --bin mori --no-default-features --features source6-expansion`, `MORI_RUST_BIN=/absolute/reviewed/target/debug/mori MORI_SOURCE6_OBSERVATIONS=/absolute/existing-parent/new-observations n\u2026",
+      "In `crates/mori-source6/src/diagnostics.rs:4-22`, owner hunk 1 defines `text(value: &str) -> String` matching `current-W-context/crates/mori/src/display.rs:2-12` (`character.is_ascii() && !character.is_control()` preserved; ASCII controls and non-ASCII scalars escaped via `char::escape_default()`) and applies it to `name` in `diagnostics::action` (`diagnostics.rs:16-22`), preventing raw control/bidi injection in `mori::source6::unknown_action` messages while keeping printable ASCII unescaped.",
+      "In `crates/mori/src/commands/expand/source6.rs:81-87,125-150`, owner hunks 3 and 4 wrap `scenario_error` messages in `crate::display::text(&message.into())` (`source6.rs:84`, matching `core_io::operation` in `crates/mori/src/commands/core_io.rs:158-164`) to escape untrusted JSON/serde error text from `read_scenario` (`source6.rs:120-122`), and bind `let name = crate::display::text(&input.file.display().to_string())` once (`source6.rs:127`) for both `NamedSource::new(&name, source.clone())` (`source6.rs:132-\u2026",
+      "Semantic action selection, scenario validation, and Source/6 proposal emission remain unchanged: `core_io::read_source(&input.file)` (`crates/mori/src/commands/expand/source6.rs:126`) reads the unescaped `PathBuf`, `select_transfer(&source, &input.action)` (`crates/mori-source6/src/transfer.rs:83-94,185-190`) compares the raw `action` token text before reading the scenario file, and `SelectedTransfer::expand`, `validate_scenario`, `emit` (`transfer.rs:68-78,245-357`), raw stdout output (`source6.rs:152-155`\u2026",
+      "The 2 owner-authored tests in `crates/mori-source6/tests/transfer.rs:70-81` (`unknown_action_diagnostic_escapes_control_and_non_ascii_characters`) and `crates/mori/tests/source6_expand.rs:166-218` (`diagnostic_presentation_escapes_filename_action_and_scenario_shape_errors`) accurately cover all 3 escaped presentation sites (`unknown_action` with printable `'s` and `\\n\\u{1b}\\u{202e}`, hostile filename `invoice\\u{1b}\\u{202e}.mori` on `unknown_action` and `scenario_shape`, and hostile `replay` input on `source\u2026"
+    ],
+    "limitations": [
+      "All Rust, Cargo, and Node checks remain UNRUN (`PROPOSED-CHECKS.json:1-14`, `CANDIDATE-MANIFEST.json:199-202`); static source inspection is not observed test execution or runtime protection, and this fresh non-author Gemini HIGH outage-fallback review (`gemini-4-argon-high`, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) retains explicit fallback model/canonical metadata limitations and is never relabeled as Opus.",
+      "Pre-renderer escaping in `crates/mori-source6/src/diagnostics.rs:4-22` and `crates/mori/src/commands/expand/source6.rs:84,127` covers only the 3 identified diagnostic/header sites; `NamedSource::new` (`source6.rs:132-135,144-147`) still receives raw `source` text so `mori_span::Span` byte offsets remain aligned, and external `miette`/`anstream` rendering behavior (`current-W-context/crates/mori/src/shell.rs:76-79`) is uninspected.",
+      "Transitive Cargo dependency resolution, build scripts, and `Cargo.lock` (`f47f1f3e04111a50134656dce0e9d278e19a6c162aaf06cdd5f79fceead68ff3`, `history/adopted30/LOCK-DISPOSITION.json:1-24`, `source-after/Cargo.toml:14-75`) were not executed or resolved; root owns post-merge lock verification and offline cache availability prior to running scoped checks.",
+      "`mori-source6` (`crates/mori-source6/src/lib.rs:1-17`, `transfer.rs:68-78`) emits only a `local-stipulation-only` Source/6 proposal, and the TS consumer (`financial-agreement-source-v6-frontend.ts:254-292`, `mil4-s0-source-v6.ts:27-59`, `mil4-s0-core-v5.ts:127-302`) returns only `PreparedUnqualified` with `unverifiedBindings` (`agreement-id`, `selected-program`, `asset-scale`, `authenticated-predecessor`) and `requiredPremises` (`canonical-intent-signature`, `snapshot-to-head`, `head-extension`, `atomic-led\u2026",
+      "Independent whole emitted wire/DTO/origin goldens and accepted logical-work schedule/post-work counters (`workRemaining`/`workSpent`) remain missing (`experiments/moriarty-language/regressions/rust-source6-transfer.mjs:27-34,144-145`, `MISSING-OUTPUT-PREMISES.json:1-46`), leaving full `UNI-018`\u2013`UNI-021` observations and all original `U0`\u2013`U7`, `M1`\u2013`M17`, `MC`, `SP`, `G`, finance, composition, native, and target exits open."
+    ],
+    "reviewToken": "doctorwatson-source6-complete-source-security-fallback-20261018-a1-whole-review",
+    "summary": "Fresh independent non-author Gemini HIGH outage-fallback (`gemini-4-argon-high`, never relabeled as Opus, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) read-only source review of the 39-file candidate (`CANDIDATE-MANIFEST.json` digest `3735e1579f2e3a70f6378f4348a53a679e932e78d5e793b5faf924797a13a0d6`) and verbatim `OWNER-SOURCE.patch` (`4289747c35eeef1461d5d19715212c479e6ee67252a14b757b1bf90547f1803e`, 4 files, 5 hunks, 2 tests). All 3 pre-ren\u2026",
+    "verdict": "approve-scoped-source"
+  },
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "CANDIDATE-MANIFEST.json",
+      "PROPOSED-CHECKS.json",
+      "OWNER-SOURCE.patch",
+      "source-after/Cargo.toml",
+      "source-after/crates/mori/Cargo.toml",
+      "source-after/crates/mori-source6/Cargo.toml",
+      "source-after/crates/mori-source6/src/diagnostics.rs",
+      "source-after/crates/mori-source6/src/transfer.rs",
+      "source-after/crates/mori-source6/tests/transfer.rs",
+      "source-after/crates/mori/src/commands/expand.rs",
+      "source-after/crates/mori/src/commands/expand/source6.rs",
+      "source-after/crates/mori/tests/source6_expand.rs",
+      "source-after/experiments/moriarty-language/regressions/rust-source6-transfer.mjs",
+      "current-W-context/crates/mori/src/display.rs"
+    ],
+    "findings": [
+      "ELIGIBILITY: eligible-scoped \u2014 The 4 `PROPOSED-CHECKS.json` commands (`cargo test --locked --offline -p mori-source6 --features source6-transfer-slice --test transfer`, `cargo test --locked --offline -p mori --no-default-features --features source6-expansion --test source6_expand`, `cargo build --locked --offline -p mori --bin mori --no-default-features --features source6-expansion`, `MORI_RUST_BIN=/absolute/reviewed/target/debug/mori MORI_SOURCE6_OBSERVATIONS=/absolute/existing-parent/new-observations node\u2026",
+      "In `crates/mori-source6/src/diagnostics.rs:4-22`, owner hunk 1 defines `text(value: &str) -> String` matching `current-W-context/crates/mori/src/display.rs:2-12` (`character.is_ascii() && !character.is_control()` preserved; ASCII controls and non-ASCII scalars escaped via `char::escape_default()`) and applies it to `name` in `diagnostics::action` (`diagnostics.rs:16-22`), preventing raw control/bidi injection in `mori::source6::unknown_action` messages while keeping printable ASCII unescaped.",
+      "In `crates/mori/src/commands/expand/source6.rs:81-87,125-150`, owner hunks 3 and 4 wrap `scenario_error` messages in `crate::display::text(&message.into())` (`source6.rs:84`, matching `core_io::operation` in `crates/mori/src/commands/core_io.rs:158-164`) to escape untrusted JSON/serde error text from `read_scenario` (`source6.rs:120-122`), and bind `let name = crate::display::text(&input.file.display().to_string())` once (`source6.rs:127`) for both `NamedSource::new(&name, source.clone())` (`source6.rs:132-\u2026",
+      "Semantic action selection, scenario validation, and Source/6 proposal emission remain unchanged: `core_io::read_source(&input.file)` (`crates/mori/src/commands/expand/source6.rs:126`) reads the unescaped `PathBuf`, `select_transfer(&source, &input.action)` (`crates/mori-source6/src/transfer.rs:83-94,185-190`) compares the raw `action` token text before reading the scenario file, and `SelectedTransfer::expand`, `validate_scenario`, `emit` (`transfer.rs:68-78,245-357`), raw stdout output (`source6.rs:152-155`\u2026",
+      "The 2 owner-authored tests in `crates/mori-source6/tests/transfer.rs:70-81` (`unknown_action_diagnostic_escapes_control_and_non_ascii_characters`) and `crates/mori/tests/source6_expand.rs:166-218` (`diagnostic_presentation_escapes_filename_action_and_scenario_shape_errors`) accurately cover all 3 escaped presentation sites (`unknown_action` with printable `'s` and `\\n\\u{1b}\\u{202e}`, hostile filename `invoice\\u{1b}\\u{202e}.mori` on `unknown_action` and `scenario_shape`, and hostile `replay` input on `source\u2026"
+    ],
+    "limitations": [
+      "All Rust, Cargo, and Node checks remain UNRUN (`PROPOSED-CHECKS.json:1-14`, `CANDIDATE-MANIFEST.json:199-202`); static source inspection is not observed test execution or runtime protection, and this fresh non-author Gemini HIGH outage-fallback review (`gemini-4-argon-high`, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) retains explicit fallback model/canonical metadata limitations and is never relabeled as Opus.",
+      "Pre-renderer escaping in `crates/mori-source6/src/diagnostics.rs:4-22` and `crates/mori/src/commands/expand/source6.rs:84,127` covers only the 3 identified diagnostic/header sites; `NamedSource::new` (`source6.rs:132-135,144-147`) still receives raw `source` text so `mori_span::Span` byte offsets remain aligned, and external `miette`/`anstream` rendering behavior (`current-W-context/crates/mori/src/shell.rs:76-79`) is uninspected.",
+      "Transitive Cargo dependency resolution, build scripts, and `Cargo.lock` (`f47f1f3e04111a50134656dce0e9d278e19a6c162aaf06cdd5f79fceead68ff3`, `history/adopted30/LOCK-DISPOSITION.json:1-24`, `source-after/Cargo.toml:14-75`) were not executed or resolved; root owns post-merge lock verification and offline cache availability prior to running scoped checks.",
+      "`mori-source6` (`crates/mori-source6/src/lib.rs:1-17`, `transfer.rs:68-78`) emits only a `local-stipulation-only` Source/6 proposal, and the TS consumer (`financial-agreement-source-v6-frontend.ts:254-292`, `mil4-s0-source-v6.ts:27-59`, `mil4-s0-core-v5.ts:127-302`) returns only `PreparedUnqualified` with `unverifiedBindings` (`agreement-id`, `selected-program`, `asset-scale`, `authenticated-predecessor`) and `requiredPremises` (`canonical-intent-signature`, `snapshot-to-head`, `head-extension`, `atomic-led\u2026",
+      "Independent whole emitted wire/DTO/origin goldens and accepted logical-work schedule/post-work counters (`workRemaining`/`workSpent`) remain missing (`experiments/moriarty-language/regressions/rust-source6-transfer.mjs:27-34,144-145`, `MISSING-OUTPUT-PREMISES.json:1-46`), leaving full `UNI-018`\u2013`UNI-021` observations and all original `U0`\u2013`U7`, `M1`\u2013`M17`, `MC`, `SP`, `G`, finance, composition, native, and target exits open."
+    ],
+    "reviewToken": "doctorwatson-source6-complete-source-security-fallback-20261018-a1-whole-review",
+    "summary": "Fresh independent non-author Gemini HIGH outage-fallback (`gemini-4-argon-high`, never relabeled as Opus, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) read-only source review of the 39-file candidate (`CANDIDATE-MANIFEST.json` digest `3735e1579f2e3a70f6378f4348a53a679e932e78d5e793b5faf924797a13a0d6`) and verbatim `OWNER-SOURCE.patch` (`4289747c35eeef1461d5d19715212c479e6ee67252a14b757b1bf90547f1803e`, 4 files, 5 hunks, 2 tests). All 3 pre-ren\u2026",
+    "verdict": "approve-scoped-source"
+  },
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "CANDIDATE-MANIFEST.json",
+      "PROPOSED-CHECKS.json",
+      "OWNER-SOURCE.patch",
+      "source-after/Cargo.toml",
+      "source-after/crates/mori/Cargo.toml",
+      "source-after/crates/mori-source6/Cargo.toml",
+      "source-after/crates/mori-source6/src/diagnostics.rs",
+      "source-after/crates/mori-source6/src/transfer.rs",
+      "source-after/crates/mori-source6/tests/transfer.rs",
+      "source-after/crates/mori/src/commands/expand.rs",
+      "source-after/crates/mori/src/commands/expand/source6.rs",
+      "source-after/crates/mori/tests/source6_expand.rs",
+      "source-after/experiments/moriarty-language/regressions/rust-source6-transfer.mjs",
+      "current-W-context/crates/mori/src/display.rs"
+    ],
+    "findings": [
+      "ELIGIBILITY: eligible-scoped \u2014 The 4 `PROPOSED-CHECKS.json` commands (`cargo test --locked --offline -p mori-source6 --features source6-transfer-slice --test transfer`, `cargo test --locked --offline -p mori --no-default-features --features source6-expansion --test source6_expand`, `cargo build --locked --offline -p mori --bin mori --no-default-features --features source6-expansion`, `MORI_RUST_BIN=/absolute/reviewed/target/debug/mori MORI_SOURCE6_OBSERVATIONS=/absolute/existing-parent/new-observations node --test experiments/moriarty-language/regressions/rust-source6-transfer.mjs`) are eligible for narrow SDK-free execution if: (a) `mori` commands keep `--no-default-features --features source6-expansion` and target only `--test source6_expand` or `--bin mori` (excluding `native`/`mori-backend`/`mori-ledger`/`midnight-*` in `crates/mori/Cargo.toml:10-26,66-112`, no `--lib`/`--all-targets`), (b) `--locked --offline` holds on `Cargo.lock`, and (c) Node gets absolute `MORI_RUST_BIN` and fresh `MORI_SOURCE6_OBSERVATIONS` (`rust-source6-transfer.mjs:14-19,63-69`). Source advice only.",
+      "In `crates/mori-source6/src/diagnostics.rs:4-22`, owner hunk 1 defines `text(value: &str) -> String` matching `current-W-context/crates/mori/src/display.rs:2-12` (`character.is_ascii() && !character.is_control()` preserved; ASCII controls and non-ASCII scalars escaped via `char::escape_default()`) and applies it to `name` in `diagnostics::action` (`diagnostics.rs:16-22`), preventing raw control/bidi injection in `mori::source6::unknown_action` messages while keeping printable ASCII unescaped.",
+      "In `crates/mori/src/commands/expand/source6.rs:81-87,125-150`, owner hunks 3 and 4 wrap `scenario_error` messages in `crate::display::text(&message.into())` (`source6.rs:84`, matching `core_io::operation` in `crates/mori/src/commands/core_io.rs:158-164`) to escape untrusted JSON/serde error text from `read_scenario` (`source6.rs:120-122`), and bind `let name = crate::display::text(&input.file.display().to_string())` once (`source6.rs:127`) for both `NamedSource::new(&name, source.clone())` (`source6.rs:132-135`) and `NamedSource::new(name, source)` (`source6.rs:144-147`).",
+      "Semantic action selection, scenario validation, and Source/6 proposal emission remain unchanged: `core_io::read_source(&input.file)` (`crates/mori/src/commands/expand/source6.rs:126`) reads the unescaped `PathBuf`, `select_transfer(&source, &input.action)` (`crates/mori-source6/src/transfer.rs:83-94,185-190`) compares the raw `action` token text before reading the scenario file, and `SelectedTransfer::expand`, `validate_scenario`, `emit` (`transfer.rs:68-78,245-357`), raw stdout output (`source6.rs:152-155`), and default Core `mori expand` (`crates/mori/src/commands/expand.rs:22-33`) are untouched by `OWNER-SOURCE.patch`.",
+      "The 2 owner-authored tests in `crates/mori-source6/tests/transfer.rs:70-81` (`unknown_action_diagnostic_escapes_control_and_non_ascii_characters`) and `crates/mori/tests/source6_expand.rs:166-218` (`diagnostic_presentation_escapes_filename_action_and_scenario_shape_errors`) accurately cover all 3 escaped presentation sites (`unknown_action` with printable `'s` and `\\n\\u{1b}\\u{202e}`, hostile filename `invoice\\u{1b}\\u{202e}.mori` on `unknown_action` and `scenario_shape`, and hostile `replay` input on `source6-scenario-shape`), asserting exit status 1, empty stdout, selection before missing `absent.json`, and absence of raw `\\u{1b}` or `\\u{202e}` on stderr."
+    ],
+    "limitations": [
+      "All Rust, Cargo, and Node checks remain UNRUN (`PROPOSED-CHECKS.json:1-14`, `CANDIDATE-MANIFEST.json:199-202`); static source inspection is not observed test execution or runtime protection, and this fresh non-author Gemini HIGH outage-fallback review (`gemini-4-argon-high`, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) retains explicit fallback model/canonical metadata limitations and is never relabeled as Opus.",
+      "Pre-renderer escaping in `crates/mori-source6/src/diagnostics.rs:4-22` and `crates/mori/src/commands/expand/source6.rs:84,127` covers only the 3 identified diagnostic/header sites; `NamedSource::new` (`source6.rs:132-135,144-147`) still receives raw `source` text so `mori_span::Span` byte offsets remain aligned, and external `miette`/`anstream` rendering behavior (`current-W-context/crates/mori/src/shell.rs:76-79`) is uninspected.",
+      "Transitive Cargo dependency resolution, build scripts, and `Cargo.lock` (`f47f1f3e04111a50134656dce0e9d278e19a6c162aaf06cdd5f79fceead68ff3`, `history/adopted30/LOCK-DISPOSITION.json:1-24`, `source-after/Cargo.toml:14-75`) were not executed or resolved; root owns post-merge lock verification and offline cache availability prior to running scoped checks.",
+      "`mori-source6` (`crates/mori-source6/src/lib.rs:1-17`, `transfer.rs:68-78`) emits only a `local-stipulation-only` Source/6 proposal, and the TS consumer (`financial-agreement-source-v6-frontend.ts:254-292`, `mil4-s0-source-v6.ts:27-59`, `mil4-s0-core-v5.ts:127-302`) returns only `PreparedUnqualified` with `unverifiedBindings` (`agreement-id`, `selected-program`, `asset-scale`, `authenticated-predecessor`) and `requiredPremises` (`canonical-intent-signature`, `snapshot-to-head`, `head-extension`, `atomic-ledger-compare-and-consume`) unverified, with no Core/1, Core/2, Sherlock, proof, or native authority.",
+      "Independent whole emitted wire/DTO/origin goldens and accepted logical-work schedule/post-work counters (`workRemaining`/`workSpent`) remain missing (`experiments/moriarty-language/regressions/rust-source6-transfer.mjs:27-34,144-145`, `MISSING-OUTPUT-PREMISES.json:1-46`), leaving full `UNI-018`\u2013`UNI-021` observations and all original `U0`\u2013`U7`, `M1`\u2013`M17`, `MC`, `SP`, `G`, finance, composition, native, and target exits open."
+    ],
+    "reviewToken": "doctorwatson-source6-complete-source-security-fallback-20261018-a1-whole-review",
+    "summary": "Fresh independent non-author Gemini HIGH outage-fallback (`gemini-4-argon-high`, never relabeled as Opus, distinct from non-canonical author `doctorwatson-source6-input-escaping-author-security-fallback-20261018-a2`) read-only source review of the 39-file candidate (`CANDIDATE-MANIFEST.json` digest `3735e1579f2e3a70f6378f4348a53a679e932e78d5e793b5faf924797a13a0d6`) and verbatim `OWNER-SOURCE.patch` (`4289747c35eeef1461d5d19715212c479e6ee67252a14b757b1bf90547f1803e`, 4 files, 5 hunks, 2 tests). All 3 pre-renderer escaping fixes (`diagnostics::action` in `crates/mori-source6/src/diagnostics.rs:4-22`, `scenario_error` in `crates/mori/src/commands/expand/source6.rs:81-87`, and `NamedSource::new` filename escaping in `source6.rs:127-147`) match `crate::display::text` (`crates/mori/src/display.rs:2-12`), preserve raw action selection and emitted Source/6 bytes (`crates/mori-source6/src/transfer.rs:83-94,185-190,294-357`), and are covered by the 2 tests (`crates/mori-source6/tests/transfer.rs:70-81`, `crates/mori/tests/source6_expand.rs:166-218`). All 4 commands in `PROPOSED-CHECKS.json` are `eligible-scoped` under explicit non-native/offline/path conditions; all checks remain UNRUN.",
+    "verdict": "approve-scoped-source"
+  }
+]

@@ -1,0 +1,31 @@
+// Ordinary profile/admission-lattice regression. This is a compiler refusal,
+// not a second positive U2 walkthrough or financial/native correspondence.
+#[test]
+fn core_check_accepts_external_duty_but_compile_refuses_closed_registry() {
+    const SOURCE: &str = r#"language "moriarty/1";
+agreement ExternalDuty {
+  asset USD = { network: "local", issuer: "issuer", reference: "usd", scale: 2 };
+  action settle(amount: UInt) {
+    discharge("external-duty", amount);
+  }
+}"#;
+    let f = Files::new();
+    f.setup(SOURCE, &Target::ledger9("local", "external-duty-profile"));
+
+    let checked = f.check("source.mori", &["--json"]);
+    success(&checked);
+    let checked = report(&checked);
+    assert_eq!(checked["status"], "accepted");
+    assert_eq!(checked["language"], "moriarty/1");
+    assert_eq!(checked["agreement"], "ExternalDuty");
+    assert_eq!(checked["diagnostics"], json!([]));
+
+    let out = f.path("external-duty-output");
+    let compiled = f.compile(&out);
+    refused(&compiled);
+    let diagnostic = String::from_utf8_lossy(&compiled.stderr);
+    assert!(diagnostic.contains("mori::backend::unsupported"), "{diagnostic}");
+    assert!(diagnostic.contains("external-duty"), "{diagnostic}");
+    assert!(!out.exists(), "compiler refusal must precede destination creation");
+    assert_eq!(std::fs::read_to_string(f.path("source.mori")).unwrap(), SOURCE);
+}

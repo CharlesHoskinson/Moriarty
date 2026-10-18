@@ -1,0 +1,3 @@
+PR210, PR212 and PR213 are merged with scoped observed results and integration receipts. Source6 has twelve passing checks and pending finite changed-base confirmation. Disjoint composition has two passing checks and pending fresh result review. Complete financial and wire qualifications, original failures, independent expectation provenance and all parent requirements remain recorded.
+
+All raw public review objects are retained. Tool wrapper variants count once per context; provider model identity is not independently attested. Private provider streams, credentials, proof/key stores and wallets are excluded.
