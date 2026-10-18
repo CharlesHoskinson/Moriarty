@@ -4,6 +4,29 @@ Requested by the user on2026-10-17 after final design/spec integration. This use
 
 ## Entry and next actual implementation
 
+### October 18 priority: continue handwritten circuit implementation
+
+The user instructs: **“make sure we continue writing the handwritten circuits so
+we don't get lost in the verified side”**, and requires this intention to survive
+compaction. Keep a dedicated handwritten-circuit implementation lane alongside
+the public compiler/runtime lane and all three permanent Clean, Quint and K lanes.
+Formal models and evidence work must accompany concrete circuit development.
+
+Recover the circuit lane on every restart and compaction. Record its named owner,
+exact source cut, next missing transition/helper relation, target emitter and
+consumer, pending source changes/review/check, and remaining native evidence in
+the typed Root continuation. A completed source task does not retire this lane.
+If execution is blocked, continue the next eligible circuit source change while
+the prerequisite is resolved; preserve the actual execution limits and failures.
+
+The current owner is `/root/composed_statement_security_a`. The next source task
+is the missing `b.helper.Scalar.arithmetic` relation after Scalar.tag: the
+RetRight/Add/Second-to-Done checked UInt128 addition fragment, with its prescribed
+outcome, work counters and preserved state. Use the designated security author
+and independent review routing. Track source construction, consumed checks,
+native constraints/proofs and target acceptance separately. Update the circuit
+website concept log when a new circuit source iteration actually exists.
+
 ### October18 beta automation
 
 The latest user override removes human-only setup and approval requirements.
