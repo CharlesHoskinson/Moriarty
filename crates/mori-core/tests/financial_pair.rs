@@ -61,11 +61,7 @@ fn snapshot_from_columns(columns: &Value, row: &Value, identities: &Value) -> Va
     let balances = snapshot["balances"].as_array_mut().unwrap();
     assert_eq!(balances.len(), balance_columns.len());
     assert_eq!(balance_columns.len(), balance_cells.len());
-    for ((balance, column), cell) in balances
-        .iter_mut()
-        .zip(balance_columns)
-        .zip(balance_cells)
-    {
+    for ((balance, column), cell) in balances.iter_mut().zip(balance_columns).zip(balance_cells) {
         assert_eq!(
             column.as_str().unwrap(),
             format!(
@@ -120,7 +116,10 @@ fn compare_execution(
         serde_json::to_value(&actual.pre).unwrap(),
         snapshot_from_columns(columns, &call["pre"], &expected["post"])
     );
-    assert_eq!(serde_json::to_value(&actual.post).unwrap(), expected["post"]);
+    assert_eq!(
+        serde_json::to_value(&actual.post).unwrap(),
+        expected["post"]
+    );
     assert_eq!(
         serde_json::to_value(&actual.effects).unwrap(),
         expected["effects"]
@@ -234,5 +233,203 @@ fn approved_multiasset_reserve_matches_every_frozen_financial_prefix_and_total_w
         reserve,
         &reserve["work"]["statements"],
         case(&cases, "approved-reserve-multiasset"),
+    );
+}
+
+// Semantic comparison only: the independent freeze explicitly leaves numeric
+// ExprIds, whole wire values and three ACTUS state-result mappings unasserted.
+fn stk04_independent_cashflow(execution: &Execution, expected_asset: &Value) -> Value {
+    let mut payoff = None;
+    let mut currency = None;
+    let mut event = None;
+    for effect in &execution.effects {
+        match effect {
+            mori_core::Effect::Transfer {
+                asset,
+                from,
+                to,
+                amount,
+            } => {
+                assert!(payoff.is_none(), "one source-authored cashflow per call");
+                assert_eq!(serde_json::to_value(asset).unwrap(), *expected_asset);
+                currency = Some(asset.reference.clone());
+                payoff = Some(match (from.as_str(), to.as_str()) {
+                    ("investor", "counterparty") => format!("-{}", amount.0),
+                    ("counterparty", "investor") => amount.0.to_string(),
+                    _ => panic!("unexpected source cashflow parties"),
+                });
+            }
+            mori_core::Effect::Emit { name, value } => {
+                assert!(event.is_none(), "one source-authored event per call");
+                let mori_core::Value::UInt(time) = value else {
+                    panic!("event must carry the source timestamp")
+                };
+                event = Some((name.as_str(), time.0));
+            }
+            mori_core::Effect::State { .. } => {}
+            _ => panic!("independent normal trace has no other effect kind"),
+        }
+    }
+    let (event_type, timestamp) = event.unwrap();
+    // Mechanical display of the finite supplied YYYYMMDDhhmmss encoding.
+    // This is no schedule generator, calendar implementation or clock oracle.
+    let digits = format!("{timestamp:014}");
+    assert_eq!(digits.len(), 14);
+    let date = format!(
+        "{}-{}-{}T{}:{}:{}",
+        &digits[0..4],
+        &digits[4..6],
+        &digits[6..8],
+        &digits[8..10],
+        &digits[10..12],
+        &digits[12..14]
+    );
+    json!({
+        "eventDate": date,
+        "eventType": event_type,
+        "payoff_signed_decimal": payoff.unwrap(),
+        "currency": currency.unwrap()
+    })
+}
+
+#[test]
+fn actus_stk04_matches_independent_core_trace_and_four_cashflow_fields() {
+    use sha2::Digest;
+
+    let oracle: Value =
+        serde_json::from_str(fixture!("actus-stk04/independent/oracle.json")).unwrap();
+    let operands: Value = serde_json::from_str(fixture!("actus-stk04/call-operands.json")).unwrap();
+    let source = fixture!("actus-stk04/source.mori");
+    let opening = fixture!("actus-stk04/opening.scenario.json");
+    assert_eq!(
+        format!("{:x}", sha2::Sha256::digest(source.as_bytes())),
+        oracle["input_subject"]["source_sha256"].as_str().unwrap()
+    );
+    assert_eq!(
+        format!("{:x}", sha2::Sha256::digest(opening.as_bytes())),
+        oracle["input_subject"]["opening_scenario_sha256"]
+            .as_str()
+            .unwrap()
+    );
+    assert_eq!(
+        format!(
+            "{:x}",
+            sha2::Sha256::digest(fixture!("actus-stk04/call-operands.json").as_bytes())
+        ),
+        oracle["input_subject"]["call_operands_sha256"]
+            .as_str()
+            .unwrap()
+    );
+    let program = parse(source).unwrap();
+    validate(&program).unwrap();
+    assert_eq!(
+        program.language,
+        oracle["profile"]["language"].as_str().unwrap()
+    );
+    assert_eq!(
+        program.semantics,
+        oracle["profile"]["semantics"].as_str().unwrap()
+    );
+    let mut scenario: Scenario = serde_json::from_str(opening).unwrap();
+    let calls = oracle["calls"].as_array().unwrap();
+    let inputs = operands["calls"].as_array().unwrap();
+    let records = oracle["cashflow_records"].as_array().unwrap();
+    assert_eq!(calls.len(), inputs.len());
+    assert_eq!(calls.len(), records.len());
+    let mut previous_actual_post: Option<mori_core::Snapshot> = None;
+    let mut pair_effects = Vec::new();
+    for ((call, input), record) in calls.iter().zip(inputs).zip(records) {
+        let action = input["action"].as_str().unwrap();
+        assert_eq!(input["action"], call["action"]);
+        assert_eq!(input["inputs"], call["input_values"]);
+        scenario.inputs = serde_json::from_value(input["inputs"].clone()).unwrap();
+        let original = scenario.clone();
+        let actual = simulate(&program, action, &scenario).unwrap();
+        assert_eq!(scenario, original);
+        assert_eq!(actual.action, action);
+        assert_eq!(
+            actual.semantics,
+            oracle["profile"]["semantics"].as_str().unwrap()
+        );
+        if let Some(previous) = &previous_actual_post {
+            assert_eq!(&actual.pre, previous);
+        }
+        assert_eq!(serde_json::to_value(&actual.pre).unwrap(), call["pre"]);
+        assert_eq!(serde_json::to_value(&actual.post).unwrap(), call["post"]);
+        assert_eq!(
+            serde_json::to_value(&actual.effects).unwrap(),
+            call["effects"]
+        );
+        let expected_steps = call["steps"].as_array().unwrap();
+        assert_eq!(actual.steps.len(), expected_steps.len());
+        let mut prefix: Vec<Value> = Vec::new();
+        for (ordinal, (step, expected)) in actual.steps.iter().zip(expected_steps).enumerate() {
+            assert_eq!(usize::from(step.index), ordinal);
+            assert_eq!(json!(step.index), expected["index"]);
+            assert_eq!(
+                serde_json::to_value(&step.value).unwrap(),
+                expected["value"]
+            );
+            assert_eq!(
+                serde_json::to_value(&step.snapshot).unwrap(),
+                expected["snapshot"]
+            );
+            let effects = serde_json::to_value(&step.effects).unwrap();
+            assert_eq!(effects, expected["effects"]);
+            prefix.extend(effects.as_array().unwrap().iter().cloned());
+            assert_eq!(json!(prefix), expected["effect_prefix"]);
+
+            // Retain all specified statement metadata. Remove only each
+            // explicitly unasserted ExprId field, requiring its typed presence.
+            let mut statement = serde_json::to_value(&step.statement).unwrap();
+            let object = statement.as_object_mut().unwrap();
+            for member in expected["statement_contract"]["wire_exprid_members_unasserted"]
+                .as_array()
+                .unwrap()
+            {
+                let reference = object.remove(member.as_str().unwrap()).unwrap();
+                assert!(reference.is_u64());
+            }
+            assert_eq!(
+                statement,
+                expected["statement_contract"]["known_wire_members"]
+            );
+        }
+        assert_eq!(json!(prefix), call["effects"]);
+        let cashflow = stk04_independent_cashflow(&actual, &oracle["accounting"]["asset"]);
+        assert_eq!(
+            cashflow,
+            json!({
+                "eventDate": record["eventDate"],
+                "eventType": record["eventType"],
+                "payoff_signed_decimal": record["payoff_signed_decimal"],
+                "currency": record["currency"]
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(&actual.post.state["statusTime"]).unwrap(),
+            record["core_status_time_after"]
+        );
+        pair_effects.extend(
+            serde_json::to_value(&actual.effects)
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .iter()
+                .cloned(),
+        );
+        previous_actual_post = Some(actual.post.clone());
+        // Expected state is comparison-only: the actual complete poststate
+        // supplies the next call, while inputs come from input custody.
+        scenario = Scenario {
+            state: actual.post.state,
+            inputs: Default::default(),
+            balances: actual.post.balances,
+            liabilities: actual.post.liabilities,
+        };
+    }
+    assert_eq!(
+        json!(pair_effects),
+        oracle["complete_ordered_effect_history"]
     );
 }
