@@ -14,6 +14,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Check the stream realization](how-to/check-stream-realization.md)
 - [Prepare a compile-only HostOnly source artifact](how-to/prepare-host-source-artifact.md)
 - [Observe a Core2 stage financial result](how-to/observe-stage-financial-result.md)
+- [Use typed word arithmetic](how-to/use-typed-word-arithmetic.md)
 
 ## Reference
 
@@ -21,6 +22,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Profiles and results](reference/profiles-results.md)
 - [Host machine](reference/host-machine.md)
 - [Core2 financial observation adapter](reference/financial-observation-adapter.md)
+- [Typed word arithmetic](reference/typed-word-arithmetic.md)
 - [K-A host event grouping](reference/host-grouping.md)
 - [HostOnly source compiler API and artifact](reference/host-source-compiler.md)
 - [HostOnly configuration and exact fixture](reference/host-source-config.md)

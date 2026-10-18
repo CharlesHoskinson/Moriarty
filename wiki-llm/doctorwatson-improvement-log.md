@@ -1143,3 +1143,27 @@ and native provisioner source remain separate review tasks. No model quota,
 missing response or author-time comment can change a native execution grant or
 close an unobserved requirement. These lessons improve the existing factory;
 they introduce no scheduler or new public developer permission.
+
+
+### DW-60 — Separate public API compilation from feature consumption
+
+The [typed word components](../docs/results/sherlock-word-components-20261018/README.md)
+provide named32/64-bit carry, borrow, full-product and checked-result records.
+Seventeen original external tests passed against their exact source. The new
+normal Core export, external public consumer and canonical test location then
+compiled separately. No passing case was rerun to change its provenance. An
+exported API still needs an actual arithmetic-lowering consumer; original030
+remains open with that missing edge named explicitly.
+
+The existing evidence reader reports nine current adopted originals after Root's
+explicit additive-export compatibility decision. The original execution inputs
+and preceding financial adoption remain archived unchanged. A later library
+registration does not rewrite earlier execution-time input checks into claims
+about today's entire tree. All original and refinement status enums are retained.
+
+Freeze review handoff files before Root binds them for execution. One checker
+precheck stopped before launching any child when a literal-location record was
+finalized after selection. Its historical selection and stop were retained; the
+final metadata was frozen before the actual eighteen checker tests ran and passed.
+Finalized records now use new revision paths for later corrections. Record a
+metadata stop separately from a compiler failure or subject retry.
