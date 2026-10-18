@@ -1514,3 +1514,37 @@ The production handler and publisher bytes were unchanged by this test correctio
 ### DW77 — Separate qualitative review from computed identities
 
 The selected compile result review initially clipped the BranchTotal tail and misstated Core wire fields and identity suffixes. Retain that report, then supply a smaller complete corrective packet to the same reviewer. The corrective report read the missing tail and retracted the wrong facts. Actual source, artifact, command and stream hashes remain machine-computed identities; generated prose never overrides them. A scoped successful review does not close B04 or native/target requirements. [Published adoption](../docs/results/sherlock-selected-compile-handler-20261018/ROOT-FINAL-ADOPTION.json).
+
+### DW78 — Mix zero and nonzero arities in public source acceptance
+
+The new ProvenanceTwins consumer compiled and listed successfully, then the
+public runtime rejected its valid source before evaluation with
+`V4:params not contiguous`. Its unused zero-argument function follows a
+parameterized function. The producer normalizes an empty parameter slice to
+start zero, while V4 compares every slice start to the cumulative parameter
+cursor. The frozen independent source and expected tables stay unchanged; the
+repair belongs in the owning preparation/admission contract. Retain the failed
+run and empty event file. A test that merely reordered the functions would hide
+the defect.
+
+### DW79 — Validate literal test edits against the actual harness
+
+The native lifecycle source owner confirmed the one-line as-pid-1 candidate,
+but returned test hunks using obsolete harness signatures and members. Root
+withheld that proposed extra test. The two exact expectation-line replacements
+were reviewed separately, and the actual current thirty mocked checks passed.
+Keep the valid source disposition, rejected patch proposal and actual unit
+result separate. Generated claims about host versions, paths or unchanged
+source details do not override inspected bytes and machine receipts.
+
+### DW80 — Keep compilation evidence separate from source review
+
+Both source reviewers accepted the new five-test module, but the actual test build found seventeen result-extraction errors: Tooling has no Debug implementation, while Result unwrap/expect require one. The normal production library had already compiled successfully. Preserve both results and request test-local error extraction from its author. Compilation is a necessary check even after detailed source review. A normal library success does not predict a test build.
+
+### DW81 — Preserve usable artifacts when independent checks fail
+
+After the test-build failure stopped its sequence, Root separately selected the three previously unrun public-consumer phases, whose only producer dependency was the successful normal Core library. The frozen program and expectations were unchanged. The new public run passed all table and event-origin assertions; the five unit methods remained unrun. Keep that scoped success and the unresolved test-build failure together. Reuse the compiled producer and retain complete event output; do not replay a passing build to conceal a failed check.
+
+### DW82 — Reconcile generated membership with the pinned tool's behavior
+
+Native04 passed its earlier A0 failure boundary, staging and Cargo fetch. Raw verification then found that only `.package-cache-mutate` was missing from576 declared generated entries. Preserve the strict refusal, the actual575-present/one-absent metadata, and the completed cleanup. Send this precise producer/expected-membership disagreement to the owner before changing configuration or source; another unchanged build attempt would add no evidence.

@@ -1,0 +1,74 @@
+# R365 — Independent Non-Author Review of Changed `bwrap_descendant_diagnostic.py` (`14426B`, `df596128...`)
+
+---
+
+## 1. Reviewer Identity, Authorship Attribution & Complete Inline Read Coverage
+
+- **Reviewer Identity & Route**: Retained actual independent reviewer `CID=6277cc2c-99b8-4b7a-a220-a6c971d1bb98`, original `cwd=/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`, running on `gemini-4-argon-high` / `HIGH` under the standing observed `claude-opus-5-5` HIGH outage fallback. Zero tools, commands, file reads/writes, imports, or external actions were used.
+- **Authorship & Prior Failure Attribution**:
+  - In R361, this reviewer (`6277cc2c...`) authored 3 literal edits producing `8bc2269769f096223cf3e31eab722fc396b50c493777f2cc6cb79bb1d3d6e992` (`12190B`). When executed once in `actual-01` (`RESULT.json` `5aa360b8...`), `8bc22697...` exited `1` in `0.067554s` with `0B` stdout and `RuntimeError: unexpected seccomp network notification` at line 185 because `selectors.EpollSelector` maps `EPOLLHUP` (asserted when the target process exits) to `selectors.EVENT_READ`.
+  - R140 (`bb6043a1-63f1-4de9-b26f-ef50139233e3`) authored the 4 literal edits against `8bc22697...` producing the new candidate `bwrap_descendant_diagnostic.py` (`14426B`, SHA-256 `df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a`). This reviewer did not author those 4 edits and reviews them independently. The single small replacement of `inspect_listener()` in Section 4 is authored by `6277cc2c...`.
+- **Complete Inline Read Accounting**:
+  1. `.../363-r140-actual-descendant-diagnostic-failure-followup/source/bwrap_descendant_diagnostic.py` (`14426B`, `df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a`): **100% read** (lines 1–354).
+  2. `.../363-r140-actual-descendant-diagnostic-failure-followup/FINAL-RESPONSE.txt` (`15569B`, `bb5d3223980932ff893872038bc70953840dbe3a49d0694f3237ceef4375fdc8`): **100% read**.
+  3. `.../361-bwrap-descendant-diagnostic-independent-review/reviewer-literal-edits-01/bwrap_descendant_diagnostic.py` (`12190B`, `8bc2269769f096223cf3e31eab722fc396b50c493777f2cc6cb79bb1d3d6e992`): **100% read**.
+  4. `.../actual-01/COMMAND.json` (`ca083036...`), `RESULT.json` (`5aa360b8...`), `stdout.bin` (`0B`), `stderr.bin`: **100% read**.
+  5. `.../primary-source-data/RECV-AND-POLL-EXCERPT.txt`, `PROVENANCE.json` (`b1dcfea0...`), and `.../PUBLIC-SOURCE-EXACT-RECV-WAIT-IOCTL-POLL.txt` (lines 1421–1489, 1524–1623, 1712–1765, 1826–1883 of Linux v6.18 `kernel/seccomp.c`): **100% read**.
+  6. `.../EXACT-CHANGED-ORDINARY-OPERATION.proposed.json` and `.../PASSIVE-PINS-AND-TWO-PRIOR-OBSERVATIONS.json`: **100% read**.
+- **Named Omissions**: The remaining unquoted lines of `linux-v6.18-seccomp.c` (`67517B` `b1dcfea0...`) and the separate `EXACT-OWNER-EDITS.json` (`6305B` `4b6bc7cd...`, whose 4 edits are already inline in `FINAL-RESPONSE.txt` `bb5d3223...`) are not repeated; neither is required for this review.
+
+---
+
+## 2. Independent Source Verdict & Assessment of `O_NONBLOCK` + `SECCOMP_IOCTL_NOTIF_RECV`
+
+- **Source Verdict on Unmodified `df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a`**: **`REVISE`** (eligible as **`ELIGIBLE_WITH_EXACT_EDIT`** once the single uniquely anchored replacement of `inspect_listener()` in Section 4 is applied).
+
+### A. Specific Kernel & Source Analysis: `os.set_blocking(fd, False)` + `SECCOMP_IOCTL_NOTIF_RECV` (`L36–72`, `L213`, `L252`)
+
+1. **`SECCOMP_IOCTL_NOTIF_RECV` Completely Ignores `O_NONBLOCK` (`os.set_blocking(fd, False)`)**:
+   - In the supplied Linux `kernel/seccomp.c` (`PUBLIC-SOURCE-EXACT-RECV-WAIT-IOCTL-POLL.txt`, lines 1826–1835), `seccomp_notify_ioctl(struct file *file, unsigned int cmd, unsigned long arg)` extracts `struct seccomp_filter *filter = file->private_data;` and invokes `seccomp_notify_recv(filter, buf)` **without passing `file` or checking `file->f_flags & O_NONBLOCK`**.
+   - Inside `seccomp_notify_recv(filter, buf)` -> `recv_wait_event(filter)` (lines 1524–1550), the kernel never inspects `O_NONBLOCK`. Thus R140's claim that `os.set_blocking(fd, False)` makes `fcntl.ioctl(fd, SECCOMP_IOCTL_NOTIF_RECV, buf, True)` non-blocking is **false**.
+2. **Why Calling `SECCOMP_IOCTL_NOTIF_RECV` When `POLLIN == 0` (at `L213` and `L252`) Can Block and Lose Already-Collected Observations**:
+   - In `recv_wait_event(filter)` (lines 1529–1547), `SECCOMP_IOCTL_NOTIF_RECV` sleeps in `schedule()` (`TASK_INTERRUPTIBLE`) whenever `atomic_dec_if_positive(&filter->notif->requests) < 0` **and** `refcount_read(&filter->users) > 0` (or on older/WSL kernels that lack the `refcount_read(&filter->users) == 0` early-return check).
+   - In `run_case()`, `inspect_listener(listener)` is called both inside the selector loop (`L213`, before `proc` or its descendants have necessarily dropped `filter->users` to `0`) and **unconditionally** after `proc.wait()` and subreaper reaping (`L252`: `post_wait_listener = inspect_listener(listener)`).
+   - If `refcount_read(&filter->users) > 0` when `L213` or `L252` runs with `requests == 0` (or if the running WSL kernel blocks in `recv_wait_event` even on `POLLHUP`), `fcntl.ioctl(fd, SECCOMP_IOCTL_NOTIF_RECV, ...)` **blocks in `schedule()` until the 4.0s `SIGALRM` fires**, raising `TimeoutError("4s internal wall cap")` and **discarding all `p2_at_l711` and `reparented_reaped` observations already collected in `run_case()`**!
+3. **Pure `select.poll()` (`poll.poll(0)`) Suffices and Aligns With Production `network_pending()`**:
+   - Unlike `SECCOMP_IOCTL_NOTIF_RECV`, `select.poll().poll(0)` is guaranteed non-blocking by the VFS `do_sys_poll` zero-timeout contract and calls `seccomp_notify_poll()` (lines 1855–1882), which immediately returns the exact bitmask: `EPOLLIN | EPOLLRDNORM` if any notification is in `SECCOMP_NOTIFY_INIT`, and `EPOLLHUP` when `refcount_read(&filter->users) == 0`.
+   - Furthermore, the production guard `bounded_sdk_compile.py` (`087f3a37...`, lines 633–636) uses pure `select.poll()` (`any(events & select.POLLIN for _, events in poll.poll(0))`) and never calls `SECCOMP_IOCTL_NOTIF_RECV`.
+   - Replacing `inspect_listener(fd)` with a pure `poll.poll(0)` inspector that records `revents`, `pollin` (true on any of `POLLIN | POLLPRI | POLLERR | POLLNVAL` so error/priority bits also fail closed), `pollhup`, and `pollerr` completely eliminates the blocking `ioctl` hazard while preserving both existing callers (`L213` and `L252`).
+
+### B. Assessment of the Remaining Changes in `df596128...`
+- **Listener Unregistration on Pure `POLLHUP` (`L211–221`)**: When `EpollSelector` wakes on `"network"` and `inspect_listener(listener)` observes `pollin == False` (`POLLHUP` only), recording `ev_info` (capped at 4 entries), calling `sel.unregister(listener)`, and setting `listener_active = False` cleanly prevents `EpollSelector` from spinning on sticky `EPOLLHUP` while allowing `stdout`/`stderr` EOF drain and `proc.wait()` to finish.
+- **Post-`proc.wait()` Timing & Orphan Measurement (`L222–255`)**: `t_after_p1_wait = time.monotonic()`, `p2_at_l711 = read_proc_ppid_and_state(p2_pid)`, and `ucred_at_l711 = read_proc_ppid_and_state(ucred_pid)` are captured immediately after `proc.wait()` returns (`L222–227`), before the subreaper `os.waitpid(-1, os.WNOHANG)` loop (`L232–249`) and before `post_wait_listener` (`L252`). Thus `inspect_listener` does not delay the `L711` state snapshot.
+- **Per-Step Exception Capture & Bounded JSON Output (`L333–349`)**: `main()` wraps each `run_case` call (`step_A_default_bwrap_no_as_pid_1` and `step_B_bwrap_with_as_pid_1`) in `try...except Exception as exc:`, ensuring that `run_case`'s `finally:` block always cleans up `proc`, reaps subreaper children, and closes all FDs (`received_fds`, `parent`, `child`, `fd`, `stage_fd`, `sel`, `proc.stdout`, `proc.stderr`), while `main()` always emits a single compact JSON document (`< 1.5 KB`, well under the `4096B` cap) to `stdout`.
+
+---
+
+## 3. Exact Single Unique `old -> new` Literal Edit Against `df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a`
+
+```json
+{
+  "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/363-r140-actual-descendant-diagnostic-failure-followup/source/bwrap_descendant_diagnostic.py",
+  "base_bytes": 14426,
+  "base_sha256": "df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a",
+  "patch_author_cid": "6277cc2c-99b8-4b7a-a220-a6c971d1bb98",
+  "edits": [
+    {
+      "old": "SECCOMP_IOCTL_NOTIF_RECV = 0xC0502100\n\n\ndef inspect_listener(fd):\n    poll = select.poll()\n    poll.register(fd, select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLHUP)\n    revents = 0\n    for _, ev in poll.poll(0):\n        revents |= ev\n    os.set_blocking(fd, False)\n    buf = bytearray(80)\n    try:\n        fcntl.ioctl(fd, SECCOMP_IOCTL_NOTIF_RECV, buf, True)\n        nid, pid, flg, nr, arch, ip, a0, a1, a2, a3, a4, a5 = struct.unpack(\"<QIIiIQQQQQQQ\", buf)\n        return {\n            \"revents\": revents,\n            \"pollin\": bool(revents & select.POLLIN),\n            \"pollhup\": bool(revents & select.POLLHUP),\n            \"notif\": {\n                \"id\": nid,\n                \"pid\": pid,\n                \"flags\": flg,\n                \"syscall_nr\": nr,\n                \"arch\": arch,\n                \"ip\": ip,\n                \"args\": [a0, a1, a2, a3, a4, a5],\n            },\n        }\n    except OSError as exc:\n        return {\n            \"revents\": revents,\n            \"pollin\": bool(revents & select.POLLIN),\n            \"pollhup\": bool(revents & select.POLLHUP),\n            \"ioctl_errno\": exc.errno,\n        }",
+      "new": "def inspect_listener(fd):\n    poll = select.poll()\n    poll.register(fd, select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLHUP)\n    revents = 0\n    for _, ev in poll.poll(0):\n        revents |= ev\n    bad = bool(revents & (select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLNVAL))\n    return {\n        \"revents\": revents,\n        \"pollin\": bad,\n        \"pollhup\": bool(revents & select.POLLHUP),\n        \"pollerr\": bool(revents & (select.POLLERR | select.POLLPRI | select.POLLNVAL)),\n    }"
+    }
+  ]
+}
+```
+
+---
+
+## 4. Separate Exact-Operation Eligibility & Preserved Boundaries
+
+- **Operation Disposition (`EXACT-CHANGED-ORDINARY-OPERATION.proposed.json`)**: **`ELIGIBLE_WITH_EXACT_EDIT`**
+  - Once Root mechanically applies the single literal edit in Section 3 to `df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a`, the proposed `argv` in `EXACT-CHANGED-ORDINARY-OPERATION.proposed.json` (`/usr/bin/timeout --signal=TERM --kill-after=1s 5s /usr/bin/prlimit --cpu=2 --as=134217728 --data=67108864 --fsize=65536 --nofile=64 -- /usr/bin/python3 -I -B -S <script_path>`, `uid: 1000`, `cwd: /tmp/moriarty-r140-final-security-A-9c662tt7`, `controller_wall_seconds: 6.25`, `combined_capture_cap: 4096`) is eligible for one ordinary host-only execution.
+- **Preserved Global Boundaries**:
+  - Production guard `bounded_sdk_compile.owner-proposed.py` (`74823B`, `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f`), all resource caps, one-shot rules, `C4=OPEN`, `R2=UNSATISFIED`, and `stopped Amendment 10` remain unchanged.
+  - Both the default-`bwrap` orphan hypothesis and the pure-`POLLHUP` explanation remain unverified until observed in the actual output of this discriminator; no speculative guard edit is adopted.
+
+END-R365-CORRECTED-DESCENDANT-DIAGNOSTIC-REVIEW

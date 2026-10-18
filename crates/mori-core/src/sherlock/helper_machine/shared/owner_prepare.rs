@@ -764,7 +764,7 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
     let mut expect_start: usize = 0;
     for (fi, f) in v.functions.iter().enumerate() {
         if f.function_name >= v.names.len() { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "name")); }
-        if !slice_inside(&f.params, v.parameters.len()) || f.params.start != expect_start {
+        if !slice_inside(&f.params, v.parameters.len()) || (f.params.len > 0 && f.params.start != expect_start) {
             return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "params not contiguous")); }
         expect_start = expect_start.checked_add(f.params.len).ok_or_else(|| pv_err(ViewCheck::V4, "functions", Some(fi), "parameter offset overflow"))?;
         if f.body >= n_expr || parent[f.body].is_some() || fn_of_root[f.body] != Some(fi) {
@@ -1074,3 +1074,6 @@ pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
         CapacityKind::Frames, stack_v, bounds.frames as u128, None))?;
     Ok(genesis(a, run_id, true, fuel_v, stack_usize))
 }
+
+#[cfg(test)]
+mod v4_empty_params_tests;

@@ -1,0 +1,155 @@
+DECLARATIONS ONLY. No producer algorithms, observations or expected outputs. Public consumer path: mori_core::sherlock_compile_artifact::draft_execution::run_draft_host.
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct DraftCompileArtifact {
+    pub format: &'static str,
+    pub qualification: &'static str,
+    pub source: DraftSourceIdentity,
+    pub execution_profile: &'static str,
+    pub supported_profile: super::draft_profile::SupportedProfileReport,
+    pub input_policy: InputPolicy,
+    pub config: DraftConfigIdentity,
+    pub target: TargetDescriptor,
+    pub preparation: PreparationReport,
+    pub correspondence: correspondence::SemanticCorrespondenceReport,
+    // Existing complete OwnerWire views, not reconstructed stand-ins.
+    pub admission: Value,
+    pub genesis: Value,
+    pub plans: Plans,
+    pub observation: Observation,
+    pub evidence: Evidence,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub enum SourceSort { UInt, Bool, List, Tree }
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct SourceSpan { pub start: u32, pub end: u32 }
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct SourceLocation {
+    pub function_index: Option<UsizeDecimal>,
+    pub child_path: Vec<UsizeDecimal>,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct BinderSite { pub name: String, pub span: SourceSpan }
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct ParameterSite { pub binder: BinderSite, pub type_span: SourceSpan }
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct FunctionSite {
+    pub index: UsizeDecimal,
+    pub span: SourceSpan,
+    pub name_span: SourceSpan,
+    pub parameters: Vec<ParameterSite>,
+    pub return_type_span: SourceSpan,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct ExpressionSite {
+    pub source: SourceLocation,
+    pub span: SourceSpan,
+    pub kind: &'static str,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct PatternSite {
+    pub match_source: SourceLocation,
+    pub arm_index: UsizeDecimal,
+    pub span: SourceSpan,
+    pub binders: Vec<BinderSite>,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct SourceProvenance {
+    pub language_span: SourceSpan,
+    pub program_name_span: SourceSpan,
+    pub functions: Vec<FunctionSite>,
+    pub expressions: Vec<ExpressionSite>,
+    pub patterns: Vec<PatternSite>,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct ParameterDeclaration { pub name: String, pub sort: SourceSort }
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct FunctionDeclaration {
+    pub name: String,
+    pub parameters: Vec<ParameterDeclaration>,
+    pub return_sort: SourceSort,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct TypeReport {
+    pub function_returns: Vec<SourceSort>,
+    pub entry_type: SourceSort,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct PreparationReport {
+    pub kind: &'static str,
+    pub functions: Vec<FunctionDeclaration>,
+    pub provenance: SourceProvenance,
+    pub types: TypeReport,
+    // This states the existing source/owner join, whose full cells the
+    // independent oracle compares. It does not certify correspondence.
+    pub owner_mapping: OwnerMapping,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+pub struct OwnerMapping {
+    pub program_view_pointer: &'static str,
+    pub source_order: &'static str,
+    pub join: &'static str,
+    pub correspondence: &'static str,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs
+pub struct DraftConfigIdentity {
+    #[serde(flatten)] pub fields: DraftExecutionConfig,
+    pub file_digest: String,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs
+pub enum EntrySelection { Entry }
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs
+pub struct DraftSourceIdentity {
+    pub language: &'static str,
+    pub semantics: &'static str,
+    pub program: String,
+    pub selection: EntrySelection,
+    pub source_digest: String,
+}
+
+// crates/mori-core/src/sherlock/compile_artifact/draft_execution.rs
+pub struct DraftHostRun {
+    pub preparation: DraftCompileArtifact,
+    pub completed: CompletedRun,
+}
+
+// crates/mori-core/src/sherlock/helper_machine/shared.rs
+pub enum DigestC { Unselected, Selected { format: (String, String), bytes: Vec<u8> } }
+
+// crates/mori-core/src/sherlock/helper_machine/shared.rs
+pub struct IdentityC { pub profile_id: u8, pub grammar_domain: GrammarDomain, pub finance: FinanceInput, pub layout_version: (String, String), pub layout_digest: DigestC, pub bounds_digest: DigestC, pub field_id: Option<(String, String)>, pub program_membership_digest: DigestC }
+
+// crates/mori-core/src/sherlock/helper_machine/shared.rs
+pub struct RunIdC { pub identity: IdentityC, pub fuel_input: RunIntC, pub stack_limit_input: RunIntC }
+
+// crates/mori-core/src/sherlock/helper_machine/shared.rs
+pub struct ExpandedStepIdC { pub run_id: std::sync::Arc<RunIdC>, pub ordinal: u128 }
+
+// crates/mori-core/src/sherlock/helper_machine/shared.rs
+pub enum LocatorC { Occurrence { owner_is_function: bool, function: usize, ast_path: Vec<usize> }, Table { table: String, row: usize }, Field { name: String } }
+
+// crates/mori-core/src/sherlock/helper_machine/shared.rs
+pub struct StepEventC { pub step_id: ExpandedStepIdC, pub rule_id: RuleIdC, pub event_kind: EventKind, pub site: Option<SiteTag>, pub helper_kind: Option<HelperKind>, pub disposition: StepDisposition, pub work_delta: u8, pub helper_work_delta: u8, pub helper_visits_delta: u8, pub reference_cursor_delta: u8, pub alloc_deltas: AllocDeltasC, pub value_slot_writes: u8, pub logical_depth_before: usize, pub logical_depth_after: usize, pub task_cursor_before: usize, pub task_cursor_after: usize, pub helper_phase_before: Option<HelperPhaseSummaryC>, pub helper_phase_after: Option<HelperPhaseSummaryC>, pub helper_cursor_before: Option<usize>, pub helper_cursor_after: Option<usize>, pub result_tag: Option<HelperResultTagC>, pub origin_reference_cursor: Option<u128>, pub source_expr_id: usize, pub source_occurrence: LocatorC, pub exhausted_kind: Option<ExhaustReason>, pub outcome_tag: OutcomeTagC, pub outcome_payload: OutcomeC, pub boundary: BoundaryKind }
+
+pub fn run_draft_host(source: &str, config_source: &str, target_source: &str, sink: &mut dyn FnMut(&StepEventC)) -> Result<DraftHostRun, CompileFailure>;
+
+impl DraftHostRun { pub fn observe(&self) -> Result<HostObservation<'_>, ConsumerError>; }
+
+Wire conventions: usize/u128/i64 use decimal strings; booleans/u8/u32 use native JSON primitives; Options use null or exact value. SourceSpan start/end are u32 byte offsets. UsizeDecimal uses canonical decimal strings. ProgramView has exactly entry, expressions, occurrences, occurrence_paths, children, functions, parameters, arms, patterns, constants, constant_fields, names. No native canonical codec or input-image importer is implied.

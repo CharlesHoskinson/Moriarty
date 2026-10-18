@@ -1,0 +1,139 @@
+### 1. Inline Read Accounting, Route/Pin Audit & Authorship Attribution
+
+- **Reviewer Identity & Route**: Retained designated independent reviewer `CID=6277cc2c-99b8-4b7a-a220-a6c971d1bb98` at original `cwd=/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`, running on `gemini-4-argon-high` (`HIGH` thinking) under the standing observed `claude-opus-5-5` HIGH outage fallback. Zero tools, commands, file reads/writes, imports, or external actions were invoked.
+- **Complete Inline Read Accounting (All Supplied Inline Blocks Read 100% in Full)**:
+  1. `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/366-owner-authored-as-pid1-guard-candidate/bounded_sdk_compile.py` (`74,900` bytes; SHA-256 `cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc`; 952 lines; read in full).
+  2. `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/368-as-pid1-owner-disposition-and-test-source-request/minimal-existing-test-expectation-candidate/test_launch_handoff.py` (`29,901` bytes; SHA-256 `2dc9f00b90ab7ec08b91619e13a2c800bb42f3eaac8c8abe45d4846344746681`; 691 lines; read in full).
+  3. `.../366-owner-authored-as-pid1-guard-candidate/SOURCE.patch` (7-line unified diff at `L661–667`; read in full).
+  4. `.../366-owner-authored-as-pid1-guard-candidate/ROOT-MATERIALIZATION.json` (records `source_author_CID="bb6043a1-63f1-4de9-b26f-ef50139233e3"`, `base_sha256="087f3a37..."`, `new_sha256="cf94c096..."`, `+77` bytes; read in full).
+  5. `.../370-as-pid1-guard-minimal-tests-independent-review/EXACT-AUTHOR-DISPOSITION-PROJECTION.json` (selected author fields from R368 `FINAL-RESPONSE.txt` `28920a47dea946cf883b2229113ddc0b4379e4fa85caebf7490ca393fbda2a07`; treated strictly as author proposals/dispositions, not peer approval; read in full).
+  6. `.../368-as-pid1-owner-disposition-and-test-source-request/ROOT-LITERAL-READBACK.json` (documents why R140's multi-line hunks 1 & 2 had `0` exact matches against `1a7b4218...` and why R140's proposed 3rd test used nonexistent harness symbols; read in full).
+  7. `.../368-as-pid1-owner-disposition-and-test-source-request/minimal-existing-test-expectation-candidate/ROOT-MATERIALIZATION.json` (records the 2 single-line replacements from `1a7b4218...` to `2dc9f00b...`; read in full).
+  8. `.../370-as-pid1-guard-minimal-tests-independent-review/ACTUAL-TEST-API-AND-PIN-READBACK.json` (read in full).
+  9. `.../365-corrected-descendant-diagnostic-independent-review/reviewer-literal-edit-01/actual-01/COMMAND.json` (read in full).
+  10. `.../365-corrected-descendant-diagnostic-independent-review/reviewer-literal-edit-01/actual-01/RESULT.json` (`2,247` bytes; SHA-256 `621a7d0d022cad9f606ec7a107707711ec506d992edb782d7eb33d366a22c6d0`; `stdout.bin` `1,942` bytes `854711c521a31cf0b912dae8c8cf95152cb67558d30bd615faaaa42158782170`; read in full).
+  11. `.../370-as-pid1-guard-minimal-tests-independent-review/EXACT-EXISTING-SDKFREE30-OPERATION.proposed.json` & `.../CURRENT-FACTS-AND-UNCHANGED-SCOPE.json` (read in full).
+  - **Named Omissions / Truncations**: **None**.
+- **Strict Authorship Attribution**:
+  - **Production Guard (`bounded_sdk_compile.py`, `cf94c096...`)**: Authored by R140 (`bb6043a1-63f1-4de9-b26f-ef50139233e3`). This reviewer (`6277cc2c...`) is a genuine non-author of the guard candidate and provides an independent non-author source verdict on `cf94c096...`.
+  - **Minimal Updated Focused Test Module (`test_launch_handoff.py`, `2dc9f00b...`)**: The underlying 8-test harness (`1a7b42184e581bafd44f9a35607c7c3dbfef5ac286e47f14cf84fe2278e3ae0a`, `29,867` bytes) was authored by this CID (`6277cc2c...`) in R338/R343 and reviewed by R140 in R340/R345; ONLY the 2 single-line `expected_options = expected_raw[:sep] + ['--as-pid-1']` replacements (`L395` and `L464`, `+34` bytes) were authored by `bb6043a1-63f1-4de9-b26f-ef50139233e3`. This reviewer independently reviews `bb6043...`'s 2 literal expectation changes and the operational safety of the 30-test run, while explicitly making **no claim of independent non-author self-certification** over our own underlying `1a7b4218...` harness bytes.
+
+---
+
+### 2. Independent Non-Author Source Review of `bounded_sdk_compile.py` (`cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc`)
+
+- **Guard Source Verdict**: **`APPROVE`**
+
+#### A. Verification of the Exact 1-Line Guard Delta (`L664`)
+In `launch()` (`L659–736`), `bounded_sdk_compile.py` (`cf94c096...`) differs from previously reviewed `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f` (`74,823B`) solely at line 664 (`+77` bytes):
+```python
+    separator=args.index('--');cmd=args[separator+1:]
+    if not cmd: raise CompileFailure('bwrap argv missing command after --')
+    bwrap_opts=args[:separator]+([] if '--as-pid-1' in args[:separator] else ['--as-pid-1']);fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in bwrap_opts)+b'\0');args=bwrap_opts+['--',*cmd]
+```
+1. **Option Placement & Deduplication**:
+   - `sandbox_args(c, phase, audit_worker=False, precheck=False)` (`L464–502`) always begins with `['--die-with-parent', '--unshare-user', '--unshare-pid', '--unshare-uts', '--unshare-ipc', '--unshare-cgroup-try', '--new-session', ...]` and ends with `['--', *cmd]`.
+   - `args.index('--')` (`L662`) locates the first `'--'` separator, which terminates `bwrap` options and precedes the inner command (`python3 -I -B -c ...` + `TRAMPOLINE`).
+   - `bwrap_opts` takes `args[:separator]` and appends `'--as-pid-1'` if and only if `'--as-pid-1'` is not already present in `args[:separator]`.
+   - Because `--unshare-pid` is unconditionally present in `args[:separator]` across all phases (`L466`), `bwrap`'s prerequisite for `--as-pid-1` (`opt_unshare_pid`) is satisfied in every invocation.
+2. **Memfd Serialization vs Outer `Popen` Argv vs `records` Audit Trail**:
+   - `fd = sealed_memfd('sdk-bwrap-argv', b'\0'.join(x.encode() for x in bwrap_opts) + b'\0')` writes only the NUL-delimited `bwrap` option tokens (ending with `'--as-pid-1\0'`) into the sealed `sdk-bwrap-argv` memfd. No `'--'` token and no inner command tokens are placed in the `--args` memfd (preserving the R332/R336 fix for `bwrap` `--args` parsing).
+   - Outer `subprocess.Popen` (`L669`) executes `['/usr/bin/bwrap', '--args', str(fd), '--', *cmd]`, and `records.append({... 'argv': ['/usr/bin/bwrap', *args], ...})` (`L729`) accurately records the logical full `bwrap` argv `['/usr/bin/bwrap', *bwrap_opts, '--', *cmd]`.
+
+#### B. Cross-Phase Process, Signal, Reaping & Seccomp Analysis (`A0`, `A`, `B`, `C`, `D`, `E`, `F`)
+1. **Elimination of `bwrap` `do_init` ($P_2$) Exit-Order Race**:
+   - Without `--as-pid-1`, when `--unshare-pid` is active, outer host-namespace `bwrap` ($P_1$) forks child-PID-namespace PID 1 (`bwrap` `do_init`, $P_2$), which in turn forks the target command ($P_3$) and waits for $P_3$ in `do_init`, while $P_1$ monitors an `eventfd` written by $P_2$ just before $P_2$ calls `_exit()`. Consequently, $P_1$ can wake from `eventfd` and exit (`proc.wait()` returns in the parent guard) before $P_2$ finishes kernel `do_exit() -> cgroup_exit()`, causing the immediate post-`proc.wait()` check at `L711` (`read_numbers(group.path/'cgroup.events').get('populated',0) != 0`) to fail spuriously.
+   - With `--as-pid-1`, `bwrap` does not fork a `do_init` wrapper ($P_2 \equiv P_3$). Instead, the single child forked by $P_1$ is PID 1 of the new PID namespace and directly `execve`s the inner command (`python3` running `TRAMPOLINE`). And in `bubblewrap.c`, when `opt_as_pid_1` is set (`!opt_unshare_pid || opt_as_pid_1`), $P_1$ waits synchronously on $P_2$ via blocking `waitpid(pid, &status, 0)` rather than `eventfd`. In the Linux kernel (`kernel/exit.c:do_exit()`), `cgroup_exit()` executes *before* `exit_notify()` wakes `waitpid()` in $P_1$.
+2. **Single-Process Python Worker Phases (`A0`, `A`, `C`, `D`, and `E`/`F` Precheck & Audit Workers)**:
+   - `TRAMPOLINE` (`L61–85`) executes in child PID 1, sets caps/no_new_privs/seccomp notify, sends the notify FD over `SCM_RIGHTS`, closes the handoff socket, and calls `os.execve(ctx['cmd'][0], ctx['cmd'], ctx['env'])` in place (remaining child PID 1). The Python worker (`STAGE` / `AUDIT` / `PRECHECK`) spawns no subprocesses and exits cleanly.
+3. **Multi-Process Cargo Phases (`B`, `E`, `F` Main Compile)**:
+   - `TRAMPOLINE` `execve`s `/usr/bin/cargo` in place as child-namespace PID 1.
+   - During compilation, `cargo` spawns and waits on its own child jobs (`rustc`, `build-script-build`, proc-macro servers). If any grandchild is reparented to child PID 1 before `cargo` exits, or if any descendant remains when `cargo` (child PID 1) exits, the Linux kernel's `zap_pid_ns_processes()` (invoked inside child PID 1's `do_exit -> exit_notify -> forget_original_parent`) sends `SIGKILL` to all remaining processes in the child PID namespace and calls `kernel_wait4()` on every task in that namespace before child PID 1 completes `exit_notify()` and wakes outer `bwrap` ($P_1$).
+   - **PID-1 Signal Semantics (`SIGNAL_UNKILLABLE`)**: Inside the child PID namespace, PID 1 ignores unhandled signals sent from within the *same* PID namespace, which does not affect `cargo`'s normal termination or its signalling of child `rustc` processes. Signals sent from an ancestor namespace or kernel control path—specifically `--die-with-parent` (`PR_SET_PDEATHSIG(SIGKILL)` set by outer `bwrap` $P_1$) and the guard's cgroup kill (`group.kill()` writing `'1'` to `cgroup.kill` on timeout/failure)—deliver `SIGKILL` with `SEND_SIG_FORCED` / ancestor privileges, overriding `SIGNAL_UNKILLABLE` and terminating child PID 1 and all descendants unconditionally.
+4. **Seccomp Notify Listener & `POLLHUP` vs `POLLIN` (`L591–595`, `L698`, `L710`)**:
+   - The seccomp user-notification filter installed by `TRAMPOLINE` before `os.execve` is preserved across `execve` and inherited by all `cargo`/`rustc` descendants.
+   - When the final process bound to the filter exits, the kernel transitions the notify FD to `POLLHUP` (`revents = 16`, `POLLIN = false`), as empirically verified in R365 `actual-01`. Because `network_pending(listener)` (`L591–595`) checks `bool(poller.poll(0))` registered with `select.POLLIN` only, pure `POLLHUP` returns `False` and never causes a false-positive network refusal, while any actual `connect`/`sendto`/`sendmsg`/`bind`/`listen`/`accept`/`accept4`/`socket(AF_INET|AF_INET6|AF_NETLINK|AF_PACKET)` syscall by `cargo` or any descendant continues to generate `POLLIN` and triggers immediate fail-closed `group.kill()` + `CompileFailure(f'blocked network/socket syscall in phase {phase}')`.
+5. **Strict Security Controls Unchanged**:
+   - Immediate post-`proc.wait()` cgroup emptiness check at `L711` (`if read_numbers(group.path/'cgroup.events').get('populated',0)!=0: raise CompileFailure('background descendants remain after phase process')`), `Cgroup` limits (`pids.max`, `memory.max`, `memory.swap.max`, `cpu.max`), wall/stdout/stderr caps, FD hygiene, and one-shot native constraints remain 100% unchanged.
+
+#### C. Accurate Technical Scoping of the R365 Host Discriminator (`actual-01`)
+- In R365 `actual-01` (`RESULT.json` `621a7d0d...`, `stdout.bin` `854711c5...`):
+  - **`step_A_default_bwrap_no_as_pid_1`**: Proved on this host (`bwrap 0.11.0`, kernel `6.17.0-20-generic`) that without `--as-pid-1`, `distinct_p2_and_p3` is `true` (`p1=464765, p2=464766, p3=464767`), and at `t=0` immediately after `proc.wait(p1)` returns, inner `bwrap` `do_init` ($P_2$) still exists in `/proc` (`{"comm": "bwrap", "exists": true, "ppid": 464764, "state": "Z"}`) and is reaped by the subreaper `103.2 us` later.
+  - **`step_B_bwrap_with_as_pid_1`**: Proved on this host that adding `--as-pid-1` collapses $P_2$ and $P_3$ (`distinct_p2_and_p3: false`, `p1=464768, p2=p3=464769`), produces identical `SCM_RIGHTS` handoff and `listener_events` (`[{"pollerr": false, "pollhup": true, "pollin": false, "revents": 16}]`), and leaves `p2_state_immediately_after_proc_wait_at_L711` completely absent (`{"comm": null, "exists": false, "ppid": null, "state": null}`, `reparented_orphans_reaped_by_subreaper: []`) at `t=0` after `proc.wait(p1)`.
+  - **Exact Caveat Preserved**: In host-only `step_A`, a task already in `"state": "Z"` (`EXIT_ZOMBIE`) has already passed `cgroup_exit()` inside `do_exit()`; under `step_A`'s unwaited `eventfd` wakeup, whether $P_2$ is caught in `/proc` just before or just after `cgroup_exit()` is a microsecond scheduling race, whereas under `step_B` (`--as-pid-1`), $P_1$'s synchronous `waitpid(P_2)` strictly orders $P_2$'s `cgroup_exit()` before `proc.wait(p1)` can return. Furthermore, `actual-01` is a host-only discriminator and does not retroactively alter retired native `03` or close `C4`/`R2`.
+
+---
+
+### 3. Separate Source & Operation Eligibility Disposition for the Existing 30-Case SDK-Free Unit Suite (`EXACT-EXISTING-SDKFREE30-OPERATION.proposed.json`)
+
+- **2-Line Test Diff Verdict (`test_launch_handoff.py` `2dc9f00b90ab7ec08b91619e13a2c800bb42f3eaac8c8abe45d4846344746681`)**: **`APPROVE` (for `bb6043...`'s 2 literal lines at `L395` and `L464`)**
+  - At `L395` (`test_audit_phase_a0_options_only_memfd_outer_argv_pass_fds_and_records`) and `L464` (`test_non_audit_phase_b_omits_token_fd_and_separates_cargo_command`), replacing `expected_options = expected_raw[:sep]` with `expected_options = expected_raw[:sep] + ['--as-pid-1']` accurately aligns both the `sdk-bwrap-argv` memfd payload expectation and the `res['processes'][0]['argv']` expectation with `bounded_sdk_compile.py` (`cf94c096...`).
+  - None of the other 6 tests in `test_launch_handoff.py` or the 22 tests in `test_config_source.py` (`0f966d9635fd8b5de58beebce9f58f9b13a5a1fa4b0b8136a4a3a7a4dd3d673b`) fail or conflict with `cf94c096...` (for example, `test_sandbox_args_all_phases_keep_command_Strictly_after_double_dash` in `test_config_source.py` tests `sandbox_args()` directly, which remains unchanged).
+- **Separate Operation Eligibility Disposition**: **`ELIGIBLE_AS_PROPOSED` (`APPROVE_OPERATION`)**
+  - The exact proposed 30-case SDK-free unit test command in `EXACT-EXISTING-SDKFREE30-OPERATION.proposed.json` (`['/usr/bin/python3', '-I', '-B', ...]` running the 22 tests in `test_config_source.py` `0f966d96...` + 8 tests in `test_launch_handoff.py` `2dc9f00b...` against `bounded_sdk_compile.py` `cf94c096...` and `config.example.json` `4b12357a...`, `timeout=30s`, `131,072B` stream capture, no `.pyc` writes, all OS/cgroup/bwrap/socket/memfd operations mocked) is **eligible for immediate ordinary execution as-is**.
+  - **No 9th/31st test is required as a gate or blocker** to running `EXACT-EXISTING-SDKFREE30-OPERATION.proposed.json`.
+
+---
+
+### 4. Optional Reviewer-Authored 9th Test Method (`test_as_pid_1_appended_once_before_separator_and_not_duplicated`)
+
+- **Scope & Authorship Note**: The literal addition below is authored by this reviewer (`6277cc2c-99b8-4b7a-a220-a6c971d1bb98`) against `test_launch_handoff.py` (`2dc9f00b90ab7ec08b91619e13a2c800bb42f3eaac8c8abe45d4846344746681`, `29,901` bytes) using only actual `LaunchHarness` APIs (`LaunchHarness()`, `with h.patches():`, `patch.object(runner, 'sandbox_args', ...)`, `h.memfds`, `h.popens`, `h.c`). It is **optional**, is **not self-certified** by this reviewer, and **does not block** running the 30-test suite in Section 3; if Root materializes a 31-test file incorporating this method, R140 (`bb6043...`) can provide non-author review of this 19-line addition.
+
+#### Exact Uniquely Anchored `old -> new` Literal Against `test_launch_handoff.py` (`2dc9f00b90ab7ec08b91619e13a2c800bb42f3eaac8c8abe45d4846344746681`, `L660–691`)
+
+**`old`** (exact lines `660–691` of `2dc9f00b90ab7ec08b91619e13a2c800bb42f3eaac8c8abe45d4846344746681`):
+```python
+        # Breaks out of drain loop on deadline without raising 'wall cap B' or calling sel.select.
+        self.assertEqual(str(ctx.exception), 'listener handoff failed')
+        self.assertIn('group.kill', h.events)
+        self.assertNotIn('sel.select', h.events)
+        self.assertEqual(h.open_fds, set())
+        self.assertEqual(h.events[-1], 'group.close')
+
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+**`new`**:
+```python
+        # Breaks out of drain loop on deadline without raising 'wall cap B' or calling sel.select.
+        self.assertEqual(str(ctx.exception), 'listener handoff failed')
+        self.assertIn('group.kill', h.events)
+        self.assertNotIn('sel.select', h.events)
+        self.assertEqual(h.open_fds, set())
+        self.assertEqual(h.events[-1], 'group.close')
+
+    def test_as_pid_1_appended_once_before_separator_and_not_duplicated(self):
+        h = LaunchHarness()
+        orig_sandbox_args = runner.sandbox_args
+
+        def preseeded_sandbox_args(c, phase, audit_worker=False, precheck=False):
+            raw = orig_sandbox_args(c, phase, audit_worker=audit_worker, precheck=precheck)
+            sep = raw.index('--')
+            return raw[:sep] + ['--as-pid-1'] + raw[sep:]
+
+        with h.patches(), patch.object(runner, 'sandbox_args', side_effect=preseeded_sandbox_args):
+            res = runner.launch(h.c, 'B', ['cargo', 'check', '--offline'])
+
+        _, bwrap_name, bwrap_payload = h.memfds[1]
+        self.assertEqual(bwrap_name, 'sdk-bwrap-argv')
+        bwrap_opts = bwrap_payload[:-1].decode().split('\0')
+        self.assertEqual(bwrap_opts.count('--as-pid-1'), 1)
+        self.assertNotIn('--', bwrap_opts)
+        rec_argv = res['processes'][0]['argv']
+        rec_sep = rec_argv.index('--')
+        self.assertEqual(rec_argv[:rec_sep].count('--as-pid-1'), 1)
+        self.assertEqual(rec_argv[rec_sep + 1:], h.popens[0].args[4:])
+
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+---
+
+### 5. Preserved Global & Gate Boundaries
+- `C4` remains `OPEN`; `R2` remains `UNSATISFIED`; stopped Amendment 10 (`69` tests) remains untouched; retired native attempts `01`, `02`, and `03` remain immutable historical records; neither this guard/test source review nor the SDK-free unit test execution authorizes a native attempt (`fresh04`) or closes `C4`/`R2`.
+
+END-R370-AS-PID1-INDEPENDENT-GUARD-AND-MINIMAL-TESTS
