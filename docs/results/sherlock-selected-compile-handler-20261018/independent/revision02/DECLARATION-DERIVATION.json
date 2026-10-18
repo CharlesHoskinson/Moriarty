@@ -1,0 +1,78 @@
+{
+  "diagnosis": "Consumer incorrectly compared the complete typed admitted layout directly to the wire config.layout subtree. Wire Layout has no bounds member; typed LayoutObservation/LayoutSchemaC explicitly contain bounds. The admitted layout is config.layout plus the single config.bounds object.",
+  "independent_public_evidence": [
+    {
+      "id": "wireConfigLayout",
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/compile_artifact/config.rs",
+        "bytes": 9291,
+        "sha256": "d87f772db4cca17c34f03b91f399a68b9728f8229fc23dd9f39a730a41c18698"
+      },
+      "startLine": 132,
+      "endLine": 155,
+      "literal_excerpt": "#[derive(Clone, Serialize, Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct Layout {\n    pub layout_version: [String; 2],\n    pub field_id: RequiredNull,\n    pub widths: RequiredNull,\n    pub scalar_layout_id: RequiredNull,\n    pub capacities: Capacities,\n    pub boundary_capacities_present: bool,\n}\n\n#[derive(Clone, Serialize, Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct ExecutionConfig {\n    pub format: ConfigFormat,\n    pub profile: Profile,\n    pub grammar: Grammar,\n    pub finance: Finance,\n    pub bounds: Bounds,\n    pub layout: Layout,\n    pub fuel: RunInput,\n    pub stack: RunInput,\n    pub host: HostBounds,\n}\n"
+    },
+    {
+      "id": "typedLayoutObservation",
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+        "bytes": 6480,
+        "sha256": "b6d0524431df4e73898853b073ba9c3f5a212fd83f3dd4015c6a4e1eda1d0017"
+      },
+      "startLine": 51,
+      "endLine": 61,
+      "literal_excerpt": "#[derive(Clone, Copy)]\npub struct LayoutObservation<'a> {\n    pub layout_version: &'a (String, String),\n    pub field_id: Option<&'a (String, String)>,\n    pub widths: Option<WidthTableObservation<'a>>,\n    pub scalar_layout_id: Option<&'a (String, String)>,\n    pub bounds: &'a BoundsC,\n    pub capacities: &'a LayoutCapacitiesC,\n    pub boundary_capacities_present: bool,\n    _sealed: (),\n}\n"
+    },
+    {
+      "id": "typedLayoutSchema",
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared.rs",
+        "bytes": 43892,
+        "sha256": "479eb3983c81e9734d5bd427b68d735e627010368e6c992687c9ff5ff2dad3a9"
+      },
+      "startLine": 345,
+      "endLine": 351,
+      "literal_excerpt": "pub struct LayoutSchemaC { pub layout_version: (String, String),\n    pub field_id: Option<(String, String)>, pub widths: Option<WidthTable>,\n    pub scalar_layout_id: Option<(String, String)>, pub bounds: BoundsC,\n    pub capacities: LayoutCapacitiesC,\n    pub boundary_capacities_present: bool } // must be false in B-core (AD-6)\n\n// ---------- errors / selection: no derives over raw, moved RawRuleId ----\n"
+    },
+    {
+      "id": "existingWireLayout",
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/compile_artifact/wire.rs",
+        "bytes": 51045,
+        "sha256": "727f8a3a2fd01bd03ee98a3e3bb3beca1626ce9fe0396dd523232780598bec9e"
+      },
+      "startLine": 955,
+      "endLine": 962,
+      "literal_excerpt": "pub fn layout(value: &LayoutObservation<'_>) -> Value {\n    json!({\"layout_version\": value.layout_version.owner_wire(),\n        \"field_id\": value.field_id.owner_wire(),\n        \"widths\": value.widths.as_ref().map(widths),\n        \"scalar_layout_id\": value.scalar_layout_id.owner_wire(),\n        \"bounds\": value.bounds.owner_wire(), \"capacities\": value.capacities.owner_wire(),\n        \"boundary_capacities_present\": value.boundary_capacities_present})\n}\n"
+    }
+  ],
+  "exact_corrected_predicate": "actual.admission.layout == frozen exactConfig.layout extended with bounds=frozen exactConfig.bounds, with complete object equality retained",
+  "scope": "Both Core and draft checks corrected identically. No new expected semantic fields are learned from observed output; no filtering of actual fields or ignored differences.",
+  "observed_failure_pin": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/354-selected-compile-source/normal-consumer-proposal/actual-positives-01/1-quote-compile/stderr.bin",
+    "bytes": 2008,
+    "sha256": "336059909f42087a1c0d2822514d0d4d96a14de5c69b90b91796415686ca94a2"
+  },
+  "observed_published_artifact_pin": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/354-selected-compile-source/normal-consumer-proposal/actual-positives-01/1-quote-compile/published/sherlock-artifact.json",
+    "bytes": 12753,
+    "sha256": "ae898872a4395e05e5b24a7309f63efdb3d5f1bf81c0cf1f0be7b51438bd32a5"
+  },
+  "observed_artifact_use": "Failure diagnosis only; not a golden expected record. Actualhandler success/publication and oldconsumer panic101 remain historical facts; no firstconsumer pass claimed.",
+  "initial_source": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/B04-independent-real-compile-handler-expectations/afterimages/crates/mori/tests/support/real_compile_handler_independent.rs",
+    "bytes": 9907,
+    "sha256": "177dfe39cb3be0f965e3fd81be43fb994da9db620aeae8a06536f4e90ba164c8"
+  },
+  "initial_expected_output": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/B04-independent-real-compile-handler-expectations/EXPECTED-OUTPUT.json",
+    "bytes": 12249,
+    "sha256": "72fdc13596121d594a71293125c4519eccd36c9eb55778d456f466b54f998fdb"
+  },
+  "initial_freeze": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/B04-independent-real-compile-handler-expectations/EXPECTATION-FREEZE.json",
+    "bytes": 3047,
+    "sha256": "a0bf9a53146c054b010126e92992603e58fe8fa1cbb381472ff0b58efb11eb46"
+  },
+  "expected_output_semantics_changed": false
+}

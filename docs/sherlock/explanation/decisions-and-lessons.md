@@ -59,3 +59,10 @@ expectation. Full root CLI/global/outer dispatch and file publication remain UNR
 Fixed owner semantics gain no new circuit/transition rule; no circuit/website
 iteration or B04 completion is claimed. Earlier journal entries and R279
 observations retain their exact dated scope.
+
+
+### Reconcile control metadata with the actual schema
+
+The metadata helper initially assumed a total-count key that the real staging manifest did not contain, and treated five already-bound external archive rows as ordinary Cargo-root descendants. Independent review corrected the helper against the existing six category-count keys and preserved the external identities without opening payloads. Six selftests then passed and the live refresh changed 13 of 1,755 selected control rows while preserving 488 noncontrol row objects. Incorrect owner pin/API prose remains unadopted; exact source and receipt bytes supply identities.
+
+The subsequent fresh03 attempt completed A0_FREEZE but refused background descendants before A0_RESULT. A successful helper or freeze file does not establish phase success or a native build. Preserve each refusal, consumed marker and teardown result, and diagnose the next concrete failure rather than rerun unchanged passing tests. See the [dated receipts](../../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/control-metadata-refresh-and-fresh03/README.md).

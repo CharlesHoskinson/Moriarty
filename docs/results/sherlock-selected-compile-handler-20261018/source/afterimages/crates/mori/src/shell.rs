@@ -1,0 +1,97 @@
+//! Cargo-style status output on stderr.
+
+use std::fmt::Display;
+use std::io::{self, Stderr, Write};
+
+use anstream::{AutoStream, ColorChoice};
+use anstyle::Style;
+use mori_diagnostics::Report;
+use mori_diagnostics::render::{self, WIDTH};
+
+use crate::styles;
+
+pub use crate::status_output::Verbosity;
+
+/// Writes status lines such as `    Checking invoice.mori` to stderr.
+///
+/// Command results go to stdout and never pass through the shell. Output is
+/// best effort: if stderr cannot be written, there is nowhere to report it.
+pub struct Shell {
+    err: AutoStream<Stderr>,
+    verbosity: Verbosity,
+}
+
+impl Shell {
+    pub fn new(verbosity: Verbosity, color: ColorChoice) -> Self {
+        Self {
+            err: AutoStream::new(io::stderr(), color),
+            verbosity,
+        }
+    }
+
+    /// Prints a right-aligned green verb followed by a message.
+    pub fn status(&mut self, verb: &str, message: impl Display) {
+        crate::status_output::status(&mut self.err, self.verbosity, verb, message);
+    }
+
+    /// Like [`Shell::status`], but only under `--verbose`.
+    pub fn verbose_status(&mut self, verb: &str, message: impl Display) {
+        if self.verbosity == Verbosity::Verbose {
+            self.aligned(verb, styles::HEADER, message);
+        }
+    }
+
+    #[expect(dead_code, reason = "used once a command prints notes")]
+    pub fn note(&mut self, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.prefixed("note", styles::HEADER, message);
+        }
+    }
+
+    #[expect(dead_code, reason = "used once a command emits warnings")]
+    pub fn warn(&mut self, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.prefixed("warning", styles::WARN, message);
+        }
+    }
+
+    /// Prints an error line. Errors are shown even under `--quiet`.
+    pub fn error(&mut self, message: impl Display) {
+        self.prefixed("error", styles::ERROR, message);
+    }
+
+    /// Renders an error report, wrapped to the terminal width up to 80 columns.
+    /// Errors are shown even under `--quiet`.
+    pub fn report(&mut self, report: &Report) {
+        let width = terminal_size::terminal_size_of(io::stderr())
+            .map_or(WIDTH, |(width, _)| usize::from(width.0));
+        let _ = writeln!(self.err, "{}", render::render_colored(report, width));
+    }
+
+    /// Prints `hunks` as `cargo fmt --check` does, indented to line up with a
+    /// diagnostic's message.
+    pub fn diff(&mut self, file: &str, hunks: &[mori_fmt::Hunk]) {
+        const INDENT: &str = "    ";
+        for hunk in hunks {
+            let _ = writeln!(self.err, "{INDENT}Diff in {file}:{}:", hunk.line);
+            for (change, line) in &hunk.lines {
+                let (sign, style) = match change {
+                    mori_fmt::Change::Context => (' ', Style::new()),
+                    mori_fmt::Change::Removed => ('-', styles::REMOVED),
+                    mori_fmt::Change::Added => ('+', styles::ADDED),
+                };
+                let _ = writeln!(self.err, "{INDENT}{style}{sign}{line}{style:#}");
+            }
+        }
+        let _ = writeln!(self.err);
+    }
+
+    fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
+        crate::status_output::aligned(&mut self.err, verb, style, message);
+    }
+
+    fn prefixed(&mut self, label: &str, style: Style, message: impl Display) {
+        let message = crate::display::text(&message.to_string());
+        let _ = writeln!(self.err, "{style}{label}:{style:#} {message}");
+    }
+}
