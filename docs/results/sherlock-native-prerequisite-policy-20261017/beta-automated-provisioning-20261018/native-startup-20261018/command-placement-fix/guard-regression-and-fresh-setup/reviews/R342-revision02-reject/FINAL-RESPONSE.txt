@@ -1,0 +1,67 @@
+{
+  "identity_and_role": {
+    "conversation_id": "bb6043a1-63f1-4de9-b26f-ef50139233e3",
+    "cwd": "/tmp/moriarty-r140-final-security-A-9c662tt7",
+    "reviewer_slot": "security-A",
+    "reviewer_role": "non_author_new_test_source_and_ordinary_operation_reviewer",
+    "primary_model": "claude-opus-5-5",
+    "requested_model": "gemini-4-argon-high",
+    "returned_identity": "gemini-4-argon-high",
+    "effort": "high",
+    "fallback_status": "standing_opus_quota_outage_fallback",
+    "scope_qualification": "R140 authored production guard bounded_sdk_compile.py (087f3a37..., 74823B), NOT test_launch_handoff.py (586bdec4..., 29848B, revision02 authored by CID 6277cc2c...). This is a non-author review of test_launch_handoff.py and classification of the proposed 4-file ordinary mocked unittest operation, NOT a fresh whole-guard certification or blind R2 review. Zero tools or external actions invoked."
+  },
+  "decision_1_new_test_source_review": {
+    "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/342-launch-handoff-test-source-review/revision02/unadopted-tests/test_launch_handoff.py",
+    "target_sha256": "586bdec4bbdcca82a072c5e16e4bc0c91048de9f20f9a30c668993a6ccaa78de",
+    "target_bytes": 29848,
+    "verdict": "REJECT",
+    "verdict_detail": "CHANGES_REQUIRED (two deterministic runtime bugs BF-1 and BF-2 in test_launch_handoff.py; R343 revision02 line-539 fix memfds[5]->memfds[6] is verified correct)",
+    "ast_test_counts": {
+      "test_launch_handoff.py": 8,
+      "test_config_source.py": 22,
+      "combined_expected_ast_cases": 30,
+      "note_on_author_prose": "Author prose claiming 7 tests was mistaken; LaunchHandoffTests defines 8 test_* methods."
+    },
+    "mandatory_blocking_findings": [
+      {
+        "id": "BF-1",
+        "severity": "BLOCKING_RUNTIME_ATTRIBUTE_ERROR_ALL_8_TESTS",
+        "anchor": "test_launch_handoff.py LaunchHarness.patches() line 354 ('stack.enter_context(patch.object(runner.socket, \"socketpair\", side_effect=self.fake_socketpair))') vs bounded_sdk_compile.py module imports (BODY5 L8-22, selected_namespace_binding_facts.socket=false) and def launch() (BODY4 L640 'import socket')",
+        "defect": "bounded_sdk_compile.py does NOT import 'socket' at module scope; 'import socket' is a function-local import inside def launch() (L640) that binds local name 'socket' to sys.modules['socket']. Evaluating 'runner.socket' in LaunchHarness.patches() immediately raises AttributeError: module 'bounded_sdk_compile' has no attribute 'socket' before launch() is even called, failing all 8 tests in LaunchHandoffTests.",
+        "exact_fix": {
+          "old": "        stack.enter_context(patch.object(runner.socket, 'socketpair', side_effect=self.fake_socketpair))",
+          "new": "        stack.enter_context(patch.object(socket, 'socketpair', side_effect=self.fake_socketpair))"
+        }
+      },
+      {
+        "id": "BF-2",
+        "severity": "BLOCKING_ASSERTION_FAILURE_IN_TEST_1",
+        "anchor": "test_launch_handoff.py LaunchHandoffTests.test_audit_phase_a0_options_only_memfd_outer_argv_pass_fds_and_records lines 435-451 ('proc.preexec_fn()' followed by 'self.assertEqual(h.events[-1], \"group.close\")')",
+        "defect": "runner.launch() appends 'group.close' to h.events in its outer finally: block (BODY4 L724) before returning. When test 1 subsequently calls 'proc.preexec_fn()' at L436, enter() (BODY4 L661-662) executes 'parent.close(); group.join_child()', which appends 'parent.close' and 'group.join_child' to the end of h.events. Therefore h.events[-1] is 'group.join_child', causing L451 'self.assertEqual(h.events[-1], \"group.close\")' to fail with AssertionError: 'group.join_child' != 'group.close'.",
+        "exact_fix": {
+          "old": "        # Verify preexec_fn closes parent socket and joins child cgroup in memory.\n        proc.preexec_fn()\n        self.assertIn('group.join_child', h.events)\n\n        self.assertEqual(res['phase'], 'A0')\n        self.assertEqual(res['processes'], [{\n            'argv': expected_options + ['--', *expected_cmd],\n            'audit_worker': True,\n            'child_exit': 0,\n        }])\n        self.assertEqual(res['log_bytes'], {'stdout': 10, 'stderr': 10})\n        self.assertEqual(h.written_logs['A0.stdout'], b'a0-stdout\\n')\n        self.assertEqual(h.written_logs['A0.stderr'], b'a0-stderr\\n')\n        self.assertEqual(h.closed_fds, [401, 102, 100, 101])\n        self.assertEqual(h.open_fds, set())\n        self.assertEqual(h.itimer_calls, [])\n        self.assertEqual(h.events[-1], 'group.close')",
+          "new": "        self.assertEqual(res['phase'], 'A0')\n        self.assertEqual(res['processes'], [{\n            'argv': expected_options + ['--', *expected_cmd],\n            'audit_worker': True,\n            'child_exit': 0,\n        }])\n        self.assertEqual(res['log_bytes'], {'stdout': 10, 'stderr': 10})\n        self.assertEqual(h.written_logs['A0.stdout'], b'a0-stdout\\n')\n        self.assertEqual(h.written_logs['A0.stderr'], b'a0-stderr\\n')\n        self.assertEqual(h.closed_fds, [401, 102, 100, 101])\n        self.assertEqual(h.open_fds, set())\n        self.assertEqual(h.itimer_calls, [])\n        self.assertEqual(h.events[-1], 'group.close')\n\n        # Verify preexec_fn closes parent socket and joins child cgroup in memory.\n        proc.preexec_fn()\n        self.assertEqual(h.events[-2:], ['parent.close', 'group.join_child'])"
+        }
+      }
+    ],
+    "verified_correct_elements_and_nonblocking_findings": [
+      "R343 revision02 fix at line 539 ('ctx2 = json.loads(h.memfds[6][2].decode())') is verified exact: in Phase E variants [(True,True),(False,False),(True,False)], variant 0 allocates memfds[0..2], non-audit variant 1 allocates memfds[3..4] (no worker context memfd), and audit variant 2 allocates memfds[5]=TRAMPOLINE, memfds[6]=context JSON, memfds[7]=bwrap-argv.",
+      "Patch target 'runner.open' with create=True (L356) accurately intercepts open() inside runner.launch() (L660) without affecting Path.read_text() in stdlib pathlib.",
+      "All 22 existing tests in test_config_source.py (0f966d96..., BODY2), including inspect.getsource(runner.launch) in test_t2 and FailedGroup in test_t6, are compatible with bounded_sdk_compile.owner-proposed.py (087f3a37...).",
+      "Non-blocking note: FakePopen._poll_none_until_drained (L149-151) is unused by any variant_plan because in normal-path tests 1-3, len(sel.get_map()) starts at 3 (listener+stdout+stderr) and drives the main loop until stdout/stderr hit EOF."
+    ]
+  },
+  "decision_2_ordinary_operation_review": {
+    "verdict_for_unmodified_586bdec4": "INELIGIBLE",
+    "verdict_after_BF1_BF2_fix": "ELIGIBLE_WITH_CONDITIONS",
+    "containment_and_mock_escape_assessment": "SAFE_NO_ESCAPE: Neither test_config_source.py (22 tests) nor test_launch_handoff.py (8 tests) can escape mocks to trigger real subprocesses, sockets, memfds, cgroup mutations, timers, or SDK/Cargo/archive/private file reads. The only filesystem read during the entire 30-test suite is loading the adjacent staged config.example.json fixture (4b12357a...); all path strings inside config.example.json remain inert in-memory strings because owned_paths, jload, digest, check_pin, os.walk, Group, supervisor_envelope, bound_identities, quotas, sealed_memfd, socketpair, DefaultSelector, Popen, open, os.read, os.close, os.set_blocking, network_pending, read_numbers, and signal.setitimer are patched.",
+    "concrete_conditions_for_execution": [
+      "1. Apply the two exact literal fixes BF-1 and BF-2 to test_launch_handoff.py before staging and record the updated test_launch_handoff.py SHA-256.",
+      "2. Stage byte-exact copies of bounded_sdk_compile.py (087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f, 74823B), test_config_source.py (0f966d96932136e0762c18b80ba0ca0d13230079125850ce3c35e438a37e5e9d, 21076B), config.example.json (4b12357a4af85553be2ca833760d3bd4a08bb9ad4f5585823d63e800f0ff42cb, 15229B), and the BF-1/BF-2-corrected test_launch_handoff.py in the fresh isolated directory /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/338-focused-launch-unit-source-request/prospective-isolated-sdkfree-suite (from original files, not compact prompt JSON).",
+      "3. Supply an explicit sanitized controller environment map and unprivileged execution context: run as UID=1000, GID=1000 (no sudo/elevated privileges), cwd=suite_dir, env={'LANG':'C.UTF-8','PATH':'/usr/bin:/bin','HOME':suite_dir,'TMPDIR':suite_dir}, under the stated 30s wall timeout (--signal=TERM --kill-after=1s 30s) and 131072B combined stdout/stderr capture cap.",
+      "4. Verify 30/30 test discovery and pass (22 in test_config_source.py + 8 in test_launch_handoff.py) in a single attempt with no automatic retry."
+    ]
+  },
+  "explicit_scoped_limitations": "Non-author review of test_launch_handoff.py and ordinary 4-file mocked unit operation only; not a self-review or whole-guard certification of bounded_sdk_compile.py (087f3a37...), not blind R2, and not native build/provisioning/config admission. Passed B1/B2 diagnostics and consumed native attempts must not be rerun. Beta override (bcb1e016...) removes human-only approval gates while preserving all resource/safety caps, C4=OPEN, 60s/460s=HOLD, and stopped Amendment10."
+}
