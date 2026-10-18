@@ -96,7 +96,7 @@ changes the corresponding digest.
 
 ## Inspect the supported-profile field
 
-With the R254 source overlay, borrow `artifact.supported_profile` from the
+With the installed report field, borrow `artifact.supported_profile` from the
 returned artifact as shown above. No argument is added to
 `compile_draft_host(&source, &config, &target)`. The example prints the actual
 returned report; no captured printout or successful run of this file-publication
@@ -161,11 +161,32 @@ correspondence need their own observations. Original UIREQ-022 is adopted; the
 new supported-profile field has separate passing R256 observations, with
 original UIREQ-002 reporting scope adopted after fresh R272 result review.
 
-A separate [runtime candidate](../reference/draft-source-compiler.md#separate-public-runtime-candidate)
-and its external consumer compiled. Its first test was refused before stepping
-under the original capacity input; corrected input is under fresh review.
-Those two programs still have intended, unobserved results 7 and 8. This compile-only guide does not execute it or substitute
-those expected values for observations.
+## Inspect the observed public runtime cases
+
+The separate [public runtime API](../reference/draft-source-compiler.md#public-draft-runtime-api)
+is installed. Its [independent public test consumer](../../../crates/mori-core/tests/sherlock_draft_runtime_independent.rs)
+uses the exact [runtime fixtures](../../../crates/mori-core/tests/fixtures/draft-runtime-independent/),
+which retain fuel 4096 and stack 64 and use value-slot capacity 4096. These are
+explicit specimen inputs, not defaults. They differ from this guide's compile-only
+fixture. `run_draft_host` takes source/config/target plus a callback for full
+`StepEventC` events; it runs the same admitted pair rather than compiling a second
+pair or replacing source calls with an evaluated literal.
+
+The [adopted R279 result](../../results/sherlock-public-runtime-20261018/README.md)
+records consumer compilation, listing and both exact tests passing, with 636
+selected pins unchanged and the existing Core build reused. The inspected tests
+assert actual UInt 7/8, terminal state, recursive-call order/counts and relational
+counter/event/resource conservation. Raw stdout contains test status, not a
+printed value trace or exact B-clock totals. Full payload prefixes and independent
+exact B-clock evidence remain absent. The retained earlier capacity refusal and
+listing correction are part of that archive.
+
+This compile-only guide still does not run the runtime API or its file-publication
+example. Inspect `completed`/`observe()` for post-run data; `preparation` remains
+the unstepped snapshot. An `Ok` run wrapper can contain Rejected/Exhausted as well
+as Halted. Public developer use does not require maintainer review permission.
+The installed API and two passing host cases add no CLI, general H1, proof,
+circuit, native or full-language acceptance claim.
 
 For the existing scalar Core1 path and its historical observed fixtures, use
 [prepare a compile-only HostOnly artifact](prepare-host-source-artifact.md).

@@ -25,8 +25,7 @@ pub fn compile_draft_host(
 
 The [public module](../../../crates/mori-core/src/lib.rs) exports the
 [compiler](../../../crates/mori-core/src/sherlock/compile_artifact.rs),
-`draft_contract`, `draft_report` and the `draft_profile` report types in the
-validated R254 source overlay.
+`draft_contract`, `draft_report` and the installed `draft_profile` report types.
 Parser/checker internals are not public
 client entry points. `parse_draft_config` decodes the distinct wire shape;
 successful decoding alone does not establish program or owner admission.
@@ -44,7 +43,8 @@ literal. All function bodies are checked before the entry.
 The two supplied programs exercise nested calls with dedicated list/tree
 constructors and matching. This scope adds no generic ADT grammar, financial
 effects, external entry parameters, Core2 continuation lowering or native export.
-There is no draft runtime observation argument. Target JSON is retained as a
+`compile_draft_host` has no runtime observation argument; execution uses the
+separate public `run_draft_host` API below. Target JSON is retained as a
 descriptor plus an exact-byte digest; it does not select a network/backend.
 
 ## Supported-profile report
@@ -280,9 +280,9 @@ These compile-only tables establish no runtime 7/8 result, error trace,
 evaluation-order/resource-prefix observation or circuit semantic proof.
 
 
-## Separate public runtime candidate
+## Public draft runtime API
 
-R258 separately supplies this source-level interface under
+The installed dedicated-source runtime interface is under
 `mori_core::sherlock_compile_artifact::draft_execution`:
 
 ```rust
@@ -300,28 +300,46 @@ The source forwards actual full `StepEventC` callbacks from the fixed B owner's
 run of the same admitted pair. The preparation snapshot remains genesis-only;
 a run wrapper returning `Ok` would not itself mean `Halted`, since completed
 owner outcomes can include `Rejected` or `Exhausted`. Callback retention is
-caller-owned. This source contract is not an observed execution or global H1
-claim, and compile-only R256 eligibility does not classify this runtime plan.
+caller-owned. The unstepped preparation snapshot is not relabelled as runtime
+evidence; post-run state is read from `completed`, `observe()` and
+`resource_report()`. The observed cases below establish no global H1 guarantee.
 
-R259 independently froze two external runtime tests for ChainTotal and
-BranchTotal. Intended UInt results 7 and 8, ordered recursive call sequences and
-counter/resource relations are expectations, not observations. Full independent
-B clocks, all intermediate-state prefixes and physical costs remain gaps. R264 compiled the candidate Core library and external consumer. The first
-ChainTotal test then reached `admit-run` and returned `CapacityNotAdmitted`: its
-value-slot limit was 1024, while unchanged R5 required at least the supplied
-fuel, 4096. Evaluation was false and no events were forwarded; BranchTotal
-remained unrun. An independently derived input correction changes only that
-capacity to 4096, its test hash and expectation metadata; semantic expectations
-and test logic are unchanged. Fresh review precedes the new four-phase
-consumer compilation/listing/two-test run, reusing the existing Core build.
+The [observed public runtime result](../../results/sherlock-public-runtime-20261018/README.md)
+records four passing R279 phases: external consumer compilation against the
+unchanged R264 Core library, exact two-test listing, ChainTotal and BranchTotal.
+All 636 selected pins remained unchanged. The independently frozen tests assert
+actual owner-bound Halted/Return UInt values 7 and 8, all twelve ordered
+ProgramView tables, recursive call order and 3/5 invoke/bind/return completions,
+plus relational event/ordinal/counter/resource conservation. Raw stdout records
+libtest status. Complete event payloads, numeric counter totals, full intermediate
+state prefixes and an independent exact B-clock oracle were not persisted.
+
+[Root adopted the scoped result](../../results/sherlock-public-runtime-20261018/ROOT-ADOPTION.json)
+after successful fresh R281 operation review and R286 result/installation review,
+and installed exactly three source files and seven test/fixture files. Dated
+SOURCE_ONLY/UNRUN author comments remain unchanged as historical metadata; they
+do not describe the later observed test cut. This runtime installation adds no
+original EARS adoption to the retained eleven-original baseline.
+
+Earlier failures remain history. Root first miscompared the alphabetic test list
+as an ordered sequence; the exact set/count correction did not rerun its passing
+compile/list prefix. ChainTotal then refused before stepping because value-slot
+capacity 1024 was below supplied fuel 4096, and BranchTotal was not run. The
+independent input correction changed only value slots to 4096, the config-hash
+literal and expected-input authorship metadata; source semantics and assertions
+were unchanged. R279 reused the passed Core build. Five owner cleanup/allocation/
+report/global-H1 gaps, caller-owned event retention and uncaught sink-panic scope
+remain; finite logical bounds and these two observations do not certify physical
+resources, semantic proof or arbitrary-input execution.
 
 [Root's status correction](../../results/sherlock-supported-profile-20261018/ROOT-RUNTIME-REVIEW-STATUS-CORRECTION.json)
 records that the prior runtime reviewer exited CLI 0 but returned terminal
 `ERROR`. Its visible opinion is retained without adoption; it is not a
 successful approval. These project execution records create no public developer
 permission rule.
-No actual 7/8 runtime result, full semantic correspondence, circuit proof or
-native/target outcome is claimed.
+The later R279/R286 observations supply these two host results. Full semantic
+correspondence, defined-failure/full-prefix coverage, CLI execution, circuit proof
+and native/target outcomes remain separate unobserved requirements.
 
 ## Explicit CLI selection
 
