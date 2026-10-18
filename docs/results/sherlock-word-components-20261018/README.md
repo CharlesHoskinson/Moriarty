@@ -1,6 +1,6 @@
 # Sherlock typed word components — 2026-10-18
 
-Integrated archive for the public pure Rust32/64 word components, typed carry/borrow/MulCarry/full-result records and their installed test source. [Root adopts the scoped component and additive public export](ROOT-FEATURE-ADOPTION.json); R211’s historical compatibility proposal is sealed by that record. R213 reference/how-to documentation is installed. R212 final integration review remains pending; no full UIREQ030 closure is claimed.
+Integrated archive for the public pure Rust32/64 word components, typed carry/borrow/MulCarry/full-result records and their installed test source. [Root adopts the scoped component and additive public export](ROOT-FEATURE-ADOPTION.json); R211’s historical compatibility proposal is sealed by that record. R213 reference/how-to documentation is installed. [R212 final integration review](reviews/R212/REPORT.md) confirms the scoped integration; [Root accepts it](FINAL-INTEGRATION-ADOPTION.json); no full UIREQ030 closure is claimed.
 
 ## Observed execution and compile-only evidence
 
