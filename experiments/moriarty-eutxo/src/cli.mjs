@@ -49,7 +49,7 @@ function usage() {
   return `moriarty-eutxo public atomic experiment (not production, not private/PCD)
 
   node src/cli.mjs compile --source <file.mori> --manifest <manifest.json> [--out artifacts]
-  node src/cli.mjs compile-custody --source <file.mori> --seed <seed.json> --manifest <manifest.json> [--out t1-native-adapters-57/checks/cli-custody]
+  node src/cli.mjs compile-custody --source <file.mori> --seed <seed.json> --manifest <manifest.json> [--oracle-results <file.json>] [--out t1-native-adapters-57/checks/cli-custody]
   node src/cli.mjs native [--out t1-native-adapters-57/checks/native-cli]
   node src/cli.mjs validate --designers <dir> --manifest <manifest.json> [--out artifacts]
 
@@ -311,6 +311,7 @@ if (command === 'compile-custody') {
     expectedReleasePath: arg('--expected-release', join(designer, 'E13-release-real-custody.expected.json')),
     expectedRefundPath: arg('--expected-refund', join(designer, 'E11-refund-real-custody.expected.json')),
     residualPath: arg('--residual', join(designer, 'financial-residual-custody-v5.json')),
+    oracleResultsPath: arg('--oracle-results', undefined),
     manifest,
     outDir: out,
   });
