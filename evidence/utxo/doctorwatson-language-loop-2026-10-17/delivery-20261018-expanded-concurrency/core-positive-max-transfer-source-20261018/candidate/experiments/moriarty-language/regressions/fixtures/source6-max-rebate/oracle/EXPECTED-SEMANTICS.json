@@ -1,0 +1,286 @@
+{
+  "format": "independent-max-transfer-semantic-oracle/1",
+  "status": "FROZEN_BEFORE_PRODUCT_EXECUTION",
+  "actualRoute": "Rust beta/1 check/explicitSource6 expansion -> Source6 semantic inputs; NOTmori-core/1 compiler",
+  "historicalDirectoryNameNotQualification": true,
+  "common": {
+    "agreement": "MaxRebatePayout",
+    "sourceProfile": "moriarty-beta/1",
+    "source6Profile": "moriarty-financial-agreement-source/6",
+    "aliases": {
+      "domain": {
+        "Preview": {
+          "id": "Midnight",
+          "chain": "midnight",
+          "network": "preview"
+        }
+      },
+      "accounts": {
+        "Buyer": "Owner",
+        "Seller": "Recipient",
+        "Treasury": "Fee"
+      },
+      "asset": {
+        "USD": {
+          "id": "A",
+          "scale": "2",
+          "representation": "canonical",
+          "symbol": "USD",
+          "domain": "Midnight"
+        }
+      }
+    },
+    "constants": [
+      {
+        "expression": "4.50 USD",
+        "type": "Qty<USD>",
+        "atoms": "450"
+      },
+      {
+        "expression": "atoms(asset: USD,value:50)",
+        "type": "Qty<USD>",
+        "atoms": "50"
+      },
+      {
+        "expression": "4.50 USD - atoms(asset:USD,value:50)",
+        "type": "Qty<USD>",
+        "atoms": "400"
+      },
+      {
+        "expression": "2 * (4.50 USD - atoms(asset:USD,value:50))",
+        "type": "Qty<USD>",
+        "atoms": "800"
+      },
+      {
+        "expression": "7.00 USD",
+        "type": "Qty<USD>",
+        "atoms": "700"
+      },
+      {
+        "name": "payout",
+        "expression": "max(a:left,b:700)",
+        "type": "Qty<USD>",
+        "atoms": "800",
+        "selectedArgument": "a"
+      },
+      {
+        "name": "fee",
+        "expression": "atoms(asset:USD,value:25)",
+        "type": "Qty<USD>",
+        "atoms": "25"
+      },
+      {
+        "expression": "8.50 USD",
+        "type": "Qty<USD>",
+        "atoms": "850"
+      }
+    ],
+    "selectedSource6ActionId": "TransferLiteralFee",
+    "literalClaims": {
+      "source_hash": "rebate-source",
+      "policy_digest": "rebate-policy",
+      "qualification": "Opaque source claims, not computed commitments."
+    },
+    "inputScenario": {
+      "profile": "moriarty-local-scenario/1",
+      "kind": "local-stipulation",
+      "domain": "Midnight",
+      "asset": "A",
+      "head": "m0",
+      "predecessor": "rebate-opening",
+      "round": "4",
+      "balances": [
+        {
+          "account": "Owner",
+          "amount": "2000"
+        },
+        {
+          "account": "Recipient",
+          "amount": "5"
+        },
+        {
+          "account": "Fee",
+          "amount": "7"
+        }
+      ],
+      "allowance": {
+        "owner": "Owner",
+        "remaining": "2000",
+        "spent": "25"
+      },
+      "replay": "unused",
+      "work_remaining": "12",
+      "work_spent": "2",
+      "post_head": "m1"
+    }
+  },
+  "cases": [
+    {
+      "action": "pay_rebate",
+      "selectedIntent": "Rebate",
+      "selectedMaxArgument": "a: left scalar2*(450-50)=800 exceeds b700",
+      "value": "800",
+      "fee": "25",
+      "gross": "825",
+      "grossCap": "850",
+      "feeCap": "25",
+      "netFloor": "800",
+      "grossCapHeadroom": "25",
+      "recipientNetIncrease": "800",
+      "ownerTotalDebit": "825",
+      "feeRecipientIncrease": "25",
+      "openingFinancialFrame": {
+        "domain": "Midnight",
+        "asset": "A",
+        "balances": [
+          {
+            "account": "Owner",
+            "amount": "2000"
+          },
+          {
+            "account": "Recipient",
+            "amount": "5"
+          },
+          {
+            "account": "Fee",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Owner",
+            "remaining": "2000",
+            "spent": "25"
+          }
+        ]
+      },
+      "conditionalClosingFinancialProjection": {
+        "domain": "Midnight",
+        "asset": "A",
+        "balances": [
+          {
+            "account": "Owner",
+            "amount": "1175"
+          },
+          {
+            "account": "Recipient",
+            "amount": "805"
+          },
+          {
+            "account": "Fee",
+            "amount": "32"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Owner",
+            "remaining": "1175",
+            "spent": "850"
+          }
+        ],
+        "head": "m1",
+        "round": "4",
+        "selectedReplay": {
+          "tuple": [
+            "Midnight",
+            "Owner",
+            "rebate-nonce"
+          ],
+          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
+          "state": "consumed"
+        }
+      },
+      "source6OrderedEffects": [
+        {
+          "kind": "Debit",
+          "account": "Owner",
+          "asset": "A",
+          "amount": "825"
+        },
+        {
+          "kind": "Credit",
+          "account": "Recipient",
+          "asset": "A",
+          "amount": "800"
+        },
+        {
+          "kind": "Credit",
+          "account": "Fee",
+          "asset": "A",
+          "amount": "25"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Owner",
+          "amount": "825"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "rebate-nonce"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "m0",
+          "successor": "m1"
+        }
+      ],
+      "core5SemanticOrderedEffects": [
+        {
+          "kind": "Debit",
+          "account": "Owner",
+          "asset": "A",
+          "amount": "825"
+        },
+        {
+          "kind": "Credit",
+          "account": "Recipient",
+          "asset": "A",
+          "amount": "800"
+        },
+        {
+          "kind": "Credit",
+          "account": "Fee",
+          "asset": "A",
+          "amount": "25"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Owner",
+          "amount": "825"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "m0",
+          "successor": "m1"
+        }
+      ],
+      "effectCount": 6,
+      "feeCreditOmitted": false,
+      "feeOpeningRowRequiredAndRetained": {
+        "account": "Fee",
+        "before": "7",
+        "after": "32"
+      },
+      "source6InputWork": {
+        "remaining": "12",
+        "spent": "2"
+      },
+      "residualDuties": {
+        "providedObligationCell": "absent; transfer scenario forbids obligation",
+        "newDutyOrDischargeEffects": [],
+        "retainedDutiesForm": "empty",
+        "conditionalLocalS0RemainingDuty": [],
+        "scope": "No duty is declared or changed in this finite local transfer subset; no global debt/frame assertion."
+      },
+      "source6AstFile": "pay_rebate.source6.ast.expected.json",
+      "orderedTargetLinesFile": "pay_rebate.ordered-target-lines.expected.json",
+      "independentSource6File": "pay_rebate.independent-source6.txt",
+      "effectPrefixFile": "pay_rebate.effect-prefix-financial-states.expected.json",
+      "closingProjectionQualification": "Normative conditional financial projection, not a complete actual Core post/status/qualification; work fields absent."
+    }
+  ]
+}

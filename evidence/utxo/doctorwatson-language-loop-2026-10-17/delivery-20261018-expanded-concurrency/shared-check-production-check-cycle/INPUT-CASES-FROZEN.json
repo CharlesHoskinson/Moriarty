@@ -1,0 +1,598 @@
+[
+  {
+    "name": "accepted",
+    "source": "profile \"moriarty-beta/1\";\nagreement Oracle {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  observation price = { id: \"price\", domain: Preview };\n  intent read = { operation: oracle.select(observation: price) };\n  action fetch uses read;\n}\n",
+    "file": "test.mori",
+    "expected_cli": {
+      "status": "accepted",
+      "file": "test.mori",
+      "source_hash": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b",
+      "agreement": {
+        "name": "Oracle",
+        "span": {
+          "start": 37,
+          "end": 43
+        }
+      },
+      "declarations": [
+        {
+          "kind": "domain",
+          "name": "Preview",
+          "span": {
+            "start": 48,
+            "end": 122
+          },
+          "name_span": {
+            "start": 55,
+            "end": 62
+          }
+        },
+        {
+          "kind": "observation",
+          "name": "price",
+          "span": {
+            "start": 125,
+            "end": 178
+          },
+          "name_span": {
+            "start": 137,
+            "end": 142
+          }
+        },
+        {
+          "kind": "intent",
+          "name": "read",
+          "span": {
+            "start": 181,
+            "end": 244
+          },
+          "name_span": {
+            "start": 188,
+            "end": 192
+          }
+        }
+      ],
+      "actions": [
+        {
+          "name": "fetch",
+          "intent": "read",
+          "support": "specified_only",
+          "span": {
+            "start": 247,
+            "end": 270
+          },
+          "name_span": {
+            "start": 254,
+            "end": 259
+          }
+        }
+      ],
+      "diagnostics": []
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "test.mori",
+      "source_hash": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b",
+      "checked_profile": "moriarty-beta/1",
+      "status": "accepted",
+      "diagnostics": [],
+      "stage_qualification": null
+    },
+    "expectation_basis": "Exact e4d7a2b5 beta CheckReport snapshot, not generated from candidate.",
+    "expected_cli_text": "{\n  \"status\": \"accepted\",\n  \"file\": \"test.mori\",\n  \"source_hash\": \"2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b\",\n  \"agreement\": {\n    \"name\": \"Oracle\",\n    \"span\": {\n      \"start\": 37,\n      \"end\": 43\n    }\n  },\n  \"declarations\": [\n    {\n      \"kind\": \"domain\",\n      \"name\": \"Preview\",\n      \"span\": {\n        \"start\": 48,\n        \"end\": 122\n      },\n      \"name_span\": {\n        \"start\": 55,\n        \"end\": 62\n      }\n    },\n    {\n      \"kind\": \"observation\",\n      \"name\": \"price\",\n      \"span\": {\n        \"start\": 125,\n        \"end\": 178\n      },\n      \"name_span\": {\n        \"start\": 137,\n        \"end\": 142\n      }\n    },\n    {\n      \"kind\": \"intent\",\n      \"name\": \"read\",\n      \"span\": {\n        \"start\": 181,\n        \"end\": 244\n      },\n      \"name_span\": {\n        \"start\": 188,\n        \"end\": 192\n      }\n    }\n  ],\n  \"actions\": [\n    {\n      \"name\": \"fetch\",\n      \"intent\": \"read\",\n      \"support\": \"specified_only\",\n      \"span\": {\n        \"start\": 247,\n        \"end\": 270\n      },\n      \"name_span\": {\n        \"start\": 254,\n        \"end\": 259\n      }\n    }\n  ],\n  \"diagnostics\": []\n}"
+  },
+  {
+    "name": "rejected",
+    "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n",
+    "file": "test.mori",
+    "expected_cli": {
+      "status": "rejected",
+      "file": "test.mori",
+      "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
+      "agreement": {
+        "name": "Invoice",
+        "span": {
+          "start": 37,
+          "end": 44
+        }
+      },
+      "declarations": [
+        {
+          "kind": "const",
+          "name": "price",
+          "span": {
+            "start": 49,
+            "end": 66
+          },
+          "name_span": {
+            "start": 55,
+            "end": 60
+          }
+        },
+        {
+          "kind": "const",
+          "name": "price",
+          "span": {
+            "start": 69,
+            "end": 89
+          },
+          "name_span": {
+            "start": 75,
+            "end": 80
+          }
+        }
+      ],
+      "actions": [],
+      "diagnostics": [
+        {
+          "code": "mori::check::duplicate_name",
+          "severity": "error",
+          "message": "`price` is declared twice.",
+          "help": "Each declaration and action in an agreement needs its own name.",
+          "labels": [
+            {
+              "span": {
+                "start": 55,
+                "end": 60
+              },
+              "text": "first declared here",
+              "primary": false
+            },
+            {
+              "span": {
+                "start": 75,
+                "end": 80
+              },
+              "text": "declared again here",
+              "primary": true
+            }
+          ]
+        },
+        {
+          "code": "mori::check::unknown_name",
+          "severity": "error",
+          "message": "I cannot find a declaration named `pirce`.",
+          "help": "Did you mean `price`?\n\n    const price = price;",
+          "labels": [
+            {
+              "span": {
+                "start": 83,
+                "end": 88
+              },
+              "text": "not declared above",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "test.mori",
+      "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
+      "checked_profile": "moriarty-beta/1",
+      "status": "rejected",
+      "diagnostics": [
+        {
+          "kind": "beta",
+          "code": "mori::check::duplicate_name",
+          "severity": "error",
+          "message": "`price` is declared twice.",
+          "help": "Each declaration and action in an agreement needs its own name.",
+          "labels": [
+            {
+              "span": {
+                "start": 55,
+                "end": 60
+              },
+              "text": "first declared here",
+              "primary": false
+            },
+            {
+              "span": {
+                "start": 75,
+                "end": 80
+              },
+              "text": "declared again here",
+              "primary": true
+            }
+          ]
+        },
+        {
+          "kind": "beta",
+          "code": "mori::check::unknown_name",
+          "severity": "error",
+          "message": "I cannot find a declaration named `pirce`.",
+          "help": "Did you mean `price`?\n\n    const price = price;",
+          "labels": [
+            {
+              "span": {
+                "start": 83,
+                "end": 88
+              },
+              "text": "not declared above",
+              "primary": true
+            }
+          ]
+        }
+      ],
+      "stage_qualification": null
+    },
+    "expectation_basis": "Exact e4d7a2b5 beta CheckReport snapshot, not generated from candidate.",
+    "expected_cli_text": "{\n  \"status\": \"rejected\",\n  \"file\": \"test.mori\",\n  \"source_hash\": \"4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b\",\n  \"agreement\": {\n    \"name\": \"Invoice\",\n    \"span\": {\n      \"start\": 37,\n      \"end\": 44\n    }\n  },\n  \"declarations\": [\n    {\n      \"kind\": \"const\",\n      \"name\": \"price\",\n      \"span\": {\n        \"start\": 49,\n        \"end\": 66\n      },\n      \"name_span\": {\n        \"start\": 55,\n        \"end\": 60\n      }\n    },\n    {\n      \"kind\": \"const\",\n      \"name\": \"price\",\n      \"span\": {\n        \"start\": 69,\n        \"end\": 89\n      },\n      \"name_span\": {\n        \"start\": 75,\n        \"end\": 80\n      }\n    }\n  ],\n  \"actions\": [],\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::check::duplicate_name\",\n      \"severity\": \"error\",\n      \"message\": \"`price` is declared twice.\",\n      \"help\": \"Each declaration and action in an agreement needs its own name.\",\n      \"labels\": [\n        {\n          \"span\": {\n            \"start\": 55,\n            \"end\": 60\n          },\n          \"text\": \"first declared here\",\n          \"primary\": false\n        },\n        {\n          \"span\": {\n            \"start\": 75,\n            \"end\": 80\n          },\n          \"text\": \"declared again here\",\n          \"primary\": true\n        }\n      ]\n    },\n    {\n      \"code\": \"mori::check::unknown_name\",\n      \"severity\": \"error\",\n      \"message\": \"I cannot find a declaration named `pirce`.\",\n      \"help\": \"Did you mean `price`?\\n\\n    const price = price;\",\n      \"labels\": [\n        {\n          \"span\": {\n            \"start\": 83,\n            \"end\": 88\n          },\n          \"text\": \"not declared above\",\n          \"primary\": true\n        }\n      ]\n    }\n  ]\n}"
+  },
+  {
+    "name": "unparsable",
+    "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10\n",
+    "file": "test.mori",
+    "expected_cli": {
+      "status": "rejected",
+      "file": "test.mori",
+      "source_hash": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123",
+      "agreement": null,
+      "declarations": [],
+      "actions": [],
+      "diagnostics": [
+        {
+          "code": "mori::syntax::missing_semicolon",
+          "severity": "error",
+          "message": "I was partway through the declaration of `price` when I found the end of the file.",
+          "help": "A declaration looks like this. The type after `:` is optional:\n\n    const fee: Qty<USD> = 0.10 USD;",
+          "labels": [
+            {
+              "span": {
+                "start": 65,
+                "end": 65
+              },
+              "text": "I expected `;` here",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "test.mori",
+      "source_hash": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123",
+      "checked_profile": "moriarty-beta/1",
+      "status": "rejected",
+      "diagnostics": [
+        {
+          "kind": "beta",
+          "code": "mori::syntax::missing_semicolon",
+          "severity": "error",
+          "message": "I was partway through the declaration of `price` when I found the end of the file.",
+          "help": "A declaration looks like this. The type after `:` is optional:\n\n    const fee: Qty<USD> = 0.10 USD;",
+          "labels": [
+            {
+              "span": {
+                "start": 65,
+                "end": 65
+              },
+              "text": "I expected `;` here",
+              "primary": true
+            }
+          ]
+        }
+      ],
+      "stage_qualification": null
+    },
+    "expectation_basis": "Exact e4d7a2b5 beta CheckReport snapshot, not generated from candidate.",
+    "expected_cli_text": "{\n  \"status\": \"rejected\",\n  \"file\": \"test.mori\",\n  \"source_hash\": \"b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123\",\n  \"agreement\": null,\n  \"declarations\": [],\n  \"actions\": [],\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::syntax::missing_semicolon\",\n      \"severity\": \"error\",\n      \"message\": \"I was partway through the declaration of `price` when I found the end of the file.\",\n      \"help\": \"A declaration looks like this. The type after `:` is optional:\\n\\n    const fee: Qty<USD> = 0.10 USD;\",\n      \"labels\": [\n        {\n          \"span\": {\n            \"start\": 65,\n            \"end\": 65\n          },\n          \"text\": \"I expected `;` here\",\n          \"primary\": true\n        }\n      ]\n    }\n  ]\n}"
+  },
+  {
+    "name": "core1-accepted",
+    "source": "language \"moriarty/1\"; agreement Minimal { action advance() { requires true; } }\n",
+    "file": "minimal.mori",
+    "expected_cli": {
+      "status": "accepted",
+      "file": "minimal.mori",
+      "source_hash": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526",
+      "language": "moriarty/1",
+      "agreement": "Minimal",
+      "actions": [
+        {
+          "name": "advance",
+          "inputs": [],
+          "statements": [
+            {
+              "kind": "Requires",
+              "predicate": 0
+            }
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "minimal.mori",
+      "source_hash": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526",
+      "checked_profile": "moriarty/1",
+      "status": "accepted",
+      "diagnostics": [],
+      "stage_qualification": null
+    },
+    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
+    "expected_cli_text": null
+  },
+  {
+    "name": "core1-rejected",
+    "source": "language \"moriarty/1\"; agreement Empty {}\n",
+    "file": "empty.mori",
+    "expected_cli": {
+      "status": "rejected",
+      "file": "empty.mori",
+      "diagnostics": [
+        {
+          "code": "mori::core::program",
+          "message": "Program needs at least one action.",
+          "offset": null,
+          "step": null
+        }
+      ]
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "empty.mori",
+      "source_hash": "eb7a9e96829f3ef9aae077f18adee18f334c4b6ab3b34db8463a9153af99d9e8",
+      "checked_profile": "moriarty/1",
+      "status": "rejected",
+      "diagnostics": [
+        {
+          "kind": "core",
+          "code": "mori::core::program",
+          "message": "Program needs at least one action.",
+          "offset": null,
+          "step": null
+        }
+      ],
+      "stage_qualification": null
+    },
+    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
+    "expected_cli_text": null
+  },
+  {
+    "name": "core2-accepted",
+    "source": "language \"moriarty/2\"; agreement Minimal { action advance() { requires true; } }\n",
+    "file": "minimal.mori",
+    "expected_cli": {
+      "status": "accepted",
+      "file": "minimal.mori",
+      "source_hash": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc",
+      "language": "moriarty/2",
+      "agreement": "Minimal",
+      "actions": [
+        {
+          "name": "advance",
+          "inputs": [],
+          "statements": [
+            {
+              "kind": "Requires",
+              "predicate": 0
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "qualification": "local-reference-stage",
+      "authentication": "none",
+      "consumption": "untracked"
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "minimal.mori",
+      "source_hash": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc",
+      "checked_profile": "moriarty/2",
+      "status": "accepted",
+      "diagnostics": [],
+      "stage_qualification": {
+        "qualification": "local-reference-stage",
+        "authentication": "none",
+        "consumption": "untracked"
+      }
+    },
+    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
+    "expected_cli_text": null
+  },
+  {
+    "name": "core2-rejected",
+    "source": "language \"moriarty/2\"; agreement Empty {}\n",
+    "file": "empty.mori",
+    "expected_cli": {
+      "status": "rejected",
+      "file": "empty.mori",
+      "diagnostics": [
+        {
+          "code": "mori::core::program",
+          "message": "Program needs at least one action.",
+          "offset": null,
+          "step": null
+        }
+      ],
+      "qualification": "local-reference-stage",
+      "authentication": "none",
+      "consumption": "untracked"
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "empty.mori",
+      "source_hash": "37d660cea5a09c6d85d9a8121a634320754cf833eee733efc208728ca5c24d19",
+      "checked_profile": "moriarty/2",
+      "status": "rejected",
+      "diagnostics": [
+        {
+          "kind": "core",
+          "code": "mori::core::program",
+          "message": "Program needs at least one action.",
+          "offset": null,
+          "step": null
+        }
+      ],
+      "stage_qualification": {
+        "qualification": "local-reference-stage",
+        "authentication": "none",
+        "consumption": "untracked"
+      }
+    },
+    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
+    "expected_cli_text": null
+  },
+  {
+    "name": "unicode-byte-offsets",
+    "source": "// café\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n",
+    "file": "test.mori",
+    "expected_cli": {
+      "status": "rejected",
+      "file": "test.mori",
+      "source_hash": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f",
+      "agreement": {
+        "name": "Invoice",
+        "span": {
+          "start": 46,
+          "end": 53
+        }
+      },
+      "declarations": [
+        {
+          "kind": "const",
+          "name": "price",
+          "span": {
+            "start": 58,
+            "end": 75
+          },
+          "name_span": {
+            "start": 64,
+            "end": 69
+          }
+        },
+        {
+          "kind": "const",
+          "name": "price",
+          "span": {
+            "start": 78,
+            "end": 98
+          },
+          "name_span": {
+            "start": 84,
+            "end": 89
+          }
+        }
+      ],
+      "actions": [],
+      "diagnostics": [
+        {
+          "code": "mori::check::duplicate_name",
+          "severity": "error",
+          "message": "`price` is declared twice.",
+          "help": "Each declaration and action in an agreement needs its own name.",
+          "labels": [
+            {
+              "span": {
+                "start": 64,
+                "end": 69
+              },
+              "text": "first declared here",
+              "primary": false
+            },
+            {
+              "span": {
+                "start": 84,
+                "end": 89
+              },
+              "text": "declared again here",
+              "primary": true
+            }
+          ]
+        },
+        {
+          "code": "mori::check::unknown_name",
+          "severity": "error",
+          "message": "I cannot find a declaration named `pirce`.",
+          "help": "Did you mean `price`?\n\n    const price = price;",
+          "labels": [
+            {
+              "span": {
+                "start": 92,
+                "end": 97
+              },
+              "text": "not declared above",
+              "primary": true
+            }
+          ]
+        }
+      ]
+    },
+    "expected_mcp": {
+      "format": "mori-mcp-check/1",
+      "kind": "check",
+      "scope": "source-check-only",
+      "file": "test.mori",
+      "source_hash": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f",
+      "checked_profile": "moriarty-beta/1",
+      "status": "rejected",
+      "diagnostics": [
+        {
+          "kind": "beta",
+          "code": "mori::check::duplicate_name",
+          "severity": "error",
+          "message": "`price` is declared twice.",
+          "help": "Each declaration and action in an agreement needs its own name.",
+          "labels": [
+            {
+              "span": {
+                "start": 64,
+                "end": 69
+              },
+              "text": "first declared here",
+              "primary": false
+            },
+            {
+              "span": {
+                "start": 84,
+                "end": 89
+              },
+              "text": "declared again here",
+              "primary": true
+            }
+          ]
+        },
+        {
+          "kind": "beta",
+          "code": "mori::check::unknown_name",
+          "severity": "error",
+          "message": "I cannot find a declaration named `pirce`.",
+          "help": "Did you mean `price`?\n\n    const price = price;",
+          "labels": [
+            {
+              "span": {
+                "start": 92,
+                "end": 97
+              },
+              "text": "not declared above",
+              "primary": true
+            }
+          ]
+        }
+      ],
+      "stage_qualification": null
+    },
+    "expectation_basis": "Frozen rejected beta source plus a UTF-8 comment prefix; every byte span increases by independently counted prefix bytes. UNRUN.",
+    "expected_cli_text": null
+  }
+]

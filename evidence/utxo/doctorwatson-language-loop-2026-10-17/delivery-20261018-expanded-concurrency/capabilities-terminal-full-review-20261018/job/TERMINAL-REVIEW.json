@@ -1,0 +1,152 @@
+{
+  "concreteChecks": [
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "pub enum Command {\n    /// Describe compiled features and public source consumers without running them\n    Capabilities(capabilities::Args),",
+        "lineOrJsonPointer": "117-119",
+        "path": "crates/mori/src/cli.rs"
+      },
+      "reasoning": "Verified that crates/mori/src/cli.rs imports capabilities (line 5) and registers Command::Capabilities(capabilities::Args) on the top-level Clap subcommand enum without a #[cfg_attr(not(feature = \"native\"), ...)] restriction, while preserving existing non-native after_help notices on Cli and native-only subcommands.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "Command::Capabilities(args) => capabilities::run(args, shell),",
+        "lineOrJsonPointer": "44",
+        "path": "crates/mori/src/commands/mod.rs"
+      },
+      "reasoning": "Verified that crates/mori/src/commands/mod.rs declares pub mod capabilities (line 10) and routes Command::Capabilities(args) directly to capabilities::run(args, shell) unconditionally across all feature configurations.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "\"availableInBuild\": status.0 == \"source-present\" && build.is_none_or(|(_, enabled)| enabled),",
+        "lineOrJsonPointer": "59",
+        "path": "crates/mori/src/commands/capabilities.rs"
+      },
+      "reasoning": "Verified that crates/mori/src/commands/capabilities.rs computes producer.buildFeatures from actual compile-time cfg!(feature = ...) flags (native, source6-expansion, core2-disjoint-draft), links real profile constants (LANGUAGE, SEMANTICS, LANGUAGE_2, SEMANTICS_2, mori_parser::PROFILE), sets availableInBuild true only when status.0 == \"source-present\" and any required feature is enabled (keeping core2-target-inspect false under \"unsupported\" and rust-lsp/rust-mcp false under \"stub\"), and emits the report read-only via super::core_io::print(&report).",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-excerpt",
+        "exactExcerptOrValue": "        let staged = match mori_core::stage::load(&source) {\n            Ok(staged) => staged,\n            Err(error) => {\n                super::simulate::print_stage_report(json!({\"status\":\"rejected\", \"error\":error}))?;\n                return Ok(ExitCode::FAILURE);\n            }\n        };\n        let program = staged.program();\n        super::simulate::print_stage_report(json!({\n            \"status\": \"accepted\", \"language\": program.language, \"semantics\": program.semantics,\n            \"agreement\": program.name, \"states\": program.states, \"assets\": program.assets,\n            \"actions\": program.actions, \"expressions\": program.expressions,\n            \"stage_plan\": staged.plan(), \"enforcement_report\": null\n        }))?;",
+        "lineOrJsonPointer": "30-43",
+        "path": "crates/mori/src/commands/inspect.rs"
+      },
+      "reasoning": "Cross-checked curated consumer metadata in capabilities.rs against the E4D context excerpts (Cargo.toml files, ir.rs, mori-parser/src/lib.rs, stage/mod.rs, check.rs, inspect.rs, simulate.rs, stage/report.rs, test.rs, expand.rs, expand/source6.rs, mori-source6, compile.rs, mori-backend, lsp.rs, mcp.rs, core_io.rs, and packages/moriarty-beta/package.json). Confirmed that Core/1 inspect emits outer format=\"moriarty-enforcement-report/1\" with qualification=\"source-only-unqualified\" and no status field, whereas Core/2 source-only inspect emits status=\"accepted\", STAGE_LABELS (qualification=\"local-reference-stage\", authentication=\"none\", consumption=\"untracked\"), no outer format field, and nested stage_plan.format=\"moriarty-stage-plan/1\".",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "        if language == \"moriarty/2\" {\n            assert_eq!(inspected[\"status\"], \"accepted\");\n            assert_eq!(inspected[\"qualification\"], \"local-reference-stage\");\n            assert_eq!(inspected[\"authentication\"], \"none\");\n            assert_eq!(inspected[\"consumption\"], \"untracked\");\n            assert!(row(&report, \"consumers\", \"core2-inspect\")[\"outputProfile\"].is_null());\n            assert!(inspected.get(\"format\").is_none());\n            assert_eq!(inspected[\"stage_plan\"][\"format\"], \"moriarty-stage-plan/1\");\n        } else {\n            assert!(inspected.get(\"status\").is_none());\n            assert_eq!(inspected[\"qualification\"], \"source-only-unqualified\");\n            assert_eq!(inspected[\"format\"], \"moriarty-enforcement-report/1\");\n        }",
+        "lineOrJsonPointer": "213-226",
+        "path": "crates/mori/tests/capabilities.rs"
+      },
+      "reasoning": "Verified that crates/mori/tests/capabilities.rs runs in an isolated temporary directory with PATH=\"\", stdin=null, and snapshot equality checks proving capabilities does not mutate the working directory; validates top-level keys, unique IDs, cfg-dependent buildFeatures/availableInBuild values, stub/unsupported falsity, and unchecked targets; and uses the reported sourceHeader strings to run real check and inspect CLI commands against synthesized moriarty/1 and moriarty/2 agreements with exact branch-specific DTO assertions.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"core2-disjoint-draft\":false,\"native\":false,\"source6-expansion\":false}",
+        "lineOrJsonPointer": "/producer/buildFeatures",
+        "path": "no-default-features/QUERY-STDOUT.json"
+      },
+      "reasoning": "Verified no-default-features mode results: both integration tests in no-default-features/STDOUT.log passed (exitCode 0 in no-default-features/RESULT.json), direct query in no-default-features/QUERY-RESULT.json exited 0 with empty stderr (no-default-features/QUERY-STDERR.log is 0 bytes), and the parsed JSON in no-default-features/QUERY-STDOUT.json equals the specified contract no-default-features.json across all fields, with all three buildFeatures false and availableInBuild false for feature-gated, unsupported, and stub consumers.",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"core2-disjoint-draft\":true,\"native\":false,\"source6-expansion\":true}",
+        "lineOrJsonPointer": "/producer/buildFeatures",
+        "path": "ordinary-optins/QUERY-STDOUT.json"
+      },
+      "reasoning": "Verified ordinary-optins mode results (--no-default-features --features source6-expansion,core2-disjoint-draft): the targeted test in ordinary-optins/STDOUT.log passed (exitCode 0 in ordinary-optins/RESULT.json), direct query in ordinary-optins/QUERY-RESULT.json exited 0 with empty stderr, and the parsed JSON in ordinary-optins/QUERY-STDOUT.json equals the specified contract ordinary-optins.json, with producer.buildFeatures.source6-expansion=true and core2-disjoint-draft=true and availableInBuild flipping to true only for core2-disjoint-draft and beta-to-source6-transfer while native-gated and stub consumers remain false.",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"allExitZero\":true,\"allStepsCompleted\":true,\"head\":\"ff4f718d8b1d9deccf40ff7597b6afbb1f1ccf75\",\"tree\":\"3b5d75a115712b155b68398d83ce18cef78a3d87\"}",
+        "lineOrJsonPointer": "/",
+        "path": "RESULT.json"
+      },
+      "reasoning": "Verified CHECK-PLAN.json, RESULT.json, and CLEANUP.json: head ff4f718d8b1d9deccf40ff7597b6afbb1f1ccf75 and tree 3b5d75a115712b155b68398d83ce18cef78a3d87 were unchanged before and after both steps with clean git status (statusAfter=\"\"), offline/frozen Cargo isolation, and confirmed removal of ownedTemporaryRoot /tmp/doctorwatson-capabilities-bj33cu41 (existsAfter=false).",
+      "scope": "result"
+    }
+  ],
+  "dissent": [],
+  "findings": [
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "const SOURCE_REVISION: &str = \"e4d7a2b5709caa18a94f5256d03a0302364b8235\";",
+        "lineOrJsonPointer": "18",
+        "path": "crates/mori/src/commands/capabilities.rs"
+      },
+      "factOrInference": "source-fact",
+      "finding": "catalogue.sourceRevision is a hardcoded string constant recording the E4D source-inspection basis rather than a dynamically computed binary Git revision (producer.binarySourceRevision is null), so future changes to consumer routing or lsp/mcp editor implementations will not automatically update this catalogue without a manual edit.",
+      "minimalCorrection": "No change required for ff4f718d8b1d9deccf40ff7597b6afbb1f1ccf75; update SOURCE_REVISION and the corresponding consumer entries in crates/mori/src/commands/capabilities.rs whenever CLI routing or editor implementations change.",
+      "severity": "limitation",
+      "userVisibleConsequence": "Callers inspecting catalogue.sourceRevision see the static inspection basis commit rather than the binary build commit, and could observe stale consumer notes if future routing changes omit a manual catalogue update, though catalogue.note and binarySourceRevision=null explicitly disclose this boundary."
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "[{\"name\":\"no-default-features\",\"argv\":[\"/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo\",\"test\",\"--manifest-path\",\"/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/Cargo.toml\",\"--frozen\",\"-j1\",\"-p\",\"mori\",\"--no-default-features\",\"--test\",\"capabilities\",\"--\",\"--test-threads=1\"],\"wallSeconds\":90,\"killGraceSeconds\":5},{\"name\":\"ordinary-optins\",\"argv\":[\"/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo\",\"test\",\"--manifest-path\",\"/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/Cargo.toml\",\"--frozen\",\"-j1\",\"-p\",\"mori\",\"--no-default-features\",\"--features\",\"source6-expansion,core2-disjoint-draft\",\"--test\",\"capabilities\",\"--\",\"--exact\",\"public_query_distinguishes_profiles_build_consumers_and_unchecked_targets\",\"--test-threads=1\"],\"wallSeconds\":90,\"killGraceSeconds\":5}]",
+        "lineOrJsonPointer": "/steps",
+        "path": "CHECK-PLAN.json"
+      },
+      "factOrInference": "observed-result-fact",
+      "finding": "The executed test plan exercises two non-native builds (no-default-features and ordinary-optins with source6-expansion,core2-disjoint-draft) and filters out reported_core_profiles_select_real_source_only_cli_consumers in the second step; no build with --features native was executed in this check run.",
+      "minimalCorrection": "No change required for the scoped non-native capability check; add an optional --features native test step if an executed receipt for native=true capability reporting is desired.",
+      "severity": "limitation",
+      "userVisibleConsequence": "The behavior of capabilities when cfg!(feature = \"native\") is true (setting buildFeatures.native=true and availableInBuild=true for core1-compile and core2-compile while keeping core2-target-inspect availableInBuild=false) is established here by source inspection of crates/mori/src/commands/capabilities.rs rather than an executed native binary output."
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    // JSON is the sole format; the flag is an explicit client spelling.\n    let _ = args.json;",
+        "lineOrJsonPointer": "70-71",
+        "path": "crates/mori/src/commands/capabilities.rs"
+      },
+      "factOrInference": "source-fact",
+      "finding": "The --json flag on mori capabilities is a no-op alias (JSON is always emitted), and the report covers only a curated subset of public profile consumers (\"selected-public-profile-consumers\") with grammar intentionally unenumerated beyond Core UInt and Bool types.",
+      "minimalCorrection": "No change required; the behavior is intentional, documented in Args help text and report limitations, and verified by crates/mori/tests/capabilities.rs.",
+      "severity": "limitation",
+      "userVisibleConsequence": "Users running mori capabilities without --json still receive JSON on stdout, and consumers must rely on the actual parsers/checkers for grammar admission and on --help for subcommands omitted from the selected consumer catalogue."
+    }
+  ],
+  "head": "ff4f718d8b1d9deccf40ff7597b6afbb1f1ccf75",
+  "limitations": [
+    "Review is strictly limited to the inline packet text (4 full changed files, embedded E4D context excerpts, and embedded test/query receipts) without executing commands or reading external filesystem paths.",
+    "mori capabilities is a static/compile-time read-only self-report and establishes no runtime, compiler, prover, verifier, target, installation, deployment, or ledger qualification.",
+    "Grammar details beyond Core UInt/Bool and CLI subcommands outside the 14 curated consumer rows remain unenumerated by design.",
+    "Only non-native feature combinations (no-default-features and source6-expansion,core2-disjoint-draft) were executed in the supplied receipts; native=true behavior is verified by source inspection only.",
+    "No security, hostile-input, or cryptographic-soundness judgment is made, and no backend/model cryptographic attestation is claimed; U/M/MC/SP/G exits are retained."
+  ],
+  "resultVerdict": "approve",
+  "reviewToken": "capabilities-full-review-882ba80e3c4f496ab6fb977eac86e80d",
+  "sourceVerdict": "approve",
+  "summary": "Independent source and result review of commit ff4f718d8b1d9deccf40ff7597b6afbb1f1ccf75 (tree 3b5d75a115712b155b68398d83ce18cef78a3d87, base e4d7a2b5709caa18a94f5256d03a0302364b8235). All four full changed files (crates/mori/src/cli.rs, crates/mori/src/commands/mod.rs, crates/mori/src/commands/capabilities.rs, crates/mori/tests/capabilities.rs) and the executed results across both build modes (no-default-features and ordinary-optins) satisfy the review predicate. The new read-only `mori capabilities [--json]` subcommand accurately reports compile-time Cargo features (`native`, `source6-expansion`, `core2-disjoint-draft`), distinct source profiles/headers/parsers/semantics (`moriarty/1` + `moriarty-core/1`, `moriarty/2` + `moriarty-core/2`, `moriarty-beta/1` + null semantics), and objective consumer/build/target boundaries without promoting source or build presence to compiler, proof, target, or ledger qualification. Core/1 vs Core/2 `inspect` output differences (Core/1 top-level `format: \"moriarty-enforcement-report/1\"` and no `status` vs Core/2 `status: \"accepted\"`, `STAGE_LABELS`, no outer `format`, and nested `stage_plan.format: \"moriarty-stage-plan/1\"`) are accurately reflected in both `capabilities.rs` and `tests/capabilities.rs`. Both sourceVerdict and resultVerdict are approve, subject to the documented scope limitations.",
+  "tree": "3b5d75a115712b155b68398d83ce18cef78a3d87",
+  "unreadScope": [
+    "Omitted lines outside the embedded excerpt ranges of the 20 excerpted E4D context files (crates/mori/Cargo.toml, crates/mori-core/Cargo.toml, crates/mori-source6/Cargo.toml, crates/mori-core/src/ir.rs, crates/mori-parser/src/lib.rs, crates/mori-core/src/stage/mod.rs, crates/mori/src/commands/check.rs, crates/mori/src/commands/inspect.rs, crates/mori/src/commands/simulate.rs, crates/mori-core/src/stage/report.rs, crates/mori/src/commands/test.rs, crates/mori/src/commands/expand.rs, crates/mori/src/commands/expand/source6.rs, crates/mori-source6/src/lib.rs, crates/mori-source6/src/transfer.rs, crates/mori/src/commands/compile.rs, crates/mori-backend/src/lib.rs, crates/mori-backend/src/stage/mod.rs, crates/mori-backend/src/stage/artifact.rs, crates/mori/src/commands/core_io.rs, and packages/moriarty-beta/package.json).",
+    "The remaining 6 physical context files from the 28-file preservation set that were not excerpted inline in the packet (note: crates/mori/src/commands/lsp.rs and crates/mori/src/commands/mcp.rs are 10 lines each and embedded in full).",
+    "The unembedded 819-entry sourcePins manifest referenced by CHECK-PLAN.json (/sourcePins).",
+    "The unembedded Cargo build/test stderr logs for the two test steps (referenced by stderrSha256 1b573a3442c57d4f7678a272dfee85e561ad4c15d62aa0ea4954a9459968ebb7 in no-default-features/RESULT.json and c0a4394d2923d070c4b25656f7c68f711770936ce4376d028029cb5085fb677d in ordinary-optins/RESULT.json).",
+    "Original pretty-printed whitespace bytes of the compacted JSON receipts and expected contract files."
+  ],
+  "unverifiedClaims": [
+    "Runtime execution behavior of mori built with --features native (not executed in CHECK-PLAN.json).",
+    "End-to-end compilation, proving, verification, target descriptor validation, or Midnight ledger execution for any profile or consumer.",
+    "Availability, behavior, or version compatibility of the separate Node executable @moriarty-lang/beta (reported as availability: not-inspected).",
+    "Cryptographic or backend attestation of the model/effort environment or external filesystem sha256 pins beyond the inline packet contents."
+  ]
+}

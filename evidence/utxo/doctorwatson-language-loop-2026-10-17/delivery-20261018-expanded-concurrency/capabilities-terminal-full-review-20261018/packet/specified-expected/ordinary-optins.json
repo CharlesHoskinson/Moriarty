@@ -1,0 +1,386 @@
+{
+  "format": "moriarty-cli-capabilities/1",
+  "producer": {
+    "implementation": "rust-workspace-cli",
+    "packageVersion": "0.1.0",
+    "binarySourceRevision": null,
+    "responseKind": "command-self-report",
+    "buildFeatures": {
+      "native": false,
+      "source6-expansion": true,
+      "core2-disjoint-draft": true
+    }
+  },
+  "catalogue": {
+    "sourceRevision": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
+    "coverage": "selected-public-profile-consumers",
+    "basis": "source-inspection",
+    "runtimeEvidence": "not-included",
+    "note": "Curated consumer descriptions use this inspection basis, not an inferred binary revision. Linked profile constants and cfg flags come from the build. Routing/editor changes require a catalogue update."
+  },
+  "profiles": [
+    {
+      "id": "rust-core1",
+      "sourceProfile": "moriarty/1",
+      "sourceHeader": "language \"moriarty/1\";",
+      "semanticsProfile": "moriarty-core/1",
+      "parser": "mori_core::parse",
+      "implementation": "source-present",
+      "grammar": {
+        "coverage": "profile-selection-summary-not-grammar-completion",
+        "types": [
+          "UInt",
+          "Bool"
+        ],
+        "declarations": [],
+        "statements": [],
+        "expressions": [],
+        "unsupported": [],
+        "bounds": {},
+        "notes": [
+          "Grammar is not enumerated here; use the actual parser/checker for admission."
+        ]
+      },
+      "qualification": "source-description-only",
+      "limitations": [
+        "Parser/checker support does not imply compiler or target qualification."
+      ]
+    },
+    {
+      "id": "rust-core2",
+      "sourceProfile": "moriarty/2",
+      "sourceHeader": "language \"moriarty/2\";",
+      "semanticsProfile": "moriarty-core/2",
+      "parser": "mori_core::stage::load",
+      "implementation": "source-present",
+      "grammar": {
+        "coverage": "profile-selection-summary-not-grammar-completion",
+        "types": [
+          "UInt",
+          "Bool"
+        ],
+        "declarations": [],
+        "statements": [],
+        "expressions": [],
+        "unsupported": [],
+        "bounds": {},
+        "notes": [
+          "Grammar is not enumerated here; use the actual parser/checker for admission."
+        ]
+      },
+      "qualification": "source-description-only",
+      "limitations": [
+        "Parser/checker support does not imply compiler or target qualification."
+      ]
+    },
+    {
+      "id": "rust-beta-frontend",
+      "sourceProfile": "moriarty-beta/1",
+      "sourceHeader": "profile \"moriarty-beta/1\";",
+      "semanticsProfile": null,
+      "parser": "mori_parser::parse then mori_checker::check",
+      "implementation": "source-present",
+      "grammar": {
+        "coverage": "profile-selection-summary-not-grammar-completion",
+        "types": [],
+        "declarations": [],
+        "statements": [],
+        "expressions": [],
+        "unsupported": [],
+        "bounds": {},
+        "notes": [
+          "Grammar is not enumerated here; use the actual parser/checker for admission."
+        ]
+      },
+      "qualification": "source-description-only",
+      "limitations": [
+        "Parser/checker support does not imply compiler or target qualification."
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "id": "core1-check",
+      "entrypoint": "check FILE --json",
+      "inputProfile": "moriarty/1",
+      "semanticsProfile": "moriarty-core/1",
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "source-check",
+      "limitations": [
+        "No compilation or target qualification."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/check.rs"
+      ]
+    },
+    {
+      "id": "core2-check",
+      "entrypoint": "check FILE --json",
+      "inputProfile": "moriarty/2",
+      "semanticsProfile": "moriarty-core/2",
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "source-check",
+      "limitations": [
+        "Uses staged admission and planning."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/check.rs"
+      ]
+    },
+    {
+      "id": "beta-check",
+      "entrypoint": "check FILE --json",
+      "inputProfile": "moriarty-beta/1",
+      "semanticsProfile": null,
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "frontend-check-only",
+      "limitations": [
+        "Named-action admission is determined by the checker; no Core semantics are inferred."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/check.rs"
+      ]
+    },
+    {
+      "id": "core1-reference",
+      "entrypoint": "simulate FILE --action NAME --scenario FILE",
+      "inputProfile": "moriarty/1",
+      "semanticsProfile": "moriarty-core/1",
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "local-reference-execution",
+      "limitations": [
+        "--trace is a separate native-feature consumer."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/simulate.rs"
+      ]
+    },
+    {
+      "id": "core2-reference",
+      "entrypoint": "simulate FILE --action NAME --scenario FILE; simulate FILE --resume FILE --event FILE",
+      "inputProfile": "moriarty/2",
+      "semanticsProfile": "moriarty-core/2",
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "local-reference-stage",
+      "limitations": [
+        "Stdout has no outer format. Waiting alone contains continuation.format=moriarty-continuation/1; complete and rejected do not.",
+        "Authentication is none; consumption is untracked."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/simulate.rs",
+        "crates/mori-core/src/stage/mod.rs"
+      ]
+    },
+    {
+      "id": "core1-inspect",
+      "entrypoint": "inspect FILE",
+      "inputProfile": "moriarty/1",
+      "semanticsProfile": "moriarty-core/1",
+      "outputProfile": "moriarty-enforcement-report/1",
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "source-only-unqualified",
+      "limitations": [
+        "No target was supplied or compiled."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/inspect.rs"
+      ]
+    },
+    {
+      "id": "core2-inspect",
+      "entrypoint": "inspect FILE",
+      "inputProfile": "moriarty/2",
+      "semanticsProfile": "moriarty-core/2",
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "local-reference-stage",
+      "limitations": [
+        "Stdout has no outer format; stage_plan.format=moriarty-stage-plan/1 identifies the nested stage plan. --target is a distinct refused consumer."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/inspect.rs"
+      ]
+    },
+    {
+      "id": "core2-target-inspect",
+      "entrypoint": "inspect FILE --target FILE",
+      "inputProfile": "moriarty/2",
+      "semanticsProfile": "moriarty-core/2",
+      "outputProfile": null,
+      "requiresBuildFeatures": [
+        "native"
+      ],
+      "implementation": "unsupported",
+      "availableInBuild": false,
+      "qualification": "profile-refused",
+      "limitations": [
+        "Core/2 target inspection refuses even though Core/2 has a separate compiler."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/inspect.rs"
+      ]
+    },
+    {
+      "id": "core2-disjoint-draft",
+      "entrypoint": "test DIRECTORY",
+      "inputProfile": "moriarty-tests/disjoint-draft/1",
+      "semanticsProfile": "moriarty-core/2",
+      "outputProfile": null,
+      "requiresBuildFeatures": [
+        "core2-disjoint-draft"
+      ],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "unadopted-local-disjoint-product",
+      "limitations": [
+        "Opt-in draft; not required for base Core/2 check, start or resume."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/test.rs"
+      ]
+    },
+    {
+      "id": "beta-to-source6-transfer",
+      "entrypoint": "expand FILE --emit-source6-transfer --action NAME --scenario FILE",
+      "inputProfile": "moriarty-beta/1",
+      "semanticsProfile": null,
+      "outputProfile": "Source/6",
+      "requiresBuildFeatures": [
+        "source6-expansion"
+      ],
+      "implementation": "source-present",
+      "availableInBuild": true,
+      "qualification": "local-stipulation-only",
+      "limitations": [
+        "Checked LocalS0 transfer subset and moriarty-local-scenario/1 only.",
+        "Raw proposal output; no Source/6 input parser or Core/5 preparation is supplied."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/expand.rs",
+        "crates/mori/src/commands/expand/source6.rs"
+      ]
+    },
+    {
+      "id": "core1-compile",
+      "entrypoint": "compile FILE --target FILE --out DIR",
+      "inputProfile": "moriarty/1",
+      "semanticsProfile": "moriarty-core/1",
+      "outputProfile": "moriarty-zkir-artifact/3",
+      "requiresBuildFeatures": [
+        "native"
+      ],
+      "implementation": "source-present",
+      "availableInBuild": false,
+      "qualification": "compiler-source-present",
+      "limitations": [
+        "Exact target descriptor and compiler subset admission required; nothing was compiled by this query."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/compile.rs"
+      ]
+    },
+    {
+      "id": "core2-compile",
+      "entrypoint": "compile FILE --target FILE --out DIR",
+      "inputProfile": "moriarty/2",
+      "semanticsProfile": "moriarty-core/2",
+      "outputProfile": "moriarty-zkir-artifact/4",
+      "requiresBuildFeatures": [
+        "native"
+      ],
+      "implementation": "source-present",
+      "availableInBuild": false,
+      "qualification": "staged-compiler-source-present",
+      "limitations": [
+        "Distinct staged artifact/4, ABI/4 and relation/4; unsigned target only.",
+        "Legacy /3 proving consumers do not accept the distinct /4 type; no proof or ledger result is inferred."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/compile.rs",
+        "crates/mori-backend/src/stage/mod.rs"
+      ]
+    },
+    {
+      "id": "rust-lsp",
+      "entrypoint": "lsp",
+      "inputProfile": null,
+      "semanticsProfile": null,
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "stub",
+      "availableInBuild": false,
+      "qualification": "not-implemented",
+      "limitations": [
+        "Stub at the catalogue inspection revision. Update this row when the editor implementation changes."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/lsp.rs"
+      ]
+    },
+    {
+      "id": "rust-mcp",
+      "entrypoint": "mcp",
+      "inputProfile": null,
+      "semanticsProfile": null,
+      "outputProfile": null,
+      "requiresBuildFeatures": [],
+      "implementation": "stub",
+      "availableInBuild": false,
+      "qualification": "not-implemented",
+      "limitations": [
+        "Stub at the catalogue inspection revision. Update this row when the editor implementation changes."
+      ],
+      "sourceRefs": [
+        "crates/mori/src/commands/mcp.rs"
+      ]
+    }
+  ],
+  "targets": [
+    {
+      "id": "midnight-ledger9-zkirv3",
+      "consumerIds": [
+        "core1-compile",
+        "core2-compile"
+      ],
+      "descriptorRequired": true,
+      "configuredTarget": null,
+      "qualification": "not-checked",
+      "notes": [
+        "No target, network, anchor, parameters, prover, verifier or deployment was inspected."
+      ]
+    }
+  ],
+  "otherExecutables": [
+    {
+      "id": "node-beta-cli",
+      "package": "@moriarty-lang/beta",
+      "binaryName": "mori",
+      "relationship": "separate executable; no Rust capability inheritance",
+      "availability": "not-inspected"
+    }
+  ],
+  "limitations": [
+    "availableInBuild means the source path is compiled in, not that a request passed admission or execution.",
+    "This selected catalogue is not exhaustive; omitted capabilities and grammar remain unknown.",
+    "No runtime, proof, installation, deployment or ledger qualification is established."
+  ]
+}

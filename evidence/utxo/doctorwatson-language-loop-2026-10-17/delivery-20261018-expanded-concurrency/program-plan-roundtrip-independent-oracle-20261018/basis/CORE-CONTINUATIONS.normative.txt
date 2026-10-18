@@ -1,0 +1,67 @@
+SOURCE docs/CORE-CONTINUATIONS.md L69-96
+    await delivery(ready: Bool) when ready;
+    transfer(PAY, "escrow", "bob", amount);
+    discharge("release", amount);
+  }
+}
+```
+
+`delivery` names this await site. Its event declares a Bool named `ready`; the
+guard has type Bool. Event binders may use Bool or UInt. Labels are unique within
+an action, and binders cannot shadow existing names. The current bounds are
+16 awaits per action, 16 event binders per site and 256 capture slots.
+
+Reaching the await ends the current segment before evaluating its guard. With
+the supplied scenario (`amount` = 10), the local prefix has balances `alice` 90,
+`escrow` 10 and `bob` 0, plus a `release` duty of 10. The remaining transfer and
+discharge have not run.
+`requires` and `ensures` remain assertions at their source positions; a false
+assertion does not become an await.
+
+## Start and resume through the CLI
+
+From the repository root, the start interface is:
+
+```sh
+mori simulate examples/core/continuations/delivery.mori \
+  --action deliver \
+  --scenario examples/core/continuations/delivery-scenario.json \
+  --logical-cap 11
+
+SOURCE docs/CORE-CONTINUATIONS.md L151-185
+for security analysis. This guide describes language and tool behavior.
+
+## What survives a boundary
+
+Action inputs and evaluated lets are captured by value. Earlier accepted event
+binders are captured for later awaits. State and liabilities are read from the
+current boundary. To retain a state value as it stood earlier, bind it explicitly,
+for example `let savedBasis = basis;`.
+
+The [two-await reserve example](../examples/core/continuations/reserve.mori)
+starts with `basis` 40 and `extra` 2. It captures `held` 42, then updates `basis`
+to 35. The accepted event value `quote` 43 remains available after the second
+await; `basis` has meanwhile become 78. The final segment uses `held` 42 and
+`quote` 43 rather than recomputing them from `basis` 78. Completion retains an
+allocation duty of 5.
+
+`residual` lists every positive liability in the post boundary. Completing an
+action does not erase those duties or report settlement. Each awaiting action
+has one pending frame in the staged representation; the local qualifications
+above remain part of every result.
+
+## Logical work and compilation
+
+The profile is `moriarty-reference-logical-cost/2`. It counts statement dispatch
+and distinct expression-node visits with a fresh cache per statement. A plan
+records the successful cost of each segment. Reaching an await charges its entry;
+resuming charges dispatch and evaluates the guard.
+
+For delivery, start costs 5 and a true resume costs 6, for 11 committed units.
+A false resume reports 2 attempted units while committed work remains 5. A later
+true resume still completes at 11 committed units. Reserve has segment costs
+11, 15 and 10, for 36 committed units. Attempted work on a false or rejected
+invocation is reported separately.
+
+These units are not circuit cost, DUST, service fees or proof measurements.
+

@@ -1,0 +1,846 @@
+{
+  "format": "moriarty.floor-division-consumer-impact/1",
+  "createdAt": "2026-10-18T13:12:14.991937+00:00",
+  "currentRoot": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018",
+  "capturedHead": "823ce081c00786a0c55b92af81009f9e7c5e6a16",
+  "priorCandidate": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018",
+  "priorPreservedUnchanged": true,
+  "finding": "All eight identified hand-written exhaustive production shared-Core Expr matches are already accounted for. No additional accidental exhaustive-match compile gap was established by source inspection.",
+  "qualification": "Source inspection/byte comparison only; no compile/build/run/test/model/SDK/provider/Git/shared write. Not ordinary runtime, compiler, proof or security acceptance.",
+  "exhaustiveConsumers": [
+    {
+      "id": "E01",
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "type_cached",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/runtime.rs",
+          "sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+          "bytes": 37871,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 83,
+          "endLine": 115,
+          "sha256": "9cbf8c8d84afd38ee7c99c0ba159462e3e23815c4f49598b2ef6312a2021b65e",
+          "text": "let result = match node {\n        Expr::LiabilityPresent { .. } => Ok(Type::Bool),\n        Expr::LiabilityAmount { .. } => Ok(Type::UInt),\n        Expr::Literal { value } => Ok(value.ty()),\n        Expr::Name { name } => env\n            .get(name)\n            .copied()\n            .ok_or_else(|| failure(\"name\", format!(\"Unknown or forward name {name:?}.\"))),\n        Expr::Not { value } => {\n            if type_cached(program, *value, env, depth + 1, cache)? != Type::Bool {\n                return Err(failure(\"type\", \"not requires Bool.\"));\n            }\n            Ok(Type::Bool)\n        }\n        Expr::Binary { op, lhs, rhs } => {\n            let a = type_cached(program, *lhs, env, depth + 1, cache)?;\n            let b = type_cached(program, *rhs, env, depth + 1, cache)?;\n            let expected = match op {\n                BinaryOp::And | BinaryOp::Or => Type::Bool,\n                _ => Type::UInt,\n            };\n            if a != b || (!matches!(op, BinaryOp::Eq | BinaryOp::Ne) && a != expected) {\n                return Err(failure(\"type\", \"Binary operands have incompatible types.\"));\n            }\n            Ok(\n                if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul) {\n                    Type::UInt\n                } else {\n                    Type::Bool\n                },\n            )\n        }\n    }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-core/src/runtime.rs",
+          "sha256": "980cec57419c1345525e03dd2b8070d64802fba98978311e99c9dcc25ee27e4d",
+          "bytes": 40802
+        },
+        "match": {
+          "startLine": 83,
+          "endLine": 129,
+          "sha256": "46d9b0967e3ec32cf33b2ae60bc7d81e01b281e49ce1a400f610d591f8747577",
+          "text": "let result = match node {\n        #[cfg(feature = \"core-floor-div-draft\")]\n        Expr::FloorDiv { numerator, denominator } => {\n            if program.language != crate::floor_div_draft::LANGUAGE\n                || program.semantics != crate::floor_div_draft::SEMANTICS\n            {\n                return Err(failure(\"profile\", \"FloorDiv requires the division draft profile.\"));\n            }\n            let numerator_type = type_cached(program, *numerator, env, depth + 1, cache)?;\n            let denominator_type = type_cached(program, *denominator, env, depth + 1, cache)?;\n            if numerator_type != Type::UInt || denominator_type != Type::UInt {\n                return Err(failure(\"type\", \"floor_div requires two UInt operands.\"));\n            }\n            Ok(Type::UInt)\n        }\n        Expr::LiabilityPresent { .. } => Ok(Type::Bool),\n        Expr::LiabilityAmount { .. } => Ok(Type::UInt),\n        Expr::Literal { value } => Ok(value.ty()),\n        Expr::Name { name } => env\n            .get(name)\n            .copied()\n            .ok_or_else(|| failure(\"name\", format!(\"Unknown or forward name {name:?}.\"))),\n        Expr::Not { value } => {\n            if type_cached(program, *value, env, depth + 1, cache)? != Type::Bool {\n                return Err(failure(\"type\", \"not requires Bool.\"));\n            }\n            Ok(Type::Bool)\n        }\n        Expr::Binary { op, lhs, rhs } => {\n            let a = type_cached(program, *lhs, env, depth + 1, cache)?;\n            let b = type_cached(program, *rhs, env, depth + 1, cache)?;\n            let expected = match op {\n                BinaryOp::And | BinaryOp::Or => Type::Bool,\n                _ => Type::UInt,\n            };\n            if a != b || (!matches!(op, BinaryOp::Eq | BinaryOp::Ne) && a != expected) {\n                return Err(failure(\"type\", \"Binary operands have incompatible types.\"));\n            }\n            Ok(\n                if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul) {\n                    Type::UInt\n                } else {\n                    Type::Bool\n                },\n            )\n        }\n    }"
+        }
+      },
+      "disposition": "Explicit UInt operand/result typing.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E02",
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "eval_cached",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/runtime.rs",
+          "sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+          "bytes": 37871,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 432,
+          "endLine": 484,
+          "sha256": "b2e48515e8050af4e40c5db721b02f922c21cea040f4bdf96d8cf72794d87068",
+          "text": "let result = match &p.expressions[i] {\n        Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {\n            let row = snapshot\n                .liabilities\n                .binary_search_by(|l| l.name.as_str().cmp(name.as_str()))\n                .ok()\n                .map(|index| &snapshot.liabilities[index]);\n            if matches!(&p.expressions[i], Expr::LiabilityPresent { .. }) {\n                Value::Bool(row.is_some())\n            } else {\n                Value::UInt(row.map_or(UInt(0), |l| l.amount))\n            }\n        }\n        Expr::Literal { value } => value.clone(),\n        Expr::Name { name } => env\n            .get(name)\n            .cloned()\n            .ok_or_else(|| failure(\"name\", format!(\"Unknown name {name:?}.\")))?,\n        Expr::Not { value } => match eval_cached(p, *value, env, snapshot, cache, meter)? {\n            Value::Bool(b) => Value::Bool(!b),\n            _ => return Err(failure(\"type\", \"not expects Bool.\")),\n        },\n        Expr::Binary { op, lhs, rhs } => {\n            let a = eval_cached(p, *lhs, env, snapshot, cache, meter)?;\n            let b = eval_cached(p, *rhs, env, snapshot, cache, meter)?;\n            match (op, a, b) {\n                (BinaryOp::Add, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_add(b).ok_or_else(|| {\n                        failure(\"overflow\", \"UInt addition exceeds u128.\")\n                    })?))\n                }\n                (BinaryOp::Sub, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_sub(b).ok_or_else(|| {\n                        failure(\"underflow\", \"UInt subtraction is negative.\")\n                    })?))\n                }\n                (BinaryOp::Mul, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_mul(b).ok_or_else(|| {\n                        failure(\"overflow\", \"UInt multiplication exceeds u128.\")\n                    })?))\n                }\n                (BinaryOp::Eq, a, b) => Value::Bool(a == b),\n                (BinaryOp::Ne, a, b) => Value::Bool(a != b),\n                (BinaryOp::Lt, Value::UInt(a), Value::UInt(b)) => Value::Bool(a < b),\n                (BinaryOp::Le, Value::UInt(a), Value::UInt(b)) => Value::Bool(a <= b),\n                (BinaryOp::Gt, Value::UInt(a), Value::UInt(b)) => Value::Bool(a > b),\n                (BinaryOp::Ge, Value::UInt(a), Value::UInt(b)) => Value::Bool(a >= b),\n                (BinaryOp::And, Value::Bool(a), Value::Bool(b)) => Value::Bool(a && b),\n                (BinaryOp::Or, Value::Bool(a), Value::Bool(b)) => Value::Bool(a || b),\n                _ => return Err(failure(\"type\", \"Invalid operand types.\")),\n            }\n        }\n    }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-core/src/runtime.rs",
+          "sha256": "980cec57419c1345525e03dd2b8070d64802fba98978311e99c9dcc25ee27e4d",
+          "bytes": 40802
+        },
+        "match": {
+          "startLine": 470,
+          "endLine": 533,
+          "sha256": "1cac12bb3d53d0e802a593652a0cb768af56b4c04ea49e97f1711efb58d0062a",
+          "text": "let result = match &p.expressions[i] {\n        #[cfg(feature = \"core-floor-div-draft\")]\n        Expr::FloorDiv { numerator, denominator } => {\n            let a = eval_cached(p, *numerator, env, snapshot, cache, meter)?;\n            let b = eval_cached(p, *denominator, env, snapshot, cache, meter)?;\n            let (Value::UInt(UInt(a)), Value::UInt(UInt(b))) = (a, b) else {\n                return Err(failure(\"type\", \"floor_div requires two UInt operands.\"));\n            };\n            Value::UInt(UInt(a.checked_div(b).ok_or_else(|| {\n                failure(\"division_by_zero\", \"floor_div denominator must be positive.\")\n            })?))\n        }\n        Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {\n            let row = snapshot\n                .liabilities\n                .binary_search_by(|l| l.name.as_str().cmp(name.as_str()))\n                .ok()\n                .map(|index| &snapshot.liabilities[index]);\n            if matches!(&p.expressions[i], Expr::LiabilityPresent { .. }) {\n                Value::Bool(row.is_some())\n            } else {\n                Value::UInt(row.map_or(UInt(0), |l| l.amount))\n            }\n        }\n        Expr::Literal { value } => value.clone(),\n        Expr::Name { name } => env\n            .get(name)\n            .cloned()\n            .ok_or_else(|| failure(\"name\", format!(\"Unknown name {name:?}.\")))?,\n        Expr::Not { value } => match eval_cached(p, *value, env, snapshot, cache, meter)? {\n            Value::Bool(b) => Value::Bool(!b),\n            _ => return Err(failure(\"type\", \"not expects Bool.\")),\n        },\n        Expr::Binary { op, lhs, rhs } => {\n            let a = eval_cached(p, *lhs, env, snapshot, cache, meter)?;\n            let b = eval_cached(p, *rhs, env, snapshot, cache, meter)?;\n            match (op, a, b) {\n                (BinaryOp::Add, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_add(b).ok_or_else(|| {\n                        failure(\"overflow\", \"UInt addition exceeds u128.\")\n                    })?))\n                }\n                (BinaryOp::Sub, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_sub(b).ok_or_else(|| {\n                        failure(\"underflow\", \"UInt subtraction is negative.\")\n                    })?))\n                }\n                (BinaryOp::Mul, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_mul(b).ok_or_else(|| {\n                        failure(\"overflow\", \"UInt multiplication exceeds u128.\")\n                    })?))\n                }\n                (BinaryOp::Eq, a, b) => Value::Bool(a == b),\n                (BinaryOp::Ne, a, b) => Value::Bool(a != b),\n                (BinaryOp::Lt, Value::UInt(a), Value::UInt(b)) => Value::Bool(a < b),\n                (BinaryOp::Le, Value::UInt(a), Value::UInt(b)) => Value::Bool(a <= b),\n                (BinaryOp::Gt, Value::UInt(a), Value::UInt(b)) => Value::Bool(a > b),\n                (BinaryOp::Ge, Value::UInt(a), Value::UInt(b)) => Value::Bool(a >= b),\n                (BinaryOp::And, Value::Bool(a), Value::Bool(b)) => Value::Bool(a && b),\n                (BinaryOp::Or, Value::Bool(a), Value::Bool(b)) => Value::Bool(a || b),\n                _ => return Err(failure(\"type\", \"Invalid operand types.\")),\n            }\n        }\n    }"
+        }
+      },
+      "disposition": "Explicit checked_div evaluation with current cache and meter.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E03",
+      "path": "crates/mori-core/src/stage/cost.rs",
+      "symbol": "expression_nodes",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/stage/cost.rs",
+          "sha256": "eeb5c9fbd1c58c5b46f346a0e62484c1bb366e548c50824295d833648ba6bcc1",
+          "bytes": 14795,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 37,
+          "endLine": 44,
+          "sha256": "fe1b97cb3d8eb92a7fa40cd586b506acaee37692b43fd28daddfa34a1c1775d6",
+          "text": "match node {\n            Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),\n            Expr::Not { value } => pending.push(*value),\n            Expr::LiabilityPresent { .. }\n            | Expr::LiabilityAmount { .. }\n            | Expr::Literal { .. }\n            | Expr::Name { .. } => {}\n        }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-core/src/stage/cost.rs",
+          "sha256": "82d023da54918efa08c1232d2a0c4a1a190c26cd38db350c095430d4a1d013a5",
+          "bytes": 14992
+        },
+        "match": {
+          "startLine": 37,
+          "endLine": 48,
+          "sha256": "efb57c89ed521f26d7782d5d8a015cab9c13125fc8a09fc001eebf89b9ee3775",
+          "text": "match node {\n            #[cfg(feature = \"core-floor-div-draft\")]\n            Expr::FloorDiv { .. } => {\n                return Err(Error::new(\"profile\", \"FloorDiv is not a staged expression.\"));\n            }\n            Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),\n            Expr::Not { value } => pending.push(*value),\n            Expr::LiabilityPresent { .. }\n            | Expr::LiabilityAmount { .. }\n            | Expr::Literal { .. }\n            | Expr::Name { .. } => {}\n        }"
+        }
+      },
+      "disposition": "Explicit profile refusal; no staged cost support.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E04",
+      "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+      "symbol": "map_expression node-kind label",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "sha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b",
+          "bytes": 16604,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 405,
+          "endLine": 412,
+          "sha256": "1a614eea0e29033c9fd3fdd2e673d2eb8556eaa83db1d42f99f3b6b26873dc23",
+          "text": "let kind = match source {\n        CoreExpr::Literal { .. } => \"literal\",\n        CoreExpr::Name { .. } => \"name\",\n        CoreExpr::Binary { .. } => \"binary\",\n        CoreExpr::Not { .. } => \"not\",\n        CoreExpr::LiabilityPresent { .. } => \"liability-present\",\n        CoreExpr::LiabilityAmount { .. } => \"liability-amount\",\n    }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-core/src/sherlock/source_adapter.rs",
+          "sha256": "13fbfeeeda5dfba4414c6f69442def6c41781153e9ce8773a4846220073868eb",
+          "bytes": 16904
+        },
+        "match": {
+          "startLine": 405,
+          "endLine": 414,
+          "sha256": "2dc9c658a3d6957216e83957a7fba2e40c400cb8e7a8af6b1dd960255ff8ecab",
+          "text": "let kind = match source {\n        #[cfg(feature = \"core-floor-div-draft\")]\n        CoreExpr::FloorDiv { .. } => \"floor-div\",\n        CoreExpr::Literal { .. } => \"literal\",\n        CoreExpr::Name { .. } => \"name\",\n        CoreExpr::Binary { .. } => \"binary\",\n        CoreExpr::Not { .. } => \"not\",\n        CoreExpr::LiabilityPresent { .. } => \"liability-present\",\n        CoreExpr::LiabilityAmount { .. } => \"liability-amount\",\n    }"
+        }
+      },
+      "disposition": "Explicit CoreExpr floor-div label.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E05",
+      "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+      "symbol": "map_expression translation",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+          "sha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b",
+          "bytes": 16604,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 435,
+          "endLine": 474,
+          "sha256": "250028d8cddc00d21251a7915d7732b9114021d094e48a0a8bc1e832343805f5",
+          "text": "let mapped = match source {\n        CoreExpr::Literal { value } => Expr::Literal(match value {\n            crate::Value::UInt(value) => Value::UInt(value.0),\n            crate::Value::Bool(value) => Value::Bool(*value),\n        }),\n        CoreExpr::Name { name } => Expr::Var(name.clone()),\n        CoreExpr::Not { value } => {\n            Expr::Unary(UnaryOp::Not, child(*value, 0, occurrences, remaining)?)\n        }\n        CoreExpr::Binary { op, lhs, rhs } => {\n            let op = match op {\n                CoreOp::Add => BinaryOp::Add,\n                CoreOp::Sub => BinaryOp::Sub,\n                CoreOp::Mul => BinaryOp::Mul,\n                CoreOp::Eq => BinaryOp::Eq,\n                CoreOp::Lt => BinaryOp::Lt,\n                other => {\n                    return Err(diagnostic(\n                        action,\n                        Some(statement),\n                        Some(id),\n                        &format!(\"binary-{other:?}\"),\n                        \"unsupported-projection\",\n                    ));\n                }\n            };\n            let left = child(*lhs, 0, occurrences, remaining)?;\n            let right = child(*rhs, 1, occurrences, remaining)?;\n            Expr::Binary(op, left, right)\n        }\n        CoreExpr::LiabilityPresent { .. } | CoreExpr::LiabilityAmount { .. } => {\n            return Err(diagnostic(\n                action,\n                Some(statement),\n                Some(id),\n                kind,\n                \"unsupported-projection\",\n            ));\n        }\n    }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-core/src/sherlock/source_adapter.rs",
+          "sha256": "13fbfeeeda5dfba4414c6f69442def6c41781153e9ce8773a4846220073868eb",
+          "bytes": 16904
+        },
+        "match": {
+          "startLine": 437,
+          "endLine": 480,
+          "sha256": "91f45b6a8177f6a35e19ebd20d53cd663dcf18821e5df33b1880007c25654287",
+          "text": "let mapped = match source {\n        #[cfg(feature = \"core-floor-div-draft\")]\n        CoreExpr::FloorDiv { .. } => {\n            return Err(diagnostic(action, Some(statement), Some(id), kind, \"unsupported-projection\"));\n        }\n        CoreExpr::Literal { value } => Expr::Literal(match value {\n            crate::Value::UInt(value) => Value::UInt(value.0),\n            crate::Value::Bool(value) => Value::Bool(*value),\n        }),\n        CoreExpr::Name { name } => Expr::Var(name.clone()),\n        CoreExpr::Not { value } => {\n            Expr::Unary(UnaryOp::Not, child(*value, 0, occurrences, remaining)?)\n        }\n        CoreExpr::Binary { op, lhs, rhs } => {\n            let op = match op {\n                CoreOp::Add => BinaryOp::Add,\n                CoreOp::Sub => BinaryOp::Sub,\n                CoreOp::Mul => BinaryOp::Mul,\n                CoreOp::Eq => BinaryOp::Eq,\n                CoreOp::Lt => BinaryOp::Lt,\n                other => {\n                    return Err(diagnostic(\n                        action,\n                        Some(statement),\n                        Some(id),\n                        &format!(\"binary-{other:?}\"),\n                        \"unsupported-projection\",\n                    ));\n                }\n            };\n            let left = child(*lhs, 0, occurrences, remaining)?;\n            let right = child(*rhs, 1, occurrences, remaining)?;\n            Expr::Binary(op, left, right)\n        }\n        CoreExpr::LiabilityPresent { .. } | CoreExpr::LiabilityAmount { .. } => {\n            return Err(diagnostic(\n                action,\n                Some(statement),\n                Some(id),\n                kind,\n                \"unsupported-projection\",\n            ));\n        }\n    }"
+        }
+      },
+      "disposition": "Explicit unsupported-projection; Sherlock enum unchanged.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E06",
+      "path": "crates/mori-backend/src/lib.rs",
+      "symbol": "Builder::expression value construction",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-backend/src/lib.rs",
+          "sha256": "3ad0862058adbdc9b9a080f644fec7aa1721d70f115cdf8a08f5ef45cbdf2259",
+          "bytes": 46966,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 693,
+          "endLine": 758,
+          "sha256": "37c96fa6b2e9e06a53bbb61b21bba6eda149da8092dedaa64563c5936c90fcac",
+          "text": "let wire = match expression {\n                Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {\n                    let (presence, amount) = liabilities.get(name).ok_or_else(|| {\n                        error(\"unsupported\", format!(\"Unknown liability read {name:?}.\"))\n                    })?;\n                    if matches!(expression, Expr::LiabilityPresent { .. }) {\n                        presence.clone()\n                    } else {\n                        amount.clone()\n                    }\n                }\n                Expr::Literal { value } => match value {\n                    Value::UInt(n) => Wire {\n                        operand: immediate(n.0),\n                        ty: Type::UInt,\n                    },\n                    Value::Bool(b) => Wire {\n                        operand: immediate(u128::from(*b)),\n                        ty: Type::Bool,\n                    },\n                },\n                Expr::Name { name } => env\n                    .get(name)\n                    .cloned()\n                    .ok_or_else(|| error(\"name\", format!(\"Unbound name {name:?}.\")))?,\n                Expr::Not { value } => Wire {\n                    operand: self.unary(values[value].operand.clone(), \"not\"),\n                    ty: Type::Bool,\n                },\n                Expr::Binary { op, lhs, rhs } => {\n                    let a = values[lhs].operand.clone();\n                    let b = values[rhs].operand.clone();\n                    let operand = match op {\n                        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul => self.arithmetic(a, b, *op),\n                        BinaryOp::Eq => self.binary(a, b, BinaryOp::Eq),\n                        BinaryOp::Ne => {\n                            let eq = self.binary(a, b, BinaryOp::Eq);\n                            self.unary(eq, \"not\")\n                        }\n                        BinaryOp::Lt => self.binary(a, b, BinaryOp::Lt),\n                        BinaryOp::Gt => self.binary(b, a, BinaryOp::Lt),\n                        BinaryOp::Le => {\n                            let gt = self.binary(b, a, BinaryOp::Lt);\n                            self.unary(gt, \"not\")\n                        }\n                        BinaryOp::Ge => {\n                            let lt = self.binary(a, b, BinaryOp::Lt);\n                            self.unary(lt, \"not\")\n                        }\n                        BinaryOp::And => self.binary(a, b, BinaryOp::Mul),\n                        BinaryOp::Or => {\n                            let na = self.unary(a, \"not\");\n                            let nb = self.unary(b, \"not\");\n                            let neither = self.binary(na, nb, BinaryOp::Mul);\n                            self.unary(neither, \"not\")\n                        }\n                    };\n                    let ty = if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul) {\n                        Type::UInt\n                    } else {\n                        Type::Bool\n                    };\n                    self.range(operand.clone(), ty);\n                    Wire { operand, ty }\n                }\n            }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-backend/src/lib.rs",
+          "sha256": "6092965b21e86ca18cccdd8e4d12eb6ed0c634566db5f96fe4f90d51c704245b",
+          "bytes": 47201
+        },
+        "match": {
+          "startLine": 695,
+          "endLine": 761,
+          "sha256": "be4d91f1e719acd750050f4ede621a3f937ca29c999707b287b19ea80c0184a0",
+          "text": "let wire = match expression {\n                Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {\n                    let (presence, amount) = liabilities.get(name).ok_or_else(|| {\n                        error(\"unsupported\", format!(\"Unknown liability read {name:?}.\"))\n                    })?;\n                    if matches!(expression, Expr::LiabilityPresent { .. }) {\n                        presence.clone()\n                    } else {\n                        amount.clone()\n                    }\n                }\n                Expr::Literal { value } => match value {\n                    Value::UInt(n) => Wire {\n                        operand: immediate(n.0),\n                        ty: Type::UInt,\n                    },\n                    Value::Bool(b) => Wire {\n                        operand: immediate(u128::from(*b)),\n                        ty: Type::Bool,\n                    },\n                },\n                Expr::Name { name } => env\n                    .get(name)\n                    .cloned()\n                    .ok_or_else(|| error(\"name\", format!(\"Unbound name {name:?}.\")))?,\n                Expr::Not { value } => Wire {\n                    operand: self.unary(values[value].operand.clone(), \"not\"),\n                    ty: Type::Bool,\n                },\n                Expr::Binary { op, lhs, rhs } => {\n                    let a = values[lhs].operand.clone();\n                    let b = values[rhs].operand.clone();\n                    let operand = match op {\n                        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul => self.arithmetic(a, b, *op),\n                        BinaryOp::Eq => self.binary(a, b, BinaryOp::Eq),\n                        BinaryOp::Ne => {\n                            let eq = self.binary(a, b, BinaryOp::Eq);\n                            self.unary(eq, \"not\")\n                        }\n                        BinaryOp::Lt => self.binary(a, b, BinaryOp::Lt),\n                        BinaryOp::Gt => self.binary(b, a, BinaryOp::Lt),\n                        BinaryOp::Le => {\n                            let gt = self.binary(b, a, BinaryOp::Lt);\n                            self.unary(gt, \"not\")\n                        }\n                        BinaryOp::Ge => {\n                            let lt = self.binary(a, b, BinaryOp::Lt);\n                            self.unary(lt, \"not\")\n                        }\n                        BinaryOp::And => self.binary(a, b, BinaryOp::Mul),\n                        BinaryOp::Or => {\n                            let na = self.unary(a, \"not\");\n                            let nb = self.unary(b, \"not\");\n                            let neither = self.binary(na, nb, BinaryOp::Mul);\n                            self.unary(neither, \"not\")\n                        }\n                    };\n                    let ty = if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul) {\n                        Type::UInt\n                    } else {\n                        Type::Bool\n                    };\n                    self.range(operand.clone(), ty);\n                    Wire { operand, ty }\n                }\n                _ => return Err(error(\"unsupported\", \"Expression is outside this compiler profile.\")),\n            }"
+        }
+      },
+      "disposition": "Generic unsupported-expression fallback only, no division lowering.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E07",
+      "path": "crates/mori-ledger/src/relation/compiler.rs",
+      "symbol": "Compiler::expr value construction",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-ledger/src/relation/compiler.rs",
+          "sha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a",
+          "bytes": 28101,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 445,
+          "endLine": 497,
+          "sha256": "06b096bf7779139d329a01a7123283044bd339f5788e3c9b419322b93caac959",
+          "text": "let w = match self\n            .p\n            .expressions\n            .get(id as usize)\n            .ok_or(refusal(\"expression-index\"))?\n            .clone()\n        {\n            Expr::LiabilityPresent { name } => {\n                let (member, _) = self.observe_duty(&name)?;\n                Wire {\n                    val: member,\n                    ty: Type::Bool,\n                }\n            }\n            Expr::LiabilityAmount { name } => {\n                let (_, amount) = self.observe_duty(&name)?;\n                Wire {\n                    val: amount,\n                    ty: Type::UInt,\n                }\n            }\n            Expr::Literal { value } => Wire {\n                val: imm(match value {\n                    Value::UInt(n) => n.0,\n                    Value::Bool(b) => u128::from(b),\n                }),\n                ty: value.ty(),\n            },\n            Expr::Name { name } => self\n                .env\n                .get(&name)\n                .cloned()\n                .ok_or(refusal(\"unopened-name\"))?,\n            Expr::Not { value } => {\n                let a = self.expr(value, cache)?;\n                Wire {\n                    val: self.b.unary(a.val, true),\n                    ty: Type::Bool,\n                }\n            }\n            Expr::Binary { op, lhs, rhs } => {\n                let a = self.expr(lhs, cache)?;\n                let b = self.expr(rhs, cache)?;\n                Wire {\n                    val: self.b.expression(a.val, b.val, op),\n                    ty: if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul) {\n                        Type::UInt\n                    } else {\n                        Type::Bool\n                    },\n                }\n            }\n        }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori-ledger/src/relation/compiler.rs",
+          "sha256": "072ff1a8a50a333fd6df061606fa2e6d3ea6a8464fd26b218b7f9550d3d1dbde",
+          "bytes": 28289
+        },
+        "match": {
+          "startLine": 447,
+          "endLine": 500,
+          "sha256": "63c4b408393c10b5d93d0ac132fe12b3c02048451347383fca9da1444422deeb",
+          "text": "let w = match self\n            .p\n            .expressions\n            .get(id as usize)\n            .ok_or(refusal(\"expression-index\"))?\n            .clone()\n        {\n            Expr::LiabilityPresent { name } => {\n                let (member, _) = self.observe_duty(&name)?;\n                Wire {\n                    val: member,\n                    ty: Type::Bool,\n                }\n            }\n            Expr::LiabilityAmount { name } => {\n                let (_, amount) = self.observe_duty(&name)?;\n                Wire {\n                    val: amount,\n                    ty: Type::UInt,\n                }\n            }\n            Expr::Literal { value } => Wire {\n                val: imm(match value {\n                    Value::UInt(n) => n.0,\n                    Value::Bool(b) => u128::from(b),\n                }),\n                ty: value.ty(),\n            },\n            Expr::Name { name } => self\n                .env\n                .get(&name)\n                .cloned()\n                .ok_or(refusal(\"unopened-name\"))?,\n            Expr::Not { value } => {\n                let a = self.expr(value, cache)?;\n                Wire {\n                    val: self.b.unary(a.val, true),\n                    ty: Type::Bool,\n                }\n            }\n            Expr::Binary { op, lhs, rhs } => {\n                let a = self.expr(lhs, cache)?;\n                let b = self.expr(rhs, cache)?;\n                Wire {\n                    val: self.b.expression(a.val, b.val, op),\n                    ty: if matches!(op, BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul) {\n                        Type::UInt\n                    } else {\n                        Type::Bool\n                    },\n                }\n            }\n            _ => return Err(refusal(\"expression-not-lowered\")),\n        }"
+        }
+      },
+      "disposition": "Generic expression-not-lowered fallback only, no division lowering.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "E08",
+      "path": "crates/mori/src/commands/inspect.rs",
+      "symbol": "enforcement expression rule",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori/src/commands/inspect.rs",
+          "sha256": "e17139f43eaefc07530a2f9636e0b42fe2410ce8bcef1710f206ebc1bcc4e5c8",
+          "bytes": 21667,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 372,
+          "endLine": 386,
+          "sha256": "9a62508db12856b6ccd3067eda140e2d9dc4c6ced71830d2b2e0b326a110d704",
+          "text": "let rule = match node {\n            Expr::LiabilityPresent { .. } => \"read current duty presence under its source-fixed identity\",\n            Expr::LiabilityAmount { .. } => \"read current duty atomic amount under its source-fixed identity\",\n            Expr::Literal { .. } => \"source-fixed typed literal immediate\",\n            Expr::Name { .. } => \"use the typed binding at this ordered statement\",\n            Expr::Not { .. } => \"boolean negation\",\n            Expr::Binary { op, .. } => match op {\n                BinaryOp::Add => \"integer addition with unsigned 128-bit result range; overflow refuses\",\n                BinaryOp::Sub => \"integer subtraction with unsigned 128-bit result range; underflow refuses\",\n                BinaryOp::Mul => \"64-bit limb multiplication with zero high product and unsigned 128-bit result range; overflow refuses\",\n                BinaryOp::Eq | BinaryOp::Ne => \"typed equality or inequality with boolean result\",\n                BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => \"unsigned 128-bit comparison with boolean result\",\n                BinaryOp::And | BinaryOp::Or => \"boolean conjunction or disjunction with boolean result\",\n            }\n        }"
+        }
+      },
+      "candidate": {
+        "source": {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/candidate/crates/mori/src/commands/inspect.rs",
+          "sha256": "4d0f54f272d16bd597fd3c5b80b796eb0ae1b953bcf637e9c4881c4fa33b6310",
+          "bytes": 21851
+        },
+        "match": {
+          "startLine": 372,
+          "endLine": 388,
+          "sha256": "fbd092b705f739e3ad3eda93f2392f51c8f8418eff2cb60f9f9ba30dfd44b42d",
+          "text": "let rule = match node {\n            Expr::LiabilityPresent { .. } => \"read current duty presence under its source-fixed identity\",\n            Expr::LiabilityAmount { .. } => \"read current duty atomic amount under its source-fixed identity\",\n            Expr::Literal { .. } => \"source-fixed typed literal immediate\",\n            Expr::Name { .. } => \"use the typed binding at this ordered statement\",\n            Expr::Not { .. } => \"boolean negation\",\n            Expr::Binary { op, .. } => match op {\n                BinaryOp::Add => \"integer addition with unsigned 128-bit result range; overflow refuses\",\n                BinaryOp::Sub => \"integer subtraction with unsigned 128-bit result range; underflow refuses\",\n                BinaryOp::Mul => \"64-bit limb multiplication with zero high product and unsigned 128-bit result range; overflow refuses\",\n                BinaryOp::Eq | BinaryOp::Ne => \"typed equality or inequality with boolean result\",\n                BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => \"unsigned 128-bit comparison with boolean result\",\n                BinaryOp::And | BinaryOp::Or => \"boolean conjunction or disjunction with boolean result\",\n            }\n            #[allow(unreachable_patterns)] // Opt-in dependency expressions are not part of this display profile.\n            _ => \"expression outside the current inspection profile\",\n        }"
+        }
+      },
+      "disposition": "Generic unsupported display fallback after every existing variant.",
+      "status": "new variant accounted for by source inspection; compile unrun",
+      "additionalCorrectionRequired": false
+    }
+  ],
+  "partialReferenceWalks": [
+    {
+      "id": "W01",
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "validate depth/reference walk",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/runtime.rs",
+          "sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+          "bytes": 37871,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 184,
+          "endLine": 188,
+          "sha256": "8e98602e404eb90400240f075e2ce470ce61fef6f768c18b9738ebb7efb0f87e",
+          "text": "let refs = match e {\n            Expr::Binary { lhs, rhs, .. } => vec![*lhs, *rhs],\n            Expr::Not { value } => vec![*value],\n            _ => vec![],\n        }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 215,
+        "endLine": 226,
+        "sha256": "372a5e3414126cc556696945a53e73253a6c35cbaff5b396e378b669ff6d1c56",
+        "text": "let refs = match e {\n            #[cfg(feature = \"core-floor-div-draft\")]\n            Expr::FloorDiv { numerator, denominator } => {\n                if !division {\n                    return Err(failure(\"profile\", \"FloorDiv requires the division draft profile.\"));\n                }\n                vec![*numerator, *denominator]\n            }\n            Expr::Binary { lhs, rhs, .. } => vec![*lhs, *rhs],\n            Expr::Not { value } => vec![*value],\n            _ => vec![],\n        }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Candidate adds explicit FloorDiv children and ordinary-profile refusal.",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "W02",
+      "path": "crates/mori-core/src/stage/validate.rs",
+      "symbol": "validate_v2 depth/reference walk",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/stage/validate.rs",
+          "sha256": "d301530692f2f02a51bb68cf8b30ee51db6d3f3c9019b9045ed2a50e3ad8debf",
+          "bytes": 18486,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 111,
+          "endLine": 115,
+          "sha256": "8e98602e404eb90400240f075e2ce470ce61fef6f768c18b9738ebb7efb0f87e",
+          "text": "let refs = match e {\n            Expr::Binary { lhs, rhs, .. } => vec![*lhs, *rhs],\n            Expr::Not { value } => vec![*value],\n            _ => vec![],\n        }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 111,
+        "endLine": 115,
+        "sha256": "8e98602e404eb90400240f075e2ce470ce61fef6f768c18b9738ebb7efb0f87e",
+        "text": "let refs = match e {\n            Expr::Binary { lhs, rhs, .. } => vec![*lhs, *rhs],\n            Expr::Not { value } => vec![*value],\n            _ => vec![],\n        }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Existing wildcard. Stage source load does not construct the new node; StagedProgram has no Deserialize/public constructor. No staged support is inferred.",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "W03",
+      "path": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+      "symbol": "bounded source tree-size/depth walk",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+          "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+          "bytes": 14891,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 155,
+          "endLine": 159,
+          "sha256": "eda7fe4bdc7ffcffd122d644f2b5ea139c3d8c6a58954c97b2862c6d42b310bd",
+          "text": "let (children, fanout): ([crate::ExprId; 2], usize) = match expression {\n            crate::Expr::Binary { lhs, rhs, .. } => ([*lhs, *rhs], 2),\n            crate::Expr::Not { value } => ([*value, 0], 1),\n            _ => ([0, 0], 0),\n        }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 155,
+        "endLine": 159,
+        "sha256": "eda7fe4bdc7ffcffd122d644f2b5ea139c3d8c6a58954c97b2862c6d42b310bd",
+        "text": "let (children, fanout): ([crate::ExprId; 2], usize) = match expression {\n            crate::Expr::Binary { lhs, rhs, .. } => ([*lhs, *rhs], 2),\n            crate::Expr::Not { value } => ([*value, 0], 1),\n            _ => ([0, 0], 0),\n        }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Existing wildcard. crate::validate precedes this walk and proposed default validation refuses the draft. No projection support is inferred.",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "W04",
+      "path": "crates/mori-backend/src/lib.rs",
+      "symbol": "Builder::expression child scheduling",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-backend/src/lib.rs",
+          "sha256": "3ad0862058adbdc9b9a080f644fec7aa1721d70f115cdf8a08f5ef45cbdf2259",
+          "bytes": 46966,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 678,
+          "endLine": 691,
+          "sha256": "b451e8f3f7fc876282120e86501fd458343cdc7997694495a3f3c123f18bbd01",
+          "text": "match expression {\n                    Expr::Binary { lhs, rhs, .. } => {\n                        todo.push((id, true));\n                        todo.push((*rhs, false));\n                        todo.push((*lhs, false));\n                        continue;\n                    }\n                    Expr::Not { value } => {\n                        todo.push((id, true));\n                        todo.push((*value, false));\n                        continue;\n                    }\n                    _ => {}\n                }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 678,
+        "endLine": 691,
+        "sha256": "b451e8f3f7fc876282120e86501fd458343cdc7997694495a3f3c123f18bbd01",
+        "text": "match expression {\n                    Expr::Binary { lhs, rhs, .. } => {\n                        todo.push((id, true));\n                        todo.push((*rhs, false));\n                        todo.push((*lhs, false));\n                        continue;\n                    }\n                    Expr::Not { value } => {\n                        todo.push((id, true));\n                        todo.push((*value, false));\n                        continue;\n                    }\n                    _ => {}\n                }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Existing wildcard. Final value-construction match has the candidate unsupported fallback; native division stays unresolved.",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "W05",
+      "path": "crates/mori-ledger/src/relation/compiler.rs",
+      "symbol": "Compiler::names",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-ledger/src/relation/compiler.rs",
+          "sha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a",
+          "bytes": 28101,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 423,
+          "endLine": 438,
+          "sha256": "0ed26d65d1252ad613948437fe077a1cfcabd35804dd3ff5ef4b67a6a64091bc",
+          "text": "match self\n            .p\n            .expressions\n            .get(id as usize)\n            .ok_or(refusal(\"expression-index\"))?\n        {\n            Expr::Name { name } if self.states.contains_key(name) => {\n                names.insert(name.clone());\n            }\n            Expr::Binary { lhs, rhs, .. } => {\n                self.names(*lhs, names, seen)?;\n                self.names(*rhs, names, seen)?;\n            }\n            Expr::Not { value } => self.names(*value, names, seen)?,\n            _ => {}\n        }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 423,
+        "endLine": 438,
+        "sha256": "0ed26d65d1252ad613948437fe077a1cfcabd35804dd3ff5ef4b67a6a64091bc",
+        "text": "match self\n            .p\n            .expressions\n            .get(id as usize)\n            .ok_or(refusal(\"expression-index\"))?\n        {\n            Expr::Name { name } if self.states.contains_key(name) => {\n                names.insert(name.clone());\n            }\n            Expr::Binary { lhs, rhs, .. } => {\n                self.names(*lhs, names, seen)?;\n                self.names(*rhs, names, seen)?;\n            }\n            Expr::Not { value } => self.names(*value, names, seen)?,\n            _ => {}\n        }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Existing wildcard. Candidate expr value construction remains unsupported; native division stays unresolved.",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "W06",
+      "path": "crates/mori-ledger/src/ops.rs",
+      "symbol": "lower_ops_inner prefix-state references",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori-ledger/src/ops.rs",
+          "sha256": "f213d1cc2084084b30e6d8f0641fbbb8258d10dbad983fe254519c9f4c1a6633",
+          "bytes": 28251,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 347,
+          "endLine": 363,
+          "sha256": "10de199b047ca45997e4462f55c6797a45ff9b1e3589c5f78d0a9648996d854f",
+          "text": "match expr {\n                    mori_core::Expr::Name { name } => {\n                        if prefix.state.contains_key(name) {\n                            names.insert(name.clone());\n                        }\n                    }\n                    mori_core::Expr::Binary { lhs, rhs, .. } => {\n                        pending.push(*rhs);\n                        pending.push(*lhs);\n                    }\n                    mori_core::Expr::Not { value } => pending.push(*value),\n                    mori_core::Expr::LiabilityPresent { name }\n                    | mori_core::Expr::LiabilityAmount { name } => {\n                        duty_reads.push((id, name.clone()));\n                    }\n                    _ => {}\n                }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 347,
+        "endLine": 363,
+        "sha256": "10de199b047ca45997e4462f55c6797a45ff9b1e3589c5f78d0a9648996d854f",
+        "text": "match expr {\n                    mori_core::Expr::Name { name } => {\n                        if prefix.state.contains_key(name) {\n                            names.insert(name.clone());\n                        }\n                    }\n                    mori_core::Expr::Binary { lhs, rhs, .. } => {\n                        pending.push(*rhs);\n                        pending.push(*lhs);\n                    }\n                    mori_core::Expr::Not { value } => pending.push(*value),\n                    mori_core::Expr::LiabilityPresent { name }\n                    | mori_core::Expr::LiabilityAmount { name } => {\n                        duty_reads.push((id, name.clone()));\n                    }\n                    _ => {}\n                }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Existing wildcard ignores unknown shapes. This is not a FloorDiv consumer and is not qualified by the reference alternative; future projection remains separate.",
+      "additionalCorrectionRequired": false
+    },
+    {
+      "id": "W07",
+      "path": "crates/mori/src/commands/inspect.rs",
+      "symbol": "reachable expression IDs",
+      "current": {
+        "source": {
+          "root": "K",
+          "path": "crates/mori/src/commands/inspect.rs",
+          "sha256": "e17139f43eaefc07530a2f9636e0b42fe2410ce8bcef1710f206ebc1bcc4e5c8",
+          "bytes": 21667,
+          "matchesCapturedHead": true
+        },
+        "match": {
+          "startLine": 364,
+          "endLine": 368,
+          "sha256": "93f40bd0e2436c8f837ff373bd2b097d21b5f820e2fb6eaef1657b902100e6fb",
+          "text": "match &program.expressions[id as usize] {\n            Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),\n            Expr::Not { value } => pending.push(*value),\n            _ => {}\n        }"
+        }
+      },
+      "candidateMatch": {
+        "startLine": 364,
+        "endLine": 368,
+        "sha256": "93f40bd0e2436c8f837ff373bd2b097d21b5f820e2fb6eaef1657b902100e6fb",
+        "text": "match &program.expressions[id as usize] {\n            Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),\n            Expr::Not { value } => pending.push(*value),\n            _ => {}\n        }"
+      },
+      "status": "nonexhaustive walk; no enum compile gap",
+      "detail": "Existing wildcard. Current CLI/default parser does not route the draft; any future CLI support must separately address child reachability.",
+      "additionalCorrectionRequired": false
+    }
+  ],
+  "selectiveReaders": [
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "validate liability-read identity checks",
+      "line": 328,
+      "source": {
+        "root": "K",
+        "path": "crates/mori-core/src/runtime.rs",
+        "sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+        "bytes": 37871,
+        "matchesCapturedHead": true
+      },
+      "disposition": "Selective if-let over flat arena nodes; no exhaustive arm required."
+    },
+    {
+      "path": "crates/mori-backend/src/liabilities.rs",
+      "symbol": "registry liability-read checks",
+      "line": 100,
+      "source": {
+        "root": "K",
+        "path": "crates/mori-backend/src/liabilities.rs",
+        "sha256": "c05a718c201db4c437bb6aa8df7fd97d81600541181a09d2f03be4a55ca3cb24",
+        "bytes": 3857,
+        "matchesCapturedHead": true
+      },
+      "disposition": "Selective if-let over flat arena nodes; no exhaustive arm required."
+    }
+  ],
+  "wireDecodeCompatibility": [
+    {
+      "id": "D01",
+      "path": "crates/mori-core/src/ir.rs",
+      "symbols": [
+        "shared Expr derive Deserialize",
+        "v1::Program.expressions: Vec<Expr>",
+        "decode_via_v1!(Statement, Action, Program, Step, Execution)"
+      ],
+      "featureOff": "The opt-in variant is absent; this specific enum change does not alter the derive variant set. Runtime compatibility was not measured.",
+      "featureOn": "Shared Expr derive recognizes FloorDiv; v1::Program reuses it, so Program deserialization recognizes the new variant before validation and independently of the language string.",
+      "candidateValidation": "Default validate explicitly refuses the new node in its whole-arena walk. Draft validation separately checks the draft language/semantics. Decode and validation are distinct.",
+      "disposition": "Feature-on frozen wire isolation/diagnostics is UNADOPTED. No codec policy correction is made.",
+      "source": {
+        "root": "K",
+        "path": "crates/mori-core/src/ir.rs",
+        "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+        "bytes": 12823,
+        "matchesCapturedHead": true
+      }
+    },
+    {
+      "id": "D02",
+      "path": "crates/mori-core/src/ir.rs",
+      "symbols": [
+        "v1::Statement",
+        "v1::Step",
+        "v1::Execution"
+      ],
+      "detail": "Step/Execution contain statement ExprIds, values, snapshots/effects and no expression arena. The new Expr kind does not itself add a Statement kind or Step/Execution field. An enclosing Program retains D01.",
+      "disposition": "No extra hand-written exhaustive decoder arm is missing; this is source inference, not a decode execution.",
+      "source": {
+        "root": "K",
+        "path": "crates/mori-core/src/ir.rs",
+        "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+        "bytes": 12823,
+        "matchesCapturedHead": true
+      }
+    },
+    {
+      "id": "D03",
+      "path": "crates/mori-core/src/stage/mod.rs",
+      "symbols": [
+        "StagedProgram",
+        "load",
+        "Continuation",
+        "StageEvent"
+      ],
+      "detail": "StagedProgram is constructed only by load and has no Deserialize/public constructor. Continuation/Event carry snapshots/named scalar values, not Expr/Program arenas. No external staged Program decoder is invented.",
+      "disposition": "No compile-only codec patch necessary; staged division stays unsupported.",
+      "source": {
+        "root": "K",
+        "path": "crates/mori-core/src/stage/mod.rs",
+        "sha256": "e3c4a463319056d0a32ac192c57b3f587584976e08974f4dec04c9e881f80f23",
+        "bytes": 6382,
+        "matchesCapturedHead": true
+      }
+    }
+  ],
+  "currentToPriorPatchBase": [
+    {
+      "path": "crates/mori/src/commands/inspect.rs",
+      "currentSha256": "e17139f43eaefc07530a2f9636e0b42fe2410ce8bcef1710f206ebc1bcc4e5c8",
+      "priorBeforeSha256": "e17139f43eaefc07530a2f9636e0b42fe2410ce8bcef1710f206ebc1bcc4e5c8",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-backend/src/lib.rs",
+      "currentSha256": "3ad0862058adbdc9b9a080f644fec7aa1721d70f115cdf8a08f5ef45cbdf2259",
+      "priorBeforeSha256": "3ad0862058adbdc9b9a080f644fec7aa1721d70f115cdf8a08f5ef45cbdf2259",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/Cargo.toml",
+      "currentSha256": "93318da98ab974c2d30210bd868f98fa5c4af60390395dcbe4f65669e815ac7c",
+      "priorBeforeSha256": "93318da98ab974c2d30210bd868f98fa5c4af60390395dcbe4f65669e815ac7c",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/src/ir.rs",
+      "currentSha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "priorBeforeSha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/src/lib.rs",
+      "currentSha256": "b33afe9a9f7a32d0c4b10211fa139bca5d1a8741ba61ee4df8acebbcd5f8304a",
+      "priorBeforeSha256": "b33afe9a9f7a32d0c4b10211fa139bca5d1a8741ba61ee4df8acebbcd5f8304a",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/src/parser.rs",
+      "currentSha256": "587e8b024ae16d513c5e6d6ef4929e4140bbfc7d2a716b5d38781645cb7c7275",
+      "priorBeforeSha256": "587e8b024ae16d513c5e6d6ef4929e4140bbfc7d2a716b5d38781645cb7c7275",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "currentSha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+      "priorBeforeSha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+      "currentSha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b",
+      "priorBeforeSha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-core/src/stage/cost.rs",
+      "currentSha256": "eeb5c9fbd1c58c5b46f346a0e62484c1bb366e548c50824295d833648ba6bcc1",
+      "priorBeforeSha256": "eeb5c9fbd1c58c5b46f346a0e62484c1bb366e548c50824295d833648ba6bcc1",
+      "equal": true
+    },
+    {
+      "path": "crates/mori-ledger/src/relation/compiler.rs",
+      "currentSha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a",
+      "priorBeforeSha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a",
+      "equal": true
+    }
+  ],
+  "excludedTypeFamilies": [
+    {
+      "family": "Sherlock Expr/BinaryOp visitors",
+      "reason": "Different enums. Candidate changes neither; Core-to-Sherlock map explicitly reports unsupported projection."
+    },
+    {
+      "family": "mori-ast NodeTag and beta parser/checker/formatter",
+      "reason": "Different AST/frontend; no shared Core Expr exhaustive import/spelling was identified."
+    },
+    {
+      "family": "captured fixture basis/ir-public-dto.rs copies",
+      "reason": "Immutable captured DTO source, not the production definition; no rewrite."
+    },
+    {
+      "family": "standalone Cardano K2/R1CS Core copy",
+      "reason": "Cargo paths select experiments/moriarty-cardano-rust/moriarty/crates/mori-core rather than workspace crates/mori-core. No candidate is installed there."
+    },
+    {
+      "family": "ordinary test/example constructors, matches! and if-let",
+      "reason": "Partial construction/pattern sites require no new exhaustive arm. No test design, test additions or execution in this lane."
+    }
+  ],
+  "sourceFiles": [
+    {
+      "root": "K",
+      "path": "Cargo.toml",
+      "sha256": "ffa6cd7e538f3162a722dd657aea0e68d80c6ace3eddfcab0810ccbc03d37404",
+      "bytes": 3826,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-backend/src/liabilities.rs",
+      "sha256": "c05a718c201db4c437bb6aa8df7fd97d81600541181a09d2f03be4a55ca3cb24",
+      "bytes": 3857,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-backend/src/lib.rs",
+      "sha256": "3ad0862058adbdc9b9a080f644fec7aa1721d70f115cdf8a08f5ef45cbdf2259",
+      "bytes": 46966,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/Cargo.toml",
+      "sha256": "93318da98ab974c2d30210bd868f98fa5c4af60390395dcbe4f65669e815ac7c",
+      "bytes": 881,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/ir.rs",
+      "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "bytes": 12823,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/lib.rs",
+      "sha256": "b33afe9a9f7a32d0c4b10211fa139bca5d1a8741ba61ee4df8acebbcd5f8304a",
+      "bytes": 1277,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/logical_cost.rs",
+      "sha256": "8c1b38da8cbefb5f3bb83e89fc1fb471410e3886fc50b74e2af8c0d9dc9636cc",
+      "bytes": 2869,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/parser.rs",
+      "sha256": "587e8b024ae16d513c5e6d6ef4929e4140bbfc7d2a716b5d38781645cb7c7275",
+      "bytes": 15275,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/replay.rs",
+      "sha256": "eb5e0219d543f41c8c5ae943be91dadadef7e14a1fd8f47993d5b181627de9d2",
+      "bytes": 3691,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/runtime.rs",
+      "sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+      "bytes": 37871,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+      "sha256": "cd7ad770ef310486cf0e6ff38beb6aa5ae33075d96fb56df97f1752f3bd18e68",
+      "bytes": 14891,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+      "sha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b",
+      "bytes": 16604,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/stage/cost.rs",
+      "sha256": "eeb5c9fbd1c58c5b46f346a0e62484c1bb366e548c50824295d833648ba6bcc1",
+      "bytes": 14795,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/stage/decode.rs",
+      "sha256": "58f0c1156efa2682f17240dda19be7f567905b61c95f399831136746a2e09f50",
+      "bytes": 8814,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/stage/mod.rs",
+      "sha256": "e3c4a463319056d0a32ac192c57b3f587584976e08974f4dec04c9e881f80f23",
+      "bytes": 6382,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/stage/profile.rs",
+      "sha256": "933560466065d78b0ce3f3559c2cf2bb9cbdc8eea45903af564cf1ab469cd59d",
+      "bytes": 1237,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-core/src/stage/validate.rs",
+      "sha256": "d301530692f2f02a51bb68cf8b30ee51db6d3f3c9019b9045ed2a50e3ad8debf",
+      "bytes": 18486,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-ledger/src/ops.rs",
+      "sha256": "f213d1cc2084084b30e6d8f0641fbbb8258d10dbad983fe254519c9f4c1a6633",
+      "bytes": 28251,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori-ledger/src/relation/compiler.rs",
+      "sha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a",
+      "bytes": 28101,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "crates/mori/src/commands/inspect.rs",
+      "sha256": "e17139f43eaefc07530a2f9636e0b42fe2410ce8bcef1710f206ebc1bcc4e5c8",
+      "bytes": 21667,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "experiments/moriarty-cardano-rust/k2/Cargo.toml",
+      "sha256": "8e4d6049d6e67e7c5e7a321badb50232883f776d466e96daf5777b529ec33948",
+      "bytes": 1904,
+      "matchesCapturedHead": true
+    },
+    {
+      "root": "K",
+      "path": "experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/Cargo.toml",
+      "sha256": "5a58874fc0452c34a1f794df552d126367f18f7ccb851b2a109171a7cc9b6e88",
+      "bytes": 2280,
+      "matchesCapturedHead": true
+    }
+  ],
+  "retainedScope": {
+    "source": {
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/defi-floor-division-current-source-20261018/PRESERVED-SCOPE.json",
+      "sha256": "1eba9db2ad7eab5ff2d3eeb927b7bea00dd3a31e3911b8aa5bb9f147c5d655f2",
+      "bytes": 102453
+    },
+    "rows": 72,
+    "DA01to24": 24,
+    "heldouts": 3,
+    "intents": 8,
+    "regressionClasses": 8,
+    "composition": 5,
+    "acceptance": "unchanged/open"
+  }
+}

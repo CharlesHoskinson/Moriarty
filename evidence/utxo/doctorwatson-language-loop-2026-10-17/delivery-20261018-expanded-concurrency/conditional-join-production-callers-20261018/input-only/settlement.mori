@@ -1,0 +1,20 @@
+language "moriarty/2";
+agreement JoinedContinuation {
+  asset DOC = { network: "local", issuer: "join-document", reference: "DOC", scale: 0 };
+  asset ACK = { network: "local", issuer: "join-recipient", reference: "ACK", scale: 0 };
+  state docMarker: UInt = 7;
+  state recipientMarker: UInt = 9;
+  action settle() {
+    requires liability_present("documentDuty") and liability_amount("documentDuty") == 0;
+    requires liability_present("recipientDuty") and liability_amount("recipientDuty") == 0;
+    await handoff(allow: Bool) when allow;
+    fee(DOC, "documentReceiver", "joinTreasury", 1);
+    transfer(ACK, "recipientReceiver", "joinReceiver", 1);
+    emit "joined"(docMarker + recipientMarker);
+  }
+  action declare() {
+    liability("documentDuty", DOC, "documentAgent", "documentReceiver", 0);
+    liability("retainedDocumentDuty", DOC, "documentAgent", "documentReceiver", 0);
+    liability("recipientDuty", ACK, "recipientAgent", "recipientReceiver", 0);
+  }
+}

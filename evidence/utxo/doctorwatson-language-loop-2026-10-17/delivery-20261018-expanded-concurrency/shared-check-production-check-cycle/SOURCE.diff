@@ -1,0 +1,1043 @@
+diff --git a/crates/fixtures/check-source/cases.json b/crates/fixtures/check-source/cases.json
+new file mode 100644
+index 00000000..29649c74
+--- /dev/null
++++ b/crates/fixtures/check-source/cases.json
+@@ -0,0 +1,170 @@
++[
++  {
++    "id": "accepted",
++    "source": "cases/accepted.mori",
++    "fileLabel": "test.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "test.mori",
++      "--json"
++    ],
++    "expectedExit": 0,
++    "expectedStdout": "expected/accepted.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "test.mori"
++    ]
++  },
++  {
++    "id": "rejected",
++    "source": "cases/rejected.mori",
++    "fileLabel": "test.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "test.mori",
++      "--json"
++    ],
++    "expectedExit": 1,
++    "expectedStdout": "expected/rejected.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "test.mori"
++    ]
++  },
++  {
++    "id": "unparsable",
++    "source": "cases/unparsable.mori",
++    "fileLabel": "test.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "test.mori",
++      "--json"
++    ],
++    "expectedExit": 1,
++    "expectedStdout": "expected/unparsable.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "test.mori"
++    ]
++  },
++  {
++    "id": "core1-accepted",
++    "source": "cases/core1-accepted.mori",
++    "fileLabel": "minimal.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "minimal.mori",
++      "--json"
++    ],
++    "expectedExit": 0,
++    "expectedStdout": "expected/core1-accepted.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "minimal.mori"
++    ]
++  },
++  {
++    "id": "core1-rejected",
++    "source": "cases/core1-rejected.mori",
++    "fileLabel": "empty.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "empty.mori",
++      "--json"
++    ],
++    "expectedExit": 1,
++    "expectedStdout": "expected/core1-rejected.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "empty.mori"
++    ]
++  },
++  {
++    "id": "core2-accepted",
++    "source": "cases/core2-accepted.mori",
++    "fileLabel": "minimal.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "minimal.mori",
++      "--json"
++    ],
++    "expectedExit": 0,
++    "expectedStdout": "expected/core2-accepted.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "minimal.mori"
++    ]
++  },
++  {
++    "id": "core2-rejected",
++    "source": "cases/core2-rejected.mori",
++    "fileLabel": "empty.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "empty.mori",
++      "--json"
++    ],
++    "expectedExit": 1,
++    "expectedStdout": "expected/core2-rejected.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "empty.mori"
++    ]
++  },
++  {
++    "id": "unicode-byte-offsets",
++    "source": "cases/unicode-byte-offsets.mori",
++    "fileLabel": "test.mori",
++    "argv": [
++      "--color",
++      "never",
++      "check",
++      "test.mori",
++      "--json"
++    ],
++    "expectedExit": 1,
++    "expectedStdout": "expected/unicode-byte-offsets.stdout",
++    "humanArgv": [
++      "--color",
++      "never",
++      "--quiet",
++      "check",
++      "test.mori"
++    ]
++  }
++]
+diff --git a/crates/fixtures/check-source/cases/accepted.mori b/crates/fixtures/check-source/cases/accepted.mori
+new file mode 100644
+index 00000000..a97b8570
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/accepted.mori
+@@ -0,0 +1,7 @@
++profile "moriarty-beta/1";
++agreement Oracle {
++  domain Preview = { id: "preview", chain: "midnight", network: "preview" };
++  observation price = { id: "price", domain: Preview };
++  intent read = { operation: oracle.select(observation: price) };
++  action fetch uses read;
++}
+diff --git a/crates/fixtures/check-source/cases/core1-accepted.mori b/crates/fixtures/check-source/cases/core1-accepted.mori
+new file mode 100644
+index 00000000..5cb5f84e
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/core1-accepted.mori
+@@ -0,0 +1 @@
++language "moriarty/1"; agreement Minimal { action advance() { requires true; } }
+diff --git a/crates/fixtures/check-source/cases/core1-rejected.mori b/crates/fixtures/check-source/cases/core1-rejected.mori
+new file mode 100644
+index 00000000..7bc4a777
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/core1-rejected.mori
+@@ -0,0 +1 @@
++language "moriarty/1"; agreement Empty {}
+diff --git a/crates/fixtures/check-source/cases/core2-accepted.mori b/crates/fixtures/check-source/cases/core2-accepted.mori
+new file mode 100644
+index 00000000..f4493ff0
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/core2-accepted.mori
+@@ -0,0 +1 @@
++language "moriarty/2"; agreement Minimal { action advance() { requires true; } }
+diff --git a/crates/fixtures/check-source/cases/core2-rejected.mori b/crates/fixtures/check-source/cases/core2-rejected.mori
+new file mode 100644
+index 00000000..2eb12d8e
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/core2-rejected.mori
+@@ -0,0 +1 @@
++language "moriarty/2"; agreement Empty {}
+diff --git a/crates/fixtures/check-source/cases/rejected.mori b/crates/fixtures/check-source/cases/rejected.mori
+new file mode 100644
+index 00000000..59e33e34
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/rejected.mori
+@@ -0,0 +1,5 @@
++profile "moriarty-beta/1";
++agreement Invoice {
++  const price = 10;
++  const price = pirce;
++}
+diff --git a/crates/fixtures/check-source/cases/unicode-byte-offsets.mori b/crates/fixtures/check-source/cases/unicode-byte-offsets.mori
+new file mode 100644
+index 00000000..41997210
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/unicode-byte-offsets.mori
+@@ -0,0 +1,6 @@
++// café
++profile "moriarty-beta/1";
++agreement Invoice {
++  const price = 10;
++  const price = pirce;
++}
+diff --git a/crates/fixtures/check-source/cases/unparsable.mori b/crates/fixtures/check-source/cases/unparsable.mori
+new file mode 100644
+index 00000000..3b47b0af
+--- /dev/null
++++ b/crates/fixtures/check-source/cases/unparsable.mori
+@@ -0,0 +1,3 @@
++profile "moriarty-beta/1";
++agreement Invoice {
++  const price = 10
+diff --git a/crates/fixtures/check-source/expected/accepted.stdout b/crates/fixtures/check-source/expected/accepted.stdout
+new file mode 100644
+index 00000000..de42b337
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/accepted.stdout
+@@ -0,0 +1,66 @@
++{
++  "status": "accepted",
++  "file": "test.mori",
++  "source_hash": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b",
++  "agreement": {
++    "name": "Oracle",
++    "span": {
++      "start": 37,
++      "end": 43
++    }
++  },
++  "declarations": [
++    {
++      "kind": "domain",
++      "name": "Preview",
++      "span": {
++        "start": 48,
++        "end": 122
++      },
++      "name_span": {
++        "start": 55,
++        "end": 62
++      }
++    },
++    {
++      "kind": "observation",
++      "name": "price",
++      "span": {
++        "start": 125,
++        "end": 178
++      },
++      "name_span": {
++        "start": 137,
++        "end": 142
++      }
++    },
++    {
++      "kind": "intent",
++      "name": "read",
++      "span": {
++        "start": 181,
++        "end": 244
++      },
++      "name_span": {
++        "start": 188,
++        "end": 192
++      }
++    }
++  ],
++  "actions": [
++    {
++      "name": "fetch",
++      "intent": "read",
++      "support": "specified_only",
++      "span": {
++        "start": 247,
++        "end": 270
++      },
++      "name_span": {
++        "start": 254,
++        "end": 259
++      }
++    }
++  ],
++  "diagnostics": []
++}
+diff --git a/crates/fixtures/check-source/expected/core1-accepted.stdout b/crates/fixtures/check-source/expected/core1-accepted.stdout
+new file mode 100644
+index 00000000..a4b7c671
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/core1-accepted.stdout
+@@ -0,0 +1,20 @@
++{
++  "actions": [
++    {
++      "inputs": [],
++      "name": "advance",
++      "statements": [
++        {
++          "kind": "Requires",
++          "predicate": 0
++        }
++      ]
++    }
++  ],
++  "agreement": "Minimal",
++  "diagnostics": [],
++  "file": "minimal.mori",
++  "language": "moriarty/1",
++  "source_hash": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526",
++  "status": "accepted"
++}
+diff --git a/crates/fixtures/check-source/expected/core1-rejected.stdout b/crates/fixtures/check-source/expected/core1-rejected.stdout
+new file mode 100644
+index 00000000..81c07493
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/core1-rejected.stdout
+@@ -0,0 +1,12 @@
++{
++  "diagnostics": [
++    {
++      "code": "mori::core::program",
++      "message": "Program needs at least one action.",
++      "offset": null,
++      "step": null
++    }
++  ],
++  "file": "empty.mori",
++  "status": "rejected"
++}
+diff --git a/crates/fixtures/check-source/expected/core2-accepted.stdout b/crates/fixtures/check-source/expected/core2-accepted.stdout
+new file mode 100644
+index 00000000..f72da871
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/core2-accepted.stdout
+@@ -0,0 +1,23 @@
++{
++  "actions": [
++    {
++      "inputs": [],
++      "name": "advance",
++      "statements": [
++        {
++          "kind": "Requires",
++          "predicate": 0
++        }
++      ]
++    }
++  ],
++  "agreement": "Minimal",
++  "authentication": "none",
++  "consumption": "untracked",
++  "diagnostics": [],
++  "file": "minimal.mori",
++  "language": "moriarty/2",
++  "qualification": "local-reference-stage",
++  "source_hash": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc",
++  "status": "accepted"
++}
+diff --git a/crates/fixtures/check-source/expected/core2-rejected.stdout b/crates/fixtures/check-source/expected/core2-rejected.stdout
+new file mode 100644
+index 00000000..fbe5c6d2
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/core2-rejected.stdout
+@@ -0,0 +1,15 @@
++{
++  "authentication": "none",
++  "consumption": "untracked",
++  "diagnostics": [
++    {
++      "code": "mori::core::program",
++      "message": "Program needs at least one action.",
++      "offset": null,
++      "step": null
++    }
++  ],
++  "file": "empty.mori",
++  "qualification": "local-reference-stage",
++  "status": "rejected"
++}
+diff --git a/crates/fixtures/check-source/expected/rejected.stdout b/crates/fixtures/check-source/expected/rejected.stdout
+new file mode 100644
+index 00000000..6cb095ad
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/rejected.stdout
+@@ -0,0 +1,81 @@
++{
++  "status": "rejected",
++  "file": "test.mori",
++  "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
++  "agreement": {
++    "name": "Invoice",
++    "span": {
++      "start": 37,
++      "end": 44
++    }
++  },
++  "declarations": [
++    {
++      "kind": "const",
++      "name": "price",
++      "span": {
++        "start": 49,
++        "end": 66
++      },
++      "name_span": {
++        "start": 55,
++        "end": 60
++      }
++    },
++    {
++      "kind": "const",
++      "name": "price",
++      "span": {
++        "start": 69,
++        "end": 89
++      },
++      "name_span": {
++        "start": 75,
++        "end": 80
++      }
++    }
++  ],
++  "actions": [],
++  "diagnostics": [
++    {
++      "code": "mori::check::duplicate_name",
++      "severity": "error",
++      "message": "`price` is declared twice.",
++      "help": "Each declaration and action in an agreement needs its own name.",
++      "labels": [
++        {
++          "span": {
++            "start": 55,
++            "end": 60
++          },
++          "text": "first declared here",
++          "primary": false
++        },
++        {
++          "span": {
++            "start": 75,
++            "end": 80
++          },
++          "text": "declared again here",
++          "primary": true
++        }
++      ]
++    },
++    {
++      "code": "mori::check::unknown_name",
++      "severity": "error",
++      "message": "I cannot find a declaration named `pirce`.",
++      "help": "Did you mean `price`?\n\n    const price = price;",
++      "labels": [
++        {
++          "span": {
++            "start": 83,
++            "end": 88
++          },
++          "text": "not declared above",
++          "primary": true
++        }
++      ]
++    }
++  ]
++}
+diff --git a/crates/fixtures/check-source/expected/unicode-byte-offsets.stdout b/crates/fixtures/check-source/expected/unicode-byte-offsets.stdout
+new file mode 100644
+index 00000000..bfbcc2ba
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/unicode-byte-offsets.stdout
+@@ -0,0 +1,81 @@
++{
++  "status": "rejected",
++  "file": "test.mori",
++  "source_hash": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f",
++  "agreement": {
++    "name": "Invoice",
++    "span": {
++      "start": 46,
++      "end": 53
++    }
++  },
++  "declarations": [
++    {
++      "kind": "const",
++      "name": "price",
++      "span": {
++        "start": 58,
++        "end": 75
++      },
++      "name_span": {
++        "start": 64,
++        "end": 69
++      }
++    },
++    {
++      "kind": "const",
++      "name": "price",
++      "span": {
++        "start": 78,
++        "end": 98
++      },
++      "name_span": {
++        "start": 84,
++        "end": 89
++      }
++    }
++  ],
++  "actions": [],
++  "diagnostics": [
++    {
++      "code": "mori::check::duplicate_name",
++      "severity": "error",
++      "message": "`price` is declared twice.",
++      "help": "Each declaration and action in an agreement needs its own name.",
++      "labels": [
++        {
++          "span": {
++            "start": 64,
++            "end": 69
++          },
++          "text": "first declared here",
++          "primary": false
++        },
++        {
++          "span": {
++            "start": 84,
++            "end": 89
++          },
++          "text": "declared again here",
++          "primary": true
++        }
++      ]
++    },
++    {
++      "code": "mori::check::unknown_name",
++      "severity": "error",
++      "message": "I cannot find a declaration named `pirce`.",
++      "help": "Did you mean `price`?\n\n    const price = price;",
++      "labels": [
++        {
++          "span": {
++            "start": 92,
++            "end": 97
++          },
++          "text": "not declared above",
++          "primary": true
++        }
++      ]
++    }
++  ]
++}
+diff --git a/crates/fixtures/check-source/expected/unparsable.stdout b/crates/fixtures/check-source/expected/unparsable.stdout
+new file mode 100644
+index 00000000..d78fcd97
+--- /dev/null
++++ b/crates/fixtures/check-source/expected/unparsable.stdout
+@@ -0,0 +1,26 @@
++{
++  "status": "rejected",
++  "file": "test.mori",
++  "source_hash": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123",
++  "agreement": null,
++  "declarations": [],
++  "actions": [],
++  "diagnostics": [
++    {
++      "code": "mori::syntax::missing_semicolon",
++      "severity": "error",
++      "message": "I was partway through the declaration of `price` when I found the end of the file.",
++      "help": "A declaration looks like this. The type after `:` is optional:\n\n    const fee: Qty<USD> = 0.10 USD;",
++      "labels": [
++        {
++          "span": {
++            "start": 65,
++            "end": 65
++          },
++          "text": "I expected `;` here",
++          "primary": true
++        }
++      ]
++    }
++  ]
++}
+diff --git a/crates/mori/src/commands/check.rs b/crates/mori/src/commands/check.rs
+index 8335d68d..19769e55 100644
+--- a/crates/mori/src/commands/check.rs
++++ b/crates/mori/src/commands/check.rs
+@@ -7,6 +7,8 @@ use mori_diagnostics::{MoriDiagnostic, NamedSource};
+ use crate::json::CheckReport;
+ use crate::shell::Shell;
+ 
++use super::check_source::{self, SourceCheckConsumer};
++
+ #[derive(Debug, clap::Args)]
+ pub struct Args {
+     /// Source file
+@@ -26,88 +28,93 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+         shell.status("Checking", &name);
+     }
+     let started = Instant::now();
+-    if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
+-        let staged = mori_core::language(&source).is_ok_and(|language| language == "moriarty/2");
+-        let result = if staged {
+-            mori_core::stage::load(&source).map(|program| program.program().clone())
+-        } else {
+-            mori_core::parse(&source)
+-        };
+-        if args.json {
+-            let report = match &result {
+-                Ok(program) => {
+-                    serde_json::json!({"status":"accepted", "file":name,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
+-                }
+-                Err(error) => {
+-                    serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
+-                }
+-            };
+-            if staged {
+-                super::simulate::print_stage_report(report)?;
+-            } else {
+-                super::core_io::print(&report)?;
+-            }
+-        } else {
+-            match &result {
+-                Ok(_) => shell.status("Finished", "bounded core check"),
+-                Err(error) => shell.error(error),
+-            }
+-        }
+-        return Ok(if result.is_ok() {
+-            ExitCode::SUCCESS
+-        } else {
+-            ExitCode::FAILURE
+-        });
+-    }
+-    let (accepted, report) = match mori_parser::parse(&source) {
+-        Err(error) => {
+-            let diagnostics = vec![error];
+-            let report = args
+-                .json
+-                .then(|| CheckReport::new(name.clone(), &source, None, &diagnostics));
+-            (
+-                finish(shell, &name, &source, diagnostics, args.json),
+-                report,
+-            )
+-        }
+-        Ok(ast) => {
+-            if !args.json {
+-                shell.verbose_status(
+-                    "Parsed",
+-                    format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
+-                );
+-            }
+-            let result = mori_checker::check(&ast);
+-            let report = args.json.then(|| {
+-                CheckReport::new(
+-                    name.clone(),
+-                    &source,
+-                    Some(&result.checked),
+-                    &result.diagnostics,
+-                )
+-            });
+-            (
+-                finish(shell, &name, &source, result.diagnostics, args.json),
+-                report,
+-            )
++    let outcome = check_source::dispatch(
++        &source,
++        CliConsumer {
++            name: &name,
++            source: &source,
++            json: args.json,
++            shell,
++        },
++    )?;
++    if outcome.beta {
++        if let Some(report) = outcome.report {
++            super::core_io::print(&report)?;
++        } else if outcome.accepted {
++            shell.status(
++                "Finished",
++                format!("check in {:.2}s", started.elapsed().as_secs_f64()),
++            );
+         }
+-    };
+-
+-    if let Some(report) = report {
+-        super::core_io::print(&report)?;
+-    } else if accepted {
+-        shell.status(
+-            "Finished",
+-            format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+-        );
+     }
+-    Ok(if accepted {
++    Ok(if outcome.accepted {
+         ExitCode::SUCCESS
+     } else {
+         ExitCode::FAILURE
+     })
+ }
+ 
++struct CliOutcome {
++    accepted: bool,
++    beta: bool,
++    report: Option<CheckReport>,
++}
++
++struct CliConsumer<'a> {
++    name: &'a str,
++    source: &'a str,
++    json: bool,
++    shell: &'a mut Shell,
++}
++
++impl SourceCheckConsumer for CliConsumer<'_> {
++    type Output = super::Result<CliOutcome>;
++
++    fn parsed(&mut self, tokens: usize, nodes: usize) {
++        if !self.json {
++            self.shell
++                .verbose_status("Parsed", format!("{tokens} tokens, {nodes} nodes"));
++        }
++    }
++
++    fn beta(
++        self,
++        checked: Option<&mori_checker::Checked<'_>>,
++        diagnostics: Vec<MoriDiagnostic>,
++    ) -> Self::Output {
++        let report = self.json.then(|| {
++            check_source::beta_report(self.name.to_owned(), self.source, checked, &diagnostics)
++        });
++        let accepted = finish(self.shell, self.name, self.source, diagnostics, self.json);
++        Ok(CliOutcome {
++            accepted,
++            beta: true,
++            report,
++        })
++    }
++
++    fn core(
++        self,
++        result: Result<mori_core::Program, mori_core::Error>,
++        staged: bool,
++    ) -> Self::Output {
++        if self.json {
++            let report = check_source::core_report(self.name, self.source, &result, staged);
++            super::core_io::print(&report)?;
++        } else {
++            match &result {
++                Ok(_) => self.shell.status("Finished", "bounded core check"),
++                Err(error) => self.shell.error(error),
++            }
++        }
++        Ok(CliOutcome {
++            accepted: result.is_ok(),
++            beta: false,
++            report: None,
++        })
++    }
++}
++
+ /// Renders the diagnostics, unless the report is JSON. True when there are none.
+ fn finish(
+     shell: &mut Shell,
+diff --git a/crates/mori/src/commands/check_source.rs b/crates/mori/src/commands/check_source.rs
+new file mode 100644
+index 00000000..e619c2c7
+--- /dev/null
++++ b/crates/mori/src/commands/check_source.rs
+@@ -0,0 +1,86 @@
++//! Shared source-profile dispatch and the existing check report formats.
++
++use mori_diagnostics::MoriDiagnostic;
++
++use crate::json::CheckReport;
++
++/// Consume checked values while the Beta AST they borrow is still alive.
++/// Reports remain optional: a human consumer can render diagnostics directly.
++pub(super) trait SourceCheckConsumer {
++    type Output;
++
++    /// Called after Beta parsing, before its checker starts.
++    fn parsed(&mut self, _tokens: usize, _nodes: usize) {}
++
++    fn beta(
++        self,
++        checked: Option<&mori_checker::Checked<'_>>,
++        diagnostics: Vec<MoriDiagnostic>,
++    ) -> Self::Output;
++
++    fn core(
++        self,
++        result: Result<mori_core::Program, mori_core::Error>,
++        staged: bool,
++    ) -> Self::Output;
++}
++
++/// Select exactly the same Beta, Core1 or staged Core2 path as `mori check`.
++pub(super) fn dispatch<C: SourceCheckConsumer>(source: &str, mut consumer: C) -> C::Output {
++    if mori_lexer::first_token_text(source).is_ok_and(|token| token == "language") {
++        let staged = mori_core::language(source).is_ok_and(|language| language == "moriarty/2");
++        let result = if staged {
++            mori_core::stage::load(source).map(|program| program.program().clone())
++        } else {
++            mori_core::parse(source)
++        };
++        return consumer.core(result, staged);
++    }
++    match mori_parser::parse(source) {
++        Err(error) => consumer.beta(None, vec![error]),
++        Ok(ast) => {
++            consumer.parsed(ast.tokens.len(), ast.nodes.len());
++            let mori_checker::CheckResult {
++                checked,
++                diagnostics,
++            } = mori_checker::check(&ast);
++            consumer.beta(Some(&checked), diagnostics)
++        }
++    }
++}
++
++/// Preserve the Beta struct's serialization order and diagnostic/span mapping.
++pub(super) fn beta_report(
++    file: String,
++    source: &str,
++    checked: Option<&mori_checker::Checked<'_>>,
++    diagnostics: &[MoriDiagnostic],
++) -> CheckReport {
++    CheckReport::new(file, source, checked, diagnostics)
++}
++
++/// Construct the existing Core JSON object only when a consumer requests it.
++pub(super) fn core_report(
++    file: &str,
++    source: &str,
++    result: &Result<mori_core::Program, mori_core::Error>,
++    staged: bool,
++) -> serde_json::Value {
++    let mut report = match result {
++        Ok(program) => {
++            serde_json::json!({"status":"accepted", "file":file,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
++        }
++        Err(error) => {
++            serde_json::json!({"status":"rejected","file":file,"diagnostics":[error]})
++        }
++    };
++    if staged {
++        let object = report
++            .as_object_mut()
++            .expect("stage reports are JSON objects");
++        for (name, value) in mori_core::stage::STAGE_LABELS {
++            object.insert(name.into(), serde_json::Value::String(value.into()));
++        }
++    }
++    report
++}
+diff --git a/crates/mori/src/commands/mod.rs b/crates/mori/src/commands/mod.rs
+index cc59d26c..7592e46d 100644
+--- a/crates/mori/src/commands/mod.rs
++++ b/crates/mori/src/commands/mod.rs
+@@ -9,6 +9,7 @@ use crate::shell::Shell;
+ 
+ mod call_io;
+ pub mod check;
++mod check_source;
+ pub mod compile;
+ pub mod compile_call;
+ mod core_io;
+diff --git a/crates/mori/tests/check_source_dispatch.rs b/crates/mori/tests/check_source_dispatch.rs
+new file mode 100644
+index 00000000..1d1fc550
+--- /dev/null
++++ b/crates/mori/tests/check_source_dispatch.rs
+@@ -0,0 +1,131 @@
++//! Complete public `mori check` output and exits for the shared dispatch paths.
++
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::sync::atomic::{AtomicU64, Ordering};
++
++use serde::Deserialize;
++
++#[derive(Deserialize)]
++#[serde(rename_all = "camelCase")]
++struct Case {
++    id: String,
++    source: String,
++    file_label: String,
++    argv: Vec<String>,
++    expected_exit: i32,
++    expected_stdout: String,
++    human_argv: Vec<String>,
++}
++
++struct CaseDirectory(PathBuf);
++
++impl CaseDirectory {
++    fn new(id: &str) -> Self {
++        static NEXT: AtomicU64 = AtomicU64::new(0);
++        let nonce = std::time::SystemTime::now()
++            .duration_since(std::time::UNIX_EPOCH)
++            .expect("current time is after the Unix epoch")
++            .as_nanos();
++        let path = std::env::temp_dir().join(format!(
++            "mori-check-{id}-{}-{nonce}-{}",
++            std::process::id(),
++            NEXT.fetch_add(1, Ordering::Relaxed)
++        ));
++        std::fs::create_dir(&path).expect("create isolated check directory");
++        Self(path)
++    }
++}
++
++impl Drop for CaseDirectory {
++    fn drop(&mut self) {
++        let _ = std::fs::remove_dir_all(&self.0);
++    }
++}
++
++fn check_case(id: &str) {
++    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures/check-source");
++    let cases: Vec<Case> = serde_json::from_slice(
++        &std::fs::read(fixtures.join("cases.json")).expect("read case manifest"),
++    )
++    .expect("decode case manifest");
++    let case = cases.iter().find(|case| case.id == id).expect("named case");
++    let source = std::fs::read(fixtures.join(&case.source)).expect("read source fixture");
++    let directory = CaseDirectory::new(id);
++    std::fs::write(directory.0.join(&case.file_label), &source).expect("copy source bytes");
++    let expected = std::fs::read(fixtures.join(&case.expected_stdout)).expect("read byte oracle");
++    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .current_dir(&directory.0)
++        .args(&case.argv)
++        .output()
++        .expect("run public JSON check");
++    let description = format!("case {id} source:\n{}", String::from_utf8_lossy(&source));
++    assert_eq!(
++        output.status.code(),
++        Some(case.expected_exit),
++        "{description}"
++    );
++    assert_eq!(output.stdout, expected, "{description}");
++    assert!(
++        output.stderr.is_empty(),
++        "{description}: {:?}",
++        output.stderr
++    );
++
++    let human = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .current_dir(&directory.0)
++        .args(&case.human_argv)
++        .output()
++        .expect("run public human check");
++    assert_eq!(
++        human.status.code(),
++        Some(case.expected_exit),
++        "{description}"
++    );
++    assert!(human.stdout.is_empty(), "{description}");
++    assert_eq!(
++        human.stderr.is_empty(),
++        case.expected_exit == 0,
++        "{description}"
++    );
++}
++
++#[test]
++fn beta_accepted() {
++    check_case("accepted");
++}
++
++#[test]
++fn beta_rejected() {
++    check_case("rejected");
++}
++
++#[test]
++fn beta_parse_error() {
++    check_case("unparsable");
++}
++
++#[test]
++fn core1_accepted() {
++    check_case("core1-accepted");
++}
++
++#[test]
++fn core1_rejected() {
++    check_case("core1-rejected");
++}
++
++#[test]
++fn core2_accepted() {
++    check_case("core2-accepted");
++}
++
++#[test]
++fn core2_rejected() {
++    check_case("core2-rejected");
++}
++
++#[test]
++fn beta_unicode_byte_offsets() {
++    check_case("unicode-byte-offsets");
++}

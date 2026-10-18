@@ -1,0 +1,51 @@
+--- prior/crates/mori-backend/tests/full_artifact_consumer_contract.rs
++++ current/crates/mori-backend/tests/full_artifact_consumer_contract.rs
+@@ -120,7 +120,7 @@
+         same_members(&inputs, &expected_inputs);
+         assert_eq!(action.statements.len() as u64, uint(&expected["syntacticStatementCount"]));
+     }
+-    // This checks declarations, not the complete expression arena or its IDs.
++    // Declaration projections supplement the complete Program equality in observe.
+ }
+ 
+ fn circuit(value: &Value, facts: &Value, expected_action: &Value) {
+@@ -215,11 +215,14 @@
+     assert_eq!(serde_json::to_value(decoded).unwrap(), serde_ir);
+ }
+ 
+-fn observe(source: &str, facts: &str) {
++fn observe(source: &str, facts: &str, frozen_program: &str) {
+     let facts: Value = serde_json::from_str(facts).unwrap();
+     let expected_target: Value = serde_json::from_str(expectation!("target.expected.json")).unwrap();
+     let target = Target::from_json(expectation!("target.expected.json")).unwrap();
+     let program = mori_core::parse(source).unwrap();
++    let expected_program: Value = serde_json::from_str(frozen_program).unwrap();
++    assert_eq!(serde_json::to_value(&program).unwrap(), expected_program,
++        "the complete independently frozen Program must match before compiling");
+     source_declarations(&program, &facts);
+     // Same Core/1 entry point as the public CLI, including its separate metadata wrapper.
+     let artifact = compile_reported(&program, &target).unwrap().artifact;
+@@ -234,7 +237,7 @@
+     assert_eq!(wire["relation"], json!("moriarty-zkir-relation/3"));
+     assert_eq!(wire["authorization_mode"], json!("unsigned"));
+     text(&wire["program_hash"]); // Exact canonical Program hash remains independently unasserted.
+-    assert_eq!(wire["semantics"], json!(program.semantics)); // Producer/consumer consistency only.
++    assert_eq!(wire["semantics"], expected_program["semantics"]); // Frozen independent literal.
+     assert_eq!(wire["target"], expected_target);
+     object(&wire["target"], &["profile", "network", "anchor", "ledger_revision", "zkir_version",
+         "max_instructions", "max_artifact_bytes"]);
+@@ -271,9 +274,11 @@
+ 
+ #[test]
+ fn invoice_whole_artifact_reopens_and_preserves_independent_source_facts() {
+-    observe(source!("installment-invoice.mori"), expectation!("installment-invoice.source-facts.json"));
++    observe(source!("installment-invoice.mori"), expectation!("installment-invoice.source-facts.json"),
++        source!("installment-invoice.program.expected.json"));
+ }
+ #[test]
+ fn reserve_whole_artifact_reopens_and_preserves_five_exact_balance_rows() {
+-    observe(source!("conditional-reserve.mori"), expectation!("conditional-reserve.source-facts.json"));
+-}
++    observe(source!("conditional-reserve.mori"), expectation!("conditional-reserve.source-facts.json"),
++        source!("conditional-reserve.program.expected.json"));
++}

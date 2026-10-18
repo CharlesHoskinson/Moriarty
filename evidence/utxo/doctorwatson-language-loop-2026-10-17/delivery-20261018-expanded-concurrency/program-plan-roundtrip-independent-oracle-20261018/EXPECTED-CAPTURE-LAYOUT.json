@@ -1,0 +1,94 @@
+{
+  "action": "pay",
+  "statement_count": 10,
+  "sites": [
+    {
+      "site": 0,
+      "captures": []
+    },
+    {
+      "site": 1,
+      "label": "receipt",
+      "ordinal": 6,
+      "binders": [
+        {
+          "name": "accepted",
+          "ty": "Bool"
+        }
+      ],
+      "captures": [
+        {
+          "name": "quantity",
+          "ty": "UInt",
+          "origin": "Input",
+          "ordinal": 0
+        },
+        {
+          "name": "owed",
+          "ty": "UInt",
+          "origin": "Let",
+          "ordinal": 0
+        }
+      ]
+    }
+  ],
+  "frame_pre": {
+    "site": 0,
+    "captures": []
+  },
+  "frame_post": {
+    "site": 1,
+    "captures": [
+      {
+        "name": "quantity",
+        "value": {
+          "type": "UInt",
+          "value": "14"
+        }
+      },
+      {
+        "name": "owed",
+        "value": {
+          "type": "UInt",
+          "value": "17"
+        }
+      }
+    ]
+  },
+  "continuationCaptures": [
+    {
+      "name": "quantity",
+      "value": {
+        "type": "UInt",
+        "value": "14"
+      }
+    },
+    {
+      "name": "owed",
+      "value": {
+        "type": "UInt",
+        "value": "17"
+      }
+    }
+  ],
+  "excludedFromCaptures": [
+    "principal",
+    "accepted"
+  ],
+  "residual": [],
+  "completeBoundaryLiabilities": [
+    {
+      "name": "paid-invoice",
+      "asset": {
+        "network": "local",
+        "issuer": "receipt-issuer",
+        "reference": "credit",
+        "scale": 3
+      },
+      "debtor": "alice",
+      "creditor": "merchant",
+      "amount": "0"
+    }
+  ],
+  "note": "Input and Let origin enums distinguish their equal ordinal zero. Pending event binder not yet captured. State read from boundary."
+}

@@ -1,0 +1,103 @@
+{
+  "actions": [
+    {
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "name": "await_document",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "DOC",
+          "creditor": "documentReceiver",
+          "debtor": "documentAgent",
+          "kind": "Liability",
+          "name": "documentDuty"
+        },
+        {
+          "amount": 1,
+          "asset": "DOC",
+          "creditor": "documentReceiver",
+          "debtor": "documentAgent",
+          "kind": "Liability",
+          "name": "retainedDocumentDuty"
+        },
+        {
+          "binders": [
+            {
+              "name": "observed",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 2,
+          "kind": "Await",
+          "label": "document"
+        },
+        {
+          "amount": 3,
+          "asset": "DOC",
+          "from": "documentAgent",
+          "kind": "Transfer",
+          "to": "documentReceiver"
+        },
+        {
+          "amount": 4,
+          "kind": "Discharge",
+          "name": "documentDuty"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "join-document",
+        "network": "local",
+        "reference": "DOC",
+        "scale": 0
+      },
+      "name": "DOC"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "2"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "observed"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    }
+  ],
+  "language": "moriarty/2",
+  "name": "DocumentParent",
+  "semantics": "moriarty-core/2",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "7"
+      },
+      "name": "docMarker",
+      "ty": "UInt"
+    }
+  ]
+}

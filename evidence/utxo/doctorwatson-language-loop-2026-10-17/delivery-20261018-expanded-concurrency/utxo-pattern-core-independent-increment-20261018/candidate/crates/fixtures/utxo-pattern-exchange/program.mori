@@ -1,0 +1,24 @@
+// Ordinary local Core/1 example. These account labels and supplied balances
+// do not authenticate escrow ownership, signatories, or any ledger state.
+language "moriarty/1";
+agreement PrefundedBilateralExchange {
+  asset A = { network: "local", issuer: "example-bilateral", reference: "A", scale: 0 };
+  asset B = { network: "local", issuer: "example-bilateral", reference: "B", scale: 0 };
+  state phase: UInt = 0;
+  state revision: UInt = 0;
+  state marker: UInt = 77;
+
+  action exchange(quotedA: UInt, quotedB: UInt, serviceFee: UInt) {
+    requires phase == 0;
+    requires quotedA == 10;
+    requires quotedB == 25;
+    requires serviceFee == 1;
+    transfer(A, "escrow-a", "trader", quotedA);
+    transfer(B, "escrow-b", "provider", quotedB);
+    fee(A, "fee-payer", "treasury", serviceFee);
+    next phase = 1;
+    next revision = revision + 1;
+    ensures phase == 1;
+    emit "exchanged"(quotedA);
+  }
+}

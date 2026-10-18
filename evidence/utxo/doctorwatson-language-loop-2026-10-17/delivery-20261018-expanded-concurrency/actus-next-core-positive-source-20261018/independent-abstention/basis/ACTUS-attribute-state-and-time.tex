@@ -1,0 +1,89 @@
+Contract Attributes (attributes) represent the legal contractual terms that define the exchange of cash-flows of a financial contract. These attributes are defined and described in the ACTUS dictionary (\url{https://github.com/actusfrf/actus-dictionary/blob/master/actus-dictionary-terms.json}). Throughout this document attributes are referenced by their short name according to the dictionary. Further, vector-type attributes may be indexed with a subscript indicating that a specific vector-element is referenced.
+
+\begin{example}[Contract Attribute]
+The ACTUS attribute \textit{Initial Exchange Date} is referenced in short form \attr{IED}.
+\end{example}
+
+
+\begin{example}[Element of Vector-Type Attribute]
+The ACTUS attribute \textit{Array Cycle Anchor Date of Principal Redemption} is a vector-type attribute and referenced as \attr{ARPRANX}. The $i$-th element of the vector is represented by $\attr{ARPRANX}_i$.
+\end{example}
+
+
+\subsection{$\undef$-Operator}\label{sec:undef}
+
+The $\undef$-operator is used to indicate that a certain property is undefined or, in other words, that no value has been assigned to the respective property. In particular, for optional contract attributes it means that the attribute is not defined and for schedule times (see section \ref{sec:schedule}) it means that the respective schedule is empty, i.e. no schedule time defined.
+
+\begin{example}[Undefined Attribute]
+$\attr{IPANX}=\undef$ indicates that attribute \attr{IPANX} is undefined.
+\end{example}
+
+\begin{example}[Empty Schedule]
+$\vec{t}^{IP}=\undef$ means the same as $\vec{t}^{IP}=\{\}$, with $\{\}$ the empty set, and states that the IP schedule $\vec{t}^{IP}$ does not contain a schedule time.
+\end{example}
+
+
+\subsection{$t_0$-Time}\label{sec:t0time}
+
+$t_0$ represents \attr{SD} of a contract and marks the time as per which the terms and implied state of a contract is represented. In general, from the contractual logic we are able to derive any contractual events and resulting states for any time $t>t_0$ but not for times $s<t_0$.
+
+
+\subsection{State Variables}\label{sec:statevarsnotat}
+
+State Variables (states) describe the state of a contract at a certain point in time $t$ during its lifetime. Examples of such states are the (outstanding) Notional Principal, the applicable Nominal Interest Rate, or the current Contract Performance. The ACTUS dictionary (\url{https://github.com/actusfrf/actus-dictionary/blob/master/actus-dictionary-states.json}) defines all states and provides further information on their data type, format, etc.
+
+In general, states represent certain terms of a contract that change along the contract lifetime according to either scheduled events or unscheduled events. Therefore, states representing a contractual term carry the exact same names as their term-counterpart.
+
+States are written in their short form representation with first letter capitalized, printed in bold, and indexed with time.
+
+\begin{example}[State Variables]
+$\svar{Nt}{t}$ refers to the state \textit{Notional Principal} observed at time $t$.
+\end{example}
+
+
+\subsection{Contract Events}\label{sec:events}
+
+A Contract Event (event) $e_t^k$ refers to any contractually scheduled or unscheduled event at a certain time $t$ and of a certain type $k$. Contract events mark specific points in time during the lifetime of a contract at which a cash flow is being exchanged (see section \ref{sec:pof}) or the states of the contract are being updated (see section \ref{sec:stf}). The dictionary lists and describes all the event types $k$ defined by the ACTUS standards (\url{https://github.com/actusfrf/actus-dictionary/blob/master/actus-dictionary-event-types.json}). Throughout this document event types $k$ are written in the short form as defined in the dictionary.
+
+As an event always has an associated event time $t$ and payoff $c\in\Real$ we define two operators allowing to retrieve these quantities for any single event $e_t^k$ or set of events $\{e_t^k,e_s^j, ...\}$ as follows;
+
+{$\begin{aligned}
+	\tev{x} &= \begin{cases} t & \text{if}\quad x=e_t^k \\
+				\{t,s,...\} & \text{else if}\quad x=\{e_t^k,e_s^j,...\} \end{cases} \\
+	\fev{x} &= \begin{cases} c & \text{if}\quad x=e_t^k \\
+				\{c_1, c_2, ...\} & \text{else if}\quad x=\{e_t^k,e_s^j,...\} \end{cases}
+\end{aligned}$}
+
+with $c_1=\fev{e_t^k}, c_2=\fev{e_s^j}, ...$.
+
+\begin{example}[Contract Events]
+The \textit{Initial Exchange Date} event with event time $s$ is written as $e_s^{IED}$ with $\tev{e_s^{IED}}=s$ and $\fev{e_s^{IED}}=c$ where for any contract \attr{CT} $c=\pof{IED}{\attr{CT}}$.
+\end{example}
+
+
+\subsection{State Transition Functions}\label{sec:stf}
+
+State Transition Functions (STF) define the transition of states from a pre-event to a post-event state when a certain event $e_t^{k}$ applies. Thereby, the pre-event and post-event times are indexed with $t^-$ and $t^+$, respectively. 
+
+These functions are specific to a certain event and contract. STFs are written according to the following pattern \stf{[event type]}{[contract type]} where [event type] and [contract type] refer to the respective event type and contract to which the STF belongs.
+
+\begin{example}[State Transition Functions]
+The STF for an IP event and PAM contract is written as \stf{IP}{PAM} and maps e.g. state \textit{Accrued Interest} from a pre-event state $\svar{Ipac}{t^-}$ to post-event state $\svar{Ipac}{t^+}$.
+\end{example}
+
+
+\subsection{Payoff Functions}\label{sec:pof}
+
+Payoff Functions (POF) define how the cash flow $c\in\Real$ for a certain event $e_t^k$ is being derived from current states and from the contract terms. If necessary, the resulting cash flow can be indexed with the event time $c_t$. These functions are specific to a certain event and contract. POFs are written according to the following pattern \pof{[event type]}{[contract type]} where [event type] and [contract type] refer to the respective event and contract to which the STF belongs.
+
+\begin{example}[Payoff Functions]
+The POF for an IP event $e_t^{IP}$ and PAM contract is written as \pof{IP}{PAM} with $\fev{e_t^{IP}}=\pof{IP}{PAM}$.
+\end{example}
+
+
+\subsection{Date/Time}\label{sec:time}
+
+ACTUS builds on the ISO 8601 date/time format. Hence, dates are generally expressed in the following format: [YYYY]-[MM]-[DD]T[hh]:[mm]:[ss].
+
+Time zone information is currently not supported.
+

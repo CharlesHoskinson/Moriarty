@@ -1,0 +1,12 @@
+language "moriarty-join-draft/1";
+join ReleaseAll {
+  module document from "document.mori";
+  module recipient from "recipient.mori";
+  module settlement from "settlement.mori";
+  parent document = document.await_document;
+  parent recipient = recipient.await_recipient;
+  availability all_observed;
+  success all_complete;
+  frame disjoint_union;
+  successor settlement.settle;
+}

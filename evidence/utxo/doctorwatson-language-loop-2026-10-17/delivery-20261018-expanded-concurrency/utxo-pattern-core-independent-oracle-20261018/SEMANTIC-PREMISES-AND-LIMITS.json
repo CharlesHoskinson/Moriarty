@@ -1,0 +1,42 @@
+{
+  "basisCommit": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
+  "matchingConsumerCommit": "823ce081c00786a0c55b92af81009f9e7c5e6a16",
+  "normativeFinancialRules": [
+    {
+      "basis": "core1-normative-readme.md",
+      "rule": "Nonempty scenario state supplies exactly all declared values; names resolve in statement order; next updates immediately; requires/ensures checked where written."
+    },
+    {
+      "basis": "core1-normative-readme.md",
+      "rule": "Exactasset transfer debits/credits explicit account rows; fee has same balances with distinct Fee effect; no mint/burn/implicit account creation."
+    },
+    {
+      "basis": "core1-normative-readme.md",
+      "rule": "Liabilities evolve only by explicit liability/discharge; no such statement appears, so all supplied duties persist."
+    },
+    {
+      "basis": "core1-snapshot-effect-dto.rs.txt",
+      "rule": "Expected Snapshot fields state/balances/liabilities and complete State/Transfer/Fee/Emit effect payloads use canonical UInt strings."
+    }
+  ],
+  "presentationPremise": {
+    "custodian": "/root/dwu_audit_ledger_native, input-only custody",
+    "sourceFactOnly": "runtime.rs scenario_snapshot line631 sorts balances by(asset,account); line664 sorts liabilities byname. AssetId Ord follows network,issuer,reference,scale in ir.rs. This nonnumeric ordering fact was received from sibling; no evaluator transition body/output was read.",
+    "expectedOrder": "A escrow-a,fee-payer,observer,trader,treasury; B escrow-b,observer,provider,trader; duties service-B thenwarranty-A.",
+    "losslessAlternativeComparison": "A comparator may key balances by full(asset,account) and duties byname only after asserting exactunique fullidentities/cardinalities; effects and prefixes stay ordered."
+  },
+  "selectedRoute": {
+    "consumer": "mori_core::parse -> unmetered mori_core::simulate",
+    "logicalCap": null,
+    "measuredLogicalCost": "unasserted: no meter selected",
+    "SDKDustNativeOrServiceFeeMeasurement": "unasserted; source Fee(A,1) is local token accounting only"
+  },
+  "notAsserted": [
+    "Parser ExprId/Statement IR encoding",
+    "Step.value and other evaluator diagnostic presentation not specified by the financial Snapshot/effect oracle",
+    "Compilation/proof/nativeSDK/ledger settlement",
+    "Any of20pattern families closure or proof of pattern ownership/ledger authority",
+    "Negative/hostile cases, atomic rollback on failure or generallanguage equivalence"
+  ],
+  "status": "Independent expected financial semantics for one normal admitted program; not execution evidence and no security judgment"
+}

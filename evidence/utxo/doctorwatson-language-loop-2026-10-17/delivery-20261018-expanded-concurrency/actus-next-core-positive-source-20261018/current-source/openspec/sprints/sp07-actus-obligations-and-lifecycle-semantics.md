@@ -1,0 +1,94 @@
+# SP07: ACTUS obligations and lifecycle semantics implementation plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
+
+**Goal:** Implement scheduled financial obligations, starting with the held-out capitalization and refinance cases.
+
+**Architecture:** This sprint contributes to MC01, MC07; those OpenSpec packages retain acceptance ownership. It consumes the exact accepted profiles and artifacts named by its prerequisites.
+
+**Tech Stack:** TypeScript/Node.js, `.mori`, ISO/IEC 14977 EBNF, K, Compact and the selected Midnight native stack where applicable. Versions are pinned at task admission.
+
+## Global constraints
+
+This is an internal maintainer implementation plan. Reviewer, task-admission and RP03 controls apply only to project-operated development and funded campaigns. Public authoring, compilation, proving and deployment with developer-owned resources require objective language/proof validity and participant authorization, not project records. The [product contract](../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope.
+
+Status: S2, specified-only. [Program rules](README.md) apply to every task.
+
+Full-completion dependencies (not individual task entry gates): SP03. Stage scope: actus-semantics. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
+
+## File and interface map
+
+Paths marked create are proposed outputs. Their presence or commands are not claimed today. If a path already exists at dispatch, reconcile it first.
+
+| Operation | Path | Responsibility |
+| --- | --- | --- |
+| create | `experiments/moriarty-conformance/src/actus.ts` | Pinned event and state comparison adapter |
+| create | `experiments/moriarty-language/library/actus/README.md` | Type-specific source programs and source mapping |
+| create | `experiments/moriarty-conformance/fixtures/heldouts/nam19.json` | Independent zero-payoff capitalization trace |
+| create | `experiments/moriarty-conformance/fixtures/heldouts/refinance.json` | Old/new debt identity and authority trace |
+| create | `experiments/moriarty-conformance/tests/actus.test.mjs` | All-field event, schedule and rounding controls |
+| modify | `experiments/moriarty-language/formal/k/moriarty.k` | Required financial Core extensions |
+
+Interfaces use the common records in [the sprint contract](README.md#shared-artifact-contract). Exact code signatures belong to the reviewed execution packet. Do not invent a prover API before its pinned source is inspected.
+
+## SP07.1: Resolve financial source discrepancies
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP07.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Pin normative sources and fixture revisions for DS-01 through DS-07. Freeze calendar, day-count, event order, rounding, currency and ANN initialization rules. Preserve all 32 taxonomy dispositions and 18 executable type scopes.
+- [ ] Verify: Every present result-field kind is compared without arbitrary tolerance. An unresolved required discrepancy blocks its family; no fixture is silently excluded.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP07` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP07.2: Implement the held-outs first
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP07.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Implement NAM19 capitalization and accepted refinance in source, typed Core, evaluator and K. Keep nominal debt separate from immediate payoff and token settlement. Preserve old/new obligation identities and authorized liabilities.
+- [ ] Verify: Zero cash flow may still capitalize debt. Refinance must be accepted when authorized and rejected for debt erasure, duplicate novation or increased unsigned liability.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP07` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP07.3: Complete scheduled contract families
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP07.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Implement all 277 pinned fixtures through shared language libraries and necessary versioned Core extensions. Partition batches by actual contract type and event behavior. Define bounded schedules, partial payment, maturity/default and obligation-preserving exhaustion.
+- [ ] Verify: Every required fixture has an independently checked complete semantic trace. K/evaluator/lowering changes reopen affected claims; proof and ledger qualification finish in SP11.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP07` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP07.3 batch boundaries
+
+Use separate executable packets for these pinned types: ANN, CLM, CAPFL, CSH, CEC, COM, LAX, FXOUT, FUTUR, CEG, LAM, NAM, OPTNS, SWPPV, PAM, STK, SWAPS, UMP. Start the NAM batch with NAM19. Each packet lives at `openspec/sprints/execution/SP07-TYPE.md`, with TYPE replaced by its listed identifier. Its exit evidence records every fixture and complete field comparison, source digest, changed K/Core constructors, current semantic claims and charged resources. A failed type remains open; passing another type cannot close it. Refinance has its own held-out packet under SP07.2.
+
+## Shared file integration order
+
+SP07 owns the first financial additions to shared `formal/k/**` and `src/successor/**` files. SP08 drafts its libraries and independent expectations concurrently, then rebases and integrates affected shared files after SP07's reviewed change. The orchestrator assigns one writer for each exact shared file in the executable packet and serializes their merges. No two admitted packets may own the same shared file simultaneously. Re-run affected financial and correspondence checks after integration.
+
+## Verification entry points
+
+Existing package commands may run only in their declared scope. Other commands are proposed interfaces that task admission must create and verify. Behavioral task packets must include exact runnable inputs, failing tests and expected outputs before implementation.
+
+```sh
+npm --prefix experiments/moriarty-conformance test
+npm --prefix experiments/moriarty-conformance run actus -- --all --all-fields
+python3 experiments/moriarty-language/formal/k/run.py traces --all
+```
+
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection rather than a crash or unauthorized effect. Pre-submission logical rejection is atomic; submitted transactions may retain only effects, authority/nonce consumption and fees permitted by the signed phase-specific failure policy. Project-operated proof and public-network campaigns additionally require live RP03 admission; independent public toolchain use does not.
+
+## Report-informed acceptance refinement
+
+**Implement ACTUS without losing debt or fields.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP07.1: resolve DS-01–DS-07 with pinned normative sources, independent arithmetic and calendar/event-order policies. Preserve 32 dispositions, 18 executable types, 276 contract fixtures plus one analysis-date fixture.
+- [ ] SP07.2: implement NAM19 zero-payoff capitalization and authorized refinance first. Carry old/new debt identity, nominal liability, interest allocation and time separately from immediate token transfers.
+- [ ] SP07.3: all 277 filename-qualified fixtures compare every present ordered field through shared source/Core/K/evaluator/lowering. No fixture-specific bypass, silent tolerance, quarantine or expected-failure exclusion. TX02/TX03 supplement; they do not rewrite ACTUS semantics.
+
+## Current task interpretation — 2026-10-14
+
+Retain all 277 fixtures and expected fields, 18 executable types, 32 taxonomy dispositions and DS01–07. Existing finite libraries and new FeePool cases do not resolve ACTUS source gaps or replace family-specific semantic evidence. Validate exact manifest membership before scoring. Independent source/arithmetic preparation can continue under U0/U6 while applicable accepted semantic inputs still govern full SP09/U4 qualification. No SP07 task is newly complete.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
+## Exit gate
+
+Complete ACTUS semantic evidence and held-out implementation. MC07 remains open until native, compiler and acceptance coverage are requalified.

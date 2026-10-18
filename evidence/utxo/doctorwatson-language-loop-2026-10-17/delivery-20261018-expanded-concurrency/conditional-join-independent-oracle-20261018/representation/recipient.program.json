@@ -1,0 +1,88 @@
+{
+  "actions": [
+    {
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "name": "await_recipient",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "ACK",
+          "creditor": "recipientReceiver",
+          "debtor": "recipientAgent",
+          "kind": "Liability",
+          "name": "recipientDuty"
+        },
+        {
+          "binders": [
+            {
+              "name": "accepted",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 1,
+          "kind": "Await",
+          "label": "acceptance"
+        },
+        {
+          "amount": 2,
+          "asset": "ACK",
+          "from": "recipientAgent",
+          "kind": "Transfer",
+          "to": "recipientReceiver"
+        },
+        {
+          "amount": 3,
+          "kind": "Discharge",
+          "name": "recipientDuty"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "join-recipient",
+        "network": "local",
+        "reference": "ACK",
+        "scale": 0
+      },
+      "name": "ACK"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "accepted"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    }
+  ],
+  "language": "moriarty/2",
+  "name": "RecipientParent",
+  "semantics": "moriarty-core/2",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "9"
+      },
+      "name": "recipientMarker",
+      "ty": "UInt"
+    }
+  ]
+}

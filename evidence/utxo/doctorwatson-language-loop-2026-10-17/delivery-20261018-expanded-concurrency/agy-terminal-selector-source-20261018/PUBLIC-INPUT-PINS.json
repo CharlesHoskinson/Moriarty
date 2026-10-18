@@ -1,0 +1,80 @@
+{
+  "capturedAt": "2026-10-18T12:53:54.545201+00:00",
+  "publicProbeInputs": [
+    {
+      "originalPath": "/home/charl/moriarty-c2-opus55-restored-20261017/agy-terminal-envelope-probe-20261018/PUBLIC-PROTOCOL-SHAPES.json",
+      "copiedPath": "public-protocol-inputs/PUBLIC-PROTOCOL-SHAPES.json",
+      "bytes": 6096,
+      "sha256": "c6bbc9567925a0676a7dee39be3e8cdd8d0e23b5612e8ee3f417a64be3209fc2",
+      "kind": "Existing public nonce-probe structural metadata/schema; no provider/private stream read"
+    },
+    {
+      "originalPath": "/home/charl/moriarty-c2-opus55-restored-20261017/agy-terminal-envelope-probe-20261018/OUTPUT-SCHEMA.json",
+      "copiedPath": "public-protocol-inputs/OUTPUT-SCHEMA.json",
+      "bytes": 476,
+      "sha256": "01233761f403ac4105cf2fa7a3e377bb47b8b340328039f2126f425b7ef8b486",
+      "kind": "Existing public nonce-probe structural metadata/schema; no provider/private stream read"
+    }
+  ],
+  "libraryApiSourceExcerpts": [
+    {
+      "sourcePath": "/usr/lib/python3/dist-packages/jsonschema/validators.py",
+      "fullFileSha256": "bee964eb97ce1c89bfb4d14d9046325c44934f95de1e390c523939db5136ab48",
+      "fullFileBytes": 46262,
+      "kind": "Installed public library source API excerpt read without import/execution; not an archive/Git provenance claim",
+      "excerpts": [
+        {
+          "startLine": 1240,
+          "endLine": 1248,
+          "text": "def validate(instance, schema, cls=None, *args, **kwargs):  # noqa: D417\n    \"\"\"\n    Validate an instance under the given schema.\n\n        >>> validate([2, 3, 4], {\"maxItems\": 2})\n        Traceback (most recent call last):\n            ...\n        ValidationError: [2, 3, 4] is too long\n"
+        },
+        {
+          "startLine": 1297,
+          "endLine": 1306,
+          "text": "        `jsonschema.validators.validates`\n    \"\"\"\n    if cls is None:\n        cls = validator_for(schema)\n\n    cls.check_schema(schema)\n    validator = cls(schema, *args, **kwargs)\n    error = exceptions.best_match(validator.iter_errors(instance))\n    if error is not None:\n        raise error"
+        },
+        {
+          "startLine": 1309,
+          "endLine": 1318,
+          "text": "def validator_for(schema, default=_UNSET):\n    \"\"\"\n    Retrieve the validator class appropriate for validating the given schema.\n\n    Uses the :kw:`$schema` keyword that should be present in the given\n    schema to look up the appropriate validator class.\n\n    Arguments:\n\n        schema (collections.abc.Mapping or bool):"
+        },
+        {
+          "startLine": 1365,
+          "endLine": 1381,
+          "text": "\n    \"\"\"\n    DefaultValidator = _LATEST_VERSION if default is _UNSET else default\n\n    if schema is True or schema is False or \"$schema\" not in schema:\n        return DefaultValidator\n    if schema[\"$schema\"] not in _META_SCHEMAS and default is _UNSET:\n        warn(\n            (\n                \"The metaschema specified by $schema was not found. \"\n                \"Using the latest draft to validate, but this will raise \"\n                \"an error in the future.\"\n            ),\n            DeprecationWarning,\n            stacklevel=2,\n        )\n    return _META_SCHEMAS.get(schema[\"$schema\"], DefaultValidator)"
+        }
+      ]
+    },
+    {
+      "sourcePath": "/usr/lib/python3/dist-packages/referencing/_core.py",
+      "fullFileSha256": "d1225f656ebc74eacb31a15d84ccaec98cdbd018bd77405c3e31b08a37ac7fd1",
+      "fullFileBytes": 24830,
+      "kind": "Installed public library source API excerpt read without import/execution; not an archive/Git provenance claim",
+      "excerpts": [
+        {
+          "startLine": 285,
+          "endLine": 340,
+          "text": "                resolver=resolver,\n                subresource=self._specification.create_resource(contents),\n            )\n            if resolver is not last:\n                segments = []\n        return Resolved(contents=contents, resolver=resolver)  # type: ignore[reportUnknownArgumentType]\n\n\ndef _fail_to_retrieve(uri: URI):\n    raise exceptions.NoSuchResource(ref=uri)\n\n\n@frozen\nclass Registry(Mapping[URI, Resource[D]]):\n    r\"\"\"\n    A registry of `Resource`\\ s, each identified by their canonical URIs.\n\n    Registries store a collection of in-memory resources, and optionally\n    enable additional resources which may be stored elsewhere (e.g. in a\n    database, a separate set of files, over the network, etc.).\n\n    They also lazily walk their known resources, looking for subresources\n    within them. In other words, subresources contained within any added\n    resources will be retrievable via their own IDs (though this discovery of\n    subresources will be delayed until necessary).\n\n    Registries are immutable, and their methods return new instances of the\n    registry with the additional resources added to them.\n\n    The ``retrieve`` argument can be used to configure retrieval of resources\n    dynamically, either over the network, from a database, or the like.\n    Pass it a callable which will be called if any URI not present in the\n    registry is accessed. It must either return a `Resource` or else raise a\n    `NoSuchResource` exception indicating that the resource does not exist\n    even according to the retrieval logic.\n    \"\"\"\n\n    _resources: HashTrieMap[URI, Resource[D]] = field(\n        default=HashTrieMap(),\n        converter=HashTrieMap.convert,  # type: ignore[reportGeneralTypeIssues]\n        alias=\"resources\",\n    )\n    _anchors: HashTrieMap[tuple[URI, str], AnchorType[D]] = HashTrieMap()\n    _uncrawled: HashTrieSet[URI] = EMPTY_UNCRAWLED\n    _retrieve: Retrieve[D] = field(default=_fail_to_retrieve, alias=\"retrieve\")\n\n    def __getitem__(self, uri: URI) -> Resource[D]:\n        \"\"\"\n        Return the (already crawled) `Resource` identified by the given URI.\n        \"\"\"\n        try:\n            return self._resources[uri.rstrip(\"#\")]\n        except KeyError:\n            raise exceptions.NoSuchResource(ref=uri) from None\n\n    def __iter__(self) -> Iterator[URI]:"
+        }
+      ]
+    },
+    {
+      "sourcePath": "/usr/lib/python3/dist-packages/referencing/exceptions.py",
+      "fullFileSha256": "cc581a120e9688a793e7c310b8a36c8060e71ecce9dba738a11782eac17d8073",
+      "fullFileBytes": 4176,
+      "kind": "Installed public library source API excerpt read without import/execution; not an archive/Git provenance claim",
+      "excerpts": [
+        {
+          "startLine": 18,
+          "endLine": 35,
+          "text": "@frozen\nclass NoSuchResource(KeyError):\n    \"\"\"\n    The given URI is not present in a registry.\n\n    Unlike most exceptions, this class *is* intended to be publicly\n    instantiable and *is* part of the public API of the package.\n    \"\"\"\n\n    ref: URI\n\n    def __eq__(self, other: object) -> bool:\n        if self.__class__ is not other.__class__:\n            return NotImplemented\n        return attrs.astuple(self) == attrs.astuple(other)\n\n    def __hash__(self) -> int:\n        return hash(attrs.astuple(self))"
+        },
+        {
+          "startLine": 98,
+          "endLine": 116,
+          "text": "class Unresolvable(Exception):\n    \"\"\"\n    A reference was unresolvable.\n    \"\"\"\n\n    ref: URI\n\n    def __eq__(self, other: object) -> bool:\n        if self.__class__ is not other.__class__:\n            return NotImplemented\n        return attrs.astuple(self) == attrs.astuple(other)\n\n    def __hash__(self) -> int:\n        return hash(attrs.astuple(self))\n\n\n@frozen\nclass PointerToNowhere(Unresolvable):\n    \"\"\""
+        }
+      ]
+    }
+  ]
+}
