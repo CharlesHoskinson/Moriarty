@@ -97,6 +97,207 @@ pub fn advance_m(machine: &mut Machine, m: usize) -> ReferenceSlice {
     }
 }
 
+// Plain A observation data. This leaf also compiles in the existing std-only
+// host source graph. Core's already-registered resource_report module supplies
+// serialization adapters; no B/serde dependency is introduced here.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReferenceUnmeasuredStatus { Unmeasured }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReferenceUnmeasuredGroup {
+    pub status: ReferenceUnmeasuredStatus,
+    pub reason: &'static str,
+    pub metrics: &'static [&'static str],
+}
+fn gap(reason: &'static str, metrics: &'static [&'static str]) -> ReferenceUnmeasuredGroup {
+    ReferenceUnmeasuredGroup { status: ReferenceUnmeasuredStatus::Unmeasured, reason, metrics }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReferenceUnmeasured {
+    pub peaks: ReferenceUnmeasuredGroup,
+    pub physical: ReferenceUnmeasuredGroup,
+    pub circuit: ReferenceUnmeasuredGroup,
+    pub proof: ReferenceUnmeasuredGroup,
+    pub host: ReferenceUnmeasuredGroup,
+    pub overhead: ReferenceUnmeasuredGroup,
+    pub financial_target: ReferenceUnmeasuredGroup,
+    pub event_reconciliation: ReferenceUnmeasuredGroup,
+    pub remaining_nonhelper_reference_work: ReferenceUnmeasuredGroup,
+}
+impl ReferenceUnmeasured {
+    pub fn from_snapshot_only() -> Self {
+        Self {
+            peaks: gap("final-snapshot-is-not-a-history",
+                &["maximum-logical-depth", "peak-live-helper-tasks", "peak-storage-bytes"]),
+            physical: gap("no-physical-accounting-observation",
+                &["physical-dispatches", "frame-bytes", "environment-bytes", "node-bytes", "allocator-reserved-bytes"]),
+            circuit: gap("no-circuit-observation",
+                &["active-rows", "padded-rows", "active-cells", "padded-cells", "degree", "table-bytes", "code-bytes"]),
+            proof: gap("no-native-proof-observation",
+                &["key-bytes", "proof-bytes", "witness-time", "witness-memory", "proving-time", "proving-memory", "verification-time", "verification-memory"]),
+            host: gap("no-host-measurement", &["wall-time", "peak-memory"]),
+            overhead: gap("no-overhead-measurement",
+                &["preparation", "wrappers", "checkpoint-io", "conversion", "report-serialization", "end-to-end-total"]),
+            financial_target: gap("no-financial-or-target-observation",
+                &["target-identity", "dust", "financial-fees", "service-fees", "reserve-recovery-accounting"]),
+            event_reconciliation: gap("final-snapshot-and-summary-are-not-an-event-stream",
+                &["per-rule-counts", "per-event-allocation-ledger"]),
+            remaining_nonhelper_reference_work: gap("no-total-nonhelper-reference-budget",
+                &["remaining-nonhelper-reference-work"]),
+        }
+    }
+}
+
+/// Versioned observation manifest. Missing metadata remains named and unavailable;
+/// a source-definition pin is not a rule-inventory or prepared-program digest.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReferenceResourceManifest {
+    pub format: &'static str,
+    pub reference_schedule_id: Option<&'static str>,
+    pub profile_id: Option<u8>,
+    pub source_definition_sha256: Option<&'static str>,
+    pub layout_version: Option<(String, String)>,
+    pub bounds: Option<()>,
+    pub unavailable_metadata: ReferenceUnmeasuredGroup,
+    pub measurement_scope: &'static str,
+}
+impl ReferenceResourceManifest {
+    fn reference_a() -> Self {
+        Self {
+            format: "moriarty-sherlock-resource-manifest/1",
+            reference_schedule_id: Some(PROFILE),
+            profile_id: None,
+            source_definition_sha256: Some(K_SOURCE_SHA256),
+            layout_version: None,
+            bounds: None,
+            unavailable_metadata: gap("not-carried-by-this-reference-observation", &[
+                "rule-inventory-digest", "program-image-id", "layout-version", "bounds",
+                "lowering-digest", "frame-bytes-by-function", "helper-scratch-bounds",
+            ]),
+            measurement_scope: "supplied-k-a-reference-slice-observations-only",
+        }
+    }
+}
+
+/// Cumulative K-A observation totals; not physical/economic measurements.
+/// Original complete slices remain caller-owned. No B clock is substituted.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReferenceResourceReport {
+    pub format: &'static str,
+    pub manifest: ReferenceResourceManifest,
+    pub reference_work: u128,
+    pub recorded_reference_events: u128,
+    pub maximum_observed_logical_depth: usize,
+    pub helper_work: ReferenceUnmeasuredGroup,
+    pub helper_visits: ReferenceUnmeasuredGroup,
+    pub unmeasured: ReferenceUnmeasured,
+}
+impl ReferenceResourceReport {
+    fn observed(work: u128, events: u128, depth: usize) -> Self {
+        let mut unmeasured = ReferenceUnmeasured::from_snapshot_only();
+        unmeasured.physical.metrics = &["physical-dispatches", "physical-transitions",
+            "frame-bytes", "environment-bytes", "node-bytes", "allocator-reserved-bytes"];
+        unmeasured.host.metrics = &["wall-time", "peak-memory", "peak-rss"];
+        unmeasured.overhead.metrics = &["preparation", "wrappers", "checkpoint-io", "conversion",
+            "report-serialization", "end-to-end-total", "preparation-bytes", "serialization-bytes"];
+        unmeasured.financial_target.metrics = &["target-identity", "dust", "financial-fees",
+            "service-fees", "reserve-recovery-accounting", "ledger-fees"];
+        unmeasured.peaks = gap("only-logical-frame-depth-is-observed",
+            &["peak-live-helper-tasks", "peak-storage-bytes"]);
+        unmeasured.event_reconciliation = gap("no-per-rule-or-allocation-ledger-report",
+            &["per-rule-counts", "per-event-allocation-ledger"]);
+        unmeasured.remaining_nonhelper_reference_work = gap("not-in-this-cumulative-report",
+            &["remaining-nonhelper-reference-work"]);
+        Self {
+            format: "moriarty-sherlock-a-resource-report/1",
+            manifest: ReferenceResourceManifest::reference_a(),
+            reference_work: work, recorded_reference_events: events,
+            maximum_observed_logical_depth: depth,
+            helper_work: gap("k-a-pure-helpers-are-unmetered", &["helper-work"]),
+            helper_visits: gap("k-a-pure-helpers-are-unmetered", &["helper-visits"]),
+            unmeasured,
+        }
+    }
+}
+
+/// Data-accounting diagnostics on supplied slices, with no rule evaluation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReferenceReportError {
+    NoChunks,
+    Profile { chunk: usize },
+    Continuity { chunk: usize, difference: super::compare::ContinuityDifference },
+    BetweenChunks { previous: usize, next: usize, difference: super::compare::ContinuityDifference },
+    PrefixWork { chunk: usize, position: usize },
+    ChargeOverflow { chunk: usize, record: usize },
+    EventCountOverflow { chunk: usize },
+}
+
+impl ReferenceSlice {
+    /// The same cumulative report used for multiple technical chunks.
+    /// A pending or empty present slice remains a valid reportable prefix.
+    pub fn resource_report(&self) -> Result<
+        ReferenceResourceReport, ReferenceReportError>
+    {
+        cumulative_resource_report(&[self])
+    }
+}
+
+/// Report one ordered K-A observation from its present technical chunks.
+/// Reuses the complete typed continuity checker and exact record charges;
+/// grouping boundaries contribute no event, work, helper or financial cost.
+/// Prefix sums are checked independently of the caller-supplied prefix_work.
+/// No transition, rule charge, source authenticity or producer is validated.
+/// Reporting inherits A's unbounded structural traversal; it creates no public
+/// untrusted-input resource policy and does not claim equal-fuel cross profiles.
+pub fn cumulative_resource_report(chunks: &[&ReferenceSlice]) -> Result<
+    ReferenceResourceReport, ReferenceReportError>
+{
+    use super::compare::{first_continuity_difference, TraceIdentity, TraceView};
+    let Some(first) = chunks.first() else { return Err(ReferenceReportError::NoChunks); };
+    let identity = TraceIdentity { profile: PROFILE, source_sha256: K_SOURCE_SHA256 };
+    let mut total_work = 0u128;
+    let mut total_events = 0u128;
+    let mut depth = first.start.frames.len();
+    for (chunk, slice) in chunks.iter().enumerate() {
+        if slice.profile_id != PROFILE {
+            return Err(ReferenceReportError::Profile { chunk });
+        }
+        let trace = TraceView { identity, initial: &slice.start, records: &slice.records };
+        if let Some(difference) = first_continuity_difference(trace, &slice.end) {
+            return Err(ReferenceReportError::Continuity { chunk, difference });
+        }
+        if chunk > 0 {
+            let edge = TraceView { identity, initial: &chunks[chunk - 1].end, records: &[] };
+            if let Some(difference) = first_continuity_difference(edge, &slice.start) {
+                return Err(ReferenceReportError::BetweenChunks {
+                    previous: chunk - 1, next: chunk, difference,
+                });
+            }
+        }
+        if slice.prefix_work.len() != slice.records.len() + 1 {
+            return Err(ReferenceReportError::PrefixWork { chunk, position: slice.prefix_work.len() });
+        }
+        if slice.prefix_work[0] != 0 {
+            return Err(ReferenceReportError::PrefixWork { chunk, position: 0 });
+        }
+        depth = depth.max(slice.start.frames.len()).max(slice.end.frames.len());
+        let mut prefix = 0u128;
+        for (record, event) in slice.records.iter().enumerate() {
+            prefix = prefix.checked_add(u128::from(event.charge))
+                .ok_or(ReferenceReportError::ChargeOverflow { chunk, record })?;
+            if slice.prefix_work[record + 1] != prefix {
+                return Err(ReferenceReportError::PrefixWork { chunk, position: record + 1 });
+            }
+            total_work = total_work.checked_add(u128::from(event.charge))
+                .ok_or(ReferenceReportError::ChargeOverflow { chunk, record })?;
+            depth = depth.max(event.before.frames.len()).max(event.after.frames.len());
+        }
+        total_events = total_events.checked_add(slice.records.len() as u128)
+            .ok_or(ReferenceReportError::EventCountOverflow { chunk })?;
+    }
+    Ok(ReferenceResourceReport::observed(
+        total_work, total_events, depth))
+}
+
 #[cfg(test)]
 #[path = "reference_slice_tests.rs"]
 mod tests;
