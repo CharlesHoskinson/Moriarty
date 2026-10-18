@@ -102,7 +102,9 @@ impl ImageMachine {
     /// Immutable image/observation identities stay shared; values, controls,
     /// environments, frames, origins, counters and outcome are retained in full.
     pub(super) fn checkpoint(&self) -> ImageCheckpoint {
-        ImageCheckpoint { machine: self.clone() }
+        ImageCheckpoint {
+            machine: self.clone(),
+        }
     }
 
     /// Consume a typed cut and continue its saved execution directly. No source
@@ -114,9 +116,16 @@ impl ImageMachine {
     pub(super) fn snapshot(&self) -> Snapshot {
         Snapshot {
             program: self.observations.program.clone(),
-            control: self.control.as_ref().map(|control| self.observe_control(control)),
+            control: self
+                .control
+                .as_ref()
+                .map(|control| self.observe_control(control)),
             environment: self.environment.clone(),
-            frames: self.frames.iter().map(|frame| self.observe_frame(frame)).collect(),
+            frames: self
+                .frames
+                .iter()
+                .map(|frame| self.observe_frame(frame))
+                .collect(),
             stack_limit: self.stack_limit,
             remaining_fuel: self.remaining_fuel,
             initial_fuel: self.initial_fuel,
@@ -126,13 +135,19 @@ impl ImageMachine {
 
     /// Current scheduling occurrence, retained even after terminal publication.
     /// This is an image-local source position, not authenticated program identity.
-    pub(super) fn control_origin(&self) -> ExprId { self.control_origin }
+    pub(super) fn control_origin(&self) -> ExprId {
+        self.control_origin
+    }
 
     /// Owners of pending frames in the same top-first order as snapshot().frames.
-    pub(super) fn frame_origins(&self) -> &[ExprId] { &self.frame_origins }
+    pub(super) fn frame_origins(&self) -> &[ExprId] {
+        &self.frame_origins
+    }
 
     /// The immutable image actually used for row fetches by this machine.
-    pub(super) fn program_image(&self) -> &Arc<ProgramImageDraft> { &self.image }
+    pub(super) fn program_image(&self) -> &Arc<ProgramImageDraft> {
+        &self.image
+    }
 
     /// One charged K-A rule, or free terminal publication. Snapshot conversion
     /// and cloning are unmetered host work, as in the existing A reference.
@@ -162,13 +177,20 @@ impl ImageMachine {
                 let (line, next) = self.transition(control);
                 // Generated controls retain their scheduler. Only an actual
                 // next Eval selects a new source occurrence from its row ID.
-                if let ImageControl::Eval(id) = &next { self.control_origin = *id; }
+                if let ImageControl::Eval(id) = &next {
+                    self.control_origin = *id;
+                }
                 self.control = Some(next);
                 self.remaining_fuel -= 1;
                 (line, 1)
             }
         };
-        Some(StepRecord { rule_start_line, charge, before, after: self.snapshot() })
+        Some(StepRecord {
+            rule_start_line,
+            charge,
+            before,
+            after: self.snapshot(),
+        })
     }
 
     pub(crate) fn run(&mut self) -> Snapshot {
@@ -192,15 +214,26 @@ impl ImageMachine {
             }
             ImageControl::Invoke(name, values) => {
                 // Preserve source order and first match, including duplicate names.
-                let found = self.image.functions.iter().position(|function| function.name == name);
+                let found = self
+                    .image
+                    .functions
+                    .iter()
+                    .position(|function| function.name == name);
                 (200, ImageControl::Enter(found, values))
             }
             ImageControl::Enter(None, _) => (202, ImageControl::Error(7)),
             ImageControl::Enter(Some(index), values) => {
                 let function = &self.image.functions[index];
-                let parameters = &self.image.ordered_parameters[
-                    function.parameters.start..function.parameters.start + function.parameters.len];
-                (204, ImageControl::Bound(bind(parameters, &values), function.return_type, function.body))
+                let parameters = &self.image.ordered_parameters[function.parameters.start
+                    ..function.parameters.start + function.parameters.len];
+                (
+                    204,
+                    ImageControl::Bound(
+                        bind(parameters, &values),
+                        function.return_type,
+                        function.body,
+                    ),
+                )
             }
             ImageControl::Bound(None, _, _) => (206, ImageControl::Error(8)),
             ImageControl::Bound(Some(environment), ty, body) => {
@@ -211,14 +244,22 @@ impl ImageMachine {
             ImageControl::Cases(value, arms, environment) => {
                 let arm = &self.image.match_arms[arms.start];
                 let bindings = matching(&arm.pattern, &value, &environment);
-                (214, ImageControl::CaseResult(bindings, value, arm.body, tail(arms), environment))
+                (
+                    214,
+                    ImageControl::CaseResult(bindings, value, arm.body, tail(arms), environment),
+                )
             }
             ImageControl::CaseResult(None, value, _, arms, environment) => {
                 (217, ImageControl::Cases(value, arms, environment))
             }
-            ImageControl::CaseResult(Some(bindings), _, body, _, environment) => {
-                (220, push(ImageFrame::Scope(environment), ImageControl::Eval(body), bindings))
-            }
+            ImageControl::CaseResult(Some(bindings), _, body, _, environment) => (
+                220,
+                push(
+                    ImageFrame::Scope(environment),
+                    ImageControl::Eval(body),
+                    bindings,
+                ),
+            ),
             ImageControl::PrimitiveResult(Ok(value)) => (223, ImageControl::Return(value)),
             ImageControl::PrimitiveResult(Err(code)) => (225, ImageControl::Error(code)),
             ImageControl::Error(_) => unreachable!("error publication precedes charged rules"),
@@ -227,40 +268,68 @@ impl ImageMachine {
 
     fn evaluate(&self, id: ExprId) -> (usize, ImageControl) {
         let row = &self.image.expressions[id.0];
-        let children = &self.image.ordered_children[
-            row.children.start..row.children.start + row.children.len];
+        let children =
+            &self.image.ordered_children[row.children.start..row.children.start + row.children.len];
         let environment = &self.environment;
         match &row.payload {
-            ExprPayload::Literal(constant) => (102, ImageControl::Return(self.constants[constant.0].clone())),
+            ExprPayload::Literal(constant) => (
+                102,
+                ImageControl::Return(self.constants[constant.0].clone()),
+            ),
             ExprPayload::Var(name) => match environment.get(name) {
                 Some(value) => (108, ImageControl::Return(value.clone())),
                 None => (111, ImageControl::Error(3)),
             },
             ExprPayload::Let(name) => {
                 let frame = ImageFrame::Let(name.clone(), children[1], environment.clone());
-                (114, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+                (
+                    114,
+                    push(frame, ImageControl::Eval(children[0]), environment.clone()),
+                )
             }
             ExprPayload::Binary(op) => {
                 let frame = ImageFrame::Left(*op, children[1], environment.clone());
-                (117, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+                (
+                    117,
+                    push(frame, ImageControl::Eval(children[0]), environment.clone()),
+                )
             }
-            ExprPayload::Unary(op) => {
-                (120, push(ImageFrame::Unary(*op), ImageControl::Eval(children[0]), environment.clone()))
-            }
+            ExprPayload::Unary(op) => (
+                120,
+                push(
+                    ImageFrame::Unary(*op),
+                    ImageControl::Eval(children[0]),
+                    environment.clone(),
+                ),
+            ),
             ExprPayload::If => {
                 let frame = ImageFrame::If(children[1], children[2], environment.clone());
-                (123, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+                (
+                    123,
+                    push(frame, ImageControl::Eval(children[0]), environment.clone()),
+                )
             }
             ExprPayload::Match(arms) => {
                 let frame = ImageFrame::Match(*arms, environment.clone());
-                (126, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+                (
+                    126,
+                    push(frame, ImageControl::Eval(children[0]), environment.clone()),
+                )
             }
             ExprPayload::Call(name) if children.is_empty() => {
                 (129, ImageControl::Invoke(name.clone(), Vec::new()))
             }
             ExprPayload::Call(name) => {
-                let frame = ImageFrame::Args(name.clone(), Vec::new(), tail(row.children), environment.clone());
-                (131, push(frame, ImageControl::Eval(children[0]), environment.clone()))
+                let frame = ImageFrame::Args(
+                    name.clone(),
+                    Vec::new(),
+                    tail(row.children),
+                    environment.clone(),
+                );
+                (
+                    131,
+                    push(frame, ImageControl::Eval(children[0]), environment.clone()),
+                )
             }
         }
     }
@@ -285,7 +354,10 @@ impl ImageMachine {
             }
             ImageFrame::Right(op, left) => {
                 self.remove_top_frame();
-                (153, ImageControl::PrimitiveResult(binary_result(op, left, value)))
+                (
+                    153,
+                    ImageControl::PrimitiveResult(binary_result(op, left, value)),
+                )
             }
             ImageFrame::Unary(op) => {
                 self.remove_top_frame();
@@ -295,8 +367,11 @@ impl ImageMachine {
                 Value::Bool(condition) => {
                     self.remove_top_frame();
                     self.environment = environment;
-                    if condition { (161, ImageControl::Eval(yes)) }
-                    else { (165, ImageControl::Eval(no)) }
+                    if condition {
+                        (161, ImageControl::Eval(yes))
+                    } else {
+                        (165, ImageControl::Eval(no))
+                    }
                 }
                 _ => (169, ImageControl::Error(5)),
             },
@@ -342,14 +417,28 @@ impl ImageMachine {
     fn observe_frame(&self, frame: &ImageFrame) -> Frame {
         let source = &self.observations;
         match frame {
-            ImageFrame::Let(name, body, environment) => Frame::Let(name.clone(), source.expression(*body), environment.clone()),
-            ImageFrame::Left(op, right, environment) => Frame::Left(*op, source.expression(*right), environment.clone()),
+            ImageFrame::Let(name, body, environment) => {
+                Frame::Let(name.clone(), source.expression(*body), environment.clone())
+            }
+            ImageFrame::Left(op, right, environment) => {
+                Frame::Left(*op, source.expression(*right), environment.clone())
+            }
             ImageFrame::Right(op, value) => Frame::Right(*op, value.clone()),
             ImageFrame::Unary(op) => Frame::Unary(*op),
-            ImageFrame::If(yes, no, environment) => Frame::If(source.expression(*yes), source.expression(*no), environment.clone()),
-            ImageFrame::Match(arms, environment) => Frame::Match(source.arms(&self.image, *arms), environment.clone()),
+            ImageFrame::If(yes, no, environment) => Frame::If(
+                source.expression(*yes),
+                source.expression(*no),
+                environment.clone(),
+            ),
+            ImageFrame::Match(arms, environment) => {
+                Frame::Match(source.arms(&self.image, *arms), environment.clone())
+            }
             ImageFrame::Args(name, values, rest, environment) => Frame::Args(
-                name.clone(), values.clone(), source.children(&self.image, *rest), environment.clone()),
+                name.clone(),
+                values.clone(),
+                source.children(&self.image, *rest),
+                environment.clone(),
+            ),
             ImageFrame::Return(ty, environment) => Frame::Return(*ty, environment.clone()),
             ImageFrame::Scope(environment) => Frame::Scope(environment.clone()),
         }
@@ -361,15 +450,32 @@ impl ImageMachine {
             ImageControl::Eval(id) => Control::Eval(source.expression(*id)),
             ImageControl::Return(value) => Control::Return(value.clone()),
             ImageControl::Push(frame, next, environment) => Control::Push(
-                self.observe_frame(frame), Box::new(self.observe_control(next)), environment.clone()),
+                self.observe_frame(frame),
+                Box::new(self.observe_control(next)),
+                environment.clone(),
+            ),
             ImageControl::Invoke(name, values) => Control::Invoke(name.clone(), values.clone()),
             ImageControl::Enter(index, values) => Control::Enter(
-                index.map(|index| source.program.functions[index].clone()), values.clone()),
-            ImageControl::Bound(bindings, ty, body) => Control::Bound(bindings.clone(), *ty, source.expression(*body)),
+                index.map(|index| source.program.functions[index].clone()),
+                values.clone(),
+            ),
+            ImageControl::Bound(bindings, ty, body) => {
+                Control::Bound(bindings.clone(), *ty, source.expression(*body))
+            }
             ImageControl::Cases(value, arms, environment) => Control::Cases(
-                value.clone(), source.arms(&self.image, *arms), environment.clone()),
-            ImageControl::CaseResult(bindings, value, body, rest, environment) => Control::CaseResult(
-                bindings.clone(), value.clone(), source.expression(*body), source.arms(&self.image, *rest), environment.clone()),
+                value.clone(),
+                source.arms(&self.image, *arms),
+                environment.clone(),
+            ),
+            ImageControl::CaseResult(bindings, value, body, rest, environment) => {
+                Control::CaseResult(
+                    bindings.clone(),
+                    value.clone(),
+                    source.expression(*body),
+                    source.arms(&self.image, *rest),
+                    environment.clone(),
+                )
+            }
             ImageControl::PrimitiveResult(result) => Control::PrimitiveResult(result.clone()),
             ImageControl::Error(code) => Control::Error(*code),
         }
@@ -382,7 +488,10 @@ fn push(frame: ImageFrame, next: ImageControl, environment: Environment) -> Imag
 
 /// Only applied to a nonempty ordered child or arm slice.
 fn tail(slice: TableSlice) -> TableSlice {
-    TableSlice { start: slice.start + 1, len: slice.len - 1 }
+    TableSlice {
+        start: slice.start + 1,
+        len: slice.len - 1,
+    }
 }
 
 /// Immutable observation cache: reverse preorder resolves children before their
@@ -398,9 +507,14 @@ impl SourceObservations {
         let mut expressions: Vec<Option<ExprRef>> = vec![None; image.expressions.len()];
         for index in (0..image.expressions.len()).rev() {
             let row = &image.expressions[index];
-            let children = &image.ordered_children[row.children.start..row.children.start + row.children.len];
-            let child = |position: usize| expressions[children[position].0].as_ref()
-                .expect("builder child follows its parent").clone();
+            let children =
+                &image.ordered_children[row.children.start..row.children.start + row.children.len];
+            let child = |position: usize| {
+                expressions[children[position].0]
+                    .as_ref()
+                    .expect("builder child follows its parent")
+                    .clone()
+            };
             let expression = match &row.payload {
                 ExprPayload::Literal(id) => Expr::Literal(constants[id.0].clone()),
                 ExprPayload::Var(name) => Expr::Var(name.clone()),
@@ -408,26 +522,49 @@ impl SourceObservations {
                 ExprPayload::Binary(op) => Expr::Binary(*op, child(0), child(1)),
                 ExprPayload::Unary(op) => Expr::Unary(*op, child(0)),
                 ExprPayload::If => Expr::If(child(0), child(1), child(2)),
-                ExprPayload::Call(name) => Expr::Call(name.clone(), (0..children.len()).map(child).collect()),
-                ExprPayload::Match(arms) => Expr::Match(child(0), image.match_arms[
-                    arms.start..arms.start + arms.len].iter().map(|arm| Arm {
-                        pattern: arm.pattern.clone(),
-                        body: expressions[arm.body.0].as_ref().expect("builder arm follows parent").clone(),
-                    }).collect()),
+                ExprPayload::Call(name) => {
+                    Expr::Call(name.clone(), (0..children.len()).map(child).collect())
+                }
+                ExprPayload::Match(arms) => Expr::Match(
+                    child(0),
+                    image.match_arms[arms.start..arms.start + arms.len]
+                        .iter()
+                        .map(|arm| Arm {
+                            pattern: arm.pattern.clone(),
+                            body: expressions[arm.body.0]
+                                .as_ref()
+                                .expect("builder arm follows parent")
+                                .clone(),
+                        })
+                        .collect(),
+                ),
             };
             expressions[index] = Some(Arc::new(expression));
         }
-        let expressions: Vec<ExprRef> = expressions.into_iter()
-            .map(|expression| expression.expect("all builder rows reconstructed")).collect();
-        let functions = image.functions.iter().map(|function| Function {
-            name: function.name.clone(),
-            parameters: image.ordered_parameters[
-                function.parameters.start..function.parameters.start + function.parameters.len].to_vec(),
-            return_type: function.return_type,
-            body: expressions[function.body.0].clone(),
-        }).collect();
-        let program = Arc::new(Program { functions, entry: expressions[image.entry.0].clone() });
-        Self { expressions, program }
+        let expressions: Vec<ExprRef> = expressions
+            .into_iter()
+            .map(|expression| expression.expect("all builder rows reconstructed"))
+            .collect();
+        let functions = image
+            .functions
+            .iter()
+            .map(|function| Function {
+                name: function.name.clone(),
+                parameters: image.ordered_parameters[function.parameters.start
+                    ..function.parameters.start + function.parameters.len]
+                    .to_vec(),
+                return_type: function.return_type,
+                body: expressions[function.body.0].clone(),
+            })
+            .collect();
+        let program = Arc::new(Program {
+            functions,
+            entry: expressions[image.entry.0].clone(),
+        });
+        Self {
+            expressions,
+            program,
+        }
     }
 
     fn expression(&self, id: ExprId) -> ExprRef {
@@ -435,14 +572,20 @@ impl SourceObservations {
     }
 
     fn children(&self, image: &ProgramImageDraft, slice: TableSlice) -> Vec<ExprRef> {
-        image.ordered_children[slice.start..slice.start + slice.len].iter()
-            .map(|id| self.expression(*id)).collect()
+        image.ordered_children[slice.start..slice.start + slice.len]
+            .iter()
+            .map(|id| self.expression(*id))
+            .collect()
     }
 
     fn arms(&self, image: &ProgramImageDraft, slice: TableSlice) -> Vec<Arm> {
-        image.match_arms[slice.start..slice.start + slice.len].iter().map(|arm| Arm {
-            pattern: arm.pattern.clone(), body: self.expression(arm.body),
-        }).collect()
+        image.match_arms[slice.start..slice.start + slice.len]
+            .iter()
+            .map(|arm| Arm {
+                pattern: arm.pattern.clone(),
+                body: self.expression(arm.body),
+            })
+            .collect()
     }
 }
 
@@ -453,25 +596,37 @@ fn decode_constants(image: &ProgramImageDraft) -> Vec<Value> {
     for index in (0..image.constants.len()).rev() {
         let row = &image.constants[index];
         let fields = &image.constant_fields[row.fields.start..row.fields.start + row.fields.len];
-        let field = |position: usize| values[fields[position].0].as_ref()
-            .expect("builder constant child follows parent");
+        let field = |position: usize| {
+            values[fields[position].0]
+                .as_ref()
+                .expect("builder constant child follows parent")
+        };
         let value = match row.payload {
             ConstantPayload::UInt(value) => Value::UInt(value),
             ConstantPayload::Bool(value) => Value::Bool(value),
-            ConstantPayload::List => Value::List((0..fields.len()).map(|position| match field(position) {
-                Value::UInt(value) => *value,
-                _ => unreachable!("builder list fields are UInt"),
-            }).collect()),
+            ConstantPayload::List => Value::List(
+                (0..fields.len())
+                    .map(|position| match field(position) {
+                        Value::UInt(value) => *value,
+                        _ => unreachable!("builder list fields are UInt"),
+                    })
+                    .collect(),
+            ),
             ConstantPayload::TreeLeaf(value) => Value::Tree(Tree::Leaf(value)),
             ConstantPayload::TreeBranch => match (field(0), field(1)) {
                 (Value::Tree(left), Value::Tree(right)) => Value::Tree(Tree::Branch(
-                    Arc::new(left.clone()), Arc::new(right.clone()))),
+                    Arc::new(left.clone()),
+                    Arc::new(right.clone()),
+                )),
                 _ => unreachable!("builder branch fields are trees"),
             },
         };
         values[index] = Some(value);
     }
-    values.into_iter().map(|value| value.expect("all builder constants decoded")).collect()
+    values
+        .into_iter()
+        .map(|value| value.expect("all builder constants decoded"))
+        .collect()
 }
 
 // Mechanical K-A pure helpers, kept local rather than calling reference::Machine
@@ -479,16 +634,26 @@ fn decode_constants(image: &ProgramImageDraft) -> Vec<Value> {
 // and mirror reference.rs's rule decomposition; that reduces independence.
 // Independent literal normal oracles remain the comparison authority.
 fn has_type(value: &Value, ty: Type) -> bool {
-    matches!((value, ty),
-        (Value::UInt(_), Type::UInt) | (Value::Bool(_), Type::Bool)
-        | (Value::List(_), Type::List) | (Value::Tree(_), Type::Tree))
+    matches!(
+        (value, ty),
+        (Value::UInt(_), Type::UInt)
+            | (Value::Bool(_), Type::Bool)
+            | (Value::List(_), Type::List)
+            | (Value::Tree(_), Type::Tree)
+    )
 }
 
 fn binary_result(op: BinaryOp, left: Value, right: Value) -> Result<Value, u8> {
     match (op, left, right) {
-        (BinaryOp::Add, Value::UInt(a), Value::UInt(b)) => a.checked_add(b).map(Value::UInt).ok_or(10),
-        (BinaryOp::Sub, Value::UInt(a), Value::UInt(b)) => a.checked_sub(b).map(Value::UInt).ok_or(10),
-        (BinaryOp::Mul, Value::UInt(a), Value::UInt(b)) => a.checked_mul(b).map(Value::UInt).ok_or(10),
+        (BinaryOp::Add, Value::UInt(a), Value::UInt(b)) => {
+            a.checked_add(b).map(Value::UInt).ok_or(10)
+        }
+        (BinaryOp::Sub, Value::UInt(a), Value::UInt(b)) => {
+            a.checked_sub(b).map(Value::UInt).ok_or(10)
+        }
+        (BinaryOp::Mul, Value::UInt(a), Value::UInt(b)) => {
+            a.checked_mul(b).map(Value::UInt).ok_or(10)
+        }
         (BinaryOp::Lt, Value::UInt(a), Value::UInt(b)) => Ok(Value::Bool(a < b)),
         (BinaryOp::Eq, left, right) => Ok(Value::Bool(left == right)),
         (BinaryOp::Cons, Value::UInt(head), Value::List(mut tail)) => {
@@ -511,7 +676,9 @@ fn unary_result(op: UnaryOp, value: Value) -> Result<Value, u8> {
 }
 
 fn bind(parameters: &[Parameter], values: &[Value]) -> Option<Environment> {
-    if parameters.len() != values.len() { return None; }
+    if parameters.len() != values.len() {
+        return None;
+    }
     let mut environment = Environment::new();
     for (parameter, value) in parameters.iter().zip(values).rev() {
         if !has_type(value, parameter.ty) || environment.contains_key(&parameter.name) {
@@ -525,7 +692,9 @@ fn bind(parameters: &[Parameter], values: &[Value]) -> Option<Environment> {
 fn matching(pattern: &Pattern, value: &Value, saved: &Environment) -> Option<Environment> {
     let mut environment = saved.clone();
     match (pattern, value) {
-        (Pattern::Var(name), value) => { environment.insert(name.clone(), value.clone()); }
+        (Pattern::Var(name), value) => {
+            environment.insert(name.clone(), value.clone());
+        }
         (Pattern::Nil, Value::List(values)) if values.is_empty() => {}
         (Pattern::Cons(head, tail), Value::List(values)) if head != tail && !values.is_empty() => {
             environment.insert(head.clone(), Value::UInt(values[0]));

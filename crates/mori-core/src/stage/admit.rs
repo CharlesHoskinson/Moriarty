@@ -6,9 +6,9 @@
 //! segment, effects or continuation; the evaluator only ever sees a clone of
 //! the boundary, so the caller's input stays valid for a corrected retry (C10).
 use super::{
-    CONTINUATION_FORMAT, Continuation, NamedValue, PendingFrame, STAGE_EVENT_FORMAT,
-    StageEvent, StageLogical, StageOutcome, StageRejection, StageSegment, StagedProgram, cost,
-    decode, digest, profile, residual,
+    CONTINUATION_FORMAT, Continuation, NamedValue, PendingFrame, STAGE_EVENT_FORMAT, StageEvent,
+    StageLogical, StageOutcome, StageRejection, StageSegment, StagedProgram, cost, decode, digest,
+    profile, residual,
 };
 use crate::runtime::{self, SegmentEntry, SegmentRun};
 use crate::{Error, LOGICAL_COST_PROFILE_2, Scenario, UInt};
@@ -126,7 +126,10 @@ impl Admitted<'_> {
                 captures_out,
             } => {
                 let planned = *plan.segment_cost.get(segment).ok_or_else(|| {
-                    fail(Error::new("stage_logical", "Segment is absent from the stage plan."))
+                    fail(Error::new(
+                        "stage_logical",
+                        "Segment is absent from the stage plan.",
+                    ))
                 })?;
                 cost::require_static(meter, planned).map_err(fail)?;
                 let committed = cost::committed_after(plan, segment).map_err(fail)?;
@@ -158,7 +161,7 @@ impl Admitted<'_> {
                             action: action.clone(),
                             frame_pre,
                             frame_post,
-                            execution,
+                            execution: *execution,
                         },
                         committed,
                         attempted,
@@ -202,7 +205,7 @@ impl Admitted<'_> {
                         action: action.clone(),
                         frame_pre,
                         frame_post,
-                        execution,
+                        execution: *execution,
                     }),
                     continuation,
                     attempted,
@@ -232,7 +235,12 @@ pub fn start(
         .actions
         .get(index)
         .filter(|plan| plan.action == action)
-        .ok_or_else(|| refuse(Error::new("stage_site", "Action is absent from the stage plan.")))?;
+        .ok_or_else(|| {
+            refuse(Error::new(
+                "stage_site",
+                "Action is absent from the stage plan.",
+            ))
+        })?;
     let pre = runtime::scenario_snapshot(sp.program(), selected, &scenario).map_err(refuse)?;
     let limit = cost::start_preflight(plan, cap).map_err(refuse)?;
     let mut inputs = Vec::with_capacity(selected.inputs.len());
@@ -315,8 +323,16 @@ pub fn resume(
     let Some(index) = sp.action_index(&c.action) else {
         return Err(refuse("stage_site", "Continuation action does not exist."));
     };
-    let Some(plan) = sp.plan().actions.get(index).filter(|plan| plan.action == c.action) else {
-        return Err(refuse("stage_site", "Action is absent from the stage plan."));
+    let Some(plan) = sp
+        .plan()
+        .actions
+        .get(index)
+        .filter(|plan| plan.action == c.action)
+    else {
+        return Err(refuse(
+            "stage_site",
+            "Action is absent from the stage plan.",
+        ));
     };
     if c.site == 0 || usize::from(c.site) > plan.sites.len() {
         return Err(refuse(
@@ -326,7 +342,9 @@ pub fn resume(
     }
     let site = &plan.sites[usize::from(c.site) - 1];
     // R4
-    if !layout_matches(&c.captures, site.captures.iter(), |s| (s.name.as_str(), s.ty)) {
+    if !layout_matches(&c.captures, site.captures.iter(), |s| {
+        (s.name.as_str(), s.ty)
+    }) {
         return Err(refuse(
             "stage_capture",
             "Captures differ from the pending site layout.",

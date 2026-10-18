@@ -30,6 +30,10 @@ mod normal_oracle_inputs;
 #[cfg(test)]
 mod reference_oracles_tests;
 
+// Shared source programs for the extra normal oracles, mounted once.
+#[cfg(test)]
+mod extra_oracle_programs;
+
 #[cfg(test)]
 mod resource_tests;
 

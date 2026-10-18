@@ -1,6 +1,4 @@
-//! Opus-authored static-cost and `/2` validation tests (H17, H26, H22 core).
-//! Written before execution; not yet run. Results require the closure
-//! classification and are not acceptance evidence by themselves.
+//! Static-cost and `/2` validation tests (H17, H26, H22 core).
 //!
 //! H17: a successful segment's attempted work equals the plan's
 //! `segment_cost`, for random inputs and boundaries, through the normal
@@ -131,20 +129,33 @@ fn plan_layout_is_prefix_monotone_inputs_first_and_excludes_states() {
     let action = &sp.plan().actions[0];
     assert_eq!(action.statement_count, 12);
     let names = |k: usize| -> Vec<&str> {
-        action.sites[k].captures.iter().map(|s| s.name.as_str()).collect()
+        action.sites[k]
+            .captures
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect()
     };
     assert_eq!(names(0), vec!["extra", "held"]);
     assert_eq!(names(1), vec!["extra", "held", "quote"]);
     assert_eq!(
-        action.sites.iter().map(|s| (s.site, s.ordinal)).collect::<Vec<_>>(),
+        action
+            .sites
+            .iter()
+            .map(|s| (s.site, s.ordinal))
+            .collect::<Vec<_>>(),
         vec![(1, 3), (2, 8)]
     );
-    assert!(action.sites[1].captures.starts_with(&action.sites[0].captures));
+    assert!(
+        action.sites[1]
+            .captures
+            .starts_with(&action.sites[0].captures)
+    );
     for site in &action.sites {
-        assert!(site.captures.iter().all(|s| !matches!(
-            s.name.as_str(),
-            "basis" | "allocated" | "marker"
-        )));
+        assert!(
+            site.captures
+                .iter()
+                .all(|s| !matches!(s.name.as_str(), "basis" | "allocated" | "marker"))
+        );
     }
 }
 
@@ -159,7 +170,10 @@ fn digests_are_canonical_deterministic_and_bind_every_literal() {
     let canonical = mori_core::intent::canonical(a.program()).unwrap();
     let expected: [u8; 32] = Sha256::digest(&canonical).into();
     assert_eq!(a.program_hash(), expected);
-    assert_eq!(a.plan().program_hash, mori_core::intent::hex(&a.program_hash()));
+    assert_eq!(
+        a.plan().program_hash,
+        mori_core::intent::hex(&a.program_hash())
+    );
     assert_eq!(a.plan().format, stage::STAGE_PLAN_FORMAT);
     let canonical_plan = mori_core::intent::canonical(a.plan()).unwrap();
     let expected_plan: [u8; 32] = Sha256::digest(&canonical_plan).into();
@@ -186,18 +200,37 @@ fn h26_every_admitted_segment_meters_exactly_its_static_cost() {
     assert_eq!(attempted.0, cost[0]);
     assert_eq!(first.logical.committed.0, before[1]);
     let segment = segment.unwrap();
-    assert_eq!(segment.frame_pre, stage::PendingFrame { site: 0, captures: vec![] });
+    assert_eq!(
+        segment.frame_pre,
+        stage::PendingFrame {
+            site: 0,
+            captures: vec![]
+        }
+    );
     assert_eq!(segment.frame_post.site, 1);
     // False guard: one dispatch plus the guard's three nodes; nothing commits.
     let (advanced, segment, same, attempted) = waiting(
-        stage::resume(&sp, first.clone(), event("run", "first", &[("y", uint(6))]), None, None)
-            .unwrap(),
+        stage::resume(
+            &sp,
+            first.clone(),
+            event("run", "first", &[("y", uint(6))]),
+            None,
+            None,
+        )
+        .unwrap(),
     );
     assert!(!advanced && segment.is_none());
     assert_eq!(attempted, UInt(4));
     assert_eq!(same, first);
     let (_, _, second, attempted) = waiting(
-        stage::resume(&sp, first, event("run", "first", &[("y", uint(5))]), None, None).unwrap(),
+        stage::resume(
+            &sp,
+            first,
+            event("run", "first", &[("y", uint(5))]),
+            None,
+            None,
+        )
+        .unwrap(),
     );
     assert_eq!(attempted.0, cost[1]);
     assert_eq!(second.logical.committed.0, before[2]);
@@ -213,7 +246,13 @@ fn h26_every_admitted_segment_meters_exactly_its_static_cost() {
     );
     assert_eq!(attempted.0, cost[2]);
     assert_eq!(committed.0, total);
-    assert_eq!(segment.frame_post, stage::PendingFrame { site: 0, captures: vec![] });
+    assert_eq!(
+        segment.frame_post,
+        stage::PendingFrame {
+            site: 0,
+            captures: vec![]
+        }
+    );
 }
 
 #[test]
@@ -226,7 +265,13 @@ fn h26_zero_await_action_completes_with_its_single_static_segment() {
     let (segment, committed, attempted) =
         complete(stage::start(&sp, "bump", opening, Some(UInt(8))).unwrap());
     assert_eq!((committed, attempted), (UInt(8), UInt(8)));
-    assert_eq!(segment.frame_pre, stage::PendingFrame { site: 0, captures: vec![] });
+    assert_eq!(
+        segment.frame_pre,
+        stage::PendingFrame {
+            site: 0,
+            captures: vec![]
+        }
+    );
     assert_eq!(segment.frame_post, segment.frame_pre);
     assert_eq!(segment.execution.post.state["n"], uint(42));
 }
@@ -252,7 +297,13 @@ fn start_cap_below_plan_total_refuses_before_evaluation() {
 
 // ------------------------------------------------------------------ H17 property
 
-fn escrow_opening(amount: u128, alice_extra: u128, escrow: u128, bob: u128, release: Option<u128>) -> Scenario {
+fn escrow_opening(
+    amount: u128,
+    alice_extra: u128,
+    escrow: u128,
+    bob: u128,
+    release: Option<u128>,
+) -> Scenario {
     let id = asset("continuation-escrow-oracle", "PAY");
     Scenario {
         state: Default::default(),
@@ -440,22 +491,43 @@ fn action_source(body: &str) -> String {
 #[test]
 fn h22_await_validation_codes() {
     let cases: Vec<(String, &str)> = vec![
-        (action_source("await p(r: Bool) when r; await p(q: Bool) when q;"), "duplicate"),
+        (
+            action_source("await p(r: Bool) when r; await p(q: Bool) when q;"),
+            "duplicate",
+        ),
         (action_source("await p(s: UInt) when s == 0;"), "duplicate"),
         (action_source("await p(i: UInt) when i == 0;"), "duplicate"),
-        (action_source("let l = i; await p(l: UInt) when l == 0;"), "duplicate"),
-        (action_source("await p(r: Bool) when r; await q(r: Bool) when r;"), "duplicate"),
-        (action_source("await p(r: Bool, r: Bool) when r;"), "duplicate"),
+        (
+            action_source("let l = i; await p(l: UInt) when l == 0;"),
+            "duplicate",
+        ),
+        (
+            action_source("await p(r: Bool) when r; await q(r: Bool) when r;"),
+            "duplicate",
+        ),
+        (
+            action_source("await p(r: Bool, r: Bool) when r;"),
+            "duplicate",
+        ),
         (action_source("await p(PAY: Bool) when PAY;"), "duplicate"),
-        (action_source("await p(r: Bool) when r; let r = 1;"), "duplicate"),
+        (
+            action_source("await p(r: Bool) when r; let r = 1;"),
+            "duplicate",
+        ),
         (action_source("await p(r: UInt) when r;"), "type"),
         (action_source("await p(r: UInt) when r + 1;"), "type"),
         (action_source("await p() when unknown;"), "name"),
-        (action_source("await p() when r; await q(r: Bool) when r;"), "name"),
+        (
+            action_source("await p() when r; await q(r: Bool) when r;"),
+            "name",
+        ),
         (action_source("let await = 1;"), "duplicate"),
         (action_source("let when = 1;"), "duplicate"),
         (action_source("await when(r: Bool) when r;"), "duplicate"),
-        (action_source("await p(await: Bool) when true;"), "duplicate"),
+        (
+            action_source("await p(await: Bool) when true;"),
+            "duplicate",
+        ),
     ];
     for (source, code) in cases {
         let error = refused(&source);
@@ -465,10 +537,22 @@ fn h22_await_validation_codes() {
 
 #[test]
 fn h22_await_and_layout_bounds() {
-    let awaits: String = (0..17).map(|k| format!("await w{k}() when true; ")).collect();
+    let awaits: String = (0..17)
+        .map(|k| format!("await w{k}() when true; "))
+        .collect();
     assert_eq!(refused(&action_source(&awaits)).code, "mori::core::bound");
-    let sixteen: String = (0..16).map(|k| format!("await w{k}() when true; ")).collect();
-    assert_eq!(stage::load(&action_source(&sixteen)).unwrap().plan().actions[0].sites.len(), 16);
+    let sixteen: String = (0..16)
+        .map(|k| format!("await w{k}() when true; "))
+        .collect();
+    assert_eq!(
+        stage::load(&action_source(&sixteen))
+            .unwrap()
+            .plan()
+            .actions[0]
+            .sites
+            .len(),
+        16
+    );
     let binders: Vec<String> = (0..17).map(|k| format!("b{k}: Bool")).collect();
     let too_many = action_source(&format!("await p({}) when true;", binders.join(", ")));
     assert_eq!(refused(&too_many).code, "mori::core::bound");
@@ -483,10 +567,19 @@ fn h22_await_and_layout_bounds() {
         )
     };
     assert_eq!(
-        stage::load(&wide("await p() when true;")).unwrap().plan().actions[0].sites[0].captures.len(),
+        stage::load(&wide("await p() when true;"))
+            .unwrap()
+            .plan()
+            .actions[0]
+            .sites[0]
+            .captures
+            .len(),
         256
     );
-    assert_eq!(refused(&wide("let z = 1; await p() when true;")).code, "mori::core::bound");
+    assert_eq!(
+        refused(&wide("let z = 1; await p() when true;")).code,
+        "mori::core::bound"
+    );
 }
 
 #[test]
@@ -498,28 +591,40 @@ fn requires_stays_a_predicate_and_profiles_stay_isolated() {
         mori_core::Statement::Requires { .. }
     ));
     // `/1` source cannot load as staged, and `/2` source fails legacy parse.
-    let legacy = r#"language "moriarty/1"; agreement L { state s: UInt = 0; action a() { next s = 1; } }"#;
+    let legacy =
+        r#"language "moriarty/1"; agreement L { state s: UInt = 0; action a() { next s = 1; } }"#;
     assert_eq!(refused(legacy).code, "mori::core::profile");
     let staged = action_source("next s = i;");
-    assert_eq!(mori_core::parse(&staged).unwrap_err().code, "mori::core::profile");
+    assert_eq!(
+        mori_core::parse(&staged).unwrap_err().code,
+        "mori::core::profile"
+    );
     // /1 keeps await and when as ordinary names (C6).
     let names = r#"language "moriarty/1"; agreement L { state s: UInt = 0; action a() { let await = 1; let when = await; next s = when; } }"#;
     assert!(mori_core::parse(names).is_ok());
     // Profile helpers keep the legacy error identity.
     let core1 = mori_core::parse(legacy).unwrap();
     assert!(stage::require_core1(&core1).is_ok());
-    assert_eq!(stage::require_core2(&core1).unwrap_err().code, "mori::core::profile");
+    assert_eq!(
+        stage::require_core2(&core1).unwrap_err().code,
+        "mori::core::profile"
+    );
     let core2 = stage::load(&staged).unwrap();
     assert!(stage::require_core2(core2.program()).is_ok());
-    assert_eq!(stage::require_core1(core2.program()).unwrap_err().code, "mori::core::profile");
+    assert_eq!(
+        stage::require_core1(core2.program()).unwrap_err().code,
+        "mori::core::profile"
+    );
     let mut relabelled = core2.program().clone();
     relabelled.language = mori_core::LANGUAGE.into();
     relabelled.semantics = mori_core::SEMANTICS.into();
-    relabelled.actions[0].statements.push(mori_core::Statement::Await {
-        label: "x".into(),
-        binders: vec![],
-        guard: 0,
-    });
+    relabelled.actions[0]
+        .statements
+        .push(mori_core::Statement::Await {
+            label: "x".into(),
+            binders: vec![],
+            guard: 0,
+        });
     let error = stage::require_core1(&relabelled).unwrap_err();
     assert_eq!(error.code, "mori::core::profile");
 }
@@ -549,6 +654,10 @@ fn legacy_constraints_have_identical_errors_under_both_profiles() {
         let legacy = staged.replace("moriarty/2", "moriarty/1");
         let v1 = mori_core::parse(&legacy).expect_err(body);
         let v2 = refused(&staged);
-        assert_eq!((&v2.code, &v2.message, v2.step), (&v1.code, &v1.message, v1.step), "{body}");
+        assert_eq!(
+            (&v2.code, &v2.message, v2.step),
+            (&v1.code, &v1.message, v1.step),
+            "{body}"
+        );
     }
 }

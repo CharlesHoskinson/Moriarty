@@ -16,9 +16,9 @@ in the October 11 native-liabilities runtime evidence. Frozen SHA256 inputs:
 | LICENSE-MIT | 2230c498083dc4b7b5f21d3cc0177a8bb1bfa8dd93ce1f8a02ea906f2cc82af1 |
 | LICENSE-APACHE | cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30 |
 
-`src/signed/schnorr.rs` adapts curve/subgroup checking, canonical scalar
-conversion, the FENS-first challenge and the response equation from the
-reference/specification. It adds strict lowercase affine32LE decoding.
+The host verifier adapted from the reference/specification lives in
+`mori-backend/src/schnorr.rs` (see its notice); `src/signed/schnorr.rs` only
+wraps it in ledger refusal codes.
 `src/signed/constraints.rs` adapts the constraint-only asserted verifier from the frozen `zkir.rs`: typed coordinate extraction, nonidentity, FENS-first challenge, canonical scalar roundtrip and asserted equation. It uses only the ledger Builder allocator and emits no auth Impact or private transcript. No signer, custody scheme or Fenrir application is copied.
 The implementation depends only on the already locked Midnight crates.
 Historical external audit notes do not certify these observed source bytes or

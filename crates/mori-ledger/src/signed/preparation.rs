@@ -83,6 +83,7 @@ fn decode_predecessor(
         params,
     ))
 }
+#[allow(clippy::too_many_arguments)]
 pub fn prepare_installed_call_signing_statement(
     source: &str,
     p: &Program,
@@ -218,7 +219,7 @@ pub(crate) fn build_package(
         .ok_or(refuse("offer"))?;
     let inputs=offer.inputs.iter().map(|o|Ok(serde_json::json!({"owner":codec::native_hex(&o.owner)?,"amount":UInt(o.value),"asset":codec::native_hex(&o.type_)?}))).collect::<Result<Vec<_>>>()?;
     let outputs=offer.outputs.iter().map(|o|Ok(serde_json::json!({"owner":codec::native_hex(&o.owner)?,"amount":UInt(o.value),"asset":codec::native_hex(&o.type_)?}))).collect::<Result<Vec<_>>>()?;
-    let readback = serde_json::json!([PROJECTION,b.readback.execution.pre,b.readback.execution.post,b.readback.execution.effects,b.native.lowered.program.iter().map(|o|codec::native_hex(o)).collect::<Result<Vec<_>>>()?,b.readback.charged_successor_hex,b.readback.effects_hex,b.readback.native_events_hex,b.readback.measured_gas_hex,d.frame.gas_hex,b.readback.preserved_frame,b.readback.prospective_balances,{"spends":inputs,"outputs":outputs}]);
+    let readback = serde_json::json!([PROJECTION,b.readback.execution.pre,b.readback.execution.post,b.readback.execution.effects,b.native.lowered.program.iter().map(codec::native_hex).collect::<Result<Vec<_>>>()?,b.readback.charged_successor_hex,b.readback.effects_hex,b.readback.native_events_hex,b.readback.measured_gas_hex,d.frame.gas_hex,b.readback.preserved_frame,b.readback.prospective_balances,{"spends":inputs,"outputs":outputs}]);
     let bindings = &s.bindings;
     let payload = OwnerPayload {
         profile: PAYLOAD.into(),

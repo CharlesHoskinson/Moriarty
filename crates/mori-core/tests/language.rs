@@ -403,8 +403,7 @@ fn excessive_trace_refuses() {
         .extend(std::iter::repeat_n(stmt, 20));
     assert_eq!(
         simulate(&p, "settle", &s)
-            .err()
-            .expect("trace budget must refuse")
+            .expect_err("trace budget must refuse")
             .code,
         "mori::core::bound"
     );

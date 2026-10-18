@@ -39,12 +39,11 @@ pub fn prepare_offer(pre: &AdmittedPredecessor, e: &Execution) -> Result<Prepare
         | Effect::Fee {
             asset, to, amount, ..
         } = effect
+            && amount.0 > 0
         {
-            if amount.0 > 0 {
-                let k = (pre.assets[asset], pre.roles[to].address);
-                let n = groups.entry(k).or_insert(0u128);
-                *n = n.checked_add(amount.0).ok_or(refusal("claim-overflow"))?;
-            }
+            let k = (pre.assets[asset], pre.roles[to].address);
+            let n = groups.entry(k).or_insert(0u128);
+            *n = n.checked_add(amount.0).ok_or(refusal("claim-overflow"))?;
         }
     }
     let mut required = BTreeMap::new();
@@ -205,15 +204,14 @@ pub fn validate_offer(
         | Effect::Fee {
             asset, to, amount, ..
         } = effect
+            && amount.0 != 0
         {
-            if amount.0 != 0 {
-                let n = payments
-                    .entry((pre.assets[asset], pre.roles[to].address))
-                    .or_insert(0u128);
-                *n = n
-                    .checked_add(amount.0)
-                    .ok_or(refusal("payout-sum-overflow"))?;
-            }
+            let n = payments
+                .entry((pre.assets[asset], pre.roles[to].address))
+                .or_insert(0u128);
+            *n = n
+                .checked_add(amount.0)
+                .ok_or(refusal("payout-sum-overflow"))?;
         }
     }
     let mut counts: BTreeMap<UtxoOutput, usize> = BTreeMap::new();

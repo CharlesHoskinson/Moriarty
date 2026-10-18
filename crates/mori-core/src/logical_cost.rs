@@ -32,6 +32,8 @@ pub struct MeteredReplayError {
 }
 /// Executes with a separately trusted, unsigned local logical-work cap.
 /// A refusal reports charged attempts and exposes no partial execution.
+// The refusal carries its charged cost report by design.
+#[allow(clippy::result_large_err)]
 pub fn simulate_metered(
     program: &Program,
     action: &str,
@@ -55,6 +57,8 @@ pub fn simulate_metered(
 }
 /// Reconstructs once under the trusted cap, then uses existing first-divergence
 /// comparison. Comparison and serialization work are outside this cost profile.
+// The refusal carries its charged cost report by design.
+#[allow(clippy::result_large_err)]
 pub fn replay_detailed_metered(
     program: &Program,
     action: &str,

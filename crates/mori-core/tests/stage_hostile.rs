@@ -1,7 +1,5 @@
-//! Opus-authored hostile-resume tests (H1-H5, H8, H13, H17/H26, H25).
-//! Written before execution; not yet run. Expected values are frozen from the
-//! source read and DESIGN-OPUS-A2, not from any evaluator output, and are not
-//! acceptance evidence by themselves.
+//! Hostile-resume tests (H1-H5, H8, H13, H17/H26, H25). Expected values come
+//! from the design, not from any evaluator output.
 //!
 //! Each case perturbs exactly one field of a genuine Waiting continuation, so
 //! the expected code does not depend on admission order beyond R0-R7.
@@ -143,7 +141,13 @@ fn h3_only_a_planned_pending_site_is_admitted() {
 fn h4_captures_must_match_the_site_layout_exactly() {
     let sp = stage::load(ESCROW).unwrap();
     let c = pending(&sp, None);
-    assert_eq!(c.captures, vec![NamedValue { name: "amount".into(), value: uint(10) }]);
+    assert_eq!(
+        c.captures,
+        vec![NamedValue {
+            name: "amount".into(),
+            value: uint(10)
+        }]
+    );
     let mut renamed = c.clone();
     renamed.captures[0].name = "amount2".into();
     let mut retyped = c.clone();
@@ -151,7 +155,10 @@ fn h4_captures_must_match_the_site_layout_exactly() {
     let mut dropped = c.clone();
     dropped.captures.clear();
     let mut extra = c.clone();
-    extra.captures.push(NamedValue { name: "ready".into(), value: Value::Bool(true) });
+    extra.captures.push(NamedValue {
+        name: "ready".into(),
+        value: Value::Bool(true),
+    });
     for forged in [renamed, retyped, dropped, extra] {
         rejects(&sp, forged, ready(true), "stage_capture");
     }
@@ -211,10 +218,19 @@ fn c10_rejection_leaves_the_input_valid_for_a_corrected_retry() {
     let sp = stage::load(ESCROW).unwrap();
     let c = pending(&sp, None);
     let snapshot = c.clone();
-    rejects(&sp, c.clone(), event("deliver", "delivery", &[]), "stage_event");
+    rejects(
+        &sp,
+        c.clone(),
+        event("deliver", "delivery", &[]),
+        "stage_event",
+    );
     assert_eq!(c, snapshot);
     match stage::resume(&sp, c, ready(true), None, None).unwrap() {
-        StageOutcome::Complete { committed, attempted, .. } => {
+        StageOutcome::Complete {
+            committed,
+            attempted,
+            ..
+        } => {
             assert_eq!((committed, attempted), (UInt(11), UInt(6)));
         }
         other => panic!("expected complete, got {other:?}"),
@@ -251,10 +267,16 @@ fn h25_emitted_continuations_round_trip_through_the_resume_decoder() {
         // The `cap` key is mandatory even when null.
         let missing = text.replacen("\"cap\":null,", "", 1);
         if missing != text {
-            assert_eq!(stage::decode::continuation(&missing).unwrap_err().code, "mori::core::json");
+            assert_eq!(
+                stage::decode::continuation(&missing).unwrap_err().code,
+                "mori::core::json"
+            );
         }
         let unknown = text.replacen('{', "{\"extra\":1,", 1);
-        assert_eq!(stage::decode::continuation(&unknown).unwrap_err().code, "mori::core::json");
+        assert_eq!(
+            stage::decode::continuation(&unknown).unwrap_err().code,
+            "mori::core::json"
+        );
         assert!(stage::resume(&sp, decoded, ready(true), None, None).is_ok());
     }
 }
@@ -322,10 +344,8 @@ proptest! {
     }
 }
 
-// Opus hostile repair: F1 controls H6, H7, H9, H10, H11, H12, H14 and H24,
-// then optional F2 coverage. Appended without changing any test above.
-// Written before execution and not yet run. Codes, messages, steps and meter
-// counts come from DESIGN-OPUS section 8, DESIGN-OPUS-FINAL A10 and an
+// F1 controls H6, H7, H9, H10, H11, H12, H14 and H24, then optional F2
+// coverage. Codes, messages, steps and meter counts come from the design and an
 // independent recount of the escrow and E2 plans, not from evaluator output.
 use mori_core::{Effect, Error};
 
@@ -366,7 +386,12 @@ fn assert_escrow_boundary(c: &Continuation) {
     let l = &c.boundary.liabilities;
     assert_eq!(l.len(), 1);
     assert_eq!(
-        (l[0].name.as_str(), l[0].debtor.as_str(), l[0].creditor.as_str(), l[0].amount),
+        (
+            l[0].name.as_str(),
+            l[0].debtor.as_str(),
+            l[0].creditor.as_str(),
+            l[0].amount
+        ),
         ("release", "escrow", "bob", UInt(10))
     );
 }
@@ -386,12 +411,17 @@ fn completes(sp: &StagedProgram, c: Continuation) -> stage::StageSegment {
 }
 fn assert_duplicate_key(error: Error) {
     assert_eq!(error.code, "mori::core::json");
-    assert!(error.message.starts_with("duplicate decoded key"), "{error:?}");
+    assert!(
+        error.message.starts_with("duplicate decoded key"),
+        "{error:?}"
+    );
 }
 fn assert_non_canonical(error: Error) {
     assert_eq!(error.code, "mori::core::json");
     assert!(
-        error.message.contains("expected canonical unsigned decimal string"),
+        error
+            .message
+            .contains("expected canonical unsigned decimal string"),
         "{error:?}"
     );
 }
@@ -459,16 +489,18 @@ fn h7_non_canonical_uint_strings_are_refused_on_decode() {
 
     let flag = r#"{"type":"Bool","value":true}"#;
     assert_eq!(READY_TRUE_JSON.matches(flag).count(), 1);
-    let uint_event = |raw: &str| {
-        READY_TRUE_JSON.replace(flag, &format!(r#"{{"type":"UInt","value":"{raw}"}}"#))
-    };
+    let uint_event =
+        |raw: &str| READY_TRUE_JSON.replace(flag, &format!(r#"{{"type":"UInt","value":"{raw}"}}"#));
     for raw in ["010", "00", "+10", "1_0", " 10", ""] {
         assert_non_canonical(stage::decode::event(&uint_event(raw)).unwrap_err());
     }
     // The canonical spelling decodes; admission then refuses the UInt for the
     // Bool binder at R5, a separate check from decoding.
     let canonical = stage::decode::event(&uint_event("10")).unwrap();
-    assert_eq!(canonical, event("deliver", "delivery", &[("ready", uint(10))]));
+    assert_eq!(
+        canonical,
+        event("deliver", "delivery", &[("ready", uint(10))])
+    );
     refused_before_evaluation(&sp, c, canonical, "stage_event");
 }
 
@@ -513,13 +545,19 @@ fn h10_boundary_liability_identity_must_match_the_source_registry() {
     creditor.boundary.liabilities[0].creditor = "observer".into();
     for forged in [debtor, creditor] {
         let error = refused_before_evaluation(&sp, forged, ready(true), "liability");
-        assert_eq!(error.message, "Existing liability identity differs for \"release\".");
+        assert_eq!(
+            error.message,
+            "Existing liability identity differs for \"release\"."
+        );
     }
     // A name absent from the source registry is refused the same way.
     let mut renamed = c.clone();
     renamed.boundary.liabilities[0].name = "ghost".into();
     let error = refused_before_evaluation(&sp, renamed, ready(true), "liability");
-    assert_eq!(error.message, "Existing liability identity differs for \"ghost\".");
+    assert_eq!(
+        error.message,
+        "Existing liability identity differs for \"ghost\"."
+    );
     completes(&sp, c);
 }
 
@@ -534,7 +572,10 @@ fn h11_drained_escrow_fails_the_true_resume_at_step_3_then_a_corrected_retry_com
     // ordinal 3 after guard (1 + 1) and transfer (1 + 1) were attempted.
     let refused = stage::resume(&sp, drained.clone(), ready(true), None, None).unwrap_err();
     assert_eq!(refused.error.code, "mori::core::balance");
-    assert_eq!(refused.error.message, "Insufficient balance for \"escrow\".");
+    assert_eq!(
+        refused.error.message,
+        "Insufficient balance for \"escrow\"."
+    );
     assert_eq!(refused.error.step, Some(3));
     assert_eq!((refused.attempted, refused.committed), (UInt(4), UInt(5)));
     // A false guard on the same drained boundary never reaches the transfer.
@@ -579,7 +620,10 @@ fn h12_removed_release_fails_at_step_4_and_publishes_no_transfer_or_segment() {
     // guard 2 + transfer 2 + discharge 2 attempted; the discharge fails.
     let refused = stage::resume(&sp, removed, ready(true), None, None).unwrap_err();
     assert_eq!(refused.error.code, "mori::core::liability");
-    assert_eq!(refused.error.message, "Unknown residual liability \"release\".");
+    assert_eq!(
+        refused.error.message,
+        "Unknown residual liability \"release\"."
+    );
     assert_eq!(refused.error.step, Some(4));
     assert_eq!((refused.attempted, refused.committed), (UInt(6), UInt(5)));
     // The rejection carries only error and work; the transfer that ran on the
@@ -621,7 +665,11 @@ fn h14_tampered_capture_is_accepted_as_a_characterized_unauthenticated_limitatio
     // Characterization only, not protection: captures and the boundary are
     // unauthenticated (`authentication:none`) and unconsumed
     // (`consumption:untracked`), so a tampered `y` is accepted locally.
-    assert!(STAGE_LABELS_EXPECTED.iter().all(|label| stage::STAGE_LABELS.contains(label)));
+    assert!(
+        STAGE_LABELS_EXPECTED
+            .iter()
+            .all(|label| stage::STAGE_LABELS.contains(label))
+    );
     let sp = stage::load(E2).unwrap();
     assert_eq!(sp.plan().actions[0].segment_cost, vec![UInt(7), UInt(8)]);
     let opening = Scenario {
@@ -643,8 +691,14 @@ fn h14_tampered_capture_is_accepted_as_a_characterized_unauthenticated_limitatio
     assert_eq!(
         c.captures,
         vec![
-            NamedValue { name: "x".into(), value: uint(4) },
-            NamedValue { name: "y".into(), value: uint(5) },
+            NamedValue {
+                name: "x".into(),
+                value: uint(4)
+            },
+            NamedValue {
+                name: "y".into(),
+                value: uint(5)
+            },
         ]
     );
     assert_eq!(c.boundary.state["level"], uint(5));
@@ -706,7 +760,10 @@ fn h24_stage_size_caps_apply_before_parse_and_the_legacy_ceiling_is_unchanged() 
     let text = serde_json::to_string(&c).unwrap();
     // Whitespace padding keeps the text valid JSON, so the only difference
     // between the accepted and refused case is one byte over the cap.
-    assert_eq!(stage::decode::continuation(&padded(&text, 4 * MIB)).unwrap(), c);
+    assert_eq!(
+        stage::decode::continuation(&padded(&text, 4 * MIB)).unwrap(),
+        c
+    );
     for over in [padded(&text, 4 * MIB + 1), "[".repeat(4 * MIB + 1)] {
         assert_too_large(
             stage::decode::continuation(&over).unwrap_err(),
@@ -714,9 +771,15 @@ fn h24_stage_size_caps_apply_before_parse_and_the_legacy_ceiling_is_unchanged() 
         );
     }
     // The legacy 1 MiB ceiling does not apply to a stage continuation.
-    assert_eq!(stage::decode::continuation(&padded(&text, MIB + 1)).unwrap(), c);
+    assert_eq!(
+        stage::decode::continuation(&padded(&text, MIB + 1)).unwrap(),
+        c
+    );
 
-    assert_eq!(stage::decode::event(&padded(READY_TRUE_JSON, 65_536)).unwrap(), ready(true));
+    assert_eq!(
+        stage::decode::event(&padded(READY_TRUE_JSON, 65_536)).unwrap(),
+        ready(true)
+    );
     for over in [padded(READY_TRUE_JSON, 65_537), "{".repeat(65_537)] {
         assert_too_large(
             stage::decode::event(&over).unwrap_err(),
@@ -727,7 +790,10 @@ fn h24_stage_size_caps_apply_before_parse_and_the_legacy_ceiling_is_unchanged() 
     // `/1` keeps its ceiling and message, including for a stage-sized text.
     assert!(mori_core::json::parse(&padded("{}", MIB)).is_ok());
     for over in [padded("{}", MIB + 1), padded(&text, 4 * MIB)] {
-        assert_too_large(mori_core::json::parse(&over).unwrap_err(), "JSON exceeds 1 MiB");
+        assert_too_large(
+            mori_core::json::parse(&over).unwrap_err(),
+            "JSON exceeds 1 MiB",
+        );
     }
 }
 
@@ -775,8 +841,12 @@ fn h24_read_bounded_refuses_oversized_stage_files_before_decoding() {
     let continuation_over =
         TempInput::new("continuation-over", padded(&text, 4 * MIB + 1).as_bytes());
     assert_too_large(
-        read_bounded(&continuation_over.0, stage::MAX_CONTINUATION_BYTES, CONTINUATION_TOO_LARGE)
-            .unwrap_err(),
+        read_bounded(
+            &continuation_over.0,
+            stage::MAX_CONTINUATION_BYTES,
+            CONTINUATION_TOO_LARGE,
+        )
+        .unwrap_err(),
         "Continuation JSON exceeds 4 MiB",
     );
 
@@ -795,13 +865,22 @@ fn f2_start_requires_exactly_the_typed_action_inputs() {
         ..opening(10)
     };
     let cases = [
-        (vec![("amount", Value::Bool(true))], "Missing or wrong type for input \"amount\"."),
-        (vec![], "Scenario must provide exactly the selected action's inputs."),
+        (
+            vec![("amount", Value::Bool(true))],
+            "Missing or wrong type for input \"amount\".",
+        ),
+        (
+            vec![],
+            "Scenario must provide exactly the selected action's inputs.",
+        ),
         (
             vec![("amount", uint(10)), ("extra", uint(1))],
             "Scenario must provide exactly the selected action's inputs.",
         ),
-        (vec![("other", uint(10))], "Missing or wrong type for input \"amount\"."),
+        (
+            vec![("other", uint(10))],
+            "Missing or wrong type for input \"amount\".",
+        ),
     ];
     for (inputs, message) in cases {
         let refused = stage::start(&sp, "deliver", with_inputs(inputs), None).unwrap_err();
@@ -809,7 +888,15 @@ fn f2_start_requires_exactly_the_typed_action_inputs() {
         assert_eq!(refused.error.message, message);
         assert_eq!((refused.attempted, refused.committed), (UInt(0), UInt(0)));
     }
-    assert!(stage::start(&sp, "deliver", with_inputs(vec![("amount", uint(10))]), None).is_ok());
+    assert!(
+        stage::start(
+            &sp,
+            "deliver",
+            with_inputs(vec![("amount", uint(10))]),
+            None
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -834,7 +921,10 @@ fn f2_r7_requires_exactly_the_declared_typed_states() {
     let error = refused_before_evaluation(&sp, renamed, ready(true), "state");
     assert_eq!(error.message, "Missing state \"marker\".");
     let mut retyped = c.clone();
-    retyped.boundary.state.insert("marker".into(), Value::Bool(true));
+    retyped
+        .boundary
+        .state
+        .insert("marker".into(), Value::Bool(true));
     let error = refused_before_evaluation(&sp, retyped, ready(true), "state");
     assert_eq!(error.message, "Wrong type for state \"marker\".");
     completes(&sp, c);
@@ -861,10 +951,19 @@ fn f2_r7_requires_strictly_ascending_unique_liabilities() {
         ..Scenario::default()
     };
     let c = match stage::start(&sp, "owe", opening, None).unwrap() {
-        StageOutcome::Waiting { advanced: true, continuation, .. } => continuation,
+        StageOutcome::Waiting {
+            advanced: true,
+            continuation,
+            ..
+        } => continuation,
         other => panic!("expected waiting, got {other:?}"),
     };
-    let names: Vec<&str> = c.boundary.liabilities.iter().map(|l| l.name.as_str()).collect();
+    let names: Vec<&str> = c
+        .boundary
+        .liabilities
+        .iter()
+        .map(|l| l.name.as_str())
+        .collect();
     assert_eq!(names, vec!["alpha", "beta"]);
     let go = || event("owe", "go", &[("ok", Value::Bool(true))]);
     let mut inverted = c.clone();

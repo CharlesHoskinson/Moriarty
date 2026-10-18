@@ -10,6 +10,7 @@ use crate::{
     profile::Deployment,
     relation,
 };
+use midnight_ledger::error::TransactionProvingError;
 use midnight_ledger::structure::{
     ContractAction, ContractCall, Intent, IntentHash, ProofKind, ProofMarker, ProofPreimageMarker,
     ProofVersioned, Utxo,
@@ -23,8 +24,8 @@ use midnight_transient_crypto::{
     commitment::{Pedersen, PedersenRandomness},
     curve::Fr,
     proofs::{
-        KeyLocation, ParamsProver, ParamsProverProvider, Proof, ProofPreimage, ProvingKeyMaterial,
-        ProvingProvider, Resolver, Zkir,
+        KeyLocation, ParamsProver, ParamsProverProvider, Proof, ProofPreimage, ProvingError,
+        ProvingKeyMaterial, ProvingProvider, Resolver, Zkir,
     },
 };
 use midnight_zkir_v3::IrSource;
@@ -218,7 +219,77 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-core/src/stage/mod.rs"),
             include_str!("../../mori-core/src/stage/plan.rs"),
             include_str!("../../mori-core/src/stage/profile.rs"),
-            include_str!("../../mori-core/src/stage/validate.rs")
+            include_str!("../../mori-core/src/stage/validate.rs"),
+            include_str!("../../mori-core/src/sherlock/arithmetic_witness.rs"),
+            include_str!("../../mori-core/src/sherlock/arithmetic_witness_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/bounded_scalar_source.rs"),
+            include_str!("../../mori-core/src/sherlock/bounded_scalar_source_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/checkpoint_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/compare.rs"),
+            include_str!("../../mori-core/src/sherlock/compare_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/draft_image_bridge.rs"),
+            include_str!("../../mori-core/src/sherlock/draft_image_bridge_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/draft_source.rs"),
+            include_str!("../../mori-core/src/sherlock/draft_source_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/draft_typecheck.rs"),
+            include_str!("../../mori-core/src/sherlock/draft_typecheck_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/extra_normal_oracles.rs"),
+            include_str!("../../mori-core/src/sherlock/extra_oracle_programs.rs"),
+            include_str!("../../mori-core/src/sherlock/helper_call_adapter.rs"),
+            include_str!("../../mori-core/src/sherlock/helper_call_adapter_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/helper_schedule.rs"),
+            include_str!("../../mori-core/src/sherlock/helper_schedule_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/image_reference.rs"),
+            include_str!("../../mori-core/src/sherlock/image_reference_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/arithmetic_fuel.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/arithmetic_fuel_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/aux_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/auxiliary.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/constants.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/encoding.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/limits.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/mod.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/observation.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/observation_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/prepare.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/rows.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state_decode.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state_decode_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state_encode.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state_encode_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state_encoding.rs"),
+            include_str!("../../mori-core/src/sherlock/layout_a/state_encoding_normal_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/machine_image.rs"),
+            include_str!("../../mori-core/src/sherlock/machine_image_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/mod.rs"),
+            include_str!("../../mori-core/src/sherlock/normal_oracle_inputs.rs"),
+            include_str!("../../mori-core/src/sherlock/normal_oracles.rs"),
+            include_str!("../../mori-core/src/sherlock/program_image.rs"),
+            include_str!("../../mori-core/src/sherlock/program_image_oracles.rs"),
+            include_str!("../../mori-core/src/sherlock/program_image_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_bounded_extra_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_bounded_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_display.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_oracles_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_slice.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_slice_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_stream.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_stream_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/reference_types.rs"),
+            include_str!("../../mori-core/src/sherlock/resource_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/source_adapter.rs"),
+            include_str!("../../mori-core/src/sherlock/source_adapter_tests.rs"),
+            include_str!("../../mori-core/src/sherlock/source_origin_normal_tests.rs"),
+            include_str!("../../mori-backend/Cargo.toml"),
+            include_str!("../../mori-backend/src/schnorr.rs"),
+            include_str!("../../mori-backend/src/parameters.rs"),
+            include_str!("../../mori-backend/third-party/jubjub-fens/NOTICE.md"),
+            include_str!("../../mori-backend/third-party/jubjub-fens/LICENSE-MIT"),
+            include_str!("../../mori-backend/third-party/jubjub-fens/LICENSE-APACHE")
         )
         .as_bytes(),
     )
@@ -476,14 +547,23 @@ fn bound_preimage(
 fn fork_rng(rng: &mut StdRng) -> StdRng {
     StdRng::from_rng(rng).expect("StdRng is an infallible seed source")
 }
+// The SDK trait returns its type-erased `ProvingError`. Our refusals pass
+// through it unchanged and `sdk_refusal` recovers them after proving.
 impl ProvingProvider for SourceCallProver {
-    async fn check(&self, preimage: &ProofPreimage) -> anyhow::Result<Vec<Option<usize>>> {
+    async fn check(
+        &self,
+        preimage: &ProofPreimage,
+    ) -> std::result::Result<Vec<Option<usize>>, ProvingError> {
         if preimage.key_location.0.as_ref() != self.resolver.keys.action {
             return Err(refusal("snapshot-key-location").into());
         }
         Ok(relation::check(&self.artifact, preimage)?)
     }
-    async fn prove(self, preimage: &ProofPreimage, binding: Option<Fr>) -> anyhow::Result<Proof> {
+    async fn prove(
+        self,
+        preimage: &ProofPreimage,
+        binding: Option<Fr>,
+    ) -> std::result::Result<Proof, ProvingError> {
         if preimage.key_location.0.as_ref() != self.resolver.keys.action {
             return Err(refusal("snapshot-key-location").into());
         }
@@ -720,7 +800,7 @@ pub async fn prove_prepared_call(
             &native.params.cost_model.runtime_cost_model,
         )
         .await
-        .map_err(|_| refusal("sdk-intent-proving"))?;
+        .map_err(|error| sdk_refusal(&error).unwrap_or_else(|| refusal("sdk-intent-proving")))?;
     let verification = verify_proven_call(&prepared, &key, operation, &intent)?;
     Ok(ProvenNativeCall {
         intent,
@@ -728,9 +808,126 @@ pub async fn prove_prepared_call(
     })
 }
 
+/// Finds the refusal `SourceCallProver` raised inside the SDK's proving error.
+/// The SDK wraps a call's prover error in `TransactionProvingError::Proving`,
+/// which reports no source, so that layer is unwrapped by hand.
+fn sdk_refusal(error: &ProvingError) -> Option<Error> {
+    error.chain().find_map(|cause| {
+        if let Some(refusal) = cause.downcast_ref::<Error>() {
+            return Some(refusal.clone());
+        }
+        match cause.downcast_ref::<TransactionProvingError<InMemoryDB>>()? {
+            TransactionProvingError::Proving(inner) => sdk_refusal(inner),
+            _ => None,
+        }
+    })
+}
+
 #[cfg(test)]
-#[path = "../tests/support/mod.rs"]
-mod test_support;
+use crate::test_support;
+
+/// Actual installed consumer; operation comes from the admitted owner, never a
+/// proof/key bundle argument. SDK Intent::prove receives its raw intent once.
+pub async fn prove_installed_call(
+    prepared: crate::prepare::PreparedInstalledCall,
+    derived: crate::local_deployment::DerivedLocalDeployment,
+    rng: StdRng,
+) -> Result<ProvenInstalledCall> {
+    if prepared.context.signed.is_some() {
+        return Err(refusal("unsigned-profile"));
+    }
+    prove_installed_call_inner(prepared, derived, rng).await
+}
+pub(crate) async fn prove_installed_call_inner(
+    prepared: crate::prepare::PreparedInstalledCall,
+    derived: crate::local_deployment::DerivedLocalDeployment,
+    rng: StdRng,
+) -> Result<ProvenInstalledCall> {
+    if prepared.public.identity() != derived.public.identity()
+        || prepared.prepared.artifact().manifest.action != derived.action
+    {
+        return Err(refusal("installed-proving-policy"));
+    }
+    let context = prepared.proof_context();
+    let inspection = prepared.bundle().leaves.clone();
+    let readback = prepared.bundle().readback.clone();
+    let mut result = prove_prepared_call(
+        prepared.prepared,
+        derived.selected,
+        &prepared.operation,
+        rng,
+    )
+    .await?;
+    result.verification.scope = if context.signed.is_some() {
+        crate::signed::RESULT_SCOPE
+    } else {
+        "local-unsigned-source-derived-installed-call-unqualified"
+    };
+    let final_readback = crate::prepare::final_installed_readback(&readback, result.verification());
+    Ok(ProvenInstalledCall {
+        native: result,
+        context,
+        inspection,
+        final_readback,
+    })
+}
+pub fn verify_installed_call(
+    prepared: &crate::prepare::PreparedInstalledCall,
+    candidate: &ProvenIntent,
+) -> Result<CallVerification> {
+    if prepared.context.signed.is_some() {
+        return Err(refusal("unsigned-profile"));
+    }
+    verify_installed_call_inner(prepared, candidate)
+}
+pub(crate) fn verify_installed_call_inner(
+    prepared: &crate::prepare::PreparedInstalledCall,
+    candidate: &ProvenIntent,
+) -> Result<CallVerification> {
+    let mut result = verify_proven_call(
+        &prepared.prepared,
+        prepared
+            .public
+            .key(&prepared.prepared.artifact().manifest.action)?,
+        &prepared.operation,
+        candidate,
+    )?;
+    result.scope = if prepared.context.signed.is_some() {
+        crate::signed::RESULT_SCOPE
+    } else {
+        "local-unsigned-source-derived-installed-call-unqualified"
+    };
+    Ok(result)
+}
+
+/// A genuine native installed result owns its final semantic readback and the
+/// separately preserved inspection archive. There is no imported constructor.
+/// ```compile_fail
+/// let _: mori_ledger::proving::ProvenInstalledCall = serde_json::from_str("{}").unwrap();
+/// ```
+pub struct ProvenInstalledCall {
+    native: ProvenNativeCall,
+    context: crate::call_artifacts::ProofContext,
+    inspection: std::collections::BTreeMap<String, Vec<u8>>,
+    final_readback: crate::prepare::Readback,
+}
+impl ProvenInstalledCall {
+    pub fn intent(&self) -> &ProvenIntent {
+        self.native.intent()
+    }
+    pub fn verification(&self) -> &CallVerification {
+        self.native.verification()
+    }
+    pub fn readback(&self) -> &crate::prepare::Readback {
+        &self.final_readback
+    }
+    pub(crate) fn context(&self) -> &crate::call_artifacts::ProofContext {
+        &self.context
+    }
+    pub(crate) fn inspection(&self) -> &std::collections::BTreeMap<String, Vec<u8>> {
+        &self.inspection
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -750,6 +947,18 @@ mod tests {
             &f.request,
         )
         .unwrap()
+    }
+    #[test]
+    fn sdk_refusal_recovers_the_prover_refusal_through_sdk_wrapping() {
+        let raised = refusal("snapshot-key-location");
+        let direct = ProvingError::from(raised.clone());
+        assert_eq!(sdk_refusal(&direct), Some(raised.clone()));
+        let wrapped = ProvingError::from(TransactionProvingError::<InMemoryDB>::Proving(direct));
+        assert_eq!(sdk_refusal(&wrapped), Some(raised));
+        let foreign = ProvingError::from(TransactionProvingError::<InMemoryDB>::MissingKeyset(
+            KeyLocation(Cow::Borrowed("settle")),
+        ));
+        assert_eq!(sdk_refusal(&foreign), None);
     }
     #[test]
     fn binding_overwrite_is_required_and_checked_activity_is_stable() {
@@ -1204,108 +1413,5 @@ mod tests {
         let mut changed = inspected;
         changed.actions = vec![ContractAction::Call(Sp::new(second_expansion))].into();
         assert!(validate_final_envelope(&prepared, &changed).is_err());
-    }
-}
-
-/// Actual installed consumer; operation comes from the admitted owner, never a
-/// proof/key bundle argument. SDK Intent::prove receives its raw intent once.
-pub async fn prove_installed_call(
-    prepared: crate::prepare::PreparedInstalledCall,
-    derived: crate::local_deployment::DerivedLocalDeployment,
-    rng: StdRng,
-) -> Result<ProvenInstalledCall> {
-    if prepared.context.signed.is_some() {
-        return Err(refusal("unsigned-profile"));
-    }
-    prove_installed_call_inner(prepared, derived, rng).await
-}
-pub(crate) async fn prove_installed_call_inner(
-    prepared: crate::prepare::PreparedInstalledCall,
-    derived: crate::local_deployment::DerivedLocalDeployment,
-    rng: StdRng,
-) -> Result<ProvenInstalledCall> {
-    if prepared.public.identity() != derived.public.identity()
-        || prepared.prepared.artifact().manifest.action != derived.action
-    {
-        return Err(refusal("installed-proving-policy"));
-    }
-    let context = prepared.proof_context();
-    let inspection = prepared.bundle().leaves.clone();
-    let readback = prepared.bundle().readback.clone();
-    let mut result = prove_prepared_call(
-        prepared.prepared,
-        derived.selected,
-        &prepared.operation,
-        rng,
-    )
-    .await?;
-    result.verification.scope = if context.signed.is_some() {
-        crate::signed::RESULT_SCOPE
-    } else {
-        "local-unsigned-source-derived-installed-call-unqualified"
-    };
-    let final_readback = crate::prepare::final_installed_readback(&readback, result.verification());
-    Ok(ProvenInstalledCall {
-        native: result,
-        context,
-        inspection,
-        final_readback,
-    })
-}
-pub fn verify_installed_call(
-    prepared: &crate::prepare::PreparedInstalledCall,
-    candidate: &ProvenIntent,
-) -> Result<CallVerification> {
-    if prepared.context.signed.is_some() {
-        return Err(refusal("unsigned-profile"));
-    }
-    verify_installed_call_inner(prepared, candidate)
-}
-pub(crate) fn verify_installed_call_inner(
-    prepared: &crate::prepare::PreparedInstalledCall,
-    candidate: &ProvenIntent,
-) -> Result<CallVerification> {
-    let mut result = verify_proven_call(
-        &prepared.prepared,
-        prepared
-            .public
-            .key(&prepared.prepared.artifact().manifest.action)?,
-        &prepared.operation,
-        candidate,
-    )?;
-    result.scope = if prepared.context.signed.is_some() {
-        crate::signed::RESULT_SCOPE
-    } else {
-        "local-unsigned-source-derived-installed-call-unqualified"
-    };
-    Ok(result)
-}
-
-/// A genuine native installed result owns its final semantic readback and the
-/// separately preserved inspection archive. There is no imported constructor.
-/// ```compile_fail
-/// let _: mori_ledger::proving::ProvenInstalledCall = serde_json::from_str("{}").unwrap();
-/// ```
-pub struct ProvenInstalledCall {
-    native: ProvenNativeCall,
-    context: crate::call_artifacts::ProofContext,
-    inspection: std::collections::BTreeMap<String, Vec<u8>>,
-    final_readback: crate::prepare::Readback,
-}
-impl ProvenInstalledCall {
-    pub fn intent(&self) -> &ProvenIntent {
-        self.native.intent()
-    }
-    pub fn verification(&self) -> &CallVerification {
-        self.native.verification()
-    }
-    pub fn readback(&self) -> &crate::prepare::Readback {
-        &self.final_readback
-    }
-    pub(crate) fn context(&self) -> &crate::call_artifacts::ProofContext {
-        &self.context
-    }
-    pub(crate) fn inspection(&self) -> &std::collections::BTreeMap<String, Vec<u8>> {
-        &self.inspection
     }
 }

@@ -48,6 +48,8 @@ fn counter_scenario(amount: u128) -> Scenario {
         ..Scenario::default()
     }
 }
+// The refusal carries its charged cost report by design.
+#[allow(clippy::result_large_err)]
 fn prepare(
     owner: &mut LocalSourceSponsor,
     source: &str,

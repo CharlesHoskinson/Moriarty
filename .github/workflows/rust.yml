@@ -1,0 +1,42 @@
+# Optional manual workflow. The current user runs CI locally; do not add
+# automatic triggers or dispatch this workflow as part of ordinary work.
+# These broad Rust checks also remain subject to the native execution boundary.
+
+name: rust
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Lint
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Test
+        run: cargo test --workspace --locked

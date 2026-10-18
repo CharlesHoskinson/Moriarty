@@ -373,6 +373,9 @@ pub fn verify_and_simulate(
 /// The caller's unsigned cap is outside the unchanged owner signing message.
 /// Preparation, signature and effect checks are outside this logical cost profile.
 /// Late authority refusal retains consumed work and exposes no execution.
+// The refusal carries its charged cost report by design.
+#[allow(clippy::result_large_err)]
+#[allow(clippy::too_many_arguments)]
 pub fn verify_and_simulate_metered(
     program: &Program,
     source_hash: &str,

@@ -343,21 +343,20 @@ pub(crate) fn validate_liability_reads(p: &Program) -> Result<(), Error> {
             creditor,
             ..
         } = stmt
+            && let Some(found) = reads.get_mut(name.as_str())
         {
-            if let Some(found) = reads.get_mut(name.as_str()) {
-                let identity = (
-                    validate_asset(p, asset)?,
-                    debtor.as_str(),
-                    creditor.as_str(),
-                );
-                if found.is_some_and(|previous| previous != identity) {
-                    return Err(failure(
-                        "liability",
-                        format!("Conflicting source liability identity for {name:?}."),
-                    ));
-                }
-                *found = Some(identity);
+            let identity = (
+                validate_asset(p, asset)?,
+                debtor.as_str(),
+                creditor.as_str(),
+            );
+            if found.is_some_and(|previous| previous != identity) {
+                return Err(failure(
+                    "liability",
+                    format!("Conflicting source liability identity for {name:?}."),
+                ));
             }
+            *found = Some(identity);
         }
     }
     for (name, identity) in reads {
@@ -371,7 +370,11 @@ pub(crate) fn validate_liability_reads(p: &Program) -> Result<(), Error> {
     Ok(())
 }
 
-pub(crate) fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result<(), Error> {
+pub(crate) fn require_uint(
+    p: &Program,
+    id: ExprId,
+    env: &BTreeMap<String, Type>,
+) -> Result<(), Error> {
     if expr_type(p, id, env, 0)? != Type::UInt {
         Err(failure(
             "type",
@@ -513,13 +516,13 @@ fn liability_identities(p: &Program) -> Result<BTreeMap<&str, (&AssetId, &str, &
                 debtor.as_str(),
                 creditor.as_str(),
             );
-            if let Some(existing) = identities.insert(name.as_str(), identity) {
-                if existing != identity {
-                    return Err(failure(
-                        "liability",
-                        format!("Conflicting source liability identity for {name:?}."),
-                    ));
-                }
+            if let Some(existing) = identities.insert(name.as_str(), identity)
+                && existing != identity
+            {
+                return Err(failure(
+                    "liability",
+                    format!("Conflicting source liability identity for {name:?}."),
+                ));
             }
         }
     }
@@ -649,13 +652,13 @@ pub(crate) fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result
                 "Invalid or duplicate liability identity.",
             ));
         }
-        if let Some(identity) = identities.get(l.name.as_str()) {
-            if *identity != (&l.asset, l.debtor.as_str(), l.creditor.as_str()) {
-                return Err(failure(
-                    "liability",
-                    format!("Existing liability identity differs for {:?}.", l.name),
-                ));
-            }
+        if let Some(identity) = identities.get(l.name.as_str())
+            && *identity != (&l.asset, l.debtor.as_str(), l.creditor.as_str())
+        {
+            return Err(failure(
+                "liability",
+                format!("Existing liability identity differs for {:?}.", l.name),
+            ));
         }
     }
     liabilities.sort_by(|a, b| a.name.cmp(&b.name));
@@ -797,10 +800,7 @@ fn execute_statement(
             let before = if let Some(index) = found {
                 let l = &current.liabilities[index];
                 if l.asset != id || l.debtor != *debtor || l.creditor != *creditor {
-                    return Err(failure(
-                        "liability",
-                        "Existing liability identity differs.",
-                    ));
+                    return Err(failure("liability", "Existing liability identity differs."));
                 }
                 l.amount
             } else {
@@ -844,9 +844,10 @@ fn execute_statement(
                     failure("liability", format!("Unknown residual liability {name:?}."))
                 })?;
             let before = l.amount;
-            let after = UInt(before.0.checked_sub(amount.0).ok_or_else(|| {
-                failure("liability", "Discharge exceeds residual liability.")
-            })?);
+            let after =
+                UInt(before.0.checked_sub(amount.0).ok_or_else(|| {
+                    failure("liability", "Discharge exceeds residual liability.")
+                })?);
             l.amount = after;
             effects.push(Effect::Liability {
                 name: name.clone(),
@@ -886,7 +887,12 @@ pub(crate) fn simulate_with_meter(
     for (i, stmt) in selected.statements.iter().enumerate() {
         let mut effects = vec![];
         let result = execute_statement(
-            program, stmt, &mut env, &mut current, &mut meter, &mut effects,
+            program,
+            stmt,
+            &mut env,
+            &mut current,
+            &mut meter,
+            &mut effects,
         );
         let value = result.map_err(|mut e| {
             e.step = Some(i as u16);
@@ -912,7 +918,9 @@ pub(crate) fn simulate_with_meter(
 }
 /// Environment seed supplied only by stage admission.
 pub enum SegmentEntry<'a> {
-    Start { inputs: &'a [crate::stage::NamedValue] },
+    Start {
+        inputs: &'a [crate::stage::NamedValue],
+    },
     Resume {
         site: u16,
         captures: &'a [crate::stage::NamedValue],
@@ -923,7 +931,7 @@ pub enum SegmentEntry<'a> {
 pub enum SegmentRun {
     NotAdvanced,
     Ran {
-        execution: Execution,
+        execution: Box<Execution>,
         exit_site: u16,
         captures_out: Vec<crate::stage::NamedValue>,
     },
@@ -952,15 +960,33 @@ pub(crate) fn run_segment(
             env.extend(inputs.iter().map(|v| (v.name.clone(), v.value.clone())));
             0
         }
-        SegmentEntry::Resume { site, captures, event } => {
-            env.extend(captures.iter().chain(event).map(|v| (v.name.clone(), v.value.clone())));
+        SegmentEntry::Resume {
+            site,
+            captures,
+            event,
+        } => {
+            env.extend(
+                captures
+                    .iter()
+                    .chain(event)
+                    .map(|v| (v.name.clone(), v.value.clone())),
+            );
             let ordinal = usize::from(plan.sites[usize::from(site) - 1].ordinal);
             let statement = &selected.statements[ordinal];
             let mut effects = Vec::new();
             // execute_statement charges dispatch once, then visits the guard.
             let value = execute_statement(
-                program, statement, &mut env, &mut current, &mut meter, &mut effects,
-            ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;
+                program,
+                statement,
+                &mut env,
+                &mut current,
+                &mut meter,
+                &mut effects,
+            )
+            .map_err(|mut error| {
+                error.step = Some(ordinal as u16);
+                error
+            })?;
             if value != Some(Value::Bool(true)) {
                 return Ok(SegmentRun::NotAdvanced);
             }
@@ -983,20 +1009,37 @@ pub(crate) fn run_segment(
                 error.step = Some(ordinal as u16);
                 error
             })?;
-            let site = plan.sites.iter().find(|s| usize::from(s.ordinal) == ordinal)
+            let site = plan
+                .sites
+                .iter()
+                .find(|s| usize::from(s.ordinal) == ordinal)
                 .ok_or_else(|| failure("stage_site", "Await site is absent from stage plan."))?;
             exit_site = site.site;
             for slot in &site.captures {
-                let value = env.get(&slot.name).cloned()
+                let value = env
+                    .get(&slot.name)
+                    .cloned()
                     .ok_or_else(|| failure("name", format!("Unknown name {:?}.", slot.name)))?;
-                captures_out.push(crate::stage::NamedValue { name: slot.name.clone(), value });
+                captures_out.push(crate::stage::NamedValue {
+                    name: slot.name.clone(),
+                    value,
+                });
             }
             break;
         }
         let mut effects = Vec::new();
         let value = execute_statement(
-            program, statement, &mut env, &mut current, &mut meter, &mut effects,
-        ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;
+            program,
+            statement,
+            &mut env,
+            &mut current,
+            &mut meter,
+            &mut effects,
+        )
+        .map_err(|mut error| {
+            error.step = Some(ordinal as u16);
+            error
+        })?;
         all_effects.extend(effects.clone());
         steps.push(Step {
             index: ordinal as u16,
@@ -1007,14 +1050,14 @@ pub(crate) fn run_segment(
         });
     }
     Ok(SegmentRun::Ran {
-        execution: Execution {
+        execution: Box::new(Execution {
             semantics: program.semantics.clone(),
             action: selected.name.clone(),
             pre,
             post: current,
             steps,
             effects: all_effects,
-        },
+        }),
         exit_site,
         captures_out,
     })

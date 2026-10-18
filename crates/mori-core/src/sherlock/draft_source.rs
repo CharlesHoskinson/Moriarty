@@ -1,21 +1,31 @@
 //! Unregistered draft syntax preparation using the real Moriarty lexer.
 //! Integration proposal: a Core lib.rs path module outside Sherlock's standalone
 //! pure-Std graph. No current export, profile registration or execution.
-use crate::sherlock::{Arm, BinaryOp, Expr, ExprRef, Function, Name, Parameter,
-    Pattern, Program, Type, UnaryOp, Value};
+use crate::sherlock::{
+    Arm, BinaryOp, Expr, ExprRef, Function, Name, Parameter, Pattern, Program, Type, UnaryOp, Value,
+};
 use mori_lexer::{TokenIdx, TokenKind, Tokens};
 use std::sync::Arc;
 
 pub const DRAFT_LANGUAGE: &str = "moriarty-sherlock-draft/1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SourceSpan { pub start: u32, pub end: u32 }
+pub struct SourceSpan {
+    pub start: u32,
+    pub end: u32,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BinderSite { pub name: Name, pub span: SourceSpan }
+pub struct BinderSite {
+    pub name: Name,
+    pub span: SourceSpan,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ParameterSite { pub binder: BinderSite, pub type_span: SourceSpan }
+pub struct ParameterSite {
+    pub binder: BinderSite,
+    pub type_span: SourceSpan,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FunctionSite {
@@ -70,8 +80,15 @@ pub struct ParsedDraft {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DraftError {
     Lex(String),
-    Syntax { span: SourceSpan, expected: &'static str, found: String },
-    UIntLiteral { span: SourceSpan, text: String },
+    Syntax {
+        span: SourceSpan,
+        expected: &'static str,
+        found: String,
+    },
+    UIntLiteral {
+        span: SourceSpan,
+        text: String,
+    },
 }
 
 ///
@@ -80,7 +97,13 @@ pub enum DraftError {
 /// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
 pub fn parse_draft_source(source: &str) -> Result<ParsedDraft, DraftError> {
     let tokens = mori_lexer::lex(source).map_err(|error| DraftError::Lex(error.to_string()))?;
-    Parser { source, tokens, cursor: 0, end: 0 }.program()
+    Parser {
+        source,
+        tokens,
+        cursor: 0,
+        end: 0,
+    }
+    .program()
 }
 
 struct Node {
@@ -92,20 +115,35 @@ struct Node {
 
 impl Node {
     fn new(expression: Expr, span: SourceSpan, children: Vec<Node>) -> Self {
-        Self { expression: Arc::new(expression), span, children, patterns: vec![] }
+        Self {
+            expression: Arc::new(expression),
+            span,
+            children,
+            patterns: vec![],
+        }
     }
 }
 
-struct Parser<'a> { source: &'a str, tokens: Tokens, cursor: usize, end: u32 }
+struct Parser<'a> {
+    source: &'a str,
+    tokens: Tokens,
+    cursor: usize,
+    end: u32,
+}
 
 impl Parser<'_> {
     fn index(&self, ahead: usize) -> TokenIdx {
         TokenIdx::new((self.cursor + ahead).min(self.tokens.len() - 1))
     }
-    fn kind(&self, ahead: usize) -> TokenKind { self.tokens.kind(self.index(ahead)) }
+    fn kind(&self, ahead: usize) -> TokenKind {
+        self.tokens.kind(self.index(ahead))
+    }
     fn span(&self) -> SourceSpan {
         let span = self.tokens.span(self.index(0), self.source);
-        SourceSpan { start: span.start, end: span.end }
+        SourceSpan {
+            start: span.start,
+            end: span.end,
+        }
     }
     fn text(&self) -> &str {
         let span = self.span();
@@ -115,19 +153,29 @@ impl Parser<'_> {
         self.kind(0).is_word() && self.text() == word
     }
     fn error(&self, expected: &'static str) -> DraftError {
-        DraftError::Syntax { span: self.span(), expected, found: self.text().into() }
+        DraftError::Syntax {
+            span: self.span(),
+            expected,
+            found: self.text().into(),
+        }
     }
     fn bump(&mut self) {
         self.end = self.span().end;
-        if self.kind(0) != TokenKind::Eof { self.cursor += 1; }
+        if self.kind(0) != TokenKind::Eof {
+            self.cursor += 1;
+        }
     }
     fn expect(&mut self, kind: TokenKind, expected: &'static str) -> Result<(), DraftError> {
-        if self.kind(0) != kind { return Err(self.error(expected)); }
+        if self.kind(0) != kind {
+            return Err(self.error(expected));
+        }
         self.bump();
         Ok(())
     }
     fn expect_word(&mut self, word: &'static str) -> Result<(), DraftError> {
-        if !self.word(word) { return Err(self.error(word)); }
+        if !self.word(word) {
+            return Err(self.error(word));
+        }
         self.bump();
         Ok(())
     }
@@ -135,14 +183,19 @@ impl Parser<'_> {
         if self.kind(0) != TokenKind::Ident || reserved(self.text()) {
             return Err(self.error("identifier"));
         }
-        let site = BinderSite { name: self.text().into(), span: self.span() };
+        let site = BinderSite {
+            name: self.text().into(),
+            span: self.span(),
+        };
         self.bump();
         Ok(site)
     }
     fn ty(&mut self) -> Result<(Type, SourceSpan), DraftError> {
         let ty = match self.text() {
-            "UInt" => Type::UInt, "Bool" => Type::Bool,
-            "List" => Type::List, "Tree" => Type::Tree,
+            "UInt" => Type::UInt,
+            "Bool" => Type::Bool,
+            "List" => Type::List,
+            "Tree" => Type::Tree,
             _ => return Err(self.error("UInt, Bool, List or Tree")),
         };
         let span = self.span();
@@ -151,7 +204,9 @@ impl Parser<'_> {
     }
     fn program(mut self) -> Result<ParsedDraft, DraftError> {
         self.expect_word("language")?;
-        if self.kind(0) != TokenKind::String { return Err(self.error("draft language string")); }
+        if self.kind(0) != TokenKind::String {
+            return Err(self.error("draft language string"));
+        }
         let language_span = self.span();
         if mori_lexer::decode_string(self.text()) != DRAFT_LANGUAGE {
             return Err(self.error(DRAFT_LANGUAGE));
@@ -177,9 +232,14 @@ impl Parser<'_> {
                     let binder = self.name()?;
                     self.expect(TokenKind::Colon, ":")?;
                     let (ty, type_span) = self.ty()?;
-                    parameters.push(Parameter { name: binder.name.clone(), ty });
+                    parameters.push(Parameter {
+                        name: binder.name.clone(),
+                        ty,
+                    });
                     parameter_sites.push(ParameterSite { binder, type_span });
-                    if self.kind(0) != TokenKind::Comma { break; }
+                    if self.kind(0) != TokenKind::Comma {
+                        break;
+                    }
                     self.bump();
                 }
             }
@@ -187,10 +247,22 @@ impl Parser<'_> {
             self.expect(TokenKind::Colon, ":")?;
             let (return_type, return_type_span) = self.ty()?;
             let body = self.block()?;
-            functions.push(Function { name: function_name.name, parameters, return_type,
-                body: body.expression.clone() });
-            sites.push(FunctionSite { index, span: SourceSpan { start, end: self.end },
-                name_span: function_name.span, parameters: parameter_sites, return_type_span });
+            functions.push(Function {
+                name: function_name.name,
+                parameters,
+                return_type,
+                body: body.expression.clone(),
+            });
+            sites.push(FunctionSite {
+                index,
+                span: SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                name_span: function_name.span,
+                parameters: parameter_sites,
+                return_type_span,
+            });
             bodies.push(body);
         }
         self.expect_word("entry")?;
@@ -198,14 +270,26 @@ impl Parser<'_> {
         self.expect(TokenKind::Semicolon, ";")?;
         self.expect(TokenKind::RBrace, "}")?;
         self.expect(TokenKind::Eof, "end of draft program")?;
-        let program = Arc::new(Program { functions, entry: entry.expression.clone() });
-        let mut provenance = SourceProvenance { language_span, program_name_span: name.span,
-            functions: sites, expressions: Vec::new(), patterns: Vec::new() };
+        let program = Arc::new(Program {
+            functions,
+            entry: entry.expression.clone(),
+        });
+        let mut provenance = SourceProvenance {
+            language_span,
+            program_name_span: name.span,
+            functions: sites,
+            expressions: Vec::new(),
+            patterns: Vec::new(),
+        };
         collect_sites(&entry, None, &mut provenance);
         for (index, body) in bodies.iter().enumerate() {
             collect_sites(body, Some(index), &mut provenance);
         }
-        Ok(ParsedDraft { name: name.name, program, provenance })
+        Ok(ParsedDraft {
+            name: name.name,
+            program,
+            provenance,
+        })
     }
     fn block(&mut self) -> Result<Node, DraftError> {
         self.expect(TokenKind::LBrace, "{")?;
@@ -216,12 +300,22 @@ impl Parser<'_> {
     fn expression(&mut self, minimum: u8) -> Result<Node, DraftError> {
         let mut left = self.atom()?;
         while let Some((op, precedence, width)) = self.binary() {
-            if precedence < minimum { break; }
-            for _ in 0..width { self.bump(); }
+            if precedence < minimum {
+                break;
+            }
+            for _ in 0..width {
+                self.bump();
+            }
             let right = self.expression(precedence + 1)?;
-            let span = SourceSpan { start: left.span.start, end: right.span.end };
-            left = Node::new(Expr::Binary(op, left.expression.clone(), right.expression.clone()),
-                span, vec![left, right]);
+            let span = SourceSpan {
+                start: left.span.start,
+                end: right.span.end,
+            };
+            left = Node::new(
+                Expr::Binary(op, left.expression.clone(), right.expression.clone()),
+                span,
+                vec![left, right],
+            );
         }
         Ok(left)
     }
@@ -244,8 +338,18 @@ impl Parser<'_> {
             let value = self.expression(0)?;
             self.expect_word("in")?;
             let body = self.expression(0)?;
-            return Ok(Node::new(Expr::Let(binder.name, value.expression.clone(), body.expression.clone()),
-                SourceSpan { start, end: body.span.end }, vec![value, body]));
+            return Ok(Node::new(
+                Expr::Let(
+                    binder.name,
+                    value.expression.clone(),
+                    body.expression.clone(),
+                ),
+                SourceSpan {
+                    start,
+                    end: body.span.end,
+                },
+                vec![value, body],
+            ));
         }
         if self.word("if") {
             self.bump();
@@ -253,21 +357,38 @@ impl Parser<'_> {
             let yes = self.block()?;
             self.expect_word("else")?;
             let no = self.block()?;
-            return Ok(Node::new(Expr::If(condition.expression.clone(), yes.expression.clone(), no.expression.clone()),
-                SourceSpan { start, end: self.end }, vec![condition, yes, no]));
+            return Ok(Node::new(
+                Expr::If(
+                    condition.expression.clone(),
+                    yes.expression.clone(),
+                    no.expression.clone(),
+                ),
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                vec![condition, yes, no],
+            ));
         }
-        if self.word("match") { return self.match_expression(start); }
+        if self.word("match") {
+            return self.match_expression(start);
+        }
         if self.kind(0) == TokenKind::LParen {
             self.bump();
             let mut node = self.expression(0)?;
             self.expect(TokenKind::RParen, ")")?;
-            node.span = SourceSpan { start, end: self.end };
+            node.span = SourceSpan {
+                start,
+                end: self.end,
+            };
             return Ok(node);
         }
         if self.kind(0) == TokenKind::Number {
             let text = self.text().to_owned();
             let span = self.span();
-            let value = text.replace('_', "").parse::<u128>()
+            let value = text
+                .replace('_', "")
+                .parse::<u128>()
                 .map_err(|_| DraftError::UIntLiteral { span, text })?;
             self.bump();
             return Ok(Node::new(Expr::Literal(Value::UInt(value)), span, vec![]));
@@ -275,32 +396,78 @@ impl Parser<'_> {
         if matches!(self.kind(0), TokenKind::KwTrue | TokenKind::KwFalse) {
             let value = self.kind(0) == TokenKind::KwTrue;
             self.bump();
-            return Ok(Node::new(Expr::Literal(Value::Bool(value)), SourceSpan { start, end: self.end }, vec![]));
+            return Ok(Node::new(
+                Expr::Literal(Value::Bool(value)),
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                vec![],
+            ));
         }
         if self.word("nil") {
             self.bump();
-            return Ok(Node::new(Expr::Literal(Value::List(vec![])), SourceSpan { start, end: self.end }, vec![]));
+            return Ok(Node::new(
+                Expr::Literal(Value::List(vec![])),
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                vec![],
+            ));
         }
-        if ["cons", "leaf", "branch", "not"].iter().any(|word| self.word(word)) {
+        if ["cons", "leaf", "branch", "not"]
+            .iter()
+            .any(|word| self.word(word))
+        {
             let constructor = self.text().to_owned();
             self.bump();
             let children = self.arguments()?;
             let expression = match (constructor.as_str(), children.as_slice()) {
                 ("leaf", [child]) => Expr::Unary(UnaryOp::Leaf, child.expression.clone()),
                 ("not", [child]) => Expr::Unary(UnaryOp::Not, child.expression.clone()),
-                ("cons", [left, right]) => Expr::Binary(BinaryOp::Cons, left.expression.clone(), right.expression.clone()),
-                ("branch", [left, right]) => Expr::Binary(BinaryOp::Branch, left.expression.clone(), right.expression.clone()),
+                ("cons", [left, right]) => Expr::Binary(
+                    BinaryOp::Cons,
+                    left.expression.clone(),
+                    right.expression.clone(),
+                ),
+                ("branch", [left, right]) => Expr::Binary(
+                    BinaryOp::Branch,
+                    left.expression.clone(),
+                    right.expression.clone(),
+                ),
                 _ => return Err(self.error("constructor arguments in declared order/arity")),
             };
-            return Ok(Node::new(expression, SourceSpan { start, end: self.end }, children));
+            return Ok(Node::new(
+                expression,
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                children,
+            ));
         }
         let name = self.name()?;
         if self.kind(0) == TokenKind::LParen {
             let arguments = self.arguments()?;
-            let expression = Expr::Call(name.name,
-                arguments.iter().map(|argument| argument.expression.clone()).collect());
-            Ok(Node::new(expression, SourceSpan { start, end: self.end }, arguments))
-        } else { Ok(Node::new(Expr::Var(name.name), name.span, vec![])) }
+            let expression = Expr::Call(
+                name.name,
+                arguments
+                    .iter()
+                    .map(|argument| argument.expression.clone())
+                    .collect(),
+            );
+            Ok(Node::new(
+                expression,
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                arguments,
+            ))
+        } else {
+            Ok(Node::new(Expr::Var(name.name), name.span, vec![]))
+        }
     }
     fn arguments(&mut self) -> Result<Vec<Node>, DraftError> {
         self.expect(TokenKind::LParen, "(")?;
@@ -308,7 +475,9 @@ impl Parser<'_> {
         if self.kind(0) != TokenKind::RParen {
             loop {
                 arguments.push(self.expression(0)?);
-                if self.kind(0) != TokenKind::Comma { break; }
+                if self.kind(0) != TokenKind::Comma {
+                    break;
+                }
                 self.bump();
             }
         }
@@ -327,15 +496,26 @@ impl Parser<'_> {
             self.expect(TokenKind::Eq, "=>")?;
             self.expect(TokenKind::Gt, "=>")?;
             let body = self.expression(0)?;
-            arms.push(Arm { pattern, body: body.expression.clone() });
+            arms.push(Arm {
+                pattern,
+                body: body.expression.clone(),
+            });
             patterns.push((span, binders));
             children.push(body);
-            if self.kind(0) != TokenKind::Comma { break; }
+            if self.kind(0) != TokenKind::Comma {
+                break;
+            }
             self.bump();
         }
         self.expect(TokenKind::RBrace, "}")?;
-        let mut node = Node::new(Expr::Match(children[0].expression.clone(), arms),
-            SourceSpan { start, end: self.end }, children);
+        let mut node = Node::new(
+            Expr::Match(children[0].expression.clone(), arms),
+            SourceSpan {
+                start,
+                end: self.end,
+            },
+            children,
+        );
         node.patterns = patterns;
         Ok(node)
     }
@@ -343,9 +523,19 @@ impl Parser<'_> {
         let start = self.span().start;
         if self.word("nil") {
             self.bump();
-            return Ok((Pattern::Nil, SourceSpan { start, end: self.end }, vec![]));
+            return Ok((
+                Pattern::Nil,
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                vec![],
+            ));
         }
-        if ["cons", "leaf", "branch"].iter().any(|word| self.word(word)) {
+        if ["cons", "leaf", "branch"]
+            .iter()
+            .any(|word| self.word(word))
+        {
             let constructor = self.text().to_owned();
             self.bump();
             self.expect(TokenKind::LParen, "(")?;
@@ -361,7 +551,14 @@ impl Parser<'_> {
                 "cons" => Pattern::Cons(binders[0].name.clone(), binders[1].name.clone()),
                 _ => Pattern::Branch(binders[0].name.clone(), binders[1].name.clone()),
             };
-            Ok((pattern, SourceSpan { start, end: self.end }, binders))
+            Ok((
+                pattern,
+                SourceSpan {
+                    start,
+                    end: self.end,
+                },
+                binders,
+            ))
         } else {
             let binder = self.name()?;
             Ok((Pattern::Var(binder.name.clone()), binder.span, vec![binder]))
@@ -370,19 +567,48 @@ impl Parser<'_> {
 }
 
 fn reserved(name: &str) -> bool {
-    matches!(name, "language" | "program" | "fn" | "entry" | "if" | "else" | "let" | "in"
-        | "match" | "UInt" | "Bool" | "List" | "Tree" | "nil" | "cons" | "leaf" | "branch" | "not")
+    matches!(
+        name,
+        "language"
+            | "program"
+            | "fn"
+            | "entry"
+            | "if"
+            | "else"
+            | "let"
+            | "in"
+            | "match"
+            | "UInt"
+            | "Bool"
+            | "List"
+            | "Tree"
+            | "nil"
+            | "cons"
+            | "leaf"
+            | "branch"
+            | "not"
+    )
 }
 
 fn collect_sites(root: &Node, function_index: Option<usize>, provenance: &mut SourceProvenance) {
     let mut todo = vec![(root, Vec::new())];
     while let Some((node, path)) = todo.pop() {
-        let source = SourceLocation { function_index, child_path: path.clone() };
-        provenance.expressions.push(ExpressionSite { source: source.clone(), span: node.span,
-            kind: node_kind(&node.expression) });
+        let source = SourceLocation {
+            function_index,
+            child_path: path.clone(),
+        };
+        provenance.expressions.push(ExpressionSite {
+            source: source.clone(),
+            span: node.span,
+            kind: node_kind(&node.expression),
+        });
         for (arm_index, (span, binders)) in node.patterns.iter().enumerate() {
-            provenance.patterns.push(PatternSite { match_source: source.clone(), arm_index,
-                span: *span, binders: binders.clone() });
+            provenance.patterns.push(PatternSite {
+                match_source: source.clone(),
+                arm_index,
+                span: *span,
+                binders: binders.clone(),
+            });
         }
         for (index, child) in node.children.iter().enumerate().rev() {
             let mut child_path = path.clone();
@@ -394,13 +620,25 @@ fn collect_sites(root: &Node, function_index: Option<usize>, provenance: &mut So
 
 fn node_kind(expression: &Expr) -> &'static str {
     match expression {
-        Expr::Literal(Value::UInt(_)) => "uint", Expr::Literal(Value::Bool(_)) => "bool",
-        Expr::Literal(Value::List(_)) => "nil", Expr::Literal(Value::Tree(_)) => "tree-literal",
-        Expr::Var(_) => "var", Expr::Let(..) => "let", Expr::If(..) => "if",
-        Expr::Call(..) => "call", Expr::Match(..) => "match",
-        Expr::Binary(op, ..) => match op { BinaryOp::Add => "add", BinaryOp::Sub => "sub",
-            BinaryOp::Mul => "mul", BinaryOp::Eq => "eq", BinaryOp::Lt => "lt",
-            BinaryOp::Cons => "cons", BinaryOp::Branch => "branch" },
-        Expr::Unary(UnaryOp::Leaf, _) => "leaf", Expr::Unary(UnaryOp::Not, _) => "not",
+        Expr::Literal(Value::UInt(_)) => "uint",
+        Expr::Literal(Value::Bool(_)) => "bool",
+        Expr::Literal(Value::List(_)) => "nil",
+        Expr::Literal(Value::Tree(_)) => "tree-literal",
+        Expr::Var(_) => "var",
+        Expr::Let(..) => "let",
+        Expr::If(..) => "if",
+        Expr::Call(..) => "call",
+        Expr::Match(..) => "match",
+        Expr::Binary(op, ..) => match op {
+            BinaryOp::Add => "add",
+            BinaryOp::Sub => "sub",
+            BinaryOp::Mul => "mul",
+            BinaryOp::Eq => "eq",
+            BinaryOp::Lt => "lt",
+            BinaryOp::Cons => "cons",
+            BinaryOp::Branch => "branch",
+        },
+        Expr::Unary(UnaryOp::Leaf, _) => "leaf",
+        Expr::Unary(UnaryOp::Not, _) => "not",
     }
 }
