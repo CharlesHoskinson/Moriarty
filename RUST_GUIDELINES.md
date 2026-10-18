@@ -267,6 +267,13 @@ security approval or language-exit acceptance.
   is explicit; these static admission and serialization checks establish no
   runtime predicate truth, independent financial oracle, compiler Artifact,
   native-proof or ledger correspondence.
+- The finite `core_duty_read_check_public` target compares hand-derived complete
+  Core/2 Program JSON and public checker streams with frozen files in
+  `crates/fixtures/core-duty-read-check/` instead of generating insta snapshots.
+  Its assertions include the complete source and declare implementation-source
+  exposure. These static duty-read shape and admission checks execute no action
+  and establish no financial outcome, compiler Artifact, native-proof or ledger
+  correspondence.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
