@@ -1,0 +1,119 @@
+{
+  "status": "fresh independent derivation from supplied inputs and pinned normative prose/DTOs; not a consumer observation",
+  "custodian": {
+    "task": "/root/utxo_devex_fresh_finance_oracle_sol",
+    "model": "inherited Codex model; no provider identity probe",
+    "independence": "Did not read init.rs, project(), init tests, source proposal, prior independent-oracle directories, evaluator implementation or producer expected literals. Input custody declares the packet extractor contaminated; this fresh reader used only the isolated input projection."
+  },
+  "source_commit": "9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb",
+  "input_inventory": {
+    "INPUT-CUSTODY.json": "b18b2400b0dae54b4aa5825eaab2eec5b807443ab6174dfcb601041edcc292cd",
+    "INPUT-DTO-EXCERPTS.json": "b23de5c9b6a367e1a2168789e18ed4a47ec90562cf3be00115af140c6e4a2862",
+    "README.md": "e6ac0d46848a6e828d9ade2326694f5cfb6fbbbbb9e15dad6ca85fcbf6052d79",
+    "repay.mori": "f619527f31a8d535e9a5708971345e4844752c1dbb5356e326f0a079f9fe37be",
+    "repay.scenario.json": "993c5dcc41da52330259c93572ec14641b638e95b7c7d34e22fa5e8db2a7f9ad",
+    "transfer.mori": "56292f1ef606953462aca5d92cbbcac43bd01c66d537fc6dac84df7c7ce8b1cc",
+    "transfer.scenario.json": "7f4a257874805ccc7c3d9db7cbe6655b2f837c655aa7dd5ed5ae805fc339ed63"
+  },
+  "input_inventory_file_sha256": "59bd98b5f46bb5c57bce328b2de5aebb91a2cb8284e35b3fead3e7f8483a2f4b",
+  "normative_sources": [
+    {
+      "path": "crates/mori-core/README.md",
+      "git_commit": "9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb",
+      "sha256": "0d91facda4bcf06e545af2f9ced7c72b2b76220a9b53eb46a5a4caea66ebc4dc",
+      "capture": "normative-core-readme.md",
+      "basis_sections": [
+        "UInt arithmetic checked u128; positive requires checked where written",
+        "integral atomic units and exact AssetId identity",
+        "transfer debits/credits; fee separate effect; no implicit creation/mint/burn",
+        "discharge checked subtraction; separate transfer; zero residual snapshots retained",
+        "canonical snapshots and complete ordered effects",
+        "primitive logical meter: statement plus uncached expression nodes; per-statement cache reset"
+      ]
+    },
+    {
+      "path": "crates/mori-core/src/ir.rs",
+      "git_commit": "9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb",
+      "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "capture": "normative-core-ir-dto.rs",
+      "basis_declarations": [
+        "UInt canonical decimal string",
+        "AssetId",
+        "Balance",
+        "Liability",
+        "Scenario",
+        "Snapshot",
+        "Effect"
+      ]
+    }
+  ],
+  "derivations": [
+    {
+      "case": "Transfer/pay",
+      "premises": [
+        "amount=25 > 0",
+        "alice exact TEST balance=100",
+        "bob exact TEST balance=0",
+        "state empty; opening liability list empty"
+      ],
+      "arithmetic": [
+        "alice=100-25=75",
+        "bob=0+25=25",
+        "total=75+25=100"
+      ],
+      "ordered_effects": [
+        "Transfer TEST alice->bob 25"
+      ],
+      "frame": "No state updates, liability operation, fee, event, reserve, mint or burn occurs. Declaring an asset causes no movement."
+    },
+    {
+      "case": "Repay/repay",
+      "premises": [
+        "amount=30 > 0",
+        "alice exact TEST balance=100",
+        "bob exact TEST balance=0",
+        "debt exact TEST alice->bob present at 100",
+        "seed action is declared but is not selected"
+      ],
+      "arithmetic": [
+        "alice=100-30=70",
+        "bob=0+30=30",
+        "debt=100-30=70",
+        "total=70+30=100"
+      ],
+      "ordered_effects": [
+        "Transfer TEST alice->bob 30",
+        "Liability debt TEST alice->bob before 100 after 70"
+      ],
+      "frame": "The separate discharge changes only debt; it does not transfer again. Seed is not executed implicitly; no created/accrued liability, fee, event, reserve, mint or burn occurs."
+    }
+  ],
+  "logical_derivation": {
+    "requires": "1 attempted statement + Name(amount), Literal(0), Binary(Gt) = 4",
+    "transfer": "1 attempted statement + Name(amount) = 2",
+    "discharge": "1 attempted statement + Name(amount) = 2",
+    "reason_for_no_shared_discount": "Expression-node caching resets per statement; repeated values across statements do not remove charges."
+  },
+  "not_selected_actions": [
+    {
+      "program": "repay.mori",
+      "action": "seed",
+      "status": "No separate call/scenario selected in input-custody cases. No seed-call success/financial result asserted."
+    }
+  ],
+  "falsifiable_predicates": [
+    "For Transfer/pay with the bound source/scenario, canonical pre/post and exact ordered effects equal transfer.expected.json, and no extra financial/state/effect rows exist.",
+    "For Repay/repay with the bound source/scenario, canonical pre/post and exact ordered effects equal repay.expected.json, preserving debt identity with residual 70 and no extra rows/effects.",
+    "If the corresponding calls are metered under sufficient explicit cap, primitive logical work is 6 and 8 respectively."
+  ],
+  "exclusions": [
+    "No original init.rs/project()/test reads",
+    "No clean-financial-devex-source-proposal reads",
+    "No other oracle directory reads",
+    "No evaluator/compiler/parser implementation reads",
+    "No W writes or Git mutations",
+    "No production/security analysis",
+    "No test/consumer execution"
+  ],
+  "startup_observations": "Read installed develop skill, checkout AGENTS.md/product contract and skill execution-focus reference; ran read-only plugin status as required. Historical plugin blockers are not selected actions or approval evidence."
+}

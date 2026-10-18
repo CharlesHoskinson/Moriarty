@@ -1,0 +1,49 @@
+[
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "PRIMARY.md",
+      "PUBLIC-CONSUMER-EXCERPTS.md",
+      "SOURCE-PINS.json",
+      "proposal/README.md",
+      "proposal/membership.json",
+      "proposal/candidate.patch",
+      "proposal/regression-only.patch",
+      "proposal/source-fix.patch",
+      "proposal/baseline/crates/mori/src/commands/init.rs",
+      "proposal/baseline/crates/mori/tests/init.rs",
+      "proposal/candidate/crates/mori/src/commands/init.rs",
+      "proposal/candidate/crates/mori/tests/init.rs",
+      "public-main/AGENTS.md",
+      "public-main/Cargo.toml",
+      "public-main/RUST_GUIDELINES.md",
+      "public-main/crates/mori/Cargo.toml",
+      "public-main/crates/mori/src/commands/check.rs",
+      "public-main/crates/mori/src/commands/core_io.rs",
+      "public-main/crates/mori/src/commands/mod.rs",
+      "public-main/crates/mori/src/commands/simulate.rs",
+      "public-main/crates/mori/src/commands/test.rs",
+      "public-main/crates/mori-core/Cargo.toml",
+      "public-main/crates/mori-core/src/ir.rs",
+      "public-main/crates/mori-core/src/json.rs",
+      "public-main/docs/MORIARTY-PRODUCT-CONTRACT.md"
+    ],
+    "findings": [
+      "Public CLI dispatch and consumer interfaces match across crates/mori/src/commands/init.rs:50,92-94,103-112 and crates/mori/src/commands/{mod,check,simulate,test}.rs. init::Args (init.rs:11-19) is unchanged and project() (init.rs:50) is private. Generated commands invoke `check source.mori --json` (check.rs:29-49 -> status=accepted, language=moriarty/1), `simulate source.mori --action {action} --scenario scenario.json` (simulate.rs:109-141 -> status=accepted, qualification=local-reference-execution, execution.semantics=moriarty-core/1), and `test .` (test.rs:40-88 -> status=passed, full post/effects check).",
+      "Pre-reservation error handling in crates/mori/src/commands/init.rs:106-117 preserves atomic destination refusal. std::env::current_exe() and to_str() UTF-8 validation run via super::core_io::operation (core_io.rs:158-164) before std::fs::create_dir(&args.dir) (init.rs:114), so executable-path failures never create or mutate the target directory. Note that non-UTF-8 executable paths now fail init rather than generating static bare `mori` text.",
+      "RUST_GUIDELINES.md:59 (`No absolute paths. Locate files from env!(\\\"CARGO_MANIFEST_DIR\\\").`) targets hardcoded repo/fixture paths, not runtime std::env::current_exe() in init.rs:106 (also used in core_io.rs:126,368). However, crates/mori/tests/init.rs:350 introduces a literal `\\\"/bin/sh\\\"` under #[cfg(unix)] (line 325) so child PATH can be empty (line 352). While /bin/sh is POSIX-standard, if strict avoidance of literal absolute paths in tests is required, resolve `sh` before clearing PATH or pass PATH=\\\"\\\" via env utility/command prefix inside the shell.",
+      "Portability of generated README.md (crates/mori/src/commands/init.rs:92-94,106-110): embedding the single-quoted runtime executable path fixes `mori` PATH collisions with the TypeScript CLI, but makes README.md specific to the creating binary path and POSIX sh syntax (unlike Windows cmd.exe or relocated binaries, which require updating the path as README.md:93 notes). Existing cross-platform tests in crates/mori/tests/init.rs:129-323 remain intact because both init calls in lines 197-206 share CARGO_BIN_EXE_mori.",
+      "Manifest features and CLI test scope conform to crates/mori/Cargo.toml:10-25,35-36,64-107, crates/mori-core/Cargo.toml:8-25, and RUST_GUIDELINES.md:253-256. `tests/init.rs` requires no `native` feature and builds without mori-backend, mori-ledger, or midnight-* crates under `--no-default-features`. The Unix regression in crates/mori/tests/init.rs:325-380 exercises real binary dispatch, stdout JSON stream decoding, and process exits within the narrow CLI binary-test exception."
+    ],
+    "limitations": [
+      "Source-only review: no Cargo, rustc, rustfmt, clippy, or mori binary execution was performed. Actual RED (regression-only.patch) and GREEN (source-fix.patch / candidate.patch) test runs remain unexecuted pending root integration.",
+      "Ordinary non-security review only: shell quoting in crates/mori/src/commands/init.rs:110, `/bin/sh -c` execution of README text in crates/mori/tests/init.rs:343-354, and hostile path/input security judgments are deferred to the designated security fallback reviewer.",
+      "No independent financial oracle verification: candidate `expected()` in crates/mori/tests/init.rs:85-99 and literals in crates/mori/src/commands/init.rs:51-89 are self-consistent candidate values, not independent financial evidence; `clean-devex-fresh-independent-oracles` remains separate and unread.",
+      "Scoped to local `moriarty/1` and `moriarty-core/1` starter tooling only: establishes no ZKIRv3 compilation, native proof production, Midnight ledger settlement, Source/6 or `moriarty/2` qualification, or closure of open U0-U7/M/MC/SP/G gates.",
+      "The new regression `generated_commands_use_the_creating_rust_cli_without_path_lookup` in crates/mori/tests/init.rs:325-380 is gated with `#[cfg(unix)]` and does not exercise generated command execution on non-Unix platforms."
+    ],
+    "reviewToken": "doctorwatson-clean-starter-source-ordinary-20261018-a1-whole-review",
+    "summary": "Approve candidate source for the scoped local moriarty/1 and moriarty-core/1 clean-starter CLI task (combined candidate.patch SHA256 4e7017eca9dfe9e23e1e957e808047c8652633e108a78bf91f7e2c5cd1318b4b on base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb). In crates/mori/src/commands/init.rs:50,92-94,104-111, init::run resolves std::env::current_exe() and validates UTF-8 before reserving the destination directory, single-quotes the executable path for POSIX sh, and emits check/simulate/test commands and profile labels matching crates/mori/src/commands/{check,simulate,test}.rs and crates/mori-core/src/ir.rs:4-5,263-270. In crates/mori/tests/init.rs:325-380, the Unix regression tests a copied binary in a path with spaces, an apostrophe, and Unicode under empty child PATH. Runtime-derived README paths and hardcoded /bin/sh in tests/init.rs:350 are assessed below; security shell/path/input judgments remain with the designated security fallback reviewer, and RED/GREEN execution plus independent oracle verification remain pending.",
+    "verdict": "approve-source"
+  }
+]

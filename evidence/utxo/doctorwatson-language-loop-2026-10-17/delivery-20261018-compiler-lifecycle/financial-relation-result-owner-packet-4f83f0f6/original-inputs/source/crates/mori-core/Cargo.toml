@@ -1,0 +1,27 @@
+[package]
+name = "mori-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# Opt-in and non-default: enables only the Midnight-native signing-frame
+# compatibility test. Ordinary mori-core consumers and SDK-free test
+# selection never pull these dependencies.
+midnight-compat-tests = ["dep:midnight-base-crypto", "dep:midnight-serialize"]
+
+[dependencies]
+mori-lexer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+k256.workspace = true
+# Optional and off by default; pulled in only by the midnight-compat-tests
+# feature for the native compatibility test.
+midnight-base-crypto = { workspace = true, optional = true }
+midnight-serialize = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true

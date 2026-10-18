@@ -1,0 +1,106 @@
+[
+  {
+    "decisionVotes": {
+      "D1": {
+        "reason": "`disjoint.rs::declared_domains` and `disjoint` enforce whole-program state, exact `AssetId`, and `Statement::Liability` disjointness; `merge` builds a flat sorted `Snapshot` rejecting state, `(asset,account)`, or liability-name overlaps while keeping same-asset parallel out of scope.",
+        "vote": "adopt-design"
+      },
+      "D2": {
+        "reason": "`Pair::start` fixes `[0,1]` initialization from independent `Scenario`s without state sharing; `Pair::resume` advances one pending branch per event, and `report` concatenates segment `effects` in invocation-then-statement order across `mori-tests.json`'s two schedules.",
+        "vote": "adopt-design"
+      },
+      "D3": {
+        "reason": "`Pair::start` and `Pair::resume` publish state only after stage execution, `merge`, and `sum` succeed. False guards keep `StageOutcome::Waiting` with `segment: None` in `latest[member]` per `admit.rs` while preserving prior segments in `history`.",
+        "vote": "adopt-design"
+      },
+      "D4": {
+        "reason": "`Pair::start` enforces `sum(caps[0], caps[1])` and passes `Some(caps[i])`; `Pair::resume` passes `cli_cap: None` so `cost::resume_preflight` enforces stored per-member caps. `attempted_total` sums all invocation attempts and `MAX_INVOCATIONS` caps history at 256.",
+        "vote": "adopt-design"
+      },
+      "D5": {
+        "reason": "`core2-disjoint-draft` is non-default in `mori-core` and `mori`, gating `moriarty-tests/disjoint-draft/1` in `test.rs`. `Pair::report` emits `moriarty-local-disjoint-draft/1` with `STAGE_LABELS`, `unadopted-local-disjoint-product`, and positive `residual` duties.",
+        "vote": "adopt-design"
+      },
+      "RV1": {
+        "reason": "`Error::public_report` (`moriarty-local-disjoint-error-draft/1`) preserves full `stage::outcome_report(Err(rejection))`, earlier-start counters, and `AfterInvocation` per-member work; `disjoint_test::pair_error` forwards the JSON `Value` to `core_io::operation`.",
+        "vote": "adopt-design"
+      },
+      "RV2": {
+        "reason": "`run_case` checks full `Pair::report()` equality against each stage golden before `ObservationTables::reference` verifies `starts_with` monotonicity and replaces `history`/`effects` with `{table,prefix_len}` under `moriarty-local-disjoint-referenced-draft/1`, reversed by `expand`.",
+        "vote": "adopt-design"
+      },
+      "RV3": {
+        "reason": "`test.rs::aggregate_report` retains per-case 1 MiB/depth-32 `mori_core::json::export` checks while RV2 removes quadratic wire duplication, and `Error::AfterInvocation` preserves work counters on post-call `merge`/`sum` failures without claiming host resource bounds.",
+        "vote": "adopt-design"
+      }
+    },
+    "findings": [
+      "`crates/mori-core/src/stage/disjoint.rs` (`declared_domains`, `merge`, `Pair::start`): `declared_domains` checks static `Statement::Liability` declarations across both programs, whereas 0-await actions skip `decode::canonical_boundary` in `admit::start` and can admit undeclared `Scenario.liabilities`. If undeclared 0-await scenario duties collide by name, `merge(start_pre(&first)?, start_pre(&second)?)` catches the collision after both `super::start` calls and returns `Error::AfterInvocation`, preserving both members' `attempted` and `local_committed` counters without publishing a `Pair`.",
+      "`crates/mori-core/src/stage/disjoint.rs` (`Pair::resume`, `Error::Shape`, `Error::public_report`): Pre-invocation refusals in `Pair::resume` (`self.history.len() >= MAX_INVOCATIONS` or selecting a non-Waiting `member`) return `Error::Shape`, which `Error::public_report` serializes with `detail.kind = \"before-invocation\"` and `message` only, omitting `pair_attempted_before` and `pair_committed_before` (unlike `Error::Branch` and `Error::AfterInvocation`).",
+      "`crates/mori/src/commands/test/disjoint_test.rs` (`ObservationTables::reference`, `run_case`) & `crates/mori/tests/disjoint_test_public.rs` (`expand`): `run_case` compares each unprojected `Pair::report()` against `expected_start` and `event.expected` before transforming `history` and `effects` into `{table, prefix_len}` references in `tables`, avoiding $O(K^2)$ JSON export growth per case while preserving lossless expansion in `disjoint_test_public.rs`.",
+      "`crates/fixtures/core-disjoint-product/mori-tests.json` & `crates/mori/tests/disjoint_test_public.rs`: All 11 required independent oracle files (`left-first-0..4.json`, `right-first-0..4.json`, and `public-report.json`) and their independent `Program`/`StagePlan` digest preimages are absent from the candidate tree, so `disjoint_test_public.rs` cannot pass until independent oracles are frozen and supplied."
+    ],
+    "limitations": [
+      "Source-only review with no build, test, or binary execution; runtime behavior and CLI output bytes were not executed or observed.",
+      "All 11 independent golden files (`left-first-0..4.json`, `right-first-0..4.json`, `public-report.json`), independent `Program`/`StagePlan` digest preimages, and negative diagnostic expectations remain absent.",
+      "Candidate implements only the stronger full-program asset/state/duty-disjoint local 2-member product with fixed `[0,1]` start order; same-asset disjoint-account parallel composition, configurable start order, and general fan-in remain unimplemented.",
+      "Required SP10.1/MC06 operators and obligations\u2014sequential `Step`, native `Split`, shared-state interleaving, atomic `Join`, asynchronous `Pending`/messaging, proofs, and host resource/security certification\u2014remain open."
+    ],
+    "reviewToken": "doctorwatson-composition-revised-operator-20261018-a4-whole-review",
+    "summary": "Conditional source-design adoption (`adopt-design`) for D1\u2013D5 and RV1\u2013RV3 on the frozen 16-file candidate. `crates/mori-core/src/stage/disjoint.rs` and `crates/mori/src/commands/test/disjoint_test.rs` implement the bounded two-member local disjoint product behind non-default `core2-disjoint-draft`, enforcing static state/asset/liability disjointness, fixed `[0,1]` start linearization, atomic post-merge state publication, per-member stored caps, lossless JSON error diagnostics (`moriarty-local-disjoint-error-draft/1`), and prefix-referenced case tables (`moriarty-disjoint-case-observations-draft/1` / `moriarty-local-disjoint-referenced-draft/1`). This vote approves only the local draft source design; all 11 independent oracle files (`left-first-0..4.json`, `right-first-0..4.json`, `public-report.json`), digest preimages, runtime execution evidence, and all original SP10.1/MC06 composition operators (`Step`, same-asset/native `Split`, shared-state interleaving, `Join`, async `Pending`) remain open.",
+    "toolAction": "Completing independent operator source review",
+    "toolSummary": "Complete independent operator review",
+    "verdict": "adopt-design"
+  },
+  {
+    "decisionVotes": {
+      "D1": {
+        "reason": "`disjoint.rs::declared_domains` and `disjoint` enforce whole-program state, exact `AssetId`, and `Statement::Liability` disjointness; `merge` builds a flat sorted `Snapshot` rejecting state, `(asset,account)`, or liability-name overlaps while keeping same-asset parallel out of scope.",
+        "vote": "adopt-design"
+      },
+      "D2": {
+        "reason": "`Pair::start` fixes `[0,1]` initialization from independent `Scenario`s without state sharing; `Pair::resume` advances one pending branch per event, and `report` concatenates segment `effects` in invocation-then-statement order across `mori-tests.json`'s two schedules.",
+        "vote": "adopt-design"
+      },
+      "D3": {
+        "reason": "`Pair::start` and `Pair::resume` publish state only after stage execution, `merge`, and `sum` succeed. False guards keep `StageOutcome::Waiting` with `segment: None` in `latest[member]` per `admit.rs` while preserving prior segments in `history`.",
+        "vote": "adopt-design"
+      },
+      "D4": {
+        "reason": "`Pair::start` enforces `sum(caps[0], caps[1])` and passes `Some(caps[i])`; `Pair::resume` passes `cli_cap: None` so `cost::resume_preflight` enforces stored per-member caps. `attempted_total` sums all invocation attempts and `MAX_INVOCATIONS` caps history at 256.",
+        "vote": "adopt-design"
+      },
+      "D5": {
+        "reason": "`core2-disjoint-draft` is non-default in `mori-core` and `mori`, gating `moriarty-tests/disjoint-draft/1` in `test.rs`. `Pair::report` emits `moriarty-local-disjoint-draft/1` with `STAGE_LABELS`, `unadopted-local-disjoint-product`, and positive `residual` duties.",
+        "vote": "adopt-design"
+      },
+      "RV1": {
+        "reason": "`Error::public_report` (`moriarty-local-disjoint-error-draft/1`) preserves full `stage::outcome_report(Err(rejection))`, earlier-start counters, and `AfterInvocation` per-member work; `disjoint_test::pair_error` forwards the JSON `Value` to `core_io::operation`.",
+        "vote": "adopt-design"
+      },
+      "RV2": {
+        "reason": "`run_case` checks full `Pair::report()` equality against each stage golden before `ObservationTables::reference` verifies `starts_with` monotonicity and replaces `history`/`effects` with `{table,prefix_len}` under `moriarty-local-disjoint-referenced-draft/1`, reversed by `expand`.",
+        "vote": "adopt-design"
+      },
+      "RV3": {
+        "reason": "`test.rs::aggregate_report` retains per-case 1 MiB/depth-32 `mori_core::json::export` checks while RV2 removes quadratic wire duplication, and `Error::AfterInvocation` preserves work counters on post-call `merge`/`sum` failures without claiming host resource bounds.",
+        "vote": "adopt-design"
+      }
+    },
+    "findings": [
+      "`crates/mori-core/src/stage/disjoint.rs` (`declared_domains`, `merge`, `Pair::start`): `declared_domains` checks static `Statement::Liability` declarations across both programs, whereas 0-await actions skip `decode::canonical_boundary` in `admit::start` and can admit undeclared `Scenario.liabilities`. If undeclared 0-await scenario duties collide by name, `merge(start_pre(&first)?, start_pre(&second)?)` catches the collision after both `super::start` calls and returns `Error::AfterInvocation`, preserving both members' `attempted` and `local_committed` counters without publishing a `Pair`.",
+      "`crates/mori-core/src/stage/disjoint.rs` (`Pair::resume`, `Error::Shape`, `Error::public_report`): Pre-invocation refusals in `Pair::resume` (`self.history.len() >= MAX_INVOCATIONS` or selecting a non-Waiting `member`) return `Error::Shape`, which `Error::public_report` serializes with `detail.kind = \"before-invocation\"` and `message` only, omitting `pair_attempted_before` and `pair_committed_before` (unlike `Error::Branch` and `Error::AfterInvocation`).",
+      "`crates/mori/src/commands/test/disjoint_test.rs` (`ObservationTables::reference`, `run_case`) & `crates/mori/tests/disjoint_test_public.rs` (`expand`): `run_case` compares each unprojected `Pair::report()` against `expected_start` and `event.expected` before transforming `history` and `effects` into `{table, prefix_len}` references in `tables`, avoiding $O(K^2)$ JSON export growth per case while preserving lossless expansion in `disjoint_test_public.rs`.",
+      "`crates/fixtures/core-disjoint-product/mori-tests.json` & `crates/mori/tests/disjoint_test_public.rs`: All 11 required independent oracle files (`left-first-0..4.json`, `right-first-0..4.json`, and `public-report.json`) and their independent `Program`/`StagePlan` digest preimages are absent from the candidate tree, so `disjoint_test_public.rs` cannot pass until independent oracles are frozen and supplied."
+    ],
+    "limitations": [
+      "Source-only review with no build, test, or binary execution; runtime behavior and CLI output bytes were not executed or observed.",
+      "All 11 independent golden files (`left-first-0..4.json`, `right-first-0..4.json`, `public-report.json`), independent `Program`/`StagePlan` digest preimages, and negative diagnostic expectations remain absent.",
+      "Candidate implements only the stronger full-program asset/state/duty-disjoint local 2-member product with fixed `[0,1]` start order; same-asset disjoint-account parallel composition, configurable start order, and general fan-in remain unimplemented.",
+      "Required SP10.1/MC06 operators and obligations\u2014sequential `Step`, native `Split`, shared-state interleaving, atomic `Join`, asynchronous `Pending`/messaging, proofs, and host resource/security certification\u2014remain open."
+    ],
+    "reviewToken": "doctorwatson-composition-revised-operator-20261018-a4-whole-review",
+    "summary": "Conditional source-design adoption (`adopt-design`) for D1\u2013D5 and RV1\u2013RV3 on the frozen 16-file candidate. `crates/mori-core/src/stage/disjoint.rs` and `crates/mori/src/commands/test/disjoint_test.rs` implement the bounded two-member local disjoint product behind non-default `core2-disjoint-draft`, enforcing static state/asset/liability disjointness, fixed `[0,1]` start linearization, atomic post-merge state publication, per-member stored caps, lossless JSON error diagnostics (`moriarty-local-disjoint-error-draft/1`), and prefix-referenced case tables (`moriarty-disjoint-case-observations-draft/1` / `moriarty-local-disjoint-referenced-draft/1`). This vote approves only the local draft source design; all 11 independent oracle files (`left-first-0..4.json`, `right-first-0..4.json`, `public-report.json`), digest preimages, runtime execution evidence, and all original SP10.1/MC06 composition operators (`Step`, same-asset/native `Split`, shared-state interleaving, `Join`, async `Pending`) remain open.",
+    "verdict": "adopt-design"
+  }
+]

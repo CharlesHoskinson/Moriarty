@@ -1,0 +1,53 @@
+[
+  {
+    "decisionVotes": {
+      "D1": {
+        "reason": "`disjoint.rs::declared_domains` and `disjoint()` enforce whole-program state, exact `AssetId`, and `Statement::Liability` disjointness, while `merge()` builds a flat sorted union and catches any 0-await scenario duty collision before publication via `Error::AfterInvocation`.",
+        "vote": "adopt-design"
+      },
+      "D2": {
+        "reason": "`Pair::start` fixes start order `[0,1]` and `Pair::resume` steps one pending member per event from its isolated `Continuation`. `Pair::report` orders `effects` by invocation then statement order, keeping `left-first` and `right-first` histories/effects distinct despite equal `post`.",
+        "vote": "adopt-design"
+      },
+      "D3": {
+        "reason": "`Pair::start` and `Pair::resume` publish only after stage calls, `merge()`, and `sum()` succeed. False guards (`Waiting{advanced:false,segment:None}`) update `latest[member]` while `Pair::history` keeps prior segments, and `Error::Branch`/`AfterInvocation` preserve all work counters.",
+        "vote": "adopt-design"
+      },
+      "D4": {
+        "reason": "`Pair::start` passes each member's finite `cap` (`16`, `36`, `cap_total: 52`) into `stage::start` (`continuation.logical.cap`), and `Pair::resume` passes `cli_cap=None`, which `cost::resume_preflight` checks against stored `logical.cap` within `MAX_INVOCATIONS` (256).",
+        "vote": "adopt-design"
+      },
+      "D5": {
+        "reason": "`mori-core` and `mori` gate `stage::disjoint` and `disjoint_test` behind non-default `core2-disjoint-draft`. `Pair::report` emits `moriarty-local-disjoint-draft/1`, `unadopted-local-disjoint-product`, and `STAGE_LABELS`, keeping positive `residual` duties without claiming native `Split`.",
+        "vote": "adopt-design"
+      },
+      "RV1": {
+        "reason": "`disjoint.rs::Error::public_report()` emits `moriarty-local-disjoint-error-draft/1`, embedding full `stage::outcome_report(Err(rejection))`, earlier-start/prior-pair work, and `Error::AfterInvocation` counters; `disjoint_test.rs::pair_error` routes this `Value` to `core_io::operation`.",
+        "vote": "adopt-design"
+      },
+      "RV2": {
+        "reason": "`disjoint_test.rs::run_case` checks each full `Pair::report()` against its golden before `ObservationTables::reference` verifies `starts_with`, moves `history`/`effects` into case `tables`, and writes `prefix_len` references that `disjoint_test_public.rs::expand` losslessly restores.",
+        "vote": "adopt-design"
+      },
+      "RV3": {
+        "reason": "`test.rs::aggregate_report` and 1 MiB/64 KiB bounds remain unchanged. Case `tables` remove $O(N^2)$ wire duplication in `disjoint_test.rs` while keeping `Pair::report()` complete and leaving `Pair` unchanged on error with work counters in `Error::public_report()`.",
+        "vote": "adopt-design"
+      }
+    },
+    "findings": [
+      "`crates/mori-core/src/stage/disjoint.rs` (`Error::public_report`, `Error::Branch`, `Error::AfterInvocation`) & `crates/mori/src/commands/test/disjoint_test.rs` (`pair_error`): Passing `error.public_report()` (`moriarty-local-disjoint-error-draft/1`) to `core_io::operation` preserves `stage::outcome_report(Err(rejection))` counters, `earlier_start_attempted`/`earlier_start_local_committed`, and `pair_attempted_before`/`pair_committed_before`, while `disjoint_test.rs` halts on `PairError` as a positive manifest runner.",
+      "`crates/mori-core/src/stage/disjoint.rs` (`Pair::resume`, `Error::Shape`): Pre-invocation errors in `Pair::resume` (`history.len() >= MAX_INVOCATIONS` or non-pending `member`) return `Error::Shape`, which `Error::public_report()` serializes as `detail.kind = \"before-invocation\"` with only `message` (omitting `pair_attempted_before` and `pair_committed_before`, unlike `Error::Branch` and `Error::AfterInvocation`). Any future negative diagnostic oracle for resume preflight refusals must account for this distinction.",
+      "`crates/mori/src/commands/test/disjoint_test.rs` (`ObservationTables::reference`, `run_case`) & `crates/mori/tests/disjoint_test_public.rs` (`expand`): `run_case` compares the unprojected `Pair::report()` against `expected_start` and each `event.expected` before `ObservationTables::reference` verifies `starts_with` prefix monotonicity and replaces `history`/`effects` with `{\"table\":...,\"prefix_len\":N}` under `moriarty-local-disjoint-referenced-draft/1`. `expand()` losslessly restores `expanded_format` and slices `tables[name][..prefix_len]` to match the 10 full stage goldens.",
+      "`crates/mori-core/src/stage/disjoint.rs` (`declared_domains`, `merge`, `Pair::start`): `declared_domains` checks static `Statement::Liability` names across whole programs (matching `decode::registry`), whereas 0-await actions skip `decode::canonical_boundary` in `admit::start` and can admit undeclared `Scenario.liabilities` via `runtime::scenario_snapshot`. If an undeclared 0-await scenario duty collides by name, `merge(start_pre(&first)?, start_pre(&second)?)` rejects before `Pair` publication via `Error::AfterInvocation`, preserving both members' `attempted` and `local_committed` counters."
+    ],
+    "limitations": [
+      "Source-only review: no build, Cargo, `rustc`, `mori` CLI, native, proof, or test execution was performed; all candidate files and `crates/mori/tests/disjoint_test_public.rs` remain unrun.",
+      "Missing independent oracles: all 10 full stage goldens (`left-first-0..4.json`, `right-first-0..4.json`), `public-report.json` (in `moriarty-disjoint-case-observations-draft/1` format), independent `Program`/`StagePlan` preimages/digests, `DERIVATION.md`, `INDEPENDENT-FREEZE.json`, and `moriarty-local-disjoint-error-draft/1` error oracles remain absent prerequisites.",
+      "Scope and operator separation: this conditional draft covers only a local, unauthenticated, untracked asset-disjoint pair (`core2-disjoint-draft`). All five composition operators under MC06/SP10.1 (sequential `Step`/escrow lane, same-asset account-disjoint & native `Split`, shared-state interleaving, atomic `Join`, async `Pending`) and U0\u2013U7/M1\u2013M17 exits remain open.",
+      "Unanswered security, constraint, proof, target-phase, and resource-adequacy judgments (including 256-invocation `Pair::history` retention, merged `Snapshot` bounds up to 8,192 balances/2,048 liabilities, uncharged host merge/report work, native head lifetime conservation, and hostile tests) are routed to the designated Opus/fallback owner."
+    ],
+    "reviewToken": "doctorwatson-composition-revised-consumer-20261018-a3-whole-review",
+    "summary": "Independent source-only consumer design review of the 16-file revised `core2-disjoint-draft` candidate (`disjoint.rs`, `disjoint_test.rs`, `test.rs`, `disjoint_test_public.rs`, and `crates/fixtures/core-disjoint-product/*`). Verdict: `adopt-design` for the conditional local draft across D1\u2013D5 and RV1\u2013RV3. The three-file delta (`revised/delta-from-original.patch`) resolves the prior consumer, error-diagnostic, and wire-duplication defects: (1) `Error::public_report()` (`moriarty-local-disjoint-error-draft/1`) and `disjoint_test.rs::pair_error` preserve full `stage::outcome_report(Err(rejection))` envelopes, earlier-start work, prior pair counters, and post-invocation `Error::AfterInvocation` work vectors through `core_io::operation`; (2) `run_case` compares each full `Pair::report()` against its stage golden before `ObservationTables::reference` deduplicates append-only `history`/`effects` into case-level `tables` with lossless prefix references verified by `disjoint_test_public.rs::expand`; (3) all 11 oracle goldens, preimages, and runtime checks remain open prerequisites.",
+    "verdict": "adopt-design"
+  }
+]

@@ -1,0 +1,7 @@
+# Fresh a2 source review
+
+Exact a2 includes full current2candidatefiles plus a1-to-a2testdelta; production init.rs bytes e7640559... unchanged, test26a616f9.... Root chose literal compliance with RUSTGUIDELINES Noabsolutepaths: test resolves/canonicalizes host sh from testprocessPATH before clearing childPATH, replacing hardcoded /bin/sh. This is not a waiver. No a1approval transfers to thesechangedbytes. Both a1WHOLE exports/PROCESS are preserved physically under a1-reviews/, including allsecurity recommendations.
+
+Financefreezes now physically preserved under finance-freezes/: firstf18bd05450c003aabe8c13aa24094ab06d113b95640a011a256d5dfd9f416ab1;extradbcc0b8256617d90daa7eb7ec53cef17dd1b6a266c8236e953b14344b9425fe1. Hashinventories verified;custodianBASIS/limitations unchanged. Candidate expected() remains candidate-authored, not the independentbasis. No actualRED/GREEN results are included; root handles them separately.
+
+Fresh review must inspect bothfullcurrentfiles, exactdelta, actualpubliccheck/simulate/projecttest and feature/guideline source. Designatedsecurity owns whether remaining a1control/backtick/nonUTF8 recommendations are mandatorychanges or advisorygaps; unchangedproduction does not silently resolve them. Sol only transports thosejudgments. Ordinary source review covers publicpath/portability/testscope withoutsecurityjudgment. No SDK/native/model/VM/proof/ledger or oldgateclosure from this localsource slice.

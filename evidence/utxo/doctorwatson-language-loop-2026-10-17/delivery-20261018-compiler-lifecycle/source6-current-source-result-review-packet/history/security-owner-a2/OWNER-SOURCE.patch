@@ -1,0 +1,143 @@
+--- a/crates/mori-source6/src/diagnostics.rs
++++ b/crates/mori-source6/src/diagnostics.rs
+@@ -1,7 +1,20 @@
+ use mori_diagnostics::MoriDiagnostic;
+ use mori_span::Span;
+ 
++fn text(value: &str) -> String {
++    let mut result = String::with_capacity(value.len());
++    for character in value.chars() {
++        if character.is_ascii() && !character.is_control() {
++            result.push(character);
++        } else {
++            result.extend(character.escape_default());
++        }
++    }
++    result
++}
++
+ pub fn action(span: Span, name: &str) -> MoriDiagnostic {
++    let name = text(name);
+     MoriDiagnostic::error(format!("No checked action named `{name}` was found."))
+         .with_code("mori::source6::unknown_action")
+         .with_label(span.primary_label("select an action declared in this agreement"))
+--- a/crates/mori-source6/tests/transfer.rs
++++ b/crates/mori-source6/tests/transfer.rs
+@@ -65,4 +65,17 @@
+     }, {
+         insta::assert_snapshot!("workshop_source6", expansion.source6);
+     });
+ }
++
++#[test]
++fn unknown_action_diagnostic_escapes_control_and_non_ascii_characters() {
++    let source = include_str!("fixtures/invoice.mori");
++    let errors = expand_transfer(source, "pay's\n\u{1b}\u{202e}", &invoice_scenario())
++        .expect_err("unknown action must fail");
++    assert_eq!(errors.len(), 1);
++    let message = errors[0].to_string();
++    assert_eq!(
++        message,
++        r"No checked action named `pay's\n\u{1b}\u{202e}` was found.",
++    );
++}
+--- a/crates/mori/src/commands/expand/source6.rs
++++ b/crates/mori/src/commands/expand/source6.rs
+@@ -81,7 +81,7 @@
+ fn scenario_error(code: &str, message: impl Into<String>) -> mori_diagnostics::Report {
+     crate::error::CliError::Operation {
+         code: format!("mori::command::{code}"),
+-        message: message.into(),
++        message: crate::display::text(&message.into()),
+     }
+     .into()
+ }
+@@ -125,24 +125,25 @@
+ pub(super) fn run(input: ActionInput, shell: &mut Shell) -> crate::commands::Result<ExitCode> {
+     let source = core_io::read_source(&input.file)?;
++    let name = crate::display::text(&input.file.display().to_string());
+     let selected = match select_transfer(&source, &input.action) {
+         Ok(selected) => selected,
+         Err(diagnostics) => {
+             for diagnostic in diagnostics {
+                 shell.report(&diagnostic.with_source_code(NamedSource::new(
+-                    input.file.display().to_string(),
++                    &name,
+                     source.clone(),
+                 )));
+             }
+             return Ok(ExitCode::FAILURE);
+         }
+     };
+     let scenario = read_scenario(&input.scenario)?;
+     let expansion = match selected.expand(&scenario.local()) {
+         Ok(expansion) => expansion,
+         Err(diagnostic) => {
+             shell.report(&diagnostic.with_source_code(NamedSource::new(
+-                input.file.display().to_string(),
++                name,
+                 source,
+             )));
+             return Ok(ExitCode::FAILURE);
+         }
+--- a/crates/mori/tests/source6_expand.rs
++++ b/crates/mori/tests/source6_expand.rs
+@@ -161,4 +161,58 @@
+         assert!(output.stdout.is_empty());
+         assert!(String::from_utf8_lossy(&output.stderr).contains(expected));
+     }
+ }
++
++#[test]
++fn diagnostic_presentation_escapes_filename_action_and_scenario_shape_errors() {
++    let files = Files::new();
++    let hostile_file = "invoice\u{1b}\u{202e}.mori";
++    fs::write(files.0.join(hostile_file), fixture!("invoice.mori")).unwrap();
++
++    let unknown = files.invoke(&[
++        "expand",
++        hostile_file,
++        "--action",
++        "pay\n\u{1b}\u{202e}",
++        "--scenario",
++        "absent.json",
++        "--emit-source6-transfer",
++    ]);
++    assert_eq!(unknown.status.code(), Some(1));
++    assert!(unknown.stdout.is_empty());
++    let stderr = String::from_utf8_lossy(&unknown.stderr);
++    assert!(stderr.contains("mori::source6::unknown_action"), "{stderr}");
++    assert!(stderr.contains(r"invoice\u{1b}\u{202e}.mori"), "{stderr}");
++    assert!(stderr.contains(r"No checked action named `pay\n\u{1b}\u{202e}` was found."), "{stderr}");
++    assert!(!stderr.contains(['\u{1b}', '\u{202e}']), "{stderr}");
++
++    let mut bad_serde: Value = serde_json::from_slice(fixture!("invoice.scenario.json")).unwrap();
++    bad_serde["replay"] = serde_json::json!("bad\u{1b}\u{202e}");
++    fs::write(files.0.join("scenario.json"), serde_json::to_vec(&bad_serde).unwrap()).unwrap();
++    let shape = files.invoke(&source6_arguments());
++    assert_eq!(shape.status.code(), Some(1));
++    assert!(shape.stdout.is_empty());
++    let stderr = String::from_utf8_lossy(&shape.stderr);
++    assert!(stderr.contains("mori::command::source6-scenario-shape"), "{stderr}");
++    assert!(stderr.contains(r"bad\u{1b}\u{202e}"), "{stderr}");
++    assert!(!stderr.contains(['\u{1b}', '\u{202e}']), "{stderr}");
++
++    let mut bad_domain: Value = serde_json::from_slice(fixture!("invoice.scenario.json")).unwrap();
++    bad_domain["domain"] = serde_json::json!("Other");
++    fs::write(files.0.join("scenario.json"), serde_json::to_vec(&bad_domain).unwrap()).unwrap();
++    let mismatch = files.invoke(&[
++        "expand",
++        hostile_file,
++        "--action",
++        "pay",
++        "--scenario",
++        "scenario.json",
++        "--emit-source6-transfer",
++    ]);
++    assert_eq!(mismatch.status.code(), Some(1));
++    assert!(mismatch.stdout.is_empty());
++    let stderr = String::from_utf8_lossy(&mismatch.stderr);
++    assert!(stderr.contains("mori::source6::scenario_shape"), "{stderr}");
++    assert!(stderr.contains(r"invoice\u{1b}\u{202e}.mori"), "{stderr}");
++    assert!(!stderr.contains(['\u{1b}', '\u{202e}']), "{stderr}");
++}

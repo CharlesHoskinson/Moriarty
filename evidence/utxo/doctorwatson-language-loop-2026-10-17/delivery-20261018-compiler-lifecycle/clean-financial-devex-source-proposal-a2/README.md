@@ -1,0 +1,7 @@
+# A2: resolve the test shell from the host PATH
+
+This revision changes only `crates/mori/tests/init.rs` relative to a1. The test resolves an executable `sh` from its own declared PATH before setting the child PATH to empty. It canonicalizes that resolved path before changing the child working directory, then launches it directly. No fixed absolute path, external `which`, or subprocess helper is used for resolution. The fixture CLI invocations and generated-command shell still receive empty PATH.
+
+The complete production `init.rs` source is byte-identical to a1. Both complete candidate files are under `candidate/`; `a1-to-a2.patch` is the small exact revision; `candidate.patch` contains the whole two-file candidate against the recorded main base. `membership.json` gives original, a1 and a2 digests. The a1 proposal and regression RED record are unchanged.
+
+No product, Cargo, SDK or other runtime checks were executed in this revision; all a2 runtime results are UNRUN. The parent reports that the earlier a1 RED failed correctly with child exit127; that historical result is not an a2 green or audit. The changed a2 candidate requires fresh exact-candidate audits. Integrator commands remain the no-default-features/offline selected `init` regression and then complete `init` integration target recorded in a1 README. The parent test environment will supply its pinned tool directory and system executable directories on PATH before the test resolves `sh`.

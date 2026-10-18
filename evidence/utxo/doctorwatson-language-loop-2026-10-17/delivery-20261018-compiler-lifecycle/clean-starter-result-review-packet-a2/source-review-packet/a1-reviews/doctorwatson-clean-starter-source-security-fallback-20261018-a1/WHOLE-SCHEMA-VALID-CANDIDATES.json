@@ -1,0 +1,100 @@
+[
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "PRIMARY.md",
+      "PUBLIC-CONSUMER-EXCERPTS.md",
+      "SOURCE-PINS.json",
+      "proposal/README.md",
+      "proposal/baseline/crates/mori/src/commands/init.rs",
+      "proposal/baseline/crates/mori/tests/init.rs",
+      "proposal/candidate/crates/mori/src/commands/init.rs",
+      "proposal/candidate/crates/mori/tests/init.rs",
+      "proposal/candidate.patch",
+      "proposal/membership.json",
+      "proposal/regression-only.patch",
+      "proposal/source-fix.patch",
+      "public-main/AGENTS.md",
+      "public-main/Cargo.toml",
+      "public-main/RUST_GUIDELINES.md",
+      "public-main/crates/mori/Cargo.toml",
+      "public-main/crates/mori/src/commands/check.rs",
+      "public-main/crates/mori/src/commands/core_io.rs",
+      "public-main/crates/mori/src/commands/mod.rs",
+      "public-main/crates/mori/src/commands/simulate.rs",
+      "public-main/crates/mori/src/commands/test.rs",
+      "public-main/crates/mori/src/commands/test/stage_test.rs",
+      "public-main/crates/mori/src/error.rs",
+      "public-main/crates/mori/src/main.rs",
+      "public-main/crates/mori/src/shell.rs",
+      "public-main/crates/mori-core/Cargo.toml",
+      "public-main/crates/mori-core/src/ir.rs",
+      "public-main/crates/mori-core/src/json.rs",
+      "public-main/docs/MORIARTY-PRODUCT-CONTRACT.md"
+    ],
+    "findings": [
+      "POSIX shell quoting in crates/mori/src/commands/init.rs:106-110 (format!(\"'{}'\", executable.replace('\\'', \"'\\\\''\"))) safely encodes any UTF-8 path as one literal POSIX shell word with no parameter, command, or glob expansion, and resolves before std::fs::create_dir(&args.dir) (line 114). However, lines 107-110 only validate UTF-8 via to_str() and do not reject ASCII/Unicode control characters (e.g. \\n, \\r, \\x1b, \\u{202e}) or backticks (`) before interpolating {executable} into the README.md ```sh fence (lin\u2026",
+      "RUST_GUIDELINES.md:59 states \"No absolute paths. Locate files from env!(\\\"CARGO_MANIFEST_DIR\\\").\" In crates/mori/src/commands/init.rs:106, the path is runtime-derived via std::env::current_exe() rather than hardcoded in source; CARGO_MANIFEST_DIR cannot be used because mori init runs in external user directories and would bake the build host's source path into the binary. In crates/mori/tests/init.rs:350, Command::new(\"/bin/sh\") is a hardcoded absolute OS path required because line 352 sets .env(\"PATH\", \"\")\u2026",
+      "Portability boundary in crates/mori/src/commands/init.rs:93,106-110 and crates/mori/tests/init.rs:325,350: README.md embeds the creating binary's absolute path in POSIX single quotes and scopes usage to \"in a POSIX shell\" (line 93), noting the path must be updated if the binary moves. On Windows, current_exe() yields backslash paths in single quotes ('C:\\\\...\\\\mori.exe'), which POSIX sh preserves literally but native cmd.exe/PowerShell cannot invoke directly without '&'. In tests/init.rs:325,350, #[cfg(unix\u2026",
+      "Untested error branch in crates/mori/src/commands/init.rs:107-109: executable.to_str().ok_or_else(|| super::core_io::operation(\"starter commands require a UTF-8 Rust executable path\")) refuses non-UTF-8 paths before std::fs::create_dir(&args.dir) (line 114) without lossy substitution, and sanitizes diagnostics via crate::display::text (core_io.rs:161). However, crates/mori/tests/init.rs:329 only exercises valid UTF-8 (\"Rust CLI's tools \ud83e\uddea\"). Concrete repair: extract a helper (e.g. quote_executable(path: &Pat\u2026"
+    ],
+    "limitations": [
+      "Static source-only review of the frozen packet; no Cargo, rustc, rustfmt, clippy, or mori binary execution was performed, and actual RED/GREEN test execution remains pending in the root integration checkout.",
+      "Candidate expected() in crates/mori/tests/init.rs:85-99 and literal expectations in crates/mori/src/commands/init.rs:52-88 are self-consistent author literals, not independent financial oracle evidence; separate clean-devex-fresh-independent-oracles custodian work remains pending and unread.",
+      "Starter templates and consumers exercised here cover only local reference check/simulate/test for language \"moriarty/1\" and semantics \"moriarty-core/1\" (check.rs:29-60, simulate.rs:109-147, test.rs:39-89); they establish no ZKIRv3 compilation, cryptographic proof, or Midnight ledger settlement.",
+      "Review is scoped to the two changed starter files and their public SDK-free CLI consumers; it grants no native execution authority and closes no existing roadmap, U0-U7, M, MC, SP, or G acceptance gates."
+    ],
+    "reviewToken": "doctorwatson-clean-starter-source-security-fallback-20261018-a1-whole-review",
+    "summary": "Approve exact two-file candidate (combined patch SHA256 4e7017eca9dfe9e23e1e957e808047c8652633e108a78bf91f7e2c5cd1318b4b against base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) for scoped source-only starter CLI resolution. In crates/mori/src/commands/init.rs:106-111, run() resolves std::env::current_exe(), enforces UTF-8 via to_str() without lossy substitution, and single-quotes the path as one POSIX shell word before std::fs::create_dir(&args.dir) (line 114), preventing partial destination creation on erro\u2026",
+    "verdict": "approve-source"
+  },
+  {
+    "filesRead": [
+      "MANIFEST.json",
+      "PRIMARY.md",
+      "PUBLIC-CONSUMER-EXCERPTS.md",
+      "SOURCE-PINS.json",
+      "proposal/README.md",
+      "proposal/baseline/crates/mori/src/commands/init.rs",
+      "proposal/baseline/crates/mori/tests/init.rs",
+      "proposal/candidate/crates/mori/src/commands/init.rs",
+      "proposal/candidate/crates/mori/tests/init.rs",
+      "proposal/candidate.patch",
+      "proposal/membership.json",
+      "proposal/regression-only.patch",
+      "proposal/source-fix.patch",
+      "public-main/AGENTS.md",
+      "public-main/Cargo.toml",
+      "public-main/RUST_GUIDELINES.md",
+      "public-main/crates/mori/Cargo.toml",
+      "public-main/crates/mori/src/commands/check.rs",
+      "public-main/crates/mori/src/commands/core_io.rs",
+      "public-main/crates/mori/src/commands/mod.rs",
+      "public-main/crates/mori/src/commands/simulate.rs",
+      "public-main/crates/mori/src/commands/test.rs",
+      "public-main/crates/mori/src/commands/test/stage_test.rs",
+      "public-main/crates/mori/src/error.rs",
+      "public-main/crates/mori/src/main.rs",
+      "public-main/crates/mori/src/shell.rs",
+      "public-main/crates/mori-core/Cargo.toml",
+      "public-main/crates/mori-core/src/ir.rs",
+      "public-main/crates/mori-core/src/json.rs",
+      "public-main/docs/MORIARTY-PRODUCT-CONTRACT.md"
+    ],
+    "findings": [
+      "POSIX shell quoting in crates/mori/src/commands/init.rs:106-110 (format!(\"'{}'\", executable.replace('\\'', \"'\\\\''\"))) safely encodes any UTF-8 path as one literal POSIX shell word with no parameter, command, or glob expansion, and resolves before std::fs::create_dir(&args.dir) (line 114). However, lines 107-110 only validate UTF-8 via to_str() and do not reject ASCII/Unicode control characters (e.g. \\n, \\r, \\x1b, \\u{202e}) or backticks (`) before interpolating {executable} into the README.md ```sh fence (line 93) and tests/init.rs:347 split_once(\"```\"). Concrete hardening repair: reject executable.chars().any(|c| c.is_control() || c == '`') via super::core_io::operation before line 110.",
+      "RUST_GUIDELINES.md:59 states \"No absolute paths. Locate files from env!(\\\"CARGO_MANIFEST_DIR\\\").\" In crates/mori/src/commands/init.rs:106, the path is runtime-derived via std::env::current_exe() rather than hardcoded in source; CARGO_MANIFEST_DIR cannot be used because mori init runs in external user directories and would bake the build host's source path into the binary. In crates/mori/tests/init.rs:350, Command::new(\"/bin/sh\") is a hardcoded absolute OS path required because line 352 sets .env(\"PATH\", \"\"), precluding PATH lookup of \"sh\". Concrete repair if strict accounting is desired: document this narrow OS-shell test exception in RUST_GUIDELINES.md:253-270.",
+      "Portability boundary in crates/mori/src/commands/init.rs:93,106-110 and crates/mori/tests/init.rs:325,350: README.md embeds the creating binary's absolute path in POSIX single quotes and scopes usage to \"in a POSIX shell\" (line 93), noting the path must be updated if the binary moves. On Windows, current_exe() yields backslash paths in single quotes ('C:\\\\...\\\\mori.exe'), which POSIX sh preserves literally but native cmd.exe/PowerShell cannot invoke directly without '&'. In tests/init.rs:325,350, #[cfg(unix)] and /bin/sh assume a standard FHS /bin/sh path and skip shell-execution coverage on Windows.",
+      "Untested error branch in crates/mori/src/commands/init.rs:107-109: executable.to_str().ok_or_else(|| super::core_io::operation(\"starter commands require a UTF-8 Rust executable path\")) refuses non-UTF-8 paths before std::fs::create_dir(&args.dir) (line 114) without lossy substitution, and sanitizes diagnostics via crate::display::text (core_io.rs:161). However, crates/mori/tests/init.rs:329 only exercises valid UTF-8 (\"Rust CLI's tools \ud83e\uddea\"). Concrete repair: extract a helper (e.g. quote_executable(path: &Path) -> super::Result<String>) in crates/mori/src/commands/init.rs and unit-test non-UTF-8 OsStr input on Unix (OsStrExt::from_bytes(b\"/tmp/mori-\\xff\"))."
+    ],
+    "limitations": [
+      "Static source-only review of the frozen packet; no Cargo, rustc, rustfmt, clippy, or mori binary execution was performed, and actual RED/GREEN test execution remains pending in the root integration checkout.",
+      "Candidate expected() in crates/mori/tests/init.rs:85-99 and literal expectations in crates/mori/src/commands/init.rs:52-88 are self-consistent author literals, not independent financial oracle evidence; separate clean-devex-fresh-independent-oracles custodian work remains pending and unread.",
+      "Starter templates and consumers exercised here cover only local reference check/simulate/test for language \"moriarty/1\" and semantics \"moriarty-core/1\" (check.rs:29-60, simulate.rs:109-147, test.rs:39-89); they establish no ZKIRv3 compilation, cryptographic proof, or Midnight ledger settlement.",
+      "Review is scoped to the two changed starter files and their public SDK-free CLI consumers; it grants no native execution authority and closes no existing roadmap, U0-U7, M, MC, SP, or G acceptance gates."
+    ],
+    "reviewToken": "doctorwatson-clean-starter-source-security-fallback-20261018-a1-whole-review",
+    "summary": "Approve exact two-file candidate (combined patch SHA256 4e7017eca9dfe9e23e1e957e808047c8652633e108a78bf91f7e2c5cd1318b4b against base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) for scoped source-only starter CLI resolution. In crates/mori/src/commands/init.rs:106-111, run() resolves std::env::current_exe(), enforces UTF-8 via to_str() without lossy substitution, and single-quotes the path as one POSIX shell word before std::fs::create_dir(&args.dir) (line 114), preventing partial destination creation on error and avoiding PATH collision with the TypeScript mori CLI. POSIX single-quoting ('...' with ' -> '\\'') neutralizes shell metacharacters, spaces, quotes, and expansions; args.dir is never interpolated into README.md, and action is a closed match (\"pay\"|\"repay\", lines 52-55). In crates/mori/tests/init.rs:325-380, the Unix regression copies the binary into \"Rust CLI's tools \ud83e\uddea\" and runs the extracted README.md sh block via /bin/sh with PATH=\"\" across check, simulate, and test consumers. Source approval covers only local moriarty/1 and moriarty-core/1 starter behavior; it is not runtime pass evidence, independent financial oracle verification, or native execution admission.",
+    "verdict": "approve-source"
+  }
+]
