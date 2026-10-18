@@ -1,12 +1,13 @@
 # Current35 EARS assessment
 
-Eleven of the 35 original requirements are closed on their supported host or reporting
+Twelve of the 35 original requirements are closed on their supported host or reporting
 scope: UIREQ-001, UIREQ-002, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008,
-UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-022 and UIREQ-025.
+UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-022, UIREQ-025 and UIREQ-027.
 The [supported-profile adoption](../results/sherlock-supported-profile-20261018/ROOT-ORIGINAL002-ADOPTION.json)
 adds original UIREQ-002's admitted grammar/versioned-profile reporting clause and
-First-order fragment scenario. The [current report](../results/sherlock-simulate-report-20261018/CURRENTNESS-RESULT.json)
-verifies eleven current adopted closures with no findings. The remaining 24 original
+First-order fragment scenario. The [whole-provenance adoption](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/ROOT-ORIGINAL027-ADOPTION.json)
+and [current report](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/CURRENTNESS-RESULT.json)
+verify twelve current adopted closures with no findings. The remaining 23 original
 requirements and all 25 refinements/68 scenarios remain open. Whole-owner
 closed-body/unique-function admission, higher-order/letrec and generic extensions,
 bound enforcement and runtime/formal/native predicates remain distinct unfinished
@@ -50,7 +51,7 @@ retain their exact scoped observations. Matching files alone cannot close a requ
 | UIREQ-024 | partial | partial | open | Select one actual frame/sharing optimization proposal, freeze complete preservation predicate and independently compare its declared observations/costs; unmeasured physical/native costs remain unknown rather than mandatory native run for host-only proposal. |
 | UIREQ-025 | complete | observed | closed | Complete C1-C4 seven-field record and qualified compiler companion adopted after actual checks and fresh reviews; historical model evidence does not validate changed B semantics. Raw artifact requires its companion. |
 | UIREQ-026 | partial | partial | open | Request only authorized owner shareable record/existence and public semantic/model binding plus exact per-slice comparison/gap record; verify both scenarios. No new private checkout, Lean/model/native execution is authorized here. |
-| UIREQ-027 | partial | partial | open | Promote/reuse actual producer with declared profile mapping; two equal source sites plus named recursion must retain distinct occurrence IDs, ordered tables and actual expanded-step origin. No execution during preparation. |
+| UIREQ-027 | complete | observed | closed | Entire original clause accepted after complete current source and actual-result review: source order/membership, distinct equal sites, static recursion references, ordered slices/arms, first-match lookup, full public step origins and pure preparation. Retain exact evidence; generic, persistent, formal/native and refinement obligations remain separate. |
 | UIREQ-028 | partial | partial | open | Capture actual permitted lookup-deeper and repeated-subtree equality owner steps with owned full before/event/after, independently frozen counters/resume/origin. Keep B erasure observational and no equal-fuel claim. |
 | UIREQ-029 | partial | partial | open | Implement partial bounded image representation/codec for exact admitted layout/domain; independently compare factorial pending Mul/caller/helper state and explicit out-of-domain refusal; constraints/theorems remain distinct. |
 | UIREQ-030 | partial | partial | open | Implement specified typed32/64 limb components; independent cross-limb normal values2^32+5,2^64+2,3*2^48+3 plus full high/low product and checkedU128 wrapper mapping. Source-only host tests do not establish circuit constraints. |
@@ -58,7 +59,7 @@ retain their exact scoped observations. Matching files alone cannot close a requ
 | UIREQ-032 | partial | partial | open | Public grouping API is exposed; all three fixed N01 cases passed and reviewed. Twelve fixed grouped callee-return cases now passed and reviewed. Implement causal occurrence IDs and complete precedence/B/persistent/financial/circuit scope; preserve complete internal records and first-stop precedence. |
 | UIREQ-033 | absent | unrun | open | Implement finite worklist generic baseline/masks and force reachable low-size fallback; compare every dynamic prefix/state/charge/origin/first stop, never specializing runtime fuel/values or unrolling recursion. |
 | UIREQ-034 | absent | unrun | open | Implement owner-adopted declaration/register/check two-stage pipeline and actual ordered runtime; Schedule Both(Pay4Done,Pay5Done) selects first arm4, separate sum9, with type/constructor/binder/workMap retained. No dedicated-sort substitution. |
-| UIREQ-035 | absent | unrun | open | Implement uncached dependency DAG and exact bindings before caches/lifetime/stream variants; compare complete factorial/list/tree/pendingcaller prefixes vs independent oracle and retain visits/copies/livevalue diagnostics separately. |
+| UIREQ-035 | partial | partial | open | Implement uncached dependency DAG and exact bindings before caches/lifetime/stream variants; compare complete factorial/list/tree/pendingcaller prefixes vs independent oracle and retain visits/copies/livevalue diagnostics separately. |
 
 Exact predicates, complete original scenario text, per-row source/result/audit pins and source-currentness are in current-evidence.json. Scope-specific additional obligations are in refinementRequirements and retainedInventory;35 rows are not the complete EARS programme denominator.
 
