@@ -123,7 +123,12 @@ corrections retained. R310 then passed three phases and one new test looping two
 programs through real run/report/Serialize/JSON, checking independent UInt7/8 and
 same-run report bindings with 457 pins unchanged. See the
 [intended command shape](how-to/compile-draft-program.md#pending-command-shape-unrun).
-No full CLI/global handler, file I/O or command report printout was observed.
+R322 later passed compilation, two direct real selected-handler processes and a
+saved-files-only verifier. Genuine Args, production source/config/target reads and
+JSON export/printing produced complete 59,814/64,160-byte reports; frozen R324
+predicates checked independent UInt 7/8 and declared bindings without a second
+owner run. Full root CLI/global dispatch and file publication remain unrun,
+without an exact B-clock/full trace.
 R315 returned SUCCESS and Root installed all six consumer files, verified all
 twenty source/test files and applied the reviewed R316 reporting-reference update.
 The existing reader is CURRENT11/35 with no findings, 24 originals and all 25

@@ -1,0 +1,137 @@
+# R336 — Independent Non-Author Exact Guarded-Launch Source Review
+
+---
+
+## 1. Reviewer Identity, Independence & Complete Inline Read Coverage
+
+- **Reviewer Identity & Route**: Retained actual independent designated security reviewer `CID=6277cc2c-99b8-4b7a-a220-a6c971d1bb98` at original `cwd=/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`, running on `gemini-4-argon-high` / `HIGH` under the standing observed `claude-opus-4-6` HIGH outage fallback.
+- **Non-Authorship & Independence**: R140 owner (`bb6043a1-63f1-4de9-b26f-ef50139233e3`) authored the single literal `launch()` source edit (`$.exact_guard_launch_edit` in `afd81621fab63bd1bed8e95e87881f149291ee4373274ea4333f11de98e831f9`), which Sol mechanically applied to frozen `bounded_sdk_compile.py` (`73836B`, SHA-256 `94810a65a2a68563300edefe34c76447ad9cc3118c07c8ae8f67607b88ac1fd7`) to materialize `bounded_sdk_compile.owner-proposed.py` (`74823B`, SHA-256 `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f`). This reviewer did not author any part of the candidate edit and evaluates the complete afterimage independently.
+- **Zero-Tool / Inert-Data Compliance**: Zero tool calls, file reads, writes, shell commands, imports, tests, or host/SDK/Git actions were performed.
+
+### Complete Inline Read Accounting (All Supplied Inline Bodies Read 100% Without Truncation)
+
+| Inline Body Identifier | Supplied Path (Inert Reference) | Bytes | SHA-256 | Read Coverage |
+| :--- | :--- | :---: | :--- | :--- |
+| `FULL_CURRENT_CHANGED_GUARD_SOURCE` | `.../336-unadopted-owner-exact-guard-correction/bounded_sdk_compile.owner-proposed.py` | `74823` | `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f` | **100% read** (`#!/usr/bin/python3` through `sys.exit(2)`, lines 1–1024; `+987B` over `73836B` `94810a65...`) |
+| `FULL_ACTUAL_R140_OWNER_RESPONSE` | `.../332-owner-exact-guard-command-and-capture-request/FINAL-RESPONSE.txt` | `10734` | `afd81621fab63bd1bed8e95e87881f149291ee4373274ea4333f11de98e831f9` | **100% read** (complete JSON payload including `$.exact_guard_launch_edit`, `$.minimum_test_or_verification_scope`, `$.config_and_receipt_impact`) |
+| `FULL_R329_ACTUAL_SUCCESS1259B_JSON` | `.../329-minimal-diagnostic-command-placement/actual-attempt-01/combined-output.bin` | `1259` | `70aad95a29b59957de8168a9c61b98311a238f4125a982ba0791d0cb9497464a` | **100% read** (`B1_no_masks` and `B2_with_masks` both `returncode: 0`, `status: "OK"`, `received_msg_hex: "4c"`, `scm_rights_fds: 1`) |
+| `EXACT_R329_ACTUAL_SELECTION_AND_CONTROLLER` | `.../329-minimal-diagnostic-command-placement/actual-attempt-01/ROOT-SELECTION.json` | `977` | `5b273ca4c80536403e235e55ed07f4b1214d2a8a9489668d7259d355a4727b5f` | **100% read** |
+| `FULL_R329_ACTUAL_CAPTURE_RESULT` | `.../329-minimal-diagnostic-command-placement/actual-attempt-01/RESULT.json` | `385` | `8f6eeee5d8009185503ad13fad8ecfb201077a75d4f0eeaf9000ef7696f765ee` | **100% read** (`exit: 0`, `wall_seconds: 0.08351558800131897`, `output_bytes_captured: 1259`, `temporary_script_removed: true`) |
+| `COMPLETE_UNCHANGED_LIMITS_AND_HISTORICAL_CONFIG_FACTS` | `.../309-C-source-coverage-and-human-request/listener-handoff-owner-diagnosis/FULL-CURRENT-SAFETY-LIMITS-AND-SCOPE.json` | `8585` | `b30318d8edc62bdbd43369fd62a94e01bfc013d4738ea2e2432ca58c993b8fb7` | **100% read** |
+| `COMPLETE_PRIOR_EXTERNAL_SOURCE_FREEZE` | `.../53-r2-integrated-source-candidate/source/SOURCE-FREEZE.json` | `6659` | `f7910a648f0558c9aa3f0543c18cc546d0b0238c83b867db75c2ff0dfb3cdf17` | **100% read** (12 frozen files, 69 total AST test definitions) |
+| `CURRENT_CONFIG_SOURCE_AND_ONE_SHOT_FACTS` | `.../336-unadopted-owner-exact-guard-correction/CURRENT-SOURCE-CONFIG-AND-ONE-SHOT-FACTS.json` | `5899` | `2781836729c46cac0371b2abb8a717d85db68dc32b8b84d5800399f16c158ac1` | **100% read** |
+
+- **Named Non-Inline Reference Accounting**: External artifacts cited only by hash/byte pin in `CURRENT_CONFIG_SOURCE_AND_ONE_SHOT_FACTS` (`FRESH-REQUEST-CANDIDATE-PLAN.json` `7705B` `c8d52680...`, `MECHANICAL-MATERIALIZATION.json` `2353B` `c7356035...`, the 11 unchanged R53 source/test files in `f7910a64...`, and historical `config.final.actual.json` `679713B` `65a0d174...`) are not inline; they are not required to complete the exact changed-source audit of `bounded_sdk_compile.owner-proposed.py` (`087f3a37...`), and no unverified content from them is assumed.
+
+---
+
+## 2. Independent Exact-Source Verdict on `bounded_sdk_compile.owner-proposed.py`
+
+- **Exact-Source Verdict**: **`APPROVE`**
+- **Reviewed File**: `bounded_sdk_compile.owner-proposed.py` (`74823` bytes, SHA-256 `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f`)
+- **Base Comparison**: Differs from frozen `bounded_sdk_compile.py` (`73836` bytes, SHA-256 `94810a65a2a68563300edefe34c76447ad9cc3118c07c8ae8f67607b88ac1fd7`) solely within `launch(c, phase, config_sha)` at lines `656–709` (`+987` bytes, `+21` lines). All other functions, constants, seccomp/trampoline assembly, cgroup controls, manifest/receipt checks, and one-shot markers are byte-identical.
+
+### Concrete Line-Anchored Technical Assessment of `launch()` (Lines 636–727)
+
+#### A. Command/Options Separation (`--args` Memfd vs Outer `bwrap` `argv`), `audit`/`precheck` Variants & `records` Retention (`L645–664`, `L709`)
+1. **`sandbox_args(c, phase, audit, precheck)` Construction (`L557–595`) & Variant Iteration (`L645–648`)**:
+   - Phases `A0`, `A`, `C`, `D` run `variants = [(True, False)]` (audit worker only).
+   - Phase `B` runs `variants = [(False, False)]` (`cargo fetch --locked --offline` only).
+   - Phases `E` and `F` run `variants = [(True, True), (False, False), (True, False)]` (precheck audit worker `_precheck`, Cargo step `''`, post-Cargo audit worker `_audit`) under the same phase cgroup and phase wall-clock/stream budgets.
+   - In every variant, `sandbox_args()` builds a flat list of `bwrap` option tokens followed by a single `'--'` separator (`L587`, found via `separator = args.index('--')` at `L656`), followed by `target = args[separator+1:]` (either the internal Python worker command `['/usr/bin/python3', '-I', '-B', runner, '--worker', phase, '--config', p['config']]` + optional `['--precheck']`, or `cargo_argv(phase)`).
+2. **`audit` vs Non-`audit` Token FD Handling (`L650–658`)**:
+   - When `audit=True`, `token_fd = sealed_memfd('sdk-internal-worker-context', json_bytes(context))` (`L655`), `target += ['--config-sha256', config_sha, '--worker-fd', str(token_fd)]` (`L657`), and `preserved = [stage_fd, child.fileno()] + [token_fd]` (`L658`).
+   - When `audit=False` (phase `B` and the Cargo step of `E`/`F`), `token_fd` remains `-1` (`L648`), is omitted from `preserved` (`L658`), is passed as literal `"-1"` in `cmd` (`L659`) where `TRAMPOLINE` checks `if token_fd>=0: os.set_inheritable(token_fd, True)` (`L137`), and is skipped by `if token_fd>=0: os.close(token_fd)` in `finally` (`L714`).
+3. **Options-Only `--args` Memfd vs Outer `bwrap` `argv` (`L659–664`)**:
+   - `L659`: `cmd = ['/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/'+str(stage_fd), str(stage_fd), str(child.fileno()), str(token_fd), *target]`.
+   - `L660`: `fd = sealed_memfd('sdk-bwrap-argv', b'\0'.join(x.encode() for x in args[:separator]) + b'\0'); args = args[:separator] + ['--', *cmd]`.
+   - `L664`: `proc = subprocess.Popen(['/usr/bin/bwrap', '--args', str(fd), '--', *cmd], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env={}, pass_fds=tuple([fd, *preserved]), preexec_fn=enter, close_fds=True)`.
+   - **Consequence**: The `--args` memfd now contains **strictly** NUL-delimited `bwrap` option tokens (`args[:separator]`), eliminating the `bwrap` option-parser rejection confirmed by the R309 (`0ef33e8d...`) vs R329 (`70aad95a...`) host-only discriminator runs. The `'--'` delimiter and target `cmd` are passed directly on outer `bwrap` `argv` after `['--args', str(fd)]`. Meanwhile, `args = args[:separator] + ['--', *cmd]` preserves the exact full logical command vector in `records.append({'argv': args, 'audit_worker': audit, 'child_exit': 0})` (`L709`) for phase receipt emission.
+
+#### B. Pre-Handoff Outcomes: Success, EOF, Bad Message, Nonzero Flags, Ancillary Mismatch, Timeout, OS Errors & `SIGALRM` (`L665–693`)
+1. **Timeout & Pipe Registration Before Handoff (`L665–667`)**:
+   - `child.close()` closes the parent copy of the child socket immediately after `Popen` (`L665`), ensuring `parent.recvmsg(...)` returns immediate EOF (`message == b''`) if the child process exits or crashes before sending `'L'`.
+   - `parent.settimeout(max(.001, v['wall_seconds'] - (time.monotonic() - start)))` bounds `recvmsg` to the remaining phase wall-clock budget (`L665`).
+   - `proc.stdout` and `proc.stderr` are placed in non-blocking mode and registered on `sel` (`L666–667`) **before** `parent.recvmsg(...)` is called.
+2. **All Pre-Handoff Failure Modes Caught by `except BaseException:` (`L668–677`)**:
+   - **Success**: `message == b'L'`, `flags == 0`, single `SOL_SOCKET`/`SCM_RIGHTS` ancillary item unpacking to `len(received) == 1` sets `listener = received[0]` (`L670–676`).
+   - **EOF (`b''`) or Wrong Payload (`!= b'L'`) or Nonzero `flags` (e.g., `MSG_CTRUNC`)**: Fails `need(message == b'L' and not flags, 'listener handoff failed')` (`L671`), raising `Refusal('listener handoff failed')`.
+   - **Ancillary Level/Type Mismatch**: Fails `need(level == socket.SOL_SOCKET and kind == socket.SCM_RIGHTS, 'unexpected handoff')` (`L673`), raising `Refusal('unexpected handoff')`.
+   - **Zero or Multiple `SCM_RIGHTS` FDs (`len(received) != 1`)**: Fails `need(len(received) == 1, 'exact one seccomp listener required')` (`L676`) **before** `listener = received[0]` is assigned, raising `Refusal('exact one seccomp listener required')`.
+   - **Socket Timeout / OS Error / `SIGALRM`**: `socket.timeout` (`TimeoutError`), `OSError`, or `SIGALRM` (`stop_alarm` raising `Refusal('whole-job wall cap')`, `L275–276`) all inherit from `BaseException` and enter `except BaseException:` (`L677`).
+
+#### C. Received `SCM_RIGHTS` FD Ownership & Closure Across Pre-Handoff Failure and Post-Handoff `finally` (`L668–680`, `L712`)
+- `received = []` is initialized prior to `try:` (`L668`), and every unpacked `SCM_RIGHTS` integer FD is appended via `received.extend(values)` (`L675`).
+- On any synchronous pre-handoff failure (including ancillary mismatch on a second cmsg header or `len(received) != 1` when >1 FDs were passed), `listener` remains `None`, and the `except BaseException:` block closes every unpacked FD in `received`:
+  ```python
+  for rfd in received:
+      try:os.close(rfd)
+      except OSError:pass
+  ```
+- On post-handoff execution (once `listener = received[0]` succeeds and the `try` block exits normally), `listener` owns the single FD and the inner `finally:` (`L712`) closes it via `if listener is not None: os.close(listener)`.
+- *(Minor non-blocking observation)*: If an asynchronous `SIGALRM` were to fire on `L676` in the sub-microsecond window after `listener = received[0]` executes but before the `try:` block exits, `except BaseException:` would close `rfd` (`received[0]`) and inner `finally:` (`L712`) would call `os.close(listener)` on the already-closed FD number (single-threaded process, no concurrent FD allocator). Moving `listener = received[0]` to the `else:` clause of `try:` (or setting `listener = None` inside `except BaseException:`) would eliminate even that theoretical `SIGALRM` double-close, though it does not affect normal synchronous failure paths or single-threaded safety and does not block `APPROVE`.
+
+#### D. `group.kill()`, Bounded Failure Drain, Stream Budgets & Non-Masking of Original Exception (`L681–693`)
+1. **Immediate Cgroup Termination Before Drain (`L681`)**:
+   - `group.kill()` writes `'1'` to `sdk-once-<phase>/cgroup.kill` (`L263–266`) **before** entering the drain loop (`L682`). This immediately terminates `bwrap` and any descendants inside the phase cgroup so that child pipe write-ends close promptly and the drain loop cannot stall on a live child.
+2. **Selector Contents & Bounded Drain Loop (`L682–692`)**:
+   - Because `sel.register(listener, ...)` (`L694`) occurs **after** the pre-handoff `try...except`, `sel.get_map()` inside `except BaseException:` contains exclusively `(name, log)` entries for `proc.stdout` and `proc.stderr` (never `('network', None)`).
+   - The drain loop runs while `sel.get_map()` is non-empty, breaking immediately if:
+     - `time.monotonic() - start > v['wall_seconds']` (`L683`, respecting the phase wall deadline without raising a `wall cap` `Refusal`), or
+     - `not events and proc.poll() is not None` (`L685`, exiting once the killed child has terminated and no pipe events remain).
+   - For each readable pipe, `take = min(len(chunk), max(0, v[name+'_bytes'] - counts[name]))` (`L689`) clamps writes to the remaining per-stream byte budget (`v['stdout_bytes']` / `v['stderr_bytes']`) and unregisters the stream if `take < len(chunk)` (`L691`) or EOF (`not chunk`, `L688`).
+3. **No Exception Masking (`L682–693`)**:
+   - Unlike the normal post-handoff loop (which calls `need(...)` on wall cap and log cap), the failure drain uses `break` on wall deadline and `min(..., max(0, ...))` clamping on stream byte caps, and `group.kill()` catches `(FileNotFoundError, ProcessLookupError)`. Thus, neither log-cap overflow nor deadline expiry during error drain can raise a secondary `Refusal` that masks the original pre-handoff exception re-raised by bare `raise` at `L693`.
+
+#### E. Post-Handoff Loop, Listener Registration, `group.check()`, `group.close()` & All `finally` Paths (`L694–727`)
+- **Post-Handoff Selector Loop (`L694–705`)**: Registers `listener` as `('network', None)` at `L694`; loops while `len(sel.get_map()) > 1 or proc.poll() is None`; enforces `v['wall_seconds']`, `group.check()` (`events.get('oom_kill', 0) == 0` and `events.get('oom', 0) == 0`), `not network_pending(listener)`, and `counts[name] <= v[name+'_bytes']`.
+- **Post-Exit Checks (`L706–708`)**: Verifies `proc.wait() == 0`, `group.check()`, `not network_pending(listener)`, and `read_numbers(group.path/'cgroup.events').get('populated', 0) == 0` (no background descendants).
+- **Inner Variant `finally:` (`L710–717`)**:
+  - Disarms `ITIMER_REAL` if unwinding an exception (`L710`).
+  - If `proc` is still running (`proc is not None and proc.poll() is None`), calls `group.kill(); proc.wait(timeout=5)` (`L711`).
+  - Closes `listener` (if not `None`), `parent`, `child` (Python `socket.close()` is idempotent after `L665`), `fd`, `stage_fd`, `token_fd` (if `>= 0`), `sel`, and each file in `logs` (`L712–717`).
+- **Outer Phase `finally:` (`L725–727`)**:
+  - Disarms `ITIMER_REAL` on exception (`L726`) and calls `group.close()` (`L727`), which kills the phase cgroup, waits up to 5s for `populated == 0`, and `rmdir`s `sdk-once-<phase>` (`L267–274`).
+
+#### F. Verification of Unchanged Targets, Quotas/Caps, Network Refusal & One-Shot Semantics
+- **Targets & Build Matrix**: `BASE` (`f7fff3...`), `LOCK` (`9ef939...`), `CARGO` (`dc220a...`), `BACKEND = 'sherlock-Tee-Backend'`, `CLI_OBLIGATION = 'ad4:src/main.rs'` (`L25–30`), `REQUIRED_MASKS` (`L35–58`), and `GIT_SYMLINKS` (`L60–65`) are completely unchanged.
+- **Quotas & Caps**: `quotas()` (`L332–347`), `supervisor_envelope()` (`L321–330`), and all phase/global limits (`memory.max`, `memory.swap.max=0`, `pids.max`, `cpu.max`, `wall_seconds`, `stdout_bytes`, `stderr_bytes`, `total_wall_seconds <= 5400`) are completely unchanged.
+- **Seccomp Network Refusal**: `TRAMPOLINE` (`L100–146`), BPF filter generation for `socket`/`connect`/`bind`/`listen`/`accept`/`accept4`/`sendto`/`sendmsg`/`sendmmsg`/`getsockname`/`getpeername`/`setsockopt`/`getsockopt`, and `network_pending()` (`L622–634`) are completely unchanged.
+- **One-Shot Semantics**: `run()` (`L996–1024`) still requires `ONE_SHOT_STARTED` to be absent before starting, writes it once with `open(..., 'xb')` (`L999–1000`), requires it in `launch()` (`L641`), never deletes it, and writes `TERMINAL_FAILURE.json` (`L1017–1020`) on any exception.
+
+---
+
+## 3. Applicable Minimum Changed-Source Tests & Real Prerequisites Before Selecting a Fresh Guarded Job
+
+### A. Applicable Minimum Changed-Source Tests (SDK-Free / Mocked `launch()` Scope)
+1. **No Repeat of Passed Host `bwrap` Smokes & No New Blind Loop**:
+   - The standalone host-only discriminator `bwrap_handoff_diag.owner-minimal-correction.py` (`13798B`, `0ee523a0f46bf072dd72c79085b19495a5d2cb8def73281043c5cd19cb1e71e3`) already executed once in R329 (`70aad95a...`) and proved that moving `['--', *cmd]` from the `--args` memfd to outer `bwrap` `argv` produces `returncode: 0`, `received_msg_hex: "4c"`, and `scm_rights_fds: 1` for both `B1_no_masks` and `B2_with_masks`. Neither `B1`/`B2` nor the earlier namespace/mask `/bin/true` smokes should be repeated.
+   - This single-function post-attempt fix in `launch()` does not trigger a new blind `R2` review loop under the retained `P1` §2.4(b) / `R134` / `R157` disposition.
+2. **Minimum Bounded SDK-Free Unit Tests for the Changed `launch()` Function (`087f3a37...`)**:
+   - Before adopting/installing `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f` into the frozen source set, run a bounded SDK-free mocked unit test suite covering `launch()` in `bounded_sdk_compile.py`:
+     1. **`--args` Memfd vs Outer `Popen` `argv` & `records` Invariant Test**: With `subprocess.Popen`, `Group`, `sealed_memfd`, `supervisor_envelope`, `bound_identities`, and `quotas` mocked, verify across both an `audit=True` phase (e.g., `A0` or `E` precheck/audit) and an `audit=False` phase (`B` or `E` main) that:
+        - `sdk-bwrap-argv` memfd receives `b'\0'.join(x.encode() for x in args[:separator]) + b'\0'` (zero `'--'` or target command tokens inside the memfd);
+        - `Popen` is invoked with `['/usr/bin/bwrap', '--args', str(fd), '--', *cmd]`;
+        - `pass_fds` contains `(fd, stage_fd, child_fd, token_fd)` when `audit=True` and `(fd, stage_fd, child_fd)` when `audit=False`;
+        - `records[i]['argv'] == args[:separator] + ['--', *cmd]`.
+     2. **Pre-Handoff Failure Drain, `SCM_RIGHTS` FD Closure & Non-Masking Test**: Simulate pre-handoff failures on the mocked `socketpair` / `Popen` pipes:
+        - Child EOF (`b''`) with diagnostic bytes pre-written to mocked `proc.stderr` and `proc.stdout` (including a payload exceeding `v['stderr_bytes']`);
+        - Ancillary mismatch or `len(received) != 1` (e.g., 2 FDs unpacked into `received`);
+        - Verify that: (a) every unpacked FD in `received` is closed via `os.close`, (b) `group.kill()` is called before draining, (c) `packet/<phase+suffix>.stderr` and `.stdout` capture the buffered bytes clamped to `v[name+'_bytes']`, (d) the original `Refusal` (`'listener handoff failed'` / `'exact one seccomp listener required'`) or `TimeoutError` propagates unmasked, and (e) `group.close()` runs in outer `finally`.
+     3. **Existing Frozen Unit Test Compatibility**: Run the existing SDK-free guard unit tests (`test_bounded_sdk_compile.py` in `SOURCE-FREEZE.json` `f7910a64...`, updated if any test pins the literal `bounded_sdk_compile.py` SHA-256 or inspects `Popen` `argv` in `launch()`) to confirm all existing invariants pass against `087f3a37...`.
+
+### B. Real Ordinary & Native Prerequisites Before Selecting Any Fresh Guarded Job
+1. **Source Freeze & Pin Reconciliation (Ordinary Metadata/File Prerequisite)**:
+   - Adopt `087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f` as `bounded_sdk_compile.py` in a refreshed source freeze (replacing `94810a65a2a68563300edefe34c76447ad9cc3118c07c8ae8f67607b88ac1fd7`).
+2. **Fresh Unconsumed Runtime Paths & Ordinary Operator Provisioning (`OP-0..OP-6`)**:
+   - The prior attempt consumed `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-compile-20261018-01` and wrote `ONE_SHOT_STARTED` (`37cb06c8...`) and `TERMINAL_FAILURE.json` (`3dc8fd2c...`) in `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-evidence-20261018-01`. Those directories and markers are permanently retired and immutable.
+   - Selecting a genuinely fresh guarded job requires:
+     - Selecting brand-new, non-existent `execution_root`, `config_dir`, `evidence_dir`, and `envelope_path` (`E`) operands;
+     - Running ordinary provisioning (`OP-0` through `OP-6`) under the approved `operator_provisioner.py` (`7a8e55b9...`) to create the fresh directories/cgroups, record fresh `Q-OBS.json` (`OP-1`), and generate a fresh `old_home_stat_manifest` (`OP-2`) after link-target pre-check (`GIT_SYMLINKS`).
+3. **Updated Admitted Configuration & Hash-Bound Receipts (`OP-3` / `OP-4` / `OP-5` / `OP-6`)**:
+   - Because `validate()` in `bounded_sdk_compile.py` (`L350–454`) enforces exact SHA-256 bindings across the runner, review receipts, config inputs, admitted config receipt, and tier receipts:
+     - `c['bindings']['runner']` must bind `sha256: "087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f"` and `size_bytes: 74823` (and `bounded_sdk_compile.py` installed at `<execution_root>/runner/bounded_sdk_compile.py` `0700` must match `087f3a37...`);
+     - `security_source_review_receipt.json` and `nonsecurity_source_review_receipt.json` must bind `runner_sha256 == "087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f"` (while `c['source_manifest']` `9f48d1f29a9fb8ff8fe2c8fd9a31ceae3bbacffef35b5cc1bdde6f42bc2ab24b` for the 31,964 SDK worktree files remains unchanged);
+     - `c['bindings']['config_inputs']`, the compiled `config.final.json`, Root's `ADMITTED_CONFIGURATION` receipt (`admitted_configuration_receipt.json`), and tier receipts (`tier3_2_receipt.json`, `tier3_1_receipt.json`, `tier2_receipt.json`) must be freshly generated (`OP-3`..`OP-5`) and verified by `prelaunch-verify` (`OP-6`) before any fresh one-shot guarded launch (`--config-sha256 <new_config_sha256>`) is eligible for selection.
+
+END-R336-INDEPENDENT-EXACT-GUARD-LAUNCH-REVIEW
