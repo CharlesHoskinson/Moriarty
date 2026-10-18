@@ -1,0 +1,38 @@
+{
+  "status": "FROZEN_NORMAL_SOURCE_INPUTS_BEFORE_ANY_EXECUTION",
+  "consumer": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-plan-cache-stream-source-20261018/afterimages/crates/mori-core/tests/support/sherlock_witness_cache_stream_positive.rs",
+    "bytes": 11471,
+    "sha256": "9b220693c118c13851b2c8fc498f0b983219c1903e55084381106d85a2b2532f"
+  },
+  "caseInputs": [
+    {
+      "selector": "factorial_three_cold_warm_last_use_and_stopped_stream",
+      "source": "fact(n:UInt)->UInt = if n==0 then1 else n*fact(n-1); entry fact(3)",
+      "literalResult": 6,
+      "sink": "Stop after first delivered record; resume same image/cache without replay"
+    },
+    {
+      "selector": "list_two_five_cold_warm_last_use_and_stream",
+      "source": "sum_list(xs:List)->UInt = match xs {Nil=>0;Cons(h,t)=>h+sum_list(t)}; entry sum_list([2,5])",
+      "literalResult": 7
+    },
+    {
+      "selector": "tree_four_one_three_cold_warm_last_use_and_stream",
+      "source": "sum_tree(tr:Tree)->UInt = match tr {Leaf(n)=>n;Branch(l,r)=>sum_tree(l)+sum_tree(r)}; entry Branch(Leaf4,Branch(Leaf1,Leaf3))",
+      "literalResult": 8
+    }
+  ],
+  "fuel": "4096",
+  "stack": "64",
+  "capacities": "Hardcoded ordinary consumer layout matches adopted baseline CONFIG values; not a new product limit/default.",
+  "inputLineage": "Same independently fixed mathematical factorial3/list2,5/tree4,1,3 domain noted in existing UIREQ035 scoped evidence; these are newly authored Core AST builders, not claimed byteidentical to unread R321 source.",
+  "semanticExpectations": "Literal6/7/8 and complete raw/decoded variant preservation; full independent absolute B prefix/clock expectations remain UNBOUND/not supplied",
+  "hostCounterExpectations": [
+    "For constructedplan Nnodes/MReadbindings: cold0hits/N-Mmisses; warmN-Mhits/0misses/MexecutedReads. EveryNode still scheduled.",
+    "LastUse releases each nonliveout at its preexisting lastuse; retainedscratch liveouts count, peak scratch<=N.",
+    "Copiedcachedslotvalues counts exactly cachehit value.clone invocations, not physicalcopy/heapbytes.",
+    "Memo keys and retainedcacheargument/valuecells counted separately from scratchreclamation; all physicaltime/bytes remainNone."
+  ],
+  "oracleAuthorship": "This ordinary positive consumer is authored with implementation and is not an independent audit/oracle. Existing independently authored baseline inputs remain immutable; fresh independent case/output/counter review is required."
+}

@@ -1725,3 +1725,15 @@ Scan every changed production/test/fixture path recursively across the entire le
 
 
 Review fidelity lesson: compare cited helper names, plan hashes, source line ranges and callable names with the actual selected files before adopting a result. The final financial reviewer cited nonexistent methods and the wrong runner/plan. Root preserved that opinion, supplied the complete actual files, and obtained explicit withdrawals and a source-grounded acceptance. A model-recited hash catalogue does not replace the selected manifest.
+
+
+## DW101 — Keep counterpart source and observed stages separate
+
+October 18 instruction: maintain dedicated Clean, Quint and K counterparts with each primary batch through the existing loop. A ready source batch is not a model run. Independently freeze shared inputs and complete expected projections before execution; compare full state/event fields and declared clock/work mappings, retaining unsupported cases and omissions. Keep ordinary host tests, model frontend acceptance, model runs, complete comparisons and native/proof/target results separate. No new factory or denominator is needed.
+
+The current nominal K sequence makes those boundaries concrete: after the earlier missing-Map failure, model-only compilation passed in 4.238 seconds, but the first `kast` failed on the Map argument surface and 21 later children stayed unrun. Prepare the smallest input-only correction and reuse the successful compiled definition; do not replay that passing compile or report corrected tail observations before they exist. The separate five-operation witness host pass does not supply those missing model results. Native source returned or reviewed likewise does not resolve B1–B5 or the measured Cargo global-cache mismatch.
+
+Preserve each actual failure and later stage result with its exact source/input identity. Keep dedicated source lanes active, and ask the independent complete comparison what changed before adopting correspondence. The [loop contract](../docs/sherlock/implementation-loop.md#persistent-clean-quint-and-k-counterparts--october-18-user-instruction) carries the persistent instruction; website concepts remain illustrations for the planned completed product.
+
+
+October 18 observed check follow-up: the fresh Quint source review approved the finite operations, but the first actual typecheck failed with QNT101 on local binders `fields` and `field`; the two later commands remain unrun. The corrected K queries parsed, reduced and printed with exit0 for all seven cases, but complete comparison rejected every unevaluated `ngObserve` term. This is an evaluation failure, not correspondence evidence. The dedicated agents are preparing source/operation corrections while preserving these receipts. Clean review found a reserved `prefix` identifier and a non-definitional `rfl` base case; kernel checks remain unrun pending corrected source.
