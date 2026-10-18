@@ -1,0 +1,166 @@
+//! Source-only inspect preserves the Core header producer's diagnostics.
+use serde_json::Value;
+use std::{
+    fs,
+    path::PathBuf,
+    process::{Command, Output},
+    sync::atomic::{AtomicU64, Ordering},
+};
+
+struct HeaderCase {
+    name: &'static str,
+    source: &'static str,
+    expected_error: &'static str,
+    expected_stderr: &'static str,
+}
+
+const CASES: [HeaderCase; 3] = [
+    HeaderCase {
+        name: "unknown",
+        source: r###"language "other";"###,
+        expected_error: r###"{
+  "code": "mori::core::profile",
+  "message": "Expected language \"moriarty/1\" or \"moriarty/2\"; found \"other\".",
+  "offset": 16,
+  "step": null
+}"###,
+        expected_stderr: r###"  × mori::command: mori::core::profile: Expected language "moriarty/1" or
+  │ "moriarty/2"; found "other".
+
+"###,
+    },
+    HeaderCase {
+        name: "missing",
+        source: r###"language ;"###,
+        expected_error: r###"{
+  "code": "mori::core::syntax",
+  "message": "Expected language \"moriarty/1\" or \"moriarty/2\". Expected a quoted string.",
+  "offset": 9,
+  "step": null
+}"###,
+        expected_stderr: r###"  × mori::command: mori::core::syntax: Expected language "moriarty/1" or
+  │ "moriarty/2". Expected a quoted string.
+
+"###,
+    },
+    HeaderCase {
+        name: "commented",
+        source: r###"// café
+language "other";"###,
+        expected_error: r###"{
+  "code": "mori::core::profile",
+  "message": "Expected language \"moriarty/1\" or \"moriarty/2\"; found \"other\".",
+  "offset": 25,
+  "step": null
+}"###,
+        expected_stderr: r###"  × mori::command: mori::core::profile: Expected language "moriarty/1" or
+  │ "moriarty/2"; found "other".
+
+"###,
+    },
+];
+
+struct Project {
+    root: PathBuf,
+    temporary: bool,
+}
+
+impl Project {
+    fn new() -> Self {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let (root, temporary) = match std::env::var_os("MORI_INSPECT_HEADER_OBSERVATIONS") {
+            Some(path) => {
+                let path = PathBuf::from(path);
+                assert!(path.is_absolute(), "use an absolute capture directory");
+                (path, false)
+            }
+            None => (
+                std::env::temp_dir().join(format!(
+                    "mori-inspect-header-{}-{}",
+                    std::process::id(),
+                    NEXT.fetch_add(1, Ordering::Relaxed)
+                )),
+                true,
+            ),
+        };
+        fs::create_dir(&root).expect("use a fresh capture directory");
+        Self { root, temporary }
+    }
+
+    fn run(&self, name: &str, source: &str) -> Output {
+        let dir = self.root.join(name);
+        fs::create_dir(&dir).unwrap();
+        fs::write(dir.join("header.mori"), source).unwrap();
+        let args = ["--color", "never", "inspect", "header.mori"];
+        let captured = Command::new(env!("CARGO_BIN_EXE_mori"))
+            .current_dir(&dir)
+            .args(args)
+            .output();
+        if let Err(error) = &captured {
+            fs::write(
+                dir.join("process.json"),
+                serde_json::to_vec_pretty(
+                    &serde_json::json!({"args": args, "launchError": error.to_string()}),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        }
+        let output = captured.expect("run actual public source-only inspect");
+        // Keep all process bytes/outcomes before any product assertion.
+        fs::write(dir.join("stdout.bin"), &output.stdout).unwrap();
+        fs::write(dir.join("stderr.txt"), &output.stderr).unwrap();
+        fs::write(
+            dir.join("process.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "executable": env!("CARGO_BIN_EXE_mori"),
+                "args": args, "status": output.status.code(),
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        output
+    }
+}
+
+impl Drop for Project {
+    fn drop(&mut self) {
+        if self.temporary && !std::thread::panicking() {
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
+}
+
+#[test]
+fn source_only_inspect_keeps_complete_header_errors() {
+    let project = Project::new();
+    // Capture each public process stream before assertions, including on failure.
+    let captured = CASES
+        .iter()
+        .map(|case| {
+            let error = mori_core::language(case.source)
+                .err()
+                .map(|error| serde_json::to_value(error).unwrap())
+                .unwrap_or(Value::Null);
+            let output = project.run(case.name, case.source);
+            fs::write(
+                project.root.join(case.name).join("producer-error.json"),
+                serde_json::to_vec_pretty(&error).unwrap(),
+            )
+            .unwrap();
+            (case, error, output)
+        })
+        .collect::<Vec<_>>();
+    for (case, error, output) in captured {
+        let expected: Value = serde_json::from_str(case.expected_error).unwrap();
+        assert_eq!(error, expected, "{}: complete producer Error", case.name);
+        assert_eq!(output.status.code(), Some(1), "{}", case.name);
+        assert!(output.stdout.is_empty(), "{}: complete stdout", case.name);
+        assert_eq!(
+            output.stderr,
+            case.expected_stderr.as_bytes(),
+            "{}: complete human stream",
+            case.name
+        );
+    }
+}
