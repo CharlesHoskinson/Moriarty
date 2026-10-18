@@ -1,0 +1,182 @@
+{
+  "schema": "sherlock-independent-public-draft-runtime-expectations/1",
+  "authorship": "R259 nonauthor candidate/output-blind expectations; declaration-only R258 PUBLIC-API read, no candidate implementation or outcome read",
+  "inputs": {
+    "config": {
+      "path": "fixtures/config.json",
+      "sha256": "aa1fbd325f9897c7a35d55b564c6c2c51df2d74fa3bd1b7e8fd9d07974387e26",
+      "fuel": "4096",
+      "stack": "64",
+      "extentDisposition": "All preprocessing/table/layout fields value-identical to R218 revision02; only fuel64→4096 and stack8→64. Explicit fixture inputs, no new defaults/policy."
+    },
+    "target": {
+      "path": "fixtures/target.json",
+      "sha256": "b7b9069acc831ae962d941c75a75c7bc2780e4029a569209458601f9b3f8d56d"
+    },
+    "preparation": {
+      "path": "fixtures/EXPECTED-PREPARATION.json",
+      "sha256": "24cc457da9858ecbb6358f2f146f151151ab59ac4213bc4757f44b88060f121b"
+    }
+  },
+  "cases": {
+    "chain_total": {
+      "source": {
+        "path": "fixtures/chain-total.mori",
+        "sha256": "3cec986244abd2e43c5d52894a84c54d69383a2bec327308651ea40a3f787644"
+      },
+      "returnedUInt": "7",
+      "derivation": "sum([2,5])=2+sum([5])=2+(5+sum([]))=2+(5+0)=7. Strict List argument construction and firstmatching Nil/Cons cases; named calls remain original sum function.",
+      "calleeReturnValuesMathOnly": [
+        "0",
+        "5",
+        "7"
+      ],
+      "evalCallArgumentExprIds": [
+        0,
+        11,
+        11
+      ],
+      "evalCallArgumentOccurrences": [
+        {
+          "owner_is_function": false,
+          "function": 0,
+          "ast_path": []
+        },
+        {
+          "owner_is_function": true,
+          "function": 0,
+          "ast_path": [
+            2,
+            1
+          ]
+        },
+        {
+          "owner_is_function": true,
+          "function": 0,
+          "ast_path": [
+            2,
+            1
+          ]
+        }
+      ],
+      "successfulInvokeBindReturnCount": 3,
+      "programViewExpected": "Unchanged full chain_total.program_view in R115, every12field/orderedcell",
+      "expectedFinal": {
+        "outcome": "Halted with actual scalar UInt7 reference",
+        "control": "Return with the exact same RefC as Halted; B publication retains control",
+        "frames": "empty",
+        "env_root": null,
+        "helper": null,
+        "result": null,
+        "initial_fuel": "4096",
+        "stack_limit": 64,
+        "finance": "Absent",
+        "arenaDisposition": "No empty env/data arena assertion: old cells/allocations may remain."
+      }
+    },
+    "branch_total": {
+      "source": {
+        "path": "fixtures/branch-total.mori",
+        "sha256": "fbf56e7b9fe589471ba12cf9aa7246ac538291422e662a79db5e7924a300e109"
+      },
+      "returnedUInt": "8",
+      "derivation": "fold(Branch(Leaf4,Branch(Leaf1,Leaf3)))=4+(1+3)=8. Strict left-before-right tree children and fold calls preserve source order.",
+      "calleeReturnValuesMathOnly": [
+        "4",
+        "1",
+        "3",
+        "4",
+        "8"
+      ],
+      "evalCallArgumentExprIds": [
+        0,
+        13,
+        15,
+        13,
+        15
+      ],
+      "evalCallArgumentOccurrences": [
+        {
+          "owner_is_function": false,
+          "function": 0,
+          "ast_path": []
+        },
+        {
+          "owner_is_function": true,
+          "function": 0,
+          "ast_path": [
+            2,
+            0
+          ]
+        },
+        {
+          "owner_is_function": true,
+          "function": 0,
+          "ast_path": [
+            2,
+            1
+          ]
+        },
+        {
+          "owner_is_function": true,
+          "function": 0,
+          "ast_path": [
+            2,
+            0
+          ]
+        },
+        {
+          "owner_is_function": true,
+          "function": 0,
+          "ast_path": [
+            2,
+            1
+          ]
+        }
+      ],
+      "successfulInvokeBindReturnCount": 5,
+      "programViewExpected": "Unchanged full branch_total.program_view in R115, every12field/orderedcell",
+      "expectedFinal": {
+        "outcome": "Halted with actual scalar UInt8 reference",
+        "control": "Return with the exact same RefC as Halted; B publication retains control",
+        "frames": "empty",
+        "env_root": null,
+        "helper": null,
+        "result": null,
+        "initial_fuel": "4096",
+        "stack_limit": 64,
+        "finance": "Absent",
+        "arenaDisposition": "No empty env/data arena assertion: old cells/allocations may remain."
+      }
+    }
+  },
+  "eventContract": {
+    "sink": "Clone every actual full StepEventC received; never replace it with a reduced/mock event. Captured Vec.len equals CompletedRun.events_forwarded equals RunSummary.events.",
+    "ordinal": "Each step_id.ordinal equals prefix sum of all earlier work_delta, because actual owner passes pre.consumed_work. It is not assumed to be arbitrary report enumeration.",
+    "runIdentity": "Every event RunIdC equals the actual final observed RunIdC and its admission identity; exact fuel/stack inputs retained.",
+    "counterConservation": "Sum all work/helper_work/helper_visits/reference_cursor deltas equals both final image counters and RunSummary counters. initial_fuel=remaining_work+consumed_work; no A/B charge equality.",
+    "normalLastEvent": {
+      "rule": "KAdminPublishValue",
+      "kind": "Publish",
+      "disposition": "Published",
+      "boundary": "Terminal",
+      "outcomeTag": "Halted",
+      "work_delta": 0,
+      "helper_work_delta": 0,
+      "helper_visits_delta": 0,
+      "reference_cursor_delta": 0
+    },
+    "prefix": "Before last normal publication, actual events have Running outcome, Applied disposition and unit work_delta. Adjacent logical-depth/task-cursor fields conserve continuity.",
+    "semanticSubsequence": "Source-order KMachineEvalCallArguments ExprId/Occurrence sequence and successful InvokeFind/EnterBind/ReturnCallValid counts are independently derived above; total B event/helper counts are not."
+  },
+  "explicitMissing": [
+    "Complete B StepEvent sequence/payload golden",
+    "Exact total B consumed_work/helper_work/helper_visits/reference_cursor/event counts",
+    "Complete intermediate B images and materialized values for each callee return",
+    "Exact final RefC index/data/env/value-slot/task allocation counts or byte encodings",
+    "Independent B fuel-capacity sufficiency proof for the selected fixture extents",
+    "Physical transition/heap/native-stack/time cost and H1 global guarantee",
+    "Host-to-K/Quint/formal/constraint/native/financial/target correspondence and fullv1 closure"
+  ],
+  "scope": "Two intended positive public source-to-real-B-owner runtime observations only. Expected Halted7/8 is independently derived semantics, not an observed result. API/source/tests unrun here; no arbitrary cap calibration from subject outputs."
+}

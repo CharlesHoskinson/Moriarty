@@ -13,3 +13,5 @@ After each frozen implementation iteration, record the source or result identity
 The circuit atlas remains the separate visual concept log, with its own authorship and source snapshots. A journal entry is not a new circuit iteration, a security audit or a milestone completion.
 
 - [October18: public source, report observations and pending runtime](2026-10-18-profile-runtime-knowledge.md) — dated source/results/review boundaries; no new closure or circuit semantics.
+
+- [October18: public draft runtime observed](2026-10-18-public-runtime-observed.md) — adopted two-case host results, retained earlier failures and limited mock evidence; no new EARS closure.
