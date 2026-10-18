@@ -1,0 +1,57 @@
+--- run_batch.py
++++ run_batch.py
+@@ -119,6 +119,22 @@
+     found = re.findall(r'test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out', text)
+     assert len(found) == 1, 'Require exactly one selected integration-test summary.'
+     return dict(zip(['passed', 'failed', 'ignored', 'measured', 'filtered'], map(int, found[0])))
++
++
++def node_summary(text):
++    """Accept one exact TAP or plain SPEC summary for the two bound cases."""
++    rows = re.findall(r'^(#|ℹ) (tests|pass|fail)(?: (.*))?$', text, re.MULTILINE)
++    counts, reporters = {}, set()
++    for reporter, key, value in rows:
++        if re.fullmatch(r'[0-9]+', value) is None:
++            raise ValueError('Malformed Node summary count: ' + key)
++        if key in counts:
++            raise ValueError('Duplicate Node summary count: ' + key)
++        reporters.add(reporter)
++        counts[key] = int(value)
++    if len(reporters) != 1 or counts != {'tests': 2, 'pass': 2, 'fail': 0}:
++        raise ValueError('Require one complete TAP or SPEC summary: ' + repr(counts))
++    return counts
+ 
+ 
+ def worker(expected_hash, plan_path):
+@@ -158,6 +174,17 @@
+             'stdoutSha256': sha(phase / 'STDOUT.log'), 'stderrSha256': sha(phase / 'STDERR.log'),
+             'validationComplete': False}
+         write(phase / 'RESULT.json', result)  # Terminal facts survive every later post-check failure.
++        if step['kind'] == 'node':
++            # Persist available post-run custody facts before any summary parsing.
++            result['binarySha256After'] = sha(binary)
++            write(phase / 'RESULT.json', result)
++            run_record = json.loads((output / 'node-observations/run.json').read_text())
++            result['nodeRunBinarySha256'] = run_record.get('binarySha256')
++            result['postNodeBinaryMatches'] = result['binarySha256After'] == quantity_hash
++            result['nodeRunBinaryMatches'] = result['nodeRunBinarySha256'] == quantity_hash
++            write(phase / 'RESULT.json', result)
++            assert result['postNodeBinaryMatches'], 'Source6 binary changed during Node phase.'
++            assert result['nodeRunBinaryMatches'], 'Node run record binary differs from Source6 binary.'
+         result['sourceAfter'] = verify_all(contract, expected_hash)
+         result['sourceAfter']['emptyAncestorConfigsVerified'] = verify_configs(plan['absentAncestorConfigs'])
+         write(phase / 'RESULT.json', result)
+@@ -181,12 +208,7 @@
+             result.update(rustSummary=summary, binarySha256=quantity_hash, binaryRole='no-default-features + source6-expansion CLI')
+             write(output / 'SOURCE6-BINARY-IDENTITY.json', {'path': str(binary), 'sha256': quantity_hash, 'recordedBeforeNode': True})
+         else:
+-            counts = {key: int(value) for key, value in re.findall(r'^# (tests|pass|fail) (\d+)$', text, re.MULTILINE)}
+-            assert counts == {'tests': 2, 'pass': 2, 'fail': 0}, counts
+-            assert sha(binary) == quantity_hash
+-            run_record = json.loads((output / 'node-observations/run.json').read_text())
+-            assert run_record['binarySha256'] == quantity_hash
+-            result.update(nodeSummary=counts, binarySha256After=sha(binary))
++            result['nodeSummary'] = node_summary(text)
+         result['validationComplete'] = True
+         write(phase / 'RESULT.json', result)
+         print(json.dumps({'step': step['name'], **result}), flush=True)

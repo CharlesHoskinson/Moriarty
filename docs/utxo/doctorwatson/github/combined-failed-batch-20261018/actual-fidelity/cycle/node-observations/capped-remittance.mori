@@ -1,0 +1,32 @@
+profile "moriarty-beta/1";
+agreement CappedRemittance {
+ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Buyer = { domain: Local, id: "Owner" };
+ account Seller = { domain: Local, id: "Recipient" };
+ account Treasury = { domain: Local, id: "Fee" };
+ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
+ const unitPrice: Qty<USD> = 0.75 USD;
+ const itemCount: Scalar = 3;
+ const quoted = unitPrice * itemCount;
+ const tightLimit = 2.10 USD;
+ const looseLimit = 2.50 USD;
+ const tightAmount = min(a: quoted, b: tightLimit);
+ const looseAmount = min(a: quoted, b: looseLimit);
+ const noCharge = atoms(asset: USD, value: 0);
+ intent TightPayment = {
+  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
+  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: tightAmount + noCharge, fee_cap: noCharge, net_floor: tightAmount,
+  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: tightAmount, fee: noCharge),
+  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ intent LoosePayment = {
+  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
+  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: looseAmount + noCharge, fee_cap: noCharge, net_floor: looseAmount,
+  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: looseAmount, fee: noCharge),
+  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ action pay_tight uses TightPayment;
+ action pay_loose uses LoosePayment;
+}
