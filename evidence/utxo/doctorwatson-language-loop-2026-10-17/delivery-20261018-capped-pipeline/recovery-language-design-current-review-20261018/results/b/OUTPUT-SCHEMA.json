@@ -1,0 +1,239 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewToken",
+    "summary",
+    "sourceCoverage",
+    "decision",
+    "scopeAssessment",
+    "financialAssessment",
+    "findings",
+    "ownerDependent",
+    "ordinaryVote"
+  ],
+  "properties": {
+    "reviewToken": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "sourceCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary",
+        "originalExamples",
+        "supplements",
+        "financialTrees",
+        "limitations"
+      ],
+      "properties": {
+        "primary": {
+          "enum": [
+            "FULL",
+            "INCOMPLETE"
+          ]
+        },
+        "originalExamples": {
+          "enum": [
+            "FULL",
+            "INCOMPLETE"
+          ]
+        },
+        "supplements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "status",
+              "notes"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "FULL",
+                  "UNREAD",
+                  "TRUNCATED",
+                  "UNAVAILABLE"
+                ]
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "financialTrees": {
+          "enum": [
+            "BOTH_COMPLETE_LOSSLESS_REVIEWED",
+            "BOTH_COMPLETE_RAW_REVIEWED",
+            "INCOMPLETE"
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "choice",
+        "reason",
+        "minimalCoherentInterface",
+        "versionAndCompatibility",
+        "durableContinuationPlan",
+        "publicCliAndSourcePlan",
+        "firstImplementationScope",
+        "remainingRequiredExits"
+      ],
+      "properties": {
+        "choice": {
+          "enum": [
+            "L03_WITH_REQUIRED_EXTENSIONS",
+            "MAJOR3",
+            "JUSTIFIED_HYBRID",
+            "REJECT_BOTH",
+            "ABSTAIN"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "minimalCoherentInterface": {
+          "type": "string"
+        },
+        "versionAndCompatibility": {
+          "type": "string"
+        },
+        "durableContinuationPlan": {
+          "type": "string"
+        },
+        "publicCliAndSourcePlan": {
+          "type": "string"
+        },
+        "firstImplementationScope": {
+          "type": "string"
+        },
+        "remainingRequiredExits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scopeAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pendingClosure",
+        "attemptedCommittedAccounting",
+        "refundVsCompensation",
+        "completeEffectsDuties",
+        "failurePhases",
+        "noLibraryOnlyScopeWaiver"
+      ],
+      "properties": {
+        "pendingClosure": {
+          "type": "string"
+        },
+        "attemptedCommittedAccounting": {
+          "type": "string"
+        },
+        "refundVsCompensation": {
+          "type": "string"
+        },
+        "completeEffectsDuties": {
+          "type": "string"
+        },
+        "failurePhases": {
+          "type": "string"
+        },
+        "noLibraryOnlyScopeWaiver": {
+          "type": "string"
+        }
+      }
+    },
+    "financialAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "custodyRefund",
+        "forwardCompensation",
+        "conditionalFailureVariants",
+        "unresolvedAndOverheadUnknowns"
+      ],
+      "properties": {
+        "custodyRefund": {
+          "type": "string"
+        },
+        "forwardCompensation": {
+          "type": "string"
+        },
+        "conditionalFailureVariants": {
+          "type": "string"
+        },
+        "unresolvedAndOverheadUnknowns": {
+          "type": "string"
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "evidence",
+          "requiredChange"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "blocking",
+              "major",
+              "minor",
+              "note"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "requiredChange": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ownerDependent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ordinaryVote": {
+      "enum": [
+        "AGREE_DIRECTION_WITH_EXPLICIT_GATES",
+        "REVISE_BEFORE_AGREEMENT",
+        "ABSTAIN_NO_COMPLETE_REVIEW"
+      ]
+    }
+  }
+}

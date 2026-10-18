@@ -1,0 +1,5 @@
+This adds a capped-remittance agreement that exercises quantity multiplication, both quantity-minimum branches and a zero fee through the public Rust Source/6 expander. A separate regression passes untouched Rust stdout to the real TypeScript Source/6 parser, lowerer and S0 preparer, then compares complete semantic ASTs, ordered effects and financial projections with independently frozen expectations.
+
+Validation: the Rust regression passed on 34257f3ef95e7a1bf29031417e7f6d33f708f06a (1 passed, 7 filtered, 53.494 seconds). On 5acfebe651af47e8edd6741bba298d7336a03b0e the native-OFF binary build passed in 41.935 seconds and both new TypeScript pipeline cases passed in 0.202 seconds. Their captured outcomes are PreparedUnqualified; no ledger qualification is implied. Expected financial semantics were frozen before execution. Earlier fixtures and their freezes remain unchanged.
+
+Draft: fresh review of the complete 31-path candidate and actual results is pending. Full language coverage, canonical Program/Artifact goldens, measured work, authentication and native/proof/ledger correspondence remain open.

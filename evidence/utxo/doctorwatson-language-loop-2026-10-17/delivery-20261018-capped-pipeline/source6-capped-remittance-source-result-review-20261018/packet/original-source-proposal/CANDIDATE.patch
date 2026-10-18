@@ -1,0 +1,208 @@
+--- a/crates/mori/tests/source6_expand.rs
++++ b/crates/mori/tests/source6_expand.rs
+@@ -268,3 +268,54 @@
+     assert!(stderr.contains(r"invoice\u{1b}\u{202e}.mori"), "{stderr}");
+     assert!(!stderr.contains(['\u{1b}', '\u{202e}']), "{stderr}");
+ }
++
++// Public consumer coverage for already admitted nominal arithmetic. Expected
++// bytes are hand-derived fixtures, not output from the checker or expander.
++#[test]
++fn quantity_min_selects_both_operands_through_public_source6_expansion() {
++    let files = Files::new();
++    fs::write(
++        files.0.join("capped.mori"),
++        fixture!("capped-remittance.mori"),
++    )
++    .unwrap();
++    fs::write(
++        files.0.join("capped.json"),
++        fixture!("capped-remittance.scenario.json"),
++    )
++    .unwrap();
++
++    let checked = files.invoke(&["check", "capped.mori", "--json"]);
++    assert_eq!(checked.status.code(), Some(0));
++    assert!(checked.stderr.is_empty());
++    let report: Value = serde_json::from_slice(&checked.stdout).unwrap();
++    assert_eq!(report["status"], "accepted");
++    let actions = report["actions"].as_array().unwrap();
++    assert_eq!(actions.len(), 2);
++    for (action, name) in actions.iter().zip(["pay_tight", "pay_loose"]) {
++        assert_eq!(action["name"], name);
++        assert_eq!(action["support"], "local_s0");
++    }
++
++    // 75 * 3 = 225 atoms. The tight minimum chooses b=210; the loose minimum
++    // chooses a=225. The atoms(...,0) fee retains its input cell but adds no
++    // fee Credit proposal. Both are complete Source/6 text comparisons.
++    for (action, expected) in [
++        ("pay_tight", fixture!("capped-tight.source6")),
++        ("pay_loose", fixture!("capped-loose.source6")),
++    ] {
++        let output = files.invoke(&[
++            "--quiet",
++            "expand",
++            "capped.mori",
++            "--action",
++            action,
++            "--scenario",
++            "capped.json",
++            "--emit-source6-transfer",
++        ]);
++        assert_eq!(output.status.code(), Some(0));
++        assert!(output.stderr.is_empty());
++        assert_eq!(output.stdout.as_slice(), expected);
++    }
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-loose.source6
+@@ -0,0 +1,44 @@
++profile "moriarty-financial-agreement-source/6";
++agreement CappedRemittance {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "srcC" digest "policyC";
++intent {
++signer Owner key "keyC";
++nonce "nC";
++pre_head "c0";
++valid 2..20;
++gross_cap 225;
++fee_cap 0;
++net_floor 225;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 225 fee 0;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "c0";
++predecessor "prior";
++round 4;
++balance Owner 1000;
++balance Recipient 5;
++balance Fee 7;
++allowance Owner remaining 1000 spent 25;
++replay unused;
++work_remaining 12;
++work_spent 2;
++}
++submit transfer from Owner to Recipient fee_to Fee value 225 fee 0;
++effects {
++debit Owner 225;
++credit Recipient 225;
++use_allowance Owner 225;
++use_replay "nC";
++advance_head "c0" "c1";
++}
++post_head "c1";
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-remittance.mori
+@@ -0,0 +1,32 @@
++profile "moriarty-beta/1";
++agreement CappedRemittance {
++ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Local, id: "Owner" };
++ account Seller = { domain: Local, id: "Recipient" };
++ account Treasury = { domain: Local, id: "Fee" };
++ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
++ const unitPrice: Qty<USD> = 0.75 USD;
++ const itemCount: Scalar = 3;
++ const quoted = unitPrice * itemCount;
++ const tightLimit = 2.10 USD;
++ const looseLimit = 2.50 USD;
++ const tightAmount = min(a: quoted, b: tightLimit);
++ const looseAmount = min(a: quoted, b: looseLimit);
++ const noCharge = atoms(asset: USD, value: 0);
++ intent TightPayment = {
++  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: tightAmount + noCharge, fee_cap: noCharge, net_floor: tightAmount,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: tightAmount, fee: noCharge),
++  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ intent LoosePayment = {
++  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: looseAmount + noCharge, fee_cap: noCharge, net_floor: looseAmount,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: looseAmount, fee: noCharge),
++  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay_tight uses TightPayment;
++ action pay_loose uses LoosePayment;
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-remittance.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "c0",
++  "predecessor": "prior",
++  "round": "4",
++  "balances": [
++    { "account": "Owner", "amount": "1000" },
++    { "account": "Recipient", "amount": "5" },
++    { "account": "Fee", "amount": "7" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "1000", "spent": "25" },
++  "replay": "unused",
++  "work_remaining": "12",
++  "work_spent": "2",
++  "post_head": "c1"
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-tight.source6
+@@ -0,0 +1,44 @@
++profile "moriarty-financial-agreement-source/6";
++agreement CappedRemittance {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "srcC" digest "policyC";
++intent {
++signer Owner key "keyC";
++nonce "nC";
++pre_head "c0";
++valid 2..20;
++gross_cap 210;
++fee_cap 0;
++net_floor 210;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 210 fee 0;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "c0";
++predecessor "prior";
++round 4;
++balance Owner 1000;
++balance Recipient 5;
++balance Fee 7;
++allowance Owner remaining 1000 spent 25;
++replay unused;
++work_remaining 12;
++work_spent 2;
++}
++submit transfer from Owner to Recipient fee_to Fee value 210 fee 0;
++effects {
++debit Owner 210;
++credit Recipient 210;
++use_allowance Owner 210;
++use_replay "nC";
++advance_head "c0" "c1";
++}
++post_head "c1";
++}

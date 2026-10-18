@@ -1,0 +1,2362 @@
+diff --git a/crates/mori/tests/fixtures/source6-expansion/capped-loose.source6 b/crates/mori/tests/fixtures/source6-expansion/capped-loose.source6
+new file mode 100644
+index 00000000..a0cbe8da
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-loose.source6
+@@ -0,0 +1,44 @@
++profile "moriarty-financial-agreement-source/6";
++agreement CappedRemittance {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "srcC" digest "policyC";
++intent {
++signer Owner key "keyC";
++nonce "nC";
++pre_head "c0";
++valid 2..20;
++gross_cap 225;
++fee_cap 0;
++net_floor 225;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 225 fee 0;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "c0";
++predecessor "prior";
++round 4;
++balance Owner 1000;
++balance Recipient 5;
++balance Fee 7;
++allowance Owner remaining 1000 spent 25;
++replay unused;
++work_remaining 12;
++work_spent 2;
++}
++submit transfer from Owner to Recipient fee_to Fee value 225 fee 0;
++effects {
++debit Owner 225;
++credit Recipient 225;
++use_allowance Owner 225;
++use_replay "nC";
++advance_head "c0" "c1";
++}
++post_head "c1";
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/capped-remittance.mori b/crates/mori/tests/fixtures/source6-expansion/capped-remittance.mori
+new file mode 100644
+index 00000000..ad39f493
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-remittance.mori
+@@ -0,0 +1,32 @@
++profile "moriarty-beta/1";
++agreement CappedRemittance {
++ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Local, id: "Owner" };
++ account Seller = { domain: Local, id: "Recipient" };
++ account Treasury = { domain: Local, id: "Fee" };
++ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
++ const unitPrice: Qty<USD> = 0.75 USD;
++ const itemCount: Scalar = 3;
++ const quoted = unitPrice * itemCount;
++ const tightLimit = 2.10 USD;
++ const looseLimit = 2.50 USD;
++ const tightAmount = min(a: quoted, b: tightLimit);
++ const looseAmount = min(a: quoted, b: looseLimit);
++ const noCharge = atoms(asset: USD, value: 0);
++ intent TightPayment = {
++  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: tightAmount + noCharge, fee_cap: noCharge, net_floor: tightAmount,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: tightAmount, fee: noCharge),
++  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ intent LoosePayment = {
++  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: looseAmount + noCharge, fee_cap: noCharge, net_floor: looseAmount,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: looseAmount, fee: noCharge),
++  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay_tight uses TightPayment;
++ action pay_loose uses LoosePayment;
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/capped-remittance.scenario.json b/crates/mori/tests/fixtures/source6-expansion/capped-remittance.scenario.json
+new file mode 100644
+index 00000000..f86e7d22
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-remittance.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "c0",
++  "predecessor": "prior",
++  "round": "4",
++  "balances": [
++    { "account": "Owner", "amount": "1000" },
++    { "account": "Recipient", "amount": "5" },
++    { "account": "Fee", "amount": "7" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "1000", "spent": "25" },
++  "replay": "unused",
++  "work_remaining": "12",
++  "work_spent": "2",
++  "post_head": "c1"
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/capped-tight.source6 b/crates/mori/tests/fixtures/source6-expansion/capped-tight.source6
+new file mode 100644
+index 00000000..1e07f06b
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/capped-tight.source6
+@@ -0,0 +1,44 @@
++profile "moriarty-financial-agreement-source/6";
++agreement CappedRemittance {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "srcC" digest "policyC";
++intent {
++signer Owner key "keyC";
++nonce "nC";
++pre_head "c0";
++valid 2..20;
++gross_cap 210;
++fee_cap 0;
++net_floor 210;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 210 fee 0;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "c0";
++predecessor "prior";
++round 4;
++balance Owner 1000;
++balance Recipient 5;
++balance Fee 7;
++allowance Owner remaining 1000 spent 25;
++replay unused;
++work_remaining 12;
++work_spent 2;
++}
++submit transfer from Owner to Recipient fee_to Fee value 210 fee 0;
++effects {
++debit Owner 210;
++credit Recipient 210;
++use_allowance Owner 210;
++use_replay "nC";
++advance_head "c0" "c1";
++}
++post_head "c1";
++}
+diff --git a/crates/mori/tests/source6_expand.rs b/crates/mori/tests/source6_expand.rs
+index c39630f0..6cebf48b 100644
+--- a/crates/mori/tests/source6_expand.rs
++++ b/crates/mori/tests/source6_expand.rs
+@@ -268,3 +268,54 @@ fn diagnostic_presentation_escapes_filename_action_and_scenario_shape_errors() {
+     assert!(stderr.contains(r"invoice\u{1b}\u{202e}.mori"), "{stderr}");
+     assert!(!stderr.contains(['\u{1b}', '\u{202e}']), "{stderr}");
+ }
++
++// Public consumer coverage for already admitted nominal arithmetic. Expected
++// bytes are hand-derived fixtures, not output from the checker or expander.
++#[test]
++fn quantity_min_selects_both_operands_through_public_source6_expansion() {
++    let files = Files::new();
++    fs::write(
++        files.0.join("capped.mori"),
++        fixture!("capped-remittance.mori"),
++    )
++    .unwrap();
++    fs::write(
++        files.0.join("capped.json"),
++        fixture!("capped-remittance.scenario.json"),
++    )
++    .unwrap();
++
++    let checked = files.invoke(&["check", "capped.mori", "--json"]);
++    assert_eq!(checked.status.code(), Some(0));
++    assert!(checked.stderr.is_empty());
++    let report: Value = serde_json::from_slice(&checked.stdout).unwrap();
++    assert_eq!(report["status"], "accepted");
++    let actions = report["actions"].as_array().unwrap();
++    assert_eq!(actions.len(), 2);
++    for (action, name) in actions.iter().zip(["pay_tight", "pay_loose"]) {
++        assert_eq!(action["name"], name);
++        assert_eq!(action["support"], "local_s0");
++    }
++
++    // 75 * 3 = 225 atoms. The tight minimum chooses b=210; the loose minimum
++    // chooses a=225. The atoms(...,0) fee retains its input cell but adds no
++    // fee Credit proposal. Both are complete Source/6 text comparisons.
++    for (action, expected) in [
++        ("pay_tight", fixture!("capped-tight.source6")),
++        ("pay_loose", fixture!("capped-loose.source6")),
++    ] {
++        let output = files.invoke(&[
++            "--quiet",
++            "expand",
++            "capped.mori",
++            "--action",
++            action,
++            "--scenario",
++            "capped.json",
++            "--emit-source6-transfer",
++        ]);
++        assert_eq!(output.status.code(), Some(0));
++        assert!(output.stderr.is_empty());
++        assert_eq!(output.stdout.as_slice(), expected);
++    }
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/FIXTURE-PINS.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/FIXTURE-PINS.json
+new file mode 100644
+index 00000000..30157d09
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/FIXTURE-PINS.json
+@@ -0,0 +1,35 @@
++{
++  "format": "source6-capped-remittance-oracle-custody/1",
++  "custodianFreezeSha256": "4a859749e91cc31cce74a1e9220e91235c9263a50e5dee1d84949e158885ba79",
++  "custodianManifestSha256": "c911856c73f9970bc87187ad132412b1f142c4721c2891cb5dcfe1cb5758b5d1",
++  "expectedSemanticsSha256": "da997f7f4f59300007cb0368b2d96b728049623315e6649e1bf9c6cccf6fd624",
++  "custodianSource": "financial_report_contract_sol; independent pre-execution semantic freeze",
++  "basis": "Unchanged complete23-member freeze plus FREEZE.sha256 copied here; no compiler output or author byte golden",
++  "source_commit": "34257f3ef95e7a1bf29031417e7f6d33f708f06a",
++  "files": {
++    "oracle/DERIVATION.md": "a2d8e27020ed2417db1c56bc170e9ecc6d01933f0817471993420f41c558be08",
++    "oracle/EXPECTED-SEMANTICS.json": "da997f7f4f59300007cb0368b2d96b728049623315e6649e1bf9c6cccf6fd624",
++    "oracle/MANIFEST.json": "c911856c73f9970bc87187ad132412b1f142c4721c2891cb5dcfe1cb5758b5d1",
++    "oracle/PROVENANCE.json": "857d414b460efab93b8f45361d5f9ad5932934f8e24b8bb73d9b6079128e076d",
++    "oracle/README.md": "ee589b6e28b71154703ed26e00a845d96d52279f8663a0b13fd397a2c8cc736f",
++    "oracle/STATIC-CHECKS.json": "36eadfded90b0897b76f10da071df8e4d68b881e9fa3aca47809e54033469a74",
++    "oracle/UNKNOWN.json": "de53b22a57d0f27b2d07531375adef006309eb4a2d930933f1dfac532515a8a8",
++    "oracle/basis/docs/BETA-SOURCE6-EXPANSION.md": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f",
++    "oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt": "b79c6c74d1ce2e2761ded415bf8a5f65db173e01570f3dd6129717445fbb08a0",
++    "oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt": "c9de1e005f16744cd4715907c9e8f871f837d0edced3a6ee66992a004f03571c",
++    "oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e",
++    "oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec",
++    "oracle/basis/experiments/moriarty-language/spec/successor/lexical.md": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639",
++    "oracle/basis/packages/moriarty-beta/GETTING-STARTED.md": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706",
++    "oracle/basis/packages/moriarty-beta/README.md": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d",
++    "oracle/inputs/capped-remittance.mori": "898ffbec44b4165f1afb298398fe36fccc7459e2c1ff92ca7be3ea61fb7c043c",
++    "oracle/inputs/capped-remittance.scenario.json": "6c8c1548cbbc52eca5584f16d4e6e873b245841e6697ad816d22afe73b361dfa",
++    "oracle/pay_loose.independent-source6.txt": "3913534693475e0132d4c5a68b7eef31d1d55c0bb898618ef1c39ad1f38d42d8",
++    "oracle/pay_loose.ordered-target-lines.expected.json": "05008475f2cabbec049350114110f031782bf600544bec64c9b4219123d2f42c",
++    "oracle/pay_loose.source6.ast.expected.json": "d84b4675121518394d8e292aedfcbe417534d662b1fd72a4bca26eb9c620e684",
++    "oracle/pay_tight.independent-source6.txt": "cc616f8ed536ef03871f572743b6741d22debc39752b1e288515d9a22e992cd2",
++    "oracle/pay_tight.ordered-target-lines.expected.json": "c0a88fe3a8d647bb46f95a37063f0ca13d138b4bcf830c9480c4fcb1bfe7793c",
++    "oracle/pay_tight.source6.ast.expected.json": "7e6a072c7bfc19eb1e631f84ff688b1197191f77328afb9cee6ecac2a2bc3835",
++    "oracle/FREEZE.sha256": "4a859749e91cc31cce74a1e9220e91235c9263a50e5dee1d84949e158885ba79"
++  }
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/DERIVATION.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/DERIVATION.md
+new file mode 100644
+index 00000000..ee0bc3eb
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/DERIVATION.md
+@@ -0,0 +1,13 @@
++# Independent capped-remittance derivation
++
++The only chosen case data read were capped-remittance.mori and capped-remittance.scenario.json. The new candidate test, capped-tight.source6, capped-loose.source6, INDEPENDENT-SOURCE-SHAPE and actual outputs were not opened, hashed or copied. Normative/reference documents and DTO declarations were pinned directly to74a909d69639df8823a527a4d608a7516ccd69a2 using explicitly authorized read-only Git queries. No producer, parser, checker, evaluator, emitter, compiler, SDK or runtime was called.
++
++USD is a source alias; its economic asset is A in Midnight at scale2. Buyer/Seller/Treasury map to Owner/Recipient/Fee. Exact base10 conversion gives0.75USD=75atoms,2.10USD=210,2.50USD=250. Scalar3 produces75*3=225atoms without rounding. min(225,210)=210 chooses tightLimit(b); min(225,250)=225 chooses quoted(a). atoms(USD,0)=0. Both gross caps are amount+0, fee caps0, and net floors equal amount. All shown intermediates are nonnegative and below UInt128 and the S0 nominal2^127-1 bound; no floatingpoint or product numeric function is involved.
++
++Both actions independently use the same opening frame: Owner1000,Recipient5,Fee7, allowance remaining1000/spent25. Tight debit210 gives Owner790/Recipient215/Fee7, allowance790/235. Loose debit225 gives Owner775/Recipient230/Fee7, allowance775/250. Provided balances total1012 in each arithmetic frame; allowance remaining+spent remains1025. These are arithmetic cross-checks of this finite conditional projection, not a security/conservation proof or observed acceptance. They are alternatives, not sequential transactions.
++
++The Source6 contract mandates Debit(owner,value+fee), Credit(recipient,value), optional Credit(feeRecipient,fee) iff fee>0, UseAllowance(owner,gross), UseReplay(key), AdvanceHead(pre,post). Fee0 omits the optional credit entirely; it does not remove Fee's required third opening row or reset7 to0. Exactly five effects remain. Both signed_action and submit still explicitly say fee_to Fee and fee0. The text nonce is nC; the separately labeled Core5 semantic effect uses the encoded domain/signer/nonce tuple [Midnight,Owner,nC]. AdvanceHead uses currentheadc0->c1, not authenticated.predecessor prior. Round4 is retained, not incremented.
++
++Every Source6 statement/block is frozen in each independent-source6 text and ordered-target-lines file. The typed Source6Ast expectation separately retains agreement CappedRemittance, scale2 and predecessor prior; selected.actionId is the normative profile tag TransferLiteralFee, not pay_tight/pay_loose. The input work12/2 is carried exactly in authenticated fields. Target indentation is independently chosen from the EBNF; exact stdout/whitespace is not asserted. No expected compiler Program/Artifact, hash identity, measured work, gate outcome, qualification, complete Core post or ledger result is supplied; see UNKNOWN.json.
++
++Previous exposure is explicit: this author handled earlier Source6 owner packets with Rust Source6 CLI/library/emitter, lexer/checker source, old invoice/workshop inputs/tests and artifact copies. This is not global pre-implementation blindness. In this lane no producer emission or new authored oracle/test was used. Only DTO declaration ranges were used from the Source6/S0 TS modules; an earlier displayed DTO range incidentally included the adjacent Parser class header/fields and numeric-bound declarations, not parsing/lowering execution or chosen-case results. That incidental source exposure is recorded rather than hidden.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/EXPECTED-SEMANTICS.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/EXPECTED-SEMANTICS.json
+new file mode 100644
+index 00000000..b0c40c2c
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/EXPECTED-SEMANTICS.json
+@@ -0,0 +1,404 @@
++{
++  "format": "independent-capped-remittance-semantic-oracle/1",
++  "status": "FROZEN_BEFORE_PRODUCT_EXECUTION",
++  "common": {
++    "agreement": "CappedRemittance",
++    "sourceProfile": "moriarty-beta/1",
++    "source6Profile": "moriarty-financial-agreement-source/6",
++    "aliases": {
++      "domain": {
++        "Local": "Midnight"
++      },
++      "accounts": {
++        "Buyer": "Owner",
++        "Seller": "Recipient",
++        "Treasury": "Fee"
++      },
++      "asset": {
++        "USD": {
++          "id": "A",
++          "scale": "2",
++          "representation": "canonical",
++          "domain": "Midnight"
++        }
++      }
++    },
++    "constants": [
++      {
++        "name": "unitPrice",
++        "type": "Qty<USD>",
++        "source": "0.75 USD",
++        "atoms": "75"
++      },
++      {
++        "name": "itemCount",
++        "type": "Scalar",
++        "source": "3",
++        "value": "3"
++      },
++      {
++        "name": "quoted",
++        "type": "Qty<USD>",
++        "source": "unitPrice * itemCount",
++        "atoms": "225"
++      },
++      {
++        "name": "tightLimit",
++        "type": "Qty<USD>",
++        "source": "2.10 USD",
++        "atoms": "210"
++      },
++      {
++        "name": "looseLimit",
++        "type": "Qty<USD>",
++        "source": "2.50 USD",
++        "atoms": "250"
++      },
++      {
++        "name": "tightAmount",
++        "type": "Qty<USD>",
++        "source": "min(a: quoted, b: tightLimit)",
++        "atoms": "210",
++        "selectedArgument": "b"
++      },
++      {
++        "name": "looseAmount",
++        "type": "Qty<USD>",
++        "source": "min(a: quoted, b: looseLimit)",
++        "atoms": "225",
++        "selectedArgument": "a"
++      },
++      {
++        "name": "noCharge",
++        "type": "Qty<USD>",
++        "source": "atoms(asset: USD, value: 0)",
++        "atoms": "0"
++      }
++    ],
++    "selectedSource6ActionId": "TransferLiteralFee",
++    "sourceHashLiteral": "srcC",
++    "policyDigestLiteral": "policyC",
++    "literalDigestQualification": "Opaque source claims; neither is a computed hash or verified commitment.",
++    "inputScenario": {
++      "profile": "moriarty-local-scenario/1",
++      "kind": "local-stipulation",
++      "domain": "Midnight",
++      "asset": "A",
++      "head": "c0",
++      "predecessor": "prior",
++      "round": "4",
++      "balances": [
++        {
++          "account": "Owner",
++          "amount": "1000"
++        },
++        {
++          "account": "Recipient",
++          "amount": "5"
++        },
++        {
++          "account": "Fee",
++          "amount": "7"
++        }
++      ],
++      "allowance": {
++        "owner": "Owner",
++        "remaining": "1000",
++        "spent": "25"
++      },
++      "replay": "unused",
++      "work_remaining": "12",
++      "work_spent": "2",
++      "post_head": "c1"
++    },
++    "actionRelationship": "Two independent alternative expansions use the same opening scenario; no sequential execution or shared-nonce acceptance is asserted."
++  },
++  "cases": [
++    {
++      "action": "pay_tight",
++      "selectedIntent": "TightPayment",
++      "selectedMinArgument": "b: tightLimit=210 (225 > 210)",
++      "value": "210",
++      "fee": "0",
++      "gross": "210",
++      "grossCap": "210",
++      "feeCap": "0",
++      "netFloor": "210",
++      "openingFinancialFrame": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1000"
++          },
++          {
++            "account": "Recipient",
++            "amount": "5"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "1000",
++            "spent": "25"
++          }
++        ]
++      },
++      "conditionalClosingFinancialProjection": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "790"
++          },
++          {
++            "account": "Recipient",
++            "amount": "215"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "790",
++            "spent": "235"
++          }
++        ],
++        "head": "c1",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "nC"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"nC\"]",
++          "state": "consumed"
++        }
++      },
++      "source6OrderedEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "210"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "210"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "210"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "nC"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "c0",
++          "successor": "c1"
++        }
++      ],
++      "core5SemanticOrderedEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "210"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "210"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "210"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "[\"Midnight\",\"Owner\",\"nC\"]"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "c0",
++          "successor": "c1"
++        }
++      ],
++      "effectCount": 5,
++      "feeCreditOmitted": true,
++      "feeOpeningRowRequiredAndRetained": {
++        "account": "Fee",
++        "before": "7",
++        "after": "7"
++      },
++      "source6InputWork": {
++        "remaining": "12",
++        "spent": "2"
++      },
++      "closingProjectionQualification": "Conditional arithmetic consequence of the normative transfer vector only; not a complete Core post, acceptance/PreparedUnqualified result, authenticated state or ledger observation. Work fields intentionally absent.",
++      "source6AstFile": "pay_tight.source6.ast.expected.json",
++      "orderedTargetLinesFile": "pay_tight.ordered-target-lines.expected.json",
++      "independentSource6File": "pay_tight.independent-source6.txt"
++    },
++    {
++      "action": "pay_loose",
++      "selectedIntent": "LoosePayment",
++      "selectedMinArgument": "a: quoted=225 (225 < 250)",
++      "value": "225",
++      "fee": "0",
++      "gross": "225",
++      "grossCap": "225",
++      "feeCap": "0",
++      "netFloor": "225",
++      "openingFinancialFrame": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1000"
++          },
++          {
++            "account": "Recipient",
++            "amount": "5"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "1000",
++            "spent": "25"
++          }
++        ]
++      },
++      "conditionalClosingFinancialProjection": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "775"
++          },
++          {
++            "account": "Recipient",
++            "amount": "230"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "775",
++            "spent": "250"
++          }
++        ],
++        "head": "c1",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "nC"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"nC\"]",
++          "state": "consumed"
++        }
++      },
++      "source6OrderedEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "225"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "225"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "225"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "nC"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "c0",
++          "successor": "c1"
++        }
++      ],
++      "core5SemanticOrderedEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "225"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "225"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "225"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "[\"Midnight\",\"Owner\",\"nC\"]"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "c0",
++          "successor": "c1"
++        }
++      ],
++      "effectCount": 5,
++      "feeCreditOmitted": true,
++      "feeOpeningRowRequiredAndRetained": {
++        "account": "Fee",
++        "before": "7",
++        "after": "7"
++      },
++      "source6InputWork": {
++        "remaining": "12",
++        "spent": "2"
++      },
++      "closingProjectionQualification": "Conditional arithmetic consequence of the normative transfer vector only; not a complete Core post, acceptance/PreparedUnqualified result, authenticated state or ledger observation. Work fields intentionally absent.",
++      "source6AstFile": "pay_loose.source6.ast.expected.json",
++      "orderedTargetLinesFile": "pay_loose.ordered-target-lines.expected.json",
++      "independentSource6File": "pay_loose.independent-source6.txt"
++    }
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/FREEZE.sha256 b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/FREEZE.sha256
+new file mode 100644
+index 00000000..f4c94c36
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/FREEZE.sha256
+@@ -0,0 +1,23 @@
++a2d8e27020ed2417db1c56bc170e9ecc6d01933f0817471993420f41c558be08  DERIVATION.md
++da997f7f4f59300007cb0368b2d96b728049623315e6649e1bf9c6cccf6fd624  EXPECTED-SEMANTICS.json
++c911856c73f9970bc87187ad132412b1f142c4721c2891cb5dcfe1cb5758b5d1  MANIFEST.json
++857d414b460efab93b8f45361d5f9ad5932934f8e24b8bb73d9b6079128e076d  PROVENANCE.json
++ee589b6e28b71154703ed26e00a845d96d52279f8663a0b13fd397a2c8cc736f  README.md
++36eadfded90b0897b76f10da071df8e4d68b881e9fa3aca47809e54033469a74  STATIC-CHECKS.json
++de53b22a57d0f27b2d07531375adef006309eb4a2d930933f1dfac532515a8a8  UNKNOWN.json
++78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f  basis/docs/BETA-SOURCE6-EXPANSION.md
++b79c6c74d1ce2e2761ded415bf8a5f65db173e01570f3dd6129717445fbb08a0  basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt
++c9de1e005f16744cd4715907c9e8f871f837d0edced3a6ee66992a004f03571c  basis/dto/mil4-s0-core-v5.ts.declarations.txt
++5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e  basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf
++725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec  basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md
++88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639  basis/experiments/moriarty-language/spec/successor/lexical.md
++7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706  basis/packages/moriarty-beta/GETTING-STARTED.md
++a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d  basis/packages/moriarty-beta/README.md
++898ffbec44b4165f1afb298398fe36fccc7459e2c1ff92ca7be3ea61fb7c043c  inputs/capped-remittance.mori
++6c8c1548cbbc52eca5584f16d4e6e873b245841e6697ad816d22afe73b361dfa  inputs/capped-remittance.scenario.json
++3913534693475e0132d4c5a68b7eef31d1d55c0bb898618ef1c39ad1f38d42d8  pay_loose.independent-source6.txt
++05008475f2cabbec049350114110f031782bf600544bec64c9b4219123d2f42c  pay_loose.ordered-target-lines.expected.json
++d84b4675121518394d8e292aedfcbe417534d662b1fd72a4bca26eb9c620e684  pay_loose.source6.ast.expected.json
++cc616f8ed536ef03871f572743b6741d22debc39752b1e288515d9a22e992cd2  pay_tight.independent-source6.txt
++c0a88fe3a8d647bb46f95a37063f0ca13d138b4bcf830c9480c4fcb1bfe7793c  pay_tight.ordered-target-lines.expected.json
++7e6a072c7bfc19eb1e631f84ff688b1197191f77328afb9cee6ecac2a2bc3835  pay_tight.source6.ast.expected.json
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/MANIFEST.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/MANIFEST.json
+new file mode 100644
+index 00000000..516fff94
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/MANIFEST.json
+@@ -0,0 +1,119 @@
++{
++  "format": "independent-preexecution-semantic-freeze/1",
++  "frozenAtUtc": "2026-10-18T11:43:30.468747+00:00",
++  "status": "FROZEN_BEFORE_EXECUTION",
++  "scope": "CappedRemittance pay_tight/pay_loose source-derived Source6 statements/AST/effects/conditional financial projection only",
++  "payloadFilesBeforeManifest": 22,
++  "files": [
++    {
++      "path": "DERIVATION.md",
++      "bytes": 3524,
++      "sha256": "a2d8e27020ed2417db1c56bc170e9ecc6d01933f0817471993420f41c558be08"
++    },
++    {
++      "path": "EXPECTED-SEMANTICS.json",
++      "bytes": 10071,
++      "sha256": "da997f7f4f59300007cb0368b2d96b728049623315e6649e1bf9c6cccf6fd624"
++    },
++    {
++      "path": "PROVENANCE.json",
++      "bytes": 6568,
++      "sha256": "857d414b460efab93b8f45361d5f9ad5932934f8e24b8bb73d9b6079128e076d"
++    },
++    {
++      "path": "README.md",
++      "bytes": 1027,
++      "sha256": "ee589b6e28b71154703ed26e00a845d96d52279f8663a0b13fd397a2c8cc736f"
++    },
++    {
++      "path": "STATIC-CHECKS.json",
++      "bytes": 365,
++      "sha256": "36eadfded90b0897b76f10da071df8e4d68b881e9fa3aca47809e54033469a74"
++    },
++    {
++      "path": "UNKNOWN.json",
++      "bytes": 1743,
++      "sha256": "de53b22a57d0f27b2d07531375adef006309eb4a2d930933f1dfac532515a8a8"
++    },
++    {
++      "path": "basis/docs/BETA-SOURCE6-EXPANSION.md",
++      "bytes": 4376,
++      "sha256": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f"
++    },
++    {
++      "path": "basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt",
++      "bytes": 1885,
++      "sha256": "b79c6c74d1ce2e2761ded415bf8a5f65db173e01570f3dd6129717445fbb08a0"
++    },
++    {
++      "path": "basis/dto/mil4-s0-core-v5.ts.declarations.txt",
++      "bytes": 1944,
++      "sha256": "c9de1e005f16744cd4715907c9e8f871f837d0edced3a6ee66992a004f03571c"
++    },
++    {
++      "path": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
++      "bytes": 3753,
++      "sha256": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e"
++    },
++    {
++      "path": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
++      "bytes": 11648,
++      "sha256": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec"
++    },
++    {
++      "path": "basis/experiments/moriarty-language/spec/successor/lexical.md",
++      "bytes": 5589,
++      "sha256": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639"
++    },
++    {
++      "path": "basis/packages/moriarty-beta/GETTING-STARTED.md",
++      "bytes": 11939,
++      "sha256": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706"
++    },
++    {
++      "path": "basis/packages/moriarty-beta/README.md",
++      "bytes": 4772,
++      "sha256": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d"
++    },
++    {
++      "path": "inputs/capped-remittance.mori",
++      "bytes": 1815,
++      "sha256": "898ffbec44b4165f1afb298398fe36fccc7459e2c1ff92ca7be3ea61fb7c043c"
++    },
++    {
++      "path": "inputs/capped-remittance.scenario.json",
++      "bytes": 491,
++      "sha256": "6c8c1548cbbc52eca5584f16d4e6e873b245841e6697ad816d22afe73b361dfa"
++    },
++    {
++      "path": "pay_loose.independent-source6.txt",
++      "bytes": 1065,
++      "sha256": "3913534693475e0132d4c5a68b7eef31d1d55c0bb898618ef1c39ad1f38d42d8"
++    },
++    {
++      "path": "pay_loose.ordered-target-lines.expected.json",
++      "bytes": 1455,
++      "sha256": "05008475f2cabbec049350114110f031782bf600544bec64c9b4219123d2f42c"
++    },
++    {
++      "path": "pay_loose.source6.ast.expected.json",
++      "bytes": 2084,
++      "sha256": "d84b4675121518394d8e292aedfcbe417534d662b1fd72a4bca26eb9c620e684"
++    },
++    {
++      "path": "pay_tight.independent-source6.txt",
++      "bytes": 1065,
++      "sha256": "cc616f8ed536ef03871f572743b6741d22debc39752b1e288515d9a22e992cd2"
++    },
++    {
++      "path": "pay_tight.ordered-target-lines.expected.json",
++      "bytes": 1455,
++      "sha256": "c0a88fe3a8d647bb46f95a37063f0ca13d138b4bcf830c9480c4fcb1bfe7793c"
++    },
++    {
++      "path": "pay_tight.source6.ast.expected.json",
++      "bytes": 2084,
++      "sha256": "7e6a072c7bfc19eb1e631f84ff688b1197191f77328afb9cee6ecac2a2bc3835"
++    }
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/PROVENANCE.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/PROVENANCE.json
+new file mode 100644
+index 00000000..125a3bf8
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/PROVENANCE.json
+@@ -0,0 +1,132 @@
++{
++  "format": "independent-oracle-provenance/1",
++  "frozenAtUtc": "2026-10-18T11:43:30.468747+00:00",
++  "author": "GPT-6.1 Sol high ordinary independent semantic derivation; no security decision",
++  "sourceInputs": [
++    {
++      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/source6-rule-coverage-candidate-20261018/candidate/crates/mori/tests/fixtures/source6-expansion/capped-remittance.mori",
++      "copy": "inputs/capped-remittance.mori",
++      "bytes": 1815,
++      "sha256": "898ffbec44b4165f1afb298398fe36fccc7459e2c1ff92ca7be3ea61fb7c043c"
++    },
++    {
++      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/source6-rule-coverage-candidate-20261018/candidate/crates/mori/tests/fixtures/source6-expansion/capped-remittance.scenario.json",
++      "copy": "inputs/capped-remittance.scenario.json",
++      "bytes": 491,
++      "sha256": "6c8c1548cbbc52eca5584f16d4e6e873b245841e6697ad816d22afe73b361dfa"
++    }
++  ],
++  "basis": [
++    {
++      "path": "packages/moriarty-beta/README.md",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "085320f568b226a2de63b879738299697f941dff",
++      "copy": "basis/packages/moriarty-beta/README.md",
++      "bytes": 4772,
++      "sha256": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d",
++      "kind": "pinned normative/reference document"
++    },
++    {
++      "path": "packages/moriarty-beta/GETTING-STARTED.md",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "458194f2848aeb689fd6a34947f5b194a2ef58d8",
++      "copy": "basis/packages/moriarty-beta/GETTING-STARTED.md",
++      "bytes": 11939,
++      "sha256": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706",
++      "kind": "pinned normative/reference document"
++    },
++    {
++      "path": "docs/BETA-SOURCE6-EXPANSION.md",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "1851e6eb666cd2a0b50d1564cc2044fe14b823f5",
++      "copy": "basis/docs/BETA-SOURCE6-EXPANSION.md",
++      "bytes": 4376,
++      "sha256": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f",
++      "kind": "pinned normative/reference document"
++    },
++    {
++      "path": "experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "dca76f9a9146a86f4c06b27156580692e4480dbe",
++      "copy": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
++      "bytes": 11648,
++      "sha256": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec",
++      "kind": "pinned normative/reference document"
++    },
++    {
++      "path": "experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "6fc1b5882524781db5cac693c6d3ca1bd982ab42",
++      "copy": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
++      "bytes": 3753,
++      "sha256": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e",
++      "kind": "pinned normative/reference document"
++    },
++    {
++      "path": "experiments/moriarty-language/spec/successor/lexical.md",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "2a57e60840b712d8426a1463342c0375ee26c8eb",
++      "copy": "basis/experiments/moriarty-language/spec/successor/lexical.md",
++      "bytes": 5589,
++      "sha256": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639",
++      "kind": "pinned normative/reference document"
++    },
++    {
++      "path": "experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "80cd1dc71c0ca705969a470edebc55e568c31e60",
++      "ranges": [
++        [
++          112,
++          138
++        ],
++        [
++          318,
++          321
++        ]
++      ],
++      "copy": "basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt",
++      "bytes": 1885,
++      "sha256": "b79c6c74d1ce2e2761ded415bf8a5f65db173e01570f3dd6129717445fbb08a0",
++      "kind": "DTO declaration excerpt; no parser/evaluator body used"
++    },
++    {
++      "path": "experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts",
++      "commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++      "gitBlob": "0b2dfcf3309b6d0976cfd33ca152e5c8d1b19a2e",
++      "ranges": [
++        [
++          10,
++          47
++        ]
++      ],
++      "copy": "basis/dto/mil4-s0-core-v5.ts.declarations.txt",
++      "bytes": 1944,
++      "sha256": "c9de1e005f16744cd4715907c9e8f871f837d0edced3a6ee66992a004f03571c",
++      "kind": "DTO declaration excerpt; no parser/evaluator body used"
++    }
++  ],
++  "normativeCommit": "74a909d69639df8823a527a4d608a7516ccd69a2",
++  "rootReportedCandidateCommit": "34257f3ef95e7a1bf29031417e7f6d33f708f06a",
++  "rootReportedCandidateTree": "f529a1924885019aa884bc6447f8d47fff47526f",
++  "rootReportedCurrentBase": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
++  "currencyQualification": "Root states PR219 changes only42ACTUS test/fixture paths and all beta/Source6 norms unchanged vs74. Norms were independently fetched at exact74; no mutable I manifest or newcandidate expected/test read.",
++  "priorSource6Exposure": [
++    "Previous Rust Source6 CLI/library/emitter/lexer/checker source review preparation.",
++    "Old invoice/workshop source/scenario/test/fixture packet exposure and copies; not globally blinded.",
++    "This task read Source6 DTO ranges plus incidental adjacent Parser header/fields and bound constants before narrowing excerpt; no parser/lowerer algorithm or chosen-case result used."
++  ],
++  "currentExcludedUnread": [
++    "candidate/crates/mori/tests/source6_expand.rs",
++    "candidate/crates/mori/tests/fixtures/source6-expansion/capped-tight.source6",
++    "candidate/crates/mori/tests/fixtures/source6-expansion/capped-loose.source6",
++    "Any INDEPENDENT-SOURCE-SHAPE authored values",
++    "Any actualoutput/result file"
++  ],
++  "currentDerivationMethod": "Manual source-semantic base10 arithmetic and normative grammar/DTO field mapping, encoded with standard Python JSON/text only. No Moriarty code imported or executed.",
++  "productCompilerRuntimeSDKProvider": "UNRUN/NOT_CALLED",
++  "git": "Only newly authorized read-only show/rev-parse at exact74 for allowed norm/DTO sources; no Git or shared writes.",
++  "securityJudgment": false,
++  "Q1ProviderLoop": "Remains STOPPED; this ordinary lane makes no provider call.",
++  "source6ByteForByteStdoutOracle": false
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/README.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/README.md
+new file mode 100644
+index 00000000..39dc85bc
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/README.md
+@@ -0,0 +1,5 @@
++# Frozen independent capped-remittance semantic oracle
++
++Start with EXPECTED-SEMANTICS.json, then the two complete Source6Ast files and ordered-target-lines files. Each independent-source6 text contains all target statements in grammar order; indentation is independently chosen and is not an actual stdout byte oracle. ConditionalClosingFinancialProjection contains complete provided3balance/1allowance financial projection, not a complete accepted Core post. Source6 bare nonce and Core5 encoded replay-key effect vectors are separately labeled. UNKNOWN.json keeps Program/Artifact/hashes/work/gates/qualification unasserted.
++
++Inputs and exact74norms/DTO excerpts are frozen alongside DERIVATION.md and PROVENANCE.json. Prior Source6 implementation exposure is disclosed; no new authored test/expected Source6/INDEPENDENT-SOURCE-SHAPE or actualoutput was read. No product/provider/runtime/SDK call occurred. FREEZE.sha256 is the immutable payload manifest; do not add execution results or edit expectations in this directory.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/STATIC-CHECKS.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/STATIC-CHECKS.json
+new file mode 100644
+index 00000000..f36be78b
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/STATIC-CHECKS.json
+@@ -0,0 +1,16 @@
++{
++  "status": "independent ordinary arithmetic/custody checks only",
++  "quotedAtoms": 225,
++  "tightMin": 210,
++  "looseMin": 225,
++  "feeAtoms": 0,
++  "effectCounts": {
++    "pay_tight": 5,
++    "pay_loose": 5
++  },
++  "providedBalanceTotal": 1012,
++  "allowanceTotal": 1025,
++  "feeRowRetained": true,
++  "actualProductTests": "UNRUN",
++  "producerEmissionCompared": false
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/UNKNOWN.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/UNKNOWN.json
+new file mode 100644
+index 00000000..db635efa
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/UNKNOWN.json
+@@ -0,0 +1,12 @@
++{
++  "format": "independent-oracle-explicit-unknowns/1",
++  "wholeProgram": "UNKNOWN: no Core1/Core2 fullProgram arena/ExprId/normalization oracle derived.",
++  "artifact": "UNKNOWN: compiler/ZKIR/SDK/plan/circuit/ABI artifact output not derived.",
++  "hashes": "Computed source/scenario/program/plan/policy/target/proof identities UNKNOWN; srcC/policyC are literal unverified source claims. FREEZE/input SHA256 values are custody hashes only.",
++  "work": "Input Source6 workRemaining12/workSpent2 are known literal transport fields. Actual CLI/lowerer/compiler/logical/committed/resource work, limits and complete post-work observations UNKNOWN/unasserted; the beta guide example is not used as this run's cost oracle.",
++  "gates": "Actual check/formation/Core gate status, refusal precedence, authentication/signature/head-extension/atomic-ledger premises and openGate arrays UNKNOWN/unasserted. Numeric premise4 within inclusive2..20 is arithmetically true only.",
++  "qualification": "Actual result qualification/status/PreparedUnqualified or stderr/exit code UNKNOWN/unasserted. local-stipulation is the supplied scenario kind, not a qualified outcome.",
++  "bytes": "Canonical whitespace, actual stdout/stderr bytes, byte spans/origins, token/node counts and result wrappers UNKNOWN/unasserted. Independent Source6 documents freeze all statements and order using arbitrary grammar-valid indentation.",
++  "fullPost": "Conditional financial projection covers all three provided balance rows, one allowance and selected replay/head/round only; no complete Core post/work/global frame/unlisted replay inventory or target post claimed.",
++  "scope": "No security judgment, proof/native/ledger result or general Source6 adoption/closure supplied."
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md
+new file mode 100644
+index 00000000..1851e6eb
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md
+@@ -0,0 +1,30 @@
++# Rust beta Source/6 transfer expansion
++
++Status: ordinary interface adopted by the [2026-10-18 root decision](../evidence/utxo/doctorwatson-language-loop-2026-10-17/source6-public-consumer-adoption-20261018/DESIGN-ADOPTION.json). Source integration/audit and actual runtime remain UNRUN or pending; no compile, real-lowerer, security, native or release qualification is established. The `source6-expansion` Cargo feature enables the explicit local transfer presentation path; it is separate from `native` and does not alter default features.
++
++Existing default command, unchanged:
++
++```sh
++mori expand core.mori --action noop --scenario core.json
++```
++
++This still validates a Core action against its Core scenario and prints its generic Core Program JSON. A Rust beta file supplied without the new option still reaches the existing Core parser and refuses; no default beta output is replaced. The separate Node beta package and its default JSON expansion output are unchanged.
++
++Adopted explicit command interface, in a build with `source6-expansion` enabled:
++
++```sh
++mori check invoice.mori --json
++mori --quiet expand invoice.mori --action pay --scenario scenario.json --emit-source6-transfer
++```
++
++The explicit command reads a typed local transfer scenario and first calls `mori-source6::select_transfer`, which uses the real Rust beta parser and checker, before reading the scenario file. The resulting `SelectedTransfer::expand` is the same emission path used by the `expand_transfer` convenience API. Stdout is the actual generated Source/6 text with its existing final newline; `--quiet` leaves stderr empty. Without `--quiet`, stderr reports `Expanded Source/6 transfer proposal (local-stipulation-only)`. It does not emit a Core success result. Without the build feature, the explicit option reports `mori::command::source6-unavailable`.
++
++Source/action checking and unsupported selection precede scenario I/O. After strict JSON parsing, profile/kind is checked before closed transfer decoding; `obligation` and `candidate_effects` produce `source6-scenario-unsupported`, a non-three balance array produces `source6-scenario-cells`, and other DTO-shape errors produce `source6-scenario-shape`. Foreign/missing profile/kind produces `source6-scenario-profile`. These are ordinary command diagnostic categories, not Core judgments.
++
++The adopted scenario JSON interface is the closed **transfer subset** of the existing `moriarty-local-scenario/1` / `local-stipulation` shape. It requires domain, asset, head, predecessor, round, exactly three ordered balances, allowance, replay, work_remaining, work_spent and post_head. Numeric values are canonical decimal strings parsed through the existing Core UInt decoder; no new decimal evaluator is introduced. Balance order is owner, recipient, fee recipient. Replay is `unused` or `consumed`. Obligation and candidate_effects overrides are outside this option. The current strict CLI reader and existing read/JSON bounds apply.
++
++The root decision adopts this profile-token reuse, transfer subset, option name, feature name, raw stdout/status output and public diagnostic classifications as the exact ordinary interface. The two original design reviews and their historical wording remain unchanged in the decision record. Adoption does not establish full Node beta wire or diagnostic parity. The typed borrowed local scenario passed to the library is an internal input, not proof or authentication.
++
++Evidence remains separate: the existing independent14 financial payload baseline predates this actual consumer. Same-author pre-code fixture/snapshot files remain author baselines; complete new wire/output/work expectations and the chosen WorkshopReceipt fixture freeze are still missing. Public binary checks, actual emitted Rust bytes through `parseAndLowerSource6`, ordinary source/result audits and the designated owner's filename/security judgment remain unrun or pending.
++
++Boundary: Rust beta/1 → local transfer proposal presentation → Source/6 text. The real experimental TypeScript `parseAndLowerSource6` must still consume actual emitted bytes; its Core/5 preparation remains separately unqualified. This option provides no Source/6/Core/5→Core/1/Core/2/Sherlock/native embedding, no handwritten target IR and no target/proof/post-state success. The default Core and separate Node consumers retain their own profiles.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt
+new file mode 100644
+index 00000000..f1223ff0
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt
+@@ -0,0 +1,35 @@
++// Pinned 74a909d69639df8823a527a4d608a7516ccd69a2:experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:112-138; DTO declarations only.
++export type Source6Action =
++  | { kind: 'Transfer'; from: string; to: string; feeTo: string; value: string; fee: string }
++  | { kind: 'Repay'; obligation: string; payer: string; amount: string; conversion: 'identity' };
++export interface Source6Obligation {
++  id: string; debtor: string; creditor: string; asset: string;
++  principal: string; accrued: string; outstanding: string; status: 'Outstanding';
++}
++export interface Source6Ast {
++  profile: typeof MIL4_S0_SOURCE; programId: string; domain: string;
++  settlement: { asset: string; scale: string };
++  selected: { actionId: string; sourceHash: string; policyDigest: string };
++  intent: {
++    signer: string; keyRef: string; nonce: string; preHead: string;
++    notBefore: string; notAfter: string; grossCap: string; feeCap: string; netFloor: string;
++    signedAction: Source6Action; failure: 'success_only';
++    observations: 'empty'; disclosures: 'empty'; retainedEffects: 'empty'; retainedDuties: 'empty';
++    delegation: 'none'; recovery: 'none';
++  };
++  authenticated: {
++    head: string; predecessor: string; round: string;
++    balances: { account: string; amount: string }[];
++    allowance: { owner: string; remaining: string; spent: string };
++    obligation?: Source6Obligation; replay: 'unused' | 'consumed';
++    workRemaining: string; workSpent: string;
++  };
++  submitted: { action: Source6Action; effects: S0Effect[]; postHead: string };
++}
++
++// Pinned 74a909d69639df8823a527a4d608a7516ccd69a2:experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:318-321; DTO declarations only.
++export interface Source6Lowered {
++  ast: Source6Ast; state: S0State; intent: S0Intent;
++  submittedEffects: S0Effect[]; proposedPostHead: string;
++}
++
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt
+new file mode 100644
+index 00000000..00ad53d5
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt
+@@ -0,0 +1,40 @@
++// Pinned 74a909d69639df8823a527a4d608a7516ccd69a2:experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts:10-47; DTO declarations only.
++export interface S0Balance { account: string; amount: string }
++export interface S0Allowance { owner: string; remaining: string; spent: string }
++export interface S0Obligation {
++  id: string; debtor: string; creditor: string; asset: string;
++  principal: string; accrued: string; outstanding: string;
++  status: 'Outstanding' | 'Settled';
++}
++export interface S0State {
++  core: typeof MIL4_S0_CORE; domain: string; asset: string;
++  head: string; round: string; workRemaining: string; workSpent: string;
++  balances: S0Balance[]; allowances: S0Allowance[];
++  obligations: S0Obligation[]; consumedReplay: string[];
++}
++interface S0IntentBase {
++  version: typeof MIL4_S0_INTENT; core: typeof MIL4_S0_CORE;
++  sourceProfile: typeof MIL4_S0_SOURCE; programId: string;
++  sourceHash: string; policyDigest: string; signedDigest?: string; keyRef: string;
++  domain: string; asset: string; signer: string; nonce: string;
++  preHead: string; notBefore: string; notAfter: string;
++  grossCap: string; feeCap: string; netFloor: string;
++}
++export interface S0TransferIntent extends S0IntentBase {
++  kind: 'Transfer'; recipient: string; feeRecipient: string;
++  amount: string; fee: string;
++}
++export interface S0RepayIntent extends S0IntentBase {
++  kind: 'Repay'; obligationId: string; amount: string;
++}
++export type S0Intent = S0TransferIntent | S0RepayIntent;
++
++export type S0Effect =
++  | { kind: 'Debit'; account: string; asset: string; amount: string }
++  | { kind: 'Credit'; account: string; asset: string; amount: string }
++  | { kind: 'SetObligation'; id: string; principal: string; accrued: string; outstanding: string; status: 'Outstanding' | 'Settled' }
++  | { kind: 'UseAllowance'; owner: string; amount: string }
++  | { kind: 'UseReplay'; key: string }
++  | { kind: 'AdvanceHead'; predecessor: string; successor: string };
++
++
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf
+new file mode 100644
+index 00000000..6fc1b588
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf
+@@ -0,0 +1,65 @@
++(* ISO 14977 EBNF; provisional Source/6 S0 presentation syntax only.
++   This is not the /3 signed-intent byte codec. The exact profile string is
++   moriarty-financial-agreement-source/6. Whitespace, comments, identifiers,
++   integers and strings use lexical.md. New words and the .. interval token
++   below are profile-local and do not extend Source/5.
++   All productions are closed; unknown fields and duplicate fields reject.
++   The companion contract defines nominal typing, caps and Core/5 mapping. *)
++
++source = header, agreement, ? end of file ? ;
++header = "profile", '"moriarty-financial-agreement-source/6"', ";" ;
++agreement = "agreement", identifier, "{", domain, settlement,
++            selected, intent, authenticated, submitted, "}" ;
++domain = "domain", identifier, ";" ;
++settlement = "settlement", identifier, "scale", integerToken, ";" ;
++selected = "selected", identifier, "source_hash", stringToken,
++           "digest", stringToken, ";" ;
++
++intent = "intent", "{", "signer", identifier, "key", stringToken, ";",
++         "nonce", stringToken, ";", "pre_head", stringToken, ";",
++         "valid", integerToken, "..", integerToken, ";",
++         "gross_cap", integerToken, ";", "fee_cap", integerToken, ";",
++         "net_floor", integerToken, ";", "failure", "success_only", ";",
++         "signed_action", ( transfer | repay ),
++         "observations", "empty", ";", "disclosures", "empty", ";",
++         "retained_effects", "empty", ";", "retained_duties", "empty", ";",
++         "delegation", "none", ";", "recovery", "none", ";", "}" ;
++
++authenticated = "authenticated", "{", "head", stringToken, ";",
++                "predecessor", stringToken, ";", "round", integerToken, ";",
++                "balance", identifier, integerToken, ";",
++                "balance", identifier, integerToken, ";",
++                [ "balance", identifier, integerToken, ";" ],
++                "allowance", identifier, "remaining", integerToken,
++                "spent", integerToken, ";",
++                [ obligation ], "replay", ( "unused" | "consumed" ), ";",
++                "work_remaining", integerToken, ";",
++                "work_spent", integerToken, ";", "}" ;
++obligation = "obligation", identifier, "{", "debtor", identifier, ";",
++             "creditor", identifier, ";", "asset", identifier, ";",
++             "principal", integerToken, ";", "accrued", integerToken, ";",
++             "outstanding", integerToken, ";", "status", "outstanding", ";",
++             "}" ;
++
++submitted = "submit", ( transfer | repay ), "effects", "{", effectVector, "}",
++            "post_head", stringToken, ";" ;
++transfer = "transfer", "from", identifier, "to", identifier,
++           "fee_to", identifier, "value", integerToken,
++           "fee", integerToken, ";" ;
++repay = "repay", "obligation", identifier, "payer", identifier,
++        "amount", integerToken, "conversion", "identity", ";" ;
++effectVector = transferEffects | repayEffects ;
++transferEffects = debit, credit, [ credit ], useAllowance, useReplay, advanceHead ;
++repayEffects = debit, credit, setObligation, useAllowance, useReplay, advanceHead ;
++debit = "debit", identifier, integerToken, ";" ;
++credit = "credit", identifier, integerToken, ";" ;
++setObligation = "set_obligation", identifier, "principal", integerToken,
++                "accrued", integerToken, "outstanding", integerToken,
++                "status", ( "outstanding" | "settled" ), ";" ;
++useAllowance = "use_allowance", identifier, integerToken, ";" ;
++useReplay = "use_replay", stringToken, ";" ;
++advanceHead = "advance_head", stringToken, stringToken, ";" ;
++
++identifier = ? ASCII identifier token in lexical.md ? ;
++integerToken = ? canonical unsigned decimal token in lexical.md ? ;
++stringToken = ? JSON string token in lexical.md ? ;
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md
+new file mode 100644
+index 00000000..dca76f9a
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md
+@@ -0,0 +1,48 @@
++# Financial agreement Source/6 and Core/5 S0 contract
++
++**Status:** provisional Sprint 0 specification, 2026-09-29. The grammar is a closed presentation syntax for one S0 stage proposal, and an isolated Source/6 parser and local Core/5 preparer implement this first slice. It is not a signed `/3` encoding or an adopted MIL/4 profile. W-D0–W-D4 remain open. See the [MIL/4 semantic contract](../../formal/mil4/semantics-contract.md) and [S0 implementation contract](../../formal/mil4/s0-implementation-contract.md).
++
++## Formation and version gate
++
++The [EBNF](financial-agreement-source-v6-grammar.ebnf) parses exactly one `profile`, one `agreement`, and one stage proposal. Its header must contain the raw token `"moriarty-financial-agreement-source/6"` before parsing the agreement body; a differently escaped spelling is outside this provisional presentation. The fixed declaration and field order is presentation syntax, not a claim about signed bytes. Unknown, repeated, omitted or out-of-order fields reject at Source/6 formation with `SOURCE6_SHAPE`; an unknown action or effect tag rejects with `SOURCE6_UNKNOWN_TAG`. A different header rejects with `SOURCE6_VERSION`. The closed source grammar also rejects a nonempty failure, observation, disclosure, retained-effect or duty form at formation with `SOURCE6_SHAPE`; `S0_FAILURE_UNSUPPORTED` applies only when a typed Core/5 stage reaches the failure judgment. These source rejections have no Core/5 term or K transition. A local Source/5 parser test confirms that a `/6` header rejects with `PROFILE_MISMATCH`; Core/4-to-Core/5 compatibility has not been implemented or verified here.
++
++The grammar borrows only the token definitions from `lexical.md`; all literal words in the Source/6 EBNF are profile-local reserved words and cannot be identifiers. This does not alter Source/5 keywords. Limits are simultaneous: source UTF-8 bytes ≤65536, tokens ≤8192, AST nodes ≤8192, nesting depth ≤64, identifiers ≤64 ASCII characters, decoded strings ≤1024 UTF-8 bytes, and one stage/effect vector per document. Opaque string fields in this S0 presentation must be nonempty. `scale` is 0..18; each nominal amount (`value`, `fee`, `amount`, caps and floor) is 0..`2^127−1`; each balance, allowance counter and work count is 0..`2^128−1`. S0 uses checked UInt128 intermediates, including `value+fee`, `principal+accrued`, credits and spent counters. The current source/kernel nominal bound does not by itself impose the same bound on every lifecycle state field. This S0 proposal additionally caps principal, accrued and outstanding at `2^127−1` and requires `outstanding=principal+accrued`. W-D4 must review that additional narrowing. Invalid bounds, including an inverted validity interval, reject before K admission with `SOURCE6_RANGE`.
++
++Source/6 formation applies an action-dependent shape check after the closed EBNF parses: transfer requires three balance rows in owner, recipient, fee-recipient order and no obligation; repay requires two rows in payer, bound-creditor order and exactly one obligation. All endpoint identifiers are pairwise distinct for transfer; payer and creditor differ for repay. Duplicate or missing authenticated cells reject `SOURCE6_CELL_SHAPE`; an absent receiver balance is not silently initialized. The allowance owner equals signer. The replay row states whether the selected signed key is unused or consumed; a consumed row rejects at history. The authenticated block is a *claim* until a snapshot-to-head premise establishes each cell and the current head. The strings used for key, nonce, digest and heads are opaque typed identifiers in this syntax, not hash byte definitions.
++
++## Source fields to Core/5
++
++One elaboration proposes `Core5Stage(pre, action, signedScope, submittedEffects, premises)`. The current direct parser preserves agreement ID, asset scale and authenticated predecessor on its AST, but the local Core preparer does not bind those three fields or an exact `/3` digest. It reports the candidate as `PreparedUnqualified`. The Core/5 tags below are proposed typed constructors. No caller Boolean can establish authentication or signature validity.
++
++The local intent object carries the proposed version label `moriarty-intent/3`. That label is a type discriminator only. Source/6 lowering does not encode canonical `/3` bytes or calculate their digest, and no verifier consumes this object as a signed authorization.
++
++| Source/6 field or form | Core/5 field or constructor | Rule |
++| --- | --- | --- |
++| `profile`, `agreement`, `domain`, `settlement` | Proposed `Version(Source6,Core5)`, `AgreementId`, `DomainId`, `AssetId(scale)` | The parser retains all four. The current local Core preparer does not bind `AgreementId` or scale; these remain named unverified bindings. |
++| `selected … source_hash … digest` | Proposed `SelectedProgram(actionId,sourceHash,policyDigest)` | The current Core field named `programId` contains the selected **action ID**, not the agreement ID. Binding all three to a signed statement remains unverified. S0 uses exact action IDs `TransferLiteralFee` and `RepayAccrualFirst`, matching the signed and submitted constructor. Any other action ID rejects `SOURCE6_PROFILE_UNSUPPORTED`. |
++| `signer … key`, `nonce`, `pre_head`, `valid` | `SignedScope(signer,keyRef,replayKey,preHead,roundLo,roundHi)` | `replayKey=(domain,signer,nonce)`; the exact digest and verifier are external typed premises. |
++| `signed_action` | `SignedAction(TransferLiteralFee | RepayAccrualFirst)` | Fix owner/payer, recipients, fee recipient, obligation ID and quantities under the signature. The submitted action must match this signed action exactly. |
++| `gross_cap`, `fee_cap`, `net_floor` | `Bounds(grossCap,feeCap,netFloor)` | Bind all three to the signed scope; authority uses gross debit. |
++| `failure success_only` and six explicit empty/none fields | `FailurePolicy(SuccessOnly)`, empty observation, disclosure, retained effect and duty, no delegation or recovery | The current parser rejects a nonempty source variant at formation with `SOURCE6_SHAPE`. A separately constructed typed Core/5 requested outcome reaches `S0_FAILURE_UNSUPPORTED` at Failure. The Source/6 parser cannot express that typed hostile input. No accepted fee-bearing failure exists. |
++| `authenticated head`, `predecessor`, `round` | `PreHead`, `Predecessor`, `CurrentRound` | Must be authenticated against the same snapshot; current head comparison is atomic with replay consumption. |
++| `balance`, `allowance`, `obligation`, `replay`, `work_remaining`, `work_spent` | `BalanceCell`, `AllowanceCell`, `ObligationCell`, `ReplayCell`, `WorkCell` | These are read cells. Obligation binds debtor, creditor, asset, principal, accrued, outstanding and status. Both work counters come from the authenticated snapshot; lowering never resets spent work. |
++| `transfer` | `TransferLiteralFee(owner,recipient,feeRecipient,value,fee)` | Owner=signer. Prepare debit gross, recipient credit value, and fee credit only when fee>0. |
++| `repay` | `RepayAccrualFirst(obligationId,payer,amount,IdentityConversion)` | Payer=debtor=signer. Read bound creditor and asset from obligation; do not accept caller supplied substitutes. |
++| `effects` | `PreparedEffects` comparison candidate | Order and values must equal the internally derived vector below. The supplied vector does not define the effect. In this provisional text profile, `use_replay` supplies the signed nonce; Core derives the domain/signer/nonce replay key. |
++| `post_head` | `PostHead` candidate | Must be a valid authenticated successor under the external head-extension premise. |
++
++For transfer, prepare `Debit(owner,v+f)`, `Credit(recipient,v)`, optional `Credit(feeRecipient,f)` when `f>0`, `UseAllowance(owner,v+f)`, `UseReplay(key)`, `AdvanceHead(pre,post)` in exactly that order. The optional line is present iff `f>0`; a zero-valued fee line rejects. Require `v>0`, `f≤feeCap`, `v+f≤grossCap`, `v≥netFloor`, sufficient owner balance and remaining allowance, and no overflow in any receiver or spent counter. Debit and credits conserve the same nominal asset. Preserve gross effects even though balance changes could be netted. The local wrapper checks Stage first, then requires the transfer in `submit` to equal `signed_action`; it withholds any candidate prepared during that local check when they differ.
++
++For repay, require one Outstanding obligation, `0<n≤outstanding`, matching asset, identity conversion `(mantissa=1,scale=0,rounding=none)`, `feeCap=0`, `netFloor=0`, sufficient payer balance and allowance, and no overflow in the creditor or spent counter. Let `da=min(n,accrued)` and `dp=n−da`. Prepare `Debit(payer,n)`, `Credit(boundCreditor,n)`, `SetObligation(p−dp,a−da,p+a−n,status')`, `UseAllowance(payer,n)`, `UseReplay(key)`, `AdvanceHead(pre,post)`. `status'` is Settled iff outstanding becomes zero. Every unlisted authenticated cell is unchanged. A debt reduction without the creditor credit rejects. The local wrapper checks Stage first, then requires the repayment in `submit` to equal `signed_action`; it withholds any candidate prepared during that local check when they differ.
++
++## Admission and observation
++
++Core/5 applies `stage → intent → effect → authority → history → failure`. `stage` checks version, selected program, typed cells and authentication premises. `intent` checks exact signed scope, validity, endpoints, alias policy and all signed nominal caps and floors. `effect` computes and compares the complete ordered vector and post cells. `authority` checks signer, allowance and work budget. `history` compares the current head and unused replay key and verifies successor binding. `failure` accepts only terminal success with empty retained effects and duties. The first failing judgment returns `(judgment,code,diagnosticWork)` without a published post-state or effects. Within-judgment code spelling and precedence remain W-D3 choices; provisional codes are in `s0-implementation-contract.md`.
++
++The result shape is `Core5Observation(pre,action,signedScope,preparedEffects,post,remainingDuty,remainingWork,replay,preHead,postHead,phase,judgment,code)`. Accepted S0 success contains complete effects, consumption, writes, one post-head and empty duty. Atomic rejection contains the first judgment/code and diagnostic work, with `post`, published effects and post-head absent. Snapshot authentication, exact signature verification, head extension and ledger compare-and-consume are typed external premises; failure or absence rejects. Source/6 grammar acceptance alone does not imply admission.
++
++## Boundary with earlier and later forms
++
++Source/5 `profile`, declarations, `action`, expression and `emit` forms have no automatic injection into this S0 stage. A future migration must map every legacy field, selected Core/4 program, authenticated state, signed digest and complete effect obligation, then prove the old and new observations equivalent on the stated domain. `Repay` in Core/4 consumes a separate Transfer; Core/5's `RepayAccrualFirst` is one funded stage. All old Source/5 and Core/4 behavior remains historical until such a mapping is demonstrated.
++
++The eight MIL/4 first families and all later profiles reject from this S0 grammar with `SOURCE6_PROFILE_UNSUPPORTED` or `SOURCE6_UNKNOWN_TAG` at formation. A later full Source/6 grammar must add typed productions and Core/5 constructors per family. General Φ₁, uncertified Ω, division, rounding, mint, reserve, foreign evidence, accepted failures and recovery are outside S0. This document does not turn those forms into generic records or strings.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md
+new file mode 100644
+index 00000000..2a57e608
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md
+@@ -0,0 +1,80 @@
++# Lexical rules for `moriarty-successor-syntax/0`
++
++These rules are the lexical layer for [grammar.ebnf](grammar.ebnf). They are not a second grammar dialect. Regular expressions below are JavaScript Unicode regular expressions and apply only to this note. The ISO EBNF file refers to the tokens named here through special sequences.
++
++## Encoding and spans
++
++Input is a sequence of Unicode scalar values encoded as UTF-8. Lone UTF-16 surrogates in a JavaScript string, malformed UTF-8 in CLI file bytes, and escaped lone surrogates in string literals all fail. The CLI decoder uses a fatal UTF-8 decode. It does not replace invalid bytes.
++
++Source locations are 0-based UTF-8 byte offsets on the half-open interval `[start, end)`. Comments and whitespace occupy bytes and count toward the 65536-byte source bound. They are not tokens and they are not AST nodes.
++
++The parser does not normalize Unicode, strip a BOM, or rewrite the caller string.
++
++## Whitespace
++
++ASCII space, tab, CR, and LF may separate tokens. No other code point is whitespace.
++
++## Comments
++
++Line comments start with `//` and run through the last character before a U+000A line feed, or through end of file if no line feed remains. A line comment at end of file is terminated.
++
++Block comments start with `/*` and end at the first `*/`. They do not nest. `/* /* */` ends at the first closer. An unclosed `/*` fails with `UNTERMINATED_COMMENT`.
++
++A `/` that does not start `//` or `/*` is not a token. There is no division operator.
++
++## Identifiers and keywords
++
++An identifier is `[A-Za-z][A-Za-z0-9_]*` and is at most 64 ASCII characters. Identifiers are case-sensitive. A non-ASCII letter, number, connector punctuation, nonspacing mark, or spacing combining mark (Unicode categories `L`, `N`, `Pc`, `Mn`, or `Mc`) at the start of a token or immediately after an ASCII identifier prefix fails with `NON_ASCII_IDENTIFIER`. For example, standalone U+0301 and `a` followed by U+0301 both fail with that code. Other non-ASCII code points outside strings and comments fail with `UNEXPECTED_CHAR`.
++
++A word that equals a keyword is a keyword token. Keywords cannot be identifiers.
++
++Keywords:
++
++```
++profile agreement unit party asset const state action
++requires let next emit ensures
++true false not and or
++```
++
++`pre` and `post` are identifiers. `next` is a keyword and begins a state update. `floor_div` and `ceil_div` are identifiers and parse as calls when followed by an argument list.
++
++## Integer tokens
++
++An integer token is `0` or `[1-9][0-9]*`. The lexer consumes `[0-9]+` and then checks that form. Leading zeros, signs, decimal points, exponent suffixes, and digit separators fail. The token is kept as decimal text. It is not converted to a IEEE number. More than 78 digits fails with `INTEGER_BOUND`.
++
++## String tokens
++
++A string token is a JSON string in RFC 8259 form, including the surrounding quotes. Allowed escapes are `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`, `\t`, and `\uXXXX` with four hexadecimal digits. Unescaped U+0000 through U+001F, unknown escapes, and an unclosed quote fail.
++
++After decoding, the value must be Unicode scalar values. A decoded lone surrogate, including one produced by `\uD800` without a trailing low surrogate, fails with `INVALID_SURROGATE`. A valid surrogate pair in escapes is one supplementary scalar. The decoded UTF-8 length must be at most 1024 bytes.
++
++The formatter emits the original string token text, so `\u0041` and `A` remain distinct literals.
++
++Unicode scalar values may appear in string and comment contents. Their byte spans follow UTF-8.
++
++## Punctuation and token priority
++
++The lexer uses longest match in this order:
++
++1. Whitespace (discarded)
++2. Line comment or block comment (discarded)
++3. Two-character operators `==`, `!=`, `<=`, `>=`
++4. One-character punctuation `{ } ( ) < > , : ; . = + - *`
++5. String
++6. Integer
++7. Keyword or identifier
++8. Failure
++
++There is no `>>` token. Nested generics `Map<Debt<USD>>` are two `>` tokens.
++
++`>=` is one token. A type that is immediately followed by `=` without whitespace therefore lexes as `>=`. The type parser splits a `>=` token into `>` and `=` when it is closing a type argument list, so `Debt<USD>= debt(1, USD)` is accepted. The split rewrites that token in place and does not emit a new lexer token. The extra `=` counts toward the 8192 token bound including the end-of-file token. The formatter always writes a space before `=`.
++
++`<` and `>` are type-argument delimiters only in type position. In expressions they are comparisons. This profile has no call-site type arguments, so `foo<bar>` in an expression is `foo < bar` plus a leftover `>`.
++
++## End of file
++
++The grammar's `? end of file ?` special sequence matches the lexer’s single EOF sentinel after all source characters, including trailing whitespace or a terminated comment, have been consumed. EOF has zero width: its start and end spans both equal the source UTF-8 byte length. It consumes no source character and cannot match before remaining non-ignored text. The sentinel counts as one token toward the token bound.
++
++## Token bound
++
++Whitespace and comments are not counted. The token bound is 8192 including the end-of-file token. The lexer reserves one slot for end of file, so 8191 non-EOF tokens plus EOF are accepted and a 8192nd non-EOF token is rejected. The type parser may rewrite a `>=` token in place into `>` and `=` when it closes a type argument list. That rewrite does not emit a lexer token. The extra `=` counts toward the 8192 bound including the end-of-file token. If the bound would be exceeded, the parser fails with `TOKEN_BOUND`.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md
+new file mode 100644
+index 00000000..458194f2
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md
+@@ -0,0 +1,195 @@
++# Get started with Moriarty beta
++
++This package checks `.mori` financial authoring and locally prepares two S0
++operations. **PreparedUnqualified means a candidate, not an authenticated,
++proved, signed or settled transaction.** The local scenario is a stipulation.
++The other eight-family examples check structure only (`SpecifiedOnly`).
++For external signatures checked by the actual Rust verifier before preparation,
++follow the [signed intent walkthrough](SIGNED-INTENT.md). Its public examples
++include BIP340/raw transfer, ECDSA/wallet-framed transfer and ECDSA/raw repayment.
++
++## Install and run
++
++Use Node 24 or later. From `packages/moriarty-beta` in a Moriarty checkout:
++
++```sh
++npm ci
++npm run build
++node dist/cli.js init /tmp/invoice
++node dist/cli.js check /tmp/invoice/invoice.mori
++node dist/cli.js test /tmp/invoice
++node dist/cli.js simulate /tmp/invoice/invoice.mori --action pay --scenario /tmp/invoice/scenario.json
++node dist/cli.js init /tmp/loan --template repay
++node dist/cli.js test /tmp/loan
++node dist/cli.js simulate /tmp/loan/repayment.mori --action repay_loan --scenario /tmp/loan/scenario.json
++```
++
++`init` refuses an existing directory. `--template transfer` is the default;
++`--template repay` creates `repayment.mori` instead of `invoice.mori`.
++For an installation outside the checkout, run `npm pack` here, then install that
++local `.tgz` into your project with `npm install /absolute/path/to/archive.tgz`.
++Run `npx mori` there. No npm registry publication is claimed.
++`mori COMMAND --help` shows the command's arguments. Exit 0 means the requested
++local operation completed: a preparation remains unqualified. Exit 1 means
++rejection, unsupported execution, test mismatch or a command/file error.
++
++## Read the program
++
++A program begins `profile "moriarty-beta/1"; agreement Name { ... }`.
++Declarations refer only to previous immutable declarations. Account and asset
++names are source names; their `id` fields are economic identity claims.
++`Buyer` may have `id: "Owner"`: the scenario and Core effects use `Owner`.
++Changing a source alias does not change that economic identity. A symbol such as
++`USD` is display metadata, not an asset identity or conversion permission.
++Different assets/domains never mix implicitly. Asset scale 2 means `10.00 USD`
++is 1000 atoms. JSON monetary amounts are canonical decimal **atom strings**.
++No floating point, division, rounding or implicit asset conversion exists.
++`Qty<USD>`, amount literals, `atoms(asset: USD,value: 1000)`, checked arithmetic,
++named calls, comments and trailing commas provide authoring convenience.
++
++An `intent` supplies explicit signer/key/nonce/head, inclusive round window,
++gross cap (including fees), fee cap, net floor and fixed operation. Empty
++observations/disclosures/retained effects/duties and `None` delegation/recovery
++are explicit signed terms. `action pay uses Payment;` selects that intent.
++There are no hidden financial defaults. A funded repayment requires zero fee cap and net floor, and uses accrued interest
++first, then principal; paying above outstanding rejects at Core's Effect judgment.
++
++## Understand the two local examples
++
++Transfer: price 1000 atoms, fee 10, debit 1010. Owner 10000 becomes 8990;
++Recipient receives 1000 and Fee receives 10. Allowance decreases by 1010;
++work decreases by 1; replay is consumed and head advances h0→h1.
++
++Repayment: principal 100000, accrued 1000, outstanding 101000. Payment 3000
++pays all 1000 accrued and 2000 principal. Principal/outstanding become 98000,
++accrued becomes 0, and status remains Outstanding. Payer 200000 becomes 197000;
++Creditor receives 3000. Allowance/work/replay/head change explicitly.
++The shipped [repayment fixture](examples/local/repay/repayment.mori) includes
++complete independently derived effect and post-state expectations.
++
++`TransferLiteralFee` and `RepayAccrualFirst` in expansion identify the selected
++Source/6 profile, not your action's name. Source/6 shows bare nonce `n1`; Core
++consumes the domain/signer/nonce tuple encoded as `["Midnight","Payer","n1"]`.
++A fixture's round is the observation round and is not automatically advanced.
++
++## Local scenario reference
++
++JSON profile `moriarty-local-scenario/1`, kind `local-stipulation`.
++Every top-level field below is required. Unknown fields and duplicate decoded
++keys reject, including escaped spellings of the same key. Files are bounded to
++65536 bytes and JSON to depth 32 / 4096 nodes; no comments in JSON.
++
++| Field | Meaning and shape |
++| --- | --- |
++| `profile`, `kind` | Exact strings above |
++| `domain`, `asset` | Economic IDs matching the selected source action |
++| `head`, `predecessor`, `post_head` | Explicit nonempty scalar text; source `pre_head` is a signed term |
++| `round` | Canonical unsigned decimal string; source window endpoints are inclusive |
++| `balances` | Exact ordered `{account,amount}` cells: transfer signer, recipient, fee recipient; repayment payer, creditor |
++| `allowance` | `{owner,remaining,spent}`; owner is signer; counters are atom strings |
++| `replay` | Exactly `unused` or `consumed` |
++| `work_remaining`, `work_spent` | Canonical unsigned decimal strings |
++| `obligation` | Required for repayment; forbidden for transfer; shape below |
++| `candidate_effects` | Optional hostile proposal override, at most 16 entries, checked through Source/6 and actual Core |
++
++Economic IDs passed into Source/6 use `[A-Za-z][A-Za-z0-9_]{0,63}`.
++UInt128 integers use `0` or a nonzero leading digit followed by digits, no sign,
++leading zeros, exponent or decimal point. S0 signed monetary fields fit 2^127−1.
++Balance/counter transport fields fit UInt128; allowance and work totals cannot
++overflow. Scenario shape/identity/accounting errors are `FormationRejected`.
++Caps, funds, authority, expiry, replay and complete financial effects are decided
++by existing Core, in Stage→Intent→Effect→Authority→History→Failure order.
++`check` can succeed while Core rejects a particular scenario; this is intentional.
++
++Repayment obligation fields: `id`, `debtor`, `creditor`, `asset`, `principal`,
++`accrued`, `outstanding`, `status`. IDs must match the source/payer/asset;
++creditor differs from payer; status is `Outstanding`; principal + accrued equals
++outstanding. Unused source constants named principal or accrued do not constrain
++scenario accounting; only operative intent fields bind the request. The required
++predecessor is echoed into Source/6 but remains unauthenticated, and is not a
++Core equality check. Amounts are atom strings. Partial/full/interest-only repayment uses
++the same operation, with different explicit source amount and fixture.
++
++The override's Source/6 effect variants are `Debit`, `Credit`, `SetObligation`,
++`UseAllowance`, `UseReplay`, `AdvanceHead`. Inspect `expand` for their closed field
++shapes. Override replay uses the bare nonce at this boundary; prepared Core
++outputs use the tuple key. Overrides are fault-injection proposals, never facts.
++
++## Test and diagnose
++
++`mori.tests.json` is a closed record `{profile:"moriarty-beta-tests/1",cases:[...]}`
++with 1–64 cases. A case has exactly `name`, `source`, `action`, `scenario`, `expect`.
++Names are unique nonempty strings; source/scenario are relative files contained
++in the project, including after resolving symlinks.
++`expect` requires `status`; optional `code`, `effects`, `post` are exact assertions.
++Statuses: `PreparedUnqualified`, `CoreRejected`, `SourceRejected`,
++`AuthoringRejected`, `FormationRejected`, `Unsupported`.
++`effects` checks the full ordered vector, and `post` the full exact record, with
++no omitted or extra fields. The starter tests include both. Passing only a status
++checks less; it does not establish financial completeness.
++
++A mismatch gives up to four first differences, one each for status/code/effects/
++post, with an RFC6901 pointer and bounded expected/actual summaries. For example
++`/post/balances/0/amount`, expected `8991`, actual `8990`. Containers are summarized
++instead of dumped. Test result `qualification` is `local-stipulation-only`.
++`inspect` resource refusal is `InspectionRejected` with the original
++`authoringStatus`; it is not a newly discovered source error.
++
++`check` defaults to a short readable report; use `--json` for machines.
++`simulate` retains the full local Core result, ordered effects and candidate post.
++`expand` exposes generated Source/6 and origins back to source/scenario fields.
++CLI files require valid UTF-8 without a BOM. Invalid encoding is refused before
++`fmt --write` can change bytes. API inputs are already decoded text.
++Formatting preserves comments/spelling and compact named calls, but changes
++bytes and therefore source commitments; it never updates or signs claimed hashes.
++
++## Editors, AI and the implementation boundary
++
++Follow [editor setup](editor/README.md) for VS Code highlighting/snippets/LSP or
++Neovim, and [AI setup](ai/README.md) for MCP and project-local provider adapters.
++MCP accepts bounded text only, with no filesystem paths, shell, signing or sending.
++AI completions are proposals subject to the same compiler/Core checks.
++
++`check` returns `status`, `sourceHash`, `agreement`, `diagnostics`, `actions`,
++`operationSchemas`, `declarations`, `agreementSpan`, `references`, `fieldUses`,
++`evidence`, `openGates`. References and field-use
++byte spans are additive JSON-safe authoring metadata; they do not authenticate IDs.
++Use named fields; the API does not promise a permanently closed result key set.
++`inspect` reports per-action support and actual signed terms without recursively
++expanding the declaration DAG. Empty S0 premise/binding arrays on SpecifiedOnly
++mean that S0's particular catalog does not apply: authentication and financial
++relations remain Open, not premise-free or qualified.
++
++Computed `sourceHash`/`scenarioHash` digest actual input text. Source
++`source_hash`/`policy_digest` remain unverified signed claims. Four local S0
++external premises are canonical intent signature, snapshot-to-head, head extension,
++and atomic ledger compare-and-consume. Four unverified bindings are agreement ID,
++selected program, asset scale and authenticated predecessor. Neither a hash nor
++a successful local test closes these obligations. Blockchain address codecs,
++authenticated key/address mapping, ZK proving, financial ledger settlement and general
++formal correspondence remain open. The signed intent flow checks native cryptographic
++signatures while preserving those separate obligations.
++
++
++### SpecifiedOnly authoring hints
++
++Provided domain/asset/signer headers must agree with the operation's local domain;
++bridge source/destination may be foreign, while owner and amount share the local
++domain. Caps use the declared asset, or bridge's local amount asset when absent;
++AMM swap net floor uses its output asset. These checks establish nominal types,
++not financial conservation or authority. Share-class IDs are unique per domain.
++Intent `retained_duties` hints accept text or arrays of text; stage
++`retained_duties` hints accept text only. Stage `signed_floor` accepts
++text or a Qty in that stage domain. Prose hints and partial policy records,
++including an empty policy, are stored authoring data. They do not establish duties,
++evidence, policy preservation, stage linkage or a valid financial floor.
++Unsupported expansion/simulation reports `scenarioValidation: NotAppliedUnsupported`:
++the scenario was not schema-checked or applied. An Unsupported expected test can
++pass with an invalid fixture because it tests the support refusal, not that
++fixture. For a real local financial test, assert the complete effects and post.
++
++Result shapes follow the command: expand/simulate/test/init carry a local scope
++label; authoring check/inspect and CLI formation refusals describe authoring or
++rejection directly. A missing `qualification` field never means qualification.
++Init repayment source and the shipped example differ by a terminal newline;
++`sourceHash` therefore differs. Always digest the actual source bytes you use.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/packages/moriarty-beta/README.md b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/packages/moriarty-beta/README.md
+new file mode 100644
+index 00000000..085320f5
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/basis/packages/moriarty-beta/README.md
+@@ -0,0 +1,93 @@
++# Moriarty beta
++
++A standalone `.mori` authoring language for explicit financial intent, requiring
++Node 24 or later. Local transfer and funded AccrualFirst repayment reuse Source/6
++and Core/5 and return **PreparedUnqualified**. The signed owner-intent flow adds native Rust signature checks before local
++preparation. Provider authentication, financial proof and ledger commit remain open.
++
++Read the [getting started guide](GETTING-STARTED.md) for both operations, complete
++scenario/test schemas and troubleshooting. Read the [signed intent walkthrough](SIGNED-INTENT.md)
++for external signing, native verification and three public ready-to-verify examples.
++
++## Start
++
++From this package:
++
++```sh
++npm ci
++npm run build
++node dist/cli.js init /tmp/my-mori-project
++node dist/cli.js check /tmp/my-mori-project/invoice.mori --json
++node dist/cli.js test /tmp/my-mori-project
++node dist/cli.js simulate /tmp/my-mori-project/invoice.mori --action pay --scenario /tmp/my-mori-project/scenario.json
++```
++
++For a packed installation, install the `.tgz` with npm and use `npx mori`.
++The bundle includes the strict S0 modules and needs no repository metadata or
++global TypeScript compiler. `init` refuses existing targets.
++
++## Exact amounts and names
++
++```mori
++const price: Qty<USD> = 10.00 USD;
++const fee = 0.10 USD;
++const cap = price + fee;
++const exact_atoms = atoms(asset: USD, value: 1000);
++```
++
++Declare USD's domain, economic ID, representation and scale first. Symbol is
++display metadata. Bare numbers are unsigned scalars. Addition/subtraction require
++the same nominal asset; scalar multiplication and named `min`/`max` are checked.
++Every intermediate fits UInt128. S0 operation/cap/liability fields additionally
++fit `2^127−1`. No floating point, rounding, division or implicit conversion occurs.
++
++Agreements contain prior-only immutable declarations, closed named calls and
++`action NAME uses INTENT;`. Comments and trailing commas are supported. The starter
++shows every signed bound and explicit empty/None field. A separate scenario supplies
++**untrusted local data** with no default balances or spent counters. Unknown fields
++and decoded duplicate JSON keys reject. It cannot override source intent.
++
++## Tools
++
++| Command | Result |
++| --- | --- |
++| `init DIR [--template transfer\|repay]` | Explicit transfer or repayment project, no overwrite |
++| `check FILE [--json]` | Syntax/name/nominal checks and action support |
++| `fmt FILE [--write]` | Comment/spelling-preserving format, stdout by default |
++| `inspect FILE` | Identity claims, operative bounds and open premises |
++| `expand FILE --action NAME --scenario FILE` | Source/6 and input origin map |
++| `intent ... [--review\|--json]` | Native owner signing bytes; possession unchecked |
++| `verify-intent ... [--review\|--json]` | Native signature check then unqualified local Core preparation |
++| `simulate ...` | Actual local Core result, effects and candidate post-state |
++| `test DIR` | Bounded cases, optionally exact effects/post expectations |
++| `lsp` | Full-sync stdio language server |
++| `mcp` | Read-only stdio check/inspect/expand/preview tools |
++
++Formatting changes source bytes and can invalidate commitments. It never signs or
++rewrites claimed hashes; invalid source receives no edit. Expansion is a proposal.
++Core decides the first economic failure and publishes no effects on rejection;
++Source/6-unrepresentable inputs are formation errors.
++
++[Editor instructions](editor/README.md) cover highlighting, snippets, VS Code
++packaging and Neovim. [AI instructions](ai/README.md) cover portable skills and
++project-scoped provider adapters. These files change no global client settings.
++
++## Financial horizon and API
++
++The closed catalog covers AMMs, lending, stablecoins, options, oracles, governance,
++bridges and staking. `check` publishes argument schemas and checked coverage.
++Those actions are `SpecifiedOnly`: structural support exists; financial relations,
++authentication and execution remain open. Expansion/simulation return
++`BETA_PROFILE_UNSUPPORTED` with no effect vector. The wiki's proposed typed lifecycle
++grammar is a separate full-language horizon, not accepted beta syntax.
++
++```js
++import { check, format, inspect, expand, simulate } from '@moriarty-lang/beta';
++const report = check(sourceText);
++const local = simulate(sourceText, 'pay', scenarioJsonText);
++```
++
++Public APIs accept bounded text and digest both local inputs. Origins use UTF8 byte
++ranges; editor positions use UTF16. Prepared results retain four external premises
++and four unverified bindings. A verified native signature is scoped evidence; account authority and the remaining
++state/ledger obligations stay open. Matching hashes and AI tools establish no authority. Native financial settlement and general K/Quint correspondence remain open.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/inputs/capped-remittance.mori b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/inputs/capped-remittance.mori
+new file mode 100644
+index 00000000..ad39f493
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/inputs/capped-remittance.mori
+@@ -0,0 +1,32 @@
++profile "moriarty-beta/1";
++agreement CappedRemittance {
++ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Local, id: "Owner" };
++ account Seller = { domain: Local, id: "Recipient" };
++ account Treasury = { domain: Local, id: "Fee" };
++ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
++ const unitPrice: Qty<USD> = 0.75 USD;
++ const itemCount: Scalar = 3;
++ const quoted = unitPrice * itemCount;
++ const tightLimit = 2.10 USD;
++ const looseLimit = 2.50 USD;
++ const tightAmount = min(a: quoted, b: tightLimit);
++ const looseAmount = min(a: quoted, b: looseLimit);
++ const noCharge = atoms(asset: USD, value: 0);
++ intent TightPayment = {
++  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: tightAmount + noCharge, fee_cap: noCharge, net_floor: tightAmount,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: tightAmount, fee: noCharge),
++  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ intent LoosePayment = {
++  domain: Local, asset: USD, signer: Buyer, key: "keyC", nonce: "nC", pre_head: "c0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: looseAmount + noCharge, fee_cap: noCharge, net_floor: looseAmount,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: looseAmount, fee: noCharge),
++  source_hash: "srcC", policy_digest: "policyC", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay_tight uses TightPayment;
++ action pay_loose uses LoosePayment;
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/inputs/capped-remittance.scenario.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/inputs/capped-remittance.scenario.json
+new file mode 100644
+index 00000000..f86e7d22
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/inputs/capped-remittance.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "c0",
++  "predecessor": "prior",
++  "round": "4",
++  "balances": [
++    { "account": "Owner", "amount": "1000" },
++    { "account": "Recipient", "amount": "5" },
++    { "account": "Fee", "amount": "7" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "1000", "spent": "25" },
++  "replay": "unused",
++  "work_remaining": "12",
++  "work_spent": "2",
++  "post_head": "c1"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.independent-source6.txt b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.independent-source6.txt
+new file mode 100644
+index 00000000..0d9c44a9
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.independent-source6.txt
+@@ -0,0 +1,44 @@
++profile "moriarty-financial-agreement-source/6";
++agreement CappedRemittance {
++  domain Midnight;
++  settlement A scale 2;
++  selected TransferLiteralFee source_hash "srcC" digest "policyC";
++  intent {
++    signer Owner key "keyC";
++    nonce "nC";
++    pre_head "c0";
++    valid 2 .. 20;
++    gross_cap 225;
++    fee_cap 0;
++    net_floor 225;
++    failure success_only;
++    signed_action transfer from Owner to Recipient fee_to Fee value 225 fee 0;
++    observations empty;
++    disclosures empty;
++    retained_effects empty;
++    retained_duties empty;
++    delegation none;
++    recovery none;
++  }
++  authenticated {
++    head "c0";
++    predecessor "prior";
++    round 4;
++    balance Owner 1000;
++    balance Recipient 5;
++    balance Fee 7;
++    allowance Owner remaining 1000 spent 25;
++    replay unused;
++    work_remaining 12;
++    work_spent 2;
++  }
++  submit transfer from Owner to Recipient fee_to Fee value 225 fee 0;
++  effects {
++    debit Owner 225;
++    credit Recipient 225;
++    use_allowance Owner 225;
++    use_replay "nC";
++    advance_head "c0" "c1";
++  }
++  post_head "c1";
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.ordered-target-lines.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.ordered-target-lines.expected.json
+new file mode 100644
+index 00000000..932fa56a
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.ordered-target-lines.expected.json
+@@ -0,0 +1,50 @@
++{
++  "scope": "All ordered meaningful Source6 lines/blocks from pinned grammar; independently chosen indentation, not actual stdout byte oracle.",
++  "byteForByteStdoutOracle": false,
++  "lines": [
++    "profile \"moriarty-financial-agreement-source/6\";",
++    "agreement CappedRemittance {",
++    "domain Midnight;",
++    "settlement A scale 2;",
++    "selected TransferLiteralFee source_hash \"srcC\" digest \"policyC\";",
++    "intent {",
++    "signer Owner key \"keyC\";",
++    "nonce \"nC\";",
++    "pre_head \"c0\";",
++    "valid 2 .. 20;",
++    "gross_cap 225;",
++    "fee_cap 0;",
++    "net_floor 225;",
++    "failure success_only;",
++    "signed_action transfer from Owner to Recipient fee_to Fee value 225 fee 0;",
++    "observations empty;",
++    "disclosures empty;",
++    "retained_effects empty;",
++    "retained_duties empty;",
++    "delegation none;",
++    "recovery none;",
++    "}",
++    "authenticated {",
++    "head \"c0\";",
++    "predecessor \"prior\";",
++    "round 4;",
++    "balance Owner 1000;",
++    "balance Recipient 5;",
++    "balance Fee 7;",
++    "allowance Owner remaining 1000 spent 25;",
++    "replay unused;",
++    "work_remaining 12;",
++    "work_spent 2;",
++    "}",
++    "submit transfer from Owner to Recipient fee_to Fee value 225 fee 0;",
++    "effects {",
++    "debit Owner 225;",
++    "credit Recipient 225;",
++    "use_allowance Owner 225;",
++    "use_replay \"nC\";",
++    "advance_head \"c0\" \"c1\";",
++    "}",
++    "post_head \"c1\";",
++    "}"
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.source6.ast.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.source6.ast.expected.json
+new file mode 100644
+index 00000000..6cf0f8af
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_loose.source6.ast.expected.json
+@@ -0,0 +1,106 @@
++{
++  "profile": "moriarty-financial-agreement-source/6",
++  "programId": "CappedRemittance",
++  "domain": "Midnight",
++  "settlement": {
++    "asset": "A",
++    "scale": "2"
++  },
++  "selected": {
++    "actionId": "TransferLiteralFee",
++    "sourceHash": "srcC",
++    "policyDigest": "policyC"
++  },
++  "intent": {
++    "signer": "Owner",
++    "keyRef": "keyC",
++    "nonce": "nC",
++    "preHead": "c0",
++    "notBefore": "2",
++    "notAfter": "20",
++    "grossCap": "225",
++    "feeCap": "0",
++    "netFloor": "225",
++    "signedAction": {
++      "kind": "Transfer",
++      "from": "Owner",
++      "to": "Recipient",
++      "feeTo": "Fee",
++      "value": "225",
++      "fee": "0"
++    },
++    "failure": "success_only",
++    "observations": "empty",
++    "disclosures": "empty",
++    "retainedEffects": "empty",
++    "retainedDuties": "empty",
++    "delegation": "none",
++    "recovery": "none"
++  },
++  "authenticated": {
++    "head": "c0",
++    "predecessor": "prior",
++    "round": "4",
++    "balances": [
++      {
++        "account": "Owner",
++        "amount": "1000"
++      },
++      {
++        "account": "Recipient",
++        "amount": "5"
++      },
++      {
++        "account": "Fee",
++        "amount": "7"
++      }
++    ],
++    "allowance": {
++      "owner": "Owner",
++      "remaining": "1000",
++      "spent": "25"
++    },
++    "replay": "unused",
++    "workRemaining": "12",
++    "workSpent": "2"
++  },
++  "submitted": {
++    "action": {
++      "kind": "Transfer",
++      "from": "Owner",
++      "to": "Recipient",
++      "feeTo": "Fee",
++      "value": "225",
++      "fee": "0"
++    },
++    "effects": [
++      {
++        "kind": "Debit",
++        "account": "Owner",
++        "asset": "A",
++        "amount": "225"
++      },
++      {
++        "kind": "Credit",
++        "account": "Recipient",
++        "asset": "A",
++        "amount": "225"
++      },
++      {
++        "kind": "UseAllowance",
++        "owner": "Owner",
++        "amount": "225"
++      },
++      {
++        "kind": "UseReplay",
++        "key": "nC"
++      },
++      {
++        "kind": "AdvanceHead",
++        "predecessor": "c0",
++        "successor": "c1"
++      }
++    ],
++    "postHead": "c1"
++  }
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.independent-source6.txt b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.independent-source6.txt
+new file mode 100644
+index 00000000..78ba9f6e
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.independent-source6.txt
+@@ -0,0 +1,44 @@
++profile "moriarty-financial-agreement-source/6";
++agreement CappedRemittance {
++  domain Midnight;
++  settlement A scale 2;
++  selected TransferLiteralFee source_hash "srcC" digest "policyC";
++  intent {
++    signer Owner key "keyC";
++    nonce "nC";
++    pre_head "c0";
++    valid 2 .. 20;
++    gross_cap 210;
++    fee_cap 0;
++    net_floor 210;
++    failure success_only;
++    signed_action transfer from Owner to Recipient fee_to Fee value 210 fee 0;
++    observations empty;
++    disclosures empty;
++    retained_effects empty;
++    retained_duties empty;
++    delegation none;
++    recovery none;
++  }
++  authenticated {
++    head "c0";
++    predecessor "prior";
++    round 4;
++    balance Owner 1000;
++    balance Recipient 5;
++    balance Fee 7;
++    allowance Owner remaining 1000 spent 25;
++    replay unused;
++    work_remaining 12;
++    work_spent 2;
++  }
++  submit transfer from Owner to Recipient fee_to Fee value 210 fee 0;
++  effects {
++    debit Owner 210;
++    credit Recipient 210;
++    use_allowance Owner 210;
++    use_replay "nC";
++    advance_head "c0" "c1";
++  }
++  post_head "c1";
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.ordered-target-lines.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.ordered-target-lines.expected.json
+new file mode 100644
+index 00000000..d93e9294
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.ordered-target-lines.expected.json
+@@ -0,0 +1,50 @@
++{
++  "scope": "All ordered meaningful Source6 lines/blocks from pinned grammar; independently chosen indentation, not actual stdout byte oracle.",
++  "byteForByteStdoutOracle": false,
++  "lines": [
++    "profile \"moriarty-financial-agreement-source/6\";",
++    "agreement CappedRemittance {",
++    "domain Midnight;",
++    "settlement A scale 2;",
++    "selected TransferLiteralFee source_hash \"srcC\" digest \"policyC\";",
++    "intent {",
++    "signer Owner key \"keyC\";",
++    "nonce \"nC\";",
++    "pre_head \"c0\";",
++    "valid 2 .. 20;",
++    "gross_cap 210;",
++    "fee_cap 0;",
++    "net_floor 210;",
++    "failure success_only;",
++    "signed_action transfer from Owner to Recipient fee_to Fee value 210 fee 0;",
++    "observations empty;",
++    "disclosures empty;",
++    "retained_effects empty;",
++    "retained_duties empty;",
++    "delegation none;",
++    "recovery none;",
++    "}",
++    "authenticated {",
++    "head \"c0\";",
++    "predecessor \"prior\";",
++    "round 4;",
++    "balance Owner 1000;",
++    "balance Recipient 5;",
++    "balance Fee 7;",
++    "allowance Owner remaining 1000 spent 25;",
++    "replay unused;",
++    "work_remaining 12;",
++    "work_spent 2;",
++    "}",
++    "submit transfer from Owner to Recipient fee_to Fee value 210 fee 0;",
++    "effects {",
++    "debit Owner 210;",
++    "credit Recipient 210;",
++    "use_allowance Owner 210;",
++    "use_replay \"nC\";",
++    "advance_head \"c0\" \"c1\";",
++    "}",
++    "post_head \"c1\";",
++    "}"
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.source6.ast.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.source6.ast.expected.json
+new file mode 100644
+index 00000000..31b05d67
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-capped-remittance/oracle/pay_tight.source6.ast.expected.json
+@@ -0,0 +1,106 @@
++{
++  "profile": "moriarty-financial-agreement-source/6",
++  "programId": "CappedRemittance",
++  "domain": "Midnight",
++  "settlement": {
++    "asset": "A",
++    "scale": "2"
++  },
++  "selected": {
++    "actionId": "TransferLiteralFee",
++    "sourceHash": "srcC",
++    "policyDigest": "policyC"
++  },
++  "intent": {
++    "signer": "Owner",
++    "keyRef": "keyC",
++    "nonce": "nC",
++    "preHead": "c0",
++    "notBefore": "2",
++    "notAfter": "20",
++    "grossCap": "210",
++    "feeCap": "0",
++    "netFloor": "210",
++    "signedAction": {
++      "kind": "Transfer",
++      "from": "Owner",
++      "to": "Recipient",
++      "feeTo": "Fee",
++      "value": "210",
++      "fee": "0"
++    },
++    "failure": "success_only",
++    "observations": "empty",
++    "disclosures": "empty",
++    "retainedEffects": "empty",
++    "retainedDuties": "empty",
++    "delegation": "none",
++    "recovery": "none"
++  },
++  "authenticated": {
++    "head": "c0",
++    "predecessor": "prior",
++    "round": "4",
++    "balances": [
++      {
++        "account": "Owner",
++        "amount": "1000"
++      },
++      {
++        "account": "Recipient",
++        "amount": "5"
++      },
++      {
++        "account": "Fee",
++        "amount": "7"
++      }
++    ],
++    "allowance": {
++      "owner": "Owner",
++      "remaining": "1000",
++      "spent": "25"
++    },
++    "replay": "unused",
++    "workRemaining": "12",
++    "workSpent": "2"
++  },
++  "submitted": {
++    "action": {
++      "kind": "Transfer",
++      "from": "Owner",
++      "to": "Recipient",
++      "feeTo": "Fee",
++      "value": "210",
++      "fee": "0"
++    },
++    "effects": [
++      {
++        "kind": "Debit",
++        "account": "Owner",
++        "asset": "A",
++        "amount": "210"
++      },
++      {
++        "kind": "Credit",
++        "account": "Recipient",
++        "asset": "A",
++        "amount": "210"
++      },
++      {
++        "kind": "UseAllowance",
++        "owner": "Owner",
++        "amount": "210"
++      },
++      {
++        "kind": "UseReplay",
++        "key": "nC"
++      },
++      {
++        "kind": "AdvanceHead",
++        "predecessor": "c0",
++        "successor": "c1"
++      }
++    ],
++    "postHead": "c1"
++  }
++}
+diff --git a/experiments/moriarty-language/regressions/rust-source6-capped-remittance.mjs b/experiments/moriarty-language/regressions/rust-source6-capped-remittance.mjs
+new file mode 100644
+index 00000000..d5f6caf7
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/rust-source6-capped-remittance.mjs
+@@ -0,0 +1,188 @@
++// Opt-in public Rust CLI -> actual provisional Source/6/Core/5 consumers.
++// New independent oracle custody; old Source/6 transfer fixtures are untouched.
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { spawnSync } from 'node:child_process';
++import { createHash } from 'node:crypto';
++import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
++import { isAbsolute, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { parseAndLowerSource6 } from '../src/successor/financial-agreement-source-v6-frontend.ts';
++import { prepareSource6S0Unqualified } from '../src/successor/mil4-s0-source-v6.ts';
++
++const fixtures = fileURLToPath(new URL('./fixtures/source6-capped-remittance/', import.meta.url));
++const binary = process.env.MORI_RUST_BIN;
++const observations = process.env.MORI_SOURCE6_OBSERVATIONS;
++assert.ok(binary && isAbsolute(binary), 'MORI_RUST_BIN must name the absolute reviewed Rust binary');
++assert.ok(observations && isAbsolute(observations), 'MORI_SOURCE6_OBSERVATIONS must name a fresh absolute directory');
++mkdirSync(observations);
++const json = (name) => JSON.parse(readFileSync(join(fixtures, name), 'utf8'));
++const pins = json('FIXTURE-PINS.json');
++for (const [name, expected] of Object.entries(pins.files)) {
++  const bytes = readFileSync(join(fixtures, name));
++  assert.equal(createHash('sha256').update(bytes).digest('hex'), expected,
++    `custodian fixture bytes changed: ${name}`);
++}
++const facts = json('oracle/EXPECTED-SEMANTICS.json');
++assert.equal(facts.format, 'independent-capped-remittance-semantic-oracle/1');
++assert.equal(facts.cases.length, 2);
++
++// These helpers only serialize observations and select named financial fields.
++// They never calculate amounts, simulate a transfer or construct product ASTs.
++function captureJson(path, value) {
++  const encoded = JSON.stringify(value, null, 2) + '\n';
++  writeFileSync(path, encoded);
++  return JSON.parse(encoded);
++}
++function errorRecord(error) {
++  return {
++    name: error?.name ?? typeof error,
++    message: error?.message ?? String(error),
++    code: error?.code ?? null,
++    offset: error?.offset ?? null,
++    stack: error?.stack ?? null,
++  };
++}
++function financialFrame(state) {
++  return {
++    domain: state.domain, asset: state.asset,
++    balances: state.balances, allowances: state.allowances,
++  };
++}
++
++captureJson(join(observations, 'run.json'), {
++  node: process.version, binary,
++  binarySha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
++  oracleFreezeSha256: pins.custodianFreezeSha256,
++  oracleManifestSha256: pins.custodianManifestSha256,
++  expectedSemanticsSha256: pins.expectedSemanticsSha256,
++  unasserted: ['whole emitted wire bytes/whitespace', 'Core status/qualification/gates',
++    'measured work/cost and post-work counters', 'complete Core post/global replay inventory',
++    'whole Program/Target/Artifact', 'authentication', 'native/proof/ledger', 'parent acceptance'],
++});
++// Preserve exact run inputs and the oracle manifest alongside the observations.
++for (const name of ['capped-remittance.mori', 'capped-remittance.scenario.json']) {
++  writeFileSync(join(observations, name), readFileSync(join(fixtures, 'oracle/inputs', name)));
++}
++writeFileSync(join(observations, 'oracle-MANIFEST.json'), readFileSync(join(fixtures, 'oracle/MANIFEST.json')));
++writeFileSync(join(observations, 'oracle-FREEZE.sha256'), readFileSync(join(fixtures, 'oracle/FREEZE.sha256')));
++
++for (const expected of facts.cases) {
++  test(`${expected.action}: actual public Source/6 bytes against independent semantic observations`, () => {
++    const expectedAst = json(`oracle/${expected.source6AstFile}`);
++    const scenario = json('oracle/inputs/capped-remittance.scenario.json');
++    const post = expected.conditionalClosingFinancialProjection;
++    const args = ['--quiet', '--color', 'never', 'expand',
++      join(fixtures, 'oracle/inputs/capped-remittance.mori'), '--action', expected.action,
++      '--scenario', join(fixtures, 'oracle/inputs/capped-remittance.scenario.json'),
++      '--emit-source6-transfer'];
++    const output = spawnSync(binary, args, {
++      cwd: fixtures, stdio: ['ignore', 'pipe', 'pipe'], shell: false,
++      timeout: 30_000, maxBuffer: 1024 * 1024,
++    });
++    const destination = join(observations, expected.action);
++    mkdirSync(destination);
++    const stdout = output.stdout ?? Buffer.alloc(0);
++    const stderr = output.stderr ?? Buffer.alloc(0);
++    // Every actual process byte is saved before any product result assertion.
++    writeFileSync(join(destination, 'stdout.source6'), stdout);
++    writeFileSync(join(destination, 'stderr.txt'), stderr);
++    captureJson(join(destination, 'process.json'), {
++      executable: binary, args, cwd: fixtures, status: output.status, signal: output.signal,
++      error: output.error ? errorRecord(output.error) : null,
++      stdoutSha256: createHash('sha256').update(stdout).digest('hex'),
++      stderrSha256: createHash('sha256').update(stderr).digest('hex'),
++    });
++
++    const actual = {
++      decodeError: null, loweringAttempted: false, loweringError: null, lowered: null,
++      preparationAttempted: false, preparationError: null, outcome: null,
++    };
++    let source6;
++    try { source6 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(stdout); }
++    catch (error) { actual.decodeError = errorRecord(error); }
++    if (source6 !== undefined) {
++      // Untouched decoded stdout goes directly to both actual APIs. No trim,
++      // fixture Source/6 substitution, JSON unwrap, AST construction or replay.
++      actual.loweringAttempted = true;
++      try { actual.lowered = parseAndLowerSource6(source6); }
++      catch (error) { actual.loweringError = errorRecord(error); }
++      actual.preparationAttempted = true;
++      try { actual.outcome = prepareSource6S0Unqualified(source6); }
++      catch (error) { actual.preparationError = errorRecord(error); }
++    }
++    // Capture complete returned objects or thrown errors before checking them.
++    // JSON is the observation representation: undefined optional members are
++    // omitted by JSON serialization; no product field value is recalculated.
++    const observed = captureJson(join(destination, 'actual-consumer.json'), actual);
++
++    assert.ifError(output.error);
++    assert.equal(output.signal, null);
++    assert.equal(output.status, 0, stderr.toString('utf8'));
++    assert.equal(stderr.length, 0, '--quiet must suppress the adopted public status line');
++    assert.ok(stdout.length > 0);
++    assert.equal(stdout.at(-1), 10, 'adopted public output includes its final LF');
++    assert.notEqual(stdout.at(-2), 10, 'adopted public output has a single final LF');
++    assert.equal(observed.decodeError, null);
++    assert.equal(observed.loweringError, null);
++    assert.equal(observed.preparationError, null);
++    assert.ok(observed.loweringAttempted && observed.preparationAttempted);
++    const { ast, state, intent } = observed.lowered;
++    // Full independent Source/6 AST, including every ordered effect and all
++    // source/intent/claim/input fields. This is not a Core Program oracle.
++    assert.deepEqual(ast, expectedAst);
++    assert.deepEqual(ast.submitted.effects, expected.source6OrderedEffects);
++    assert.equal(ast.submitted.effects.length, expected.effectCount);
++    assert.deepEqual(observed.outcome.ast, expectedAst);
++
++    assert.deepEqual(financialFrame(state), expected.openingFinancialFrame);
++    assert.equal(state.head, expectedAst.authenticated.head);
++    assert.equal(state.round, expectedAst.authenticated.round);
++    assert.equal(state.workRemaining, expected.source6InputWork.remaining);
++    assert.equal(state.workSpent, expected.source6InputWork.spent);
++    assert.equal(state.consumedReplay.includes(post.selectedReplay.encodedKey), false);
++    assert.deepEqual({
++      sourceProfile: intent.sourceProfile, programId: intent.programId,
++      sourceHash: intent.sourceHash, policyDigest: intent.policyDigest, keyRef: intent.keyRef,
++      domain: intent.domain, asset: intent.asset, signer: intent.signer, nonce: intent.nonce,
++      preHead: intent.preHead, notBefore: intent.notBefore, notAfter: intent.notAfter,
++      grossCap: intent.grossCap, feeCap: intent.feeCap, netFloor: intent.netFloor,
++      kind: intent.kind, recipient: intent.recipient, feeRecipient: intent.feeRecipient,
++      amount: intent.amount, fee: intent.fee,
++    }, {
++      sourceProfile: expectedAst.profile, programId: expectedAst.selected.actionId,
++      sourceHash: expectedAst.selected.sourceHash, policyDigest: expectedAst.selected.policyDigest,
++      keyRef: expectedAst.intent.keyRef, domain: expectedAst.domain, asset: expectedAst.settlement.asset,
++      signer: expectedAst.intent.signer, nonce: expectedAst.intent.nonce,
++      preHead: expectedAst.intent.preHead, notBefore: expectedAst.intent.notBefore,
++      notAfter: expectedAst.intent.notAfter, grossCap: expected.grossCap,
++      feeCap: expected.feeCap, netFloor: expected.netFloor,
++      kind: expectedAst.intent.signedAction.kind, recipient: expectedAst.intent.signedAction.to,
++      feeRecipient: expectedAst.intent.signedAction.feeTo, amount: expected.value, fee: expected.fee,
++    });
++    assert.deepEqual(observed.lowered.submittedEffects, expected.core5SemanticOrderedEffects);
++    assert.equal(observed.lowered.proposedPostHead, post.head);
++
++    // Require the actual financial projection for the positive comparison;
++    // status, qualification, required-premise and work-cost strings are only
++    // observed in actual-consumer.json, never asserted as an oracle verdict.
++    const candidate = observed.outcome.candidate;
++    assert.ok(candidate && candidate.candidatePost, 'actual consumer must expose the compared financial candidate');
++    assert.equal(candidate.preHead, expectedAst.authenticated.head);
++    assert.deepEqual(candidate.effects, expected.core5SemanticOrderedEffects);
++    assert.equal(candidate.effects.length, expected.effectCount);
++    assert.deepEqual(financialFrame(candidate.candidatePost), {
++      domain: post.domain, asset: post.asset, balances: post.balances, allowances: post.allowances,
++    });
++    assert.equal(candidate.candidatePost.head, post.head);
++    assert.equal(candidate.candidatePost.round, post.round);
++    // The independent oracle fixes the selected key, not a global replay
++    // inventory or a security/history judgment about consuming that key.
++    const selectedKey = candidate.candidatePost.consumedReplay
++      .find((key) => key === post.selectedReplay.encodedKey);
++    assert.equal(selectedKey, post.selectedReplay.encodedKey);
++    assert.deepEqual(JSON.parse(selectedKey), post.selectedReplay.tuple);
++    // No complete Core post, residual-duty DTO, post-work or qualification
++    // oracle is invented. Their actual fields remain in the captured result.
++  });
++}

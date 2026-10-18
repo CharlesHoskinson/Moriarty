@@ -1,0 +1,404 @@
+{
+  "format": "independent-capped-remittance-semantic-oracle/1",
+  "status": "FROZEN_BEFORE_PRODUCT_EXECUTION",
+  "common": {
+    "agreement": "CappedRemittance",
+    "sourceProfile": "moriarty-beta/1",
+    "source6Profile": "moriarty-financial-agreement-source/6",
+    "aliases": {
+      "domain": {
+        "Local": "Midnight"
+      },
+      "accounts": {
+        "Buyer": "Owner",
+        "Seller": "Recipient",
+        "Treasury": "Fee"
+      },
+      "asset": {
+        "USD": {
+          "id": "A",
+          "scale": "2",
+          "representation": "canonical",
+          "domain": "Midnight"
+        }
+      }
+    },
+    "constants": [
+      {
+        "name": "unitPrice",
+        "type": "Qty<USD>",
+        "source": "0.75 USD",
+        "atoms": "75"
+      },
+      {
+        "name": "itemCount",
+        "type": "Scalar",
+        "source": "3",
+        "value": "3"
+      },
+      {
+        "name": "quoted",
+        "type": "Qty<USD>",
+        "source": "unitPrice * itemCount",
+        "atoms": "225"
+      },
+      {
+        "name": "tightLimit",
+        "type": "Qty<USD>",
+        "source": "2.10 USD",
+        "atoms": "210"
+      },
+      {
+        "name": "looseLimit",
+        "type": "Qty<USD>",
+        "source": "2.50 USD",
+        "atoms": "250"
+      },
+      {
+        "name": "tightAmount",
+        "type": "Qty<USD>",
+        "source": "min(a: quoted, b: tightLimit)",
+        "atoms": "210",
+        "selectedArgument": "b"
+      },
+      {
+        "name": "looseAmount",
+        "type": "Qty<USD>",
+        "source": "min(a: quoted, b: looseLimit)",
+        "atoms": "225",
+        "selectedArgument": "a"
+      },
+      {
+        "name": "noCharge",
+        "type": "Qty<USD>",
+        "source": "atoms(asset: USD, value: 0)",
+        "atoms": "0"
+      }
+    ],
+    "selectedSource6ActionId": "TransferLiteralFee",
+    "sourceHashLiteral": "srcC",
+    "policyDigestLiteral": "policyC",
+    "literalDigestQualification": "Opaque source claims; neither is a computed hash or verified commitment.",
+    "inputScenario": {
+      "profile": "moriarty-local-scenario/1",
+      "kind": "local-stipulation",
+      "domain": "Midnight",
+      "asset": "A",
+      "head": "c0",
+      "predecessor": "prior",
+      "round": "4",
+      "balances": [
+        {
+          "account": "Owner",
+          "amount": "1000"
+        },
+        {
+          "account": "Recipient",
+          "amount": "5"
+        },
+        {
+          "account": "Fee",
+          "amount": "7"
+        }
+      ],
+      "allowance": {
+        "owner": "Owner",
+        "remaining": "1000",
+        "spent": "25"
+      },
+      "replay": "unused",
+      "work_remaining": "12",
+      "work_spent": "2",
+      "post_head": "c1"
+    },
+    "actionRelationship": "Two independent alternative expansions use the same opening scenario; no sequential execution or shared-nonce acceptance is asserted."
+  },
+  "cases": [
+    {
+      "action": "pay_tight",
+      "selectedIntent": "TightPayment",
+      "selectedMinArgument": "b: tightLimit=210 (225 > 210)",
+      "value": "210",
+      "fee": "0",
+      "gross": "210",
+      "grossCap": "210",
+      "feeCap": "0",
+      "netFloor": "210",
+      "openingFinancialFrame": {
+        "domain": "Midnight",
+        "asset": "A",
+        "balances": [
+          {
+            "account": "Owner",
+            "amount": "1000"
+          },
+          {
+            "account": "Recipient",
+            "amount": "5"
+          },
+          {
+            "account": "Fee",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Owner",
+            "remaining": "1000",
+            "spent": "25"
+          }
+        ]
+      },
+      "conditionalClosingFinancialProjection": {
+        "domain": "Midnight",
+        "asset": "A",
+        "balances": [
+          {
+            "account": "Owner",
+            "amount": "790"
+          },
+          {
+            "account": "Recipient",
+            "amount": "215"
+          },
+          {
+            "account": "Fee",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Owner",
+            "remaining": "790",
+            "spent": "235"
+          }
+        ],
+        "head": "c1",
+        "round": "4",
+        "selectedReplay": {
+          "tuple": [
+            "Midnight",
+            "Owner",
+            "nC"
+          ],
+          "encodedKey": "[\"Midnight\",\"Owner\",\"nC\"]",
+          "state": "consumed"
+        }
+      },
+      "source6OrderedEffects": [
+        {
+          "kind": "Debit",
+          "account": "Owner",
+          "asset": "A",
+          "amount": "210"
+        },
+        {
+          "kind": "Credit",
+          "account": "Recipient",
+          "asset": "A",
+          "amount": "210"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Owner",
+          "amount": "210"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "nC"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "c0",
+          "successor": "c1"
+        }
+      ],
+      "core5SemanticOrderedEffects": [
+        {
+          "kind": "Debit",
+          "account": "Owner",
+          "asset": "A",
+          "amount": "210"
+        },
+        {
+          "kind": "Credit",
+          "account": "Recipient",
+          "asset": "A",
+          "amount": "210"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Owner",
+          "amount": "210"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "[\"Midnight\",\"Owner\",\"nC\"]"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "c0",
+          "successor": "c1"
+        }
+      ],
+      "effectCount": 5,
+      "feeCreditOmitted": true,
+      "feeOpeningRowRequiredAndRetained": {
+        "account": "Fee",
+        "before": "7",
+        "after": "7"
+      },
+      "source6InputWork": {
+        "remaining": "12",
+        "spent": "2"
+      },
+      "closingProjectionQualification": "Conditional arithmetic consequence of the normative transfer vector only; not a complete Core post, acceptance/PreparedUnqualified result, authenticated state or ledger observation. Work fields intentionally absent.",
+      "source6AstFile": "pay_tight.source6.ast.expected.json",
+      "orderedTargetLinesFile": "pay_tight.ordered-target-lines.expected.json",
+      "independentSource6File": "pay_tight.independent-source6.txt"
+    },
+    {
+      "action": "pay_loose",
+      "selectedIntent": "LoosePayment",
+      "selectedMinArgument": "a: quoted=225 (225 < 250)",
+      "value": "225",
+      "fee": "0",
+      "gross": "225",
+      "grossCap": "225",
+      "feeCap": "0",
+      "netFloor": "225",
+      "openingFinancialFrame": {
+        "domain": "Midnight",
+        "asset": "A",
+        "balances": [
+          {
+            "account": "Owner",
+            "amount": "1000"
+          },
+          {
+            "account": "Recipient",
+            "amount": "5"
+          },
+          {
+            "account": "Fee",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Owner",
+            "remaining": "1000",
+            "spent": "25"
+          }
+        ]
+      },
+      "conditionalClosingFinancialProjection": {
+        "domain": "Midnight",
+        "asset": "A",
+        "balances": [
+          {
+            "account": "Owner",
+            "amount": "775"
+          },
+          {
+            "account": "Recipient",
+            "amount": "230"
+          },
+          {
+            "account": "Fee",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Owner",
+            "remaining": "775",
+            "spent": "250"
+          }
+        ],
+        "head": "c1",
+        "round": "4",
+        "selectedReplay": {
+          "tuple": [
+            "Midnight",
+            "Owner",
+            "nC"
+          ],
+          "encodedKey": "[\"Midnight\",\"Owner\",\"nC\"]",
+          "state": "consumed"
+        }
+      },
+      "source6OrderedEffects": [
+        {
+          "kind": "Debit",
+          "account": "Owner",
+          "asset": "A",
+          "amount": "225"
+        },
+        {
+          "kind": "Credit",
+          "account": "Recipient",
+          "asset": "A",
+          "amount": "225"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Owner",
+          "amount": "225"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "nC"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "c0",
+          "successor": "c1"
+        }
+      ],
+      "core5SemanticOrderedEffects": [
+        {
+          "kind": "Debit",
+          "account": "Owner",
+          "asset": "A",
+          "amount": "225"
+        },
+        {
+          "kind": "Credit",
+          "account": "Recipient",
+          "asset": "A",
+          "amount": "225"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Owner",
+          "amount": "225"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "[\"Midnight\",\"Owner\",\"nC\"]"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "c0",
+          "successor": "c1"
+        }
+      ],
+      "effectCount": 5,
+      "feeCreditOmitted": true,
+      "feeOpeningRowRequiredAndRetained": {
+        "account": "Fee",
+        "before": "7",
+        "after": "7"
+      },
+      "source6InputWork": {
+        "remaining": "12",
+        "spent": "2"
+      },
+      "closingProjectionQualification": "Conditional arithmetic consequence of the normative transfer vector only; not a complete Core post, acceptance/PreparedUnqualified result, authenticated state or ledger observation. Work fields intentionally absent.",
+      "source6AstFile": "pay_loose.source6.ast.expected.json",
+      "orderedTargetLinesFile": "pay_loose.ordered-target-lines.expected.json",
+      "independentSource6File": "pay_loose.independent-source6.txt"
+    }
+  ]
+}
