@@ -260,6 +260,13 @@ security approval or language-exit acceptance.
   and, for the reserve case, its public CLI. Source exposure and the exact
   assertion boundaries are recorded with the test evidence. These tests do not
   establish SDK, native-proof, compiler-Artifact or ledger correspondence.
+- The finite `core_boolean_check_public` target compares hand-derived complete
+  Core Program JSON and public checker streams with frozen files in
+  `crates/fixtures/core-boolean-check/` instead of generating insta snapshots.
+  Its assertions include the complete source. Parser and checker source exposure
+  is explicit; these static admission and serialization checks establish no
+  runtime predicate truth, independent financial oracle, compiler Artifact,
+  native-proof or ledger correspondence.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
