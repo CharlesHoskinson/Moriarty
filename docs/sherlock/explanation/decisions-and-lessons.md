@@ -25,8 +25,14 @@ circuit semantics. This explanation's design claims and evidence distinctions
 are unaffected; no new circuit or website iteration is reported. R256 passed
 both new producer tests and its five phases. Fresh literal-result review then
 preceded Root's adoption of original UIREQ-002, bringing accepted originals to
-11 of 35. The separate runtime candidate compiled, but its first test was
-refused before stepping under the original capacity input. Corrected input is
-under review; expected results 7/8 are not observations. The DW-63 lesson is recorded
+11 of 35. The later [adopted public runtime result](../../results/sherlock-public-runtime-20261018/README.md)
+records actual two-case host observations: UInt 7/8, call order/counts and
+relational counter/event contracts. It preserves the earlier pre-step capacity
+refusal, listing-order mistake and R265 terminal ERROR; successful later evidence
+does not rewrite those records. Raw status output and inspected assertions do
+not supply full traces, exact independent B clocks or semantic/circuit proof.
+The adapter reuses the fixed B owner without changing transition/circuit semantics;
+no circuit/website iteration follows, and no new original EARS closure is claimed.
+The DW-63 lesson is recorded
 separately in the [DoctorWatson improvement log](../../../wiki-llm/doctorwatson-improvement-log.md),
 not as a new semantic or acceptance decision here.

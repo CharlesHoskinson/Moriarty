@@ -74,6 +74,9 @@ adds returned compiler metadata; it changes no transition or circuit semantics
 used in this exercise. The tutorial commands and their historical observations
 are unchanged. R256's two new report tests passed; the
 [separate file-publication example](../how-to/compile-draft-program.md#inspect-the-supported-profile-field)
-remains unrun. The separate runtime candidate compiled, but its first test was refused before
-stepping under the original capacity input; corrected input is under review.
-No runtime 7/8 or new circuit/website observation is added to this exercise.
+remains unrun. The separate [public runtime result](../../results/sherlock-public-runtime-20261018/README.md)
+now records two passing host tests whose inspected assertions check UInt 7/8 and
+call/counter relations. Those are separate observations, not output from this
+unchanged Python exercise. Raw stdout contains test status, not a complete trace
+or exact B clock. No transition/circuit semantics or circuit/website iteration
+changed in this tutorial; no command here was rerun for this documentation update.
