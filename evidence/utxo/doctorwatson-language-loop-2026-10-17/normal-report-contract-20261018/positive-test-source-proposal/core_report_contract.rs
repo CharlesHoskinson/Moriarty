@@ -1,0 +1,134 @@
+//! Public normal Core/1 reports against complete independent literal oracles.
+use serde_json::Value;
+use std::{
+    fs,
+    path::PathBuf,
+    process::Command,
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
+macro_rules! fixture {
+    ($name:literal) => {
+        include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fixtures/core-report-contract/",
+            $name
+        ))
+        .as_slice()
+    };
+}
+
+static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+struct Project {
+    root: PathBuf,
+    source: PathBuf,
+    scenario: PathBuf,
+}
+
+impl Project {
+    fn new(source_name: &str, source: &[u8], scenario_name: &str, scenario: &[u8]) -> Self {
+        let root = std::env::temp_dir().join(format!(
+            "mori-core-report-contract-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&root).unwrap();
+        let project = Self {
+            source: root.join(source_name),
+            scenario: root.join(scenario_name),
+            root,
+        };
+        fs::write(&project.source, source).unwrap();
+        fs::write(&project.scenario, scenario).unwrap();
+        project
+    }
+
+    fn assert_case(&self, name: &str, action: &str, cap: Option<&str>, expected_stdout: &[u8]) {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_mori"));
+        command
+            .current_dir(&self.root)
+            .args(["--color", "never", "simulate"])
+            .arg(&self.source)
+            .args(["--action", action, "--scenario"])
+            .arg(&self.scenario);
+        if let Some(cap) = cap {
+            command.arg(format!("--logical-cap={cap}"));
+        }
+        let output = command.output().unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{name}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            output.stderr.as_slice(),
+            fixture!("empty.stderr.expected.bin"),
+            "{name}: stderr"
+        );
+        let actual: Value = serde_json::from_slice(&output.stdout).unwrap();
+        let expected: Value = serde_json::from_slice(expected_stdout).unwrap();
+        assert_eq!(actual, expected, "{name}: complete JSON report");
+        assert_eq!(output.stdout, expected_stdout, "{name}: exact stdout bytes");
+    }
+}
+
+impl Drop for Project {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
+
+#[test]
+fn counter_unmetered_and_positive_caps_match_complete_public_reports() {
+    let project = Project::new(
+        "counter.mori",
+        fixture!("counter.mori"),
+        "counter-amount7.scenario.json",
+        fixture!("counter-amount7.scenario.json"),
+    );
+    for (name, cap, expected) in [
+        (
+            "counter-unmetered",
+            None,
+            fixture!("counter.unmetered.stdout.json"),
+        ),
+        (
+            "counter-cap16",
+            Some("16"),
+            fixture!("counter.cap16.stdout.json"),
+        ),
+        (
+            "counter-capmax",
+            Some("340282366920938463463374607431768211455"),
+            fixture!("counter.capmax.stdout.json"),
+        ),
+    ] {
+        project.assert_case(name, "run", cap, expected);
+    }
+}
+
+#[test]
+fn empty_action_preserves_complete_frame_unmetered_and_at_zero_cap() {
+    let project = Project::new(
+        "empty-frame.mori",
+        fixture!("empty-frame.mori"),
+        "empty-frame.scenario.json",
+        fixture!("empty-frame.scenario.json"),
+    );
+    for (name, cap, expected) in [
+        (
+            "empty-unmetered",
+            None,
+            fixture!("empty.unmetered.stdout.json"),
+        ),
+        (
+            "empty-cap0",
+            Some("0"),
+            fixture!("empty.cap0.stdout.json"),
+        ),
+    ] {
+        project.assert_case(name, "idle", cap, expected);
+    }
+}

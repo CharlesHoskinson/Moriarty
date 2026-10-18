@@ -1,0 +1,294 @@
+diff --git a/crates/fixtures/publication/README.md b/crates/fixtures/publication/README.md
+new file mode 100644
+index 00000000..f09ff973
+--- /dev/null
++++ b/crates/fixtures/publication/README.md
+@@ -0,0 +1,142 @@
++# Ordinary byte-publication fixture
++
++`transport-artifact.json` is a frozen transport-only `mori_backend::Artifact`
++constructor input for the file-publication tests in `mori/src/commands/compile.rs`.
++Its opaque publication bytes are **not compiled ZKIR**, native-valid artifacts,
++or financial/ledger evidence. The two array entries are file-order specimens,
++not the two positive U2 program walkthroughs. No source program is supplied.
++
++The falsifiable predicate is: publication writes each supplied UTF-8 string
++unchanged to its indexed filename, preserves array order, and writes the exact
++supplied manifest bytes last as the completion marker. A provided projection
++is another exact-byte leaf before that marker. Artifact decoding is only the
++constructor path; successful decoding does not certify the supplied payloads.
++
++This contract was frozen independently from the public schema and existing
++publication assertions at baseline
++`baf61ebd0cb49f2c4441cb7fa8de53b343e056dc`. No implementation candidate or
++compiler output was consulted. No compiler, evaluator, Cargo, rustc, model,
++SDK, VM, key, signing, proof, ledger, network or private cache/capture action
++was used to produce these values. Standard-library JSON encoding and SHA-256
++were used only to package and identify these literal transport bytes.
++
++## Frozen input and expected bytes
++
++The JSON file is UTF-8, indented with two spaces, and has **no terminal newline**.
++Its literal file size is 2424 bytes; SHA-256 is
++`4e66f47b2c055deaa595290c6989554364d7520c2ba957e03669608b6c783447`. Pass these exact bytes as the manifest string when testing
++the frozen manifest contract. A test may decode using
++`serde_json::from_str::<mori_backend::Artifact>`; it must not replace the public
++decoder or compile a source program to construct this artifact.
++
++The circuit array is exactly `z_first`, then `a_second`, intentionally opposite
++to lexicographic action ordering. Indexing starts at zero and uses three digits.
++The following escaped strings denote the complete leaf payloads; `\n` means
++one LF byte, and each Greek letter is its literal UTF-8 encoding:
++
++```text
++publication fixture: z_first\nopaque UTF-8: α\n
++publication fixture: a_second\nopaque UTF-8: β\n
++```
++
++The letters are `α` = `ce b1` and `β` = `ce b2` in hexadecimal. Both payloads
++end in LF; there is also one LF between their two lines. Neither has a CR,
++BOM, extra final blank line, or JSON escaping in the published leaf.
++
++| Published filename | Byte count | SHA-256 |
++| --- | ---: | --- |
++| `000-z_first.zkir` | 46 | `c1a64f94f4cef172b10175423186f2d41b29f6a4986629d92a7dd2f974880904` |
++| `001-a_second.zkir` | 47 | `857aaff9ede141a511b448ad466145c7fd13aec7a4666d21f34030ef990bc5c7` |
++| `artifact.json` | 2424 | `4e66f47b2c055deaa595290c6989554364d7520c2ba957e03669608b6c783447` |
++
++With no projection, a fresh reserved output directory has exactly these three
++files on success. `source-projection.json` is absent. `artifact.json` equals
++the supplied manifest string byte for byte; the publisher must not parse,
++normalize, or add a newline to it.
++
++For the positive projection case, supply the exact Rust string literal
++`"{\"transport_fixture\":\"projection\"}\n"`. Its decoded bytes are
++`{"transport_fixture":"projection"}` followed by one LF, totaling
++35 bytes; SHA-256 is `c826a58ecde287b2742ff1606b98dcf08c439185df611e24f3d502fb91b76474`.
++Success has exactly four files: the same two ordered circuit leaves,
++`source-projection.json` containing those 35 bytes unchanged, and
++`artifact.json` containing the same frozen manifest. The projection is a
++transport specimen, not an actual source hash or compilation report.
++
++## Completion and existing refusal assertions
++
++The required publication sequence is `000-z_first.zkir`,
++`001-a_second.zkir`, optional `source-projection.json`, then `artifact.json`.
++The marker may appear only after all requested non-marker leaves are complete.
++A pre-existing marker alone is never evidence of completion by this attempt.
++
++For the existing regular-file refusal cases without projection, seed the
++collision leaf with `third-party sentinel` and an unrelated file named
++`unrelated` with `user addition`. Both byte strings have no newline and must
++remain unchanged. Refusal retains the completed prefix and writes no later
++leaf; these independently expected totals include the two seeded entries:
++
++| Collision leaf | Complete new circuit prefix | Final directory entry count |
++| --- | --- | ---: |
++| `000-z_first.zkir` | none | 2 |
++| `001-a_second.zkir` | `000-z_first.zkir` | 3 |
++| `artifact.json` | both circuit leaves | 4 |
++
++For a collision on either circuit, the completion marker must remain absent.
++For a collision on the marker, its original sentinel bytes remain unchanged.
++
++The existing Unix link/directory cases seed only a collision at the second
++circuit or marker, without `unrelated`: expected counts are respectively two
++and three. Preserve the original symlink target or directory, an existing
++external target's `external sentinel` bytes, and the absence of a dangling
++link's external target. In all such cases the first circuit bytes are exactly
++the frozen `z_first` payload. The second circuit collision leaves no marker.
++These are the retained publication assertions, not a claim that hostile or
++security validation was performed by this fixture owner.
++
++## Why the public decoder can construct it
++
++`mori-backend/src/lib.rs` declares every included `Artifact`, `CircuitArtifact`,
++`Resources` and `Target` field. The version decoders require exactly
++`moriarty-zkir-artifact/3`, `moriarty-public-abi/3` and
++`moriarty-zkir-relation/3`. Unsigned mode matches the unsigned target because
++`signed_policy` is omitted; explicit null is intentionally not supplied.
++The target has the exact pinned `ledger-9` profile, ledger revision
++`04c9c5d9bcebb8d4427d8589fb54d58a55599c14`, and ZKIR version `3.0.0-rc.2`.
++`local` and `publication-fixture` are nonempty bounded labels; the limits are
++positive integers, 100000 instructions and 16777216 artifact bytes.
++They identify this local transport specimen, not an observed network target.
++
++The program digest is exactly 64 `0` characters; circuit context digests are
++exactly 64 `1` characters and 64 `2` characters in array order. They satisfy
++the lowercase 32-byte hexadecimal decoding shape only. They are deliberately
++literal placeholders, not recomputed program/context commitments. Context
++constants likewise are descriptor-shape literals, not digest limb claims.
++
++Each circuit has two public inputs with role `context`, names
++`program_target_action.0` and `program_target_action.1`, type `UInt`, explicit
++null `asset`, and canonical decimal `constant` strings (`0`, `1` for the first;
++`2`, `3` for the second). This satisfies the unsigned branch of
++`signed_relation::validate_shape`: authorization and private-input arrays are
++empty. Effect, balance and liability frames are empty; replay steps and
++instruction counts are zero. No Type, AssetId or descriptor is inferred from
++a compiler or evaluator.
++
++Resources have `instructions: 0`, `zkir_bytes: 93`,
++`artifact_bytes: 2424`, `public_values: 4`, `max_replay_steps: 0`,
++explicit null `circuit_k` and `fraud_max_k`, `cost_measured: false`,
++`liability_registry_entries: 0`, and `max_liability_registry_entries: 16`.
++The registry decoders permit zero entries and require the pinned ceiling 16.
++The byte counters describe this packaged fixture only. Empty `gates` asserts
++no completed gate, and `moriarty-core/1` is the literal semantics label.
++
++The constructor checks the versions, target, mode, digest encoding and
++unsigned descriptor shape. This constructor assessment comes from source
++inspection; Rust serde decoding and publication tests were not run by the
++fixture owner. It does not parse the `zkir` strings or establish
++cryptographic validity of the placeholder digests/context. Do not send this
++fixture to native validation or treat its schema acceptance as a compiled
++artifact result. If a later decoder adds a requirement incompatible with
++opaque strings, report that exact field or predicate; use an explicitly typed
++transport-test construction if appropriate instead of bypassing or weakening
++the production decoder.
+diff --git a/crates/fixtures/publication/transport-artifact.json b/crates/fixtures/publication/transport-artifact.json
+new file mode 100644
+index 00000000..14657b24
+--- /dev/null
++++ b/crates/fixtures/publication/transport-artifact.json
+@@ -0,0 +1,88 @@
++{
++  "format": "moriarty-zkir-artifact/3",
++  "abi": "moriarty-public-abi/3",
++  "relation": "moriarty-zkir-relation/3",
++  "authorization_mode": "unsigned",
++  "program_hash": "0000000000000000000000000000000000000000000000000000000000000000",
++  "semantics": "moriarty-core/1",
++  "target": {
++    "profile": "ledger-9",
++    "network": "local",
++    "anchor": "publication-fixture",
++    "ledger_revision": "04c9c5d9bcebb8d4427d8589fb54d58a55599c14",
++    "zkir_version": "3.0.0-rc.2",
++    "max_instructions": 100000,
++    "max_artifact_bytes": 16777216
++  },
++  "circuits": [
++    {
++      "action": "z_first",
++      "zkir": "publication fixture: z_first\nopaque UTF-8: α\n",
++      "context_hash": "1111111111111111111111111111111111111111111111111111111111111111",
++      "public_inputs": [
++        {
++          "role": "context",
++          "name": "program_target_action.0",
++          "ty": "UInt",
++          "constant": "0",
++          "asset": null
++        },
++        {
++          "role": "context",
++          "name": "program_target_action.1",
++          "ty": "UInt",
++          "constant": "1",
++          "asset": null
++        }
++      ],
++      "authorization_bindings": [],
++      "private_inputs": [],
++      "instruction_count": 0,
++      "effect_frame": [],
++      "balance_frame": [],
++      "liability_frame": [],
++      "replay_steps": 0
++    },
++    {
++      "action": "a_second",
++      "zkir": "publication fixture: a_second\nopaque UTF-8: β\n",
++      "context_hash": "2222222222222222222222222222222222222222222222222222222222222222",
++      "public_inputs": [
++        {
++          "role": "context",
++          "name": "program_target_action.0",
++          "ty": "UInt",
++          "constant": "2",
++          "asset": null
++        },
++        {
++          "role": "context",
++          "name": "program_target_action.1",
++          "ty": "UInt",
++          "constant": "3",
++          "asset": null
++        }
++      ],
++      "authorization_bindings": [],
++      "private_inputs": [],
++      "instruction_count": 0,
++      "effect_frame": [],
++      "balance_frame": [],
++      "liability_frame": [],
++      "replay_steps": 0
++    }
++  ],
++  "resources": {
++    "instructions": 0,
++    "zkir_bytes": 93,
++    "artifact_bytes": 2424,
++    "public_values": 4,
++    "max_replay_steps": 0,
++    "circuit_k": null,
++    "fraud_max_k": null,
++    "cost_measured": false,
++    "liability_registry_entries": 0,
++    "max_liability_registry_entries": 16
++  },
++  "gates": []
++}
+\ No newline at end of file
+diff --git a/crates/mori/src/commands/compile.rs b/crates/mori/src/commands/compile.rs
+index 40786732..e1d623c7 100644
+--- a/crates/mori/src/commands/compile.rs
++++ b/crates/mori/src/commands/compile.rs
+@@ -134,11 +134,12 @@ mod tests {
+         }
+     }
+     fn artifact() -> (mori_backend::Artifact, String) {
+-        let p=mori_core::parse("language \"moriarty/1\"; agreement Publication { state count: UInt = 0; action z_first() { next count = count + 1; } action a_second() { next count = count + 2; } }").unwrap();
+-        let a =
+-            mori_backend::compile(&p, &mori_backend::Target::ledger9("local", "leaves")).unwrap();
+-        let manifest = serde_json::to_string_pretty(&a).unwrap();
+-        (a, manifest)
++        let manifest = include_str!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/../fixtures/publication/transport-artifact.json"
++        ));
++        let artifact = serde_json::from_str::<mori_backend::Artifact>(manifest).unwrap();
++        (artifact, manifest.to_owned())
+     }
+     #[test]
+     fn raced_files_at_first_second_and_manifest_are_never_clobbered() {
+@@ -239,6 +240,28 @@ mod tests {
+             );
+         }
+     }
++    #[test]
++    fn source_projection_is_published_with_complete_circuits_and_manifest() {
++        let (a, m) = artifact();
++        let d = Reserved::new();
++        let projection = "{\"transport_fixture\":\"projection\"}\n";
++        publish_artifact(&a, &m, Some(projection), &d.0).unwrap();
++        for (leaf, bytes) in [
++            (
++                "000-z_first.zkir",
++                "publication fixture: z_first\nopaque UTF-8: α\n",
++            ),
++            (
++                "001-a_second.zkir",
++                "publication fixture: a_second\nopaque UTF-8: β\n",
++            ),
++            ("source-projection.json", projection),
++            ("artifact.json", m.as_str()),
++        ] {
++            assert_eq!(std::fs::read(d.0.join(leaf)).unwrap(), bytes.as_bytes());
++        }
++        assert_eq!(std::fs::read_dir(&d.0).unwrap().count(), 4);
++    }
+ }
+ 
+ #[cfg(not(feature = "native"))]
