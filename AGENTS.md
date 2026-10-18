@@ -1,3 +1,15 @@
+## Persistent handwritten-circuit lane — October 18
+
+Continue writing handwritten Sherlock circuits alongside the primary compiler/runtime
+implementation and the three Clean, Quint and K lanes. The user explicitly requires
+this intention to survive compaction. Recover the circuit owner, source cut, next
+missing relation/emitter/consumer, pending review/check and native gap from the
+[implementation loop](docs/sherlock/implementation-loop.md#october-18-priority-continue-handwritten-circuit-implementation)
+and latest typed Root continuation. Formal verification and evidence maintenance
+must accompany concrete circuit source progress. A completed task does not retire
+the circuit lane. Keep the existing source/resource/correctness requirements and
+current security author/reviewer routing.
+
 ## Persistent formal lanes and compaction recovery — October 18
 
 Keep the dedicated Clean, Quint and K lanes alongside the primary Sherlock implementation after every compaction or restart. Recover all three from the [implementation loop](docs/sherlock/implementation-loop.md#recover-all-three-formal-lanes-after-compaction) and latest typed Root continuation in `.moriarty-dev/runtime/sherlock-review-20261017/295-root-runtime-integration/`. Revalidate actual agent/process state before continuing or replacing a lane. Carry forward each exact source cut, pending check/review, independent oracle, next action and unsupported scope. A completed subtask does not retire its lane while counterpart work remains. This is part of the existing DoctorWatson loop, with no new factory or acceptance gate.
