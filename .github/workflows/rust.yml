@@ -40,3 +40,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Test
         run: cargo test --workspace --locked
+      # The default workspace test above runs with default features, so the
+      # feature-gated Midnight-native compatibility test is not selected there.
+      # Run it explicitly so full compatibility coverage is retained.
+      - name: Midnight native compatibility (mori-core/midnight-compat-tests)
+        run: cargo test --locked -p mori-core --features midnight-compat-tests --test intents -- --test-threads=1

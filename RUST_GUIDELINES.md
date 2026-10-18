@@ -68,6 +68,18 @@ difference is listed here under the applicable user authorization.
   cargo clippy --workspace --all-targets --locked -- -D warnings
   cargo test --workspace --locked
   ```
+- `mori-core`'s Midnight-native compatibility test is gated behind the
+  non-default `midnight-compat-tests` feature, so ordinary `mori-core` test
+  selection is free of Midnight dependencies, for example
+  `cargo test -p mori-core` or
+  `cargo test --frozen -j1 -p mori-core --no-default-features --test continuations -- --test-threads=1`.
+  The `cargo test --workspace --locked` above does not enable that feature, so
+  run the compatibility test explicitly for full coverage (it builds the pinned
+  Midnight SDK closure):
+
+  ```
+  cargo test --locked -p mori-core --features midnight-compat-tests --test intents
+  ```
 - The optional `rust` workflow is manual only. Ordinary work does not dispatch
   hosted CI. Source-only handoffs list unrun checks and blocked acceptance;
   broad Rust suites do not override the zero-native boundary.
