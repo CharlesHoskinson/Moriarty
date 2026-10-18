@@ -24,7 +24,7 @@ The [design](../design.md) selects B HostOnly admission of parameter-free Core/1
 
 ## Nonpublic and proposed surfaces
 
-`program_image`, `image_reference`, `reference_slice`, `machine_image`, `helper_schedule`, `helper_call_adapter`, `arithmetic_witness` are test-only. Internal `pub` items are not runtime exports; `advance_m`/`ProgramImageDraft` define no adopted ABI. Historical comments cannot override registration or establish execution.
+`reference_slice` is a public host observation/grouping module. The adopted opt-in [resource manifest report API](resource-manifest-api.md) adds reporting and caller-owned JSON writing; its scoped results and explicit earlier-evidence applicability are recorded in the linked reference. `program_image`, `image_reference`, `machine_image`, `helper_schedule`, `helper_call_adapter`, `arithmetic_witness` remain test-only. Internal `pub` items are not runtime exports; `advance_m`/`ProgramImageDraft` define no adopted ABI. Historical comments cannot override registration or establish execution.
 
 ## Product scope
 

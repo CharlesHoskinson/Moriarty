@@ -1,0 +1,11 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/366-owner-authored-as-pid1-guard-candidate/bounded_sdk_compile.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/392-native05-owner-literal-candidate/bounded_sdk_compile.py
+@@ -195,7 +195,7 @@
+         name=PurePosixPath(p['relative']).name
+         if p['kind']=='cargo-ok':need(name=='.cargo-ok','cargo-ok name')
+         elif p['kind']=='cargo-checksum':need(name=='.cargo-checksum.json','checksum name')
+-        elif p['kind']=='cargo-lockfile':need(p['relative'] in ('.package-cache','.package-cache-mutate','.global-cache','.global-cache-wal','.global-cache-shm'),'bookkeeping name')
++        elif p['kind']=='cargo-lockfile':need(p['relative'] in ('.package-cache','.package-cache-mutate','.global-cache','.global-cache-wal','.global-cache-shm','git/CACHEDIR.TAG','registry/CACHEDIR.TAG'),'bookkeeping name')
+         elif p['kind']=='git-control':need(any(p['relative'].startswith(g['relative_root']+'/.git/') for g in c['git_checkouts']),'Git control outside checkout .git')
+     for p in [*c['includes'],*c['expected_generated_files']]:
+         need(not any(p['relative']==x or p['relative'].startswith(x+'/') for x in links),'include or generated path at or under declared Git symlink')

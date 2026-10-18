@@ -79,6 +79,13 @@ Root/I alone integrates shared CLI/ABI/dispatcher/exports and Git changes. Sol6.
 
 Ready disjoint batches: compiler preparation/wire leaf; non-author independently derived positive-source/table/event/image expectations; complete B observation materialization; full39 and B/helper/GenericNominal read/write/consumer inventories; witness/constraint/export dataflow preparation; K/Quint/public formal correspondence preparation; Core/2 financial mapping; affected documentation. Assign exact owned paths before work; shared-type changes return to Root. Workers never edit independent expectations to pass their own result. Native dependencies block only consuming work. Avoid duplicates of already assigned or completed leaves.
 
+Source-only authoring and review may reread exact allowlisted source pages.
+Check every completed read for full delivery and require coverage of every
+needed body; do not reject a permitted reread after context compaction. Preserve
+failed-call evidence and reuse applicable unchanged completed reads in a changed
+continuation. Source delivery never supplies semantic approval. Exact path/tool,
+identity and execution limits remain enforced.
+
 ## One execution cycle
 
 1. Select an existing unfulfilled atomic capability and real consumer; name its exact supported domain, input-to-output difference, dependency and owned files.
@@ -160,3 +167,25 @@ The [unchanged independent ProvenanceTwins consumer](../results/sherlock-provena
 The [whole original027 adoption](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/ROOT-ORIGINAL027-ADOPTION.json) closes all original provenance sentences after complete source/result review; DoctorWatson reports12 adopted originals and23 open. All25 refinements remain open. Continue actual generic nominal/ConstructorFields implementation through the existing checked engine; no new interpreter or factory.
 
 The changed-input native05 attempt passed A0/A/B then stopped at strict source-home membership in C: four extra bookkeeping files and no missing entries. The complete [terminal archive](../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/native-attempt05-20261018/README.md) retains metadata difference, original failure and successful collection/teardown. No D/E/F, native compile, proof or target result is claimed. A source-owner diagnosis precedes another attempt; no unchanged retry.
+
+### October18 manifest reporting and first backend compilation
+
+The [reporting adoption](../results/sherlock-resource-manifest-20261018/ROOT-REPORTING-ADOPTION.json)
+installs public opt-in A/B manifest projections and the caller-owned JSON writer.
+The changed normal Core build and three independent supplied-A reporting tests
+passed, including twelve complete File writes and readbacks. The reader first
+invalidated three source-dependent closures, then returned CURRENT12 after
+substantive review and explicit applicability reconciliation. Original013 and
+all25 refinements remain open; actual identity production and remaining resource
+planes are required, and B3 runtime was not observed.
+
+[Native06](../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/native-attempt06-20261018/README.md)
+passed A0 through E and Cargo reported a finished backend test build. F's output
+audit then refused a dependency spelling containing parent segments; no full F
+success or accepted native output exists. Preserve the43 collected members,
+launcher-prefix deviation and quarantined compiled target. Next resolve the
+actual dependency audit through the designated source owner and independently
+review a bounded audit-only reuse route; do not repeat Cargo or the passing
+prefix, execute the test binary, or relabel the failed attempt as accepted.
+Root retains cleanup responsibility. Full proofs, Midnight stagenet and all
+retained language requirements remain required.
