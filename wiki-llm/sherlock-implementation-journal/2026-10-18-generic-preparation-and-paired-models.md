@@ -46,3 +46,10 @@ The shared-four Quint raw ACCEPT is bound to its complete 13-entry factual map a
 The [supplement](../../docs/results/sherlock-formal-nominal-progress-20261018/addenda/20261018-reviewed-shared-and-witness/README.md) retains all 13 corrections with the raw opinion. It preserves 68 actual factor-reference identities rather than treating unrelated catalog errors as proof that the complete data was unread or unequal. Exact supplied artifacts govern literal claims; readable-coverage assertions remain separate.
 
 The portable witness stage compiles new include-path bytes once, without fabricating another three-case runtime pass. Root has installed the seven source/fixture files and explicitly adopted namespace-only compatibility for retained027; original035 and SCON013 remain open. The [concept log](../sherlock-circuit-atlas/UPDATE-014-COMPLETE-OBSERVATIONS-AND-PORTABLE-PREFIXES.md) illustrates the interfaces without a new circuit or correspondence theorem.
+
+
+## October 18 — preserve the meaning of each observed stage
+
+The contrast consumer passed one compile and two exact runtime tests. Its selected full-helper B0 expectation is 214 consumed work, 132 helper work, 46 helper visits and reference cursor 82; complete comparisons occurred in memory, with no persisted full actual trace dump. The discovery wrapper separately compiled and listed three tests, executing zero bodies. Clean's tiny frontend diagnosis returned the expected negative1 and positive0; full JSON remains unrun. Original035 stays partial/open, originals stay15/35 and refinements0/25.
+
+The [receipt cut](../../docs/results/sherlock-stage-separation-20261018/README.md) keeps commands and full streams separate. The negative/positive Clean reproducer narrows the implementation approach while retaining the unrun larger path. Native P3 stopped before Cargo; proposed cache-debt accounting has no review outcome in this cut. The website concept remains planned for completed Sherlock; no circuit iteration is added.
