@@ -1,0 +1,165 @@
+    "includes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "relative",
+          "algorithm",
+          "digest",
+          "source_identifier"
+        ],
+        "properties": {
+          "relative": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/].*$"
+          },
+          "algorithm": {
+            "enum": [
+              "archive-member",
+              "git-blob"
+            ]
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+          },
+          "source_identifier": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "expected_generated_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "relative",
+          "kind"
+        ],
+        "properties": {
+          "relative": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/].*$"
+          },
+          "kind": {
+            "enum": [
+              "cargo-ok",
+              "cargo-checksum",
+              "cargo-lockfile",
+              "git-control"
+            ]
+          }
+        }
+      }
+    },
+    "executable_pins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "realpath",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^/[^\\u0000]*$"
+          },
+          "realpath": {
+            "type": "string",
+            "pattern": "^/[^\\u0000]*$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "minItems": 3
+    },
+    "cpu_arch": {
+      "const": "x86_64-unknown-linux-gnu"
+    },
+    "source_authoring_only": {
+      "const": false
+    },
+    "external_tier_consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier1",
+        "tier2"
+      ],
+      "properties": {
+        "tier1": {
+          "type": "boolean"
+        },
+        "tier2": {
+          "type": "boolean"
+        }
+      }
+    },
+    "total_wall_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "supervisor_cpu_seconds": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "tier1"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "review_receipts": {
+            "not": {
+              "required": [
+                "tier2"
+              ]
+            }
+          },
+          "external_tier_consent": {
+            "properties": {
+              "tier2": {
+                "const": false
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "review_receipts": {
+            "required": [
+              "tier2"
+            ]
+          },
+          "external_tier_consent": {
+            "properties": {
+              "tier2": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

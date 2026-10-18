@@ -1,0 +1,167 @@
+    need(any('midnight-onchain-runtime ' in u['identity'][0] for u in observed),'onchain build feature premise unobserved')
+    receipt(c,'E_RESOLVED.json',{'host_units':observed,'roots':roots},'E')
+
+def make_words(text):
+    # Rust make dep-info: escaped whitespace/#/backslash and line continuations.
+    # Unknown make syntax is refused, not silently omitted.
+    text=text.replace('\\\n','');out=[];word='';esc=False
+    for ch in text:
+        if esc:word+=ch;esc=False
+        elif ch=='\\':esc=True
+        elif ch.isspace():
+            if word:out.append(word);word=''
+        elif ch in '$;|':raise Unsupported('unsupported dep-info syntax')
+        else:word+=ch
+    need(not esc,'trailing dep-info escape')
+    if word:out.append(word)
+    return out
+
+def parse_depinfo(text,worktree):
+    rows=[]
+    for line in text.replace('\\\n','').splitlines():
+        if not line or line.startswith('# env-dep:'):continue
+        escaped=False;delimiter=None
+        for i,ch in enumerate(line):
+            if escaped:escaped=False
+            elif ch=='\\':escaped=True
+            elif ch==':':delimiter=i;break
+        need(delimiter is not None,'unrecognized dep-info rule')
+        def paths(part):
+            out=set()
+            for word in make_words(part):
+                p=Path(word);p=p if p.is_absolute() else worktree/p
+                need('..' not in p.parts,'non-normalized dep-info path');out.add(str(p))
+            return out
+        rows.append((paths(line[:delimiter]),paths(line[delimiter+1:])))
+    return rows
+
+def artifact_dependencies(artifact,records):
+    """Dep-info target identity, with verified same-directory Cargo alias copy."""
+    result=[];artifact=str(artifact)
+    for rows in records.values():
+        for targets,dependencies in rows:
+            if artifact in targets:result.append(dependencies);continue
+            if Path(artifact).name!='build-script-build':continue
+            for target in targets:
+                p=Path(target)
+                if p.parent!=Path(artifact).parent or re.fullmatch(r'build_script_build-[0-9a-f]+',p.name) is None:continue
+                regular(p);regular(artifact)
+                if p.stat().st_size==Path(artifact).stat().st_size and digest(p)==digest(artifact):result.append(dependencies)
+    need(result,'host output lacks exact dep-info target or verified Cargo alias')
+    return set().union(*result)
+
+
+def output_check(c):
+    frozen_source(c);root=Path(c['paths']['target']);resolved=jload(Path(c['paths']['packet'])/'E_RESOLVED.json')['host_units']
+    included={str(Path(c['paths']['source_home'])/p['relative']) for p in c['includes']};deps={};host=[];fingerprints=[];out_dirs=[]
+    for p in root.rglob('*.d'):
+        regular(p);deps[str(p)]=parse_depinfo(p.read_text(),Path(c['paths']['worktree']))
+        inputs=set().union(*(values for _,values in deps[str(p)]))
+        sdk=any('/midnight-' in x or '/midnight-ledger-' in x for x in inputs)
+        if sdk:
+            for x in inputs:
+                if x.startswith(c['paths']['source_home']+'/') and not x.endswith('.rs'):need(x in included,'unbound SDK non-Rust dep-info input')
+    for p in walk_files(root):
+        is_build=('/build/' in str(p) and (p.name=='build-script-build' or p.name.startswith('build_script_build-')) and p.stat().st_mode&0o111)
+        if p.suffix!='.so' and not is_build:continue
+        kind='build-script' if is_build else 'proc-macro';inputs=artifact_dependencies(p,deps)
+        units=[u for u in resolved if u['identity'][1]==kind and any(x.startswith(u['root']+'/') for x in inputs)]
+        need(len(units)==1,'host artifact exact package/kind/source identity ambiguous');u=units[0]
+        host.append({'path':str(p.relative_to(root)),'source_root':u['root'],'identity':u['identity'],'name':u['name'],'target_name':u['target_name'],'kind':kind,'sha256':digest(p)})
+    for p in walk_files(root):
+        if '/.fingerprint/' not in str(p):continue
+        label=p.name.removesuffix('.json');directory=p.parent.name
+        match=re.fullmatch(r'(.+)-([0-9a-f]{16})',directory)
+        need(match is not None,'unknown fingerprint directory identity');name,unit_hash=match.groups()
+        if label.startswith('run-build-script-'):
+            units=[u for u in resolved if u['name']==name and u['identity'][1]=='build-script']
+            need(len(units)==1,'run-build-script fingerprint has ambiguous exact source root');u=units[0]
+            need(any(h['identity']==u['identity'] and h['source_root']==u['root'] and h['kind']=='build-script' for h in host),'run-unit lacks dep-info-associated compiled build script')
+            # Cargo's run-unit hash names both its fingerprint and OUT_DIR.
+            profile=p.parents[2];out=profile/'build'/directory/'out'
+            need(out.is_dir() and out.resolve()==out,'run-unit OUT_DIR identity')
+            need(out.stat().st_dev==root.stat().st_dev,'OUT_DIR device differs')
+            out_dirs.append({'path':str(out.relative_to(root)),'identity':u['identity'],'source_root':u['root'],'files':tree_hashes(out)})
+        elif label.startswith('build-script-'):
+            candidates=[h for h in host if h['kind']=='build-script' and Path(h['path']).parent.name==directory]
+            identities={(h['name'],h['kind'],h['source_root']) for h in candidates}
+            need(len(identities)==1 and next(iter(identities))[0]==name,'build-script fingerprint exact identity missing')
+            u=candidates[0]
+        elif label.startswith('lib-'):
+            crate_name=label[4:]
+            candidates=[h for h in host if h['kind']=='proc-macro' and h['name']==name and h['target_name'].replace('-','_')==crate_name and Path(h['path']).name.endswith('-'+unit_hash+'.so')]
+            if not candidates:
+                need(not any(u['name']==name and u['identity'][1]=='proc-macro' and u['target_name'].replace('-','_')==crate_name for u in resolved),'resolved proc-macro fingerprint lacks artifact provenance')
+                continue
+            identities={(h['name'],h['kind'],h['source_root']) for h in candidates};need(len(identities)==1,'proc-macro fingerprint identity ambiguous');u=candidates[0]
+        else:continue
+        fingerprints.append({'path':str(p.relative_to(root)),'name':name,'kind':u.get('kind',u['identity'][1]),'source_root':u.get('source_root',u.get('root')),'identity':u['identity']})
+    receipt(c,'F_QUARANTINED_OUTPUTS.json',{'all_outputs':tree_hashes(root),'host_outputs':host,'host_fingerprints':fingerprints,'build_script_outputs':out_dirs,'acceptance':'UNACCEPTED: independent result review required; no artifact executed'},'F')
+
+
+def worker(c,phase):
+    # A0/A/C/D workers and E/F post-command audits are dispatched. They run inside the same bounded
+    # cgroup/sandbox envelope; Cargo receives no Python callback or wrapper flag.
+    if phase=='A0':freeze_inputs(c)
+    elif phase=='A':stage(c)
+    elif phase=='C':verify_raw(c)
+    elif phase=='D':freeze_source(c)
+    elif phase=='E':metadata_check(c)
+    elif phase=='F':output_check(c)
+    else:raise Unsupported('invalid data worker phase')
+
+def run(c,config_sha):
+    consent(c);supervisor_envelope(c)
+    def expired(signum,frame):raise Refusal('whole-job wall cap')
+    signal.signal(signal.SIGALRM,expired);signal.setitimer(signal.ITIMER_REAL,c['total_wall_seconds'])
+    resource.setrlimit(resource.RLIMIT_CPU,(c['supervisor_cpu_seconds'],c['supervisor_cpu_seconds']))
+    bound_identities(c)
+    p=c['paths'];root=Path(p['execution_root'])
+    # No hidden privilege/setup attempt. Exact empty quota mountpoints and a
+    # reviewed supervisor envelope must already exist under a separate grant.
+    owned_paths(c)
+    for k in ('source_home','target','tmp','packet','empty_home','mask_empty'):
+        need(Path(p[k]).is_dir() and not any(Path(p[k]).iterdir()),'required fresh empty owned path: '+k)
+        need(Path(p[k]).stat().st_uid==os.getuid(),'output ownership')
+    write_new(root/'ONE_SHOT_STARTED',b'no retry\n',64)
+    # This marker is never removed, even on failure. No old record/counter edit.
+    phases=PHASES if c['mode']=='tier1-and-compile' else PHASES[:-1]
+    try:
+        for phase in phases:
+            bound_identities(c);quotas(c,phase)
+            result=launch(c,phase,config_sha)
+            bound_identities(c)
+            receipt(c,phase+'_RESULT.json',result,phase)
+    except BaseException as e:
+        signal.setitimer(signal.ITIMER_REAL,0)
+        # Failures are terminal; cleanup kills descendants, never deletes evidence
+        # or resets the one-shot marker. No auto-repair, retries or phase skipping.
+        try:receipt(c,'TERMINAL_FAILURE.json',{'type':type(e).__name__,'message':str(e),'native_outputs_accepted':False},phase)
+        except Exception:pass
+        raise
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--config',required=True)
+    parser.add_argument('--config-sha256',required=True)
+    parser.add_argument('--worker-fd',type=int)
+    parser.add_argument('--worker',choices=('A0','A','C','D','E','F'))
+    parser.add_argument('--precheck',action='store_true')
+    a=parser.parse_args();need(HEX.fullmatch(a.config_sha256) is not None,'external full-config SHA required')
+    need(digest(a.config)==a.config_sha256,'final config differs from Root-supplied external anchor')
+    c=validate(jload(a.config));need(str(Path(a.config).resolve())==c['paths']['config'],'config path binding')
+    executing_identity(c)
+    if a.worker:
+        verify_worker_context(c,a.worker,a.precheck,a.worker_fd,a.config_sha256)
+        consent(c)
+        if a.precheck:
+            need(a.worker in ('E','F'),'invalid precheck');frozen_source(c)
+        else:worker(c,a.worker)
+    else:
+        need(a.worker_fd is None and not a.precheck,'internal flags on supervisor')
+        run(c,a.config_sha256)
+
+if __name__=='__main__':
+    try:main()
+    except (Refusal,OSError,ValueError,KeyError) as e:
+        print('TERMINAL_REFUSAL: '+str(e),file=sys.stderr);sys.exit(2)
