@@ -111,3 +111,10 @@ not cover decode_capture end-to-end chain propagation, the six assembler guard
 categories or multiline single-item guards. General candidate04 assembler/decoder
 installation remains unadopted. No full corpus, theorem, B/finance, circuit/native
 proof or target result follows from original021's finite reporting acceptance.
+
+
+## October 18 — retained native06 R3 provenance and completed cleanup
+
+The corrected retained R3 audit passed and both independent result reviewers accepted its scoped build-provenance result. Root subsequently verified durable preservation of 3,554 files (3,498 target files, 55 packet files and one external marker), totaling 2,628,344,281 bytes, then completed all six cleanup operations. The three tmpfs mounts are gone, cgroups are absent and the final receipt records `cleanupOwed:false`. Archived files remain read-only/nonexecutable; native outputs remain unaccepted and the SDK target ELF was not executed. Proofs, native target semantics, stagenet and full Sherlock completion remain open. No requirement status changes; the current published count remains 15/35.
+
+See the [complete result archive](../../results/sherlock-native06-association-audit-20261018/README.md), [Root preservation disposition](../../results/sherlock-native06-association-audit-20261018/actual/preservation/ROOT-PRESERVATION-DISPOSITION.json) and [actual cleanup result](../../results/sherlock-native06-association-audit-20261018/actual/preservation/POST-CLEANUP-RESULT.json). The outer audit measured 23.021559253 seconds and the worker 12.381874724997033 seconds; neither is target execution time. All file hashes were verified before cleanup; post-cleanup checks cover regularity, size and mode without a redundant payload rehash. Earlier pending/owed receipts remain dated history.

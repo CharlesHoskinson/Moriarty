@@ -1,0 +1,9 @@
+# October 18 — retained native06 R3 audit and durable cleanup
+
+Observation: The corrected retained R3 audit passed and both independent result reviewers accepted its scoped build-provenance result. Root subsequently verified durable preservation of 3,554 files (3,498 target files, 55 packet files and one external marker), totaling 2,628,344,281 bytes, then completed all six cleanup operations. The three tmpfs mounts are gone, cgroups are absent and the final receipt records `cleanupOwed:false`. Archived files remain read-only/nonexecutable; native outputs remain unaccepted and the SDK target ELF was not executed. Proofs, native target semantics, stagenet and full Sherlock completion remain open. No requirement status changes; the current published count remains 15/35.
+
+The [archive](../../docs/results/sherlock-native06-association-audit-20261018/README.md) preserves the failed outer wrapper, corrected operation, whole security and normal opinions, factual qualifications and filesystem receipts. The source author is distinct from both reviewers; later same-CID review turns are continuity, not extra votes. The outer 23.021559253 seconds and inner 12.381874724997033 seconds are different clocks. No Cargo rebuild or SDK target execution was needed for this retained audit.
+
+Interpretation: a verified association audit makes the retained build provenance usable within its stated scope. Root's later exact-copy and cleanup receipts settle preservation and cleanup, without settling artifact semantics, proof or deployment. The immutable earlier raw cuts continue to show pending reviews or cleanup owed at their original times. Full packet membership is 55 regular files plus an external 9-byte marker.
+
+Next unresolved work is qualification of the actual native target, proof/verification and stagenet execution under the full product obligations. No new circuit iteration or requirement closure follows from this editorial entry.
