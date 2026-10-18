@@ -1,0 +1,790 @@
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/approval-true.json
+@@ -0,0 +1,14 @@
++{
++  "format": "moriarty-stage-event/1",
++  "action": "deliver",
++  "label": "approval",
++  "values": [
++    {
++      "name": "ok",
++      "value": {
++        "type": "Bool",
++        "value": true
++      }
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/mori-tests.json
+@@ -0,0 +1,85 @@
++{
++  "profile": "moriarty-tests/disjoint-draft/1",
++  "cases": [
++    {
++      "name": "left-first",
++      "members": [
++        {
++          "source": "two-deliveries.mori",
++          "scenario": "two-deliveries-scenario.json",
++          "action": "deliver",
++          "logical_cap": "16"
++        },
++        {
++          "source": "reserve.mori",
++          "scenario": "reserve-scenario.json",
++          "action": "allocate",
++          "logical_cap": "36"
++        }
++      ],
++      "expected": "left-first-0.json",
++      "events": [
++        {
++          "member": 0,
++          "event": "approval-true.json",
++          "expected": "left-first-1.json"
++        },
++        {
++          "member": 1,
++          "event": "quote43.json",
++          "expected": "left-first-2.json"
++        },
++        {
++          "member": 0,
++          "event": "receipt-true.json",
++          "expected": "left-first-3.json"
++        },
++        {
++          "member": 1,
++          "event": "settlement-true.json",
++          "expected": "left-first-4.json"
++        }
++      ]
++    },
++    {
++      "name": "right-first",
++      "members": [
++        {
++          "source": "two-deliveries.mori",
++          "scenario": "two-deliveries-scenario.json",
++          "action": "deliver",
++          "logical_cap": "16"
++        },
++        {
++          "source": "reserve.mori",
++          "scenario": "reserve-scenario.json",
++          "action": "allocate",
++          "logical_cap": "36"
++        }
++      ],
++      "expected": "right-first-0.json",
++      "events": [
++        {
++          "member": 1,
++          "event": "quote43.json",
++          "expected": "right-first-1.json"
++        },
++        {
++          "member": 0,
++          "event": "approval-true.json",
++          "expected": "right-first-2.json"
++        },
++        {
++          "member": 1,
++          "event": "settlement-true.json",
++          "expected": "right-first-3.json"
++        },
++        {
++          "member": 0,
++          "event": "receipt-true.json",
++          "expected": "right-first-4.json"
++        }
++      ]
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/quote43.json
+@@ -0,0 +1,14 @@
++{
++  "format": "moriarty-stage-event/1",
++  "action": "allocate",
++  "label": "approval",
++  "values": [
++    {
++      "name": "quote",
++      "value": {
++        "type": "UInt",
++        "value": "43"
++      }
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/receipt-true.json
+@@ -0,0 +1,14 @@
++{
++  "format": "moriarty-stage-event/1",
++  "action": "deliver",
++  "label": "receipt",
++  "values": [
++    {
++      "name": "seen",
++      "value": {
++        "type": "Bool",
++        "value": true
++      }
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/reserve-scenario.json
+@@ -0,0 +1,78 @@
++{
++  "state": {
++    "basis": {
++      "type": "UInt",
++      "value": "40"
++    },
++    "allocated": {
++      "type": "UInt",
++      "value": "0"
++    },
++    "marker": {
++      "type": "UInt",
++      "value": "77"
++    }
++  },
++  "inputs": {
++    "extra": {
++      "type": "UInt",
++      "value": "2"
++    }
++  },
++  "balances": [
++    {
++      "asset": {
++        "network": "local",
++        "issuer": "continuation-reserve-oracle",
++        "reference": "UNIT",
++        "scale": 0
++      },
++      "account": "observer",
++      "amount": "42"
++    },
++    {
++      "asset": {
++        "network": "local",
++        "issuer": "continuation-reserve-oracle",
++        "reference": "UNIT",
++        "scale": 0
++      },
++      "account": "reserve",
++      "amount": "100"
++    },
++    {
++      "asset": {
++        "network": "local",
++        "issuer": "continuation-reserve-oracle",
++        "reference": "UNIT",
++        "scale": 0
++      },
++      "account": "target",
++      "amount": "0"
++    },
++    {
++      "asset": {
++        "network": "local",
++        "issuer": "continuation-reserve-oracle",
++        "reference": "UNIT",
++        "scale": 0
++      },
++      "account": "treasury",
++      "amount": "0"
++    }
++  ],
++  "liabilities": [
++    {
++      "name": "allocation",
++      "asset": {
++        "network": "local",
++        "issuer": "continuation-reserve-oracle",
++        "reference": "UNIT",
++        "scale": 0
++      },
++      "debtor": "reserve",
++      "creditor": "target",
++      "amount": "5"
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/reserve.mori
+@@ -0,0 +1,21 @@
++language "moriarty/2";
++agreement ReserveContinuationOracle {
++  asset CREDIT = { network: "local", issuer: "continuation-reserve-oracle", reference: "UNIT", scale: 0 };
++  state basis: UInt = 40;
++  state allocated: UInt = 0;
++  state marker: UInt = 77;
++  action allocate(extra: UInt) {
++    let held = basis + extra;
++    next basis = basis - 5;
++    liability("allocation", CREDIT, "reserve", "target", held);
++    await approval(quote: UInt) when quote >= held;
++    next allocated = held;
++    transfer(CREDIT, "reserve", "target", held);
++    discharge("allocation", held);
++    next basis = basis + quote;
++    await settlement(ready: Bool) when ready;
++    requires quote <= 50;
++    fee(CREDIT, "reserve", "treasury", extra);
++    emit "settled_quote"(quote);
++  }
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/settlement-true.json
+@@ -0,0 +1,14 @@
++{
++  "format": "moriarty-stage-event/1",
++  "action": "allocate",
++  "label": "settlement",
++  "values": [
++    {
++      "name": "ready",
++      "value": {
++        "type": "Bool",
++        "value": true
++      }
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/two-deliveries-scenario.json
+@@ -0,0 +1,65 @@
++{
++  "balances": [
++    {
++      "account": "alice",
++      "amount": "20",
++      "asset": {
++        "issuer": "independent-staged-test-oracle",
++        "network": "local",
++        "reference": "UNIT",
++        "scale": 0
++      }
++    },
++    {
++      "account": "bob",
++      "amount": "0",
++      "asset": {
++        "issuer": "independent-staged-test-oracle",
++        "network": "local",
++        "reference": "UNIT",
++        "scale": 0
++      }
++    },
++    {
++      "account": "observer",
++      "amount": "11",
++      "asset": {
++        "issuer": "independent-staged-test-oracle",
++        "network": "local",
++        "reference": "UNIT",
++        "scale": 0
++      }
++    },
++    {
++      "account": "treasury",
++      "amount": "0",
++      "asset": {
++        "issuer": "independent-staged-test-oracle",
++        "network": "local",
++        "reference": "UNIT",
++        "scale": 0
++      }
++    }
++  ],
++  "inputs": {},
++  "liabilities": [
++    {
++      "amount": "5",
++      "asset": {
++        "issuer": "independent-staged-test-oracle",
++        "network": "local",
++        "reference": "UNIT",
++        "scale": 0
++      },
++      "creditor": "bob",
++      "debtor": "alice",
++      "name": "duty"
++    }
++  ],
++  "state": {
++    "phase": {
++      "type": "UInt",
++      "value": "0"
++    }
++  }
++}
+--- /dev/null
++++ b/crates/fixtures/core-disjoint-product/two-deliveries.mori
+@@ -0,0 +1,15 @@
++language "moriarty/2";
++agreement TwoDeliveries {
++  state phase: UInt = 0;
++  asset UNIT = { network: "local", issuer: "independent-staged-test-oracle", reference: "UNIT", scale: 0 };
++  action deliver() {
++    transfer(UNIT, "alice", "bob", 7);
++    next phase = 1;
++    await approval(ok: Bool) when ok;
++    transfer(UNIT, "alice", "bob", 3);
++    await receipt(seen: Bool) when seen;
++    next phase = 2;
++    emit "done"(phase);
++  }
++  action declare() { liability("duty", UNIT, "alice", "bob", 0); }
++}
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -8,6 +8,7 @@
+ repository.workspace = true
+ 
+ [features]
++core2-disjoint-draft = ["mori-core/core2-disjoint-draft"]
+ default = ["native"]
+ native = [
+     "dep:mori-backend",
+--- /dev/null
++++ b/crates/mori/src/commands/test/disjoint_test.rs
+@@ -0,0 +1,102 @@
++use crate::{commands::core_io, shell::Shell};
++use mori_core::stage::{self, disjoint::{Member, Pair, MAX_INVOCATIONS}};
++use serde::Deserialize;
++use serde_json::{Value, json};
++use std::{path::{Path, PathBuf}, process::ExitCode};
++
++type Result<T> = crate::commands::Result<T>;
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Manifest {
++    profile: String,
++    cases: Vec<Case>,
++}
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Case {
++    name: String,
++    members: [MemberPath; 2],
++    expected: PathBuf,
++    events: Vec<Event>,
++}
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct MemberPath {
++    source: PathBuf,
++    scenario: PathBuf,
++    action: String,
++    logical_cap: mori_core::UInt,
++}
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Event {
++    member: usize,
++    event: PathBuf,
++    expected: PathBuf,
++}
++
++pub(super) fn run(dir: &Path, value: Value, shell: &mut Shell) -> Result<ExitCode> {
++    let manifest: Manifest = serde_json::from_value(value).map_err(core_io::operation)?;
++    if manifest.profile != "moriarty-tests/disjoint-draft/1"
++        || manifest.cases.is_empty() || manifest.cases.len() > 256
++    {
++        return Err(core_io::operation("expected a bounded disjoint-draft manifest"));
++    }
++    let mut names = std::collections::BTreeSet::new();
++    for case in &manifest.cases {
++        if case.name.is_empty() || !names.insert(&case.name)
++            || case.events.len() > MAX_INVOCATIONS - 2
++            || case.events.iter().any(|event| event.member >= 2)
++        {
++            return Err(core_io::operation("invalid disjoint case name, member or invocation count"));
++        }
++    }
++    let mut reports = Vec::new();
++    let mut failed = 0;
++    for case in manifest.cases {
++        let report = run_case(dir, case)?;
++        if report["passed"] != true { failed += 1; }
++        reports.push(report);
++    }
++    shell.status("Tested", format!("{} passed; {} failed", reports.len() - failed, failed));
++    println!("{}", super::aggregate_report(failed == 0, reports)?);
++    Ok(if failed == 0 { ExitCode::SUCCESS } else { ExitCode::FAILURE })
++}
++
++fn member(dir: &Path, input: MemberPath) -> Result<Member> {
++    let source = core_io::read_source(&dir.join(input.source))?;
++    let scenario: mori_core::Scenario = core_io::read_json(&dir.join(input.scenario))?;
++    Ok(Member {
++        program: stage::load(&source).map_err(core_io::operation)?,
++        action: input.action, scenario, cap: input.logical_cap,
++    })
++}
++
++fn run_case(dir: &Path, case: Case) -> Result<Value> {
++    // Freeze complete expected observations before invoking either program.
++    let expected_start: Value = core_io::read_json(&dir.join(case.expected))?;
++    let expected_events: Vec<Value> = case.events.iter().map(|event| {
++        core_io::read_json(&dir.join(&event.expected))
++    }).collect::<Result<_>>()?;
++    let events: Vec<_> = case.events.iter().map(|event| {
++        stage::decode::read_bounded(
++            &dir.join(&event.event), stage::decode::MAX_EVENT_BYTES,
++            stage::decode::EVENT_TOO_LARGE,
++        ).and_then(|text| stage::decode::event(&text)).map_err(core_io::operation)
++    }).collect::<Result<_>>()?;
++    let [left, right] = case.members;
++    let members = [member(dir, left)?, member(dir, right)?];
++    let mut pair = Pair::start(members).map_err(core_io::operation)?;
++    let actual = pair.report().map_err(core_io::operation)?;
++    let mut passed = actual == expected_start;
++    let mut stages = vec![json!({"index":0,"passed":passed,"actual":actual})];
++    for (index, ((step, event), expected)) in case.events.iter().zip(events).zip(expected_events).enumerate() {
++        pair.resume(step.member, event).map_err(core_io::operation)?;
++        let actual = pair.report().map_err(core_io::operation)?;
++        let matched = actual == expected;
++        passed &= matched;
++        stages.push(json!({"index":index+1,"passed":matched,"actual":actual}));
++    }
++    Ok(json!({"name":case.name,"passed":passed,"stages":stages}))
++}
+--- a/crates/mori/src/commands/test.rs
++++ b/crates/mori/src/commands/test.rs
+@@ -4,6 +4,8 @@
+ use std::{path::PathBuf, process::ExitCode};
+ 
+ mod stage_test;
++#[cfg(feature = "core2-disjoint-draft")]
++mod disjoint_test;
+ 
+ #[derive(Debug, clap::Args)]
+ pub struct Args {
+@@ -40,6 +42,14 @@
+     let value: serde_json::Value = core_io::read_json(&args.dir.join("mori-tests.json"))?;
+     if value.get("profile").and_then(serde_json::Value::as_str) == Some("moriarty-tests/2") {
+         return stage_test::run(&args.dir, value, shell);
++    }
++    if value.get("profile").and_then(serde_json::Value::as_str)
++        == Some("moriarty-tests/disjoint-draft/1")
++    {
++        #[cfg(feature = "core2-disjoint-draft")]
++        return disjoint_test::run(&args.dir, value, shell);
++        #[cfg(not(feature = "core2-disjoint-draft"))]
++        return Err(core_io::operation("disjoint draft requires feature core2-disjoint-draft"));
+     }
+     let manifest: Manifest = serde_json::from_value(value).map_err(core_io::operation)?;
+     if manifest.profile != "moriarty-tests/1"
+--- /dev/null
++++ b/crates/mori/tests/disjoint_test_public.rs
+@@ -0,0 +1,50 @@
++#![cfg(feature = "core2-disjoint-draft")]
++use serde_json::Value;
++use std::{fs, path::PathBuf, process::Command, sync::atomic::{AtomicUsize, Ordering}};
++
++static NEXT: AtomicUsize = AtomicUsize::new(0);
++
++struct Project(PathBuf);
++impl Project {
++    fn new() -> Self {
++        let path = std::env::temp_dir().join(format!(
++            "mori-disjoint-test-public-{}-{}", std::process::id(),
++            NEXT.fetch_add(1, Ordering::Relaxed),
++        ));
++        fs::create_dir(&path).unwrap();
++        let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
++            .join("../fixtures/core-disjoint-product");
++        for entry in fs::read_dir(fixtures).unwrap() {
++            let entry = entry.unwrap();
++            if entry.file_type().unwrap().is_file() {
++                fs::copy(entry.path(), path.join(entry.file_name())).unwrap();
++            }
++        }
++        Self(path)
++    }
++}
++impl Drop for Project {
++    fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
++}
++
++#[test]
++fn public_consumer_observes_both_disjoint_domains_for_two_explicit_schedules() {
++    let project = Project::new();
++    // The aggregate and all ten stage reports are independent literal inputs.
++    let expected = fs::read(project.0.join("public-report.json")).unwrap();
++    let expected_json: Value = serde_json::from_slice(&expected).unwrap();
++    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .args(["--color", "never", "test"])
++        .arg(&project.0).output().unwrap();
++    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
++    let actual: Value = serde_json::from_slice(&output.stdout).unwrap();
++    assert_eq!(actual, expected_json);
++    assert_eq!(output.stdout, expected);
++    assert!(String::from_utf8_lossy(&output.stderr).contains("2 passed; 0 failed"));
++    // Equality here supplements the independently literal complete reports.
++    // It does not replace their separate ordered histories or member effects.
++    assert_eq!(
++        actual["cases"][0]["stages"][4]["actual"]["post"],
++        actual["cases"][1]["stages"][4]["actual"]["post"],
++    );
++}
+--- a/crates/mori-core/Cargo.toml
++++ b/crates/mori-core/Cargo.toml
+@@ -6,6 +6,7 @@
+ license.workspace = true
+ 
+ [features]
++core2-disjoint-draft = []
+ # Opt-in and non-default: enables only the Midnight-native signing-frame
+ # compatibility test. Ordinary mori-core consumers and SDK-free test
+ # selection never pull these dependencies.
+--- /dev/null
++++ b/crates/mori-core/src/stage/disjoint.rs
+@@ -0,0 +1,225 @@
++//! Local product of two staged actions with disjoint state and asset domains.
++use super::{PendingFrame, StageEvent, StageOutcome, StageRejection, StagedProgram};
++use crate::{AssetId, Effect, Scenario, Snapshot, Statement, UInt};
++use serde_json::{Value, json};
++use std::collections::BTreeSet;
++
++pub const MAX_INVOCATIONS: usize = 256;
++
++pub struct Member {
++    pub program: StagedProgram,
++    pub action: String,
++    pub scenario: Scenario,
++    pub cap: UInt,
++}
++
++#[derive(Debug, thiserror::Error)]
++pub enum Error {
++    #[error("local disjoint product: {0}")]
++    Shape(String),
++    #[error("member {member}: {rejection}")]
++    Branch {
++        member: usize,
++        rejection: StageRejection,
++        /// Start may have attempted an earlier member before this refusal.
++        attempted_before: Vec<UInt>,
++    },
++}
++
++#[derive(Clone)]
++struct Observation {
++    member: usize,
++    outcome: StageOutcome,
++}
++
++/// Opaque local state: member boundaries come only from actual stage outputs.
++/// It has no decoder, authentication or consumption tracking.
++pub struct Pair {
++    programs: [StagedProgram; 2],
++    caps: [UInt; 2],
++    cap_total: UInt,
++    attempted_total: UInt,
++    opening: Snapshot,
++    latest: [StageOutcome; 2],
++    history: Vec<Observation>,
++}
++
++fn shape(message: &str) -> Error {
++    Error::Shape(message.into())
++}
++
++fn sum(left: UInt, right: UInt) -> Result<UInt, Error> {
++    left.0.checked_add(right.0).map(UInt).ok_or_else(|| shape("logical sum exceeds UInt"))
++}
++
++fn declared_domains(program: &StagedProgram) -> (BTreeSet<&str>, BTreeSet<&AssetId>, BTreeSet<&str>) {
++    let program = program.program();
++    let states = program.states.iter().map(|state| state.name.as_str()).collect();
++    let assets = program.assets.iter().map(|asset| &asset.identity).collect();
++    let duties = program.actions.iter().flat_map(|action| &action.statements).filter_map(|stmt| {
++        match stmt {
++            Statement::Liability { name, .. } => Some(name.as_str()),
++            _ => None,
++        }
++    }).collect();
++    (states, assets, duties)
++}
++
++fn disjoint(left: &StagedProgram, right: &StagedProgram) -> Result<(), Error> {
++    let (left_state, left_assets, left_duties) = declared_domains(left);
++    let (right_state, right_assets, right_duties) = declared_domains(right);
++    if !left_state.is_disjoint(&right_state)
++        || !left_assets.is_disjoint(&right_assets)
++        || !left_duties.is_disjoint(&right_duties)
++    {
++        return Err(shape("requires disjoint declared state names, exact assets and duty names"));
++    }
++    Ok(())
++}
++
++fn merge(left: &Snapshot, right: &Snapshot) -> Result<Snapshot, Error> {
++    let mut state = left.state.clone();
++    for (name, value) in &right.state {
++        if state.insert(name.clone(), value.clone()).is_some() {
++            return Err(shape("state domains overlap"));
++        }
++    }
++    let mut balances = left.balances.clone();
++    balances.extend(right.balances.iter().cloned());
++    balances.sort_by(|a, b| (&a.asset, &a.account).cmp(&(&b.asset, &b.account)));
++    if balances.windows(2).any(|rows| rows[0].asset == rows[1].asset && rows[0].account == rows[1].account) {
++        return Err(shape("balance domains overlap"));
++    }
++    let mut liabilities = left.liabilities.clone();
++    liabilities.extend(right.liabilities.iter().cloned());
++    liabilities.sort_by(|a, b| a.name.cmp(&b.name));
++    if liabilities.windows(2).any(|rows| rows[0].name == rows[1].name) {
++        return Err(shape("duty domains overlap"));
++    }
++    Ok(Snapshot { state, balances, liabilities })
++}
++
++fn boundary(outcome: &StageOutcome) -> &Snapshot {
++    match outcome {
++        StageOutcome::Waiting { continuation, .. } => &continuation.boundary,
++        StageOutcome::Complete { segment, .. } => &segment.execution.post,
++    }
++}
++
++fn start_pre(outcome: &StageOutcome) -> Result<&Snapshot, Error> {
++    match outcome {
++        StageOutcome::Waiting { segment: Some(segment), .. }
++        | StageOutcome::Complete { segment, .. } => Ok(&segment.execution.pre),
++        _ => Err(shape("start did not supply a committed segment")),
++    }
++}
++
++fn attempted(outcome: &StageOutcome) -> UInt {
++    match outcome {
++        StageOutcome::Waiting { attempted, .. } | StageOutcome::Complete { attempted, .. } => *attempted,
++    }
++}
++
++fn committed(outcome: &StageOutcome) -> UInt {
++    match outcome {
++        StageOutcome::Waiting { continuation, .. } => continuation.logical.committed,
++        StageOutcome::Complete { committed, .. } => *committed,
++    }
++}
++
++fn frame(outcome: &StageOutcome) -> PendingFrame {
++    match outcome {
++        StageOutcome::Waiting { continuation, .. } => PendingFrame {
++            site: continuation.site,
++            captures: continuation.captures.clone(),
++        },
++        StageOutcome::Complete { segment, .. } => segment.frame_post.clone(),
++    }
++}
++
++fn effects(outcome: &StageOutcome) -> &[Effect] {
++    match outcome {
++        StageOutcome::Waiting { segment: Some(segment), .. }
++        | StageOutcome::Complete { segment, .. } => &segment.execution.effects,
++        StageOutcome::Waiting { segment: None, .. } => &[],
++    }
++}
++
++impl Pair {
++    /// Start uses a declared left-then-right reference linearization. Neither
++    /// member receives the other's boundary, effects, captures or inputs.
++    pub fn start([left, right]: [Member; 2]) -> Result<Self, Error> {
++        disjoint(&left.program, &right.program)?;
++        let caps = [left.cap, right.cap];
++        let cap_total = sum(caps[0], caps[1])?;
++        let programs = [left.program, right.program];
++        let first = super::start(&programs[0], &left.action, left.scenario, Some(caps[0]))
++            .map_err(|rejection| Error::Branch { member: 0, rejection, attempted_before: vec![] })?;
++        let second = super::start(&programs[1], &right.action, right.scenario, Some(caps[1]))
++            .map_err(|rejection| Error::Branch {
++                member: 1, rejection, attempted_before: vec![attempted(&first)],
++            })?;
++        let attempted_total = sum(attempted(&first), attempted(&second))?;
++        let opening = merge(start_pre(&first)?, start_pre(&second)?)?;
++        merge(boundary(&first), boundary(&second))?;
++        let history = vec![
++            Observation { member: 0, outcome: first.clone() },
++            Observation { member: 1, outcome: second.clone() },
++        ];
++        Ok(Self { programs, caps, cap_total, attempted_total, opening, latest: [first, second], history })
++    }
++
++    /// Resume one member from its own actual continuation. Publication replaces
++    /// only that member after its stage call and complete frame merge succeed.
++    pub fn resume(&mut self, member: usize, event: StageEvent) -> Result<(), Error> {
++        if self.history.len() >= MAX_INVOCATIONS {
++            return Err(shape("invocation limit reached"));
++        }
++        let Some(StageOutcome::Waiting { continuation, .. }) = self.latest.get(member) else {
++            return Err(shape("member must identify a pending branch"));
++        };
++        let outcome = super::resume(
++            &self.programs[member], continuation.clone(), event, Some(&continuation.action), None,
++        ).map_err(|rejection| Error::Branch { member, rejection, attempted_before: vec![] })?;
++        let mut latest = self.latest.clone();
++        latest[member] = outcome.clone();
++        merge(boundary(&latest[0]), boundary(&latest[1]))?;
++        let attempted_total = sum(self.attempted_total, attempted(&outcome))?;
++        self.latest = latest;
++        self.attempted_total = attempted_total;
++        self.history.push(Observation { member, outcome });
++        Ok(())
++    }
++
++    /// The report contains the complete product frame and all original member
++    /// envelopes. Effects retain invocation order, then source statement order.
++    pub fn report(&self) -> Result<Value, Error> {
++        let post = merge(boundary(&self.latest[0]), boundary(&self.latest[1]))?;
++        let committed = [committed(&self.latest[0]), committed(&self.latest[1])];
++        let committed_total = sum(committed[0], committed[1])?;
++
++        let ordered_effects: Vec<_> = self.history.iter().flat_map(|item| effects(&item.outcome)).collect();
++        let history: Vec<_> = self.history.iter().map(|item| {
++            json!({"member":item.member,"outcome":super::outcome_report(Ok(item.outcome.clone()))})
++        }).collect();
++        let members: Vec<_> = self.latest.iter().map(|outcome| {
++            super::outcome_report(Ok(outcome.clone()))
++        }).collect();
++        let frames = self.latest.each_ref().map(frame);
++        let waiting = self.latest.iter().any(|outcome| matches!(outcome, StageOutcome::Waiting { .. }));
++        Ok(json!({
++            "format":"moriarty-local-disjoint-draft/1",
++            "status":if waiting { "waiting" } else { "complete" },
++            "qualification":"local-reference-stage",
++            "composition_qualification":"unadopted-local-disjoint-product",
++            "authentication":"none", "consumption":"untracked",
++            "ordering":{"start":[0,1],"effects":"invocation-then-source-order"},
++            "pre":self.opening, "post":post, "frames":frames,
++            "members":members, "history":history, "effects":ordered_effects,
++            "logical":{"caps":self.caps,"cap_total":self.cap_total,
++                "committed":committed,"committed_total":committed_total,
++                "attempted_total":self.attempted_total},
++            "residual":super::residual(&post),
++        }))
++    }
++}
+--- a/crates/mori-core/src/stage/mod.rs
++++ b/crates/mori-core/src/stage/mod.rs
+@@ -6,6 +6,8 @@
+ //! `STAGE_LABELS` so these limits stay visible.
+ mod admit;
+ mod cost;
++#[cfg(feature = "core2-disjoint-draft")]
++pub mod disjoint;
+ pub mod decode;
+ mod digest;
+ mod plan;

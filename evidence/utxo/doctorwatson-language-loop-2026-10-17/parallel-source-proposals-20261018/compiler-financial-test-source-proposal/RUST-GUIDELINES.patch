@@ -1,0 +1,14 @@
+--- a/RUST_GUIDELINES.md
++++ b/RUST_GUIDELINES.md
+@@ -224,6 +224,11 @@
+ ## Testing
+ 
+ - Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
++- The backend financial-pair integration target uses independent complete
++  Artifact JSON equality and typed reopened-IR equality instead of insta
++  snapshots. Its exact shared `.mori` sources and oracle provenance remain
++  pinned by the independent fixture packet under `crates/fixtures/`; the test
++  must not generate or update its expected compiler output.
+ - Test programs shared by several crates live in `crates/fixtures/`, which is
+   excluded from the workspace. Nothing under `crates/` reads files outside it;
+   copy anything needed in.

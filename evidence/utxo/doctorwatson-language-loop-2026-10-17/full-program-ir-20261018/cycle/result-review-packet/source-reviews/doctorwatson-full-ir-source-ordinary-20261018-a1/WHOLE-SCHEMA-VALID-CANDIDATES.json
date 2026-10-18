@@ -1,0 +1,100 @@
+[
+  {
+    "filesRead": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/CURRENT-SOURCE.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/PROPOSAL.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/RUSTFMT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/TOOL-METADATA.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/Cargo.toml",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/Cargo.toml",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/tests/program_ir_contract.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/ir.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/lib.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/parser.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/runtime.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-lexer/src/lib.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/docs/CORE-EXECUTION-REPORTS.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/README.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/FREEZE.sha256",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/INVENTORY.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/DERIVATION.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/counter.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/counter.program.expected.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/empty-frame.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/empty-frame.program.expected.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/DERIVATION.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/INVENTORY.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/FREEZE.sha256",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/counter.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/counter.program.expected.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/empty-frame.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/empty-frame.program.expected.json"
+    ],
+    "findings": [
+      "Candidate commit bc8b35f4f02af6e76819736b60872b03d72dce93 (tree 678b59a139e7130ad4d668e3998a0909fb2b8bdf) over base dac00001652b5c4a6297de1d3a8747f743432dfa (tree e9d7103deb0a693b9d6c4859f8a0b1d31748fe46) adds only the 9 scoped paths: crates/mori-core/tests/program_ir_contract.rs (SHA-256 5b359d34bb404c2b35a6bdd53374aaf4db65910b104f17cf9a13290dd390a2db, rustfmt-clean) and crates/fixtures/program-ir-contract/{DERIVATION.md,INVENTORY.json,counter.mori,counter.program.expected.json,empty-frame.mori,empty-frame.program.expected.json,FREEZE.sha256,README.md}, with zero production or dependency changes.",
+      "All 6 frozen oracle members and FREEZE.sha256 (SHA-256 c1b5027d0cab397134337d4346e2c956fffde532d4a9e56843b725df212cba99) under candidate/crates/fixtures/program-ir-contract/ match independent-oracles/ byte-for-byte, preserving the prior 7a314c14... .mori sources and post-adoption DTO/grammar/representation-premise provenance without parser/runtime output generation.",
+      "Both test functions in program_ir_contract.rs invoke public mori_core::parse on the exact fixture strings, serialize the entire returned Program via serde_json::to_value(&program), decode the frozen expected JSON file into serde_json::Value, and assert full equality across all seven Program fields (language, semantics, name, states, assets, expressions, actions) without projection, filtering, normalization, or reordering.",
+      "Static trace of mori_core::parse, ir.rs, and runtime::validate confirms exact correspondence: Counter produces 1 state (count=UInt 0 stored in StateDecl.initial), 0 assets, 11 expression nodes in lexical/postorder (0:Name count, 1:Name amount, 2:Add(0,1), 3:Name total, 4:Literal UInt 100, 5:Le(3,4), 6:Name total, 7:Name count, 8:Name total, 9:Eq(7,8), 10:Name count), and 1 action run(amount:UInt) with 5 statement roots (2,5,6,9,10); PreservedIdleFrame produces 2 states (count=UInt 5, ready=Bool true), 1 asset CASH (local, normal-report-empty-oracle, CASH, scale 2), 1 global expression node at ExprId 0 (Literal UInt 0), and 2 actions in source order (idle empty, plus uninvoked declare retaining its Liability statement referencing reserve, CASH, treasury, beneficiary, amount ExprId 0).",
+      "PROPOSAL.json specifies a single new bounded command (attemptLimit=1, newAttemptSequence=1) running /usr/bin/timeout --signal=TERM --kill-after=5s 60s cargo test --manifest-path .../Cargo.toml --frozen -j1 -p mori-core --no-default-features --test program_ir_contract -- --test-threads=1 with strict 13-env whitelist (no HOME), owned cold target/cargo-home/cwd/tmp under /tmp/doctorwatson-full-ir-check-, 4 pre-spawn SHA-256 tool pins, 14-path ancestor Cargo config absence check, and immediate cleanup, excluding the compatibility SDK (midnight-compat-tests is non-default), CLI, report tests, and native/ledger/proof/network paths."
+    ],
+    "limitations": [
+      "Read-only source and proposal review only; no commands, Cargo, parser, runtime, or tests were executed during this review, so actual parser calls remain UNRUN pending the approved single command execution and subsequent result audit.",
+      "The two finite positive normal Program IR comparisons test only Counter and PreservedIdleFrame under mori_core::parse and do not establish general frontend/compiler/backend/native/SDK correspondence, simulation report byte conformance, or closure of any parent roadmap exit.",
+      "Oracle expectations are post-adoption derivations from public DTOs, grammar docs, and explicit source-order/fresh-node/postorder representation premises rather than blinded pre-implementation oracles.",
+      "Security review in this cycle uses the designated Gemini authorized outage fallback after the recorded Opus 4.8 rate failure at 06:54:51 UTC without recovery, rather than Opus."
+    ],
+    "reviewToken": "doctorwatson-full-ir-source-ordinary-20261018-a1-whole-review",
+    "summary": "Approve candidate source commit bc8b35f4f02af6e76819736b60872b03d72dce93 (tree 678b59a139e7130ad4d668e3998a0909fb2b8bdf) and the proposed single new 60s+5s offline frozen cargo test command (-p mori-core --no-default-features --test program_ir_contract -- --test-threads=1). The candidate adds only the 9 scoped paths (1 test file with 2 test functions plus 6 exact frozen oracle payloads, FREEZE.sha256, and README.md), preserves all prior freezes and production/dependency files unchanged, and compares the entire serialized Program (all 7 fields) from mori_core::parse against exact frozen expectations for Counter (all 11 expression nodes and 5 statement roots) and PreservedIdleFrame (2 states, 1 asset, global Literal 0 at ExprId 0, empty idle action, and uninvoked declare Liability action).",
+    "toolAction": "Completing source and command review",
+    "toolSummary": "Complete source and command review",
+    "verdict": "approve-source-and-one-ordinary-command"
+  },
+  {
+    "filesRead": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/CURRENT-SOURCE.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/PROPOSAL.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/RUSTFMT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/TOOL-METADATA.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/Cargo.toml",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/Cargo.toml",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/tests/program_ir_contract.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/ir.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/lib.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/parser.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-core/src/runtime.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/mori-lexer/src/lib.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/docs/CORE-EXECUTION-REPORTS.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/README.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/FREEZE.sha256",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/INVENTORY.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/DERIVATION.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/counter.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/counter.program.expected.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/empty-frame.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/candidate/crates/fixtures/program-ir-contract/empty-frame.program.expected.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/DERIVATION.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/INVENTORY.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/FREEZE.sha256",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/counter.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/counter.program.expected.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/empty-frame.mori",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/full-ir-contract-cycle/source-review-packet/independent-oracles/empty-frame.program.expected.json"
+    ],
+    "findings": [
+      "Candidate commit bc8b35f4f02af6e76819736b60872b03d72dce93 (tree 678b59a139e7130ad4d668e3998a0909fb2b8bdf) over base dac00001652b5c4a6297de1d3a8747f743432dfa (tree e9d7103deb0a693b9d6c4859f8a0b1d31748fe46) adds only the 9 scoped paths: crates/mori-core/tests/program_ir_contract.rs (SHA-256 5b359d34bb404c2b35a6bdd53374aaf4db65910b104f17cf9a13290dd390a2db, rustfmt-clean) and crates/fixtures/program-ir-contract/{DERIVATION.md,INVENTORY.json,counter.mori,counter.program.expected.json,empty-frame.mori,empty-frame.program.expected.json,FREEZE.sha256,README.md}, with zero production or dependency changes.",
+      "All 6 frozen oracle members and FREEZE.sha256 (SHA-256 c1b5027d0cab397134337d4346e2c956fffde532d4a9e56843b725df212cba99) under candidate/crates/fixtures/program-ir-contract/ match independent-oracles/ byte-for-byte, preserving the prior 7a314c14... .mori sources and post-adoption DTO/grammar/representation-premise provenance without parser/runtime output generation.",
+      "Both test functions in program_ir_contract.rs invoke public mori_core::parse on the exact fixture strings, serialize the entire returned Program via serde_json::to_value(&program), decode the frozen expected JSON file into serde_json::Value, and assert full equality across all seven Program fields (language, semantics, name, states, assets, expressions, actions) without projection, filtering, normalization, or reordering.",
+      "Static trace of mori_core::parse, ir.rs, and runtime::validate confirms exact correspondence: Counter produces 1 state (count=UInt 0 stored in StateDecl.initial), 0 assets, 11 expression nodes in lexical/postorder (0:Name count, 1:Name amount, 2:Add(0,1), 3:Name total, 4:Literal UInt 100, 5:Le(3,4), 6:Name total, 7:Name count, 8:Name total, 9:Eq(7,8), 10:Name count), and 1 action run(amount:UInt) with 5 statement roots (2,5,6,9,10); PreservedIdleFrame produces 2 states (count=UInt 5, ready=Bool true), 1 asset CASH (local, normal-report-empty-oracle, CASH, scale 2), 1 global expression node at ExprId 0 (Literal UInt 0), and 2 actions in source order (idle empty, plus uninvoked declare retaining its Liability statement referencing reserve, CASH, treasury, beneficiary, amount ExprId 0).",
+      "PROPOSAL.json specifies a single new bounded command (attemptLimit=1, newAttemptSequence=1) running /usr/bin/timeout --signal=TERM --kill-after=5s 60s cargo test --manifest-path .../Cargo.toml --frozen -j1 -p mori-core --no-default-features --test program_ir_contract -- --test-threads=1 with strict 13-env whitelist (no HOME), owned cold target/cargo-home/cwd/tmp under /tmp/doctorwatson-full-ir-check-, 4 pre-spawn SHA-256 tool pins, 14-path ancestor Cargo config absence check, and immediate cleanup, excluding the compatibility SDK (midnight-compat-tests is non-default), CLI, report tests, and native/ledger/proof/network paths."
+    ],
+    "limitations": [
+      "Read-only source and proposal review only; no commands, Cargo, parser, runtime, or tests were executed during this review, so actual parser calls remain UNRUN pending the approved single command execution and subsequent result audit.",
+      "The two finite positive normal Program IR comparisons test only Counter and PreservedIdleFrame under mori_core::parse and do not establish general frontend/compiler/backend/native/SDK correspondence, simulation report byte conformance, or closure of any parent roadmap exit.",
+      "Oracle expectations are post-adoption derivations from public DTOs, grammar docs, and explicit source-order/fresh-node/postorder representation premises rather than blinded pre-implementation oracles.",
+      "Security review in this cycle uses the designated Gemini authorized outage fallback after the recorded Opus 4.8 rate failure at 06:54:51 UTC without recovery, rather than Opus."
+    ],
+    "reviewToken": "doctorwatson-full-ir-source-ordinary-20261018-a1-whole-review",
+    "summary": "Approve candidate source commit bc8b35f4f02af6e76819736b60872b03d72dce93 (tree 678b59a139e7130ad4d668e3998a0909fb2b8bdf) and the proposed single new 60s+5s offline frozen cargo test command (-p mori-core --no-default-features --test program_ir_contract -- --test-threads=1). The candidate adds only the 9 scoped paths (1 test file with 2 test functions plus 6 exact frozen oracle payloads, FREEZE.sha256, and README.md), preserves all prior freezes and production/dependency files unchanged, and compares the entire serialized Program (all 7 fields) from mori_core::parse against exact frozen expectations for Counter (all 11 expression nodes and 5 statement roots) and PreservedIdleFrame (2 states, 1 asset, global Literal 0 at ExprId 0, empty idle action, and uninvoked declare Liability action).",
+    "verdict": "approve-source-and-one-ordinary-command"
+  }
+]

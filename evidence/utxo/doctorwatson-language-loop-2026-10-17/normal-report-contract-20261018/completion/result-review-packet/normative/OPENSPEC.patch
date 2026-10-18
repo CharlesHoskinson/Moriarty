@@ -1,0 +1,44 @@
+diff --git a/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md b/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md
+--- a/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md
++++ b/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md
+@@ -198,6 +198,14 @@
+ - **WHEN** A beta or Source/6 program passes its local checker but is outside a Rust compiler's admitted input.
+ - **THEN** The record retains the local checking result and reports the compiler boundary as unsupported; compilation receives no inferred pass.
+ 
++**Normal accepted report clauses NR-01–03.** These adopted design requirements refine profile/consumer admission through the [normal Core/1 report contract](../../../../../docs/CORE-EXECUTION-REPORTS.md). They cover accepted Let, Requires, Next, Ensures and Emit actions, including the otherwise valid empty action; other statements retain their existing contracts.
++
++**NR-01 — Complete report and exact step identity.** WHEN a scoped normal Core/1 action completes, its report SHALL retain exact semantics/action, complete pre/post snapshots, one Step per source statement in order and complete ordered effects. Each Step SHALL contain index, exact admitted IR statement, value, snapshot and effects. Index SHALL be its numeric zero-based source ordinal; statement ExprIds SHALL reference that Program's expression array. For the contract's exact Counter specimen, indexes0..4 and roots2,5,6,9,10 SHALL correspond to its eleven-node expression table. For N=0, steps SHALL be [], post SHALL equal complete pre, and effects SHALL be []; no synthetic Step or value SHALL be created.
++
++**NR-02 — Present typed result, including Let.** WHEN any scoped statement completes normally, its outer Step.value SHALL contain its typed semantic result: Let's captured RHS, Bool true for Requires/Ensures at their written positions, Next's RHS evaluated before assignment, or Emit's emitted value. UInt SHALL use canonical decimal strings and Bool SHALL use JSON booleans. Some SHALL serialize as the typed object; null or omission SHALL NOT replace that object for these completed kinds. Counter Step0 SHALL distinguish statement.value ExprId2 from outer typed UInt7, with unchanged snapshot and empty effects; total SHALL remain a local capture.
++
++**NR-03 — Complete post-statement snapshots.** WHILE Steps enumerate a scoped normal action, each snapshot SHALL contain the complete post-statement state, balances and liabilities, preserving affected and untouched rows in canonical order: balances by exact (asset,account), asset by (network,issuer,reference,scale), liabilities by name. Inputs and let captures SHALL NOT become state fields. Next SHALL update state immediately for later statements while earlier captures retain their values. Execution.pre SHALL be the normalized opening snapshot; post SHALL equal the last Step.snapshot for N>0 and pre for N=0. In Counter, Next at index2 SHALL produce count7, Ensures at index3 SHALL read count7/total7, and Emit at index4 SHALL retain that full snapshot.
++
+ ### Requirement: UNI-019 Scoped lowering comparison
+ When two lowering consumers are compared, the comparison SHALL state their statements, admitted constructs and common domain, and SHALL compare independently specified complete observations only within that domain.
+ 
+@@ -220,6 +228,10 @@
+ - **WHEN** Expected results come only from the same evaluator, static reopen or a wrapper around the implementation under review.
+ - **THEN** The record describes internal agreement and leaves independent semantic-oracle coverage open.
+ 
++**NR-04 — Statement deltas and ordered execution effects.** WHEN a scoped normal Core/1 report is serialized, each Step.effects SHALL contain only that statement's new ordered effects, and Execution.effects SHALL equal their ordered concatenation, retaining duplicates and array order. The derived prefix SHALL satisfy P[-1]=[] and P[i]=P[i-1] followed by Step[i].effects; it is not an extra wire member. The N=0 concatenation SHALL be []. Counter Step2/3/4 deltas SHALL respectively be [State(count0→count7)], [] and [Emit(count,UInt7)], with prefixes [State], [State] and [State,Emit]; the final execution effects SHALL be [State,Emit]. Final-state equality alone does not supply this observation.
++
++**NR-05 — Positive metered/ordinary agreement.** WHERE a scoped normal invocation uses the existing moriarty-reference-logical-cost/1 profile with a sufficient cap, its complete Execution SHALL equal the same invocation without metering. The metered envelope SHALL preserve status, qualification and Execution, adding only profile and logical:{cap,used} with canonical decimal strings; no per-Step work member is introduced. For the contract's Counter at cap16, the independently specified increments4,4,2,4,2 SHALL total used16, with cap:"16" and used:"16". These units measure reference interpretation only. The complete ordinary/metered observation and literal work SHALL be checked against expectations frozen independently before the run under UNI-020.
++
+ ### Requirement: UNI-021 Capability evidence and parent acceptance
+ When a capability report is updated, it SHALL record implementation, evidence and acceptance separately for the exact predicate, tree, profile, consumer and target, while retaining every unmet parent exit.
+ 
+@@ -231,6 +243,8 @@
+ - **WHEN** A discovery index contains 69 top-level IDs but mandatory atomic clauses are not fully reconciled.
+ - **THEN** The report supplies no whole-language completion percentage and identifies the unresolved coverage.
+ 
++**Normal-report evidence boundary.** NR-01–06 are adopted design requirements, not observed runtime, source-to-IR or public-byte conformance. Their implementation, source observations, independently frozen expectations, actual results and acceptance SHALL remain separate for the exact candidate/profile/consumer. The proposal author's implementation exposure SHALL be disclosed rather than relabeled independent behavior proof. Original proposals, freezes and failures SHALL remain unchanged. A complete Counter, empty-action or Transfer observation can establish only its named child predicate; no parent exit or requirement denominator is closed by design adoption.
++
+ ### Requirement: UNI-022 Target-separated requirement reconciliation
+ When M1–M17 or existing Preview requirements are reconciled, the register SHALL retain the user's direct M requirements and preserve each result's actual target, qualified tuple and unresolved external facts.
+ 
+@@ -267,3 +281,5 @@
+ #### Scenario: Complete aggregate CLI test report
+ - **WHEN** A valid `moriarty-tests/1` suite of at most 256 cases has individually exportable complete case reports whose combined JSON exceeds 1 MiB.
+ - **THEN** `mori test` SHALL emit every full actual result in manifest order, retain each comparison result and the overall status, and return exit 1 for expectation mismatches or exit 0 when all expectations match. Smaller reports SHALL retain their existing pretty JSON bytes, including the final newline.
++
++**NR-06 — Public normal process and serialization.** WHEN ordinary public mori simulate successfully prints a scoped normal accepted result, it SHALL return exit0 and print one complete JSON report followed by one final newline, with no ordinary status text on stderr. The ordinary envelope SHALL contain exactly status:"accepted", qualification:"local-reference-execution" and execution; a positive metered envelope SHALL add only profile and logical:{cap,used}. The existing bounded pretty exporter SHALL be retained. Complete semantic JSON equality and independently frozen public-byte compatibility SHALL be checked separately; object member order is not execution order, while prescribed arrays remain ordered. Through the original mori test aggregate/report consumer, the existing normal Transfer oracle's complete accepted-case Execution, preserved observer/duty rows and original aggregate bytes SHALL remain unchanged. That aggregate byte pin SHALL NOT be transferred to an ordinary mori simulate accepted envelope; the new normal simulate goldens cover Counter and the empty action separately. That compatibility case does not establish the new Let result rule or full financial-family acceptance.
