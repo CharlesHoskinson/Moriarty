@@ -1496,3 +1496,21 @@ a build result or repeat the unchanged attempt. DoctorWatson should compare
 current cache descriptors with the selected manifest before provisioning and
 retain a stable cache snapshot for the chosen dependency tuple. Input refresh
 and code/archive identity checks belong in the next scoped reconciliation.
+
+
+### DW-75 — Match the real staging schema and freeze mutable controls
+
+The first control-refresh helper assumed a nonexistent total-count field and a uniform Cargo-root path rule. The actual manifest has six category-count keys and five already-bound external archive rows. Independent review prescribed four literal corrections; six selftests and the live 1,755-control refresh then passed. Thirteen control records changed, 1,742 did not, and 488 noncontrol row objects were preserved unopened. Keep wrong owner hash/API prose as an unadopted proposal, not an authority for copied source or refreshed inputs.
+
+The changed-input native attempt completed A0_FREEZE and then refused background descendants; it produced no A0_RESULT or accepted native output. Durable evidence collection and teardown passed. DoctorWatson must distinguish schema reconciliation, current mutable control identities, freeze completion and phase success. Preserve the refusal and consumed marker, diagnose the next concrete boundary, and do not rerun the unchanged passing thirty-test suite or relabel setup as a Cargo/compiler result. The separate selected-compile artifact readback reused the saved first artifact before running only the five remaining cases.
+
+
+### DW-76 — Derive wire adapters from declarations and retain produced artifacts
+
+The selected compiler produced its first artifact and status line before the independent consumer panicked on its layout predicate. Config wire layout and typed admitted layout differ: the latter also contains the same frozen bounds. The independent author corrected that adapter from public type declarations, retaining the frozen semantic expectations. A read-only verification mode checked the saved quote artifact without invoking the handler again; only the remaining five cases ran afterward. Keep the original exit101, the corrected verification and new runs as separate evidence.
+
+The production handler and publisher bytes were unchanged by this test correction. Reuse the unchanged Core library, compile only the changed consumer and preserve exact source/dependency/command/result identities. A post-publication test failure does not justify discarding output or repeating the completed producer prefix. Full CLI/default/refusal/native acceptance remains separate from these six scoped artifact comparisons.
+
+### DW77 — Separate qualitative review from computed identities
+
+The selected compile result review initially clipped the BranchTotal tail and misstated Core wire fields and identity suffixes. Retain that report, then supply a smaller complete corrective packet to the same reviewer. The corrective report read the missing tail and retracted the wrong facts. Actual source, artifact, command and stream hashes remain machine-computed identities; generated prose never overrides them. A scoped successful review does not close B04 or native/target requirements. [Published adoption](../docs/results/sherlock-selected-compile-handler-20261018/ROOT-FINAL-ADOPTION.json).
