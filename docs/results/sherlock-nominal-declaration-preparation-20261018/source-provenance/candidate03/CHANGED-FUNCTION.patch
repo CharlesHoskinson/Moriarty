@@ -1,0 +1,37 @@
+--- crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs
++++ crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs
+@@ -302,34 +302,12 @@
+     bytes_total: &mut u128,
+     l: &LayoutSchemaC,
+ ) -> Result<(), Tooling> {
+-    use super::owner_ext_type_builder::TypeExprSrc;
+     for decl in decls {
+         push_distinct_name(distinct, bytes_total, &decl.name, l)?;
+-        for param in &decl.parameters {
+-            push_distinct_name(distinct, bytes_total, param, l)?;
+-        }
+         for ctor in &decl.ctors {
+             push_distinct_name(distinct, bytes_total, &ctor.name, l)?;
+             for field in &ctor.fields {
+                 push_distinct_name(distinct, bytes_total, &field.name, l)?;
+-                let mut ty_stack = vec![&field.ty];
+-                while let Some(ty) = ty_stack.pop() {
+-                    match ty {
+-                        TypeExprSrc::UInt
+-                        | TypeExprSrc::Bool
+-                        | TypeExprSrc::List
+-                        | TypeExprSrc::Tree => {}
+-                        TypeExprSrc::Named { name } | TypeExprSrc::Param { name } => {
+-                            push_distinct_name(distinct, bytes_total, name, l)?;
+-                        }
+-                        TypeExprSrc::Apply { name, args } => {
+-                            push_distinct_name(distinct, bytes_total, name, l)?;
+-                            for arg in args.iter().rev() {
+-                                ty_stack.push(arg);
+-                            }
+-                        }
+-                    }
+-                }
+             }
+         }
+     }

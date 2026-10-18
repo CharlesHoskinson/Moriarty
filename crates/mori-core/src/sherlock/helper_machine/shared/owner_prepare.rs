@@ -244,6 +244,278 @@ fn name_id(names: &[String], n: &str) -> Result<usize, Tooling> {
         detail: "name not collected in pass B".to_string(), locator: None })
 }
 
+
+/// Identifies whether `PreparedNominalDeclarations::interned_names` covers only `&[TypeDeclSrc]`
+/// (`DeclarationOnly`) or the unified Pass-B name pool of `&CoreProgram` + `&[TypeDeclSrc]`
+/// (`ProgramAndDeclarations`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PreparedDeclarationScope {
+    DeclarationOnly,
+    ProgramAndDeclarations,
+}
+
+/// Checked nominal declaration-phase output: authenticated Pass-B name table, bound declaration
+/// NameIds, and T1/T2 instantiated type/constructor/field tables.
+/// Not an `Admitted` program, runtime `MachineImage`, full `ProgramView`, or proof.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PreparedNominalDeclarations {
+    pub scope: PreparedDeclarationScope,
+    pub domain: GrammarDomain,
+    pub interned_names: Vec<String>,
+    pub decl_name_ids: super::owner_ext_type_builder::PassBTypeNameIds,
+    pub tables: super::owner_ext_type_builder::BuiltAdtTypeTables,
+}
+
+fn push_distinct_name<'a>(
+    distinct: &mut std::collections::BTreeSet<&'a str>,
+    bytes_total: &mut u128,
+    n: &'a str,
+    l: &LayoutSchemaC,
+) -> Result<(), Tooling> {
+    if !distinct.contains(n) {
+        let nb = *bytes_total + n.len() as u128;
+        if distinct.len() as u128 >= l.capacities.name_rows as u128 {
+            return Err(cap_err(
+                CapacityKind::NameRows,
+                distinct.len() as u128 + 1,
+                l.capacities.name_rows as u128,
+                None,
+            ));
+        }
+        if nb > l.capacities.name_bytes as u128 {
+            return Err(cap_err(
+                CapacityKind::NameBytes,
+                nb,
+                l.capacities.name_bytes as u128,
+                None,
+            ));
+        }
+        *bytes_total = nb;
+        distinct.insert(n);
+    }
+    Ok(())
+}
+
+fn collect_decl_group_names<'a>(
+    decls: &'a [super::owner_ext_type_builder::TypeDeclSrc],
+    distinct: &mut std::collections::BTreeSet<&'a str>,
+    bytes_total: &mut u128,
+    l: &LayoutSchemaC,
+) -> Result<(), Tooling> {
+    for decl in decls {
+        push_distinct_name(distinct, bytes_total, &decl.name, l)?;
+        for ctor in &decl.ctors {
+            push_distinct_name(distinct, bytes_total, &ctor.name, l)?;
+            for field in &ctor.fields {
+                push_distinct_name(distinct, bytes_total, &field.name, l)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn bind_owner_decl_name_ids(
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    interned_names: &[String],
+) -> Result<super::owner_ext_type_builder::PassBTypeNameIds, Tooling> {
+    use super::owner_ext_type_builder::{DeclNameIds, PassBTypeNameIds};
+    let mut bound_decls = Vec::with_capacity(decls.len());
+    for decl in decls {
+        let type_name_id = name_id(interned_names, &decl.name)?;
+        let mut ctor_name_ids = Vec::with_capacity(decl.ctors.len());
+        let mut field_name_ids = Vec::with_capacity(decl.ctors.len());
+        for ctor in &decl.ctors {
+            ctor_name_ids.push(name_id(interned_names, &ctor.name)?);
+            let mut f_ids = Vec::with_capacity(ctor.fields.len());
+            for field in &ctor.fields {
+                f_ids.push(name_id(interned_names, &field.name)?);
+            }
+            field_name_ids.push(f_ids);
+        }
+        bound_decls.push(DeclNameIds {
+            type_name_id,
+            ctor_name_ids,
+            field_name_ids,
+        });
+    }
+    Ok(PassBTypeNameIds::new_owner_verified(
+        interned_names.len(),
+        bound_decls,
+    ))
+}
+
+fn collect_declaration_only_names(
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    l: &LayoutSchemaC,
+) -> Result<
+    (Vec<String>, super::owner_ext_type_builder::PassBTypeNameIds),
+    super::owner_ext_type_builder::ExtTypeBuildError,
+> {
+    use super::owner_ext_type_builder::ExtTypeBuildError;
+    let mut distinct: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    let mut bytes_total: u128 = 0;
+    collect_decl_group_names(decls, &mut distinct, &mut bytes_total, l)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    let interned_names: Vec<String> = distinct.into_iter().map(|s| s.to_string()).collect();
+    let decl_ids = bind_owner_decl_name_ids(decls, &interned_names)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    Ok((interned_names, decl_ids))
+}
+
+fn collect_program_and_declaration_names(
+    p: &CoreProgram,
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    l: &LayoutSchemaC,
+) -> Result<
+    (Vec<String>, super::owner_ext_type_builder::PassBTypeNameIds),
+    super::owner_ext_type_builder::ExtTypeBuildError,
+> {
+    use super::owner_ext_type_builder::ExtTypeBuildError;
+    let mut distinct: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    let mut bytes_total: u128 = 0;
+    collect_decl_group_names(decls, &mut distinct, &mut bytes_total, l)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    let mut stack: Vec<NameAct<'_>> = Vec::new();
+    for f in p.functions.iter().rev() {
+        stack.push(NameAct::Expr(&f.body));
+        for prm in f.parameters.iter().rev() {
+            stack.push(NameAct::Name(&prm.name));
+        }
+        stack.push(NameAct::Name(&f.name));
+    }
+    stack.push(NameAct::Expr(&p.entry));
+    while let Some(act) = stack.pop() {
+        match act {
+            NameAct::Name(n) => {
+                push_distinct_name(&mut distinct, &mut bytes_total, n, l)
+                    .map_err(ExtTypeBuildError::CoreTooling)?;
+            }
+            NameAct::Pat(pat) => match pat {
+                CorePattern::PVar { x } | CorePattern::PLeaf { x } => stack.push(NameAct::Name(x)),
+                CorePattern::PCons { x, y } | CorePattern::PBranch { x, y } => {
+                    stack.push(NameAct::Name(y));
+                    stack.push(NameAct::Name(x));
+                }
+                CorePattern::PNil => {}
+            },
+            NameAct::Expr(e) => match e {
+                CoreExpr::Literal { .. } => {}
+                CoreExpr::Var { name } => stack.push(NameAct::Name(name)),
+                CoreExpr::Let { name, value, body } => {
+                    stack.push(NameAct::Expr(body));
+                    stack.push(NameAct::Expr(value));
+                    stack.push(NameAct::Name(name));
+                }
+                CoreExpr::Binary { left, right, .. } => {
+                    stack.push(NameAct::Expr(right));
+                    stack.push(NameAct::Expr(left));
+                }
+                CoreExpr::Unary { operand, .. } => stack.push(NameAct::Expr(operand)),
+                CoreExpr::If {
+                    cond,
+                    then_expr,
+                    else_expr,
+                } => {
+                    stack.push(NameAct::Expr(else_expr));
+                    stack.push(NameAct::Expr(then_expr));
+                    stack.push(NameAct::Expr(cond));
+                }
+                CoreExpr::Call { name, args } => {
+                    for a in args.iter().rev() {
+                        stack.push(NameAct::Expr(a));
+                    }
+                    stack.push(NameAct::Name(name));
+                }
+                CoreExpr::Match { scrutinee, arms } => {
+                    for arm in arms.iter().rev() {
+                        stack.push(NameAct::Expr(&arm.body));
+                    }
+                    stack.push(NameAct::Expr(scrutinee));
+                    for arm in arms.iter().rev() {
+                        stack.push(NameAct::Pat(&arm.pattern));
+                    }
+                }
+            },
+        }
+    }
+    let interned_names: Vec<String> = distinct.into_iter().map(|s| s.to_string()).collect();
+    let decl_ids = bind_owner_decl_name_ids(decls, &interned_names)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    Ok((interned_names, decl_ids))
+}
+
+/// Checked nominal declaration table producer over raw declarations and explicit layout/bounds.
+pub fn prepare_nominal_declarations(
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    layout: &LayoutSchemaC,
+    domain: GrammarDomain,
+    locator: Option<LocatorC>,
+) -> Result<PreparedNominalDeclarations, super::owner_ext_type_builder::ExtTypeBuildError> {
+    use super::nominal_declaration_order::walk_declaration_type_occurrences;
+    use super::owner_ext_prepare_types::instantiate_declared_types;
+    use super::owner_ext_type_builder::{CheckedTypeDeclView, ExtTypeBuildError};
+
+    if layout.boundary_capacities_present {
+        return Err(ExtTypeBuildError::CoreTooling(
+            Tooling::UnsupportedFeature {
+                feature: FeatureKind::BoundarySection,
+                locator: None,
+            },
+        ));
+    }
+    let (interned_names, decl_name_ids) = collect_declaration_only_names(decls, layout)?;
+    let view = CheckedTypeDeclView::new_checked(domain, decls, &decl_name_ids, &layout.bounds)?;
+    walk_declaration_type_occurrences(&view, |occ, _path, ty_expr| {
+        view.validate_declaration_type_occurrence(occ, ty_expr)
+    })?;
+    let tables = instantiate_declared_types(&view, locator)?;
+    Ok(PreparedNominalDeclarations {
+        scope: PreparedDeclarationScope::DeclarationOnly,
+        domain,
+        interned_names,
+        decl_name_ids,
+        tables,
+    })
+}
+
+/// Checked nominal declaration table producer binding declaration names into the unified
+/// Pass-B name pool of `program` + `decls`.
+pub fn prepare_program_nominal_declarations(
+    program: &CoreProgram,
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    layout: &LayoutSchemaC,
+    domain: GrammarDomain,
+    locator: Option<LocatorC>,
+) -> Result<PreparedNominalDeclarations, super::owner_ext_type_builder::ExtTypeBuildError> {
+    use super::nominal_declaration_order::walk_declaration_type_occurrences;
+    use super::owner_ext_prepare_types::instantiate_declared_types;
+    use super::owner_ext_type_builder::{CheckedTypeDeclView, ExtTypeBuildError};
+
+    if layout.boundary_capacities_present {
+        return Err(ExtTypeBuildError::CoreTooling(
+            Tooling::UnsupportedFeature {
+                feature: FeatureKind::BoundarySection,
+                locator: None,
+            },
+        ));
+    }
+    let (interned_names, decl_name_ids) =
+        collect_program_and_declaration_names(program, decls, layout)?;
+    let view = CheckedTypeDeclView::new_checked(domain, decls, &decl_name_ids, &layout.bounds)?;
+    walk_declaration_type_occurrences(&view, |occ, _path, ty_expr| {
+        view.validate_declaration_type_occurrence(occ, ty_expr)
+    })?;
+    let tables = instantiate_declared_types(&view, locator)?;
+    Ok(PreparedNominalDeclarations {
+        scope: PreparedDeclarationScope::ProgramAndDeclarations,
+        domain,
+        interned_names,
+        decl_name_ids,
+        tables,
+    })
+}
+
+
 struct TempExpr<'a> {
     expr: &'a CoreExpr, owner_is_function: bool, function: usize,
     parent: Option<usize>, child_pos: usize, child_ids: Vec<usize>,
@@ -1077,3 +1349,5 @@ pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
 
 #[cfg(test)]
 mod v4_empty_params_tests;
+#[cfg(test)]
+mod nominal_decl_producer_tests;

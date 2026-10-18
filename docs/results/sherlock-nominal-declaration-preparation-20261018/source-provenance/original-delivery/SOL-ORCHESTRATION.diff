@@ -1,0 +1,42 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/b-fullB-adt-prepare-source-01/owner_ext_prepare_types.rs
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/B06-small-connected-U1-source-unit/sol-afterimages/crates/mori-core/src/sherlock/helper_machine/shared/owner_ext_prepare_types.rs
+@@ -14,6 +14,7 @@
+     BuiltAdtTypeTables, CheckedTypeDeclView, ExtTypeBuildError, OwnerExtTypeBuilder,
+ };
+ use super::LocatorC;
++use super::nominal_declaration_order::for_each_constructor_field;
+ 
+ /// Instantiate all non-parameterized declarations and every nominal instance
+ /// discovered from their fields, preserving T1 preassignment and T2 FIFO order.
+@@ -46,13 +47,9 @@
+         let key = builder.begin_dequeue_next_key()?;
+         for ctor_ordinal in 0..key.ctor_count {
+             let ctor_id = builder.begin_constructor(&key, ctor_ordinal, locator.clone())?;
+-            let field_count = view.field_count(key.decl, ctor_ordinal)?;
+-            for field_ordinal in 0..field_count {
+-                let source_type =
+-                    view.field_type_expr(key.decl, ctor_ordinal, field_ordinal)?;
+-                // Resolution may enqueue more keys. Those keys are left in the
+-                // owner FIFO until this type's contiguous constructors and fields
+-                // are complete; the enclosing key supplies Param substitution.
++            for_each_constructor_field(view, key.decl, ctor_ordinal, |field, source_type| {
++                // Only ordering belongs to this leaf. The real owner resolves
++                // types, discovers keys and performs every checked table write.
+                 let field_type = builder.resolve_type_expr(
+                     source_type,
+                     Some(key.type_id),
+@@ -62,11 +59,11 @@
+                     &key,
+                     ctor_id,
+                     ctor_ordinal,
+-                    field_ordinal,
++                    field.field_ordinal,
+                     field_type,
+                     locator.clone(),
+-                )?;
+-            }
++                )
++            })?;
+         }
+         builder.complete_dequeued_key(key)?;
+     }

@@ -153,3 +153,8 @@ assets, rendered scene or deployment.
 ## Editorial update007 — actual host observations and revision03
 
 [Host observation and completion design](UPDATE-007-HOST-OBSERVATION-AND-COMPLETION-DESIGN.md) links the actual stream and composed carrier results to the existing assembly-history concept. It is a Root/Sol factual editorial update, not a new circuit-source iteration or Opus creative note. Latest actual circuit-source entry remains005. The finished website launches after full Sherlock v1 acceptance.
+
+
+## Editorial update008 — nominal declaration assembly
+
+[Nominal declaration assembly](UPDATE-008-NOMINAL-DECLARATION-ASSEMBLY.md) records the adopted compiler table substrate and its independent complete-table normal observation. Root/Sol factual editorial update; circuit iteration005 remains the latest circuit-source entry.
