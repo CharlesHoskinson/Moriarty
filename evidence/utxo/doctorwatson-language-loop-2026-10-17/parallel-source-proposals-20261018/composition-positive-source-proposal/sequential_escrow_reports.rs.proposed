@@ -1,0 +1,84 @@
+//! UNAPPLIED ordinary source proposal. Intended destination:
+//! crates/mori-core/tests/sequential_escrow_reports.rs
+//! Requires the independent complete oracle described in ORACLE-REQUIRED.md.
+//! No expected output may be captured from this test or a Moriarty evaluator.
+use mori_core::stage::{self, Continuation, PendingFrame, StageOutcome};
+use mori_core::{Scenario, UInt};
+use serde_json::Value;
+
+const SOURCE: &str = include_str!("../../../examples/core/continuations/escrow.mori");
+const INPUT_ORACLE: &str = include_str!("fixtures/continuations/normal-oracle.json");
+
+macro_rules! complete_oracle {
+    ($name:literal) => {
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fixtures/core-sequential-escrow/",
+            $name
+        ))
+    };
+}
+
+fn checked(outcome: StageOutcome, expected_text: &str) -> Option<Continuation> {
+    let continuation = match &outcome {
+        StageOutcome::Waiting { continuation, .. } => Some(continuation.clone()),
+        StageOutcome::Complete { .. } => None,
+    };
+    let actual = stage::outcome_report(Ok(outcome));
+    let expected: Value = serde_json::from_str(expected_text).unwrap();
+    // Whole-object equality retains both frames, complete snapshots, each
+    // statement IR/value/snapshot/effect, ordered effects, work and duties.
+    assert_eq!(actual, expected);
+    let mut actual_bytes = serde_json::to_vec_pretty(&actual).unwrap();
+    actual_bytes.push(b'\n');
+    assert_eq!(actual_bytes, expected_text.as_bytes());
+    continuation
+}
+
+#[test]
+fn escrow_sequential_prefix_observation_and_delivery_match_complete_literal_reports() {
+    // Freeze every input and expected member before invoking the consumer.
+    let inputs: Value = serde_json::from_str(INPUT_ORACLE).unwrap();
+    let inputs = &inputs["escrow"];
+    let opening: Scenario = serde_json::from_value(inputs["opening"].clone()).unwrap();
+    let false_event = serde_json::from_value(inputs["false_resume"]["event"].clone()).unwrap();
+    let true_event =
+        serde_json::from_value(inputs["true_resume_complete"]["event"].clone()).unwrap();
+    let expected_program: Value =
+        serde_json::from_str(complete_oracle!("escrow-program.json")).unwrap();
+    let expected_plan: Value =
+        serde_json::from_str(complete_oracle!("escrow-plan.json")).unwrap();
+    let expected_start = complete_oracle!("escrow-start.json");
+    let expected_observed = complete_oracle!("escrow-observed.json");
+    let expected_complete = complete_oracle!("escrow-complete.json");
+    // Parse each whole expected envelope before any stage invocation.
+    for text in [expected_start, expected_observed, expected_complete] {
+        serde_json::from_str::<Value>(text).unwrap();
+    }
+
+    let program = stage::load(SOURCE).unwrap();
+    assert_eq!(serde_json::to_value(program.program()).unwrap(), expected_program);
+    assert_eq!(serde_json::to_value(program.plan()).unwrap(), expected_plan);
+    let started = stage::start(&program, "deliver", opening, Some(UInt(11))).unwrap();
+    let first = checked(started, expected_start).expect("actual pending escrow prefix");
+
+    let before_observation = first.clone();
+    let observed = stage::resume(&program, first, false_event, Some("deliver"), None).unwrap();
+    let pending = checked(observed, expected_observed).expect("actual unchanged pending frame");
+    assert_eq!(pending, before_observation);
+
+    // This causal check supplements independent whole-report equality. It is
+    // not a separate oracle and never supplies a boundary from an expected file.
+    let expected_frame_pre = PendingFrame {
+        site: pending.site,
+        captures: pending.captures.clone(),
+    };
+    let actual_boundary = pending.boundary.clone();
+    let completed = stage::resume(&program, pending, true_event, Some("deliver"), None).unwrap();
+    let StageOutcome::Complete { segment, .. } = &completed else {
+        panic!("expected actual delivery completion");
+    };
+    assert_eq!(segment.frame_pre, expected_frame_pre);
+    assert_eq!(segment.execution.pre, actual_boundary);
+    assert!(checked(completed, expected_complete).is_none());
+}
