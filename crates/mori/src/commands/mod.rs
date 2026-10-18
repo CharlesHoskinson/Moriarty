@@ -10,6 +10,7 @@ use crate::shell::Shell;
 mod call_io;
 pub mod capabilities;
 pub mod check;
+mod check_source;
 pub mod compile;
 pub mod compile_call;
 mod core_io;
