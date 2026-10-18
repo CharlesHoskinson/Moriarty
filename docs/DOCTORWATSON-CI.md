@@ -151,6 +151,8 @@ checks for the current source.
 
 ## Evidence tiers
 
+Current beta operator policy follows the [canonical automation override](../raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md), which removes human-only operation/tier approval steps. This ordinary entrypoint’s observed scope remains separate from authorized beta setup and native/target evidence; historical zero-authority wording does not override the current assignment.
+
 | Tier | Consumer and required evidence | Included here |
 |---|---|---|
 | Ordinary QA | Frozen normal expectations, supplied complete prefix/state comparisons and committed oracle readback through the commands above | Yes; Python standard library only |
@@ -159,7 +161,7 @@ checks for the current source.
 | DoctorWatson design | Workflow state machine, deterministic scenarios and bounded sampled invariants | Only with explicit `--design`; separate from interpreter semantic QA |
 | Developer semantic checks | Required K execution and explicit finite Quint projection, with actual traces, bounds, clocks and first divergences | No; unrun by this entrypoint |
 | Lean/Clean and handwritten circuits | Required reference/component observations, separate witness and constraint dispositions, and cross-layer correspondence evidence | No; unrun by this entrypoint; existing private Fenrir integration remains separate |
-| Native and target qualification | Exact SDK/relation, keys, proofs, verifier and actual qualified target receipts | No; current native authority remains zero |
+| Native and target qualification | Exact SDK/relation, keys, proofs, verifier and actual qualified target receipts | No native/target observation is supplied by this ordinary entrypoint; beta operator policy follows the current override |
 
 The developer tiers remain required by the
 [Sherlock correctness loop](SHERLOCK-CORRECTNESS-LOOP.md). Ordinary fixture and

@@ -161,6 +161,53 @@ correspondence need their own observations. Original UIREQ-022 is adopted; the
 new supported-profile field has separate passing R256 observations, with
 original UIREQ-002 reporting scope adopted after fresh R272 result review.
 
+## Pending command shape: UNRUN
+
+The installed simulate source is intended to call the runtime API and
+print the separate [simulation report](../reference/draft-source-compiler.md#simulate-source-integration-observed-consumers-cli-unrun).
+For a checkout containing that integration, the intended shape is:
+
+```text
+mori simulate SOURCE --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry --execution-config CONFIG --target TARGET
+```
+
+`SOURCE`, `CONFIG` and `TARGET` denote actual file paths. The current
+[runtime fixtures](../../../crates/mori-core/tests/fixtures/draft-runtime-independent/)
+are explicit specimen inputs, not numerical defaults. No output or successful
+invocation of this command is shown: the enclosing public CLI/global handler,
+file reads/writes remain **UNRUN**. The report API now has the separate Rust
+consumer observation below; it is not CLI/file-I/O evidence. The existing complete
+Rust file-publication example above also remains unrun.
+
+The installed command source selects a dedicated entry without action/scenario, resume,
+trace, logical-cap or signed replay arguments. It prints preparation and actual
+post-run execution separately and retains no event trace. Its source maps actual
+Halted to exit zero and Rejected/Exhausted/Running to failure. Read the reference
+for the complete report/failure contract. Command exit/printing behavior remains
+source intent; report values/serialization have a separate consumer observation,
+not a captured command printout. Developer use requires no maintainer approval.
+
+R299 passed its seventeen-phase ordinary operation and one Rust test over 24
+frozen shared production argument/selection rows, with 1,611 unchanged input
+pins. R301 separately compiled the normal Core report composition at exit zero
+with 559 unchanged pins and nine warnings. Root preserves its original dep-info
+FAIL_STOP record and additive hash/normalized-alias correction; no compilation
+was rerun. R300 source/operation review and R311 result/source review returned
+SUCCESS, and Root installed the fourteen source files. Neither observed consumer
+runs this command, global options or files.
+
+R310 separately passed consumer compilation, listing and one test looping two
+programs through real run → report → serialized bytes → JSON. All 457 pins were
+unchanged. Inspected assertions check independent UInt 7/8/source identities and
+same-run preparation/post-run summary/image/resource bindings; raw stdout contains
+test status, not a saved report or trace. R315 completed successfully; Root
+installed all six consumer files, verified the combined twenty-file source/test
+set and applied reviewed reporting compatibility. The existing reader is now
+CURRENT11/35 with no findings; the earlier CURRENT10/stale025 negative is retained.
+Full CLI and file/output handling remain UNRUN, so B04's actual clause stays
+unchecked. See the [source and receipt archive](../../results/sherlock-simulate-report-20261018/README.md);
+no command output is fabricated here.
+
 ## Inspect the observed public runtime cases
 
 The separate [public runtime API](../reference/draft-source-compiler.md#public-draft-runtime-api)

@@ -1387,3 +1387,48 @@ no new original EARS acceptance, circuit/website iteration or native authority.
 The user removed human-only operation and approval requirements for beta work. Root recorded the override in AGENTS/the implementation loop, observed working noninteractive sudo, and completed the existing OP0..OP6 host setup without changing its source or resource limits. The [actual receipts](../docs/results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/README.md) replace the missing live provisioning evidence.
 
 DoctorWatson must apply current user authorization before recovering historical operator/approval queues. Keep objective resource/correctness checks and distinguish live setup from final configuration, native compilation, proofs and target outcomes. Do not regenerate a human-only request after that requirement was removed. Preserve historical refusals and policy records rather than rewriting their past meaning.
+
+
+### DW-69 — Distinguish the three real consumers and preserve negative currentness
+
+R299 passed seventeen phases and one Rust test over24 shared production argument
+rows; it did not execute the enclosing CLI/global handler. R301's normal Core
+compiler exited zero; the original literal dep-info FAIL_STOP remains alongside
+the normalized-path/hash correction without a compiler rerun. R310 passed three
+phases and one new test looping two fixed programs through real run, public
+report, Serialize-to-bytes and JSON, with457 pins unchanged. It checks independent
+UInt7/8/source identities, complete same-run preparation, genesis/post-run
+separation and callback/summary/image/resource bindings. Raw stdout is test
+status; complete persisted reports/traces, exact independent B clocks and
+semantic proofs are not supplied. These are distinct bounded consumers.
+
+R300's successful source/operation review and the raw81-page LF-count discrepancy
+remain beside Root's additive convention correction. Root installed fourteen
+exact source files after R311 review. R315 then returned SUCCESS on the actual
+report result, exact six-file promotion and reporting-document compatibility;
+Root installed all six consumer files and verified the combined twenty-file set.
+No unchanged passing prefix was rerun and earlier negative metadata is preserved.
+
+A documentation-pin change temporarily made the existing reader CURRENT10 with
+stale UIREQ025, despite eleven declared acceptances. That negative remains
+immutable. Reviewed R316 compatibility plus two guarded reference operations
+restored the actual existing reader to CURRENT11/35, no findings, 24 original
+clauses and25 refinements open. This is restored reporting currentness, not a
+new EARS adoption or a proof supplied by a matching hash. Review final reporting
+docs with their final pin update instead of blindly rebinding an intermediate
+body and immediately making it stale again.
+
+Full CLI/global handler, input/output files and a command printout remain UNRUN;
+B04 stays unchecked despite actual report serialization in the Rust consumer.
+Public developer flows gain no approval gate. Preserve current DW68's actual
+beta-automation override and all earlier simulate cuts. No new circuit/website
+iteration, native result, security conclusion or replacement factory is claimed.
+
+
+### DW-70 — Preserve startup diagnostics and separate volatile metadata
+
+Automated beta provisioning passed OP0 through OP6 without a human operator. A first supervisor launch stopped before its one-shot marker because the Cargo home directory mtime changed after capture. A full descriptive comparison found identical tracked membership and only that directory timestamp changed. The changed-input capture and configuration were explicitly rebound; the old failure remains preserved.
+
+The next launch created the one-shot marker and failed at A0 with `listener handoff failed`. Cargo and the compiler never started. Its captured A0 stdout/stderr were both empty: the source registers pipe draining after listener handoff, leaving no underlying startup error in these receipts. The designated security owner is diagnosing this boundary; no root cause, source fix or successful build is inferred. The existing evidence collection and privileged teardown both passed automatically, preserving the consumed marker and failure in the durable evidence directory.
+
+For future DoctorWatson work, distinguish volatile ancestor metadata from pinned input changes and make pre-handoff child errors available within the existing log/resource bounds. These are backlog observations for designated-owner design and review, not permission to weaken checks or repeat the failed operation unchanged.

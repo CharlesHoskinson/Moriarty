@@ -73,7 +73,11 @@ report/preparation observations. Earlier public fixtures retain their exact
 historical producer results.
 
 Original UIREQ-022 remains adopted. With original UIREQ-002 now adopted,
-the current evidence check records 11 accepted originals out of 35 and 24 open. Reading the returned
+the latest existing reader records CURRENT eleven adopted originals out of 35,
+24 open originals and all 25 refinements open, with no findings, after reviewed
+R315/R316 reporting compatibility. The earlier CURRENT10/stale025 snapshot is
+preserved as a negative historical cut; this is restored currentness, not a new
+requirement adoption. Reading the
 public report requires no reviewer permission; these review/adoption statuses
 describe project evidence, not developer authorization.
 
@@ -340,6 +344,104 @@ permission rule.
 The later R279/R286 observations supply these two host results. Full semantic
 correspondence, defined-failure/full-prefix coverage, CLI execution, circuit proof
 and native/target outcomes remain separate unobserved requirements.
+
+## Simulate source integration: observed consumers, CLI UNRUN
+
+The installed R293 combined fourteen-file source shares the production simulate `Args`
+and pure selection with the public CLI, and adds an output-only report around
+the installed public runtime API. R300 returned SUCCESS with a complete
+25,013-byte source/operation opinion approving the fourteen-file composition,
+mechanical extraction and specified R299/R301 ordinary operations. Root installed
+the exact fourteen files after R311 source/result review. R310 now supplies the
+new report consumer observation below. R315 returned SUCCESS, Root installed
+its exact six test/fixture files and verified all twenty source/test files;
+reviewed R316 reporting-document compatibility was applied. No enclosing CLI/global handler,
+input-file I/O or public simulation command has run. Earlier R279 public Rust
+runtime observations remain separate evidence.
+
+The intended command is:
+
+```text
+mori simulate SOURCE --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry --execution-config CONFIG --target TARGET
+```
+
+Each input is explicit; there is no source-profile autodetection. The selected
+route refuses action/scenario, resume/event, trace, logical-cap and signed replay
+profile/authority/at/signature arguments. Omission of the new selection flags
+preserves legacy routing in the installed source. These are source contracts,
+not new command/refusal observations or a legacy-handler regression result.
+The developer API/command carries no maintainer reviewer-permission requirement.
+
+Public module: `mori_core::sherlock_compile_artifact::draft_simulation_report`.
+Its API is:
+
+```rust
+pub fn report(run: &DraftHostRun)
+    -> Result<DraftSimulationReport<'_>, CompileFailure>;
+```
+
+`DraftSimulationReport<'a>` contains `format`, `qualification`,
+`preparation: &'a DraftCompileArtifact` and `execution: ExecutionReport`.
+The format is `sherlock-host-simulation/1`; qualification is HostOnly
+execution without proof/native/target qualification. `preparation` preserves the
+unstepped genesis snapshot. `execution` carries `evaluation_performed`,
+`completed`, actual owner `summary`, decimal-string `events_forwarded`,
+`event_capture: "not-retained"`, actual post-run `image` and `resource_report`.
+Neither the report API nor the command stores a full event vector or supplies
+an exact independent B-clock/prefix oracle. JSON size/encoding and host
+allocation costs remain unmeasured; no new output cap/default is introduced.
+
+The installed handler source reads source/config/target using existing `core_io`, calls
+`run_draft_host` once with a non-retaining callback, obtains the report and prints
+JSON to stdout. It selects exit zero only for actual `Halted`; `Rejected`,
+`Exhausted` and unexpected `Running` select failure. Tooling/input/observation
+failures keep existing structured `CompileFailure` metadata where printing
+succeeds. A later serialization failure uses `run.failure(...)` to retain actual
+completion/count metadata; failed output I/O is not a guarantee of a printed
+JSON failure. A successful report wrapper is not a manufactured Halted result.
+R310 now observes the report API and JSON serialization in its external Rust
+consumer. Command exit behavior and file/output handling remain UNRUN.
+
+The external Rust test consumes the same production Clap `Args` via
+`augment_args`/`FromArgMatches`, then calls shared pure `selection`. Its frozen
+24 rows cover explicit draft selection, legacy argument shapes, conflicts and
+missing/unknown selection inputs. R299 actually passed all seventeen phases,
+including this one test over 24 rows (0.006984103 seconds), with all 1,611 input
+pins unchanged. This is not 24 public CLI executions. The test does not construct
+the enclosing `Cli`, apply quiet/verbose/color options, dispatch a handler, read
+files or invoke runtime/report serialization.
+
+R301 separately compiled the normal Core composition containing the new report
+module: actual exit zero in 4.090251816 seconds, all 559 pins unchanged and nine
+compiler warnings. Its original capture stays FAIL_STOP because Root compared
+two `families/../fragments` dep-info aliases literally. The additive
+ROOT-DEPINFO-ALIAS-CORRECTION binds normalized paths to the same frozen bytes/
+hashes and records NORMAL_CORE_COMPILE_PASS_NO_RERUN. No compiler failure or
+passing-prefix retry is inferred. Compilation checks module/type composition;
+this compile result does not itself establish report values. R310 separately
+passed three phases: external consumer compilation, exact one-test listing and
+one new test looping ChainTotal/BranchTotal, with all 457 input pins and generated
+outputs unchanged. That test calls real `run_draft_host`, `report`, serialization
+to bytes and JSON parsing. It asserts independently frozen UInt 7/8 and source
+identities, complete same-run preparation, distinct genesis/post-run state,
+actual forwarded/callback/summary/resource bindings, and explicit unproved/
+unmeasured/not-retained qualifications. Raw stdout records test status, not a
+persisted report or full event trace. No exact new count oracle, physical cost
+measurement, complete B prefix or semantic proof is supplied.
+
+R300's raw coverage predicate also remains false: reported line counts used
+LF-count plus one on all 81 pages, while the observer compared LF-count directly.
+Root's additive convention correction preserves raw observations, exact byte
+counts and explicit complete-source declarations; counts alone do not prove
+semantic comprehension. R315 returned SUCCESS and Root adopted the scoped
+R310 report result, installed the exact six consumer files and verified all
+twenty source/test files. Two reviewed R316 document-reference operations restored
+the existing reader to CURRENT11/35 with 24 originals and 25 refinements open,
+no findings and no new requirement acceptance. The prior CURRENT10/stale025
+negative remains unchanged. Enclosing CLI/global-handler/file behavior still
+lacks observation, so B04 remains unchecked. See the
+[source and receipt archive](../../results/sherlock-simulate-report-20261018/README.md).
+This documentation update executes no reader or subject code.
 
 ## Explicit CLI selection
 

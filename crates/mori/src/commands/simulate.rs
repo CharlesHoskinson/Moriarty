@@ -1,46 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 
 use crate::shell::Shell;
 
-#[derive(Debug, clap::Args)]
-pub struct Args {
-    /// Source file
-    pub file: PathBuf,
+#[path = "simulate_sherlock.rs"]
+mod sherlock;
 
-    /// Action to run
-    #[arg(long, value_name = "NAME", required_unless_present = "resume")]
-    pub action: Option<String>,
-
-    /// Scenario JSON with the local state and inputs
-    #[arg(long, value_name = "FILE", required_unless_present = "resume")]
-    pub scenario: Option<PathBuf>,
-    /// Resume a moriarty/2 continuation (local, unauthenticated, consumption untracked)
-    #[arg(
-        long,
-        value_name = "FILE",
-        requires = "event",
-        conflicts_with_all = ["scenario", "trace", "target", "profile", "authority", "at", "signature"]
-    )]
-    pub resume: Option<PathBuf>,
-    /// Stage event JSON for --resume (at most 64 KiB)
-    #[arg(long, value_name = "FILE", requires = "resume")]
-    pub event: Option<PathBuf>,
-    /// Generate a complete public replay sidecar against a trusted Target
-    #[arg(long)]
-    pub trace: bool,
-    /// Cap local statement and uncached expression attempts (other costs unmeasured)
-    #[arg(long, value_name = "CANONICAL_U128", value_parser = logical_cap, conflicts_with = "trace")]
-    pub logical_cap: Option<mori_core::UInt>,
-    /// Trusted Target JSON (required with --trace)
-    #[arg(long, value_name = "FILE")]
-    pub target: Option<std::path::PathBuf>,
-    #[command(flatten)]
-    pub authorization: super::replay::AuthorizationArgs,
-}
+pub use crate::cli_args::simulate::Args;
 
 impl Args {
-    /// Legacy start inputs. Clap requires both whenever --resume is absent.
+    /// Legacy start inputs. Clap requires both outside resume or explicit Sherlock selection.
     fn legacy(&self) -> super::Result<(&str, &Path)> {
         match (self.action.as_deref(), self.scenario.as_deref()) {
             (Some(action), Some(scenario)) => Ok((action, scenario)),
@@ -51,12 +20,13 @@ impl Args {
     }
 }
 
-fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
-    serde_json::from_value(serde_json::Value::String(value.into()))
-        .map_err(|_| "expected canonical unsigned decimal string in u128 range".into())
-}
 
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    if args.execution_profile.is_some() || args.source_profile.is_some()
+        || args.entry || args.execution_config.is_some()
+    {
+        return sherlock::run(&args);
+    }
     // Clap has already refused every --resume/--event conflict, so a
     // malformed invocation reads no file.
     if let Some(resume) = &args.resume {
@@ -232,3 +202,7 @@ fn no_work(error: mori_core::Error) -> mori_core::stage::StageRejection {
         committed: mori_core::UInt(0),
     }
 }
+
+#[cfg(test)]
+#[path = "simulate_sherlock_tests.rs"]
+mod sherlock_tests;
