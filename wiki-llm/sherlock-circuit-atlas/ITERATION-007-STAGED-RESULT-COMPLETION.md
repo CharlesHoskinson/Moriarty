@@ -1,0 +1,11 @@
+# Iteration 007: complete the staged Scalar result
+
+The real source candidate adds `emit_b_scalar_exit_add_u128` and `emit_b_scalar_failure_add` in `b_scalar_completion.rs`. They emit pinned `midnight_zkir_v3::Instruction` values. They do not run the SDK, compile a circuit or produce a proof. The new source and its eight consumed test bodies are retained as an unadopted R-only candidate.
+
+The value path starts after checked Add has staged a UInt128 value. The emitter forms two enable branches from the logical `alloc.dataNodes < bounds.dataNodes` comparison. The Applied branch selects the physical slot at `pre.active.data`, writes the staged 16-byte value, increments the data active length and allocation counter, publishes a local `ScalarValue(Data(index))` helper result, and clears helper lanes. The cap-refusal branch instead emits the local Exhausted(DataNodes) outcome and retains the helper/result/data witnesses. These are the source's intended constraints; independent review and actual SDK constraint execution remain separate evidence.
+
+The failure path accepts staged primitive error 10 or 11, transfers that code to the local ScalarError helper-result carrier, clears helper lanes and retains a Running outcome. It does not publish the final rejected program outcome. Both completion fragments emit work transitions for remaining, consumed and helper work while retaining helper visits. This differs from the preceding arithmetic visit, which also increments helper visits.
+
+A future visual board can show the same staged-result card splitting toward an append slot or a cap-refusal gate, with the error card taking a separate code-transfer wire. The counter strip should show the three work changes and the stationary helper-visit column. No animation should present an observed proof, constraint check or measured circuit cost.
+
+The next missing connection is the handwritten `k.machine.return.right` row: consume the helper result, clear it, pop the RightF frame and form PrimResult. The following primitive value/error rows then form Return or Error. Those relations, other Scalar modes/stagings/sites, global dispatch/StepInv/complement, serialization, public-statement binding, SDK field behavior and native proof/target acceptance remain open.
