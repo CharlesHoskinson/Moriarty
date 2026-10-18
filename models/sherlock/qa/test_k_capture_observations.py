@@ -40,7 +40,7 @@ EMPTY = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 MAIN_K_SHA256 = 'b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41'
 FIXED_SOURCES = {
     'k_capture_observations.py': (
-        41183, '5df990ed9c8b54ca1e090e80883f483f2e745138a740cdbcbbfc80fd00ce77d1'),
+        41478, '2260ebb2d2bbfc6d1cb3f6d2a6715f023637c6d76e401fe105c42616053ab8ac'),
     'k_observations.py': (7686, '540128fdb7f693a7b1f415898fd74bd6c1918df50a7a48ce602471b6e85f9b07'),
     'k_terms.py': (5666, 'c79a852cbda9259c736d36da29132486d10903007fd3adc755e7d0585b8366ca'),
 }
@@ -295,6 +295,8 @@ class ActualN01CaptureTests(unittest.TestCase):
                 data = MODULE.with_name(name).read_bytes()
                 self.assertEqual((len(data), sha(data)), (size, digest))
                 self.assertEqual(k.ADAPTER_SOURCES[name], digest)
+        self.assertEqual(k.MAX_CAPTURES, 64)
+        self.assertEqual(k.F03_MAX_CAPTURES, 95)
         self.assertEqual(k.FORMAT, 'sherlock-k-standard-log-capture/2')
         self.assertEqual(k.LOG_FORMAT, 'installed-kore-standard-log/2')
         self.assertIn('not bound', run()['evidence']['adapter_source_binding'])
@@ -964,9 +966,37 @@ class ActualN01CaptureTests(unittest.TestCase):
             k.decode_capture('N' * 65, ENTRY, captures(), source_path=SOURCE)
         with self.assertRaises(ValueError):
             run(run_input=RUN_INPUT + ' ' * k.MAX_TERM_BYTES)
+        default_rows = ([dict(configuration=pretty('09-kprint-04'))]
+                        + [dict(configuration=pretty('10-kprint-05'),
+                                incoming_log=actual('05-exec-depth1-2/stderr'),
+                                state_kore=actual('05-exec-depth1-2/state.kore'))
+                           for _ in range(k.MAX_CAPTURES - 1)])
+        default_result = run(default_rows)
+        self.assertEqual(len(default_result['raw_captures']), k.MAX_CAPTURES)
+        self.assertFalse(default_result['comparison_ready'])
         with self.assertRaises(ValueError):
             run([dict(configuration=pretty('09-kprint-04'))
                  for _ in range(k.MAX_CAPTURES + 1)])
+        f03_rows = ([dict(configuration=pretty('09-kprint-04'))]
+                    + [dict(configuration=pretty('10-kprint-05'),
+                            incoming_log=actual('05-exec-depth1-2/stderr'),
+                            state_kore=actual('05-exec-depth1-2/state.kore'))
+                       for _ in range(k.F03_MAX_CAPTURES - 1)])
+        with self.assertRaises(ValueError):
+            run(f03_rows)
+        f03_result = run(f03_rows, max_captures=k.F03_MAX_CAPTURES)
+        self.assertEqual(len(f03_result['raw_captures']), k.F03_MAX_CAPTURES)
+        self.assertFalse(f03_result['comparison_ready'])
+        with self.assertRaises(ValueError):
+            run([dict(configuration=pretty('09-kprint-04'))
+                 for _ in range(k.F03_MAX_CAPTURES + 1)],
+                max_captures=k.F03_MAX_CAPTURES)
+        with self.assertRaises(TypeError):
+            k._captures(captures(), k.F03_MAX_CAPTURES)
+        for bad_limit in (0, -1, k.F03_MAX_CAPTURES + 1, True, False, '95', None):
+            with self.subTest(max_captures=bad_limit):
+                with self.assertRaises(ValueError):
+                    run(max_captures=bad_limit)
         for argv in (['x'] * (k.MAX_ARGV + 1), [KORE_EXEC, 'x' * (k.MAX_ARG_CHARS + 1)]):
             rows = captures()
             rows[1]['engine_receipt']['argv'] = argv
