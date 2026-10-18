@@ -26,9 +26,32 @@ node dist/cli.js simulate /tmp/loan/repayment.mori --action repay_loan --scenari
 
 `init` refuses an existing directory. `--template transfer` is the default;
 `--template repay` creates `repayment.mori` instead of `invoice.mori`.
-For an installation outside the checkout, run `npm pack` here, then install that
-local `.tgz` into your project with `npm install /absolute/path/to/archive.tgz`.
-Run `npx mori` there. No npm registry publication is claimed.
+For an installation outside the checkout, start in the same package directory.
+Pack into a new local project, then select the installed beta CLI explicitly:
+
+```sh
+MORI_BETA_PROJECT=$(mktemp -d)
+npm pack --pack-destination "$MORI_BETA_PROJECT"
+cd "$MORI_BETA_PROJECT"
+npm install ./moriarty-lang-beta-0.1.0-beta.1.tgz
+MORI_BETA_PKG="$PWD/node_modules/@moriarty-lang/beta"
+mori() { node "$MORI_BETA_PKG/dist/cli.js" "$@"; }
+mori init invoice
+cd invoice
+mori check invoice.mori --json
+mori test .
+mori simulate invoice.mori --action pay --scenario scenario.json
+```
+
+Packing runs the prepack build; the archive name matches this package's current
+`0.1.0-beta.1` version. Keep this terminal open: the function retains the absolute
+installed-package path when you change directories, so the generated README's
+`mori` commands do not require a global install or repository metadata. In a new
+terminal, return to that local project and define the function again. No npm
+registry publication is claimed. This Node beta prepares Source/6 through
+TypeScript Core/5 and stays **PreparedUnqualified**; it is separate from the Rust
+Core language. These instructions do not establish an observed fresh install,
+proof, deployment or settlement.
 `mori COMMAND --help` shows the command's arguments. Exit 0 means the requested
 local operation completed: a preparation remains unqualified. Exit 1 means
 rejection, unsupported execution, test mismatch or a command/file error.
