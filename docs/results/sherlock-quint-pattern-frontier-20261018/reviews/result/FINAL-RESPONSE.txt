@@ -1,0 +1,99 @@
+# B10 Actual-Result / Scope Review: Fresh Primary Opus 5.5 HIGH
+
+## 0. Identity, discipline, coverage, reliance
+
+- **Reviewer.** I am a fresh, nonauthor, primary Opus 5.5 HIGH reviewer (`claude-opus-5-5`). I am not Gemini and not conversation `8a6a2b55-…`. I do not resume or relabel that conversation's opinion.
+- **Zero tools.** I made no filesystem, shell, provider, delegation, Quint, model, kernel, native, Git or network action.
+- **Coverage.** I read the current route note and the complete preserved payload, Bodies 1–21, from `BEGIN BODY 1` through `END-QUINT-B10-SAME8A-ACTUAL-RESULT-REVIEW` and `END-B10-FRESH-PRIMARY-OPUS-ACTUALRESULT-REVIEW`. Nothing was truncated or absent. The zero-byte Bodies 8, 9 and 14 were present as explicit empty bodies.
+- **Reliance.** I did not read any `.qnt`, `.py`, input or readset source. Every source-level fact below comes from Body 1, which is the prior Gemini opinion and is provided as prior evidence only. This includes transition isolation, what each of the 11 selectors checks, the cohort witnesses and positive-premise placement. I do not treat Body 1 as my own audit or as an oracle, and I add no semantic derivation of my own. No populated golden or expected document was requested or read.
+
+## 1. Actual receipts reconciled against the approved two operations (Body 18)
+
+| Check | Result |
+|---|---|
+| Op1 `COMMAND.argv` (Body 5) | Equals the Body 18 op1 argv exactly, wrapped by `/usr/bin/timeout --signal=KILL 60s`. cwd matches; 60 s timeout matches. |
+| Op2 `COMMAND.argv` (Body 10) | Equals the Body 18 op2 argv exactly, wrapped by `timeout … 120s`. Matches on: `--main patternFrontierTest`, the regex `^frontier(Case[0-4](Correspondence\|Cuts)\|DirectedCoverage)Test$`, `--backend typescript`, `--max-samples 1`, `--seed 1`, and `--max-old-space-size=512`. cwd matches. |
+| Environment | `PATH=/usr/bin:/bin`, `LANG=C.UTF-8`. Node is invoked by absolute path, so PATH has no effect on it. |
+| Exits | Both exit 0, with `controller_failure: null`. Exit 0 also rules out a timeout KILL, which would have given 137. |
+| Elapsed time | Op1 took 9.191602489008801 s against a 60 s limit; op2 took 6.984830638000858 s against 120 s. Body 4 (root), Bodies 6/7 (child/phase) and Body 17 all agree. |
+| CHILD-RESULT vs RESULT | Byte-identical per phase: `3a0cd5e1…` for op1 and `1b6039e3…` for op2. Consistent, but this is duplication, not independent corroboration. |
+| Empty streams | Op1 stdout, op1 stderr and op2 stderr are all 0 B with `e3b0c442…`, the correct SHA-256 of the empty string. `full_stream_retained: true`. |
+| Op2 stdout (Body 13) | Lists each of the 11 selector names exactly once, in definition order: 5×Correspondence, 5×Cuts, then DirectedCoverage. Each shows `passed 1 test(s)`, followed by `11 passing (295ms)`. There are no extra or missing names and no failures. |
+| 608 B claim | My manual count of the displayed text, assuming a leading newline and one blank separator line before the summary, comes to exactly 608 bytes. I cannot verify the SHA `ad2b67dd…`. |
+| Body 17 readback | All 12 actual-file pins equal Bodies 4–14. |
+| Sample/seed scope | Per Body 1 (relied on), the selectors are pure deterministic `run`s, so `--max-samples 1` is a complete execution of each, not a sampling weakness. |
+
+**Pin readback (Body 15).**
+- It lists exactly 30 files plus 2 tools, all marked `equal: true` with `allMatch: true`.
+- Every overlapping hash equals the catalog in Body 1 and the tool pins in Body 18: the four `.qnt` files, the `.py`, the compact and full inputs, the freeze, owner-gap, finite-ops, lexical, preimages, scope and declarations files, and `shared.rs` `8092ce1e…`.
+
+**Receipt and provenance gaps.** None of these is a model finding, and none is blocking.
+1. Only a **post-result** readback (UTC 2026-10-18T22:17:39) is inline. Condition 1 required pins to be checked before op1 and to match after op2. The pre-op check appears only as the boolean `allSourceToolPinsCurrent: true` in Body 4. Because the post-result pins equal the reviewed pins, the bytes that ran are consistent with the bytes that were reviewed, apart from a transient-mutation case I consider implausible.
+2. The `cli.js` tool pin covers only the Quint entry file, not the rest of `@informalsystems/quint/dist`. The typechecker and simulator therefore have only partial byte pinning. This should be stated as a limitation, not hidden.
+3. `CANDIDATE-FREEZE.json` (`5829f23e…`) is cited as the reference but is not itself listed as an expected/actual pair in the readback.
+
+## 2. Catalog-typo qualification (Bodies 1, 3, 16)
+
+- The prior report recites the Body-22 hash as `d89ad097…fc1101424f2a6271`. That string is **65 hex digits**, so it cannot be a valid SHA-256 at all. Its first 55 characters match the controlling `d89ad0971dd75fb56ea1ab7438e9424f2a6271b7736d29049fc1101b3e2ac7de`, which points to a transcription splice rather than a different file.
+- The controlling hash is the exact pinned artifact plus the membership file `0329c630…`.
+- The original report stays unedited.
+- This is a metadata qualification only. It is not a source change, and it does not stand in for an acknowledgement that the file was read.
+
+Separately, I note internal line-citation inconsistencies in Body 1. For example, `frontierIsWildcard` is placed at 120–122 while `frontierValueEncodingValid` is placed at 120–134. Also, the heading "Unused Helper" sits over text saying the helper is used. I don't rely on any line numbers, so this does not affect the verdict. It does mean the prior report's line citations should not be republished as authoritative.
+
+## 3. Mandatory model findings
+
+**None.** No source was supplied and none was required for the result/scope question. I raise no model defect and accept none beyond the reliance stated in §0.
+
+## 4. Publication recipe and README review (Bodies 19–21)
+
+**Recipe mechanics are sound.**
+- It has 42 copy entries: 4 `.qnt`, 2 READMEs, 13 `source/`, 12 `actual/`, 8 `reviews/source-part-0{1,2}/` and 3 `readback/`.
+- Every pin matches the bodies.
+- All preimages are ABSENT, so nothing is overwritten.
+- It does not touch Root's pending parser/evidence/current-evidence work or the existing counts.
+- The model README link `../../../../docs/results/…/README.md` resolves correctly from `models/sherlock/quint/pattern-frontier/`.
+
+**Required before publication:**
+1. **Broken path.** Body 21 says the report is "preserved under `reviews/source-part02/`", but the recipe target is `reviews/source-part-02/`. Root should correct that substring. That changes the README's hash, so Root must re-pin it, and the edit should be limited to that substring.
+2. **Result-review labelling.** The recipe status reads `PENDING_SAME8A_ACTUAL_RESULT_SCOPE_REVIEW`. That is stale under the current override. The result review appended at `reviews/result/` must be labelled as this fresh primary Opus call, using only my real returned receipts. The prior Gemini source review must not be relabelled.
+
+**Recommended, non-blocking:**
+- Body 21 calls the source review "one continuing *independent* same8a reviewer". Body 1 describes itself as "one continuing non-author opinion, not a second vote". **Nonauthor** is the accurate word.
+- Body 20 claims the inputs include "nullary matching". Body 1's directed-coverage selector checks only four phenomena: discard, shared occurrence, whole wildcard and retained parent. Nothing I read supports nullary as a selector-checked witness. The README should either qualify it as an author-declared input property or drop it.
+- Body 20 should state that `pattern-frontier/nominalConstruction.qnt` is a byte-identical copy (`77a487c5…`) of the existing `nominal-construction/nominalConstruction.qnt`. Saying so guards against the two copies drifting apart.
+- The published evidence has dangling references:
+  - `ROOT-SELECTION.json` cites `FINAL-RESPONSE.txt` (`0f61cd65…`, 25162 B), which is not copied. Only `REPORT.md` at 25163 B is copied.
+  - `REVIEW-CATALOG-CLARIFICATION.json` cites `MEMBERSHIP.json` and `INSTALLED-LEXER-LITERALS.txt`, neither of which is copied.
+
+  Either copy these files or note that they remain in the runtime R tree.
+- My coverage limits on the published set:
+  - I read the compact readback (19390 B). The published `SOURCE-PIN-READBACK.json` (22882 B, `8289a4c2…`) is the pretty-printed form, and I rely on the "lossless" claim for it.
+  - I did not read the `source-part-01` receipts (REPORT 5560 B and siblings), which the recipe also publishes.
+- Absolute `/home/charl/…` paths are kept as historical receipt data. This is acceptable as declared.
+
+## 5. Retained scope and limitations
+
+- **Finite positive model-to-model correspondence only.** The comparison is against the accepted B09 PURE `nestedPatternMatch`, which serves as a reference operand, not an independent oracle. The checks are:
+  - five result/full-environment/source-order/frontier relations;
+  - five all-33-cuts checks;
+  - one directed-coverage selector.
+
+  This is not a general theorem and not an independent full-state expected trace.
+- **All-cuts is a deterministic iteration identity.** It shows `f^(32−c)(f^c(x₀)) = f^32(x₀)` and nothing more. It does not test a serializer, deserializer, `TechnicalCut` or checkpoint ABI.
+- **Positive premises sit outside `advance`.** Typing, acyclicity, binder linearity and slice/representation validity are checked externally. `advance` has unchecked total indexing and no hostile-input or production-admission policy. The bounds 32/12/4 are analysis bounds, not capacity policy.
+- **NoArm** is local and not exercised as a terminal cohort result. It is not mapped to `Rejected(error9)`.
+- **Diagnostics are abstract local counts.** They are not B `workMap`, rules, `helperWork`, `consumedWork`, charges, caps, fuel, earliest-stop, circuit reads or physical costs.
+- **Owner basis.** The historical inspected W owner carrier/readset (`shared.rs` `8092ce1e…`) is a dated basis. The newer unmerged generic-owner metadata PASS is **not** adoption, and no B ABI is adopted.
+- **Open items.** Nominal MatchPlan/storage/resume ABI and admission, UIREQ-034/035, SCON-016/017/021, B06 financial, Clean/K, ZKIRv3/Halo2 native, Midnight settlement, and product or release closure all remain open. No new product predicate, compatibility count or current-evidence closure follows from this result.
+
+## 6. Verdict
+
+**Actual-result/scope verdict: ACCEPT.** The two observed operations match the approved argv, cwd, timeouts and resource/sample/seed scope exactly. Both exited 0. The full 608 B stdout shows exactly the 11 selectors, each passing once, and all other streams are empty. The post-result pins equal the reviewed and frozen pins. This acceptance covers only the finite, qualified scope in §5, and it relies on the prior Gemini source opinion as stated in §0.
+
+**Publication eligibility: ELIGIBLE for Root publication, conditional on all three of the following:**
+- **(a)** the `source-part02` → `source-part-02` README path correction, with the README re-pinned;
+- **(b)** labelling this result review as the fresh primary Opus call;
+- **(c)** appending only my real returned terminal receipts once they exist.
+
+The §4 recommendations are advisory. No source change, new execution or unchanged-prefix rerun is requested. This is one opinion and not an additional semantic or oracle vote.
