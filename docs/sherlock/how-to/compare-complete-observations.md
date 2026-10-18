@@ -89,3 +89,8 @@ accepts the finite report requirement; the comparator still records acceptance
 and refinement as `none`. The seven map-key helper/log tests passed separately;
 they do not waive the six assembler, multiline or end-to-end chain guards needed
 for general candidate04 tool adoption. No proof, native, finance or B claim follows.
+
+
+## Later bounded offline adapter adoption
+
+The six assembler, multiline and whole-chain guard obligations named above were subsequently exercised by the [eleven complementary tests](../../results/sherlock-f03-general-adapter-guards-20261018/actual/eleven-01/RESULT.json). Four installed-decoder regressions then passed separately. Root adopted the exact bounded offline F03/N01 utilities; the preceding report remains a historical cut. Use [assemble an existing F03 capture set](assemble-offline-f03-observations.md) and the [adapter reference](../reference/offline-k-capture-adapters.md) for the callable interface and limits. This adds no producer, theorem, finance or native result.

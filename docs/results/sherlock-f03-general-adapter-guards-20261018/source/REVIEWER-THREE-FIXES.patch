@@ -1,0 +1,36 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/F03-general-offline-guard-tests-owner-materialization-20261018/afterimages/test_f03_general_adoption_guards.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/F03-general-offline-guard-tests-owner-materialization-20261018/revision02-reviewed-literals/afterimages/test_f03_general_adoption_guards.py
+@@ -498,7 +498,7 @@
+             'pre-startup path chain mismatch: exec-001 --output duplicates exec-000 --output',
+         )
+         check_prestartup(
+-            lambda st: st['exec-000']['receipt']['argv'].extend(['--smt', 'none']),
++            mutate_flag('exec-000', '--smt', 'z3'),
+             'pre-startup command template mismatch between exec-000 and exec-001',
+         )
+         check_prestartup(
+@@ -806,7 +806,6 @@
+ 
+     def test_multiline_single_k_item_positive_normalization_and_retention(self):
+         base_cfg = self.stages['print-001']['stdout'].decode('ascii')
+-        self.assertNotIn('~>', base_cfg)
+         multiline_head = (
+             'uiEval(\n'
+             '    uiCall(\n'
+@@ -817,6 +816,7 @@
+         )
+         k_start = base_cfg.index('<k>') + 3
+         k_end = base_cfg.index('</k>')
++        self.assertNotIn('~>', base_cfg[:k_start] + base_cfg[k_end:])
+         multiline_cfg = (
+             base_cfg[:k_start] + '\n    ' + multiline_head + ' ~> .K\n  ' + base_cfg[k_end:]
+         )
+@@ -979,7 +979,7 @@
+         e4_argv = asm_chain['captures'][5]['engine_receipt']['argv']
+         e5_argv[e5_argv.index('--output') + 1] = e4_argv[e4_argv.index('--output') + 1]
+         asm_chain['captures'][6]['print_receipt']['argv'][2] = e5_argv[e5_argv.index('--output') + 1]
+-        e5_argv.extend(['--smt', 'none'])
++        e5_argv[e5_argv.index('--smt') + 1] = 'z3'
+         asm_chain['captures'][6]['print_receipt']['argv'][0] = '/usr/local/bin/kprint-custom'
+ 
+         res = self._run_decode_capture(asm_chain)
