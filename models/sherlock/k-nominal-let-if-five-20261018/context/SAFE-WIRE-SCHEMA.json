@@ -1,0 +1,42 @@
+{
+  "status": "DECLARATION_ONLY_NO_EXPECTED_CELLS",
+  "schema": "independent-nominal-full-state/1",
+  "root": {"schema":"string","profile":"string","caseId":"input case identifier","states":"ordered complete snapshot array","terminalStepContract":"string"},
+  "K": {
+    "snapshotKeys": ["program","control","environment","frames_top_first","events"],
+    "programShape": "NGProgram normalized input-only shape from successor/inputs/*.program.json",
+    "environmentShape": "array of {name_id:integer,value:Value}, sorted by numeric name_id",
+    "valueShape": "{UInt:integer}|{Bool:boolean}|{Nominal:{type_id:integer,ctor_id:integer,fields:Value[]}}",
+    "controlFrameEventShape": "one-key object {public syntax constructor name:{all payload fields named exactly by PUBLIC-API.json control/frame/event_payload_order}}",
+    "eventHistory": "complete ordered cumulative event array, not last event only",
+    "extraRootKey": {"observerCuts":"ordered observation ordinals; no semantic charge"},
+    "publicAPI": "generic-nominal-let-if-source-successor-20261018/PUBLIC-API.json"
+  },
+  "Quint": {
+    "snapshotKeys": ["program","control","environment","frames","initialFuel","remaining","consumed","helperWork","constructorNodes","constructorFieldSlots","outcome","source","event","builds","selectedArms","enteredArguments","maxDepth"],
+    "programMapNormalization": {"expressions":"array of {exprId,expression}","functions":"array of {name,function}","layouts":"array of {typeId,ctorId,fields}","entry":"integer"},
+    "environmentShape": "array of {name:integer,value:Value}, sorted by numeric name",
+    "valueShape": "preorder token array; token is {UIntToken:integer}|{BoolToken:boolean}|{ConstructorToken:{typeId,ctorId,arity}}",
+    "variantShape": "one-key object; scalar payload is direct, record payload has all declared field names; Stopped is a string",
+    "constructionKeys": ["typeId","ctorId","occurrence","source","completed","remaining","saved"],
+    "functionKeys": ["name","parameters","parameterTypes","resultType","body"],
+    "outcomeShape": "Pending string|{Done:Value}|Exhausted string|OutsideDomain string",
+    "buildObservationKeys": ["occurrence","typeId","ctorId","fields","value"],
+    "eventShape": "declared enum tag string",
+    "extraRootKeys": {"sourceOccurrences":"input-only ExprId to occurrence entry array","recursiveGroups":"input-only nominal type to group entry array"},
+    "publicContract": "dedicated-quint-20261018/DECLARATION-AND-STEP-CONTRACT.md",
+    "clock": "own profile only; no K/A/B work alias"
+  },
+  "Clean": {
+    "schema": "independent-clean-cursor/1",
+    "root": {"schema":"string","cases":"array"},
+    "frameKeys": ["typeId","ctorId","origin","completedValues","remainingExprs","savedEnvironment"],
+    "cursorShape": "{eval:{expression,environment,frame}}|{build:{typeId,ctorId,origin,fields,savedEnvironment}}",
+    "caseShape": "caseId with explicit FieldsEvaluate premise, ordered cursors, cut splits, finishBuild and clock qualification; nullary case has begin and returnedValues",
+    "valuesAndEnvironment": "same independent nominal wire as K; explicit adapter needed for Lean constructors"
+  },
+  "numericConvention": "JSON integer tokens, booleans remain booleans; no floating point or decimal strings",
+  "opaqueExpectedDirectory": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-formal-independent-normal-oracle-20261018/expected",
+  "opaquePathRule": "{caseId}.K.json or {caseId}.Quint.json; Clean-continuation-cursors.json",
+  "sourceAuthorRule": "Do not open expected files or materializer/derivation/data validation/freeze content while authoring models. Root and independent reviewers may read complete tables."
+}

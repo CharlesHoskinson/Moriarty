@@ -32,3 +32,6 @@ mod core_action_resource_integration_tests;
 
 #[cfg(test)]
 mod core_action_operator_pipeline_tests;
+
+// Read-only diagnostic reference prefixes from saved actual B observations.
+pub mod reference_projection;
