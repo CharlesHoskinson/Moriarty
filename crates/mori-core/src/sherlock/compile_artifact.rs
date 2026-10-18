@@ -26,6 +26,8 @@ pub mod draft_report;
 pub mod draft_profile;
 #[path = "compile_artifact/draft_execution.rs"]
 pub mod draft_execution;
+#[path = "compile_artifact/draft_simulation_report.rs"]
+pub mod draft_simulation_report;
 #[path = "compile_artifact/draft_diagnostics.rs"]
 mod draft_diagnostics;
 use config::ExecutionConfig;

@@ -36,3 +36,21 @@ no circuit/website iteration follows, and no new original EARS closure is claime
 The DW-63 lesson is recorded
 separately in the [DoctorWatson improvement log](../../../wiki-llm/doctorwatson-improvement-log.md),
 not as a new semantic or acceptance decision here.
+
+
+The [simulate adapter/report](../reference/draft-source-compiler.md#simulate-source-integration-observed-consumers-cli-unrun)
+keeps another evidence boundary visible: R299's passed shared production
+argument test covers one Rust test/24 rows, while R301's exit-zero compilation
+checks normal Core module composition. Neither is enclosing CLI/global-handler
+execution or file I/O. R310 separately observes real run/report/Serialize/JSON
+for two programs and same-run bindings, without saving a complete report/trace
+or supplying an exact count oracle. Raw metadata failures and additive path/
+line-convention corrections stay visible; no passing prefix was rerun. Root
+installed the fourteen source files, then accepted R315's result/installation
+review and added all six consumer files. The reviewed R316 reference update
+restored CURRENT11/35 with no findings; the old CURRENT10/stale025 cut is retained.
+That restores reporting currentness without a new semantic closure. Full CLI/
+files remain UNRUN.
+Fixed owner semantics gain no new circuit/transition rule; no circuit/website
+iteration or B04 completion is claimed. Earlier journal entries and R279
+observations retain their exact dated scope.

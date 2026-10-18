@@ -6,6 +6,7 @@ use crate::cli::Cli;
 use crate::shell::Shell;
 
 mod cli;
+mod cli_args;
 mod commands;
 mod display;
 mod error;

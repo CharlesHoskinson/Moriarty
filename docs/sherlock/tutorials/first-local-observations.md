@@ -80,3 +80,12 @@ call/counter relations. Those are separate observations, not output from this
 unchanged Python exercise. Raw stdout contains test status, not a complete trace
 or exact B clock. No transition/circuit semantics or circuit/website iteration
 changed in this tutorial; no command here was rerun for this documentation update.
+
+
+The [unrun simulate command](../how-to/compile-draft-program.md#pending-command-shape-unrun)
+adds no observed exercise step here. R299's one-test/24-row argument check and
+R301's normal Core compile have separate scoped observations. R310 also passed
+one two-program real-run/report/serialization test; that is not enclosing CLI,
+file I/O or a command printout. Those command/file observations remain UNRUN.
+Existing tutorial commands/results stay unchanged; there is no transition/
+circuit semantic change or circuit/website iteration.
