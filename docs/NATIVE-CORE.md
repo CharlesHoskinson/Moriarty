@@ -135,14 +135,31 @@ cargo run -p mori --locked -- compile examples/core/batch-clear/batch.mori \
   --target toolchains/ledger-9.json --out build-batch
 ```
 
-`cargo run -p mori --locked -- init NEW_DIR` creates a Core transfer starter. `--template repay`
-creates a repayment starter. Before running the generated README commands from
-its project directory, replace their `mori` executable with an absolute path to
-the Rust binary built from this checkout. Those commands check, simulate and
-test the complete expected post-state and ordered effects.
-The destination must not exist, and its parent must exist. An I/O failure
-can leave an incomplete project. Choose a new destination before retrying.
-These starters use local example assets and reference execution.
+For a source-only local Core starter, explicitly select the Rust binary and
+disable its default `native` feature. From the repository root, with the pinned
+Rust toolchain and Cargo available:
+
+```sh
+MORI_CORE_PROJECT=$(mktemp -d)
+cargo run -p mori --locked --no-default-features --bin mori -- init "$MORI_CORE_PROJECT/transfer"
+cd "$MORI_CORE_PROJECT/transfer"
+```
+
+The parent exists and the `transfer` child is new. The generated `README.md`
+already contains `check`, `simulate` and `test` commands using the POSIX-quoted
+absolute path of the Rust executable that created it. Run those commands from
+this starter directory; if the executable moves, update its path in the README.
+To create a repayment starter instead, use `--template repay` on the `init`
+command. Both use `language "moriarty/1";`, `source.mori`, `scenario.json` and
+`mori-tests.json`; their actions are `pay` and `repay`, respectively. These are
+separate from the Node beta's profile, Source/6 preparation and test manifest.
+
+The commands compare complete expected post-state and ordered effects under local
+reference execution. The TEST asset and accounts are examples. An I/O failure
+can leave an incomplete project; choose a new child before retrying. Dependency
+resolution, build success and fresh external installation remain separate from
+local execution. No native proof, deployment or settlement is established.
+Return to the repository root before using the rest of this guide's Cargo commands.
 
 `check` reads at most 1 MiB plus one refusal byte through the shared bounded
 reader; both Core and beta retain their 65,536-byte source grammar limit.
