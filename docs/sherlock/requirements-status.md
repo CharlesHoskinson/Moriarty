@@ -1,13 +1,15 @@
 # Current35 EARS assessment
 
-Twelve of the 35 original requirements are closed on their supported host or reporting
+Thirteen of the 35 original requirements are closed on their supported host or reporting
 scope: UIREQ-001, UIREQ-002, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008,
-UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-022, UIREQ-025 and UIREQ-027.
+UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-022, UIREQ-025, UIREQ-027 and UIREQ-030.
 The [supported-profile adoption](../results/sherlock-supported-profile-20261018/ROOT-ORIGINAL002-ADOPTION.json)
 adds original UIREQ-002's admitted grammar/versioned-profile reporting clause and
-First-order fragment scenario. The [whole-provenance adoption](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/ROOT-ORIGINAL027-ADOPTION.json)
-and [current report](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/CURRENTNESS-RESULT.json)
-verify twelve current adopted closures with no findings. The remaining 23 original
+First-order fragment scenario. The earlier [whole-provenance adoption](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/ROOT-ORIGINAL027-ADOPTION.json)
+retains its twelve-closure dated cut. The later [word adoption](../results/sherlock-selected-word-arithmetic-20261018/ROOT-WORD-ADOPTION.json)
+and [current report](../results/sherlock-selected-word-arithmetic-20261018/ROOT-CURRENTNESS-READBACK.json)
+record 13 current adopted closures with no findings: 13 complete, 19 partial and 3
+absent original implementations. The remaining 22 original
 requirements and all 25 refinements/68 scenarios remain open. Whole-owner
 closed-body/unique-function admission, higher-order/letrec and generic extensions,
 bound enforcement and runtime/formal/native predicates remain distinct unfinished
@@ -54,7 +56,7 @@ retain their exact scoped observations. Matching files alone cannot close a requ
 | UIREQ-027 | complete | observed | closed | Entire original clause accepted after complete current source and actual-result review: source order/membership, distinct equal sites, static recursion references, ordered slices/arms, first-match lookup, full public step origins and pure preparation. Retain exact evidence; generic, persistent, formal/native and refinement obligations remain separate. |
 | UIREQ-028 | partial | partial | open | Capture actual permitted lookup-deeper and repeated-subtree equality owner steps with owned full before/event/after, independently frozen counters/resume/origin. Keep B erasure observational and no equal-fuel claim. |
 | UIREQ-029 | partial | partial | open | Implement partial bounded image representation/codec for exact admitted layout/domain; independently compare factorial pending Mul/caller/helper state and explicit out-of-domain refusal; constraints/theorems remain distinct. |
-| UIREQ-030 | partial | partial | open | Implement specified typed32/64 limb components; independent cross-limb normal values2^32+5,2^64+2,3*2^48+3 plus full high/low product and checkedU128 wrapper mapping. Source-only host tests do not establish circuit constraints. |
+| UIREQ-030 | complete | observed | closed | Whole original typed32/64 arithmetic/lowering clause adopted after generic source and actual normal/error10 review: named full intermediates, checked UInt128 mapping and original normal equations. Retain the nine passed operations; circuit constraints, charged-work equivalence, layout/row-cost winner and native/proof/target remain separate. |
 | UIREQ-031 | absent | unrun | open | Implement separate typed plan visitors/capability inventory on one actual step, explicit ordered inputs/outputs/witness-program export vs constraints/nativeclosure/lookup/interaction unsupported. Do not invent native exporter support. |
 | UIREQ-032 | partial | partial | open | Public grouping API is exposed; all three fixed N01 cases passed and reviewed. Twelve fixed grouped callee-return cases now passed and reviewed. Implement causal occurrence IDs and complete precedence/B/persistent/financial/circuit scope; preserve complete internal records and first-stop precedence. |
 | UIREQ-033 | absent | unrun | open | Implement finite worklist generic baseline/masks and force reachable low-size fallback; compare every dynamic prefix/state/charge/origin/first stop, never specializing runtime fuel/values or unrolling recursion. |

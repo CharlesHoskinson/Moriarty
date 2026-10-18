@@ -1,0 +1,73 @@
+{
+  "status": "PROPOSED_FOR_REVIEW_NOT_ADOPTED",
+  "id": "UIREQ-030",
+  "originalRequirementSource": {
+    "path": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b",
+    "heading": "UIREQ-030 Typed arithmetic component API",
+    "scenarioNames": [
+      "Carry, borrow and full product"
+    ],
+    "startLine": 218
+  },
+  "originalPredicatePreserved": {
+    "id": "uireq-030_original_clause_and_scenarios",
+    "description": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.",
+    "domain": "Public SDK-free 32/64-bit little-endian host components with named carry/borrow/product results, distinct CarryBit/BorrowBit versus MulCarry32/64, full intermediates and checked UInt128 wrappers. R201 observed17 normal tests on the original standalone harness. R206 compiled the normal Core public alias and unchanged independent12-test consumer without executing/listing them; no lowering selection or invocation is established.",
+    "applicableEvidenceClasses": [
+      "source",
+      "scoped-observation",
+      "declared-component-correspondence"
+    ],
+    "nativeRequiredByOriginal": false,
+    "allOriginalScenarios": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.\n\n#### Scenario: Carry, borrow and full product\n- **WHEN** b is 32 or 64 and checkedU128Add/Sub/Mul use little-endian limbs.\n- **THEN** addCarry_b(a,bv,carryIn) returns named {low,carryOut}, subBorrow_b(a,bv,borrowIn) returns {low,borrowOut}, and mulWide_b(a,bv) returns {low,high}; carry/borrow bits and multiply-accumulate whole-word carries have distinct types. The wrappers retain K mathematical-result/error10 meaning, including the full up-to-256-bit product before checked UInt128 selection. Independently specified normal results are (2^32−3)+8 = 2^32+5, (2^64+9)−7 = 2^64+2, and (2^48+1)·3 = 3·2^48+3; no layout or row-cost winner is selected."
+  },
+  "currentAcceptance": {
+    "status": "open",
+    "proposedStatus": "open",
+    "scope": "Original clause and all applicable revision03 refinements retained",
+    "reason": "Actual arithmetic lowering/layout selector invoking these components is not established. Complete checked UInt128 error10 correspondence remains unobserved at runtime for overflow/underflow/nonzero high128; R203 retains designated-owner coverage caveat without this audit making a security judgment. Original arithmetic-lowering clause remains open; no circuit/native prerequisite is added to original030.",
+    "adoption": "pending-root-semantic-review"
+  },
+  "proposedAfterReview": {
+    "implementation": "complete",
+    "validation": "observed",
+    "acceptance": "closed"
+  },
+  "obligations": [
+    {
+      "obligation": "Named full results, bit/carry types, 32/64 little-endian components and exact full checked wrapper",
+      "evidence": [
+        "Unchanged current word_arithmetic.rs f10af3a... source, retained R197 independent literal expectations / R201 actual17 tests; new word_lowering.rs generic six-variant delegate, not only sample expressions."
+      ]
+    },
+    {
+      "obligation": "Original three normal equations for each selected layout, real public B lowering path",
+      "evidence": [
+        "Actual five normal operations: direct full-result assertions and actual public selected32/64 each three original expressions."
+      ]
+    },
+    {
+      "obligation": "Mathematical result/error10 including complete up-to-256-bit product before UInt128 selection",
+      "evidence": [
+        "Existing generic full component/wrapper source plus actual new direct add overflow, sub borrow, nonzero high128 product arrays and actual public selected32/64 rejected10 outcomes; three new cases run once, all pass."
+      ]
+    },
+    {
+      "obligation": "No layout or row-cost winner",
+      "evidence": [
+        "No equality/performance/native theorem claimed; host components and observed selected paths only."
+      ]
+    }
+  ],
+  "roles": {
+    "a3ce": "Nonauthor seven production files and normal tests; AUTHOR new error10 tests/literal correction. Review whole requirement using separate 29f6 test-source verdict, never self-approve test source.",
+    "reviewer29": "Nonauthor error10 test/QA reviewer; AUTHOR additive owner_host constructor, so production self-approval excluded. Constructor already independently read/approved by a3ce."
+  },
+  "conditions": [
+    "Actual nine receipts and retained independent component evidence satisfy whole original clause, not merely finite-test universal inference. Reviewer must assess generic implementation source reasoning.",
+    "Root final adoption/public portable archive and exact currentness refs required before canonical status change.",
+    "All original normative description/allOriginalScenarios and 25 refinement acceptance statuses retained; no native prerequisite inserted."
+  ],
+  "historicalPredicateDomainNote": "Current predicate.domain contains pre-batch no-lowering/no-invocation evidence-state text. It is reproduced byte-exact, not a newly asserted observation. Root should decide separate factual evidence-state wording reconciliation without altering original normative clause/scenario; this packet does not silently narrow or rewrite it."
+}

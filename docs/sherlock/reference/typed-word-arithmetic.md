@@ -1,13 +1,18 @@
 # Typed word arithmetic
 
-Public Rust path: `mori_core::sherlock_word_arithmetic`. Core's library root now
-exports the R196 host leaf, matching the R206 source whose normal library and
-external public consumer compiled successfully. R214 also compiled the
-[canonical test wrapper](../../../crates/mori-core/tests/sherlock_word_arithmetic.rs)
-after its fixture include path changed. These are compilation results; the
-canonical test binary was neither listed nor executed. The
-[how-to](../how-to/use-typed-word-arithmetic.md) contains one usage example whose
-status is source-inspected only.
+Public Rust paths are `mori_core::sherlock_word_arithmetic` for typed components,
+`mori_core::sherlock_word_lowering` for explicit Word32/Word64 selection, and
+`mori_core::sherlock_compile_artifact::draft_execution` for the selected host run.
+The installed Scalar lowering uses the existing components on actual evaluated
+UInt128 operands. [Root adoption](../../results/sherlock-selected-word-arithmetic-20261018/ROOT-WORD-ADOPTION.json)
+closes the whole original UIREQ-030 host arithmetic clause after source/result
+review and the nine observed normal/error operations. It establishes no circuit,
+native-proof, charged-work or target result, and selects no layout/cost winner.
+
+Earlier R201/R206/R214 observations below retain their exact artifacts and scope.
+The [how-to](../how-to/use-typed-word-arithmetic.md) includes a standalone product
+snippet with no separate execution receipt; the later selected-path tests are
+different executed artifacts.
 
 ## Layout and component meaning
 
@@ -82,6 +87,45 @@ pub fn checked_u128_sub_64(a: u128, bv: u128) -> CheckedUInt128Sub64;
 pub fn checked_u128_mul_64(a: u128, bv: u128) -> CheckedUInt128Mul64;
 ```
 
+## Selected host lowering
+
+`mori_core::sherlock_word_lowering` exports `WordLayout::{Word32, Word64}`,
+`UInt128Operation::{Add, Sub, Mul}`, `ArithmeticLowering` and
+`FullArithmeticResult::{Add32, Sub32, Mul32, Add64, Sub64, Mul64}`.
+`ArithmeticLowering::new(layout, operation)` returns a value whose **method**
+`execute(self, left: u128, right: u128)` returns the complete
+`FullArithmeticResult`. `component_name(self)` identifies its checked component;
+`FullArithmeticResult::checked(self)` projects `Result<u128, u8>` only after the
+full intermediate has been produced. There is no associated free `execute`
+function or implicit choice of word width.
+
+The public dedicated-source function has this signature:
+
+```rust
+pub fn run_draft_host_with_word_layout(
+    source: &str,
+    config_source: &str,
+    target_source: &str,
+    word_layout: WordLayout,
+    sink: &mut dyn FnMut(&StepEventC),
+) -> Result<WordLoweredDraftHostRun, CompileFailure>;
+```
+
+`WordLoweredDraftHostRun` has `word_layout: WordLayout` and `run: DraftHostRun`.
+Read `run.completed` for the actual summary/event count and `run.observe()` for
+the borrowed post-run observation. `run.preparation` remains its original
+unstepped genesis report; its wire widths do not become circuit/field layout
+claims. An `Ok` run can contain a real `Rejected { code: 10 }` or exhausted
+outcome; it does not assert successful application return.
+
+The selected path is `run_draft_host_with_word_layout` →
+`host_owner_engine_with_word_layout` → `WordFamilyPlans` → Scalar Add/Sub/Mul →
+`ArithmeticLowering::new(...).execute(...)`. Other family plans delegate to the
+existing implementation. Existing `run_draft_host` and `host_owner_engine`
+retain their default path. Configured parser/type/copy/runtime extents, operand
+order and sink/failure contracts are shared; selecting a host word layout adds
+no public developer permission, new runtime budget or native exporter.
+
 ## Full intermediate and checked result
 
 Each checked entrypoint returns both `full` and `checked`. Addition retains
@@ -94,9 +138,10 @@ calculation still fits.
 `checked: Result<u128, u8>` is `Ok(value)` when the mathematical result lies in
 `[0, 2^128)`. The inspected source selects legacy `Err(10)` for final addition
 carry, final subtraction borrow, or a nonzero high128 product. The retained full
-intermediate remains in the return object. Those whole-UInt128 error branches
-were not executed by the normal cohort described below; error10 selection is a
-source observation here.
+intermediate remains in the return object. The later selected error cohort
+executed addition overflow, subtraction underflow and a nonzero-high128 product
+through both Word32 and Word64 public paths, observing semantic error10. The
+historical normal-only cohorts did not execute those branches.
 
 The independently specified R197 original examples give these successful values
 in both layouts:
@@ -126,6 +171,22 @@ The R206 and R214 compilations did not rerun the R201 cohort or establish a
 canonical 12-test execution. The canonical wrapper differs from the R206 wrapper
 only in its fixture include path; its historical compile-only provenance comment
 is retained. These receipts describe their frozen source and consumers.
-They supply no arithmetic-lowering integration, circuit constraints, row-cost
-winner, native proof or ledger result, and do not close original UIREQ-030.
+Those historical receipts alone established no selected lowering or whole030
+closure. The later [selected-word archive](../../results/sherlock-selected-word-arithmetic-20261018/README.md)
+adds the following actual observations:
+
+| Adopted batch | Actual observation |
+| --- | --- |
+| Five normal operations | Changed combined Core compilation, normal-consumer compilation and three exact tests passed; all 500 input pins unchanged. Full component checks and six public normal runs cover the original D26/D27/D28 equations in both layouts. |
+| Four error10 operations | New consumer compilation and three exact tests passed using the same Core library; all 505 input pins unchanged. Full intermediates and six public error runs cover max+1, 0−1 and max×2. No Core rebuild or positive replay. |
+| Whole original030 adoption | Source inspection and actual scoped results accepted; six prior closures retained after compatibility review. [Currentness readback](../../results/sherlock-selected-word-arithmetic-20261018/ROOT-CURRENTNESS-READBACK.json) reports 13 adopted originals with no findings. |
+
+The normal and error cohorts comprise six tests, not an exhaustive input-space
+execution. General implementation meaning was assessed by source review; these
+finite runs supply scoped observations. The source reviewer authored the new
+error tests and relied on independent reviewer29 for their review; independent reviewer29's
+production constructor was separately reviewed by a3ce. Raw process137/terminal
+SUCCESS, later clean confirmation and the qualified single-JSON-fence observer
+failure remain in the archive. Circuit constraints, row costs, native proofs,
+charged-work equivalence and ledger/target acceptance remain unestablished.
 See [profiles and results](profiles-results.md) for the broader evidence boundaries.

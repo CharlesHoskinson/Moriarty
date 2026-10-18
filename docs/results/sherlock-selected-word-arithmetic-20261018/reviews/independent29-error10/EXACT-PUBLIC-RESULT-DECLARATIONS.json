@@ -1,0 +1,41 @@
+{
+  "scope": "Complete actual named type declarations and CompletedRun.observe/EventForwarding impl; unrelated guard bodies not repeated",
+  "regions": [
+    {
+      "origin": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/R274-word-lowering-product-source/fresh-argon-revision03/qa-proposal/snapshot/crates/mori-core/src/sherlock/compile_artifact.rs",
+        "bytes": 14950,
+        "sha256": "9c0749c098cacc523632930a85a1a3c0be1ccf0d5e4a0bccaa35a7a017edd70f"
+      },
+      "linesInclusive": [
+        100,
+        108
+      ],
+      "text": "/// Structured original diagnostic payloads, never a manufactured owner outcome.\n#[derive(Serialize)]\npub struct CompileFailure {\n    pub stage: &'static str,\n    pub actual_error: Value,\n    pub evaluation_performed: bool,\n    pub events_forwarded: String,\n    pub completed: bool,\n}\n"
+    },
+    {
+      "origin": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/R274-word-lowering-product-source/fresh-argon-revision03/qa-proposal/snapshot/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security.rs",
+        "bytes": 26772,
+        "sha256": "8ce1093e8cad5f1a649e65505f3a715788ec1ed7da9a5607628d09d0bc6b356b"
+      },
+      "linesInclusive": [
+        130,
+        212
+      ],
+      "text": "/// Staged consumer error. Tooling and HostViolation payloads are the actual\n/// owner values, unchanged. The stage tells the caller how far the real call\n/// sequence got and, for run/observation failures, what the sink has seen.\npub enum ConsumerError {\n    HostGuard(HostGuardError),\n    /// The actual crate validation error, unchanged. This is the existing\n    /// compiler's own refusal surface, not a new guard refusal.\n    CoreValidation(crate::Error),\n    /// The actual prepare_scalar_action diagnostic, unchanged. Per the\n    /// adapter contract this is projection metadata, not a compiler refusal.\n    SourceProjection(ProjectionDiagnostic),\n    Admit(Tooling),\n    AdmitRun(Tooling),\n    /// Owner run returned a HostViolation after earlier events were already\n    /// forwarded to the caller's sink. Those events are a partial prefix:\n    /// no RunSummary and no observation exist for this call.\n    Run {\n        violation: HostViolation,\n        events_forwarded: u128,\n    },\n    /// Run completed and the summary is real, but the bound observation was\n    /// refused. The summary and the already-forwarded events remain valid.\n    Observation {\n        violation: HostViolation,\n        summary: RunSummary,\n        events_forwarded: u128,\n    },\n}\n\n/// A completed real owner run. The admitted bindings and the image are owned\n/// side by side (never a stored self-referential observation); observe()\n/// borrows both for the duration of one owner-bound read-only observation.\npub struct CompletedRun {\n    pub admitted: Admitted,\n    pub image: MachineImage,\n    pub summary: RunSummary,\n    pub events_forwarded: u128,\n}\n\nimpl CompletedRun {\n    pub fn observe(&self) -> Result<HostObservation<'_>, ConsumerError> {\n        observe_bound_image(&self.admitted, &self.image).map_err(|violation| {\n            ConsumerError::Observation {\n                violation,\n                summary: RunSummary {\n                    outcome: self.summary.outcome,\n                    events: self.summary.events,\n                    consumed_work: self.summary.consumed_work,\n                    helper_work: self.summary.helper_work,\n                    helper_visits: self.summary.helper_visits,\n                    reference_cursor: self.summary.reference_cursor,\n                },\n                events_forwarded: self.events_forwarded,\n            }\n        })\n    }\n}\n\n/// Checked event counter for Sol's forwarding sink. The consumer retains no\n/// events itself; it forwards each real StepEventC to the caller's sink\n/// exactly once, in run order. Retention is therefore the caller's own\n/// choice and allocation, outside this module. One fresh counter is used\n/// for one owner run. The fixed owner `run` performs `checked_add(1)` on\n/// its own event count before invoking the sink, so it returns its\n/// unchanged HostViolation before forwarding an event that would overflow\n/// either count; sink invocations in one run therefore cannot exceed\n/// u128::MAX and `overflowed` cannot be set on that path. `overflowed`\n/// remains a defensive record only if this counter were reused outside\n/// that contract; it is not surfaced as a lower-bound count.\n#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]\npub struct EventForwarding {\n    pub forwarded: u128,\n    pub overflowed: bool,\n}\n\nimpl EventForwarding {\n    pub fn note(&mut self) {\n        match self.forwarded.checked_add(1) {\n            Some(next) => self.forwarded = next,\n            None => self.overflowed = true,\n        }\n    }\n}\n"
+    },
+    {
+      "origin": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/R274-word-lowering-product-source/fresh-argon-revision03/qa-proposal/snapshot/crates/mori-core/tests/sherlock_word_lowering.rs",
+        "bytes": 4898,
+        "sha256": "00ff50d3ff928b47fe03d1b412f61192f355868e5cf31b51f8d304a2db5571e5"
+      },
+      "linesInclusive": [
+        68,
+        89
+      ],
+      "text": "fn run_source(layout: WordLayout, expression: &str, expected: u128) {\n    let source = format!(\"language \\\"moriarty-sherlock-draft/1\\\"; program WordArithmetic {{ entry {expression}; }}\");\n    let mut actual_events = 0usize;\n    let selected = run_draft_host_with_word_layout(&source, CONFIG, TARGET, layout,\n        &mut |_| actual_events += 1).unwrap_or_else(|_| panic!(\"normal selected source run failed\"));\n    assert_eq!(selected.word_layout, layout);\n    assert!(actual_events > 0, \"actual owner run, not compile-only preparation\");\n    let observation = selected.run.observe().unwrap_or_else(|_| panic!(\"real bound observation failed\"));\n    let value = match observation.image.outcome {\n        OutcomeC::Halted { value } => *value,\n        other => panic!(\"expected normal halt, got {other:?}\"),\n    };\n    let index = match value {\n        RefC::Data(index) => index,\n        other => panic!(\"arithmetic result is not owner data: {other:?}\"),\n    };\n    match &observation.image.data[index] {\n        mori_core::sherlock::helper_machine::raw::DataRow::U128 { n } => assert_eq!(*n, expected),\n        _ => panic!(\"wrong arithmetic result kind\"),\n    }\n}\n\n"
+    }
+  ]
+}

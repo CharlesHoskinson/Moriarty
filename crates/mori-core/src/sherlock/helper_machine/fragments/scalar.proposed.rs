@@ -24,6 +24,30 @@ fn scalar_operand_b(operand_b: Option<RefC>) -> Result<RefC, HostViolation> {
 fn plan_scalar(sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator)
     -> Result<EffectPlan, HostViolation>
 {
+    plan_scalar_lowered(sel, pre, g, None)
+}
+
+fn plan_scalar_with_word_layout(sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator,
+    layout: WordLayout) -> Result<EffectPlan, HostViolation>
+{
+    plan_scalar_lowered(sel, pre, g, Some(layout))
+}
+
+fn checked_word_result(layout: WordLayout, operation: UInt128Operation, left: u128, right: u128)
+    -> pure_leaves::CheckedArith
+{
+    // FullArithmeticResult is constructed before its checked projection. The
+    // existing component execute path yields only Ok(n) or semantic Err(10).
+    let full = ArithmeticLowering::new(layout, operation).execute(left, right);
+    match full.checked() {
+        Ok(n) => pure_leaves::CheckedArith::Value { n },
+        Err(_) => pure_leaves::CheckedArith::Overflow,
+    }
+}
+
+fn plan_scalar_lowered(sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator,
+    word_layout: Option<WordLayout>) -> Result<EffectPlan, HostViolation>
+{
     let mut writes = PlannedWrites::default();
     let mut delta = PlanDelta::default();
     match &sel.rule {
@@ -133,11 +157,20 @@ fn plan_scalar(sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator)
                             if *mode == ScalarMode::Lt {
                                 ScalarStaged::BoolValue { b: *reg_a < n }
                             } else {
-                                let result = match *mode {
-                                    ScalarMode::Add => pure_leaves::checked_add(*reg_a, n),
-                                    ScalarMode::Sub => pure_leaves::checked_sub(*reg_a, n),
-                                    ScalarMode::Mul => pure_leaves::checked_mul(*reg_a, n),
-                                    _ => return Err(scalar_payload_error(HostViolationKind::WrongVariant, "checked arithmetic mode")),
+                                let result = if let Some(layout) = word_layout {
+                                    match *mode {
+                                        ScalarMode::Add => checked_word_result(layout, UInt128Operation::Add, *reg_a, n),
+                                        ScalarMode::Sub => checked_word_result(layout, UInt128Operation::Sub, *reg_a, n),
+                                        ScalarMode::Mul => checked_word_result(layout, UInt128Operation::Mul, *reg_a, n),
+                                        _ => return Err(scalar_payload_error(HostViolationKind::WrongVariant, "checked arithmetic mode")),
+                                    }
+                                } else {
+                                    match *mode {
+                                        ScalarMode::Add => pure_leaves::checked_add(*reg_a, n),
+                                        ScalarMode::Sub => pure_leaves::checked_sub(*reg_a, n),
+                                        ScalarMode::Mul => pure_leaves::checked_mul(*reg_a, n),
+                                        _ => return Err(scalar_payload_error(HostViolationKind::WrongVariant, "checked arithmetic mode")),
+                                    }
                                 };
                                 match result {
                                     pure_leaves::CheckedArith::Value { n } => ScalarStaged::U128Value { n },

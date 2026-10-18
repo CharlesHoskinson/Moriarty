@@ -1,0 +1,29 @@
+--- original/sherlock_word_lowering_error10.rs
++++ corrected/sherlock_word_lowering_error10.rs
+@@ -95,7 +95,7 @@
+     let source = format!(
+         "language \"moriarty-sherlock-draft/1\"; program WordArithmeticError10 {{ entry {expression}; }}"
+     );
+-    let mut actual_events = 0usize;
++    let mut actual_events = 0u128;
+     let selected = run_draft_host_with_word_layout(
+         &source,
+         CONFIG,
+@@ -103,7 +103,7 @@
+         layout,
+         &mut |_| actual_events += 1,
+     )
+-    .unwrap_or_else(|err| panic!("selected host run returned CompileFailure: {err:?}"));
++    .unwrap_or_else(|_| panic!("selected host run returned CompileFailure"));
+     assert_eq!(selected.word_layout, layout);
+     assert!(actual_events > 0, "actual owner run, not compile-only preparation");
+     assert_eq!(selected.run.completed.events_forwarded, actual_events);
+@@ -114,7 +114,7 @@
+     let observation = selected
+         .run
+         .observe()
+-        .unwrap_or_else(|err| panic!("real bound observation failed: {err:?}"));
++        .unwrap_or_else(|_| panic!("real bound observation failed"));
+     match observation.image.outcome {
+         OutcomeC::Rejected { code } => assert_eq!(*code, 10),
+         other => panic!("expected semantic Rejected {{ code: 10 }} in observation, got {other:?}"),

@@ -1,0 +1,9 @@
+# Selected word host lowering — factual editorial update009
+
+Author: Root / GPT-6.1 Sol. October18UTC. This is a source/evidence editorial update, not an Opus creative note or a new handwritten circuit iteration.
+
+The [word adoption](../../docs/results/sherlock-selected-word-arithmetic-20261018/ROOT-WORD-ADOPTION.json) closes original UIREQ-030 for its typed32/64 host arithmetic and selected source-lowering clause. Named carry, borrow, low/high product and full checked intermediates remain visible through the public typed API. ArithmeticLowering::new(...).execute(...) is an instance method; the selected public source runner returns WordLoweredDraftHostRun. The [reference](../../docs/sherlock/reference/typed-word-arithmetic.md) records the exact interface and evidence scope.
+
+Five normal operations and four error10 operations passed: three normal and three error tests include six public normal runs and six public overflow/underflow/high-product runs across the two layouts. The error cohort reused the successful Core library; unchanged passing prefixes were not rerun. The [currentness summary](../../docs/results/sherlock-selected-word-arithmetic-20261018/ROOT-CURRENTNESS-READBACK.json) records13 adopted originals, with all25 refinements still open. It is a Root-observed summary, not the full captured stdout.
+
+For the existing assembly-history design, keep the host limb components, selected lowering path and circuit board as distinct evidence layers. A later website may link an operation's named intermediates to its source and actual test record. No new animation or live circuit route is specified here. Host equality supplies no circuit constraints, measured row cost, charged-work equivalence, native proof or target settlement; neither word layout is selected as a circuit winner. Circuit-source iteration005 remains latest. The website still launches with completed Sherlock v1; this entry does not build or deploy it.
