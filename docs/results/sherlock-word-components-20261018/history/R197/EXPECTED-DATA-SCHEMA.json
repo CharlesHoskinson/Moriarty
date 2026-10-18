@@ -1,0 +1,96 @@
+{
+  "format": "sherlock-typed-words-independent-expected-schema/1",
+  "root_fields": [
+    "format",
+    "api_declaration_sha256",
+    "layout_version",
+    "cases",
+    "mul_accumulate_cases"
+  ],
+  "numeric_representation": "All mathematical integers, words, limbs, results and full-product values are canonical nonnegative decimal JSON strings; word_bits and array indices are small JSON integers; bit carries/borrows are JSON booleans. No f64.",
+  "case_order": "input cases in declared order, then word_bits32,64 for each case",
+  "case_fields": [
+    "id",
+    "word_bits",
+    "operation",
+    "inputs",
+    "input_limbs_le",
+    "word_components",
+    "full",
+    "checked"
+  ],
+  "inputs_fields": [
+    "a",
+    "bv"
+  ],
+  "input_limbs_le_fields": [
+    "a",
+    "bv"
+  ],
+  "add_component_fields": [
+    "limb_index",
+    "a",
+    "bv",
+    "carry_in",
+    "low",
+    "carry_out"
+  ],
+  "sub_component_fields": [
+    "limb_index",
+    "a",
+    "bv",
+    "borrow_in",
+    "low",
+    "borrow_out"
+  ],
+  "mul_component_fields": [
+    "a_index",
+    "bv_index",
+    "a",
+    "bv",
+    "low",
+    "high"
+  ],
+  "component_grid": "add/sub every one ofN=128/b limbs; mul every ordered NxN word pair, a_index outer then bv_index; preserve zeros",
+  "full_add_fields": [
+    "low",
+    "carry_out"
+  ],
+  "full_sub_fields": [
+    "low",
+    "borrow_out"
+  ],
+  "full_mul_fields": [
+    "low",
+    "high",
+    "little_endian_256",
+    "mathematical_product"
+  ],
+  "full_add_sub_low": "N limbs; finalcarry/finalborrowBit",
+  "full_mul_arrays": "lowN limbs weights2^(b*i), highN weights2^(128+b*i), little_endian_256 exactly2N limbs low thenhigh; no truncation/filtering",
+  "checked_fields": [
+    "variant",
+    "value"
+  ],
+  "checked_normal_variant": "Ok; value exactUInt128 decimal string",
+  "mul_accumulate_case_fields": [
+    "id",
+    "word_bits",
+    "inputs",
+    "output"
+  ],
+  "mul_accumulate_input_fields": [
+    "a",
+    "bv",
+    "addend",
+    "carry_in"
+  ],
+  "mul_accumulate_output_fields": [
+    "low",
+    "carry_out"
+  ],
+  "mul_accumulate_carry_type": "whole word MulCarry32/64, decimal string, distinct from bool CarryBit/BorrowBit",
+  "not_observed_serializer": "Independent QA data contract only; Rust literal consumer makes direct typed assertions, no author serializer assumed",
+  "proposed_consumer_filename": "crates/mori-core/src/sherlock/word_arithmetic_independent_normal_tests.rs",
+  "proposed_registration": "inside word_arithmetic module: #[cfg(test)] #[path=\"word_arithmetic_independent_normal_tests.rs\"] mod independent_normal_tests; Root integration only"
+}
