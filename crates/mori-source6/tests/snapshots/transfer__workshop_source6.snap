@@ -1,0 +1,49 @@
+---
+source: crates/mori-source6/tests/transfer.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement WorkshopReceipt {\n domain Local = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };\n account Buyer = { domain: Local, id: \"Owner\" };\n account Seller = { domain: Local, id: \"Recipient\" };\n account Treasury = { domain: Local, id: \"Fee\" };\n asset USD = { domain: Local, id: \"A\", scale: 2, representation: \"canonical\" };\n const base = 2.00 USD;\n const supplement = 0.35 USD;\n const price = base + supplement;\n const fee = 0.07 USD;\n intent Payment = {\n  domain: Local, asset: USD, signer: Buyer, key: \"key2\", nonce: \"n2\", pre_head: \"s0\",\n  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: price + fee, fee_cap: fee, net_floor: price,\n  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),\n  source_hash: \"src2\", policy_digest: \"policy2\", failure: SuccessOnly,\n  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,\n };\n action pay uses Payment;\n}\n"
+---
+profile "moriarty-financial-agreement-source/6";
+agreement WorkshopReceipt {
+domain Midnight;
+settlement A scale 2;
+selected TransferLiteralFee source_hash "src2" digest "policy2";
+intent {
+signer Owner key "key2";
+nonce "n2";
+pre_head "s0";
+valid 2..20;
+gross_cap 242;
+fee_cap 7;
+net_floor 235;
+failure success_only;
+signed_action transfer from Owner to Recipient fee_to Fee value 235 fee 7;
+observations empty;
+disclosures empty;
+retained_effects empty;
+retained_duties empty;
+delegation none;
+recovery none;
+}
+authenticated {
+head "s0";
+predecessor "earlier";
+round 3;
+balance Owner 1000;
+balance Recipient 5;
+balance Fee 2;
+allowance Owner remaining 900 spent 100;
+replay unused;
+work_remaining 9;
+work_spent 4;
+}
+submit transfer from Owner to Recipient fee_to Fee value 235 fee 7;
+effects {
+debit Owner 242;
+credit Recipient 235;
+credit Fee 7;
+use_allowance Owner 242;
+use_replay "n2";
+advance_head "s0" "s1";
+}
+post_head "s1";
+}
