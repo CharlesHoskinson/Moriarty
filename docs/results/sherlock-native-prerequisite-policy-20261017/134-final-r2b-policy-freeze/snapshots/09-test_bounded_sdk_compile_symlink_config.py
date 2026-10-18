@@ -1,0 +1,382 @@
+#!/usr/bin/python3
+# Independent CONFIG/16-BINDING/AM-PIN test fragment for the proposed R5 symlink amendment.
+# Unexecuted proposal; grants nothing. Oracles are the owner-recorded Git mode facts
+# (transcribed twice: OWNER_ROWS below and exact16_git_symlinks.json), the owner contract
+# text and stdlib Git blob framing. Guard constants and helpers are compared, never trusted.
+# Every config value below is an in-memory test-only dummy, not a resource proposal or grant.
+from __future__ import annotations
+import contextlib
+import copy
+import hashlib
+import importlib.util
+import json
+import os
+import sys
+import unittest
+from pathlib import Path
+from unittest import mock
+
+HERE = Path(os.path.abspath(__file__)).parent
+GUARD_PATH = HERE / 'bounded_sdk_compile.py'
+FIXTURE_PATH = HERE / 'exact16_git_symlinks.json'
+
+
+def load_guard():
+    name = 'bounded_sdk_compile'
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, GUARD_PATH)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        del sys.modules[name]
+        raise
+    return module
+
+
+G = load_guard()
+
+C04 = '04c9c5d9bcebb8d4427d8589fb54d58a55599c14'
+CA0 = 'a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1'
+VK = 'integration-tests/resources/sample_vk.verifier'
+DUST = 'wasm-proving-demos/webpage/public/midnight/dust/'
+# Owner record: path -> (blob OID, recorded lstat bytes); identical for both commits.
+OWNER_ROWS = {
+    VK: ('bc7a71de4f851d7cf7d5057b7c37a34ea810d76d', 33),
+    DUST + 'spend.bzkir': ('90c050be858ccab1c5af1577f9d096c4a9100e7b', 45),
+    DUST + 'spend.bzkir.sha256': ('4c5a4df1af7a20d300d569f3b6f0c59a73ca9321', 52),
+    DUST + 'spend.prover.sha256': ('970ccd09630a4e9f4d163114448cb87da1fffe79', 53),
+    DUST + 'spend.verifier': ('e0b21cadbbf1ba6e84ed129cb22ab7fd556cd6f9', 48),
+    DUST + 'spend.verifier.sha256': ('08a90b6bbf012c3edd41f7402643361b34031319', 55),
+    DUST + 'spend.zkir': ('66c922eba4290c4fc6a5b58bf2d29c40c6752f7b', 44),
+    DUST + 'spend.zkir.sha256': ('c0034ed0eb572b69526f3d1d88c1d86cbb5d3fa4', 51),
+}
+MODE_FACTS_SHA256 = '18aacc53ad146565a7d54ee35b5387a1ea25d4d97f1727e241461f4e6b84c0c5'
+AM_NEW = '3676da94b6ad533a2276271c55c3c47b8c4473170b1200cf0dcae2b362fbda5d'
+AM_OLD = '78daa6750da05e14a353398dece97e505a4e2b4fe826987962b71937a7a499c2'
+EMBEDDED = 'ac397cfd5e0952b01ae1b892997808e95e13d3ac10ecff2e90418e484fab57d7'
+WORKTREE = '/home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016'
+TOOLCHAIN = '/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu'
+CARGO = TOOLCHAIN + '/bin/cargo'
+MASKS = ['/run', '/var/lib/docker', '/nix/var/nix/daemon-socket', '/nix/var/determinate',
+         '/home/charl', '/home/charl/.cargo', '/sys/fs/cgroup',
+         '/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014']
+# Dummy values: limits of 1, unreachable /nonexistent-test-only pins and synthetic registry roots
+# exist only to reach the Git checks; source_authoring_only False only lets validate proceed.
+X = '/nonexistent-test-only/exec'
+ROOTS = {C04: 'git/checkouts/test-only-ledger/04c9c5d', CA0: 'git/checkouts/test-only-ledger/a01a1ea'}
+REGULAR = {'Cargo.toml': '100644', 'scripts/test-only.sh': '100755',
+           VK + '.orig': '100644', DUST + 'README.test-only': '100644'}
+LIMIT_KEYS = ('wall_seconds memory_bytes pids cpu_quota_us cpu_period_us cpu_time_us stdout_bytes '
+              'stderr_bytes packet_bytes source_bytes target_tmp_bytes file_bytes namespace_tmpfs_bytes').split()
+FORBIDDEN = ('builtins.open', 'io.open', 'os.open', 'os.stat', 'os.lstat',
+             'os.readlink', 'os.scandir', 'os.listdir')
+
+
+class ReachedReader(Exception):
+    pass
+
+
+def git_blob_oid(data):
+    return hashlib.sha1(b'blob ' + str(len(data)).encode() + bytes([0]) + data).hexdigest()
+
+
+def h40(label):
+    return git_blob_oid(b'test-only ' + label.encode())
+
+
+def h64(label):
+    return hashlib.sha256(b'test-only ' + label.encode()).hexdigest()
+
+
+def is_hex(value, n):
+    return type(value) is str and len(value) == n and set(value) <= set('0123456789abcdef')
+
+
+def pin(label):
+    return {'path': '/nonexistent-test-only/pins/' + label, 'sha256': h64(label)}
+
+
+def owner_triples():
+    return {(c, p, oid) for c in (C04, CA0) for p, (oid, _) in OWNER_ROWS.items()}
+
+
+def load_fixture():
+    with open(FIXTURE_PATH, 'rb') as f:
+        return json.loads(f.read().decode('utf-8'))
+
+
+def checkout(c, commit):
+    return next(g for g in c['git_checkouts'] if g['commit'] == commit)
+
+
+def row(c, commit, path):
+    return next(p for p in checkout(c, commit)['files'] if p['relative'] == path)
+
+
+@contextlib.contextmanager
+def forbid_io(reader=None):
+    calls = []
+
+    def trap(label):
+        def refuse(*args, **kwargs):
+            calls.append(label)
+            raise AssertionError('forbidden I/O: ' + label)
+        return refuse
+    with contextlib.ExitStack() as stack:
+        for target in FORBIDDEN:
+            stack.enter_context(mock.patch(target, side_effect=trap(target)))
+        stack.enter_context(mock.patch.object(
+            G, 'jload', reader if reader is not None else mock.Mock(side_effect=trap('jload'))))
+        yield calls
+
+
+def base_config():
+    archives = [pin('archive-%d.crate' % i) for i in range(5)]
+    bindings = {k: pin('binding-' + k) for k in ('runner', 'config_inputs', 'subject', 'staging', 'host_units')}
+    bindings['embedded'] = {'path': '/nonexistent-test-only/pins/embedded', 'sha256': EMBEDDED}
+    bindings['amendments'] = {'path': '/nonexistent-test-only/pins/amendments', 'sha256': AM_NEW}
+    checkouts = []
+    for commit in (C04, CA0):
+        files = [{'relative': p, 'blob': oid, 'mode': '120000'} for p, (oid, _) in sorted(OWNER_ROWS.items())]
+        files += [{'relative': p, 'blob': h40(p), 'mode': m} for p, m in sorted(REGULAR.items())]
+        checkouts.append({'relative_root': ROOTS[commit], 'commit': commit, 'files': files})
+    return {
+        'version': 2, 'mode': 'tier1', 'cpu_arch': 'x86_64-unknown-linux-gnu',
+        'source_authoring_only': False,
+        'external_tier_consent': {'tier1': False, 'tier2': False},
+        'total_wall_seconds': 1, 'supervisor_cpu_seconds': 1,
+        'acquired_archives': archives, 'bindings': bindings,
+        'paths': {'worktree': WORKTREE, 'execution_root': X, 'source_home': X + '/source-home',
+                  'target': X + '/target', 'tmp': X + '/tmp', 'packet': X + '/packet',
+                  'empty_home': X + '/empty-home', 'mask_empty': X + '/mask-empty',
+                  'config': '/nonexistent-test-only/config.json'},
+        'masks': list(MASKS), 'readonly_tools': [TOOLCHAIN],
+        'source_copy_mounts': ['/home/charl/.cargo'] + [a['path'] for a in archives],
+        'limits': {ph: dict.fromkeys(LIMIT_KEYS, 1) for ph in ('A0', 'A', 'B', 'C', 'D', 'E', 'F')},
+        'cgroup': {'envelope_path': '/test-only.slice/dummy', 'supervisor_leaf_name': 'test-supervisor',
+                   'phase_parent_name': 'test-phases', 'envelope_memory_max': 1,
+                   'envelope_pids_max': 1, 'envelope_cpu_max': '1 1'},
+        'quota_mounts': {k: {'mountpoint': X + '/quota-' + k, 'mount_id': 1, 'device': 'test-only',
+                             'max_bytes': 1, 'max_inodes': 1} for k in ('source_home', 'target_tmp', 'packet')},
+        'review_receipts': {k: pin('receipt-' + k) for k in ('security', 'nonsecurity', 'root', 'tier1')},
+        'old_home_stat_manifest': pin('old-home'), 'source_manifest': pin('source-manifest'),
+        'executable_pins': [{'path': p, 'realpath': p, 'sha256': h64(p)}
+                            for p in (CARGO, '/usr/bin/bwrap', '/usr/bin/python3')],
+        'registry_roots': [{'archive': 'test-only-%03d.crate' % i,
+                            'source_relative': 'registry/src/test-only/crate-%03d' % i,
+                            'package_checksum': h64('crate-%d' % i)} for i in range(423)],
+        'git_checkouts': checkouts,
+        'includes': [{'relative': ROOTS[C04] + '/Cargo.toml', 'algorithm': 'git-blob',
+                      'digest': h40('Cargo.toml'), 'source_identifier': C04 + ':Cargo.toml'}],
+        'expected_generated_files': [{'relative': ROOTS[C04] + '/.git/HEAD', 'kind': 'git-control'},
+                                     {'relative': 'registry/src/test-only/crate-000/.cargo-ok', 'kind': 'cargo-ok'}],
+    }
+
+
+class SymlinkConfigBindingTest(unittest.TestCase):
+    def setUp(self):
+        self.base = base_config()
+
+    def mutated(self, change):
+        c = copy.deepcopy(self.base)
+        change(c)
+        return c
+
+    def assert_valid(self, c):
+        snapshot = copy.deepcopy(c)
+        with forbid_io() as calls:
+            result = G.validate(c)
+        self.assertEqual(calls, [])
+        self.assertIs(result, c)
+        self.assertEqual(c, snapshot)
+
+    def assert_refused(self, c):
+        with forbid_io() as calls:
+            with self.assertRaises(G.Refusal):
+                G.validate(c)
+        self.assertEqual(calls, [])
+
+    def test_independent_oracles_and_io_trap_are_sound(self):
+        self.assertEqual(git_blob_oid(b''), 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391')
+        self.assertEqual(git_blob_oid(b'hello world' + bytes([10])), '3b18e512dba79e4c8300dd08aeb37f8e728b8dad')
+        reader = mock.Mock()
+        with forbid_io(reader) as calls:
+            with self.assertRaises(AssertionError):
+                open(FIXTURE_PATH, 'rb')
+            with self.assertRaises(AssertionError):
+                os.lstat(FIXTURE_PATH)
+            self.assertIs(G.jload, reader)
+        self.assertEqual(calls, ['builtins.open', 'os.lstat'])
+        self.assertIsNot(G.jload, reader)
+        reader.assert_not_called()
+
+    def test_fixture_is_exact_owner_record(self):
+        fx = load_fixture()
+        self.assertEqual(fx['mode_facts']['sha256'], MODE_FACTS_SHA256)
+        self.assertEqual(fx['count'], 16)
+        rows = fx['rows']
+        self.assertEqual(len(rows), 16)
+        seen = set()
+        for r in rows:
+            self.assertEqual(set(r), {'commit', 'path', 'oid', 'mode', 'recorded_lstat_bytes'})
+            self.assertEqual(r['mode'], '120000')
+            self.assertIn(r['commit'], (C04, CA0))
+            self.assertTrue(is_hex(r['oid'], 40))
+            self.assertEqual((r['oid'], r['recorded_lstat_bytes']), OWNER_ROWS[r['path']])
+            seen.add((r['commit'], r['path'], r['oid']))
+        self.assertEqual(seen, owner_triples())
+        sizes = [r['recorded_lstat_bytes'] for r in rows]
+        self.assertEqual((min(sizes), max(sizes)), (33, 55))
+        self.assertNotIn(git_blob_oid(b''), {r['oid'] for r in rows})
+
+    def test_guard_constants_equal_owner_record(self):
+        self.assertEqual(os.path.abspath(G.__file__), str(GUARD_PATH))
+        rows = load_fixture()['rows']
+        self.assertEqual(G.GIT_SYMLINK_MODE, '120000')
+        self.assertEqual(G.GIT_SYMLINK_TEXT_BYTES, (33, 55))
+        self.assertIsInstance(G.GIT_SYMLINKS, frozenset)
+        self.assertEqual(len(G.GIT_SYMLINKS), 16)
+        self.assertEqual(set(G.GIT_SYMLINKS), {(r['commit'], r['path'], r['oid']) for r in rows})
+        self.assertEqual(set(G.GIT_SYMLINKS), owner_triples())
+
+    def test_exact_binding_accepted_without_io(self):
+        # The base also holds spend.zkir.sha256 beside link spend.zkir and sample_vk.verifier.orig:
+        # a non-component name prefix is not beneath a link.
+        self.assert_valid(self.base)
+        self.assert_valid(json.loads(json.dumps(self.base)))
+        with forbid_io() as calls:
+            rows = G.link_rows(self.base)
+            links = G.declared_links(self.base)
+        self.assertEqual(calls, [])
+        expected = {ROOTS[c] + '/' + p: (c, p, oid) for c, p, oid in owner_triples()}
+        self.assertEqual(len(expected), 16)
+        self.assertEqual(rows, expected)
+        self.assertEqual(links, frozenset(Path(X + '/source-home', k) for k in expected))
+
+    def test_omitted_link_row_refused(self):
+        for commit, path, _ in sorted(owner_triples()):
+            with self.subTest(commit=commit, path=path):
+                self.assert_refused(self.mutated(lambda c: checkout(c, commit)['files'].remove(row(c, commit, path))))
+        for commit in (C04, CA0):
+            with self.subTest(all_links_of=commit):
+                self.assert_refused(self.mutated(lambda c: checkout(c, commit).update(
+                    files=[p for p in checkout(c, commit)['files'] if p['mode'] != '120000'])))
+
+    def test_mode_rewrite_refused(self):
+        for commit, path, _ in sorted(owner_triples()):
+            for mode in ('100644', '100755', '160000', 120000):
+                with self.subTest(commit=commit, path=path, mode=mode):
+                    self.assert_refused(self.mutated(lambda c: row(c, commit, path).update(mode=mode)))
+        for path in sorted(REGULAR):
+            with self.subTest(regular_to_link=path):
+                self.assert_refused(self.mutated(lambda c: row(c, C04, path).update(mode='120000')))
+
+    def test_oid_substitution_refused(self):
+        for commit, path, oid in sorted(owner_triples()):
+            for blob in (h40('substitute ' + path), oid.upper()):
+                with self.subTest(commit=commit, path=path, blob=blob):
+                    self.assertNotEqual(blob, oid)
+                    self.assert_refused(self.mutated(lambda c: row(c, commit, path).update(blob=blob)))
+
+        def rotate(c):
+            links = [p for p in checkout(c, C04)['files'] if p['mode'] == '120000']
+            blobs = [p['blob'] for p in links]
+            for p, blob in zip(links, blobs[1:] + blobs[:1]):
+                p['blob'] = blob
+        self.assert_refused(self.mutated(rotate))
+
+    def test_foreign_or_duplicate_commit_refused(self):
+        for commit in (C04, CA0):
+            for other in (h40('foreign commit'), commit.upper(), commit[:7]):
+                with self.subTest(commit=commit, other=other):
+                    self.assert_refused(self.mutated(lambda c: checkout(c, commit).update(commit=other)))
+        self.assert_refused(self.mutated(lambda c: checkout(c, CA0).update(commit=C04)))
+        self.assert_refused(self.mutated(lambda c: checkout(c, C04).update(commit=CA0)))
+
+    def test_extra_link_or_checkout_count_refused(self):
+        extras = [('extra/test-only-link', h40('extra')), (VK + '2', OWNER_ROWS[VK][0]),
+                  (DUST + 'spend.prover', OWNER_ROWS[DUST + 'spend.prover.sha256'][0])]
+        for commit in (C04, CA0):
+            for path, blob in extras:
+                with self.subTest(commit=commit, path=path):
+                    self.assert_refused(self.mutated(lambda c: checkout(c, commit)['files'].append(
+                        {'relative': path, 'blob': blob, 'mode': '120000'})))
+
+        def third(c):
+            extra = copy.deepcopy(c['git_checkouts'][0])
+            extra['relative_root'] = 'git/checkouts/test-only-ledger/third'
+            c['git_checkouts'].append(extra)
+        self.assert_refused(self.mutated(third))
+        self.assert_refused(self.mutated(lambda c: c['git_checkouts'].pop()))
+        self.assert_refused(self.mutated(lambda c: c['git_checkouts'].clear()))
+        self.assert_refused(self.mutated(lambda c: c.update(git_checkouts={g['commit']: g for g in c['git_checkouts']})))
+
+    def test_duplicate_rows_and_root_collision_refused(self):
+        for commit in (C04, CA0):
+            for path, change in ((VK, {}), (VK, {'mode': '100644', 'blob': h40('dup')}), ('Cargo.toml', {})):
+                with self.subTest(commit=commit, path=path, change=change):
+                    self.assert_refused(self.mutated(lambda c: checkout(c, commit)['files'].append(
+                        dict(row(c, commit, path), **change))))
+        self.assert_refused(self.mutated(lambda c: checkout(c, CA0).update(relative_root=ROOTS[C04])))
+
+    def test_row_beneath_link_refused(self):
+        for commit, path, _ in sorted(owner_triples()):
+            for child in ('/test-only', '/a/b'):
+                with self.subTest(commit=commit, path=path + child):
+                    self.assert_refused(self.mutated(lambda c: checkout(c, commit)['files'].append(
+                        {'relative': path + child, 'blob': h40(child), 'mode': '100644'})))
+
+    def test_other_checkout_rooted_at_or_beneath_link_refused(self):
+        # Contract item 1: any Git row lying beneath a declared link path is refused. Read in
+        # source-home space this includes rows of the other checkout. Owner adjudicates if contested.
+        for suffix in ('', '/nested'):
+            with self.subTest(suffix=suffix):
+                self.assert_refused(self.mutated(lambda c: checkout(c, CA0).update(
+                    relative_root=ROOTS[C04] + '/' + VK + suffix)))
+
+    def test_include_or_generated_at_or_under_link_refused(self):
+        for commit, path, _ in sorted(owner_triples()):
+            link = ROOTS[commit] + '/' + path
+            with self.subTest(link=link):
+                for rel in (link, link + '/test-only'):
+                    self.assert_refused(self.mutated(lambda c: c['includes'].append(
+                        {'relative': rel, 'algorithm': 'git-blob', 'digest': h40(rel),
+                         'source_identifier': commit + ':' + path})))
+                for name, kind in (('.cargo-ok', 'cargo-ok'), ('.cargo-checksum.json', 'cargo-checksum')):
+                    self.assert_refused(self.mutated(lambda c: c['expected_generated_files'].append(
+                        {'relative': link + '/' + name, 'kind': kind})))
+        sibling = ROOTS[CA0] + '/' + VK + '.orig'
+        self.assert_valid(self.mutated(lambda c: c['includes'].append(
+            {'relative': sibling, 'algorithm': 'git-blob', 'digest': h40(sibling),
+             'source_identifier': CA0 + ':' + VK + '.orig'})))
+
+    def test_amendment_pin_refused_before_any_reader(self):
+        bad = [('amendments', AM_OLD), ('amendments', AM_NEW.upper()),
+               ('amendments', AM_NEW[:-1] + 'e'), ('embedded', h64('wrong-embedded'))]
+        for key, value in bad:
+            with self.subTest(key=key, value=value):
+                c = self.mutated(lambda c: c['bindings'][key].update(sha256=value))
+                reader = mock.Mock(side_effect=AssertionError('reader reached before pin refusal'))
+                with forbid_io(reader) as calls:
+                    with self.assertRaises(G.Refusal):
+                        G.approved_includes(c)
+                self.assertEqual(calls, [])
+                reader.assert_not_called()
+        # Exact new AM pin plus unchanged embedded pin passes both pins and only then reaches a reader.
+        # The sentinel stops there; no SDK inventory acceptance is simulated.
+        reader = mock.Mock(side_effect=ReachedReader)
+        with forbid_io(reader) as calls:
+            with self.assertRaises(ReachedReader):
+                G.approved_includes(copy.deepcopy(self.base))
+        self.assertEqual(calls, [])
+        bound = {self.base['bindings'][k]['path'] for k in ('embedded', 'amendments')}
+        self.assertTrue(reader.call_args_list)
+        for call in reader.call_args_list:
+            self.assertIn(call.args[0], bound)
+
+
+if __name__ == '__main__':
+    unittest.main()

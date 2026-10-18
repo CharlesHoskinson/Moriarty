@@ -1,0 +1,129 @@
+EXACT SOURCE FUNCTION source_binding; original lines 324..344
+def source_binding(c):
+    check_pin(c['source_manifest']);m=jload(c['source_manifest']['path'])
+    exact(m,'root head files excluded_directories head_files','checkout manifest')
+    need(m['root']==c['paths']['worktree'] and m['head']==BASE,'candidate source base')
+    # Exclusions are directory masks, not ways to omit compile inputs. Only .git
+    # is supported here; existing target directories must be absent/masked.
+    need(m['excluded_directories']==['.git'],'source omission unsupported')
+    root=Path(m['root']); actual={}
+    for base,dirs,files in os.walk(root,followlinks=False):
+        if Path(base)==root:dirs[:]=[d for d in dirs if d!='.git']
+        for d in dirs:need(not (Path(base)/d).is_symlink(),'source directory symlink')
+        for f in files:
+            if Path(base)==root and f=='.git':continue
+            p=Path(base)/f;actual[str(p.relative_to(root))]=digest(p)
+    need(actual==m['files'],'complete source membership/hash mismatch')
+    for p in m['head_files']:pin_schema(p);check_pin(p)
+    need(actual.get('Cargo.lock')==LOCK,'lock changed')
+    subject=jload(c['bindings']['subject']['path'])
+    need(len(subject['candidate_files'])==10,'backend selected-file membership')
+    for entry in subject['candidate_files']:
+        need(actual.get(entry['path'])==entry['sha256'],'selected backend source differs from reviewed subject')
+
+EXACT SOURCE FUNCTION consent; original lines 369..401
+def consent(c):
+    import copy
+    projection=copy.deepcopy(c);projection.pop('review_receipts');projection['bindings'].pop('config_inputs')
+    check_pin(c['bindings']['config_inputs'])
+    need(jload(c['bindings']['config_inputs']['path'])==projection,'configuration projection differs')
+    need(c['external_tier_consent']['tier1'] is True,'Tier 1 not explicitly granted')
+    need(c['external_tier_consent']['tier2']==(c['mode']=='tier1-and-compile'),'tier choice mismatch')
+    records={}
+    for key,pin in c['review_receipts'].items():
+        check_pin(pin);record=jload(pin['path']);records[key]=record
+        need(record['schema_version']==1 and record['authority_granted_by_this_file_alone'] is False,'receipt version or authority claim')
+    allowed_routing={('claude-opus-5-5','claude-opus-5-5','claude-opus-5-5','high','primary'),('claude-opus-5-5','gemini-4-argon-high','gemini-4-argon-high','high','standing_opus_quota_outage_fallback')}
+    for key,kind,role,decision in [('security','security_source_review','designated_security_owner','APPROVED_SOURCE_WITH_LIMITS'),('nonsecurity','nonsecurity_source_review','nonsecurity_source_reviewer','APPROVED_NORMAL_SOURCE')]:
+        r=records[key]
+        exact(r,'schema_version kind reviewer_role decision primary_model requested_model returned_identity effort fallback_status terminal_sha256 report_sha256 runner_sha256 source_manifest_sha256 subject_manifest_sha256 authority_granted_by_this_file_alone','source review receipt')
+        need((r['kind'],r['reviewer_role'],r['decision'])==(kind,role,decision),'source review decision/role')
+        need((r['primary_model'],r['requested_model'],r['returned_identity'],r['effort'],r['fallback_status']) in allowed_routing,'source review routing identity')
+        need(HEX.fullmatch(r['terminal_sha256']) is not None and HEX.fullmatch(r['report_sha256']) is not None,'review terminal/report hash')
+        need(r['runner_sha256']==c['bindings']['runner']['sha256'] and r['subject_manifest_sha256']==c['bindings']['subject']['sha256'],'review subject identity')
+        need(HEX.fullmatch(r['source_manifest_sha256']) is not None,'review full-source manifest hash')
+    need(records['security']['source_manifest_sha256']==records['nonsecurity']['source_manifest_sha256'],'review candidates differ')
+    r=records['root'];exact(r,'schema_version kind decision admitted_mode runner_sha256 subject_manifest_sha256 config_inputs_sha256 security_receipt_sha256 nonsecurity_receipt_sha256 authority_granted_by_this_file_alone','Root admission')
+    need((r['kind'],r['decision'],r['admitted_mode'])==('root_admission','ADMITTED_CONFIGURATION',c['mode']),'Root mode/decision')
+    for field,key in [('runner_sha256','runner'),('subject_manifest_sha256','subject'),('config_inputs_sha256','config_inputs')]:need(r[field]==c['bindings'][key]['sha256'],'Root candidate binding')
+    for key in ('security','nonsecurity'):need(r[key+'_receipt_sha256']==c['review_receipts'][key]['sha256'],'Root review binding')
+    for tier in (1,2) if c['mode']=='tier1-and-compile' else (1,):
+        r=records['tier'+str(tier)];keys='schema_version kind tier decision root_receipt_sha256 config_inputs_sha256 amendments_sha256 authority_granted_by_this_file_alone'
+        if tier==2:keys+=' tier1_receipt_sha256'
+        exact(r,keys,'user tier decision')
+        need((r['kind'],r['tier'],r['decision'])==('user_tier'+str(tier)+'_grant',tier,'GRANTED_TIER'+str(tier)),'user tier decision')
+        need(r['root_receipt_sha256']==c['review_receipts']['root']['sha256'],'grant Root identity')
+        need(r['config_inputs_sha256']==c['bindings']['config_inputs']['sha256'] and r['amendments_sha256']==c['bindings']['amendments']['sha256'],'grant scope identity')
+        if tier==2:need(r['tier1_receipt_sha256']==c['review_receipts']['tier1']['sha256'],'Tier 2 predecessor grant')
+
+EXACT SOURCE FUNCTION check_tmpfs; original lines 417..432
+def check_tmpfs(q,allowed_nested):
+    # Hard bounds, not a post-hoc du/polling claim. Provisioning is outside this
+    # source and must be explicitly granted; no mount/setup command is hidden.
+    rows=Path('/proc/self/mountinfo').read_text().splitlines();match=[]
+    for line in rows:
+        pre,post=line.split(' - ',1);a=pre.split();b=post.split()
+        if a[4]==q['mountpoint']:match.append((a,b))
+    need(len(match)==1,'required distinct tmpfs mount absent')
+    a,b=match[0];need(int(a[0])==q['mount_id'] and a[2]==q['device'] and b[0]=='tmpfs','mount identity/type')
+    need('rw' in a[5].split(','),'quota mount not writable')
+    v=os.statvfs(q['mountpoint']);need(v.f_blocks*v.f_frsize<=q['max_bytes'] and v.f_files<=q['max_inodes'],'kernel filesystem bound exceeds declared limit')
+    # Other namespace descendants must not bypass the same filesystem limit.
+    for line in rows:
+        a2=line.split(' - ',1)[0].split()
+        if a2[4].startswith(q['mountpoint'].rstrip('/')+'/'):
+            need(a2[4] in allowed_nested,'unbound nested mount under quota root')
+
+EXACT SOURCE FUNCTION quotas; original lines 434..448
+def quotas(c,phase):
+    owned_paths(c)
+    for key in ('empty_home','mask_empty'):need(not any(Path(c['paths'][key]).iterdir()),'empty mount source changed')
+    for key,q in c['quota_mounts'].items():
+        permitted={c['paths']['source_home'],c['paths']['packet']} if key=='target_tmp' else set()
+        check_tmpfs(q,permitted)
+    p=c['paths'];q=c['quota_mounts'];v=c['limits'][phase]
+    need(q['source_home']['mountpoint']==p['source_home'],'source quota must cover exact S')
+    need(q['packet']['mountpoint']==p['packet'],'packet quota must cover exact packet')
+    group=Path(q['target_tmp']['mountpoint'])
+    need(str(group)==p['execution_root'],'target/tmp quota must cover exact execution root')
+    need(all(Path(p[k]).parent==group for k in ('target','tmp')),'target and tmp need one common hard quota')
+    need(q['source_home']['max_bytes']<=v['source_bytes'],'source hard bound too large for phase')
+    need(q['target_tmp']['max_bytes']<=v['target_tmp_bytes'],'target/tmp hard bound too large')
+    need(q['packet']['max_bytes']<=v['packet_bytes'],'packet hard bound too large')
+
+EXACT SOURCE FUNCTION supervisor_envelope; original lines 546..580
+def supervisor_envelope(c):
+    # Read-only E/L/P preflight, per adopted owner contract and mandatory K1-K3.
+    cg=c['cgroup'];e_ns,l_ns,p_ns=cg_paths(c);uid=os.getuid()
+    need(uid==os.geteuid() and uid!=0,'unprivileged matching supervisor uid required')
+    status=dict(line.split(':',1) for line in _cg_text('/proc/self/status').splitlines() if ':' in line)
+    for key in ('CapPrm','CapEff','CapAmb'):
+        need(re.fullmatch(r'0+',status.get(key,'').strip()) is not None,'nonzero or missing '+key)
+    need(_cg_text('/proc/self/cgroup').splitlines()==['0::'+l_ns],'unbound supervisor leaf')
+    rows=_mount_rows();cgroups=[row for row in rows if row[1]=='cgroup2']
+    need(cgroups==[('/sys/fs/cgroup','cgroup2')] and sum(row[0]=='/sys/fs/cgroup' for row in rows)==1,'single global cgroup2 mount required')
+    need(not any(point.startswith('/sys/fs/cgroup/') for point,kind in rows),'nested cgroup mount')
+    root_stat,_=_cg_dirstat('/sys/fs/cgroup');paths=[cg_fs(ns) for ns in (e_ns,l_ns,p_ns)];stats=[]
+    for p in paths:
+        st,resolved=_cg_dirstat(p)
+        need(stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode) and resolved==p and st.st_dev==root_stat.st_dev,'cgroup path identity')
+        stats.append(st)
+    e,l,p=paths
+    need(_cg_text(l/'cgroup.procs').splitlines()==[str(os.getpid())],'supervisor leaf membership')
+    for path in paths:need(_cg_text(path/'cgroup.type').strip()=='domain','cgroup domain required')
+    for k,v in [('memory.max',cg['envelope_memory_max']),('pids.max',cg['envelope_pids_max']),('cpu.max',cg['envelope_cpu_max']),('memory.swap.max',0)]:
+        need(_cg_text(e/k).strip()==str(v),'aggregate resource envelope mismatch')
+        st,_=_cg_dirstat(e/k)
+        need(st.st_uid!=uid and not _cg_writable(e/k),'aggregate cap owned or writable by supervisor')
+    need(not _cg_text(e/'cgroup.procs').splitlines(),'aggregate envelope populated')
+    need({'cpu','memory','pids'}<=set(_cg_text(e/'cgroup.subtree_control').split()),'aggregate controllers missing')
+    need(_cg_children(e)=={cg['supervisor_leaf_name'],cg['phase_parent_name']},'unexpected envelope children')
+    need(_cg_writable(e/'cgroup.procs'),'migration ancestor not writable')
+    need(not _cg_children(l),'supervisor leaf has children')
+    need(not _cg_text(l/'cgroup.subtree_control').split(),'supervisor leaf enables controllers')
+    need(not _cg_text(p/'cgroup.procs').splitlines(),'phase parent populated')
+    for name in ('cgroup.controllers','cgroup.subtree_control'):
+        need({'cpu','memory','pids'}<=set(_cg_text(p/name).split()),'phase parent controllers missing')
+    need(stats[2].st_uid==uid and _cg_writable(p,search=True),'phase parent ownership or access')
+    _cg_dirstat(p/'cgroup.kill')
+    need(not _cg_children(p),'phase parent contains residual groups')

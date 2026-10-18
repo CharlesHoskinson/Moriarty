@@ -1,0 +1,237 @@
+        need(not any(x.is_symlink() for x in [p,*p.parents]),'owned path symlink: '+key)
+        st=os.lstat(p);need(stat.S_ISDIR(st.st_mode) and st.st_uid==os.getuid(),'owned directory identity: '+key)
+        if key!='execution_root':need(p.parent==root,'owned path escaped root')
+    for key in ('target','tmp','empty_home','mask_empty'):
+        need(os.stat(c['paths'][key]).st_dev==os.stat(root).st_dev,'owned path outside execution-root quota: '+key)
+
+def executing_identity(c):
+    actual=Path(__file__).resolve(strict=True);expected=absolute(c['bindings']['runner']['path'])
+    need(actual==expected,'executing supervisor/worker differs from pinned runner path')
+    need(digest(actual)==c['bindings']['runner']['sha256'],'executing runner bytes differ from pin')
+
+def regular(path):
+    p=absolute(str(path))
+    need(not any(x.is_symlink() for x in [p,*p.parents]),'symlink path: '+str(p))
+    s=os.stat(p,follow_symlinks=False);need(stat.S_ISREG(s.st_mode),'not regular: '+str(p));return s
+
+def digest(path, git=False):
+    s=regular(path); before=stable_stat(path)
+    h=hashlib.sha1() if git else hashlib.sha256()
+    if git:h.update(b'blob '+str(s.st_size).encode()+b'\0')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    try:
+        with os.fdopen(fd,'rb') as f:
+            while b:=f.read(CHUNK):h.update(b)
+    finally:
+        need(stable_stat(path)==before,'file changed while reading: '+str(path))
+    return h.hexdigest()
+
+def check_pin(p):
+    need(digest(p['path'])==p['sha256'],'pin mismatch: '+p['path'])
+
+def json_bytes(value):return (json.dumps(value,sort_keys=True,separators=(',',':'))+'\n').encode()
+
+def write_new(path, data, cap):
+    need(len(data)<=cap,'packet output cap')
+    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'wb') as f:f.write(data);f.flush();os.fsync(f.fileno())
+
+def receipt(c, name, value, phase):
+    write_new(Path(c['paths']['packet'])/name,json_bytes(value),c['limits'][phase]['packet_bytes'])
+
+def walk_tree(root,links=frozenset()):
+    # No-follow walk: regular files, exactly the declared symlinks, and directories.
+    # Entries are classified with lstat semantics through an O_NOFOLLOW directory fd.
+    # A declared symlink is recorded but never descended, opened, stat'ed through or
+    # chmod'ed; any other symlink refuses. Unreadable directories refuse, never skip.
+    root=absolute(str(root));files=[];found=set();dirs=[];pending=[root]
+    need(not any(x.is_symlink() for x in [root,*root.parents]),'symlink tree root: '+str(root))
+    while pending:
+        base=pending.pop();fd=os.open(base,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+        try:
+            with os.scandir(fd) as it:entries=[(e.name,e.is_symlink(),e.is_dir(follow_symlinks=False)) for e in it]
+        finally:os.close(fd)
+        for name,link,directory in entries:
+            p=base/name
+            if link:need(p in links,'undeclared symlink: '+str(p));found.add(p)
+            else:
+                need(p not in links,'declared Git symlink is not a symlink: '+str(p))
+                if directory:dirs.append(p);pending.append(p)
+                else:regular(p);files.append(p)
+    return sorted(files),found,sorted(dirs)
+
+def walk_files(root):return walk_tree(root)[0]
+
+def link_rows(c):
+    # Validated mode-120000 rows keyed by source-home relative path.
+    return {str(PurePosixPath(g['relative_root'])/p['relative']):(g['commit'],p['relative'],p['blob']) for g in c['git_checkouts'] for p in g['files'] if p['mode']==GIT_SYMLINK_MODE}
+
+def declared_links(c):
+    root=Path(c['paths']['source_home']);return frozenset(root/relative(rel) for rel in link_rows(c))
+
+def link_identity(path):
+    # Git blob identity over the link text only. The target is never opened, stat'ed or followed.
+    p=absolute(str(path))
+    need(not any(x.is_symlink() for x in p.parents),'symlink ancestor: '+str(p))
+    before=stable_stat(p);need(stat.S_ISLNK(before['mode']),'declared Git symlink not materialized as a symlink: '+str(p))
+    need(GIT_SYMLINK_TEXT_BYTES[0]<=before['size']<=GIT_SYMLINK_TEXT_BYTES[1],'Git symlink text outside admitted size: '+str(p))
+    text=os.readlink(os.fsencode(p))
+    need(stable_stat(p)==before and len(text)==before['size'],'symlink changed while reading: '+str(p))
+    return text,hashlib.sha1(b'blob '+str(len(text)).encode()+b'\0'+text).hexdigest()
+
+def link_target(relative_link,text,regular_rows):
+    # Fail-closed lexical containment of authenticated link text; nothing is resolved.
+    # Only leading '..' components are accepted, so the lexical result equals kernel
+    # resolution through the walked non-symlink directories of the same checkout.
+    need(all(0x21<=ch<=0x7e for ch in text) and not text.startswith(b'/'),'Git symlink text is not relative printable ASCII')
+    parts=list(PurePosixPath(relative_link).parent.parts);descending=False
+    for part in text.decode('ascii').split('/'):
+        need(part not in ('','.'),'non-normalized Git symlink text')
+        if part=='..':need(not descending and bool(parts),'Git symlink escapes checkout or ascends after descent');parts.pop()
+        else:descending=True;parts.append(part)
+    target='/'.join(parts)
+    need(descending and '.git' not in parts and target in regular_rows,'Git symlink target is not a declared regular file of the same checkout')
+    return target
+
+def tree_hashes(root,links=frozenset()):
+    files,found,_=walk_tree(root,links);root=absolute(str(root))
+    need(found==set(links),'declared Git symlink missing from tree: '+str(root))
+    hashes={str(p.relative_to(root)):digest(p) for p in files}
+    hashes.update({str(p.relative_to(root)):'git-symlink:'+link_identity(p)[1] for p in sorted(found)})
+    return hashes
+
+def source_binding(c):
+    check_pin(c['source_manifest']);m=jload(c['source_manifest']['path'])
+    exact(m,'root head files excluded_directories head_files','checkout manifest')
+    need(m['root']==c['paths']['worktree'] and m['head']==BASE,'candidate source base')
+    # Exclusions are directory masks, not ways to omit compile inputs. Only .git
+    # is supported here; existing target directories must be absent/masked.
+    need(m['excluded_directories']==['.git'],'source omission unsupported')
+    root=Path(m['root']); actual={}
+    for base,dirs,files in os.walk(root,followlinks=False):
+        if Path(base)==root:dirs[:]=[d for d in dirs if d!='.git']
+        for d in dirs:need(not (Path(base)/d).is_symlink(),'source directory symlink')
+        for f in files:
+            if Path(base)==root and f=='.git':continue
+            p=Path(base)/f;actual[str(p.relative_to(root))]=digest(p)
+    need(actual==m['files'],'complete source membership/hash mismatch')
+    for p in m['head_files']:pin_schema(p);check_pin(p)
+    need(actual.get('Cargo.lock')==LOCK,'lock changed')
+    subject=jload(c['bindings']['subject']['path'])
+    need(len(subject['candidate_files'])==10,'backend selected-file membership')
+    for entry in subject['candidate_files']:
+        need(actual.get(entry['path'])==entry['sha256'],'selected backend source differs from reviewed subject')
+
+def old_home_stats(c):
+    check_pin(c['old_home_stat_manifest']);m=jload(c['old_home_stat_manifest']['path'])
+    exact(m,'paths directory_memberships','old-home stat manifest')
+    for p,e in m['paths'].items():need(stable_stat(p)==e,'original metadata changed: '+p)
+    for p,names in m['directory_memberships'].items():need(sorted(os.listdir(p))==names,'original membership changed: '+p)
+
+def bound_identities(c,host_originals=True):
+    for p in c['bindings'].values():check_pin(p)
+    for p in c['executable_pins']:
+        need(str(Path(p['path']).resolve())==p['realpath'],'tool symlink changed')
+        need(digest(p['realpath'])==p['sha256'],'tool changed')
+    need(not any((Path(d)/'scheme').exists() for d in CARGO_PATH.split(':')),'scheme present on bounded PATH')
+    subject=jload(c['bindings']['subject']['path'])
+    need(subject['base_head']==BASE and subject['cargo_lock_sha256']==LOCK,'subject mismatch')
+    need(subject['worktree']==c['paths']['worktree'],'subject path')
+    approved_includes(c)
+    source_binding(c)
+    if host_originals:old_home_stats(c)
+    frozen=Path(c['paths']['packet'])/'A0_FREEZE.json'
+    if host_originals and frozen.exists():
+        for row in jload(frozen)['inputs']:
+            need(stable_stat(row['source'])==row['stat'],'original staged input stat changed')
+
+def consent(c):
+    import copy
+    projection=copy.deepcopy(c);projection.pop('review_receipts');projection['bindings'].pop('config_inputs')
+    check_pin(c['bindings']['config_inputs'])
+    need(jload(c['bindings']['config_inputs']['path'])==projection,'configuration projection differs')
+    need(c['external_tier_consent']['tier1'] is True,'Tier 1 not explicitly granted')
+    need(c['external_tier_consent']['tier2']==(c['mode']=='tier1-and-compile'),'tier choice mismatch')
+    records={}
+    for key,pin in c['review_receipts'].items():
+        check_pin(pin);record=jload(pin['path']);records[key]=record
+        need(record['schema_version']==1 and record['authority_granted_by_this_file_alone'] is False,'receipt version or authority claim')
+    allowed_routing={('claude-opus-5-5','claude-opus-5-5','claude-opus-5-5','high','primary'),('claude-opus-5-5','gemini-4-argon-high','gemini-4-argon-high','high','standing_opus_quota_outage_fallback')}
+    for key,kind,role,decision in [('security','security_source_review','designated_security_owner','APPROVED_SOURCE_WITH_LIMITS'),('nonsecurity','nonsecurity_source_review','nonsecurity_source_reviewer','APPROVED_NORMAL_SOURCE')]:
+        r=records[key]
+        exact(r,'schema_version kind reviewer_role decision primary_model requested_model returned_identity effort fallback_status terminal_sha256 report_sha256 runner_sha256 source_manifest_sha256 subject_manifest_sha256 authority_granted_by_this_file_alone','source review receipt')
+        need((r['kind'],r['reviewer_role'],r['decision'])==(kind,role,decision),'source review decision/role')
+        need((r['primary_model'],r['requested_model'],r['returned_identity'],r['effort'],r['fallback_status']) in allowed_routing,'source review routing identity')
+        need(HEX.fullmatch(r['terminal_sha256']) is not None and HEX.fullmatch(r['report_sha256']) is not None,'review terminal/report hash')
+        need(r['runner_sha256']==c['bindings']['runner']['sha256'] and r['subject_manifest_sha256']==c['bindings']['subject']['sha256'],'review subject identity')
+        need(HEX.fullmatch(r['source_manifest_sha256']) is not None,'review full-source manifest hash')
+    need(records['security']['source_manifest_sha256']==records['nonsecurity']['source_manifest_sha256'],'review candidates differ')
+    r=records['root'];exact(r,'schema_version kind decision admitted_mode runner_sha256 subject_manifest_sha256 config_inputs_sha256 security_receipt_sha256 nonsecurity_receipt_sha256 authority_granted_by_this_file_alone','Root admission')
+    need((r['kind'],r['decision'],r['admitted_mode'])==('root_admission','ADMITTED_CONFIGURATION',c['mode']),'Root mode/decision')
+    for field,key in [('runner_sha256','runner'),('subject_manifest_sha256','subject'),('config_inputs_sha256','config_inputs')]:need(r[field]==c['bindings'][key]['sha256'],'Root candidate binding')
+    for key in ('security','nonsecurity'):need(r[key+'_receipt_sha256']==c['review_receipts'][key]['sha256'],'Root review binding')
+    for tier in (1,2) if c['mode']=='tier1-and-compile' else (1,):
+        r=records['tier'+str(tier)];keys='schema_version kind tier decision root_receipt_sha256 config_inputs_sha256 amendments_sha256 authority_granted_by_this_file_alone'
+        if tier==2:keys+=' tier1_receipt_sha256'
+        exact(r,keys,'user tier decision')
+        need((r['kind'],r['tier'],r['decision'])==('user_tier'+str(tier)+'_grant',tier,'GRANTED_TIER'+str(tier)),'user tier decision')
+        need(r['root_receipt_sha256']==c['review_receipts']['root']['sha256'],'grant Root identity')
+        need(r['config_inputs_sha256']==c['bindings']['config_inputs']['sha256'] and r['amendments_sha256']==c['bindings']['amendments']['sha256'],'grant scope identity')
+        if tier==2:need(r['tier1_receipt_sha256']==c['review_receipts']['tier1']['sha256'],'Tier 2 predecessor grant')
+    # This parses the owner-proposed records; only Root's independent, externally
+    # supplied full-config SHA anchors their bytes. A hash DAG grants nothing.
+
+
+def cargo_argv(phase):
+    if phase=='B':return [CARGO,'fetch','--frozen']
+    if phase=='E':return [CARGO,'metadata','--frozen','--format-version','1','--filter-platform','x86_64-unknown-linux-gnu']
+    if phase=='F':return [CARGO,*BACKEND]
+    raise Refusal('not a Cargo phase')
+
+def cargo_env(c,phase):
+    p=c['paths'];env={'PATH':CARGO_PATH,'CARGO_HOME':p['source_home'],'HOME':p['empty_home'],'TMPDIR':p['tmp'],'LANG':'C'}
+    if phase=='F':env['CARGO_TARGET_DIR']=p['target']
+    return env
+
+def check_tmpfs(q,allowed_nested):
+    # Hard bounds, not a post-hoc du/polling claim. Provisioning is outside this
+    # source and must be explicitly granted; no mount/setup command is hidden.
+    rows=Path('/proc/self/mountinfo').read_text().splitlines();match=[]
+    for line in rows:
+        pre,post=line.split(' - ',1);a=pre.split();b=post.split()
+        if a[4]==q['mountpoint']:match.append((a,b))
+    need(len(match)==1,'required distinct tmpfs mount absent')
+    a,b=match[0];need(int(a[0])==q['mount_id'] and a[2]==q['device'] and b[0]=='tmpfs','mount identity/type')
+    need('rw' in a[5].split(','),'quota mount not writable')
+    v=os.statvfs(q['mountpoint']);need(v.f_blocks*v.f_frsize<=q['max_bytes'] and v.f_files<=q['max_inodes'],'kernel filesystem bound exceeds declared limit')
+    # Other namespace descendants must not bypass the same filesystem limit.
+    for line in rows:
+        a2=line.split(' - ',1)[0].split()
+        if a2[4].startswith(q['mountpoint'].rstrip('/')+'/'):
+            need(a2[4] in allowed_nested,'unbound nested mount under quota root')
+
+def quotas(c,phase):
+    owned_paths(c)
+    for key in ('empty_home','mask_empty'):need(not any(Path(c['paths'][key]).iterdir()),'empty mount source changed')
+    for key,q in c['quota_mounts'].items():
+        permitted={c['paths']['source_home'],c['paths']['packet']} if key=='target_tmp' else set()
+        check_tmpfs(q,permitted)
+    p=c['paths'];q=c['quota_mounts'];v=c['limits'][phase]
+    need(q['source_home']['mountpoint']==p['source_home'],'source quota must cover exact S')
+    need(q['packet']['mountpoint']==p['packet'],'packet quota must cover exact packet')
+    group=Path(q['target_tmp']['mountpoint'])
+    need(str(group)==p['execution_root'],'target/tmp quota must cover exact execution root')
+    need(all(Path(p[k]).parent==group for k in ('target','tmp')),'target and tmp need one common hard quota')
+    need(q['source_home']['max_bytes']<=v['source_bytes'],'source hard bound too large for phase')
+    need(q['target_tmp']['max_bytes']<=v['target_tmp_bytes'],'target/tmp hard bound too large')
+    need(q['packet']['max_bytes']<=v['packet_bytes'],'packet hard bound too large')
+
+def sandbox_args(c,phase,worker=True,precheck=False):
+    owned_paths(c)
+    p=c['paths'];args=['--die-with-parent','--new-session','--unshare-user','--unshare-pid','--unshare-net','--unshare-ipc','--unshare-uts','--disable-userns','--cap-drop','ALL','--ro-bind','/','/']
+    # Mask private home and old trees first; restore only the exact bound public
+    # worktree/toolchain/proposal and current owned output mounts afterwards.
+    args+=['--size',str(c['limits'][phase]['namespace_tmpfs_bytes']),'--tmpfs','/home/charl']
+    for mask in sorted(set(c['masks'])-{'/home/charl'},key=lambda x:(len(Path(x).parts),x)):
+        if phase in ('A0','A') and mask=='/home/charl/.cargo':continue
+        args+=['--ro-bind',p['mask_empty'],mask]

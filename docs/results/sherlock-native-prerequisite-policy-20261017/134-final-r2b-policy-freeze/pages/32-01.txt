@@ -1,0 +1,239 @@
+IFACE-BT1 (corrected, cycle 1): interface contract for the BT-1 blind test author
+Status: PROPOSED, UNADOPTED, UNEXECUTED. Grants nothing.
+Author: the designated security contract owner (canonical claude-opus-5-5), who has seen the implementation. The blind author has not seen it and must not.
+Root records this file's SHA-256 outside this file.
+This text states observable behaviour and data contracts only. It reproduces no implementation code. Anything marked UNSPECIFIED must not be asserted by any test. Where README.md, AMENDMENTS.proposed.json or CONTRACT-ADDENDUM.json wording differs from this text (for example, README.md says the walk refuses unreadable directories), this text governs every assertion.
+
+IF-0 Subject and access
+- Module: bounded_sdk_compile.
+- Guard bytes SHA-256: fc1c1c980541d5d8dffb49f3ed4001f3f9e62e1f732f9ea9bae47ce1cb22f5bf.
+- The run driver verifies these bytes. Tests never open, read, hash, import or exec the guard file.
+- Obtain the module only as sys.modules['bounded_sdk_compile'], which the driver preloads. Raise if it is absent.
+- Environment: interpreter /usr/bin/python3 (observed realpath /usr/bin/python3.14), Linux, non-root uid. The filesystem type of TMPDIR and the effective capabilities of the run are not observed by any record cited here; Root must record both before launch.
+- Tests may call only the functions in IF-4 to IF-13. Apart from those functions, guard.Refusal, guard.os and the IF-14 seams, tests may read only the three guard attributes named in IF-2.
+- Patching is limited to the IF-14 seams and to stdlib functions that are wrapped for spying or replaced for trapping. The only other permitted replacements are the two this contract requires to return a modified result: os.readlink returning text of a different length (IF-6) and os.fstat returning a mismatched file type (IF-10).
+
+IF-1 Exceptions
+- Refusal is defined as class Refusal(RuntimeError).
+- Every contract predicate failure below raises Refusal. Assert it with assertRaises(guard.Refusal).
+- Where a case below says OSError, the stdlib OSError propagates unwrapped. Its subclass is UNSPECIFIED unless one is named. Assert OSError.
+- For inputs whose outcome this contract states, TypeError arises only as described in IF-4.5 and IF-7. Inputs whose outcome is UNSPECIFIED are not tested.
+- Exception message text is UNSPECIFIED everywhere. Never use assertRaisesRegex on a guard exception, and never inspect the str() of one.
+
+IF-2 Constants
+- Tests read from the guard only GIT_SYMLINK_MODE, GIT_SYMLINK_TEXT_BYTES and GIT_SYMLINKS, and O0 asserts only those three.
+- C04, CA0, CARGO, TOOLCHAIN, WORKTREE and REQUIRED_MASKS below are contract literals: take them from this text, never from the guard. Whether the guard has an attribute with any of these six names, and its type, is UNSPECIFIED.
+- GIT_SYMLINK_MODE == '120000' (a str).
+- GIT_SYMLINK_TEXT_BYTES == (33, 55) (a tuple of int; both bounds inclusive).
+- GIT_SYMLINKS is a frozenset of exactly 16 tuples (commit, path, oid), all str.
+  - It equals {(r['commit'], r['path'], r['oid']) for r in rows} over the rows of exact16_git_symlinks.json.
+  - There are 8 rows per commit, for commits C04 = 04c9c5d9bcebb8d4427d8589fb54d58a55599c14 and CA0 = a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1.
+- validate compares config values against the literal strings below. These are config data only; validate never touches them on disk.
+  - CARGO = /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo
+  - TOOLCHAIN = /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu
+  - WORKTREE = /home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016
+  - REQUIRED_MASKS is these 8 strings:
+    - /run
+    - /var/lib/docker
+    - /nix/var/nix/daemon-socket
+    - /nix/var/determinate
+    - /home/charl
+    - /home/charl/.cargo
+    - /sys/fs/cgroup
+    - /home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014
+
+IF-3 Value domains
+- NAP (normalized absolute path):
+  - a str that starts with '/';
+  - equal to str(pathlib.Path(s)), so it has no trailing '/', no inner '//' and no '/./';
+  - no '..' component and no NUL.
+  - A value starting with exactly two slashes is UNSPECIFIED.
+- NRP (normalized relative path):
+  - a str that is not absolute;
+  - equal to str(pathlib.PurePosixPath(s));
+  - no '..' component, and not '.' or ''.
+  - So './a', 'a/', 'a//b' and 'a/./b' are not NRP.
+- HEX64 is exactly 64 characters from 0-9a-f. HEX40 is exactly 40 characters from 0-9a-f. Uppercase is never accepted.
+- PIN: a dict with exactly the keys path (a NAP) and sha256 (a HEX64).
+- Positive int: the type is exactly int and the value is > 0. True and 1.0 both refuse.
+- Link path of a checkout row: str(PurePosixPath(relative_root) / relative), which is relative_root + '/' + relative.
+
+IF-4 validate(c) -> c
+
+4.0 General
+- When it accepts, validate returns the same object c (identity) and does not mutate c.
+- It performs no I/O of any kind: no open, stat, lstat, readlink, listdir, scandir or jload.
+- validate is INDEPENDENT of config.schema.json. It does not run the schema and does not implement all of it, and it enforces predicates the schema lacks (4.2, 4.3). So a schema-valid config may be refused, and a schema-invalid config may be accepted.
+- Acceptance says nothing about real host paths, pins, quotas, mounts, cgroups, provisioning or numeric adequacy.
+- The value 1 satisfies every numeric ceiling that validate checks. That shows only that the config passes validate. It does not show that any resource is adequate.
+
+4.1 Positive base recipe
+A config built by exactly this procedure is accepted.
+Start from a deep copy of the dict parsed from the adjacent config.example.json. Keep all its other values unchanged, and set the following:
+ a. source_authoring_only = False. mode stays 'tier1'. external_tier_consent stays {'tier1': False, 'tier2': False}.
+ b. bindings.config_inputs = a PIN.
+    Recommended for reuse in IF-13: set bindings.amendments.sha256 to the full amendments pin of IF-13. bindings.embedded.sha256 already equals the full embedded pin.
+ c. masks = a list of the 8 REQUIRED_MASKS.
+ d. Every one of the 7 x 13 limits values = 1.
+    - Phases: A0, A, B, C, D, E, F.
+    - Keys: wall_seconds, memory_bytes, pids, cpu_quota_us, cpu_period_us, cpu_time_us, stdout_bytes, stderr_bytes, packet_bytes, source_bytes, target_tmp_bytes, file_bytes, namespace_tmpfs_bytes.
+ e. cgroup = {'envelope_path': '/test-only/envelope', 'supervisor_leaf_name': 'test-supervisor', 'phase_parent_name': 'test-phases', 'envelope_memory_max': 1, 'envelope_pids_max': 1, 'envelope_cpu_max': '1 1'}.
+ f. Each of the 3 quota_mounts: keep its mountpoint, and set mount_id 1, device 'test-only-device', max_bytes 1, max_inodes 1.
+ g. review_receipts = exactly the keys security, muse, root and tier1, each a PIN.
+ h. old_home_stat_manifest = a PIN.
+ i. total_wall_seconds = 1 and supervisor_cpu_seconds = 1.
+ j. registry_roots = a list of exactly 423 dicts {'archive': NRP, 'source_relative': NRP, 'package_checksum': HEX64}. Distinct values are recommended but not required.
+ k. git_checkouts = a list of exactly 2 dicts {'relative_root': NRP, 'commit': ..., 'files': [...]}.
+    - One dict has commit C04 and the other CA0.
+    - The two relative_root values must differ, and neither may be a path-ancestor of the other. Recommended: 'git/checkouts/test-ledger/04c9c5d' and 'git/checkouts/test-ledger/a01a1ea'.
+    - Each files list contains the 8 fixture rows of that commit, each as {'relative': path, 'blob': oid, 'mode': '120000'}.
+    - Each files list also contains at least one regular row {'relative': NRP, 'blob': HEX40, 'mode': '100644' or '100755'}.
+    - Every relative is unique within its checkout. No regular row may have one of the same checkout's '120000' paths as a path-ancestor.
+ l. includes = a list of valid include rows (4.2). It may be empty.
+ m. expected_generated_files = a list of valid generated rows (4.2). It may be empty.
+
+Recommendations and notes:
+- Give the base one git-blob include and one archive-member include, plus one generated row of each kind, so that negatives can mutate an existing valid row.
+- The example's own paths, acquired_archives, source_copy_mounts, readonly_tools, executable_pins, source_manifest, the other bindings, quota mountpoints, cpu_arch and version already satisfy 4.2.
+- tier1-and-compile variant (also accepted): set mode = 'tier1-and-compile' and add review_receipts.tier2 = a PIN. In this mode validate checks external_tier_consent only for bool type.
+- Extra NAP masks beyond the 8 are accepted.
+- A limit value exactly equal to its ceiling is accepted, and so is a log value of 16777216.
+
+4.2 Refusal predicates
+With the base otherwise intact, each item below raises Refusal.
+
+Top level, version and mode:
+- c is not a dict, or its key set is not exactly the 24 top-level keys of config.example.json (a key is missing or extra).
+- version is not equal to 2 under Python ==. So 2.0 does not refuse; use 1 or 3 as refusal values.
+- mode is not 'tier1' or 'tier1-and-compile'.
+
+No-null rule:
+- Any None anywhere in c, at any depth, as a dict value or a list item.
+- Any str value anywhere that is '', contains NUL, or starts with 'UNBOUND'. Dict keys are not checked by this rule.
+
+acquired_archives:
+- Not a list of exactly 5, or any entry not a PIN.
+
+Scalar fields:
+- total_wall_seconds or supervisor_cpu_seconds is not a positive int.
+- external_tier_consent keys are not exactly tier1 and tier2, or a value is not a bool.
+- source_authoring_only is not the object False. For example, 0 refuses.
+- cpu_arch is not 'x86_64-unknown-linux-gnu'.
+
+bindings:
+- Keys are not exactly runner, config_inputs, subject, staging, host_units, embedded and amendments.
+- Any value is not a PIN. validate does not compare pin values with fixed hashes.
+
+paths:
+- Keys are not exactly worktree, execution_root, source_home, target, tmp, packet, empty_home, mask_empty and config.
+- Any value is not a NAP.
+- worktree is not WORKTREE.
+- Any of source_home, target, tmp, packet, empty_home or mask_empty has a pathlib parent other than execution_root.
+- The 9 values are not pairwise distinct.
+
+masks:
+- masks is not a list.
+- REQUIRED_MASKS is not a subset of masks.
+- Any mask is not a NAP.
+
+readonly_tools:
+- Any entry is not a NAP, or set(readonly_tools) is not {TOOLCHAIN}.
+
+source_copy_mounts:
+- Not a list of exactly 6, or any entry is not a NAP.
+- set(source_copy_mounts) does not equal {'/home/charl/.cargo'} union the 5 acquired_archives paths, or that union does not have size 6.
+
+limits:
+- Phase keys are not exactly the 7 phases, or any phase's keys are not exactly the 13 keys.
+- Any value is not a positive int.
+- Any stdout_bytes or stderr_bytes is > 16777216.
+- Ceilings are inclusive:
+  - A: wall_seconds <= 900; memory_bytes <= 2147483648.
+  - B: wall_seconds <= 600; memory_bytes <= 2147483648; pids <= 256; source_bytes <= 1287099500.
+  - C: wall_seconds <= 1200; memory_bytes <= 2147483648; packet_bytes <= 67108864.
+  - E: wall_seconds <= 120; memory_bytes <= 2147483648; pids <= 256; source_bytes <= 1287099500.
+  - F: wall_seconds <= 2700; memory_bytes <= 8589934592; pids <= 1024; target_tmp_bytes <= 21474836480.
+  - A0 and D have no ceilings beyond positivity and the log ceilings.
+
+cgroup:
+- Keys are not exactly envelope_path, supervisor_leaf_name, phase_parent_name, envelope_memory_max, envelope_pids_max and envelope_cpu_max.
+- envelope_path:
+  - is not a NAP; or
+  - is not one or more segments, each '/' followed by one character of [A-Za-z0-9_] and then 0 to 127 characters of [A-Za-z0-9_.@-]; or
+  - has a segment starting with 'cgroup.'.
+- Either child name is not a str of one [a-z] character followed by 0 to 62 characters of [a-z0-9-], or it starts with 'sdk-once-'.
+- The two child names are equal.
+- envelope_memory_max or envelope_pids_max is not a positive int.
+- envelope_cpu_max is not a str of two space-separated decimal integers, each starting with a nonzero digit.
+
+quota_mounts:
+- Keys are not exactly source_home, target_tmp and packet.
+- Any entry's keys are not exactly mountpoint, mount_id, device, max_bytes and max_inodes.
+- mountpoint is not a NAP.
+- mount_id, max_bytes or max_inodes is not a positive int.
+- device is subject only to the no-null rule.
+
+review_receipts:
+- In mode tier1, keys are not exactly security, muse, root and tier1.
+- In mode tier1-and-compile, keys are not exactly those four plus tier2.
+- Any value is not a PIN.
+
+Manifests:
+- old_home_stat_manifest or source_manifest is not a PIN.
+
+executable_pins:
+- Any entry's keys are not exactly path, realpath and sha256.
+- path or realpath is not a NAP, or sha256 is not a HEX64.
+- The set of paths is not a superset of {CARGO, '/usr/bin/bwrap', '/usr/bin/python3'}.
+
+registry_roots:
+- Any entry's keys are not exactly archive, source_relative and package_checksum.
+- archive or source_relative is not an NRP, or package_checksum is not a HEX64.
+- The length is not 423.
+
+git_checkouts:
+- Not a list of exactly 2.
+- An entry's keys are not exactly relative_root, commit and files.
+- relative_root is not an NRP, or commit is not a HEX40.
+- A file row's keys are not exactly relative, blob and mode.
+- relative is not an NRP, or blob is not a HEX40.
+- mode is not one of the str values '100644', '100755' or '120000'. The int 120000 refuses.
+- A relative is duplicated within one checkout.
+- A '120000' row's (commit, relative, blob) is not in GIT_SYMLINKS.
+- For one checkout, the set of its '120000' triples does not equal the GIT_SYMLINKS triples of its commit. Omission, re-moding a link row to '100644' or '100755', re-blobbing and rotation all hit this rule.
+- A row lies strictly beneath one of the same checkout's link paths.
+- The set of the two commits is not {C04, CA0}. A foreign commit and a duplicated commit both hit this rule.
+- The two relative_root values are equal, or one is a path-ancestor of the other. This applies in either direction, whether or not the inner root is at or under a link path.
+- The combined link paths are not 16 distinct strings.
+
+includes:
+- An entry's keys are not exactly relative, algorithm, digest and source_identifier.
+- relative is not an NRP.
+- algorithm is not 'archive-member' or 'git-blob'.
+- digest is not a HEX64 for archive-member, or not a HEX40 for git-blob.
+- relative ends in '.zkir', '.bzkir' or '.prover'.
+- relative is duplicated.
+- source_identifier is subject only to the no-null rule.
+
+expected_generated_files:
+- An entry's keys are not exactly relative and kind.
+- relative is not an NRP.
+- kind is not cargo-ok, cargo-checksum, cargo-lockfile or git-control.
+- A cargo-ok row whose last path component is not '.cargo-ok'.
+- A cargo-checksum row whose last component is not '.cargo-checksum.json'.
+- A cargo-lockfile row whose whole relative is not one of '.package-cache', '.package-cache-mutate', '.global-cache', '.global-cache-wal' or '.global-cache-shm'.
+- A git-control row whose relative does not start with '<relative_root of some checkout>/.git/'.
+
+Link paths:
+- Any include or generated relative equals a link path, or starts with a link path + '/'.
+
+Isolation notes:
+- The link paths ending spend.zkir and spend.bzkir also carry excluded include suffixes. An include AT a link path therefore isolates the link predicate only for the other 6 link names.
+- For the 'under' case, use the link path + '/child.bin'.
+- A generated row AT a link path cannot satisfy any kind rule. Test generated rows only under a link: the link path + '/.cargo-ok' with kind cargo-ok, or + '/.cargo-checksum.json' with kind cargo-checksum.
+
+4.3 Schema constraints validate does NOT enforce
+Do not write refusal tests for these. Acceptance is not a required property and need not be asserted.
+- tier1 mode with external_tier_consent.tier2 True.
+- uniqueItems on masks or readonly_tools. For example, readonly_tools [TOOLCHAIN, TOOLCHAIN].
+- The schema's source_copy_mounts enum of the example's exact strings.

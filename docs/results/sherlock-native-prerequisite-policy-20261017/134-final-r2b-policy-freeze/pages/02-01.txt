@@ -1,0 +1,221 @@
+#!/usr/bin/python3
+"""Unexecuted one-shot source proposal. This file grants no authority.
+
+The example is deliberately incomplete. No phase may run until every exact
+binding, host prerequisite, review and separate tier consent has been supplied.
+No shell, downloads, alternate compiler, SDK API, test runner or retry path.
+"""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import resource
+import selectors
+import signal
+import stat
+import subprocess
+import sys
+import tarfile
+import time
+
+PHASES = ('A0', 'A', 'B', 'C', 'D', 'E', 'F')
+CARGO = '/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo'
+CARGO_PATH = str(Path(CARGO).parent) + ':/usr/bin:/bin'
+BACKEND = ('test', '--no-run', '--frozen', '-p', 'mori-backend', '--lib', '-j4')
+CLI_OBLIGATION = ('test', '--no-run', '--frozen', '-p', 'mori', '--test', 'stage_test_public', '-j4')
+BASE = '5cf27d64fe91a3faef3ed1b4283284c50f660b24'
+LOCK = 'dfffb853b47a7b2d0d1b80a64bb3e826d64d66f247881603b6fc31c8e3e34003'
+REQUIRED_MASKS = {'/run', '/var/lib/docker', '/nix/var/nix/daemon-socket',
+                  '/nix/var/determinate', '/home/charl',
+                  '/home/charl/.cargo', '/sys/fs/cgroup',
+                  '/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014'}
+HEX = re.compile(r'[0-9a-f]{64}\Z')
+CHUNK = 1024 * 1024
+# Owner-bound Git mode-120000 rows, exactly as recorded in GIT-MODE-FACTS.json
+# (sha256 18aacc53ad146565a7d54ee35b5387a1ea25d4d97f1727e241461f4e6b84c0c5).
+# Only these (commit, path, blob) rows may be symlinks; every other path stays regular.
+# Link text is the only content ever read for them; targets are never followed.
+GIT_SYMLINK_MODE = '120000'
+GIT_SYMLINK_TEXT_BYTES = (33, 55)
+GIT_SYMLINKS = frozenset({
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'integration-tests/resources/sample_vk.verifier', 'bc7a71de4f851d7cf7d5057b7c37a34ea810d76d'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.bzkir', '90c050be858ccab1c5af1577f9d096c4a9100e7b'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.bzkir.sha256', '4c5a4df1af7a20d300d569f3b6f0c59a73ca9321'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.prover.sha256', '970ccd09630a4e9f4d163114448cb87da1fffe79'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.verifier', 'e0b21cadbbf1ba6e84ed129cb22ab7fd556cd6f9'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.verifier.sha256', '08a90b6bbf012c3edd41f7402643361b34031319'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.zkir', '66c922eba4290c4fc6a5b58bf2d29c40c6752f7b'),
+    ('04c9c5d9bcebb8d4427d8589fb54d58a55599c14', 'wasm-proving-demos/webpage/public/midnight/dust/spend.zkir.sha256', 'c0034ed0eb572b69526f3d1d88c1d86cbb5d3fa4'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'integration-tests/resources/sample_vk.verifier', 'bc7a71de4f851d7cf7d5057b7c37a34ea810d76d'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.bzkir', '90c050be858ccab1c5af1577f9d096c4a9100e7b'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.bzkir.sha256', '4c5a4df1af7a20d300d569f3b6f0c59a73ca9321'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.prover.sha256', '970ccd09630a4e9f4d163114448cb87da1fffe79'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.verifier', 'e0b21cadbbf1ba6e84ed129cb22ab7fd556cd6f9'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.verifier.sha256', '08a90b6bbf012c3edd41f7402643361b34031319'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.zkir', '66c922eba4290c4fc6a5b58bf2d29c40c6752f7b'),
+    ('a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1', 'wasm-proving-demos/webpage/public/midnight/dust/spend.zkir.sha256', 'c0034ed0eb572b69526f3d1d88c1d86cbb5d3fa4'),
+})
+
+class Refusal(RuntimeError):
+    pass
+
+class Unsupported(Refusal):
+    pass
+
+def need(ok, why):
+    if not ok:
+        raise Refusal(why)
+
+def exact(obj, keys, where):
+    need(type(obj) is dict and set(obj) == set(keys.split()), 'schema keys: ' + where)
+
+def no_null(value, where='config'):
+    need(value is not None, 'unbound/null: ' + where)
+    if isinstance(value, dict):
+        for k, v in value.items():
+            no_null(v, where + '.' + k)
+    elif isinstance(value, list):
+        for i, v in enumerate(value):
+            no_null(v, where + '[' + str(i) + ']')
+    elif isinstance(value, str):
+        need('\0' not in value and value != '' and not value.startswith('UNBOUND'), 'unbound string: ' + where)
+
+def positive(value, where):
+    need(type(value) is int and value > 0, 'positive integer required: ' + where)
+
+def absolute(value):
+    need(type(value) is str and value.startswith('/') and str(Path(value)) == value,
+         'normalized absolute path required')
+    need('..' not in Path(value).parts and '\0' not in value, 'unsafe path')
+    return Path(value)
+
+def relative(value):
+    p = PurePosixPath(value)
+    need(type(value) is str and not p.is_absolute() and '..' not in p.parts and str(p) == value and value != '.', 'unsafe relative path')
+    return p
+
+def pin_schema(p):
+    exact(p, 'path sha256', 'pin')
+    absolute(p['path']); need(bool(HEX.fullmatch(p['sha256'])), 'full sha256 required')
+
+def validate_cgroup(cg):
+    exact(cg,'envelope_path supervisor_leaf_name phase_parent_name envelope_memory_max envelope_pids_max envelope_cpu_max','cgroup')
+    p=absolute(cg['envelope_path'])
+    need(re.fullmatch(r'(/[A-Za-z0-9_][A-Za-z0-9_.@-]{0,127})+',cg['envelope_path']) is not None and not any(part.startswith('cgroup.') for part in p.parts),'invalid envelope namespace path')
+    for key in ('supervisor_leaf_name','phase_parent_name'):
+        name=cg[key]
+        need(type(name) is str and re.fullmatch(r'[a-z][a-z0-9-]{0,62}',name) is not None and not name.startswith('sdk-once-'),'invalid cgroup child name')
+    need(cg['supervisor_leaf_name']!=cg['phase_parent_name'],'cgroup child names must differ')
+    positive(cg['envelope_memory_max'],'envelope memory');positive(cg['envelope_pids_max'],'envelope tasks')
+    need(type(cg['envelope_cpu_max']) is str and re.fullmatch(r'[1-9][0-9]* [1-9][0-9]*',cg['envelope_cpu_max']) is not None,'finite envelope cpu.max')
+
+def validate(c):
+    exact(c, 'version mode bindings paths masks readonly_tools source_copy_mounts limits cgroup quota_mounts review_receipts old_home_stat_manifest source_manifest git_checkouts registry_roots includes expected_generated_files executable_pins cpu_arch source_authoring_only external_tier_consent total_wall_seconds supervisor_cpu_seconds acquired_archives', 'config')
+    need(c['version'] == 2 and c['mode'] in ('tier1', 'tier1-and-compile'), 'mode/version')
+    no_null(c)
+    need(type(c['acquired_archives']) is list and len(c['acquired_archives'])==5,'exact acquired archive list')
+    for p in c['acquired_archives']:pin_schema(p)
+    positive(c['total_wall_seconds'],'total wall'); positive(c['supervisor_cpu_seconds'],'supervisor CPU')
+    exact(c['external_tier_consent'],'tier1 tier2','external tier consent')
+    need(all(type(x) is bool for x in c['external_tier_consent'].values()),'tier consent booleans')
+    need(c['source_authoring_only'] is False, 'proposal is source-only; execution config must be separately reviewed')
+    need(c['cpu_arch'] == 'x86_64-unknown-linux-gnu', 'unsupported target')
+    exact(c['bindings'], 'runner config_inputs subject staging host_units embedded amendments', 'bindings')
+    for p in c['bindings'].values(): pin_schema(p)
+    exact(c['paths'], 'worktree execution_root source_home target tmp packet empty_home mask_empty config', 'paths')
+    for p in c['paths'].values(): absolute(p)
+    need(c['paths']['worktree'] == '/home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016', 'wrong backend candidate')
+    root = Path(c['paths']['execution_root'])
+    for key in ('source_home', 'target', 'tmp', 'packet', 'empty_home', 'mask_empty'):
+        need(Path(c['paths'][key]).parent == root, 'owned direct child required: ' + key)
+    need(len(set(c['paths'].values())) == len(c['paths']), 'overlapping exact paths')
+    need(type(c['masks']) is list and REQUIRED_MASKS <= set(c['masks']), 'complete required masks missing')
+    for p in c['masks']: absolute(p)
+    for p in c['readonly_tools']: absolute(p)
+    need(set(c['readonly_tools'])=={str(Path(CARGO).parent.parent)},'only the pinned Rust toolchain restoration is supported')
+    need(type(c['source_copy_mounts']) is list and len(c['source_copy_mounts'])==6,'exact six copy-source mounts required')
+    for p in c['source_copy_mounts']: absolute(p)
+    copy_sources={'/home/charl/.cargo'} | {p['path'] for p in c['acquired_archives']}
+    need(len(copy_sources)==6 and set(c['source_copy_mounts'])==copy_sources,'copy mounts must equal old Cargo home and five acquired archive files')
+    exact(c['limits'], 'A0 A B C D E F', 'limits')
+    for phase, v in c['limits'].items():
+        exact(v, 'wall_seconds memory_bytes pids cpu_quota_us cpu_period_us cpu_time_us stdout_bytes stderr_bytes packet_bytes source_bytes target_tmp_bytes file_bytes namespace_tmpfs_bytes', 'limits.' + phase)
+        for k, n in v.items(): positive(n, phase + '.' + k)
+        need(v['stdout_bytes'] <= 16777216 and v['stderr_bytes'] <= 16777216, 'owner log ceilings')
+    # Existing proposed ceilings are upper bounds, never a grant.
+    for ph, wall, mem, pids in [('A',900,2147483648,None), ('B',600,2147483648,256), ('C',1200,2147483648,None), ('E',120,2147483648,256), ('F',2700,8589934592,1024)]:
+        v=c['limits'][ph]; need(v['wall_seconds']<=wall and v['memory_bytes']<=mem, 'owner ceiling '+ph)
+        if pids is not None: need(v['pids']<=pids, 'owner tasks ceiling '+ph)
+    for ph in ('B','E'): need(c['limits'][ph]['source_bytes']<=1287099500, 'source-home ceiling')
+    need(c['limits']['C']['packet_bytes']<=67108864, 'C packet ceiling')
+    need(c['limits']['F']['target_tmp_bytes']<=21474836480, 'F target/tmp ceiling')
+    validate_cgroup(c['cgroup'])
+    exact(c['quota_mounts'], 'source_home target_tmp packet', 'quotas')
+    for q in c['quota_mounts'].values():
+        exact(q, 'mountpoint mount_id device max_bytes max_inodes', 'quota')
+        absolute(q['mountpoint'])
+        for k in ('mount_id','max_bytes','max_inodes'): positive(q[k],k)
+    receipt_keys='security nonsecurity root tier1'+(' tier2' if c['mode']=='tier1-and-compile' else '')
+    exact(c['review_receipts'],receipt_keys,'review receipts')
+    for p in c['review_receipts'].values(): pin_schema(p)
+    for key in ('old_home_stat_manifest','source_manifest'): pin_schema(c[key])
+    for p in c['executable_pins']:
+        exact(p, 'path realpath sha256', 'executable'); absolute(p['path']); absolute(p['realpath']); need(bool(HEX.fullmatch(p['sha256'])),'executable hash')
+    need({CARGO,'/usr/bin/bwrap','/usr/bin/python3'} <= {p['path'] for p in c['executable_pins']}, 'runner tools not pinned')
+    for r in c['registry_roots']:
+        exact(r, 'archive source_relative package_checksum', 'registry root'); relative(r['archive']); relative(r['source_relative']); need(bool(HEX.fullmatch(r['package_checksum'])),'archive checksum')
+    need(len(c['registry_roots'])==423,'all 423 archives must be bound')
+    need(type(c['git_checkouts']) is list and len(c['git_checkouts'])==2,'exactly two Git checkouts')
+    for g in c['git_checkouts']:
+        exact(g, 'relative_root commit files', 'git checkout'); relative(g['relative_root']); need(re.fullmatch('[0-9a-f]{40}',g['commit']) is not None,'git commit')
+        seen=set();declared=set()
+        for p in g['files']:
+            exact(p,'relative blob mode','git file'); relative(p['relative']); need(re.fullmatch('[0-9a-f]{40}',p['blob']) is not None,'blob identity'); need(p['mode'] in ('100644','100755',GIT_SYMLINK_MODE),'unsupported Git mode')
+            need(p['relative'] not in seen,'duplicate Git file path');seen.add(p['relative'])
+            # Mode 120000 only for the exact owner-bound rows; no general enum widening.
+            if p['mode']==GIT_SYMLINK_MODE:
+                need((g['commit'],p['relative'],p['blob']) in GIT_SYMLINKS,'undeclared Git symlink row');declared.add((g['commit'],p['relative'],p['blob']))
+        need(declared=={x for x in GIT_SYMLINKS if x[0]==g['commit']},'exact declared Git symlink membership')
+        names={x[1] for x in declared}
+        need(not any(str(a) in names for r in seen for a in PurePosixPath(r).parents),'Git path beneath declared symlink')
+    need({g['commit'] for g in c['git_checkouts']} == {'04c9c5d9bcebb8d4427d8589fb54d58a55599c14','a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1'},'full pinned Git commits required')
+    # Source-home disjointness: no row of one checkout can lie at or beneath the other's links.
+    first,second=(PurePosixPath(g['relative_root']) for g in c['git_checkouts'])
+    need(first!=second and first not in second.parents and second not in first.parents,'Git checkout roots equal or nested')
+    links=link_rows(c);need(len(links)==len(GIT_SYMLINKS),'declared Git symlink paths collide')
+    for p in c['includes']:
+        exact(p,'relative algorithm digest source_identifier','include'); relative(p['relative']); need(p['algorithm'] in ('archive-member','git-blob'),'include algorithm'); need(re.fullmatch('[0-9a-f]{'+('64' if p['algorithm']=='archive-member' else '40')+'}',p['digest']) is not None,'include pin')
+        need(not p['relative'].endswith(('.zkir','.bzkir','.prover')),'excluded SDK payload include')
+    need(len({p['relative'] for p in c['includes']})==len(c['includes']),'duplicate include path')
+    for p in c['expected_generated_files']:
+        exact(p,'relative kind','generated file');relative(p['relative']);need(p['kind'] in ('cargo-ok','cargo-checksum','cargo-lockfile','git-control'),'generated file kind')
+        name=PurePosixPath(p['relative']).name
+        if p['kind']=='cargo-ok':need(name=='.cargo-ok','cargo-ok name')
+        elif p['kind']=='cargo-checksum':need(name=='.cargo-checksum.json','checksum name')
+        elif p['kind']=='cargo-lockfile':need(p['relative'] in ('.package-cache','.package-cache-mutate','.global-cache','.global-cache-wal','.global-cache-shm'),'bookkeeping name')
+        elif p['kind']=='git-control':need(any(p['relative'].startswith(g['relative_root']+'/.git/') for g in c['git_checkouts']),'Git control outside checkout .git')
+    for p in [*c['includes'],*c['expected_generated_files']]:
+        need(not any(p['relative']==x or p['relative'].startswith(x+'/') for x in links),'include or generated path at or under declared Git symlink')
+    return c
+
+def jload(path):
+    def pairs(items):
+        result={}
+        for k,v in items:
+            need(k not in result,'duplicate JSON key: '+k);result[k]=v
+        return result
+    return json.loads(Path(path).read_text(), object_pairs_hook=pairs)
+
+def stable_stat(path):
+    s=os.lstat(path)
+    return {'device':s.st_dev,'inode':s.st_ino,'size':s.st_size,'mtime_ns':s.st_mtime_ns,'mode':s.st_mode,'links':s.st_nlink}
+
+def owned_paths(c):
+    """Check actual output objects, not only textual directory relationships."""
+    root=absolute(c['paths']['execution_root'])
+    for key in ('execution_root','source_home','target','tmp','packet','empty_home','mask_empty'):
+        p=absolute(c['paths'][key])
+        need(p.resolve(strict=True)==p,'owned path resolves elsewhere: '+key)
