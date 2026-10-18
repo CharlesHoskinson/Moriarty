@@ -1,0 +1,101 @@
+### Verdict: `APPROVE_WITH_LIMITS` (Scoped Non-Security Normal Source / API / Conformance Review)
+
+- **Reviewer Identity & Seat**: Gemini 4 Argon (High) (`conversation_id: 06c05fc4-a056-459b-99b6-26a4891e4eea`), acting as the fresh non-author fallback reviewer for the single normal source/API/conformance review seat (distinct from author `789028af-dc85-40bc-91d9-7cefb8a46330`; the independent security review seat is separate and unavailable here).
+- **Explicit Read Scope & Execution Posture**: Read strictly from the 13 inline bodies in the prompt (`b_scalar_arithmetic.rs`, `b_scalar_arithmetic_normal_tests.rs`, `sherlock_machine/mod.rs`, `LOCAL-RELATION-NORMATIVE-VALUES.json`, `10-18-ARITHMETIC-ROW-EXACT-VALUES.compact.json`, `08-03-enabled_fetch.rs`, `01-CURRENT-CONSTRUCTION-ERROR.rs.txt`, `02-SDK-IDENTIFIER-OPERAND-DECL.rs.txt`, `03-SDK-IRSOURCE-DECL.rs.txt`, `04-SDK-SELECTED-INSTRUCTION-API.rs.txt`, `11-21-SAFE-BINDINGS.json`, `12-22-SAFE-INPUTS.lossless-compact.json`, and `MECHANICAL-FACTS.json`). Zero tools, commands, file reads, builds, tests, or git actions were invoked.
+
+---
+
+### Mandatory Fixes
+
+- **None** for the scoped handwritten source, module integration, SDK API surface, or local relation conformance of `b.helper.Scalar.arithmetic` (`RetRight / Add / Second -> Done`).
+
+---
+
+### Scoped Source, API, and Conformance Audit
+
+#### 1. Three-File Integration, Imports, Re-Exports, and Ownership Plumbing
+- **Parent Module Registration & Re-Exports** (`crates/mori-backend/src/sherlock_machine/mod.rs`):
+  - Declares `pub mod b_scalar_arithmetic;` and `#[cfg(test)] mod b_scalar_arithmetic_normal_tests;`.
+  - Re-exports all 20 public functions/types (`emit_b_scalar_arithmetic_add`, `emit_public_b_scalar_arithmetic_add`, `u128_to_le_immediates`, `BChargedCounters`, `BOptValueRef`, `BScalarArithmeticAddBlock`, `BScalarArithmeticAddInputs`, `BScalarArithmeticConstructionError`, `BScalarArithmeticField`, `BScalarArithmeticFieldRole`, `BScalarArithmeticRegister`, `BScalarArithmeticWitness`, `BScalarHelperRestLanes`, `BScalarStagedLanes`, `BU128Lanes`, `BValueRef`, `BValueRowLanes`, `BValueSpace`, `BValueTableRead`, `EmittedBScalarArithmeticAdd`) and all 27 `pub const` discriminators/ordinals defined in `b_scalar_arithmetic.rs`.
+  - Prior archived `005` Tag module is neither registered nor imported; `b_scalar_arithmetic.rs` defines its own self-contained carrier types (`BValueRef`, `BOptValueRef`, `BValueRowLanes`, `BValueTableRead`, `BScalarStagedLanes`, `BScalarHelperRestLanes`, `BScalarArithmeticRegister`, `BChargedCounters`).
+- **Parent Scope Resolution** (`crates/mori-backend/src/sherlock_machine/b_scalar_arithmetic.rs`):
+  - `use super::*;` resolves `Fr`, `Operand`, `IrType`, `Identifier`, `Instruction`, `IrSource`, `Type`, `Arc`, `Column`, `TableShape`, `ConstructionError`, `immediate`, `constrain`, `emit_enabled_fetch_block`, and `EnabledFetchInputs` from `sherlock_machine/mod.rs`.
+- **Test Module Imports & Borrow-Check Fix** (`crates/mori-backend/src/sherlock_machine/b_scalar_arithmetic_normal_tests.rs`):
+  - Imports `use super::b_scalar_arithmetic::*;` and `use super::*;`.
+  - In `LogicalAddFixture::build_symbolic_inputs`, wraps the map in `let env = std::cell::RefCell::new(BTreeMap::new());` with `env.borrow_mut().insert(name.clone(), val);` and explicitly drops both closures (`drop(bind_u128); drop(bind);`) before calling `env.into_inner()`. This resolves the simultaneous mutable-borrow conflict between `bind` and `bind_u128` that would otherwise fail `rustc` borrow checking.
+
+#### 2. Local Normative Relation Conformance (`b.helper.Scalar.arithmetic`, `RetRight / Add / Second -> Done`)
+- **Pre-State Branch Guards**:
+  - In `emit_b_scalar_arithmetic_add` (`b_scalar_arithmetic.rs`), section A09 constrains:
+    ```rust
+    for (pre, expected) in [
+        (&input.pre_helper.present, HELPER_PRESENT),
+        (&input.pre_helper.kind, HELPER_KIND_SCALAR),
+        (&input.pre_helper.site, SITE_RET_RIGHT),
+        (&input.pre_helper.mode, SCALAR_MODE_ADD),
+        (&input.pre_helper.phase, SCALAR_PHASE_SECOND),
+        (&input.pre_helper.operand_b.present, OPT_PRESENT),
+    ] {
+        b.gated_eq(enable, pre.clone(), immediate(expected));
+    }
+    ```
+  - Ordinals match `LOCAL-RELATION-NORMATIVE-VALUES.json`: `HELPER_KIND_SCALAR = 0` (`/enums/HelperKind[0]`), `SITE_RET_RIGHT = 11` (`/enums/SiteTag[11]`), `SCALAR_MODE_ADD = 0` (`/enums/ScalarMode[0]`), `SCALAR_PHASE_SECOND = 1` (`/enums/ScalarPhase[1]`), `SCALAR_PHASE_DONE = 2` (`/enums/ScalarPhase[2]`), and `OPT_PRESENT = 1` (`/helper_state_space/Scalar`: `operandB present iff mode in {Add, Sub, Mul, Lt, Cons, Branch}`).
+- **Two-Space `operandB` Read & Kind/Payload Validation**:
+  - In `emit_b_scalar_arithmetic_add`, `space` is enable-gated (`let space = b.select(enable.clone(), input.pre_helper.operand_b.value.space.clone(), immediate(0)); b.boolean(space.clone());`) and `en_const` is its complement under `enable` (`let en_const = b.select(space.clone(), immediate(0), enable.clone());`).
+  - `space_read_any_kind` delegates to `emit_enabled_fetch_block` (`08-03-enabled_fetch.rs`) with 17 `Type::UInt` columns (`tag` + `n.0`..`n.15`) when `table.capacity > 0`, or emits `b.eq(enable, immediate(0));` when `table.capacity == 0`. This enforces `SC-02` (`index < active_rows <= capacity`) on whichever space (`Const` or `Data`) is selected when `enable = 1`.
+  - Section A07 constrains `read_tag` to 3 bits and `read_tag < VALID_VALUE_TAG_COUNT` (`6`):
+    ```rust
+    let read_tag = b.select(space.clone(), tag_data, tag_const);
+    b.bits(read_tag.clone(), 3);
+    let valid_tag = b.less_than(read_tag.clone(), immediate(VALID_VALUE_TAG_COUNT));
+    b.assert(valid_tag);
+    ```
+    This accepts only core value kinds `{UInt=0, Bool=1, Nil=2, Cons=3, Leaf=4, Branch=5}` (matching `/logical_kind` D-23 and `/records/ValueRef`) and rejects reserved ordinal `6` (`Constructor_EXTENSION_RESERVED`) and ordinal `7` (`ConstTag::U128OutOfRange` / `LogicalKind::Marker`).
+  - Section A08 constrains each selected byte `read_n[i]` to 8 bits (`b.bits(value.clone(), 8)`) and forces `read_n[i] == 0` whenever `b_is_uint == 0` (`let active_n = b.select(b_is_uint.clone(), value.clone(), immediate(0)); b.eq(value.clone(), active_n);`), enforcing `/notation/inactive` on the dereferenced row's `U128.n` payload.
+- **Checked `UInt128` Addition, Carry Chain, `PrimError(10)` / `PrimError(11)` Staging, and Inactive Union Columns**:
+  - Section A10 range-checks `eff_reg_a` and `eff_post_u128` to 8 bits per byte when `enable = 1` via `eff_bytes`.
+  - Section A11 computes the 16-byte little-endian ripple-carry sum (`ab = eff_reg_a[i] + read_n[i]`, `total = ab + carry`, `next_carry = less_than(255, total)`), setting `overflow = carry` after byte 15.
+  - Section A12 defines `is_val = select(b_is_uint, not_overflow, 0)` and constrains `eff_post_u128[i] + 256 * carry_chain[i] == totals[i]` under `is_val = 1`, while forcing `eff_post_u128[i] == 0` when `is_val = 0` (`let inactive_u128 = b.select(is_val.clone(), immediate(0), eff_post_u128[i].clone()); b.eq(inactive_u128, immediate(0));`).
+  - Section A13 constrains `post_helper.phase == SCALAR_PHASE_DONE` (`2`), `post_helper.staged.tag == select(is_val, SCALAR_STAGED_TAG_U128_VALUE (1), SCALAR_STAGED_TAG_PRIM_ERROR (4))`, and `post_helper.staged.prim_error_code == select(b_is_uint, select(overflow, 10, 0), 11)`. This matches `/helper_events/2`:
+    - `b_is_uint == 0` $\implies$ `ScalarStaged::PrimError{code: 11}` (`PRIM_ERROR_SORT_MISMATCH`), `u128_value = 0`, even if `reg_a` is arbitrary;
+    - `b_is_uint == 1, overflow == 1` $\implies$ `ScalarStaged::PrimError{code: 10}` (`PRIM_ERROR_ARITH_OVERFLOW`), `u128_value = 0`;
+    - `b_is_uint == 1, overflow == 0` $\implies$ `ScalarStaged::U128Value{n: reg_a + read_n}`, `prim_error_code = 0`.
+  - All four remaining `ScalarStaged` union columns (`bool_value`, `pending_node_tag`, `selector`, `type_test_ok`) are constrained to `0` under `enable`.
+- **Helper Complement Preservation & Four Exact Counter Deltas**:
+  - Section A14 constrains `post == pre` under `enable` for `present`, `kind`, `site`, `mode`, `operand_a.{space,index}`, `operand_b.{present,value.space,value.index}`, all 16 bytes of `reg_a`, and all `rest` lanes (`input.pre_helper.rest.iter().zip(input.post_helper.rest.iter())`).
+  - Sections A15–A17 (`decrement` and `increment`) enforce exact 16-byte little-endian `[-1, +1, +1, +1]` transitions on `remaining_work`, `consumed_work`, `helper_work`, and `helper_visits` (matching `/delta_order` and `/helper_events/2` `deltas.base: [-1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]`), with final borrow/carry constrained to `0` (`b.eq(borrow, immediate(0))` and `b.eq(carry, immediate(0))`), rejecting `remaining_work = 0` underflow and `u128::MAX` counter overflow when `enable = 1`.
+
+#### 3. Wrapper Positional Binding, Host Construction Checks, and SDK API Conformance
+- **Positional Binding (`emit_public_b_scalar_arithmetic_add`, `unpack_helper_lanes`, `unpack_counter_lanes`, `EmittedBScalarArithmeticAdd::pack_witness`)**:
+  - Input order matches across `input_fields`, `ops` slicing, and `pack_witness`:
+    `[enable (1), const_active_rows (1), const_rows (17 * const_capacity), data_active_rows (1), data_rows (17 * data_capacity), pre_helper (48 + rest_lanes), post_helper (48 + rest_lanes), pre_counters (64), post_counters (64)]`.
+  - Output order matches across `outputs`, `output_fields`, and `ir.outputs`:
+    `[read_tag (1), read_n (16), b_is_uint (1), overflow (1)]` (19 outputs) followed by all input operands in declaration order.
+  - `unpack_helper_lanes` indices `0..48` and `48..` match the exact field order traversed by `helper_operands`.
+- **Constructor Validation & Namespace Hygiene**:
+  - `emit_b_scalar_arithmetic_add` checks `!scope.is_empty()`, `input.constants.rows.len() == input.constants.capacity`, `input.data.rows.len() == input.data.capacity`, `input.pre_helper.rest.len() == input.post_helper.rest.len()`, `%` prefix on every `Operand::Variable`, and rejects any input variable colliding with `%{scope}.local.temp.`, `%{scope}.const_fetch.temp.`, or `%{scope}.data_fetch.temp.`.
+- **SDK API Match**:
+  - All `Instruction` variants (`CondSelect`, `ConstrainEq`, `ConstrainToBoolean`, `ConstrainBits`, `Assert`, `TestEq`, `LessThan`, `Add`, `Mul`, `PublicInput`, `Impact`, `Output`), `Operand`, `Identifier`, and `IrSource` fields match `02-SDK-IDENTIFIER-OPERAND-DECL.rs.txt`, `03-SDK-IRSOURCE-DECL.rs.txt`, and `04-SDK-SELECTED-INSTRUCTION-API.rs.txt`.
+
+#### 4. Eight Test Functions, Fixture Coverage, and Local Interpreter Fidelity (`b_scalar_arithmetic_normal_tests.rs`)
+- **Test Consumption of Emitted IR**:
+  - Tests 1–6 call `emit_b_scalar_arithmetic_add` and pass `&block.instructions` into `eval_emitted_instructions`, which steps through the emitted `Instruction` slice and checks `ConstrainToBoolean`, `ConstrainBits`, `ConstrainEq`, and `Assert`.
+  - `safe_input_ten_cases()` encodes all 10 cases from `12-22-SAFE-INPUTS.lossless-compact.json` (`const-zero`, `const-small`, `data-byte-carry`, `const-half-width-carry`, `data-max-plus-zero`, `const-max-reached`, `data-defined-overflow`, `const-defined-overflow`, `const-defined-sort-error`, `data-defined-sort-error`) with matching `regA`, `operandB`, counters (`83, 17, 9, 4 -> 82, 18, 10, 5`), and `rest = [8, 0, 0, 0, 0]`.
+  - Negative tests (`security_negative_witness_mutations_are_rejected_in_circuit`, `security_negative_overflow_and_sort_mismatch_cannot_be_forged_or_leak_inactive_lanes`, `counter_underflow_and_overflow_boundaries_are_rejected`, `disabled_branch_accepts_divergent_pre_post_and_zero_capacity_unused_space`, `constructor_rejects_invalid_scopes_shapes_and_identifier_collisions`) mutate the symbolic environment or inputs and verify rejection by `eval_emitted_instructions` or `emit_b_scalar_arithmetic_add`.
+
+---
+
+### Non-Blocking Limits, Unproved External Premises, and Flags for Designated Security Review
+
+1. **Uncompiled / Unexecuted Source & Local Host Interpreter Only**:
+   - No `rustc`, `cargo check`, `cargo test`, or Halo2 circuit compilation/proving has been run (`typecheckCompileTestsSDK_unrun: true`).
+   - `eval_emitted_instructions` in `b_scalar_arithmetic_normal_tests.rs` evaluates arithmetic over host `u128` (`va.checked_add(vb).unwrap()`, `va.checked_mul(vb).unwrap()`), not `Fr` field arithmetic, and rejects `PublicInput`/`Impact`/`Output` with `EvalRejection::UnsupportedInstruction`. Test 8 (`public_wrapper_emits_declared_io_and_packs_witness`) verifies wrapper shape and witness packing length only (`pre_helper_lanes: vec![0; 53]`), not instruction evaluation. Test names claiming `"in_circuit"` rejection are source identifiers only, not observed Halo2 constraint rejections.
+2. **Expected Outcomes Not Bound to Opaque Independent Oracle Yet**:
+   - The populated `expected-logical-relation.json` (83,407 bytes) is opaque and uninspected in this packet. The `ExpectedStaged` outcomes in `safe_input_ten_cases()` are author-written in the test file; binding against the frozen independent expected oracle via a checked adapter remains a separate downstream step.
+3. **Flags for Designated Security Review (Local Carrier vs. Global `StepInv` / Full-B Boundary)**:
+   - **Pre-State `StepInv` Obligations Not Enforced Locally**: `emit_b_scalar_arithmetic_add` intentionally does not constrain `pre.staged` (`SI-22 S2`: `pre.staged == None`), `pre.reg_a == u128(pre.operand_a)` (`SI-22 S2`), `pre.operand_a` validity/range, `parentResume.present == 0` (`SI-08`), or `expected.present == 0`. Those rely on incoming `StepInv` and are preserved into `post` when `enable = 1`.
+   - **Unselected Table Row Widths**: `space_read_any_kind` declares table columns `tag` and `n.0`..`n.15` as `Type::UInt` (constrained to 128 bits by `emit_enabled_fetch_block`). Only the *selected* row's `read_tag` (3 bits, `< 6`) and `read_n[i]` (8 bits, zero if non-`UInt`) are tightly range-checked in A07–A08; unselected table rows rely on external table/image invariants.
+   - **Disabled Branch (`enable = 0`)**: When `enable = 0`, `post_helper` and `post_counters` are unconstrained by `emit_b_scalar_arithmetic_add` (except that `emit_enabled_fetch_block` still enforces `active_rows <= capacity` and 128-bit cell bounds on non-zero-capacity tables, and A07 passes because `read_tag = 0 < 6`). In a composed step circuit, the caller/dispatcher must constrain `post` on the active branch.
+   - **`rest` Lane Count & Semantics**: `emit_b_scalar_arithmetic_add` requires only `input.pre_helper.rest.len() == input.post_helper.rest.len()` (it does not enforce `rest.len() == 5` from `BScalarHelperRestLanes`). In `emit_public_b_scalar_arithmetic_add` and `pack_witness`, `48 + rest_lanes` and `19 + ops.len()` use unchecked `usize` addition rather than `checked_add`.
+   - **External System Premises**: Global `StepInv` (`SI-01`..`SI-23`), `AB`, `P0`..`P3` (including `P2` fuel exhaustion and `P3` `pre.helperWork = bounds.maxHelperWork`), `PS`, exactly-one dispatch, untouched-image complement `C` (including the 7 zero-delta counters), physical B encoding, and `L04` statement/field binding remain external unproved obligations.
+

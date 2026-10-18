@@ -287,3 +287,22 @@ mod error_publication_step_normal_tests;
 
 #[cfg(test)]
 mod fuel_exhaustion_step_normal_tests;
+
+pub mod b_scalar_arithmetic;
+pub use b_scalar_arithmetic::{
+    emit_b_scalar_arithmetic_add, emit_public_b_scalar_arithmetic_add, u128_to_le_immediates,
+    BChargedCounters, BOptValueRef, BScalarArithmeticAddBlock, BScalarArithmeticAddInputs,
+    BScalarArithmeticConstructionError, BScalarArithmeticField, BScalarArithmeticFieldRole,
+    BScalarArithmeticRegister, BScalarArithmeticWitness, BScalarHelperRestLanes,
+    BScalarStagedLanes, BU128Lanes, BValueRef, BValueRowLanes, BValueSpace, BValueTableRead,
+    EmittedBScalarArithmeticAdd, CONST_TAG_U128, DATA_TAG_U128, HELPER_KIND_SCALAR,
+    HELPER_PRESENT, OPT_ABSENT, OPT_PRESENT, PRIM_ERROR_ARITH_OVERFLOW, PRIM_ERROR_SORT_MISMATCH,
+    SCALAR_MODE_ADD, SCALAR_PHASE_DONE, SCALAR_PHASE_FIRST, SCALAR_PHASE_SECOND,
+    SCALAR_STAGED_TAG_BOOL_VALUE, SCALAR_STAGED_TAG_NONE, SCALAR_STAGED_TAG_PENDING_NODE,
+    SCALAR_STAGED_TAG_PRIM_ERROR, SCALAR_STAGED_TAG_SELECTOR, SCALAR_STAGED_TAG_TYPE_TEST,
+    SCALAR_STAGED_TAG_U128_VALUE, SITE_RET_RIGHT, VALID_VALUE_TAG_COUNT, VALUE_TAG_BOOL,
+    VALUE_TAG_BRANCH, VALUE_TAG_CONS, VALUE_TAG_LEAF, VALUE_TAG_NIL, VALUE_TAG_U128,
+};
+
+#[cfg(test)]
+mod b_scalar_arithmetic_normal_tests;
