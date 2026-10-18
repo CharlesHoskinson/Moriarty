@@ -1,0 +1,21 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/336-unadopted-owner-exact-guard-correction/fresh02-request-and-assembler/assemble_existing_metadata.proposed.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/344-fresh02-automated-provisioning/assemble_existing_metadata.cgroup-shape.py
+@@ -42,8 +42,16 @@
+         c['paths'][key]=req['paths'][key]
+     c['paths']['config']=str(Path(req['paths']['config_dir'])/'config.final.json')
+     for key in c['cgroup']:
+-        assert obs['cgroup_verified'][key]==req['cgroup'][key]
+-        c['cgroup'][key]=obs['cgroup_verified'][key]
++        expected=req['cgroup'][key]
++        observed=obs['cgroup_verified'][key]
++        if key!='envelope_path':
++            assert expected==before['cgroup'][key]  # preserve every configured numeric cap
++        if isinstance(expected,dict):
++            assert all(observed[field]==value for field,value in expected.items())
++            assert observed.get('memory_swap_max')==0
++        else:
++            assert observed==expected
++        c['cgroup'][key]=copy.deepcopy(expected)  # observation carries extra diagnostic fields
+     for key,q in obs['quota_mounts'].items():
+         for field in ('mountpoint','max_bytes','max_inodes'):
+             assert q[field]==req['quota_mounts'][key][field]
