@@ -1,0 +1,41 @@
+# Actual Ten-Operation Result Review: Bounded Nominal Text Source (`moriarty-sherlock-nominal/1`)
+
+- **Reviewer identity & continuity**: Same independent nonauthor reviewer context (`d20b2771-529e-47a8-b9b8-a51309d1c747`, Gemini 4 Argon High standing fallback) and original working directory as the prior 37-body pre-execution review (`FINAL-RESPONSE.txt`, `22,898` bytes, `sha256=3b4682c3e022dffc7cbd3f70e32a42c2db46b73213a62114276de3d8db25890a`).
+- **Read coverage**: All 64 actual bodies (**ACTUAL BODY 01 – ACTUAL BODY 64**) read in full in the same context, with prior source/spec/test bodies (**BODY 01 – BODY 37**) retained. No tools, commands, or modifications were invoked.
+
+---
+
+## 1. Verdict
+
+- **Result Verdict**: **`ACCEPT_SCOPED_RESULTS`**
+- **Concrete Discrepancies**: **None** (`0` discrepancies across source pins, dep-info closures, command arguments, resource bounds, stream captures, exit statuses, or exact test-membership receipts).
+- **Integration Determination**: The actual evidence supports integrating this exact bounded nominal text parser and owner type-preparation consumer (`crates/mori-core/src/sherlock/nominal_source.rs`, the module registration in `crates/mori-core/src/lib.rs`, `design.md`, `spec.md`, the 3 `.mori` fixtures, and the 8 tests in `crates/mori-core/tests/sherlock_nominal_source_positive.rs` + `support/nominal_text_source_{positive,budgets}.rs`), subject to the explicit scope qualifications below.
+
+---
+
+## 2. Audit of Capture Integrity, Provenance, Dependency Binding, and Test Membership
+
+1. **Single-Attempt Execution & Frozen Source Linkage (`ACTUAL BODY 02 – 04`)**:
+   - `ROOT-SELECTION.json` (`6aca7709...`) and `ACTUAL-SUMMARY-AND-PINS.json` (`1c34de3d...`) confirm Root read the full `22,898`-byte source review before executing the single 10-operation run (`actual-ten-01/RESULT.json`, `12,759` bytes, `sha256=1178dd77b4d3f447da90314ec70fafbe9f0876360e2e62b088e6ecc14527c5ea`) against `SOURCE-FREEZE.json` (`9,921` bytes, `e3d48091...`) and all `488` static pins (`allPinsCurrent: true`), with `oldPassingPrefixReruns: 0` and no retry or output fitting.
+   - `PASSIVE-ACTUAL-READBACK.json` (`98,590` bytes, `e82cd0cc...`) is explicitly labeled as a passive post-hoc readback of existing bytes rather than a historical collector.
+2. **Compile Operations, Dep-Info Closure, and Warning Retention (`ACTUAL BODY 05 – 16`)**:
+   - **Operation `01` (`01-compileNormalCoreNominalTextRlib`)**: Exited `0` in `8.017854s` (`controller_failure: null`) under `timeout --signal=KILL 30s` and `prlimit --cpu=25:25 --as=2147483648:2147483648 --fsize=67108864:67108864 --core=0:0` with the exact 3-variable environment (`PATH`, `LANG`, `TMPDIR`). Produced `build/libmori_core.rlib` (`44,547,596` bytes, `62409d79...`) and `build/core-rlib.d` (`48,533` bytes, `12069c4e...`).
+     - `DEP-INFO-CHECK.json` (`ACTUAL BODY 07`, `47,174` bytes, `b51bce60...`) verifies all 62 source files read by `rustc` (`allMatch: true`), including exact SHA-256 matches for `lib.rs` (`94d4acfb...`), `nominal_source.rs` (`ca3efdd0...`), `draft_source.rs` (`caa5bbad...`), `shared.rs` (`8092ce1e...`), `owner_prepare.rs` (`1e620475...`), `owner_ext_type_builder.rs` (`77ab913b...`), `owner_ext_source_program.rs` (`5170e6ba...`), `owner_ext_t3_uses.rs` (`719f7aa1...`), `owner_ext_prepare_types.rs` (`e68de6b6...`), `ext_pass_b_walk.rs` (`224ae524...`), `ext_source_traversal.rs` (`3481176a...`), `nominal_declaration_order.rs` (`d7f70be2...`), `adt.rs` (`bc4c239e...`), and `adt_storage.rs` (`c70c61d5...`).
+     - `stderr.bin` (`ACTUAL BODY 09`, `5,454` bytes, `ad949259...`, `full_stream_retained: true`) retains all 11 compiler warnings in full (all located in pre-existing modules; 0 warnings in `nominal_source.rs` or `lib.rs`).
+   - **Operation `02` (`02-compileNominalTextEightTests`)**: Exited `0` in `0.577662s` (`controller_failure: null`, `0` bytes stdout/stderr, `full_stream_retained: true`), linking `--extern mori_core=.../build/libmori_core.rlib` to produce `build/nominal-text-positive` (`15,105,512` bytes, `b39e4ea5...`) and `build/nominal-text-positive.d` (`3,703` bytes, `66304b4a...`).
+     - `DEP-INFO-CHECK.json` (`ACTUAL BODY 13`, `3,260` bytes, `6f6a45a7...`) verifies all 6 test and fixture files (`sherlock_nominal_source_positive.rs`, `nominal_text_source_positive.rs`, `nominal_text_source_budgets.rs`, `schedule.mori`, `mutual-generic.mori`, `nested-application.mori`) with `allMatch: true` and exact SHA-256 matches to the reviewed source bodies.
+3. **Eight Serial Exact Test Runs & Child-vs-Postdata Provenance (`ACTUAL BODY 17 – 64`)**:
+   - Operations `03`–`10` executed `build/nominal-text-positive --exact <selector> --test-threads=1 --nocapture` under `timeout --signal=KILL 10s` and `prlimit --cpu=8:8 --as=1073741824:1073741824 --fsize=16777216:16777216 --core=0:0` (`0.005645s`–`0.015112s` each).
+   - For all 10 operations, `CHILD-RESULT.json` and per-phase `RESULT.json` are byte-identical (`actual_exit: 0`, `controller_failure: null`, `full_stream_retained: true` on all 20 streams, well below the `131,072`-byte cap), separating raw child capture from post-capture `.d` and `EXACT-MEMBERSHIP.json` checks.
+   - Every test phase (`03`–`10`) produced `0` stderr bytes and exact Rust test-harness stdout (`running 1 test`, `test <selector> ... ok`, `test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s`), verified in `EXACT-MEMBERSHIP.json` (`selected: 1, passed: 1, failed: 0, ignored: 0, measured: 0, filtered_out: 7`).
+
+---
+
+## 3. Scope Qualifications and Remaining Limitations
+
+1. **What is established**:
+   - `mori_core` (`cfg(test)` false) compiles cleanly with `pub mod sherlock_nominal_source`, and the external test binary compiles and passes all 8 exact selectors (`3` positive parse + owner `prepare_ext_program_types` tests over `schedule.mori`, `mutual-generic.mori`, and `nested-application.mori`, plus `5` inclusive/boundary `DraftParseBudget` refusal tests).
+2. **What is NOT established (boundaries preserved)**:
+   - **Author-owned pre-execution assertions, not independent semantic oracles**: The 8 tests validate in-memory AST shapes, source provenance paths, `DraftParseBudget` boundaries, and owner Pass-B/T1/T2/T3 table/record counts authored by Sol under the parser-depth exception. Test `stdout.bin` captures only the Rust test harness summary, not a persisted serialized dump of ASTs or owner tables.
+   - **Text-to-owner type preparation only**: `prepare_nominal_source_types_bounded` reaches `shared::prepare_ext_program_types` (`PreparedExtProgramSource`), not `compile_draft_host`, `ProgramView`, `MatchPlan` compilation/execution, generic B-machine admission/runtime evaluation, witness generation, or native/target proof export.
+   - **Resource & policy boundaries**: The H1 controller/process-level qualification and the absence of release defaults or separate nominal-declaration count caps beyond `DraftParseBudget` (lexical-token and active-descent bounds) and owner `BoundsC` remain unchanged from the source review. Canonical worktree (`WW 99d86a99`) comparison and integration are separate from this QA snapshot result receipt.

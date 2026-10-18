@@ -1,0 +1,750 @@
+--- a/crates/mori-core/src/lib.rs
++++ b/crates/mori-core/src/lib.rs
+@@ -51,3 +51,7 @@
+ // Explicit typed host arithmetic lowering used by the selected Scalar family.
+ #[path = "sherlock/word_lowering.rs"]
+ pub mod sherlock_word_lowering;
++
++// Explicit nominal text source -> existing owner type preparation, no evaluation.
++#[path = "sherlock/nominal_source.rs"]
++pub mod sherlock_nominal_source;
+--- /dev/null
++++ b/crates/mori-core/src/sherlock/nominal_source.rs
+@@ -0,0 +1,390 @@
++//! Explicit nominal text preparation into the existing owned ExtProgram.
++//! No evaluator, generic admission or inference. Existing caller-owned parser
++//! extents are reused; no release defaults or owner-preparation policy is added.
++use crate::sherlock::helper_machine::shared::{
++    BinaryOp, CorePattern, CoreValue, LayoutSchemaC, LocatorC, UnaryOp,
++    owner_ext_source_program::{ExtDomain, ExtProgram},
++    owner_ext_t3_uses::{ExtArm, ExtExpr, ExtFunction, ExtParamSrc, ExtPattern, ExtValue},
++    owner_ext_type_builder::{CtorDeclSrc, CtorFieldSrc, ExtTypeBuildError, TypeDeclSrc, TypeExprSrc},
++    prepare_ext_program_types, PreparedExtProgramSource,
++    i128_class::KIntC,
++};
++use mori_lexer::{TokenIdx, TokenKind, Tokens};
++pub use crate::sherlock_draft::{DraftError, SourceSpan, DraftParseBudget,
++    DraftBudgetResource, DraftBudgetExceeded};
++
++pub const NOMINAL_LANGUAGE: &str = "moriarty-sherlock-nominal/1";
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct NamedSite { pub name: String, pub span: SourceSpan }
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct FieldSite { pub binder: NamedSite, pub type_span: SourceSpan }
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct ConstructorSite { pub name: NamedSite, pub span: SourceSpan, pub fields: Vec<FieldSite> }
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct DeclarationSite {
++    pub name: NamedSite, pub span: SourceSpan, pub parameters: Vec<NamedSite>,
++    pub constructors: Vec<ConstructorSite>,
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct FunctionSite {
++    pub name: NamedSite, pub span: SourceSpan, pub parameters: Vec<FieldSite>,
++    pub return_type_span: SourceSpan,
++}
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum SourceOwner { Entry, Function(usize) }
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct ExpressionOccurrence {
++    pub owner: SourceOwner, pub child_path: Vec<usize>, pub span: SourceSpan,
++    pub kind: &'static str,
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct PatternOccurrence {
++    pub owner: SourceOwner, pub match_path: Vec<usize>, pub arm: usize,
++    pub field_path: Vec<usize>, pub span: SourceSpan, pub kind: &'static str,
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct NominalProvenance {
++    pub language_span: SourceSpan, pub program_name_span: SourceSpan,
++    pub declarations: Vec<DeclarationSite>, pub functions: Vec<FunctionSite>,
++    /// Entry preorder, then function bodies in unchanged function-table order.
++    pub expressions: Vec<ExpressionOccurrence>,
++    /// Match occurrence order, arm order, then nested field preorder.
++    pub patterns: Vec<PatternOccurrence>,
++}
++pub struct ParsedNominal {
++    pub name: String, pub program: ExtProgram, pub provenance: NominalProvenance,
++}
++pub enum NominalSourceError { Parse(DraftError), Preparation(ExtTypeBuildError) }
++pub struct PreparedNominalText {
++    pub name: String, pub provenance: NominalProvenance, pub prepared: PreparedExtProgramSource,
++}
++
++/// Parse a selected nominal text source without evaluating it.
++/// H1: this unbounded host preparation API has no new native-stack/heap/time
++/// admission guarantee. Existing lexer hard limits remain. The existing bounded
++/// draft parser is unchanged. The separate bounded nominal entry consumes
++/// explicit parser extents; owner preparation and full H1 remain separate.
++pub fn parse_nominal_source(source: &str) -> Result<ParsedNominal, DraftError> {
++    let tokens=mori_lexer::lex(source).map_err(|e| DraftError::Lex(e.to_string()))?;
++    Parser::new(source,tokens,None).program()
++}
++
++/// Caller-bounded parsing using the existing draft budget fields and errors.
++/// Expr/Pattern occurrences and expression structural depth keep their existing
++/// meanings; nominal type recursion uses the same active parser-descent bound.
++/// Declaration/type/field storage is token bounded, not a separate invented cap.
++/// No defaults, owner-preparation budget or process-wide H1 guarantee is supplied.
++pub fn parse_nominal_source_bounded(source: &str, budget: DraftParseBudget)
++    -> Result<ParsedNominal,DraftError>
++{
++    within(DraftBudgetResource::SourceBytes,budget.max_source_bytes,source.len())?;
++    let tokens=mori_lexer::lex_with_token_limit(source,budget.max_tokens)
++        .map_err(|error| match error {
++            mori_lexer::TokenLimitedLexError::Lex(error)=>DraftError::Lex(error.to_string()),
++            mori_lexer::TokenLimitedLexError::TokenLimit {limit,observed}=>
++                DraftError::Budget(DraftBudgetExceeded {resource:DraftBudgetResource::Tokens,limit,observed}),
++        })?;
++    Parser::new(source,tokens,Some(budget)).program()
++}
++
++/// The bounded text parser is consumed before the SAME existing owner API.
++/// Owner Pass-B/Pass-T allocation and typing refusal semantics remain unchanged.
++pub fn prepare_nominal_source_types_bounded(source: &str, budget: DraftParseBudget,
++    layout: &LayoutSchemaC, domain: ExtDomain, locator: Option<LocatorC>)
++    -> Result<PreparedNominalText,NominalSourceError>
++{
++    let parsed=parse_nominal_source_bounded(source,budget).map_err(NominalSourceError::Parse)?;
++    let prepared=prepare_ext_program_types(parsed.program,layout,domain,locator)
++        .map_err(NominalSourceError::Preparation)?;
++    Ok(PreparedNominalText {name:parsed.name,provenance:parsed.provenance,prepared})
++}
++
++fn within(resource: DraftBudgetResource,limit: usize,observed: usize)->Result<(),DraftError> {
++    if observed>limit {Err(DraftError::Budget(DraftBudgetExceeded {resource,limit,observed}))}
++    else {Ok(())}
++}
++
++/// Real existing owner type preparation; explicit caller domain/layout, no
++/// domain inference or replacement of owner errors with parser diagnostics.
++pub fn prepare_nominal_source_types(source: &str, layout: &LayoutSchemaC,
++    domain: ExtDomain, locator: Option<LocatorC>) -> Result<PreparedNominalText, NominalSourceError>
++{
++    let parsed=parse_nominal_source(source).map_err(NominalSourceError::Parse)?;
++    let prepared=prepare_ext_program_types(parsed.program,layout,domain,locator)
++        .map_err(NominalSourceError::Preparation)?;
++    Ok(PreparedNominalText { name: parsed.name, provenance: parsed.provenance, prepared })
++}
++
++struct Site { depth: usize, span: SourceSpan, kind: &'static str, children: Vec<Site>, patterns: Vec<Site> }
++impl Site {
++    fn new(span: SourceSpan, kind: &'static str, children: Vec<Site>) -> Self {
++        let depth=children.iter().map(|c|c.depth).max().unwrap_or(0).saturating_add(1);
++        Self { depth, span, kind, children, patterns: Vec::new() }
++    }
++}
++struct E { value: ExtExpr, site: Site }
++struct P { value: ExtPattern, site: Site }
++fn separate(nodes: Vec<E>) -> (Vec<ExtExpr>, Vec<Site>) {
++    nodes.into_iter().map(|n| (n.value,n.site)).unzip()
++}
++struct Parser<'a> { source: &'a str, tokens: Tokens, cursor: usize, end: u32,
++    budget: Option<DraftParseBudget>,total_parameters: usize,ast_occurrences: usize,parser_depth: usize }
++impl<'a> Parser<'a> {
++    fn new(source: &'a str,tokens: Tokens,budget: Option<DraftParseBudget>)->Self {
++        Self {source,tokens,cursor:0,end:0,budget,total_parameters:0,ast_occurrences:0,parser_depth:0}
++    }
++    fn descend<T>(&mut self,parse:impl FnOnce(&mut Self)->Result<T,DraftError>)->Result<T,DraftError> {
++        if let Some(b)=self.budget {within(DraftBudgetResource::ParserRecursionDepth,
++            b.max_parser_recursion_depth,self.parser_depth.saturating_add(1))?;}
++        self.parser_depth+=1;let result=parse(self);self.parser_depth-=1;result
++    }
++    fn reserve_occurrence(&mut self)->Result<(),DraftError> {
++        if let Some(b)=self.budget {within(DraftBudgetResource::AstOccurrences,
++            b.max_ast_occurrences,self.ast_occurrences.saturating_add(1))?;}
++        self.ast_occurrences+=1;Ok(())
++    }
++    fn structural_depth(&self,child:usize)->Result<(),DraftError> {
++        if let Some(b)=self.budget {within(DraftBudgetResource::StructuralAstDepth,
++            b.max_structural_ast_depth,child.saturating_add(1))?;}
++        Ok(())
++    }
++    fn structural_sites(&self,children:&[Site])->Result<(),DraftError> {
++        self.structural_depth(children.iter().map(|s|s.depth).max().unwrap_or(0))
++    }
++
++    fn index(&self, ahead: usize) -> TokenIdx { TokenIdx::new((self.cursor+ahead).min(self.tokens.len()-1)) }
++    fn kind(&self, ahead: usize) -> TokenKind { self.tokens.kind(self.index(ahead)) }
++    fn span(&self) -> SourceSpan {
++        let x=self.tokens.span(self.index(0),self.source); SourceSpan { start: x.start,end: x.end }
++    }
++    fn text(&self) -> &str { let x=self.span(); &self.source[x.start as usize..x.end as usize] }
++    fn word(&self, s: &str) -> bool { self.kind(0).is_word() && self.text()==s }
++    fn error(&self, expected: &'static str) -> DraftError {
++        DraftError::Syntax { span: self.span(),expected,found: self.text().into() }
++    }
++    fn bump(&mut self) { self.end=self.span().end; if self.kind(0)!=TokenKind::Eof { self.cursor+=1; } }
++    fn expect(&mut self, k: TokenKind, s: &'static str) -> Result<(),DraftError> {
++        if self.kind(0)!=k { return Err(self.error(s)); } self.bump(); Ok(())
++    }
++    fn expect_word(&mut self, s: &'static str) -> Result<(),DraftError> {
++        if !self.word(s) { return Err(self.error(s)); } self.bump(); Ok(())
++    }
++    fn name(&mut self) -> Result<NamedSite,DraftError> {
++        if self.kind(0)!=TokenKind::Ident || reserved(self.text()) { return Err(self.error("identifier")); }
++        let n=NamedSite { name: self.text().into(),span: self.span() }; self.bump(); Ok(n)
++    }
++    fn type_expr(&mut self, parameters: &[String]) -> Result<(TypeExprSrc,SourceSpan),DraftError> {
++        self.descend(|p|p.type_expr_inner(parameters))
++    }
++    fn type_expr_inner(&mut self, parameters: &[String]) -> Result<(TypeExprSrc,SourceSpan),DraftError> {
++        if !(self.kind(0)==TokenKind::Ident && !reserved(self.text()))
++            && !matches!(self.text(),"UInt"|"Bool"|"List"|"Tree")
++        { return Err(self.error("type name")); }
++        let start=self.span().start; let name=self.text().to_owned(); self.bump();
++        let ty=if self.kind(0)==TokenKind::Lt {
++            self.bump(); let mut args=vec![self.type_expr(parameters)?.0];
++            while self.kind(0)==TokenKind::Comma { self.bump(); args.push(self.type_expr(parameters)?.0); }
++            self.expect(TokenKind::Gt,">")?; TypeExprSrc::Apply { name,args }
++        } else { match name.as_str() {
++            "UInt"=>TypeExprSrc::UInt,"Bool"=>TypeExprSrc::Bool,
++            "List"=>TypeExprSrc::List,"Tree"=>TypeExprSrc::Tree,
++            _ if parameters.iter().any(|p| p==&name)=>TypeExprSrc::Param { name },
++            _=>TypeExprSrc::Named { name },
++        }};
++        Ok((ty,SourceSpan { start,end: self.end }))
++    }
++    fn program(mut self) -> Result<ParsedNominal,DraftError> {
++        self.expect_word("language")?;
++        if self.kind(0)!=TokenKind::String { return Err(self.error("nominal language string")); }
++        let language_span=self.span();
++        if mori_lexer::decode_string(self.text())!=NOMINAL_LANGUAGE { return Err(self.error(NOMINAL_LANGUAGE)); }
++        self.bump(); self.expect(TokenKind::Semicolon,";")?;self.expect_word("program")?;
++        let name=self.name()?;self.expect(TokenKind::LBrace,"{")?;
++        let mut types=Vec::new();let mut declarations=Vec::new();
++        while self.word("type") { let (ty,site)=self.declaration()?;types.push(ty);declarations.push(site); }
++        let mut functions=Vec::new();let mut function_sites=Vec::new();let mut body_sites=Vec::new();
++        while self.word("fn") {
++            if let Some(b)=self.budget {within(DraftBudgetResource::Functions,b.max_functions,functions.len().saturating_add(1))?;}
++            let start=self.span().start;self.bump();let name=self.name()?;
++            self.expect(TokenKind::LParen,"(")?;let mut parameters=Vec::new();let mut parameter_sites=Vec::new();
++            if self.kind(0)!=TokenKind::RParen { loop {
++                if let Some(b)=self.budget {
++                    within(DraftBudgetResource::ParametersPerFunction,b.max_parameters_per_function,parameters.len().saturating_add(1))?;
++                    within(DraftBudgetResource::TotalParameters,b.max_total_parameters,self.total_parameters.saturating_add(1))?;
++                }
++                self.total_parameters+=1;
++                let binder=self.name()?;self.expect(TokenKind::Colon,":")?;
++                let (ty,type_span)=self.type_expr(&[])?;
++                parameters.push(ExtParamSrc { name: binder.name.clone(),ty });
++                parameter_sites.push(FieldSite { binder,type_span });
++                if self.kind(0)!=TokenKind::Comma { break; } self.bump();
++            }}
++            self.expect(TokenKind::RParen,")")?;self.expect(TokenKind::Colon,":")?;
++            let (return_type,return_type_span)=self.type_expr(&[])?;let body=self.block()?;
++            functions.push(ExtFunction { name: name.name.clone(),parameters,return_type,body: body.value });
++            function_sites.push(FunctionSite { name,span: SourceSpan { start,end: self.end },parameters: parameter_sites,return_type_span });body_sites.push(body.site);
++        }
++        self.expect_word("entry")?;let entry=self.expression(0)?;self.expect(TokenKind::Semicolon,";")?;
++        self.expect(TokenKind::RBrace,"}")?;self.expect(TokenKind::Eof,"end of nominal program")?;
++        let mut provenance=NominalProvenance { language_span,program_name_span: name.span,
++            declarations,functions: function_sites,expressions: Vec::new(),patterns: Vec::new() };
++        collect(&entry.site,SourceOwner::Entry,&mut provenance,self.budget)?;
++        for (i,site) in body_sites.iter().enumerate() { collect(site,SourceOwner::Function(i),&mut provenance,self.budget)?; }
++        Ok(ParsedNominal { name: name.name,program: ExtProgram { types,assets: Vec::new(),states: Vec::new(),inputs: Vec::new(),functions,entry: entry.value },provenance })
++    }
++    fn declaration(&mut self) -> Result<(TypeDeclSrc,DeclarationSite),DraftError> {
++        let start=self.span().start;self.bump();let name=self.name()?;
++        let mut parameters=Vec::new();
++        if self.kind(0)==TokenKind::Lt {
++            self.bump();parameters.push(self.name()?);
++            while self.kind(0)==TokenKind::Comma { self.bump();parameters.push(self.name()?); }
++            self.expect(TokenKind::Gt,">")?;
++        }
++        let parameter_names:Vec<String>=parameters.iter().map(|p| p.name.clone()).collect();
++        self.expect(TokenKind::LBrace,"{")?;let mut ctors=Vec::new();let mut constructors=Vec::new();
++        while self.kind(0)!=TokenKind::RBrace {
++            let ctor_start=self.span().start;let ctor=self.name()?;let mut fields=Vec::new();let mut field_sites=Vec::new();
++            if self.kind(0)==TokenKind::LParen {
++                self.bump();if self.kind(0)!=TokenKind::RParen { loop {
++                    let binder=self.name()?;self.expect(TokenKind::Colon,":")?;
++                    let (ty,type_span)=self.type_expr(&parameter_names)?;
++                    fields.push(CtorFieldSrc { name: binder.name.clone(),ty });field_sites.push(FieldSite { binder,type_span });
++                    if self.kind(0)!=TokenKind::Comma { break; }self.bump();
++                }}self.expect(TokenKind::RParen,")")?;
++            }
++            self.expect(TokenKind::Semicolon,";")?;
++            ctors.push(CtorDeclSrc { name: ctor.name.clone(),fields });constructors.push(ConstructorSite { name: ctor,span: SourceSpan { start: ctor_start,end: self.end },fields: field_sites });
++        }
++        self.bump();let site=DeclarationSite { name: name.clone(),span: SourceSpan { start,end: self.end },parameters,constructors };
++        Ok((TypeDeclSrc { name: name.name,parameters: parameter_names,ctors },site))
++    }
++    fn block(&mut self) -> Result<E,DraftError> {
++        self.descend(Self::block_inner)
++    }
++    fn block_inner(&mut self) -> Result<E,DraftError> {
++        self.expect(TokenKind::LBrace,"{")?;let x=self.expression(0)?;self.expect(TokenKind::RBrace,"}")?;Ok(x)
++    }
++    fn binary(&self) -> Option<(BinaryOp,u8,usize)> { Some(match self.kind(0) {
++        TokenKind::Eq if self.kind(1)==TokenKind::Eq=>(BinaryOp::Eq,1,2),
++        TokenKind::Lt=>(BinaryOp::Lt,1,1),TokenKind::Plus=>(BinaryOp::Add,2,1),
++        TokenKind::Minus=>(BinaryOp::Sub,2,1),TokenKind::Star=>(BinaryOp::Mul,3,1),_=>return None,
++    }) }
++    fn expression(&mut self, minimum: u8) -> Result<E,DraftError> {
++        self.descend(|p|p.expression_inner(minimum))
++    }
++    fn expression_inner(&mut self, minimum: u8) -> Result<E,DraftError> {
++        let mut left=self.atom()?;
++        while let Some((op,precedence,width))=self.binary() {
++            if precedence<minimum { break; }for _ in 0..width { self.bump(); }
++            let right=self.expression(precedence+1)?;self.reserve_occurrence()?;self.structural_depth(left.site.depth.max(right.site.depth))?;let span=SourceSpan { start:left.site.span.start,end:right.site.span.end };
++            left=E { value: ExtExpr::Binary { op,left: Box::new(left.value),right: Box::new(right.value) },site: Site::new(span,"binary",vec![left.site,right.site]) };
++        }Ok(left)
++    }
++    fn atom(&mut self) -> Result<E,DraftError> {
++        self.descend(Self::atom_inner)
++    }
++    fn atom_inner(&mut self) -> Result<E,DraftError> {
++        let start=self.span().start;
++        if self.kind(0)==TokenKind::LParen { self.bump();let mut e=self.expression(0)?;self.expect(TokenKind::RParen,")")?;e.site.span=SourceSpan { start,end:self.end };return Ok(e); }
++        self.reserve_occurrence()?;self.structural_depth(0)?;
++        if self.word("let") {
++            self.bump();let n=self.name()?;self.expect(TokenKind::Eq,"=")?;let value=self.expression(0)?;self.expect_word("in")?;let body=self.expression(0)?;self.structural_depth(value.site.depth.max(body.site.depth))?;
++            return Ok(E { value:ExtExpr::Let { name:n.name,value:Box::new(value.value),body:Box::new(body.value) },site:Site::new(SourceSpan {start,end:self.end},"let",vec![value.site,body.site]) });
++        }
++        if self.word("if") {
++            self.bump();let c=self.expression(0)?;let t=self.block()?;self.expect_word("else")?;let e=self.block()?;self.structural_depth(c.site.depth.max(t.site.depth).max(e.site.depth))?;
++            return Ok(E {value:ExtExpr::If {cond:Box::new(c.value),then_expr:Box::new(t.value),else_expr:Box::new(e.value)},site:Site::new(SourceSpan {start,end:self.end},"if",vec![c.site,t.site,e.site])});
++        }
++        if self.word("match") { return self.match_expression(); }
++        if self.word("construct") {
++            self.bump();let (ty,_)=self.type_expr(&[])?;self.qualification()?;let ctor=self.name()?;let (fields,sites)=separate(self.arguments()?);self.structural_sites(&sites)?;
++            return Ok(E {value:ExtExpr::Construct {ty,ctor:ctor.name,fields},site:Site::new(SourceSpan {start,end:self.end},"construct",sites)});
++        }
++        if self.kind(0)==TokenKind::Number {
++            let text=self.text().to_owned();let span=self.span();let n=text.replace('_',"").parse::<u128>().map_err(|_| DraftError::UIntLiteral {span,text})?;self.bump();
++            return Ok(E {value:ExtExpr::Literal {value:ExtValue::Core {value:CoreValue::UInt {n:KIntC::InRange(n)}}},site:Site::new(span,"uint",vec![])});
++        }
++        if matches!(self.kind(0),TokenKind::KwTrue|TokenKind::KwFalse) {
++            let b=self.kind(0)==TokenKind::KwTrue;self.bump();return Ok(E {value:ExtExpr::Literal {value:ExtValue::Core {value:CoreValue::Bool {b}}},site:Site::new(SourceSpan {start,end:self.end},"bool",vec![])});
++        }
++        if self.word("nil") { self.bump();return Ok(E {value:ExtExpr::Literal {value:ExtValue::Core {value:CoreValue::List {elements:vec![]}}},site:Site::new(SourceSpan {start,end:self.end},"nil",vec![])}); }
++        if ["cons","leaf","branch","not"].iter().any(|s|self.word(s)) {
++            let n=self.text().to_owned();self.bump();let mut args=self.arguments()?;
++            self.structural_depth(args.iter().map(|a|a.site.depth).max().unwrap_or(0))?;
++            let expected=if n=="leaf"||n=="not" {1}else{2};if args.len()!=expected {return Err(self.error("dedicated constructor arguments in declared order/arity"));}
++            let (value,sites)=if expected==1 {let a=args.remove(0);(ExtExpr::Unary {op:if n=="leaf" {UnaryOp::Leaf}else{UnaryOp::Not},operand:Box::new(a.value)},vec![a.site])}else{let b=args.pop().expect("two arguments");let a=args.pop().expect("two arguments");(ExtExpr::Binary {op:if n=="cons" {BinaryOp::Cons}else{BinaryOp::Branch},left:Box::new(a.value),right:Box::new(b.value)},vec![a.site,b.site])};
++            return Ok(E {value,site:Site::new(SourceSpan {start,end:self.end},"dedicated-constructor",sites)});
++        }
++        let n=self.name()?;
++        if self.kind(0)==TokenKind::LParen {let (args,sites)=separate(self.arguments()?);self.structural_sites(&sites)?;Ok(E {value:ExtExpr::Call {name:n.name,args},site:Site::new(SourceSpan {start,end:self.end},"call",sites)})}
++        else {Ok(E {value:ExtExpr::Var {name:n.name},site:Site::new(n.span,"var",vec![])})}
++    }
++    fn arguments(&mut self) -> Result<Vec<E>,DraftError> {
++        self.descend(Self::arguments_inner)
++    }
++    fn arguments_inner(&mut self) -> Result<Vec<E>,DraftError> {
++        self.expect(TokenKind::LParen,"(")?;let mut args=Vec::new();
++        if self.kind(0)!=TokenKind::RParen {loop {args.push(self.expression(0)?);if self.kind(0)!=TokenKind::Comma {break;}self.bump();}}
++        self.expect(TokenKind::RParen,")")?;Ok(args)
++    }
++    fn qualification(&mut self) -> Result<(),DraftError> {self.expect(TokenKind::Colon,"::")?;self.expect(TokenKind::Colon,"::")}
++    fn match_expression(&mut self) -> Result<E,DraftError> {
++        self.descend(Self::match_expression_inner)
++    }
++    fn match_expression_inner(&mut self) -> Result<E,DraftError> {
++        let start=self.span().start;self.bump();let scrutinee=self.expression(0)?;self.expect(TokenKind::LBrace,"{")?;
++        let mut arms=Vec::new();let mut children=vec![scrutinee.site];let mut patterns=Vec::new();
++        loop {
++            let pattern=self.pattern()?;self.expect(TokenKind::Eq,"=>")?;self.expect(TokenKind::Gt,"=>")?;let body=self.expression(0)?;
++            arms.push(ExtArm {pattern:pattern.value,body:body.value});patterns.push(pattern.site);children.push(body.site);
++            if self.kind(0)!=TokenKind::Comma {break;}self.bump();
++        }
++        self.expect(TokenKind::RBrace,"}")?;self.structural_sites(&children)?;let mut site=Site::new(SourceSpan {start,end:self.end},"match",children);site.patterns=patterns;
++        Ok(E {value:ExtExpr::Match {scrutinee:Box::new(scrutinee.value),arms},site})
++    }
++    fn pattern(&mut self) -> Result<P,DraftError> {
++        self.descend(Self::pattern_inner)
++    }
++    fn pattern_inner(&mut self) -> Result<P,DraftError> {
++        self.reserve_occurrence()?;
++        let start=self.span().start;
++        if self.word("wildcard") {self.bump();return Ok(P {value:ExtPattern::Wildcard,site:Site::new(SourceSpan {start,end:self.end},"wildcard",vec![])});}
++        if self.word("nil") {self.bump();return Ok(P {value:ExtPattern::Dedicated {pattern:CorePattern::PNil},site:Site::new(SourceSpan {start,end:self.end},"nil",vec![])});}
++        if ["cons","leaf","branch"].iter().any(|s|self.word(s)) {
++            let n=self.text().to_owned();self.bump();self.expect(TokenKind::LParen,"(")?;let a=self.name()?;
++            let pattern=if n=="leaf" {CorePattern::PLeaf {x:a.name}}else{self.expect(TokenKind::Comma,",")?;let b=self.name()?;if n=="cons" {CorePattern::PCons {x:a.name,y:b.name}}else{CorePattern::PBranch {x:a.name,y:b.name}}};self.expect(TokenKind::RParen,")")?;
++            return Ok(P {value:ExtPattern::Dedicated {pattern},site:Site::new(SourceSpan {start,end:self.end},"dedicated-pattern",vec![])});
++        }
++        // An explicit :: or < starts a nominal type-qualified constructor pattern.
++        // No casing convention or declaration lookup decides variable vs constructor.
++        if self.kind(0).is_word() && (self.kind(1)==TokenKind::Lt||self.kind(1)==TokenKind::Colon) {
++            let (ty,_)=self.type_expr(&[])?;self.qualification()?;let ctor=self.name()?;self.expect(TokenKind::LParen,"(")?;
++            let mut fields=Vec::new();let mut sites=Vec::new();
++            if self.kind(0)!=TokenKind::RParen {loop {let p=self.pattern()?;fields.push(p.value);sites.push(p.site);if self.kind(0)!=TokenKind::Comma {break;}self.bump();}}
++            self.expect(TokenKind::RParen,")")?;
++            Ok(P {value:ExtPattern::Ctor {ty,ctor:ctor.name,fields},site:Site::new(SourceSpan {start,end:self.end},"constructor-pattern",sites)})
++        } else {let n=self.name()?;Ok(P {value:ExtPattern::Dedicated {pattern:CorePattern::PVar {x:n.name}},site:Site::new(n.span,"binder",vec![])})}
++    }
++}
++fn reserved(s:&str)->bool {matches!(s,"language"|"program"|"type"|"construct"|"wildcard"|"fn"|"entry"|"let"|"in"|"if"|"else"|"match"|"UInt"|"Bool"|"List"|"Tree"|"nil"|"cons"|"leaf"|"branch"|"not")}
++fn collect(root:&Site,owner:SourceOwner,out:&mut NominalProvenance,budget:Option<DraftParseBudget>)->Result<(),DraftError> {
++    let mut todo=vec![(root,Vec::new())];
++    while let Some((node,path))=todo.pop() {
++        if let Some(b)=budget {
++            within(DraftBudgetResource::StructuralAstDepth,b.max_structural_ast_depth,path.len().saturating_add(1))?;
++            within(DraftBudgetResource::AstOccurrences,b.max_ast_occurrences,out.expressions.len().saturating_add(out.patterns.len()).saturating_add(1))?;
++        }
++        out.expressions.push(ExpressionOccurrence {owner,child_path:path.clone(),span:node.span,kind:node.kind});
++        for (arm,pattern) in node.patterns.iter().enumerate() {
++            let mut pending=vec![(pattern,Vec::new())];
++            while let Some((p,field_path))=pending.pop() {
++                if let Some(b)=budget {within(DraftBudgetResource::AstOccurrences,b.max_ast_occurrences,out.expressions.len().saturating_add(out.patterns.len()).saturating_add(1))?;}
++                out.patterns.push(PatternOccurrence {owner,match_path:path.clone(),arm,field_path:field_path.clone(),span:p.span,kind:p.kind});
++                for (i,c) in p.children.iter().enumerate().rev() {let mut next=field_path.clone();next.push(i);pending.push((c,next));}
++            }
++        }
++        for (i,c) in node.children.iter().enumerate().rev() {let mut next=path.clone();next.push(i);todo.push((c,next));}
++    }
++    Ok(())
++}
+--- /dev/null
++++ b/crates/mori-core/tests/fixtures/nominal-text-source/mutual-generic.mori
+@@ -0,0 +1,12 @@
++language "moriarty-sherlock-nominal/1";
++program MutualAndGeneric {
++  type Even { Zero; SuccOdd(previous: Odd); }
++  type Odd { SuccEven(previous: Even); }
++  type Box<T> { Box(value: T); }
++  fn wrap(e: Even): Box<Even> { construct Box<Even>::Box(e) }
++  fn unwrap(b: Box<Even>): Even {
++    match b { Box<Even>::Box(value) => value }
++  }
++  entry unwrap(wrap(construct Even::SuccOdd(
++    construct Odd::SuccEven(construct Even::Zero()))));
++}
+--- /dev/null
++++ b/crates/mori-core/tests/fixtures/nominal-text-source/nested-application.mori
+@@ -0,0 +1,11 @@
++language "moriarty-sherlock-nominal/1";
++program NestedApplication {
++  type Box<T> { Box(value: T); }
++  fn first(b: Box<Box<UInt>>): UInt {
++    match b {
++      Box<Box<UInt>>::Box(Box<UInt>::Box(value)) => value,
++      wildcard => 0
++    }
++  }
++  entry first(construct Box<Box<UInt>>::Box(construct Box<UInt>::Box(7)));
++}
+--- /dev/null
++++ b/crates/mori-core/tests/fixtures/nominal-text-source/schedule.mori
+@@ -0,0 +1,19 @@
++language "moriarty-sherlock-nominal/1";
++program OrderedSchedule {
++  type Schedule {
++    Done;
++    Pay(amount: UInt, tail: Schedule);
++    Both(left: Schedule, right: Schedule);
++  }
++  fn choose(s: Schedule): UInt {
++    match s {
++      Schedule::Both(Schedule::Pay(x, wildcard), wildcard) => x,
++      Schedule::Both(wildcard, r) => choose(r),
++      Schedule::Pay(x, t) => x + choose(t),
++      Schedule::Done() => 0
++    }
++  }
++  entry choose(construct Schedule::Both(
++    construct Schedule::Pay(4, construct Schedule::Done()),
++    construct Schedule::Pay(5, construct Schedule::Done())));
++}
+--- /dev/null
++++ b/crates/mori-core/tests/sherlock_nominal_source_positive.rs
+@@ -0,0 +1,4 @@
++#[path = "support/nominal_text_source_positive.rs"]
++mod positive;
++#[path = "support/nominal_text_source_budgets.rs"]
++mod budgets;
+--- /dev/null
++++ b/crates/mori-core/tests/support/nominal_text_source_budgets.rs
+@@ -0,0 +1,67 @@
++//! Finite parser-boundary checks under the standing Sol parser-depth exception.
++//! No malformed witness, owner admission guard, evaluator or runtime tests.
++use mori_core::sherlock_nominal_source::{parse_nominal_source_bounded,DraftParseBudget,
++    DraftError,DraftBudgetResource as R,DraftBudgetExceeded};
++const LITERAL:&str="language \"moriarty-sherlock-nominal/1\"; program Literal { entry 7; }";
++fn budget()->DraftParseBudget {
++    DraftParseBudget {max_source_bytes:4096,max_tokens:1024,max_functions:8,
++        max_parameters_per_function:8,max_total_parameters:32,max_ast_occurrences:256,
++        max_parser_recursion_depth:64,max_structural_ast_depth:32}
++}
++fn error(source:&str,b:DraftParseBudget,resource:R,limit:usize,observed:usize) {
++    match parse_nominal_source_bounded(source,b) {
++        Err(DraftError::Budget(actual))=>assert_eq!(actual,DraftBudgetExceeded {resource,limit,observed}),
++        Err(other)=>panic!("unexpected parser diagnostic: {other:?}"),
++        Ok(_)=>panic!("expected explicit caller parser extent"),
++    }
++}
++#[test]
++fn source_bytes_and_eof_inclusive_tokens_keep_exact_existing_resources() {
++    let mut b=budget();b.max_source_bytes=LITERAL.len();b.max_tokens=11;
++    assert!(parse_nominal_source_bounded(LITERAL,b).is_ok());
++    b.max_source_bytes=LITERAL.len()-1;error(LITERAL,b,R::SourceBytes,LITERAL.len()-1,LITERAL.len());
++    b=budget();b.max_tokens=10;error(LITERAL,b,R::Tokens,10,11);
++    b.max_tokens=0;error(LITERAL,b,R::Tokens,0,1);
++}
++#[test]
++fn expression_occurrences_and_structural_depth_have_inclusive_boundaries() {
++    let mut b=budget();b.max_ast_occurrences=1;b.max_structural_ast_depth=1;
++    assert!(parse_nominal_source_bounded(LITERAL,b).is_ok());
++    b.max_ast_occurrences=0;error(LITERAL,b,R::AstOccurrences,0,1);
++    b=budget();b.max_structural_ast_depth=0;error(LITERAL,b,R::StructuralAstDepth,0,1);
++    let binary="language \"moriarty-sherlock-nominal/1\"; program Binary { entry 1 + 2 * 3; }";
++    b=budget();b.max_ast_occurrences=5;b.max_structural_ast_depth=3;
++    assert!(parse_nominal_source_bounded(binary,b).is_ok());
++    b.max_ast_occurrences=4;error(binary,b,R::AstOccurrences,4,5);
++    b=budget();b.max_structural_ast_depth=2;error(binary,b,R::StructuralAstDepth,2,3);
++}
++#[test]
++fn parser_descent_includes_parentheses_and_nested_type_applications() {
++    let mut b=budget();b.max_parser_recursion_depth=2;
++    assert!(parse_nominal_source_bounded(LITERAL,b).is_ok());
++    b.max_parser_recursion_depth=1;error(LITERAL,b,R::ParserRecursionDepth,1,2);
++    let nested="language \"moriarty-sherlock-nominal/1\"; program Nested { type Box<T> { Box(value:T); } fn f(b:Box<Box<UInt>>):UInt { 1 } entry 0; }";
++    b=budget();b.max_parser_recursion_depth=3;
++    assert!(parse_nominal_source_bounded(nested,b).is_ok());
++    b.max_parser_recursion_depth=2;error(nested,b,R::ParserRecursionDepth,2,3);
++    let parentheses="language \"moriarty-sherlock-nominal/1\"; program Parens { entry (7); }";
++    b=budget();b.max_parser_recursion_depth=3;error(parentheses,b,R::ParserRecursionDepth,3,4);
++}
++#[test]
++fn function_and_signature_parameter_extents_keep_existing_meanings() {
++    let source="language \"moriarty-sherlock-nominal/1\"; program Function { fn f(x:UInt):UInt { x } entry f(1); }";
++    let mut b=budget();b.max_functions=1;b.max_parameters_per_function=1;b.max_total_parameters=1;
++    assert!(parse_nominal_source_bounded(source,b).is_ok());
++    b.max_functions=0;error(source,b,R::Functions,0,1);
++    b=budget();b.max_parameters_per_function=0;error(source,b,R::ParametersPerFunction,0,1);
++    b=budget();b.max_total_parameters=0;error(source,b,R::TotalParameters,0,1);
++}
++#[test]
++fn nested_nominal_patterns_count_each_occurrence_with_an_explicit_budget() {
++    let source="language \"moriarty-sherlock-nominal/1\"; program Pattern { type Box<T> { Box(value:T); } entry match 7 { Box<UInt>::Box(Box<UInt>::Box(x)) => 0, wildcard => 1 }; }";
++    // Match, literal scrutinee, two literal arm bodies, three nested patterns,
++    // and one wildcard: eight occurrences; type annotation nodes are token bounded.
++    let mut b=budget();b.max_ast_occurrences=8;
++    assert!(parse_nominal_source_bounded(source,b).is_ok());
++    b.max_ast_occurrences=7;error(source,b,R::AstOccurrences,7,8);
++}
+--- /dev/null
++++ b/crates/mori-core/tests/support/nominal_text_source_positive.rs
+@@ -0,0 +1,108 @@
++//! Author-owned ordinary source-level tests; not independent runtime oracles.
++//! Actual public text parser and existing owner type-preparation consumer only.
++use mori_core::sherlock_nominal_source::{parse_nominal_source_bounded,prepare_nominal_source_types_bounded,DraftParseBudget,SourceOwner};
++use mori_core::sherlock::helper_machine::shared::{
++    BoundsC,LayoutCapacitiesC,LayoutSchemaC,CorePattern,
++    owner_ext_source_program::ExtDomain,
++    owner_ext_t3_uses::{ExtExpr,ExtPattern,T3UseSite},
++    owner_ext_type_builder::TypeExprSrc,
++};
++fn budget()->DraftParseBudget {
++    DraftParseBudget {max_source_bytes:4096,max_tokens:1024,max_functions:8,
++        max_parameters_per_function:8,max_total_parameters:32,max_ast_occurrences:256,
++        max_parser_recursion_depth:64,max_structural_ast_depth:32}
++}
++fn layout()->LayoutSchemaC {
++    LayoutSchemaC {layout_version:("nominal-text-positive".into(),"1".into()),field_id:None,widths:None,scalar_layout_id:None,
++        bounds:BoundsC {code_rows:256,function_rows:16,code_child_slots:256,parameter_slots:64,
++            pattern_rows:128,match_plan_rows:128,match_arm_rows:128,type_rows:64,
++            constructor_rows:128,constructor_field_slots:256,max_arity:16,constant_nodes:128,
++            constant_field_slots:128,data_nodes:128,data_field_slots:256,environment_cells:128,
++            frames:64,helper_tasks:256,serialization_bytes:65536,max_reference_work:4096,
++            max_helper_work:4096,step_cap:1},
++        capacities:LayoutCapacitiesC {name_rows:256,name_bytes:4096,occurrence_path_slots:1024,value_slots:256},boundary_capacities_present:false}
++}
++fn ty(t:&TypeExprSrc)->String {
++    match t {
++        TypeExprSrc::UInt=>"UInt".into(),TypeExprSrc::Bool=>"Bool".into(),
++        TypeExprSrc::List=>"List".into(),TypeExprSrc::Tree=>"Tree".into(),
++        TypeExprSrc::Named {name}=>format!("named:{name}"),
++        TypeExprSrc::Param {name}=>format!("param:{name}"),
++        TypeExprSrc::Apply {name,args}=>format!("apply:{name}<{}>",args.iter().map(ty).collect::<Vec<_>>().join(",")),
++    }
++}
++fn pat(p:&ExtPattern)->String {
++    match p {
++        ExtPattern::Wildcard=>"wildcard".into(),
++        ExtPattern::Dedicated {pattern:CorePattern::PVar {x}}=>format!("bind:{x}"),
++        ExtPattern::Dedicated {..}=>"dedicated".into(),
++        ExtPattern::Ctor {ty:t,ctor,fields}=>format!("{}::{ctor}({})",ty(t),fields.iter().map(pat).collect::<Vec<_>>().join(",")),
++    }
++}
++#[test]
++fn text_schedule_preserves_recursive_declarations_ordered_patterns_and_owner_types() {
++    let source=include_str!("../fixtures/nominal-text-source/schedule.mori");
++    let p=parse_nominal_source_bounded(source,budget()).expect("normal nominal text parses");
++    assert_eq!(p.name,"OrderedSchedule");assert_eq!(p.program.types.len(),1);
++    let d=&p.program.types[0];assert_eq!(d.name,"Schedule");assert!(d.parameters.is_empty());
++    assert_eq!(d.ctors.iter().map(|c|c.name.as_str()).collect::<Vec<_>>(),["Done","Pay","Both"]);
++    assert_eq!(d.ctors.iter().map(|c|c.fields.iter().map(|f|(f.name.as_str(),ty(&f.ty))).collect::<Vec<_>>()).collect::<Vec<_>>(),
++        vec![vec![],vec![("amount","UInt".into()),("tail","named:Schedule".into())],vec![("left","named:Schedule".into()),("right","named:Schedule".into())]]);
++    let f=&p.program.functions[0];assert_eq!(f.name,"choose");assert_eq!(ty(&f.parameters[0].ty),"named:Schedule");assert_eq!(ty(&f.return_type),"UInt");
++    let ExtExpr::Match {scrutinee,arms}=&f.body else {panic!("source Match preserved")};
++    assert!(matches!(&**scrutinee,ExtExpr::Var {name} if name=="s"));
++    assert_eq!(arms.iter().map(|a|pat(&a.pattern)).collect::<Vec<_>>(),[
++        "named:Schedule::Both(named:Schedule::Pay(bind:x,wildcard),wildcard)",
++        "named:Schedule::Both(wildcard,bind:r)","named:Schedule::Pay(bind:x,bind:t)","named:Schedule::Done()"]);
++    assert!(matches!(&arms[0].body,ExtExpr::Var {name} if name=="x"));
++    assert!(matches!(&arms[1].body,ExtExpr::Call {name,args} if name=="choose"&&args.len()==1));
++    let prepared=prepare_nominal_source_types_bounded(source,budget(),&layout(),ExtDomain::GENERIC_ABSENT,None)
++        .unwrap_or_else(|_|panic!("normal source reaches actual owner type preparation"));
++    assert_eq!(prepared.prepared.tables.types.len(),5);
++    assert_eq!(prepared.prepared.tables.constructors.len(),7);
++    assert_eq!(prepared.prepared.tables.ctor_fields.len(),9);
++    assert_eq!(prepared.prepared.tables.decl_param_counts,[0]);
++    assert_eq!(prepared.prepared.tables.decl_ctor_counts,[3]);
++    assert!(prepared.prepared.t3_records.iter().any(|r|matches!(r.site,T3UseSite::ParamType {function:0,param:0})&&r.type_id.0==4));
++    assert!(prepared.prepared.t3_records.iter().any(|r|matches!(r.site,T3UseSite::CtorPattern {arm:0,pattern:1,..})&&r.type_id.0==4&&r.ctor_id.is_some()));
++    assert_eq!(prepared.provenance,p.provenance);
++}
++#[test]
++fn text_mutual_forward_references_and_generic_parameter_bindings_reach_owner() {
++    let source=include_str!("../fixtures/nominal-text-source/mutual-generic.mori");
++    let p=parse_nominal_source_bounded(source,budget()).expect("normal mutual/generic source parses");
++    assert_eq!(p.program.types.iter().map(|d|d.name.as_str()).collect::<Vec<_>>(),["Even","Odd","Box"]);
++    assert_eq!(ty(&p.program.types[0].ctors[1].fields[0].ty),"named:Odd");
++    assert_eq!(ty(&p.program.types[1].ctors[0].fields[0].ty),"named:Even");
++    assert_eq!(p.program.types[2].parameters,["T"]);assert_eq!(ty(&p.program.types[2].ctors[0].fields[0].ty),"param:T");
++    assert_eq!(ty(&p.program.functions[0].return_type),"apply:Box<named:Even>");
++    assert_eq!(ty(&p.program.functions[1].parameters[0].ty),"apply:Box<named:Even>");
++    let prepared=prepare_nominal_source_types_bounded(source,budget(),&layout(),ExtDomain::GENERIC_ABSENT,None)
++        .unwrap_or_else(|_|panic!("mutual and generic types use existing checked owner"));
++    assert_eq!(prepared.prepared.tables.types.len(),7);
++    assert_eq!(prepared.prepared.tables.decl_param_counts,[0,0,1]);
++    assert_eq!(prepared.prepared.tables.decl_ctor_counts,[2,1,1]);
++    assert_eq!(prepared.prepared.program.functions.iter().map(|f|f.name.as_str()).collect::<Vec<_>>(),["wrap","unwrap"]);
++    assert!(prepared.prepared.t3_records.iter().any(|r|matches!(r.site,T3UseSite::ReturnType {function:0})&&r.type_id.0==6));
++    assert!(prepared.prepared.t3_records.iter().any(|r|matches!(r.site,T3UseSite::ParamType {function:1,param:0})&&r.type_id.0==6));
++}
++#[test]
++fn text_nested_applications_patterns_and_complete_occurrence_paths() {
++    let source=include_str!("../fixtures/nominal-text-source/nested-application.mori");
++    let p=parse_nominal_source_bounded(source,budget()).expect("normal nested source parses");
++    assert_eq!(ty(&p.program.functions[0].parameters[0].ty),"apply:Box<apply:Box<UInt>>");
++    let ExtExpr::Match {arms,..}=&p.program.functions[0].body else {panic!("match")};
++    assert_eq!(arms.iter().map(|a|pat(&a.pattern)).collect::<Vec<_>>(),[
++        "apply:Box<apply:Box<UInt>>::Box(apply:Box<UInt>::Box(bind:value))","wildcard"]);
++    let patterns=p.provenance.patterns.iter().filter(|s|s.owner==SourceOwner::Function(0)).collect::<Vec<_>>();
++    assert_eq!(patterns.iter().map(|s|(s.arm,s.field_path.clone(),s.kind)).collect::<Vec<_>>(),[
++        (0,vec![],"constructor-pattern"),(0,vec![0],"constructor-pattern"),(0,vec![0,0],"binder"),(1,vec![],"wildcard")]);
++    for s in patterns {assert!(s.match_path.is_empty());assert!(!source[s.span.start as usize..s.span.end as usize].is_empty());}
++    let expressions=p.provenance.expressions.iter().filter(|s|s.owner==SourceOwner::Entry).map(|s|(s.child_path.clone(),s.kind)).collect::<Vec<_>>();
++    assert_eq!(expressions,[(vec![],"call"),(vec![0],"construct"),(vec![0,0],"construct"),(vec![0,0,0],"uint")]);
++    let prepared=prepare_nominal_source_types_bounded(source,budget(),&layout(),ExtDomain::GENERIC_ABSENT,None)
++        .unwrap_or_else(|_|panic!("nested applications reach owner"));
++    assert_eq!(prepared.prepared.tables.types.len(),6);
++    assert_eq!(prepared.prepared.tables.decl_param_counts,[1]);
++    assert_eq!(prepared.prepared.tables.type_args.len(),2);
++}
+--- /dev/null
++++ b/openspec/changes/sherlock-nominal-text-source/design.md
+@@ -0,0 +1,61 @@
++# Explicit nominal text source
++
++This additive candidate uses `language "moriarty-sherlock-nominal/1"; program Name { ... }`.
++Core headers and `moriarty-sherlock-draft/1` keep their existing parsers and meaning.
++The existing generic ADT design specifies source-ordered closed declarations,
++constructor identity, strict left-to-right fields and first matching ordered arm;
++it does not prescribe a text spelling. This proposal supplies that spelling.
++
++```
++program-body = { type-decl } { function } "entry" expression ";" ;
++type-decl = "type" name [ "<" name { "," name } ">" ] "{"
++              { name [ "(" field { "," field } ")" ] ";" } "}" ;
++field = name ":" type ;
++type = ( "UInt" | "Bool" | "List" | "Tree" | name )
++       [ "<" type { "," type } ">" ] ;
++construct = "construct" type "::" name "(" [ expression { "," expression } ] ")" ;
++pattern = "wildcard" | name | type "::" name "(" [ pattern { "," pattern } ] ")"
++        | existing-dedicated-pattern ;
++```
++
++Function signatures, blocks, literals, arithmetic precedence, let/in, if/else,
++calls and comma-separated `match ... { pattern => body, ... }` retain draft/1
++spellings. Nullary constructor declarations may omit `()`, but constructor use
++and nominal constructor patterns always include it. Explicit type qualification
++avoids guessing a constructor from a variable/function name or a casing rule.
++`construct Box<UInt>::Box(3)` is a constructor expression, whereas `f(3)` is a call.
++Within one type declaration, a bare reference exactly equal to a declared type
++parameter produces `TypeExprSrc::Param`; other bare names produce `Named`.
++Applications produce `Apply` with all arguments in order. Names are not resolved
++against preceding declarations, so forward/mutual references survive unchanged.
++No inference, duplicate elimination, declaration sorting, match compilation or
++constructor/type/arity admission occurs in this parser.
++
++The public parse result owns the actual `ExtProgram`; preparation invokes
++`shared::owner_prepare::prepare_ext_program_types` with caller-supplied layout,
++explicit `ExtDomain` and locator. The owner retains all existing refusal order,
++finite instantiation, capacity checks and type resolution. This is a text-to-type
++preparation consumer, not generic B admission, evaluation or a compiler export.
++Source spans and source occurrence paths are retained independently of table IDs.
++
++The caller-bounded entry reuses `DraftParseBudget` and the actual token-limited
++lexer, with no defaults. Source bytes, EOF-inclusive tokens, function/signature
++parameter counts, syntactic Expr+Pattern occurrences, active parser descent and
++Expr structural depth retain their existing meanings. Active descent additionally
++covers the new type application and nested pattern functions; parentheses still
++consume descent without creating an Expr. Declaration/type/constructor/field
++collections are bounded by actual consumed lexical tokens, not silently charged
++as function parameters or Expr nodes. No separate nominal declaration/type-node
++limit is prescribed by the adopted source contract; any additional release policy
++must be explicit and reviewed, not guessed from fixture bounds.
++
++Bounded text preparation invokes the existing owner only after successful bounded
++parse. It does not fall back to unbounded parsing. Owner preparation allocations,
++cleanup and process-wide H1 stack/heap/time guarantees remain separate. Existing
++Core/draft bounded paths and guards are unchanged. The standing Sol parser-depth
++exception authorizes this source and finite exact parser-limit tests; fresh
++Opus/Gemini security review precedes any compiler/test selection.
++
++The existing lexer admits names beginning with letters and does not tokenize `_`.
++`wildcard` is therefore the explicit nominal-profile wildcard spelling; the lexer
++and its identifier/refusal policy are unchanged.
+--- /dev/null
++++ b/openspec/changes/sherlock-nominal-text-source/specs/nominal-text-source/spec.md
+@@ -0,0 +1,41 @@
++# Nominal text source
++
++## Requirement: Explicit nominal text preparation
++WHEN a caller selects the nominal text header, the parser SHALL produce the actual
++ExtProgram source carriers and preserve type, parameter, constructor, field,
++function, expression occurrence, nested pattern and match-arm source order.
++
++### Scenario: Recursive ordered Schedule
++- GIVEN Schedule with Done, Pay and Both and nested constructor patterns.
++- WHEN text is parsed and passed to the existing owner type preparation API.
++- THEN nominal uses retain their explicit TypeExprSrc/constructor spelling and
++  source order, and the existing owner produces the resolved type-use tables.
++
++### Scenario: Forward mutual references and generic application
++- GIVEN mutually referring declarations and Box<T> with Box<UInt> signatures and uses.
++- WHEN nominal text is parsed.
++- THEN parameter references are Param only within their declaring binder scope,
++  applications preserve all arguments, and no forward reference is substituted,
++  reordered or evaluated.
++
++### Scenario: Existing source versions
++- GIVEN an ordinary Core or dedicated draft/1 program.
++- WHEN its existing parser is used.
++- THEN its existing grammar, budgets, errors and profile selection remain unchanged.
++
++Preparation is not generic runtime admission. Existing owner policies, H1 limits,
++security review and broader original034/refinement obligations remain separate.
++
++## Requirement: Explicit existing parser extents
++WHEN a caller supplies DraftParseBudget to nominal text preparation, the parser
++SHALL enforce its existing source/token/function/signature/Expr+Pattern/descent/
++Expr-structural meanings before the associated work, including descent through
++nominal type applications and nested constructor patterns, without unbounded fallback.
++
++### Scenario: Exact caller extent and next attempted unit
++- GIVEN a normal text input and explicit inclusive parser extents.
++- WHEN one extent equals the needed count or is one unit smaller.
++- THEN the exact boundary parses or returns the existing typed Budget resource,
++  caller limit and first attempted count; no parser refusal becomes an owner outcome.
++
++No default release extent or generic compilation/admission capability is implied.

@@ -1,0 +1,11 @@
+language "moriarty-sherlock-nominal/1";
+program NestedApplication {
+  type Box<T> { Box(value: T); }
+  fn first(b: Box<Box<UInt>>): UInt {
+    match b {
+      Box<Box<UInt>>::Box(Box<UInt>::Box(value)) => value,
+      wildcard => 0
+    }
+  }
+  entry first(construct Box<Box<UInt>>::Box(construct Box<UInt>::Box(7)));
+}

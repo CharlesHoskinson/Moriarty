@@ -51,3 +51,7 @@ pub mod sherlock_word_arithmetic;
 // Explicit typed host arithmetic lowering used by the selected Scalar family.
 #[path = "sherlock/word_lowering.rs"]
 pub mod sherlock_word_lowering;
+
+// Explicit nominal text source -> existing owner type preparation, no evaluation.
+#[path = "sherlock/nominal_source.rs"]
+pub mod sherlock_nominal_source;
