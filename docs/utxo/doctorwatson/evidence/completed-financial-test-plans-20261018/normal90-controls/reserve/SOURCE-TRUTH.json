@@ -1,0 +1,78 @@
+{
+  "kind": "literal current consumer anchors; full source retained",
+  "wholeConsumerSha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+  "anchors": [
+    {
+      "label": "financialProjection",
+      "path": "current-source/crates/mori/tests/core_reserve_spend_refund.rs",
+      "sha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+      "startLine": 20,
+      "endLine": 42,
+      "exactQuote": "fn financial_execution(execution: &Value) -> Value {\n    let steps = execution[\"steps\"]\n        .as_array()\n        .unwrap()\n        .iter()\n        .map(|step| {\n            json!({\n                \"index\": step[\"index\"],\n                \"value\": step[\"value\"],\n                \"snapshot\": step[\"snapshot\"],\n                \"effects\": step[\"effects\"],\n            })\n        })\n        .collect::<Vec<_>>();\n    json!({\n        \"semantics\": execution[\"semantics\"],\n        \"action\": execution[\"action\"],\n        \"pre\": execution[\"pre\"],\n        \"post\": execution[\"post\"],\n        \"steps\": steps,\n        \"effects\": execution[\"effects\"],\n    })\n}"
+    },
+    {
+      "label": "financialAssertions",
+      "path": "current-source/crates/mori/tests/core_reserve_spend_refund.rs",
+      "sha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+      "startLine": 44,
+      "endLine": 80,
+      "exactQuote": "fn assert_financial_prefixes(execution: &Value) {\n    let root = fixtures();\n    assert_eq!(\n        financial_execution(execution),\n        json_file(&root.join(\"financial-execution-projection.expected.json\")),\n        \"every typed result, changed and preserved row, and new effect delta\"\n    );\n    let kinds = execution[\"steps\"]\n        .as_array()\n        .unwrap()\n        .iter()\n        .map(|step| step[\"statement\"][\"kind\"].clone())\n        .collect::<Vec<_>>();\n    assert_eq!(\n        Value::Array(kinds),\n        json_file(&root.join(\"source-statement-kinds.expected.json\")),\n        \"all source statement kinds, without inventing expression roots\"\n    );\n    let mut prefix = Vec::new();\n    let prefixes = execution[\"steps\"]\n        .as_array()\n        .unwrap()\n        .iter()\n        .map(|step| {\n            prefix.extend(step[\"effects\"].as_array().unwrap().iter().cloned());\n            json!({\n                \"index\": step[\"index\"],\n                \"effects\": prefix.clone(),\n            })\n        })\n        .collect::<Vec<_>>();\n    assert_eq!(\n        Value::Array(prefixes),\n        json_file(&root.join(\"cumulative-prefix-effects.expected.json\")),\n        \"all ordered effect prefixes against independent literals\"\n    );\n}"
+    },
+    {
+      "label": "wholeLibraryTest",
+      "path": "current-source/crates/mori/tests/core_reserve_spend_refund.rs",
+      "sha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+      "startLine": 83,
+      "endLine": 92,
+      "exactQuote": "fn reserve_library_keeps_complete_financial_prefixes() {\n    let root = fixtures();\n    let source = fs::read_to_string(root.join(\"reserve-spend-refund.mori\")).unwrap();\n    let program = mori_core::parse(&source).expect(\"the ordinary source must parse\");\n    let scenario =\n        serde_json::from_slice(&fs::read(root.join(\"opening.scenario.json\")).unwrap()).unwrap();\n    let execution = mori_core::simulate(&program, \"run\", &scenario)\n        .expect(\"the positive reference call must complete\");\n    assert_financial_prefixes(&serde_json::to_value(execution).unwrap());\n}"
+    },
+    {
+      "label": "persistentCaptureHook",
+      "path": "current-source/crates/mori/tests/core_reserve_spend_refund.rs",
+      "sha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+      "startLine": 101,
+      "endLine": 124,
+      "exactQuote": "impl Project {\n    fn new() -> Self {\n        let (root, temporary) = match std::env::var_os(\"MORI_CORE_REFUND_OBSERVATIONS\") {\n            Some(path) => {\n                let path = PathBuf::from(path);\n                assert!(path.is_absolute(), \"observation path must be absolute\");\n                (path, false)\n            }\n            None => (\n                std::env::temp_dir().join(format!(\n                    \"mori-reserve-refund-{}-{}\",\n                    std::process::id(),\n                    NEXT.fetch_add(1, Ordering::Relaxed)\n                )),\n                true,\n            ),\n        };\n        fs::create_dir(&root).expect(\"use a fresh observation directory\");\n        for name in [\"reserve-spend-refund.mori\", \"opening.scenario.json\"] {\n            fs::copy(fixtures().join(name), root.join(name)).unwrap();\n        }\n        Self { root, temporary }\n    }\n}"
+    },
+    {
+      "label": "dropSemantics",
+      "path": "current-source/crates/mori/tests/core_reserve_spend_refund.rs",
+      "sha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+      "startLine": 126,
+      "endLine": 132,
+      "exactQuote": "impl Drop for Project {\n    fn drop(&mut self) {\n        if self.temporary && !std::thread::panicking() {\n            let _ = fs::remove_dir_all(&self.root);\n        }\n    }\n}"
+    },
+    {
+      "label": "wholePublicCliTest",
+      "path": "current-source/crates/mori/tests/core_reserve_spend_refund.rs",
+      "sha256": "27c502d178d7422b2c53f03e1b294cdb792dfc719aac1e772ca2cf405b514b90",
+      "startLine": 135,
+      "endLine": 192,
+      "exactQuote": "fn reserve_public_cli_keeps_complete_financial_prefixes() {\n    let project = Project::new();\n    let args = [\n        \"--color\",\n        \"never\",\n        \"simulate\",\n        \"reserve-spend-refund.mori\",\n        \"--action\",\n        \"run\",\n        \"--scenario\",\n        \"opening.scenario.json\",\n    ];\n    let captured = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .current_dir(&project.root)\n        .args(args)\n        .output();\n    if let Err(error) = &captured {\n        fs::write(\n            project.root.join(\"process.json\"),\n            serde_json::to_vec_pretty(&json!({\n                \"executable\": env!(\"CARGO_BIN_EXE_mori\"),\n                \"args\": args,\n                \"launchError\": error.to_string(),\n            }))\n            .unwrap(),\n        )\n        .unwrap();\n    }\n    let output = captured.expect(\"the reviewed public binary must launch\");\n    // Save complete actual process bytes and outcome before result assertions.\n    fs::write(project.root.join(\"stdout.json\"), &output.stdout).unwrap();\n    fs::write(project.root.join(\"stderr.txt\"), &output.stderr).unwrap();\n    fs::write(\n        project.root.join(\"process.json\"),\n        serde_json::to_vec_pretty(&json!({\n            \"executable\": env!(\"CARGO_BIN_EXE_mori\"),\n            \"args\": args,\n            \"status\": output.status.code(),\n            \"success\": output.status.success(),\n        }))\n        .unwrap(),\n    )\n    .unwrap();\n    assert_eq!(output.status.code(), Some(0));\n    assert!(output.stderr.is_empty());\n    let report: Value = serde_json::from_slice(&output.stdout).unwrap();\n    let mut keys = report\n        .as_object()\n        .unwrap()\n        .keys()\n        .map(String::as_str)\n        .collect::<Vec<_>>();\n    keys.sort_unstable();\n    assert_eq!(keys, [\"execution\", \"qualification\", \"status\"]);\n    assert_eq!(report[\"status\"], \"accepted\");\n    assert_eq!(report[\"qualification\"], \"local-reference-execution\");\n    assert_financial_prefixes(&report[\"execution\"]);\n}"
+    }
+  ],
+  "captureClassifications": {
+    "actualChildCopiedInputs": [
+      "reserve-spend-refund.mori",
+      "opening.scenario.json"
+    ],
+    "actualPublicProcessOutputs": [
+      "stdout.json",
+      "stderr.txt",
+      "process.json"
+    ],
+    "libraryCaptures": []
+  },
+  "successProcessObjectKeys": [
+    "executable",
+    "args",
+    "status",
+    "success"
+  ],
+  "launchErrorObjectKeys": [
+    "executable",
+    "args",
+    "launchError"
+  ],
+  "currentGitIdentityNotFreshlyQueried": true
+}

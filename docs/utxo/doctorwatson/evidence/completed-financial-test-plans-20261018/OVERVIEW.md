@@ -1,0 +1,20 @@
+This is an archive-only companion to the previously published positive-financial-consumer evidence. It records seven actual positive test functions in four separate ordinary targets on GP0345. The candidate remains LOCAL_UNAPPROVED; no source/result review or parent acceptance is supplied.
+
+| Target | Passed / failed / filtered | Wall seconds | Captured scope |
+|---|---|---:|---|
+| guarded quantity/fee |1/0/0|43.11800830600|compiled predicate only; no full raw object|
+| Program/Plan Waiting |1/0/0|38.29682343100|memory exports/assertions only; no full raw object|
+| three-way payout |3/0/0|80.88892536100|14 complete actual captures,23 root matches|
+| reserve spend/refund |2/0/0|66.65559955500|five persistent CLI/input/process files; no library capture|
+
+Every actual stdout/stderr/terminal/final result, capture/process/binary-after/cleanup record, copied input and whole root disposition is retained byte-for-byte. TERMINAL selectedCheckSatisfied false precedes postchecks; final RESULT true is a later record. No original record is rewritten. The complete payout ROOT-CAPTURE-COMPARISONS records 23 full matches and all 14 raw artifacts remain. Reserve's raw 91,122-byte CLI report and its four other persistent files remain original. Binary hashes were measured after the target returned; no pre-call hash is invented.
+
+The guarded test uses the existing cap 64 call: used 50/profile and whole metered Execution equality, full endpoints/nine ordered effects/18 typed values plus selected preserved rows and borrowed Scenario immutability. It does not assert every changing financial field at every prefix or the CostReport cap field separately. The earlier full 18-prefix guarded consumer remains separate evidence. Original author exposure and unselected old cases/cap49 data are retained, not promoted to new passes.
+
+The Waiting test checks complete authored Program/Plan/Waiting segment/Continuation values and typed reopen, with cap 23/start attempted 15/present-zero duty. Hash linkage uses production canonical/hash functions; exact numeric arena/whole wire literals are authored, not newly independent canonical identity or codec goldens. No stage::resume call or persisted full export exists in this target. The separate earlier successful invoice journey is not silently substituted.
+
+The three payout tests checks complete source Program candidate, four-step execution/effects/frames/cost 8, plus two real public CLI calls with full ordinary/metered envelopes and exact frozen stdout/stderr under the original conditional IR/ASCII/order premises. The two reserve tests check 20 typed values/complete financial frames and 17 ordered effects across eight balances, remaining 40/grossReserved 100/grossSpent 40/refunded 20/marker 77, retained reserve-duty 40/observer-duty 5. Reserve work 60 is unmetered/unobserved; there is no separate stored library Execution, independent whole Program/ExprIds/raw Statement arguments or exact stdout-byte oracle. Existing writers' freshness/sync limitations remain in the full control/source contracts; no stronger guarantees are invented.
+
+All original expectation packets, derivations, exposure/premises/unknowns/unused fields and helper/source controls are retained through exact immutable or copied resolutions. The full selected 260-source closure for both CLI targets remains resolvable; source availability is not a whole-source audit. Previously published bytes use exact 0eea or 3100 commit/path/SHA, with explicit full copies for additional public bodies. No mutable source alias, provider/private capture, key/auth/config/cache content or integration index is included.
+
+Root supplies the exact 13-distinct original-plan function mapping separately. This archive does not derive 13-of-13 or EARS/UTXO/global finance/composition/native/proof/ledger/target closure. Old 600 batches remain UNRUN/unadopted; each observed target used its single ordinary 90 TERM + 5 KILL, parent 95 check. All original scope, failures, counts and independent source/result audit obligations remain. Public developer permissions are unchanged.

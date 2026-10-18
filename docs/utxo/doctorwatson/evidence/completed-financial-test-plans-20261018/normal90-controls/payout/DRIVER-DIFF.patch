@@ -1,0 +1,121 @@
+--- frozen-one600/run_check.py
++++ ordinary-normal90/run_check.py
+@@ -1,4 +1,4 @@
+-"""PROPOSED one whole ordinary payout600TERM+5KILL/parent605; root adoption required.
++"""Root-invoked one whole ordinary payout90TERM+5KILL/parent95; preparation only.
+ 
+ Three unchanged Rust functions, one cold cargo target, two real public CLI calls.
+ No retry, renewal, fallback, native allocation, source fix or expectation update.
+@@ -44,51 +44,18 @@
+     return path
+ 
+ 
+-def adoption(binding, binding_sha, path):
+-    # A one-task root record, not a persistent scheduler or product permission.
+-    path = require_public_file(path, D.parent)
+-    a = json.loads(path.read_bytes())
+-    assert a['adopted'] is True and a['decision'] == 'ADOPT_EXACT_ONE_PAYOUT_600_PLUS_5'
+-    assert a['bindingSha256'] == binding_sha
+-    assert a['head'] == binding['head'] and a['tree'] == binding['tree']
+-    assert a['driverSha256'] == binding['driverSha256']
+-    assert a['attempts'] == 1 and a['termSeconds'] == 600 and a['killGraceSeconds'] == 5 and a['parentMaximumSeconds'] == 605
+-    assert a['nativeAllocationChanged'] is False and a['priorAllocationsReset'] is False
+-    reviews = a['freshWholeHostReviews']
+-    assert len(reviews) == 2
+-    tokens, hashes = set(), set()
+-    for entry in reviews:
+-        assert entry['reviewOuterSeconds'] == 420 and entry['reviewKillGraceSeconds'] == 5
+-        p = require_public_file(Path(entry['wholeOpinionPath']), D.parent)
+-        assert sha(p) == entry['wholeOpinionSha256']
+-        opinion = json.loads(p.read_bytes())
+-        assert opinion['reviewedContractSha256'] == binding_sha
+-        assert opinion['verdict'] == 'approve-exact-one-batch'
+-        assert opinion['reason'].strip() and all(opinion['assessments'][axis].strip() for axis in binding['hostAxes'])
+-        tokens.add(opinion['reviewToken']); hashes.add(entry['wholeOpinionSha256'])
+-        receipt_path = require_public_file(Path(entry['terminalReceiptPath']), D.parent)
+-        cleanup_path = require_public_file(Path(entry['cleanupPath']), D.parent)
+-        assert sha(receipt_path) == entry['terminalReceiptSha256']
+-        assert sha(cleanup_path) == entry['cleanupSha256']
+-        receipt, cleanup = json.loads(receipt_path.read_bytes()), json.loads(cleanup_path.read_bytes())
+-        assert receipt['terminalExitCode'] == 0 and receipt['decision'] == 'EXPORT' and receipt['resultEvents'] == 1
+-        assert cleanup['ownedGroupRemaining'] is False and cleanup['captureReachedEOF'] is True
+-    assert tokens == {'payout-one600-host-a-20261018', 'payout-one600-host-b-20261018'} and len(hashes) == 2
+-    return {'rootRecord': str(path), 'rootRecordSha256': sha(path), 'twoWholeHostOpinionSha256s': sorted(hashes),
+-            'reviewIdentityAndCognitiveReadsNotAttestedByThisCheck': True}
+-
+-
+ def main():
+     ap = argparse.ArgumentParser(description=__doc__)
+     ap.add_argument('--binding-sha', required=True)
+-    ap.add_argument('--root-adoption', type=Path, required=True)
+     args = ap.parse_args()
+     assert sha(D / 'BOUND-CANDIDATE.json') == args.binding_sha
+     binding = json.loads((D / 'BOUND-CANDIDATE.json').read_bytes())
+     assert sha(Path(__file__).resolve()) == binding['driverSha256']
+     tools = {x['name']: x for x in json.loads((D / 'TOOL-PINS.json').read_bytes())}
+     assert str(Path(sys.executable).resolve()) == tools['python']['resolved']
+-    authorization = adoption(binding, args.binding_sha, args.root_adoption)
++    invocation = {'mode': 'root-selected ordinary90 whole target', 'bindingSha256': args.binding_sha,
++                  'hostVotesRequiredByThisOrdinaryDriver': False, '600AllocationGranted': False,
++                  'priorAllocationsReset': False, 'noAutomaticRetry': True}
+     checkout, cycle = Path(binding['checkout']), Path(binding['actualOutput'])
+     assert checkout.is_absolute() and cycle.parent == D.parent and not cycle.exists()
+     cycle.mkdir(exist_ok=False)  # Fixed-path one-attempt guard; root retains global allowance accounting.
+@@ -139,7 +106,7 @@
+     def members(sid, deadline):
+         remaining = min(.25, deadline - time.monotonic())
+         if remaining <= 0:
+-            raise TimeoutError('605 exhausted: membership unknown; no extra wait.')
++            raise TimeoutError('95 exhausted: membership unknown; no extra wait.')
+         p = subprocess.run([tools['ps']['path'], '--sid', str(sid), '-o', 'pid=,sid=,stat='], env=git_env,
+                            capture_output=True, text=True, timeout=remaining)
+         assert p.returncode in (0, 1)
+@@ -177,13 +144,13 @@
+         write(cycle / 'PREFLIGHT-RESULT.json', {'at': now(), 'productChildStarted': False, 'temporaryTargetCreated': False,
+               'errorClass': type(e).__name__, 'error': str(e), 'noAutomaticRetry': True})
+         raise
+-    root = Path(tempfile.mkdtemp(prefix='doctorwatson-payout-one600-'))
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-payout-normal90-'))
+     child, deadline, start = None, None, None
+     remaining, census_error, after = None, None, None
+     expired, reaped, stop_sent = False, False, False
+     phase_error, post_error, cleanup_error = None, None, None
+     samples = []
+-    result = {'head': binding['head'], 'tree': binding['tree'], 'sourceBefore': before, 'authorization': authorization,
++    result = {'head': binding['head'], 'tree': binding['tree'], 'sourceBefore': before, 'invocation': invocation,
+               'attemptConsumed': False, 'selectedCheckSatisfied': False}
+     try:
+         for name in ['cwd', 'tmp', 'cargo-home']:
+@@ -209,18 +176,18 @@
+         command = [tools['cargo']['path'], 'test', '--manifest-path', str(checkout / 'Cargo.toml'), '--frozen', '-j1',
+                    '-p', 'mori', '--no-default-features', '--test', 'core_three_way_payout', '--', '--test-threads=1']
+         assert command == binding['cargoArgv']
+-        argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '600s', *command]
++        argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '90s', *command]
+         assert argv == binding['timeoutArgv']
+         write(cycle / 'CHECK-PLAN.json', {'at': now(), 'argv': argv, 'environment': env, 'cwd': str(root / 'cwd'),
+               'head': binding['head'], 'tree': binding['tree'], 'bindingSha256': args.binding_sha,
+-              'ownedRoot': str(root), 'captureRoot': str(capture), 'coldTarget': True, 'termSeconds': 600,
+-              'killGraceSeconds': 5, 'parentMaximumSeconds': 605, 'oneWholeTargetAll3Tests': True,
++              'ownedRoot': str(root), 'captureRoot': str(capture), 'coldTarget': True, 'termSeconds': 90,
++              'killGraceSeconds': 5, 'parentMaximumSeconds': 95, 'oneWholeTargetAll3Tests': True,
+               'absentAncestorConfigs': absent, 'sourceBefore': before, 'noAutomaticRetry': True,
+               'inputCopyProvenance': 'Root preexecution fixture snapshots, not actual child temporary-project captures.',
+               'preAndPostMetadataOutsideProductDeadline': True, 'scope': binding['scope'], 'limitations': binding['limitations']})
+         write(cycle / 'START.json', {'at': now(), 'argv': argv, 'cwd': str(root / 'cwd'), 'environment': env,
+-              'head': binding['head'], 'tree': binding['tree'], 'authorization': authorization})
+-        start = time.monotonic(); deadline = start + 605
++              'head': binding['head'], 'tree': binding['tree'], 'invocation': invocation})
++        start = time.monotonic(); deadline = start + 95
+         diagnostic_deadline, next_sample = start + 90, start
+         with (cycle / 'STDOUT.log').open('xb') as stdout, (cycle / 'STDERR.log').open('xb') as stderr:
+             try:
+@@ -236,7 +203,7 @@
+                             os.killpg(child.pid, signal.SIGKILL); stop_sent = True
+                         except ProcessLookupError:
+                             stop_sent = True
+-                        child.poll()  # Nonblocking: no new grace/reap wait after605.
++                        child.poll()  # Nonblocking: no new grace/reap wait after95.
+                         break
+                     if len(samples) < 12 and current < diagnostic_deadline and current >= next_sample:
+                         samples.append(sample(child.pid, min(diagnostic_deadline, deadline)))

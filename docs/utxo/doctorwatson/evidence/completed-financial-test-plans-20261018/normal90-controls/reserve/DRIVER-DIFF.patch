@@ -1,0 +1,102 @@
+--- inspected-payout-normal90/run_check.py
++++ reserve-normal90/run_check.py
+@@ -1,6 +1,6 @@
+-"""Root-invoked one whole ordinary payout90TERM+5KILL/parent95; preparation only.
+-
+-Three unchanged Rust functions, one cold cargo target, two real public CLI calls.
++"""Root-invoked one whole ordinary reserve-spend-refund90TERM+5KILL/parent95; preparation only.
++
++Two unchanged Rust functions, one cold cargo target, one real public CLI call.
+ No retry, renewal, fallback, native allocation, source fix or expectation update.
+ """
+ from pathlib import Path
+@@ -80,6 +80,9 @@
+             p = require_public_file(checkout / row['path'], checkout)
+             assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256'], row['path']
+         expected = json.loads((D / 'EXPECTATION-PINS.json').read_bytes())
++        for row in expected['independentReserveOracleFiles']:
++            p = require_public_file(D / row['physical'], D)
++            assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256']
+         for row in expected['originalPlanFiles']:
+             p = require_public_file(D / row['physical'], D)
+             assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256']
+@@ -144,7 +147,7 @@
+         write(cycle / 'PREFLIGHT-RESULT.json', {'at': now(), 'productChildStarted': False, 'temporaryTargetCreated': False,
+               'errorClass': type(e).__name__, 'error': str(e), 'noAutomaticRetry': True})
+         raise
+-    root = Path(tempfile.mkdtemp(prefix='doctorwatson-payout-normal90-'))
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-reserve-spend-refund-normal90-'))
+     child, deadline, start = None, None, None
+     remaining, census_error, after = None, None, None
+     expired, reaped, stop_sent = False, False, False
+@@ -164,26 +167,20 @@
+                'CARGO_HOME': str(root / 'cargo-home'), 'CARGO_TARGET_DIR': str(root / 'target'), 'CARGO_NET_OFFLINE': 'true',
+                'CARGO_INCREMENTAL': '0', 'CARGO_CACHE_AUTO_CLEAN_FREQUENCY': 'never', 'GIT_CONFIG_NOSYSTEM': '1',
+                'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8',
+-               'TMPDIR': str(root / 'tmp'), 'MORI_PAYOUT_OBSERVATIONS': str(capture)}
++               'TMPDIR': str(root / 'tmp'), 'MORI_CORE_REFUND_OBSERVATIONS': str(capture)}
+         assert len(env) == 14 and not capture.exists() and capture.parent.is_dir() and not (root / 'target').exists()
+         absent = configs(root)
+-        # These root copies preserve original fixture inputs; they are NOT retained copies of the child's deleted temp project.
+-        inputs = cycle / 'root-original-input-copies'
+-        inputs.mkdir()
+-        for name in ['three-way-payout.mori', 'three-way-payout.scenario.json']:
+-            src = checkout / 'crates/fixtures/three-way-payout-contract/inputs' / name
+-            (inputs / name).write_bytes(src.read_bytes())
+         command = [tools['cargo']['path'], 'test', '--manifest-path', str(checkout / 'Cargo.toml'), '--frozen', '-j1',
+-                   '-p', 'mori', '--no-default-features', '--test', 'core_three_way_payout', '--', '--test-threads=1']
++                   '-p', 'mori', '--no-default-features', '--test', 'core_reserve_spend_refund', '--', '--test-threads=1']
+         assert command == binding['cargoArgv']
+         argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '90s', *command]
+         assert argv == binding['timeoutArgv']
+         write(cycle / 'CHECK-PLAN.json', {'at': now(), 'argv': argv, 'environment': env, 'cwd': str(root / 'cwd'),
+               'head': binding['head'], 'tree': binding['tree'], 'bindingSha256': args.binding_sha,
+               'ownedRoot': str(root), 'captureRoot': str(capture), 'coldTarget': True, 'termSeconds': 90,
+-              'killGraceSeconds': 5, 'parentMaximumSeconds': 95, 'oneWholeTargetAll3Tests': True,
++              'killGraceSeconds': 5, 'parentMaximumSeconds': 95, 'oneWholeTargetAll2Tests': True,
+               'absentAncestorConfigs': absent, 'sourceBefore': before, 'noAutomaticRetry': True,
+-              'inputCopyProvenance': 'Root preexecution fixture snapshots, not actual child temporary-project captures.',
++              'inputCopyProvenance': 'Existing Project::new copies actual two inputs into persistent observations; bytes are checked after selected target only.',
+               'preAndPostMetadataOutsideProductDeadline': True, 'scope': binding['scope'], 'limitations': binding['limitations']})
+         write(cycle / 'START.json', {'at': now(), 'argv': argv, 'cwd': str(root / 'cwd'), 'environment': env,
+               'head': binding['head'], 'tree': binding['tree'], 'invocation': invocation})
+@@ -240,7 +237,7 @@
+             if row['exists']:
+                 row.update(bytes=p.stat().st_size, sha256=sha(p))
+             capture_facts.append(row)
+-        write(cycle / 'CAPTURE-FACTS.json', {'at': now(), 'files': capture_facts, 'expectedCount': 14,
++        write(cycle / 'CAPTURE-FACTS.json', {'at': now(), 'files': capture_facts, 'expectedCount': 5,
+               'allPresent': all(x['exists'] for x in capture_facts), 'preserveEveryPresentCaptureOnFailure': True})
+         result['captureFiles'] = capture_facts
+         # AFTER the whole Cargo process returned: never relabel as a pre-call binary measurement.
+@@ -301,17 +298,22 @@
+             if child is not None and child.returncode == 0 and reaped and not expired and not phase_error:
+                 text = (cycle / 'STDOUT.log').read_text()
+                 found = re.findall(r'test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out', text)
+-                assert len(found) == 1 and tuple(map(int, found[0])) == (3, 0, 0, 0, 0)
++                assert len(found) == 1 and tuple(map(int, found[0])) == (2, 0, 0, 0, 0)
+                 for name in binding['testFunctions']:
+                     assert 'test ' + name + ' ... ok' in text
+-                assert len(result.get('captureFiles', [])) == 14 and all(x['exists'] for x in result['captureFiles'])
+-                for stem, expected_argv in zip(['ordinary-unmetered', 'ordinary-metered'], binding['publicCliArgv']):
+-                    process = json.loads((cycle / 'observations' / (stem + '.process.json')).read_bytes())
+-                    assert process['argv'] == expected_argv and process['status_code'] == 0 and process['success'] is True
+-                    assert process['executable'] == str(root / 'target/debug/mori') and process['spawn_error'] is None
+-                    assert (cycle / 'observations' / (stem + '.stderr.bin')).read_bytes() == b''
++                assert len(result.get('captureFiles', [])) == 5 and all(x['exists'] for x in result['captureFiles'])
++                for name in ['reserve-spend-refund.mori', 'opening.scenario.json']:
++                    assert (cycle / 'observations' / name).read_bytes() == (checkout / 'crates/fixtures/reserve-spend-refund' / name).read_bytes()
++                process = json.loads((cycle / 'observations/process.json').read_bytes())
++                assert set(process) == {'executable', 'args', 'status', 'success'}
++                assert process['args'] == binding['publicCliArgv'][0] and process['status'] == 0 and process['success'] is True
++                assert process['executable'] == str(root / 'target/debug/mori')
++                assert (cycle / 'observations/stderr.txt').read_bytes() == b''
++                report = json.loads((cycle / 'observations/stdout.json').read_bytes())
++                assert set(report) == {'execution', 'qualification', 'status'}
++                assert report['status'] == 'accepted' and report['qualification'] == 'local-reference-execution'
+                 result['wholeSelectedTargetPredicate'] = True
+-                result['rustSummary'] = {'passed': 3, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
++                result['rustSummary'] = {'passed': 2, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
+             else:
+                 result['wholeSelectedTargetPredicate'] = False
+             after = verify()
