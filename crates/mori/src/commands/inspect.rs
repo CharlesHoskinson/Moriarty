@@ -26,7 +26,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     }
     let source = super::core_io::read_source(&args.file)?;
     if args.target.is_none()
-        && mori_core::language(&source).is_ok_and(|language| language == "moriarty/2")
+        && mori_core::language(&source).map_err(super::core_io::operation)? == "moriarty/2"
     {
         let staged = match mori_core::stage::load(&source) {
             Ok(staged) => staged,
