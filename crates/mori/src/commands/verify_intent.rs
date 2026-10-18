@@ -131,6 +131,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
 /// Strict signed acceptance: trusted reconstruction, exact wrapper equality,
 /// host FENS under the reconstructed message and the ordinary compiled
 /// relation check. No unsigned or legacy fallback.
+#[cfg(feature = "native")]
 fn signed(args: &Args, target: &std::path::Path) -> super::Result<ExitCode> {
     let source = super::core_io::read_source(&args.input.file)?;
     let scenario = super::core_io::read_json(&args.input.scenario)?;
@@ -174,4 +175,9 @@ fn signed(args: &Args, target: &std::path::Path) -> super::Result<ExitCode> {
             Ok(ExitCode::FAILURE)
         }
     }
+}
+
+#[cfg(not(feature = "native"))]
+fn signed(_args: &Args, _target: &std::path::Path) -> super::Result<ExitCode> {
+    super::native_unavailable()
 }

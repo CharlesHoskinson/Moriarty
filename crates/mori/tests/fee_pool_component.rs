@@ -69,6 +69,7 @@ fn invoke(mut c: Command) -> Output {
     }
     o
 }
+#[cfg(feature = "native")]
 fn status_text(o: &Output) -> String {
     format!(
         "{}{}",
@@ -433,6 +434,7 @@ fn public_simulate_budget_boundary_and_atomic_refusals() {
         assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 }
+#[cfg(feature = "native")]
 fn static_command(
     source: &str,
     bindings: &Path,
@@ -463,6 +465,7 @@ fn static_command(
         .arg(destination);
     c
 }
+#[cfg(feature = "native")]
 #[test]
 fn public_source_static_all_actions_and_separate_process_reopen_both_programs() {
     for (source, bindings, count) in [
@@ -677,6 +680,7 @@ fn public_source_static_all_actions_and_separate_process_reopen_both_programs() 
         );
     }
 }
+#[cfg(feature = "native")]
 #[test]
 fn signed_whole_program_rejects_real_mixed_payers_and_stale_inputs_publish_nothing() {
     let t = Temp::new();

@@ -1,6 +1,10 @@
+#[cfg(feature = "native")]
 use super::{call_io, core_io};
+#[cfg(feature = "native")]
 use mori_ledger::{profile::NativeWorkLimits, signed::*};
-use std::{path::PathBuf, process::ExitCode};
+use std::path::PathBuf;
+#[cfg(feature = "native")]
+use std::process::ExitCode;
 #[derive(Debug, clap::Args)]
 pub struct Input {
     pub file: PathBuf,
@@ -23,6 +27,7 @@ pub struct Input {
     #[arg(long)]
     pub derive_supplied_frame: bool,
 }
+#[cfg(feature = "native")]
 pub struct Inputs {
     pub source: String,
     pub program: mori_core::Program,
@@ -33,6 +38,7 @@ pub struct Inputs {
     pub request: SignedCallRequest,
     pub limits: NativeWorkLimits,
 }
+#[cfg(feature = "native")]
 impl Input {
     fn validate_frame_mode(&self, version: SignedVersion) -> super::Result<()> {
         if self.derive_supplied_frame && version != SignedVersion::ConsumingV2 {
@@ -92,6 +98,7 @@ impl Input {
         })
     }
 }
+#[cfg(feature = "native")]
 pub fn descriptor(
     input: &Input,
     i: &Inputs,
@@ -114,6 +121,7 @@ pub fn descriptor(
     }
 }
 
+#[cfg(feature = "native")]
 pub fn attachment(
     path: &std::path::Path,
     l: &NativeWorkLimits,
@@ -124,6 +132,7 @@ pub fn attachment(
     )?)
     .map_err(core_io::ledger_operation)
 }
+#[cfg(feature = "native")]
 pub fn status(
     shell: &mut crate::shell::Shell,
     label: &str,
@@ -134,7 +143,7 @@ pub fn status(
     ExitCode::SUCCESS
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
     use clap::Parser;
