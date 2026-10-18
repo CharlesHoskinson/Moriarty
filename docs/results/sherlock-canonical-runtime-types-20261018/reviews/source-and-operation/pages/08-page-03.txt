@@ -1,0 +1,141 @@
+        KMachineEvalLiteralValid | KMachineEvalLiteralInvalid | KMachineEvalVariablePresent | KMachineEvalVariableAbsent | KMachineEvalLet | KMachineEvalBinary | KMachineEvalUnary | KMachineEvalIf | KMachineEvalMatch | KMachineEvalCallEmpty | KMachineEvalCallArguments | KMachinePushAccept | KMachinePushRefuse | KMachineReturnLet | KMachineReturnLeft | KMachineReturnRight | KMachineReturnUnary | KMachineReturnIfTrue | KMachineReturnIfFalse | KMachineReturnIfInvalid | KMachineReturnMatch | KMachineReturnArgumentsNext | KMachineReturnArgumentsFinal | KMachineReturnCallValid | KMachineReturnCallInvalid | KMachineReturnScope | KMachineInvokeFind | KMachineEnterMissing | KMachineEnterBind | KMachineBoundInvalid | KMachineBoundValid | KMachineCasesEmpty | KMachineCasesTry | KMachineCasesMiss | KMachineCasesHit | KMachinePrimitiveValue | KMachinePrimitiveError => EventKind::LegacyComplete,
+        BHelperScalarTag | BHelperScalarArithmetic | BHelperScalarConstruct | BHelperEnvGetCell | BHelperEnvGetEmpty | BHelperEnvPutInsert | BHelperFindRow | BHelperFindEmpty | BHelperBindPair | BHelperBindEmpty | BHelperBindArity | BHelperBindType | BHelperBindDuplicate | BHelperBindInsert | BHelperBindPropagate | BHelperAppendCell | BHelperAppendEmpty | BHelperAppendTail | BHelperAppendCopy | BHelperValidateOccurrence | BHelperValidateField | BHelperValidateEmpty | BHelperValidateInvalid | BHelperEqualPair | BHelperEqualField | BHelperEqualEmpty | BHelperEqualDifferent | BHelperMatchArm | BHelperMatchOccurrence | BHelperMatchField | BHelperMatchBinding | BHelperMatchDistinct | BHelperMatchNext | BHelperMatchSelected => EventKind::HelperVisit,
+        BHelperEnvPutCell | BHelperEnvPutEmpty | BHelperEnvPutFailure | BHelperAppendFailure | BHelperEqualFailure | BHelperMatchEmpty | BHelperValidateDeclaration | BHelperMatchDiscard | BBookkeepingTaskEnqueue | BBookkeepingResumeStore | BBookkeepingResumeRestore => EventKind::HelperVisit
+    }
+}
+fn visits_of(r: &RuleIdC) -> u8 {
+    use RuleIdC::*;
+    match r { BHelperScalarTag | BHelperScalarArithmetic | BHelperScalarConstruct | BHelperEnvGetCell
+        | BHelperEnvPutInsert | BHelperFindRow | BHelperBindPair | BHelperBindType | BHelperBindDuplicate
+        | BHelperBindInsert | BHelperBindPropagate | BHelperAppendCell | BHelperAppendTail | BHelperAppendCopy
+        | BHelperValidateOccurrence | BHelperValidateField | BHelperValidateInvalid | BHelperEqualPair
+        | BHelperEqualField | BHelperEqualDifferent | BHelperMatchArm | BHelperMatchOccurrence
+        | BHelperMatchField | BHelperMatchBinding | BHelperMatchDistinct => 1, _ => 0 }
+}
+fn family_of_rule(r: &RuleIdC) -> FamilyId {
+    use RuleIdC::*;
+    match r { BHelperScalarEntry | BHelperScalarTag | BHelperScalarArithmetic | BHelperScalarConstruct
+        | BHelperScalarExit | BHelperScalarFailure => FamilyId::Scalar,
+        BHelperEnvGetEntry | BHelperEnvGetCell | BHelperEnvGetEmpty | BHelperEnvGetExit | BHelperEnvGetFailure => FamilyId::EnvGet,
+        BHelperEnvPutEntry | BHelperEnvPutInsert | BHelperEnvPutExit => FamilyId::EnvPut,
+        BHelperFindEntry | BHelperFindRow | BHelperFindEmpty | BHelperFindExit | BHelperFindFailure => FamilyId::Find,
+        BHelperBindEntry | BHelperBindPair | BHelperBindEmpty | BHelperBindArity | BHelperBindType
+        | BHelperBindDuplicate | BHelperBindInsert | BHelperBindPropagate | BHelperBindExit | BHelperBindFailure => FamilyId::Bind,
+        BHelperAppendEntry | BHelperAppendCell | BHelperAppendEmpty | BHelperAppendTail | BHelperAppendCopy | BHelperAppendExit => FamilyId::Append,
+        BHelperValidateEntry | BHelperValidateOccurrence | BHelperValidateField | BHelperValidateEmpty
+        | BHelperValidateInvalid | BHelperValidateExit | BHelperValidateFailure => FamilyId::Validate,
+        BHelperEqualEntry | BHelperEqualPair | BHelperEqualField | BHelperEqualEmpty | BHelperEqualDifferent | BHelperEqualExit => FamilyId::Equal,
+        BHelperMatchEntry | BHelperMatchArm | BHelperMatchOccurrence | BHelperMatchField | BHelperMatchBinding
+        | BHelperMatchDistinct | BHelperMatchNext | BHelperMatchSelected | BHelperMatchExit | BHelperMatchFailure => FamilyId::Match,
+        BBookkeepingTaskRelease => FamilyId::BookkeepingRelease, _ => FamilyId::Legacy }
+}
+fn selected_for(pre: &PreImage, rule: RuleIdC) -> Result<Selected, HostViolation> {
+    check_enabled(&rule)?;
+    let site = if pre.helper().is_some() || pre.result().is_some() { Some(owner_site(pre)?) }
+        else { Some(owner_site(pre)?) };
+    let hk = match event_kind_of(&rule) { EventKind::LegacyComplete => None,
+        EventKind::Bookkeeping => match pre.helper() { Some(h) => Some(helper_kind_of(h)), None => None },
+        _ => Some(match family_of_rule(&rule) { FamilyId::Scalar => HelperKind::Scalar, FamilyId::EnvGet => HelperKind::EnvGet,
+            FamilyId::EnvPut => HelperKind::EnvPut, FamilyId::Find => HelperKind::Find, FamilyId::Bind => HelperKind::Bind,
+            FamilyId::Append => HelperKind::Append, FamilyId::Validate => HelperKind::Validate,
+            FamilyId::Equal => HelperKind::Equal, FamilyId::Match => HelperKind::Match,
+            FamilyId::BookkeepingRelease => HelperKind::Validate, FamilyId::Legacy => HelperKind::Scalar }) };
+    let hk = if event_kind_of(&rule) == EventKind::Bookkeeping {
+        pre.helper().map(helper_kind_of) } else { hk };
+    Ok(Selected { rule, event_kind: event_kind_of(&rule), site,
+        helper_kind: if event_kind_of(&rule) == EventKind::LegacyComplete { None } else { hk },
+        helper_eligible: event_kind_of(&rule) != EventKind::LegacyComplete, helper_visits: visits_of(&rule) })
+}
+fn helper_group(k: HelperKind) -> &'static [RuleIdC] {
+    use RuleIdC::*;
+    match k { HelperKind::Scalar => &[BHelperScalarConstruct, BHelperScalarArithmetic, BHelperScalarTag, BHelperScalarFailure, BHelperScalarExit],
+        HelperKind::EnvGet => &[BHelperEnvGetExit, BHelperEnvGetFailure, BHelperEnvGetCell, BHelperEnvGetEmpty],
+        HelperKind::EnvPut => &[BHelperEnvPutInsert, BHelperEnvPutExit],
+        HelperKind::Find => &[BHelperFindExit, BHelperFindFailure, BHelperFindRow, BHelperFindEmpty],
+        HelperKind::Bind => &[BHelperBindExit, BHelperBindFailure, BHelperBindPair, BHelperBindEmpty, BHelperBindArity, BHelperBindType, BHelperBindDuplicate, BHelperBindInsert, BHelperBindPropagate],
+        HelperKind::Append => &[BHelperAppendCopy, BHelperAppendCell, BHelperAppendEmpty, BHelperAppendTail, BHelperAppendExit],
+        HelperKind::Validate => &[BBookkeepingTaskRelease, BHelperValidateFailure, BHelperValidateExit, BHelperValidateEmpty, BHelperValidateInvalid, BHelperValidateOccurrence, BHelperValidateField],
+        HelperKind::Equal => &[BBookkeepingTaskRelease, BHelperEqualExit, BHelperEqualEmpty, BHelperEqualDifferent, BHelperEqualPair, BHelperEqualField],
+        HelperKind::Match => &[BHelperMatchExit, BHelperMatchFailure, BHelperMatchArm, BHelperMatchOccurrence, BHelperMatchDistinct, BHelperMatchField, BHelperMatchBinding, BHelperMatchSelected, BHelperMatchNext] }
+}
+fn legacy_group(site: SiteTag) -> &'static [RuleIdC] {
+    use RuleIdC::*; use SiteTag::*;
+    match site { EvalLiteral => &[KMachineEvalLiteralValid, KMachineEvalLiteralInvalid],
+        EvalVar => &[KMachineEvalVariablePresent, KMachineEvalVariableAbsent], EvalLet => &[KMachineEvalLet],
+        EvalBinary => &[KMachineEvalBinary], EvalUnary => &[KMachineEvalUnary], EvalIf => &[KMachineEvalIf],
+        EvalMatch => &[KMachineEvalMatch], EvalCall => &[KMachineEvalCallEmpty, KMachineEvalCallArguments],
+        Push => &[KMachinePushAccept, KMachinePushRefuse], RetLet => &[KMachineReturnLet], RetLeft => &[KMachineReturnLeft],
+        RetRight => &[KMachineReturnRight], RetUnary => &[KMachineReturnUnary],
+        RetIf => &[KMachineReturnIfTrue, KMachineReturnIfFalse, KMachineReturnIfInvalid], RetMatch => &[KMachineReturnMatch],
+        RetArgs => &[KMachineReturnArgumentsNext, KMachineReturnArgumentsFinal],
+        RetCall => &[KMachineReturnCallValid, KMachineReturnCallInvalid], RetScope => &[KMachineReturnScope],
+        Invoke => &[KMachineInvokeFind], Enter => &[KMachineEnterMissing, KMachineEnterBind],
+        Bound => &[KMachineBoundInvalid, KMachineBoundValid], Cases => &[KMachineCasesEmpty, KMachineCasesTry],
+        CaseResult => &[KMachineCasesMiss, KMachineCasesHit], Prim => &[KMachinePrimitiveValue, KMachinePrimitiveError] }
+}
+/// AB is already enforced by `PreImage::bind`; a non-Running image fails SI-18 here.
+pub fn owner_select(pre: &PreImage, guards: &OwnerGuards) -> Result<Selected, HostViolation> {
+    if pre.img.outcome != OutcomeC::Running {
+        return Err(hv(HostViolationKind::StepInvViolated, Some(StepInvClauseId::SI18), None, "select on non-Running image")); }
+    if let Some(h) = pre.helper() {
+        for r in helper_group(helper_kind_of(h)) {
+            if guards.eval_select_when(r, pre)? { return selected_for(pre, *r); } }
+        return Err(hv(HostViolationKind::SelectUndefined, None, None, "helper group exhausted"));
+    }
+    let site = owner_site(pre)?;
+    if pre.result().is_some() {
+        for r in legacy_group(site) {
+            if guards.reads_result_root(r) && guards.eval_select_when(r, pre)? { return selected_for(pre, *r); } }
+        return Err(hv(HostViolationKind::SelectUndefined, None, None, "stale result"));
+    }
+    if let Some(k) = owner_helper_plan(site, pre) { return selected_for(pre, entry_rule(k)); }
+    for r in legacy_group(site) {
+        if !guards.reads_result_root(r) && guards.eval_select_when(r, pre)? { return selected_for(pre, *r); } }
+    Err(hv(HostViolationKind::SelectUndefined, None, None, "legacy group exhausted"))
+}
+pub fn owner_family_of(raw: &RawRuleId) -> Option<FamilyId> {
+    let r = owner_rule_id_of(raw);
+    if is_disabled(&r) || is_extension(&r) || matches!(r, RuleIdC::KAdminStartupValid | RuleIdC::KAdminStartupInvalid
+        | RuleIdC::KAdminPublishValue | RuleIdC::KAdminPublishError | RuleIdC::KAdminPublishExhausted) { None }
+    else { Some(family_of_rule(&r)) }
+}
+pub fn owner_rule_id_of(raw: &RawRuleId) -> RuleIdC {
+    use RawRuleId as R; use RuleIdC as C;
+    match raw { R::KMachineEvalLiteralValid => C::KMachineEvalLiteralValid, R::KMachineEvalLiteralInvalid => C::KMachineEvalLiteralInvalid,
+        R::KMachineEvalVariablePresent => C::KMachineEvalVariablePresent, R::KMachineEvalVariableAbsent => C::KMachineEvalVariableAbsent,
+        R::KMachineEvalLet => C::KMachineEvalLet, R::KMachineEvalBinary => C::KMachineEvalBinary, R::KMachineEvalUnary => C::KMachineEvalUnary,
+        R::KMachineEvalIf => C::KMachineEvalIf, R::KMachineEvalMatch => C::KMachineEvalMatch, R::KMachineEvalCallEmpty => C::KMachineEvalCallEmpty,
+        R::KMachineEvalCallArguments => C::KMachineEvalCallArguments, R::KMachinePushAccept => C::KMachinePushAccept, R::KMachinePushRefuse => C::KMachinePushRefuse,
+        R::KMachineReturnLet => C::KMachineReturnLet, R::KMachineReturnLeft => C::KMachineReturnLeft, R::KMachineReturnRight => C::KMachineReturnRight,
+        R::KMachineReturnUnary => C::KMachineReturnUnary, R::KMachineReturnIfTrue => C::KMachineReturnIfTrue, R::KMachineReturnIfFalse => C::KMachineReturnIfFalse,
+        R::KMachineReturnIfInvalid => C::KMachineReturnIfInvalid, R::KMachineReturnMatch => C::KMachineReturnMatch,
+        R::KMachineReturnArgumentsNext => C::KMachineReturnArgumentsNext, R::KMachineReturnArgumentsFinal => C::KMachineReturnArgumentsFinal,
+        R::KMachineReturnCallValid => C::KMachineReturnCallValid, R::KMachineReturnCallInvalid => C::KMachineReturnCallInvalid,
+        R::KMachineReturnScope => C::KMachineReturnScope, R::KMachineInvokeFind => C::KMachineInvokeFind, R::KMachineEnterMissing => C::KMachineEnterMissing,
+        R::KMachineEnterBind => C::KMachineEnterBind, R::KMachineBoundInvalid => C::KMachineBoundInvalid, R::KMachineBoundValid => C::KMachineBoundValid,
+        R::KMachineCasesEmpty => C::KMachineCasesEmpty, R::KMachineCasesTry => C::KMachineCasesTry, R::KMachineCasesMiss => C::KMachineCasesMiss,
+        R::KMachineCasesHit => C::KMachineCasesHit, R::KMachinePrimitiveValue => C::KMachinePrimitiveValue, R::KMachinePrimitiveError => C::KMachinePrimitiveError,
+        R::BHelperScalarEntry => C::BHelperScalarEntry, R::BHelperScalarTag => C::BHelperScalarTag, R::BHelperScalarArithmetic => C::BHelperScalarArithmetic,
+        R::BHelperScalarConstruct => C::BHelperScalarConstruct, R::BHelperScalarExit => C::BHelperScalarExit, R::BHelperScalarFailure => C::BHelperScalarFailure,
+        R::BHelperEnvGetEntry => C::BHelperEnvGetEntry, R::BHelperEnvGetCell => C::BHelperEnvGetCell, R::BHelperEnvGetEmpty => C::BHelperEnvGetEmpty,
+        R::BHelperEnvGetExit => C::BHelperEnvGetExit, R::BHelperEnvGetFailure => C::BHelperEnvGetFailure, R::BHelperEnvPutEntry => C::BHelperEnvPutEntry,
+        R::BHelperEnvPutCell => C::BHelperEnvPutCell, R::BHelperEnvPutInsert => C::BHelperEnvPutInsert, R::BHelperEnvPutEmpty => C::BHelperEnvPutEmpty,
+        R::BHelperEnvPutExit => C::BHelperEnvPutExit, R::BHelperEnvPutFailure => C::BHelperEnvPutFailure, R::BHelperFindEntry => C::BHelperFindEntry,
+        R::BHelperFindRow => C::BHelperFindRow, R::BHelperFindEmpty => C::BHelperFindEmpty, R::BHelperFindExit => C::BHelperFindExit, R::BHelperFindFailure => C::BHelperFindFailure,
+        R::BHelperBindEntry => C::BHelperBindEntry, R::BHelperBindPair => C::BHelperBindPair, R::BHelperBindEmpty => C::BHelperBindEmpty,
+        R::BHelperBindArity => C::BHelperBindArity, R::BHelperBindType => C::BHelperBindType, R::BHelperBindDuplicate => C::BHelperBindDuplicate,
+        R::BHelperBindInsert => C::BHelperBindInsert, R::BHelperBindPropagate => C::BHelperBindPropagate, R::BHelperBindExit => C::BHelperBindExit, R::BHelperBindFailure => C::BHelperBindFailure,
+        R::BHelperAppendEntry => C::BHelperAppendEntry, R::BHelperAppendCell => C::BHelperAppendCell, R::BHelperAppendEmpty => C::BHelperAppendEmpty,
+        R::BHelperAppendTail => C::BHelperAppendTail, R::BHelperAppendCopy => C::BHelperAppendCopy, R::BHelperAppendExit => C::BHelperAppendExit, R::BHelperAppendFailure => C::BHelperAppendFailure,
+        R::BHelperValidateEntry => C::BHelperValidateEntry, R::BHelperValidateOccurrence => C::BHelperValidateOccurrence, R::BHelperValidateField => C::BHelperValidateField,
+        R::BHelperValidateDeclaration => C::BHelperValidateDeclaration, R::BHelperValidateEmpty => C::BHelperValidateEmpty, R::BHelperValidateInvalid => C::BHelperValidateInvalid,
+        R::BHelperValidateExit => C::BHelperValidateExit, R::BHelperValidateFailure => C::BHelperValidateFailure, R::BHelperEqualEntry => C::BHelperEqualEntry,
+        R::BHelperEqualPair => C::BHelperEqualPair, R::BHelperEqualField => C::BHelperEqualField, R::BHelperEqualEmpty => C::BHelperEqualEmpty,
+        R::BHelperEqualDifferent => C::BHelperEqualDifferent, R::BHelperEqualExit => C::BHelperEqualExit, R::BHelperEqualFailure => C::BHelperEqualFailure,
+        R::BHelperMatchEntry => C::BHelperMatchEntry, R::BHelperMatchArm => C::BHelperMatchArm, R::BHelperMatchOccurrence => C::BHelperMatchOccurrence,
+        R::BHelperMatchField => C::BHelperMatchField, R::BHelperMatchBinding => C::BHelperMatchBinding, R::BHelperMatchDistinct => C::BHelperMatchDistinct,
+        R::BHelperMatchDiscard => C::BHelperMatchDiscard, R::BHelperMatchNext => C::BHelperMatchNext, R::BHelperMatchSelected => C::BHelperMatchSelected,
+        R::BHelperMatchEmpty => C::BHelperMatchEmpty, R::BHelperMatchExit => C::BHelperMatchExit, R::BHelperMatchFailure => C::BHelperMatchFailure,
+        R::BBookkeepingTaskEnqueue => C::BBookkeepingTaskEnqueue, R::BBookkeepingTaskRelease => C::BBookkeepingTaskRelease,
+        R::BBookkeepingResumeStore => C::BBookkeepingResumeStore, R::BBookkeepingResumeRestore => C::BBookkeepingResumeRestore,
+        R::KAdminStartupValid => C::KAdminStartupValid, R::KAdminStartupInvalid => C::KAdminStartupInvalid, R::KAdminPublishValue => C::KAdminPublishValue,

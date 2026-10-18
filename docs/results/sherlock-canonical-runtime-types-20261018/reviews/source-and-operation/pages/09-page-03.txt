@@ -1,0 +1,198 @@
+    pub fn arity_of(k: LogicalKind) -> Option<usize> {
+        match k { LogicalKind::UInt | LogicalKind::Bool | LogicalKind::Nil => Some(0),
+            LogicalKind::Cons | LogicalKind::Branch => Some(2),
+            LogicalKind::Leaf => Some(1),
+            LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => None } }
+    pub fn sort_of_kind(k: LogicalKind) -> Option<SortTag> {
+        match k { LogicalKind::UInt => Some(SortTag::UInt),
+            LogicalKind::Bool => Some(SortTag::Bool),
+            LogicalKind::Nil | LogicalKind::Cons => Some(SortTag::List),
+            LogicalKind::Leaf | LogicalKind::Branch => Some(SortTag::Tree),
+            LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => None } }
+    // Marker/reserved arity or sort = None here; the OWNER maps None to
+    // HostViolation{ArithmeticUndefined} / staged PrimError as the row requires.
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    pub enum CheckedArith { Value { n: u128 }, Overflow }
+    pub fn checked_add(a: u128, b: u128) -> CheckedArith { match a.checked_add(b) { Some(n) => CheckedArith::Value { n }, None => CheckedArith::Overflow } }
+    pub fn checked_sub(a: u128, b: u128) -> CheckedArith { match a.checked_sub(b) { Some(n) => CheckedArith::Value { n }, None => CheckedArith::Overflow } }
+    pub fn checked_mul(a: u128, b: u128) -> CheckedArith { match a.checked_mul(b) { Some(n) => CheckedArith::Value { n }, None => CheckedArith::Overflow } }
+    // Owner maps CheckedArith::Overflow only to staged PrimError{code:10}; no None-to-false and no other mapping.
+}
+
+// ---------- family-facing checked view: NO raw table escape (SEC-06) ---
+pub trait PreImageView {
+    fn control(&self) -> &ControlC;
+    fn control_origin(&self) -> usize;
+    fn env_root(&self) -> EnvRootC;
+    fn depth(&self) -> usize;
+    fn task_live(&self) -> usize;
+    fn stack_limit(&self) -> usize;
+    fn outcome(&self) -> &OutcomeC;
+    fn initial_fuel(&self) -> u128;
+    fn remaining_work(&self) -> u128;
+    fn consumed_work(&self) -> u128;
+    fn helper_work(&self) -> u128;
+    fn helper_visits(&self) -> u128;
+    fn reference_cursor(&self) -> u128;
+    fn helper(&self) -> Option<&HelperControlC>;
+    fn result(&self) -> Option<&HelperResultC>;
+    fn top_frame(&self) -> Option<&FrameRowC>;
+    fn top_task(&self) -> Option<&HelperTaskC>;
+    fn active(&self) -> ActiveLengths;
+    fn alloc(&self) -> AllocCounters;
+    // All keys by reference with C carriers; all reads checked, Err never panic. No view()/ProgramView escape.
+    fn expr(&self, id: &usize) -> Result<&ExpressionRowC, HostViolation>;
+    fn child(&self, pos: &usize) -> Result<usize, HostViolation>;
+    fn function_row(&self, id: &usize) -> Result<&FunctionRowC, HostViolation>;
+    fn parameter(&self, pos: &usize) -> Result<&ParameterRowC, HostViolation>;
+    fn arm(&self, id: &usize) -> Result<&ArmRowC, HostViolation>;
+    fn pattern(&self, id: &usize) -> Result<&PatternRowC, HostViolation>;
+    fn occurrence(&self, id: &usize) -> Result<&OccurrenceRowC, HostViolation>;
+    fn occurrence_path(&self, s: &SliceC) -> Result<&[usize], HostViolation>;
+    fn constant_borrowed(&self, id: &usize) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation>;
+    fn constant_field(&self, id: &usize) -> Result<usize, HostViolation>;
+    fn marker_free(&self, id: &usize) -> Result<bool, HostViolation>;
+    fn deref_borrowed(&self, r: &RefC) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation>;
+    fn field_at(&self, r: &RefC, i: &usize) -> Result<RefC, HostViolation>;
+    fn env_cell(&self, id: &usize) -> Result<&EnvCellC, HostViolation>;
+    fn value_slot(&self, pos: &usize) -> Result<RefC, HostViolation>;
+    fn kind_of(&self, r: &RefC) -> Result<LogicalKind, HostViolation>;
+    fn u128_of(&self, r: &RefC) -> Result<u128, HostViolation>;
+    fn bool_of(&self, r: &RefC) -> Result<bool, HostViolation>;
+    fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation>;
+    // pure arity_of None (Marker/ConstructorExtensionReserved) maps only here to ArithmeticUndefined.
+    fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation>;
+    // pure sort_of_kind None maps only here to ArithmeticUndefined for structural sort consumers.
+    fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation>;
+    // Sole Scalar TestType seam: kind Marker/ConstructorExtensionReserved yields Ok(false), UInt/Bool/Nil/Cons/Leaf/Branch compares checked_sort; families never map Option themselves.
+    fn admitted_function_count(&self) -> usize;
+    // Sole function-table length seam: owner returns admitted view functions.len(); no other implementation and no zero fallback is permitted. Other tables remain readable only through the checked row methods above.
+}
+// Owner-only whole-view access lives ONLY in shared::owner (not this trait,
+// not given to families): owner code uses PreImage fields directly.
+
+pub trait GuardEvaluator {
+    fn eval_guard(&self, g: &GuardId, pre: &dyn PreImageView)
+        -> Result<bool, HostViolation>;
+    fn eval_select_when(&self, rule: &RuleIdC, pre: &dyn PreImageView)
+        -> Result<bool, HostViolation>;
+    fn reads_result_root(&self, rule: &RuleIdC) -> bool; // AST Root{r}
+}
+// OwnerGuards implements GuardEvaluator in shared::owner (future body); families receive only &dyn GuardEvaluator.
+
+// ---------- plan: writes authoritative, delta is owner-checked assertion --
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Write<T> { Keep, Set(T) }
+impl<T> Default for Write<T> { fn default() -> Self { Write::Keep } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FrameWrite { Push(FrameRowC), RewriteTop(FrameRowC), Pop }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TaskOp { None, Push(HelperTaskC), Pop }
+impl Default for TaskOp { fn default() -> Self { TaskOp::None } }
+// Per-variant staging (SEC-05): no DataRow.fields exists to ignore.
+// Owner constructs the row + FieldSlice itself: len 0 -> (0,0),
+// else start = pre.active.data_fields, fields written before node (G1).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AllocDataWrite { U128 { n: u128 }, Bool { b: bool }, Nil,
+    Cons { fields: [RefC; 2] }, Leaf { field: RefC }, Branch { fields: [RefC; 2] } }
+impl AllocDataWrite {
+    pub fn field_len(&self) -> usize {
+        match self { AllocDataWrite::U128 { .. } | AllocDataWrite::Bool { .. }
+            | AllocDataWrite::Nil => 0,
+            AllocDataWrite::Leaf { .. } => 1,
+            AllocDataWrite::Cons { .. } | AllocDataWrite::Branch { .. } => 2 } }
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct PlanDelta { // allocation/depth/task/slot assertion only
+    pub alloc_data_nodes: i64, pub alloc_data_fields: i64,
+    pub alloc_environment_cells: i64, pub depth: i64, pub task_live: i64,
+    pub active_value_slots: i64 }
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct PlannedWrites {
+    pub control: Write<ControlC>, pub control_origin: Write<usize>,
+    pub env_root: Write<EnvRootC>, pub result: Write<Option<HelperResultC>>,
+    pub helper: Write<Option<HelperControlC>>, pub frame: Option<FrameWrite>,
+    pub task_rewrite_top: Option<HelperTaskC>, pub task_op: TaskOp,
+    pub alloc_data: Option<AllocDataWrite>, pub alloc_env: Option<EnvCellC>,
+    pub alloc_value_slot: Option<RefC> }
+pub struct EffectPlan { pub delta_assert: PlanDelta, pub writes: PlannedWrites }
+    // No rule/event/eligible/visits/cap list: Selected (owner) is sole source;
+// owner derives CapKinds from delta_assert; charges/visits/cursor fire once.
+
+// ValidatedPlan: opaque, constructible only inside `shared` descendants.
+pub struct ValidatedPlan { writes: PlannedWrites, delta: PlanDelta,
+    cap_first: Option<CapKind>, rule: RuleIdC }
+impl ValidatedPlan {
+    fn from_validated(w: PlannedWrites, d: PlanDelta, c: Option<CapKind>, rule: RuleIdC) -> Self {
+        Self { writes: w, delta: d, cap_first: c, rule } } // shared::owner only
+    pub fn rule(&self) -> RuleIdC { self.rule }
+}
+
+// ---------- family contract (Sol, pure row effects only) ----------------
+// Every method receives the authoritative Selected. A method presented a
+// foreign RuleId MUST return HostViolation { kind: HostViolationKind::WrongVariant, clause: None, rule: None, locator: Some("foreign rule for family".to_string()) }.
+// The same literal rendering applies to private family free functions. Families never
+// recompute site/helper-plan/dispatch, charges, caps, or refusals.
+pub trait FamilyPlans {
+    fn plan_legacy(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_scalar(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_env_get(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_env_put(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_find(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_bind(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_append(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_validate(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_equal(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_match(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_bookkeeping_release(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+}
+// Sol invokes owner eval_guard/eval_select_when through &dyn GuardEvaluator without implementing guards or selection.
+// Foreign RuleIdC for the family (sole rendering): HostViolation { kind: HostViolationKind::WrongVariant, clause: None, rule: None, locator: Some("foreign rule for family".to_string()) }.
+
+// ---------- security-owner contract (future S-owned bodies, PS order) ---
+pub trait OwnerEngine {
+    fn prepare_core(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
+        -> Result<ProgramView, Tooling>;
+    fn check_program_view(&self, v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
+        -> Result<(), ProgramViewViolation>;
+    fn admit(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
+        -> Result<Admitted, Tooling>;
+    fn admit_run(&self, a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC, finance: &FinanceInput)
+        -> Result<MachineImage, Tooling>;
+    fn rule_id_of(&self, raw: &RawRuleId) -> RuleIdC;
+    fn raw_rule_id(&self, rule: &RuleIdC) -> RawRuleId;
+    fn select(&self, pre: &PreImage<'_>) -> Result<Selected, HostViolation>;
+    fn family_of(&self, rule: &RawRuleId) -> Option<FamilyId>; // dispatcher;
+    // None for Disabled/ExtensionOnly -> Disabled/ExtensionRuleReached.
+    // PS plan validation, P6 cap refusal, PS physical check and P7 apply are
+    // NOT trait methods (F-TRAIT-1): no caller-authored Selected/EffectPlan
+    // reaches them. owner_step alone runs AB,P0,P1,P2,PS,P3,P4,P6,P7 over the
+    // owner-private free functions, so images mutate only through step/run.
+    fn step(&self, a: &Admitted, img: &mut MachineImage)
+        -> Result<StepResult, HostViolation>; // AB,P0,P1,P2,PS,P3,P4,P6,P7
+    fn run(&self, a: &Admitted, img: &mut MachineImage,
+        sink: &mut dyn FnMut(&StepEventC)) -> Result<RunSummary, HostViolation>;
+    fn check_step_inv(&self, pre: &PreImage<'_>)
+        -> Result<(), Vec<StepInvViolation>>;
+}
+
+// Root module placement only; owner body above unchanged.
+pub mod adt;
+pub mod adt_storage;
+pub mod ext_pass_b_walk;
+pub mod ext_source_traversal;
+pub mod nominal_declaration_order;
+pub mod owner_ext_prepare_types;
+pub mod owner_ext_source_program;
+pub mod owner_ext_t3_uses;
+pub mod owner_ext_type_builder;
+mod owner_prepare;
+mod owner_runtime;
+pub mod owner_host;
+pub mod host_implied_prefix;
+
+pub use owner_prepare::{
+    prepare_ext_program_types, prepare_nominal_declarations, prepare_program_nominal_declarations,
+    PassTOutput, PassTSession, PreparedDeclarationScope, PreparedExtProgramSource,
+    PreparedNominalDeclarations, run_pass_t,
+};

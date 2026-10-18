@@ -1044,11 +1044,11 @@ pub fn prepare_core(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
                 return Err(cap_err(CapacityKind::ParameterSlots,
                     parameters.len() as u128 + 1, b.parameter_slots as u128, None));
             }
-            parameters.push(ParameterRowC { binder: name_id(&names, &prm.name)?, sort: prm.sort });
+            parameters.push(ParameterRowC { binder: name_id(&names, &prm.name)?, sort: TypeIdC::from_source_sort(prm.sort) });
         }
         functions.push(FunctionRowC { function_name: name_id(&names, &f.name)?,
             params: SliceC::normalized(start, f.parameters.len()),
-            return_type: f.return_type, body: fn_body_ids[fi] });
+            return_type: TypeIdC::from_source_sort(f.return_type), body: fn_body_ids[fi] });
     }
     // ---- C6: constants in literal ExprId order, post-order per literal.
     let mut constants: Vec<RawConstRow> = Vec::new();
@@ -1400,15 +1400,29 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
         decoded[i] = Some(e);
     }
     let entry = decoded[v.entry].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", None, "entry taken"))?;
+    fn decode_source_sort(sort: TypeIdC, table: &str, row: usize, detail: &str)
+        -> Result<SortTag, ProgramViewViolation> {
+        match sort {
+            TypeIdC::UInt => Ok(SortTag::UInt),
+            TypeIdC::Bool => Ok(SortTag::Bool),
+            TypeIdC::List => Ok(SortTag::List),
+            TypeIdC::Tree => Ok(SortTag::Tree),
+            _ => Err(pv_err(ViewCheck::V8, table, Some(row), detail)),
+        }
+    }
     let mut funcs: Vec<CoreFunction> = Vec::new();
-    for f in &v.functions {
+    for (fi, f) in v.functions.iter().enumerate() {
         let bod = decoded[f.body].take().ok_or_else(|| pv_err(ViewCheck::V8, "functions", None, "function body taken"))?;
         let mut params: Vec<CoreParameter> = Vec::new();
         if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {
+            let sort = decode_source_sort(
+                v.parameters[pid].sort, "parameters", pid, "non-builtin parameter sort")?;
             params.push(CoreParameter { name: v.names[v.parameters[pid].binder].clone(),
-                sort: v.parameters[pid].sort }); } }
+                sort }); } }
+        let return_type = decode_source_sort(
+            f.return_type, "functions", fi, "non-builtin return type")?;
         funcs.push(CoreFunction { name: v.names[f.function_name].clone(),
-            parameters: params, return_type: f.return_type, body: bod });
+            parameters: params, return_type, body: bod });
     }
     let prog = CoreProgram { functions: funcs, entry };
     let reprepared = prepare_core(&prog, b, l)

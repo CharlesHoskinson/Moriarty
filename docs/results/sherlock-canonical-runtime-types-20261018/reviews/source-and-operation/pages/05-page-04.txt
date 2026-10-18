@@ -1,0 +1,261 @@
+        functions, parameters, arms, patterns, constants, constant_fields, names })
+}
+
+// --------------------------------------------------------- check_program_view
+fn decode_const_value(root: usize, v: &ProgramView, max_const_nodes: usize)
+    -> Result<CoreValue, ProgramViewViolation> {
+    enum Frame { Enter(usize), Cons, Leaf, Branch }
+    let mut results: Vec<DecodedConst> = Vec::new();
+    let mut stack: Vec<Frame> = vec![Frame::Enter(root)];
+    let mut visited: usize = 0;
+    while let Some(fr) = stack.pop() {
+        match fr {
+            Frame::Enter(id) => {
+                visited += 1;
+                if visited > max_const_nodes {
+                    return Err(pv_err(ViewCheck::V8, "constants", Some(id), "constant expansion exceeds bounds.constantNodes"));
+                }
+                let row = &v.constants[id];
+                let fs = const_fields_of(row);
+                let fids: Vec<usize> = if fs.len == 0 { Vec::new() } else {
+                    v.constant_fields[fs.start..fs.start + fs.len].to_vec() };
+                match row {
+                    RawConstRow::U128 { n, .. } => results.push(DecodedConst::Scalar(
+                        i128_class::KIntC::InRange(*n))),
+                    RawConstRow::U128OutOfRange { .. } => results.push(DecodedConst::Scalar(
+                        i128_class::KIntC::AboveU128)),
+                    RawConstRow::Bool { b, .. } => results.push(DecodedConst::BoolVal(*b)),
+                    RawConstRow::Nil { .. } => results.push(DecodedConst::List(Vec::new())),
+                    RawConstRow::Cons { .. } => { stack.push(Frame::Cons);
+                        stack.push(Frame::Enter(fids[1])); stack.push(Frame::Enter(fids[0])); }
+                    RawConstRow::Leaf { .. } => { stack.push(Frame::Leaf);
+                        stack.push(Frame::Enter(fids[0])); }
+                    RawConstRow::Branch { .. } => { stack.push(Frame::Branch);
+                        stack.push(Frame::Enter(fids[1])); stack.push(Frame::Enter(fids[0])); }
+                }
+            }
+            Frame::Cons => {
+                let tail = results.pop().ok_or_else(|| pv_err(ViewCheck::V8, "constants", None, "cons tail"))?;
+                let head = results.pop().ok_or_else(|| pv_err(ViewCheck::V8, "constants", None, "cons head"))?;
+                match (head, tail) {
+                    (DecodedConst::Scalar(h), DecodedConst::List(mut t)) => {
+                        let mut lst = vec![h]; lst.append(&mut t);
+                        results.push(DecodedConst::List(lst));
+                    }
+                    _ => return Err(pv_err(ViewCheck::V8, "constants", None, "cons shape")),
+                }
+            }
+            Frame::Leaf => match results.pop() {
+                Some(DecodedConst::Scalar(n)) => results.push(DecodedConst::Tree(
+                    CoreTree::Leaf { n })),
+                _ => return Err(pv_err(ViewCheck::V8, "constants", None, "leaf shape")),
+            },
+            Frame::Branch => {
+                let r = results.pop().ok_or_else(|| pv_err(ViewCheck::V8, "constants", None, "branch"))?;
+                let lf = results.pop().ok_or_else(|| pv_err(ViewCheck::V8, "constants", None, "branch"))?;
+                match (lf, r) {
+                    (DecodedConst::Tree(a), DecodedConst::Tree(b2)) => results.push(
+                        DecodedConst::Tree(CoreTree::Branch {
+                            left: Box::new(a), right: Box::new(b2) })),
+                    _ => return Err(pv_err(ViewCheck::V8, "constants", None, "branch shape")),
+                }
+            }
+        }
+    }
+    match results.pop() {
+        Some(DecodedConst::Scalar(n)) => Ok(CoreValue::UInt { n }),
+        Some(DecodedConst::BoolVal(b)) => Ok(CoreValue::Bool { b }),
+        Some(DecodedConst::List(xs)) => Ok(CoreValue::List { elements: xs }),
+        Some(DecodedConst::Tree(t)) => Ok(CoreValue::Tree { tree: t }),
+        None => Err(pv_err(ViewCheck::V8, "constants", Some(root), "empty decode")),
+    }
+}
+
+fn const_row_eq(a: &RawConstRow, b: &RawConstRow) -> bool {
+    marker_of(a) == marker_of(b) && const_kind_of(a) == const_kind_of(b)
+        && const_fields_of(a) == const_fields_of(b)
+        && match (a, b) {
+            (RawConstRow::U128 { n: x, .. }, RawConstRow::U128 { n: y, .. }) => x == y,
+            (RawConstRow::Bool { b: x, .. }, RawConstRow::Bool { b: y, .. }) => x == y,
+            _ => true,
+        }
+}
+fn views_equal(a: &ProgramView, b: &ProgramView) -> bool {
+    a.entry == b.entry && a.expressions.len() == b.expressions.len()
+        && a.occurrences == b.occurrences && a.occurrence_paths == b.occurrence_paths
+        && a.children == b.children && a.functions == b.functions
+        && a.parameters == b.parameters && a.arms == b.arms && a.patterns == b.patterns
+        && a.names == b.names && a.constant_fields == b.constant_fields
+        && a.constants.len() == b.constants.len()
+        && a.constants.iter().zip(b.constants.iter()).all(|(x, y)| const_row_eq(x, y))
+        && a.expressions.iter().zip(b.expressions.iter()).all(|(x, y)| expr_eq(x, y))
+}
+fn expr_eq(a: &ExpressionRowC, b: &ExpressionRowC) -> bool {
+    use ExpressionRowC as E;
+    match (a, b) {
+        (E::Literal { constant: x }, E::Literal { constant: y }) => x == y,
+        (E::Var { binder: x }, E::Var { binder: y }) => x == y,
+        (E::Let { binder: p, value: q, body: r }, E::Let { binder: s, value: t, body: u })
+            => p == s && q == t && r == u,
+        (E::Binary { op: p, left: q, right: r }, E::Binary { op: s, left: t, right: u })
+            => p == s && q == t && r == u,
+        (E::Unary { op: p, operand: q }, E::Unary { op: s, operand: t }) => p == s && q == t,
+        (E::If { cond: p, then_expr: q, else_expr: r }, E::If { cond: s, then_expr: t, else_expr: u })
+            => p == s && q == t && r == u,
+        (E::Call { function_name: p, args: q }, E::Call { function_name: s, args: t })
+            => p == s && q == t,
+        (E::Match { scrutinee: p, arms: q }, E::Match { scrutinee: s, arms: t })
+            => p == s && q == t,
+        _ => false,
+    }
+}
+
+pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
+    -> Result<(), ProgramViewViolation> {
+    // V1 header + capacities (Vec lengths are the sole active lengths).
+    if v.entry != 0 { return Err(pv_err(ViewCheck::V1, "header", None, "entry != 0")); }
+    if v.expressions.is_empty() { return Err(pv_err(ViewCheck::V1, "expressions", None, "empty")); }
+    let caps: [(&str, usize, u128); 11] = [
+        ("expressions", v.expressions.len(), b.code_rows as u128),
+        ("occurrences", v.occurrences.len(), b.code_rows as u128),
+        ("occurrence_paths", v.occurrence_paths.len(), l.capacities.occurrence_path_slots as u128),
+        ("children", v.children.len(), b.code_child_slots as u128),
+        ("functions", v.functions.len(), b.function_rows as u128),
+        ("parameters", v.parameters.len(), b.parameter_slots as u128),
+        ("arms", v.arms.len(), b.match_arm_rows as u128),
+        ("patterns", v.patterns.len(), b.pattern_rows as u128),
+        ("constants", v.constants.len(), b.constant_nodes as u128),
+        ("constant_fields", v.constant_fields.len(), b.constant_field_slots as u128),
+        ("names", v.names.len(), l.capacities.name_rows as u128),
+    ];
+    for (t, len, cap) in caps { if len as u128 > cap {
+        return Err(pv_err(ViewCheck::V1, t, None, "active length exceeds capacity")); } }
+    let n_expr = v.expressions.len();
+    // Parent/child-position map derived once, used by V2/V3.
+    let mut parent: Vec<Option<usize>> = vec![None; n_expr];
+    let mut child_pos: Vec<usize> = vec![0; n_expr];
+    // V2 expressions.
+    for (i, e) in v.expressions.iter().enumerate() {
+        let mut kids: Vec<(usize, usize)> = Vec::new(); // (child, position)
+        match e {
+            ExpressionRowC::Literal { constant } => if *constant >= v.constants.len() {
+                return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "constant out of range")); },
+            ExpressionRowC::Var { binder } => if *binder >= v.names.len() {
+                return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "binder out of range")); },
+            ExpressionRowC::Let { binder, value, body } => {
+                if *binder >= v.names.len() { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "let binder")); }
+                kids = vec![(*value, 0), (*body, 1)];
+            }
+            ExpressionRowC::Binary { left, right, .. } => kids = vec![(*left, 0), (*right, 1)],
+            ExpressionRowC::Unary { operand, .. } => kids = vec![(*operand, 0)],
+            ExpressionRowC::If { cond, then_expr, else_expr } =>
+                kids = vec![(*cond, 0), (*then_expr, 1), (*else_expr, 2)],
+            ExpressionRowC::Call { function_name, args } => {
+                if *function_name >= v.names.len() { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "call name")); }
+                if !slice_inside(args, v.children.len()) { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "args slice")); }
+                if args.len > b.max_arity { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "args arity")); }
+                for (k, cid) in v.children[if args.len == 0 { 0 } else { args.start }..
+                    if args.len == 0 { 0 } else { args.start + args.len }].iter().enumerate() {
+                    kids.push((*cid, k));
+                }
+            }
+            ExpressionRowC::Match { scrutinee, arms } => {
+                if !slice_inside(arms, v.arms.len()) { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "arms slice")); }
+                kids.push((*scrutinee, 0));
+                if arms.len > 0 { for (k, aid) in (arms.start..arms.start + arms.len).enumerate() {
+                    kids.push((v.arms[aid].body, k + 1));
+                } }
+            }
+        }
+        for (c, pos) in kids {
+            if c <= i || c >= n_expr { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "child not greater/in range")); }
+            if parent[c].is_some() { return Err(pv_err(ViewCheck::V2, "expressions", Some(c), "duplicate parent")); }
+            parent[c] = Some(i); child_pos[c] = pos;
+        }
+    }
+    // V3 occurrences: owner + path equals parent path plus ChildPosition.
+    if v.occurrences.len() != n_expr { return Err(pv_err(ViewCheck::V3, "occurrences", None, "length")); }
+    let mut fn_of_root: Vec<Option<usize>> = vec![None; n_expr];
+    for (fi, f) in v.functions.iter().enumerate() {
+        if f.body < n_expr { if fn_of_root[f.body].is_some() {
+            return Err(pv_err(ViewCheck::V3, "occurrences", Some(f.body), "two function roots")); }
+            fn_of_root[f.body] = Some(fi); }
+    }
+    let mut expected_owner: Vec<(bool, usize)> = vec![(false, 0); n_expr];
+    for i in 0..n_expr {
+        let (is_fn, fi) = match parent[i] {
+            None => if i == v.entry { (false, 0) } else {
+                match fn_of_root[i] { Some(f) => (true, f),
+                    None => return Err(pv_err(ViewCheck::V3, "occurrences", Some(i), "orphan root")) } },
+            Some(par) => expected_owner[par],
+        };
+        expected_owner[i] = (is_fn, fi);
+        let occ = &v.occurrences[i];
+        if occ.owner_is_function != is_fn || (is_fn && occ.function != fi)
+            || (!is_fn && occ.function != 0) {
+            return Err(pv_err(ViewCheck::V3, "occurrences", Some(i), "owner mismatch")); }
+        if !slice_inside(&occ.path, v.occurrence_paths.len()) {
+            return Err(pv_err(ViewCheck::V3, "occurrences", Some(i), "path slice")); }
+        let mut exp_path: Vec<usize> = Vec::new();
+        let mut cur = i;
+        while let Some(par) = parent[cur] { exp_path.push(child_pos[cur]); cur = par; }
+        exp_path.reverse();
+        let actual: &[usize] = if occ.path.len == 0 { &[] } else {
+            &v.occurrence_paths[occ.path.start..occ.path.start + occ.path.len] };
+        if actual != exp_path.as_slice() {
+            return Err(pv_err(ViewCheck::V3, "occurrences", Some(i), "path mismatch")); }
+    }
+    // V4 functions: contiguous params, body root, names in range.
+    let mut expect_start: usize = 0;
+    for (fi, f) in v.functions.iter().enumerate() {
+        if f.function_name >= v.names.len() { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "name")); }
+        if !slice_inside(&f.params, v.parameters.len()) || (f.params.len > 0 && f.params.start != expect_start) {
+            return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "params not contiguous")); }
+        expect_start = expect_start.checked_add(f.params.len).ok_or_else(|| pv_err(ViewCheck::V4, "functions", Some(fi), "parameter offset overflow"))?;
+        if f.body >= n_expr || parent[f.body].is_some() || fn_of_root[f.body] != Some(fi) {
+            return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "body not function root")); }
+        if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {
+            if v.parameters[pid].binder >= v.names.len() {
+                return Err(pv_err(ViewCheck::V4, "parameters", Some(pid), "binder")); } } }
+    }
+    if expect_start != v.parameters.len() { return Err(pv_err(ViewCheck::V4, "parameters", None, "trailing parameters")); }
+    // V5 patterns: one per arm, binder ranges.
+    if v.patterns.len() != v.arms.len() { return Err(pv_err(ViewCheck::V5, "patterns", None, "count != arms")); }
+    let mut seen_pat = vec![false; v.patterns.len()];
+    for (ai, a) in v.arms.iter().enumerate() {
+        if a.pattern >= v.patterns.len() || seen_pat[a.pattern] {
+            return Err(pv_err(ViewCheck::V5, "arms", Some(ai), "pattern not bijective")); }
+        seen_pat[a.pattern] = true;
+        if a.body >= n_expr { return Err(pv_err(ViewCheck::V5, "arms", Some(ai), "body")); }
+    }
+    for (pi, pat) in v.patterns.iter().enumerate() {
+        let ids: &[usize] = match pat { PatternRowC::PVar { x } | PatternRowC::PLeaf { x } => &[*x],
+            PatternRowC::PCons { x, y } | PatternRowC::PBranch { x, y } => &[*x, *y],
+            PatternRowC::PNil => &[] };
+        for id in ids { if *id >= v.names.len() {
+            return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "binder")); } }
+    }
+    // V6 constants: fields < j, kinds, markerFree recomputed ascending.
+    let mut mf: Vec<bool> = Vec::new();
+    for (j, row) in v.constants.iter().enumerate() {
+        let fs = const_fields_of(row);
+        if !slice_inside(&fs, v.constant_fields.len()) {
+            return Err(pv_err(ViewCheck::V6, "constants", Some(j), "field slice")); }
+        let arity = match const_kind_of(row) { LogicalKind::UInt | LogicalKind::Bool
+            | LogicalKind::Nil | LogicalKind::Marker => 0, LogicalKind::Leaf => 1,
+            LogicalKind::Cons | LogicalKind::Branch => 2,
+            LogicalKind::ConstructorExtensionReserved => 99 };
+        if fs.len != arity { return Err(pv_err(ViewCheck::V6, "constants", Some(j), "arity")); }
+        let fids: Vec<usize> = if fs.len == 0 { Vec::new() } else {
+            v.constant_fields[fs.start..fs.start + fs.len].to_vec() };
+        for f in &fids { if *f >= j {
+            return Err(pv_err(ViewCheck::V6, "constants", Some(j), "forward field")); } }
+        if fs.len > 0 {
+            let kinds: Vec<LogicalKind> = fids.iter().map(|f| const_kind_of(&v.constants[*f])).collect();
+            let ok = match const_kind_of(row) {
+                LogicalKind::Cons => matches!(kinds[0], LogicalKind::UInt | LogicalKind::Marker)
+                    && matches!(kinds[1], LogicalKind::Nil | LogicalKind::Cons),
+                LogicalKind::Leaf => matches!(kinds[0], LogicalKind::UInt | LogicalKind::Marker),
+                LogicalKind::Branch => kinds.iter().all(|k| matches!(k, LogicalKind::Leaf | LogicalKind::Branch)),
+                _ => true,
+            };

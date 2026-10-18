@@ -143,3 +143,8 @@ The existing reader is CURRENT11/35 with no findings, 24 originals and all 25
 refinements open. The old CURRENT10/stale025 negative remains preserved; no new
 EARS adoption or reader run is claimed by this docs update. B04 stays unchecked.
 See the [source and receipt archive](../results/sherlock-simulate-report-20261018/README.md).
+
+
+## Canonical runtime type identities
+
+The canonical TypeId migration passed three compiles and ten new tests. Read the [interface reference](reference/canonical-runtime-types.md), [inspection guide](how-to/inspect-canonical-runtime-types.md), [builtin walkthrough](tutorials/first-local-observations.md#follow-one-builtin-identity-across-six-carriers) and [runtime explanation](explanation/whole-program-types-and-runtime.md#canonical-typeid-through-the-existing-owner). [Actual receipts](../results/sherlock-canonical-runtime-types-20261018/ACTUAL-TEN-TESTS-SCOPE.json) cover four builtin live-carrier cases, five V8 cases and nominal storage only. Generic nominal runtime, original UIREQ034 and all 25 refinements remain open.

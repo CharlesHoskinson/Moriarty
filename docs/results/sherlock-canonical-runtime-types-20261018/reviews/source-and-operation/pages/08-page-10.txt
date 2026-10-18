@@ -1,0 +1,271 @@
+            assert!(validate(&pre, &sel, w, &[RefC::Const(0)], &[]).is_ok(),
+                "active pattern x y rejected");
+        }
+    }
+    #[test]
+    fn sc05_n02_nameless_pnil_match_halts_and_miss_rejects_9() {
+        let eng = engine(HostFamilyPlans);
+        let (a, mut img) = admitted_image(&prog_nameless_nil(), 200);
+        match run_checked(&eng, &a, &mut img) {
+            OutcomeC::Halted { .. } => {}
+            other => panic!("nameless nil match outcome {:?}", other), }
+        let p = prog_match(CoreExpr::Literal { value: CoreValue::List {
+                elements: vec![KIntC::InRange(1)] } }, CorePattern::PNil, lit(0));
+        let (a2, mut img2) = admitted_image(&p, 400);
+        match run_checked(&eng, &a2, &mut img2) {
+            OutcomeC::Rejected { code: 9 } => {}
+            other => panic!("nil miss outcome {:?}", other), }
+    }
+
+    // ============ SC05: H01 ExprId / H02 FunctionRowId / H03 NameId =========
+    #[test]
+    fn sc05_h01_expr_id_at_len_rejected_last_accepted() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let n = a.body.view.expressions.len();
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        for (expr, ok) in [(n, false), (usize::MAX, false), (n - 1, true)] {
+            let mut w = PlannedWrites::default();
+            w.control = Write::Set(ControlC::Eval { expr });
+            w.result = Write::Set(None);
+            match validate(&pre, &sel, w, &[], &[]) {
+                Ok(_) => assert!(ok, "Eval expr accepted"),
+                Err(e) => { assert!(!ok); assert_invalid_plan(&e); } }
+        }
+        let frame = FrameRowC::ScopeF { saved_env: None, origin: n };
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::ScheduleNext { frame, next: 0, env: None });
+        w.result = Write::Set(None);
+        let e = must_err_invalid(validate(&pre, &sel, w, &[], &[]),
+            "frame origin at expressions len accepted");
+        assert_invalid_plan(&e);
+    }
+    #[test]
+    fn sc05_h02_function_id_at_len_rejected_last_accepted() {
+        let (a, img) = admitted_image(&prog_with_function(), 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.functions.len(), 1);
+        let sel = fixture_selected(RuleIdC::KMachineEnterMissing, None);
+        for (f, ok) in [(Some(1usize), false), (Some(usize::MAX), false), (Some(0usize), true)] {
+            let mut w = PlannedWrites::default();
+            w.control = Write::Set(ControlC::Enter { function: f, args: SliceC::empty() });
+            w.result = Write::Set(None);
+            match validate(&pre, &sel, w, &[], &[]) {
+                Ok(_) => assert!(ok, "Enter function accepted"),
+                Err(e) => { assert!(!ok); assert_invalid_plan(&e); } }
+        }
+    }
+    #[test]
+    fn sc05_h03_name_id_invoke_and_alloc_env_binder() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.names.len(), 1);
+        let sel = fixture_selected(RuleIdC::KMachineInvokeFind, None);
+        for (name, ok) in [(1usize, false), (usize::MAX, false), (0usize, true)] {
+            let mut w = PlannedWrites::default();
+            w.control = Write::Set(ControlC::Invoke { function_name: name, args: SliceC::empty() });
+            w.result = Write::Set(None);
+            match validate(&pre, &sel, w, &[], &[]) {
+                Ok(_) => assert!(ok, "Invoke name accepted"),
+                Err(e) => { assert!(!ok); assert_invalid_plan(&e); } }
+        }
+        let sel2 = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        let mut w = PlannedWrites::default();
+        w.alloc_env = Some(EnvCellC { binder: 1, value: RefC::Const(0), previous: None });
+        let e = must_err_invalid(validate(&pre, &sel2, w, &[RefC::Const(0)], &[]),
+            "alloc_env binder at names len accepted");
+        assert_invalid_plan(&e);
+    }
+    #[test]
+    fn sc05_h05_const_id_provenance_ok_but_range_rejected() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let n = a.body.view.constants.len(); assert!(n >= 1);
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        let bad = RefC::Const(n);
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Return { value: bad }); w.result = Write::Set(None);
+        let e = must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "Const at constants len accepted");
+        assert_invalid_plan(&e);
+        let good = RefC::Const(n - 1);
+        let mut w2 = PlannedWrites::default();
+        w2.control = Write::Set(ControlC::Return { value: good }); w2.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w2, &[good], &[]).is_ok());
+    }
+    #[test]
+    fn sc05_h05_const_id_other_holders_rejected() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        let n = a.body.view.constants.len(); assert!(n >= 1);
+        let bad = RefC::Const(n);
+        // Validate helper root holder, root supplied in provenance.
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(HelperControlC::Validate {
+            common: common(SiteTag::EvalLiteral), root: bad, status: TriStatus::Pending }));
+        let sel = fixture_selected(RuleIdC::BHelperValidateOccurrence, Some(HelperKind::Validate));
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "Validate root Const at len accepted"));
+        // Pushed ValidateTask holder.
+        let mut w = PlannedWrites::default();
+        w.task_op = TaskOp::Push(HelperTaskC::ValidateTask {
+            r: bad, visit: TaskVisitC::Unvisited, cursor: 0 });
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "ValidateTask Const at len accepted"));
+        // alloc_value_slot holder.
+        let mut w = PlannedWrites::default();
+        w.alloc_value_slot = Some(bad);
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "alloc_value_slot Const at len accepted"));
+        // alloc_env value holder, binder in range.
+        let mut w = PlannedWrites::default();
+        w.alloc_env = Some(EnvCellC { binder: 0, value: bad, previous: None });
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "alloc_env value Const at len accepted"));
+        // Pushed RightF frame left holder, origin in range.
+        let mut w = PlannedWrites::default();
+        w.frame = Some(FrameWrite::Push(FrameRowC::RightF {
+            op: BinaryOp::Add, left: bad, origin: 0 }));
+        w.result = Write::Set(None);
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        assert_invalid_plan(&must_err_invalid(validate(&pre, &sel, w, &[bad], &[]),
+            "frame left Const at len accepted"));
+    }
+    #[test]
+    fn sc05_n05_boundary_last_ids_accepted() {
+        let (a, img) = admitted_image(&prog_with_function(), 100);
+        let pre = bind_pre(&a, &img);
+        let last_expr = a.body.view.expressions.len() - 1;
+        let last_const = a.body.view.constants.len() - 1;
+        let last_fn = a.body.view.functions.len() - 1;
+        let last_name = a.body.view.names.len() - 1;
+        let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Eval { expr: last_expr }); w.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w, &[], &[]).is_ok());
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Enter { function: Some(last_fn), args: SliceC::empty() });
+        w.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w, &[], &[]).is_ok());
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Invoke { function_name: last_name, args: SliceC::empty() });
+        w.result = Write::Set(None);
+        assert!(validate(&pre, &fixture_selected(RuleIdC::KMachineInvokeFind, None), w, &[], &[]).is_ok());
+        let mut w = PlannedWrites::default();
+        w.control = Write::Set(ControlC::Return { value: RefC::Const(last_const) });
+        w.result = Write::Set(None);
+        assert!(validate(&pre, &sel, w, &[RefC::Const(last_const)], &[]).is_ok());
+    }
+
+    // ============ SC05: H06 precedence, partial as labelled =================
+    #[test]
+    fn sc05_h06_parent_resume_si08_precedes_sc05() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let vh = HelperControlC::Validate { common: HelperCommon { site: SiteTag::EvalLiteral,
+            origin_reference_cursor: 0, parent_resume: Some(1) },
+            root: RefC::Const(0), status: TriStatus::Pending };
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(vh));
+        w.control = Write::Set(ControlC::Eval { expr: usize::MAX });
+        let sel = fixture_selected(RuleIdC::BHelperValidateOccurrence, Some(HelperKind::Validate));
+        let e = must_err_invalid(validate(&pre, &sel, w, &[RefC::Const(0)], &[]),
+            "parentResume plus bad ExprId accepted");
+        assert_eq!(e.kind, HostViolationKind::StepInvViolated);
+        assert_eq!(e.clause, Some(StepInvClauseId::SI08));
+    }
+    #[test]
+    fn sc05_h06_disabled_rule_still_disabled_not_invalid_plan() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutCell, Some(HelperKind::EnvPut));
+        let e = must_err_invalid(validate(&pre, &sel, PlannedWrites::default(), &[], &[]),
+            "disabled rule validated");
+        assert_eq!(e.kind, HostViolationKind::DisabledRuleReached);
+        let selx = fixture_selected(RuleIdC::BHelperValidateDeclaration, Some(HelperKind::Validate));
+        let ex = must_err_invalid(validate(&pre, &selx, PlannedWrites::default(), &[], &[]),
+            "extension rule validated");
+        assert_eq!(ex.kind, HostViolationKind::ExtensionRuleReached);
+    }
+
+    // ============ hostile FamilyPlans through the real owner_step ==========
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum Mutation { UnreadValidateRoot, UnreadLetEnv }
+    struct HostilePlans { inner: HostFamilyPlans, mutation: Mutation }
+    impl HostilePlans {
+        fn mutate(&self, plan: &mut EffectPlan) {
+            match self.mutation {
+                Mutation::UnreadValidateRoot => {
+                    if let Write::Set(Some(HelperControlC::Validate { root, .. })) = &mut plan.writes.helper {
+                        if *root != RefC::Const(0) { *root = RefC::Const(0); } }
+                }
+                Mutation::UnreadLetEnv => {
+                    if let Write::Set(ControlC::ScheduleNext { frame, env, .. }) = &mut plan.writes.control {
+                        if let FrameRowC::LetF { saved_env, .. } = frame { *saved_env = Some(0); }
+                        *env = Some(0); }
+                }
+            }
+        }
+        fn finish(&self, r: Result<EffectPlan, HostViolation>) -> Result<EffectPlan, HostViolation> {
+            let mut p = r?; self.mutate(&mut p); Ok(p) }
+    }
+    impl FamilyPlans for HostilePlans {
+        fn plan_legacy(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_legacy(s, p, g)) }
+        fn plan_scalar(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_scalar(s, p, g)) }
+        fn plan_env_get(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_env_get(s, p, g)) }
+        fn plan_env_put(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_env_put(s, p, g)) }
+        fn plan_find(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_find(s, p, g)) }
+        fn plan_bind(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bind(s, p, g)) }
+        fn plan_append(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_append(s, p, g)) }
+        fn plan_validate(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_validate(s, p, g)) }
+        fn plan_equal(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_equal(s, p, g)) }
+        fn plan_match(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_match(s, p, g)) }
+        fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
+    }
+    #[test]
+    fn r6_refc_unread_written_ref_rejected_step_unmutated() {
+        let (a, mut img) = admitted_image(&prog_list12(), 200);
+        let eng = engine(HostilePlans { inner: HostFamilyPlans, mutation: Mutation::UnreadValidateRoot });
+        let before = snapshot(&img);
+        let e = match eng.step(&a, &mut img) {
+            Ok(_) => panic!("unread RefC write applied"), Err(e) => e };
+        assert_invalid_plan(&e);
+        assert_eq!(snapshot(&img), before, "image mutated on SC-07 refusal");
+        assert_eq!(img.outcome, OutcomeC::Running);
+    }
+    #[test]
+    fn r6_env_unread_env_id_rejected_step_unmutated() {
+        let (a, mut img) = admitted_image(&prog_let(), 200);
+        let eng = engine(HostilePlans { inner: HostFamilyPlans, mutation: Mutation::UnreadLetEnv });
+        let before = snapshot(&img);
+        let e = match eng.step(&a, &mut img) {
+            Ok(_) => panic!("unread EnvId write applied"), Err(e) => e };
+        assert_invalid_plan(&e);
+        assert_eq!(snapshot(&img), before);
+    }
+    #[test]
+    fn sc05_r6_h06_hostile_step_precedes_p3_helper_work_refusal() {
+        // Repaired fixture: the Validate root for the list literal is the
+        // Cons head constant, not Const(0), so the mutation is effective.
+        let (a, mut img) = admitted_image(&prog_list12(), 200);
+        img.helper_work = bounds().max_helper_work;
+        let eng = engine(HostilePlans { inner: HostFamilyPlans, mutation: Mutation::UnreadValidateRoot });
+        let before = snapshot(&img);
+        match eng.step(&a, &mut img) {
+            Err(e) => assert_invalid_plan(&e),
+            Ok(_) => panic!("hostile plan reached P3 or outcome instead of PS refusal"), }
+        assert_eq!(snapshot(&img), before);
+        assert_eq!(img.outcome, OutcomeC::Running, "Exhausted HelperWork published");
+    }
+
+    // ============ R6 EnvId: fresh id, previous, below-active =================
+    #[test]
+    fn r6_env_alloc_previous_is_never_fresh_self_parent() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        let mut w = PlannedWrites::default();
+        w.alloc_env = Some(EnvCellC { binder: 0, value: RefC::Const(0), previous: Some(0) });

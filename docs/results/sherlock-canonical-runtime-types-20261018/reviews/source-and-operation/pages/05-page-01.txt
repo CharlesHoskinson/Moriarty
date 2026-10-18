@@ -1,0 +1,366 @@
+// owner_prepare.proposed.rs — shared::owner_prepare (child of `shared`)
+// Security-owned prepare/admit/drop lane ONLY. Plain std, no unsafe.
+// Root places this as a child of `shared` so private Admitted/MachineImage/
+// AdmittedBody/WidthTable fields are visible; Root's sole OwnerEngine impl
+// delegates prepare_core/check_program_view/admit/admit_run to these fns.
+// No selector, guard, StepInv, validate_plan, cap, apply, step, run or
+// event-emission body is supplied here (runtime-driver lane).
+use super::*;
+use std::sync::Arc;
+
+// ---------------------------------------------------------------- helpers
+// NeededNatC is the HOST diagnostic carrier for schema Nat `needed`; it adds no cap.
+// Exact(n) only for an exact mathematical n (widened usize count, bitlen, AD-1/AD-3
+// minimum, or RunIntC::Nat). AboveU128 only for RunIntC::NatAboveU128 (R3/R4), whose
+// magnitude the three-class input never carried; it is not a recovered or saturated Nat.
+fn cap_err(kind: CapacityKind, needed: u128, limit: u128, locator: Option<LocatorC>) -> Tooling {
+    Tooling::CapacityNotAdmitted { kind, needed: NeededNatC::Exact(needed), limit, locator }
+}
+fn cap_err_above_u128(kind: CapacityKind, limit: u128, locator: Option<LocatorC>) -> Tooling {
+    Tooling::CapacityNotAdmitted { kind, needed: NeededNatC::AboveU128, limit, locator }
+}
+// emit_literal post-order result-stack underflow: an internal invariant breach,
+// not a capacity event, so no CapacityNotAdmitted with a fabricated needed/limit.
+fn const_stack_underflow() -> Tooling {
+    Tooling::AdmissionRejected { reason: AdmissionReason::ProgramViewMalformed,
+        detail: "constant post-order stack underflow".to_string(), locator: None }
+}
+fn field_loc(name: &str) -> Option<LocatorC> {
+    Some(LocatorC::Field { name: name.to_string() })
+}
+fn pv_err(check: ViewCheck, table: &str, row: Option<usize>, detail: &str) -> ProgramViewViolation {
+    ProgramViewViolation { check, table: table.to_string(), row, detail: detail.to_string() }
+}
+// bitlen(n) = max(1, ceil(log2(n+1))) per schema notation.
+fn bitlen_count(n: u128) -> u128 {
+    if n == 0 { 1 } else { (128 - n.leading_zeros()) as u128 }
+}
+// id(Z) width: max(1, ceil(log2(max(1,Z)))).
+fn bitlen_id(z: u128) -> u128 {
+    if z <= 1 { 1 } else { (128 - (z - 1).leading_zeros()) as u128 }
+}
+fn slice_inside(s: &SliceC, table_len: usize) -> bool {
+    if s.len == 0 { s.start == 0 } else {
+        match s.start.checked_add(s.len) { Some(end) => end <= table_len, None => false }
+    }
+}
+fn marker_of(row: &RawConstRow) -> bool {
+    match row {
+        RawConstRow::U128 { marker_free, .. } | RawConstRow::Bool { marker_free, .. }
+        | RawConstRow::Nil { marker_free } | RawConstRow::Cons { marker_free, .. }
+        | RawConstRow::Leaf { marker_free, .. } | RawConstRow::Branch { marker_free, .. }
+        | RawConstRow::U128OutOfRange { marker_free } => *marker_free,
+    }
+}
+fn const_fields_of(row: &RawConstRow) -> SliceC {
+    match row {
+        RawConstRow::Cons { fields, .. } | RawConstRow::Leaf { fields, .. }
+        | RawConstRow::Branch { fields, .. } => SliceC::normalized(fields.start.0, fields.len),
+        _ => SliceC::empty(),
+    }
+}
+fn const_kind_of(row: &RawConstRow) -> LogicalKind {
+    match row {
+        RawConstRow::U128 { .. } => LogicalKind::UInt,
+        RawConstRow::Bool { .. } => LogicalKind::Bool,
+        RawConstRow::Nil { .. } => LogicalKind::Nil,
+        RawConstRow::Cons { .. } => LogicalKind::Cons,
+        RawConstRow::Leaf { .. } => LogicalKind::Leaf,
+        RawConstRow::Branch { .. } => LogicalKind::Branch,
+        RawConstRow::U128OutOfRange { .. } => LogicalKind::Marker,
+    }
+}
+
+// Clone for the two non-Clone layout carriers. Same-crate impls; WidthTable
+// private fields are visible to this descendant of `shared`. This closes the
+// admit() construction gap without any contract amendment.
+impl Clone for WidthTable {
+    fn clone(&self) -> Self {
+        WidthTable { index_widths: self.index_widths.clone(),
+            counter_widths: self.counter_widths.clone(),
+            record_widths: self.record_widths.clone() }
+    }
+}
+impl Clone for LayoutSchemaC {
+    fn clone(&self) -> Self {
+        LayoutSchemaC { layout_version: self.layout_version.clone(),
+            field_id: self.field_id.clone(), widths: self.widths.clone(),
+            scalar_layout_id: self.scalar_layout_id.clone(), bounds: self.bounds,
+            capacities: self.capacities,
+            boundary_capacities_present: self.boundary_capacities_present }
+    }
+}
+
+// ------------------------------------------------------- iterative Drop C8
+fn dummy_expr() -> CoreExpr { CoreExpr::Literal { value: CoreValue::Bool { b: false } } }
+fn dummy_tree() -> CoreTree { CoreTree::Leaf { n: i128_class::KIntC::InRange(0) } }
+
+fn take_value_children(v: &mut CoreValue, tw: &mut Vec<Box<CoreTree>>) {
+    if let CoreValue::Tree { tree } = v {
+        tw.push(Box::new(std::mem::replace(tree, dummy_tree())));
+    }
+}
+fn take_expr_children(e: &mut CoreExpr, ew: &mut Vec<Box<CoreExpr>>, tw: &mut Vec<Box<CoreTree>>) {
+    match e {
+        CoreExpr::Literal { value } => take_value_children(value, tw),
+        CoreExpr::Var { .. } => {}
+        CoreExpr::Let { value, body, .. } => {
+            ew.push(std::mem::replace(value, Box::new(dummy_expr())));
+            ew.push(std::mem::replace(body, Box::new(dummy_expr())));
+        }
+        CoreExpr::Binary { left, right, .. } => {
+            ew.push(std::mem::replace(left, Box::new(dummy_expr())));
+            ew.push(std::mem::replace(right, Box::new(dummy_expr())));
+        }
+        CoreExpr::Unary { operand, .. } => {
+            ew.push(std::mem::replace(operand, Box::new(dummy_expr())));
+        }
+        CoreExpr::If { cond, then_expr, else_expr } => {
+            ew.push(std::mem::replace(cond, Box::new(dummy_expr())));
+            ew.push(std::mem::replace(then_expr, Box::new(dummy_expr())));
+            ew.push(std::mem::replace(else_expr, Box::new(dummy_expr())));
+        }
+        CoreExpr::Call { args, .. } => {
+            for a in std::mem::take(args) { ew.push(Box::new(a)); }
+        }
+        CoreExpr::Match { scrutinee, arms } => {
+            ew.push(std::mem::replace(scrutinee, Box::new(dummy_expr())));
+            for arm in std::mem::take(arms) { ew.push(Box::new(arm.body)); }
+        }
+    }
+}
+fn take_tree_children(t: &mut CoreTree, tw: &mut Vec<Box<CoreTree>>) {
+    if let CoreTree::Branch { left, right } = t {
+        tw.push(std::mem::replace(left, Box::new(dummy_tree())));
+        tw.push(std::mem::replace(right, Box::new(dummy_tree())));
+    }
+}
+fn drain_worklists(ew: &mut Vec<Box<CoreExpr>>, tw: &mut Vec<Box<CoreTree>>) {
+    loop {
+        if let Some(mut b) = ew.pop() { take_expr_children(&mut b, ew, tw); continue; }
+        if let Some(mut b) = tw.pop() { take_tree_children(&mut b, tw); continue; }
+        break;
+    }
+}
+impl Drop for CoreExpr {
+    fn drop(&mut self) {
+        let mut ew: Vec<Box<CoreExpr>> = Vec::new();
+        let mut tw: Vec<Box<CoreTree>> = Vec::new();
+        take_expr_children(self, &mut ew, &mut tw);
+        drain_worklists(&mut ew, &mut tw);
+    }
+}
+impl Drop for CoreTree {
+    fn drop(&mut self) {
+        let mut tw: Vec<Box<CoreTree>> = Vec::new();
+        take_tree_children(self, &mut tw);
+        let mut ew: Vec<Box<CoreExpr>> = Vec::new();
+        drain_worklists(&mut ew, &mut tw);
+    }
+}
+impl Drop for CoreProgram {
+    fn drop(&mut self) {
+        let mut ew: Vec<Box<CoreExpr>> = Vec::new();
+        let mut tw: Vec<Box<CoreTree>> = Vec::new();
+        ew.push(Box::new(std::mem::replace(&mut self.entry, dummy_expr())));
+        for f in std::mem::take(&mut self.functions) { ew.push(Box::new(f.body)); }
+        drain_worklists(&mut ew, &mut tw);
+    }
+}
+
+// ------------------------------------------------------------- prepare_core
+enum NameAct<'a> { Name(&'a str), Expr(&'a CoreExpr), Pat(&'a CorePattern) }
+
+fn collect_names<'a>(p: &'a CoreProgram, l: &LayoutSchemaC)
+    -> Result<Vec<String>, Tooling> {
+    // Pass B: traversal order entry, then per function name/params/body;
+    // node-own names before children. Distinct count/bytes checked before push.
+    let mut distinct: std::collections::BTreeSet<&'a str> = std::collections::BTreeSet::new();
+    let mut bytes_total: u128 = 0;
+    let mut stack: Vec<NameAct<'a>> = Vec::new();
+    for f in p.functions.iter().rev() {
+        stack.push(NameAct::Expr(&f.body));
+        for prm in f.parameters.iter().rev() { stack.push(NameAct::Name(&prm.name)); }
+        stack.push(NameAct::Name(&f.name));
+    }
+    stack.push(NameAct::Expr(&p.entry));
+    while let Some(act) = stack.pop() {
+        match act {
+            NameAct::Name(n) => {
+                if !distinct.contains(n) {
+                    let nb = bytes_total + n.len() as u128;
+                    if distinct.len() as u128 >= l.capacities.name_rows as u128 {
+                        return Err(cap_err(CapacityKind::NameRows,
+                            distinct.len() as u128 + 1, l.capacities.name_rows as u128, None));
+                    }
+                    if nb > l.capacities.name_bytes as u128 {
+                        return Err(cap_err(CapacityKind::NameBytes, nb,
+                            l.capacities.name_bytes as u128, None));
+                    }
+                    bytes_total = nb;
+                    distinct.insert(n);
+                }
+            }
+            NameAct::Pat(pat) => match pat {
+                CorePattern::PVar { x } | CorePattern::PLeaf { x } => stack.push(NameAct::Name(x)),
+                CorePattern::PCons { x, y } | CorePattern::PBranch { x, y } => {
+                    stack.push(NameAct::Name(y)); stack.push(NameAct::Name(x));
+                }
+                CorePattern::PNil => {}
+            },
+            NameAct::Expr(e) => match e {
+                CoreExpr::Literal { .. } => {}
+                CoreExpr::Var { name } => stack.push(NameAct::Name(name)),
+                CoreExpr::Let { name, value, body } => {
+                    stack.push(NameAct::Expr(body)); stack.push(NameAct::Expr(value));
+                    stack.push(NameAct::Name(name));
+                }
+                CoreExpr::Binary { left, right, .. } => {
+                    stack.push(NameAct::Expr(right)); stack.push(NameAct::Expr(left));
+                }
+                CoreExpr::Unary { operand, .. } => stack.push(NameAct::Expr(operand)),
+                CoreExpr::If { cond, then_expr, else_expr } => {
+                    stack.push(NameAct::Expr(else_expr)); stack.push(NameAct::Expr(then_expr));
+                    stack.push(NameAct::Expr(cond));
+                }
+                CoreExpr::Call { name, args } => {
+                    for a in args.iter().rev() { stack.push(NameAct::Expr(a)); }
+                    stack.push(NameAct::Name(name));
+                }
+                CoreExpr::Match { scrutinee, arms } => {
+                    for arm in arms.iter().rev() { stack.push(NameAct::Expr(&arm.body)); }
+                    stack.push(NameAct::Expr(scrutinee));
+                    for arm in arms.iter().rev() { stack.push(NameAct::Pat(&arm.pattern)); }
+                }
+            },
+        }
+    }
+    Ok(distinct.into_iter().map(|n| n.to_string()).collect())
+}
+
+fn name_id(names: &[String], n: &str) -> Result<usize, Tooling> {
+    names.binary_search_by(|x| x.as_str().cmp(n)).map_err(|_| Tooling::AdmissionRejected {
+        reason: AdmissionReason::ProgramViewMalformed,
+        detail: "name not collected in pass B".to_string(), locator: None })
+}
+
+
+/// Identifies whether `PreparedNominalDeclarations::interned_names` covers only `&[TypeDeclSrc]`
+/// (`DeclarationOnly`) or the unified Pass-B name pool of `&CoreProgram` + `&[TypeDeclSrc]`
+/// (`ProgramAndDeclarations`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PreparedDeclarationScope {
+    DeclarationOnly,
+    ProgramAndDeclarations,
+}
+
+/// Checked nominal declaration-phase output: authenticated Pass-B name table, bound declaration
+/// NameIds, and T1/T2 instantiated type/constructor/field tables.
+/// Not an `Admitted` program, runtime `MachineImage`, full `ProgramView`, or proof.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PreparedNominalDeclarations {
+    pub scope: PreparedDeclarationScope,
+    pub domain: GrammarDomain,
+    pub interned_names: Vec<String>,
+    pub decl_name_ids: super::owner_ext_type_builder::PassBTypeNameIds,
+    pub tables: super::owner_ext_type_builder::BuiltAdtTypeTables,
+}
+
+fn push_distinct_name<'a>(
+    distinct: &mut std::collections::BTreeSet<&'a str>,
+    bytes_total: &mut u128,
+    n: &'a str,
+    l: &LayoutSchemaC,
+) -> Result<(), Tooling> {
+    if !distinct.contains(n) {
+        let nb = *bytes_total + n.len() as u128;
+        if distinct.len() as u128 >= l.capacities.name_rows as u128 {
+            return Err(cap_err(
+                CapacityKind::NameRows,
+                distinct.len() as u128 + 1,
+                l.capacities.name_rows as u128,
+                None,
+            ));
+        }
+        if nb > l.capacities.name_bytes as u128 {
+            return Err(cap_err(
+                CapacityKind::NameBytes,
+                nb,
+                l.capacities.name_bytes as u128,
+                None,
+            ));
+        }
+        *bytes_total = nb;
+        distinct.insert(n);
+    }
+    Ok(())
+}
+
+fn collect_decl_group_names<'a>(
+    decls: &'a [super::owner_ext_type_builder::TypeDeclSrc],
+    distinct: &mut std::collections::BTreeSet<&'a str>,
+    bytes_total: &mut u128,
+    l: &LayoutSchemaC,
+) -> Result<(), Tooling> {
+    for decl in decls {
+        push_distinct_name(distinct, bytes_total, &decl.name, l)?;
+        for ctor in &decl.ctors {
+            push_distinct_name(distinct, bytes_total, &ctor.name, l)?;
+            for field in &ctor.fields {
+                push_distinct_name(distinct, bytes_total, &field.name, l)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn bind_owner_decl_name_ids(
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    interned_names: &[String],
+) -> Result<super::owner_ext_type_builder::PassBTypeNameIds, Tooling> {
+    use super::owner_ext_type_builder::{DeclNameIds, PassBTypeNameIds};
+    let mut bound_decls = Vec::with_capacity(decls.len());
+    for decl in decls {
+        let type_name_id = name_id(interned_names, &decl.name)?;
+        let mut ctor_name_ids = Vec::with_capacity(decl.ctors.len());
+        let mut field_name_ids = Vec::with_capacity(decl.ctors.len());
+        for ctor in &decl.ctors {
+            ctor_name_ids.push(name_id(interned_names, &ctor.name)?);
+            let mut f_ids = Vec::with_capacity(ctor.fields.len());
+            for field in &ctor.fields {
+                f_ids.push(name_id(interned_names, &field.name)?);
+            }
+            field_name_ids.push(f_ids);
+        }
+        bound_decls.push(DeclNameIds {
+            type_name_id,
+            ctor_name_ids,
+            field_name_ids,
+        });
+    }
+    Ok(PassBTypeNameIds::new_owner_verified(
+        interned_names.len(),
+        bound_decls,
+    ))
+}
+
+fn collect_declaration_only_names(
+    decls: &[super::owner_ext_type_builder::TypeDeclSrc],
+    l: &LayoutSchemaC,
+) -> Result<
+    (Vec<String>, super::owner_ext_type_builder::PassBTypeNameIds),
+    super::owner_ext_type_builder::ExtTypeBuildError,
+> {
+    use super::owner_ext_type_builder::ExtTypeBuildError;
+    let mut distinct: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    let mut bytes_total: u128 = 0;
+    collect_decl_group_names(decls, &mut distinct, &mut bytes_total, l)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    let interned_names: Vec<String> = distinct.into_iter().map(|s| s.to_string()).collect();
+    let decl_ids = bind_owner_decl_name_ids(decls, &interned_names)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    Ok((interned_names, decl_ids))
+}
+
+fn collect_program_and_declaration_names(
+    p: &CoreProgram,

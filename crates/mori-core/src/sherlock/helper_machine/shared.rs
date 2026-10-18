@@ -28,6 +28,8 @@ pub enum GrammarDomain { DedicatedSorts, GenericNominalExtensionReserved }
 pub enum FinanceInput { Absent, TypedExtensionReserved }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SortTag { UInt, Bool, List, Tree }
+// Runtime signatures share the canonical identity of the existing ADT tables.
+pub use adt::TypeIdC;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BinaryOp { Add, Sub, Mul, Eq, Lt, Cons, Branch }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -187,7 +189,7 @@ pub enum ScalarStaged { None, U128Value { n: u128 }, BoolValue { b: bool },
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HelperControlC {
     Scalar { common: HelperCommon, mode: ScalarMode, operand_a: RefC,
-        operand_b: Option<RefC>, expected: Option<SortTag>,
+        operand_b: Option<RefC>, expected: Option<TypeIdC>,
         phase: ScalarPhase, reg_a: u128, staged: ScalarStaged },
     EnvGet { common: HelperCommon, binder: usize, cursor: Option<usize>,
         found: Option<RefC>, status: TriStatus },
@@ -221,7 +223,7 @@ pub enum FrameRowC {
     MatchF { arms: SliceC, saved_env: EnvRootC, origin: usize },
     ArgsF { function_name: usize, completed: ValSliceC, rest: SliceC,
         saved_env: EnvRootC, origin: usize },
-    ReturnF { return_type: SortTag, saved_env: EnvRootC, origin: usize },
+    ReturnF { return_type: TypeIdC, saved_env: EnvRootC, origin: usize },
     ScopeF { saved_env: EnvRootC, origin: usize },
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -235,7 +237,7 @@ pub enum ControlC { Eval { expr: usize }, Return { value: RefC },
     ScheduleNext { frame: FrameRowC, next: usize, env: EnvRootC },
     Invoke { function_name: usize, args: ValSliceC },
     Enter { function: Option<usize>, args: ValSliceC },
-    Bound { binding: BoundBinding, return_type: SortTag, body: usize },
+    Bound { binding: BoundBinding, return_type: TypeIdC, body: usize },
     Cases { value: RefC, arms: SliceC, saved_env: EnvRootC },
     CaseResult { matching: CaseMatching, value: RefC, body: usize,
         rest: SliceC, saved_env: EnvRootC },
@@ -244,7 +246,7 @@ pub enum ControlC { Eval { expr: usize }, Return { value: RefC },
 pub enum HelperTaskC {
     ValidateTask { r: RefC, visit: TaskVisitC, cursor: usize },
     EqualTask { left: RefC, right: RefC, visit: TaskVisitC, cursor: usize },
-    PairTask { binder: usize, sort: SortTag, arg: RefC },
+    PairTask { binder: usize, sort: TypeIdC, arg: RefC },
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HelperResultC { Validated { ok: bool }, EnvFound { value: RefC },
@@ -298,9 +300,9 @@ pub enum ExpressionRowC { Literal { constant: usize }, Var { binder: usize },
     Call { function_name: usize, args: SliceC },
     Match { scrutinee: usize, arms: SliceC } }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct FunctionRowC { pub function_name: usize, pub params: SliceC, pub return_type: SortTag, pub body: usize }
+pub struct FunctionRowC { pub function_name: usize, pub params: SliceC, pub return_type: TypeIdC, pub body: usize }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct ParameterRowC { pub binder: usize, pub sort: SortTag }
+pub struct ParameterRowC { pub binder: usize, pub sort: TypeIdC }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ArmRowC { pub pattern: usize, pub body: usize }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -430,7 +432,8 @@ impl OwnerGuards {
 // Borrowed raw-row adapter for the expanded-13 leaves (M1). This module
 // re-authors the leaves as pub fns; it assumes NO old private visibility.
 pub mod pure_leaves {
-    use super::{LogicalKind, RawConstRow, RawDataRow, SortTag};
+    use super::{LogicalKind, RawConstRow, RawDataRow};
+    use super::TypeIdC as SortTag;
     #[derive(Clone, Copy)]
     pub enum BorrowedValueRow<'a> {
         Const(&'a super::RawConstRow), Data(&'a super::RawDataRow) }
@@ -530,9 +533,9 @@ pub trait PreImageView {
     fn bool_of(&self, r: &RefC) -> Result<bool, HostViolation>;
     fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation>;
     // pure arity_of None (Marker/ConstructorExtensionReserved) maps only here to ArithmeticUndefined.
-    fn checked_sort(&self, k: &LogicalKind) -> Result<SortTag, HostViolation>;
+    fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation>;
     // pure sort_of_kind None maps only here to ArithmeticUndefined for structural sort consumers.
-    fn scalar_test_type_ok(&self, r: &RefC, expected: &SortTag) -> Result<bool, HostViolation>;
+    fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation>;
     // Sole Scalar TestType seam: kind Marker/ConstructorExtensionReserved yields Ok(false), UInt/Bool/Nil/Cons/Leaf/Branch compares checked_sort; families never map Option themselves.
     fn admitted_function_count(&self) -> usize;
     // Sole function-table length seam: owner returns admitted view functions.len(); no other implementation and no zero fallback is permitted. Other tables remain readable only through the checked row methods above.

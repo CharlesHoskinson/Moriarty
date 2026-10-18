@@ -1,0 +1,209 @@
+        Some(HelperControlC::Bind { args, .. }) => live(args), Some(HelperControlC::Append { src, .. }) => live(src), _ => true };
+    let result_ok = match &img.result { Some(HelperResultC::AppendDone { seq }) => live(seq), _ => true };
+    control_ok && frames_ok && helper_ok && result_ok
+}
+/// `check_view` is the prepare lane's check_program_view, supplied by Root.
+pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
+    check_view: &dyn Fn(&ProgramView, &BoundsC, &LayoutSchemaC) -> Result<(), ProgramViewViolation>)
+    -> Result<(), Vec<StepInvViolation>> {
+    if !std::sync::Arc::ptr_eq(&a.body, &img.admission.body) {
+        return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "admitted instance mismatch")]); } // AB first, alone.
+    let pre = match PreImage::bind(a, img) { Ok(p) => p, Err(_) =>
+        return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "bind failed")]) };
+    let b = &a.body.bounds; let view = &a.body.view; let mut v: Vec<StepInvViolation> = Vec::new();
+    let mut push = |c: StepInvClauseId, l: &str, d: &str, bad: bool, vv: &mut Vec<StepInvViolation>| {
+        if bad { vv.push(siv(c, l, d)); } };
+    // SI-01 identity profile/domain/finance.
+    push(StepInvClauseId::SI01, "identity", "profile/domain/finance",
+        !(a.body.identity.profile_id == 2 && a.body.identity.grammar_domain == GrammarDomain::DedicatedSorts
+            && a.body.identity.finance == FinanceInput::Absent), &mut v);
+    // SI-02 outcome payload.
+    let si02 = match img.outcome { OutcomeC::Halted { value } => !ref_in_bounds(&pre, &value),
+        OutcomeC::Rejected { code } => !(1..=11).contains(&code),
+        OutcomeC::Exhausted { reason } => reason == ExhaustReason::SerializationBytes, OutcomeC::Running => false };
+    push(StepInvClauseId::SI02, "reg.outcome", "payload", si02, &mut v);
+    // SI-03 / SI-04 counters.
+    push(StepInvClauseId::SI03, "work counters", "counter relation",
+        !(img.remaining_work.checked_add(img.consumed_work) == Some(img.initial_fuel)
+            && img.initial_fuel <= b.max_reference_work && img.helper_work <= b.max_helper_work
+            && img.helper_work <= img.consumed_work && img.helper_visits <= img.helper_work
+            && img.initial_fuel <= a.body.layout.capacities.value_slots as u128), &mut v);
+    push(StepInvClauseId::SI04, "reg.referenceCursor", "cursor = consumed - helper",
+        img.consumed_work.checked_sub(img.helper_work) != Some(img.reference_cursor), &mut v);
+    // SI-05 active == alloc (segment base is absent from the carrier; B-core base is zero by construction).
+    push(StepInvClauseId::SI05, "alloc/active", "active != alloc",
+        !(img.active.data == img.alloc.data_nodes && img.active.data_fields == img.alloc.data_fields
+            && img.active.env == img.alloc.environment_cells && img.alloc.data_nodes <= b.data_nodes
+            && img.alloc.data_fields <= b.data_field_slots && img.alloc.environment_cells <= b.environment_cells
+            && img.active.data == img.data.len() && img.active.data_fields == img.data_fields.len()
+            && img.active.env == img.env.len() && img.active.value_slots == img.value_slots.len()), &mut v);
+    // SI-06 depth.
+    push(StepInvClauseId::SI06, "reg.depth", "depth/stackLimit", !(img.frames.len() <= img.stack_limit && img.stack_limit <= b.frames), &mut v);
+    // SI-07 tasks.
+    let si07 = img.tasks.len() > b.helper_tasks || (!img.tasks.is_empty() && img.helper.is_none())
+        || img.tasks.iter().any(|t| match (t, &img.helper) {
+            (HelperTaskC::ValidateTask { .. }, Some(HelperControlC::Validate { .. }))
+            | (HelperTaskC::EqualTask { .. }, Some(HelperControlC::Equal { .. }))
+            | (HelperTaskC::PairTask { .. }, Some(HelperControlC::Bind { .. })) => false, _ => img.helper.is_some() && !img.tasks.is_empty() });
+    push(StepInvClauseId::SI07, "img.tasks", "task kind", si07, &mut v);
+    // SI-08 helper coherence (site/kind/origin/parentResume).
+    if let Some(h) = &img.helper {
+        let site_ok = owner_site(&pre).map_or(false, |s| helper_common(h).site == s
+            && owner_helper_plan(s, &pre) == Some(helper_kind_of(h)));
+        push(StepInvClauseId::SI08, "reg.helper", "helper coherence",
+            !(img.result.is_none() && site_ok && helper_common(h).origin_reference_cursor == img.reference_cursor
+                && helper_common(h).parent_resume.is_none()
+                && !matches!(img.control, ControlC::Error { .. })
+                && !(matches!(img.control, ControlC::Return { .. }) && img.frames.is_empty())), &mut v);
+    }
+    // SI-09 result membership by site.
+    if let Some(r) = &img.result {
+        let allowed = owner_site(&pre).map_or(false, |s| {
+            let top_op = match pre.top_frame() { Some(FrameRowC::RightF { op, .. }) => Some(*op), _ => None };
+            match (s, r) { (SiteTag::EvalLiteral, HelperResultC::Validated { .. }) => true,
+                (SiteTag::EvalVar, HelperResultC::EnvFound { .. } | HelperResultC::EnvMissing) => true,
+                (SiteTag::RetLet, HelperResultC::EnvUpdated { .. }) => true,
+                (SiteTag::RetRight, HelperResultC::EqualDone { .. }) => top_op == Some(BinaryOp::Eq),
+                (SiteTag::RetRight, HelperResultC::ScalarValue { .. } | HelperResultC::ScalarError { .. }) => top_op != Some(BinaryOp::Eq),
+                (SiteTag::RetUnary, HelperResultC::ScalarValue { .. } | HelperResultC::ScalarError { .. }) => true,
+                (SiteTag::RetIf, HelperResultC::ScalarSelector { .. }) => true,
+                (SiteTag::RetArgs, HelperResultC::AppendDone { .. }) => true,
+                (SiteTag::RetCall, HelperResultC::ScalarTypeTest { .. }) => true,
+                (SiteTag::Invoke, HelperResultC::FindFound { .. } | HelperResultC::FindMissing) => true,
+                (SiteTag::Enter, HelperResultC::BindOk { .. } | HelperResultC::BindBad) => true,
+                (SiteTag::Cases, HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch) => true, _ => false } });
+        push(StepInvClauseId::SI09, "reg.result", "result membership",
+            !(img.helper.is_none() && img.tasks.is_empty() && allowed), &mut v);
+    }
+    // SI-10: Vec lengths are the sole active lengths; no beyond-length row is observable in this carrier.
+    push(StepInvClauseId::SI10, "zero storage", "active length mismatch",
+        !(img.active.data == img.data.len() && img.active.value_slots == img.value_slots.len()), &mut v);
+    // SI-11 data typing: per row tag/arity, field block below active.dataFields, records.DataRow.field_kinds over kind().
+    let mut si11 = false;
+    for (j, row) in img.data.iter().enumerate() {
+        if !matches!(si11_row_ok(&pre, j, row), Ok(true)) { si11 = true; } }
+    push(StepInvClauseId::SI11, "img.data", "data typing", si11, &mut v);
+    // SI-12 field-block ownership (G1): each field-bearing row owns the next contiguous block in row order; arity-0 rows own none.
+    let mut si12 = false; let mut field_cursor = 0usize;
+    for row in &img.data {
+        let (start, len) = data_fields(row);
+        if len > 0 {
+            if start != field_cursor { si12 = true; }
+            match field_cursor.checked_add(len) { Some(c) => field_cursor = c, None => { si12 = true; break; } } } }
+    if field_cursor != img.data_fields.len() { si12 = true; }
+    push(StepInvClauseId::SI12, "img.dataFields", "field ownership", si12, &mut v);
+    // SI-13 references: data field slots point below their owner and are in bounds; every ref held in a register
+    // (control incl. a ScheduleNext frame, outcome, helper payload, result), frame, env cell, value slot or task is in
+    // bounds; every EnvId-valued holder is below active.env.
+    let mut si13 = false;
+    for (owner, row) in img.data.iter().enumerate() {
+        let (start, len) = data_fields(row); let mut i = 0usize;
+        while i < len {
+            match start.checked_add(i).and_then(|p| img.data_fields.get(p)) {
+                Some(RefC::Data(id)) if *id >= owner => si13 = true,
+                Some(_) => {}
+                None => si13 = true }
+            i += 1; } }
+    if img.data_fields.iter().any(|r| !ref_in_bounds(&pre, r)) { si13 = true; }
+    let mut held: Vec<RefC> = Vec::new(); let mut validate_held: Vec<RefC> = Vec::new();
+    control_refs(&img.control, &mut held);
+    for f in &img.frames { frame_refs(f, &mut held); }
+    if let Some(h) = &img.helper { helper_refs(h, &mut held, &mut validate_held); }
+    if let Some(r) = &img.result { result_refs(r, &mut held); }
+    for c in &img.env { held.push(c.value); }
+    for s in &img.value_slots { held.push(*s); }
+    for t in &img.tasks { task_refs(t, &mut held, &mut validate_held); }
+    let outcome_ref: Option<RefC> = match img.outcome { OutcomeC::Halted { value } => Some(value), _ => None };
+    if held.iter().chain(validate_held.iter()).chain(outcome_ref.iter()).any(|r| !ref_in_bounds(&pre, r)) { si13 = true; }
+    let mut env_held: Vec<EnvRootC> = Vec::new(); env_holders(img, &mut env_held);
+    if env_held.iter().any(|e| e.map_or(false, |id| id >= img.active.env)) { si13 = true; }
+    push(StepInvClauseId::SI13, "references", "reference and EnvId bound", si13, &mut v);
+    // SI-14 env cells.
+    push(StepInvClauseId::SI14, "img.env", "env cell",
+        img.env.iter().enumerate().any(|(i, c)| !(c.binder < view.names.len()
+            && c.previous.map_or(true, |p| p < i) && ref_in_bounds(&pre, &c.value))), &mut v);
+    // SI-15 frames and code ids: per-frame origin_tag, frame ExprIds, MatchF.arms, ArgsF suffix/count and slices;
+    // controlOrigin and non-origin control ExprIds; every FunctionRowId held in control, helper or result; Bind.params slice.
+    let n_expr = view.expressions.len(); let n_fn = view.functions.len();
+    let mut si15 = img.control_origin >= n_expr
+        || img.frames.iter().any(|f| !matches!(si15_frame_ok(&pre, f), Ok(true)));
+    si15 |= match &img.control {
+        ControlC::Eval { expr } => *expr >= n_expr,
+        ControlC::ScheduleNext { next, .. } => *next >= n_expr,
+        ControlC::Enter { function: Some(fid), .. } => *fid >= n_fn,
+        ControlC::Bound { body, .. } | ControlC::CaseResult { body, .. } => *body >= n_expr,
+        _ => false };
+    si15 |= match &img.helper {
+        Some(HelperControlC::Bind { function, params, .. }) => *function >= n_fn || !slice_ok(*params, view.parameters.len()),
+        Some(HelperControlC::Find { found: Some(fid), .. }) => *fid >= n_fn,
+        _ => false };
+    si15 |= matches!(&img.result, Some(HelperResultC::FindFound { function }) if *function >= n_fn);
+    // SI-20 controlOrigin coherence, including Return at depth > 0 against tailClosure(expectedChild(top)).
+    let si20 = match &img.control {
+        ControlC::Eval { expr } => img.control_origin != *expr,
+        ControlC::ScheduleNext { frame, .. } => img.control_origin != frame_origin(frame),
+        ControlC::Invoke { .. } | ControlC::Enter { .. } | ControlC::Bound { .. } =>
+            !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Call { .. })),
+        ControlC::Cases { .. } | ControlC::CaseResult { .. } =>
+            !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Match { .. })),
+        ControlC::PrimResult { .. } =>
+            !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Binary { .. } | ExpressionRowC::Unary { .. })),
+        ControlC::Return { .. } => match img.frames.last() {
+            Some(top) => !matches!(si20_return_ok(&pre, top, img.control_origin), Ok(true)),
+            None => false },
+        ControlC::Error { .. } => false };
+    push(StepInvClauseId::SI15, "frames", "frame code ids", si15, &mut v);
+    push(StepInvClauseId::SI20, "reg.controlOrigin", "origin coherence", si20, &mut v);
+    // SI-16 control payload: ScheduleNext.frame per SI-15; Cases.arms and CaseResult.rest suffixes of expr(controlOrigin).arms;
+    // Invoke/Enter args; Invoke NameId; PrimResult Error code in {10, 11}; Error code in 1..11.
+    let n_arms = view.arms.len();
+    let origin_arms_suffix = |s: &SliceC| slice_ok(*s, n_arms)
+        && matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Match { arms, .. }) if is_suffix(*s, *arms));
+    let si16 = match &img.control {
+        ControlC::Invoke { function_name, args } =>
+            *function_name >= view.names.len() || !slice_ok(*args, img.active.value_slots) || args.len > b.max_arity,
+        ControlC::Enter { args, .. } => !slice_ok(*args, img.active.value_slots) || args.len > b.max_arity,
+        ControlC::ScheduleNext { frame, .. } => !matches!(si15_frame_ok(&pre, frame), Ok(true)),
+        ControlC::Cases { arms, .. } => !origin_arms_suffix(arms),
+        ControlC::CaseResult { rest, .. } => !origin_arms_suffix(rest),
+        ControlC::PrimResult { result: PrimOutcome::Error { code } } => !matches!(code, 10 | 11),
+        ControlC::Error { code } => !(1..=11).contains(code),
+        ControlC::Eval { .. } | ControlC::Return { .. } | ControlC::Bound { .. }
+        | ControlC::PrimResult { result: PrimOutcome::Value { .. } } => false };
+    push(StepInvClauseId::SI16, "reg.control", "control payload", si16, &mut v);
+    // SI-17 marker placement: a markerFree=false Const ref may be held only at helper Validate.root and ValidateTask.ref
+    // (positional exemption); every other holder above and every data field slot is scanned; a read failure is a violation.
+    let si17 = held.iter().chain(img.data_fields.iter()).any(|r| match r {
+        RefC::Const(id) => !matches!(pre.marker_free(id), Ok(true)), RefC::Data(_) => false });
+    push(StepInvClauseId::SI17, "markers", "marker placement", si17, &mut v);
+    // SI-18 terminal coherence. SI-19 has no segBase field in this carrier (zero by construction).
+    push(StepInvClauseId::SI18, "terminal", "terminal coherence",
+        matches!(img.outcome, OutcomeC::Halted { .. } | OutcomeC::Rejected { .. })
+            && !(img.helper.is_none() && img.result.is_none() && img.tasks.is_empty()), &mut v);
+    // SI-21 per-kind helper coherence: Bind/Match in owner_si21_bind_match.rs, all other kinds in owner_si21_closure.rs. A checker Err is a violation, never a pass.
+    if let Some(h) = &img.helper {
+        let si21 = match h { HelperControlC::Bind { .. } => si21_bind_helper_ok(&pre), HelperControlC::Match { .. } => si21_match_helper_ok(&pre), _ => si21_helper_ok(&pre) };
+        push(StepInvClauseId::SI21, "helper coherence", "SI-21", !matches!(si21, Ok(true)), &mut v);
+    }
+    if let Some(r) = &img.result {
+        let si21r = match r { HelperResultC::BindOk { .. } | HelperResultC::BindBad => si21_bind_result_ok(&pre, r),
+            HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch => si21_match_result_ok(&pre, r), _ => si21_result_ok(&pre, r) };
+        push(StepInvClauseId::SI21, "result coherence", "SI-21R", !matches!(si21r, Ok(true)), &mut v);
+    }
+    // SI-22 helper_state_space: every listed state conjunct for all nine kinds (owner_si21_closure.rs).
+    if img.helper.is_some() {
+        push(StepInvClauseId::SI22, "helper state space", "SI-22", !matches!(si22_helper_ok(&pre), Ok(true)), &mut v);
+    }
+    // SI-23 value slots, including every live ValSlice in control, frames, helper and result.
+    push(StepInvClauseId::SI23, "img.valueSlots", "value slots",
+        !(img.active.value_slots as u128 <= img.consumed_work
+            && img.active.value_slots <= a.body.layout.capacities.value_slots
+            && img.value_slots.iter().all(|r| ref_in_bounds(&pre, r))
+            && si23_live_slices_ok(img, b.max_arity)), &mut v);
+    // SI-24 via the prepare lane's checker (explicit cross-lane dependency).
+    if check_view(view, b, &a.body.layout).is_err() {
+        v.push(siv(StepInvClauseId::SI24, "program view", "check_program_view failed")); }
+    if v.is_empty() { Ok(()) } else { Err(v) }
+}
+
+// ================= CheckedOwnerEngine: Root wiring only (finding 5) =================

@@ -1,0 +1,79 @@
+{
+  "returned_conversation_ids": [
+    "718c49e1-b041-407c-a3a9-73aa7366ad0e"
+  ],
+  "forbidden_prior_CIDs": [
+    "2246d9e6-0c61-4a77-b793-90541268a34c",
+    "29f6efee-2b5e-4f3f-b663-bad4292ff558",
+    "3b833d1d-96eb-4d82-a33a-abc28e7d3533",
+    "4e8031df-879c-41c4-95d2-622cd6b5df22",
+    "6277cc2c-99b8-4b7a-a220-a6c971d1bb98",
+    "bb6043a1-63f1-4de9-b26f-ef50139233e3",
+    "d2f4cab5-a214-4450-af91-35feb60db39f"
+  ],
+  "fresh_single_CID": true,
+  "actual_exit": 0,
+  "start_utc": "2026-10-18T14:18:55.743562+00:00",
+  "end_utc": "2026-10-18T14:21:12.880450+00:00",
+  "elapsed_seconds": 137.1369073090027,
+  "requested_model": "gemini-4-argon-high",
+  "requested_effort": "HIGHactualpinnedslug",
+  "returned_init_selection": [
+    {
+      "model": "gemini-4-argon-high",
+      "permission_mode": "always-proceed",
+      "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/429-v8-resolved-signature-owner-source-request/fresh-provider-cwd"
+    }
+  ],
+  "backendcanonical_attestation": false,
+  "event_counts": {
+    "init": 1,
+    "step_update": 344,
+    "result": 1
+  },
+  "step_type_counts": {
+    "user_input": 1,
+    "agent_response": 343
+  },
+  "terminal_count": 1,
+  "terminal": {
+    "status": "SUCCESS",
+    "response": "{\n  \"status\": \"PUBLIC_FINAL_SOURCE_AUTHOR_ONLY\",\n  \"role\": \"SECURITY_SOURCE_AUTHOR\",\n  \"model_identity\": \"Gemini 4 Argon (High)\",\n  \"authority_scope\": \"Source authoring only for the narrow V8 check_program_view TypeIdC-to-SortTag conversion/refusal seam. Not an independent review vote, not an execution grant, and not a whole-crate audit.\",\n  \"target_preimage\": {\n    \"target_file\": \"crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs\",\n    \"ordinary_afterimage_sha256\": \"9d9a59458439e09845858c80292bd12e5324d1953301ff70e7935f6432b9de80\",\n    \"check_program_view_sha256\": \"b09ef3359df2e62b8bf4f4ca5536543c1eaef061efe6c540ecb3b713a3c17440\"\n  },\n  \"exact_edits\": [\n    {\n      \"target\": \"crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs\",\n      \"old\": \"    let mut funcs: Vec<CoreFunction> = Vec::new();\\n    for f in &v.functions {\\n        let bod = decoded[f.body].take().ok_or_else(|| pv_err(ViewCheck::V8, \\\"functions\\\", None, \\\"function body taken\\\"))?;\\n        let mut params: Vec<CoreParameter> = Vec::new();\\n        if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {\\n            params.push(CoreParameter { name: v.names[v.parameters[pid].binder].clone(),\\n                sort: v.parameters[pid].sort }); } }\\n        funcs.push(CoreFunction { name: v.names[f.function_name].clone(),\\n            parameters: params, return_type: f.return_type, body: bod });\\n    }\",\n      \"new\": \"    fn decode_source_sort(sort: TypeIdC, table: &str, row: usize, detail: &str)\\n        -> Result<SortTag, ProgramViewViolation> {\\n        match sort {\\n            TypeIdC::UInt => Ok(SortTag::UInt),\\n            TypeIdC::Bool => Ok(SortTag::Bool),\\n            TypeIdC::List => Ok(SortTag::List),\\n            TypeIdC::Tree => Ok(SortTag::Tree),\\n            _ => Err(pv_err(ViewCheck::V8, table, Some(row), detail)),\\n        }\\n    }\\n    let mut funcs: Vec<CoreFunction> = Vec::new();\\n    for (fi, f) in v.functions.iter().enumerate() {\\n        let bod = decoded[f.body].take().ok_or_else(|| pv_err(ViewCheck::V8, \\\"functions\\\", None, \\\"function body taken\\\"))?;\\n        let mut params: Vec<CoreParameter> = Vec::new();\\n        if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {\\n            let sort = decode_source_sort(\\n                v.parameters[pid].sort, \\\"parameters\\\", pid, \\\"non-builtin parameter sort\\\")?;\\n            params.push(CoreParameter { name: v.names[v.parameters[pid].binder].clone(),\\n                sort }); } }\\n        let return_type = decode_source_sort(\\n            f.return_type, \\\"functions\\\", fi, \\\"non-builtin return type\\\")?;\\n        funcs.push(CoreFunction { name: v.names[f.function_name].clone(),\\n            parameters: params, return_type, body: bod });\\n    }\"\n    }\n  ],\n  \"api_refusal_and_order\": {\n    \"helper_signature\": \"fn decode_source_sort(sort: TypeIdC, table: &str, row: usize, detail: &str) -> Result<SortTag, ProgramViewViolation> (scoped locally inside check_program_view V8 reconstruction)\",\n    \"builtin_conversion_bijection\": {\n      \"TypeIdC::UInt (TypeIdC(0))\": \"Ok(SortTag::UInt)\",\n      \"TypeIdC::Bool (TypeIdC(1))\": \"Ok(SortTag::Bool)\",\n      \"TypeIdC::List (TypeIdC(2))\": \"Ok(SortTag::List)\",\n      \"TypeIdC::Tree (TypeIdC(3))\": \"Ok(SortTag::Tree)\"\n    },\n    \"non_representable_refusal\": {\n      \"domain\": \"All TypeIdC(id) with id >= 4\",\n      \"parameter_refusal\": {\n        \"check\": \"ViewCheck::V8\",\n        \"table\": \"parameters\",\n        \"row\": \"Some(pid)\",\n        \"detail\": \"non-builtin parameter sort\"\n      },\n      \"return_type_refusal\": {\n        \"check\": \"ViewCheck::V8\",\n        \"table\": \"functions\",\n        \"row\": \"Some(fi)\",\n        \"detail\": \"non-builtin return type\"\n      }\n    },\n    \"evaluation_and_refusal_order\": [\n      \"1. V1..V7 predicates execute first and unchanged (including V4 function/parameter slice, contiguity, body-root, binder-range, and trailing-parameter checks).\",\n      \"2. V8 expression reverse-ExprId decoding (including decode_const_value) and entry take execute unchanged before function/parameter reconstruction.\",\n      \"3. V8 iterates functions in ascending function index order fi in 0..v.functions.len().\",\n      \"4. Within function fi: (a) decoded[f.body].take() is checked first with existing (ViewCheck::V8, \\\"functions\\\", None, \\\"function body taken\\\"); (b) parameter rows pid in f.params.start..f.params.start + f.params.len are decoded in ascending pid order, refusing the first non-builtin parameter sort at (ViewCheck::V8, \\\"parameters\\\", Some(pid), \\\"non-builtin parameter sort\\\"); (c) f.return_type is decoded next, refusing a non-builtin return type at (ViewCheck::V8, \\\"functions\\\", Some(fi), \\\"non-builtin return type\\\"); (d) function fi completes before fi + 1 begins.\",\n      \"5. V8 prepare_core(&prog, b, l) re-prepare and views_equal(v, &reprepared) execute unchanged after all functions and parameters decode to SortTag.\"\n    ]\n  },\n  \"material_gaps_and_testing_requirements\": {\n    \"seam_grounding_gap\": \"NONE for the V8 check_program_view partial conversion/refusal seam; complete check_program_view, prepare_core, decode/equality helpers, shared.rs, and adt.rs bodies were supplied inline.\",\n    \"scope_boundaries\": [\n      \"Existing test fixture module is not supplied inline; no guessed test harness code is authored here.\",\n      \"Other functions in owner_prepare.rs outside the supplied bodies are untouched and not claimed as a fresh whole-file audit.\",\n      \"Requires fresh independent non-author review before integration/execution.\"\n    ],\n    \"required_test_cases_for_review\": [\n      \"1. Builtin round-trip acceptance: ProgramView with parameters and return types covering all four builtin IDs TypeIdC::UInt(0), TypeIdC::Bool(1), TypeIdC::List(2), TypeIdC::Tree(3) passes check_program_view and round-trips through prepare_core + views_equal.\",\n      \"2. Nominal parameter sort refusal: ProgramView otherwise V1..V8-valid with v.parameters[pid].sort = TypeIdC(4) (and higher nominal IDs) returns Err(ProgramViewViolation { check: ViewCheck::V8, table: \\\"parameters\\\", row: Some(pid), detail: \\\"non-builtin parameter sort\\\" }).\",\n      \"3. Nominal return_type refusal: ProgramView otherwise V1..V8-valid with builtin parameter sorts and v.functions[fi].return_type = TypeIdC(4) returns Err(ProgramViewViolation { check: ViewCheck::V8, table: \\\"functions\\\", row: Some(fi), detail: \\\"non-builtin return type\\\" }).\",\n      \"4. Intra-function precedence: when function fi has both v.parameters[pid].sort = TypeIdC(4) and f.return_type = TypeIdC(5), the parameter refusal at Some(pid) fires before the return_type refusal at Some(fi); if multiple parameters in fi have IDs >= 4, the lowest pid fires first.\",\n      \"5. Inter-function and stage precedence: function fi errors fire before function fi + 1; V1..V7 violations (e.g., V4 parameter binder out of range or non-contiguous params) and V8 expression/entry decode errors fire before V8 parameter/return_type sort conversion.\"\n    ]\n  }\n}\n",
+    "duration_seconds": 134.537188652,
+    "num_turns": 1,
+    "usage": {
+      "input_tokens": 49415,
+      "output_tokens": 13491,
+      "thinking_tokens": 11328,
+      "cache_read_tokens": 0,
+      "total_tokens": 62906
+    },
+    "conversation_id": "718c49e1-b041-407c-a3a9-73aa7366ad0e"
+  },
+  "stream_parse_error_count": 0,
+  "stdin_error": null,
+  "available_user_input_events": [
+    {
+      "conversation_id": "718c49e1-b041-407c-a3a9-73aa7366ad0e",
+      "step_index": 0,
+      "state": "DONE",
+      "step_type": "user_input"
+    }
+  ],
+  "available_tool_steps": [],
+  "available_public_error_metadata": [],
+  "visible_public_fields_captured": [
+    "text_delta"
+  ],
+  "final_response_bytes": 7038,
+  "all_selected_input_pins_unchanged": true,
+  "observer_violations": [],
+  "one_manual_provider_launch": true,
+  "real_native_jobs_selected_by_this_review": 0,
+  "tests_run": false,
+  "source_author_of_requested_V8_candidate": true,
+  "source_author_CID": "fresh actual returned CID only; unknown before init",
+  "test_authorship_requested": false,
+  "author_is_not_independent_review_vote": true,
+  "actual_role": "fresh_designated_security_v8_source_author_only_not_independent_vote"
+}
