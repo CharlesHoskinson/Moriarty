@@ -1,0 +1,13 @@
+# Cardano Preprod observation and FX1 binding graph fragment
+
+This additive graph maps the dated public Preprod observation, the separate Preview funding follow-up, and the qualified FX1 R2 source design. It adds 19 nodes and 26 ordered links to the pinned 1,489-node / 3,756-link parent graph. Every parent node payload and every ordered link remains an exact prefix; inherited graph metadata is unchanged and one fragment_updates entry was appended.
+
+The Preprod response set is a dated, single-provider observation. The empty address_utxos response with Content-Range */* and unknown completeness does not establish zero balance, an unfunded wallet, or complete UTxO absence. The same-provider tip bracket is not an authenticated atomic snapshot. Epoch and protocol values do not establish cost-model units, fees, min-ADA, ledger ExUnits, or transaction fit. A later faucet follow-up reported a matching unspent output on Preview; the Preprod status result was null, so that Preview observation does not establish Preprod funding. Its raw output value is retained as a string without unit conversion.
+
+The FX1 R2 source design is adopted as a specification only. It distinguishes the T1 wallet seed from the created S2p thread outref, and specifies an atomic T3 settlement with the claim burn and five zero-withdrawal checks. The graph preserves the qualification that source implementation, private-key authority, native authority, network or ledger authority, target acceptance, and the genuine-context proof path remain open. The tally is 12 author-FOR and reviewer-AGREE clause positions; the corrective addendum is not a second full audit. The broader UTxO, ACTUS, DeFi, general financial, recursion, private handoff, multi-parent PCD and universal-certificate obligations remain open.
+
+## Source and coverage limits
+
+Sources are limited to the exact published observation capsule, its root adoption/publication records, the named Preview RESULT, and the exact FX1 R2 design/adoption/review records. Five captured response bodies are represented by their sizes, hashes, and publication mappings in the capsule COPY-MANIFEST; the raw bodies were not opened for this graph. The full base corpus was not scanned. The graph represents mapped claims and boundaries, not code execution, a ledger transaction, security certification, or whole-project completion.
+
+Graphify: installed 0.9.91; primary package metadata recorded 0.9.91 as latest at 2026-10-16T13:32:52.473013Z. No package update was performed. Runtime token cost is UNKNOWN because no platform token counter was supplied. HTML export uses the installed Graphify renderer and may retain its documented CDN dependency.

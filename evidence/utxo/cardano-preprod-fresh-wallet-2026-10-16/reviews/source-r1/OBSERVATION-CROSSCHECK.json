@@ -1,0 +1,114 @@
+[
+  {
+    "evidence": "Candidate operator.py is 30735 bytes, SHA-256 7944d08ff689172a4985c5de657d4b6add0bb47dc93ecc44774f4c45e8e091b6 per INPUT-INDEX.json:156-160 and ROOT-SOURCE-MANIFEST.json:7-12 (authorBodyUnchanged true). AUTH-CANDIDATE.json:18 pins exactly that operatorSha256. The full file was read, not the author synopsis.",
+    "id": "CC-01",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Operator identity pin is consistent across index, root manifest, and candidate AUTH."
+  },
+  {
+    "evidence": "inputs/.../cardano-cli-extracted-data-20261016/DATA-ONLY-MANIFEST.json:6-9 records member cardano-cli-x86_64-linux, 102556168 bytes, SHA-256 01b131705d658912d08f20ed57bc5c0ff019b77f84df67ce8f14602e7787ad8d, mode 0644 data-only, no execution. AUTH-CANDIDATE.json:8 and :12 pin the same hash and size; operator.py:42-43,408-409 compares the streamed digest to auth[expectedStagedBinarySha256] before any execution.",
+    "id": "CC-02",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Staged-member hash measured by root as data matches the filled candidate value."
+  },
+  {
+    "evidence": "DATA-ONLY-MANIFEST (extracted):10-25 records ELF64, little-endian, machine 62, 9 program headers, hasPT_INTERP false, hasPT_DYNAMIC false. operator.py:310-353 parses exactly class/endian/machine/PT_DYNAMIC/PT_INTERP as data and at :413-415 rejects a static AUTH if either appears. AUTH-CANDIDATE.json:6,23 declares static with empty runtimeBinds, which load_auth:281-282 requires for static. No DT_NEEDED analysis is needed when no PT_DYNAMIC exists. This is an ordinary ELF observation, not build attestation or runtime compatibility evidence.",
+    "id": "CC-03",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Static linkage classification is supported by the supplied ELF observation and by operator re-parsing."
+  },
+  {
+    "evidence": "Cardano/CLI/Option.hs:58-59 addressCmdsTopLevel wraps pAddressCmds; :82 lists it first in parseClientCommand; Cardano/CLI/Run.hs:57-58 dispatches AddressCommand to runAddressCmds. Address/Option.hs:44-50 mounts commandWithMetavar \"address\" and :27-42 mounts key-gen/key-hash/build/info. The gap declared in EXECUTION-PROPOSAL.json:201 and REPORT.md:30 is closed by the supplement; the historical prose is superseded, not rewritten.",
+    "id": "CC-04",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Top-level dispatch cardano-cli address ... is now closed by supplied primary source."
+  },
+  {
+    "evidence": "EraBased/Common/Option.hs:573-575 --verification-key-file, :577-579 --signing-key-file, :1307-1317 --payment-verification-key-file, :1881-1884 --out-file, :148-158 --testnet-magic, :2543-2551 --address. These match operator.py:604-613, 638-647, 658-669, 680-689 argv exactly, in the order key-gen, key-hash, build --testnet-magic 1, info.",
+    "id": "CC-05",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "All four leaf argv spellings are verified against primary Common/Option.hs."
+  },
+  {
+    "evidence": "EraBased/Common/Option.hs:1350-1369 pAddressKeyType ends in pure AddressKeyShelley (help text: normal Shelley-era key, default); :1731-1753 pKeyOutputFormat sets FormatTextEnvelope as default via setDefault and Opt.value. Address/Run.hs:67-69 routes AddressKeyShelley to generateAndWriteKeyFiles AsPaymentKey, and :117-140 writes the text-envelope branch with paymentVkeyDesc for the vkey and \"Payment Signing Key\" (:143-144) for the skey. operator.py passes neither flag, so these source defaults govern, and its check at :626-637 (JSON object with even-length hex cborHex) is exactly what the default format produces; a bech32-default result would fail closed.",
+    "id": "CC-06",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Defaults are Shelley payment key type and text-envelope format, matching the operator's reliance and its fail-closed vkey check."
+  },
+  {
+    "evidence": "EraBased/Common/Option.hs:134-162 pNetworkId: explicit --testnet-magic overrides CARDANO_NODE_NETWORK_ID; the environment default applies only when no flag is given. operator.py:470 uses bwrap --clearenv and :488-499 sets only HOME, TMPDIR, LANG, PATH, and always passes --testnet-magic 1 (:665-666), so no inherited network id can change the target. Cardano/CLI/Environment.hs:62-80 confirms the env var is the only network-id environment input.",
+    "id": "CC-07",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Network selection cannot be hijacked by environment inside the sandbox."
+  },
+  {
+    "evidence": "Address/Run.hs:166-182 serialises verificationKeyHash as raw-bytes hex to the out-file; operator.py:649-657 requires exactly 56 lowercase hex after strip. Address/Run.hs:247-254 buildShelleyAddress uses PaymentCredentialByKey (verificationKeyHash vkey) and NoStakeAddress when no stake identifier is passed; operator passes none. Address/Info/Run.hs:53-61 emits type payment, era shelley, encoding bech32, address, base16 for a Shelley payment address. operator.py:698-720 requires all four fields, identical address, base16 decoding to 29 bytes, header 0x60, and trailing 28 bytes equal to the CLI key hash. A Shelley enterprise testnet address is one header byte (key-hash payment credential, testnet tag) plus a 28-byte key hash, so the invariant is sound and fail-closed; it is not a ledger or signature proof, as the code comment at :713-716 states.",
+    "id": "CC-08",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Enterprise address derivation and the 0x60/29-byte invariant are source-grounded."
+  },
+  {
+    "evidence": "Address info deserialises any testnet Shelley address (Info/Run.hs:40-61) with no network-magic field; operator RESULT at :771-772 sets ledgerObserved and ownershipSignatureTestPerformed false, and :737 pins networkMagic 1 as configuration. EXECUTION-PROPOSAL.json:19 and README.md:39 state the same limitation. Preprod naming rests solely on --testnet-magic 1.",
+    "id": "CC-09",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Testnet encoding cannot distinguish Preview from Preprod, and the package does not claim otherwise."
+  },
+  {
+    "evidence": "operator.py never opens payment.skey: :615-625 uses private_file_info (lstat regular/non-link, :553-554,162-169), checks size>0, chmods 0600 by path, and records only booleans (:750-753 signingKeyRetainedPrivate/Mode0600 true, Exported/HashedByOperator false). No signing-key bytes, hash, CBOR, size, entropy, or mnemonic appear in RESULT (:732-773) or failure results (:787-800). Raw CLI stdout/stderr are written only to PRIVATE_ROOT/logs at 0600 (:537-538); public records carry call name, exitCode, timedOut only (:539-543). Public exports (:728-731) occur after every validation including archive/staged re-hash (:721-726).",
+    "id": "CC-10",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Secret boundary in code: signing key is never read, hashed, copied, or exported; raw native output stays private."
+  },
+  {
+    "evidence": "operator.py:172-183 lstat-checks each private parent component (non-link directory) and creates missing ones 0700 without listing or reading contents; :186-204 creates both leaves with exclusive mkdir and fails PUBLIC_ROOT_ALREADY_EXISTS / PRIVATE_ROOT_ALREADY_EXISTS. Only the operator stats these fixed private parent paths; the AUTH/proposal boundary (EXECUTION-PROPOSAL.json:31-35, README.md:51) forbids root any read/stat/hash/walk of the private root. Existing parent modes/ownership are not re-forced, but the leaf itself is created 0700 and checked at :754; residual same-user race risk is disclosed in DESIGN P-08 rationale.",
+    "id": "CC-11",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Fresh-leaf creation, no-follow checks, and the operator-only private-parent rule are implemented as designed."
+  },
+  {
+    "evidence": "operator.py:465-503 builds /usr/bin/bwrap --unshare-all --die-with-parent --new-session --clearenv, ro-binds only the staged binary (plus any AUTH runtime binds, none for static), binds only PRIVATE_ROOT at /private read-write, adds tmpfs /tmp and --dev /dev (which supplies urandom for the CLI), and sets four env vars. No /home, /usr, existing wallet, credential, or public-root mount exists. Popen also uses start_new_session=True (:513).",
+    "id": "CC-12",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Sandbox mounts only the fresh private leaf read-write; binary read-only; no home, credentials, or network."
+  },
+  {
+    "evidence": "Address/Run.hs:93-96 generateAndWriteKeyFiles generates one (vk, sk) pair and writes both; key-hash (:170-178) and build (:193-203) then independently parse the written vkey file, and operator.py:717-720 ties the built address's trailing 28 bytes to the CLI key hash. So the exported address is credential-matched to the same CLI-generated pair within the single key-gen operation. The operator deliberately never reads the skey and performs no signature test (:772 ownershipSignatureTestPerformed false); for an unfunded dedicated test wallet this source-grounded correspondence is adequate, and live ownership/spendability remains an open later question, as README.md:43 states. No new signature test needs to be imposed to call the resulting address a key-controlled test wallet.",
+    "id": "CC-13",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Keypair-to-address credential correspondence is established without opening the signing key; signature proof is correctly deferred, not required."
+  },
+  {
+    "evidence": "Address/Run.hs:94 calls generateKeyPair (imported at :35 from Cardano.CLI.Type.Key), whose Cardano.Api implementation is not in the mirror. This remains an explicit dependency on the pinned official binary (archive SHA pinned at operator.py:38 and re-verified before/after, :360-361 and :721-722), not a mathematical CSPRNG proof. For one dedicated Preprod test wallet holding only test ADA, delegating entropy to the official pinned CLI with /dev/urandom available via bwrap --dev is appropriate; Python generates no key material (operator.py imports only hashlib/json/os/re/resource/stat/subprocess/sys/tarfile/time/pathlib).",
+    "id": "CC-14",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "CSPRNG quality rests on the pinned official CLI, acceptable for a dedicated test wallet and honestly not proved."
+  },
+  {
+    "evidence": "operator.py:457-549 performs each call via subprocess with PIPE and communicate(timeout). RLIMIT_FSIZE (:424, 32 MiB) does not bound pipe output, and RLIMIT_AS (:426) limits the child, not Python's buffering. Materiality is low for this fixed official code: with --out-file given, Address/Run.hs:181-182,221-223 and Info/Run.hs:73 write results to files, key-gen writes only files, so expected stdout/stderr is empty-to-small error text; the staged binary is hash-pinned to the official member, so a flooding binary would have to deviate from the mirrored source paths. Residual: a pathological binary could grow operator memory until the 30 s timeout/CPU limits fire; the attempt then fails spent with no address published. Not blocking for this fixed-code scope.",
+    "id": "CC-15",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Pipe output is technically unbounded in the parent, but materially bounded by the fixed official out-file code paths."
+  },
+  {
+    "evidence": "operator.py:422-426 sets RLIMIT_CPU (15,16), FSIZE 32 MiB, NOFILE 128, AS 4 GiB per CLI process (preexec_fn :514). No RLIMIT_CORE is set in set_limits, so core-dump behaviour is inherited from however the operator process itself is launched; a crashed key-gen child holds signing-key material in memory. AUTH (AUTH_KEYS :54-83) has no field to pin an inherited core limit. GHC runtime compatibility with a 4 GiB address-space cap and bwrap user-namespace availability on the host are runtime unknowns that cannot be settled by source reading and must not be probed under this review.",
+    "id": "CC-16",
+    "requiredFix": "Fold an inherited RLIMIT_CORE=(0,0) launch condition into the same new author-approved outer-bound clause required by F-01 (caller launches the operator with core dumps disabled, inherited through bwrap to the CLI), or equivalently add resource.setrlimit(resource.RLIMIT_CORE,(0,0)) to set_limits at operator.py:422-426 and submit the changed operator.py to a fresh changed-source audit before any AUTH is issued. Do not execute a probe to settle GHC/bwrap runtime compatibility.",
+    "severity": "major",
+    "summary": "Per-call limits are set as claimed except core dumps, which depend on unpinned caller inheritance."
+  }
+]

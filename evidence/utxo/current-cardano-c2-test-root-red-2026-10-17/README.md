@@ -1,0 +1,15 @@
+# C2 r2 test review and meaningful failing baseline
+
+The corrected 18-method C2 consumer test passed a fresh full-source Opus 5.5 review for one isolated run with the implementation absent. Root observed T00 pass and T01–T17 fail with the exact missing-implementation assertion, zero errors and exit 1. All five input files retained their hashes and read-only modes. The r2 implementation was absent throughout.
+
+The reviewed test is 58,800 bytes, SHA-256 `b9c1921102411734e060e48508d13be9b459721b04b43b93aa7b13b206217b3e`. The review completed with actual `claude-opus-5-5` assistant identity on all 15 envelopes, one whole review object and unchanged 23 source pins. The reviewer read eight complete line-numbered segments covering all fourteen original source bodies; it did not open those fourteen raw originals directly. The mechanical line-coverage record preserves that distinction.
+
+`root-red/DECISION.json` records the one-run root decision and exact command. `root-red/RESULT.json` and the original stdout/stderr record the observation. The command used a read-only five-file namespace, isolated Python, no network, a minimal environment, ten-second timeout and CPU limits, and 512 MiB address space. This evidence is a meaningful failing baseline, not a passing implementation. The observation awaits its separate result review.
+
+The review retains four low findings and seven information findings. The future implementation audit must inspect host aliases and mutation, first-use and hidden state, and the CP04 scan constraints directly; a passing test cannot establish those source properties. The unchanged test bytes retain the reviewed docstring limitations. The earlier corrected-source review timed out after 600 seconds and supplied no complete review or vote; `review-timeout/` preserves its public outcome. The later complete review used the same test bytes and complete source delivery, with a 1,200-second provider limit. The ordinary test limits did not change.
+
+This package grants no GREEN, mutant, builder, native, prover, VM, wallet, signing, deployment or ledger authority. Separate Opus implementation authoring has begun locally and is not part of this reviewed package. Source and result adoption remain distinct. The first rejected test is preserved in the preceding evidence package and is not relabelled.
+
+The full Cardano Preprod prototype remains open, including current-language coverage across all 20 UTXO families, financial and residual obligations, proof and ledger authentication, recursion, private handoff and bounded multiparent PCD. No on-chain transaction or proof verification occurred in this test.
+
+The eight exact reviewed segment files are stored as deterministic `.txt.gz` archives. Decompression recovers their original bytes and hashes; `SEGMENT-ARCHIVE-INDEX.json` maps each archived file to its original manifest entry. This preserves the reviewer input while avoiding Git whitespace errors from the original line-number prefixes on empty lines. All fourteen raw source bodies remain plain text. The first publication whitespace check failed on those segment-prefix spaces; it was not treated as a pass.

@@ -1,0 +1,55 @@
+--- origin-r2/source/mori-r1cs/src/coverage.rs
++++ successor/source/mori-r1cs/src/coverage.rs
+@@ -22,6 +22,10 @@
+     Internal,
+     /// Outside the transition relation; a named target obligation.
+     TargetObligation,
++    /// A fact the relation's soundness argument assumes but neither the relation nor
++    /// admission establishes: assignments violating it can satisfy the relation. A
++    /// target must authenticate it, or a reviewed constraint must be added.
++    TargetPremise,
+ }
+ 
+ #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+@@ -136,8 +140,18 @@
+     row("Program.actions (name, inputs, statements)", Support::Constant, "one relation per action; action index in the header", "plan.rs"),
+     row("Scenario.state", Support::Lowered, "pre state slots, complete and typed", "runtime.rs:548-571"),
+     row("Scenario.inputs", Support::Lowered, "input slots in declaration order, typed", "runtime.rs:572-585"),
+-    row("Scenario.balances", Support::Lowered, "represented cells; unrepresented rows are a frame-completeness target obligation", "runtime.rs:586-628"),
+-    row("Scenario.liabilities", Support::Lowered, "registry duty cells (present, amount); unregistered rows are a target obligation", "runtime.rs:629-661"),
++    row(
++        "Scenario.balances",
++        Support::Lowered,
++        "represented cells; unrepresented rows are a frame-completeness target obligation; row existence of a represented cell has no presence bit and is a target premise (see REFUSALS, review F-04)",
++        "runtime.rs:586-628",
++    ),
++    row(
++        "Scenario.liabilities",
++        Support::Lowered,
++        "registry duty cells (present, amount); unregistered incoming duties cannot be represented (no duty-frame option, review F-05), so their preservation is a target obligation",
++        "runtime.rs:629-661",
++    ),
+     row("Execution.pre / post", Support::Lowered, "pre and post body slots", "runtime.rs:904-911"),
+     row("Execution.effects", Support::Lowered, "effect slots in statement order; kinds and constant fields in the shape digest", "runtime.rs:895"),
+     row("Execution.steps (index, statement, value, snapshot, effects)", Support::Internal, "every step value is a constrained internal wire; per-step snapshots are not published (determined by pre + inputs)", "runtime.rs:886-903"),
+@@ -149,12 +163,19 @@
+ ];
+ 
+ /// Each Core refusal on the `/1` success path and how the success relation excludes it.
++/// A `TargetPremise` row is a refusal the relation does NOT exclude; it names the
++/// premise a target must establish instead.
+ pub const REFUSALS: &[Row] = &[
+     row("mori::core::profile / name / program / duplicate / type / expression / asset / account / liability (validate)", Support::AdmissionFact, "program not admitted; no relation", "runtime.rs:120-322"),
+     row("mori::core::action (unknown action)", Support::RefusedAtCompile, "CompileError::UnknownAction", "runtime.rs:875-879"),
+     row("mori::core::bound (scenario sizes, trace product)", Support::Constant, "conservative compile-time bound over the represented snapshot; extra rows are a target obligation", "runtime.rs:529-547"),
+     row("mori::core::state / input (scenario typing)", Support::Lowered, "slot types fix the shape; encode refuses mistyped claims", "runtime.rs:548-585"),
+-    row("mori::core::balance (missing explicit balance)", Support::Constant, "every touched cell is represented", "runtime.rs:609-627"),
++    row(
++        "mori::core::balance (missing explicit balance)",
++        Support::TargetPremise,
++        "NOT excluded by the relation: every touched cell is represented, but the layout has no balance presence bit, so a claim of pre-balance 0 for a row absent from the Core scenario satisfies the relation (review F-04, M-14 expected SATISFIABLE). A target must authenticate row existence, or a reviewed presence bit must be added",
++        "runtime.rs:609-627",
++    ),
+     row("mori::core::liability (scenario identity differs)", Support::Constant, "duty identities are registry constants", "runtime.rs:652-659"),
+     row("mori::core::liability (conflicting source identity)", Support::RefusedAtCompile, "StaticFailure: every simulate refuses", "runtime.rs:500-527"),
+     row("mori::core::overflow (Add, Mul, credit, accrual)", Support::Lowered, "range-proven result; unsatisfiable", "runtime.rs:455-469, 691-695, 809-814"),

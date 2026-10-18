@@ -1,0 +1,37 @@
+[
+  {
+    "evidence": "Public RESULT.json (2433 B, SHA-256 eb85770af187c927f91cff4a5b5341ae4fcd376f34bce02e69d4b2cd20611dae per INPUT-INDEX and root RESULT.json:33-35) status WALLET_CREATED_PUBLIC_EXPORT_COMPLETE, walletCreated true; six public exports pinned in root RESULT at 64/190/57/231/2433/152 B with hashes 84897c9f..., 6a257005..., 92fffc33..., 71378a4a..., eb85770a..., a1087d7d... all matching the mirror INPUT-INDEX entries.",
+    "id": "F-01",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "Actual public result fully satisfies the narrow wallet-created predicate; walletCreatedPrerequisiteClosed and walletFundingAddressReady are true for reporting the address to a human for Preprod test ADA only."
+  },
+  {
+    "evidence": "Address addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc in public RESULT.json:2, payment.addr:1, address-info.json:2; operator.py:604-689 four calls in order, :656-657 56-hex hash, :698-720 type payment/era shelley/encoding bech32/identical address/29-byte 0x60 enterprise check, :721-726 archive and staged-binary recheck, export only at :728-731. Haskell Address/Run.hs:93-96 generateAndWriteKeyFiles writes one generated pair, :197-203 and :247-254 build PaymentCredentialByKey with NoStakeAddress when no stake identifier; Info/Run.hs:53-61 supplies payment/shelley/bech32/base16.",
+    "id": "F-02",
+    "requiredFix": "None. Live ownership/spendability remains a separate later predicate and is not required before funding this test address.",
+    "severity": "info",
+    "summary": "CLI keypair correspondence is established by the single generateAndWriteKeyFiles generation path; no separate signature is needed before funding advice."
+  },
+  {
+    "evidence": "Public RESULT.json:39-45,55 ledgerObserved false networkAccessUsed false signingPerformed false ownershipSignatureTestPerformed false; :42-44 networkMagic 1 networkName Cardano Preprod mainnet false. Source R2 REPORT.md:17 and P-20 record that encoding cannot distinguish Preprod from Preview.",
+    "id": "F-03",
+    "requiredFix": "None for reporting the address; first blocked next step is human funding then public ledger observation under separate review.",
+    "severity": "info",
+    "summary": "This is not funded status, ledger ownership, signature proof, settlement, or Preprod acceptance; target is Preprod by explicit configured magic 1 only."
+  },
+  {
+    "evidence": "operator.py:422-426 sets per-process CPU/AS/NOFILE/FSIZE but no RLIMIT_CORE (outer prlimit supplies it); :465-503 bwrap --unshare-all --die-with-parent --new-session --clearenv with only fresh private root RW, no home/usr/network/prior credentials; OUTER proposal caveats record D-state and non-transitive CPU residuals. No reproducible-build attestation and CLI CSPRNG internals are outside the mirror.",
+    "id": "F-04",
+    "requiredFix": "None; retain as disclosed qualifications, not blockers to the narrow public-address predicate.",
+    "severity": "low",
+    "summary": "Residual qualifications remain: official-binary CSPRNG dependency, no reproducible-build proof, D-state/pipe-bound and non-transitive CPU limits."
+  },
+  {
+    "evidence": "Public RESULT.json contains no signing-key hash, seed, mnemonic, credential, or raw stderr; root operator.stdout.log is 113 B sanitized JSON/status+hash only and stderr 0 B; public exports are only the six named files. New key is a CLI PaymentSigningKey text envelope (Address/Run.hs:117-144), not an HD mnemonic wallet; no root backup exists in evidence.",
+    "id": "F-05",
+    "requiredFix": "Owner must protect the private file offline; share only the public address. No remediation required from this review.",
+    "severity": "info",
+    "summary": "No public leakage observed; retained secret is a CLI text-envelope signing key for owner protection, not a mnemonic."
+  }
+]

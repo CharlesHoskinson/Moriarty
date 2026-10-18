@@ -1,0 +1,76 @@
+{
+  "observed_at": "2026-09-12T20:15:55.528743+00:00",
+  "source_receipt": "source-opus-result-12b.json",
+  "source_receipt_sha256": "b2d86edd050db6557cb20efe40502f42a551808f55f56124d48449ce45f0dbf1",
+  "exit_code": 0,
+  "timed_out": false,
+  "stop_reason": "end_turn",
+  "is_error": false,
+  "modelUsage": {
+    "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 17219,
+      "cacheReadInputTokens": 1360,
+      "cacheCreationInputTokens": 750489,
+      "webSearchRequests": 0,
+      "costUSD": 7.936055,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 14456,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "review": {
+    "candidate_sha256": "40d18d36a2fb3a9d9f28aefbf3415a6fe63b9a80cda30656818092536924b884",
+    "verdict": "REVISE",
+    "scope_completed": "SOURCE ONLY, supplementing the retained Opus12 review. In this context I read the full supplied bytes of: the canonical diagnostic, snapshot.json (all 506 entries plus identity and limit fields), requisites.json (all 159), k-package-map.json (all 255), host-ownership-observation-12 (every entry and stagePath), nix-closure-metadata-03, nix-batch-order-controls-03, binding.json, store.py, foreman-launch.js, and the K bytes for bin/krun, bin/kast, bin-unwrapped/krun, kast and kore-print, plus checkJava, setenv, k, k-util.sh, expression-parser.py and expression-toolchain.lock.json. I made no edits, ran no commands and used no tools or subagents. No hashes were recomputed; I rely on the supplied hashes. No native or admission approval is given.",
+    "findings": [
+      {
+        "id": "S12b-1",
+        "severity": "medium",
+        "file": "k-macro05-trace106-diagnostic.py",
+        "line": "STAGE_COMMANDS / verify_wrapper_and_parser",
+        "evidence": "bin-unwrapped/krun calls `kore-expand-macros` by bare name on its default path (expandMacros=true). It also calls `kore-match-disjunction` only when a pattern is used, and `kparse` only when there is no --parser. kore-print then calls `kprint` by bare name. The only asserted krun-stage resolutions are the STAGE_COMMANDS helpers, the llvm and kore roles, and the parser python. On the krun stage, bison, flex, gcc-wrapper, gmp, openjdk, mpfr, ncurses, pkg-config, python3, z3 and kore-38afc81/bin all come before llvm-backend/bin. Nothing asserts which kore-expand-macros or kprint is selected. The host evidence has no entries for those intermediate bin directories. This weakens the E04-2 claim of exact selection with no unobserved fallback. The risk is bounded only by NAR and store trust. I cannot see recordedArgv in this context. If it contains --no-expand-macros, `cp` is used instead, which is covered.",
+        "required_change": "Add the krun-stage resolution, hash and symlink assertions for kore-expand-macros and kprint, and for any other bare-name callee the recordedArgv reaches. Alternatively, record why recordedArgv excludes them."
+      },
+      {
+        "id": "S12b-2",
+        "severity": "low",
+        "file": "k-macro05-trace106-pins.json (selectedExecutables)",
+        "evidence": "The shebang of bin-unwrapped/kast is `/nix/store/306znyj\u2026-bash-5.2p26/bin/sh`. The host evidence contains only `\u2026/bin/bash`, so bin/sh cannot be in the protected set, since verify_ownership would raise ARBITRARY_OVERFLOW. Its identity rests on the store root and NAR alone.",
+        "required_change": "Pin bash/bin/sh (symlink target plus resolved hash) and add a host-evidence entry for it."
+      },
+      {
+        "id": "S12b-3",
+        "severity": "info",
+        "evidence": "The supplied bytes confirm the following. (1) WRAPPER_PATH_RE yields 13 directories in gdb\u2192bison order. The `${PATH/:dir:/:}` lines match prepend_path_dir, and the resulting stages equal the host stagePaths. (2) The setenv PATH export happens after `uname` and `dirname` run, and checkJava = [lib/../../bin]+kast_stage, which matches the source. (3) checkJava's nailgun attempts (a $HOME/.kserver socket, then TCP) fail inside a read-only HOME tmpfs with --unshare-net, and the `$HOME/.local` classpath is empty. The sandbox therefore closes kserver hijack and jar injection. (4) The parser lock's kast hash equals the package-map bin/kast entry. (5) Spot checks of requisites against nix-closure-metadata-03 matched on order and narHash, and the 5 batch-order samples are all true. (6) The snapshot includes the lock, the parser (0755\u21920555), configVars.sh, and the interpreter and scanner (0775\u21920555). (7) `k` raises the soft stack limit to hard for Java kast, so STACK_SOFT constrains only krun and the interpreter."
+      },
+      {
+        "id": "S12b-4",
+        "severity": "low",
+        "file": "k-macro05-trace106-diagnostic.py",
+        "line": 676,
+        "evidence": "The _inventory_union annotation mismatch from S12-1 still stands. S12-2 cannot be closed: snapshot-inventory-draft-03 was not supplied, so the LL01 negative controls are still not bound to the canonical snapshot bytes."
+      }
+    ],
+    "remaining_unread": [
+      "llvm-backend bytes for llvm-krun, kore-expand-macros and kprint (llvm-krun's own bare-name callees are unverified), plus the interpreter ELF and loader",
+      "the pins.json and ownership.json bodies were not re-supplied, so recordedArgv and diagnosticArgv[1:8] are not visible here",
+      "runner.py after line 189",
+      "snapshot-inventory-draft-03.json",
+      "kore-38afc81/bin and the other intermediate PATH directory listings"
+    ],
+    "native_conditions": [
+      "All prior Opus12 native conditions and canaries are preserved unchanged and remain separately authorized. C7/D1/G60 pays for none of them.",
+      "Crash diagnostic outcome classes stay distinct: wrapper 113, parser/output failure, setup failure (full charge, no retry), inconclusive, and raw interpreter signal/exit. Accepted-depth success is not the acceptance predicate.",
+      "Signal evidence is transformed along the path. krun's bash stores the interpreter signal as 128+n and exits via `error ${result}`. bwrap and strace propagate exit status. foreman-launch maps a signaled direct child to exit 1, and child exit codes 124 and 125 collide with timeout and launcher error. Classify signals from the runner capture and strace `+++ killed by` lines, never from the foreman exit code alone.",
+      "The runner chain must observe RLIMIT_NOFILE. If the soft limit is 1024, preflight fails with SNAPSHOT_FD, which counts as a setup failure.",
+      "Canary, unobserved: exec of the interpreter, scanner and parser from bwrap --ro-bind-data copies (mount flags, exec permission, /proc/self/exe). Canary, unobserved: bwrap --unshare-user/--disable-userns and --proc nested inside foreman's `unshare --user --map-current-user --pid` on this WSL2 kernel. Unobserved: the 256MiB /tmp holding krun temp and expanded KORE, and the memory behind Java -Xmx8192m.",
+      "Before dispatch: refresh and bind the host ownership digest. Bind the runner plan (timeout 20, grace 5, charged 60, compile 0, retry 0), the -I -B interpreter, the full candidate, and fresh accounting and live resource state. store.py never auto-releases a primary reservation after a dead parent, so the runner must call finish() on every outcome.",
+      "Any native run requires a fresh independent review of its result."
+    ],
+    "identity_limitations": "The requested reviewer is claude-opus-5. No modelUsage receipt is visible here, so the root retains attestation. The verdict is REVISE because of S12b-1, which is conditional on recordedArgv. If recordedArgv provably avoids kore-expand-macros, kprint and the other unasserted callees, S12b-1 drops to info and the verdict becomes ACCEPT."
+  }
+}

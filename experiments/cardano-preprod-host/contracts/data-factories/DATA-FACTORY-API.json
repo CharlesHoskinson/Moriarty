@@ -1,0 +1,118 @@
+{
+  "format": "moriarty-host-data-factory-api/1",
+  "status": "AUTHOR_PROPOSAL_TEXT_ONLY_NOT_IMPLEMENTED_NOT_EXECUTED_NOT_REVIEWED_NOT_ADOPTED",
+  "author": "claude-opus-5-5 HIGH; tools off; nothing executed",
+  "contract": "DATA-FACTORY-CONTRACT.md",
+  "tests": "test_data_factories.py",
+  "module": {
+    "file": "host_codec.py",
+    "prefixBytes": 19096,
+    "prefixSha256": "8f59b28f8307c789dc1f4abe7251b0de661156af130650e9b358bceb668df377",
+    "existingPreservationPin": "first-16134-byte pin remains authoritative",
+    "priorApis": ["encode_data", "build_prove_request", "validate_prove_request", "validate_context_input", "parse_statement_header", "statement_digest_hex", "statement_public_inputs"],
+    "appendedApis": ["build_value_data", "build_output_reference", "build_env_data", "build_c2_mint_data"],
+    "suffixImports": "none in this increment (DF-02 phase gate)",
+    "clauses": ["DF-01", "DF-02"]
+  },
+  "notation": {
+    "pythonData": "('int', int) | ('bytes', bytes) | ('list', list) | ('map', list of (key, value) tuples) | ('constr', index, list); exact builtin types (DF-03)",
+    "jsonData": "node and pair arrays stand for Python tuples, container arrays for Python lists: ['int', n], ['bytes', B], ['list', [...]], ['map', [[k, v], ...]], ['constr', i, [...]]",
+    "jsonBytes": "B, and every bytes argument, is lowercase hex, or {repeat: hh, count: n} meaning bytes.fromhex(hh) * n; an encodedHex array is the concatenation of its parts",
+    "jsonScalars": "null is Python None; true and false are Python bool; kind is the only str argument",
+    "placeholder": "'<name>' inside a template is that argument's value"
+  },
+  "errors": {
+    "class": "ValueError or a private subclass",
+    "message": "fixed text beginning with the refusal prefix; never contains or formats an argument value",
+    "order": "parameter order, then the listed check order; the first failing check decides",
+    "neverRaisedForArguments": ["TypeError", "OverflowError", "RecursionError"],
+    "clauses": ["DF-04", "DF-05"]
+  },
+  "factories": [
+    {
+      "name": "build_output_reference",
+      "signature": "build_output_reference(transaction_id, output_index)",
+      "parameters": [
+        {"name": "transaction_id", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact bytes, length 32", "refusalPrefix": "transaction_id:", "label": "SOURCE claim.ak well_formed"},
+        {"name": "output_index", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact int 0..65535", "refusalPrefix": "output_index:", "label": "SOURCE claim.ak settle_outref bound; DESIGN for every reference"}
+      ],
+      "returns": ["constr", 0, [["bytes", "<transaction_id>"], ["int", "<output_index>"]]],
+      "sourceAnchors": ["transaction.ak OutputReference", "claim.ak well_formed"],
+      "clauses": ["DF-06"]
+    },
+    {
+      "name": "build_value_data",
+      "signature": "build_value_data(lovelace, tokens)",
+      "parameters": [
+        {"name": "lovelace", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "None, or exact int 0..18446744073709551615", "refusalPrefix": "lovelace:", "label": "DESIGN"},
+        {"name": "tokens", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact list of at most 256 exact 3-tuples (policy, name, quantity)", "refusalPrefix": "tokens:", "label": "DESIGN"}
+      ],
+      "tokenElementChecks": [
+        {"check": "exact tuple of length 3", "refusalPrefix": "tokens[]:"},
+        {"check": "policy: exact bytes, length 28", "refusalPrefix": "tokens[].policy:"},
+        {"check": "name: exact bytes, length 0..32", "refusalPrefix": "tokens[].name:"},
+        {"check": "quantity: exact int, nonzero, -18446744073709551615..18446744073709551615", "refusalPrefix": "tokens[].quantity:"},
+        {"check": "after the first element: (policy, name) strictly greater than the previous pair, bytewise unsigned lexicographic", "refusalPrefix": "tokens.order:"}
+      ],
+      "checkOrder": "lovelace; tokens type; tokens count; then each element completely, in index order, in tokenElementChecks order",
+      "returns": ["map", "<ada entry when lovelace is an int, then one entry per maximal same-policy run, in input order>"],
+      "adaEntry": [["bytes", ""], ["map", [[["bytes", ""], ["int", "<lovelace>"]]]]],
+      "policyEntry": [["bytes", "<policy>"], ["map", [[["bytes", "<name>"], ["int", "<quantity>"]], "..."]]],
+      "sourceAnchors": ["build_inputs.py value(), thread_value, value([]) (consumer evidence only)"],
+      "clauses": ["DF-07", "DF-08", "DF-13"]
+    },
+    {
+      "name": "build_env_data",
+      "signature": "build_env_data(predicate_digest, vk_digest, claimant_vkh, settle_transaction_id, settle_output_index, statement_digest, expiry)",
+      "parameters": [
+        {"name": "predicate_digest", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact bytes, length 32", "refusalPrefix": "predicate_digest:", "label": "SOURCE"},
+        {"name": "vk_digest", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact bytes, length 32", "refusalPrefix": "vk_digest:", "label": "SOURCE"},
+        {"name": "claimant_vkh", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact bytes, length 28", "refusalPrefix": "claimant_vkh:", "label": "SOURCE"},
+        {"name": "settle_transaction_id", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact bytes, length 32", "refusalPrefix": "settle_transaction_id:", "label": "SOURCE"},
+        {"name": "settle_output_index", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact int 0..65535", "refusalPrefix": "settle_output_index:", "label": "SOURCE"},
+        {"name": "statement_digest", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact bytes, length 32", "refusalPrefix": "statement_digest:", "label": "SOURCE"},
+        {"name": "expiry", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact int 0..18446744073709551615", "refusalPrefix": "expiry:", "label": "DESIGN"}
+      ],
+      "fixedFields": {"version": 2, "claim_kind": 0, "family_id_ascii": "MRG16-PVC-FAM2-G16-BLS-ARK04-HL2", "family_id_hex": "4d524731362d5056432d46414d322d4731362d424c532d41524b30342d484c32"},
+      "returns": ["constr", 0, [["int", 2], ["int", 0], ["bytes", "4d524731362d5056432d46414d322d4731362d424c532d41524b30342d484c32"], ["bytes", "<predicate_digest>"], ["bytes", "<vk_digest>"], ["bytes", "<claimant_vkh>"], ["constr", 0, [["bytes", "<settle_transaction_id>"], ["int", "<settle_output_index>"]]], ["bytes", "<statement_digest>"], ["int", "<expiry>"]]],
+      "notChecked": "vk_digest versus blake2b_256(vk), statement_digest versus any statement, envelope token name (DF-11)",
+      "sourceAnchors": ["types.ak EnvV2", "claim.ak well_formed", "core.ak family_v2"],
+      "clauses": ["DF-09", "DF-11"]
+    },
+    {
+      "name": "build_c2_mint_data",
+      "signature": "build_c2_mint_data(kind, vk=None, proof=None)",
+      "parameters": [
+        {"name": "kind", "kind": "POSITIONAL_OR_KEYWORD", "required": true, "accepts": "exact str Issue or Burn", "refusalPrefix": "kind:", "label": "DESIGN selector"},
+        {"name": "vk", "kind": "POSITIONAL_OR_KEYWORD", "required": false, "default": null, "accepts": "Issue: exact bytes length 1..65536; Burn: None", "refusalPrefix": "vk:", "label": "DESIGN bound; opaque, not validated"},
+        {"name": "proof", "kind": "POSITIONAL_OR_KEYWORD", "required": false, "default": null, "accepts": "Issue: exact bytes length 1..65536; Burn: None", "refusalPrefix": "proof:", "label": "DESIGN bound; opaque, not validated"}
+      ],
+      "checkOrder": "kind; vk; proof",
+      "returns": {"Issue": ["constr", 0, [["bytes", "<vk>"], ["bytes", "<proof>"]]], "Burn": ["constr", 1, []]},
+      "sourceAnchors": ["types.ak C2Mint"],
+      "clauses": ["DF-10", "DF-11"]
+    }
+  ],
+  "examples": [
+    {"call": "build_output_reference", "args": {"transaction_id": {"repeat": "22", "count": 32}, "output_index": 3}, "returns": ["constr", 0, [["bytes", {"repeat": "22", "count": 32}], ["int", 3]]], "encodedHex": ["d8799f5820", {"repeat": "22", "count": 32}, "03ff"]},
+    {"call": "build_value_data", "args": {"lovelace": 1000000, "tokens": []}, "returns": ["map", [[["bytes", ""], ["map", [[["bytes", ""], ["int", 1000000]]]]]]], "encodedHex": "a140a1401a000f4240"},
+    {"call": "build_value_data", "args": {"lovelace": null, "tokens": []}, "returns": ["map", []], "encodedHex": "a0"},
+    {"call": "build_value_data", "args": {"lovelace": 2000000, "tokens": [[{"repeat": "10", "count": 28}, {"repeat": "ab", "count": 32}, 1]]}, "returns": ["map", [[["bytes", ""], ["map", [[["bytes", ""], ["int", 2000000]]]]], [["bytes", {"repeat": "10", "count": 28}], ["map", [[["bytes", {"repeat": "ab", "count": 32}], ["int", 1]]]]]]], "encodedHex": ["a240a1401a001e8480581c", {"repeat": "10", "count": 28}, "a15820", {"repeat": "ab", "count": 32}, "01"]},
+    {"call": "build_value_data", "args": {"lovelace": null, "tokens": [[{"repeat": "10", "count": 28}, {"repeat": "ab", "count": 32}, -1]]}, "returns": ["map", [[["bytes", {"repeat": "10", "count": 28}], ["map", [[["bytes", {"repeat": "ab", "count": 32}], ["int", -1]]]]]]], "encodedHex": ["a1581c", {"repeat": "10", "count": 28}, "a15820", {"repeat": "ab", "count": 32}, "20"]},
+    {"call": "build_env_data", "args": {"predicate_digest": {"repeat": "a1", "count": 32}, "vk_digest": {"repeat": "b2", "count": 32}, "claimant_vkh": {"repeat": "c3", "count": 28}, "settle_transaction_id": {"repeat": "22", "count": 32}, "settle_output_index": 0, "statement_digest": {"repeat": "e5", "count": 32}, "expiry": 1700000060000}, "returns": ["constr", 0, [["int", 2], ["int", 0], ["bytes", "4d524731362d5056432d46414d322d4731362d424c532d41524b30342d484c32"], ["bytes", {"repeat": "a1", "count": 32}], ["bytes", {"repeat": "b2", "count": 32}], ["bytes", {"repeat": "c3", "count": 28}], ["constr", 0, [["bytes", {"repeat": "22", "count": 32}], ["int", 0]]], ["bytes", {"repeat": "e5", "count": 32}], ["int", 1700000060000]]], "encodedHex": ["d8799f02005820", "4d524731362d5056432d46414d322d4731362d424c532d41524b30342d484c32", "5820", {"repeat": "a1", "count": 32}, "5820", {"repeat": "b2", "count": 32}, "581c", {"repeat": "c3", "count": 28}, "d8799f5820", {"repeat": "22", "count": 32}, "00ff5820", {"repeat": "e5", "count": 32}, "1b0000018bcfe65260ff"]},
+    {"call": "build_c2_mint_data", "args": {"kind": "Burn"}, "returns": ["constr", 1, []], "encodedHex": "d87a80"},
+    {"call": "build_c2_mint_data", "args": {"kind": "Issue", "vk": "0102", "proof": "03"}, "returns": ["constr", 0, [["bytes", "0102"], ["bytes", "03"]]], "encodedHex": "d8799f4201024103ff"}
+  ],
+  "refusalExamples": [
+    {"call": "build_output_reference", "args": {"transaction_id": {"repeat": "22", "count": 31}, "output_index": -1}, "refusalPrefix": "transaction_id:"},
+    {"call": "build_value_data", "args": {"lovelace": true, "tokens": [null]}, "refusalPrefix": "lovelace:"},
+    {"call": "build_value_data", "args": {"lovelace": null, "tokens": [[{"repeat": "20", "count": 28}, "61", 1], [{"repeat": "10", "count": 28}, "61", 1]]}, "refusalPrefix": "tokens.order:"},
+    {"call": "build_value_data", "args": {"lovelace": null, "tokens": [[{"repeat": "20", "count": 28}, "61", 1], [{"repeat": "10", "count": 28}, "61", 0]]}, "refusalPrefix": "tokens[].quantity:"},
+    {"call": "build_env_data", "args": {"predicate_digest": {"repeat": "a1", "count": 32}, "vk_digest": {"repeat": "b2", "count": 32}, "claimant_vkh": {"repeat": "a1", "count": 32}, "settle_transaction_id": {"repeat": "22", "count": 32}, "settle_output_index": 0, "statement_digest": {"repeat": "e5", "count": 32}, "expiry": 0}, "refusalPrefix": "claimant_vkh:"},
+    {"call": "build_c2_mint_data", "args": {"kind": "issue", "vk": "01", "proof": "02"}, "refusalPrefix": "kind:"},
+    {"call": "build_c2_mint_data", "args": {"kind": "Burn", "vk": "01"}, "refusalPrefix": "vk:"},
+    {"call": "build_c2_mint_data", "args": {"kind": "Issue", "vk": "", "proof": ""}, "refusalPrefix": "vk:"}
+  ],
+  "testMethods": ["test_00_host_prefix_pin_and_suffix_inspection", "test_01_value_positive_cases", "test_02_value_refuses_types_and_ranges", "test_03_value_order_count_and_refusal_order", "test_04_value_accepted_boundaries", "test_05_output_reference_positive_cases", "test_06_output_reference_refusals", "test_07_env_positive_cases", "test_08_env_field_refusals", "test_09_env_refusal_order_and_accepted_boundaries", "test_10_c2_mint_positive_cases", "test_11_c2_mint_refusals", "test_12_cross_factory_purity_detachment_and_fixed_messages"],
+  "nonClaims": "structural local Data fixtures only; no proof, VK, signature, ledger, VM, Rust, financial or Preprod acceptance (DF-11, DF-15)"
+}

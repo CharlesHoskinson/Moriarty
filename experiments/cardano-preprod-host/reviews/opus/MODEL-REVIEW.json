@@ -1,0 +1,273 @@
+{
+  "reviewToken": "current-cardano-combined-encoder-dto-independent-opus-review-20261016",
+  "report": "DISCLOSURE. Reviewer: claude-opus-5-5 (Opus 5.5), HIGH, fresh context, acting as the non-author security and actual-result reviewer. I wrote neither the combined candidate (GPT-6.1-Sol HIGH) nor the DTO contract, addendum or tests. The DTO contract author, the R2 amendment author and the earlier encoder and DTO reviewers are also claude-opus-5-5 from the same provider, so independence comes only from the separate context. Tools were disabled: I imported, executed, hashed, diffed and wrote nothing, and I added no source. Every SHA, byte count and run result is copied from the supplied index and RESULT files. This review does not stand in for the required Muse Wonder HIGH non-security implementation audit, which is unavailable. All native authority remains ZERO.\n\nSCOPE. One full combined review of the actual host_codec.py (16134 B, 8e15bc78...). It covers (a) the unchanged 5634-byte encoder prefix (0de63bea...), and (b) the appended `_wire_*` helpers and three DTO APIs: build_prove_request, validate_prove_request and validate_context_input. They are checked against the nine full canonical clauses A1-A9, the frozen Rust wire sources (input.rs, ir.rs, relation.rs check_selector, claim.rs context_from_input, hexutil.rs, witness.rs, plan.rs, abi2.rs, statement.rs, adapter.rs, runtime.rs, json.rs, intent.rs, lib.rs), both frozen test files and the actual runs.\n\nENCODER PREFIX. Reading the supplied text, the first 5634 bytes of the combined file match the standalone encoder line for line: _append, _head, _write_bytes, _encode and encode_data, including the MemoryError comment and the absence of any handler. Root records encoderPrefixByteIdentical=true in both runs. The prior R2 trace therefore carries forward unchanged: an iterative stack, exact-type checks before any operation, B1/B2/B3/B4 enforced incrementally, fixed messages, and no partial bytes. The appended code never calls or rebinds any encoder name. The actual 19/19 encoder behavior run (0.161 s, test sha 33326559...) retains every byte, admission, bound and rejection row. One method is excluded: TestInterfaceAndScope.test_phase1_scope_gate_only_encode_data_public, whose I1-SCOPE-R2 clause explicitly limits it to the encoder-only increment.\n\nREPLACEMENT GATE FOR THE EXCLUDED METHOD (source audit):\n- Top-level public callables are exactly encode_data, build_prove_request, validate_prove_request and validate_context_input. Every helper starts with `_wire_` or `_`.\n- None of the other seven FUTURE_APIS names (build_value_data, ..., statement_public_inputs) is defined. There are no stubs and no mirrored module.\n- There are zero Import/ImportFrom nodes. None of eval, exec, compile, open, __import__, breakpoint or input appears as a name.\n- There is no getattr, globals, vars, __builtins__ or dunder attribute access. Nothing is I/O, entropy, environment or global mutation.\n- At top level there is only the docstring, the five constants and function definitions.\n- The encoder test's own AST import audit runs in setUp on the combined file, and all 19 methods passed, so that audit accepted the combined bytes. The audit is best-effort, as E1-AUDIT-R2 discloses, and root reports its own human inspection.\n\nDTO TRACE (A1/A2: exact nodes, keys before values, no hooks):\n- Every validator starts with a `type(x) is` check, or with `x is None` for Option, and short-circuits before len, iteration, comparison, int() or encode. Validators checked: _wire_text, _wire_action, _wire_uint, _wire_bool, _wire_integer (excludes bool because type(True) is bool), _wire_hex and _wire_optional_hex32.\n- _wire_keys requires an exact dict, then iterates it. Dict iteration neither hashes nor compares stored keys. It checks each key with `type(key) is str` before anything else.\n- _wire_record calls _wire_keys, then refuses any key not in the schema before reading a single value, then checks required keys. Every membership test hashes an exact str, and any collision compares only exact str objects, so the builtin str.__eq__ is used.\n- _wire_tagged decides admissible variants from the key set alone, using equal length plus every key in the schema, which implies set equality. Only then does it read the tag value, and it checks that value as an exact str before testing it against the candidate names. So unknown keys and a mismatched shape are refused before any value is visited, the tag value included.\n- _wire_map checks key exactness and UTF-8 for every key before visiting any value. Keys may be any exact str, empty included.\n- The _Trap, _KeyTrap, _Str, _Int, _List and _Dict cases all reach a type check or a key-set refusal before any caller method could run.\n- Every message is built from the path plus a literal. The path contains only schema field names, '.*' or '[]', never caller content. There are no f-strings or formatting, and `from None` suppresses chaining.\n\nA3 (typed copy):\n- Each container is copied by a dict comprehension over value.items() or a list comprehension over an exact list, and every child passes through its schema validator. The result is new dict and list objects with immutable exact str/int/bool/None leaves.\n- The copy preserves presence: optional keys that are absent stay absent and are never invented. It also preserves null, dict iteration order and array order.\n- There is no import, so there is no copy.deepcopy.\n- The schema is non-recursive with a fixed depth of about 8 (request > transition > pre > balances > [] > asset > scale), well under Python's recursion limit and json.rs depth 32. No cycle can satisfy it, so RecursionError cannot occur.\n- build_prove_request revalidates the assembled request (the C3 'then validated' step) and returns the first copy. validate_context_input appends authentication=CALLER_SUPPLIED_UNAUTHENTICATED to a detached copy. Passing that result back into the wire is refused as an unknown key.\n\nA4 (cheap bounds):\n- UInt requires an exact str of 1..39 characters, each between '0' and '9' by code point, so Arabic-Indic, fullwidth and superscript digits are refused. It also requires no leading zero except '0'. All of this runs before int(), and the value must then be at most 2^128-1. The acceptance set equals hexutil parse_u128_decimal and the ir.rs UInt deserializer.\n- action requires an exact str of 1..1024 characters before encode('utf-8'), then a byte length of at most 1024. A lone surrogate raises UnicodeEncodeError, which is re-raised as a plain ValueError. This matches check_selector's byte bound.\n\nRUST WIRE BOUNDARY:\n- Closed field sets and camelCase match input.rs and ir.rs: ProveRequest 4, RelationSelector 8 plus 2 Option, ContextInput 9 plus Option vkDigest, Scenario 4 required, Snapshot 3, Balance 3, Liability 5, AssetId 4 with u8 scale.\n- TransitionInput is CoreReference{scenario} or Records{inputs,pre,post,effects}.\n- Value is adjacently tagged: type/value, UInt or Bool.\n- Effect has five kinds with exact fields: State before/after as Value; Transfer and Fee as movement with a UInt amount; Liability before/after as UInt; Emit as Value. Emit is wire-valid and is refused only at compile time by the SettlementHashV2 adapter.\n- Context ranges are u8, u16 and u64.\n- The host refuses earlier than Rust only for driver use-rules that Rust also enforces: fixed selector and format strings (parse_request, check_selector), lowercase exact hex (hexutil decode_exact in context_from_input and compile_selected), and the action byte bound. I found no Rust-acceptable DTO that the host refuses, and no host-accepted DTO that serde would refuse at the type level.\n- Native serde, from_records and compile acceptance remain unexecuted.\n\nA5/A6. No MemoryError handler exists in either part. There are no time or memory claims and no byte-parser claims; width, string length and total size are unbounded on the host, so json.rs MAX_JSON_BYTES and the 65,536-node limit remain a separate byte stage. There is no Core, runtime or financial evaluation and no fallback, and the selector checks are literal string equality only. Context stays CALLER_SUPPLIED_UNAUTHENTICATED and only labels caller data, never ledger authentication.\n\nACTUAL RESULTS. Missing-implementation RED: 31 run, 6 gold passes, 25 missing-implementation failures, 0 errors. That matches the A9 prediction, with base24TestPrefixUnchanged=true and test sha ef343bbe... The first combined run was 31/31 OK (0.097 s), then 19/19 encoder behavior OK (0.161 s), each under timeout 10 s and prlimit (as 512 MiB, cpu 10, fsize 2 MiB, core 0) with python3 -I -B. Both isolated directories were unchanged afterwards, and no network was requested. The traces above predict that every method passes, and I found no test that passes only because of a weakened assertion. The six gold checks are fixture cross-consistency only: 69 label lookups with 6 accounting rows deferred. That is not native compiler coverage. Modes 555/444 bound the run but are not an instrumented sandbox.\n\nPOSITIONS. AGREE on all nine full canonical clauses. A7 is qualified: the historical 24-run RESULT.json and RESULT-QUALIFIED were not themselves in this packet, and I checked them through the addendum and the prior review. My own comparison of the literals agrees with F-04 and F-05.\n\nNON-BLOCKING ITEMS:\n- C-N01 (concurrency nonclaim extends to the DTO APIs).\n- C-N02 (host-valid is not parse admission).\n- C-N03 (validate-then-copy is fused, plus a second full pass).\n- C-N04 (the frozen prefix docstring describes only the encoder).\n- C-N05 (refusals do not name the unknown key, by design).\n- C-N06 (a future combined-scope gate test needs fresh review).\n- Carried from the encoder review: R2-N01 (peak memory is about 2*B4 plus a leaf temporary), R2-N02 (input is assumed not to be mutated concurrently) and R2-N03 (two stale contract status lines).\nThere is no blocking defect.\n\nSTILL OPEN, all of it:\n- native from_records and parse acceptance, and any current target transaction;\n- compiled-VM encoder roundtrip and source-to-VK matrix correspondence;\n- general UTxO compatibility and financial conformance;\n- all 20 UTxO families, ACTUS 277/18/32, DS01-07, DeFi 72, DA01-24 and held-outs;\n- intents and regressions, recursion, private handoff, multi-parent and universal;\n- K/Quint, and actual Preprod end-to-end.\nsourceReady=true is limited to this narrow combined security-source and actual-result scope. It is not product adoption, not a Muse audit, not authority, and not execution acceptance of anything beyond the recorded ordinary runs.",
+  "findings": [
+    {
+      "id": "C-N01-CONCURRENT-MUTATION-NONCLAIM-DTO",
+      "severity": "INFO (non-blocking)",
+      "summary": "The DTO APIs, like encode_data (R2-N02), are only established for single-threaded calls where no other thread mutates the caller's input during the call.",
+      "evidence": "_wire_record and _wire_map iterate value.items() and _wire_keys iterates the dict. A size change from another thread raises RuntimeError, not ValueError. validate_prove_request checks required keys and then builds its comprehension in a separate pass, so a concurrent deletion could slip between them. build_prove_request revalidates the detached copy, which catches that window; validate_prove_request returns True from its own possibly-stale view. No test or in-scope caller is multithreaded.",
+      "requiredFix": "No code change. Record the nonclaim that the DTO APIs assume their input is not mutated concurrently, alongside R2-N02."
+    },
+    {
+      "id": "C-N02-HOST-VALID-NOT-PARSE-ADMISSION",
+      "severity": "INFO",
+      "summary": "A host-valid request can still be refused by Rust's byte-stage parse_json. The host bounds no width, string length, total bytes or node count.",
+      "evidence": "_wire_array, _wire_map and _wire_text accept any number of elements and any length. input.rs parse_json enforces MAX_JSON_BYTES 1,048,576, and json.rs parse_limited enforces 65,536 nodes, depth 32 and duplicate/trailing refusal. The DTO depth is fixed at about 8, so only width and size can differ. This is consistent with A5 and XC-11.",
+      "requiredFix": "None for this increment. Keep the disclaimer. The byte emitter/parser stage remains a separate slice."
+    },
+    {
+      "id": "C-N03-FUSED-VALIDATE-COPY-AND-DOUBLE-PASS",
+      "severity": "INFO",
+      "summary": "Validation and copying happen in one schema-directed pass rather than validate-then-copy. build_prove_request then revalidates the whole result, which roughly doubles its work.",
+      "evidence": "_wire_record returns {key: fields[key](item, ...) for key, item in value.items()}. Each child is type-checked before it is copied, and keys are checked before any value, so A3's 'copied from validated exact nodes' holds node by node. A failure discards the partial copy. build_prove_request calls validate_prove_request(request), which builds and discards a second copy.",
+      "requiredFix": "None. The behaviour meets A3 and C3. The extra O(n) pass is acceptable under A5."
+    },
+    {
+      "id": "C-N04-PREFIX-DOCSTRING-SCOPE",
+      "severity": "INFO",
+      "summary": "The module docstring in the frozen prefix still describes only the PlutusData encoder, while the combined module now also provides the DTO APIs.",
+      "evidence": "The first line of host_codec.py reads 'Provisional pure PlutusData encoder for the frozen serialise_data profile.' The appended comment block notes that the DTO APIs are structural only and that Core/Rust owns semantics.",
+      "requiredFix": "Do not edit the frozen prefix. Optionally describe the combined scope in external metadata."
+    },
+    {
+      "id": "C-N05-MESSAGES-OMIT-OFFENDING-KEY",
+      "severity": "INFO",
+      "summary": "Refusals of unknown keys and non-str keys name only the containing path, not the offending key. This is a deliberate diagnostic trade-off.",
+      "evidence": "_wire_record raises path + ': expected closed schema object', and _wire_map uses path '.*'. A1 requires messages to name only the path and the expected type, so caller-controlled text never reaches a message.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "C-N06-PHASE1-GATE-REPLACEMENT",
+      "severity": "INFO",
+      "summary": "The excluded phase-1 public-absence method is replaced, for this candidate, by this source audit: exactly four public callables, no imports and no forbidden names. No combined-scope gate test exists yet.",
+      "evidence": "encoder-19-behavior/RESULT.json excludes only TestInterfaceAndScope.test_phase1_scope_gate_only_encode_data_public. I1-SCOPE-R2 allows replacing the phase gates through a fresh audit of the actual combined candidate. The encoder test's setUp AST audit still ran and passed on the combined bytes.",
+      "requiredFix": "No edit to frozen test files. A later revision may add a separate, freshly reviewed combined-scope gate test that asserts the exact public callable set."
+    },
+    {
+      "id": "C-N07-ENCODER-CARRY-FORWARD",
+      "severity": "LOW/INFO (carried, non-blocking)",
+      "summary": "The three encoder limitations from the prior Opus review carry forward unchanged into the combined candidate.",
+      "evidence": "R2-N01: peak allocation is about 2*B4 plus a leaf temporary plus O(B1), so the stated constant factor is approximate. R2-N02: the input is assumed not to be mutated concurrently. R2-N03: two contract status lines are stale (18 GREEN at 0.119 s, and the encode.rs retrieval-record sentence). The prefix bytes are identical (root records), so nothing changes.",
+      "requiredFix": "Metadata-only refresh at the next contract revision. No code or test change."
+    }
+  ],
+  "crosschecks": [
+    {
+      "id": "CC-PREFIX-IDENTITY",
+      "severity": "PASS (reading plus root record)",
+      "summary": "The combined file's first 5634 bytes are the standalone encoder.",
+      "evidence": "Line-by-line reading of both supplied texts agrees: constants, _append, _head, _write_bytes, _encode, encode_data and the I2 comment. Root records encoderPrefixBytes 5634 and encoderPrefixByteIdentical true in dto-31 and encoder-19 RESULT. The appended code references no encoder name. I did not recompute the SHA.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-PUBLIC-SURFACE-AND-EFFECTS",
+      "severity": "PASS (model reading; root human audit recorded)",
+      "summary": "Exactly four public callables. No imports, forbidden names or ambient effects.",
+      "evidence": "Public: encode_data, build_prove_request, validate_prove_request, validate_context_input. Every helper has a _ or _wire_ prefix. Top level contains only the docstring, constants and FunctionDefs. Builtins used: type, len, int, range, bytes, bytearray, any, all, ValueError and UnicodeEncodeError. There is no I/O, environment, entropy or global mutation, and no input mutation. The encoder test's AST audit passed inside the 19/19 run.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A1-EXACT-TYPES",
+      "severity": "PASS",
+      "summary": "Each validator's first operation is a type() is check or an x is None identity check.",
+      "evidence": "_wire_text, _wire_action, _wire_uint, _wire_hex, _wire_bool, _wire_integer, _wire_array and _wire_keys check type() is first. _wire_optional_hex32 checks is None first. type() reads ob_type, so a __class__ override has no effect. bool is refused for int fields, and None is accepted only through _wire_optional_hex32 at context vkDigest and the two selector pins.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A2-KEYS-AND-TAG-ORDER",
+      "severity": "PASS",
+      "summary": "Keys are checked as exact str before any hash or compare, and unknown keys are refused before any value, including the tag value.",
+      "evidence": "_wire_keys iterates without hashing. _wire_record runs its unknown-key loop before the required check and the value comprehension. _wire_tagged derives candidate names from key-set equality before reading value[tag]. That key is guaranteed present, and it is type-checked before `in names`. _wire_map checks every key's UTF-8 validity before visiting values.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A3-COPY-PRESENCE-ORDER",
+      "severity": "PASS",
+      "summary": "The builder copy is detached, order-preserving, null- and absence-preserving, and never uses deepcopy.",
+      "evidence": "Comprehensions build new dict and list objects in caller order. Optional keys are copied only when present, so vkDigest null stays null and absent stays absent. Pins are emitted only when their argument is not None. Leaves are immutable exact scalars. The module has no import, so no copy module. The fixed schema depth (about 8) excludes RecursionError.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A4-BOUNDS",
+      "severity": "PASS",
+      "summary": "The UInt and action prechecks run before conversion. Their acceptance sets equal hexutil, ir.rs and check_selector.",
+      "evidence": "_wire_uint checks 1..39 characters, each between '0' and '9', with no leading zero, then int(), then <= 2^128-1. _wire_action checks 1..1024 characters, then encode, then <= 1024 bytes. Lone surrogates become ValueError via `from None`. The R04 rows '9'*100000, 'a'*10^6, chr(0xe9)*600000 and 'a'*1023+chr(0xdc00) are all refused cheaply.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-RUST-WIRE-EQUIVALENCE",
+      "severity": "PASS (source-level; native unexecuted)",
+      "summary": "The host schema matches the serde DTOs, and its early refusals are actual driver use-rules.",
+      "evidence": "input.rs ProveRequest, RelationSelector, TransitionInput and ContextInput, and ir.rs Scenario, Snapshot, Balance, Liability, AssetId, Value and Effect: field sets, tags, Option and integer widths all match. Fixed strings match parse_request and check_selector; lib.rs ADAPTER is SettlementHashV2. Hex matches hexutil decode_exact at context_from_input and compile_selected. Emit is accepted (ir.rs Effect::Emit); refusal belongs to adapter.rs and abi2.rs at compile time.",
+      "requiredFix": "A native parse/from_records roundtrip remains a separately authorized future step."
+    },
+    {
+      "id": "CC-A6-NO-SEMANTICS",
+      "severity": "PASS",
+      "summary": "No Core, financial or authentication logic is present.",
+      "evidence": "The only value comparisons are literal format and selector strings. There are no row, order, duplicate, type-against-program, balance or Emit-policy checks, so test_wrong_financial_stories_remain_wire_valid passes by construction. The authentication label is added only to validate_context_input output. export.rs PREMISES: context is bound, not authenticated.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A7-SUPERSESSION-FACTS",
+      "severity": "PASS (qualified)",
+      "summary": "The supersession facts agree with the supplied sources.",
+      "evidence": "lib.rs has ADAPTER=SettlementHashV2. hexutil requires 2N length and only nibbles [0-9a-f]. In witness.rs, body() finds rows by name, a missing duty becomes (false, 0), frame_unchanged applies and effect-shape checks apply. My literal comparison agrees that original_request equals invoice-partial.request.json. The reserve request's 10 balances, inputs, state and empty liabilities equal reserve_records pre as multisets; only order differs. The historical 24-run RESULT.json and RESULT-QUALIFIED were not supplied this round.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A8-ORDER",
+      "severity": "PASS",
+      "summary": "The order rationale matches intent.rs and the body construction.",
+      "evidence": "intent.rs canonical() sorts object keys via BTreeMap and maps arrays in order. scenario_hash=hash_bytes(canonical(scenario)), and hash_bytes is SHA-256. witness body() looks rows up by name, scenario_snapshot sorts, and abi2 body_bytes follows plan order. intentsDigest derivation is not in the sources, and the clause claims no more than this.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-A9-TEST-COUNT-AND-RED",
+      "severity": "PASS",
+      "summary": "The test file holds 24 base methods plus 7 appended, and the observed RED matches the prediction.",
+      "evidence": "Base: TestGoldFixtures 6, TestExactRequests 5, TestClosedWire 4, TestValues 4, TestContext 3, TestStructuralNotFinancial 2. Appended: R04CoreReferenceLeaves 1, R04ExactTypes 2, R04UnknownValuesUntouched 2, R04BoundsAndCopy 2. The appended text matches TEST-REPLACEMENTS newText. The R2 RED RESULT shows 31/6/25/0, base24TestPrefixUnchanged true, sha ef343bbe.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-ACTUAL-COMBINED-RUNS",
+      "severity": "PASS",
+      "summary": "The 31/31 DTO run and the 19/19 encoder run are consistent with source and the envelope.",
+      "evidence": "dto-31: exit 0, 0.097 s, all 31 frozen methods, no exclusion. encoder-19: exit 0, 0.161 s, with the single phase-1 gate excluded. Same code sha 8e15bc78 in both; timeout 10 s; prlimit as 536870912, cpu 10, fsize 2097152, core 0; -I -B; isolated files unchanged; no network. GREEN is not compiler, VM, ledger or security acceptance.",
+      "requiredFix": "None."
+    },
+    {
+      "id": "CC-GOLD-QUALIFICATION",
+      "severity": "INFO",
+      "summary": "The six gold fixture checks are separate from compiler accounting.",
+      "evidence": "slot_value returns DERIVED for the 6 accounting.* rows. That leaves 69 lookups (27 invoice, 42 reserve). The GOLD declaredVkDigest values are SYNTHETIC, and the descriptor pins are historical.",
+      "requiredFix": "Never report these as 75 native compiler checks."
+    }
+  ],
+  "recommendation": {
+    "verdict": "COMBINED_ENCODER_DTO_NARROW_SECURITY_SOURCE_AND_ACTUAL_RESULT_CARRY_FORWARD_QUALIFIED: encoder prefix unchanged; AGREE on all nine A1-A9 full clauses (A7 qualified); no blocking defect; actual 31/31 and 19/19 consistent with source; non-blocking INFO/LOW items only",
+    "sourceReady": true,
+    "scope": "Only the actual combined host_codec.py (8e15bc78..., 16134 B) as a pure stdlib-free module: the unchanged encode_data prefix plus the structural DTO APIs build_prove_request, validate_prove_request and validate_context_input, with their recorded ordinary runs. It is not product adoption and not the Muse implementation audit. It grants no native, SDK, VM, key, proof, signing, ledger or private-material authority. It does not cover Rust parse, from_records or compile acceptance, compiled-VM roundtrip, source-to-VK correspondence, UTxO or financial conformance, or Preprod.",
+    "firstBlockedBoundary": "The required fresh Muse Wonder HIGH non-security implementation audit of the combined candidate is unavailable and must not be substituted. After it, the next separately authorized steps are: native Rust parse_request and from_records/propose round-trip of host-built requests; the byte emitter/parser stage; and compiled-VM encoder roundtrip.",
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": true,
+    "ordinarySelftestScope": "Only the two existing bounded pure stdlib tests: python3 -I -B on the frozen test_core_request_wire.py (with exact K4H-GOLD.json) and on test_plutus_data_serialisation.py (19 behavior methods, excluding only the phase-1 gate), each in a dedicated directory holding only its files plus this exact host_codec.py. Limits: timeout 10 s; prlimit as 512 MiB, cpu 10 s, fsize 2 MiB, core 0. Minimal environment, no network, modes 555/444, with a post-run directory check. Both runs have already been observed (31/31, 19/19). No native, SDK, VM, key, proof, network or ledger budget.",
+    "authorityProposalReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/input.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/relation.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/claim.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/export.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/abi2.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/statement.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/adapter.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/ir.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/runtime.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/json.rs",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/gold/K4H-GOLD.json",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/fixtures/installment-invoice.mori",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/fixtures/invoice-partial.request.json",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/fixtures/conditional-reserve.mori",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/lib.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/hexutil.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/witness.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/plan.rs",
+      "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/k2/requests/reserve-allocate.request.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-sol-candidate-20261016/host_codec.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-sol-candidate-20261016/FOREMAN_REPORT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-sol-candidate-20261016/FOREMAN_REPORT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-sol-candidate-20261016/OWN-OUTPUT-ALLOWLIST.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/test_core_request_wire.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/CORE-REQUEST-WIRE-CONTRACT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/WIRE-CONTRACT-ADDENDUM.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/SOURCE-MANIFEST.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-opus-narrow-amendment-20261016/MODEL-REVIEW.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-independent-opus-source-review-20261016/MODEL-REVIEW.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-source-candidate-20261016/ROOT-SOURCE-FACTS.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-owner-intent-signing-source-data-sol-20261016/source/core/src/intent.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-missing-implementation-ordinary-red-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-source-candidate-20261016/host_codec.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-source-candidate-20261016/test_plutus_data_serialisation.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-source-candidate-20261016/PLUTUS-DATA-SOURCE-CONTRACT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-opus-compatible-transport-review-20261016/MODEL-REVIEW.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-opus-compatible-transport-review-20261016/PROCESS.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-first-ordinary-results-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-first-ordinary-results-20261016/dto-31/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-first-ordinary-results-20261016/encoder-19-behavior/RESULT.json"
+    ],
+    "unreadPaths": [
+      "Historical 24-run DTO RESULT.json (counter 0) and RESULT-QUALIFIED.json (18) under current-cardano-core-request-missing-implementation-ordinary-red-20261016: not supplied this round, known only through the addendum and the prior review",
+      "Base test_core_request_wire.py (36315 B, cd09dcd1...): unchanged-prefix status relies on root records",
+      "DESIGN-POSITIONS.json as a separate file (seen only as embedded content in the R2 MODEL-REVIEW); TASK-BRIEF.md (root-owned)",
+      "stderr/stdout transcripts of the RED, 31/31 and 19/19 runs (only the RESULT summaries were read)",
+      "Source deriving intentsDigest from signed intents",
+      "k2 error.rs, encoding.rs, prove.rs, setup.rs, verify.rs, fixed.rs, inspect.rs; mori-r1cs circuit/lower/gadgets/identity",
+      "serde, serde_json and CPython (dict iteration, str hashing, json, unittest, -I startup) sources: behaviour is expected from documented semantics, not observed",
+      "R1 encoder base files and Aiken/Plutus/minicbor primary sources (already covered by the prior encoder review; not re-read)",
+      "Muse Wonder HIGH implementation audit (does not exist)"
+    ],
+    "limitations": "Tools were disabled: no import, execution, hashing, parsing or diffing by this reviewer. All SHAs, byte counts and run results are copied from root records, and the prefix identity is a visual reading plus the root's byte-identity record. The DTO and encoder traces were done by hand. Independence is context-only, because the DTO contract author, the R2 amendment author and the earlier encoder and DTO reviewers are all claude-opus-5-5 from the same provider. This model reading does not replace the root human import/effect audit or the unavailable Muse HIGH implementation audit. Thread concurrency is a nonclaim. Serde and native Rust acceptance are source-level expectations only. No compiler, VM, ledger or Preprod correspondence is claimed."
+  },
+  "positions": [
+    {
+      "clauseId": "A1-EXACT-NODES",
+      "clause": "Only exact builtin JSON nodes are accepted where the schema expects them: type(x) is dict/list/str/int/bool, where int excludes bool and bool appears only where the schema says Bool. None is accepted only at Option positions: context vkDigest, expectedSourceSha256 and expectedProgramHash. Any other object, including subclasses, raises ValueError without invoking any caller-controlled method. Messages name only the path and the expected type.",
+      "position": "AGREE",
+      "rationale": "Every _wire_ validator runs a type() is check first: _wire_keys, _wire_array, _wire_text, _wire_action, _wire_uint, _wire_hex, _wire_bool, and _wire_integer, which excludes bool. Each short-circuits before len, iteration, comparison, int() or encode. None is accepted only by _wire_optional_hex32, which is used solely for context vkDigest and the two selector pins. The builder's pin arguments use an `is not None` identity check, which runs no hook. Messages are path plus a literal. Paths contain only schema names, '.*' or '[]', and refused keys and values are never formatted. The actual 31/31 run includes the _Trap, _Str, _Int, _List and _Dict rows."
+    },
+    {
+      "clauseId": "A2-KEYS-FIRST",
+      "clause": "Every dict key is checked to be type(k) is str before any membership test, hash, set operation or comparison. Unknown keys of closed objects are refused before any value is visited. Map keys (state, inputs) may be any exact str.",
+      "position": "AGREE",
+      "rationale": "_wire_keys iterates the exact dict, which hashes and compares nothing, and checks each key with type(key) is str. Only then do _wire_record, _wire_tagged and _wire_map run membership tests, and those hash only exact str. _wire_record's unknown-key loop runs before any value is read. _wire_tagged derives candidate variants from the key set alone, then reads and type-checks the tag value. _wire_map accepts any exact, UTF-8-encodable str key, including the empty string, and checks all keys before visiting values. _KeyTrap rows passed."
+    },
+    {
+      "clauseId": "A3-TYPED-COPY",
+      "clause": "Validation is a fixed-depth, schema-directed walk of the typed wire, not a generic JSON normalizer. build_prove_request returns new dict and list objects copied from validated exact nodes. The copy preserves field presence, null, dict iteration order and array order, and is detached from the caller. copy.deepcopy is never applied to unvalidated input, unknown keys or foreign objects.",
+      "position": "AGREE",
+      "rationale": "The walk is driven by fixed schema functions with a depth of about 8, so no cycle or deep input can recurse. Copies are new comprehension-built dicts and lists in caller iteration order. Leaves are immutable exact scalars. Absent optional keys stay absent, null stays null, and pins are emitted only when supplied. There is no import, so there is no deepcopy. build_prove_request revalidates the result. Validation and copying are fused node by node (C-N03), and each node is type-checked before it is copied, which satisfies the clause."
+    },
+    {
+      "clauseId": "A4-CHEAP-BOUNDS",
+      "clause": "A UInt must be an exact str of 1..39 characters, all ASCII 0-9, with no leading zero except '0', checked before int(), and then at most 2^128-1. action must be an exact str of at most 1024 characters, checked before the UTF-8 byte count, and then 1..1024 bytes. Over-long or lone-surrogate strings raise an ordinary ValueError.",
+      "position": "AGREE",
+      "rationale": "_wire_uint checks the exact str, length 1..39, every character between '0' and '9' by code point (which refuses non-ASCII digits) and the leading-zero rule, and only then calls int() and the 2^128-1 bound. That equals hexutil parse_u128_decimal and the ir.rs UInt acceptance set. _wire_action checks the exact str and 1..1024 characters before encode('utf-8'), then a byte count of at most 1024, matching check_selector. UnicodeEncodeError becomes a plain ValueError via `from None`. The oversized R04 rows passed."
+    },
+    {
+      "clauseId": "A5-VALUEERROR-SCOPE",
+      "clause": "The ValueError guarantee covers input-validation refusals only. There is no time, memory, MemoryError or process guarantee, and no byte-parser duplicate, depth, node or size claim.",
+      "position": "AGREE",
+      "rationale": "No exception handler other than the UnicodeEncodeError conversion exists in the DTO code, and the encoder prefix keeps its I2 no-handler behaviour. Width and string length are unbounded on the host and allocation is O(n), with no claim made. Duplicate keys, the 1 MiB size limit, the 65,536-node limit and trailing data remain json.rs/input.rs byte-stage properties (C-N02). Concurrent mutation is a nonclaim (C-N01)."
+    },
+    {
+      "clauseId": "A6-SEMANTICS-OWNER",
+      "clause": "The host performs no Core or financial evaluation and has no fallback. Core and Rust decide semantics and the admitted program. Context remains CALLER_SUPPLIED_UNAUTHENTICATED. The full future host_codec may include the separately defined encode_data alongside these three APIs. There is no permanent API ban, and no mirrored module, interpreter or stubs.",
+      "position": "AGREE",
+      "rationale": "The only value comparisons are literal format and selector strings, which are driver rules in parse_request and check_selector. There are no row, order, duplicate, program-type, balance or Emit-policy checks, and wrong financial stories pass by design. The authentication label appears only on validate_context_input output, which the wire refuses. encode_data coexists unchanged. There are exactly four public callables and no stubs, no mirrored module and no interpreter. claim.rs keeps proposal separate from acceptance."
+    },
+    {
+      "clauseId": "A7-SUPERSESSION",
+      "clause": "Addendum section 2 supersedes the author-time 'unread' qualifications. F-01, F-02 and F-04 are closed. F-03 is narrowed to 'native from_records acceptance unexecuted'. F-05 is narrowed to 'reserve CoreReference request not transcribed; values match as multisets, order differs'. RESULT.json (counter 0) and RESULT-QUALIFIED (18) are both preserved.",
+      "position": "AGREE",
+      "rationale": "Checked against the supplied sources: lib.rs ADAPTER=SettlementHashV2 (F-01); hexutil decode_exact length 2N and nibble [0-9a-f] (F-02); witness.rs name lookup, missing duty as (false, 0), frame_unchanged and effect shapes (F-03, with native acceptance still unexecuted). My literal comparison agrees with the root fact that original_request equals invoice-partial.request.json (F-04). The reserve request's ten balances, inputs, state and empty liabilities equal reserve_records pre as multisets, and only order differs (F-05). Qualification: the historical 24-run RESULT.json and RESULT-QUALIFIED were not in this packet, so their preservation is taken from the addendum and the prior review."
+    },
+    {
+      "clauseId": "A8-ORDER-RATIONALE",
+      "clause": "Verbatim order is kept because intent scenario_hash = sha256(canonical(scenario)) preserves array order, and the intents a caller binds through intentsDigest and the context depend on it. The statement body does not directly commit a balance-array permutation. A derived scenario needs a fresh context-bound proof. K6 is never relabelled.",
+      "position": "AGREE",
+      "rationale": "In intent.rs, canonical() sorts object keys via BTreeMap and maps arrays in order, and hash_bytes is SHA-256, so scenario_hash, the OwnerIntent and its signing message depend on array order. witness body() uses find by name, runtime scenario_snapshot sorts, and abi2 body_bytes follows plan order, so the body does not directly commit a permutation. The candidate preserves order exactly. The intentsDigest derivation is not in the sources, and the clause does not overclaim it."
+    },
+    {
+      "clauseId": "A9-R04-TESTS",
+      "clause": "The new test copy is the base bytes plus appended private helpers and 7 methods. The 24 base methods, their assertions and the GOLD literals are unchanged. Predicted RED is 31 run, 6 passes and 25 missing-implementation failures.",
+      "position": "AGREE",
+      "rationale": "I count 24 base methods (6+5+4+4+3+2) plus 7 appended (1+2+2+2), and the appended text matches TEST-REPLACEMENTS newText. GOLD_BYTES and GOLD_SHA256 are unchanged. The prediction was confirmed by the actual RED (31 run, 6 gold passes, 25 missing-implementation failures, 0 errors, base24TestPrefixUnchanged true, sha ef343bbe), and the frozen bytes then ran 31/31 OK against the candidate. Base-byte identity rests on root records, since the 36315 B base was not re-supplied."
+    }
+  ]
+}

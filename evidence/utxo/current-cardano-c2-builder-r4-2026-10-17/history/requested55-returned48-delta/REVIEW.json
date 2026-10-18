@@ -1,0 +1,127 @@
+{
+  "reviewToken": "c2-r4-dependency-rev4-exact-delta-20261017",
+  "report": "Dependency-only reconciliation of the frozen R4 contract/API (S27/S28) from CP r2 revision 3 to the current CP revision 4, returned as a small exact-text edit object for root to apply mechanically. No complete file bodies are supplied; every resulting full byte must receive fresh independent review, and no adoption occurs now. The earlier whole-document reconciliation that hit ~600s and exported zero candidate is superseded by this delta approach; no prior content was salvaged, and every edit is independently derived from the frozen S27/S28, S31/S32, S34 and S35.\n\nTwelve edits in total (7 in the contract, 5 in the API, with the API condition block split into field-level replacements to keep spans small and unambiguous). They change only: (1) the exact CP source identities \u2014 root descriptor, byte+SHA pins (23830/03f03887 -> 30809/6e2c3989 contract; 5750/965b880d -> 8563/0f592eea API) and revision \"3\" -> \"4\" as the N01-N11 repair; (2) condition/status statements \u2014 \"review in progress / may require changes / audit finishes\" reconciled to \"source-policy review complete, SOURCE_POLICY_READY, CP01-CP08 AGREE (CP04 and CP06 the changed literals), root-adopted only as the basis for separately reviewed test authoring\"; (3) the CP API descriptor format bump to moriarty-c2-profile-r2-api/3 recorded in cpRevision only; (4) builderLabels.consumerProfile CP_R2_REV3... -> CP_R2_REV4...; (5) the limitations[3] literal; (6) the CP06 source-construction property now naming T02/T17 sampling with the T16 strictness caveat, consistently with rev4.\n\nWhat is deliberately NOT changed: all twelve CB401-CB412 clause literals (no clause depends on the changed identity, so changedClauses is empty); R4's own c2-builder-r4-api/2 format; the dependency result format moriarty-c2-issue-artifacts/2; the 16 labels, 12 result keys, 11 C2I stages, 7 consumer/4 builder host APIs; rustAcceptance NOT_ESTABLISHED and every no-inference statement; the v1 prohibition; cpAdopted and every flag/authority false. No new implementation, policy, requirement or authority is introduced, no RED/GREEN/reliance/Rust-acceptance is claimed, and historical scoped proof is not relabelled as current universal correspondence. R4 remains CONDITIONAL pending a reviewed r2 implementation, a fresh non-author audit, meaningful RED then GREEN, a reviewed downstream contract, the separate CP08 decision and fresh votes on CB401-CB412.",
+  "edits": [
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "It reconciles the earlier R4 candidate with the corrected CP r2 revision 3 candidate and changes nothing else.",
+      "newText": "It reconciles the earlier R4 candidate with the corrected CP r2 revision 4 candidate and changes nothing else.",
+      "expectedOccurrences": 1,
+      "rationale": "Status line: CP dependency basis moves from revision 3 to revision 4. Minimal identity change only."
+    },
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "- CONDITIONAL on the corrected, unadopted CP r2 revision 3 candidate in current-cardano-c2-profile-policy-corrected-candidate-20261016 (C2-PROFILE-R2-CONTRACT.md 23830 B, 03f03887...; C2-PROFILE-R2-API.json 5750 B, 965b880d...). A fresh non-author Opus review of it is in progress.",
+      "newText": "- CONDITIONAL on the corrected CP r2 revision 4 candidate (C2-PROFILE-R2-CONTRACT.md 30809 B, 6e2c3989...; C2-PROFILE-R2-API.json 8563 B, 0f592eea...), the exact N01-N11 repair of the revision 3 candidate in current-cardano-c2-profile-policy-corrected-candidate-20261016, pinned by the root manifest and POLICY-ADOPTION.json. A fresh non-author Opus source-policy review found it SOURCE_POLICY_READY with CP01-CP08 AGREE (CP04 and CP06 the changed literals), and root adopted that exact policy solely as the basis for separately reviewed r2 test authoring; no r2 implementation, test execution, runtime result or builder reliance is adopted.",
+      "expectedOccurrences": 1,
+      "rationale": "Updates exact source identities (pins, revision, repaired-from root retained as history) and reconciles the stale in-progress-review statement to the completed SOURCE_POLICY_READY review plus the test-authoring-only policy adoption (S34/S35), without claiming implementation or reliance adoption."
+    },
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "- R4 never declares CP adopted. The review may still require changes. A CP byte change, or an r2 implementation that differs from these literals, voids R4 until explicit downstream reconciliation and fresh review. Final R4 adoption stays conditional on that audit and on incorporation of every required correction; this revision closes neither.",
+      "newText": "- R4 never declares CP adopted for its own reliance. The source-policy review is complete and its required corrections are incorporated in revision 4; the r2 implementation, its test-source review, a fresh non-author audit and GREEN remain open. A CP byte change, or an r2 implementation that differs from these literals, voids R4 until explicit downstream reconciliation and fresh review. Final R4 adoption stays conditional on those steps, on the separate CP08 r2 reliance decision and on fresh votes on CB401-CB412; this revision closes none of them.",
+      "expectedOccurrences": 1,
+      "rationale": "Reconciles the review/correction status (now complete, N01-N11 incorporated in rev4) while preserving R4's CONDITIONAL posture and non-adoption of CP for its own reliance; adds no new authority."
+    },
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "CP's separate source-construction property (an r2-admitted input is v1-admitted, with four equal byte fields) is only sampled by future CP tests. It does not establish Rust acceptance, and no R4 check relies on it.",
+      "newText": "CP's separate source-construction property (an r2-admitted input is v1-admitted, with four equal byte fields) is only sampled by CP tests T02 and T17 when authored; T16 samples strictness only and gives no sample of it. It does not establish Rust acceptance, and no R4 check relies on it.",
+      "expectedOccurrences": 1,
+      "rationale": "Makes the CP06 sampling consistent with rev4 (T02/T17 sample the property; T16 samples strictness only) while keeping it future/unauthored and keeping the no-Rust-acceptance and no-reliance statements intact."
+    },
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "| CP basis | attempt 2 | revision 3 candidate, under fresh review |",
+      "newText": "| CP basis | attempt 2 | revision 4 candidate (N01-N11 repair of revision 3), source-policy reviewed and adopted for test authoring only |",
+      "expectedOccurrences": 1,
+      "rationale": "Reconciliation-map row: CP basis updated to revision 4 and to the completed review / test-authoring-only adoption status."
+    },
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "| builderLabels.consumerProfile | CP_R2_CANDIDATE_DECLARED_SUBSET_NOT_ADOPTED | CP_R2_REV3_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED |",
+      "newText": "| builderLabels.consumerProfile | CP_R2_CANDIDATE_DECLARED_SUBSET_NOT_ADOPTED | CP_R2_REV4_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED |",
+      "expectedOccurrences": 1,
+      "rationale": "Reconciliation-map row mirrors the builderLabels.consumerProfile literal change REV3 -> REV4 made in the API; still NOT_ADOPTED for reliance."
+    },
+    {
+      "path": "C2-BUILDER-R4-CONTRACT.md",
+      "oldText": "1. The CP fresh audit finishes and every required correction is incorporated. Root then decides whether to adopt the r2 contract and source.",
+      "newText": "1. The CP source-policy review is complete and every required correction is incorporated in revision 4; root has adopted that exact policy for test authoring only. Root still decides separately, at CP08, whether to adopt the r2 contract and source for reliance.",
+      "expectedOccurrences": 1,
+      "rationale": "Adoption-order step 1 reconciled from 'audit in progress' framing to the completed review + test-authoring-only adoption, while keeping full r2 source/reliance adoption as a separate later CP08 decision."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "  \"cpRoot\": \"current-cardano-c2-profile-policy-corrected-candidate-20261016\",",
+      "newText": "  \"cpRoot\": \"revision 4; exact N01-N11 repair of current-cardano-c2-profile-policy-corrected-candidate-20261016; pinned by the root manifest and POLICY-ADOPTION.json\",",
+      "expectedOccurrences": 1,
+      "rationale": "condition.cpRoot: rev4 has no clean VAL candidate directory, so it is identified as the N01-N11 repair of the rev3 root and pinned by the root manifest / POLICY-ADOPTION record rather than by an invented path."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "  \"cpPins\": {\"C2-PROFILE-R2-CONTRACT.md\": \"23830 B 03f03887df741ce21556158a0490e24890ba33f310ce276f5060d1013f9e5e03\", \"C2-PROFILE-R2-API.json\": \"5750 B 965b880d5b440376faf495b757ba9b06460e9e5755e943b23c81c789982af0fb\"},",
+      "newText": "  \"cpPins\": {\"C2-PROFILE-R2-CONTRACT.md\": \"30809 B 6e2c3989ede633901d7d1a95ee3a081c8eb628fbea199c1aa2858a3eaa2cba34\", \"C2-PROFILE-R2-API.json\": \"8563 B 0f592eea77df7531be1edf1685b2b7290add7f9873cda2e11f99c9aed436c3af\"},",
+      "expectedOccurrences": 1,
+      "rationale": "condition.cpPins updated to the exact revision 4 byte counts and SHA-256 (authoritative via MANIFEST and S34 candidatePins). Full digests retained as in the original field."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "  \"cpRevision\": \"3; attempt 2 (14 labels) rejected on CP04/CP05, superseded, not consumed\",",
+      "newText": "  \"cpRevision\": \"4; exact N01-N11 repair of revision 3; API descriptor format moriarty-c2-profile-r2-api/3; attempt 2 (14 labels) rejected on CP04/CP05, superseded, not consumed\",",
+      "expectedOccurrences": 1,
+      "rationale": "condition.cpRevision: 3 -> 4, records the N01-N11 repair and the CP API descriptor format bump to /3; preserves the attempt-2 rejection history unchanged."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "  \"cpReview\": \"fresh non-author Opus review in progress; may require changes\",",
+      "newText": "  \"cpReview\": \"fresh non-author Opus source-policy review complete: SOURCE_POLICY_READY, CP01-CP08 AGREE (CP04 and CP06 the changed literals); approved and root-adopted only as the basis for separately reviewed r2 test authoring\",",
+      "expectedOccurrences": 1,
+      "rationale": "condition.cpReview reconciled from in-progress to the completed S35 verdict and the S34 test-authoring-only adoption; no implementation/runtime/reliance claim."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "  \"r4Adoption\": \"conditional on that audit, incorporation of every required correction, root adoption of r2 and fresh votes on CB401-CB412; not closed here\"",
+      "newText": "  \"r4Adoption\": \"conditional on a reviewed r2 implementation, a fresh non-author audit, root-observed meaningful RED then GREEN, a reviewed downstream contract consuming moriarty-c2-issue-artifacts/2 with the 16 labels, the separate CP08 r2 reliance decision and fresh votes on CB401-CB412; not closed here\"",
+      "expectedOccurrences": 1,
+      "rationale": "condition.r4Adoption: the completed CP audit and incorporated corrections are removed from the pending list and replaced by the still-open R4 prerequisites, keeping adoption not closed here."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "  \"v1Property\": \"CP source construction: r2-admitted implies v1-admitted with four equal byte fields; sampled by CP tests only; not Rust acceptance; not relied on by R4\",",
+      "newText": "  \"v1Property\": \"CP source construction: r2-admitted implies v1-admitted with four equal byte fields; sampled by CP tests T02 and T17 only; T16 samples strictness only and is not evidence of it; not Rust acceptance; not relied on by R4\",",
+      "expectedOccurrences": 1,
+      "rationale": "dependency.v1Property reconciled to rev4's exact sampling attribution (T02/T17 sample the property; T16 strictness only), preserving the not-Rust-acceptance and not-relied-on statements."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "\"consumerProfile\": \"CP_R2_REV3_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED\"",
+      "newText": "\"consumerProfile\": \"CP_R2_REV4_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED\"",
+      "expectedOccurrences": 1,
+      "rationale": "manifest.builderLabels.consumerProfile literal REV3 -> REV4; still SELECTED_CHECKS_NOT_ADOPTED, preserving the 9 builderLabels count and NOT_ADOPTED meaning."
+    },
+    {
+      "path": "C2-BUILDER-R4-API.json",
+      "oldText": "\"Consumer profile r2 is an unadopted revision 3 candidate performing selected descriptor checks only; Rust acceptance is not established; VK profile and Rust JSON parse limits are not checked; circuit/VK correspondence is OPEN.\"",
+      "newText": "\"Consumer profile r2 is a reviewed revision 4 candidate adopted as policy for test authoring only and not adopted for builder reliance, performing selected descriptor checks only; Rust acceptance is not established; VK profile and Rust JSON parse limits are not checked; circuit/VK correspondence is OPEN.\"",
+      "expectedOccurrences": 1,
+      "rationale": "limitations[3] reconciled to revision 4 and to the precise adoption status (policy for test authoring only; not adopted for builder reliance); the selected-checks / not-established / NOT_CHECKED / OPEN tail is unchanged, keeping the 4-limitation count."
+    }
+  ],
+  "changedClauses": [],
+  "limitations": [
+    "Read-only, text-only. Nothing was executed, imported, compiled or hashed. All byte counts and SHA-256 values are taken as declared in MANIFEST.json and POLICY-ADOPTION.json (root-revalidated), not recomputed by me.",
+    "These are proposed mechanical edits, not applied. Root must independently assert each expectedOccurrences count against the frozen S27/S28, reconstruct the resulting full bytes, and compare every unchanged span before any use.",
+    "Every resulting full byte requires fresh independent review; no adoption occurs now. R4 remains CONDITIONAL pending a reviewed r2 implementation, a fresh non-author audit, meaningful RED then GREEN, a reviewed downstream contract, the separate CP08 r2 reliance decision, and fresh non-author votes on all of CB401-CB412.",
+    "changedClauses is empty: no CB401-CB412 clause literal depends on the changed CP identity/status, so all twelve clause bodies are preserved byte-for-byte.",
+    "Revision 4 has no clean VAL candidate directory in the frozen packet (it was delivered via the resume packet and the POLICY-ADOPTION record). I therefore pin it by exact bytes+SHA-256 and by the root manifest / POLICY-ADOPTION.json, and retain the revision-3 root only as the repaired-from history; I did not invent a revision-4 path.",
+    "R4's own API format c2-builder-r4-api/2 is preserved because no consumed literal (format /2, 12 keys, 16 labels, 11 stages, host APIs) changed between CP revision 3 and 4. The CP API descriptor format bump to moriarty-c2-profile-r2-api/3 is recorded only inside condition.cpRevision and is not relied upon by any R4 check.",
+    "Status statements are reconciled only to 'source-policy review complete / policy adopted for test authoring only'. I did not claim adoption of the r2 implementation, test execution, runtime results, GREEN, builder reliance, or any Rust-acceptance / subset / equivalence / conditional-inclusion relation; all such statements and all flags/authorities stay false.",
+    "The CP06 source-construction property wording now names T02/T17 sampling with the T16-strictness caveat to match revision 4; this is a consistency reconciliation of an existing statement, not a new requirement, and historical scoped proof is not relabelled as current universal correspondence.",
+    "Preserved unchanged: the 16 consumerLabels, 12 result keys, format /2, 11 C2I stages, 7 consumer and 4 builder host APIs, the v1 (23c3f99d...) prohibition and non-import, CB r1 non-routing, all 33 manifest keys / 9 builderLabels / 4 limitations / 10 flags counts, and every history item including the earlier R4 candidate supersession record and the prior failed exit-124 / 600s reconciliation attempt.",
+    "I did not read every packet file; I used MANIFEST, S27, S28, S31, S32, S34 and S35 as instructed, with S29/other files available only for crosscheck. Original private host paths were not followed."
+  ],
+  "executed": false,
+  "sourceAdopted": false,
+  "builderReliancePermitted": false
+}

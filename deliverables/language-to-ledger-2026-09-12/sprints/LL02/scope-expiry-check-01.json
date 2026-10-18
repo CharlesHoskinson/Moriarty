@@ -1,0 +1,33 @@
+{
+  "observed_at": "2026-09-12T21:30:48.304033+00:00",
+  "scope": "Harmless exact50/5 scope expiry and forced cleanup only; Python sleep ignoresTERM. No Java/K/strace/bwrap/canary/accounting.",
+  "argv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--scope",
+    "--unit=moriarty-ll02-scope-expiry-20260912-01",
+    "--property=MemoryMax=8589934592",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=200%",
+    "--property=RuntimeMaxSec=50s",
+    "--property=RuntimeRandomizedExtraSec=0",
+    "--property=TimeoutStopSec=5s",
+    "--property=KillMode=control-group",
+    "--property=FinalKillSignal=SIGKILL",
+    "--property=SendSIGKILL=yes",
+    "/usr/bin/python3.14",
+    "-I",
+    "-B",
+    "-c",
+    "import signal,time,os,json;signal.signal(signal.SIGTERM,signal.SIG_IGN);print(json.dumps({\"pid\":os.getpid(),\"harmless\":\"sleep-only-TERM-ignored\"}),flush=True);time.sleep(120)"
+  ],
+  "seconds": 55.36758177700176,
+  "exit_code": -9,
+  "stdout": "{\"pid\": 221228, \"harmless\": \"sleep-only-TERM-ignored\"}\n",
+  "stderr": "Running as unit: moriarty-ll02-scope-expiry-20260912-01.scope; invocation ID: 406b730a6c1741259961b341a705a1d8\n",
+  "postExit": {
+    "exit_code": 0,
+    "stdout": "ActiveState=failed\nSubState=failed\nResult=timeout\n",
+    "stderr": ""
+  }
+}

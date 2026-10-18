@@ -1,0 +1,16 @@
+{
+  "sourceId": "14-k2-fixture-bindings",
+  "originalPath": "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/k2/tests/common/mod.rs",
+  "originalBytes": 5672,
+  "originalSha256": "2f635864bdc0fdde7161f393c8369656910a7a37e7c38ebce35b65ee275ae833",
+  "kind": "exact-line-excerpts",
+  "excerpts": [
+    {
+      "firstLine": 1,
+      "lastLine": 45,
+      "sourceText": "//! Shared test helpers. Source only: none of these tests has been compiled or run.\n//!\n//! Expectation grades used by the tests (full table in `EXPECTATIONS.json`):\n//! - [R1-AUTH]: `RUST-ABI2-R1-EXPECTATIONS.json`, the R1 author's fixtures. Their Core effects\n//!   are the frozen non-author Sol `/1` vectors; bodies, shapes and statements are same-lineage\n//!   author derivations. Agreement is cross-implementation, not an independent oracle.\n//! - [HELDOUT]: `HELDOUT-VECTORS.json` H1-P1, frozen by a non-author reviewer before reading the\n//!   compiler. The SettlementHashV2 context used with it is synthetic.\n//! - [ADDENDUM-AUTH]: program hashes from `EXPECTED-PACKET/ADDENDUM-1.json` (author-derived from\n//!   the oracle typed Programs).\n//! - [CONSUMER]: byte constants copied from the Aiken C2 consumer `groth16.ak`.\n//! - [K2-AUTH]: this author's predictions (refusal kinds, structural properties).\n//! - [SPECIMEN]: structurally valid bytes built in the test (generator points, labelled\n//!   digests). A specimen is never a setup output and no proof verifies under it.\n//! No expected value is computed by the driver under test.\n#![allow(dead_code)]\n\nuse mori_k2_driver::input::{ContextInput, ProveRequest, RelationSelector, TransitionInput};\nuse serde_json::Value as Json;\n\nmacro_rules! r1cs {\n    ($p:literal) => {\n        include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/../r1cs/\", $p))\n    };\n}\n\nmacro_rules! own {\n    ($p:literal) => {\n        include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", $p))\n    };\n}\n\npub const INVOICE: &str = r1cs!(\"fixtures/reused/installment-invoice.mori\");\npub const RESERVE: &str = r1cs!(\"fixtures/reused/conditional-reserve.mori\");\npub const H1: &str = r1cs!(\"fixtures/heldout/H1-settle.mori\");\npub const DELIVERY2: &str = r1cs!(\"fixtures/staged/delivery.mori\");\npub const PAYROLL: &str = r1cs!(\"EXPECTED-PACKET/fresh/payroll-ledger.mori\");\npub const R1_EXPECT: &str = r1cs!(\"expectations/RUST-ABI2-R1-EXPECTATIONS.json\");\npub const HELDOUT: &str = r1cs!(\"fixtures/heldout/HELDOUT-VECTORS.json\");\npub const ADDENDUM: &str = r1cs!(\"EXPECTED-PACKET/ADDENDUM-1.json\");\n\npub const REQ_INVOICE: &str = own!(\"requests/invoice-partial.request.json\");\npub const REQ_RESERVE: &str = own!(\"requests/reserve-allocate.request.json\");\npub const SEL_INVOICE: &str = own!(\"requests/invoice-partial.selector.json\");\npub const SEL_RESERVE: &str = own!(\"requests/reserve-allocate.selector.json\");\n",
+      "excerptBytes": 2437,
+      "excerptSha256": "38aaf2bee896faaa00610c7eb5296b6cead8096ef0f201e74c4123be969509c2"
+    }
+  ]
+}

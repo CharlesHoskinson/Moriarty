@@ -1,0 +1,807 @@
+{
+  "format": "moriarty-webs-depth-copy/1",
+  "models": [
+    {
+      "id": "dex",
+      "title": "Two orders share a pool transition; each owner keeps a separate result",
+      "inputs": [
+        {
+          "id": "dex-order-one",
+          "label": "Order one",
+          "kind": "order",
+          "lines": [
+            "Offers 100 A",
+            "Minimum net receipt: 90 B"
+          ],
+          "checks": [
+            "dex-orders",
+            "dex-batch"
+          ]
+        },
+        {
+          "id": "dex-order-two",
+          "label": "Order two",
+          "kind": "order",
+          "lines": [
+            "Offers 100 A",
+            "Minimum net receipt: 90 B"
+          ],
+          "checks": [
+            "dex-orders",
+            "dex-batch"
+          ]
+        },
+        {
+          "id": "dex-pool-before",
+          "label": "Shared pool before",
+          "kind": "state-unspecified",
+          "lines": [
+            "Opening reserves not supplied",
+            "Price, fee and rounding rules not supplied"
+          ],
+          "checks": [
+            "dex-pool",
+            "dex-batch"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "dex-owner-one",
+          "label": "Owner one",
+          "kind": "payment",
+          "lines": [
+            "Receives 92 B net",
+            "92 B meets this order\u2019s 90 B floor"
+          ],
+          "checks": [
+            "dex-orders",
+            "dex-batch"
+          ]
+        },
+        {
+          "id": "dex-owner-two",
+          "label": "Owner two",
+          "kind": "payment",
+          "lines": [
+            "Receives 92 B net",
+            "92 B meets this order\u2019s 90 B floor"
+          ],
+          "checks": [
+            "dex-orders",
+            "dex-batch"
+          ]
+        },
+        {
+          "id": "dex-pool-after",
+          "label": "Shared pool continuation",
+          "kind": "state-unspecified",
+          "lines": [
+            "Must account for both orders",
+            "Closing reserves cannot be calculated from supplied facts"
+          ],
+          "checks": [
+            "dex-pool",
+            "dex-batch"
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "dex-orders",
+          "label": "Each owner\u2019s minimum",
+          "explanation": "Each owner gives 100 A and receives 92 B net against their own minimum of 90 B. The 2 B above the floor is not an identified fee."
+        },
+        {
+          "id": "dex-pool",
+          "label": "One shared pool update",
+          "explanation": "A complete pool relation must explain the same two orders under its reserve, fee and exact-rounding rules. This illustration supplies no pool calculation."
+        },
+        {
+          "id": "dex-batch",
+          "label": "Allocate each payment once",
+          "explanation": "The consuming validator checks actual output allocation. This illustration uses a separate output for each order; the two owner receipts cannot be counted as the same payment."
+        }
+      ],
+      "note": "Illustrative worked example, not an executed batch. The owner-side totals are 200 A given and 184 B received; they do not specify a complete pool ledger. Check count does not determine Strand count.",
+      "mode": "financial"
+    },
+    {
+      "id": "issuance",
+      "title": "Issue 300 units, distribute all 300, retain 700 units of capacity",
+      "inputs": [
+        {
+          "id": "issuance-cap",
+          "label": "Application supply policy",
+          "kind": "supply-limit",
+          "lines": [
+            "First issue",
+            "Cap: 1,000 application-token units",
+            "Supply predecessor representation not supplied"
+          ],
+          "checks": [
+            "issuance-supply"
+          ]
+        },
+        {
+          "id": "issuance-plan",
+          "label": "Proposed issue and allocation",
+          "kind": "mint-plan",
+          "lines": [
+            "Issue 300 application-token units",
+            "Allocate 180 and 120 units"
+          ],
+          "checks": [
+            "issuance-supply",
+            "issuance-distribution"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "issuance-recipient-one",
+          "label": "Recipient one",
+          "kind": "payment",
+          "lines": [
+            "180 application-token units"
+          ],
+          "checks": [
+            "issuance-distribution"
+          ]
+        },
+        {
+          "id": "issuance-recipient-two",
+          "label": "Recipient two",
+          "kind": "payment",
+          "lines": [
+            "120 application-token units"
+          ],
+          "checks": [
+            "issuance-distribution"
+          ]
+        },
+        {
+          "id": "issuance-supply-after",
+          "label": "Supply after first issue",
+          "kind": "supply-continuation",
+          "lines": [
+            "300 application-token units issued",
+            "180 + 120 = 300"
+          ],
+          "checks": [
+            "issuance-supply",
+            "issuance-distribution"
+          ]
+        },
+        {
+          "id": "issuance-capacity",
+          "label": "Capacity left under the cap",
+          "kind": "capacity-annotation",
+          "lines": [
+            "1,000 \u2212 300 = 700 units",
+            "Unissued capacity; no asset payment or debt"
+          ],
+          "checks": [
+            "issuance-supply",
+            "issuance-duties"
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "issuance-supply",
+          "label": "Continue supply within the cap",
+          "explanation": "The proposed first issue is 300 \u2264 1,000. The application asset\u2019s own minting policy must enforce the actual supply change and continue the supply state."
+        },
+        {
+          "id": "issuance-distribution",
+          "label": "Reconcile mint and recipient outputs",
+          "explanation": "The two recipient amounts sum to the proposed new supply: 180 + 120 = 300. The policy and consumer must check the actual mint and recipient outputs."
+        },
+        {
+          "id": "issuance-duties",
+          "label": "Separate supply from servicing promises",
+          "explanation": "The 700 units of capacity are not debt. A redemption duty exists only if the program defines its parties, asset, creation and discharge rules; none is supplied here."
+        }
+      ],
+      "note": "Illustrative application accounting, not an executed mint or datum schema. The supply and capacity annotations are not additional asset outputs. Web proof-claim issuance does not mint the application asset.",
+      "mode": "financial"
+    },
+    {
+      "id": "loan",
+      "title": "Debt changes by 35 CASH while the payer spends 37 CASH",
+      "inputs": [
+        {
+          "id": "loan-debt-before",
+          "label": "Opening obligation",
+          "kind": "duty",
+          "lines": [
+            "100 CASH debt",
+            "Principal/interest split not supplied"
+          ],
+          "checks": [
+            "loan-accrual",
+            "loan-duty"
+          ]
+        },
+        {
+          "id": "loan-period-accrual",
+          "label": "Period accrual premise",
+          "kind": "accrual-premise",
+          "lines": [
+            "Add 5 CASH",
+            "Rate, period and rounding not supplied"
+          ],
+          "checks": [
+            "loan-accrual",
+            "loan-duty"
+          ]
+        },
+        {
+          "id": "loan-payer-debit",
+          "label": "Payer\u2019s outgoing cash",
+          "kind": "debit",
+          "lines": [
+            "35 CASH repayment + 2 CASH fee",
+            "Gross debit: 37 CASH"
+          ],
+          "checks": [
+            "loan-payment",
+            "loan-duty"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "loan-lender",
+          "label": "Lender",
+          "kind": "payment",
+          "lines": [
+            "Receives 35 CASH repayment",
+            "Debt discharge: 35 CASH"
+          ],
+          "checks": [
+            "loan-payment",
+            "loan-duty"
+          ]
+        },
+        {
+          "id": "loan-fee-recipient",
+          "label": "Fee recipient",
+          "kind": "payment",
+          "lines": [
+            "Receives 2 CASH fee",
+            "Debt discharge: 0 CASH"
+          ],
+          "checks": [
+            "loan-payment",
+            "loan-duty"
+          ]
+        },
+        {
+          "id": "loan-debt-after",
+          "label": "Continuing obligation",
+          "kind": "duty-continuation",
+          "lines": [
+            "100 + 5 = 105 CASH before repayment",
+            "105 \u2212 35 = 70 CASH still owed"
+          ],
+          "checks": [
+            "loan-accrual",
+            "loan-duty"
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "loan-accrual",
+          "label": "Add the supplied accrual",
+          "explanation": "Opening debt 100 CASH plus the illustrative 5 CASH accrual gives a 105 CASH duty before payment. The example does not derive 5 CASH from a rate schedule."
+        },
+        {
+          "id": "loan-payment",
+          "label": "Pay the lender and fee recipient separately",
+          "explanation": "The payer\u2019s gross debit is 37 CASH, consisting of a 35 CASH repayment and a 2 CASH fee. Actual parties, exact CASH identity and outputs must match the payer\u2019s intent."
+        },
+        {
+          "id": "loan-duty",
+          "label": "Carry the debt that remains",
+          "explanation": "Only the 35 CASH repayment discharges debt, leaving 70 CASH. The fee is not repayment. No principal/interest allocation or collateral release is specified."
+        }
+      ],
+      "note": "Illustrative servicing arithmetic, not an executed loan or datum schema. ",
+      "mode": "financial"
+    },
+    {
+      "id": "treasury",
+      "title": "An allocation pays 23 A and 4 B, retaining backing for two duties",
+      "inputs": [
+        {
+          "id": "treasury-opening",
+          "label": "Opening custody premise",
+          "kind": "custody",
+          "lines": [
+            "25 A and 10 B",
+            "PROPOSED full-backing opening",
+            "Source step needs at least 23 A and 4 B for non-negative custody"
+          ],
+          "checks": [
+            "treasury-payments",
+            "treasury-reserve"
+          ]
+        },
+        {
+          "id": "treasury-call",
+          "label": "Source call",
+          "kind": "action-input",
+          "lines": [
+            "allocate(true,23,7,2)",
+            "approved=true; units=23",
+            "quotient=7; remainder=2",
+            "23 = 3 \u00d7 7 + 2; 2 < 3"
+          ],
+          "checks": [
+            "treasury-quotient",
+            "treasury-payments",
+            "treasury-reserve"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "treasury-alpha",
+          "label": "Alpha",
+          "kind": "payment",
+          "lines": [
+            "14 A = 2 \u00d7 quotient",
+            "4 B = fixed source transfer"
+          ],
+          "checks": [
+            "treasury-quotient",
+            "treasury-payments"
+          ]
+        },
+        {
+          "id": "treasury-beta",
+          "label": "Beta",
+          "kind": "payment",
+          "lines": [
+            "7 A = quotient"
+          ],
+          "checks": [
+            "treasury-quotient",
+            "treasury-payments"
+          ]
+        },
+        {
+          "id": "treasury-fees",
+          "label": "Fee recipient",
+          "kind": "payment",
+          "lines": [
+            "2 A = fixed source fee",
+            "Separate from the reserve duty"
+          ],
+          "checks": [
+            "treasury-payments"
+          ]
+        },
+        {
+          "id": "treasury-custody-after",
+          "label": "Retained treasury custody",
+          "kind": "custody-continuation",
+          "lines": [
+            "25 \u2212 23 = 2 A",
+            "10 \u2212 4 = 6 B"
+          ],
+          "checks": [
+            "treasury-payments",
+            "treasury-reserve"
+          ]
+        },
+        {
+          "id": "treasury-duties-after",
+          "label": "Duties created, owed to owner",
+          "kind": "duty-continuation",
+          "lines": [
+            "Allocation reserve: 2 A = remainder",
+            "Rebate: 6 B",
+            "Neither duty discharged by allocate"
+          ],
+          "checks": [
+            "treasury-reserve"
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "treasury-quotient",
+          "label": "Check approval and division inputs",
+          "explanation": "Source allocate requires approved and not allocated, remainder < 3, units = 3 \u00d7 quotient + remainder, units \u2265 3 and nonzero quotient. approved=false fails the source precondition. No distinct governance approver is supplied."
+        },
+        {
+          "id": "treasury-payments",
+          "label": "Derive and reconcile actual transfers",
+          "explanation": "Alpha receives quotient \u00d7 2 = 14 A and fixed 4 B; beta receives quotient = 7 A; the fee is fixed 2 A. Custody debit is 23 A and 4 B. The units parameter is not another debit."
+        },
+        {
+          "id": "treasury-reserve",
+          "label": "Continue custody and duties asset by asset",
+          "explanation": "The proposed opening leaves 2 A and 6 B, matching reserve duty 2 A and rebate duty 6 B. Full backing is an additional application policy. rebate(amount) can discharge B rebate; S13 has no allocation-reserve discharge action."
+        }
+      ],
+      "note": "Source arithmetic with an illustrative backing premise, not an executed treasury transaction. Duties record amounts owed; they are not extra outgoing payments. Approval consent and a separate governance decision are distinct in the attributed source reading.",
+      "mode": "financial"
+    }
+  ],
+  "cases": {
+    "dex": {
+      "intro": [
+        "A batch builder combines exchange orders so they can share a pool transition. The useful question for each trader is still individual: how much of my asset leaves, and how much of the requested asset reaches me after the applicable fees? A batch total cannot answer that question for both owners. Each owner has authorized their own limits, and a satisfactory combined total could conceal an unsatisfactory individual result.",
+        "Start with two orders. Each offers 100 A and requires at least 90 B net. The worked outcome assigns 92 B to each owner. The owner-side arithmetic therefore shows two debits of 100 A and two receipts of 92 B: 200 A offered across the batch and 184 B received by the owners. Each receipt exceeds its own 90 B floor by 2 B. That 2 B difference is headroom above the minimum; the example does not identify it as a fee. The pool\u2019s opening reserves, pricing formula, fee amounts and rounding rule are not supplied, so the 92 B outcomes are premises of this illustration rather than outputs of a demonstrated pool calculation."
+      ],
+      "details": [
+        "The computation has two connected jobs. Order checks compare each net receipt with that owner\u2019s signed floor. The pool check must explain the shared reserve transition under the chosen fee and rounding rules. Batch accounting must use the same amounts in both places. Otherwise a displayed order result and a claimed pool result could describe different transfers. The illustration assigns a separate payment output to each order; combined payments require a separately selected allocation policy.",
+        "After the illustrated full exchanges, each owner has received 92 B. The pool needs a continuing state consistent with both orders, but its balances cannot be filled in from these figures alone. A partial-fill extension would also have to carry the unfilled quantity and remaining duties forward; cancellation is a separate action."
+      ],
+      "note": "This is a proposed application. Its pool relation, actual proof producer, exact assets and recipients, complete fee and reserve worksheet, and chosen output-allocation policy remain to be supplied. No pool reserves or price formula are implied by the diagram."
+    },
+    "issuance": {
+      "intro": [
+        "An issuer needs to explain both how much new supply an operation creates and where that supply goes. Recipients need an amount they can reconcile with the actual mint and their outputs. A cap adds a further lifecycle question: how much room remains for later issuance? Those quantities describe related parts of the same operation, but unused room under a cap is not an outstanding payment promise.",
+        "This example is a first issue of 300 application-token units under a cap of 1,000. Recipient one receives 180 units and recipient two receives 120. The distribution accounts for the whole issue because 180 + 120 = 300. The issue stays within the cap because 300 \u2264 1,000, leaving 1,000 \u2212 300 = 700 units of unissued capacity. The after-state has 300 units issued and 700 units of capacity left. That capacity is an accounting limit for possible later issues; it is not an asset output sent to a third recipient."
+      ],
+      "details": [
+        "There are therefore two asset-facing checks: the actual new supply must be 300 units of the specified application asset, and the recipient outputs must account for those 300 units as 180 and 120. Supply-state continuation gives later operations a predecessor against which to check the cumulative cap. This explanation does not choose a datum layout or whether that predecessor is spent or read through another mechanism. The supplied concept requires supply continuation, but supplies no concrete issuance transaction or application minting policy.",
+        "If an issuer also promises redemption, that promise needs its own financial duty: named parties, an exact repayment asset, and rules for creation and discharge. No redemption agreement is supplied here. The 700 units of remaining capacity create no such duty. Separately, issuing a Web proof claim records evidence; it does not mint the 300 application tokens."
+      ],
+      "note": "The application\u2019s mint/burn semantics, policy, supply predecessor representation, issuer authority, concrete proof producer and any servicing terms remain unspecified. The sources establish no signer matrix or executed mint. The diagram shows the proposed supply and distribution accounting only."
+    },
+    "loan": {
+      "intro": [
+        "A loan servicer must reconcile the money leaving the repaying account with the amount removed from the debt. The borrower needs to see the whole debit before authorizing it; the lender needs to see how much arrives as repayment; both need an accurate remaining obligation. A fee makes these quantities differ even when they use the same asset. In this example, the repaying account is called the payer throughout.",
+        "The opening debt is 100 CASH. The example supplies an accrual of 5 CASH for the period, taking the amount owed before payment to 105 CASH. It then supplies a debt repayment of 35 CASH and a separate fee of 2 CASH. The payer funds 37 CASH in total, the lender receives the 35 CASH repayment, and the fee recipient receives 2 CASH. The fee is part of the payer\u2019s cost of this action. It does not discharge any of the loan."
+      ],
+      "details": [
+        "The remaining-debt calculation follows the obligation rather than the total cash debit: 100 + 5 \u2212 35 = 70 CASH. Subtracting all 37 CASH would record 68 CASH and incorrectly treat the fee as repayment. The debt continuation must therefore carry 70 CASH while the payment accounting records the separate 35 and 2 CASH transfers. A duty is the amount still owed; discharge is the explicitly recorded reduction of that duty through repayment. Cash movement and duty movement must agree on the 35 CASH reduction without giving the fee the same meaning.",
+        "The 70 CASH result is a total outstanding duty. These figures do not identify an interest-first, principal-first or proportional allocation of the 35 CASH payment. Nor do they supply the rate, period length, day-count convention or rounding that would generate the 5 CASH accrual. A display must not turn the supplied 100 CASH debt into an invented principal field or label the 70 CASH entirely as principal."
+      ],
+      "note": "This is illustrative servicing arithmetic. A loan source program, accrual terms, payment-allocation rule, exact parties and asset, actual authorization and continuing-state representation remain to be supplied. Origination, payoff, collateral release and ACTUS conformance are separate work; the diagram stops at 70 CASH still owed."
+    },
+    "treasury": {
+      "intro": [
+        "A treasury allocation must account for beneficiary payments and the duties that remain. Keeping a positive balance differs from retaining enough of each asset to cover those duties. The proposed opening of 25 A and 10 B lets the reader inspect both outgoing payments and continuing backing. The source action itself requires only non-negative custody.",
+        "The source call is `allocate(true,23,7,2)`: approval is true, units is 23, quotient is 7 and remainder is 2. The opening source state has `allocated=false` and `rounds=0`. The action requires approval and no previous allocation, checks a remainder below 3, and checks 23 = 7 \u00d7 3 + 2. It sets alpha\u2019s A payment to twice the quotient, 14 A, and beta\u2019s to one quotient, 7 A. The action separately specifies a fixed 2 A fee and a fixed 4 B payment to alpha. The B payment does not come from dividing 23."
+      ],
+      "details": [
+        "The actual proposed transfers therefore debit treasury custody by 14 + 7 + 2 = 23 A and by 4 B. Alpha receives 14 A and 4 B; beta receives 7 A; the fee recipient receives 2 A. Allocation also creates a reserve duty of `remainder`, here 2 A, and a rebate duty of 6 B. The fee and reserve happen to have the same amount in this call, but their formulas and effects differ: the fee is a fixed outgoing payment; the reserve duty uses the remainder and remains owed to the owner. The units parameter is checked arithmetically, not debited as another transfer.",
+        "With the stated backing premise, treasury custody closes at 25 \u2212 23 = 2 A and 10 \u2212 4 = 6 B. Those retained amounts match the newly created duties asset by asset. The source state advances to `allocated=true` and `rounds=1`; marker remains 77. The proposed proof requirements concern the quotient/remainder equations, the transfer calculation and the duty continuation. The source\u2019s attributed limit remains: \u201cNeither S13 nor the supplied V2 source requires custody to back liabilities.\u201d The 25 A / 10 B backing choice therefore needs a consumer-enforced application policy.",
+        "The supplied validator-facing requirement is: \u201cTreasury custody, the identities of A and B and the beneficiary outputs are checked by the consuming validator.\u201d `approved=false` fails the source precondition. Opus ERR-24 states: \u201cIn the proposed V2 consumer the Boolean is covered by the required signers' intents; that is the debited account's consent, not a separate governance decision.\u201d No separate governance approver is supplied."
+      ],
+      "note": "Allocation discharges neither new duty. `rebate(amount)` can reduce the B rebate through a payment to the owner. S13 has no reserve-duty discharge action; the attributed V2 zero-duty Close rule leaves closing blocked while that reserve remains. Backing enforcement, distinct governance authentication and a complete reserve-release or migration lifecycle remain separate work. This is source arithmetic and a proposed backing worksheet, not an executed treasury transaction."
+    }
+  },
+  "invoiceSource": {
+    "source": {
+      "path": "experiments/moriarty-cardano-rust/r1cs/fixtures/reused/installment-invoice.mori",
+      "text": "language \"moriarty/1\";\nagreement InstallmentInvoice {\n  state opened: Bool = false;\n  state paid: UInt = 0;\n  state marker: UInt = 7;\n  asset CASH = { network: \"oracle-unit\", issuer: \"invoice-issuer\", reference: \"cash\", scale: 0 };\n  action open(principal: UInt, reserve: UInt) {\n    requires not opened;\n    ensures paid == 0;\n    requires not liability_present(\"invoice\");\n    let face = principal + 10;\n    let funding = face + reserve;\n    transfer(CASH, \"buyer\", \"escrow\", funding);\n    fee(CASH, \"buyer\", \"fees\", 3);\n    liability(\"invoice\", CASH, \"escrow\", \"seller\", principal);\n    liability(\"invoice\", CASH, \"escrow\", \"seller\", 10);\n    liability(\"reserve\", CASH, \"escrow\", \"buyer\", reserve);\n    next opened = true;\n    ensures liability_amount(\"invoice\") == face and liability_amount(\"reserve\") == reserve;\n  }\n  action partial(amount: UInt) {\n    requires opened and amount > 0;\n    let opening = liability_amount(\"invoice\");\n    requires amount < opening;\n    fee(CASH, \"escrow\", \"fees\", 2);\n    transfer(CASH, \"escrow\", \"seller\", amount);\n    discharge(\"invoice\", amount);\n    next paid = paid + amount;\n    ensures liability_amount(\"invoice\") == opening - amount;\n  }\n  action finish() {\n    requires opened;\n    let closing = liability_amount(\"invoice\");\n    transfer(CASH, \"escrow\", \"seller\", closing);\n    discharge(\"invoice\", closing);\n    next paid = paid + closing;\n    next opened = false;\n    ensures liability_present(\"invoice\") and liability_amount(\"invoice\") == 0;\n  }\n}\n",
+      "scope": "Literal inspected source, unchanged."
+    },
+    "selectorPath": "experiments/moriarty-cardano-rust/k2/requests/invoice-partial.selector.json",
+    "selector": {
+      "format": "moriarty-k2-relation-selector/1",
+      "language": "moriarty/1",
+      "semantics": "moriarty-core/1",
+      "action": "partial",
+      "adapter": "SettlementHashV2",
+      "cap": "NotBound",
+      "accounting": "GrossDebitAndFees",
+      "frame": "TouchedOnly"
+    },
+    "requestPath": "experiments/moriarty-cardano-rust/k2/requests/invoice-partial.request.json",
+    "requestScope": "Actual file uses 109 escrow / 90 invoice / 14 reserve and synthetic context. No request for the proposed 112 scenario was generated or executed.",
+    "localOutputs": [
+      "relation descriptor",
+      "statement bytes/digest",
+      "two public inputs",
+      "decoded ordered body slots",
+      "fixedMatrix.violated and related matrix comparison fields"
+    ],
+    "packageStopsBefore": "The documented proof export emits no Plutus Data/CBOR or transaction. A general Web-to-transaction path is not established.",
+    "sourceRefs": [
+      "N10"
+    ]
+  },
+  "scenarioComparison": [
+    {
+      "label": "Website funding illustration",
+      "cashBefore": 112,
+      "invoiceBefore": 100,
+      "reserveBefore": 10,
+      "cashAfter": 75,
+      "invoiceAfter": 65,
+      "reserveAfter": 10
+    },
+    {
+      "label": "Source open(90,10) calculation",
+      "cashBefore": 110,
+      "invoiceBefore": 100,
+      "reserveBefore": 10,
+      "cashAfter": 73,
+      "invoiceAfter": 65,
+      "reserveAfter": 10
+    },
+    {
+      "label": "Checked-in request (different scenario)",
+      "cashBefore": 109,
+      "invoiceBefore": 90,
+      "reserveBefore": 14,
+      "cashAfter": 72,
+      "invoiceAfter": 55,
+      "reserveAfter": 14
+    }
+  ],
+  "opus": {
+    "reviewToken": "moriarty-depth-opus-S01-20261017",
+    "summary": "Explanatory copy for newcomers on how Moriarty Webs use Groth16 on Cardano, drawn only from the six packet files (MANIFEST.json, V2-COPY.json, GROTH16-SECTION.json, COUNT-CLARIFICATION.json, PRESENTATION-PATCHES.json, CONCEPT.md, DEVELOPER-EXPERIENCE.md). A Groth16 proof shows that the prover knows a witness satisfying one compiled relation for the proof's public inputs. In a Web those public inputs carry a digest of the statement bytes. The proof does not authenticate those bytes. The settling validator rebuilds each statement from the transaction and the state it spends, and compares the result with the digest that was checked when the claim was issued. Setups are counted per distinct compiled relation: one circuit-specific phase 2 for each, plus one phase 1 for each compatible curve, format and capacity set. Because predicate_digest is a compiled constant in the current source, every distinct predicate identity is a distinct circuit. New transactions, users and values inside an unchanged relation reuse its keys. The lifecycle runs: owners sign intents before proving; n Strands lead to n Issue transactions, each minting one proof-claim output; one settlement consumes them all, with claimant signatures and token burns; read-back and post-expiry reclaim follow. Nothing executes automatically. The evidence so far is local: one invoice-partial roundtrip and seven compiled claim-policy wrapper cases, run under a single-party test setup whose operator can forge proofs, with contexts supplied by the caller. No on-chain transaction, production ceremony or setup total exists.",
+    "groth16": {
+      "proofExplanation": [
+        "A Groth16 proof concerns one relation: a fixed system of arithmetic constraints that the compiler produces from one program action. Each value in that system sits on a wire. A few wires are declared public inputs, and the verifier receives their values directly. Every other wire is a witness wire: the prover supplies it and the verifier never receives it. A proof is meant to convince a verifier that the prover knows witness values that, together with the given public inputs, satisfy every constraint. Zero-knowledge means the proof itself adds nothing further about the witness wires. It does not make a value secret when anyone can reconstruct it from public data. A value that is not a public input is therefore not automatically private.",
+        "Setup for the relation produces two public keys: a proving key and a verification key. The prover combines the proving key, the public inputs and the witness into a proof of exactly three group elements. That size stays the same however many constraints the relation has. A proof is made for one relation's keys. Checking it under another relation's verification key provides no evidence about that other relation.",
+        "Verification takes the verification key, the public inputs and the three proof elements, and evaluates one pairing-product equation. Conceptually, the verifier first folds the public input values into a single group element using points fixed in the verification key. It then uses pairings, which let it compare products of values that stay hidden inside group elements. The assurance is computational and conditional. If the setup was honest and Groth16 knowledge soundness holds, a passing check means that, except with negligible probability, the prover knew a satisfying witness for those public inputs. The recorded test setup does not meet the first condition, because its operator can forge proofs. In the Cardano design, this check runs inside the claim policy when a proof-claim output is issued, not again at settlement.",
+        "In a Web relation, the Groth16 public inputs are just two field elements. Together they carry a digest of the statement bytes that the settling validator later rebuilds. The statement bytes are not themselves public inputs. They sit on witness wires, and the circuit hashes them to that digest with a BLAKE2b gadget inside the circuit. Tying the two public inputs to particular statement bytes therefore rests on further assumptions. Among them are BLAKE2b collision resistance and the in-circuit gadget actually matching its specification. Correspondence between the compiled circuit, its verification key and that gadget has not been established. Even when those assumptions hold, the proof establishes only that the computation over those bytes was carried out correctly. It never establishes that the bytes describe the real ledger or a true observation from outside the chain.",
+        "Three kinds of assertion need to be kept apart. A concrete execution proof concerns one transition: this payment, fee and duty update follow from these statement values. A universal property certificate would concern every execution in a specified domain. An authenticated ledger claim concerns a fact reached through a named ledger-authentication path. In the current design, a Strand can only be a concrete execution proof. The other two are not established Strand kinds, and none of the three can stand in for another."
+      ],
+      "publicAndPrivateInputs": [
+        "Three kinds of value need to be kept apart. First, the Groth16 public inputs: the two field elements that carry the statement digest. Second, the statement bytes. They describe a single step: the state being spent, its sequence number, the settling script, the catalogue, the signed intents, the claimant and the body values the step computes over. Inside the circuit these bytes are witness bits, which the circuit hashes to the digest. Outside the circuit they are public in practice, because the settling validator and any observer can rebuild them from the transaction and the state it spends. Sitting on a witness wire does not make them private. Third, the remaining witness values, described below.",
+        "Inside the reviewed relation source, some header fields are compiled constants: the tag, the family, predicate_digest, shape_digest and body_len. The context fields from vk_digest through intents_digest, including claimant_vkh, are free witness bits. The circuit hashes these bits into the statement digest but does not interpret them, so it accepts whatever context it is given without checking it. These fields remain part of the publicly rebuildable statement bytes. Calling them witness bits describes how the circuit receives them, not secrecy. Comparing that context with the real transaction is the consuming validator's job, not the circuit's.",
+        "The remaining witness values are whatever else the prover supplies to satisfy the constraints. Zero-knowledge keeps them out of the proof. They stay hidden only to the extent that they cannot be reconstructed from public data, and zero-knowledge does not make a transition private. The statement bytes, the proof-claim outputs, the settlement transaction and its actual outputs are all visible on the ledger. Public evidence bundles leave out witness values, private keys and setup secrets."
+      ],
+      "setupExplanation": [
+        "Groth16 defines setup as an algorithm over one relation. Its output is the proving key and the verification key for that relation. The algorithm does not prescribe how a ceremony should run. Common practice splits the work into two phases, each of which can include many participants.",
+        "Phase 1, often called powers of tau, produces reusable parameters for one curve up to a maximum constraint capacity. Any circuit on that curve that fits within the capacity and uses a compatible format can build on the same phase 1. A smaller circuit needs no extra phase 1, and an existing compatible phase 1 can be reused instead of running a new one.",
+        "Phase 2 belongs to one exact compiled relation, which includes its constraints, its public-input layout and its bounds. Phase 2 produces that circuit's proving key and verification key. Every distinct compiled circuit needs its own phase 2, even when it shares a phase 1 with others.",
+        "The keys are public. The secret is the setup randomness, often called toxic waste. Anyone who keeps it can produce verifying proofs for statements that have no witness, so it must not survive the setup. A multi-party phase is trustworthy when its transcript verifies and at least one participant in that phase was honest, under the protocol's assumptions. Every phase needs this property: an honest phase 1 does not rescue a phase 2 run by a single party who kept the randomness.",
+        "On Cardano, the reviewed source fixes a Web catalogue's verification-key digests at genesis and carries them unchanged. Replacing a key would therefore need a key-migration action that carries any remaining duties forward. That action is a proposal and does not exist in the reviewed source. Revoking an intent advances the sequence number but does not migrate keys."
+      ],
+      "countExplanation": [
+        "The unit for counting setups is the distinct compiled relation, including any additional Groth16 wrapper circuit. The number of transactions, wallets, users or claims on Cardano does not set the count, and counts of logical properties or review identifiers do not determine it. New transactions, users and public-input values inside an unchanged compiled relation reuse its keys. Assets are a different case in the current source. The invoice program declares its CASH asset as a literal, so a different asset may mean a different program, a different predicate identity and therefore a different circuit. Whether it does depends on exactly which fields predicate_digest covers, and the source file that defines that coverage was not read. Aggregating proofs does not remove the setups that the underlying circuits need.",
+        "In the common two-phase architecture, the exact count is one phase 2 for each distinct compiled circuit in a frozen circuit inventory, plus one phase 1 for each compatible parameter set that inventory uses. As a worked example, K compatible circuits on one curve need one shared phase 1 and K circuit-specific phase 2 stages. That counts stages, not K + 1 complete ceremonies. The figure holds only if every circuit uses the same curve and format and fits the shared phase-1 capacity.",
+        "Reusing a parameterized circuit and compiling predicate_digest as a constant can look contradictory, but they operate at different levels. A parameterized relation with fixed bounds covers many claims without a new setup, but only for the values its compiled form leaves free. In the current Rust source those free values are the context and body values, while predicate_digest is fixed inside the constraints. Every distinct predicate identity is therefore a distinct circuit with its own phase 2, even when two predicates look structurally alike.",
+        "A future universal circuit that takes the predicate as an input would change this comparison, and so would a target with a universal reference string, such as Midnight's PLONK/KZG infrastructure. Even such a design is still a bounded relation, not one unbounded circuit for every future Cardano application. The 235 pre-dedup review identifiers, the 20 retained families and the seven evidence layers describe review scope, not a setup count. The circuit inventory is not frozen, so no Cardano-wide total can be stated."
+      ],
+      "circuitIdentityExample": [
+        "Take the partial-payment action of the installment invoice program. Compiling it produces one relation in which predicate_digest, shape_digest and body_len are constants. That relation's phase 2 produces a verification key. The key's digest sits in the catalogue, and owner intents sign it as the target together with the predicate and shape digests.",
+        "Now take a 35 CASH partial payment on one escrow and a different partial payment on another escrow, with another claimant and another sequence number. Both use the same relation and the same keys, because only free context and body values differ. Their statements differ, so under BLAKE2b collision resistance their digests differ except with negligible probability. A claim made for one step therefore does not match the statement the validator rebuilds for the other.",
+        "The conditional-reserve allocate action belongs to a different program. No compiled relation for it is supplied. If it were compiled under the current path with a different predicate_digest constant, it would be a distinct circuit with its own phase 2. It could still share a phase 1 with the invoice relation if the curve, format and capacity are compatible. Changing a bound or the public-input layout of the invoice relation itself also produces a new circuit and a new verification-key digest. In the reviewed source, catalogues are fixed at genesis, so putting that new key into use would need a key-migration action. That action is a proposal; the reviewed source has no key migration.",
+        "Roles and relations are counted separately. The invoice Web names three conditions: payment arithmetic, fee accounting and duty continuation. A single whole-execution proof over the partial-payment action covers all three, so that design needs one relation. Proving the fee or the duty update separately would need a separately compiled relation for each, with its own phase 2. Naming source expressions 'fee' or 'liability' does not create a separate proof producer."
+      ],
+      "ledgerClaimsExplanation": [
+        "The proof supplies correct computation over the values in the statement, and the validator supplies authenticated premises and scope. Ledger facts come from the transaction itself, not from the proof. These include which state is being spent, which outputs exist and who signed. For each Strand, the settling validator rebuilds the statement from the transaction and the state it spends, then compares it with the digest the claim policy checked at issuance. It does not verify the proof again.",
+        "The validator itself compares these facts against the ledger:\n- the spent thread state and its sequence number\n- the settling script and the catalogue\n- the signed intents and the signatures behind them\n- each claimant's settlement signature and the burn of that claimant's token\n- the actual recipient and fee outputs\n- the duties carried over from the predecessor state\n\nAllocating actual outputs to obligations is also the validator's job, under the profile's chosen rule. A proof can attest arithmetic only over values the validator recomputes.",
+        "Facts from outside the chain, such as a delivery document, a price or a rate observation, enter only with a named issuer, an authentication path and a freshness limit. Reading a reference input requires the validator to read the datum and authenticate its origin. An input being unspent when the transaction applies shows presence only, not exclusivity or history. A validity interval neither dates nor authenticates a datum.",
+        "The statement's network byte is declared by the catalogue and is not compared with the executing ledger. Separation across networks therefore rests on outref uniqueness as a ledger premise, not on that byte. The claimant field is prover-chosen bytes bound when the claim is consumed, not an authenticated identity for the prover. The first supported profile refuses universal property certificates and authenticated-history claims as unsupported. Each remains a required future track that needs its own trust path."
+      ],
+      "sourceSetupStatus": [
+        "Recorded evidence is local and narrow. It consists of one current-Rust Groth16 roundtrip for the invoice-partial relation, and seven cases run against a compiled claim-policy wrapper in a local virtual machine: one acceptance and six mutation rejections. Every proof context in those records was supplied by the caller, not taken from a real transaction. No on-chain transaction is recorded.",
+        "Both records use a single-party test setup whose operator can forge proofs for any digest and any claimant. No production security claim follows from them. No production ceremony is recorded in the supplied sources, none is proposed here, and the total number of setups required is unknown. The recorded local CPU and memory figures cover the whole compiled Issue evaluation, including its pairing. They are not an isolated verification cost, ledger execution units, a fee or a transaction fit, and they support no claimed cost advantage.",
+        "The descriptions of the consumer, claim policy, owner intents, duties and Close come from reading Aiken and Rust source that is unadopted and uncompiled. They are not observed behavior, and no supplied record pins the recorded binaries or compiled bytes to that source. Correspondence between the compiled circuit, its verification key and the in-circuit BLAKE2b gadget is not established. Only a conditional source argument relating per-role predicates to whole-action execution has been adopted.",
+        "The following do not exist yet:\n- the all-or-nothing Web consumer and its required-set enforcement\n- enforcement of partial steps\n- proofs over real transaction context\n- genuine intent signatures\n- a Web-level SDK or command-line interface for assembling a Web and for building, submitting and observing its Issue and settlement transactions. The experimental mori-k2 command-line tool documents compile, inspect, setup, prove and verify, but its proof export emits no Plutus Data, CBOR or transaction.\n- a wallet signing display\n- the funding and backing actions behind the 112 CASH and 25 A / 10 B designs\n- discharge of reserve duties, including any reserve-return action\n- batch issuance\n- a production setup ceremony"
+      ]
+    },
+    "binding": [
+      {
+        "title": "Program and source identity",
+        "body": "Each catalogue entry shows the program's program_hash and source_hash. Both are covered by catalogue_digest, and every owner intent signs that digest. A consuming validator can compare the catalogue a statement names with the catalogue the owners signed. No on-chain check, however, links program_hash or source_hash to the predicate or verification-key digest. That link rests on the catalogue author's assertion.",
+        "source": "V2-COPY.json technical.trustNotes binding-chain assumptions; CONCEPT.md 'Later-source readings and their limits'"
+      },
+      {
+        "title": "Semantics and compiler version",
+        "body": "The current experimental path runs from moriarty/1 through moriarty-core/1 to SettlementHashV2. The application handoff names the source, the program, and the semantics and compiler versions. That handoff is an information contract for builders and wallets. The supplied sources describe no on-chain field through which a validator compares semantics versions.",
+        "source": "CONCEPT.md 'Evidence appendix and retained breadth' and 'How an application would use a Web'; DEVELOPER-EXPERIENCE.md Journey A step 1"
+      },
+      {
+        "title": "Predicate and shape",
+        "body": "predicate_digest, shape_digest, tag, family and body_len are compiled into the relation as constants. Under an honest setup and Groth16 knowledge soundness, a verifying proof therefore concerns the predicate and shape its circuit fixes. The recorded test setup can forge proofs, and correspondence between the compiled circuit and its verification key is not established. Owner intents sign the target predicate and shape digests. The validator compares them with the relation identity that the statement and catalogue name. Which fields predicate_digest exactly covers depends on a source file the reviewer did not read.",
+        "source": "V2-COPY.json technical.trustNotes binding-chain and effects-authority; CONCEPT.md 'Later-source readings and their limits'"
+      },
+      {
+        "title": "Verifier and verification key",
+        "body": "vk_digest is the first of the context fields hashed into the statement. Like the other context fields, it is a free witness value that the circuit hashes but does not interpret. In the reviewed source, the catalogue fixes its verification-key digests at genesis, and owner intents sign the target VK digest. The supplied sources do not show how the claim policy ties the verification key it checks a proof under to the vk_digest field. This page therefore does not claim that a proof checked under some other key is refused. Whether a given verification key matches its compiled constraint matrices is also not established.",
+        "source": "V2-COPY.json technical.signerBoundary, trustNotes setup-keys and binding-chain"
+      },
+      {
+        "title": "Spent state and sequence",
+        "body": "The statement names the state being spent and its sequence number, and owner intents sign nonce = seq. The validator rebuilds the statement from the outref it is actually spending. A claim made for another thread step therefore does not match. If a Revoke or a competing settlement advances the sequence first, claims for the old target can no longer settle.",
+        "source": "V2-COPY.json main.definitions Strand, technical.signerBoundary, trustNotes issuance-route; PRESENTATION-PATCHES.json OP-04-revocation"
+      },
+      {
+        "title": "Owner intents",
+        "body": "Each owner signs an intent before any proof exists. For each asset and beneficiary, the intent sets gross_cap, fee_cap, net_floor and liability_cap, and it also names a validity window, the nonce and the target digests. intents_digest is hashed into the statement, and the validator checks the signed intents of the accounts that the effects debit. An approved=true input is consent from the debited account, not a separate governance decision.",
+        "source": "V2-COPY.json main.lifecycleSteps authorize, technical.signerBoundary, trustNotes effects-authority"
+      },
+      {
+        "title": "Claimant",
+        "body": "claimant_vkh is hashed into the statement, and the consumer rebuilds the statement using the claimant from the claim envelope. Settlement requires that claimant's signature and burns the claim token. The claim policy does not compare the claimant with the statement at issuance. A mismatched envelope can therefore be minted but cannot settle. The claimant is bytes the prover chooses, not an authenticated identity for the prover.",
+        "source": "V2-COPY.json technical.trustNotes binding-chain; CONCEPT.md 'Security-owned proposals and open correspondence'"
+      },
+      {
+        "title": "Statement digest",
+        "body": "The claim policy checks the Groth16 proof against the statement digest when it issues the claim. At settlement, the validator recomputes the digest from the transaction and the spent state and requires equality with that issued digest. This comparison is what joins correct computation to a particular ledger step. Settlement does not verify the proof a second time.",
+        "source": "V2-COPY.json main.lifecycleSteps settle, technical.trustNotes issuance-route"
+      },
+      {
+        "title": "Outputs and allocation",
+        "body": "The validator checks the actual seller, fee-recipient and beneficiary outputs against the amounts the statement fixes and the owners' signed caps. A profile chooses one of two rules: one output per obligation, or a recomputed amount partition that admits combined payments, with every obligation allocated exactly once. No input value may count toward two obligations. The strict source rule covers redeemers of one script hash only.",
+        "source": "V2-COPY.json technical.trustNotes effects-authority; CONCEPT.md 'Five application cases' item 1"
+      },
+      {
+        "title": "Custody and duties",
+        "body": "The thread datum carries a complete custody snapshot, and custody must equal it exactly. Duties change only through recorded accruals and discharges carried over from the predecessor state. A thread with a nonzero duty cannot close. Liabilities do not have to be fully backed: the source requires only that custody stay non-negative, and full backing is an application policy that a consumer would have to enforce.",
+        "source": "V2-COPY.json technical.trustNotes effects-authority and duties-backing-fees"
+      },
+      {
+        "title": "Network and external anchors",
+        "body": "The network byte is declared by the catalogue and is not compared with the executing ledger. Cross-network separation therefore rests on outref uniqueness. External facts and reference-input data count only when the validator reads the datum, authenticates its origin and applies a named freshness limit. Being present on the ledger does not establish history, and a validity interval does not date a datum.",
+        "source": "V2-COPY.json technical.trustNotes binding-chain and proof-meaning; DEVELOPER-EXPERIENCE.md 'Provenance, lifecycle, and naming'"
+      }
+    ],
+    "lifecycle": {
+      "intro": "A Web transition moves through separate events. Some happen once per relation, some once per thread, and some once for each Strand or each transition. Off-chain work produces keys, signed intents, proofs and an assembly. On-chain work records checked proofs as claim outputs and then settles the transition. Nothing happens automatically: a proof-claim output records checked evidence, moves no application funds, and has no effect until a builder assembles and submits a settlement that the validator accepts.",
+      "stages": [
+        {
+          "id": "setup",
+          "title": "Set up keys for each compiled relation",
+          "lane": "offchain, once per distinct compiled relation",
+          "inputs": "A compiled relation (constraints, public-input layout, bounds) and a compatible phase 1 for its curve, format and capacity",
+          "action": "A circuit-specific phase 2 turns the shared phase-1 parameters into this relation's proving key and verification key, and the setup randomness is discarded.",
+          "outputs": "A public proving key and verification key; the verification-key digest that the catalogue will record",
+          "signersAndFunding": "Phase participants only. No owner, wallet or transaction is involved. Each phase is sound only if its transcript verifies and at least one participant in it was honest.",
+          "source": "GROTH16-SECTION.json setupStages and trust; COUNT-CLARIFICATION.json approvedCounterConditions"
+        },
+        {
+          "id": "genesis",
+          "title": "Fix the catalogue at genesis",
+          "lane": "onchain, once per thread",
+          "inputs": "Catalogue entries with program_hash, source_hash and verification-key digests",
+          "action": "In the reviewed source, genesis creates the thread with a catalogue whose verification-key digests stay fixed. Changing a key later would need a key-migration action that carries remaining duties. That action is a proposal and is absent from the reviewed source.",
+          "outputs": "A thread state with its catalogue digest and a lovelace thread reserve, returned on Close",
+          "signersAndFunding": "Genesis funds the V2 thread reserve in lovelace. The supplied sources do not name who signs genesis or who supplies that reserve.",
+          "source": "V2-COPY.json technical.trustNotes issuance-route ('excluding one-time genesis') and setup-keys; technical.networkFeeNote"
+        },
+        {
+          "id": "authorize",
+          "title": "Authorize the outcome",
+          "lane": "offchain, once per owner per transition",
+          "inputs": "The selected action, the current thread state and sequence number, and the catalogue",
+          "action": "Each owner signs an intent with per-asset gross, fee, net-floor and liability limits, a validity window, nonce = seq and the target predicate, VK and shape digests. Signing happens before any proof is made.",
+          "outputs": "Signed owner intents, which feed intents_digest",
+          "signersAndFunding": "The owners of the debited accounts sign. Signing is an offchain act. The supplied sources state no ADA cost for it and do not specify how signed intents are transported.",
+          "source": "V2-COPY.json main.lifecycleSteps authorize; technical.signerBoundary; DEVELOPER-EXPERIENCE.md Journey A step 4"
+        },
+        {
+          "id": "prove",
+          "title": "Produce the Strands",
+          "lane": "offchain, once per Strand",
+          "inputs": "The proving key, the statement bytes (spent state, sequence, settling script, catalogue, intents, claimant, body values), which are publicly rebuildable, and the remaining witness values",
+          "action": "The prover runs the program and produces a Groth16 proof for each Strand the Web requires. One whole-execution proof can cover several roles.",
+          "outputs": "Proof instances with their statements and binding metadata",
+          "signersAndFunding": "The prover chooses the claimant bytes. No transaction is created and nothing is funded.",
+          "source": "V2-COPY.json main.lifecycleSteps prove; DEVELOPER-EXPERIENCE.md Journey A step 5"
+        },
+        {
+          "id": "assemble",
+          "title": "Assemble the Web",
+          "lane": "offchain",
+          "inputs": "The consumer's required set of conditions and the produced Strands",
+          "action": "An assembler matches Strands to the identified consumer's requirements and names the issue and settlement stages, outputs, funding and continuation.",
+          "outputs": "A local match report and transaction candidates. Neither is settlement.",
+          "signersAndFunding": "No signatures. Later edits to the transaction invalidate the affected preparation.",
+          "source": "DEVELOPER-EXPERIENCE.md Journey A step 6"
+        },
+        {
+          "id": "issue",
+          "title": "Issue proof claims",
+          "lane": "onchain, one Issue transaction per Strand",
+          "inputs": "One proof, its statement digest, the claimant and a claimant-chosen expiry",
+          "action": "The claim policy checks the Groth16 proof and mints exactly one proof-claim output. Issuing never mints the application's asset and moves no application funds.",
+          "outputs": "One proof-claim output holding min-ADA",
+          "signersAndFunding": "The Issue transaction must cover the network fee, collateral and the claim output's min-ADA in ADA. The supplied material does not state who must sign an Issue transaction or who funds it.",
+          "source": "V2-COPY.json main.lifecycleSteps issue, technical.signerBoundary, trustNotes issuance-route"
+        },
+        {
+          "id": "settle",
+          "title": "Settle the transition",
+          "lane": "onchain, one settlement transaction",
+          "inputs": "Every required proof-claim output, the spent thread state, the signed intents and the proposed outputs",
+          "action": "The validator rebuilds each statement, compares it with the digest checked at issuance, requires each claimant's signature, burns each claim token, and enforces the signed caps, payments, custody and continuing duties.",
+          "outputs": "The application's actual outputs and the continuing thread state with its remaining duties",
+          "signersAndFunding": "Each claimant whose claim is consumed must sign. The owners' consent is checked through their signed intents. Network fees and collateral are paid in ADA, and program-asset fees move as application outputs.",
+          "source": "V2-COPY.json main.lifecycleSteps settle, faqs signers; CONCEPT.md 'How an application would use a Web'"
+        },
+        {
+          "id": "observe",
+          "title": "Observe and read back",
+          "lane": "offchain",
+          "inputs": "The submission reference",
+          "action": "The application observes three things separately: inclusion, the finality it requires, and a full readback of outputs and remaining duties. It then reconciles the actual per-asset effects against each owner's intent.",
+          "outputs": "A reconciled outcome, or an explicitly unknown one",
+          "signersAndFunding": "No signatures. Observing does not authorize any new spend.",
+          "source": "V2-COPY.json main.faqs readback, technical.readbackBoundary; DEVELOPER-EXPERIENCE.md Journey A step 7"
+        },
+        {
+          "id": "reclaim",
+          "title": "Reclaim an unused claim",
+          "lane": "onchain, failure path, once per unused claim",
+          "inputs": "A proof-claim output whose claimant-chosen expiry has passed",
+          "action": "The claimant releases the output and recovers its min-ADA. Reclaim before expiry is not available.",
+          "outputs": "Released min-ADA",
+          "signersAndFunding": "The claimant signs. The supplied sources do not state who funds the reclaim transaction's network fee and collateral.",
+          "source": "V2-COPY.json main.faqs unused-claims, technical.trustNotes issuance-route"
+        }
+      ],
+      "failureBranch": [
+        "A Web in which a required condition has no covering Strand has no authority over the contract's effects. Its already-issued claim outputs still exist on-chain, keep holding their min-ADA, and can be released only by their claimant. Issuing a proof claim is not settlement and executes nothing. A partial payment that carries every Strand its step requires is different: it is ordinary financial progress, and its remaining duties continue on the record.",
+        "The design is safe but not guaranteed to make progress. Any catalogue account can Revoke, which advances the sequence, and a competing settlement can spend the same state first. Either event leaves the issued claims pointing at a stale target. Those claims cannot settle and stay locked until the claimant's chosen expiry. Someone can copy a proof and re-issue it with the same claimant and a new expiry, but only that claimant can release it. An envelope with the wrong claimant can be minted but cannot settle.",
+        "After submission, a timeout means the outcome is unknown, not that the transition did not happen. The application keeps its last observation and submission reference. A missed deadline is never treated as evidence that the transition did not execute."
+      ],
+      "cardinality": [
+        "Conditions, Strands, claim outputs and transactions are counted separately. A Web names its required conditions, or roles. A Strand covers one or more of them, since one whole-execution proof can serve several roles. The three invoice roles can therefore be carried by a single Strand.",
+        "Each Strand becomes exactly one proof-claim output through its own Issue transaction. n required Strands therefore mean n Issue transactions, n claim outputs and one settlement that consumes them all. One-time genesis and any post-expiry reclaims are extra. These counts are structural readings of source, not measured transaction counts.",
+        "Several claim envelopes can exist for one statement digest. Settlement consumes each envelope once, as the ledger spends each output once. Issuing several claims in one transaction is not possible without a change to the claim policy."
+      ],
+      "fundingAndSigners": [
+        "The following are paid in ADA, separately from the application amounts:\n- network fees\n- collateral\n- the min-ADA each proof-claim output holds from issuance until settlement or reclaim\n- the lovelace thread reserve\n\nNone of these is estimated here. A program fee is paid in the program asset and is neither debt repayment nor a network fee. A reserve duty is a program liability, not the thread reserve.",
+        "Owners sign their intents before proving. Each claimant signs the settlement that consumes their claim, and they sign a reclaim after expiry. No published signer matrix covers each transaction. The supplied material does not say who must sign an Issue transaction or genesis, and no genuine intent signature or wallet signing display has been observed. The worksheet's fee-funded 112 CASH escrow and the 25 A / 10 B treasury backing depend on funding actions and consumer-enforced backing policies that the source programs do not contain."
+      ]
+    },
+    "sourceNotes": [
+      "A Groth16 proof has three group elements and is verified with one pairing-product equation; setup outputs public proving and verification keys for one relation: GROTH16-SECTION.json concepts[2] 'Proof and verification' (cites Groth 2016 \u00a72.2, \u00a73.2, which was not read here)",
+      "The public inputs carry a digest of the statement bytes the validator rebuilds: PRESENTATION-PATCHES.json OP-07-statement-digest (patch to GROTH16-SECTION.json concepts[0])",
+      "What a verifying proof shows, the reliance on the in-circuit BLAKE2b gadget and collision resistance, 'never authenticates', and the three assertion kinds: V2-COPY.json technical.trustNotes proof-meaning; CONCEPT.md 'One glossary for this draft' final paragraph",
+      "Compiled constants, free context bits (bytes 112..339 including claimant_vkh) and claimant binding at consumption: V2-COPY.json technical.trustNotes binding-chain; CONCEPT.md 'Later-source readings and their limits' and 'Security-owned proposals and open correspondence'",
+      "Phase 1 and phase 2 roles, toxic waste, and honesty of at least one participant in each phase: GROTH16-SECTION.json setupStages, trust",
+      "Counting formula, phase-1 compatibility, and review identifiers not being a setup count: COUNT-CLARIFICATION.json answer, approvedCardanoCount, approvedCounterConditions; PRESENTATION-PATCHES.json OP-03-count-units and OP-03-compatibility-and-soundness",
+      "K compatible circuits mean one phase 1 plus K phase 2 stages, not K+1 ceremonies; bounded generic relations; changed-relation triggers; aggregation: GROTH16-SECTION.json counter.result, reuseExamples",
+      "predicate_digest compiled as a constant, so distinct relation identities are distinct circuits; future universal circuit or Midnight SRS; total count unknown; no production ceremony: V2-COPY.json technical.trustNotes setup-keys; CONCEPT.md 'Evidence appendix and retained breadth'",
+      "Catalogue VK digests fixed at genesis; key migration carries duties; Revoke is not migration: V2-COPY.json technical.trustNotes setup-keys assumptions",
+      "Settlement rebuilds statements, compares with the digest from issuance, does not verify again; n Issue transactions plus one settlement: V2-COPY.json technical.trustNotes issuance-route; CONCEPT.md 'How an application would use a Web'",
+      "Owner intent fields and the signer boundary: V2-COPY.json technical.signerBoundary, trustNotes effects-authority",
+      "Allocation profiles, strict rule limited to one script hash, custody snapshot, duty chain, Close blocked by nonzero duty: V2-COPY.json technical.trustNotes effects-authority, duties-backing-fees",
+      "Reference inputs, presence-only premise, validity interval does not date a datum: V2-COPY.json technical.trustNotes proof-meaning assumptions; DEVELOPER-EXPERIENCE.md 'Provenance, lifecycle, and naming'",
+      "Network byte declared by the catalogue; separation rests on outref uniqueness: V2-COPY.json technical.trustNotes binding-chain assumptions; CONCEPT.md 'Later-source readings and their limits'",
+      "Revoke by any catalogue account; competing settlement; orphaned claims; reclaim only after expiry: PRESENTATION-PATCHES.json OP-04-revocation; V2-COPY.json technical.trustNotes issuance-route",
+      "Incomplete Web vs partial payment; no authority over effects; claims stay claimant-releasable: V2-COPY.json main.assemblyIncomplete, faqs partial-vs-missing; PRESENTATION-PATCHES.json OP-01-missing-coverage",
+      "Read-back separates inclusion, finality and readback; timeout is unknown: V2-COPY.json main.faqs readback, technical.readbackBoundary",
+      "Assembly stage and edit invalidation: DEVELOPER-EXPERIENCE.md Journey A step 6",
+      "Recorded evidence (one roundtrip, seven wrapper cases), forgeable single-party setup, caller-fabricated contexts, no on-chain transaction, local VM figures are not ledger cost: V2-COPY.json technical.summary, trustNotes recorded-evidence",
+      "Inventory of unbuilt components and uncompiled V2 source readings: V2-COPY.json technical.summary; CONCEPT.md 'Later-source readings and their limits'",
+      "Role vs relation: a whole-execution proof covers several roles, and naming fee/liability does not create producers: V2-COPY.json technical.trustNotes web-completeness assumptions; CONCEPT.md 'The concept and its useful job'",
+      "Funding items paid in ADA and separation of thread reserve from reserve duty: V2-COPY.json technical.networkFeeNote",
+      "The Groth paper, the snarkjs README and the Filecoin attestation pages are cited by packet files but were not supplied. Statements here rest on the packet's summaries of them."
+    ],
+    "openQuestions": [
+      "Who must sign an Issue transaction, and who signs genesis? Who funds each network fee, collateral, claim-output min-ADA and the thread reserve, including for Issue, settlement and reclaim? No per-transaction signer or funding matrix is published.",
+      "The supplied files do not state which curve and proof serialization format are used, so phase-1 compatibility for the inventory cannot be stated.",
+      "How does the rule that n required Strands are consumed by one settlement fit with the V2 source note that it 'refuses two claims for one consumed outref'? The supplied text does not resolve this.",
+      "Exact predicate_digest field coverage depends on identity.rs, which was not read. Until it is, it is unknown whether a different asset identity, or another literal declared in a program, changes predicate_digest and therefore the compiled circuit.",
+      "How does the claim policy tie the verification key it checks a proof under to the vk_digest field in the statement? The supplied sources do not say, so rejection of a proof checked under another key is not established.",
+      "Can the consumer enforce a fully authorized partial step as distinct from a missing proof?",
+      "How many Groth16 setups are needed in total? This waits on a frozen circuit inventory. No ceremony plan exists.",
+      "Batch issuance, reclaim before expiry, proof-at-consumption and key migration are proposed only.",
+      "Cross-network replay analysis is needed if the network byte is relied on.",
+      "The acceptance and read-back signal for Preview, and later Preprod, is still undefined.",
+      "The supplied sources describe no on-chain field through which a validator compares semantics or compiler versions."
+    ],
+    "limits": [
+      "The copy is authored only from the six packet files. No implementation, setup, proving, verification or ledger work was performed, and the copy issues no security acceptance.",
+      "All evidence is local: one roundtrip and seven compiled-wrapper cases, with caller-fabricated contexts and a single-party test setup whose operator can forge proofs. No on-chain transaction is recorded.",
+      "Consumer, claim-policy, intent, duty and Close behavior is read from unadopted, uncompiled source that no record pins to the executed binaries.",
+      "Correspondence between the compiled circuit, its verification key and the BLAKE2b gadget is not established. Only a conditional composition argument is adopted.",
+      "No production ceremony is recorded or proposed. No Cardano-wide setup count can be given.",
+      "No measured cost, latency or savings are claimed. The local VM figures are not ledger cost.",
+      "Zero-knowledge hides the witness only. Statements and transactions are public, so no claim of universal privacy is made.",
+      "Universal property certificates and authenticated ledger claims are not supported Strand kinds.",
+      "Midnight ZKIRv3 remains the broader target. Cardano is an additional experiment and does not qualify Midnight."
+    ]
+  }
+}

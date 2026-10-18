@@ -1,0 +1,387 @@
+{
+ "author": "claude-opus-5-5, evidence-repair source author (AUTH: author-derived, NOT independent)",
+ "financial_relation_expectations_auth": {
+  "frame_variant": "H1-P1 additionally under FrameCells::Include([USDX/auditor]) + GrossDebitAndFees: SAT; auditor pre/post slots equal the frozen 7/7; no accounting slot for auditor (frozen gross 0).",
+  "gross_debit_and_fees": "For every accepted vector, a second relation with AccountingBinding::GrossDebitAndFees (same cap binding as the vector) is SAT on the frozen records; the encoded GrossDebit/FeesPaid public slots equal the frozen gross_debit/fees_paid of each debit cell; every frozen row with gross_debit != 0 is a debit cell; adding 1 to the first field of any GrossDebit or FeesPaid slot makes the relation UNSAT.",
+  "not_bound": "gross_debit_excluding_self is compared with actual Core only (the relation counts self-transfers in gross, as intent::check_effects does). Reserve, DUST, service fees and recovery reservations have no frozen field and no slot: OPEN, never a zero-default pass.",
+  "rule": "Frozen values come only from HELDOUT-VECTORS expected.accounting; the following relation predictions are AUTH."
+ },
+ "format": "evidence-repair-heldout-addendum/3",
+ "hw25_duplicate_balance_key": {
+  "core_expected": {
+   "error": "mori::core::balance",
+   "phase": "admission",
+   "source": "runtime.rs:599-607 duplicate (asset, account) key; AUTH from source reading",
+   "step": null
+  },
+  "encoder_observation": "witness::from_records on a claimed pre-snapshot with the duplicate row is OBSERVED and printed (OPEN); no expectation is asserted. Source reading: body() takes the first matching row.",
+  "frozen_row": "HW-25 base H1-P1: duplicate balance key (two buyer/USDX rows) in pre-state layout to split a debit; required unsatisfiable / refused",
+  "id": "HW-25-r3",
+  "relation": "TARGET-PREMISE: the layout has exactly one slot per represented (asset, account) (plan.rs BTreeMap); the harness asserts one buyer/USDX cell. A duplicate row cannot be expressed in the statement, so its exclusion rests on pre-state authenticity (coverage REFUSALS scenario-row TargetPremise row).",
+  "scenario_edit": "H1-P1 scenario: buyer/USDX row 1000000 becomes 600000 and a second buyer/USDX row of 400000 is appended"
+ },
+ "inputs": {
+  "HOSTILE-CLAIMS-ADDENDUM.json": "bdc444016f9edefe5cd252e176c5ed302eaba2e0b3e5806ff5c68094e610e078",
+  "heldout/HELDOUT-VECTORS.json": "b72cec5a94219da8bd0959138430c0c6fb366712236280c064071e4ea87c2f1f"
+ },
+ "m11b_contradiction": {
+  "contradiction": "The second edit is not representable: a public input is a field element, and lo + r equals lo in the scalar field, so the edited public vector is identical to the honest one and the relation is satisfied by construction. The frozen expectation is not changed; the harness reports this half as CONTRADICTION (OPEN), executes the first half (M-11a) as frozen, and runs no substitute.",
+  "frozen_row": "M-11 base H6-A1: public input.x limbs (lo + 2^64, hi - 1) and (lo + r, hi); required UNSATISFIABLE (bit-sum binding; no modular alias)",
+  "proposed_v2_not_adopted": "M-11b-v2 (AUTH proposal only): replace the second edit with an integer limb at or above 2^64 that differs from the honest limb as a field element (for example lo + 2^64 with hi unchanged); expected UNSAT. Needs reviewer adoption before use; not executed here."
+ },
+ "public_mutation_operations": {
+  "HW-23-r3": "AUTH dated case: same slot set to p - 1 (0 - 1 in Fr); expected UNSAT (booleanity).",
+  "M-06": "H1-P1 under FrameCells::TouchedOnly: post auditor USDX 7 -> 8; frozen required MappingError::FrameChanged from the encoder (executed as NOT-ENCODABLE with FrameChanged); the relation half (no slot) stays a target obligation (OPEN).",
+  "M-07": "not executed: no FrameCells option can represent an unregistered duty (F-05); TARGET-GAP (OPEN).",
+  "M-10": "H3-P4 (poly_b): the honest assignment's public field at the Input slot of 'v' is set to 2; required UNSATISFIABLE (frozen). Honest control M-10-honest SAT (AUTH).",
+  "M-11a": "H6-A1 (add): Input slot of 'x' fields (lo, hi) become (lo + 2^64, hi - 1) in Fr; required UNSATISFIABLE (frozen). Honest control M-11-honest SAT (AUTH).",
+  "M-13": "H1-P1 (settle): first field of header.program_hash, header.shape_digest and header.action_index each + 1 in Fr, one at a time; required UNSATISFIABLE (frozen)."
+ },
+ "reencoded_claims": [
+  {
+   "absent_duty_representation": "the duty row is omitted from claim.pre.liabilities and claim.post.liabilities (Core Snapshot wire), exactly as in the frozen claim; only the effect is re-encoded",
+   "base_vector": "H1-R11",
+   "claim": {
+    "effects": [
+     {
+      "amount": "0",
+      "asset": {
+       "issuer": "holdout-issuer",
+       "network": "holdout-net",
+       "reference": "usdx",
+       "scale": 6
+      },
+      "from": "seller",
+      "kind": "Transfer",
+      "to": "buyer"
+     },
+     {
+      "after": "0",
+      "asset": {
+       "issuer": "holdout-issuer",
+       "network": "holdout-net",
+       "reference": "usdx",
+       "scale": 6
+      },
+      "before": "0",
+      "creditor": "buyer",
+      "debtor": "seller",
+      "kind": "Liability",
+      "name": "warranty"
+     },
+     {
+      "after": {
+       "type": "Bool",
+       "value": false
+      },
+      "before": {
+       "type": "Bool",
+       "value": true
+      },
+      "kind": "State",
+      "name": "open"
+     }
+    ],
+    "inputs_note": "the harness uses the base vector's scenario inputs, as the frozen harness does",
+    "post": {
+     "balances": [
+      {
+       "account": "buyer",
+       "amount": "0",
+       "asset": {
+        "issuer": "holdout-issuer",
+        "network": "holdout-net",
+        "reference": "usdx",
+        "scale": 6
+       }
+      },
+      {
+       "account": "seller",
+       "amount": "500",
+       "asset": {
+        "issuer": "holdout-issuer",
+        "network": "holdout-net",
+        "reference": "usdx",
+        "scale": 6
+       }
+      }
+     ],
+     "liabilities": [],
+     "state": {
+      "open": {
+       "type": "Bool",
+       "value": false
+      },
+      "released": {
+       "type": "UInt",
+       "value": "0"
+      },
+      "rounds": {
+       "type": "UInt",
+       "value": "0"
+      }
+     }
+    },
+    "pre": {
+     "balances": [
+      {
+       "account": "buyer",
+       "amount": "0",
+       "asset": {
+        "issuer": "holdout-issuer",
+        "network": "holdout-net",
+        "reference": "usdx",
+        "scale": 6
+       }
+      },
+      {
+       "account": "seller",
+       "amount": "500",
+       "asset": {
+        "issuer": "holdout-issuer",
+        "network": "holdout-net",
+        "reference": "usdx",
+        "scale": 6
+       }
+      }
+     ],
+     "liabilities": [],
+     "state": {
+      "open": {
+       "type": "Bool",
+       "value": true
+      },
+      "released": {
+       "type": "UInt",
+       "value": "0"
+      },
+      "rounds": {
+       "type": "UInt",
+       "value": "0"
+      }
+     }
+    }
+   },
+   "core_expected": {
+    "error": "mori::core::requires",
+    "phase": "execution",
+    "step": 0
+   },
+   "expected_reason": "the claimed pre-state has no duty row, so the registry duty cell is canonical absent (false, 0); Discharge lowers present = 1 (coverage.rs Statement::Discharge), so no assignment satisfies the relation. AUTH prediction from source reading.",
+   "expected_relation_class": "UNSAT",
+   "frozen_claim_source": "HOSTILE-CLAIMS-ADDENDUM.json rejected_vector_claims (unchanged bytes bdc444016f9edefe5cd252e176c5ed302eaba2e0b3e5806ff5c68094e610e078)",
+   "id": "H1-R11-r3",
+   "old_row_kept": "H1-R11 in the frozen addendum stays NOT-DECODABLE (absent_row is outside Core's Effect wire); it is reported as OPEN, never as OK",
+   "re_encoding": [
+    {
+     "effect_index": 1,
+     "filled_from_source_registry": [
+      "asset",
+      "debtor",
+      "creditor"
+     ],
+     "kept_verbatim": [
+      "kind",
+      "name",
+      "before",
+      "after"
+     ],
+     "removed_fields": [
+      "absent_row"
+     ]
+    }
+   ]
+  },
+  {
+   "absent_duty_representation": "the duty row is omitted from claim.pre.liabilities and claim.post.liabilities (Core Snapshot wire), exactly as in the frozen claim; only the effect is re-encoded",
+   "base_vector": "H2-R5",
+   "claim": {
+    "effects": [
+     {
+      "amount": "0",
+      "asset": {
+       "issuer": "holdout-bank",
+       "network": "holdout-net",
+       "reference": "credit",
+       "scale": 2
+      },
+      "from": "borrower",
+      "kind": "Transfer",
+      "to": "lender"
+     },
+     {
+      "after": "0",
+      "asset": {
+       "issuer": "holdout-bank",
+       "network": "holdout-net",
+       "reference": "credit",
+       "scale": 2
+      },
+      "before": "0",
+      "creditor": "lender",
+      "debtor": "borrower",
+      "kind": "Liability",
+      "name": "loan"
+     },
+     {
+      "amount": "1",
+      "asset": {
+       "issuer": "holdout-bank",
+       "network": "holdout-net",
+       "reference": "credit",
+       "scale": 2
+      },
+      "from": "borrower",
+      "kind": "Fee",
+      "to": "borrower"
+     },
+     {
+      "after": {
+       "type": "Bool",
+       "value": false
+      },
+      "before": {
+       "type": "Bool",
+       "value": false
+      },
+      "kind": "State",
+      "name": "frozen"
+     }
+    ],
+    "inputs_note": "the harness uses the base vector's scenario inputs, as the frozen harness does",
+    "post": {
+     "balances": [
+      {
+       "account": "borrower",
+       "amount": "1000",
+       "asset": {
+        "issuer": "holdout-bank",
+        "network": "holdout-net",
+        "reference": "credit",
+        "scale": 2
+       }
+      },
+      {
+       "account": "lender",
+       "amount": "0",
+       "asset": {
+        "issuer": "holdout-bank",
+        "network": "holdout-net",
+        "reference": "credit",
+        "scale": 2
+       }
+      }
+     ],
+     "liabilities": [],
+     "state": {
+      "frozen": {
+       "type": "Bool",
+       "value": false
+      },
+      "periods": {
+       "type": "UInt",
+       "value": "0"
+      }
+     }
+    },
+    "pre": {
+     "balances": [
+      {
+       "account": "borrower",
+       "amount": "1000",
+       "asset": {
+        "issuer": "holdout-bank",
+        "network": "holdout-net",
+        "reference": "credit",
+        "scale": 2
+       }
+      },
+      {
+       "account": "lender",
+       "amount": "0",
+       "asset": {
+        "issuer": "holdout-bank",
+        "network": "holdout-net",
+        "reference": "credit",
+        "scale": 2
+       }
+      }
+     ],
+     "liabilities": [],
+     "state": {
+      "frozen": {
+       "type": "Bool",
+       "value": false
+      },
+      "periods": {
+       "type": "UInt",
+       "value": "0"
+      }
+     }
+    }
+   },
+   "core_expected": {
+    "error": "mori::core::requires",
+    "phase": "execution",
+    "step": 0
+   },
+   "expected_reason": "the claimed pre-state has no duty row, so the registry duty cell is canonical absent (false, 0); Discharge lowers present = 1 (coverage.rs Statement::Discharge), so no assignment satisfies the relation. AUTH prediction from source reading.",
+   "expected_relation_class": "UNSAT",
+   "frozen_claim_source": "HOSTILE-CLAIMS-ADDENDUM.json rejected_vector_claims (unchanged bytes bdc444016f9edefe5cd252e176c5ed302eaba2e0b3e5806ff5c68094e610e078)",
+   "id": "H2-R5-r3",
+   "old_row_kept": "H2-R5 in the frozen addendum stays NOT-DECODABLE (absent_row is outside Core's Effect wire); it is reported as OPEN, never as OK",
+   "re_encoding": [
+    {
+     "effect_index": 1,
+     "filled_from_source_registry": [
+      "asset",
+      "debtor",
+      "creditor"
+     ],
+     "kept_verbatim": [
+      "kind",
+      "name",
+      "before",
+      "after"
+     ],
+     "removed_fields": [
+      "absent_row"
+     ]
+    }
+   ]
+  }
+ ],
+ "rejected_phase_work_method_auth": "phase observed as 'admission' when Core's error has no step and 'execution' otherwise (runtime.rs sets step only inside statement execution); work_attempted observed as simulate_metered(...).cost.used with the vector's cap, or u128::MAX when the vector has none; for uncapped vectors the metered refusal code/step must equal unmetered simulate (method control).",
+ "s9_capacity": {
+  "cases": [
+   {
+    "action": "settle",
+    "arithmetic": "records = 3 states + 4 touched + 6000 frame cells + 1 registry duty + 1 Liability statement + 1 = 6010; 6010 * (9 statements + 2) = 66110 > 65536 (plan.rs bound, ir.rs MAX_TRACE_CELLS)",
+    "expected": "CompileError::Bound whose text names Core's 65536 trace cap",
+    "frame_account_pattern": "s9-frame-{i:05}",
+    "frame_asset": "USDX",
+    "frame_cells": 6000,
+    "id": "S-9/trace",
+    "program": "H1-settle"
+   },
+   {
+    "action": "pay",
+    "arithmetic": "records = 0 + 4097 + 1 + 0 + 1 = 4099; 4099 * (1 + 2) = 12297 <= 65536, so the trace check passes and cells 4097 > 4096 refuses",
+    "expected": "CompileError::Bound whose text names Core's 4,096 balance cap",
+    "frame_account_pattern": "s9-frame-{i:05}",
+    "frame_asset": "T",
+    "frame_cells": 4097,
+    "id": "S-9/cells",
+    "program": "H8-discharge"
+   }
+  ],
+  "frozen_row": {
+   "expected": "explicit refusal naming the cap; never truncate rows from the frame",
+   "id": "S-9",
+   "input": "Program whose layout capacity (balances/duties/states) exceeds compiler caps"
+  },
+  "open": "States and duties capacity are not exercised: a Core-valid program that exceeds them needs > 1,024 source Liability statements or a state/statement product above the trace cap within Core's declaration and statement limits; it is not built here. Typed TARGET-GAP, not a pass.",
+  "representation": "AUTH: the balance capacity of the layout is raised with the existing FrameCells::Include option (no compiler change), on frozen held-out programs."
+ },
+ "status": "POST-FREEZE, dated 2026-10-15T16:00:42.686293+00:00. Author-derived (AUTH), written after reading the candidate, the frozen packet, the actual run and the result review. NOT independent and NOT held-out. Not executed. Frozen addenda 1 (HOSTILE-CLAIMS-ADDENDUM) and 2 are unchanged and keep their own rows and outcomes."
+}

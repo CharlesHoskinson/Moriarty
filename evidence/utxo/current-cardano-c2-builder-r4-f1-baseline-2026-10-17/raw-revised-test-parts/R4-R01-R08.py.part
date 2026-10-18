@@ -1,0 +1,295 @@
+
+
+class TestR01ToR08(R4TestBase):
+    """R01-R08: AST/imports/seam/v1; K6 golden; consumer-drawn fields; ARGV;
+    OUTDIR; READ; JSON; LINK.
+
+    PART A source fragment, AUTHOR-PROPOSED (Opus 4.8 HIGH); the R03 F1 manifest-value
+    revision is by claude-opus-5-5 HIGH. Never run, imported or compiled; the revision is
+    unreviewed. Appends byte-for-byte after R4-TEST-PREFIX.py.part; it
+    rebinds no prefix global and redefines no helper. Every method calls self.r4()
+    first, so at a future RED its only failure is the MISSING AssertionError and no
+    other assertion is reached. Expected values come from prefix literals and
+    formatters, the pinned host_codec/legacy/r2 (independent of R4) or new literals
+    copied from the frozen contract/API, never from build_k10_inputs_r4.py output.
+    """
+
+    def test_r01_module_surface_imports_seam_and_no_v1(self):
+        r4 = self.r4()
+        import ast  # local stdlib structure oracle for CB401 (disclosed; not under test)
+        source = read_bounded(HERE / R4_FILE, B9_CAP)
+        self.assertEqual(source.count(R4_SEAM.encode()), 1)
+        module = ast.parse(source.decode("utf-8"))
+        imports, from_imports, bound, names, stored = [], [], [], set(), set()
+        for node in ast.walk(module):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.append(alias.name + (" as " + alias.asname if alias.asname else ""))
+                    bound.append((alias.asname or alias.name).split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                from_imports.append(node.module)
+            elif isinstance(node, ast.Name):
+                names.add(node.id)
+                if isinstance(node.ctx, ast.Store):
+                    stored.add(node.id)
+            elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+                if node.value.id == "sys":
+                    self.assertNotIn(node.attr, ("modules", "path"))
+        self.assertEqual(from_imports, [])
+        self.assertEqual(sorted(imports), sorted(R4_IMPORTS))
+        for forbidden in (V1, "importlib"):
+            self.assertNotIn(forbidden, bound)
+            self.assertNotIn(forbidden, names)
+            self.assertNotIn(forbidden, stored)
+        public = [node.name for node in module.body
+                  if isinstance(node, ast.FunctionDef) and not node.name.startswith("_")]
+        self.assertEqual((sorted(public), len(public)), (sorted(R4_PUBLIC), 7))
+        for name in R4_PUBLIC:
+            self.assertTrue(callable(getattr(r4, name)), name)
+        self.assertNotIn(V1, sys.modules)
+
+    def test_r02_k6_golden_roster_and_manifest_literals(self):
+        r4 = self.r4()
+        outputs = self.plan()
+        self.assertEqual(sorted(outputs), sorted(ROSTER))
+        self.assertTrue(all(type(value) is bytes for value in outputs.values()))
+        self.assertEqual(outputs[T1], RAW[HIST])
+        self.assertEqual(outputs["script.hex"],
+                         (legacy.extract_compiled(RAW[B9])[0] + "\n").encode())
+        manifest = json.loads(outputs["manifest.json"])
+        self.assertEqual(outputs["manifest.json"], canonical_json(manifest))
+        self.assertEqual(manifest["positiveEnvelopeCborHex"], env_cbor(*k6_fields()).hex())
+        self.assertEqual((manifest["positiveTokenNameHex"], manifest["policyIdHex"],
+                          manifest["mintValueCborHex"]),
+                         (K6_TOKEN, POLICY, MINT_VALUE_CBOR_HEX))
+        self.assertEqual(self.plan(), outputs)  # deterministic: no I/O, clock or randomness
+
+    def test_r03_fields_are_drawn_from_the_consumer_not_constants(self):
+        r4 = self.r4()
+        # NEGATIVE FIXTURE, labelled: the genuine K6 proof is reused unchanged against an
+        # edited statement and is not valid for it. This exercises field drawing only, adds
+        # no new proof and makes no ledger claim. The statement digest and its public-input
+        # halves are made byte/profile consistent through the pinned host_codec helpers,
+        # which are independent of R4; the deep copy is a fresh parse of the pinned bytes.
+        claimant, txid, index, expiry = (bytes.fromhex("66" * 28), bytes.fromhex("33" * 32),
+                                         7, 1700000000000)
+        export = fresh_export()
+        statement = bytearray(bytes.fromhex(export["statementHex"]))
+        statement[144:172], statement[233:265], statement[265:267] = (
+            claimant, txid, index.to_bytes(2, "big"))
+        statement = bytes(statement)
+        digest = host_codec.statement_digest_hex(statement)
+        x1, x2 = host_codec.statement_public_inputs(statement)
+        export["statementHex"] = statement.hex()
+        export["statementDigestBlake2b256"] = digest
+        export["publicInputs"] = {"x1": x1, "x2": x2}
+        export["context"].update(claimantVkh=claimant.hex(), consumedTxid=txid.hex(),
+                                 consumedIx=index)
+        export["cardano"]["envV2"].update(
+            claimantVkh=claimant.hex(), statementDigest=digest,
+            settleOutref={"transactionId": txid.hex(), "outputIndex": index})
+        fields = (bytes.fromhex(export["predicateDigest"]),
+                  bytes.fromhex(export["vkDigestBlake2b256"]),
+                  claimant, txid, index, bytes.fromhex(digest), expiry)
+        token = b2(env_cbor(*fields))
+        outputs = self.plan(export=dumps(export), expiry=expiry)
+        self.assertEqual(outputs[T1],
+                         ctx_text(token, 1, fields, SETUP["verifyingKeyHex"], export["proofHex"]))
+        manifest = json.loads(outputs["manifest.json"])
+        self.assertEqual((manifest["claimantVkhHex"], manifest["settleOutref"], manifest["expiry"]),
+                         (claimant.hex(),
+                          {"transactionIdHex": txid.hex(), "outputIndex": index}, expiry))
+        self.assertEqual((manifest["positiveEnvelopeCborHex"], manifest["positiveTokenNameHex"]),
+                         (env_cbor(*fields).hex(), token.hex()))
+        # F1 stale-field checks on this varied consumer: the consumer-derived manifest values
+        # follow the edited export, never the K6 constants. The VK and the proof are unchanged
+        # by this fixture, so vkDigestHex and every row's proofHexSha256 equal the K6 values by
+        # construction. Rows follow CB410 (T1, T5 quantity 2, T6 token first bit, T7 flipped
+        # VK digest with its recomputed token), exactly as the prefix k6_rows derives them.
+        bad = (fields[0], flip1(fields[1])) + fields[2:]
+        rows = ((CASES[0], token, 1, fields), (CASES[1], token, 2, fields),
+                (CASES[2], flip1(token), 1, fields), (CASES[3], b2(env_cbor(*bad)), 1, bad))
+        self.assertEqual((manifest["statementDigestHex"], manifest["vkDigestHex"],
+                          manifest["mintValueCborHex"]),
+                         (digest, export["vkDigestBlake2b256"],
+                          "a1581c" + POLICY + "a15820" + token.hex() + "01"))
+        self.assertEqual(manifest["cases"], [expected_case(row) for row in rows])
+        blob = b"".join(value for key, value in outputs.items() if key != "script.hex")
+        for stale in (b"55" * 28, b"22" * 32, b"1893456000000", K6_TOKEN.encode(),
+                      EXPORT["statementDigestBlake2b256"].encode()):
+            self.assertNotIn(stale, blob)
+
+    def test_r04_expiry_and_argv_gate_without_filesystem_effect(self):
+        r4 = self.r4()
+        for text, value in (("0", 0), (K6_EXPIRY_TEXT, K6_EXPIRY),
+                            ("18446744073709551615", U64_MAX)):
+            got = r4.parse_expiry(text)
+            self.assertIs(type(got), int)
+            self.assertEqual(got, value)
+        for text in ("", "01", "+1", "-1", " 1", "1 ", "1\n", "1e3", "1_0", "0x1",
+                     chr(0x661), "18446744073709551616", "9" * 21, b"1", 1, None):
+            with self.subTest(text=repr(text)):
+                self.refused("C2B-ARGV", r4.parse_expiry, text)
+        for value in (True, -1, 2 ** 64, "1", 1.0):
+            with self.subTest(value=repr(value)):
+                self.refused("C2B-ARGV", self.plan, expiry=value)
+        scratch = self.case_scratch()
+        base = [R4_FILE, str(HERE / B9), str(HERE / EXP), str(HERE / SET),
+                K6_EXPIRY_TEXT, str(scratch / "out")]
+        self.assert_cli_refusal(self.run_argv(tuple(base)), "C2B-ARGV")        # argv is not a list
+        self.assert_cli_refusal(self.run_argv(base[:5]), "C2B-ARGV")           # arity 5
+        self.assert_cli_refusal(self.run_argv(base + ["extra"]), "C2B-ARGV")   # arity 7
+        non_str = list(base)
+        non_str[4] = int(K6_EXPIRY)
+        self.assert_cli_refusal(self.run_argv(non_str), "C2B-ARGV")            # non-str element
+        embedded_nul = list(base)
+        embedded_nul[1] = base[1] + "\x00tail"
+        self.assert_cli_refusal(self.run_argv(embedded_nul), "C2B-ARGV")       # embedded NUL
+        unencodable = list(base)
+        unencodable[1] = "\ud800"  # a lone high surrogate; os.fsencode refuses, no echo
+        result = self.run_argv(unencodable)
+        self.assert_cli_refusal(result, "C2B-ARGV")
+        self.assertNotIn("\ud800", result[2])
+        self.assertEqual(os.listdir(scratch), [])
+        self.assertFalse(os.path.lexists(scratch / "out"))
+
+    def test_r05_outdir_refusals_create_nothing(self):
+        r4 = self.r4()
+        scratch = self.case_scratch()
+        existing, preexisting, target = (scratch / "existingout", scratch / "preexisting",
+                                         scratch / "linktarget")
+        for directory in (existing, preexisting, target):
+            os.mkdir(directory, 0o700)
+        symlink = scratch / "outlink"
+        os.symlink(target, symlink)
+        inputs = (str(HERE / B9), str(HERE / EXP), str(HERE / SET))
+        before = tree(scratch)
+        for outdir in (existing, preexisting, symlink, scratch / "Bad Name",
+                       scratch / "absentparent" / "child", str(scratch / "trailing") + "/", "."):
+            with self.subTest(outdir=str(outdir)):
+                self.assert_cli_refusal(self.run_main(*inputs, K6_EXPIRY_TEXT, outdir), "C2B-OUTDIR")
+        self.assertEqual(tree(scratch), before)
+        self.assertEqual((os.listdir(existing), os.listdir(preexisting)), ([], []))
+
+    def test_r06_read_bounds_irregular_files_caps_and_path_types(self):
+        r4 = self.r4()
+        scratch = self.case_scratch()
+
+        def write_file(name, size):
+            path = scratch / name
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+                         | os.O_CLOEXEC, 0o600)
+            try:
+                view = memoryview(b"a" * size)
+                while view:
+                    view = view[os.write(fd, view):]
+            finally:
+                os.close(fd)
+            return path
+
+        exact = write_file("exact", SETUP_CAP)
+        self.assertEqual(r4.read_public_file(str(exact), SETUP_CAP), b"a" * SETUP_CAP)
+        over = write_file("over", SETUP_CAP + 1)
+        self.refused("C2B-READ", r4.read_public_file, str(over), SETUP_CAP)
+        regular = write_file("regular", 3)
+        symlink = scratch / "slink"
+        os.symlink(regular, symlink)
+        fifo = scratch / "fifo"
+        os.mkfifo(fifo, 0o600)  # no-follow lstat refuses before any open, so nothing blocks
+        for path in (symlink, scratch / "absent", scratch, fifo):
+            message = self.refused("C2B-READ", r4.read_public_file, str(path), SETUP_CAP)
+            self.assertNotIn(str(path), message)
+        for cap in (0, 7, True, 2 ** 63):  # cap must be one of the three frozen constants
+            with self.subTest(cap=repr(cap)):
+                self.refused("C2B-READ", r4.read_public_file, str(regular), cap)
+
+        class _NoFspath(os.PathLike):
+            def __fspath__(self):
+                raise AssertionError("__fspath__ must not be called before refusal")
+
+        class _StrSub(str):
+            pass
+
+        self.refused("C2B-READ", r4.read_public_file, os.fsencode(str(regular)), SETUP_CAP)
+        self.refused("C2B-READ", r4.read_public_file, _NoFspath(), SETUP_CAP)
+        self.refused("C2B-READ", r4.read_public_file, _StrSub(str(regular)), SETUP_CAP)
+        message = self.refused("C2B-READ", r4.read_public_file, "\ud800", SETUP_CAP)
+        self.assertNotIn("\ud800", message)
+
+    def test_r07_strict_bounded_json_and_consumer_boundary(self):
+        r4 = self.r4()
+        # R3 test_05 export vectors, refused at the JSON stage of the export read.
+        text = RAW[EXP].decode()
+        action, index = '"action": "partial"', '"actionIndex": 1'
+        export_texts = [text.replace(action, action + ", " + action, 1), "[" + text + "]",
+                        text + "{}", text.replace(action, '"action": "' + chr(92) + 'ud800"', 1)]
+        export_texts += [text.replace(index, '"actionIndex": ' + literal, 1)
+                         for literal in ("NaN", "Infinity", "-Infinity", "1.0", "1e0", "1" * 21)]
+        export_raws = [item.encode() for item in export_texts] + [
+            bytes.fromhex("efbbbf") + RAW[EXP],
+            RAW[EXP].replace(b"partial", bytes.fromhex("ff") + b"partial", 1),
+            b"[" * 100000, b" " * (EXPORT_CAP + 1)]
+        for i, raw in enumerate(export_raws):
+            with self.subTest(export=i):
+                self.assertNotEqual(raw, RAW[EXP])
+                self.refused("C2B-JSON", self.plan, export=raw)
+        setup_raws = (RAW[SET].replace(b'"curve"', b'"curve": "x", "curve"', 1),
+                      b" " * (SETUP_CAP + 1), b"[]")
+        for raw in setup_raws:
+            with self.subTest(setup=raw[:8]):
+                self.assertNotEqual(raw, RAW[SET])
+                self.refused("C2B-JSON", self.plan, setup=raw)
+        # Leading and trailing ASCII whitespace (space, tab, CR, LF) is admitted.
+        padded = b" \t\r\n" + RAW[EXP] + b" \r\n"
+        self.assertEqual(r4.parse_public_json(padded, EXPORT_CAP), fresh_export())
+        # Raw control character, -0, -01 and a 21-character integer literal are refused.
+        for raw in (RAW[EXP].replace(b'"partial"', b'"par' + bytes([1]) + b'tial"', 1),
+                    RAW[EXP].replace(b'"actionIndex": 1', b'"actionIndex": -0', 1),
+                    RAW[EXP].replace(b'"actionIndex": 1', b'"actionIndex": -01', 1),
+                    RAW[EXP].replace(b'"actionIndex": 1', b'"actionIndex": ' + b"1" * 21, 1)):
+            self.refused("C2B-JSON", r4.parse_public_json, raw, EXPORT_CAP)
+        # A 20-character signed integer literal passes JSON and is refused at CONSUMER.
+        signed = fresh_export()
+        signed["actionIndex"] = -1234567890123456789
+        signed_raw = dumps(signed)
+        self.assertIs(type(r4.parse_public_json(signed_raw, EXPORT_CAP)), dict)
+        self.assertIn("C2I-EXPORT:", self.refused("C2B-CONSUMER", self.plan, export=signed_raw))
+        # Depth 16 is admitted and depth 17 is refused; the top-level object counts as level 1.
+        self.assertIs(type(r4.parse_public_json(b'{"a":' * 15 + b"{}" + b"}" * 15, EXPORT_CAP)), dict)
+        self.refused("C2B-JSON", r4.parse_public_json, b'{"a":' * 16 + b"{}" + b"}" * 16, EXPORT_CAP)
+
+    def test_r08_link_digest_vectors_and_hostile_keys(self):
+        r4 = self.r4()
+        self.assertEqual(r4.check_setup_link(fresh_export(), RAW[SET]), PINS[SET][1])
+        self.refused("C2B-LINK", self.plan, setup=RAW[SET] + b" ")  # setup bytes change the digest
+        for bad in ("0" * 64, PINS[SET][1].upper(), PINS[SET][1][:63], None, 7):
+            export = fresh_export()
+            export["setupRecordSha256"] = bad
+            with self.subTest(bad=repr(bad)):
+                self.refused("C2B-LINK", self.plan, export=dumps(export))
+        export = fresh_export()
+        del export["setupRecordSha256"]
+        self.refused("C2B-LINK", self.plan, export=dumps(export))
+        # A non-str export key is refused by check_setup_link before any digest lookup.
+        non_str_key = fresh_export()
+        non_str_key[7] = "x"
+        self.refused("C2B-LINK", r4.check_setup_link, non_str_key, RAW[SET])
+        # A hostile key counting __eq__/__hash__ sees zero calls during the key scan.
+        class _HostileKey:
+            def __init__(self):
+                self.eq = self.hash = 0
+
+            def __hash__(self):
+                self.hash += 1
+                return 0
+
+            def __eq__(self, other):
+                self.eq += 1
+                return NotImplemented
+
+        hostile = _HostileKey()
+        export = fresh_export()
+        export[hostile] = "x"
+        hostile.eq = hostile.hash = 0  # discount the one insertion hash above
+        self.refused("C2B-LINK", r4.check_setup_link, export, RAW[SET])
+        self.assertEqual((hostile.eq, hostile.hash), (0, 0))

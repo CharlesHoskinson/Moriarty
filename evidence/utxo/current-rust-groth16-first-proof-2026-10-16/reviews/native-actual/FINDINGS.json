@@ -1,0 +1,51 @@
+[
+  {
+    "evidence": "LAUNCH.stdout: status PASS, scope 'one invoice/partial Groth16 roundtrip under single-party-test-setup/1 only', finalizers G6/H6/Z61/Z62 all attempted:true ok:true, receiptFallback {}. LAUNCH-RECORD.json: parentExit 0, elapsedSeconds 123.3336031689978, stdout 303B sha256 3dfd9f57\u2026, stderr 0B, retries 0. ROOT-OBSERVATION.json: operatorTerminalExit 0, launcherStatus PASS, publicAllowlistFiles 90, publicAllowlistMatchedFreeze true, actualResultAdopted false (pre-review).",
+    "id": "F-LAUNCH-TERMINAL",
+    "requiredFix": "None. Cite the launcher result as exit 0 / PASS in 123.3336031689978s wall with 303B stdout and 0B stderr; do not cite launcher childrenCpuSeconds 0.382541 as whole-process CPU (see resource finding).",
+    "severity": "PASS",
+    "summary": "The one authorized launcher run terminated PASS with all four finalizers ok and no retry."
+  },
+  {
+    "evidence": "prove.rs load_proving_key: size equality vs record.proving_key_bytes, SHA-256 equality vs record.proving_key_sha256, encoding::decode_proving_key, then pk.vk != setup.vk refusal. setup.rs/parser (export.rs parse_setup_record): verifyingKeyHex decoded as exactly VK_LEN 488B via encoding::decode_vk (IC prefix 3 at offset 336, strict canonical/on-curve/subgroup/non-identity points, whole-key re-encode equality), vkDigestBlake2b256 recomputed and required equal. P6 journal exit 0 (only keyed prove sandbox besides N11); N11 shows the same path refusing on size before decode. G6/V6 record vkDigest d19d99a4ede6bf6ed8ee241dfc4c14f2abf8d73f15a58367f4a38a127cd613bd from the actual 3926B record sha256 86b588fe3d7de5b5291a88928f400b9b52199bba07f9926a1f498584fd7e378b.",
+    "id": "F-PK-DECODE-EMBEDDED-VK",
+    "requiredFix": "None for the scoped predicate. In downstream prose, attribute the decode to the guarded operator's native call, not to root or to any public re-execution (VK bytes are not public; see public-VK gap).",
+    "severity": "PASS",
+    "summary": "Valid serialized PK decode with matching embedded VK is established by the production prove path actually exercised in P6."
+  },
+  {
+    "evidence": "main.rs prove: compile_selected (actual mori_r1cs::compile_source via relation.rs) \u2192 require_same(record relation, compiled descriptor) \u2192 load_proving_key \u2192 OsRng \u2192 prove::prove. prove.rs prove/check_claim: claim prepared from the compiled relation, circuit_v2 synthesized in Prove mode, is_satisfied required, tamper overrides = 0, instance exactly [1,x1,x2], prove-synthesis matrix digest == compile probe r1csSha256 (e458153e\u2026), Groth16::create_proof_with_reduction_and_matrices, then self-verification pairing_verify before export, then export parse/check_export round-trip. P6.stdout: proofExportSha256 930198631617f1f931aa93e836b32ffa8acadedadafe3b3d90081ff629e9ba5b, statementDigest c9ef8ea0\u2026, x1 268418678883876601707409168117995592842, x2 8714689549842776844379904284721120460. Proof export is 5800B; proofHex decodes to the 192B raw proof. A6.stdout descriptor (308790 constraints, bodyLen 378) equals the frozen 29-field descriptor checked in operator main before proving.",
+    "id": "F-HONEST-PROOF-PRODUCTION",
+    "requiredFix": "None. State the result as conditional under single-party-test-setup/1 honesty and Groth16 knowledge soundness; the Class-0 operator could forge, so this is not a universal semantic certificate.",
+    "severity": "PASS",
+    "summary": "The single successful proof was produced honestly from the current compiled relation, with satisfaction, matrix-digest, and self-pairing checks before export."
+  },
+  {
+    "evidence": "N1/N2/N3 stderr 'refused: proof rejected: Groth16 pairing check failed for this VK and statement digest' (exit 1, pairing rejections for retampered body / context restatement / swapped A-C proof). N4 x1 identity mismatch (expected x1, got x2). N5 statementDigestBlake2b256 mismatch with direction expected=recomputed tampered-statement digest 123f0bad\u2026, got=stale c9ef8ea0\u2026. N6 proofHex expected 384 hex chars, got 382. N7 encoding identity point in proof. N8 vkDigestBlake2b256 single-hex-edit mismatch d19d\u2026\u2192019d\u2026. N9 'refused: compile: unknown action \"partial\"' \u2014 Compile refusal via conditional-reserve, PRE-descriptor, descriptorGuardObserved=false. N10 'refused: identity mismatch on relation descriptor field abi2ShapeBytesHex' \u2014 ACTUAL identityMismatchDescriptor branch observed. N11 proving-key size expected 98715457 got 98715456, full PK read then refusal before decode/RNG. usage exit 2 'missing --proof' (grammar only, no binding evidence per G6). G6 native: checked all 17, missing [], status PASS, descriptorGuardObserved=true for N10 ONLY, n9DescriptorGuardObserved=false. negatives-metadata.json: bodies published for N1-N7 and N10 request; N8/N11 metadata-only, bodies not published.",
+    "id": "F-NEGATIVES-EXACT",
+    "requiredFix": "Correct any prior conditional language: the descriptor guard is now ACTUALLY observed in N10 (abi2ShapeBytesHex); do not infer it for N9. Keep usage as grammar-only evidence.",
+    "severity": "PASS",
+    "summary": "All exact bounded negative rejections occurred as specified, including the now-observed (not inferred) N10 descriptor guard."
+  },
+  {
+    "evidence": "operator.py: COUNTS constant (line 85) is written verbatim into h6.json; charges are ceil() of the operator's direct-child (bwrap) RUSAGE_CHILDREN delta. Journals: every chargeCpu=1 including P6; aggregate charged CPU 19 / wall 139 versus launcher wall 123.3336031689978 and launcher children CPU 0.382541 (operator child only). Per-process source controls exist (_limits RLIMIT_CPU cpu/cpu+60 inherited through exec; proc.wait timeout wall+kill_after; clean requires exit\u22650, no timeout/overflow/drain-unjoined), and all 19 journals are clean with expected exits, so termination is genuinely observed even though transitive CPU is not.",
+    "id": "F-RESOURCE-CHARGE-NOMINAL",
+    "requiredFix": "Report resources as: AUTH-defined charged 19 CPU / 139 wall of 7200/12600 (remaining 7181/12461 under that definition); actual transitive native CPU unmeasured. Do not present 19, 1 (P6), or 0.382541 as actual proof/whole-process CPU. No new native action, retry, or ceiling reset is authorized.",
+    "severity": "QUALIFICATION",
+    "summary": "Aggregate CPU/wall charges are nominal ceiling accounting, not measured native consumption; this does not invalidate the cryptographic observations."
+  },
+  {
+    "evidence": "custody.py RECORD 3926B sha256 86b588fe\u2026 contains the 488B VK; AUTH publication (90 files) excludes *.setup.json; proof export carries vkDigestBlake2b256 but no VK bytes; ROOT-OBSERVATION confirms root never read /w or protected paths. V6 recomputed the VK inside the guarded operator; G6 binds only the record SHA/label externally.",
+    "id": "F-PUBLIC-VK-NOT-REPRODUCIBLE",
+    "requiredFix": "Next step is a new scoped, separately reviewed PUBLIC verification-record export operator reading ONLY T6/w/in/invoice-partial.setup.json (3926B, sha256 86b588fe\u2026, public payload with VK/PK-hash metadata, not PK bytes) to a fresh public destination. Source preparation may proceed now; no unreviewed protected read by root, no K6 rerun/new setup/new PK read demanded.",
+    "severity": "GAP",
+    "summary": "Public independent VK reproduction is missing: the setup record body is not public, so the pairing cannot be re-run from public files alone."
+  },
+  {
+    "evidence": "Binary identity d446ab0c0dececae719fe6583532f6c2a4285f67fbc89893d61251adff190902 (3,941,352B) is pinned in custody.py BINARY_SHA256/BINARY_BYTES and hash-verified on copy in prepare_inputs; K5-ACTUAL-ADOPTION custodied it previously. V6 declaredOnly states sourceSha256/compiler build digest are byte identities of sources, not of the executing binary. FREEZE-MANIFEST/PUBLIC-RESULT-MANIFEST (sha256 d300f2c6\u2026, 99 files including root observation) freeze the 90 allowlisted files at mode 444 with matching hashes \u2014 this proves nothing about unpublished files or private absence beyond the reviewed operator checks (Q6N/Q6P probes, Z61 metadata postcheck: PK 98,715,456B mode 0600 unchanged, Q6P/P6/N11/Z61 postchecks in operator main). Proof export context uses fabricated premises (consumedTxid 2222\u2026, claimant 5555\u2026, settle a2a2\u2026): an honest local circuit example only, not Cardano ledger data; premises list in the export itself denies ledger/Preprod implication.",
+    "id": "F-IDENTITY-AND-CONTEXT-LIMITS",
+    "requiredFix": "Cite the binary identity as recorded build/source evidence, not mathematical binary proof; cite context values as fabricated local-example premises, never as ledger truth; do not claim spectator-41/frame/context/ledger truth proved.",
+    "severity": "QUALIFICATION",
+    "summary": "Source/binary identity and freeze integrity are recorded evidence with explicit limits; context is fabricated and proves no ledger truth."
+  }
+]

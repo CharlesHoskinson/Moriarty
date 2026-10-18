@@ -1,0 +1,135 @@
+{
+  "reviewToken": "mhash-reconciled-design-tests-independent-a-opus55-20261017",
+  "report": "SEAT A: independent design and test-source review of the M-HASH primary-reconciled revision (claude-opus-5-5, high effort). I am not the author. I did not see any other vote. This is one substantive vote. Nothing was executed, hashed, imported, compiled or authored.\n\nVERDICT. I agree with C1\u2013C8. The reconciled contract and API, paired with the unchanged 19-method test (28091 B, a1c00918\u2026), are ready for exactly one ROOT RED. My readiness prediction is that this test, inside the proposed envelope, gives 19 ran / 5 pass / 14 fail / 0 errors / exit 1, and that every failure is the exact M-HASH-RED assertion. Before RED, root must confirm the structure of the original MANIFEST.json (F1), which is an unread mandatory T00.1 input. A second fresh agreeing independent review is still required. Nothing below grants implementation, GREEN, mutant, operator, builder or native authority.\n\nALGORITHM AND WIDTH (C1). Source facts check out. ScriptHash is Hash ADDRHASH EraIndependentScript (Hashes:181-182). ADDRHASH is imported from Keys (Hashes:105). Keys:132 has `type ADDRHASH = Hash.Blake2b_224`. At cardano-base HEAD, B2b:57,59 give HashSize 28 and `digest = blake2b_libsodium 28`. B2b:153-159 call libsodium with outlen=size, nullPtr and key length 0, with the comment \"unkeyed\". Blake2b_256 is a separate HASH (Hashes:125). CIP:102 says blake2b-224. Three links are correctly labelled [I]: the Cardano.Crypto.Hash re-export, libsodium outlen-28 being native BLAKE2b-224 rather than truncated 256, and equality with CPython blake2b(digest_size=28). None is overclaimed.\n\nPREFIX TAG VS CBOR ENUM (C2). Lang:205 hashes `BS.singleton (plutusLanguageTag p) <> originalBytes p` with hashWith id. Lang:545 gives V2=0x02 and Lang:565 gives V3=0x03. Lang:273-278 and Lang:329-330 show the encodeEnum order (V1=0\u2026V4=3), which is used only in the [enum, bytes] envelope at Lang:227-229. originalBytes is the PlutusBinary ShortByteString: Plutus derives SafeToHash as a newtype (Lang:185), and Lang:251 and Lang:261-262 complete the chain. The tests separate the tag from the enum: T00.2 anchors, T01.3/T01.4 values, and T01.5 v2-vs-v3 sensitivity, so mutant MC1 is killed. Scope limited to v2/v3 (v1 and v4 rejected) is a stated tool choice.\n\nLEDGER BYTE / SerialisedScript / CBOR-Flat BOUNDARY (C3). Byte identity is shown in ledger source alone. decodePlutusRunnable passes the same `bs` to PV2/PV3.deserialiseScript and to hashPlutusScript (Lang:546-547, Lang:566-567). The plutus HEAD supplement adds:\n- SerialisedScript = ShortByteString (SS:124);\n- serialiseUPLC is `serialise . SerialiseViaFlat` (SS:155-160);\n- deserialiseScript decodes `fromShort sScript` from offset 0 with deserialiseFromBytes and returns sScript unmodified (SS:263-269);\n- RemainderError is raised only for languages other than V1/V2 (SS:259-261).\n\nI judged whether any missing link blocks C3. It does not. The ledger hashes originalBytes whatever their internal structure. What remains is that CIP compiledCode equals PlutusBinary bytes, which is a prose-level CIP identification (CIP:101). No ledger symbol could close it, and it is honestly labelled [I]. The stop rule forbids refitting the boundary, tag or width against the vector. If a later reviewer disagrees, the exact symbol to request is PlutusLedgerApi.V2.deserialiseScript / PlutusLedgerApi.V3.deserialiseScript (together with the cardano-ledger-core.cabal / cabal.project / flake.lock pins at d6eec237). This is not a STOP for me.\n\nA label problem remains (F3). CONTRACT:43 \"Therefore [S] \u2026 Plutus decodes as one CBOR-encoded Flat script\" depends on PV2/PV3 = Common.deserialiseScript. That is listed as an inference at API:67 and API:90 but is missing from C3's own [I] list. It also mixes ledger d6eec237 with plutus HEAD. HEAD commits are correctly disclaimed as not qualified dependency correspondence (CONTRACT:9, CONTRACT:57, API:39).\n\nC4 DOMAIN. These are local tool admission rules, not protocol limits:\n- lowercase hex of at most 65536 characters;\n- exactly one minimal definite major-2 byte string with header 58 L (24\u2013255) or 59 L16 (\u2265256);\n- header+L exact, total \u2264 32768 B;\n- v2/v3 only.\n\nThe text correctly separates them from the 14336 B target, maxTxSize and ExUnits. Refusing V2 trailing bytes is stricter than SS:259-261. CONTRACT:53 and API:78 correctly make it a refusal, never a different hash. Short-form, non-minimal and indefinite refusals are also stricter than a lenient decoder. The \"local tool bound\" heading covers them; F8 suggests saying so explicitly.\n\nC5 BLUEPRINT. The design is sound:\n- strict UTF-8;\n- duplicate keys are an error. The dup_entry and dup_pre cases are built so that either last-wins or first-wins parsing fails the test.\n- preamble.plutusVersion is required;\n- 1\u201364 validators, unique non-empty titles;\n- C4-admitted compiledCode, 56-hex hash, parameters absent or [];\n- every entry is recomputed. The changed handlers c2.c2.spend and vs4.vs4.else defeat a \"check only the first handler per group\" shortcut, assuming FIXTURE handler order.\n\nScriptHashInputError and ScriptHashMismatchError are disjoint: assertInputError and assertMismatch each also assert NotIsInstance of the other class. Wrong-hash cases (T02.3) and malformed cases (T02.4, 32 cases, including the stripped-code malformation) are kept apart. The consistent c2/vi swap is honestly shown to be caught only by pinned receipts. Determinism is checked (T01.3 repeat call). Minor gap: `parameters: null` is not tested (F8).\n\nC6/C7/C8. Oracle limits are stated honestly:\n- the CIP vector is Aiken-produced;\n- the 7 receipts come from the same Aiken run and are comparison values;\n- there is no ledger- or chain-produced vector;\n- a primitive defect shared with Aiken goes undetected;\n- the tests compute no BLAKE2b; hashlib is used only for sha256 pins (test:209).\n\nThe purity allowlist and banned names are disclosed as a guard, not a sandbox. The non-claims and open scope (20 UTxO families, ACTUS, DeFi, general financial, recursion/PCD, private handoff, multi-parent PCD, real Preprod; native authority 0) are preserved.\n\nTEST AUDIT (whole file, test:1-566).\n- Module level imports only stdlib (ast, copy, hashlib, importlib.util, json, os, unittest) and does no reads at import time. The RED cannot come from an ImportError.\n- Exactly 19 methods: T00 \u00d75; T01 \u00d710; T02 \u00d74.\n- All 14 implementation methods make _impl() (or _impl_source() in T01.2) their first statement. Each raises AssertionError(RED) when /input/independent_script_hash.py is absent, so unittest counts a failure, not an error. _cache is never filled on failure.\n- When an implementation exists, the AST guard runs before exec. spec_from_file_location and module_from_spec do not touch sys.modules or sys.path. -B prevents writes. Not reached in RED.\n\nI checked the T00 runtime inputs by transcription:\n- The 18 PINS bytes/sha256 equal the packet MANIFEST and the envelope pins.\n- CIP57_CODE is 5\u00d770 = 350 hex characters, i.e. 175 bytes = 2+0xAD. It is character-identical to CIP:425, and the hash matches CIP:426.\n- The CIP slice runs from \"<summary>Aiken's Hello World</summary>\" through ```json\\n to \\n``` and yields valid strict JSON (CIP:366-429) with v2 and a single hello_world entry.\n- All seven 59 L16 prefixes satisfy L+3 = SIZES appliedBytes and = hex/2: 2770, 13018, 12784, 6859, 9940, 10832, 10825.\n- The seven receipt literals equal the hash-*.txt bodies and FIXTURE expectedHashes. All 16 FIXTURE titles, declaredHash values and empty remainingParameters agree.\n- The SOURCES 200/404 statuses and sha256 values match.\n- The tool contains \"(M-HASH open)\" (tool:249) and no \"blake2\".\n- ADOPTION notEstablished contains \"Independent script hashes M-HASH\", and newNativeCryptoAuthority is false.\n- The README phrase is present (README:25).\n\nThe negative cases are well formed:\n- stripped payloads begin 0x01 (major type 0);\n- text-string, indefinite, 5a and non-minimal headers are built correctly;\n- the 32768 B accept / 32769 B reject boundary catches off-by-one in both directions;\n- 13 bad version values, 15 hex/type cases, 8 length cases.\n\nAll 15 meaningfulness controls map to tests that would fail. These are future controls only.\n\nENVELOPE. The envelope is adequate for one RED:\n- /input holds only the 0444 test; /packet holds 20 files at 0444 (18 PINS + original MANIFEST.json + USER-OPUS55-ROUTING.md); both directories 0555 and ro-bound.\n- The rest of the sandbox is read-only /usr plus fresh /proc and /dev. --unshare-all (including network), --die-with-parent, --new-session, --clearenv, minimal PATH/LANG/PYTHONDONTWRITEBYTECODE, MHASH_PACKET_DIR=/packet.\n- Limits: timeout 10s with kill-after 2s; prlimit cpu 10, as 512 MiB, fsize 2 MiB, core 0.\n- `python3 -I -B /input/test\u2026 -v`, so -v is unittest verbosity. -I ignores PYTHONDONTWRITEBYTECODE, which is harmless because -B covers it, but -I still lets the test read MHASH_PACKET_DIR. HERE=/input, so IMPL_PATH is absent.\n- There is no home, SDK, VM, prover, native crypto, key or subprocess. The existing tool is read only as text.\n- maximumAttempts 1; an unexpected result means STOP.\n\nIf the interpreter fails to start in the minimal root (for example a loader path problem), that also STOPs.\n\nFINDINGS (no RED blocker except the F1 precondition): F1 (medium) unread original MANIFEST body; F2 (low) B9 body opaque/unread; F3 (low) C3 label; F4 (low) citation precision; F5 (low, future runs only) loader TOCTOU/pyc; F6 (info) AST guard bypassable; F7 (info) envelope notes; F8 (info) domain-wording and test gaps.",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "medium",
+      "evidence": "T00.1 (test:204,210-211) requires /packet/MANIFEST.json to have files[].path/bytes/sha256 entries that match all 18 PINS and to have no Ledger-Core-Script.hs entry. The envelope pins this file (5602 B, 2f91b6fc\u2026; ENVELOPE:131-136), but its body is not among the 26 segmented originals, and the no-outside-packet rule kept me from reading it. My T00.1 pass prediction therefore rests on an unread input.",
+      "requiredFix": "Before the single RED, root does a read-only mechanical check (no execution) that MANIFEST.json 2f91b6fc\u2026 is the original author-packet manifest, that its 18 entries equal the test PINS, and that it has no Ledger-Core-Script.hs entry. If it differs, do not run: fix the packet, not the test, then re-review. Any T00.1 failure during RED means invalid RED \u2192 STOP, no retry."
+    },
+    {
+      "id": "F2",
+      "severity": "low",
+      "evidence": "The B9 compiled blueprint (308672 B, 10baa179\u2026) is an opaque runtime fixture that I did not read. T00.4 and _b9() (test:109-116,254-282) need strict-JSON parsing with no duplicate keys, exactly 16 validators, per-group identical code/hash, and parameters absent or []. My only basis is FIXTURE-STRUCTURE.json plus the test transcriptions.",
+      "requiredFix": "No source change. Root re-verifies the B9 sha256/size before and after the run. Any T00.4 failure or error \u2192 STOP. Do not refit expectations."
+    },
+    {
+      "id": "F3",
+      "severity": "low",
+      "evidence": "MHASH-CONTRACT.md:43 says 'Therefore [S] no layer is removed or added between the bytes Plutus decodes as one CBOR-encoded Flat script and the bytes the ledger hashes'. This depends on the inference PV2/PV3.deserialiseScript = Common.deserialiseScript (MHASH-API.json:67,90) and on ledger d6eec237 matching plutus HEAD 3de6f245. Neither is in C3's [I] list (CONTRACT:45-57). The hash rule itself (ledger hashes tag||PlutusBinary bytes) is [S] from Lang:205,262,546-547,566-567 alone.",
+      "requiredFix": "In the next contract revision, relabel CONTRACT:43 as [S] (byte identity, ledger) + [I] (decode as CBOR-Flat via uninspected PlutusLedgerApi.V2/V3; HEAD-vs-dependency), and add the PV2/PV3 inference to the C3 [I] list. This is a label-only change with no semantic change. It does not block the RED, because RED exercises no C3 behaviour."
+    },
+    {
+      "id": "F4",
+      "severity": "low",
+      "evidence": "CONTRACT:41 and API:57 cite Lang:117-118 for P.CBORDeserialiseError/P.RemainderError. Lang:117 imports PlutusLedgerLanguage. ScriptDecodeError(..) is at Lang:118, and the constructors appear at Lang:158 and Lang:163.",
+      "requiredFix": "Cite Lang:118,158,163 in the next revision. Non-blocking."
+    },
+    {
+      "id": "F5",
+      "severity": "low",
+      "evidence": "Applies to future implementation runs, not RED. _impl_source reads the text for the AST guard (test:151-152), but spec.loader.exec_module (test:174-176) re-reads the path and may load a matching __pycache__ .pyc. -B prevents writing bytecode, not reading it. The code that executes can therefore differ from the guarded text (TOCTOU or pyc substitution).",
+      "requiredFix": "For any future GREEN or mutant run, the envelope must ro-bind an input directory containing exactly the pinned test and implementation with no __pycache__, and root checks before and after. Alternatively, a separately reviewed test revision execs compile() of the exact guarded text. No change now; the test must stay unchanged for RED."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "evidence": "The AST guard (test:155-165) does not ban getattr, __builtins__, or attribute chains such as ().__class__.__base__.__subclasses__(), so it can be bypassed. This is acknowledged at CONTRACT:99 and API:163 ('guard, not a sandbox').",
+      "requiredFix": "None for RED. Implementation review plus the envelope stay the containment for future runs."
+    },
+    {
+      "id": "F7",
+      "severity": "info",
+      "evidence": "The envelope packet includes USER-OPUS55-ROUTING.md, which the test never reads. PYTHONDONTWRITEBYTECODE is ignored under -I, but -B covers it. No /etc or /tmp is mounted, and interpreter start-up relies on /usr plus the lib symlinks.",
+      "requiredFix": "None. If the interpreter fails to start or there is any non-unittest exit, STOP and do not retry."
+    },
+    {
+      "id": "F8",
+      "severity": "info",
+      "evidence": "C4 also rejects short-form, non-minimal and indefinite headers that a lenient CBOR decoder or the ledger might accept (CONTRACT:68). It only states 'stricter than ledger' for trailing bytes (CONTRACT:53,67). The test has no case for parameters: null, which the contract does not allow ('absent or []').",
+      "requiredFix": "In the next revision, state that all C4 framing refusals are tool refusals, never different hashes. Optionally add a parameters-null malformed case when the test is next re-reviewed. Non-blocking."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "ordinarySelftestReady": true,
+    "ordinarySelftestScope": "Exactly one root-executed ROOT RED using the exact PROPOSED-ORDINARY-RED-ENVELOPE argv: /input contains only test_independent_script_hash.py (28091 B, a1c00918\u2026, 0444); /packet contains the 20 pinned known public files including the original MANIFEST.json (2f91b6fc\u2026); directories 0555; no implementation file, symlink, extra file or __pycache__. Preconditions: (1) a second fresh agreeing independent Opus 5.5 design/test review; (2) root mechanical pre-check of the MANIFEST.json structure against the 18 PINS (F1); (3) root fresh pins, modes and implementation absence before and after. Expected: 19 ran, T00.1-T00.5 pass, 14 implementation methods fail with exactly 'M-HASH-RED: independent_script_hash.py is absent; no implementation has been written', 0 errors, exit 1. Any deviation (T00 failure or error, any non-RED error, timeout, interpreter start failure) means STOP with no retry. No implementation, GREEN, mutant, operator, builder or native action.",
+    "firstBlockedBoundary": "Authoring independent_script_hash.py and its separate review, followed by GREEN and the MC1-MC15 meaningfulness controls. All are blocked until the RED is root-run, compared with predictedRED and adopted. Beyond that, a ledger- or chain-produced vector and dependency-pin correspondence (cardano-ledger-core.cabal/cabal.project/flake.lock at d6eec237) remain open.",
+    "operatorReady": false,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/SEGMENT-INDEX.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-01.txt (lines 1-294, complete)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-02.txt (lines 1-526, complete)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-03.txt (lines 1-674, complete)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-04.txt (lines 1-734, complete)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-05.txt (lines 1-529, complete)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-06.txt (lines 1-524 and 525-640: first read truncated, then fully reread)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-07.txt (lines 1-471 and 472-575: first read truncated, then fully reread)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/READ-SEGMENT-08.txt (lines 1-223, complete)"
+    ],
+    "unreadPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-design-test-review-packet/B9-APPLIED-BLUEPRINT.json (opaque runtime fixture body, 308672 B; deliberately not read)",
+      "Original author-packet MANIFEST.json (5602 B, 2f91b6fc\u2026), a T00.1 runtime input; not in the review packet segments, and outside-packet reads are barred",
+      "Standalone raw copies of the 26 nonopaque originals in the review packet (their content was read through the segments; not byte- or sha-verified)",
+      "Superseded initial proposal (MHASH-CONTRACT 7359 B / MHASH-API 14378 B)"
+    ],
+    "limitations": [
+      "No execution, hashing, import, compile, test, network, SDK, VM, native or Git actions. All readiness statements are source predictions.",
+      "I did not verify that segment text equals the pinned raw originals byte-for-byte, including LF vs CRLF, which matters for the T00.2 multi-line anchors. Fidelity rests on the root's coverage claim and the pinned sha256 values.",
+      "B9 contents were not read. The T00.4/T01.4/T02.x fixture expectations are checked only against FIXTURE-STRUCTURE.json, SIZES.json, the receipts and the test transcriptions.",
+      "The original MANIFEST.json body is unread (F1), so the T00.1 manifest cross-check is unverified by me.",
+      "Supplement bodies are repository HEAD (plutus 3de6f245, cardano-base 5813d211). Their correspondence to ledger d6eec237 dependencies, Aiken v1.1.24 or any installed binary is unproven. There is no authenticated ledger oracle and no formal libsodium/CPython BLAKE2b-224 equivalence proof.",
+      "Shared-primitive limitation: every positive vector is Aiken-produced, and the receipts come from the same Aiken run.",
+      "Plan-mode file writing and ExitPlanMode tools were not available in this session. Output is delivered only through this structured object."
+    ]
+  },
+  "clauseAssessment": [
+    {
+      "id": "C1",
+      "stance": "AGREE",
+      "reason": "Hashes:181-182, Hashes:105 and Keys:37,132 show that ScriptHash uses ADDRHASH = Blake2b_224. At cardano-base HEAD, B2b:57,59 give HashSize 28 and digest = blake2b_libsodium 28, and B2b:153-159 call it unkeyed with outlen=size. Blake2b_256 is a separate HASH (Hashes:125). CIP:102 agrees. The [I] links (umbrella re-export, native-224 vs truncation, CPython equivalence) are correctly not claimed as proof."
+    },
+    {
+      "id": "C2",
+      "stance": "AGREE",
+      "reason": "Lang:205 hashes BS.singleton tag <> originalBytes with hashWith id. originalBytes is the PlutusBinary ShortByteString (Lang:185,251,261-262). The tags are 0x02/0x03 (Lang:545,565), distinct from the encodeEnum envelope index (Lang:273-278,329-330,227-229). The test anchors these exact strings and kills mutants MC1/MC2. v1/v4 are source-known and rejected as a stated tool scope. Native scripts are out of scope because of the 404."
+    },
+    {
+      "id": "C3",
+      "stance": "AGREE",
+      "reason": "The rule 'tag || compiledCode as given, no strip, no extra wrap, not the envelope' is soundly derived. Byte identity of hashed and decoded bs is [S] in the ledger alone (Lang:546-547,566-567). SS:124,155-160,263-269 show SerialisedScript is a CBOR-wrapped Flat program decoded from offset 0 and returned unmodified. The remaining CIP compiledCode = PlutusBinary identification is a prose [I] that no ledger symbol could close, so no missing primary link blocks C3 and I do not STOP. The vector is properly a cross-check under a no-refit stop rule. Caveat F3: the 'Therefore [S]' at CONTRACT:43 should also carry the PV2/PV3 = Common inference and the HEAD-vs-dependency [I]."
+    },
+    {
+      "id": "C4",
+      "stance": "AGREE",
+      "reason": "Local admission only: lowercase even-length hex of at most 65536 characters; exactly one minimal definite major-2 byte string with header 58 L (24-255) or 59 L16 (\u2265256); exact length; at most 32768 B; v2/v3 only. It is explicitly unrelated to the 14336 B target, maxTxSize and ExUnits. Refusing V2 trailing bytes is stricter than SS:259-261 and is kept as a refusal, never a different hash. T01.6, T01.7, T01.8 and T01.9 cover both sides of every bound."
+    },
+    {
+      "id": "C5",
+      "stance": "AGREE",
+      "reason": "Strict UTF-8 JSON with duplicate-key rejection; the dup cases fail under either last-wins or first-wins parsing. Required v2/v3 preamble, 1-64 unique non-empty titles, C4 code, 56-hex hash, parameters absent or [] (remaining parameters refused). Every entry is recomputed, and the changed non-first handlers defeat group shortcuts. Input and Mismatch errors are disjoint ValueError subclasses checked both ways. The function returns {title: recomputed} as fresh results. The consistent swap is honestly detectable only against pinned receipts."
+    },
+    {
+      "id": "C6",
+      "stance": "AGREE",
+      "reason": "The vectors are the CIP hello_world v2 vector plus all 16 B9 handlers grouped into 7. Expected values are frozen literals that T00 re-verifies against the pinned CIP, the receipts, FIXTURE and SIZES, and the tests compute no BLAKE2b. The receipts are honestly labelled same-run Aiken comparison values. The shared-primitive limitation, with no ledger- or chain-produced vector, is stated."
+    },
+    {
+      "id": "C7",
+      "stance": "AGREE",
+      "reason": "The future module is limited to hashlib/json/re/typing/__future__ with no I/O. The loader guards lazily with an AST allowlist and banned names before exec, without inserting into sys.path or sys.modules, and -B prevents writes. The guard is correctly stated to be not a sandbox; containment is the envelope. For future runs only, the pyc/TOCTOU note F5 applies. It is not relevant to RED."
+    },
+    {
+      "id": "C8",
+      "stance": "AGREE",
+      "reason": "The non-claims cover UPLC validity, parameter semantics, proofs and signatures, deployability, ExUnits, and installed or dependency correspondence. The 20 UTxO families, ACTUS/DeFi/financial obligations, PCD/recursion, X1/PX04/M-EU, FX1 and FV-01/02 remain open, and native authority stays ZERO. RED, GREEN and meaningfulness results are predictions. The rule of two fresh agreeing reviews before RED, with the author not voting, and the separation of later result adoption are preserved."
+    }
+  ]
+}

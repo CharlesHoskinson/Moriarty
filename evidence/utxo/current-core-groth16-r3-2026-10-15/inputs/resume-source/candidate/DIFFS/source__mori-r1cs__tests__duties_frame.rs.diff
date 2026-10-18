@@ -1,0 +1,56 @@
+--- origin-r2/source/mori-r1cs/tests/duties_frame.rs
++++ successor/source/mori-r1cs/tests/duties_frame.rs
+@@ -9,7 +9,7 @@
+ #[test]
+ fn present_zero_is_not_absence() {
+     // T9 [AUTHOR] on [ORACLE] invoice-finish: post invoice is present with amount 0.
+-    let rel = compile(INVOICE, options("finish", CapBinding::PublicCap));
++    let rel = compile_ok(INVOICE, options("finish", CapBinding::PublicCap));
+     let oracle = oracle_case("invoice-finish");
+     let honest = oracle_values(&rel, &oracle, Some(oracle.cap));
+     let invoice = rel.plan().duty_index("invoice").unwrap();
+@@ -42,7 +42,7 @@
+ 
+ #[test]
+ fn absent_duty_with_a_hidden_amount_is_refused_in_isolation() {
+-    let rel = compile(CANON, options("touch", CapBinding::NotBound));
++    let rel = compile_ok(CANON, options("touch", CapBinding::NotBound));
+     // Controls: absent pre accrues from 0; a present pre of 5 accrues from 5.
+     assert!(accepts(&rel, canon_claim(false, 0, 3)));
+     assert!(accepts(&rel, canon_claim(true, 5, 3)));
+@@ -61,7 +61,7 @@
+ 
+ #[test]
+ fn discharge_requires_presence_and_bounded_amount() {
+-    let settle = compile(PAYROLL, options("settle", CapBinding::NotBound));
++    let settle = compile_ok(PAYROLL, options("settle", CapBinding::NotBound));
+     let duty = settle.plan().duty_index("benefit").unwrap();
+     let employer = settle.plan().cells.iter().position(|c| c.account == "employer").unwrap();
+     let worker = settle.plan().cells.iter().position(|c| c.account == "worker").unwrap();
+@@ -114,7 +114,7 @@
+ 
+ #[test]
+ fn self_transfer_keeps_the_debit_check() {
+-    let rel = compile(SELF_MOVE, options("move", CapBinding::NotBound));
++    let rel = compile_ok(SELF_MOVE, options("move", CapBinding::NotBound));
+     assert_eq!(rel.plan().cells.len(), 1);
+     assert_eq!(rel.plan().logical_work, UInt(2));
+     assert!(accepts(&rel, move_claim(5, 5))); // S1
+@@ -126,7 +126,7 @@
+ fn extra_frame_cells_are_preserved() {
+     let mut opts = options("open", CapBinding::PublicCap);
+     opts.frame = FrameCells::Include(vec![CellRef { asset: "CASH".into(), account: "spectator".into() }]);
+-    let rel = compile(INVOICE, opts);
++    let rel = compile_ok(INVOICE, opts);
+     assert_eq!(rel.layout().field_count, 74); // 70 + pre/post spectator UInt
+     let oracle = oracle_case("invoice-open");
+     let values = oracle_values(&rel, &oracle, Some(oracle.cap));
+@@ -155,7 +155,7 @@
+         }],
+     };
+     let admitted = admit_program(program).expect("Core validate admits the DAG");
+-    let rel = compile::<ark_bls12_381::Fr>(admitted, options("twice", CapBinding::NotBound), StatementAdapter::DirectFieldV0).unwrap();
++    let rel = mori_r1cs::compile::<ark_bls12_381::Fr>(admitted, options("twice", CapBinding::NotBound), StatementAdapter::DirectFieldV0).unwrap();
+     assert_eq!(rel.plan().logical_work, UInt(6));
+     let claim = |post: u128, mid: u128| TransitionValues {
+         inputs: vec![],

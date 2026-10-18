@@ -1,0 +1,32 @@
+agreement OverflowHead profile "moriarty-bounded-atomic/1" {
+  lifetime 2;
+  horizon 2000000000;
+  unit Cash;
+  const payer: Text = text("payer");
+  const payee: Text = text("payee");
+  state count: UInt128 = uint(340282366920938463463374607431768211455);
+  observation now: UInt128;
+  settlement cash_binding asset text("CASH") quantum amount(1, Cash);
+  status episode closed_when count == uint(0);
+  status agreement no_remaining_notional;
+  policy step_amount targets effect(step, 0, amount) {
+    unit Cash;
+    derivation "exact argument transfer";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "overflow_head_transfer_v1";
+  }
+  effect Transfer {
+    asset: Text;
+    from: Text;
+    to: Text;
+    amount: Amount;
+  }
+  action step(actor: Text, payout: Amount<Cash>) {
+    guard arg.actor == const.payer, "payer authority required";
+    guard arg.payout > amount(0, Cash), "payout must be positive";
+    set count = state.count + uint(1);
+    emit Transfer { asset: text("CASH"), from: const.payer, to: const.payee, amount: arg.payout };
+  }
+}

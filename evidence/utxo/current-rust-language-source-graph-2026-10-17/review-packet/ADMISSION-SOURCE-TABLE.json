@@ -1,0 +1,1675 @@
+{
+  "format": "moriarty-core-frontend-source-observations/2",
+  "createdAt": "2026-10-17T19:54:13.710650+00:00",
+  "author": {
+    "routedModel": "gpt-6.1-sol",
+    "requestedEffort": "high",
+    "effortIndependentlyAttested": false,
+    "role": "nonsecurity bounded source-attribution correction"
+  },
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "nativeAuthority": 0,
+  "fullGoalOpen": true,
+  "reviewStatus": "UNREVIEWED_UNPUBLISHED; fresh Gemini4 Argon HIGH source-attribution review required before publication",
+  "inputManifest": {
+    "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-input/MANIFEST.json",
+    "sha256": "bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e",
+    "mainCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+    "remoteMainRevalidatedAtRootReported": "2026-10-17T18:43+00:00"
+  },
+  "pinScope": "18 CORE bodies pinned to mainCommit by input manifest; other supplied source bodies retain their own packet provenance. No cross-snapshot equivalence is inferred.",
+  "classifications": [
+    "CALL_EDGE",
+    "SOURCE_DECLARATION",
+    "UNINSPECTED_BOUNDARY",
+    "INFERENCE"
+  ],
+  "claims": [
+    {
+      "id": "G01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "navigation",
+      "statement": "The supplied graph records a missing Core frontend-body boundary and a separate layout/adapter/compiler/staged-lowering boundary.",
+      "citations": [
+        {
+          "inputFile": "graph.json",
+          "sha256": "93d3042e2212417bbb2a43ed2a3555c880ecbffcba97786d3d2d99567ae0e0d7",
+          "lineStart": 9,
+          "lineEnd": 19,
+          "literal": "    \"remaining_uninspected_boundaries\": [\n      {\n        \"symbol\": \"mori_core::language / parse / stage::load / stage::require_core1 / validate\",\n        \"source\": \"S06-frontend.rs:36,41,45,58-59\",\n        \"status\": \"referenced Core bodies are not included in packet; no outgoing edges inferred\"\n      },\n      {\n        \"symbol\": \"StatementLayout::build / options.compiler.checked / adapter.admits / abi2::options_ok / abi2::constants / staged.lowering_plan\",\n        \"source\": \"S16-circuit.rs:220-226,255,269\",\n        \"status\": \"direct call sites mapped; implementation bodies are not included among supplied files\"\n      }"
+        }
+      ]
+    },
+    {
+      "id": "P01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1",
+      "statement": "Core1 constants are moriarty/1 and moriarty-core/1; IR declarations set 8192 expressions,1024 statements,256 declarations and65536 trace cells.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 4,
+          "lineEnd": 9,
+          "literal": "pub const LANGUAGE: &str = \"moriarty/1\";\npub const SEMANTICS: &str = \"moriarty-core/1\";\npub const MAX_EXPRESSIONS: usize = 8192;\npub const MAX_STATEMENTS: usize = 1024;\npub const MAX_DECLARATIONS: usize = 256;\npub const MAX_TRACE_CELLS: usize = 65_536;"
+        }
+      ]
+    },
+    {
+      "id": "P02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2",
+      "statement": "Stage constants name moriarty/2, moriarty-core/2, moriarty-stage-plan/1, moriarty-continuation/1 and moriarty-stage-event/1; bounds are 16 awaits/action, 16 event binders, 256 captures, 4 MiB continuation and 65,536-byte event.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-mod.rs",
+          "sha256": "428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c",
+          "lineStart": 23,
+          "lineEnd": 32,
+          "literal": "pub const LANGUAGE_2: &str = \"moriarty/2\";\npub const SEMANTICS_2: &str = \"moriarty-core/2\";\npub const STAGE_PLAN_FORMAT: &str = \"moriarty-stage-plan/1\";\npub const CONTINUATION_FORMAT: &str = \"moriarty-continuation/1\";\npub const STAGE_EVENT_FORMAT: &str = \"moriarty-stage-event/1\";\npub const MAX_AWAITS_PER_ACTION: usize = 16;\npub const MAX_EVENT_BINDERS: usize = 16;\npub const MAX_CAPTURE_SLOTS: usize = 256;\npub const MAX_CONTINUATION_BYTES: usize = 4 * 1_048_576;\npub const MAX_EVENT_BYTES: usize = 65_536;"
+        }
+      ]
+    },
+    {
+      "id": "P03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1/Staged2",
+      "statement": "language(source) lexes source and checks its initial language string against only the two constants in this function. It is a routing function; this body does not parse/validate the rest as a Program.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 351,
+          "lineEnd": 377,
+          "literal": "/// Read the explicit source profile for CLI routing; this does not admit a program.\npub fn language(source: &str) -> Result<&'static str, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let mut tokens = Vec::new();\n    for i in 0..lexed.len() {\n        let idx = TokenIdx::new(i);\n        let span = lexed.span(idx, source);\n        let raw = &source[span.start as usize..span.end as usize];\n        let kind = lexed.kind(idx);\n        tokens.push(Tok {\n            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },\n            kind,\n            start: span.start,\n        });\n    }\n    let mut parser = Parser { tokens, pos: 0, program: Program {\n        language: LANGUAGE.into(), semantics: SEMANTICS.into(), name: String::new(),\n        states: vec![], assets: vec![], expressions: vec![], actions: vec![],\n    }};\n    parser.expect(\"language\")?;\n    let profile = parser.string()?;\n    match profile.as_str() {\n        LANGUAGE => Ok(LANGUAGE),\n        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),\n        _ => Err(parser.error(\"profile\", format!(\"Expected language \\\"{LANGUAGE}\\\"; found {profile:?}.\"))),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "P04",
+      "classification": "CALL_EDGE",
+      "profile": "Core1/Staged2",
+      "statement": "admit_source calls language then routes Core1 to parse/admit_checked and Stage2 to stage::load/StagedAdmission::new.",
+      "citations": [
+        {
+          "inputFile": "S06-frontend.rs",
+          "sha256": "039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9",
+          "lineStart": 34,
+          "lineEnd": 50,
+          "literal": "/// Route by `mori_core::language`, then admit with the profile's own Core entry point.\npub fn admit_source(source: &str) -> Result<Admitted, CompileError> {\n    let profile = mori_core::language(source).map_err(CompileError::Core)?;\n    let source_sha256 = identity::source_hash(source);\n    match profile {\n        mori_core::LANGUAGE => {\n            // `parse` validates before returning (parser.rs:157-159).\n            let program = mori_core::parse(source).map_err(CompileError::Core)?;\n            admit_checked(program, Some(source_sha256)).map(Admitted::Core1)\n        }\n        mori_core::stage::LANGUAGE_2 => {\n            let staged = mori_core::stage::load(source).map_err(CompileError::Core)?;\n            Ok(Admitted::Staged2(StagedAdmission::new(staged, source_sha256)))\n        }\n        other => Err(CompileError::Profile(other.to_string())),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "P05",
+      "classification": "CALL_EDGE",
+      "profile": "Core1",
+      "statement": "admit_program delegates to admit_checked with no source hash; admit_checked calls require_core1,validate,then identity::program_hash before constructing AdmittedCore1.",
+      "citations": [
+        {
+          "inputFile": "S06-frontend.rs",
+          "sha256": "039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9",
+          "lineStart": 52,
+          "lineEnd": 68,
+          "literal": "/// Admit an in-memory `/1` Program through the same Core checks.\npub fn admit_program(program: Program) -> Result<AdmittedCore1, CompileError> {\n    admit_checked(program, None)\n}\n\nfn admit_checked(program: Program, source_sha256: Option<Digest32>) -> Result<AdmittedCore1, CompileError> {\n    mori_core::stage::require_core1(&program).map_err(CompileError::Core)?;\n    mori_core::validate(&program).map_err(CompileError::Core)?;\n    let program_hash = identity::program_hash(&program)?;\n    let identity = ProgramIdentity {\n        language: program.language.clone(),\n        semantics: program.semantics.clone(),\n        program_hash,\n        source_sha256,\n    };\n    Ok(AdmittedCore1 { program, identity })\n}"
+        }
+      ]
+    },
+    {
+      "id": "P06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1",
+      "statement": "require_core1 requires the Core1 language/semantics pair and refuses any Await statement in its supplied Program.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-profile.rs",
+          "sha256": "933560466065d78b0ce3f3559c2cf2bb9cbdc8eea45903af564cf1ab469cd59d",
+          "lineStart": 10,
+          "lineEnd": 23,
+          "literal": "pub fn require_core1(program: &Program) -> Result<(), Error> {\n    if program.language != LANGUAGE || program.semantics != SEMANTICS {\n        return Err(Error::new(\"profile\", PROFILE_MESSAGE));\n    }\n    if program\n        .actions\n        .iter()\n        .flat_map(|action| &action.statements)\n        .any(|statement| matches!(statement, Statement::Await { .. }))\n    {\n        return Err(Error::new(\"profile\", \"Await requires moriarty-core/2.\"));\n    }\n    Ok(())\n}"
+        }
+      ]
+    },
+    {
+      "id": "P07",
+      "classification": "CALL_EDGE",
+      "profile": "Core1",
+      "statement": "parse calls parse_profile(false); parse_profile checks EOF and invokes crate::validate only when staged is false.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 5,
+          "lineEnd": 12,
+          "literal": "pub fn parse(source: &str) -> Result<Program, Error> {\n    parse_profile(source, false)\n}\n\n/// Syntax-only parser; only stage::load admits the resulting source.\npub(crate) fn parse_v2(source: &str) -> Result<Program, Error> {\n    parse_profile(source, true)\n}"
+        },
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 148,
+          "lineEnd": 161,
+          "literal": "        if parser.program.states.len() + parser.program.assets.len() + parser.program.actions.len()\n            > MAX_DECLARATIONS\n        {\n            return Err(parser.error(\"bound\", \"Program exceeds 256 declarations.\"));\n        }\n    }\n    if parser.peek().kind != TokenKind::Eof {\n        return Err(parser.error(\"syntax\", \"Unexpected content after agreement.\"));\n    }\n    if !staged {\n        validate(&parser.program)?;\n    }\n    Ok(parser.program)\n}"
+        }
+      ]
+    },
+    {
+      "id": "P08",
+      "classification": "CALL_EDGE",
+      "profile": "Staged2",
+      "statement": "load source order is parse_v2→require_core2→validate_v2→plan::build→plan_invariants→cost::fill→cost_invariants→program_hash→fill plan program_hash→plan_hash→StagedProgram.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-mod.rs",
+          "sha256": "428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c",
+          "lineStart": 71,
+          "lineEnd": 88,
+          "literal": "pub fn load(src: &str) -> Result<StagedProgram, Error> {\n    let program = crate::parser::parse_v2(src)?;\n    profile::require_core2(&program)?;\n    validate::validate_v2(&program)?;\n    let mut plan = plan::build(&program)?;\n    validate::plan_invariants(&program, &plan)?;\n    cost::fill(&program, &mut plan)?;\n    validate::cost_invariants(&program, &plan)?;\n    let program_hash = digest::program_hash(&program)?;\n    plan.program_hash = digest::hex(&program_hash);\n    let plan_hash = digest::plan_hash(&plan)?;\n    Ok(StagedProgram {\n        program,\n        plan,\n        program_hash,\n        plan_hash,\n    })\n}"
+        }
+      ]
+    },
+    {
+      "id": "P09",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Sherlock/draft",
+      "statement": "lib.rs declares public Sherlock/source/bounded-source modules separately. Its draft source/typechecker/tests/image bridge modules are private and cfg(test). Their implementation bodies are absent from the 33-file parent source packet inventoried by core-frontend-source-input/MANIFEST.json; this parent count does not describe the bounded Part 1 reviewer workspace.",
+      "citations": [
+        {
+          "inputFile": "CORE-lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "lineStart": 8,
+          "lineEnd": 31,
+          "literal": "pub mod sherlock;\n\n// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        },
+        {
+          "inputFile": "MANIFEST.json",
+          "sha256": "bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e",
+          "lineStart": 1,
+          "lineEnd": 243,
+          "literal": "{\n  \"format\": \"public-source-packet/1\",\n  \"createdAt\": \"2026-10-17T18:43:47.269292+00:00\",\n  \"mainCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n  \"remoteMainRevalidatedAt\": \"2026-10-17T18:43+00:00\",\n  \"files\": [\n    {\n      \"path\": \"CORE-intent.rs\",\n      \"bytes\": 14473,\n      \"sha256\": \"a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/intent.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-ir.rs\",\n      \"bytes\": 12823,\n      \"sha256\": \"0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/ir.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-json.rs\",\n      \"bytes\": 5391,\n      \"sha256\": \"faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/json.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-lib.rs\",\n      \"bytes\": 1277,\n      \"sha256\": \"df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/lib.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-logical_cost.rs\",\n      \"bytes\": 2683,\n      \"sha256\": \"0aa110259dbc7f5aad2b3d0edab95e7b40f63b704ce4c06eb971be2e7df5ee8d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/logical_cost.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-parser.rs\",\n      \"bytes\": 14920,\n      \"sha256\": \"83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/parser.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-policy.rs\",\n      \"bytes\": 8696,\n      \"sha256\": \"992e18f71e01ff4619512b9c9a0f7f4bbb92a9e31765edcac8cc5a6ff9667cdf\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/policy.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-replay.rs\",\n      \"bytes\": 3691,\n      \"sha256\": \"eb5e0219d543f41c8c5ae943be91dadadef7e14a1fd8f47993d5b181627de9d2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/replay.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-runtime.rs\",\n      \"bytes\": 37400,\n      \"sha256\": \"7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/runtime.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-source_sponsor.rs\",\n      \"bytes\": 11097,\n      \"sha256\": \"870e71ba219a5e8adaaff980d3757810c8e44c0047d770e93627ba4b0c34cfd2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/source_sponsor.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-admit.rs\",\n      \"bytes\": 14077,\n      \"sha256\": \"7d98472ec2d4bd151cb42682ed32deaff257d4b9746615a6453aad41b3f2ec10\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/admit.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-cost.rs\",\n      \"bytes\": 14352,\n      \"sha256\": \"6edebd925cdc8f775f9a0711775f6eca656e808f1c428bc389e21b4d0042eee2\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/cost.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-decode.rs\",\n      \"bytes\": 8731,\n      \"sha256\": \"48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/decode.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-digest.rs\",\n      \"bytes\": 1206,\n      \"sha256\": \"8193f18852499f0e3d276e2187f57fbb1fc6bf5ea8faa51a40510919655fdf72\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/digest.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-mod.rs\",\n      \"bytes\": 6169,\n      \"sha256\": \"428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/mod.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-plan.rs\",\n      \"bytes\": 3881,\n      \"sha256\": \"e29954e5c5f028e75f4f4f74ccf86c4eeda8f59c0be6dbbe5714bf30a200d3d3\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/plan.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-profile.rs\",\n      \"bytes\": 1237,\n      \"sha256\": \"933560466065d78b0ce3f3559c2cf2bb9cbdc8eea45903af564cf1ab469cd59d\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/profile.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"CORE-stage-validate.rs\",\n      \"bytes\": 18435,\n      \"sha256\": \"5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473\",\n      \"gitCommit\": \"8174e52975d8db9bf59636fea0fa338c0f47c855\",\n      \"gitPath\": \"crates/mori-core/src/stage/validate.rs\",\n      \"purpose\": \"currentMain exact public Core source; compare old frontend uninspected boundary, no runtime evidence\"\n    },\n    {\n      \"path\": \"S06-frontend.rs\",\n      \"bytes\": 2585,\n      \"sha256\": \"039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S06-frontend.rs\"\n    },\n    {\n      \"path\": \"S08-plan.rs\",\n      \"bytes\": 19278,\n      \"sha256\": \"a4e50be08727f3d89aedab66539498c0fc81e61e09a43005d274d12b63acc60f\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S08-plan.rs\"\n    },\n    {\n      \"path\": \"S09-lower.rs\",\n      \"bytes\": 12472,\n      \"sha256\": \"68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S09-lower.rs\"\n    },\n    {\n      \"path\": \"S16-circuit.rs\",\n      \"bytes\": 25657,\n      \"sha256\": \"3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S16-circuit.rs\"\n    },\n    {\n      \"path\": \"S03-input.rs\",\n      \"bytes\": 6262,\n      \"sha256\": \"646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S03-input.rs\"\n    },\n    {\n      \"path\": \"S04-relation.rs\",\n      \"bytes\": 14625,\n      \"sha256\": \"e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S04-relation.rs\"\n    },\n    {\n      \"path\": \"S10-installment-invoice.mori\",\n      \"bytes\": 1497,\n      \"sha256\": \"105137af8ac6a1f060ec7b634e3ec4aa913808e94bd1b7cffb736f8105d2cfc9\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S10-installment-invoice.mori\"\n    },\n    {\n      \"path\": \"S11-conditional-reserve.mori\",\n      \"bytes\": 1415,\n      \"sha256\": \"395e647534160fde45325232e5f1650a8bd48ce1455a68b28af203bf8bdbe357\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S11-conditional-reserve.mori\"\n    },\n    {\n      \"path\": \"S12-invoice-partial.selector.json\",\n      \"bytes\": 252,\n      \"sha256\": \"1f011dec179e394591a69859d06c999337ba45133d63627140a89c30fa591ee4\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S12-invoice-partial.selector.json\"\n    },\n    {\n      \"path\": \"S13-reserve-allocate.selector.json\",\n      \"bytes\": 253,\n      \"sha256\": \"4110ae0ca7031482155ad362a787b5fd76c59492eb045a840ee58deafef9556a\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S13-reserve-allocate.selector.json\"\n    },\n    {\n      \"path\": \"S14-invoice-partial.request.json\",\n      \"bytes\": 3008,\n      \"sha256\": \"aa1703e7b3aa2e0dd6288668cc871996fc1ee49ecc90861a3c4b40f02107f3cd\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S14-invoice-partial.request.json\"\n    },\n    {\n      \"path\": \"S15-reserve-allocate.request.json\",\n      \"bytes\": 4073,\n      \"sha256\": \"b949f44bac9b6f40bc6c780c1939fe4575f4cff70b0c8431c31df2924c2ecce7\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/S15-reserve-allocate.request.json\"\n    },\n    {\n      \"path\": \"graph.json\",\n      \"bytes\": 60032,\n      \"sha256\": \"93d3042e2212417bbb2a43ed2a3555c880ecbffcba97786d3d2d99567ae0e0d7\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/graph.json\"\n    },\n    {\n      \"path\": \"SOURCE-MANIFEST.json\",\n      \"bytes\": 7131,\n      \"sha256\": \"f95f089ff505fd6d9ad97206ec32c6b6b57a9ea5d755e37b6a6389dd161ffd34\",\n      \"originalPublicSource\": \"/home/charl/moriarty-c2-opus55-restored-20261017/backend-map/review-packet/SOURCE-MANIFEST.json\"\n    },\n    {\n      \"path\": \"PATTERN-INVENTORY.json\",\n      \"bytes\": 4701,\n      \"sha256\": \"8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997\",\n      \"originalPublicSource\": \"/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/reports/PATTERN-INVENTORY.json\"\n    }\n  ],\n  \"scope\": \"Nonsecurity source topology/grammar/profile observations only. No execution or semantic/security/ledger acceptance. Never follow case_file/provenance paths.\"\n}"
+        }
+      ]
+    },
+    {
+      "id": "P10",
+      "classification": "INFERENCE",
+      "profile": "profile separation",
+      "statement": "The inspected language/frontend dispatch exposes Core1 and Staged2 branches; separate Sherlock declarations are not an observed call edge into those branches. This is scoped to these bodies.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 351,
+          "lineEnd": 377,
+          "literal": "/// Read the explicit source profile for CLI routing; this does not admit a program.\npub fn language(source: &str) -> Result<&'static str, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let mut tokens = Vec::new();\n    for i in 0..lexed.len() {\n        let idx = TokenIdx::new(i);\n        let span = lexed.span(idx, source);\n        let raw = &source[span.start as usize..span.end as usize];\n        let kind = lexed.kind(idx);\n        tokens.push(Tok {\n            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },\n            kind,\n            start: span.start,\n        });\n    }\n    let mut parser = Parser { tokens, pos: 0, program: Program {\n        language: LANGUAGE.into(), semantics: SEMANTICS.into(), name: String::new(),\n        states: vec![], assets: vec![], expressions: vec![], actions: vec![],\n    }};\n    parser.expect(\"language\")?;\n    let profile = parser.string()?;\n    match profile.as_str() {\n        LANGUAGE => Ok(LANGUAGE),\n        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),\n        _ => Err(parser.error(\"profile\", format!(\"Expected language \\\"{LANGUAGE}\\\"; found {profile:?}.\"))),\n    }\n}"
+        },
+        {
+          "inputFile": "S06-frontend.rs",
+          "sha256": "039f0867c3efb717737909395228846aa1eef47346b08ac0671f800fed3c1bf9",
+          "lineStart": 34,
+          "lineEnd": 50,
+          "literal": "/// Route by `mori_core::language`, then admit with the profile's own Core entry point.\npub fn admit_source(source: &str) -> Result<Admitted, CompileError> {\n    let profile = mori_core::language(source).map_err(CompileError::Core)?;\n    let source_sha256 = identity::source_hash(source);\n    match profile {\n        mori_core::LANGUAGE => {\n            // `parse` validates before returning (parser.rs:157-159).\n            let program = mori_core::parse(source).map_err(CompileError::Core)?;\n            admit_checked(program, Some(source_sha256)).map(Admitted::Core1)\n        }\n        mori_core::stage::LANGUAGE_2 => {\n            let staged = mori_core::stage::load(source).map_err(CompileError::Core)?;\n            Ok(Admitted::Staged2(StagedAdmission::new(staged, source_sha256)))\n        }\n        other => Err(CompileError::Profile(other.to_string())),\n    }\n}"
+        },
+        {
+          "inputFile": "CORE-lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "lineStart": 8,
+          "lineEnd": 31,
+          "literal": "pub mod sherlock;\n\n// Unregistered draft source capability: Core-only ordinary host test proposal.\n// These lexer-dependent modules stay outside Sherlock's standalone Std graph.\n#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;\n#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;\n#[cfg(test)]\n#[path = \"sherlock/draft_source_tests.rs\"]\nmod sherlock_draft_tests;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge.rs\"]\nmod sherlock_draft_image;\n#[cfg(test)]\n#[path = \"sherlock/draft_image_bridge_tests.rs\"]\nmod sherlock_draft_image_tests;\n#[path = \"sherlock/source_adapter.rs\"]\npub mod sherlock_source;\n// Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.\n#[path = \"sherlock/bounded_scalar_source.rs\"]\npub mod sherlock_bounded_source;"
+        }
+      ]
+    },
+    {
+      "id": "T01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared IR",
+      "statement": "Type is UInt or Bool. Value uses serde type/value tagging with deny_unknown_fields. UInt wraps u128 and deserializes a decimal STRING with ASCII digits, no empty value and no leading zero except0.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 11,
+          "lineEnd": 43,
+          "literal": "/// Unsigned integral atomic units; JSON uses canonical decimal strings.\n#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]\npub struct UInt(pub u128);\nimpl Serialize for UInt {\n    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {\n        serializer.serialize_str(&self.0.to_string())\n    }\n}\nimpl<'de> Deserialize<'de> for UInt {\n    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {\n        let s = String::deserialize(deserializer)?;\n        if s.is_empty()\n            || !s.bytes().all(|b| b.is_ascii_digit())\n            || (s.len() > 1 && s.starts_with('0'))\n        {\n            return Err(serde::de::Error::custom(\n                \"expected canonical unsigned decimal string\",\n            ));\n        }\n        s.parse().map(UInt).map_err(serde::de::Error::custom)\n    }\n}\n#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\npub enum Type {\n    UInt,\n    Bool,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"type\", content = \"value\", deny_unknown_fields)]\npub enum Value {\n    UInt(UInt),\n    Bool(bool),\n}"
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared IR",
+      "statement": "Expression variants are LiabilityPresent,LiabilityAmount,Literal,Name,Binary,Not; BinaryOp enumerates Add/Sub/Mul/Eq/Ne/Lt/Le/Gt/Ge/And/Or. ExprId is u16.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 52,
+          "lineEnd": 90,
+          "literal": "pub type ExprId = u16;\n#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\npub enum BinaryOp {\n    Add,\n    Sub,\n    Mul,\n    Eq,\n    Ne,\n    Lt,\n    Le,\n    Gt,\n    Ge,\n    And,\n    Or,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Expr {\n    LiabilityPresent {\n        name: String,\n    },\n    LiabilityAmount {\n        name: String,\n    },\n    Literal {\n        value: Value,\n    },\n    Name {\n        name: String,\n    },\n    Binary {\n        op: BinaryOp,\n        lhs: ExprId,\n        rhs: ExprId,\n    },\n    Not {\n        value: ExprId,\n    },\n}"
+        }
+      ]
+    },
+    {
+      "id": "T03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared IR",
+      "statement": "StateDecl fields are name/ty/initial; InputDecl name/ty; AssetId network/issuer/reference/scale:u8; AssetDecl name/identity. These declarations deny unknown fields.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 91,
+          "lineEnd": 117,
+          "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct StateDecl {\n    pub name: String,\n    pub ty: Type,\n    pub initial: Value,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct InputDecl {\n    pub name: String,\n    pub ty: Type,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]\n#[serde(deny_unknown_fields)]\npub struct AssetId {\n    pub network: String,\n    pub issuer: String,\n    pub reference: String,\n    pub scale: u8,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct AssetDecl {\n    pub name: String,\n    pub identity: AssetId,\n}"
+        }
+      ]
+    },
+    {
+      "id": "T04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared IR",
+      "statement": "Statement variants and their literal fields include Await,Let,Requires,Ensures,Next,Emit,Transfer,Fee,Liability,Discharge. Program fields are language/semantics/name/states/assets/expressions/actions; Action fields name/inputs/statements.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 118,
+          "lineEnd": 187,
+          "literal": "/// Serialize-only on the shared type: decoding always goes through the frozen\n/// `v1` wire, so JSON can never yield `Await`.\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Statement {\n    Await {\n        label: String,\n        binders: Vec<InputDecl>,\n        guard: ExprId,\n    },\n    Let {\n        name: String,\n        value: ExprId,\n    },\n    Requires {\n        predicate: ExprId,\n    },\n    Ensures {\n        predicate: ExprId,\n    },\n    Next {\n        state: String,\n        value: ExprId,\n    },\n    Emit {\n        name: String,\n        value: ExprId,\n    },\n    Transfer {\n        asset: String,\n        from: String,\n        to: String,\n        amount: ExprId,\n    },\n    Fee {\n        asset: String,\n        from: String,\n        to: String,\n        amount: ExprId,\n    },\n    Liability {\n        name: String,\n        asset: String,\n        debtor: String,\n        creditor: String,\n        amount: ExprId,\n    },\n    Discharge {\n        name: String,\n        amount: ExprId,\n    },\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Action {\n    pub name: String,\n    pub inputs: Vec<InputDecl>,\n    pub statements: Vec<Statement>,\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Program {\n    pub language: String,\n    pub semantics: String,\n    pub name: String,\n    pub states: Vec<StateDecl>,\n    pub assets: Vec<AssetDecl>,\n    pub expressions: Vec<Expr>,\n    pub actions: Vec<Action>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 wire",
+      "statement": "Frozen v1 wire Statement excludes Await; shared Statement/Action/Program/Step/Execution Deserialize implementations route through v1 conversion. This is distinct from staged parsing of shared IR.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 274,
+          "lineEnd": 360,
+          "literal": "pub mod v1 {\n    use super::{AssetDecl, Effect, Expr, ExprId, InputDecl, Snapshot, StateDecl, Value};\n    use serde::{Deserialize, Serialize};\n\n    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n    #[serde(tag = \"kind\", deny_unknown_fields)]\n    pub enum Statement {\n        Let {\n            name: String,\n            value: ExprId,\n        },\n        Requires {\n            predicate: ExprId,\n        },\n        Ensures {\n            predicate: ExprId,\n        },\n        Next {\n            state: String,\n            value: ExprId,\n        },\n        Emit {\n            name: String,\n            value: ExprId,\n        },\n        Transfer {\n            asset: String,\n            from: String,\n            to: String,\n            amount: ExprId,\n        },\n        Fee {\n            asset: String,\n            from: String,\n            to: String,\n            amount: ExprId,\n        },\n        Liability {\n            name: String,\n            asset: String,\n            debtor: String,\n            creditor: String,\n            amount: ExprId,\n        },\n        Discharge {\n            name: String,\n            amount: ExprId,\n        },\n    }\n    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n    #[serde(deny_unknown_fields)]\n    pub struct Action {\n        pub name: String,\n        pub inputs: Vec<InputDecl>,\n        pub statements: Vec<Statement>,\n    }\n    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n    #[serde(deny_unknown_fields)]\n    pub struct Program {\n        pub language: String,\n        pub semantics: String,\n        pub name: String,\n        pub states: Vec<StateDecl>,\n        pub assets: Vec<AssetDecl>,\n        pub expressions: Vec<Expr>,\n        pub actions: Vec<Action>,\n    }\n    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n    #[serde(deny_unknown_fields)]\n    pub struct Step {\n        pub index: u16,\n        pub statement: Statement,\n        pub value: Option<Value>,\n        pub snapshot: Snapshot,\n        pub effects: Vec<Effect>,\n    }\n    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n    #[serde(deny_unknown_fields)]\n    pub struct Execution {\n        pub semantics: String,\n        pub action: String,\n        pub pre: Snapshot,\n        pub post: Snapshot,\n        pub steps: Vec<Step>,\n        pub effects: Vec<Effect>,\n    }\n}"
+        },
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 454,
+          "lineEnd": 465,
+          "literal": "// Every direct, nested or generic decode of a shared type (CLI, replay,\n// backend bundles) is routed through `v1`, so no decode site can be missed.\nmacro_rules! decode_via_v1 {\n    ($($ty:ident),*) => {$(\n        impl<'de> Deserialize<'de> for $ty {\n            fn deserialize<D: serde::Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {\n                v1::$ty::deserialize(decoder).map(Self::from)\n            }\n        }\n    )*};\n}\ndecode_via_v1!(Statement, Action, Program, Step, Execution);"
+        }
+      ]
+    },
+    {
+      "id": "T06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared scenario",
+      "statement": "Balance fields account/asset/amount; Liability name/asset/debtor/creditor/amount; Scenario state/inputs/balances/liabilities derives Default but these Deserialize fields have no serde(default) annotation in this declaration.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 188,
+          "lineEnd": 211,
+          "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Balance {\n    pub account: String,\n    pub asset: AssetId,\n    pub amount: UInt,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Liability {\n    pub name: String,\n    pub asset: AssetId,\n    pub debtor: String,\n    pub creditor: String,\n    pub amount: UInt,\n}\n#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Scenario {\n    pub state: BTreeMap<String, Value>,\n    pub inputs: BTreeMap<String, Value>,\n    pub balances: Vec<Balance>,\n    pub liabilities: Vec<Liability>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "T07",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared outputs",
+      "statement": "Snapshot fields are state/balances/liabilities. Effect variants are declared as State/Transfer/Fee/Liability/Emit. Step.effects and Execution.effects are Vec<Effect> sequences; this wording does not imply PartialOrd or Ord for Effect. Execution fields are semantics/action/pre/post/steps/effects; Step fields are index:u16/statement/value:Option<Value>/snapshot/effects.",
+      "citations": [
+        {
+          "inputFile": "CORE-ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "lineStart": 212,
+          "lineEnd": 270,
+          "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Snapshot {\n    pub state: BTreeMap<String, Value>,\n    pub balances: Vec<Balance>,\n    pub liabilities: Vec<Liability>,\n}\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum Effect {\n    State {\n        name: String,\n        before: Value,\n        after: Value,\n    },\n    Transfer {\n        asset: AssetId,\n        from: String,\n        to: String,\n        amount: UInt,\n    },\n    Fee {\n        asset: AssetId,\n        from: String,\n        to: String,\n        amount: UInt,\n    },\n    Liability {\n        name: String,\n        asset: AssetId,\n        debtor: String,\n        creditor: String,\n        before: UInt,\n        after: UInt,\n    },\n    Emit {\n        name: String,\n        value: Value,\n    },\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Step {\n    pub index: u16,\n    pub statement: Statement,\n    pub value: Option<Value>,\n    pub snapshot: Snapshot,\n    pub effects: Vec<Effect>,\n}\n#[derive(Debug, Clone, Serialize, PartialEq, Eq)]\n#[serde(deny_unknown_fields)]\npub struct Execution {\n    pub semantics: String,\n    pub action: String,\n    pub pre: Snapshot,\n    pub post: Snapshot,\n    pub steps: Vec<Step>,\n    pub effects: Vec<Effect>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "GR01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1/Staged2 syntax",
+      "statement": "Parser expects language quoted-profile semicolon, agreement name braces, state name:type=literal semicolon; asset identity fields occur in fixed network,issuer,reference,scale order with optional trailing comma.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 46,
+          "lineEnd": 102,
+          "literal": "    parser.expect(\"language\")?;\n    let profile = parser.string()?;\n    let expected_language = if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE };\n    if profile != expected_language {\n        return Err(parser.error(\n            \"profile\",\n            format!(\"Expected language \\\"{expected_language}\\\"; found {profile:?}.\"),\n        ));\n    }\n    parser.expect(\";\")?;\n    parser.expect(\"agreement\")?;\n    parser.program.name = parser.word()?;\n    parser.expect(\"{\")?;\n    while !parser.eat(\"}\") {\n        if parser.eat(\"state\") {\n            let name = parser.word()?;\n            parser.expect(\":\")?;\n            let ty = parser.ty()?;\n            parser.expect(\"=\")?;\n            let initial = parser.literal()?;\n            parser.expect(\";\")?;\n            parser.program.states.push(StateDecl { name, ty, initial });\n        } else if parser.eat(\"asset\") {\n            let name = parser.word()?;\n            parser.expect(\"=\")?;\n            parser.expect(\"{\")?;\n            parser.expect(\"network\")?;\n            parser.expect(\":\")?;\n            let network = parser.string()?;\n            parser.expect(\",\")?;\n            parser.expect(\"issuer\")?;\n            parser.expect(\":\")?;\n            let issuer = parser.string()?;\n            parser.expect(\",\")?;\n            parser.expect(\"reference\")?;\n            parser.expect(\":\")?;\n            let reference = parser.string()?;\n            parser.expect(\",\")?;\n            parser.expect(\"scale\")?;\n            parser.expect(\":\")?;\n            let Value::UInt(UInt(scale)) = parser.literal()? else {\n                return Err(parser.error(\"asset\", \"Asset scale must be an unsigned integer.\"));\n            };\n            let scale = u8::try_from(scale)\n                .map_err(|_| parser.error(\"asset\", \"Asset scale must fit u8.\"))?;\n            parser.eat(\",\");\n            parser.expect(\"}\")?;\n            parser.expect(\";\")?;\n            parser.program.assets.push(AssetDecl {\n                name,\n                identity: AssetId {\n                    network,\n                    issuer,\n                    reference,\n                    scale,\n                },\n            });"
+        }
+      ]
+    },
+    {
+      "id": "GR02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1/Staged2 syntax",
+      "statement": "Actions use parenthesized typed inputs and a brace-delimited statement list. The alternative input name:type; syntax may appear before any statement. Parser checks statement and total declaration bounds.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 103,
+          "lineEnd": 151,
+          "literal": "        } else if parser.eat(\"action\") {\n            let name = parser.word()?;\n            parser.expect(\"(\")?;\n            let mut inputs = vec![];\n            if !parser.eat(\")\") {\n                loop {\n                    let name = parser.word()?;\n                    parser.expect(\":\")?;\n                    let ty = parser.ty()?;\n                    inputs.push(InputDecl { name, ty });\n                    if parser.eat(\")\") {\n                        break;\n                    }\n                    parser.expect(\",\")?;\n                }\n            }\n            parser.expect(\"{\")?;\n            let mut statements = vec![];\n            while !parser.eat(\"}\") {\n                if parser.eat(\"input\") {\n                    if !statements.is_empty() {\n                        return Err(\n                            parser.error(\"input\", \"Declare action inputs before statements.\")\n                        );\n                    }\n                    let name = parser.word()?;\n                    parser.expect(\":\")?;\n                    let ty = parser.ty()?;\n                    parser.expect(\";\")?;\n                    inputs.push(InputDecl { name, ty });\n                    continue;\n                }\n                statements.push(parser.statement()?);\n                if statements.len() > MAX_STATEMENTS {\n                    return Err(parser.error(\"bound\", \"Action exceeds 1,024 statements.\"));\n                }\n            }\n            parser.program.actions.push(Action {\n                name,\n                inputs,\n                statements,\n            });\n        } else {\n            return Err(parser.error(\"unsupported\", \"Expected state, asset or action declaration; loops and native calls are unsupported.\"));\n        }\n        if parser.program.states.len() + parser.program.assets.len() + parser.program.actions.len()\n            > MAX_DECLARATIONS\n        {\n            return Err(parser.error(\"bound\", \"Program exceeds 256 declarations.\"));"
+        }
+      ]
+    },
+    {
+      "id": "GR03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1/Staged2 syntax",
+      "statement": "ty() recognizes UInt/Bool. literal() handles true/false or Number tokens after removing underscores, parsing u128. push() refuses expression count at8192.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 217,
+          "lineEnd": 250,
+          "literal": "    fn ty(&mut self) -> Result<Type, Error> {\n        match self.word()?.as_str() {\n            \"UInt\" => Ok(Type::UInt),\n            \"Bool\" => Ok(Type::Bool),\n            _ => Err(self.error(\"type\", \"Supported types are UInt and Bool.\")),\n        }\n    }\n    fn literal(&mut self) -> Result<Value, Error> {\n        if self.eat(\"true\") {\n            return Ok(Value::Bool(true));\n        }\n        if self.eat(\"false\") {\n            return Ok(Value::Bool(false));\n        }\n        if self.peek().kind != TokenKind::Number {\n            return Err(self.error(\"syntax\", \"Expected an unsigned integer or boolean literal.\"));\n        }\n        let raw = self.peek().text.replace('_', \"\");\n        let n = raw.parse::<u128>().map_err(|_| {\n            self.error(\n                \"number\",\n                \"UInt literal must fit u128; amounts use integral atomic units.\",\n            )\n        })?;\n        self.pos += 1;\n        Ok(Value::UInt(UInt(n)))\n    }\n    fn push(&mut self, expr: Expr) -> Result<ExprId, Error> {\n        if self.program.expressions.len() >= MAX_EXPRESSIONS {\n            return Err(self.error(\"bound\", \"Program exceeds 8,192 expression nodes.\"));\n        }\n        let id = self.program.expressions.len() as u16;\n        self.program.expressions.push(expr);\n        Ok(id)"
+        }
+      ]
+    },
+    {
+      "id": "GR04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1/Staged2 syntax",
+      "statement": "Expressions parse parentheses/not, literals, names and liability_present/amount with quoted names; source depth check is greater than64. Operator precedence branches are or1,and2,comparison3,+/-4,*5.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 252,
+          "lineEnd": 305,
+          "literal": "    fn expr(&mut self, minimum: u8, depth: usize) -> Result<ExprId, Error> {\n        if depth > 64 {\n            return Err(self.error(\"bound\", \"Expression nesting exceeds 64.\"));\n        }\n        let mut lhs = if self.eat(\"(\") {\n            let e = self.expr(0, depth + 1)?;\n            self.expect(\")\")?;\n            e\n        } else if self.eat(\"not\") {\n            let value = self.expr(6, depth + 1)?;\n            self.push(Expr::Not { value })?\n        } else if self.peek().kind == TokenKind::Number\n            || self.peek().text == \"true\"\n            || self.peek().text == \"false\"\n        {\n            let value = self.literal()?;\n            self.push(Expr::Literal { value })?\n        } else {\n            let name = self.word()?;\n            if matches!(name.as_str(), \"liability_present\" | \"liability_amount\") && self.eat(\"(\") {\n                let duty = self.string()?;\n                self.expect(\")\")?;\n                self.push(if name == \"liability_present\" {\n                    Expr::LiabilityPresent { name: duty }\n                } else {\n                    Expr::LiabilityAmount { name: duty }\n                })?\n            } else {\n                self.push(Expr::Name { name })?\n            }\n        };\n        loop {\n            // A decoded string spelling an operator is still a string token.\n            if self.peek().kind == TokenKind::String {\n                break;\n            }\n            let next = self\n                .tokens\n                .get(self.pos + 1)\n                .filter(|t| t.kind != TokenKind::String)\n                .map(|t| t.text.as_str());\n            let (op, precedence, length) = match (self.peek().text.as_str(), next) {\n                (\"or\", _) => (BinaryOp::Or, 1, 1),\n                (\"and\", _) => (BinaryOp::And, 2, 1),\n                (\"=\", Some(\"=\")) => (BinaryOp::Eq, 3, 2),\n                (\"not\", Some(\"=\")) => (BinaryOp::Ne, 3, 2),\n                (\"<\", Some(\"=\")) => (BinaryOp::Le, 3, 2),\n                (\">\", Some(\"=\")) => (BinaryOp::Ge, 3, 2),\n                (\"<\", _) => (BinaryOp::Lt, 3, 1),\n                (\">\", _) => (BinaryOp::Gt, 3, 1),\n                (\"+\", _) => (BinaryOp::Add, 4, 1),\n                (\"-\", _) => (BinaryOp::Sub, 4, 1),\n                (\"*\", _) => (BinaryOp::Mul, 5, 1),\n                _ => break,"
+        }
+      ]
+    },
+    {
+      "id": "GR05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1/Staged2 syntax",
+      "statement": "Statement parser names let,next,requires,ensures,emit,transfer,fee,liability,discharge and semicolon terminators. Await grammar is label(binders) when expression and is gated on LANGUAGE_2.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 316,
+          "lineEnd": 347,
+          "literal": "    fn statement(&mut self) -> Result<Statement, Error> {\n        let keyword = self.word()?;\n        let s=match keyword.as_str() {\n            \"await\" if self.program.language == crate::stage::LANGUAGE_2 => {\n                let label = self.word()?;\n                self.expect(\"(\")?;\n                let mut binders = Vec::new();\n                if !self.eat(\")\") {\n                    loop {\n                        let name = self.word()?;\n                        self.expect(\":\")?;\n                        let ty = self.ty()?;\n                        binders.push(InputDecl { name, ty });\n                        if self.eat(\")\") { break; }\n                        self.expect(\",\")?;\n                    }\n                }\n                self.expect(\"when\")?;\n                Statement::Await { label, binders, guard: self.expr(0, 0)? }\n            },\n            \"let\"=>{let name=self.word()?;self.expect(\"=\")?;Statement::Let{name,value:self.expr(0,0)?}},\n            \"next\"=>{let state=self.word()?;self.expect(\"=\")?;Statement::Next{state,value:self.expr(0,0)?}},\n            \"requires\"=>Statement::Requires{predicate:self.expr(0,0)?},\n            \"ensures\"=>Statement::Ensures{predicate:self.expr(0,0)?},\n            \"emit\"=>{let name=self.string()?;self.expect(\"(\")?;let value=self.expr(0,0)?;self.expect(\")\")?;Statement::Emit{name,value}},\n            \"transfer\"|\"fee\"=>{self.expect(\"(\")?;let asset=self.word()?;self.expect(\",\")?;let from=self.string()?;self.expect(\",\")?;let to=self.string()?;self.expect(\",\")?;let amount=self.expr(0,0)?;self.expect(\")\")?;if keyword==\"fee\"{Statement::Fee{asset,from,to,amount}}else{Statement::Transfer{asset,from,to,amount}}},\n            \"liability\"=>{self.expect(\"(\")?;let name=self.string()?;self.expect(\",\")?;let asset=self.word()?;self.expect(\",\")?;let debtor=self.string()?;self.expect(\",\")?;let creditor=self.string()?;self.expect(\",\")?;let amount=self.expr(0,0)?;self.expect(\")\")?;Statement::Liability{name,asset,debtor,creditor,amount}},\n            \"discharge\"=>{self.expect(\"(\")?;let name=self.string()?;self.expect(\",\")?;let amount=self.expr(0,0)?;self.expect(\")\")?;Statement::Discharge{name,amount}},\n            _=>return Err(self.error(\"unsupported\",format!(\"Unsupported statement {keyword:?}; use let, requires, ensures, next, emit, transfer, fee, liability or discharge.\"))),\n        };\n        self.expect(\";\")?;\n        Ok(s)"
+        }
+      ]
+    },
+    {
+      "id": "V01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1",
+      "statement": "validate begins with exact language/semantics, agreement identifier, at least1 action and total declaration/expression bounds; state/asset declaration names and action names are checked in separate uniqueness passes.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 120,
+          "lineEnd": 152,
+          "literal": "pub fn validate(program: &Program) -> Result<(), Error> {\n    if program.language != LANGUAGE || program.semantics != SEMANTICS {\n        return Err(failure(\n            \"profile\",\n            \"Unsupported language or semantics identity.\",\n        ));\n    }\n    if !identifier(&program.name) {\n        return Err(failure(\n            \"name\",\n            \"Agreement name must be a non-reserved ASCII identifier of at most 64 bytes.\",\n        ));\n    }\n    if program.actions.is_empty() {\n        return Err(failure(\"program\", \"Program needs at least one action.\"));\n    }\n    if program.states.len() + program.assets.len() + program.actions.len() > MAX_DECLARATIONS\n        || program.expressions.len() > MAX_EXPRESSIONS\n    {\n        return Err(failure(\n            \"bound\",\n            \"Program exceeds finite declaration/expression bounds.\",\n        ));\n    }\n    names(\n        program\n            .states\n            .iter()\n            .map(|s| s.name.as_str())\n            .chain(program.assets.iter().map(|a| a.name.as_str())),\n        \"declaration\",\n    )?;\n    names(program.actions.iter().map(|a| a.name.as_str()), \"action\")?;"
+        }
+      ]
+    },
+    {
+      "id": "V02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1",
+      "statement": "identifier source predicate uses ASCII letter first, <=64 bytes and alphanumeric/underscore rest, excluding the literal reserved list. Assets require nonempty <=1024-byte network/issuer/reference, scale<=38, identity uniqueness and matching scales for equal triples.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 8,
+          "lineEnd": 38,
+          "literal": "pub(crate) fn identifier(name: &str) -> bool {\n    let mut bytes = name.bytes();\n    matches!(bytes.next(), Some(b'A'..=b'Z' | b'a'..=b'z'))\n        && name.len() <= 64\n        && bytes.all(|b| b.is_ascii_alphanumeric() || b == b'_')\n        && !matches!(\n            name,\n            \"language\"\n                | \"agreement\"\n                | \"state\"\n                | \"asset\"\n                | \"action\"\n                | \"input\"\n                | \"let\"\n                | \"next\"\n                | \"requires\"\n                | \"ensures\"\n                | \"emit\"\n                | \"transfer\"\n                | \"fee\"\n                | \"liability\"\n                | \"discharge\"\n                | \"true\"\n                | \"false\"\n                | \"and\"\n                | \"or\"\n                | \"not\"\n                | \"UInt\"\n                | \"Bool\"\n        )\n}"
+        },
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 153,
+          "lineEnd": 181,
+          "literal": "    let mut identities = BTreeSet::new();\n    for asset in &program.assets {\n        let id = &asset.identity;\n        if id.network.is_empty()\n            || id.issuer.is_empty()\n            || id.reference.is_empty()\n            || id.network.len() > 1024\n            || id.issuer.len() > 1024\n            || id.reference.len() > 1024\n            || id.scale > 38\n            || !identities.insert(id)\n        {\n            return Err(failure(\n                \"asset\",\n                \"Asset identities must be complete, unique and use scale 0..38.\",\n            ));\n        }\n        if program.assets.iter().any(|other| {\n            other.identity.network == id.network\n                && other.identity.issuer == id.issuer\n                && other.identity.reference == id.reference\n                && other.identity.scale != id.scale\n        }) {\n            return Err(failure(\n                \"asset\",\n                \"Same asset identity cannot have conflicting scales.\",\n            ));\n        }\n    }"
+        }
+      ]
+    },
+    {
+      "id": "V03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1",
+      "statement": "Expression references must point to earlier nodes, derived depth<=64. Initial state values must match types. Action inputs<=256/statements<=1024; inputs cannot shadow declarations.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 182,
+          "lineEnd": 232,
+          "literal": "    let mut depths = Vec::with_capacity(program.expressions.len());\n    for (i, e) in program.expressions.iter().enumerate() {\n        let refs = match e {\n            Expr::Binary { lhs, rhs, .. } => vec![*lhs, *rhs],\n            Expr::Not { value } => vec![*value],\n            _ => vec![],\n        };\n        let mut depth = 0;\n        for r in refs {\n            if usize::from(r) >= i {\n                return Err(failure(\n                    \"expression\",\n                    \"Expression references must point to earlier nodes; cycles are forbidden.\",\n                ));\n            }\n            depth = depth.max(depths[usize::from(r)] + 1);\n        }\n        if depth > 64 {\n            return Err(failure(\"bound\", \"Expression depth exceeds 64.\"));\n        }\n        depths.push(depth);\n    }\n    let state_types: BTreeMap<_, _> = program\n        .states\n        .iter()\n        .map(|s| (s.name.clone(), s.ty))\n        .collect();\n    for state in &program.states {\n        if state.initial.ty() != state.ty {\n            return Err(failure(\n                \"type\",\n                format!(\"Initial state {:?} has wrong type.\", state.name),\n            ));\n        }\n    }\n    for action in &program.actions {\n        if action.inputs.len() > MAX_DECLARATIONS || action.statements.len() > MAX_STATEMENTS {\n            return Err(failure(\n                \"bound\",\n                \"Action exceeds input or statement bounds.\",\n            ));\n        }\n        names(action.inputs.iter().map(|i| i.name.as_str()), \"input\")?;\n        let mut env = state_types.clone();\n        for input in &action.inputs {\n            if env.insert(input.name.clone(), input.ty).is_some()\n                || program.assets.iter().any(|a| a.name == input.name)\n            {\n                return Err(failure(\"duplicate\", \"Input cannot shadow a declaration.\"));\n            }\n        }"
+        }
+      ]
+    },
+    {
+      "id": "V04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1",
+      "statement": "validate walks statements in order: Await profile error; Let adds a typed nonshadowing name; predicates require Bool; Next requires known state/matching type; effect names/account/duty strings and UInt amounts are checked in the displayed branches.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 233,
+          "lineEnd": 319,
+          "literal": "        for statement in &action.statements {\n            match statement {\n                // Same identity as `stage::require_core1`; only an in-memory\n                // program can carry Await here, since `/1` JSON cannot.\n                Statement::Await { .. } => {\n                    return Err(failure(\"profile\", \"Await requires moriarty-core/2.\"));\n                }\n                Statement::Let { name, value } => {\n                    let ty = expr_type(program, *value, &env, 0)?;\n                    if !identifier(name)\n                        || env.insert(name.clone(), ty).is_some()\n                        || program.assets.iter().any(|a| a.name == *name)\n                    {\n                        return Err(failure(\"duplicate\", \"let cannot shadow an existing name.\"));\n                    }\n                }\n                Statement::Requires { predicate } | Statement::Ensures { predicate } => {\n                    if expr_type(program, *predicate, &env, 0)? != Type::Bool {\n                        return Err(failure(\"type\", \"Predicate must have type Bool.\"));\n                    }\n                }\n                Statement::Next { state, value } => {\n                    let expected = state_types\n                        .get(state)\n                        .ok_or_else(|| failure(\"name\", format!(\"Unknown state {state:?}.\")))?;\n                    if expr_type(program, *value, &env, 0)? != *expected {\n                        return Err(failure(\"type\", \"State update has wrong type.\"));\n                    }\n                }\n                Statement::Emit { name, value } => {\n                    if name.is_empty() || name.len() > 1024 {\n                        return Err(failure(\"name\", \"Event name must contain 1..1024 bytes.\"));\n                    }\n                    expr_type(program, *value, &env, 0)?;\n                }\n                Statement::Transfer {\n                    asset,\n                    from,\n                    to,\n                    amount,\n                }\n                | Statement::Fee {\n                    asset,\n                    from,\n                    to,\n                    amount,\n                } => {\n                    validate_asset(program, asset)?;\n                    if from.is_empty() || to.is_empty() || from.len() > 1024 || to.len() > 1024 {\n                        return Err(failure(\"account\", \"Account identities cannot be empty.\"));\n                    }\n                    require_uint(program, *amount, &env)?;\n                }\n                Statement::Liability {\n                    name,\n                    asset,\n                    debtor,\n                    creditor,\n                    amount,\n                } => {\n                    validate_asset(program, asset)?;\n                    if name.is_empty()\n                        || debtor.is_empty()\n                        || creditor.is_empty()\n                        || name.len() > 1024\n                        || debtor.len() > 1024\n                        || creditor.len() > 1024\n                    {\n                        return Err(failure(\n                            \"liability\",\n                            \"Liability identities cannot be empty.\",\n                        ));\n                    }\n                    require_uint(program, *amount, &env)?;\n                }\n                Statement::Discharge { name, amount } => {\n                    if name.is_empty() || name.len() > 1024 {\n                        return Err(failure(\n                            \"liability\",\n                            \"Liability name must contain 1..1024 bytes.\",\n                        ));\n                    }\n                    require_uint(program, *amount, &env)?;\n                }\n            }\n        }\n    }"
+        }
+      ]
+    },
+    {
+      "id": "V05",
+      "classification": "CALL_EDGE",
+      "profile": "Core1/Staged2",
+      "statement": "Core1 validate and staged validate_v2 both call validate_liability_reads. That function resolves read names against Liability declarations across all actions and checks matching source identities for read names.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 320,
+          "lineEnd": 372,
+          "literal": "    validate_liability_reads(program)?;\n    Ok(())\n}\n// New reads require a source-fixed identity. Legacy Core external duties and\n// discharge-only programs keep their existing validation rules.\npub(crate) fn validate_liability_reads(p: &Program) -> Result<(), Error> {\n    let mut reads = BTreeMap::new();\n    for expr in &p.expressions {\n        if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expr {\n            if name.is_empty() || name.len() > 1024 {\n                return Err(failure(\n                    \"liability\",\n                    \"Liability read name must contain 1..1024 bytes.\",\n                ));\n            }\n            reads.insert(name.as_str(), None);\n        }\n    }\n    for stmt in p.actions.iter().flat_map(|a| &a.statements) {\n        if let Statement::Liability {\n            name,\n            asset,\n            debtor,\n            creditor,\n            ..\n        } = stmt\n        {\n            if let Some(found) = reads.get_mut(name.as_str()) {\n                let identity = (\n                    validate_asset(p, asset)?,\n                    debtor.as_str(),\n                    creditor.as_str(),\n                );\n                if found.is_some_and(|previous| previous != identity) {\n                    return Err(failure(\n                        \"liability\",\n                        format!(\"Conflicting source liability identity for {name:?}.\"),\n                    ));\n                }\n                *found = Some(identity);\n            }\n        }\n    }\n    for (name, identity) in reads {\n        if identity.is_none() {\n            return Err(failure(\n                \"liability\",\n                format!(\"Liability read {name:?} has no source-derived identity.\"),\n            ));\n        }\n    }\n    Ok(())\n}"
+        },
+        {
+          "inputFile": "CORE-stage-validate.rs",
+          "sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+          "lineStart": 284,
+          "lineEnd": 285,
+          "literal": "    validate_liability_reads(program)?;\n    Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "V06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2",
+      "statement": "validate_v2 additionally reserves await/when; validates16 awaits/action,16 binders/await,256 captures before a site, unique labels/nonshadowing binders, and Bool guard after adding its own binders.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-validate.rs",
+          "sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+          "lineStart": 28,
+          "lineEnd": 43,
+          "literal": "/// Legacy identifier rule with `await` and `when` also reserved (C6).\nfn identifier_v2(name: &str) -> bool {\n    identifier(name) && !matches!(name, \"await\" | \"when\")\n}\n\nfn names_v2<'a>(values: impl Iterator<Item = &'a str>, kind: &str) -> Result<(), Error> {\n    let mut seen = BTreeSet::new();\n    for name in values {\n        if !identifier_v2(name) || !seen.insert(name) {\n            return Err(failure(\n                \"duplicate\",\n                format!(\"Invalid or duplicate {kind} name {name:?}.\"),\n            ));\n        }\n    }\n    Ok(())"
+        },
+        {
+          "inputFile": "CORE-stage-validate.rs",
+          "sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+          "lineStart": 144,
+          "lineEnd": 211,
+          "literal": "    for action in &program.actions {\n        if action.inputs.len() > MAX_DECLARATIONS || action.statements.len() > MAX_STATEMENTS {\n            return Err(failure(\n                \"bound\",\n                \"Action exceeds input or statement bounds.\",\n            ));\n        }\n        names_v2(action.inputs.iter().map(|i| i.name.as_str()), \"input\")?;\n        let mut env = state_types.clone();\n        for input in &action.inputs {\n            if env.insert(input.name.clone(), input.ty).is_some()\n                || program.assets.iter().any(|a| a.name == input.name)\n            {\n                return Err(failure(\"duplicate\", \"Input cannot shadow a declaration.\"));\n            }\n        }\n        let mut labels = BTreeSet::new();\n        let mut awaits = 0_usize;\n        // Inputs, lets and earlier binders: the captures of the next site.\n        let mut captured = action.inputs.len();\n        for statement in &action.statements {\n            match statement {\n                Statement::Await {\n                    label,\n                    binders,\n                    guard,\n                } => {\n                    awaits += 1;\n                    if awaits > MAX_AWAITS_PER_ACTION {\n                        return Err(failure(\"bound\", \"Action exceeds 16 awaits.\"));\n                    }\n                    if binders.len() > MAX_EVENT_BINDERS {\n                        return Err(failure(\"bound\", \"Await exceeds 16 event binders.\"));\n                    }\n                    if captured > MAX_CAPTURE_SLOTS {\n                        return Err(failure(\"bound\", \"Await site exceeds 256 capture slots.\"));\n                    }\n                    if !identifier_v2(label) || !labels.insert(label.as_str()) {\n                        return Err(failure(\n                            \"duplicate\",\n                            format!(\"Invalid or duplicate await label {label:?}.\"),\n                        ));\n                    }\n                    for binder in binders {\n                        if !identifier_v2(&binder.name)\n                            || env.insert(binder.name.clone(), binder.ty).is_some()\n                            || program.assets.iter().any(|a| a.name == binder.name)\n                        {\n                            return Err(failure(\n                                \"duplicate\",\n                                \"Await binder cannot shadow an existing name.\",\n                            ));\n                        }\n                    }\n                    if expr_type(program, *guard, &env, 0)? != Type::Bool {\n                        return Err(failure(\"type\", \"Await guard must have type Bool.\"));\n                    }\n                    captured += binders.len();\n                }\n                Statement::Let { name, value } => {\n                    let ty = expr_type(program, *value, &env, 0)?;\n                    if !identifier_v2(name)\n                        || env.insert(name.clone(), ty).is_some()\n                        || program.assets.iter().any(|a| a.name == *name)\n                    {\n                        return Err(failure(\"duplicate\", \"let cannot shadow an existing name.\"));\n                    }\n                    captured += 1;"
+        }
+      ]
+    },
+    {
+      "id": "V07",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2",
+      "statement": "Stage plan build records inputs first, then Lets and earlier event binders as captures; Await sites numbered1..N save the current capture vector. plan_invariants separately reconstructs expected sites and checks ordered sites/prefix captures before costing.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-plan.rs",
+          "sha256": "e29954e5c5f028e75f4f4f74ccf86c4eeda8f59c0be6dbbe5714bf30a200d3d3",
+          "lineStart": 55,
+          "lineEnd": 106,
+          "literal": "/// Builds layouts after validate_v2. Costs and hashes are filled by stage::load.\npub(crate) fn build(program: &Program) -> Result<StagePlan, Error> {\n    let mut actions = Vec::new();\n    for action in &program.actions {\n        let mut types: BTreeMap<_, _> = program.states.iter()\n            .map(|state| (state.name.clone(), state.ty)).collect();\n        let mut captures = Vec::new();\n        for (ordinal, input) in action.inputs.iter().enumerate() {\n            types.insert(input.name.clone(), input.ty);\n            captures.push(CaptureSlot {\n                name: input.name.clone(), ty: input.ty,\n                origin: Origin::Input, ordinal: ordinal as u16,\n            });\n        }\n        let mut sites = Vec::new();\n        for (ordinal, statement) in action.statements.iter().enumerate() {\n            match statement {\n                Statement::Let { name, value } => {\n                    let ty = crate::runtime::expr_type(program, *value, &types, 0)?;\n                    types.insert(name.clone(), ty);\n                    captures.push(CaptureSlot {\n                        name: name.clone(), ty, origin: Origin::Let, ordinal: ordinal as u16,\n                    });\n                }\n                Statement::Await { label, binders, .. } => {\n                    sites.push(AwaitSite {\n                        site: sites.len() as u16 + 1,\n                        ordinal: ordinal as u16,\n                        label: label.clone(),\n                        binders: binders.iter().map(StageBinder::from).collect(),\n                        captures: captures.clone(),\n                    });\n                    for binder in binders {\n                        types.insert(binder.name.clone(), binder.ty);\n                        captures.push(CaptureSlot {\n                            name: binder.name.clone(), ty: binder.ty,\n                            origin: Origin::Event, ordinal: ordinal as u16,\n                        });\n                    }\n                }\n                _ => {}\n            }\n        }\n        actions.push(ActionPlan {\n            action: action.name.clone(), statement_count: action.statements.len() as u16,\n            sites, segment_cost: Vec::new(), committed_before: Vec::new(), plan_total: UInt(0),\n        });\n    }\n    Ok(StagePlan {\n        format: \"moriarty-stage-plan/1\".into(), program_hash: String::new(), actions,\n    })\n}"
+        },
+        {
+          "inputFile": "CORE-stage-validate.rs",
+          "sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+          "lineStart": 288,
+          "lineEnd": 310,
+          "literal": "/// Independently re-derives each action's sites and capture layouts and\n/// requires the Sol-built plan to equal them, then checks the A3 predicates\n/// explicitly. Runs before costing, so cost vectors and hash must be empty.\npub(crate) fn plan_invariants(program: &Program, plan: &StagePlan) -> Result<(), Error> {\n    if plan.format != STAGE_PLAN_FORMAT {\n        return Err(invariant(\"format\"));\n    }\n    if !plan.program_hash.is_empty() {\n        return Err(invariant(\"program hash filled before costing\"));\n    }\n    if plan.actions.len() != program.actions.len() {\n        return Err(invariant(\"action count\"));\n    }\n    let state_names: BTreeSet<_> = program.states.iter().map(|s| s.name.as_str()).collect();\n    for (action, ap) in program.actions.iter().zip(&plan.actions) {\n        if ap.action != action.name || usize::from(ap.statement_count) != action.statements.len()\n        {\n            return Err(invariant(\"action identity\"));\n        }\n        if !ap.segment_cost.is_empty() || !ap.committed_before.is_empty() || ap.plan_total != UInt(0)\n        {\n            return Err(invariant(\"costs filled before costing\"));\n        }"
+        },
+        {
+          "inputFile": "CORE-stage-validate.rs",
+          "sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+          "lineStart": 341,
+          "lineEnd": 409,
+          "literal": "                Statement::Await { label, binders, .. } => {\n                    expected.push(AwaitSite {\n                        site: u16::try_from(expected.len() + 1).map_err(|_| invariant(\"site\"))?,\n                        ordinal,\n                        label: label.clone(),\n                        binders: binders.iter().map(StageBinder::from).collect(),\n                        captures: slots.clone(),\n                    });\n                    for binder in binders {\n                        types.insert(binder.name.clone(), binder.ty);\n                        slots.push(CaptureSlot {\n                            name: binder.name.clone(),\n                            ty: binder.ty,\n                            origin: Origin::Event,\n                            ordinal,\n                        });\n                    }\n                }\n                _ => {}\n            }\n        }\n        if ap.sites != expected {\n            return Err(invariant(\"sites differ from source\"));\n        }\n        // Explicit A3 predicates, stated separately from the derivation.\n        if ap.sites.len() > MAX_AWAITS_PER_ACTION {\n            return Err(failure(\"bound\", \"Action exceeds 16 awaits.\"));\n        }\n        let mut previous: Option<&AwaitSite> = None;\n        for (index, site) in ap.sites.iter().enumerate() {\n            if usize::from(site.site) != index + 1 {\n                return Err(invariant(\"sites are not numbered 1..N\"));\n            }\n            if previous.is_some_and(|p| p.ordinal >= site.ordinal) {\n                return Err(invariant(\"ordinals are not strictly increasing\"));\n            }\n            if site.binders.len() > MAX_EVENT_BINDERS || site.captures.len() > MAX_CAPTURE_SLOTS {\n                return Err(failure(\"bound\", \"Await site exceeds stage layout bounds.\"));\n            }\n            let inputs = action.inputs.len();\n            if site.captures.len() < inputs\n                || site.captures[..inputs]\n                    .iter()\n                    .zip(&action.inputs)\n                    .enumerate()\n                    .any(|(i, (slot, input))| {\n                        slot.origin != Origin::Input\n                            || slot.name != input.name\n                            || slot.ty != input.ty\n                            || usize::from(slot.ordinal) != i\n                    })\n            {\n                return Err(invariant(\"captures do not begin with all inputs\"));\n            }\n            let mut seen = BTreeSet::new();\n            for slot in &site.captures {\n                if state_names.contains(slot.name.as_str())\n                    || !seen.insert(slot.name.as_str())\n                    || (slot.origin != Origin::Input && slot.ordinal >= site.ordinal)\n                {\n                    return Err(invariant(\"capture names a state, repeats or follows its site\"));\n                }\n            }\n            if let Some(p) = previous {\n                if !site.captures.starts_with(&p.captures) {\n                    return Err(invariant(\"captures are not prefix-monotone\"));\n                }\n            }\n            previous = Some(site);"
+        }
+      ]
+    },
+    {
+      "id": "J01",
+      "classification": "CALL_EDGE",
+      "profile": "driver JSON",
+      "statement": "parse_json checks1MiB bytes and UTF8, calls Core parse_limited, then serde_json::from_value. No project code was invoked in this inspection.",
+      "citations": [
+        {
+          "inputFile": "S03-input.rs",
+          "sha256": "646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42",
+          "lineStart": 53,
+          "lineEnd": 62,
+          "literal": "/// Strict JSON decoding of `bytes` into `T`.\npub fn parse_json<T: DeserializeOwned>(bytes: &[u8], what: &str) -> Result<T, DriverError> {\n    if bytes.len() > MAX_JSON_BYTES {\n        return Err(DriverError::Input(format!(\"{what}: {} bytes exceed the JSON bound\", bytes.len())));\n    }\n    let text = std::str::from_utf8(bytes).map_err(|_| DriverError::Input(format!(\"{what}: not UTF-8\")))?;\n    let value = mori_core::json::parse_limited(text, MAX_JSON_BYTES, \"JSON input exceeds the driver bound\")\n        .map_err(|e| DriverError::Input(format!(\"{what}: {e}\")))?;\n    serde_json::from_value(value).map_err(|e| DriverError::Input(format!(\"{what}: {e}\")))\n}"
+        }
+      ]
+    },
+    {
+      "id": "J02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core JSON",
+      "statement": "parse_limited supplies a caller byte cap; parse_inner checks text length, deserializes with Seed, then calls deserializer.end(). Seed bounds source depth32/nodes65536, and object visitor rejects repeated decoded keys.",
+      "citations": [
+        {
+          "inputFile": "CORE-json.rs",
+          "sha256": "faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183",
+          "lineStart": 13,
+          "lineEnd": 19,
+          "literal": "    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<Value, D::Error> {\n        use serde::de::Error as _;\n        self.nodes.set(self.nodes.get() + 1);\n        if self.depth > 32 || self.nodes.get() > 65_536 {\n            return Err(D::Error::custom(\"JSON work/depth limit\"));\n        }\n        d.deserialize_any(self)"
+        },
+        {
+          "inputFile": "CORE-json.rs",
+          "sha256": "faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183",
+          "lineStart": 50,
+          "lineEnd": 74,
+          "literal": "    fn visit_seq<A: SeqAccess<'de>>(self, mut a: A) -> Result<Value, A::Error> {\n        let mut out = Vec::new();\n        while let Some(v) = a.next_element_seed(Seed {\n            depth: self.depth + 1,\n            nodes: self.nodes,\n        })? {\n            out.push(v)\n        }\n        Ok(Value::Array(out))\n    }\n    fn visit_map<A: MapAccess<'de>>(self, mut a: A) -> Result<Value, A::Error> {\n        use serde::de::Error as _;\n        let mut out = Map::new();\n        while let Some(k) = a.next_key::<String>()? {\n            if out.contains_key(&k) {\n                return Err(A::Error::custom(\"duplicate decoded key\"));\n            }\n            let v = a.next_value_seed(Seed {\n                depth: self.depth + 1,\n                nodes: self.nodes,\n            })?;\n            out.insert(k, v);\n        }\n        Ok(Value::Object(out))\n    }"
+        },
+        {
+          "inputFile": "CORE-json.rs",
+          "sha256": "faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183",
+          "lineStart": 87,
+          "lineEnd": 111,
+          "literal": "pub fn parse(text: &str) -> Result<Value, Error> {\n    parse_inner(text, MAX_BYTES, \"JSON exceeds 1 MiB\")\n}\n/// The same strict parser under a caller-selected byte ceiling. Duplicate-key,\n/// depth (32) and node (65,536) limits are unchanged; `/2` stage files use it.\npub fn parse_limited(text: &str, max: usize, too_large: &'static str) -> Result<Value, Error> {\n    parse_inner(text, max, too_large)\n}\nfn parse_inner(text: &str, max: usize, too_large: &'static str) -> Result<Value, Error> {\n    use serde::de::DeserializeSeed;\n    if text.len() > max {\n        return Err(Error::new(\"json\", too_large));\n    }\n    let nodes = Cell::new(0);\n    let mut decoder = serde_json::Deserializer::from_str(text);\n    let value = Seed {\n        depth: 0,\n        nodes: &nodes,\n    }\n    .deserialize(&mut decoder)\n    .map_err(|e| Error::new(\"json\", e.to_string()))?;\n    decoder\n        .end()\n        .map_err(|e| Error::new(\"json\", e.to_string()))?;\n    Ok(value)"
+        }
+      ]
+    },
+    {
+      "id": "J03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "driver selectors",
+      "statement": "Selector uses camelCase/deny_unknown_fields: format/language/semantics/action/adapter/cap/accounting/frame are required fields; expectedSourceSha256 and expectedProgramHash explicitly default to None when absent.",
+      "citations": [
+        {
+          "inputFile": "S03-input.rs",
+          "sha256": "646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42",
+          "lineStart": 64,
+          "lineEnd": 83,
+          "literal": "/// Which relation to compile. Every option is spelled out; the driver supports exactly one\n/// value of each and refuses the rest (see [`crate::relation::check_selector`]).\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields, rename_all = \"camelCase\")]\npub struct RelationSelector {\n    pub format: String,\n    pub language: String,\n    pub semantics: String,\n    pub action: String,\n    pub adapter: String,\n    pub cap: String,\n    pub accounting: String,\n    pub frame: String,\n    /// Optional pin: lowercase hex SHA-256 of the raw source bytes.\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub expected_source_sha256: Option<String>,\n    /// Optional pin: lowercase hex canonical typed-Program hash.\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub expected_program_hash: Option<String>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "J04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "driver request",
+      "statement": "TransitionInput has required kind tag: CoreReference{scenario} or Records{inputs,pre,post,effects}. ProveRequest has format/selector/transition/context; ContextInput lists typed networkId:u8,consumedIx:u16,seq:u64 plus strings and optional vkDigest(default None).",
+      "citations": [
+        {
+          "inputFile": "S03-input.rs",
+          "sha256": "646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42",
+          "lineStart": 85,
+          "lineEnd": 120,
+          "literal": "/// The claimed transition, as a proposal. There is no default kind.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum TransitionInput {\n    /// Core `simulate` proposes the transition for this scenario.\n    CoreReference { scenario: Scenario },\n    /// Explicit typed records: inputs, pre and post snapshots and ordered effects.\n    Records { inputs: BTreeMap<String, Value>, pre: Snapshot, post: Snapshot, effects: Vec<Effect> },\n}\n\n/// Per-proof context bytes, as caller-declared premises. The VK digest is derived from the\n/// VK actually used; if a request restates it, the two must be equal.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields, rename_all = \"camelCase\")]\npub struct ContextInput {\n    pub claimant_vkh: String,\n    pub network_id: u8,\n    pub settle_hash: String,\n    pub thread_id: String,\n    pub consumed_txid: String,\n    pub consumed_ix: u16,\n    pub seq: u64,\n    pub catalogue_digest: String,\n    pub intents_digest: String,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub vk_digest: Option<String>,\n}\n\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields, rename_all = \"camelCase\")]\npub struct ProveRequest {\n    pub format: String,\n    pub selector: RelationSelector,\n    pub transition: TransitionInput,\n    pub context: ContextInput,\n}"
+        }
+      ]
+    },
+    {
+      "id": "J05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "driver input bounds",
+      "statement": "Source reader bound262144B, JSON bound1048576B; read_bounded requires a regular file and checks before/after read size. These are source branches, not reads performed by this task.",
+      "citations": [
+        {
+          "inputFile": "S03-input.rs",
+          "sha256": "646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42",
+          "lineStart": 16,
+          "lineEnd": 21,
+          "literal": "/// Source text ceiling (bytes).\npub const MAX_SOURCE_BYTES: u64 = 262_144;\n/// JSON document ceiling; equal to Core's own `json::parse` ceiling.\npub const MAX_JSON_BYTES: usize = 1_048_576;\n/// Proving-key file ceiling. The real size is unmeasured; a larger key is refused, not read.\npub const MAX_PROVING_KEY_BYTES: u64 = 2 * 1024 * 1024 * 1024;"
+        },
+        {
+          "inputFile": "S03-input.rs",
+          "sha256": "646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42",
+          "lineStart": 26,
+          "lineEnd": 50,
+          "literal": "/// Reads a regular file of at most `max` bytes. Devices, directories and larger files are\n/// refused before their content is read.\npub fn read_bounded(path: &Path, max: u64, what: &str) -> Result<Vec<u8>, DriverError> {\n    let file = File::open(path).map_err(|e| DriverError::Io(format!(\"{what}: cannot open {}: {e}\", path.display())))?;\n    let meta = file.metadata().map_err(|e| DriverError::Io(format!(\"{what}: cannot stat {}: {e}\", path.display())))?;\n    if !meta.is_file() {\n        return Err(DriverError::Io(format!(\"{what}: {} is not a regular file\", path.display())));\n    }\n    if meta.len() > max {\n        return Err(DriverError::Input(format!(\"{what}: {} bytes exceed the {max}-byte bound\", meta.len())));\n    }\n    let mut out = Vec::new();\n    file.take(max.saturating_add(1))\n        .read_to_end(&mut out)\n        .map_err(|e| DriverError::Io(format!(\"{what}: cannot read {}: {e}\", path.display())))?;\n    if out.len() as u64 > max {\n        return Err(DriverError::Input(format!(\"{what}: file grew beyond the {max}-byte bound while read\")));\n    }\n    Ok(out)\n}\n\n/// Reads a source file as UTF-8 text.\npub fn read_source(path: &Path) -> Result<String, DriverError> {\n    let bytes = read_bounded(path, MAX_SOURCE_BYTES, \"source\")?;\n    String::from_utf8(bytes).map_err(|_| DriverError::Input(\"source: not UTF-8\".into()))"
+        }
+      ]
+    },
+    {
+      "id": "B01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Cardano backend selected profile",
+      "statement": "check_selector compares literal Core1 language/semantics, capNotBound, accountingGrossDebitAndFees, frameTouchedOnly and crate::ADAPTER; action length1..1024. The ADAPTER constant body is absent, while compile_selected explicitly passes SettlementHashV2.",
+      "citations": [
+        {
+          "inputFile": "S04-relation.rs",
+          "sha256": "e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5",
+          "lineStart": 20,
+          "lineEnd": 49,
+          "literal": "pub const LANGUAGE: &str = \"moriarty/1\";\npub const SEMANTICS: &str = \"moriarty-core/1\";\npub const CAP: &str = \"NotBound\";\npub const ACCOUNTING: &str = \"GrossDebitAndFees\";\npub const FRAME: &str = \"TouchedOnly\";\n/// SettlementHashV2 public inputs: the two 128-bit digest halves.\npub const PUBLIC_INPUTS: u8 = 2;\n/// arkworks counts the constant-one instance variable: 1 + 2.\npub const INSTANCE_VARIABLES: u64 = 3;\n\n/// Refuses every selector value outside the one supported profile. Runs before compilation.\npub fn check_selector(s: &RelationSelector) -> Result<(), DriverError> {\n    let fixed = [\n        (\"format\", s.format.as_str(), SELECTOR_FORMAT),\n        (\"language\", s.language.as_str(), LANGUAGE),\n        (\"semantics\", s.semantics.as_str(), SEMANTICS),\n        (\"adapter\", s.adapter.as_str(), crate::ADAPTER),\n        (\"cap\", s.cap.as_str(), CAP),\n        (\"accounting\", s.accounting.as_str(), ACCOUNTING),\n        (\"frame\", s.frame.as_str(), FRAME),\n    ];\n    for (what, got, want) in fixed {\n        if got != want {\n            return Err(DriverError::Unsupported(format!(\"selector {what} {got:?}; this driver supports only {want:?}\")));\n        }\n    }\n    if s.action.is_empty() || s.action.len() > 1024 {\n        return Err(DriverError::Input(\"selector action must contain 1..1024 bytes\".into()));\n    }\n    Ok(())"
+        },
+        {
+          "inputFile": "S04-relation.rs",
+          "sha256": "e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5",
+          "lineStart": 257,
+          "lineEnd": 269,
+          "literal": "/// Compiles `source` for `selector` with the actual compiler, then checks optional pins.\npub fn compile_selected(source: &str, selector: &RelationSelector) -> Result<SelectedRelation, DriverError> {\n    check_selector(selector)?;\n    let options = CompileOptions {\n        action: selector.action.clone(),\n        cap: CapBinding::NotBound,\n        frame: FrameCells::TouchedOnly,\n        accounting: AccountingBinding::GrossDebitAndFees,\n        compiler: CompilerBuild::embedded().map_err(DriverError::Compile)?,\n    };\n    let relation =\n        mori_r1cs::compile_source::<Fr>(source, options, StatementAdapter::SettlementHashV2).map_err(DriverError::Compile)?;\n    let descriptor = RelationDescriptor::of(&relation)?;"
+        }
+      ]
+    },
+    {
+      "id": "B02",
+      "classification": "CALL_EDGE",
+      "profile": "Cardano backend→compiler",
+      "statement": "compile_selected checks selector, builds explicit CompileOptions, invokes mori_r1cs::compile_source::<Fr>(...,SettlementHashV2), then constructs descriptor and checks optional pins.",
+      "citations": [
+        {
+          "inputFile": "S04-relation.rs",
+          "sha256": "e18ae46c5ec0650f0c5dbc3c8b39262eb432c7d2e3be7b3b14cc01fe285493d5",
+          "lineStart": 257,
+          "lineEnd": 290,
+          "literal": "/// Compiles `source` for `selector` with the actual compiler, then checks optional pins.\npub fn compile_selected(source: &str, selector: &RelationSelector) -> Result<SelectedRelation, DriverError> {\n    check_selector(selector)?;\n    let options = CompileOptions {\n        action: selector.action.clone(),\n        cap: CapBinding::NotBound,\n        frame: FrameCells::TouchedOnly,\n        accounting: AccountingBinding::GrossDebitAndFees,\n        compiler: CompilerBuild::embedded().map_err(DriverError::Compile)?,\n    };\n    let relation =\n        mori_r1cs::compile_source::<Fr>(source, options, StatementAdapter::SettlementHashV2).map_err(DriverError::Compile)?;\n    let descriptor = RelationDescriptor::of(&relation)?;\n    if descriptor.language != selector.language || descriptor.semantics != selector.semantics {\n        return Err(DriverError::mismatch(\n            \"language/semantics\",\n            format!(\"{}/{}\", selector.language, selector.semantics),\n            format!(\"{}/{}\", descriptor.language, descriptor.semantics),\n        ));\n    }\n    if let Some(pin) = &selector.expected_source_sha256 {\n        hexutil::decode_exact::<32>(pin, \"expectedSourceSha256\")?;\n        let actual = descriptor.source_sha256.clone().unwrap_or_default();\n        if *pin != actual {\n            return Err(DriverError::mismatch(\"source sha256\", pin.clone(), actual));\n        }\n    }\n    if let Some(pin) = &selector.expected_program_hash {\n        hexutil::decode_exact::<32>(pin, \"expectedProgramHash\")?;\n        if *pin != descriptor.program_hash {\n            return Err(DriverError::mismatch(\"program hash\", pin.clone(), descriptor.program_hash.clone()));\n        }\n    }\n    Ok(SelectedRelation { selector: selector.clone(), relation, descriptor })"
+        }
+      ]
+    },
+    {
+      "id": "B03",
+      "classification": "CALL_EDGE",
+      "profile": "Core1/Staged2 compiler routing",
+      "statement": "compile_source calls frontend::admit_source: Core1 calls compile; Staged2 constructs Err(StagedNotLowered(Box::new(staged.lowering_plan()?))). This is a source branch, not an observed executed rejection.",
+      "citations": [
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 264,
+          "lineEnd": 271,
+          "literal": "/// Routes source by its declared profile and compiles `/1`. `/2` is admitted by the\n/// actual stage loader and then refused with its staged lowering plan.\npub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "B04",
+      "classification": "CALL_EDGE",
+      "profile": "Core1 compiler",
+      "statement": "compile calls compiler.checked,adapter.admits,optional abi2::options_ok,plan_action,StatementLayout::build,optional abi2::constants and probe in displayed source order.",
+      "citations": [
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 211,
+          "lineEnd": 226,
+          "literal": "/// Compiles one action of an admitted `/1` Program over the scalar field `F`.\npub fn compile<F: PrimeField>(admitted: AdmittedCore1, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    if F::MODULUS_BIT_SIZE < crate::MIN_MODULUS_BITS {\n        return Err(CompileError::Field(format!(\n            \"scalar field has {} bits; the exact-integer gadgets need at least {}\",\n            F::MODULUS_BIT_SIZE,\n            crate::MIN_MODULUS_BITS\n        )));\n    }\n    let build = options.compiler.checked()?;\n    adapter.admits(admitted.program()).map_err(CompileError::Adapter)?;\n    if adapter == StatementAdapter::SettlementHashV2 {\n        abi2::options_ok(&options)?;\n    }\n    let plan = plan::plan_action(admitted.program(), &options)?;\n    let layout = StatementLayout::build(admitted.identity(), &plan, build)?;"
+        },
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 254,
+          "lineEnd": 261,
+          "literal": "    let abi2 = if adapter == StatementAdapter::SettlementHashV2 {\n        Some(abi2::constants(admitted.program(), &plan, &layout, identity.digest()?.0)?)\n    } else {\n        None\n    };\n    let mut relation = CompiledRelation { admitted, options, plan, layout, identity, adapter, abi2, probe: placeholder };\n    relation.probe = probe::<F>(&relation)?;\n    Ok(relation)"
+        }
+      ]
+    },
+    {
+      "id": "B05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 compiler options",
+      "statement": "CompileOptions action/cap/frame/accounting/compiler has no Default implementation in this declaration. Enum choices are NotBound/PublicCap,NotBound/GrossDebitAndFees,TouchedOnly/Include(Vec<CellRef>).",
+      "citations": [
+        {
+          "inputFile": "S08-plan.rs",
+          "sha256": "a4e50be08727f3d89aedab66539498c0fc81e61e09a43005d274d12b63acc60f",
+          "lineStart": 13,
+          "lineEnd": 62,
+          "literal": "/// How the logical-work cap appears in the statement. No default exists: the caller\n/// chooses explicitly. This does not select the split D-13 stored-cap convention for\n/// `/2`; it only says whether a `/1` claim carries a cap at all.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub enum CapBinding {\n    /// Statement has no cap slot; the relation matches unmetered `simulate`.\n    NotBound,\n    /// Statement carries a UInt cap and the circuit enforces `W <= cap`, matching\n    /// `simulate_metered(cap)`.\n    PublicCap,\n}\n\n/// Whether the statement carries an in-circuit accounting summary. No default: the\n/// caller chooses. UNADOPTED: this implements the gross-debit and fee part of the\n/// one-vote P3-3(d) proposal (claim-utxo-abi-v1 VOTES.md §4) and needs a second vote.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]\npub enum AccountingBinding {\n    NotBound,\n    /// For every represented cell named as `from` by a Transfer or Fee, two public\n    /// 144-bit sums: gross debit (Transfer and Fee amounts, self-transfers included,\n    /// as `intent::check_effects` counts them) and fees paid (Fee amounts).\n    GrossDebitAndFees,\n}\n\n/// A balance cell named by source asset name and account.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub struct CellRef {\n    pub asset: String,\n    pub account: String,\n}\n\n/// Which balance cells the statement represents beyond those the action touches.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize)]\npub enum FrameCells {\n    /// Only cells named by the action's Transfer/Fee statements.\n    TouchedOnly,\n    /// Touched cells plus these extra preserved cells (for example a target layout's\n    /// framed matrix). Extra cells are constrained `post == pre`.\n    Include(Vec<CellRef>),\n}\n\n/// Every compile choice is explicit; there is no `Default`.\n#[derive(Debug, Clone, PartialEq, Eq)]\npub struct CompileOptions {\n    pub action: String,\n    pub cap: CapBinding,\n    pub frame: FrameCells,\n    pub accounting: AccountingBinding,\n    pub compiler: CompilerBuild,\n}"
+        }
+      ]
+    },
+    {
+      "id": "B06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 backend plan",
+      "statement": "plan_action selects options.action; sorts states by name; gathers touched balance cells and source registry duties, reads reachable duty names; local source branch refuses external-duty identity absent source Liability introduction.",
+      "citations": [
+        {
+          "inputFile": "S08-plan.rs",
+          "sha256": "a4e50be08727f3d89aedab66539498c0fc81e61e09a43005d274d12b63acc60f",
+          "lineStart": 254,
+          "lineEnd": 307,
+          "literal": "/// Builds the plan for `options.action`.\npub fn plan_action(program: &Program, options: &CompileOptions) -> Result<ActionPlan, CompileError> {\n    let action_index = program\n        .actions\n        .iter()\n        .position(|a| a.name == options.action)\n        .ok_or_else(|| CompileError::UnknownAction(options.action.clone()))?;\n    let action = &program.actions[action_index];\n    let action_index = u16::try_from(action_index).map_err(|_| CompileError::Bound(\"action index exceeds u16\".into()))?;\n    let statement_count =\n        u16::try_from(action.statements.len()).map_err(|_| CompileError::Bound(\"statement count exceeds u16\".into()))?;\n\n    let inputs: Vec<NamedType> = action.inputs.iter().map(|i| NamedType { name: i.name.clone(), ty: i.ty }).collect();\n    let mut states: Vec<NamedType> = program.states.iter().map(|s| NamedType { name: s.name.clone(), ty: s.ty }).collect();\n    states.sort_by(|a, b| a.name.cmp(&b.name));\n\n    let registry = registry(program)?;\n\n    // Cells: touched by this action, then optional preserved frame cells.\n    let mut cells: BTreeMap<(AssetId, String), (String, bool)> = BTreeMap::new();\n    let mut liability_statements = 0usize;\n    let mut touched_duties: BTreeSet<String> = BTreeSet::new();\n    for statement in &action.statements {\n        match statement {\n            Statement::Transfer { asset, from, to, .. } | Statement::Fee { asset, from, to, .. } => {\n                let id = asset_by_name(program, asset)?.clone();\n                cells.insert((id.clone(), from.clone()), (asset.clone(), true));\n                cells.insert((id, to.clone()), (asset.clone(), true));\n            }\n            Statement::Liability { name, .. } => {\n                liability_statements += 1;\n                touched_duties.insert(name.clone());\n            }\n            Statement::Discharge { name, .. } => {\n                touched_duties.insert(name.clone());\n            }\n            Statement::Await { .. } => {\n                return Err(CompileError::Unsupported {\n                    construct: \"Statement::Await\",\n                    reason: \"Await is moriarty-core/2 only; /1 admission refuses it\".into(),\n                });\n            }\n            Statement::Let { .. }\n            | Statement::Requires { .. }\n            | Statement::Ensures { .. }\n            | Statement::Next { .. }\n            | Statement::Emit { .. } => {}\n        }\n        for id in reachable(program, statement_root(statement))? {\n            if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = &program.expressions[usize::from(id)] {\n                touched_duties.insert(name.clone());\n            }\n        }\n    }"
+        },
+        {
+          "inputFile": "S08-plan.rs",
+          "sha256": "a4e50be08727f3d89aedab66539498c0fc81e61e09a43005d274d12b63acc60f",
+          "lineStart": 308,
+          "lineEnd": 346,
+          "literal": "    if let FrameCells::Include(extra) = &options.frame {\n        for cell in extra {\n            if cell.account.is_empty() || cell.account.len() > 1024 {\n                return Err(CompileError::Option(\"frame cell account must contain 1..1024 bytes\".into()));\n            }\n            let id = asset_by_name(program, &cell.asset)?.clone();\n            cells.entry((id, cell.account.clone())).or_insert((cell.asset.clone(), false));\n        }\n    }\n    let cells: Vec<CellKey> = cells\n        .into_iter()\n        .map(|((asset, account), (asset_name, touched))| CellKey { asset_name, asset, account, touched })\n        .collect();\n\n    // Duties: the whole source registry. A duty this action touches or reads without\n    // a source introduction would need a dynamic identity cell: refused (first slice).\n    for name in &touched_duties {\n        if !registry.by_name.contains_key(name) {\n            return Err(CompileError::Unsupported {\n                construct: \"external duty\",\n                reason: format!(\n                    \"duty {name:?} has no source Liability introduction; its identity would be prover data. \\\n                     First slice represents only source-fixed duty identities.\"\n                ),\n            });\n        }\n    }\n    let duties: Vec<DutyKey> = registry\n        .by_name\n        .iter()\n        .map(|(name, (asset_name, asset, debtor, creditor))| DutyKey {\n            name: name.clone(),\n            asset_name: asset_name.clone(),\n            asset: asset.clone(),\n            debtor: debtor.clone(),\n            creditor: creditor.clone(),\n            touched: touched_duties.contains(name),\n        })\n        .collect();"
+        }
+      ]
+    },
+    {
+      "id": "B07",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 backend plan",
+      "statement": "Effects and logical schedule are derived statement by statement; represented trace uses records*(statements+2), with <=65536 trace,4096 cells and1024 duties branches.",
+      "citations": [
+        {
+          "inputFile": "S08-plan.rs",
+          "sha256": "a4e50be08727f3d89aedab66539498c0fc81e61e09a43005d274d12b63acc60f",
+          "lineStart": 348,
+          "lineEnd": 440,
+          "literal": "    // Effect shapes and logical schedule, statement by statement.\n    let mut env: BTreeMap<String, Type> = program.states.iter().map(|s| (s.name.clone(), s.ty)).collect();\n    for input in &action.inputs {\n        env.insert(input.name.clone(), input.ty);\n    }\n    let cell_at = |asset: &AssetId, account: &str| -> Result<usize, CompileError> {\n        cells\n            .iter()\n            .position(|c| &c.asset == asset && c.account == account)\n            .ok_or_else(|| CompileError::Bound(\"touched cell missing from plan\".into()))\n    };\n    let duty_at = |name: &str| -> Result<usize, CompileError> {\n        duties.iter().position(|d| d.name == name).ok_or_else(|| CompileError::Bound(\"duty missing from plan\".into()))\n    };\n    let mut effects = Vec::new();\n    let mut schedule = Vec::with_capacity(action.statements.len());\n    let mut total: u128 = 0;\n    for (index, statement) in action.statements.iter().enumerate() {\n        let ordinal = index as u16;\n        let cost = statement_cost(program, statement)?;\n        total = total.checked_add(cost).ok_or_else(|| CompileError::Bound(\"logical work exceeds u128\".into()))?;\n        schedule.push(UInt(cost));\n        match statement {\n            Statement::Let { name, value } => {\n                let ty = infer(program, *value, &env)?;\n                env.insert(name.clone(), ty);\n            }\n            Statement::Next { state, .. } => {\n                let ty = *env.get(state).ok_or_else(|| CompileError::Bound(format!(\"unknown state {state:?}\")))?;\n                effects.push(EffectShape::State { statement: ordinal, name: state.clone(), ty });\n            }\n            Statement::Emit { name, value } => {\n                let ty = infer(program, *value, &env)?;\n                effects.push(EffectShape::Emit { statement: ordinal, name: name.clone(), ty });\n            }\n            Statement::Transfer { asset, from, to, .. } | Statement::Fee { asset, from, to, .. } => {\n                let id = asset_by_name(program, asset)?.clone();\n                let from_cell = cell_at(&id, from)?;\n                let to_cell = cell_at(&id, to)?;\n                effects.push(if matches!(statement, Statement::Fee { .. }) {\n                    EffectShape::Fee { statement: ordinal, asset: id, from: from.clone(), to: to.clone(), from_cell, to_cell }\n                } else {\n                    EffectShape::Transfer { statement: ordinal, asset: id, from: from.clone(), to: to.clone(), from_cell, to_cell }\n                });\n            }\n            Statement::Liability { name, .. } => {\n                effects.push(EffectShape::Liability { statement: ordinal, duty: duty_at(name)?, name: name.clone(), origin: DutyOrigin::Accrue });\n            }\n            Statement::Discharge { name, .. } => {\n                effects.push(EffectShape::Liability { statement: ordinal, duty: duty_at(name)?, name: name.clone(), origin: DutyOrigin::Discharge });\n            }\n            Statement::Requires { .. } | Statement::Ensures { .. } => {}\n            Statement::Await { .. } => unreachable!(\"refused above\"),\n        }\n    }\n    let debit_cells: Vec<usize> =\n        effects.iter().filter_map(EffectShape::debit_cell).collect::<BTreeSet<_>>().into_iter().collect();\n\n    // Core refuses scenarios whose trace product exceeds MAX_TRACE_CELLS\n    // (runtime.rs:540-547). Counting every represented duty as present is the\n    // conservative bound used by the Cardano layout as well (layout.rs:47-57). Rows\n    // outside the represented snapshot are a target premise (see adapter.rs).\n    let records = program.states.len() + cells.len() + duties.len() + liability_statements + 1;\n    let trace = records\n        .checked_mul(action.statements.len() + 2)\n        .ok_or_else(|| CompileError::Bound(\"trace product overflow\".into()))?;\n    if trace > MAX_TRACE_CELLS {\n        return Err(CompileError::Bound(format!(\n            \"represented snapshot needs {trace} trace records, above Core's {MAX_TRACE_CELLS}\"\n        )));\n    }\n    if cells.len() > 4096 || duties.len() > 1024 {\n        return Err(CompileError::Bound(\"represented cells exceed Core's 4,096 balances or 1,024 liabilities\".into()));\n    }\n\n    Ok(ActionPlan {\n        action: action.name.clone(),\n        action_index,\n        statement_count,\n        inputs,\n        states,\n        cells,\n        duties,\n        effects,\n        debit_cells,\n        logical_schedule: schedule,\n        logical_work: UInt(total),\n        cap: options.cap,\n        accounting: options.accounting,\n        frame: options.frame.clone(),\n        represented_trace_cells: trace as u64,\n    })\n}"
+        }
+      ]
+    },
+    {
+      "id": "E01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 reference source",
+      "statement": "simulate_with_meter source calls validate→selected action→scenario_snapshot→state+input environment→ordered execute_statement→step snapshots→Execution. No simulation was run.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 865,
+          "lineEnd": 912,
+          "literal": "pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<Execution, Error> {\n    simulate_with_meter(program, action, scenario, None)\n}\npub(crate) fn simulate_with_meter(\n    program: &Program,\n    action: &str,\n    scenario: &Scenario,\n    mut meter: Option<&mut Meter>,\n) -> Result<Execution, Error> {\n    validate(program)?;\n    let selected = program\n        .actions\n        .iter()\n        .find(|a| a.name == action)\n        .ok_or_else(|| failure(\"action\", format!(\"Unknown action {action:?}.\")))?;\n    let pre = scenario_snapshot(program, selected, scenario)?;\n    let mut current = pre.clone();\n    let mut env = current.state.clone();\n    env.extend(scenario.inputs.clone());\n    let mut steps = vec![];\n    let mut all_effects = vec![];\n    for (i, stmt) in selected.statements.iter().enumerate() {\n        let mut effects = vec![];\n        let result = execute_statement(\n            program, stmt, &mut env, &mut current, &mut meter, &mut effects,\n        );\n        let value = result.map_err(|mut e| {\n            e.step = Some(i as u16);\n            e\n        })?;\n        all_effects.extend(effects.clone());\n        steps.push(Step {\n            index: i as u16,\n            statement: stmt.clone(),\n            value,\n            snapshot: current.clone(),\n            effects,\n        });\n    }\n    Ok(Execution {\n        semantics: SEMANTICS.into(),\n        action: action.into(),\n        pre,\n        post: current,\n        steps,\n        effects: all_effects,\n    })\n}"
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared evaluator source",
+      "statement": "Binary expression body evaluates lhs then rhs and then dispatches operator; add/sub/mul use checked u128 operations. The fresh cache is allocated by evaluate for each root call.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 392,
+          "lineEnd": 407,
+          "literal": "fn evaluate(\n    p: &Program,\n    id: ExprId,\n    env: &BTreeMap<String, Value>,\n    snapshot: &Snapshot,\n    meter: &mut Option<&mut Meter>,\n) -> Result<Value, Error> {\n    eval_cached(\n        p,\n        id,\n        env,\n        snapshot,\n        &mut vec![None; p.expressions.len()],\n        meter,\n    )\n}"
+        },
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 414,
+          "lineEnd": 483,
+          "literal": "fn eval_cached(\n    p: &Program,\n    id: ExprId,\n    env: &BTreeMap<String, Value>,\n    snapshot: &Snapshot,\n    cache: &mut [Option<Value>],\n    meter: &mut Option<&mut Meter>,\n) -> Result<Value, Error> {\n    let i = usize::from(id);\n    if let Some(value) = &cache[i] {\n        return Ok(value.clone());\n    }\n    // Charge the attempted node before its children or operation. Cache hits\n    // above remain free, and evaluate creates a new cache for each statement.\n    charge_logical(meter)?;\n    let result = match &p.expressions[i] {\n        Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {\n            let row = snapshot\n                .liabilities\n                .binary_search_by(|l| l.name.as_str().cmp(name.as_str()))\n                .ok()\n                .map(|index| &snapshot.liabilities[index]);\n            if matches!(&p.expressions[i], Expr::LiabilityPresent { .. }) {\n                Value::Bool(row.is_some())\n            } else {\n                Value::UInt(row.map_or(UInt(0), |l| l.amount))\n            }\n        }\n        Expr::Literal { value } => value.clone(),\n        Expr::Name { name } => env\n            .get(name)\n            .cloned()\n            .ok_or_else(|| failure(\"name\", format!(\"Unknown name {name:?}.\")))?,\n        Expr::Not { value } => match eval_cached(p, *value, env, snapshot, cache, meter)? {\n            Value::Bool(b) => Value::Bool(!b),\n            _ => return Err(failure(\"type\", \"not expects Bool.\")),\n        },\n        Expr::Binary { op, lhs, rhs } => {\n            let a = eval_cached(p, *lhs, env, snapshot, cache, meter)?;\n            let b = eval_cached(p, *rhs, env, snapshot, cache, meter)?;\n            match (op, a, b) {\n                (BinaryOp::Add, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_add(b).ok_or_else(|| {\n                        failure(\"overflow\", \"UInt addition exceeds u128.\")\n                    })?))\n                }\n                (BinaryOp::Sub, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_sub(b).ok_or_else(|| {\n                        failure(\"underflow\", \"UInt subtraction is negative.\")\n                    })?))\n                }\n                (BinaryOp::Mul, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {\n                    Value::UInt(UInt(a.checked_mul(b).ok_or_else(|| {\n                        failure(\"overflow\", \"UInt multiplication exceeds u128.\")\n                    })?))\n                }\n                (BinaryOp::Eq, a, b) => Value::Bool(a == b),\n                (BinaryOp::Ne, a, b) => Value::Bool(a != b),\n                (BinaryOp::Lt, Value::UInt(a), Value::UInt(b)) => Value::Bool(a < b),\n                (BinaryOp::Le, Value::UInt(a), Value::UInt(b)) => Value::Bool(a <= b),\n                (BinaryOp::Gt, Value::UInt(a), Value::UInt(b)) => Value::Bool(a > b),\n                (BinaryOp::Ge, Value::UInt(a), Value::UInt(b)) => Value::Bool(a >= b),\n                (BinaryOp::And, Value::Bool(a), Value::Bool(b)) => Value::Bool(a && b),\n                (BinaryOp::Or, Value::Bool(a), Value::Bool(b)) => Value::Bool(a || b),\n                _ => return Err(failure(\"type\", \"Invalid operand types.\")),\n            }\n        }\n    };\n    cache[i] = Some(result.clone());\n    Ok(result)"
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "shared evaluator source",
+      "statement": "Requires and Ensures share the immediate predicate branch at their statement position. Next updates current.state and env before pushing its State effect.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 702,
+          "lineEnd": 758,
+          "literal": "fn execute_statement(\n    program: &Program,\n    stmt: &Statement,\n    env: &mut BTreeMap<String, Value>,\n    current: &mut Snapshot,\n    meter: &mut Option<&mut Meter>,\n    effects: &mut Vec<Effect>,\n) -> Result<Option<Value>, Error> {\n    charge_logical(meter)?;\n    match stmt {\n        Statement::Await { guard, .. } => {\n            let v = evaluate(program, *guard, env, current, meter)?;\n            Ok(Some(v))\n        }\n        Statement::Let { name, value } => {\n            let v = evaluate(program, *value, env, current, meter)?;\n            env.insert(name.clone(), v.clone());\n            Ok(Some(v))\n        }\n        Statement::Requires { predicate } | Statement::Ensures { predicate } => {\n            let v = evaluate(program, *predicate, env, current, meter)?;\n            if v != Value::Bool(true) {\n                return Err(failure(\n                    if matches!(stmt, Statement::Requires { .. }) {\n                        \"requires\"\n                    } else {\n                        \"ensures\"\n                    },\n                    \"Action predicate evaluated to false.\",\n                ));\n            }\n            Ok(Some(v))\n        }\n        Statement::Next { state, value } => {\n            let after = evaluate(program, *value, env, current, meter)?;\n            let before = current.state[state].clone();\n            current.state.insert(state.clone(), after.clone());\n            env.insert(state.clone(), after.clone());\n            effects.push(Effect::State {\n                name: state.clone(),\n                before,\n                after: after.clone(),\n            });\n            Ok(Some(after))\n        }\n        Statement::Emit { name, value } => {\n            let v = evaluate(program, *value, env, current, meter)?;\n            effects.push(Effect::Emit {\n                name: name.clone(),\n                value: v.clone(),\n            });\n            Ok(Some(v))\n        }\n        Statement::Transfer {\n            asset,\n            from,\n            to,"
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "scenario source",
+      "statement": "scenario_snapshot checks4096 balances/1024 liabilities/65536 trace product; empty supplied state chooses declaration initials, otherwise state is exact; input fields are exact selected action names/types. Balance and duty normalization/check branches are visible here.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 528,
+          "lineEnd": 585,
+          "literal": "pub(crate) fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, Error> {\n    if s.balances.len() > 4096 || s.liabilities.len() > 1024 {\n        return Err(failure(\n            \"bound\",\n            \"Scenario exceeds 4,096 balances or 1,024 liabilities.\",\n        ));\n    }\n    let added_liabilities = a\n        .statements\n        .iter()\n        .filter(|stmt| matches!(stmt, Statement::Liability { .. }))\n        .count();\n    let trace_records =\n        p.states.len() + s.balances.len() + s.liabilities.len() + added_liabilities + 1;\n    if trace_records.saturating_mul(a.statements.len() + 2) > MAX_TRACE_CELLS {\n        return Err(failure(\n            \"bound\",\n            \"Scenario and action exceed 65,536 trace snapshot records.\",\n        ));\n    }\n    if !s.state.is_empty() && s.state.len() != p.states.len() {\n        return Err(failure(\n            \"state\",\n            \"Provide either initial state {} or every declared state value.\",\n        ));\n    }\n    let mut state = BTreeMap::new();\n    for d in &p.states {\n        let value = if s.state.is_empty() {\n            d.initial.clone()\n        } else {\n            s.state\n                .get(&d.name)\n                .ok_or_else(|| failure(\"state\", format!(\"Missing state {:?}.\", d.name)))?\n                .clone()\n        };\n        if value.ty() != d.ty {\n            return Err(failure(\n                \"state\",\n                format!(\"Wrong type for state {:?}.\", d.name),\n            ));\n        }\n        state.insert(d.name.clone(), value);\n    }\n    if s.inputs.len() != a.inputs.len() {\n        return Err(failure(\n            \"input\",\n            \"Scenario must provide exactly the selected action's inputs.\",\n        ));\n    }\n    for input in &a.inputs {\n        if s.inputs.get(&input.name).map(Value::ty) != Some(input.ty) {\n            return Err(failure(\n                \"input\",\n                format!(\"Missing or wrong type for input {:?}.\", input.name),\n            ));\n        }\n    }"
+        },
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 586,
+          "lineEnd": 667,
+          "literal": "    let ids: BTreeSet<_> = p.assets.iter().map(|a| a.identity.clone()).collect();\n    let mut keys = BTreeSet::new();\n    let mut balances = s.balances.clone();\n    for b in &balances {\n        if !ids.contains(&b.asset) {\n            return Err(failure(\n                \"asset\",\n                format!(\n                    \"Undeclared exact asset identity for account {:?}.\",\n                    b.account\n                ),\n            ));\n        }\n        if b.account.is_empty()\n            || b.account.len() > 1024\n            || !keys.insert((b.asset.clone(), b.account.clone()))\n        {\n            return Err(failure(\n                \"balance\",\n                \"Duplicate or invalid balance account/asset.\",\n            ));\n        }\n    }\n    for stmt in &a.statements {\n        if let Statement::Transfer {\n            asset, from, to, ..\n        }\n        | Statement::Fee {\n            asset, from, to, ..\n        } = stmt\n        {\n            let id = validate_asset(p, asset)?;\n            for account in [from, to] {\n                if !keys.contains(&(id.clone(), account.clone())) {\n                    return Err(failure(\n                        \"balance\",\n                        format!(\"Missing explicit balance for {account:?} and asset {asset:?}.\"),\n                    ));\n                }\n            }\n        }\n    }\n    balances.sort_by(|a, b| (&a.asset, &a.account).cmp(&(&b.asset, &b.account)));\n    let identities = liability_identities(p)?;\n    let mut liabilities = s.liabilities.clone();\n    let mut names = BTreeSet::new();\n    for l in &liabilities {\n        if !ids.contains(&l.asset) {\n            return Err(failure(\n                \"asset\",\n                \"Liability uses undeclared exact asset identity.\",\n            ));\n        }\n        if l.name.is_empty()\n            || l.name.len() > 1024\n            || l.debtor.is_empty()\n            || l.creditor.is_empty()\n            || l.debtor.len() > 1024\n            || l.creditor.len() > 1024\n            || !names.insert(l.name.clone())\n        {\n            return Err(failure(\n                \"liability\",\n                \"Invalid or duplicate liability identity.\",\n            ));\n        }\n        if let Some(identity) = identities.get(l.name.as_str()) {\n            if *identity != (&l.asset, l.debtor.as_str(), l.creditor.as_str()) {\n                return Err(failure(\n                    \"liability\",\n                    format!(\"Existing liability identity differs for {:?}.\", l.name),\n                ));\n            }\n        }\n    }\n    liabilities.sort_by(|a, b| a.name.cmp(&b.name));\n    Ok(Snapshot {\n        state,\n        balances,\n        liabilities,\n    })\n}"
+        }
+      ]
+    },
+    {
+      "id": "E05",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 backend lowering source",
+      "statement": "lower_action iterates statements in order; lower_statement combines Requires/Ensures and replaces state/environment in Next. expr lowers lhs then rhs with fresh root memo. This records call order only and makes no correctness correspondence claim.",
+      "citations": [
+        {
+          "inputFile": "S09-lower.rs",
+          "sha256": "68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5",
+          "lineStart": 95,
+          "lineEnd": 129,
+          "literal": "    /// Lowers node `id` once per statement (memo), operands first, `lhs` before `rhs`.\n    fn expr(&self, cs: &mut Cs<F>, statement: usize, id: ExprId, memo: &mut BTreeMap<ExprId, CVal<F>>) -> Result<CVal<F>, LowerError> {\n        if let Some(v) = memo.get(&id) {\n            return Ok(v.clone());\n        }\n        let node = self\n            .program\n            .expressions\n            .get(usize::from(id))\n            .ok_or_else(|| LowerError::Shape(format!(\"expression {id} out of range\")))?;\n        let value = match node {\n            Expr::Literal { value } => match value {\n                Value::UInt(UInt(n)) => CVal::U(UIntW::constant(*n)),\n                Value::Bool(b) => CVal::B(BoolW::constant(*b)),\n            },\n            Expr::Name { name } => self.env.get(name).cloned().ok_or_else(|| LowerError::Shape(format!(\"unbound name {name:?}\")))?,\n            Expr::LiabilityPresent { name } => CVal::B(self.duties[self.duty(name)?].present.clone()),\n            Expr::LiabilityAmount { name } => CVal::U(self.duties[self.duty(name)?].amount.clone()),\n            Expr::Not { value } => {\n                let v = as_bool(self.expr(cs, statement, *value, memo)?)?;\n                CVal::B(gadgets::not(&v))\n            }\n            Expr::Binary { op, lhs, rhs } => {\n                let a = self.expr(cs, statement, *lhs, memo)?;\n                let b = self.expr(cs, statement, *rhs, memo)?;\n                // Statement scope `s{statement}` is already pushed by `lower_action`;\n                // witness labels read `s{statement}/e{id}/{role}#n`.\n                cs.push(format!(\"e{id}\"));\n                let out = self.binary(cs, *op, a, b);\n                cs.pop();\n                gadget(statement, Some(id), out)?\n            }\n        };\n        memo.insert(id, value.clone());\n        Ok(value)"
+        },
+        {
+          "inputFile": "S09-lower.rs",
+          "sha256": "68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5",
+          "lineStart": 152,
+          "lineEnd": 155,
+          "literal": "    fn root(&self, cs: &mut Cs<F>, statement: usize, id: ExprId) -> Result<CVal<F>, LowerError> {\n        let mut memo = BTreeMap::new();\n        self.expr(cs, statement, id, &mut memo)\n    }"
+        },
+        {
+          "inputFile": "S09-lower.rs",
+          "sha256": "68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5",
+          "lineStart": 184,
+          "lineEnd": 195,
+          "literal": "    for (i, statement) in action.statements.iter().enumerate() {\n        let start = cs.num_constraints();\n        cs.push(format!(\"s{i}\"));\n        let step = lower_statement(cs, &mut ctx, plan, i, statement, &mut states, &mut cells, &mut effects);\n        cs.pop();\n        step?;\n        cs.record(format!(\"statement {i}\"), start);\n    }\n    if effects.len() != plan.effects.len() {\n        return Err(LowerError::Shape(\"lowered effect count differs from plan\".into()));\n    }\n    Ok(Lowered { states, cells, duties: ctx.duties, effects })"
+        },
+        {
+          "inputFile": "S09-lower.rs",
+          "sha256": "68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5",
+          "lineStart": 209,
+          "lineEnd": 225,
+          "literal": "    match statement {\n        Statement::Let { name, value } => {\n            let v = ctx.root(cs, i, *value)?;\n            ctx.env.insert(name.clone(), v);\n        }\n        Statement::Requires { predicate } | Statement::Ensures { predicate } => {\n            let v = as_bool(ctx.root(cs, i, *predicate)?)?;\n            let what = if matches!(statement, Statement::Requires { .. }) { \"requires\" } else { \"ensures\" };\n            gadget(i, None, gadgets::assert_true(cs, &v, what))?;\n        }\n        Statement::Next { state, value } => {\n            let after = ctx.root(cs, i, *value)?;\n            let index = plan.state_index(state).ok_or_else(|| LowerError::Shape(format!(\"state {state:?} absent\")))?;\n            let before = std::mem::replace(&mut states[index], after.clone());\n            ctx.env.insert(state.clone(), after.clone());\n            effects.push(EffectW::State { before, after });\n        }"
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 source",
+      "statement": "start calls scenario_snapshot→start_preflight→optional canonical_boundary→run_segment→finish. resume source order is selected action,format/profile,program/plan digest,action/site,captures,event,cost preflight,canonical_boundary,run_segment,finish.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-admit.rs",
+          "sha256": "7d98472ec2d4bd151cb42682ed32deaff257d4b9746615a6453aad41b3f2ec10",
+          "lineStart": 216,
+          "lineEnd": 272,
+          "literal": "/// Runs segment 0 of `action`. The scenario passes the existing\n/// `scenario_snapshot`, then the plan-total cap preflight (C3, attempted 0).\n/// The pre frame is locally assumed idle (P3); `cap` becomes the stored cap.\npub fn start(\n    sp: &StagedProgram,\n    action: &str,\n    scenario: Scenario,\n    cap: Option<UInt>,\n) -> Result<StageOutcome, StageRejection> {\n    let refuse = |error: Error| rejected(error, UInt(0), UInt(0));\n    let index = sp\n        .action_index(action)\n        .ok_or_else(|| refuse(Error::new(\"action\", format!(\"Unknown action {action:?}.\"))))?;\n    let selected = &sp.program().actions[index];\n    let plan = sp\n        .plan()\n        .actions\n        .get(index)\n        .filter(|plan| plan.action == action)\n        .ok_or_else(|| refuse(Error::new(\"stage_site\", \"Action is absent from the stage plan.\")))?;\n    let pre = runtime::scenario_snapshot(sp.program(), selected, &scenario).map_err(refuse)?;\n    let limit = cost::start_preflight(plan, cap).map_err(refuse)?;\n    let mut inputs = Vec::with_capacity(selected.inputs.len());\n    for input in &selected.inputs {\n        let value = scenario.inputs.get(&input.name).cloned().ok_or_else(|| {\n            refuse(Error::new(\n                \"input\",\n                format!(\"Missing or wrong type for input {:?}.\", input.name),\n            ))\n        })?;\n        inputs.push(NamedValue {\n            name: input.name.clone(),\n            value,\n        });\n    }\n    // A boundary that R7 would refuse must not start an awaiting action:\n    // its continuation could never be resumed (H25).\n    if !plan.sites.is_empty() {\n        decode::canonical_boundary(sp, index, &inputs, &pre).map_err(refuse)?;\n    }\n    let mut meter = cost::segment_meter(limit);\n    let run = runtime::run_segment(\n        sp,\n        index,\n        SegmentEntry::Start { inputs: &inputs },\n        pre,\n        &mut meter,\n    );\n    Admitted {\n        sp,\n        action: index,\n        entry: 0,\n        committed: UInt(0),\n        stored_cap: cap,\n        frame_pre: PendingFrame::idle(),\n    }\n    .finish(run, &meter, None)"
+        },
+        {
+          "inputFile": "CORE-stage-admit.rs",
+          "sha256": "7d98472ec2d4bd151cb42682ed32deaff257d4b9746615a6453aad41b3f2ec10",
+          "lineStart": 290,
+          "lineEnd": 373,
+          "literal": "    // R0: an explicitly selected action must be the continuation's action.\n    if cli_action.is_some_and(|selected| selected != c.action) {\n        return Err(refuse(\n            \"stage_site\",\n            \"Selected action differs from the continuation action.\",\n        ));\n    }\n    // R1\n    if c.format != CONTINUATION_FORMAT || c.logical.profile != LOGICAL_COST_PROFILE_2 {\n        return Err(refuse(\n            \"stage_format\",\n            \"Unsupported continuation format or logical profile.\",\n        ));\n    }\n    // R2\n    profile::require_core2(sp.program()).map_err(refused)?;\n    if !digest::matches(&c.program_hash, &sp.program_hash())\n        || !digest::matches(&c.plan_hash, &sp.plan_hash())\n    {\n        return Err(refuse(\n            \"stage_program\",\n            \"Continuation does not belong to this program and stage plan.\",\n        ));\n    }\n    // R3\n    let Some(index) = sp.action_index(&c.action) else {\n        return Err(refuse(\"stage_site\", \"Continuation action does not exist.\"));\n    };\n    let Some(plan) = sp.plan().actions.get(index).filter(|plan| plan.action == c.action) else {\n        return Err(refuse(\"stage_site\", \"Action is absent from the stage plan.\"));\n    };\n    if c.site == 0 || usize::from(c.site) > plan.sites.len() {\n        return Err(refuse(\n            \"stage_site\",\n            \"Continuation site is not a pending await of this action.\",\n        ));\n    }\n    let site = &plan.sites[usize::from(c.site) - 1];\n    // R4\n    if !layout_matches(&c.captures, site.captures.iter(), |s| (s.name.as_str(), s.ty)) {\n        return Err(refuse(\n            \"stage_capture\",\n            \"Captures differ from the pending site layout.\",\n        ));\n    }\n    // R5\n    if e.format != STAGE_EVENT_FORMAT\n        || e.action != c.action\n        || e.label != site.label\n        || !layout_matches(&e.values, site.binders.iter(), |b| (b.name.as_str(), b.ty))\n    {\n        return Err(refuse(\n            \"stage_event\",\n            \"Event does not match the pending await.\",\n        ));\n    }\n    // R6\n    let limit = cost::resume_preflight(plan, c.site, &c.logical, cli_cap).map_err(refused)?;\n    // R7\n    decode::canonical_boundary(sp, index, &c.captures, &c.boundary).map_err(refused)?;\n    let mut meter = cost::segment_meter(limit);\n    let run = runtime::run_segment(\n        sp,\n        index,\n        SegmentEntry::Resume {\n            site: c.site,\n            captures: &c.captures,\n            event: &e.values,\n        },\n        c.boundary.clone(),\n        &mut meter,\n    );\n    Admitted {\n        sp,\n        action: index,\n        entry: c.site,\n        committed: kept,\n        stored_cap: c.logical.cap,\n        frame_pre: PendingFrame {\n            site: c.site,\n            captures: c.captures.clone(),\n        },\n    }\n    .finish(run, &meter, Some(c))"
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 source",
+      "statement": "run_segment Resume installs captures then event values and evaluates the pending guard; false returns NotAdvanced. On a next Await it captures named env slots and breaks, rather than evaluating that future guard in that segment.",
+      "citations": [
+        {
+          "inputFile": "CORE-runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "lineStart": 934,
+          "lineEnd": 1021,
+          "literal": "pub(crate) fn run_segment(\n    sp: &crate::stage::StagedProgram,\n    action: usize,\n    entry: SegmentEntry<'_>,\n    boundary: Snapshot,\n    meter: &mut Meter,\n) -> Result<SegmentRun, Error> {\n    let program = sp.program();\n    let selected = &program.actions[action];\n    let plan = &sp.plan().actions[action];\n    let pre = boundary;\n    let mut current = pre.clone();\n    let mut env = pre.state.clone();\n    let mut meter = Some(meter);\n    let mut steps = Vec::new();\n    let mut all_effects = Vec::new();\n    let begin = match entry {\n        SegmentEntry::Start { inputs } => {\n            env.extend(inputs.iter().map(|v| (v.name.clone(), v.value.clone())));\n            0\n        }\n        SegmentEntry::Resume { site, captures, event } => {\n            env.extend(captures.iter().chain(event).map(|v| (v.name.clone(), v.value.clone())));\n            let ordinal = usize::from(plan.sites[usize::from(site) - 1].ordinal);\n            let statement = &selected.statements[ordinal];\n            let mut effects = Vec::new();\n            // execute_statement charges dispatch once, then visits the guard.\n            let value = execute_statement(\n                program, statement, &mut env, &mut current, &mut meter, &mut effects,\n            ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;\n            if value != Some(Value::Bool(true)) {\n                return Ok(SegmentRun::NotAdvanced);\n            }\n            steps.push(Step {\n                index: ordinal as u16,\n                statement: statement.clone(),\n                value,\n                snapshot: pre.clone(),\n                effects,\n            });\n            ordinal + 1\n        }\n    };\n    let mut exit_site = 0;\n    let mut captures_out = Vec::new();\n    for (ordinal, statement) in selected.statements.iter().enumerate().skip(begin) {\n        if matches!(statement, Statement::Await { .. }) {\n            // Entry charge is attempted now; guard and its Step belong to resume.\n            charge_logical(&mut meter).map_err(|mut error| {\n                error.step = Some(ordinal as u16);\n                error\n            })?;\n            let site = plan.sites.iter().find(|s| usize::from(s.ordinal) == ordinal)\n                .ok_or_else(|| failure(\"stage_site\", \"Await site is absent from stage plan.\"))?;\n            exit_site = site.site;\n            for slot in &site.captures {\n                let value = env.get(&slot.name).cloned()\n                    .ok_or_else(|| failure(\"name\", format!(\"Unknown name {:?}.\", slot.name)))?;\n                captures_out.push(crate::stage::NamedValue { name: slot.name.clone(), value });\n            }\n            break;\n        }\n        let mut effects = Vec::new();\n        let value = execute_statement(\n            program, statement, &mut env, &mut current, &mut meter, &mut effects,\n        ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;\n        all_effects.extend(effects.clone());\n        steps.push(Step {\n            index: ordinal as u16,\n            statement: statement.clone(),\n            value,\n            snapshot: current.clone(),\n            effects,\n        });\n    }\n    Ok(SegmentRun::Ran {\n        execution: Execution {\n            semantics: program.semantics.clone(),\n            action: selected.name.clone(),\n            pre,\n            post: current,\n            steps,\n            effects: all_effects,\n        },\n        exit_site,\n        captures_out,\n    })\n}"
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 local cost source",
+      "statement": "statement_cost computes1+distinct reachable nodes; start preflight compares total to optional cap; resume checks planned committed work, checked needed cost and CLI/stored cap branches. These source formulas are not resource adequacy evidence.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-cost.rs",
+          "sha256": "6edebd925cdc8f775f9a0711775f6eca656e808f1c428bc389e21b4d0042eee2",
+          "lineStart": 21,
+          "lineEnd": 68,
+          "literal": "/// Distinct expression nodes reachable from `root`: the per-statement cache\n/// charges each shared DAG node once.\nfn expression_nodes(program: &Program, root: ExprId) -> Result<u128, Error> {\n    let mut seen = vec![false; program.expressions.len()];\n    let mut pending = vec![root];\n    let mut count = 0_u128;\n    while let Some(id) = pending.pop() {\n        let index = usize::from(id);\n        let node = program\n            .expressions\n            .get(index)\n            .ok_or_else(|| Error::new(\"expression\", \"Expression index out of bounds.\"))?;\n        if std::mem::replace(&mut seen[index], true) {\n            continue;\n        }\n        count += 1;\n        match node {\n            Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),\n            Expr::Not { value } => pending.push(*value),\n            Expr::LiabilityPresent { .. }\n            | Expr::LiabilityAmount { .. }\n            | Expr::Literal { .. }\n            | Expr::Name { .. } => {}\n        }\n    }\n    Ok(count)\n}\n\nfn root(statement: &Statement) -> ExprId {\n    match statement {\n        Statement::Await { guard, .. } => *guard,\n        Statement::Let { value, .. }\n        | Statement::Next { value, .. }\n        | Statement::Emit { value, .. } => *value,\n        Statement::Requires { predicate } | Statement::Ensures { predicate } => *predicate,\n        Statement::Transfer { amount, .. }\n        | Statement::Fee { amount, .. }\n        | Statement::Liability { amount, .. }\n        | Statement::Discharge { amount, .. } => *amount,\n    }\n}\n\n/// Successful cost of one statement. For an Await this is its resume dispatch\n/// plus guard; reaching an Await at segment exit costs 1 instead.\npub(crate) fn statement_cost(program: &Program, statement: &Statement) -> Result<UInt, Error> {\n    let nodes = expression_nodes(program, root(statement))?;\n    nodes.checked_add(1).map(UInt).ok_or_else(overflow)\n}"
+        },
+        {
+          "inputFile": "CORE-stage-cost.rs",
+          "sha256": "6edebd925cdc8f775f9a0711775f6eca656e808f1c428bc389e21b4d0042eee2",
+          "lineStart": 164,
+          "lineEnd": 224,
+          "literal": "/// Start refusal before evaluation (C3). Without a cap there is no admission\n/// check. Returns the meter limit of segment 0.\npub(crate) fn start_preflight(plan: &ActionPlan, cap: Option<UInt>) -> Result<UInt, Error> {\n    let first = *plan.segment_cost.first().ok_or_else(|| {\n        Error::new(\"stage_logical\", \"Stage plan has no segment costs.\")\n    })?;\n    if let Some(cap) = cap {\n        if plan.plan_total > cap {\n            return Err(Error::new(\n                \"stage_logical\",\n                \"Action plan total exceeds the logical cap.\",\n            ));\n        }\n    }\n    Ok(first)\n}\n\n/// R6. Call only after R1-R5 admitted `site`. The CLI cap checks this\n/// invocation only and can never raise the stored cap, which the output\n/// continuation carries unchanged. Returns the meter limit of segment `site`.\npub(crate) fn resume_preflight(\n    plan: &ActionPlan,\n    site: u16,\n    logical: &StageLogical,\n    cli_cap: Option<UInt>,\n) -> Result<UInt, Error> {\n    let refuse = |message: &str| Error::new(\"stage_logical\", message);\n    let index = usize::from(site);\n    let (Some(before), Some(cost)) = (\n        plan.committed_before.get(index),\n        plan.segment_cost.get(index),\n    ) else {\n        return Err(refuse(\"Pending site has no planned segment.\"));\n    };\n    if index == 0 || logical.committed != *before {\n        return Err(refuse(\"Committed work differs from the stage plan.\"));\n    }\n    let needed = logical\n        .committed\n        .0\n        .checked_add(cost.0)\n        .ok_or_else(|| refuse(\"Committed work overflows u128.\"))?;\n    let effective = match (cli_cap, logical.cap) {\n        (Some(cli), Some(stored)) if cli > stored => {\n            return Err(refuse(\"Logical cap cannot exceed the stored cap.\"));\n        }\n        (Some(cli), _) => Some(cli),\n        (None, stored) => stored,\n    };\n    if effective.is_some_and(|cap| needed > cap.0) {\n        return Err(refuse(\"Next segment exceeds the logical cap.\"));\n    }\n    Ok(*cost)\n}\n\npub(crate) fn segment_meter(limit: UInt) -> Meter {\n    Meter::new(Cost {\n        logical: limit,\n        ..Cost::default()\n    })\n}"
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 wire",
+      "statement": "NamedValue name/value; StageLogical profile/cap/committed with custom Option deserializer requiring cap key; Continuation format/program_hash/plan_hash/action/site/captures/logical/boundary; StageEvent format/action/label/values deny unknown fields.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-mod.rs",
+          "sha256": "428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c",
+          "lineStart": 90,
+          "lineEnd": 126,
+          "literal": "#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct NamedValue {\n    pub name: String,\n    pub value: Value,\n}\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct StageLogical {\n    pub profile: String,\n    /// Mandatory key; `None` is written as `null`.\n    #[serde(deserialize_with = \"Option::deserialize\")]\n    pub cap: Option<UInt>,\n    pub committed: UInt,\n}\n/// Resume input. `site` and `captures` are the executing action's pending\n/// frame; `boundary` is the legacy Snapshot. Nothing here is authenticated.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct Continuation {\n    pub format: String,\n    pub program_hash: String,\n    pub plan_hash: String,\n    pub action: String,\n    pub site: u16,\n    pub captures: Vec<NamedValue>,\n    pub logical: StageLogical,\n    pub boundary: Snapshot,\n}\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(deny_unknown_fields)]\npub struct StageEvent {\n    pub format: String,\n    pub action: String,\n    pub label: String,\n    pub values: Vec<NamedValue>,\n}"
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Staged2 decoder",
+      "statement": "strict decoder calls Core parse_limited then serde_json::from_value; continuation/event use separate4MiB/65536 limits. canonical_boundary checks supplied ordered representation rather than normalizing it.",
+      "citations": [
+        {
+          "inputFile": "CORE-stage-decode.rs",
+          "sha256": "48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c",
+          "lineStart": 34,
+          "lineEnd": 47,
+          "literal": "fn strict<T: DeserializeOwned>(text: &str, max: usize, too_large: &'static str) -> Result<T, Error> {\n    let value = crate::json::parse_limited(text, max, too_large)?;\n    serde_json::from_value(value).map_err(|e| Error::new(\"json\", e.to_string()))\n}\n\n/// Exactly one `Continuation`; unknown fields, a missing `cap` key and\n/// non-canonical UInt strings are rejected by the type's derives.\npub fn continuation(text: &str) -> Result<Continuation, Error> {\n    strict(text, MAX_CONTINUATION_BYTES, CONTINUATION_TOO_LARGE)\n}\n\npub fn event(text: &str) -> Result<StageEvent, Error> {\n    strict(text, MAX_EVENT_BYTES, EVENT_TOO_LARGE)\n}"
+        },
+        {
+          "inputFile": "CORE-stage-decode.rs",
+          "sha256": "48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c",
+          "lineStart": 94,
+          "lineEnd": 117,
+          "literal": "pub fn canonical_boundary(\n    sp: &StagedProgram,\n    action: usize,\n    captures: &[NamedValue],\n    b: &Snapshot,\n) -> Result<(), Error> {\n    let p = sp.program();\n    let (Some(a), Some(plan)) = (p.actions.get(action), sp.plan().actions.get(action)) else {\n        return Err(Error::new(\"stage_site\", \"Unknown staged action.\"));\n    };\n    // (d) Snapshot has no inputs component (U-1); R4 alone binds captures.\n    let _ = captures;\n    if b.balances.len() > 4096 || b.liabilities.len() > 1024 {\n        return Err(Error::new(\n            \"bound\",\n            \"Scenario exceeds 4,096 balances or 1,024 liabilities.\",\n        ));\n    }\n    // (a) States: exactly the declared states, each of its declared type.\n    if b.state.len() != p.states.len() {\n        return Err(Error::new(\n            \"state\",\n            \"Boundary must provide every declared state value and no other.\",\n        ));"
+        }
+      ]
+    },
+    {
+      "id": "U01",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "parser lexer",
+      "statement": "mori_lexer::lex,TokenKind classification/span and decode_string bodies are absent. Tokenization,comments,escape/Unicode behavior remain uninspected; parser spelling alone does not close lexical grammar.",
+      "citations": [
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 1,
+          "lineEnd": 4,
+          "literal": "use crate::*;\nuse mori_lexer::{TokenIdx, TokenKind};\n\n/// Parses the explicitly versioned core profile; beta grammar is untouched."
+        },
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 14,
+          "lineEnd": 26,
+          "literal": "fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let tokens = (0..lexed.len())\n        .map(|i| {\n            let idx = TokenIdx::new(i);\n            let span = lexed.span(idx, source);\n            let raw = &source[span.start as usize..span.end as usize];\n            let text = if lexed.kind(idx) == TokenKind::String {\n                mori_lexer::decode_string(raw)\n            } else {\n                raw.to_owned()\n            };\n            Tok {"
+        },
+        {
+          "inputFile": "CORE-parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "lineStart": 199,
+          "lineEnd": 215,
+          "literal": "    fn word(&mut self) -> Result<String, Error> {\n        if self.peek().kind.is_word() {\n            let text = self.peek().text.clone();\n            self.pos += 1;\n            Ok(text)\n        } else {\n            Err(self.error(\"syntax\", \"Expected a name.\"))\n        }\n    }\n    fn string(&mut self) -> Result<String, Error> {\n        if self.peek().kind == TokenKind::String {\n            let text = self.peek().text.clone();\n            self.pos += 1;\n            Ok(text)\n        } else {\n            Err(self.error(\"syntax\", \"Expected a quoted string.\"))\n        }"
+        }
+      ]
+    },
+    {
+      "id": "U02",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "compiler helpers",
+      "statement": "Graph second boundary remains: compiler identity checked,adapter admits,layout build,ABI2 options/constants,staged lowering_plan. Call sites are inspected; implementation bodies are not in33-file manifest. No security/proof/financial correctness inference is made.",
+      "citations": [
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 220,
+          "lineEnd": 226,
+          "literal": "    let build = options.compiler.checked()?;\n    adapter.admits(admitted.program()).map_err(CompileError::Adapter)?;\n    if adapter == StatementAdapter::SettlementHashV2 {\n        abi2::options_ok(&options)?;\n    }\n    let plan = plan::plan_action(admitted.program(), &options)?;\n    let layout = StatementLayout::build(admitted.identity(), &plan, build)?;"
+        },
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 254,
+          "lineEnd": 269,
+          "literal": "    let abi2 = if adapter == StatementAdapter::SettlementHashV2 {\n        Some(abi2::constants(admitted.program(), &plan, &layout, identity.digest()?.0)?)\n    } else {\n        None\n    };\n    let mut relation = CompiledRelation { admitted, options, plan, layout, identity, adapter, abi2, probe: placeholder };\n    relation.probe = probe::<F>(&relation)?;\n    Ok(relation)\n}\n\n/// Routes source by its declared profile and compiles `/1`. `/2` is admitted by the\n/// actual stage loader and then refused with its staged lowering plan.\npub fn compile_source<F: PrimeField>(source: &str, options: CompileOptions, adapter: StatementAdapter) -> Result<CompiledRelation, CompileError> {\n    match frontend::admit_source(source)? {\n        Admitted::Core1(admitted) => compile::<F>(admitted, options, adapter),\n        Admitted::Staged2(staged) => Err(CompileError::StagedNotLowered(Box::new(staged.lowering_plan()?))),"
+        }
+      ]
+    },
+    {
+      "id": "U03",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "external implementations",
+      "statement": "serde/serde_json,sha2/k256,arkworks and gadget implementations are named dependencies absent as bodies. Source-declared serialization and call order do not prove dependency behavior or proof correspondence.",
+      "citations": [
+        {
+          "inputFile": "CORE-json.rs",
+          "sha256": "faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183",
+          "lineStart": 2,
+          "lineEnd": 4,
+          "literal": "use crate::Error;\nuse serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};\nuse serde_json::{Map, Value};"
+        },
+        {
+          "inputFile": "CORE-intent.rs",
+          "sha256": "a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c",
+          "lineStart": 6,
+          "lineEnd": 8,
+          "literal": "use k256::{ecdsa, schnorr};\nuse serde::{Deserialize, Serialize};\nuse sha2::{Digest, Sha256};"
+        },
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 24,
+          "lineEnd": 29,
+          "literal": "use ark_ff::{BigInteger, PrimeField};\nuse ark_relations::r1cs::{\n    ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, OptimizationGoal, SynthesisError, SynthesisMode,\n};\nuse mori_core::{Program, Type, UInt, Value};\nuse serde::Serialize;"
+        },
+        {
+          "inputFile": "S09-lower.rs",
+          "sha256": "68e9ed9a806acae819908acb773f728cb2c74badd50f49b9de01b36995ceecc5",
+          "lineStart": 132,
+          "lineEnd": 148,
+          "literal": "    fn binary(&self, cs: &mut Cs<F>, op: BinaryOp, a: CVal<F>, b: CVal<F>) -> Result<CVal<F>, GadgetError> {\n        let shape = |m: &str| GadgetError::Static(format!(\"operand types differ from validated IR: {m}\"));\n        Ok(match (op, a, b) {\n            (BinaryOp::Add, CVal::U(x), CVal::U(y)) => CVal::U(gadgets::add(cs, \"add\", &x, &y)?),\n            (BinaryOp::Sub, CVal::U(x), CVal::U(y)) => CVal::U(gadgets::sub(cs, \"sub\", &x, &y)?),\n            (BinaryOp::Mul, CVal::U(x), CVal::U(y)) => CVal::U(gadgets::mul(cs, \"mul\", &x, &y)?),\n            (BinaryOp::Lt, CVal::U(x), CVal::U(y)) => CVal::B(gadgets::lt(cs, \"lt\", &x, &y)?),\n            (BinaryOp::Gt, CVal::U(x), CVal::U(y)) => CVal::B(gadgets::lt(cs, \"lt\", &y, &x)?),\n            (BinaryOp::Le, CVal::U(x), CVal::U(y)) => CVal::B(gadgets::not(&gadgets::lt(cs, \"lt\", &y, &x)?)),\n            (BinaryOp::Ge, CVal::U(x), CVal::U(y)) => CVal::B(gadgets::not(&gadgets::lt(cs, \"lt\", &x, &y)?)),\n            (BinaryOp::Eq, CVal::U(x), CVal::U(y)) => CVal::B(gadgets::eq_uint(cs, \"eq\", &x, &y)?),\n            (BinaryOp::Ne, CVal::U(x), CVal::U(y)) => CVal::B(gadgets::not(&gadgets::eq_uint(cs, \"eq\", &x, &y)?)),\n            (BinaryOp::Eq, CVal::B(x), CVal::B(y)) => CVal::B(gadgets::eq_bool(cs, \"beq\", &x, &y)?),\n            (BinaryOp::Ne, CVal::B(x), CVal::B(y)) => CVal::B(gadgets::not(&gadgets::eq_bool(cs, \"beq\", &x, &y)?)),\n            (BinaryOp::And, CVal::B(x), CVal::B(y)) => CVal::B(gadgets::and(cs, \"and\", &x, &y)?),\n            (BinaryOp::Or, CVal::B(x), CVal::B(y)) => CVal::B(gadgets::or(cs, \"or\", &x, &y)?),\n            (op, _, _) => return Err(shape(&format!(\"{op:?}\"))),"
+        }
+      ]
+    },
+    {
+      "id": "U04",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "financial/crypto correctness",
+      "statement": "Intent checks,policy/sponsor accounting,financial evaluator branches and constraint lowering are read as source only. Adequacy,cryptographic correctness,financial conservation,equivalence and ledger authority remain for authorized Opus work; no judgment here.",
+      "citations": [
+        {
+          "inputFile": "CORE-intent.rs",
+          "sha256": "a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c",
+          "lineStart": 251,
+          "lineEnd": 257,
+          "literal": "/// Check all owner debits, fees, net goals and closing liabilities by exact asset identity.\npub fn check_effects(\n    signer: &str,\n    limits: &[AssetLimit],\n    effects: &[Effect],\n    closing: &[Liability],\n) -> Result<(), Error> {"
+        },
+        {
+          "inputFile": "CORE-policy.rs",
+          "sha256": "992e18f71e01ff4619512b9c9a0f7f4bbb92a9e31765edcac8cc5a6ff9667cdf",
+          "lineStart": 1,
+          "lineEnd": 3,
+          "literal": "//! Deterministic cost accounting and scoped local authority.\n//! Authentication of grants and settlement observations belongs to the caller.\nuse crate::{Error, UInt};"
+        },
+        {
+          "inputFile": "CORE-source_sponsor.rs",
+          "sha256": "870e71ba219a5e8adaaff980d3757810c8e44c0047d770e93627ba4b0c34cfd2",
+          "lineStart": 1,
+          "lineEnd": 8,
+          "literal": "//! Exact-source local sponsorship, with trusted unsigned local accounting.\n//! Primitive work is retained on failure; only uncommitted economic holds roll back.\n//! Parsing, hashing, validation, cloning and normalization are outside the cost profile.\nuse crate::intent::{canonical, hash_bytes};\nuse crate::policy::FeeCapability;\nuse crate::{\n    CostReport, Error, Execution, LANGUAGE, LOGICAL_COST_PROFILE, SEMANTICS, Scenario, UInt, parse,\n    simulate_metered, validate,"
+        },
+        {
+          "inputFile": "S16-circuit.rs",
+          "sha256": "3856551a3466e6790c0142df9b2025487d2330f9da20caa3796f1ff27bd5649c",
+          "lineStart": 9,
+          "lineEnd": 13,
+          "literal": "//! Synthesis order: entry wires (claimed inputs and pre-state, range-proven), the\n//! statement-by-statement lowering, the cap constraint, the accounting summary, then\n//! binding of every slot through the adapter. Internal wires are computed from the\n//! claimed inputs and pre-state only; claimed post-state and effects enter solely as\n//! public values that the binding equates with the computed wires."
+        }
+      ]
+    },
+    {
+      "id": "W01",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 specimen",
+      "statement": "InstallmentInvoice declares Core1 and the partial action; the selector names partial and requests SettlementHashV2/NotBound/GrossDebitAndFees/TouchedOnly.",
+      "citations": [
+        {
+          "inputFile": "S10-installment-invoice.mori",
+          "sha256": "105137af8ac6a1f060ec7b634e3ec4aa913808e94bd1b7cffb736f8105d2cfc9",
+          "lineStart": 1,
+          "lineEnd": 7,
+          "literal": "language \"moriarty/1\";\nagreement InstallmentInvoice {\n  state opened: Bool = false;\n  state paid: UInt = 0;\n  state marker: UInt = 7;\n  asset CASH = { network: \"oracle-unit\", issuer: \"invoice-issuer\", reference: \"cash\", scale: 0 };\n  action open(principal: UInt, reserve: UInt) {"
+        },
+        {
+          "inputFile": "S10-installment-invoice.mori",
+          "sha256": "105137af8ac6a1f060ec7b634e3ec4aa913808e94bd1b7cffb736f8105d2cfc9",
+          "lineStart": 21,
+          "lineEnd": 29,
+          "literal": "  action partial(amount: UInt) {\n    requires opened and amount > 0;\n    let opening = liability_amount(\"invoice\");\n    requires amount < opening;\n    fee(CASH, \"escrow\", \"fees\", 2);\n    transfer(CASH, \"escrow\", \"seller\", amount);\n    discharge(\"invoice\", amount);\n    next paid = paid + amount;\n    ensures liability_amount(\"invoice\") == opening - amount;"
+        },
+        {
+          "inputFile": "S12-invoice-partial.selector.json",
+          "sha256": "1f011dec179e394591a69859d06c999337ba45133d63627140a89c30fa591ee4",
+          "lineStart": 2,
+          "lineEnd": 9,
+          "literal": "  \"format\": \"moriarty-k2-relation-selector/1\",\n  \"language\": \"moriarty/1\",\n  \"semantics\": \"moriarty-core/1\",\n  \"action\": \"partial\",\n  \"adapter\": \"SettlementHashV2\",\n  \"cap\": \"NotBound\",\n  \"accounting\": \"GrossDebitAndFees\",\n  \"frame\": \"TouchedOnly\""
+        }
+      ]
+    },
+    {
+      "id": "W02",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 request",
+      "statement": "Invoice request declares CoreReference; supplied amount is UInt string35, and request state explicitly supplies marker/opened/paid. No output was computed.",
+      "citations": [
+        {
+          "inputFile": "S14-invoice-partial.request.json",
+          "sha256": "aa1703e7b3aa2e0dd6288668cc871996fc1ee49ecc90861a3c4b40f02107f3cd",
+          "lineStart": 13,
+          "lineEnd": 15,
+          "literal": "  \"transition\": {\n    \"kind\": \"CoreReference\",\n    \"scenario\": {"
+        },
+        {
+          "inputFile": "S14-invoice-partial.request.json",
+          "sha256": "aa1703e7b3aa2e0dd6288668cc871996fc1ee49ecc90861a3c4b40f02107f3cd",
+          "lineStart": 58,
+          "lineEnd": 63,
+          "literal": "      \"inputs\": {\n        \"amount\": {\n          \"type\": \"UInt\",\n          \"value\": \"35\"\n        }\n      },"
+        },
+        {
+          "inputFile": "S14-invoice-partial.request.json",
+          "sha256": "aa1703e7b3aa2e0dd6288668cc871996fc1ee49ecc90861a3c4b40f02107f3cd",
+          "lineStart": 90,
+          "lineEnd": 103,
+          "literal": "      \"state\": {\n        \"marker\": {\n          \"type\": \"UInt\",\n          \"value\": \"7\"\n        },\n        \"opened\": {\n          \"type\": \"Bool\",\n          \"value\": true\n        },\n        \"paid\": {\n          \"type\": \"UInt\",\n          \"value\": \"0\"\n        }\n      }"
+        }
+      ]
+    },
+    {
+      "id": "W03",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 specimen",
+      "statement": "ConditionalReserve declares Core1 and allocate with approved/units/quotient/remainder inputs. It writes units == quotient * 3 + remainder, remainder <3, and a statement-position ensures rounds ==0 before financial effects and Next declarations.",
+      "citations": [
+        {
+          "inputFile": "S11-conditional-reserve.mori",
+          "sha256": "395e647534160fde45325232e5f1650a8bd48ce1455a68b28af203bf8bdbe357",
+          "lineStart": 1,
+          "lineEnd": 24,
+          "literal": "language \"moriarty/1\";\nagreement ConditionalReserve {\n  state allocated: Bool = false;\n  state rounds: UInt = 0;\n  state marker: UInt = 77;\n  asset A = { network: \"oracle-unit\", issuer: \"reserve-issuer\", reference: \"A\", scale: 0 };\n  asset B = { network: \"oracle-unit\", issuer: \"reserve-issuer\", reference: \"B\", scale: 0 };\n  action allocate(approved: Bool, units: UInt, quotient: UInt, remainder: UInt) {\n    requires approved and not allocated;\n    requires remainder < 3;\n    requires units == quotient * 3 + remainder;\n    requires units >= 3 and quotient not = 0;\n    let toAlpha = quotient * 2;\n    let toBeta = quotient;\n    ensures rounds == 0;\n    fee(A, \"vault\", \"fees\", 2);\n    transfer(A, \"vault\", \"alpha\", toAlpha);\n    transfer(A, \"vault\", \"beta\", toBeta);\n    transfer(B, \"vault\", \"alpha\", 4);\n    liability(\"allocation_reserve\", A, \"vault\", \"owner\", remainder);\n    liability(\"rebate\", B, \"vault\", \"owner\", 6);\n    next allocated = true;\n    next rounds = rounds + 1;\n    ensures liability_amount(\"allocation_reserve\") == remainder;"
+        },
+        {
+          "inputFile": "S13-reserve-allocate.selector.json",
+          "sha256": "4110ae0ca7031482155ad362a787b5fd76c59492eb045a840ee58deafef9556a",
+          "lineStart": 2,
+          "lineEnd": 9,
+          "literal": "  \"format\": \"moriarty-k2-relation-selector/1\",\n  \"language\": \"moriarty/1\",\n  \"semantics\": \"moriarty-core/1\",\n  \"action\": \"allocate\",\n  \"adapter\": \"SettlementHashV2\",\n  \"cap\": \"NotBound\",\n  \"accounting\": \"GrossDebitAndFees\",\n  \"frame\": \"TouchedOnly\""
+        }
+      ]
+    },
+    {
+      "id": "W04",
+      "classification": "SOURCE_DECLARATION",
+      "profile": "Core1 request",
+      "statement": "Reserve request declares CoreReference and supplies approved=true,quotient=UInt string7,remainder=UInt string2,units=UInt string23; liabilities is the empty array. These are input literals only.",
+      "citations": [
+        {
+          "inputFile": "S15-reserve-allocate.request.json",
+          "sha256": "b949f44bac9b6f40bc6c780c1939fe4575f4cff70b0c8431c31df2924c2ecce7",
+          "lineStart": 13,
+          "lineEnd": 15,
+          "literal": "  \"transition\": {\n    \"kind\": \"CoreReference\",\n    \"scenario\": {"
+        },
+        {
+          "inputFile": "S15-reserve-allocate.request.json",
+          "sha256": "b949f44bac9b6f40bc6c780c1939fe4575f4cff70b0c8431c31df2924c2ecce7",
+          "lineStart": 118,
+          "lineEnd": 149,
+          "literal": "      \"inputs\": {\n        \"approved\": {\n          \"type\": \"Bool\",\n          \"value\": true\n        },\n        \"quotient\": {\n          \"type\": \"UInt\",\n          \"value\": \"7\"\n        },\n        \"remainder\": {\n          \"type\": \"UInt\",\n          \"value\": \"2\"\n        },\n        \"units\": {\n          \"type\": \"UInt\",\n          \"value\": \"23\"\n        }\n      },\n      \"liabilities\": [],\n      \"state\": {\n        \"allocated\": {\n          \"type\": \"Bool\",\n          \"value\": false\n        },\n        \"marker\": {\n          \"type\": \"UInt\",\n          \"value\": \"77\"\n        },\n        \"rounds\": {\n          \"type\": \"UInt\",\n          \"value\": \"0\"\n        }"
+        }
+      ]
+    },
+    {
+      "id": "W05",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "profile": "request-to-runtime caller",
+      "statement": "TransitionInput::CoreReference has a comment naming Core simulate; the actual driver caller that converts this variant into a transition is not a supplied body. Thus these request documents do not themselves establish an observed simulate call.",
+      "citations": [
+        {
+          "inputFile": "S03-input.rs",
+          "sha256": "646c1aad3cea935de2e084e2cb1518772e8bd0fc7e57eb6b3f4581edc67b5b42",
+          "lineStart": 85,
+          "lineEnd": 93,
+          "literal": "/// The claimed transition, as a proposal. There is no default kind.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(tag = \"kind\", deny_unknown_fields)]\npub enum TransitionInput {\n    /// Core `simulate` proposes the transition for this scenario.\n    CoreReference { scenario: Scenario },\n    /// Explicit typed records: inputs, pre and post snapshots and ordered effects.\n    Records { inputs: BTreeMap<String, Value>, pre: Snapshot, post: Snapshot, effects: Vec<Effect> },\n}"
+        }
+      ]
+    }
+  ],
+  "familyInventory": [
+    {
+      "id": "S01",
+      "name": "Authenticated genesis and counterfeit state",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 4,
+          "lineEnd": 5,
+          "literal": "    \"id\": \"S01\",\n    \"name\": \"Authenticated genesis and counterfeit state\","
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "name": "Consume-and-recreate, conflict, reference-read",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 10,
+          "lineEnd": 11,
+          "literal": "    \"id\": \"S02\",\n    \"name\": \"Consume-and-recreate, conflict, reference-read\","
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "name": "Split/join conserved authority, work and duties",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 16,
+          "lineEnd": 17,
+          "literal": "    \"id\": \"S03\",\n    \"name\": \"Split/join conserved authority, work and duties\","
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "name": "Migration and termination retain residual obligations",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 22,
+          "lineEnd": 23,
+          "literal": "    \"id\": \"S04\",\n    \"name\": \"Migration and termination retain residual obligations\","
+        }
+      ]
+    },
+    {
+      "id": "escrow-time",
+      "name": "escrow-time",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 28,
+          "lineEnd": 29,
+          "literal": "    \"id\": \"escrow-time\",\n    \"name\": \"escrow-time\","
+        }
+      ]
+    },
+    {
+      "id": "interval-boundary",
+      "name": "interval-boundary",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 34,
+          "lineEnd": 35,
+          "literal": "    \"id\": \"interval-boundary\",\n    \"name\": \"interval-boundary\","
+        }
+      ]
+    },
+    {
+      "id": "joint-role",
+      "name": "joint-role",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 40,
+          "lineEnd": 41,
+          "literal": "    \"id\": \"joint-role\",\n    \"name\": \"joint-role\","
+        }
+      ]
+    },
+    {
+      "id": "oracle-observation",
+      "name": "oracle-observation",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 46,
+          "lineEnd": 47,
+          "literal": "    \"id\": \"oracle-observation\",\n    \"name\": \"oracle-observation\","
+        }
+      ]
+    },
+    {
+      "id": "bilateral atomic escrow swap",
+      "name": "bilateral atomic escrow swap",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 52,
+          "lineEnd": 53,
+          "literal": "    \"id\": \"bilateral atomic escrow swap\",\n    \"name\": \"bilateral atomic escrow swap\","
+        }
+      ]
+    },
+    {
+      "id": "constant-product exact rounding/slippage with serialized pool continuation",
+      "name": "constant-product exact rounding/slippage with serialized pool continuation",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 58,
+          "lineEnd": 59,
+          "literal": "    \"id\": \"constant-product exact rounding/slippage with serialized pool continuation\",\n    \"name\": \"constant-product exact rounding/slippage with serialized pool continuation\","
+        }
+      ]
+    },
+    {
+      "id": "order execution versus timeout cancellation",
+      "name": "order execution versus timeout cancellation",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 64,
+          "lineEnd": 65,
+          "literal": "    \"id\": \"order execution versus timeout cancellation\",\n    \"name\": \"order execution versus timeout cancellation\","
+        }
+      ]
+    },
+    {
+      "id": "two-order batch exact input coverage and injective output allocation / same-output double satisfaction",
+      "name": "two-order batch exact input coverage and injective output allocation / same-output double satisfaction",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 70,
+          "lineEnd": 71,
+          "literal": "    \"id\": \"two-order batch exact input coverage and injective output allocation / same-output double satisfaction\",\n    \"name\": \"two-order batch exact input coverage and injective output allocation / same-output double satisfaction\","
+        }
+      ]
+    },
+    {
+      "id": "F01-origination",
+      "name": "F01-origination",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 76,
+          "lineEnd": 77,
+          "literal": "    \"id\": \"F01-origination\",\n    \"name\": \"F01-origination\","
+        }
+      ]
+    },
+    {
+      "id": "F02-interest-period",
+      "name": "F02-interest-period",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 82,
+          "lineEnd": 83,
+          "literal": "    \"id\": \"F02-interest-period\",\n    \"name\": \"F02-interest-period\","
+        }
+      ]
+    },
+    {
+      "id": "F03-partial-repayment-residual-liability",
+      "name": "F03-partial-repayment-residual-liability",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 88,
+          "lineEnd": 89,
+          "literal": "    \"id\": \"F03-partial-repayment-residual-liability\",\n    \"name\": \"F03-partial-repayment-residual-liability\","
+        }
+      ]
+    },
+    {
+      "id": "F04-fee-gross-net-policy",
+      "name": "F04-fee-gross-net-policy",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 94,
+          "lineEnd": 95,
+          "literal": "    \"id\": \"F04-fee-gross-net-policy\",\n    \"name\": \"F04-fee-gross-net-policy\","
+        }
+      ]
+    },
+    {
+      "id": "AP01",
+      "name": "Fee-inclusive bounded outcome and exact identity",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 100,
+          "lineEnd": 101,
+          "literal": "    \"id\": \"AP01\",\n    \"name\": \"Fee-inclusive bounded outcome and exact identity\","
+        }
+      ]
+    },
+    {
+      "id": "AP02",
+      "name": "Per-instance durable nonce and transfer replay",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 106,
+          "lineEnd": 107,
+          "literal": "    \"id\": \"AP02\",\n    \"name\": \"Per-instance durable nonce and transfer replay\","
+        }
+      ]
+    },
+    {
+      "id": "AP03",
+      "name": "Native multisig/role authority",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 112,
+          "lineEnd": 113,
+          "literal": "    \"id\": \"AP03\",\n    \"name\": \"Native multisig/role authority\","
+        }
+      ]
+    },
+    {
+      "id": "AP04",
+      "name": "Failclosed unsupported certificate/private mode",
+      "classification": "UNINSPECTED_BOUNDARY",
+      "mapping": "UNLOCATED_IN_THIS_PACKET",
+      "constructs": [],
+      "reason": "No inspected source statement explicitly binds this inventory family ID/name to a language construct. Name similarity is not a mapping. case_file pointer not followed.",
+      "citations": [
+        {
+          "inputFile": "PATTERN-INVENTORY.json",
+          "sha256": "8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997",
+          "lineStart": 118,
+          "lineEnd": 119,
+          "literal": "    \"id\": \"AP04\",\n    \"name\": \"Failclosed unsupported certificate/private mode\","
+        }
+      ]
+    }
+  ],
+  "familyCount": 20,
+  "nextSourceOnlyTask": {
+    "requestedNamedBody": "mori_lexer source implementation defining lex,TokenKind,decode_string (exact path/hash must be supplied by root)",
+    "why": "Closes lexical grammar boundary without requiring runtime execution. Existing backend helper boundary remains separate.",
+    "notAuthorizedByThisRecord": true
+  },
+  "prohibitionsObserved": [
+    "No provenance/case_file/gitPath followed",
+    "No project source executed/imported/compiled/tested",
+    "No network/Git/CONT/job/shared-session mutations",
+    "No acceptance/adoption/security/proof/ledger judgment"
+  ],
+  "reviewScope": {
+    "parentSourcePacket": {
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-input/MANIFEST.json",
+      "sha256": "bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e",
+      "listedFiles": 33,
+      "listedCoreFiles": 18,
+      "inventoryIncludes": "PATTERN-INVENTORY.json",
+      "independentlyInspectedInventoryThisCorrection": true
+    },
+    "boundedOriginalReview": {
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/jobs/CORE-PROFILE-TYPES-PART1-REVIEW-GEMINI4-ARGON-HIGH/REVIEW.json",
+      "sha256": "940ac79aef542275458d71f0806f267770c39207bf1be28a17ef3c0e4d525d45",
+      "reviewToken": "core-profile-types-part1-gemini4-argon-high-20261017",
+      "claimIds": [
+        "G01",
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07"
+      ],
+      "claimCount": 18,
+      "remaining43ClaimsNotReviewedByPart1": true,
+      "reportedWorkspaceFileCount": 9,
+      "workspaceCountBasis": "Whole exported REVIEW.json coverage/summary/findings; bounded reviewer workspace manifest not opened in this correction",
+      "reportedSourceBodies": [
+        "CORE-ir.rs",
+        "CORE-lib.rs",
+        "CORE-parser.rs",
+        "CORE-stage-mod.rs",
+        "CORE-stage-profile.rs",
+        "S06-frontend.rs",
+        "graph.json (metadata slice only)"
+      ],
+      "PATTERN-INVENTORY.jsonDirectlyReadByBoundedReviewer": false,
+      "other13CoreBodiesDirectlyReadByBoundedReviewer": false,
+      "reviewerIdentityBasis": "Gemini4 Argon High self-report in whole public export; no independent provider identity attestation added",
+      "sourceAttributionReadyFieldIsNotAdoption": true,
+      "changedBytesFreshReviewRequired": true
+    },
+    "familyInventory": {
+      "scope": "All20 entries and exact prior citations retained from parent33-file packet, not claimed to be direct Part1 reviewer source reads",
+      "entriesUnchanged": true,
+      "caseFilePathsFollowed": false
+    }
+  },
+  "revision": {
+    "originalFiles": {
+      "ADMISSION-SOURCE-TABLE.json": {
+        "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-observations/ADMISSION-SOURCE-TABLE.json",
+        "bytes": 179486,
+        "sha256": "9c9b32c9ba160eabd2d4b6acd8ac4a63f04c11efa8852c14b6d4d0adff3d813e",
+        "lines": 1565
+      },
+      "SOURCE-WALKTHROUGHS.md": {
+        "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-observations/SOURCE-WALKTHROUGHS.md",
+        "bytes": 14864,
+        "sha256": "02af59fac26ec6bbdee4f0445a8e30d0dfb0c39e87aa3e61cc50af4ed0ceac47",
+        "lines": 351
+      },
+      "SOURCE-CHECKS.json": {
+        "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-frontend-source-observations/SOURCE-CHECKS.json",
+        "bytes": 22462,
+        "sha256": "3ba54f338114e8c63eaf68d95755dca03a80d983df0eac17efdc52e6dc46ac8b",
+        "lines": 802
+      }
+    },
+    "changedClaimIds": [
+      "P02",
+      "P04",
+      "P09",
+      "P10",
+      "T03",
+      "T06",
+      "T07"
+    ],
+    "unchangedClaimCount": 54,
+    "classificationsUnchanged": true,
+    "familyEntriesUnchanged": true,
+    "onlyEstablishedAttributionCorrections": true,
+    "adopted": false
+  },
+  "laterSourceNotes": {
+    "scope": "Separate later lexer/helper source observations are unreviewed/unpublished source notes, outside the frozen33-file parent packet and this bounded correction. They are not a new runtime approval and do not change U01/U02 or other inherited claim objects here.",
+    "tablePathReferenceOnly": "/home/charl/moriarty-c2-opus55-restored-20261017/core-lexer-helper-source-observations/LEXER-HELPER-SOURCE-TABLE.json",
+    "tableSha256FromPriorTaskRecord": "3ae1c197633e09d59e4d8241a6d87ba02c2f856cb762fb706bcb249d1b93d97a",
+    "readThisCorrection": false,
+    "runtimeReady": false,
+    "nativeAuthority": 0,
+    "fullGoalOpen": true
+  }
+}

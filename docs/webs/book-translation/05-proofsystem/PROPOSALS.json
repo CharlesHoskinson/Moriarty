@@ -1,0 +1,100 @@
+{
+  "format": "sevenlayer-layer-translation-proposals/1",
+  "role": "05-proofsystem",
+  "proposals": [
+    {
+      "id": "statement-proof-verifier",
+      "title": "Show what each proof is about",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, ‘Sealing the Certificate’ (supplied excerpt lines 9–25); G05.txt, pp. 16–18, QAP relation and Prove/Vfy algorithms.",
+      "sourceSupport": [
+        "BOOK_FACT: The chapter frames a proof system as producing a certificate for a claim about a computation.",
+        "PRIMARY_SOURCE_SUPPORT: G05 defines a relation over public statement values and a witness and describes proving and verifying a proof against them.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/proofRoleExplanation says a Strand proof attests computation over its statement values, while ledger facts come from the transaction and the validator rebuilds the statement."
+      ],
+      "websiteMapping": "Make the four elements visible together: relation (the rule), statement (the public values), witness (the private values satisfying the rule), and proof (the verifier's checkable evidence). For the invoice, show that the arithmetic statement is distinct from the validator's authentication of the spent escrow state and actual outputs.",
+      "readerCopy": "A proof is checked against a particular statement and relation. It supports the claim that the encoded computation has a satisfying witness. The transaction and the consuming validator establish which state and outputs that statement refers to.",
+      "interaction": "Select a Strand role to highlight the statement fields and the rule they enter. Toggle ‘proof checks’ versus ‘transaction supplies’ to distinguish the computed relationship from ledger facts such as the spent state, outputs and signatures.",
+      "diagram": "Relation + statement + witness → proof; verifier checks proof against statement and verification key. Beside it, transaction/state → validator rebuilds and scopes the statement.",
+      "questions": [
+        "Opus: approve the exact statement–witness terminology and the conditions under which a verifying Groth16 proof implies knowledge of a satisfying witness.",
+        "Opus: confirm the plain-language boundary between proof validity, authenticated inputs and truth of outside observations."
+      ],
+      "limits": [
+        "This is an explanatory rendering of supplied v2 copy; the complete Web consumer and statement-binding path are not recorded as implemented.",
+        "Do not imply a proof authenticates ledger facts, an issuer, a claimant's identity, or an outside observation."
+      ]
+    },
+    {
+      "id": "required-strands",
+      "title": "Collect the Strands a transition requires",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, ‘Sealing the Certificate’; Chapter 10 dependency DAG excerpt in B08-EXACT-MANUSCRIPT-SECTIONS.json, section ‘The Causal Web: Why It Is a DAG, Not a Stack.’",
+      "sourceSupport": [
+        "BOOK_FACT: Layer 5 follows the prior work of expressing computation and its witness as something a verifier can check; Chapter 10 warns that dependencies cross the numbered layers.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/definitions defines a Web as the full required Strand set and a Strand as proof plus claim, statement and binding metadata. /technical/summary says all-or-nothing enforcement is not yet built.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/explorerIntro allows one whole-execution proof to cover several roles; it does not posit a separate producer for every role."
+      ],
+      "websiteMapping": "Use the invoice transition to show required Strand roles and their statements. Present completeness as the Web design rule. Make clear that several named roles do not imply several independent circuits or proof producers; one whole-execution proof may cover several roles.",
+      "readerCopy": "A Web names the proof obligations for one transition. Each required Strand must match the statement rebuilt for that transition. One proof may cover several roles; the role list does not determine how many proof systems or producers are used.",
+      "interaction": "Display the required Strand list for the partial invoice step. Remove a Strand and show the design outcome ‘incomplete’; restore it to show the full set. The technical status panel identifies this as a design illustration because consumer enforcement is not yet implemented.",
+      "diagram": "Transaction + spent state → rebuilt statements ← required Strands; all required matches → eligible-for-settlement design state. Cross-link Layers 3–7 as dependencies rather than a one-way pipeline.",
+      "questions": [
+        "Opus: confirm that ‘one proof may cover several roles’ is worded without implying cryptographic aggregation or a deployed multi-relation system.",
+        "Opus: review whether the page's term ‘complete Web’ is sufficiently separated from cryptographic proof verification and ledger settlement."
+      ],
+      "limits": [
+        "The remove/restore state is a product-design illustration, not an observed validator result.",
+        "Do not claim independent producers, general role cardinality, implementation of partial-step enforcement, or a measured cost advantage."
+      ]
+    },
+    {
+      "id": "groth16-setup-evidence",
+      "title": "Groth16 and its setup belong in the visible story",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, ‘Groth16: The Gold Standard for Size’ (supplied excerpt lines 35–45); B08-EXACT-MANUSCRIPT-SECTIONS.json, Chapter 2 ‘Universal versus Circuit-Specific Setups’ excerpt.",
+      "sourceSupport": [
+        "BOOK_FACT: The supplied chapter describes Groth16 as a three-group-element proof with a circuit-specific setup ceremony and discusses the tradeoff between compact proof and setup requirements.",
+        "PRIMARY_SOURCE_SUPPORT: G05.txt, pp. 16–18, specifies two G1 elements and one G2 element, and one pairing-product verification equation evaluated with three pairings under the stated setup.",
+        "PRIMARY_SOURCE_SUPPORT: G02.txt §§15 and 23–24 describe Groth16 per-circuit ceremony, proof/public-input outputs and verification against a verification key; §15 warns the zero-contribution initial key is unsafe for production.",
+        "MORIARTY_MAPPING: V2-COPY.json /technical/summary and trustNotes.recorded-evidence report one invoice-partial roundtrip, one local C2 wrapper with 1 acceptance and 6 mutation rejections, caller-fabricated contexts, a forgeable single-party test setup and no on-chain transaction. trustNotes.setup-keys says no production ceremony is recorded and the total setup count is unknown."
+      ],
+      "websiteMapping": "Add a dedicated Groth16/setup section to the technical area. Explain the general circuit-specific setup tradeoff and show the current record separately: one scoped invoice relation and local wrapper evidence; forgeable test setup; no on-chain transaction; total setup count unknown.",
+      "readerCopy": "Groth16 uses a compact proof and a setup tied to a compiled circuit. Moriarty's supplied records cover one invoice-partial relation and local wrapper checks with a test setup its operator could forge. They record no on-chain transaction or production ceremony. The total number of setups a future design requires is unknown.",
+      "interaction": "Use a setup-scope selector with labels ‘one compiled circuit’, ‘observed test setup’, and ‘future total: unknown’. Show that changing the compiled relation may change setup scope; do not derive a count from role, predicate or catalogue totals.",
+      "diagram": "Compiled relation + setup parameters → proving/verification keys → proof checked with public statement. Mark the supplied test setup as forgeable and production setup as not recorded.",
+      "questions": [
+        "Opus: approve exact setup/trapdoor wording and distinguish setup soundness assumptions from proof-system correctness.",
+        "Opus: confirm how to state that setup scope tracks compiled circuits without implying one ceremony per logical predicate or Strand.",
+        "Opus: verify whether any numeric proof-size example should be shown, and pin it to curve, encoding and implementation if so. The book excerpt juxtaposes a BLS12-381 192-byte example with Ethereum alt_bn128/BN254 gas discussion; confirm how to separate those comparisons."
+      ],
+      "limits": [
+        "Do not transfer the book's 192-byte figure to Moriarty without a named curve and serialization.",
+        "Do not estimate a universal setup count or infer it from the number of Strands, properties or catalogue identifiers.",
+        "Local wrapper figures are not ledger ExUnits, fees, transaction fit, production security or on-chain acceptance."
+      ]
+    },
+    {
+      "id": "composition-terms",
+      "title": "Separate Web composition from proof composition",
+      "bookReference": "L5-EXACT-CHAPTER.md, Chapter 6, ‘The Hybrid Pipeline’ and ‘Recursion vs. Folding: Russian Dolls and Snowballs’ (supplied excerpt lines 91–170).",
+      "sourceSupport": [
+        "BOOK_FACT: The chapter describes recursion as a proof verifying an earlier proof and folding as combining claims during accumulation, with a final proof at the end.",
+        "BOOK_FACT: The chapter's hybrid example wraps a STARK proof in Groth16; this is one architecture example, not a universal product path.",
+        "MORIARTY_MAPPING: V2-COPY.json /main/explorerIntro and /technical/trustNotes.web-completeness describe Web role coverage and one proof potentially serving several roles; /technical/summary retains recursion and bounded multiparent PCD as future tracks.",
+        "UNRESOLVED: The supplied Layer 5 excerpt does not define proof aggregation as a distinct formal operation."
+      ],
+      "websiteMapping": "Provide separate labels for (1) a Web combining application obligations, (2) one proof attesting several roles, (3) aggregation of proofs, if the selected system supports it, (4) recursion that verifies earlier proofs, and (5) folding claims before a final proof. Do not present them as synonyms or imply Moriarty implements them.",
+      "readerCopy": "A Web combines the conditions an application requires for one transition. Proof aggregation, recursive verification and folding describe different cryptographic designs. The supplied Moriarty records do not establish those designs as implemented features.",
+      "interaction": "Offer a side-by-side concept switch. For recursion, nest ‘current proof checks prior proof’; for folding, join step claims and show the final proof comes later; for Web composition, group required Strand obligations. Keep aggregation disabled or marked ‘definition under review’ pending Opus wording.",
+      "diagram": "Three distinct sketches: obligations grouped for one transition; proof N verifies proof N−1; claims 1…N fold into an accumulator followed by a final proof. Add aggregation only after a reviewer-approved definition and an identified supported construction.",
+      "questions": [
+        "Opus: provide the adopted definition of aggregation and how it differs from recursive composition for this page.",
+        "Opus: approve the simplest accurate comparison of recursion and folding, including that folding alone is not the final proof-system soundness check.",
+        "Opus: state which, if any, aggregation/recursion/folding mechanisms are supported by the described Moriarty design and evidence."
+      ],
+      "limits": [
+        "Do not imply that a set of Strands is a recursively composed proof, a folded proof, or an aggregated proof.",
+        "Do not present the book's STARK-to-Groth16 hybrid pipeline as Moriarty's architecture.",
+        "The supplied records list recursion and bounded multiparent PCD as future tracks; no implementation or cost claim follows."
+      ]
+    }
+  ]
+}

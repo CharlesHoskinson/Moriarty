@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<handoff generated="2026-09-13" repo="/home/charl/Moriarty" branch="feat/session-handoff-2026-09-12" head="0990144b">
+
+  <read-first>
+    <item>openspec/changes/language-to-ledger-lifecycle/tasks.md — the authoritative task list.</item>
+    <item>SESSION-ROADMAP.md — says to read it and the tasks file before following older queues. Obey that.</item>
+    <item>deliverables/language-to-ledger-2026-09-12/AFK-HANDOVER-2026-09-12.md — prior session's findings and corrections.</item>
+    <item>deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json — 121 pinned constraints, 27 honest open items, independently reviewed APPROVED. Bind to it; do not re-derive what it pins.</item>
+  </read-first>
+
+  <state-of-play>
+    <closed receipt="deliverables/language-to-ledger-2026-09-12/scope-reconciliation/receipt-01.json">Section 0, scope reconciliation. All four items were already satisfied; only the checkboxes were stale.</closed>
+    <closed receipt="deliverables/language-to-ledger-2026-09-12/preview-constraints/closure-receipt-5.1.json">Task 5.1, constraint freeze, authored and independently reviewed across two rounds.</closed>
+    <merged>Sections 1 to 3 were merged before that session (PR5, PR6, PR7).</merged>
+    <compiled>Task 5.2a is done: loan-lifecycle.compact compiles under pinned Compact 0.31.1, producing contract bindings, zkir/originate.zkir and compiler metadata, all hash-bound in deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/binding-01.json. Proof keys were skipped, so this is not a proving build.</compiled>
+    <ready-to-merge branch="foreman/moriarty-ll-loop-20260912/implement/handoff-protocol">
+      The invocation handoff correction passed its gate and its report is complete. It fixes a measured hang where a child connecting during the durable append was dropped, leaving a socket that prevented server close so the executor never returned. It also wires the boot-mismatch denial that previously had no path. Merge this, then task 5.2 can close with all three requirements delivered and audited.
+    </ready-to-merge>
+  </state-of-play>
+
+  <next-actions order="strict">
+    <action n="1">Merge the handoff-protocol branch into the working branch. Re-run the gate. Then close task 5.2 against a receipt naming its three requirements and their audits.</action>
+    <action n="2">Close the payer-binding gap from AUDIT-OPUS-5-1A. The lender capability assertion proves the lender knows the secret; it does not make the lender the funder, and nothing debits the borrower. Both value legs draw from the submitting transaction's offer with no payer bound. Amounts are constrained, party attribution is not. This is the substantive remainder of 5.1a.</action>
+    <action n="3">Task 5.3: run test:ledger, test:compiled, test:finalized-state and test:preview, and obtain an exact-source audit. The suites already pass; the audit leg is what is missing.</action>
+    <action n="4">Task 5.4 onward: Docker lifecycle, then Preview. Preview is a testnet and its tokens are worthless; do not treat a funded transaction there as a high-risk action.</action>
+  </next-actions>
+
+  <blocked-on-owner>
+    <item task="4.1">Obligation 127 freezes all K retry until there is a grounded change or proposal, fresh independent audits, and root admission. The proposal exists at deliverables/language-to-ledger-2026-09-12/k-proposal/. The audits and admission do not.</item>
+    <item task="5.4">The plugin gate blocks dependent dispatch on four evidence gaps: two stale input hashes on openspec/sprints/sp01-financial-contract-and-execution-admission.md, a missing .moriarty-dev/runtime/current-accounting.json, and no live state for resource sp01-loan-swap-grok-01. None is a funding gap. Re-sealing the stale binding is a decision about what counts as the verified basis.</item>
+  </blocked-on-owner>
+
+  <hard-constraints>
+    <constraint id="digest-pin" severity="critical">
+      plugins/moriarty-dev/hooks/hooks.json embeds a SHA-256 digest over every .py file under scripts/moriarty_dev, currently 0b40d8c3e184f246... appearing four times. Editing any of those .py files without re-pinning all four occurrences in the same change makes every hook fail closed and stops tool interception across the environment. Recompute as: sha256 of each file keyed by path relative to that directory, JSON with sorted keys and separators (",",":"), then sha256 of that JSON. Also place the updated tree at ~/.local/share/moriarty-dev/runtimes/&lt;digest&gt;/.
+    </constraint>
+    <constraint id="accounting">Never create, reset or zero any accounting, budget, charge, reservation or resource record. Consumed charges and recorded failures are evidence. Do not write .moriarty-dev/runtime/current-accounting.json from zero.</constraint>
+    <constraint id="retained-artifacts">Several suites deliberately refuse to rebuild and verify pinned hashes instead. Never regenerate a retained build artifact. custody/generate.mjs is itself pinned in build-proven.mjs REQUIRED_SOURCES; editing it breaks three suites. An earlier round learned this and moved its emitter to generate-lifecycle.mjs.</constraint>
+    <constraint id="receipts">No roadmap checkbox may be ticked without a corresponding evidence receipt.</constraint>
+    <constraint id="attribution" severity="critical">Never write Co-Authored-By, Claude-Session, or any model or session attribution into a commit, tag or pull request. Run: git log --all --grep='Co-Authored-By' --grep='Claude-Session' --grep='Claude Code' before any push and refuse if it matches. Moriarty is clean. The separate ~/foreman repo has 38 such commits already on its remote, which is a known and separate problem.</constraint>
+    <constraint id="secret-scan">Scan before committing and pushing, not after. A prior session pushed 804 files to this public repo first. Eleven scraped pages carrying key material were removed afterwards; they remain in earlier history.</constraint>
+  </hard-constraints>
+
+  <verification>
+    <env>export MORIARTY_SWAP_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json</env>
+    <env>export MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/binding-completion/20260908T084719Z</env>
+    <note>Those two gated suites fail closed without the pointers. Documented in experiments/moriarty-midnight-financial/README.md.</note>
+    <baselines>
+      <suite name="moriarty-language npm test">889</suite>
+      <suite name="moriarty-language typecheck">clean</suite>
+      <suite name="midnight npm test">52</suite>
+      <suite name="midnight test:ledger">576</suite>
+      <suite name="midnight test:compiled">3</suite>
+      <suite name="midnight test:compiled-rejection">11</suite>
+      <suite name="midnight test:finalized-state">27</suite>
+      <suite name="midnight test:preview">89</suite>
+      <suite name="plugin pytest">223, run from plugins/moriarty-dev, not the repo root</suite>
+      <suite name="openspec validate --all --strict">13 in the main checkout, 12 in a worktree from HEAD because one change package is untracked</suite>
+    </baselines>
+    <warning>Running suites inside a workspace-write sandbox produces false failures: spawnSync returns EPERM and breaks the CLI and FIFO child-process tests. Verify outside that sandbox before believing any failure.</warning>
+  </verification>
+
+  <lessons-that-cost-time>
+    <lesson>Re-run every count yourself. Lane reports were wrong or incomplete in most rounds. Audits caught a test asserting broken behaviour as correct, a success gate fed invented zeros, and a boot-mismatch denial with no code path.</lesson>
+    <lesson>Dispatch through queue admission bound to an Endstop contract, wrapped in lane-run.sh --round. Six of six directly dispatched agent lanes stranded by backgrounding their vendor and stopping. Zero of five queue-admitted rounds did.</lesson>
+    <lesson>lane-run.sh --round takes the worktree PATH, not its slug, and prints a generic usage line when given a slug.</lesson>
+    <lesson>Use a gate that actually runs tests. tools/ci-local.sh --quick has no typecheck and no unit-test gate and passes while verifying nothing.</lesson>
+    <lesson>Create lane worktrees from a base containing the work they depend on. Four lanes inherited two test failures from an uncommitted fix.</lesson>
+    <lesson>The retained macro05 failure is the LLVM interpreter at exit 113. The kore-expand-macros fault at exit 139 belongs to the earlier parse04 attempt, and only that one is covered by documented upstream exclusion CLM-0524.</lesson>
+  </lessons-that-cost-time>
+
+</handoff>

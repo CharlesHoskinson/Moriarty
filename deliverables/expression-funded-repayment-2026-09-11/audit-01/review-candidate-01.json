@@ -1,0 +1,90 @@
+{
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effort": "medium",
+    "role": "fresh independent candidate auditor",
+    "agent": "funded_candidate_audit"
+  },
+  "createdAt": "2026-09-11T21:30:59.462114+00:00",
+  "candidateManifest": "/home/charl/Moriarty/deliverables/expression-funded-repayment-2026-09-11/candidate.json",
+  "candidateManifestSha256": "6653a2da41d7201ef0b18d0e9575711f1cf9e6dabc775e5608180153ff7406c2",
+  "verifiedHashesCount": 149,
+  "hashesVerifiedBefore": true,
+  "hashesVerifiedAfter": true,
+  "scope": [
+    "Complete frozen language package and implementation-plan identity, all 149 manifest entries verified before and after.",
+    "Full changed adapter and normal src/cli.ts source, affected tests, example source/schema/snapshots/state and changed documentation.",
+    "Existing financial-expression source evaluator, financial-expression runtime/type validation and complete repayment kernel with repayment specification; existing successor simulation caller compatibility.",
+    "Actual computed Transfer and Repay values; unit binding; ordinary plus financial atomic publication; one ordered kernel invocation; work E+N; reserve, prior spent, balances, allowances, obligations, conversions, order and tombstones.",
+    "Malformed owned JSON, malformed binding, overflow, rejection output, local-only scope and normal CLI transport behavior."
+  ],
+  "commands": [
+    {
+      "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+      "cwd": "/home/charl/Moriarty/.worktrees/expression-funded-repayment",
+      "exitCode": 0,
+      "outcome": "No pending transactions; dependent live dispatch blocked on existing admission/accounting evidence; read-only local audit proceeds."
+    },
+    {
+      "command": "Python hashlib verification of candidate.json and each manifest file",
+      "exitCode": 0,
+      "outcome": "Expected manifest digest and all 149 file hashes matched before and after audit; see hash-verification.json."
+    },
+    {
+      "command": "node --test tests/funded-expression-source.test.mjs tests/funded-expression-cli.test.mjs tests/financial-expression-source-v1.test.mjs tests/successor-repayment.test.mjs",
+      "cwd": "/home/charl/Moriarty/.worktrees/expression-funded-repayment/experiments/moriarty-language",
+      "exitCode": 0,
+      "outcome": "113 tests passed; zero failures/skips; focused-tests.txt."
+    },
+    {
+      "command": "node /home/charl/Moriarty/deliverables/expression-funded-repayment-2026-09-11/audit-01/probes.mjs",
+      "exitCode": 0,
+      "outcome": "44 independent cases passed: 40 API cases and four actual CLI invocations. Example E=45 reductions, N=2 kernel actions. Exact work zero, one-short rejection, nonzero carried spent, UInt128 total boundary and independent reserve checked. Full cases in probes.json."
+    },
+    {
+      "command": "node src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema spec/successor/examples/expression-funded-payment.schema.json --snapshots spec/successor/examples/expression-funded-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/expression-funded-payment.mori",
+      "cwd": "/home/charl/Moriarty/.worktrees/expression-funded-repayment",
+      "exitCode": 1,
+      "outcome": "README working-directory defect reproduced: MODULE_NOT_FOUND for repository-root src/cli.ts."
+    }
+  ],
+  "observations": [
+    "Example source computes nominal=first+second and payment=magnitude(nominal); unchanged source with 10+20 yields both effects 30 and principal70, while 4+3 against P100/I10 yields both effects7, P100/I3.",
+    "Adapter passes expression-debited owned state and the entire ordered action batch to prepareRepayment exactly once. Financial unit check occurs before combined publication; unit mismatch exposes diagnostics only.",
+    "Debiting remaining and incrementing spent preserves their sum; kernel validation therefore still rejects an invalid original total including closureReserve. Boundary probes confirmed this.",
+    "Published result contains complete kernel post and ordinary staged post. Independent continuation preserved unrelated balances/allowances/debt/conversion and appended IDs while carrying spent.",
+    "Financial-class schema fields are rejected even when unread; source ensures checks ordinary staged post only, as documented.",
+    "Author receipt records terminal end_turn and actual grok-4.6-build identity."
+  ],
+  "externalEvidenceInspected": [
+    {
+      "path": "../root-tests-final.txt",
+      "outcome": "Root log reports 698/698 tests passing; audit did not rerun this complete suite."
+    },
+    {
+      "path": "../root-typecheck-final.txt",
+      "outcome": "Root log records tsc -p tsconfig.json; root reports exit0. Auditor did not independently rerun typecheck."
+    }
+  ],
+  "findings": [
+    {
+      "id": "DOC-01",
+      "severity": "low",
+      "blocking": false,
+      "path": "experiments/moriarty-language/README.md",
+      "line": 116,
+      "relatedLine": 122,
+      "title": "Example working-directory instruction is incorrect",
+      "description": "The new section says to run from the repository root, but its command uses src/cli.ts and spec/... paths relative to experiments/moriarty-language. Running exactly as instructed from the checkout root fails MODULE_NOT_FOUND. The dedicated funded-expression-source.md correctly supplies repository-root paths.",
+      "reproduction": "From checkout root, run the README code block at line122; Node exits1, cannot find <checkout>/src/cli.ts.",
+      "recommendation": "Say to run from experiments/moriarty-language, or prefix all command paths with experiments/moriarty-language/."
+    }
+  ],
+  "limitations": [
+    "PASS_SCOPED approves the bounded local adapter behavior, with the low documentation finding above. It is not a proof, formal correspondence, authorization, complete SP02/SP03 or ledger acceptance verdict.",
+    "No K/Compact/native proving, signing, Preview transactions, campaign dispatch, installation or publication was performed.",
+    "All frozen bytes were hash-verified; semantic review concentrated on the complete affected implementation and its evaluator/kernel/type/caller dependency path, not every unchanged package subsystem."
+  ],
+  "verdict": "PASS_SCOPED",
+  "rationale": "No blocking functional or input-safety defect found in the authorized local slice. Source review, 113 focused tests and 44 independent probes substantiate atomic funded execution and the work contract. One reproduced low documentation path error remains."
+}

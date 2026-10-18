@@ -1,0 +1,401 @@
+draft_image_bridge.rs:1: //! SOURCE_ONLY / UNRUN: Core-only cfg(test) bridge to actual private image code.
+draft_image_bridge.rs:2: //! Requires precisely the crate-only visibility changes in shared-interface.patch.
+draft_image_bridge.rs:3: use crate::sherlock::program_image::{self, ExprId, ProgramImageDraft, SourceLocator, SourceOwner};
+draft_image_bridge.rs:4: use crate::sherlock_draft::{parse_draft_source, DraftError, ExpressionSite, ParsedDraft};
+draft_image_bridge.rs:5: use crate::sherlock_draft_types::{check_program_types, DraftTypeError, DraftTypeSummary};
+draft_image_bridge.rs:6: use std::sync::Arc;
+draft_image_bridge.rs:7: 
+draft_image_bridge.rs:8: #[derive(Clone, Debug, PartialEq, Eq)]
+draft_image_bridge.rs:9: pub(crate) struct ImageSourceSite { pub expression: ExprId, pub source: ExpressionSite }
+draft_image_bridge.rs:10: 
+draft_image_bridge.rs:11: #[derive(Clone, Debug, PartialEq, Eq)]
+draft_image_bridge.rs:12: pub(crate) struct DraftImagePreparation {
+draft_image_bridge.rs:13:     pub draft: ParsedDraft,
+draft_image_bridge.rs:14:     pub types: DraftTypeSummary,
+draft_image_bridge.rs:15:     pub image: Arc<ProgramImageDraft>,
+draft_image_bridge.rs:16:     pub image_sources: Vec<ImageSourceSite>,
+draft_image_bridge.rs:17: }
+draft_image_bridge.rs:18: 
+draft_image_bridge.rs:19: #[derive(Clone, Debug, PartialEq, Eq)]
+draft_image_bridge.rs:20: pub(crate) enum DraftImageError {
+draft_image_bridge.rs:21:     Source(DraftError),
+draft_image_bridge.rs:22:     Types(DraftTypeError),
+draft_image_bridge.rs:23:     MissingProvenance(SourceLocator),
+draft_image_bridge.rs:24:     ProvenanceCount { image: usize, provenance: usize },
+draft_image_bridge.rs:25: }
+draft_image_bridge.rs:26: 
+draft_image_bridge.rs:27: /// Parse -> ordinary candidate typing -> actual unchanged image builder.
+draft_image_bridge.rs:28: /// No machine execution, admission/resource policy or new public runtime path.
+draft_image_bridge.rs:29: ///
+draft_image_bridge.rs:30: /// # Security Warning (H1 — Unmetered Host Evaluator)
+draft_image_bridge.rs:31: /// This machine is a host diagnostic reference with zero native authority and no host time,
+draft_image_bridge.rs:32: /// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
+draft_image_bridge.rs:33: pub(crate) fn prepare_draft_image(source: &str) -> Result<DraftImagePreparation, DraftImageError> {
+draft_image_bridge.rs:34:     let draft = parse_draft_source(source).map_err(DraftImageError::Source)?;
+draft_image_bridge.rs:35:     let types = check_program_types(&draft.program).map_err(DraftImageError::Types)?;
+draft_image_bridge.rs:36:     let image = Arc::new(program_image::prepare_program_image(&draft.program));
+draft_image_bridge.rs:37:     if image.source_map.len() != draft.provenance.expressions.len() {
+draft_image_bridge.rs:38:         return Err(DraftImageError::ProvenanceCount {
+draft_image_bridge.rs:39:             image: image.source_map.len(), provenance: draft.provenance.expressions.len() });
+draft_image_bridge.rs:40:     }
+draft_image_bridge.rs:41:     let image_sources = image.source_map.iter().zip(&draft.provenance.expressions).enumerate()
+draft_image_bridge.rs:42:         .map(|(index, (locator, site))| {
+draft_image_bridge.rs:43:             let function_index = match locator.owner {
+draft_image_bridge.rs:44:                 SourceOwner::Entry => None,
+draft_image_bridge.rs:45:                 SourceOwner::Function(function) => Some(function),
+draft_image_bridge.rs:46:             };
+draft_image_bridge.rs:47:             if site.source.function_index != function_index || site.source.child_path != locator.ast_path {
+draft_image_bridge.rs:48:                 return Err(DraftImageError::MissingProvenance(locator.clone()));
+draft_image_bridge.rs:49:             }
+draft_image_bridge.rs:50:             Ok(ImageSourceSite { expression: ExprId(index), source: site.clone() })
+draft_image_bridge.rs:51:         }).collect::<Result<Vec<_>, DraftImageError>>()?;
+draft_image_bridge.rs:52:     Ok(DraftImagePreparation { draft, types, image, image_sources })
+draft_image_bridge.rs:53: }
+program_image.rs:1: //! Whole-source, host-only table proposal for the existing strict K-A AST.
+program_image.rs:2: //!
+program_image.rs:3: //! This draft is deliberately unwired. Its Rust names and `usize` indices are
+program_image.rs:4: //! not a shared IR, tag ABI, native image, admission policy or B schema freeze.
+program_image.rs:5: //! No source/membership digest, field encoding, capacity or layout is selected.
+program_image.rs:6: //! Source identity must be supplied by the integrator's separately reviewed
+program_image.rs:7: //! binding: these local locators are meaningful only within this whole image.
+program_image.rs:8: //! Preparing tables evaluates no expression and never follows a named call.
+program_image.rs:9: 
+program_image.rs:10: use super::{BinaryOp, Expr, ExprRef, Name, Parameter, Pattern, Program, Tree,
+program_image.rs:11:             Type, UnaryOp, Value, PROFILE};
+program_image.rs:12: 
+program_image.rs:13: /// Host table positions only; these select no native width or tag convention.
+program_image.rs:14: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+program_image.rs:15: pub struct ExprId(pub usize);
+program_image.rs:16: 
+program_image.rs:17: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+program_image.rs:18: pub struct ConstantId(pub usize);
+program_image.rs:19: 
+program_image.rs:20: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+program_image.rs:21: pub struct TableSlice {
+program_image.rs:22:     pub start: usize,
+program_image.rs:23:     pub len: usize,
+program_image.rs:24: }
+program_image.rs:25: 
+program_image.rs:26: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+program_image.rs:27: pub enum SourceOwner {
+program_image.rs:28:     Entry,
+program_image.rs:29:     Function(usize),
+program_image.rs:30: }
+program_image.rs:31: 
+program_image.rs:32: /// Child-position paths: let value/body=0/1, binary left/right=0/1,
+program_image.rs:33: /// unary operand=0, if condition/then/else=0/1/2, call arguments=0..n,
+program_image.rs:34: /// match scrutinee=0 and arm bodies=1..n. Function roots have an empty path.
+program_image.rs:35: /// This records typed AST positions, not textual byte offsets or run steps.
+program_image.rs:36: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:37: pub struct SourceLocator {
+program_image.rs:38:     pub owner: SourceOwner,
+program_image.rs:39:     pub ast_path: Vec<usize>,
+program_image.rs:40: }
+program_image.rs:41: 
+program_image.rs:42: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:43: pub enum ExprPayload {
+program_image.rs:44:     Literal(ConstantId),
+program_image.rs:45:     Var(Name),
+program_image.rs:46:     Let(Name),
+program_image.rs:47:     Binary(BinaryOp),
+program_image.rs:48:     Unary(UnaryOp),
+program_image.rs:49:     If,
+program_image.rs:50:     Call(Name),
+program_image.rs:51:     Match(TableSlice),
+program_image.rs:52: }
+program_image.rs:53: 
+program_image.rs:54: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:55: pub struct ExprRow {
+program_image.rs:56:     pub payload: ExprPayload,
+program_image.rs:57:     pub children: TableSlice,
+program_image.rs:58: }
+program_image.rs:59: 
+program_image.rs:60: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:61: pub struct FunctionRow {
+program_image.rs:62:     pub source_table_index: usize,
+program_image.rs:63:     pub name: Name,
+program_image.rs:64:     pub parameters: TableSlice,
+program_image.rs:65:     pub return_type: Type,
+program_image.rs:66:     pub body: ExprId,
+program_image.rs:67: }
+program_image.rs:68: 
+program_image.rs:69: /// K-A patterns are flat. Names and source-arm priority are retained verbatim.
+program_image.rs:70: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:71: pub struct MatchArmRow {
+program_image.rs:72:     pub pattern: Pattern,
+program_image.rs:73:     pub body: ExprId,
+program_image.rs:74: }
+program_image.rs:75: 
+program_image.rs:76: /// All existing literal cases are flat here. List fields refer to UInt rows;
+program_image.rs:77: /// tree branches refer to two ordered tree rows. Tree leaves carry their u128
+program_image.rs:78: /// directly. These are the existing host types, not nominal ADT/native tags.
+program_image.rs:79: #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+program_image.rs:80: pub enum ConstantPayload {
+program_image.rs:81:     UInt(u128),
+program_image.rs:82:     Bool(bool),
+program_image.rs:83:     List,
+program_image.rs:84:     TreeLeaf(u128),
+program_image.rs:85:     TreeBranch,
+program_image.rs:86: }
+program_image.rs:87: 
+program_image.rs:88: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:89: pub struct ConstantLocator {
+program_image.rs:90:     pub expression: ExprId,
+program_image.rs:91:     pub field_path: Vec<usize>,
+program_image.rs:92: }
+program_image.rs:93: 
+program_image.rs:94: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:95: pub struct ConstantRow {
+program_image.rs:96:     pub payload: ConstantPayload,
+program_image.rs:97:     pub fields: TableSlice,
+program_image.rs:98:     pub source: ConstantLocator,
+program_image.rs:99: }
+program_image.rs:100: 
+program_image.rs:101: /// Unbounded host source representation. No recursive Expr/Value/Tree is stored
+program_image.rs:102: /// in these tables. Strings, paths and growable vectors remain host metadata;
+program_image.rs:103: /// flatness alone gives no finite circuit capacity or native payload claim.
+program_image.rs:104: #[derive(Clone, Debug, PartialEq, Eq)]
+program_image.rs:105: pub struct ProgramImageDraft {
+program_image.rs:106:     pub profile_id: &'static str,
+program_image.rs:107:     pub expressions: Vec<ExprRow>,
+program_image.rs:108:     pub ordered_children: Vec<ExprId>,
+program_image.rs:109:     pub functions: Vec<FunctionRow>,
+program_image.rs:110:     pub ordered_parameters: Vec<Parameter>,
+program_image.rs:111:     pub match_arms: Vec<MatchArmRow>,
+program_image.rs:112:     pub constants: Vec<ConstantRow>,
+program_image.rs:113:     pub constant_fields: Vec<ConstantId>,
+program_image.rs:114:     /// Row i has source locator source_map[i], giving each occurrence its own ID.
+program_image.rs:115:     pub source_map: Vec<SourceLocator>,
+program_image.rs:116:     pub entry: ExprId,
+program_image.rs:117: }
+program_image.rs:118: 
+program_image.rs:119: /// Traverse entry first, then every function body in original table order.
+program_image.rs:120: /// Each root expands in source-child preorder, even when Arc storage is shared.
+program_image.rs:121: /// Each row reserves its complete ordered child slice before visiting children.
+program_image.rs:122: /// This is source preparation only: no unique-name/closed-body admission,
+program_image.rs:123: /// evaluation, source-call unrolling, fuel charge or new failure outcome occurs.
+program_image.rs:124: /// Host allocation and ordinary host address-space limits remain unmetered.
+program_image.rs:125: pub fn prepare_program_image(program: &Program) -> ProgramImageDraft {
+program_image.rs:126:     let mut image = ProgramImageDraft {
+program_image.rs:127:         profile_id: PROFILE,
+program_image.rs:128:         expressions: Vec::new(), ordered_children: Vec::new(),
+program_image.rs:129:         functions: Vec::new(), ordered_parameters: Vec::new(),
+program_image.rs:130:         match_arms: Vec::new(), constants: Vec::new(),
+program_image.rs:131:         constant_fields: Vec::new(), source_map: Vec::new(), entry: ExprId(0),
+program_image.rs:132:     };
+program_image.rs:133:     image.entry = image.append_expression(&program.entry, SourceOwner::Entry);
+program_image.rs:134:     for (source_table_index, function) in program.functions.iter().enumerate() {
+program_image.rs:135:         let parameters = TableSlice {
+program_image.rs:136:             start: image.ordered_parameters.len(), len: function.parameters.len(),
+program_image.rs:137:         };
+program_image.rs:138:         image.ordered_parameters.extend_from_slice(&function.parameters);
+program_image.rs:139:         let body = image.append_expression(&function.body, SourceOwner::Function(source_table_index));
+program_image.rs:140:         image.functions.push(FunctionRow {
+program_image.rs:141:             source_table_index, name: function.name.clone(), parameters,
+program_image.rs:142:             return_type: function.return_type, body,
+program_image.rs:143:         });
+program_image.rs:144:     }
+program_image.rs:145:     image
+program_image.rs:146: }
+program_image.rs:147: 
+program_image.rs:148: struct ExprTask<'a> {
+program_image.rs:149:     expression: &'a Expr,
+program_image.rs:150:     path: Vec<usize>,
+program_image.rs:151:     parent_child: Option<usize>,
+program_image.rs:152:     arm: Option<usize>,
+program_image.rs:153: }
+program_image.rs:154: 
+program_image.rs:155: #[derive(Clone, Copy)]
+program_image.rs:156: enum ConstantInput<'a> {
+program_image.rs:157:     Value(&'a Value),
+program_image.rs:158:     UInt(u128),
+program_image.rs:159:     Tree(&'a Tree),
+program_image.rs:160: }
+program_image.rs:161: 
+program_image.rs:162: struct ConstantTask<'a> {
+program_image.rs:163:     input: ConstantInput<'a>,
+program_image.rs:164:     path: Vec<usize>,
+program_image.rs:165:     parent_field: Option<usize>,
+program_image.rs:166: }
+program_image.rs:167: 
+program_image.rs:168: impl ProgramImageDraft {
+program_image.rs:169:     fn append_expression(&mut self, root: &ExprRef, owner: SourceOwner) -> ExprId {
+program_image.rs:170:         let root_id = ExprId(self.expressions.len());
+program_image.rs:171:         let mut pending = vec![ExprTask {
+program_image.rs:172:             expression: root.as_ref(), path: Vec::new(), parent_child: None, arm: None,
+program_image.rs:173:         }];
+program_image.rs:174:         while let Some(task) = pending.pop() {
+program_image.rs:175:             let id = ExprId(self.expressions.len());
+program_image.rs:176:             if let Some(slot) = task.parent_child { self.ordered_children[slot] = id; }
+program_image.rs:177:             if let Some(arm) = task.arm { self.match_arms[arm].body = id; }
+program_image.rs:178:             let mut children: Vec<(&Expr, Option<usize>)> = Vec::new();
+program_image.rs:179:             let payload = match task.expression {
+program_image.rs:180:                 Expr::Literal(value) => ExprPayload::Literal(self.append_constant(value, id)),
+program_image.rs:181:                 Expr::Var(name) => ExprPayload::Var(name.clone()),
+program_image.rs:182:                 Expr::Let(name, value, body) => {
+program_image.rs:183:                     children.extend([(value.as_ref(), None), (body.as_ref(), None)]);
+program_image.rs:184:                     ExprPayload::Let(name.clone())
+program_image.rs:185:                 }
+program_image.rs:186:                 Expr::Binary(op, left, right) => {
+program_image.rs:187:                     children.extend([(left.as_ref(), None), (right.as_ref(), None)]);
+program_image.rs:188:                     ExprPayload::Binary(*op)
+program_image.rs:189:                 }
+program_image.rs:190:                 Expr::Unary(op, operand) => {
+program_image.rs:191:                     children.push((operand.as_ref(), None));
+program_image.rs:192:                     ExprPayload::Unary(*op)
+program_image.rs:193:                 }
+program_image.rs:194:                 Expr::If(condition, then_body, else_body) => {
+program_image.rs:195:                     children.extend([(condition.as_ref(), None), (then_body.as_ref(), None), (else_body.as_ref(), None)]);
+program_image.rs:196:                     ExprPayload::If
+program_image.rs:197:                 }
+program_image.rs:198:                 Expr::Call(name, arguments) => {
+program_image.rs:199:                     children.extend(arguments.iter().map(|argument| (argument.as_ref(), None)));
+program_image.rs:200:                     ExprPayload::Call(name.clone())
+program_image.rs:201:                 }
+program_image.rs:202:                 Expr::Match(scrutinee, arms) => {
+program_image.rs:203:                     children.push((scrutinee.as_ref(), None));
+program_image.rs:204:                     let slice = TableSlice { start: self.match_arms.len(), len: arms.len() };
+program_image.rs:205:                     for arm in arms {
+program_image.rs:206:                         let arm_id = self.match_arms.len();
+program_image.rs:207:                         self.match_arms.push(MatchArmRow { pattern: arm.pattern.clone(), body: ExprId(0) });
+program_image.rs:208:                         children.push((arm.body.as_ref(), Some(arm_id)));
+program_image.rs:209:                     }
+program_image.rs:210:                     ExprPayload::Match(slice)
+program_image.rs:211:                 }
+program_image.rs:212:             };
+program_image.rs:213:             let child_slice = TableSlice { start: self.ordered_children.len(), len: children.len() };
+program_image.rs:214:             // Temporary slots are filled by the corresponding pending tasks.
+program_image.rs:215:             self.ordered_children.resize(child_slice.start + child_slice.len, ExprId(0));
+program_image.rs:216:             self.expressions.push(ExprRow { payload, children: child_slice });
+program_image.rs:217:             self.source_map.push(SourceLocator { owner, ast_path: task.path.clone() });
+program_image.rs:218:             for (position, (expression, arm)) in children.into_iter().enumerate().rev() {
+program_image.rs:219:                 let mut path = task.path.clone();
+program_image.rs:220:                 path.push(position);
+program_image.rs:221:                 pending.push(ExprTask { expression, path, parent_child: Some(child_slice.start + position), arm });
+program_image.rs:222:             }
+program_image.rs:223:         }
+program_image.rs:224:         root_id
+program_image.rs:225:     }
+program_image.rs:226: 
+program_image.rs:227:     fn append_constant(&mut self, value: &Value, expression: ExprId) -> ConstantId {
+program_image.rs:228:         let root_id = ConstantId(self.constants.len());
+program_image.rs:229:         let mut pending = vec![ConstantTask { input: ConstantInput::Value(value), path: Vec::new(), parent_field: None }];
+program_image.rs:230:         while let Some(task) = pending.pop() {
+program_image.rs:231:             let id = ConstantId(self.constants.len());
+program_image.rs:232:             if let Some(slot) = task.parent_field { self.constant_fields[slot] = id; }
+program_image.rs:233:             let mut children = Vec::new();
+program_image.rs:234:             let payload = match task.input {
+program_image.rs:235:                 ConstantInput::UInt(n) => ConstantPayload::UInt(n),
+program_image.rs:236:                 ConstantInput::Value(Value::UInt(n)) => ConstantPayload::UInt(*n),
+program_image.rs:237:                 ConstantInput::Value(Value::Bool(b)) => ConstantPayload::Bool(*b),
+program_image.rs:238:                 ConstantInput::Value(Value::List(elements)) => {
+program_image.rs:239:                     children.extend(elements.iter().copied().map(ConstantInput::UInt));
+program_image.rs:240:                     ConstantPayload::List
+program_image.rs:241:                 }
+program_image.rs:242:                 ConstantInput::Value(Value::Tree(tree)) | ConstantInput::Tree(tree) => match tree {
+program_image.rs:243:                     Tree::Leaf(n) => ConstantPayload::TreeLeaf(*n),
+program_image.rs:244:                     Tree::Branch(left, right) => {
+program_image.rs:245:                         children.extend([ConstantInput::Tree(left.as_ref()), ConstantInput::Tree(right.as_ref())]);
+program_image.rs:246:                         ConstantPayload::TreeBranch
+program_image.rs:247:                     }
+program_image.rs:248:                 },
+program_image.rs:249:             };
+program_image.rs:250:             let fields = TableSlice { start: self.constant_fields.len(), len: children.len() };
+program_image.rs:251:             self.constant_fields.resize(fields.start + fields.len, ConstantId(0));
+program_image.rs:252:             self.constants.push(ConstantRow { payload, fields, source: ConstantLocator {
+program_image.rs:253:                 expression, field_path: task.path.clone(),
+program_image.rs:254:             }});
+program_image.rs:255:             for (position, input) in children.into_iter().enumerate().rev() {
+program_image.rs:256:                 let mut path = task.path.clone();
+program_image.rs:257:                 path.push(position);
+program_image.rs:258:                 pending.push(ConstantTask { input, path, parent_field: Some(fields.start + position) });
+program_image.rs:259:             }
+program_image.rs:260:         }
+program_image.rs:261:         root_id
+program_image.rs:262:     }
+program_image.rs:263: }
+program_image.rs:264: 
+program_image.rs:265: #[cfg(test)]
+program_image.rs:266: #[path = "program_image_tests.rs"]
+program_image.rs:267: mod tests;
+image_reference.rs:1: //! Private host-consumer proposal for builder-produced ProgramImageDraft tables.
+image_reference.rs:2: //!
+image_reference.rs:3: //! Transitions fetch ExprId rows and ordered function/parameter/arm tables.
+image_reference.rs:4: //! Recursive source expressions are reconstructed once for Snapshot observations
+image_reference.rs:5: //! only; they never drive evaluation. Constants decode once to the existing
+image_reference.rs:6: //! typed runtime Values. There is no existing Machine execution dependency.
+image_reference.rs:7: //!
+image_reference.rs:8: //! This preserves the frozen K-A schedule, including unmetered pure helpers and
+image_reference.rs:9: //! host allocation. It selects no B schema, capacity, admission/error policy,
+image_reference.rs:10: //! native layout or public input path. Arbitrary hand-built/malformed images are
+image_reference.rs:11: //! outside this proposal's domain. Host usize positions remain host metadata.
+image_reference.rs:12: 
+image_reference.rs:13: use super::program_image::{ConstantPayload, ExprId, ExprPayload, ProgramImageDraft, TableSlice};
+image_reference.rs:14: use super::reference_types::*;
+image_reference.rs:15: use std::sync::Arc;
+image_reference.rs:16: 
+image_reference.rs:17: #[derive(Clone, Debug)]
+image_reference.rs:18: enum ImageFrame {
+image_reference.rs:19:     Let(Name, ExprId, Environment),
+image_reference.rs:20:     Left(BinaryOp, ExprId, Environment),
+image_reference.rs:21:     Right(BinaryOp, Value),
+image_reference.rs:22:     Unary(UnaryOp),
+image_reference.rs:23:     If(ExprId, ExprId, Environment),
+image_reference.rs:24:     Match(TableSlice, Environment),
+image_reference.rs:25:     Args(Name, Vec<Value>, TableSlice, Environment),
+image_reference.rs:26:     Return(Type, Environment),
+image_reference.rs:27:     Scope(Environment),
+image_reference.rs:28: }
+image_reference.rs:29: 
+image_reference.rs:30: #[derive(Clone, Debug)]
+image_reference.rs:31: enum ImageControl {
+image_reference.rs:32:     Eval(ExprId),
+image_reference.rs:33:     Return(Value),
+image_reference.rs:34:     Push(ImageFrame, Box<ImageControl>, Environment),
+image_reference.rs:35:     Invoke(Name, Vec<Value>),
+image_reference.rs:36:     Enter(Option<usize>, Vec<Value>),
+image_reference.rs:37:     Bound(Option<Environment>, Type, ExprId),
+image_reference.rs:38:     Cases(Value, TableSlice, Environment),
+image_reference.rs:39:     CaseResult(Option<Environment>, Value, ExprId, TableSlice, Environment),
+image_reference.rs:40:     PrimitiveResult(Result<Value, u8>),
+image_reference.rs:41:     Error(u8),
+image_reference.rs:42: }
+image_reference.rs:43: 
+image_reference.rs:44: /// Host-only source candidate. Integrator wiring is limited to cfg(test).
+image_reference.rs:45: /// No arbitrary-state importer or observer-controlled transition flags exist.
+image_reference.rs:46: #[derive(Clone)]
+image_reference.rs:47: pub(crate) struct ImageMachine {
+image_reference.rs:48:     image: Arc<ProgramImageDraft>,
+image_reference.rs:49:     constants: Vec<Value>,
+image_reference.rs:50:     observations: Arc<SourceObservations>,
+image_reference.rs:51:     control: Option<ImageControl>,
+image_reference.rs:52:     // Causal host metadata, deliberately absent from frozen A Snapshots.
+image_reference.rs:53:     control_origin: ExprId,
+image_reference.rs:54:     environment: Environment,
+image_reference.rs:55:     frames: Vec<ImageFrame>,
+image_reference.rs:56:     // Top first, aligned with frames. Replacement preserves the owner's ID.
+image_reference.rs:57:     frame_origins: Vec<ExprId>,
+image_reference.rs:58:     stack_limit: usize,
+image_reference.rs:59:     remaining_fuel: u128,
+image_reference.rs:60:     initial_fuel: u128,
+image_reference.rs:61:     outcome: Outcome,
+image_reference.rs:62: }
+image_reference.rs:63: 
+image_reference.rs:64: /// An owned, typed in-memory cut of a real machine. Its private payload cannot
+image_reference.rs:65: /// be assembled from an arbitrary Snapshot. No codec/admission policy is added.
+image_reference.rs:66: pub(super) struct ImageCheckpoint {
+image_reference.rs:67:     machine: ImageMachine,
+image_reference.rs:68: }
+image_reference.rs:69: 
+image_reference.rs:70: impl ImageMachine {
+image_reference.rs:71:     /// Noncanonical diagnostics of the actual ID controls and ordered frame payloads.
+image_reference.rs:72:     /// Structural snapshots remain separate from these host representation details.
+image_reference.rs:73:     pub(super) fn representation_diagnostics(&self) -> (Option<String>, Vec<String>) {
+image_reference.rs:74:         (
+image_reference.rs:75:             self.control.as_ref().map(|control| format!("{control:?}")),
+image_reference.rs:76:             self.frames.iter().map(|frame| format!("{frame:?}")).collect(),
+image_reference.rs:77:         )
+image_reference.rs:78:     }
+image_reference.rs:79: 
+image_reference.rs:80:     /// Requires an unchanged image produced by prepare_program_image. This
+image_reference.rs:81:     /// constructor deliberately adds no policy for arbitrary malformed tables.

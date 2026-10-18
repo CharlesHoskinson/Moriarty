@@ -1,0 +1,51 @@
+[
+  {
+    "id": "C-N01-CONCURRENT-MUTATION-NONCLAIM-DTO",
+    "severity": "INFO (non-blocking)",
+    "summary": "The DTO APIs, like encode_data (R2-N02), are only established for single-threaded calls where no other thread mutates the caller's input during the call.",
+    "evidence": "_wire_record and _wire_map iterate value.items() and _wire_keys iterates the dict. A size change from another thread raises RuntimeError, not ValueError. validate_prove_request checks required keys and then builds its comprehension in a separate pass, so a concurrent deletion could slip between them. build_prove_request revalidates the detached copy, which catches that window; validate_prove_request returns True from its own possibly-stale view. No test or in-scope caller is multithreaded.",
+    "requiredFix": "No code change. Record the nonclaim that the DTO APIs assume their input is not mutated concurrently, alongside R2-N02."
+  },
+  {
+    "id": "C-N02-HOST-VALID-NOT-PARSE-ADMISSION",
+    "severity": "INFO",
+    "summary": "A host-valid request can still be refused by Rust's byte-stage parse_json. The host bounds no width, string length, total bytes or node count.",
+    "evidence": "_wire_array, _wire_map and _wire_text accept any number of elements and any length. input.rs parse_json enforces MAX_JSON_BYTES 1,048,576, and json.rs parse_limited enforces 65,536 nodes, depth 32 and duplicate/trailing refusal. The DTO depth is fixed at about 8, so only width and size can differ. This is consistent with A5 and XC-11.",
+    "requiredFix": "None for this increment. Keep the disclaimer. The byte emitter/parser stage remains a separate slice."
+  },
+  {
+    "id": "C-N03-FUSED-VALIDATE-COPY-AND-DOUBLE-PASS",
+    "severity": "INFO",
+    "summary": "Validation and copying happen in one schema-directed pass rather than validate-then-copy. build_prove_request then revalidates the whole result, which roughly doubles its work.",
+    "evidence": "_wire_record returns {key: fields[key](item, ...) for key, item in value.items()}. Each child is type-checked before it is copied, and keys are checked before any value, so A3's 'copied from validated exact nodes' holds node by node. A failure discards the partial copy. build_prove_request calls validate_prove_request(request), which builds and discards a second copy.",
+    "requiredFix": "None. The behaviour meets A3 and C3. The extra O(n) pass is acceptable under A5."
+  },
+  {
+    "id": "C-N04-PREFIX-DOCSTRING-SCOPE",
+    "severity": "INFO",
+    "summary": "The module docstring in the frozen prefix still describes only the PlutusData encoder, while the combined module now also provides the DTO APIs.",
+    "evidence": "The first line of host_codec.py reads 'Provisional pure PlutusData encoder for the frozen serialise_data profile.' The appended comment block notes that the DTO APIs are structural only and that Core/Rust owns semantics.",
+    "requiredFix": "Do not edit the frozen prefix. Optionally describe the combined scope in external metadata."
+  },
+  {
+    "id": "C-N05-MESSAGES-OMIT-OFFENDING-KEY",
+    "severity": "INFO",
+    "summary": "Refusals of unknown keys and non-str keys name only the containing path, not the offending key. This is a deliberate diagnostic trade-off.",
+    "evidence": "_wire_record raises path + ': expected closed schema object', and _wire_map uses path '.*'. A1 requires messages to name only the path and the expected type, so caller-controlled text never reaches a message.",
+    "requiredFix": "None."
+  },
+  {
+    "id": "C-N06-PHASE1-GATE-REPLACEMENT",
+    "severity": "INFO",
+    "summary": "The excluded phase-1 public-absence method is replaced, for this candidate, by this source audit: exactly four public callables, no imports and no forbidden names. No combined-scope gate test exists yet.",
+    "evidence": "encoder-19-behavior/RESULT.json excludes only TestInterfaceAndScope.test_phase1_scope_gate_only_encode_data_public. I1-SCOPE-R2 allows replacing the phase gates through a fresh audit of the actual combined candidate. The encoder test's setUp AST audit still ran and passed on the combined bytes.",
+    "requiredFix": "No edit to frozen test files. A later revision may add a separate, freshly reviewed combined-scope gate test that asserts the exact public callable set."
+  },
+  {
+    "id": "C-N07-ENCODER-CARRY-FORWARD",
+    "severity": "LOW/INFO (carried, non-blocking)",
+    "summary": "The three encoder limitations from the prior Opus review carry forward unchanged into the combined candidate.",
+    "evidence": "R2-N01: peak allocation is about 2*B4 plus a leaf temporary plus O(B1), so the stated constant factor is approximate. R2-N02: the input is assumed not to be mutated concurrently. R2-N03: two contract status lines are stale (18 GREEN at 0.119 s, and the encode.rs retrieval-record sentence). The prefix bytes are identical (root records), so nothing changes.",
+    "requiredFix": "Metadata-only refresh at the next contract revision. No code or test change."
+  }
+]

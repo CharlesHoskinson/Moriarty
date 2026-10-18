@@ -1,0 +1,194 @@
+[
+  {
+    "clause": "Author exactly five proposed files: runner/operator.py, AUTH-CANDIDATE.json, EXECUTION-PROPOSAL.json, README.md, and DESIGN-POSITIONS.json. Materialization of these files creates no wallet and grants no native authority.",
+    "clauseId": "P-01",
+    "position": "AGREE",
+    "rationale": "R2 ROOT-SOURCE-MANIFEST lists the five originals unchanged plus four additive files; candidate status remains CANDIDATE_NOT_AUTHORIZED and walletCreated false, so materialization grants nothing."
+  },
+  {
+    "clause": "AUTH-CANDIDATE.json must remain literal status CANDIDATE_NOT_AUTHORIZED, with null staged-binary hash, unresolved linkage, empty runtime binds, and a root-to-fill operator hash. operator.py must reject it.",
+    "clauseId": "P-02",
+    "position": "DISAGREE",
+    "rationale": "Literal wording no longer holds after the documented root fill (AUTH-CANDIDATE.json:6,8,18 static, 01b13170..., 7944d08f...); the rejection substance holds via operator.py:251-252. Historical disagreement preserved and qualified by P-30; not agreed as written."
+  },
+  {
+    "clause": "A separate actual AUTH is required after fresh non-author review. It must use the exact AUTH field set, reject bool-for-int coercion, pin exact paths and limits, authorize exactly one attempt and zero retries, and forbid signing, transactions, network access, and old-key use.",
+    "clauseId": "P-03",
+    "position": "AGREE",
+    "rationale": "operator.py:54-83 exact 28-key set with :247 set equality, :92-97 strict type checks, :289-306 counters and all four forbidden scopes boolean false."
+  },
+  {
+    "clause": "The public run root is exactly /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-fresh-wallet-public-20261016 and its entire tree is public; it must contain no private subdirectory.",
+    "clauseId": "P-04",
+    "position": "AGREE",
+    "rationale": "operator.py:27,261-262 pins that PUBLIC_ROOT; only bin, attempt-ledger.json, staged binary, validated public exports and RESULT.json are created there, while native files live under the separate /private bind at :479-481."
+  },
+  {
+    "clause": "The private root is exactly /home/charl/.local/share/moriarty/cardano-preprod/moriarty-utxo-20261016, is new-only, uses mode 0700, and fails closed if the leaf exists. Private parent creation or validation must not read any pre-existing wallet content.",
+    "clauseId": "P-05",
+    "position": "AGREE",
+    "rationale": "operator.py:28-31,172-199 lstat-only parents, exclusive 0700 leaf, PRIVATE_ROOT_ALREADY_EXISTS on reuse; leaf existence was not observed by this reviewer, by design."
+  },
+  {
+    "clause": "The operator alone may touch the named private secret. Root must never read, stat, hash, walk, list, or back up the private root, payment.skey, private logs, or private provider outputs.",
+    "clauseId": "P-06",
+    "position": "AGREE",
+    "rationale": "Procedural boundary in README.md:51 and EXECUTION-PROPOSAL.json:31-35; in code only the operator touches private paths and never opens payment.skey (:615-625). Root compliance remains procedural."
+  },
+  {
+    "clause": "The signing key remains only at payment.skey inside the fresh private root. The operator must not open, read, copy, hash, print, export, or request it. Public signingKeyHashedByOperator must be false, and signing-key presence/mode may be reported only as booleans.",
+    "clauseId": "P-07",
+    "position": "AGREE",
+    "rationale": "operator.py:615-625 lstat/chmod only; RESULT :750-753 booleans only, signingKeyExported and signingKeyHashedByOperator false, with no size, hash, or body field."
+  },
+  {
+    "clause": "Restrictive umask 077, private directories 0700, signing key 0600, symlink/no-follow checks, exclusive creation, and no overwrite/reuse/retry/regeneration are mandatory.",
+    "clauseId": "P-08",
+    "position": "AGREE",
+    "rationale": "operator.py:580 umask 077, :179-202 private 0700, :620 chmod 0600, O_NOFOLLOW and O_EXCL creation throughout, fresh-leaf refusal at :189-199."
+  },
+  {
+    "clause": "The binary archive is the already acquired Cardano CLI 11.3.1.0 archive of 24057685 bytes with SHA-256 330d20a904d5f7526a0ba22edec6ba8fe5670978e8a37bf83c27d4b63faeeebe, from source commit fc466f22ca5c03c0e373e2d37053b7f1884c50c9 and source archive SHA-256 20ba6e5711a1f8b8aa916cc87001baa04862c19358b9bf2aaebdb9425dc536e2.",
+    "clauseId": "P-09",
+    "position": "AGREE",
+    "rationale": "Corroborated across SOURCE-MANIFEST and release manifests cited in the prior review; transport integrity pins only, no reproducible-build provenance."
+  },
+  {
+    "clause": "Archive extraction is data-only: enumerate members, reject extractall/traversal, require exactly one regular non-link member cardano-cli-x86_64-linux of 102556168 bytes, stream it to staging, measure its SHA-256, preserve the source archive, and check archive and staged hashes before and after native calls.",
+    "clauseId": "P-10",
+    "position": "AGREE",
+    "rationale": "operator.py:367-409 getmembers/extractfile streaming with count, name, regular, size and digest checks, and :721-726 re-checks after the calls; no extractall."
+  },
+  {
+    "clause": "No staged-binary member hash may be invented in the candidate or proposal. Root must measure it from the fixed archive as data before fresh review, pin that exact measured hash in the actual AUTH, and operator.py must compare it before execution and after the native sequence.",
+    "clauseId": "P-11",
+    "position": "DISAGREE",
+    "rationale": "No-invention and pinning substance is agreed and now satisfied by measurement (extracted DATA-ONLY-MANIFEST:7-8; operator.py:408-409,723-726), but the literal candidate-null premise is false after the documented root fill. Preserved as DISAGREE and qualified by P-30; not agreed as written."
+  },
+  {
+    "clause": "ELF linkage is unknown from archive/member data alone. If static, runtimeBinds must be empty and the ELF must have no PT_DYNAMIC or PT_INTERP. If dynamic, the actual AUTH must list exact regular non-link read-only runtime files, the PT_INTERP destination must be bound, and no broad /home, broad /usr, host CLI, installation, or silent fallback is allowed.",
+    "clauseId": "P-12",
+    "position": "AGREE",
+    "rationale": "Implemented at operator.py:278-284,310-353,413-418,595-598; the static branch is the observed case (no PT_INTERP, no PT_DYNAMIC), so no DT_NEEDED enumeration arises."
+  },
+  {
+    "clause": "Every native invocation runs through /usr/bin/bwrap with --unshare-all, --die-with-parent, --new-session, and --clearenv; the staged executable is read-only, only the fresh private root is read-write, /tmp is tmpfs, a minimal /dev permits urandom, and the environment is limited to HOME=/private, TMPDIR=/tmp, LANG=C.UTF-8, and PATH=/usr/bin:/bin.",
+    "clauseId": "P-13",
+    "position": "AGREE",
+    "rationale": "operator.py:465-503 constructs exactly this prefix and setenv list; :588-590 requires an executable /usr/bin/bwrap; no home or credentials are mounted."
+  },
+  {
+    "clause": "The native sequence is at most four calls in this order: address key-gen, address key-hash, address build --testnet-magic 1, and address info. No stake key, stake identifier, registration, network call, query, signing, transaction, faucet request, or submission is included.",
+    "clauseId": "P-14",
+    "position": "AGREE",
+    "rationale": "MAX_CLI_CALLS 4 at operator.py:46 with the four calls at :604-689 and no stake, network, sign, or transaction argument anywhere."
+  },
+  {
+    "clause": "The era-independent command is proposed as cardano-cli address ... with no era prefix, based on Address/Option.hs mounting the subparser literally named address. The complete top-level dispatch is not in the mirror and remains a fresh-review point.",
+    "clauseId": "P-15",
+    "position": "AGREE",
+    "rationale": "Substance verified; the caveat is now additively closed by the supplement dispatch evidence recorded in the prior review (CLI/Option addressCmdsTopLevel, CLI/Run runAddressCmds). The not-in-mirror sentence is historical and superseded under P-31."
+  },
+  {
+    "clause": "The exact proposed leaf argv uses --verification-key-file and --signing-key-file for key-gen; --payment-verification-key-file and --out-file for key-hash/build; --testnet-magic 1 for build; and --address plus --out-file for info. These spellings must be explicitly agreed or disagreed by the fresh reviewer because the imported leaf-option definitions were not mirrored.",
+    "clauseId": "P-16",
+    "position": "AGREE",
+    "rationale": "Explicit fresh agreement: supplement EraBased/Common/Option.hs defines every spelling matching operator.py:604-689, with Shelley key-type and text-envelope defaults closed as recorded in the prior review P-16; the not-mirrored premise is superseded under P-31."
+  },
+  {
+    "clause": "The keypair correspondence claim is limited to CLI generation: Address/Run.hs generateAndWriteKeyFiles generates one pair and writes both keys, while verification-key parsing is exercised by key-hash and build. No separate signing-key read or signature test is used to claim live ownership.",
+    "clauseId": "P-17",
+    "position": "AGREE",
+    "rationale": "One generated pair written together, vkey re-parsed for hash and build, and operator.py:719-720 ties the address to that hash. No live ownership is claimed; CSPRNG quality remains a disclosed dependency on the pinned official binary."
+  },
+  {
+    "clause": "The address is enterprise and key-controlled: PaymentCredentialByKey from the payment verification-key hash and NoStakeAddress, with no stake credential or registration.",
+    "clauseId": "P-18",
+    "position": "AGREE",
+    "rationale": "operator.py:658-669 passes no stake argument; RESULT :748-749 records enterprise true and stakeCredentialPresent false."
+  },
+  {
+    "clause": "Public validation requires address info type=payment, era=shelley, encoding=bech32, identical address, a single addr_test1... line, a 56-hex payment key hash, and the disclosed enterprise base16 invariant of 29 bytes with header 0x60 followed by that payment key hash. This invariant is fail-closed and requires explicit reviewer agreement; it is not a ledger or signature proof.",
+    "clauseId": "P-19",
+    "position": "AGREE",
+    "rationale": "Explicit fresh agreement: operator.py:656-657,671-679,698-720 enforces each element including the 29-byte 0x60 layout (source-derived derivation consistency only). It proves no ledger state or ownership."
+  },
+  {
+    "clause": "The network label is Cardano Preprod solely as configured target through --testnet-magic 1. Address encoding and address info do not distinguish Preprod from Preview, and no ledger observation, funded status, or target acceptance is claimed.",
+    "clauseId": "P-20",
+    "position": "AGREE",
+    "rationale": "operator.py:44-45 pins name and magic 1; RESULT :771-772 sets ledgerObserved false; README.md:39 states the Preview/Preprod limitation."
+  },
+  {
+    "clause": "walletCreated may become true only after archive/binary immutability, all four exit codes, private key presence/mode booleans, public verification-key parsing, key-hash format, address format, address-info fields, enterprise invariant, and public export all succeed. Failures remain FAILED_ATTEMPT_SPENT with fundingAddress and addressAdvice null.",
+    "clauseId": "P-21",
+    "position": "AGREE",
+    "rationale": "Public export only at operator.py:728-731 after :698-726; success RESULT at :732-774; failure path :778-806 writes FAILED_ATTEMPT_SPENT with walletCreated false and both advice fields null."
+  },
+  {
+    "clause": "The retained secret format is a CLI PaymentSigningKey text envelope, not an HD mnemonic. There is no mnemonic, seed, root backup, upload, or user secret request in this scope. The owner must protect the private file offline and share only the public address after full validation and fresh audit.",
+    "clauseId": "P-22",
+    "position": "AGREE",
+    "rationale": "Text-envelope generation under the closed defaults; no mnemonic, seed, backup, or upload in EXECUTION-PROPOSAL.json:182-188; offline warning in README.md:47-49. The skey body is never inspected."
+  },
+  {
+    "clause": "Raw native stdout/stderr, private logs, exception paths containing sensitive data, and private directory listings must never be public. Public failures use only fixed categories, exit codes, counters, and public hashes.",
+    "clauseId": "P-23",
+    "position": "AGREE",
+    "rationale": "operator.py:537-543 private 0600 logs versus public call, exitCode, timedOut only; fixed Fail categories with unexpected exceptions collapsed to INTERNAL_FIXED at :815-817."
+  },
+  {
+    "clause": "The attempt ledger is created at zero, attemptsStarted increments to one before the first process spawn, retries remain zero, and a native error or timeout preserves a spent attempt with no regeneration or retry.",
+    "clauseId": "P-24",
+    "position": "AGREE",
+    "rationale": "operator.py:438-455 ledger at zero then INTENT_RECORDED_BEFORE_FIRST_PROCESS_SPAWN before Popen at :508; retries stays 0; fresh-root refusal blocks regeneration."
+  },
+  {
+    "clause": "Whole execution is capped at 120 seconds, each call at 30 seconds wall and 15 seconds CPU, with filesystem-size and descriptor limits. CPU limits are per-process rather than transitive, and outer kill cannot guarantee death of an uninterruptible process.",
+    "clauseId": "P-25",
+    "position": "DISAGREE",
+    "rationale": "Per-call parts hold (operator.py:48-49,422-426,504-518), but whole execution capped at 120 seconds is false because the clock starts after extraction and cleanup adds up to 10 s. Preserved as DISAGREE; the repair is new clause P-29, not a reinterpretation of P-25."
+  },
+  {
+    "clause": "Python uses the standard library only for orchestration. It generates no keys, imports no SDK, installs nothing, invokes no help/version/probe, uses no existing wallet/seed/key/provider credential, and mounts no user home.",
+    "clauseId": "P-26",
+    "position": "AGREE",
+    "rationale": "operator.py:14-24 imports only hashlib, json, os, re, resource, stat, subprocess, sys, tarfile, time, pathlib; argv at :604-689 contains no help, version, query, sign, or transaction command."
+  },
+  {
+    "clause": "Source readiness, finite ordinary public evidence, proposed authority, actual proof, and target acceptance are distinct. This authored package establishes at most conditional source readiness; it establishes no executable authority, wallet existence, funded status, ownership proof, settlement, or Preprod transaction acceptance.",
+    "clauseId": "P-27",
+    "position": "AGREE",
+    "rationale": "EXECUTION-PROPOSAL.json:5-9 and README.md:5-9 maintain the same separation. This review grants no authority and claims no wallet, funding, ownership, or acceptance."
+  },
+  {
+    "clause": "All 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates, compiled C2 wrapper/genuine hash or signature qualification, settlement, qualified cost, and real Preprod transactions remain open and are not advanced by this wallet operator.",
+    "clauseId": "P-28",
+    "position": "AGREE",
+    "rationale": "EXECUTION-PROPOSAL.json:190-198 marks each open or not applicable with no compatibility percentage. Wallet creation, if later authorized and audited, completes none of them."
+  },
+  {
+    "clause": "The caller launches the operator with RLIMIT_CORE=(0,0) inherited, and an outer supervisor enforces 180 s wall from operator process spawn including archive staging/extraction, then kills the operator process group after a 10 s grace (absolute maximum 190 s). The AUTH totalWallSeconds=120 is only the inner native-call window measured from Runner construction after extraction, plus up to 10 s per-call kill cleanup, and is not a whole-execution cap. Failure at any bound leaves the attempt spent.",
+    "clauseId": "P-29",
+    "position": "AGREE",
+    "rationale": "Fresh AGREE, forming with the source author FOR the two substantive positions. Evidence: operator.py:435 and :594-599 clock after extraction, :519-535 up to 10 s cleanup, :422-426 no RLIMIT_CORE in set_limits; OUTER-EXECUTION-PROPOSAL.json:12 exact argv with prlimit --core=0 and timeout 180s plus kill-after 10s, :19-27 bounds, :30-33 caveats that timeout signals the managed child chain while each native call uses start_new_session and bwrap --new-session --die-with-parent, so no global unkillable or D-state guarantee and no transitive CPU cap is claimed. Root must not clamp parent AS below the child 4 GiB or CPU below 15/16 at :27."
+  },
+  {
+    "clause": "The immutable historical P-02/P-11 null/unresolved/placeholder wording is superseded ONLY by the reviewed root literal AUTH fills and public source/ELF pins now known; the actual AUTH uses the same existing typed keys with only the status flip, as a new isolated file, with no old-scope carry-over, no additional hidden field, and no hypothetical authority.",
+    "clauseId": "P-30",
+    "position": "AGREE",
+    "rationale": "Fresh AGREE with the author FOR. Evidence: AUTH-CANDIDATE.json:6,8,18,23,27 filled yet still self-rejecting, old candidate ROOT-SOURCE-MANIFEST:14-19 documenting the metadata-only delta, extracted DATA-ONLY-MANIFEST:7-8,24-25, and operator.py:247,251-252 exact-key and status enforcement. Literal P-02 and P-11 remain DISAGREE as written and are not erased."
+  },
+  {
+    "clause": "The missing leaf defaults/dispatch source-data gaps are closed by the pinned public Haskell supplement with literal citations; no runtime probe is needed and no binary/source reproducible-build proof is claimed.",
+    "clauseId": "P-31",
+    "position": "AGREE",
+    "rationale": "Fresh AGREE with the author FOR. Evidence: supplement SOURCE-MANIFEST five pinned files from source archive 20ba6e57..., prior independent P-15/P-16 AGREE line citations against operator.py:604-689, and this review's targeted confirmation of testnet-magic in EraBased/Common/Option.hs. Finite ordinary evidence only; no source-build attestation."
+  },
+  {
+    "clause": "The secret/public boundary is unchanged: one new keypair from four calls, no existing keys, no secret read by root, only private existence/mode booleans from the operator; no funding advice before a fresh actual audit completes public export, and raw native private outputs are never public. No signing, network, faucet, or later spend authority is derived.",
+    "clauseId": "P-32",
+    "position": "AGREE",
+    "rationale": "Fresh AGREE with the author FOR. Evidence: operator.py:189-199 exclusive fresh leaves, :537-543 private raw output, :615-625 lstat/chmod only on payment.skey, :750-753 booleans, :728-774 export only after full validation, and README.md:51 root prohibition. No live ownership signature is required before reporting a test wallet address; any later real spend needs separate review. Private leaf existence was not observed by either author or this reviewer."
+  }
+]

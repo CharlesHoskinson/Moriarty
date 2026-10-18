@@ -1,0 +1,45 @@
+--- origin-r2/source/mori-r1cs/src/circuit.rs
++++ successor/source/mori-r1cs/src/circuit.rs
+@@ -19,7 +19,7 @@
+ use crate::lower::{self, DutyW, EffectW, Entry, LowerError};
+ use crate::plan::{self, AccountingBinding, ActionPlan, CapBinding, CompileOptions};
+ use crate::r1cs::{Cs, Lc, RegionCount, Tamper};
+-use crate::statement::{EffectRole, HeaderField, SlotKind, StatementLayout, TransitionValues};
++use crate::statement::{BodyValues, EffectRole, HeaderField, SlotKind, StatementLayout, TransitionValues};
+ use ark_ff::{BigInteger, PrimeField};
+ use ark_relations::r1cs::{
+     ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, OptimizationGoal, SynthesisError, SynthesisMode,
+@@ -113,7 +113,33 @@
+     /// A circuit for proving (`Some`) or setup (`None`).
+     pub fn circuit<F: PrimeField>(&self, assignment: Option<Assignment<F>>, tamper: Tamper<F>) -> Result<TransitionCircuit<'_, F>, CompileError> {
+         self.check_field::<F>().map_err(CompileError::Field)?;
++        if let Some(a) = &assignment {
++            self.check_assignment_lengths(a)?;
++        }
+         Ok(TransitionCircuit { relation: self, assignment, tamper })
++    }
++
++    /// Refuses an assignment whose vectors do not have this relation's lengths (review
++    /// F-12). `Assignment` fields are public, so a hand-built value could otherwise make
++    /// synthesis index out of bounds and panic. Lengths only: value types, absent-duty
++    /// canonicality and every value relation stay with the constraint system, so this
++    /// adds no constraint and decides no well-shaped claim.
++    fn check_assignment_lengths<F: PrimeField>(&self, a: &Assignment<F>) -> Result<(), CompileError> {
++        let plan = &self.plan;
++        let body = |b: &BodyValues| -> bool {
++            b.states.len() == plan.states.len() && b.cells.len() == plan.cells.len() && b.duties.len() == plan.duties.len()
++        };
++        let checks = [
++            ("inputs", a.values.inputs.len() == plan.inputs.len()),
++            ("pre body", body(&a.values.pre)),
++            ("post body", body(&a.values.post)),
++            ("effects", a.values.effects.len() == plan.effects.len()),
++            ("public inputs", a.public.len() == self.layout.field_count),
++        ];
++        match checks.iter().find(|(_, ok)| !*ok) {
++            Some((what, _)) => Err(CompileError::AssignmentShape(format!("{what} length differs from the relation"))),
++            None => Ok(()),
++        }
+     }
+ 
+     fn check_field<F: PrimeField>(&self) -> Result<(), String> {

@@ -1,0 +1,85 @@
+--- origin-r2/source/mori-r1cs/tests/generic_pipeline.rs
++++ successor/source/mori-r1cs/tests/generic_pipeline.rs
+@@ -1,6 +1,9 @@
+-//! The falsifiable source predicate: one compiler, one path (source -> actual Core
++//! The falsifiable source predicate: one compiler (source -> actual Core
+ //! parse/validate -> typed Program -> plan -> constraint lowering), several
+ //! contrasting programs, every accepted witness checked against frozen expectations.
++//! There are two public entry paths: `compile_source` for source text, and
++//! `admit_program` + `compile` for an in-memory typed Program (review F-11). Both run
++//! Core `validate` (and `require_core1`) before planning; these tests use the first.
+ mod common;
+ 
+ use common::*;
+@@ -17,7 +20,7 @@
+ 
+ fn lifecycle(source: &str, cases: &[(&str, &str, usize, u128)]) {
+     for &(case, action, fields, work) in cases {
+-        let rel = compile(source, options(action, CapBinding::PublicCap));
++        let rel = compile_ok(source, options(action, CapBinding::PublicCap));
+         let oracle = oracle_case(case);
+         assert_eq!(oracle.used, UInt(work), "{case}: frozen oracle work");
+         assert_eq!(rel.plan().logical_work, UInt(work), "{case}: W from the IR");
+@@ -47,7 +50,7 @@
+         (INVOICE, INVOICE_PROGRAM, "installment-invoice.mori", "open"),
+         (RESERVE, RESERVE_PROGRAM, "conditional-reserve.mori", "allocate"),
+     ] {
+-        let rel = compile(source, options(action, CapBinding::NotBound));
++        let rel = compile_ok(source, options(action, CapBinding::NotBound));
+         // [ORACLE] complete expected typed Program.
+         assert_eq!(serde_json::to_value(rel.program()).unwrap(), json(program), "{key}: typed Program");
+         // [AUTHOR, derived from ORACLE JSON] canonical Program hash.
+@@ -62,9 +65,9 @@
+ 
+ #[test]
+ fn contrasting_programs_get_distinct_bound_identities_from_the_same_compiler() {
+-    let a = compile(INVOICE, options("open", CapBinding::PublicCap));
+-    let b = compile(RESERVE, options("allocate", CapBinding::PublicCap));
+-    let c = compile(PAYROLL, options("pay", CapBinding::PublicCap));
++    let a = compile_ok(INVOICE, options("open", CapBinding::PublicCap));
++    let b = compile_ok(RESERVE, options("allocate", CapBinding::PublicCap));
++    let c = compile_ok(PAYROLL, options("pay", CapBinding::PublicCap));
+     let ids = [a.identity(), b.identity(), c.identity()];
+     for (i, x) in ids.iter().enumerate() {
+         for y in &ids[i + 1..] {
+@@ -105,7 +108,7 @@
+ #[test]
+ fn fresh_payroll_program_pay_and_settle_satisfy_author_expectations() {
+     // pay: P1 with cap 45, W 45, 68 public inputs.
+-    let pay = compile(PAYROLL, options("pay", CapBinding::PublicCap));
++    let pay = compile_ok(PAYROLL, options("pay", CapBinding::PublicCap));
+     assert_eq!(pay.plan().logical_work, UInt(45));
+     let schedule: Vec<UInt> = [7, 4, 6, 2, 2, 2, 2, 4, 4, 2, 4, 6].into_iter().map(UInt).collect();
+     assert_eq!(pay.plan().logical_schedule, schedule);
+@@ -120,7 +123,7 @@
+ 
+     // settle from P1.post. P2 (amount 7) and P3 (amount 3), transcribed from the
+     // compact frozen form into Core records.
+-    let settle = compile(PAYROLL, options("settle", CapBinding::PublicCap));
++    let settle = compile_ok(PAYROLL, options("settle", CapBinding::PublicCap));
+     assert_eq!(settle.plan().logical_work, UInt(12));
+     assert_eq!(settle.layout().field_count, 49);
+     for (amount, employer, worker, closing, closed) in [(7u128, 71u128, 32u128, 0u128, true), (3, 75, 28, 4, false)] {
+@@ -145,16 +148,17 @@
+ }
+ 
+ #[test]
+-fn compile_source_is_the_only_path_and_it_never_reads_program_names() {
++fn compile_source_is_deterministic_and_never_reads_program_names() {
+     // The same source compiled twice yields byte-identical layouts and identities; a
+-    // renamed agreement (different Program) yields a different program hash.
+-    let a = compile(SELF_MOVE, options("move", CapBinding::NotBound));
+-    let again = compile(SELF_MOVE, options("move", CapBinding::NotBound));
++    // renamed agreement (different Program) yields a different program hash. This does
++    // not claim `compile_source` is the only public path (see the module docs, F-11).
++    let a = compile_ok(SELF_MOVE, options("move", CapBinding::NotBound));
++    let again = compile_ok(SELF_MOVE, options("move", CapBinding::NotBound));
+     assert_eq!(a.layout(), again.layout());
+     assert_eq!(a.identity(), again.identity());
+     assert_eq!(a.layout().field_count, 20); // [AUTHOR] ADDENDUM-1 without cap
+     let renamed = SELF_MOVE.replace("agreement SelfMove", "agreement SelfMoveRenamed");
+-    let r = compile(&renamed, options("move", CapBinding::NotBound));
++    let r = compile_ok(&renamed, options("move", CapBinding::NotBound));
+     assert_ne!(a.identity().program_hash, r.identity().program_hash);
+     assert_eq!(a.plan().effects, r.plan().effects);
+ }

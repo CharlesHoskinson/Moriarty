@@ -1,0 +1,158 @@
+{
+  "coverage": {
+    "limits": "Navigation/publication audit only. No full base-code review, no independent cryptographic verdict, no execution, no sha recomputation, no Git verification. Base graph bytes were not mirrored; prefix preservation is taken from root verification plus R3 pin agreement.",
+    "readPaths": [
+      "INPUT-INDEX.json (26 mirror entries)",
+      "Fragment SOURCE-MANIFEST.json, README.md, CHANGELOG.md, OWN-OUTPUT-ALLOWLIST, graphify-out/GRAPH_REPORT.md \u2014 read in full",
+      "EXACT-GRAPH-ADDITIONS.json \u2014 read in full (all 30 nodes, all 30 links, fragmentUpdates)",
+      "graph.json \u2014 sampled header, k5e node block, k5e edge block, fragment_metadata/fragment_updates tail, and target-existence checks; not read line-by-line for all 1356 base nodes/links",
+      "Capsule README.md, PUBLICATION.json (full), root/K5-RAW-OBSERVATION.json, root/K5-ACTUAL-ADOPTION.json, root/K5-RESULT-MANIFEST.json, run/logs/K5M.log, run/receipts/K5g.json \u2014 read",
+      "reviews/actual-muse/REPORT.md, ADOPTION-RECOMMENDATION.json, reviews/packaging-muse/REPORT.md, PROCESS.json \u2014 read",
+      "experiments k2/src/setup.rs \u2014 read in full",
+      "R3 README.md, AUDIT-DISPOSITION.md, OWN-OUTPUT-ALLOWLIST \u2014 read",
+      "Capsule INVENTORY.md (first 80 lines), SOURCE-PUBLICATION-SELECTION.json (first 80 lines), experiment README.md (first 80 lines) \u2014 sampled"
+    ],
+    "skippedPaths": [
+      "inputs/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/DELIVERY-INVENTORY.json \u2014 not opened",
+      "Capsule INVENTORY.md beyond line 80 \u2014 not opened",
+      "Capsule SOURCE-PUBLICATION-SELECTION.json beyond line 80 \u2014 not opened",
+      "Experiment README.md beyond line 80 \u2014 not opened",
+      "graph.json base 1356-node/3620-link payload beyond sampled windows \u2014 not opened line-by-line",
+      "Base R3 graph.json bytes (879d2a8c) \u2014 not present in mirror, not opened",
+      "USER-ROUTING-ADDENDUM-20261016.json \u2014 not listed in INPUT-INDEX, not opened; routing taken only from task prompt"
+    ]
+  },
+  "crosschecks": [
+    {
+      "evidence": [
+        "SOURCE-MANIFEST.json:5-9 base 879d2a8c 1356/3620",
+        "R3 OWN-OUTPUT-ALLOWLIST:7-8,32 same pin/counts",
+        "EXACT-GRAPH-ADDITIONS.json:2-4 base/candidate pins, 30+30, fragmentUpdates 1356/3620 to 1386/3650 arithmetic",
+        "OWN-OUTPUT-ALLOWLIST:31-48 final 1386/3650 +30/+30, 18 components (reported, not recomputed)"
+      ],
+      "id": "X-01",
+      "limits": "No execution, so 18 components, endpoint uniqueness and byte-prefix preservation were not recomputed; they rest on root verification plus pin agreement.",
+      "status": "CONSISTENT-REPORTED"
+    },
+    {
+      "evidence": [
+        "R3 effective 3401/216/3 (OWN-OUTPUT-ALLOWLIST:37-42, typeOnly 165) + added 27/3/0 = 3428/219/3",
+        "GRAPH_REPORT.md:16 states effective rule evidence_type fallback type with 3428/219/3",
+        "R3 README.md:5 explains 165 type-only links and read-time fallback"
+      ],
+      "id": "X-02",
+      "limits": "Legacy 165 links were not individually re-audited; handling is documentation-level and correct.",
+      "status": "CONSISTENT"
+    },
+    {
+      "evidence": [
+        "Capsule README.md:7,15 104 payloads 401254 bytes, no binary/PK/VK/setup-record body",
+        "PUBLICATION.json:16-18 selected 104 / staged 4 / packaging 7 (104+4+7+PUBLICATION = 116 total files under the broader count)",
+        "Packaging REPORT.md:3 108-file count uses the narrower 104+4 scope",
+        "INVENTORY.md:3-5,15-22 104 rows by group"
+      ],
+      "id": "X-03",
+      "limits": "Full 104 payload bodies were not opened; counts agree across README/PUBLICATION/INVENTORY.",
+      "status": "CONSISTENT"
+    },
+    {
+      "evidence": [
+        "K5M.log:7,12,25 wall 0:24.35, RSS 814200, exit 0",
+        "K5-RAW-OBSERVATION.json:6-29 ten exits 0, 1 invocation, 0 retries, 24.35/814200, K5g PASS",
+        "Actual REPORT.md:7,11-12 same counters/metrics, K5g PASS",
+        "K5g.json:2,89-90 consumer false, verdict PASS; keysEntries 98715456/0600/nlink1"
+      ],
+      "id": "X-04",
+      "limits": "Host observations only, not resource bounds; PK body, VK bytes and setup-record body were never opened by design.",
+      "status": "CONSISTENT"
+    },
+    {
+      "evidence": [
+        "setup.rs:119-141 encode VK hex, record_bytes, parse_setup_record roundtrip check",
+        "Actual REPORT.md:21 and Capsule README.md:11 no PK decode/subgroup/embedded-VK/PK-VK/proof/pairing/ledger",
+        "K5g.json:45-46,2 provenance not VK-verifiable, consumer false, controller could forge",
+        "Capsule README.md:11,13 synthetic caller context authenticates neither chain nor full frame; all open scopes listed"
+      ],
+      "id": "X-05",
+      "limits": "Source was read, not compiled or executed; no cryptographic verdict is offered.",
+      "status": "CONSISTENT"
+    },
+    {
+      "evidence": [
+        "Capsule README.md:9 K4H binary d446ab0c reused, 160-file package 515bd5c5 not rebuilt, F03 unobserved",
+        "Actual REPORT.md:8,12 P0 verified d446ab0c copy, K5g pins",
+        "Packaging REPORT.md:11 same reuse/F03 statement",
+        "Graph k5e_binary/k5e_f03/k5e_package cite README L9/L13 accurately"
+      ],
+      "id": "X-06",
+      "limits": "Binary identity rests on published hashes/logs; no build was performed.",
+      "status": "CONSISTENT"
+    },
+    {
+      "evidence": [
+        "Actual REPORT.md:23,27 first blocked boundary and custody retention for current-cardano-k2-k6-proof-roundtrip-20261016",
+        "ADOPTION-RECOMMENDATION.json:2-5 prerequisiteClosed true, execution not authorized, retention INPLACE grants no operation",
+        "K5-ACTUAL-ADOPTION.json:10-15,34 prerequisite closed, K6 execution false, proof/ledger false",
+        "Capsule README.md:3,21 retention permits no read/copy/delete/publication/K6 execution before new review+auth"
+      ],
+      "id": "X-07",
+      "limits": "Retention is a custody disposition only; it authorizes no key load, prove or verify.",
+      "status": "CONSISTENT"
+    }
+  ],
+  "findings": [
+    {
+      "blocking": true,
+      "description": "k5e_commit (label 'Published utxo HEAD 82c20ad4084b...') and edge k5e_edge_001 (capsule -published_at-> commit) are classified EXTRACTED with confidence 1.0 citing PUBLICATION.json /branch. That pointer contains only the string 'utxo' (PUBLICATION.json:4). The file contains no 82c20ad4 value; it records priorCommit dd449bc9 (PUBLICATION.json:5) as the previous commit. The 82c20ad4 value is supported only as a Luna/Root Git observation recorded in SOURCE-MANIFEST.json:11-15 (published_git head/branch/capsule_path) and repeated in fragment README/GRAPH_REPORT. An EXTRACTED claim must be supported by the cited file/location/sha; here it is not. This is a material provenance defect in a publication/navigation audit, even though the hash itself is corroborated elsewhere.",
+      "evidence": [
+        "EXACT-GRAPH-ADDITIONS.json:20-31 (k5e_commit EXTRACTED, /branch, sha 1e444b21)",
+        "EXACT-GRAPH-ADDITIONS.json:398-414 (k5e_edge_001 EXTRACTED 1.0, /branch)",
+        "graph.json:20727-20738 and 81157-81172 (same node/edge in candidate graph 4d9419a4)",
+        "PUBLICATION.json:4-5 (branch utxo, priorCommit dd449bc9); full-file read found no 82c20ad4",
+        "SOURCE-MANIFEST.json:11-15 (head 82c20ad4 as observation record)"
+      ],
+      "file": "graphify-out/graph.json, EXACT-GRAPH-ADDITIONS.json",
+      "id": "F-01",
+      "line": 20727,
+      "recommendation": "Minimal fix only: reclassify k5e_commit and k5e_edge_001 from EXTRACTED to INFERRED with observation provenance, repoint source_file/source_location/evidence_sha to SOURCE-MANIFEST.json /published_git/head (or add an explicit 'Git HEAD observed by Luna/Root, not contained in PUBLICATION.json' provenance note), and update all derived counts: SOURCE-MANIFEST new_layer nodes 29 EXTRACTED/1 INFERRED and links 26 EXTRACTED/4 INFERRED; GRAPH_REPORT.md added/full classes (nodes 1385/1, links 3427 EXTRACTED/220 INFERRED/3 AMBIGUOUS); OWN-OUTPUT-ALLOWLIST fragmentCounts; EXACT-GRAPH-ADDITIONS and graph.json fragment_updates. Do not edit frozen capsule bytes. No corpus re-extraction is required.",
+      "severity": "material"
+    },
+    {
+      "blocking": false,
+      "description": "All other 29 nodes and 29 links were checked against their cited files. Evidence SHAs match SOURCE-MANIFEST/INPUT-INDEX pins (README 2fb6587f, PUBLICATION 1e444b21, K5M.log 8a36fe55, K5g 71b4ee8f, actual REPORT 3d4f5101, ADOPTION 503d5bc4, packaging REPORT 6c2e376e, setup.rs 4480445e). Locations support the claims: metrics from K5M.log elapsed/RSS, gate/PK metadata from K5g /verdict and /records/keysEntries/0, unperformed steps from actual REPORT L21, open scopes from capsule README L13, VK-record roundtrip from setup.rs L137-L140. The three INFERRED links (028-030, 0.8) correctly mark invocation/implementation inference to existing base nodes k2_src_setup_setup and file_k2_src_setup_rs, both present in graph.json. No absolute w/ path from K5g records was promoted to a portable dependency; new source_file values are repo-relative.",
+      "evidence": [
+        "EXACT-GRAPH-ADDITIONS.json nodes/links throughout",
+        "Capsule README.md:7-15, setup.rs:137-141, K5g.json:2,54-62,90",
+        "graph.json:13387 (k2_src_setup_setup exists), 81616-81665 (INFERRED edges)"
+      ],
+      "file": "EXACT-GRAPH-ADDITIONS.json",
+      "id": "F-02",
+      "line": 6,
+      "recommendation": "No change. Retain EXTRACTED/INFERRED split for these items.",
+      "severity": "info"
+    },
+    {
+      "blocking": false,
+      "description": "Legacy handling is honest: GRAPH_REPORT uses evidence_type with fallback to type for the 165 type-only links, matching R3 documentation; token accounting is UNKNOWN in SOURCE-MANIFEST, GRAPH_REPORT and allowlist; no 1542/5627 extraction counts are revived; --no-viz/no HTML is consistent across SOURCE-MANIFEST build_method, GRAPH_REPORT, CHANGELOG and allowlist, and the allowlist contains no HTML file. Dated frozen 'pending audit' prose in capsule README is correctly left as a historical snapshot qualified by PUBLICATION.json. Retained fragment_metadata fourway 'pending' fields are base payload preserved unchanged and create no new fourway status; repaired fourway results remain outside this fragment.",
+      "evidence": [
+        "GRAPH_REPORT.md:10-16, R3 README.md:5, R3 AUDIT-DISPOSITION.md:7-9",
+        "SOURCE-MANIFEST.json:21,109, GRAPH_REPORT.md:11, OWN-OUTPUT-ALLOWLIST:50-57",
+        "Capsule README.md:23, PUBLICATION.json:14"
+      ],
+      "file": "graphify-out/GRAPH_REPORT.md",
+      "id": "F-03",
+      "line": 16,
+      "recommendation": "No change. Consumers must not infer a new fourway status from retained base metadata.",
+      "severity": "info"
+    }
+  ],
+  "positions": [],
+  "recommendation": {
+    "firstBlockedBoundary": "K6 exact source spec/operator with fresh full review and separate crypto authorization before any PK load/deserialize, subgroup/embedded-VK/PK-VK check, prove or independent pairing verify (Actual REPORT.md:23; ADOPTION-RECOMMENDATION.json:2).",
+    "prerequisiteClosed": true,
+    "scope": "Navigation/publication audit only for graph 4d9419a4 / allowlist d1cd6868. Source readiness, finite ordinary evidence, proposed authority and actual proof/target acceptance are distinct and must stay distinct.",
+    "verdict": "NOT READY as classified \u2014 one minimal material citation fix (F-01), then READY navigation-only. No proof, key, ledger, installation or target acceptance is granted in either state."
+  },
+  "report": "## Verdict\n\n**NOT READY as classified \u2014 one minimal material citation fix, then READY navigation-only.** The fragment is otherwise an honest additive navigation layer (base `879d2a8c`, 1356/3620 \u2192 1386/3650, +30/+30). It grants no source approval, installation, proof, key, ledger or target acceptance. Root must verify exact committed bytes before push.\n\n## Material finding\n\nF-01: node `k5e_commit` and edge `k5e_edge_001` claim EXTRACTED (1.0) from `PUBLICATION.json /branch`. That pointer holds only `utxo`; `PUBLICATION.json` records `priorCommit dd449bc9` and nowhere contains `82c20ad4`. The HEAD value is a Luna/Root observation in `SOURCE-MANIFEST.json /published_git/head`. Reclassify both items to INFERRED with observation provenance, repoint the citation, and update the derived counts in SOURCE-MANIFEST, GRAPH_REPORT, allowlist, EXACT-GRAPH-ADDITIONS and `graph.json` fragment_updates (nodes 29/1, links 26/4; full links 3427/220/3). No other fix is required; do not widen scope or re-extract the old corpus.\n\n## What checks out\n\nThe remaining 29 nodes/29 links cite files whose pins match and whose locations support the claims (run metrics, gate PASS, PK metadata-only 98715456B/0600/nlink1, VK-record roundtrip in `setup.rs`, unperformed PK/proof/verify/ledger steps, `consumerCanCheckVkToMatrixLink: false`, forge-under-test-profile, synthetic context, K4H binary reuse, F03 unobserved, open scopes). Legacy links use `evidence_type` else `type`; token accounting is UNKNOWN; no HTML (`--no-viz`).\n\n## Scope, limits and blocked boundary\n\nOne invoice/partial single-party test run (24.35s, 814200 KiB, ten exits 0, one OsRng, zero retries) closes only the K6 source-preparation prerequisite. Serialized-PK decode/subgroup/embedded-VK/PK-VK, proving, independent pairing verification, ledger/Preprod, all 20 UTXO families, ACTUS/DeFi/general, recursion, private handoff, multi-parent PCD, universal certificates and the distinct Midnight target remain open, with no compatibility percentage. First blocked boundary: a new exact K6 operator plus separate crypto authorization before any PK load, prove or verify. Retention of the named PK/record IN PLACE grants no later key operation.\n\n## Independence\n\nFresh independent muse-wonder-1.0 context; I did not author the candidate, operator or source review and executed nothing. Historical Opus routing is overridden per the task addendum reference; no provider identity, authority or approval is invented. `positions` is empty \u2014 no votes are fabricated.",
+  "reviewToken": "current-rust-cardano-first-setup-graph-independent-muse-review-20261016"
+}

@@ -20,6 +20,15 @@ now compile through `keygen-call`, `prove-call` and PK-free cold `verify-call`.
 Their native execution remains unrun; source/API delivery does not close those
 proof or settlement gates.
 
+## Cardano UTXO and Moriarty Webs
+
+The [Moriarty Webs guide](docs/webs/index.html) explains Strands, script-bound
+Groth16 proof bundles and their Cardano use cases. The [UTXO research index](research/utxo/INDEX.md)
+and [integration record](docs/utxo/MAIN-INTEGRATION-2026-10-17.md) locate the
+source catalogue, experimental compiler/backend, tests and evidence. These
+experiments remain distinct from the current Rust language and Midnight path.
+The Cardano Preprod end-to-end prototype and full UTXO compatibility remain open.
+
 ## Mid-roadmap audit review
 
 The [October 14 review and audit plan](docs/audits/2026-10-14/README.md)

@@ -1,0 +1,409 @@
+diff --git a/aggregation/examples/ivc.rs b/aggregation/examples/ivc.rs
+index 34f27fd..453205a 100644
+--- a/aggregation/examples/ivc.rs
++++ b/aggregation/examples/ivc.rs
+@@ -5,10 +5,13 @@
+ //!
+ //! DO NOT add this example to the CI as it is slow.
+ 
+-use std::time::Instant;
++use std::time::{Duration, Instant};
+ 
+ use ff::Field;
+-use midnight_aggregation::ivc::{self, IvcCircuit, IvcContext, IvcIO, IvcState, IvcTransition};
++use midnight_aggregation::ivc::{
++    self, IvcCircuit, IvcContext, IvcError, IvcIO, IvcInstance, IvcState, IvcTransition,
++};
++use midnight_circuits::{types::Instantiable, verifier::AssignedAccumulator};
+ use midnight_circuits::{
+     hash::poseidon::PoseidonChip,
+     instructions::{hash::HashCPU, *},
+@@ -20,7 +23,7 @@ use midnight_proofs::{
+     plonk::Error,
+ };
+ use midnight_zk_stdlib::{
+-    ZkStdLib, ZkStdLibArch,
++    Relation, ZkStdLib, ZkStdLibArch,
+     utils::plonk_api::{SrsSource, load_srs},
+ };
+ 
+@@ -161,44 +164,220 @@ impl<const N: usize> IvcTransition for PoseidonChain<N> {
+     }
+ }
+ 
+-fn main() {
+-    // Circuit size parameter (log2 of rows). Must be large enough to fit the
+-    // IVC circuit; ideally the minimum possible value. If too small, the error
+-    // message will hint at a valid (but not necessarily optimal) value, e.g.
+-    // `keygen_vk should not fail: SrsError(14, 19)` means K = 19 works, but a
+-    // smaller K might too. Binary-search to find it.
+-    const K: u32 = 17;
+-
+-    const N: usize = 1_000; // Number of Poseidon iteration per IVC step.
+-    const STEPS: usize = 3; // Number of IVC steps to run.
+-
+-    let srs = load_srs(
+-        SrsSource::Midnight,
+-        K,
+-        IvcCircuit::<PoseidonChain<N>>::cs_degree(),
++// ---------------------------------------------------------------------------
++// BENCH PATCH (benchmark copy only): parameterised driver with phase timings,
++// sizes, peak-RSS samples and negative controls. The transition relation above
++// is unchanged from upstream.
++// ---------------------------------------------------------------------------
++
++fn ms(d: Duration) -> f64 {
++    d.as_secs_f64() * 1e3
++}
++
++fn hwm_mb() -> f64 {
++    let s = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
++    s.lines()
++        .find(|l| l.starts_with("VmHWM:"))
++        .and_then(|l| l.split_whitespace().nth(1))
++        .and_then(|v| v.parse::<f64>().ok())
++        .map(|kb| kb / 1024.0)
++        .unwrap_or(-1.0)
++}
++
++fn env_u(name: &str, default: usize) -> usize {
++    std::env::var(name).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
++}
++
++fn report(name: &str, t: Instant, r: &Result<(), IvcError>) {
++    println!(
++        "BENCH neg={name} ms={:.1} outcome={}",
++        ms(t.elapsed()),
++        match r {
++            Ok(()) => "ACCEPTED".to_string(),
++            Err(e) => format!("REJECTED({e:?})"),
++        }
+     );
++}
+ 
+-    let start = Instant::now();
+-    let (mut prover, verifier) = ivc::setup::<PoseidonChain<N>>(srs, K, ());
+-    println!("IVC setup completed in {:.2?}", start.elapsed());
++fn run<const N: usize>(k: u32, steps: usize, neg: bool, wrong_vk: bool) {
++    type T<const M: usize> = PoseidonChain<M>;
++    let t = Instant::now();
++    let srs = load_srs(SrsSource::Midnight, k, IvcCircuit::<T<N>>::cs_degree());
++    println!("BENCH phase=srs_load ms={:.1} hwm_mb={:.1}", ms(t.elapsed()), hwm_mb());
+ 
+-    for i in 0..STEPS {
+-        let start = Instant::now();
+-        let proof = prover.prove_step(()).unwrap();
+-        let prove_time = start.elapsed();
++    let t = Instant::now();
++    let (mut prover, verifier) = ivc::setup::<T<N>>(srs, k, ());
++    println!("BENCH phase=setup_total ms={:.1} hwm_mb={:.1}", ms(t.elapsed()), hwm_mb());
++    println!(
++        "BENCH vk_bytes={} pk_bytes={}",
++        verifier.bench_vk_bytes(),
++        prover.bench_pk_bytes()
++    );
+ 
+-        let instance = prover.instance();
++    let mut hist: Vec<(IvcInstance<T<N>>, Vec<u8>)> = Vec::new();
++    for i in 0..steps {
++        let t = Instant::now();
++        let proof = prover.prove_step(()).unwrap();
++        let prove_ms = ms(t.elapsed());
++        let inst = prover.instance();
++        let t = Instant::now();
++        let r = verifier.verify(&inst, &proof);
++        let verify_ms = ms(t.elapsed());
++        r.expect("honest step must verify");
++        let pi = IvcCircuit::<T<N>>::format_instance(&inst).unwrap().len();
++        let acc_pi = AssignedAccumulator::<S>::as_public_input(&inst.bench_parts().2).len();
++        println!(
++            "BENCH step={} prove_ms={prove_ms:.1} verify_ms={verify_ms:.1} proof_bytes={} instance_pi_elems={pi} acc_pi_elems={acc_pi} hwm_mb={:.1}",
++            i + 1,
++            proof.len(),
++            hwm_mb()
++        );
++        hist.push((inst, proof));
++        if hist.len() > 2 {
++            hist.remove(0);
++        }
++    }
+ 
+-        let start = Instant::now();
+-        verifier.verify(&instance, &proof).unwrap();
+-        let verify_time = start.elapsed();
++    // Repeated verification of the final proof for a stable figure.
++    let (cur_inst, cur_proof) = hist.last().cloned().unwrap();
++    let mut v: Vec<f64> = (0..20)
++        .map(|_| {
++            let t = Instant::now();
++            verifier.verify(&cur_inst, &cur_proof).unwrap();
++            ms(t.elapsed())
++        })
++        .collect();
++    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
++    println!(
++        "BENCH verify_repeat n=20 min_ms={:.2} median_ms={:.2} max_ms={:.2}",
++        v[0], v[10], v[19]
++    );
++    println!("BENCH final_state={:?}", cur_inst.state());
++
++    if neg && hist.len() >= 2 {
++        let (prev_inst, prev_proof) = hist[0].clone();
++        let (vk_repr, st, acc) = cur_inst.bench_parts();
++        let (_, _, prev_acc) = prev_inst.bench_parts();
++
++        let t = Instant::now();
++        report("N0_positive_control", t, &verifier.verify(&cur_inst, &cur_proof));
++
++        let bad = IvcInstance::<T<N>>::bench_from_parts(
++            vk_repr,
++            State { cnt: st.cnt + F::ONE, val: st.val },
++            acc.clone(),
++        );
++        let t = Instant::now();
++        report("N1_altered_state_cnt", t, &verifier.verify(&bad, &cur_proof));
++
++        let bad = IvcInstance::<T<N>>::bench_from_parts(
++            vk_repr,
++            State { cnt: st.cnt, val: st.val + F::ONE },
++            acc.clone(),
++        );
++        let t = Instant::now();
++        report("N2_altered_state_val", t, &verifier.verify(&bad, &cur_proof));
++
++        let bad = IvcInstance::<T<N>>::bench_from_parts(vk_repr, st, prev_acc.clone());
++        let t = Instant::now();
++        report("N3_stale_accumulator", t, &verifier.verify(&bad, &cur_proof));
++
++        let t = Instant::now();
++        report("N4_stale_instance_current_proof", t, &verifier.verify(&prev_inst, &cur_proof));
++
++        let t = Instant::now();
++        report("N5_current_instance_stale_proof", t, &verifier.verify(&cur_inst, &prev_proof));
++
++        let mut p = cur_proof.clone();
++        let mid = p.len() / 2;
++        p[mid] ^= 0x01;
++        let t = Instant::now();
++        report("N6_flipped_proof_byte", t, &verifier.verify(&cur_inst, &p));
++
++        let mut p = cur_proof.clone();
++        p.push(0);
++        let t = Instant::now();
++        report("N7_appended_proof_byte", t, &verifier.verify(&cur_inst, &p));
++
++        let mut p = cur_proof.clone();
++        p.pop();
++        let t = Instant::now();
++        report("N8_truncated_proof", t, &verifier.verify(&cur_inst, &p));
++
++        let bad = IvcInstance::<T<N>>::bench_from_parts(vk_repr + F::ONE, st, acc.clone());
++        let t = Instant::now();
++        report("N9_instance_claims_other_vk_repr", t, &verifier.verify(&bad, &cur_proof));
++
++        // Invalid predecessor presented to the honest prover (guard active).
++        let tampered = State { cnt: st.cnt + F::ONE, val: st.val };
++        let mut p2 = prover.clone();
++        p2.resume_from(tampered, cur_proof.clone(), acc.clone());
++        let t = Instant::now();
++        let r = p2.prove_step(()).map(|_| ());
++        report("N10_prover_invalid_predecessor_guard_on", t, &r);
++
++        // Same, with the prover's off-circuit guard disabled: the step proof is
++        // produced, and the failure must surface at verification.
++        midnight_aggregation::ivc::prover::BENCH_SKIP_PREV_CHECK
++            .store(true, std::sync::atomic::Ordering::SeqCst);
++        let mut p3 = prover.clone();
++        p3.resume_from(tampered, cur_proof.clone(), acc.clone());
++        let t = Instant::now();
++        match p3.prove_step(()) {
++            Ok(pf) => {
++                println!("BENCH neg=N11a_prover_guard_off_step_proof_produced ms={:.1} proof_bytes={}", ms(t.elapsed()), pf.len());
++                let t = Instant::now();
++                report("N11b_verify_successor_of_invalid_predecessor", t, &verifier.verify(&p3.instance(), &pf));
++                // One more honest step on top of the poisoned chain.
++                let t = Instant::now();
++                match p3.prove_step(()) {
++                    Ok(pf2) => {
++                        println!("BENCH neg=N11c_second_step_on_poisoned_chain_proof_produced ms={:.1}", ms(t.elapsed()));
++                        let t = Instant::now();
++                        report("N11d_verify_second_step_on_poisoned_chain", t, &verifier.verify(&p3.instance(), &pf2));
++                    }
++                    Err(e) => println!("BENCH neg=N11c_second_step_on_poisoned_chain ms={:.1} outcome=REJECTED({e:?})", ms(t.elapsed())),
++                }
++            }
++            Err(e) => println!("BENCH neg=N11a_prover_guard_off ms={:.1} outcome=PROVE_FAILED({e:?})", ms(t.elapsed())),
++        }
++        midnight_aggregation::ivc::prover::BENCH_SKIP_PREV_CHECK
++            .store(false, std::sync::atomic::Ordering::SeqCst);
++    }
+ 
+-        println!("Step {i}: prove {prove_time:.2?}, verify {verify_time:.2?}");
++    if wrong_vk {
++        // A different IVC circuit (7 Poseidon rounds per step) with its own keys.
++        let t = Instant::now();
++        let srs2 = load_srs(SrsSource::Midnight, k, IvcCircuit::<T<7>>::cs_degree());
++        let (_p7, v7) = ivc::setup::<T<7>>(srs2, k, ());
++        println!("BENCH phase=wrongvk_setup ms={:.1}", ms(t.elapsed()));
++        let (vk_repr, st, acc) = cur_inst.bench_parts();
++        let as_other = IvcInstance::<T<7>>::bench_from_parts(vk_repr, st, acc.clone());
++        let t = Instant::now();
++        report("W1_other_verifier_original_vk_repr", t, &v7.verify(&as_other, &cur_proof));
++        let claim_other = IvcInstance::<T<7>>::bench_from_parts(v7.bench_vk_repr(), st, acc.clone());
++        let t = Instant::now();
++        report("W2_other_verifier_instance_claims_its_vk", t, &v7.verify(&claim_other, &cur_proof));
++        let claim_other_n = IvcInstance::<T<N>>::bench_from_parts(v7.bench_vk_repr(), st, acc);
++        let t = Instant::now();
++        report("W3_original_verifier_instance_claims_other_vk", t, &verifier.verify(&claim_other_n, &cur_proof));
+     }
++    println!("BENCH end hwm_mb={:.1}", hwm_mb());
++}
+ 
++fn main() {
++    let k = env_u("IVC_K", 17) as u32;
++    let n = env_u("IVC_N", 1000);
++    let steps = env_u("IVC_STEPS", 3);
++    let neg = env_u("IVC_NEG", 0) != 0;
++    let wrong_vk = env_u("IVC_WRONGVK", 0) != 0;
+     println!(
+-        "IVC completed: {STEPS} steps from\n genesis {:?}\n      to {:?}",
+-        PoseidonChain::<N>::genesis(&()),
+-        prover.instance().state()
++        "BENCH config k={k} n_poseidon_per_step={n} steps={steps} neg={neg} wrong_vk={wrong_vk} available_parallelism={:?}",
++        std::thread::available_parallelism()
+     );
++    match n {
++        1 => run::<1>(k, steps, neg, wrong_vk),
++        1000 => run::<1000>(k, steps, neg, wrong_vk),
++        other => panic!("unsupported IVC_N={other} (use 1 or 1000)"),
++    }
+ }
+diff --git a/aggregation/src/ivc/circuit.rs b/aggregation/src/ivc/circuit.rs
+index 2e1bfa0..359f8f4 100644
+--- a/aggregation/src/ivc/circuit.rs
++++ b/aggregation/src/ivc/circuit.rs
+@@ -242,3 +242,15 @@ impl<T: Ivc> Relation for IvcCircuit<T> {
+         Ok(IvcCircuit { domain, cs, ctx })
+     }
+ }
++
++// BENCH PATCH (benchmark copy only): accessors used by negative controls.
++impl<T: Ivc> IvcInstance<T> {
++    /// Returns (vk_repr, state, accumulator).
++    pub fn bench_parts(&self) -> (F, T::State, Accumulator<S>) {
++        (self.vk_repr, self.state.clone(), self.acc.clone())
++    }
++    /// Builds an instance from arbitrary parts.
++    pub fn bench_from_parts(vk_repr: F, state: T::State, acc: Accumulator<S>) -> Self {
++        IvcInstance { vk_repr, state, acc }
++    }
++}
+diff --git a/aggregation/src/ivc/prover.rs b/aggregation/src/ivc/prover.rs
+index 5d11320..7e82627 100644
+--- a/aggregation/src/ivc/prover.rs
++++ b/aggregation/src/ivc/prover.rs
+@@ -66,6 +66,7 @@ impl<T: Ivc> IvcProver<T> {
+         let vk = self.pk.pk().get_vk();
+         let vk_repr = vk.transcript_repr();
+ 
++        let bench_t = std::time::Instant::now();
+         let fixed_bases = midnight_circuits::verifier::fixed_bases::<S>(vk);
+ 
+         // Off-circuit verification of the previous proof.
+@@ -107,12 +108,17 @@ impl<T: Ivc> IvcProver<T> {
+                 )?;
+ 
+             if !dual_msm.clone().check(&self.params.verifier_params()) {
+-                return Err(IvcError::InvalidProof);
++                if !BENCH_SKIP_PREV_CHECK.load(std::sync::atomic::Ordering::SeqCst) {
++                    return Err(IvcError::InvalidProof);
++                }
++                println!("BENCH prover_prev_check=FAILED guard_skipped=true");
+             }
+ 
+             Accumulator::from_dual_msm(dual_msm, &fixed_bases)
+         };
+ 
++        println!("BENCH substep=offcircuit_prev_verify ms={:.1}", bench_t.elapsed().as_secs_f64() * 1e3);
++        let bench_t = std::time::Instant::now();
+         // Accumulate the proof accumulator with the previous accumulator.
+         let mut next_acc = Accumulator::accumulate(&[proof_acc, self.acc.clone()]);
+         next_acc.collapse();
+@@ -130,6 +136,8 @@ impl<T: Ivc> IvcProver<T> {
+             transition_witness,
+         };
+ 
++        println!("BENCH substep=native_accumulate ms={:.1}", bench_t.elapsed().as_secs_f64() * 1e3);
++        let bench_t = std::time::Instant::now();
+         let proof = midnight_zk_stdlib::prove::<IvcCircuit<T>, PoseidonState<F>>(
+             &self.params,
+             &self.pk,
+@@ -139,6 +147,7 @@ impl<T: Ivc> IvcProver<T> {
+             OsRng,
+         )?;
+ 
++        println!("BENCH substep=plonk_prove ms={:.1}", bench_t.elapsed().as_secs_f64() * 1e3);
+         self.state = next_state;
+         self.proof = proof.clone();
+         self.acc = next_acc;
+@@ -160,3 +169,17 @@ impl<T: Ivc> IvcProver<T> {
+         }
+     }
+ }
++
++// BENCH PATCH (benchmark copy only).
++/// When true, `prove_step` does not refuse an invalid predecessor proof.
++pub static BENCH_SKIP_PREV_CHECK: std::sync::atomic::AtomicBool =
++    std::sync::atomic::AtomicBool::new(false);
++
++impl<T: Ivc> IvcProver<T> {
++    /// Serialized proving-key size in bytes (RawBytes format).
++    pub fn bench_pk_bytes(&self) -> usize {
++        let mut b = Vec::new();
++        self.pk.write(&mut b, midnight_proofs::utils::SerdeFormat::RawBytes).unwrap();
++        b.len()
++    }
++}
+diff --git a/aggregation/src/ivc/setup.rs b/aggregation/src/ivc/setup.rs
+index 0eeb736..64b3ebc 100644
+--- a/aggregation/src/ivc/setup.rs
++++ b/aggregation/src/ivc/setup.rs
+@@ -34,8 +34,16 @@ pub fn setup<T: Ivc>(
+     // Uncomment for visualizing the size of this IVC circuit.
+     // dbg!(midnight_zk_stdlib::cost_model(&relation, Some(k)));
+ 
++    // BENCH PATCH: phase timings.
++    let bench_t = std::time::Instant::now();
+     let vk = midnight_zk_stdlib::setup_vk(&params, &relation);
++    println!("BENCH phase=keygen_vk ms={:.1}", bench_t.elapsed().as_secs_f64() * 1e3);
++    let bench_t = std::time::Instant::now();
+     let pk = midnight_zk_stdlib::setup_pk(&relation, &vk);
++    println!("BENCH phase=keygen_pk ms={:.1}", bench_t.elapsed().as_secs_f64() * 1e3);
++    if std::env::var("IVC_COST").is_ok() {
++        println!("BENCH cost_model={:?}", midnight_zk_stdlib::cost_model(&relation, Some(k)));
++    }
+ 
+     let fixed_base_labels: Vec<PolynomialLabel> =
+         fixed_bases::<S>(vk.vk()).keys().cloned().collect();
+diff --git a/aggregation/src/ivc/verifier.rs b/aggregation/src/ivc/verifier.rs
+index 8ac3a8a..17ae06d 100644
+--- a/aggregation/src/ivc/verifier.rs
++++ b/aggregation/src/ivc/verifier.rs
+@@ -87,3 +87,17 @@ impl<T: Ivc> IvcVerifier<T> {
+         Ok(())
+     }
+ }
++
++// BENCH PATCH (benchmark copy only).
++impl<T: Ivc> IvcVerifier<T> {
++    /// Transcript representation of this verifier's VK.
++    pub fn bench_vk_repr(&self) -> F {
++        self.vk.vk().transcript_repr()
++    }
++    /// Serialized verifying-key size in bytes (RawBytes format).
++    pub fn bench_vk_bytes(&self) -> usize {
++        let mut b = Vec::new();
++        self.vk.write(&mut b, midnight_proofs::utils::SerdeFormat::RawBytes).unwrap();
++        b.len()
++    }
++}

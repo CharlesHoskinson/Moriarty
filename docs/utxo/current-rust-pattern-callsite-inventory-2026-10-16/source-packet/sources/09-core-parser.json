@@ -1,0 +1,23 @@
+{
+  "sourceId": "09-core-parser",
+  "originalPath": "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/parser.rs",
+  "originalBytes": 14920,
+  "originalSha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+  "kind": "exact-line-excerpts",
+  "excerpts": [
+    {
+      "firstLine": 1,
+      "lastLine": 55,
+      "sourceText": "use crate::*;\nuse mori_lexer::{TokenIdx, TokenKind};\n\n/// Parses the explicitly versioned core profile; beta grammar is untouched.\npub fn parse(source: &str) -> Result<Program, Error> {\n    parse_profile(source, false)\n}\n\n/// Syntax-only parser; only stage::load admits the resulting source.\npub(crate) fn parse_v2(source: &str) -> Result<Program, Error> {\n    parse_profile(source, true)\n}\n\nfn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {\n    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;\n    let tokens = (0..lexed.len())\n        .map(|i| {\n            let idx = TokenIdx::new(i);\n            let span = lexed.span(idx, source);\n            let raw = &source[span.start as usize..span.end as usize];\n            let text = if lexed.kind(idx) == TokenKind::String {\n                mori_lexer::decode_string(raw)\n            } else {\n                raw.to_owned()\n            };\n            Tok {\n                text,\n                kind: lexed.kind(idx),\n                start: span.start,\n            }\n        })\n        .collect();\n    let mut parser = Parser {\n        tokens,\n        pos: 0,\n        program: Program {\n            language: if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE }.into(),\n            semantics: if staged { crate::stage::SEMANTICS_2 } else { SEMANTICS }.into(),\n            name: String::new(),\n            states: vec![],\n            assets: vec![],\n            expressions: vec![],\n            actions: vec![],\n        },\n    };\n    parser.expect(\"language\")?;\n    let profile = parser.string()?;\n    let expected_language = if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE };\n    if profile != expected_language {\n        return Err(parser.error(\n            \"profile\",\n            format!(\"Expected language \\\"{expected_language}\\\"; found {profile:?}.\"),\n        ));\n    }\n    parser.expect(\";\")?;\n",
+      "excerptBytes": 1915,
+      "excerptSha256": "93960968b60c101cb191dcbf2316a65088dc52ea5f6c74645d4f4a930d16d607"
+    },
+    {
+      "firstLine": 147,
+      "lastLine": 161,
+      "sourceText": "        }\n        if parser.program.states.len() + parser.program.assets.len() + parser.program.actions.len()\n            > MAX_DECLARATIONS\n        {\n            return Err(parser.error(\"bound\", \"Program exceeds 256 declarations.\"));\n        }\n    }\n    if parser.peek().kind != TokenKind::Eof {\n        return Err(parser.error(\"syntax\", \"Unexpected content after agreement.\"));\n    }\n    if !staged {\n        validate(&parser.program)?;\n    }\n    Ok(parser.program)\n}\n",
+      "excerptBytes": 470,
+      "excerptSha256": "3a5d057b218cb7e303c734900027d58758cd857009673dd82731a004f646a88f"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Trace106 root cause remains unproven. Retained machine code shows tail-jump dispatchers: the depth-only stack contribution of exJValid is about 285456 bytes and exJsonBytes about 666064 bytes at 5947 Option layers, excluding other frames. Those figures do not establish exhaustion of an unknown process stack.
+
+The prospective bounded strace SIGSEGV diagnostic, once admitted, can discriminate input parsing, recursive evaluator rules, GC and full-configuration output using the exact symbol ranges in the companion JSON. Keep its original argv and 20/5/60 limits. Missing unwind frames are inconclusive. The deeply nested request remains present for final printing, whose frame costs are larger than the two inspected evaluator families. Do not label a worklist rewrite the root-cause repair before actual phase evidence.
+
+No interpreter or K tool was executed. Positive 5947/Core65536 and negative 5948/Core65547 expectations remain unchanged; conformance and Preview acceptance remain open. Source and binary hashes plus retained objdump output accompany the report.

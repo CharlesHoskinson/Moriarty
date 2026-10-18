@@ -1,0 +1,198 @@
+{
+  "reviewToken": "webs-readers-20261017-H10",
+  "persona": "An information designer assessing technical diagrams",
+  "summary": "The invoice worked example is the strongest part of the page: a reader can follow 112 CASH funding, a 35 CASH seller payment, a 2 CASH fee, and the 65 + 10 = 75 remaining obligations, and the removed-coverage state makes the blocking rule visible. The page is weakest where it has to teach the mapping from conditions to Strands, proofs, Issue transactions and claim outputs. The diagrams show a set of checks converging on a Web and a four-column timeline, but neither shows counts, transaction boundaries, or the numbers changing. The most serious comprehension risk is that the main page presents the 112 CASH opening and the Web as settleable, while the technical notes say the 112 funding is a proposed policy, the S12 source opens at 110 and would be 2 CASH short, and the Web consumer is not built. A first-time reader would leave with a mostly correct model of the invoice arithmetic but a wrong sense of what is implemented and how many transactions a payment takes.",
+  "comprehension": [
+    {
+      "task": "(1) What a Web and a Strand contain",
+      "myAnswer": "A Strand is one Groth16 proof plus the claim it proves plus the data that ties it to one transaction. A Web is the set of Strands a contract requires for a given transaction; settlement needs every required condition covered by a matching Strand. I can also infer from the settlement section that each Strand becomes one Issue transaction and one proof-claim output, though the main page never states that one-to-one relation directly.",
+      "pageEvidence": "Main page 'What are Webs and Strands?': 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' and 'A Web collects the Strands a contract requires for a transaction... Settlement needs every required condition covered by a matching Strand.' Settlement step 3: 'An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA.' Technical notes: 'n required Strands mean n Issue transactions plus one settlement.'",
+      "whatIStillCannotExplain": "Whether a Strand exists on-chain as an object or only as the proof plus a claim output. The page uses 'Strand', 'claim', 'claim output', 'proof-claim output' and 'claim token' with no mapping between them. I also cannot tell from the main page how many Strands the invoice's three checks become: one shared execution proof, or three."
+    },
+    {
+      "task": "(2) How a proof connects to real transaction inputs and outputs",
+      "myAnswer": "The Groth16 public inputs carry a digest of the statement bytes. At settlement the validator rebuilds the statement from the transaction and the spent state, and compares it with the claim whose proof was checked at issuance. So the proof does not itself name the escrow or the payment; the binding happens through a digest that the validator recomputes. The page also says an external price or delivery record needs its own authenticated source.",
+      "pageEvidence": "Groth16 panel: 'The statement says what is being proved. In a Web, the public inputs carry a digest of the statement bytes. The validator rebuilds those bytes from the transaction, so a correct calculation cannot be attached to a different payment.' Invoice inspector: 'The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.' Architecture panel 7: 'the validator rebuilds each statement from the transaction and spent state.'",
+      "whatIStillCannotExplain": "Which transaction fields make up the statement for the invoice payment (input escrow datum values, output addresses and amounts, the fee recipient, the sequence number). The page never shows one statement laid out field by field next to the outputs it describes. It also does not say how many public inputs there are; the technical notes say two, and the main text never says so. And it does not say at which transaction the claimant is compared, which the technical notes place at settlement, not issuance."
+    },
+    {
+      "task": "(3) A complete concrete payment workflow",
+      "myAnswer": "Owner signs limits (intent) off-chain; a prover runs the invoice program and produces Strands; each Strand is issued in an Issue transaction that verifies its proof and creates a min-ADA claim output; then a settlement transaction consumes every claim output, burns each claim token, rebuilds and checks the claims, requires claimant signatures and enforces signed caps; the application then waits for finality and reads back the seller, fee-recipient and remaining-obligation outputs. I can order these steps, but not fill in concrete values for each.",
+      "pageEvidence": "Settlement section, Steps 1-4 (for example, 'Settlement consumes every required claim output and burns its claim token.' and 'The application then checks inclusion and its required finality, and reads back the payments and remaining obligations.'). Invoice worksheet: 'Opening escrow funding 112 CASH', 'Seller receives 35 CASH', 'Program fee recipient receives 2 CASH', 'Cash remaining 75 CASH'.",
+      "whatIStillCannotExplain": "Where the signed intent is stored and how the settlement validator reads it (the page says the validator 'checks the signed limits' but does not say from where). What the next escrow output looks like after settlement: its datum fields, the 75 CASH split, and whether it is the same output as the spent escrow. Who pays the Cardano fee and collateral for the Issue and settlement transactions. How many transactions a single 35 CASH payment takes on this route; the page never gives a number for the invoice."
+    },
+    {
+      "task": "(4) The distinction between conditions, proofs and on-chain claim outputs",
+      "myAnswer": "A condition is a required check the contract demands (the three buttons). A proof is a Groth16 Strand that covers one or more conditions. A claim output is the on-chain result of an Issue transaction that holds the checked evidence until settlement. The UI counts conditions ('3 of 3 conditions covered'), not proofs or outputs, so the reader cannot see how the count of three becomes proofs or outputs.",
+      "pageEvidence": "Application section: 'A condition is something the contract requires, such as a correct fee calculation. A Strand contains a Groth16 proof, its public claim and the information tying it to this transaction. One proof can cover several conditions.' Banner: '3 of 3 conditions covered.' Settlement step 3: 'It does not pay the seller or mint the application\u2019s asset.'",
+      "whatIStillCannotExplain": "Whether one condition maps to one Strand, one proof, or one claim output, and the count of each for the invoice. Whether the 'Remove proof coverage' action in the UI removes an output on-chain (it cannot, as the page is static) or only a conceptual proof. Whether a removed condition can later be covered by a different Strand without changing the Web's required set."
+    },
+    {
+      "task": "(5) What gets set up and how to count setups",
+      "myAnswer": "One shared phase-1 parameter set (if the circuits are compatible and fit its capacity) plus one phase-2 setup per distinct compiled circuit. The counter shows 5 circuits as 1 shared phase 1 plus 5 phase 2 stages. The page also says that a circuit with changed rules needs a new phase 2 and that the count is not determined by predicates, catalogue entries or claim types.",
+      "pageEvidence": "Setup panel: 'Each distinct compiled relation needs its own phase-2 setup; the count follows circuits, not predicates or catalogue entries.' Counter headline: '1 shared phase 1 + 5 phase 2'; text: 'These are stages, not 5 + 1 complete ceremonies.' Technical notes: 'The required total setup count is unknown.'",
+      "whatIStillCannotExplain": "How many distinct circuits the invoice route uses (one for the payment calculation, the fee and the duties together, or three). What makes two circuits 'distinct' in practice, since the notes say each distinct relation identity is a distinct circuit. What happens to phase 1 when a circuit exceeds shared capacity: the counter only says 'Smaller circuits need no extra phase 1' and does not show the over-capacity case."
+    }
+  ],
+  "missingDepth": [
+    {
+      "section": "How the proof connects to the transaction (invoice)",
+      "missingExplanation": "The page says the validator rebuilds the statement from the transaction, but never lists the statement's fields or shows one example.",
+      "concreteExampleNeeded": "A table: statement field | source in the transaction | example value for the 35 CASH payment (input escrow datum amount 112, seller output 35, fee output 2, next escrow output 75, sequence number, claimant). Mark which fields are circuit constants and which are witness values.",
+      "whyItMatters": "This is the page's central claim about binding a proof to a payment. Without it, a reader cannot tell what a valid Web prevents."
+    },
+    {
+      "section": "Settlement stages (On Cardano)",
+      "missingExplanation": "The four steps mix off-chain (sign, prove) and on-chain (Issue, settle) work with no lane marking, and the count of Issue transactions is not given.",
+      "concreteExampleNeeded": "Two swimlanes (off-chain / on-chain). Show the invoice with three conditions in two variants: one Strand (1 Issue + 1 settlement) and three Strands (3 Issue + 1 settlement). Mark each claim output and token burn.",
+      "whyItMatters": "The distinction between preparing evidence and executing an effect is the page's most important message, and the timeline does not show it."
+    },
+    {
+      "section": "Invoice worked example, 110 vs 112 funding",
+      "missingExplanation": "The slider compares 112 and 110 CASH funding and says the fee must be accounted for, but only the 112 result is captured. The 110 shortfall (73 CASH against 75 of duties) appears only in the technical notes.",
+      "concreteExampleNeeded": "Two columns side by side for 112 and 110: escrow opening, gross debit 37, cash after 75 or 73, duties 75, and a difference row showing -2 for 110 and 0 for 112, with a note that the 112 figure is a proposed policy.",
+      "whyItMatters": "The page's stated purpose is to show why the fee must be funded. The worksheet as shown does not show the failure case."
+    },
+    {
+      "section": "Exchange orders (DEX) pool update",
+      "missingExplanation": "The 92 B per owner figure is stated but its derivation is not. The pool update check contains no numbers.",
+      "concreteExampleNeeded": "Pool reserves before, the constant-product formula, fee, rounding rule, and the resulting 92 B for each order, or an explicit statement that the figures are invented placeholders and not computed.",
+      "whyItMatters": "A reader cannot check the one application whose outcome depends on pool arithmetic."
+    },
+    {
+      "section": "Web consumer and what happens when a Web is incomplete",
+      "missingExplanation": "The page says a Web with missing coverage cannot authorize settlement, but gives no statement of what the validator does with the Web (rejects, waits, or never submits) and what the financial result becomes.",
+      "concreteExampleNeeded": "A two-state comparison: complete Web (settlement proceeds, outputs listed) and incomplete Web (no settlement; issued claim outputs stay locked, reclaimable only by the claimant after expiry), with the financial result bullets greyed out in the incomplete state.",
+      "whyItMatters": "The 'why an incomplete set cannot settle' question is the interactive's stated lesson."
+    }
+  ],
+  "diagramFindings": [
+    {
+      "diagram": "Invoice 'Contract requirements' hub (invoice-diagram.png)",
+      "whatIActuallyInspected": "Screenshot of the invoice state with check 1 selected: three bordered buttons (Payment calculation, Separate program fee, Remaining obligations) with thin connector lines converging on a small ellipse labelled 'Web / PROOF COLLECTION'; inspector on the right; a banner reading '3 of 3 conditions covered.'",
+      "whatItTeaches": "A reader learns that the invoice has three required checks, that they are collected into one Web, and that the Web can be 'complete' or not. The inspector text carries the arithmetic.",
+      "whatItFailsToShow": "No arrows indicate direction or flow; no numbers appear on the diagram itself (112, 37, 75, 65, 10 are only in the text below); the three checks do not show which transaction, output or Strand they become; and the 'Web' label overlaps the ellipse outline. Nothing on the diagram changes when the amount changes, so the 'Change the amount' control is not visible in the diagram.",
+      "replacementOrRevision": "Replace the hub with an escrow flow: the 112 CASH escrow input on the left, arrows to seller 35, fee recipient 2 and next escrow 75 (split 65 invoice and 10 reserve). Attach each required check to the output or obligation it constrains, so the reader sees a check as a constraint on a specific number. Keep the Web hub only as a grouping label."
+    },
+    {
+      "diagram": "Invoice missing-coverage state (invoice-missing-coverage.png)",
+      "whatIActuallyInspected": "Screenshot with 'Payment calculation' coverage removed: dashed border on check 1, dashed connector, banner 'A required condition has no proof coverage. This Web cannot authorize settlement.' and '2 of 3 conditions covered.'",
+      "whatItTeaches": "A reader sees that removing one condition blocks the Web. The dashed visual language is a clear 'not covered' cue.",
+      "whatItFailsToShow": "The Financial result bullets below stay unchanged ('Seller receives 35 CASH...', 'Gross escrow debit is 37 CASH...'), so the diagram implies the payment outcome still holds. The screenshot does not show what happens to any issued claim outputs, which the banner mentions only in words.",
+      "replacementOrRevision": "Grey out or relabel the Financial result in the incomplete state (for example 'Not authorized: outcome shown only for a complete Web') and show the issued-claim lock as a separate state box beside the Web."
+    },
+    {
+      "diagram": "Settlement stages timeline (settlement-stages.png)",
+      "whatIActuallyInspected": "Screenshot of section 03 'How a Web reaches settlement': four columns, Step 1 to Step 4, dots on a horizontal rule, text only, with a link 'Issuance assumptions and funding'.",
+      "whatItTeaches": "A reader learns the order: owner signs limits, prover builds the Web, proof claims go on-chain, the transaction settles. It also says that creating outputs does not execute the payment, which is the most important message.",
+      "whatItFailsToShow": "No marking of off-chain versus on-chain steps; no count of Issue transactions; no arrows showing that claim outputs flow into settlement; no indication of what the claim output holds; no display of the escrow state being spent and produced. The dots suggest a single linear path, which hides the n-Issue plus one-settlement structure.",
+      "replacementOrRevision": "Two swimlanes (off-chain: owner, prover; on-chain: Issue transactions, claim outputs, settlement). Show n Issue boxes feeding one settlement box, with a counter 'n Issue + 1 settlement' that updates for the 1-, 2-, or 3-Strand case."
+    },
+    {
+      "diagram": "Exchange orders checks (dex-diagram.png)",
+      "whatIActuallyInspected": "Screenshot of the DEX state with check 1 selected ('Each owner's result'): same three-button hub; inspector claims 'Two orders each offer 100 A and require at least 90 B net; each owner receives 92 B.'",
+      "whatItTeaches": "A reader learns that the check is an owner-minimum test against the actual output, and that the pool update and combined accounting are separate checks.",
+      "whatItFailsToShow": "The Pool update and Combined accounting checks have no numbers; the 92 B cannot be traced to any pool figure; the 'Financial result' list contains non-financial statements (for example 'The reserve update, fee rule and exact rounding agree with both orders.').",
+      "replacementOrRevision": "A three-row table: input orders (100 A each, minimum 90 B), pool reserves before, computed output and rounding, actual outputs to each owner. Mark which numbers are illustrative."
+    },
+    {
+      "diagram": "Setup counter (setup-counter.png)",
+      "whatIActuallyInspected": "Screenshot of the 'Try a circuit count' control: stepper showing 5 distinct compiled circuits and the output '1 shared phase 1 + 5 phase 2' with the caveat text.",
+      "whatItTeaches": "Phase 2 runs once per circuit while phase 1 stays shared, which is the central count rule.",
+      "whatItFailsToShow": "Only the single headline changes; the caveats (compatible curve and format, capacity, honest participant) are text only. The over-capacity case, where phase 1 would need enlarging, is not shown. The phrase '5 + 1 complete ceremonies' does not match the headline order '1 shared phase 1 + 5 phase 2'.",
+      "replacementOrRevision": "A small table of circuits (rows: payment calculation, fee, duties, wrappers) with columns for curve, format, capacity fit and phase 2 needed; the total row sums phase 2 and marks phase 1 as 'shared' or 'new'."
+    },
+    {
+      "diagram": "Architecture panel 7, Verification (architecture.png)",
+      "whatIActuallyInspected": "Screenshot of the seven-concern navigation with panel 07 open: list of seven concerns on the left, 'Does this proof belong to this transaction?' and 'Result: Issue and settlement transactions' on the right. Only this one panel was in the screenshot.",
+      "whatItTeaches": "Verification is where the proof meets the ledger, and its result is two transaction types.",
+      "whatItFailsToShow": "The seven concerns are shown as a list, so the dependencies the text describes ('They influence one another') are not visible. The on-chain/off-chain boundary, which the verification panel depends on, is not drawn.",
+      "replacementOrRevision": "A left-to-right flow from Language to Witness to Proof to Verification with the off-chain/on-chain line drawn between Proof and Verification, and the dependency arrows the text mentions."
+    }
+  ],
+  "proseProblems": [
+    {
+      "location": "Invoice worked example, result panel",
+      "exactQuote": "All required conditions are covered. The Web can be submitted for settlement; the validator still checks it against the actual transaction.",
+      "problem": "This reads as if a settlement path exists now. The technical notes list the all-or-nothing Web consumer as not yet built and the 112 funding as a proposed policy. The reader is not told that the worksheet describes a design.",
+      "suggestedRewrite": "All required conditions are covered in this design. A complete Web is the input to settlement; the settlement validator, which is not yet built, would check it against the actual transaction."
+    },
+    {
+      "location": "Invoice 'Financial result' and the funding figure",
+      "exactQuote": "Opening escrow funding",
+      "problem": "The 112 CASH opening is presented as the state of the example. The only sentence that says the S12 source differs is in technical notes: 'Funding 112 is a proposed backing policy; S12 contains no extra-funding action.' A reader will not see the 2 CASH shortfall the page itself documents.",
+      "suggestedRewrite": "Add one line under the funding figure: 'This 112 CASH opening is a proposed rule. The current S12 source opens at 110 CASH, which would leave 73 CASH against 75 CASH of duties after this payment.'"
+    },
+    {
+      "location": "Invoice inspector, 'Separate program fee' and worksheet",
+      "exactQuote": "Move the slider to see why the fee must be accounted for separately.",
+      "problem": "The reader is asked to move a slider to see why the fee matters, but the captured result shows only the 112 case, and the shortfall is in the notes. The promise of the slider is not met in the main text.",
+      "suggestedRewrite": "Show the 110 result next to the 112 result in the worksheet: 'At 110 CASH funding, cash remaining after this payment is 73 against 75 owed; the fee is 2 CASH short.'"
+    },
+    {
+      "location": "Each application result panel",
+      "exactQuote": "A Web covering these conditions, bound to the transaction that spends the contract state.",
+      "problem": "The same sentence appears under every application's 'What the validator receives' and does not say what the validator receives. It has no content specific to the invoice, the DEX or the loan.",
+      "suggestedRewrite": "For the invoice: 'The Web carries three proofs or Strands (to be confirmed); the settlement transaction must spend escrow state with 112 CASH and produce seller 35, fee 2 and next escrow 75.' Replace the generic line with the specific outputs each application validates."
+    },
+    {
+      "location": "DEX result panel, 'Financial result'",
+      "exactQuote": "The reserve update, fee rule and exact rounding agree with both orders.",
+      "problem": "This is listed under 'Financial result' but is a consistency statement, not an outcome. It also has no figures, so it cannot be checked.",
+      "suggestedRewrite": "Move it out of the financial list, and give the pool figures: 'Pool reserves 1000 A / 1000 B before; after both orders 1200 A / 834 B (illustrative).'"
+    },
+    {
+      "location": "Each application role card, repeated under every check",
+      "exactQuote": "Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.",
+      "problem": "The same three-sentence caveat repeats under every role card in every application, so it stops carrying information and hides the one thing a reader needs: which checks are arithmetic and which need outside evidence. It is the kind of repeated disclaimer the brief asked to avoid.",
+      "suggestedRewrite": "Say the caveat once per application, in one place, and name the specific gap for each check, for example: 'Pool reserves are not supplied; this check needs the pool state being spent.'"
+    },
+    {
+      "location": "Settlement step 2",
+      "exactQuote": "Each claim is tied to the state being spent, its sequence number, the settlement script, the catalogue of permitted claims and verification keys, signed intents and claimant.",
+      "problem": "A seven-item list in one sentence, with no example. A reader cannot tell which of these the validator checks and which it merely records.",
+      "suggestedRewrite": "Give one example claim: 'Claim for invoice payment #1: spends escrow state X (sequence 4), settles with script Y, verification key Z, intent I signed by the buyer, claimant = seller.' Then say which fields the settlement rejects if they change."
+    },
+    {
+      "location": "Settlement step 3",
+      "exactQuote": "This output records checked evidence for later settlement.",
+      "problem": "'Checked evidence' does not say what the output contains. A reader cannot tell what is locked on-chain beyond the minimum ADA.",
+      "suggestedRewrite": "List the datum fields: claimant, expiry, statement digest, the Strand's proof identifier, and the min-ADA amount. Say which ones settlement checks."
+    },
+    {
+      "location": "Groth16 'The statement' panel",
+      "exactQuote": "The statement says what is being proved. In a Web, the public inputs carry a digest of the statement bytes.",
+      "problem": "The sentence does not say how many public inputs there are or how the digest is carried, and the technical notes describe two. A reader cannot connect this to the transaction fields.",
+      "suggestedRewrite": "State the number of public inputs and what each carries, for example: 'Two public inputs carry the digest of the statement, split into two field elements.'"
+    },
+    {
+      "location": "Claim terminology across the page",
+      "exactQuote": "Settlement consumes every required claim output and burns its claim token.",
+      "problem": "'Claim', 'claim output', 'proof-claim output', 'claim token' and 'the claim it proves' all appear and the reader must work out which is which. The same word names the thing a Strand proves and the thing created on-chain.",
+      "suggestedRewrite": "Define the three once, near the Strand definition: 'The statement a Strand proves (its claim); the proof-claim output that holds a verified Strand on-chain; the claim token that marks that output and is burned at settlement.' Then use one term consistently."
+    },
+    {
+      "location": "Setup counter caption",
+      "exactQuote": "These are stages, not 5 + 1 complete ceremonies.",
+      "problem": "The headline reads '1 shared phase 1 + 5 phase 2' and this caption says '5 + 1', which reverses the order the reader just saw and adds a second way to write the count.",
+      "suggestedRewrite": "These are stages, not separate ceremonies: phase 1 runs once and phase 2 runs once per circuit."
+    }
+  ],
+  "priorityChanges": [
+    "Replace the invoice hub with an escrow flow showing 112 CASH in, seller 35, fee 2 and next escrow 75 split into 65 invoice and 10 reserve, and attach each required check to the output it constrains. Put the 110 comparison beside it so the shortfall is visible on the page rather than only in the notes.",
+    "Bring the 112 vs 110 fact into the main invoice text next to the funding figure. Current prose presents 112 as the opening and says the Web 'can be submitted for settlement', while the notes say the consumer is not built and the 112 rule is proposed.",
+    "Add a two-lane diagram (off-chain: sign, prove; on-chain: Issue, claim output, settlement) with n Issue transactions feeding one settlement, and a count for the invoice's actual number of Strands. This is the page's key mapping from conditions to transactions and it is currently missing.",
+    "Make the incomplete-Web state change the result panel: grey out the financial bullets and state that no settlement is authorized, rather than leaving the outcome text unchanged beside the warning.",
+    "Replace the repeated 'Illustrative requirement only' caveat and the identical 'What the validator receives' sentence with content specific to each application, starting with the DEX pool figures behind the 92 B result and a field list for one invoice statement."
+  ],
+  "inspectedImages": [
+    "invoice-diagram.png",
+    "invoice-missing-coverage.png",
+    "settlement-stages.png",
+    "dex-diagram.png",
+    "setup-counter.png",
+    "architecture.png (shows only architecture panel 7 of 7, Verification)"
+  ],
+  "limitations": "\"I read six of the eleven supplied screenshots: the invoice default state, the invoice missing-coverage state, the settlement stages section, the DEX state, the setup counter and the architecture panel 7 (Verification). I did not read the loan, issuance or treasury states, the desktop opening or the mobile invoice diagram, so my remarks on those rely on the text packet only. The architecture screenshot shows only panel 7, so I judged the seven-concern set from the text. I did not interact with the page; the 110 CASH result and other slider values are not captured in the packet, so I describe them from the text and notes only. I did not check whether the states match the live code. I only read files and did not write the plan file that plan-mode normally requires, because this task asked for a single review object. This is model reader feedback, not human research or a security audit, and I have not judged the cryptographic or security claims.\"",
+  "verdict": "NEEDS_DIAGRAM_REWORK"
+}

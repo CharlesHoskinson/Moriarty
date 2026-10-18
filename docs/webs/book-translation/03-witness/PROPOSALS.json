@@ -1,0 +1,81 @@
+{
+  "role": "role03Witness",
+  "proposals": [
+    {
+      "id": "witness-definition",
+      "title": "What the witness contains",
+      "bookReference": "L3-EXACT-CHAPTER.md:25-44, Execution Traces; B08-EXACT-MANUSCRIPT-SECTIONS.json, section 'The Seven Layers at a Glance' (source lines 272-298).",
+      "sourceSupport": "Chapter 4 calls the witness the recording of a computation, including intermediate values. It distinguishes the computation from its recording and says later layers prove properties without revealing the witness contents.",
+      "websiteMapping": "Introduce witness generation as the data-preparation part of a proof explanation. Use the invoice example to distinguish selected inputs from intermediate arithmetic, while labeling the mapping as an illustration rather than an implemented invoice circuit.",
+      "readerCopy": "A witness is the data and intermediate values used to show that a computation can satisfy its rules. A proof can let someone check a statement about that computation without receiving the witness itself.",
+      "interaction": "Click 'Show the example' to reveal payment 35, seller receipt 35, fee 2, remaining invoice duty 65, and reserve duty 10. Each number is labeled input, intermediate result, or carried-forward value.",
+      "diagram": "User input → candidate witness values → constraints for a statement; a separate proof arrow leads to a verifier. Do not depict the witness itself flowing to the verifier.",
+      "questions": [
+        "Which values, if any, are witness inputs in an actual Moriarty invoice relation?",
+        "Does the implemented relation expose intermediate values or only selected public inputs?"
+      ],
+      "limits": "The invoice fixture is local arithmetic, not proof generation or verification. Do not say the listed amounts are currently private."
+    },
+    {
+      "id": "private-public-boundary",
+      "title": "Separate witness from statement",
+      "bookReference": "L3-EXACT-CHAPTER.md:19-31 and 309-337, 'The disclose() Boundary: Midnight's Witness Architecture'; B08 section 'The Seven Layers at a Glance'.",
+      "sourceSupport": "The chapter explains that a proof may establish a property without revealing witness contents, and separately describes a target-specific disclosure mechanism. The supplied V2-COPY technical trust note says a proof over supplied values does not authenticate them or turn them into authenticated ledger facts.",
+      "websiteMapping": "Add an explanatory two-column panel: 'Backstage values' and 'Statement the verifier checks'. State that public inputs, transaction data, and public outputs may remain visible even when a witness value is not disclosed.",
+      "readerCopy": "The witness and the statement are different. A proof can hide witness values while checking a statement, but it does not hide information already published in a transaction or output.",
+      "interaction": "A 'Show example values / Show the boundary' toggle changes only the explanatory labels. The boundary view tags each item as possible witness, public statement input, public transaction/history data, or unresolved. Add a fixed note: 'This control does not change privacy or run a proof.'",
+      "diagram": "Two boxes: prover-side candidate witness and verifier-side public statement. A proof connects them; public chain/history/output data sits outside both boxes and is labeled visible where published.",
+      "questions": [
+        "What exact values are public inputs to the deployed verifier?",
+        "Which claims are bound to transaction and spent-state data by the consumer, and which remain caller-supplied?",
+        "What data remains visible through public history and outputs?"
+      ],
+      "limits": "No automatic privacy claim for public-chain data, history, outputs, or caller-provided values. Exact boundary requires Opus security review of the target relation and consumer."
+    },
+    {
+      "id": "invoice-input-to-constraints",
+      "title": "Trace an invoice choice into a proposed relation",
+      "bookReference": "L3-EXACT-CHAPTER.md:25-44, 'Execution Traces'; B08 section 'The Seven Layers at a Glance'.",
+      "sourceSupport": "The invoice fixture gives a source-funded 110 CASH opening, a 35 CASH partial payment, a separate 2 CASH fee, 65 CASH remaining invoice duty, and 10 CASH reserve duty. It labels the worksheet local arithmetic and records a 2 CASH backing gap for source funding.",
+      "websiteMapping": "Use the existing staged-invoice scenario to demonstrate user input → candidate witness/intermediate arithmetic → constraints. Preserve the source-funded case's 2 CASH backing gap. Label any circuit formulation proposed and unimplemented.",
+      "readerCopy": "Choose 35 CASH. The example sends 35 to the seller and 2 to the fee recipient; 65 of invoice duty and 10 of reserve duty remain. A proposed relation could check these arithmetic rules, but this worksheet does not make or check a proof.",
+      "interaction": "Let the existing amount slider update the arithmetic panel. An optional 'View the rule' control shows: 0 < payment < 100; payment reduces invoice duty; fee is separate; reserve duty carries forward. A funding selector may show the source 110 case and the separately labeled proposed 112 case.",
+      "diagram": "Payment input 35 → calculations (seller 35, fee 2, remaining invoice 65, reserve 10) → proposed constraint checks; show no proof-verified or ledger-settled state.",
+      "questions": [
+        "Would the deployed relation prove only arithmetic, or also bind input values to a particular spent invoice state and exact asset?",
+        "Which outputs and actual state checks belong to the consumer rather than the proof?",
+        "Does the target actually carry all required duties through this step?"
+      ],
+      "limits": "The 110 CASH worksheet result leaves cash 73 against duties 75, a 2 CASH gap. Funding 112 is a proposed policy with no S12 extra-funding action. Do not imply the example is private or implemented as a proof."
+    },
+    {
+      "id": "privacy-has-process-boundaries",
+      "title": "Distinguish proof privacy from process privacy",
+      "bookReference": "L3-EXACT-CHAPTER.md:195-257, 'Side-Channel Attacks: When the Walls Leak'; lines 381-387, 'The Witness as a Multi-Dimensional Problem'.",
+      "sourceSupport": "Chapter 4 separates the mathematical zero-knowledge property of a proof from leaks during proof generation, including timing and other implementation channels. It treats side-channel risks as implementation-specific concerns.",
+      "websiteMapping": "In a technical explainer drawer, distinguish what a proof reveals from what an observer might learn from the proving process or public transaction activity. Present these as questions to assess for each implementation, not as findings about Moriarty.",
+      "readerCopy": "A proof's privacy property describes what the proof reveals. The process that creates it and the public activity around it can expose other information, so those need separate review.",
+      "interaction": "Expandable 'What else can be observed?' panel with categories: proof contents, proving-process signals such as timing, and public transaction/history/output data. No risk meter or pass/fail badge without assessed evidence.",
+      "diagram": "Three labeled observation paths: proof → verifier; prover process → potential observer; public transaction/history/output → public observer.",
+      "questions": [
+        "Have timing or other side channels been examined for the actual prover and deployment path?",
+        "What public transaction structure or history remains observable?"
+      ],
+      "limits": "Chapter examples do not establish that a particular Moriarty implementation has or lacks a leak. Security judgments and exact wording belong to Opus 5.5."
+    },
+    {
+      "id": "witness-cost-and-correctness",
+      "title": "Witness generation has cost and correctness questions",
+      "bookReference": "L3-EXACT-CHAPTER.md:72-94, 'Witness Generation Costs'; lines 297-305, 'Closing the Correctness Gap'; lines 371-383, 'The Witness as a Multi-Dimensional Problem'.",
+      "sourceSupport": "The chapter discusses witness-generation performance and memory, and the risk that the witness generator and constraints do not compute the same intended function. Its quantitative performance claims refer to cited systems and workloads, not Moriarty benchmarks.",
+      "websiteMapping": "Provide a concise Layer 3 technical card with two checks: how the witness is generated and what evidence supports its agreement with the constraints. Keep chapter benchmarks clearly attributed and separate from Moriarty implementation evidence.",
+      "readerCopy": "Preparing a witness can take time and memory. The witness generator must also agree with the rules the proof checks; if they differ, a proof may faithfully attest to the wrong computation.",
+      "interaction": "A small 'Inputs → generated values → checked rules' inspection diagram, with optional source/evidence labels such as specified, source reading, or recorded result. Do not add unprovided Moriarty timing or memory values.",
+      "questions": [
+        "What measured witness-generation cost exists for the exact Moriarty target and workload?",
+        "What independent evidence checks that the witness generator and constraints agree?"
+      ],
+      "limits": "Do not transfer ZKPoG or other system measurements to Moriarty. The supplied contribution does not establish a measured Moriarty witness-cost result or complete correctness audit."
+    }
+  ]
+}

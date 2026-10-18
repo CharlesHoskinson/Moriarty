@@ -1,0 +1,20 @@
+--- origin-r2/source/mori-r1cs/src/error.rs
++++ successor/source/mori-r1cs/src/error.rs
+@@ -33,6 +33,9 @@
+     Adapter(AdapterError),
+     /// Constraint synthesis failed during the compile-time probe.
+     Synthesis(String),
++    /// A supplied assignment's value or public vectors do not have the relation's
++    /// lengths (review F-12). Refused before synthesis; never an acceptance decision.
++    AssignmentShape(String),
+ }
+ 
+ impl fmt::Display for CompileError {
+@@ -54,6 +57,7 @@
+             Self::Option(m) => write!(f, "option: {m}"),
+             Self::Adapter(a) => write!(f, "adapter: {a}"),
+             Self::Synthesis(m) => write!(f, "synthesis: {m}"),
++            Self::AssignmentShape(m) => write!(f, "assignment shape: {m}"),
+         }
+     }
+ }

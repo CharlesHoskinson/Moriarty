@@ -1,0 +1,127 @@
+[
+  {
+    "reviewToken": "moriarty-webs-v4-candidate3-O02",
+    "verdict": "CHANGES_REQUIRED",
+    "summary": "Fresh nonauthor audit of the cryptographic and security wording in candidate3. Artifact 231a7f91\u2026eb58 matches PAGE-REPORT.json and ARTIFACT-CHECK.json. All twelve O01 findings are resolved in the rendered copy. F1: there is now an explicit three-way split between the two Groth16 public field elements, the statement bytes (witness bits, public in practice) and the remaining witness. F2: assets are removed from the reuse list and qualified by the identity.rs coverage question. F3: the binding card no longer claims a proof checked under another key is refused, and an open question is added. F4/F5: the reclaim fee payer, the Issue funder and 'costs no ADA' are removed. F6: allocate is conditional and key migration is marked proposed/absent in the circuit example; the setupExplanation and genesis-action fixes sit in COPY.json fields this candidate does not render. F7: 'Webs currently carry' is now design-scoped. F8: the pairing check, BLAKE2b digest inequality and predicate binding are conditional on honest setup, knowledge soundness, collision resistance and gadget correspondence, and the forgeable recorded setup is stated next to them. F9: the not-built inventory is rendered as a list and no longer denies the documented mori-k2 CLI. F10: NotBound/TouchedOnly scope is explained. F11: 'recovery' is disambiguated. F12: the headline no longer claims proofs establish what a transaction does. The frozen technical copy, security cards, setup trust text and count conditions are preserved, and ARTIFACT-CHECK records pins and equality checks for them. Independent expectations hold. Invoice: 112 = 35 + 2 + 75 with duties 65 + 10. Source open(90,10): 110 leaves 73 against 75. The checked-in request 109/90/14 leaves 72/55/14 and is labelled a different scenario. The invoice uses one whole-execution Strand, one Issue and one settlement, not three proof producers. Issuance: 300 = 180 + 120, with 700 of capacity that is not debt. Loan: 100 + 5 \u2212 35 = 70 against a 37 gross debit. Treasury pays 14 + 7 + 2 = 23 A and 4 B, and retains 2 A / 6 B against two duties, with the 2 A fee separate from the remainder. No pools, accrual rates, datum layouts or network-cost numbers are invented. On the root's referral about the failure drawer: the excerpt that drops the first sentence of failureBranch[1] is an acceptable selection, because every remaining sentence traces to the frozen OP-04 wording and the binding-chain/issuance-route assumptions. One major issue remains in scope. The rendered reclaim stage says the claimant 'recovers its min-ADA'. That names who receives the released min-ADA and implies who funded the Issue, which source notes Q06 leaves unresolved and the corrected Issue row disclaims. This is the same class of issue as O01 F4. Minor issues follow. The new headline swaps 'transition' for 'transaction', against the ERR-26 forbidden-phrase rule. 'Claim token burned on release' could be read as covering reclaim. Proposed evidence bundles are described as existing. The diagram note refers to an 'integration reference' that does not exist. The remaining items are small nonblocking wording points. All fixes are copy-only edits to depth-2026-10-17/COPY.json opus.lifecycle, App.jsx and DepthContent.jsx. This is a wording audit only, not security, protocol, product or ledger acceptance.",
+    "filesRead": [
+      "MANIFEST.json",
+      "CHANGES.md",
+      "OPUS-AUTHORED-CORRECTIONS.json",
+      "PREVIOUS-OPUS-REVIEW.json",
+      "PREVIOUS-GEMINI-REVIEW.json",
+      "PAGE-REPORT.json",
+      "app/ARTIFACT-CHECK.json",
+      "app/src/App.jsx",
+      "app/src/TransactionDiagram.jsx",
+      "app/src/transaction-diagram.css",
+      "app/src/DepthContent.jsx",
+      "app/src/CryptographicDetail.jsx",
+      "app/src/ConcernGraph.jsx",
+      "app/src/concern-graph.css",
+      "app/src/SevenLayers.jsx",
+      "app/src/Groth16.jsx",
+      "app/src/invoice.mjs",
+      "app/src/data.generated.json",
+      "app/src/app.css",
+      "app/src/brand.css",
+      "app/src/depth.css",
+      "app/build.mjs",
+      "app/check-artifact.mjs",
+      "app/src/main.jsx",
+      "app/src/editorial.mjs",
+      "app/src/presentation.mjs",
+      "depth-2026-10-17/COPY.json",
+      "depth-2026-10-17/DESIGN-AND-PLAN.md",
+      "depth-2026-10-17/reader-study/SYNTHESIS.md",
+      "depth-2026-10-17/narrative/SOURCE-NOTES.md",
+      "depth-2026-10-17/applications/SOURCE-NOTES.md",
+      "contributions/11-v2-security/V2-COPY.json",
+      "contributions/14-review-corrections/PRESENTATION-PATCHES.json",
+      "contributions/14-review-corrections/COUNT-CLARIFICATION.json",
+      "reference-inputs/concept/integrated-r2/CONCEPT.md",
+      "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md"
+    ],
+    "findings": [
+      {
+        "severity": "major (blocking in assigned scope)",
+        "location": "depth-2026-10-17/COPY.json opus.lifecycle.stages[id=reclaim].action ('The claimant releases the output and recovers its min-ADA.') and .outputs ('Released min-ADA'). The action is rendered in the 'Unused claims, stale state and readback' drawer at app/src/CryptographicDetail.jsx:72.",
+        "problem": "This assigns custody of the released min-ADA to the claimant. Because it says 'recovers', it also implies the claimant funded the claim output's min-ADA at Issue. The packet's own register leaves both open: Q06 asks 'who supplies claim-output minimum ADA, and who receives its release?' and sets the display treatment 'Other signers, amounts and sponsors stay unknown.' The candidate's corrected Issue row says the supplied material does not state who funds the Issue transaction, so the reclaim wording contradicts it. The frozen sources establish only that release needs the claimant's signature after the claimant-chosen expiry. This is the same class of unsupported funding/custody attribution that O01 F4 removed from the reclaim fee-payer row.",
+        "requiredChange": "Replace the reclaim action with: 'After the claimant-chosen expiry, the claimant can release the output; release requires the claimant's signature. Reclaim before expiry is not available. The supplied sources do not state where the released min-ADA goes.' Replace outputs with: 'The released claim output; the destination of its min-ADA is not stated in the supplied sources.' Leave signersAndFunding unchanged.",
+        "source": "depth-2026-10-17/narrative/SOURCE-NOTES.md Q06 and N09 ('Funding amounts and full signer matrix are unresolved'); V2-COPY.json technical.signerBoundary ('Unused claims are reclaimed with the claimant's signature after the claimant-chosen expiry') and technical.networkFeeNote; COPY.json opus.lifecycle.stages[id=issue].signersAndFunding (candidate3: does not state who funds Issue); PREVIOUS-OPUS-REVIEW.json F4."
+      },
+      {
+        "severity": "minor (nonblocking; fix before publication)",
+        "location": "app/src/App.jsx:112, hero h1 'Bring the required proofs to a Cardano transaction.'",
+        "problem": "OPUS-AUTHORED-CORRECTIONS says F12 uses the concept's own positioning line. The concept line is 'Bring the required proofs to the transition.' [ERR-26]. The frozen forbidden-phrase register lists 'Bring proof with the transaction' and gives 'Bring the required proofs to the transition.' as the replacement. On the reviewed issuance route, proofs are checked in separate Issue transactions and the settlement transaction consumes claim outputs, not proofs, so 'transaction' brings back the meaning ERR-26 corrected. This is nonblocking only because the editorial heroBody, which predates this candidate, already says 'attach proofs to a transaction' and the lifecycle section right below explains the route.",
+        "requiredChange": "Change the h1 to 'Bring the required proofs to each Cardano contract transition.' Alternatively use the exact concept line, 'Bring the required proofs to the transition.'",
+        "source": "reference-inputs/concept/integrated-r2/CONCEPT.md 'The concept and its useful job' line 7; data.generated.json security.forbiddenPhrases ('Bring proof with the transaction' \u2192 'Bring the required proofs to the transition.', ERR-26); V2-COPY.json technical.trustNotes issuance-route."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "app/src/DepthContent.jsx:9, invoiceModel input 'invoice-claim', third line 'Claim token burned on release'",
+        "problem": "The page uses 'release' for both settlement and post-expiry reclaim (for example, 'can be released only by their claimant'). The sources establish the claim-token burn only inside settlement; none says reclaim burns the token. Read as covering reclaim, the line asserts unsupported behavior.",
+        "requiredChange": "Change the line to 'Claim token burned at settlement'.",
+        "source": "V2-COPY.json technical.trustNotes issuance-route ('Each consumed claim needs its claimant's signature on the settlement transaction and the burn of its token'); data.generated.json security.diagramRules DR-06; CONCEPT.md 'How an application would use a Web'."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "depth-2026-10-17/COPY.json opus.groth16.publicAndPrivateInputs[2], last sentence 'Public evidence bundles leave out witness values, private keys and setup secrets.' (rendered at app/src/CryptographicDetail.jsx:13)",
+        "problem": "The only source for public evidence bundles is DEVELOPER-EXPERIENCE.md Journey C, where the bundle is a PROPOSED design (Study 07 DX07-P03/P06). The present-tense sentence reads as a property of existing published bundles.",
+        "requiredChange": "Replace with: 'A public evidence bundle, as proposed, would leave out witness values, private keys and setup secrets.'",
+        "source": "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md 'Journey C' ('A public evidence bundle \u2026 excludes witness, private-key, and setup-secret material. [Study 07 DX07-P03/P06, PROPOSED]')."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "app/src/DepthContent.jsx:21, invoiceModel note ('A transaction blueprint for the one-Strand teaching design. \u2026 Exact datum and transaction encodings belong to the integration reference.')",
+        "problem": "'Transaction blueprint' and 'belong to the integration reference' suggest that a specified transaction format and an integration reference document exist. Source notes Q07 and Q09 record the statement byte layout, datum/redeemer schemas, policy IDs and transaction pairing as unresolved, and N04 calls the input/output table 'conceptual, not a datum type, transaction or correspondence result'.",
+        "requiredChange": "Replace the note with: 'A conceptual transaction map for the one-Strand teaching design. CASH values exclude ADA fees, collateral, minimum ADA, funding/change outputs and any thread reserve. The supplied sources do not specify exact datum, redeemer or transaction encodings.'",
+        "source": "depth-2026-10-17/narrative/SOURCE-NOTES.md N04, Q07 and Q09."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "Seven-layer subtitle for Layer 3 'Witness' ('The prover's private inputs'), from the editorial overlay in data.generated.json sevenLayers.layers[2].subtitle; displayed in the new ConcernGraph card (app/src/ConcernGraph.jsx:89)",
+        "problem": "The new Groth16 copy says that being a witness value does not make a value private: the statement bytes sit on witness wires yet can be rebuilt publicly. Calling the witness 'private inputs' in the new graph card contradicts that point. Layer 3's body is frozen and qualifies this ('only the assignment'), but the subtitle does not.",
+        "requiredChange": "Change the Layer 3 subtitle in the editorial overlay to 'Values the prover supplies'. Leave the frozen Layer 3 body unchanged.",
+        "source": "COPY.json opus.groth16.proofExplanation[0] and publicAndPrivateInputs[0]\u2013[2]; data.generated.json bookFindings F1."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "depth-2026-10-17/COPY.json opus.lifecycle.stages[id=assemble].signersAndFunding ('No signatures. Later edits to the transaction invalidate the affected preparation.'), rendered in the funding table at app/src/CryptographicDetail.jsx:65",
+        "problem": "The only source says invalidation happens 'according to the specified binding contract' for a future Web assembler that does not exist. The page states it as present behavior with no condition attached.",
+        "requiredChange": "Replace with: 'No signatures. In the proposed design, later edits to the transaction would invalidate the affected preparation under the chosen binding contract.'",
+        "source": "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md Journey A step 6 ('A future Web assembler \u2026 Transaction edits invalidate affected preparation according to the specified binding contract')."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "depth-2026-10-17/COPY.json opus.lifecycle.failureBranch[1] and app/src/CryptographicDetail.jsx:71 (split('. ').slice(1).join('. '))",
+        "problem": "I assessed the root's excerpt selection, and it is acceptable. Dropping 'The design is safe but not guaranteed to make progress.' avoids an unscoped safety claim; the frozen text says 'Safe but not live' only inside the V2 source-reading assumptions. Every rendered sentence traces to frozen OP-04 and the binding-chain/issuance-route assumptions. Two side problems remain. First, the unrendered source string still carries the unqualified 'The design is safe' sentence, and it ships in the bundled JSON. Second, selecting text by splitting on '. ' would quietly change if the copy were edited.",
+        "requiredChange": "In COPY.json, change failureBranch[1] to start with 'Any catalogue account can Revoke, \u2026' (the rendered text). In CryptographicDetail.jsx:71, render c.failureBranch[1] directly without splitting. If the liveness point is wanted, add after the first sentence: 'In the reviewed source this blocks progress without letting stale claims settle.'",
+        "source": "CHANGES.md G21 referral; V2-COPY.json technical.trustNotes issuance-route assumptions ('Safe but not live\u2026'); PRESENTATION-PATCHES.json OP-04-revocation; data.generated.json security.forbiddenPhrases ('secure, security guarantee, guaranteed \u2026 (unscoped)')."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "app/src/CryptographicDetail.jsx:33, BindingReference lead paragraph",
+        "problem": "The binding drawer describes catalogue, claim-policy and validator behavior in present tense. Its only qualifier is the word 'source-level'. The frozen integration rule allows the V2 source-reading caveat to sit one disclosure away, and it does through the issuance-route link, so this is acceptable. It would read more clearly if the caveat were inline.",
+        "requiredChange": "Replace the lead with: 'The following map is a reading of unadopted, uncompiled V2 source, not observed behavior. It separates identities the consumer compares from correspondences that still need evidence.'",
+        "source": "data.generated.json security.statusScope.sourceReadingCaveat and integrationRule; COPY.json opus.groth16.sourceSetupStatus[2]."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "depth-2026-10-17/COPY.json opus.groth16.sourceSetupStatus[3], fifth list item ('The experimental mori-k2 command-line tool documents compile, inspect, setup, prove and verify\u2026'), rendered by ImplementationSummary",
+        "problem": "The source says the README documents these commands, not the tool itself, and the commands were not run for this page. The current wording blurs documented interfaces with observed tool behavior.",
+        "requiredChange": "Change that sentence to: 'The experimental Rust README documents mori-k2 compile, inspect, setup, prove and verify commands, which were not run for this page; its documented proof export emits no Plutus Data, CBOR or transaction.'",
+        "source": "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md 'Current source commands and future ergonomics'; COPY.json invoiceSource.packageStopsBefore; App.jsx available-tooling drawer."
+      }
+    ],
+    "limits": [
+      "Source-level wording audit only, done with the Read tool on packet files. I did not run, build, render or screenshot the page, did not read the generated index.html, and did not view any images. Browser and visual QA belong to root.",
+      "I did not recompute SHA-256 values for packet files or the artifact. The artifact hash comes from PAGE-REPORT.json and app/ARTIFACT-CHECK.json.",
+      "editorial-2026-10-17/COPY.json, SECURITY-COPY.json, GROTH16-SECTION.json, SEVEN-LAYER-SECTION.json, scenarios.json and invoice-fixtures.json are not in the packet. I reviewed their effect through app/src/data.generated.json, which I read in full, and through the presentation/editorial adapters.",
+      "External documents cited by the sources were not available. These include Groth 2016, snarkjs, the Filecoin attestations, SECURITY-ERRATA rows, the S07/S08/S12/S13 records, identity.rs and the V2 Aiken/Rust source. Judgments rest on the supplied frozen summaries.",
+      "COPY.json opus fields that this candidate does not render (summary, sourceNotes, setupExplanation, ledgerClaimsExplanation[1] and [3], most openQuestions, and the setup/genesis/assemble/observe stage actions) were checked for consistency but not treated as visible claims.",
+      "Financial-attribution details outside the security scope, such as the creditor of the S13 allocation_reserve, were not judged.",
+      "Verdict scope is cryptographic and security explanatory wording only. This is not product, protocol, security or ledger acceptance, and it does not authorize implementation, native SDK work, setup, proving, signing or deployment.",
+      "Plan mode was active and only Read and StructuredOutput tools were available, so no plan file was written. This structured review is the requested deliverable."
+    ]
+  }
+]

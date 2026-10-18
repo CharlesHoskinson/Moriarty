@@ -1,0 +1,83 @@
+[
+  {
+    "id": "dex",
+    "title": "Two orders share a pool transition; each owner keeps a separate result",
+    "inputs": [
+      {"id": "dex-order-one", "label": "Order one", "kind": "order", "lines": ["Offers 100 A", "Minimum net receipt: 90 B"], "checks": ["dex-orders", "dex-batch"]},
+      {"id": "dex-order-two", "label": "Order two", "kind": "order", "lines": ["Offers 100 A", "Minimum net receipt: 90 B"], "checks": ["dex-orders", "dex-batch"]},
+      {"id": "dex-pool-before", "label": "Shared pool before", "kind": "state-unspecified", "lines": ["Opening reserves not supplied", "Price, fee and rounding rules not supplied"], "checks": ["dex-pool", "dex-batch"]}
+    ],
+    "outputs": [
+      {"id": "dex-owner-one", "label": "Owner one", "kind": "payment", "lines": ["Receives 92 B net", "92 B meets this order’s 90 B floor"], "checks": ["dex-orders", "dex-batch"]},
+      {"id": "dex-owner-two", "label": "Owner two", "kind": "payment", "lines": ["Receives 92 B net", "92 B meets this order’s 90 B floor"], "checks": ["dex-orders", "dex-batch"]},
+      {"id": "dex-pool-after", "label": "Shared pool continuation", "kind": "state-unspecified", "lines": ["Must account for both orders", "Closing reserves cannot be calculated from supplied facts"], "checks": ["dex-pool", "dex-batch"]}
+    ],
+    "checks": [
+      {"id": "dex-orders", "label": "Each owner’s minimum", "explanation": "Each owner gives 100 A and receives 92 B net against their own minimum of 90 B. The 2 B above the floor is not an identified fee."},
+      {"id": "dex-pool", "label": "One shared pool update", "explanation": "A complete pool relation must explain the same two orders under its reserve, fee and exact-rounding rules. This illustration supplies no pool calculation."},
+      {"id": "dex-batch", "label": "Allocate each payment once", "explanation": "The consuming validator checks actual output allocation. This illustration uses a separate output for each order; the two owner receipts cannot be counted as the same payment."}
+    ],
+    "note": "PROPOSED worked example, not an executed batch. Show two order-to-owner lanes coupled to a shared pool continuation. The owner-side totals are 200 A given and 184 B received; they do not specify a complete pool ledger. Check count does not determine Strand count."
+  },
+  {
+    "id": "issuance",
+    "title": "Issue 300 units, distribute all 300, retain 700 units of capacity",
+    "inputs": [
+      {"id": "issuance-cap", "label": "Application supply policy", "kind": "supply-limit", "lines": ["First issue", "Cap: 1,000 application-token units", "Supply predecessor representation not supplied"], "checks": ["issuance-supply"]},
+      {"id": "issuance-plan", "label": "Proposed issue and allocation", "kind": "mint-plan", "lines": ["Issue 300 application-token units", "Allocate 180 and 120 units"], "checks": ["issuance-supply", "issuance-distribution"]}
+    ],
+    "outputs": [
+      {"id": "issuance-recipient-one", "label": "Recipient one", "kind": "payment", "lines": ["180 application-token units"], "checks": ["issuance-distribution"]},
+      {"id": "issuance-recipient-two", "label": "Recipient two", "kind": "payment", "lines": ["120 application-token units"], "checks": ["issuance-distribution"]},
+      {"id": "issuance-supply-after", "label": "Supply after first issue", "kind": "supply-continuation", "lines": ["300 application-token units issued", "180 + 120 = 300"], "checks": ["issuance-supply", "issuance-distribution"]},
+      {"id": "issuance-capacity", "label": "Capacity left under the cap", "kind": "capacity-annotation", "lines": ["1,000 − 300 = 700 units", "Unissued capacity; no asset payment or debt"], "checks": ["issuance-supply", "issuance-duties"]}
+    ],
+    "checks": [
+      {"id": "issuance-supply", "label": "Continue supply within the cap", "explanation": "The proposed first issue is 300 ≤ 1,000. The application asset’s own minting policy must enforce the actual supply change and continue the supply state."},
+      {"id": "issuance-distribution", "label": "Reconcile mint and recipient outputs", "explanation": "The two recipient amounts sum to the proposed new supply: 180 + 120 = 300. The policy and consumer must check the actual mint and recipient outputs."},
+      {"id": "issuance-duties", "label": "Separate supply from servicing promises", "explanation": "The 700 units of capacity are not debt. A redemption duty exists only if the program defines its parties, asset, creation and discharge rules; none is supplied here."}
+    ],
+    "note": "PROPOSED application accounting, not an executed mint or datum schema. Draw a 300-unit issue branching into the 180/120 recipient payments, beside a supply-capacity continuation. The supply and capacity annotations are not additional asset outputs. Web proof-claim issuance does not mint the application asset."
+  },
+  {
+    "id": "loan",
+    "title": "Debt changes by 35 CASH while the payer spends 37 CASH",
+    "inputs": [
+      {"id": "loan-debt-before", "label": "Opening obligation", "kind": "duty", "lines": ["100 CASH debt", "Principal/interest split not supplied"], "checks": ["loan-accrual", "loan-duty"]},
+      {"id": "loan-period-accrual", "label": "Period accrual premise", "kind": "accrual-premise", "lines": ["Add 5 CASH", "Rate, period and rounding not supplied"], "checks": ["loan-accrual", "loan-duty"]},
+      {"id": "loan-payer-debit", "label": "Payer’s outgoing cash", "kind": "debit", "lines": ["35 CASH repayment + 2 CASH fee", "Gross debit: 37 CASH"], "checks": ["loan-payment", "loan-duty"]}
+    ],
+    "outputs": [
+      {"id": "loan-lender", "label": "Lender", "kind": "payment", "lines": ["Receives 35 CASH repayment", "Debt discharge: 35 CASH"], "checks": ["loan-payment", "loan-duty"]},
+      {"id": "loan-fee-recipient", "label": "Fee recipient", "kind": "payment", "lines": ["Receives 2 CASH fee", "Debt discharge: 0 CASH"], "checks": ["loan-payment", "loan-duty"]},
+      {"id": "loan-debt-after", "label": "Continuing obligation", "kind": "duty-continuation", "lines": ["100 + 5 = 105 CASH before repayment", "105 − 35 = 70 CASH still owed"], "checks": ["loan-accrual", "loan-duty"]}
+    ],
+    "checks": [
+      {"id": "loan-accrual", "label": "Add the supplied accrual", "explanation": "Opening debt 100 CASH plus the illustrative 5 CASH accrual gives a 105 CASH duty before payment. The example does not derive 5 CASH from a rate schedule."},
+      {"id": "loan-payment", "label": "Pay the lender and fee recipient separately", "explanation": "The payer’s gross debit is 37 CASH, consisting of a 35 CASH repayment and a 2 CASH fee. Actual parties, exact CASH identity and outputs must match the payer’s intent."},
+      {"id": "loan-duty", "label": "Carry the debt that remains", "explanation": "Only the 35 CASH repayment discharges debt, leaving 70 CASH. The fee is not repayment. No principal/interest allocation or collateral release is specified."}
+    ],
+    "note": "PROPOSED servicing arithmetic, not an executed loan or datum schema. Use an obligation line 100 → 105 → 70 above a cash fork 37 → lender 35 + fee recipient 2. A connector from repayment 35 to debt discharge should show why the fee does not reduce debt."
+  },
+  {
+    "id": "treasury",
+    "title": "An allocation pays 23 A and 4 B, retaining backing for two duties",
+    "inputs": [
+      {"id": "treasury-opening", "label": "Opening custody premise", "kind": "custody", "lines": ["25 A and 10 B", "PROPOSED full-backing opening", "Source step needs at least 23 A and 4 B for non-negative custody"], "checks": ["treasury-payments", "treasury-reserve"]},
+      {"id": "treasury-call", "label": "Source call", "kind": "action-input", "lines": ["allocate(true,23,7,2)", "approved=true; units=23", "quotient=7; remainder=2", "23 = 3 × 7 + 2; 2 < 3"], "checks": ["treasury-quotient", "treasury-payments", "treasury-reserve"]}
+    ],
+    "outputs": [
+      {"id": "treasury-alpha", "label": "Alpha", "kind": "payment", "lines": ["14 A = 2 × quotient", "4 B = fixed source transfer"], "checks": ["treasury-quotient", "treasury-payments"]},
+      {"id": "treasury-beta", "label": "Beta", "kind": "payment", "lines": ["7 A = quotient"], "checks": ["treasury-quotient", "treasury-payments"]},
+      {"id": "treasury-fees", "label": "Fee recipient", "kind": "payment", "lines": ["2 A = fixed source fee", "Separate from the reserve duty"], "checks": ["treasury-payments"]},
+      {"id": "treasury-custody-after", "label": "Retained treasury custody", "kind": "custody-continuation", "lines": ["25 − 23 = 2 A", "10 − 4 = 6 B"], "checks": ["treasury-payments", "treasury-reserve"]},
+      {"id": "treasury-duties-after", "label": "Duties created, owed to owner", "kind": "duty-continuation", "lines": ["Allocation reserve: 2 A = remainder", "Rebate: 6 B", "Neither duty discharged by allocate"], "checks": ["treasury-reserve"]}
+    ],
+    "checks": [
+      {"id": "treasury-quotient", "label": "Check approval and division inputs", "explanation": "Source allocate requires approved and not allocated, remainder < 3, units = 3 × quotient + remainder, units ≥ 3 and nonzero quotient. approved=false fails the source precondition. No distinct governance approver is supplied."},
+      {"id": "treasury-payments", "label": "Derive and reconcile actual transfers", "explanation": "Alpha receives quotient × 2 = 14 A and fixed 4 B; beta receives quotient = 7 A; the fee is fixed 2 A. Custody debit is 23 A and 4 B. The units parameter is not another debit."},
+      {"id": "treasury-reserve", "label": "Continue custody and duties asset by asset", "explanation": "The proposed opening leaves 2 A and 6 B, matching reserve duty 2 A and rebate duty 6 B. Full backing is an additional application policy. rebate(amount) can discharge B rebate; S13 has no allocation-reserve discharge action."}
+    ],
+    "note": "Source arithmetic with a PROPOSED backing premise, not an executed treasury transaction. Use separate A and B custody rows branching to beneficiaries/fees, then align retained A/B with matching duty rows. Duties record amounts owed; they are not extra outgoing payments. Approval consent and a separate governance decision are distinct in the attributed source reading."
+  }
+]

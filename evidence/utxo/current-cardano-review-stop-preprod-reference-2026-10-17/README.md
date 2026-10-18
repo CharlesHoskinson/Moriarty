@@ -1,0 +1,11 @@
+# Required review stopped; public Preprod references captured
+
+The C2 r2 implementation author delivered 21,648 bytes with SHA-256 `67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98`. Those unreviewed source bytes are retained locally and are not part of this package. A fresh Opus 5.5 implementation audit ended with exit 1 after a provider rate-limit rejection. It produced zero complete reviews. All thirty frozen input pins remained unchanged. The earlier published failing baseline remains scoped to the absent implementation.
+
+The separate M-HASH source reconciliation also ended with a provider rate-limit rejection, zero complete outputs and unchanged twenty-seven input pins. It made no source or design decision. The three missing primary source files had been acquired before this attempt; their interpretation remains pending. Neither failure is a security finding, vote or approval. No partial provider content was recovered, no fallback model was used, and no retry was scheduled. The provider reset time is unknown.
+
+No GREEN test, M-HASH test, proof verification or ledger transaction occurred. No implementation, builder reliance or native authority was adopted. The required independent nonsecurity Muse audit also remains unavailable from the previously recorded account/capacity failure. The full Preprod prototype remains open.
+
+`preprod-api-reference/` contains a separate read-only public Koios capture, retrieved with Scrapling on October 17. The tip and protocol-parameter responses both report epoch 319. The original response bytes, URLs, retrieval times, digests and selected-field projection are preserved. The service returned 404 for robots.txt; that response is retained. No cookie or credential was retained and no wallet or key was used.
+
+These are API-reported reference inputs. No consensus/header authentication, genesis identity or ledger-state proof was checked. The hostname and returned values do not establish network qualification, script deployability, transaction size sufficiency or execution-budget acceptance. They must not be presented as authenticated ledger claims or as a completed on-chain test. All 20 UTXO families, financial/residual obligations, recursion, private handoff and bounded multiparent PCD remain within the goal.

@@ -1,0 +1,158 @@
+{
+  "reviewer": "Claude Opus (fresh, non-author, independent source reviewer; task 1.1a source audit)",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "candidateSha256": "fe7482477f068ed87a7ad93a27b9cba2893044a7429176dc3546615cae8feaf7",
+  "verdict": "CHANGES_REQUIRED. The production bytes in policy.py, store.py and cli.py appear correct for scope. I found no live-profile bypass of the history, retry or primary gates on the inspected paths. The candidate is not approved because the tests omit cases that the approved spec readings F1/F3 made mandatory. They also never exercise the real main() \u2192 guarded-reader wiring. The blocking items can be fixed with tests only. Any byte change produces a new candidate that needs both fresh source votes.",
+  "approvedScope": "None granted by this vote. If a revised candidate resolves S1\u2013S4 with no other relevant byte changes, the intended scope is task 1.1a source acceptance only. That covers the live-profile policy gates, named-only resolution, identity-gated live history and bidirectional primary occupancy in policy.py/store.py and their cli.py callers, plus the corresponding isolated 1.4 tests. Excluded: records bridge and labels, runner/producer, identity creation or adoption, live history reconciliation, accounting, registration, dispatch and result acceptance.",
+  "findings": [
+    {
+      "id": "S1",
+      "severity": "blocking (coverage)",
+      "class": "actual consumer path untested",
+      "path": "cli.py::main (history_reader construction); tests/test_live_policy_history.py::CanonicalHistoryAndCli.guarded_reader",
+      "observation": "Every live-lineage CLI test builds its own reader through the test helper guarded_reader(), which copies what main() does. No test runs main() or a subprocess with a live-profile catalog. The existing subprocess tests in test_execution.py use only non-live loan actions. If main() reverted to make_history_reader, or passed an identity_anchor from an env var, flag or file, all 223 tests would still pass. That wiring is the production guarantee that live history stays unavailable at this scope.",
+      "correction": "Add a test that goes through main() or a subprocess against an isolated store. The store holds a live-profile catalog, a populated store_identity token, exact-lineage events and findings. Run status, next and review, and assert that history is unavailable (operational-history present, sameDefectFailures null). Also assert that no anchor source exists: the same result must hold with an env var named like the anchor set."
+    },
+    {
+      "id": "S2",
+      "severity": "blocking (coverage)",
+      "class": "positive identity match not independently tested",
+      "path": "store.py::get_live_history, read_store_identity; test_missing_identity_yields_unavailable_live_history",
+      "observation": "The tests cover no token, and an anchor plus a matching token. No test covers a present token with a different anchor, a multi-row store_identity table, or a blank or non-string token. Mutating `token != identity_anchor` to `token is None`, or dropping the LIMIT 2 row-count check, passes the whole suite. F1 requires a positive match, so this is the central guard.",
+      "correction": "Add isolated cases for mismatched anchor, two identity rows, whitespace token and whitespace anchor. Each must yield None from get_live_history and unavailable history through the guarded reader."
+    },
+    {
+      "id": "S3",
+      "severity": "blocking (coverage mandated by approved readings F1/F3)",
+      "class": "default-resolved git layout and keying observation absent",
+      "path": "tests/test_live_policy_history.py::IsolatedTempStore (non-git fallback only); records.py::_repository_identity; store.py::_canonical_repo_ids, get_history",
+      "observation": [
+        "All live-history tests run in a directory with no .git.",
+        "In that layout the reader's repository key and the writers' str(repo) key happen to be the same root path.",
+        "In a git or linked-worktree layout the reader passes the git common dir. `_canonical_repo_ids(common_dir)` expands only to that path, while reserve, record_review and record_event key rows by the checkout path. The anchored reader, and ordinary get_history via the CLI, therefore return None in every production layout.",
+        "Fail-closed behaviour holds.",
+        "F1 required a test of 'a temporary clone resolved by default'. F3(a)/(b) required recording this caller-keying observation and treating linked-worktree key variance as counted or unavailable, never zero.",
+        "Neither appears. The anchored positive-count GREEN test only works in the layout production does not use."
+      ],
+      "correction": "Add a git-init temp repo and a linked worktree, both resolved through default get_db_path, and assert that their destination is outside the live common dir. Seed a token, exact-lineage findings from the worktree path, and an anchor. Assert unavailable (or counted), never zero. Retain the key-mismatch observation explicitly as preexisting rather than as a repair."
+    },
+    {
+      "id": "S4",
+      "severity": "blocking (coverage mandated by F1), low risk",
+      "class": "no identity table after write-path commands on pre-existing schema",
+      "path": "store.py::init_db/SCHEMA_SQL; test_status_does_not_create_identity_table",
+      "observation": [
+        "Identity-table absence is checked only after cmd_status, and only on a store freshly created by init_db.",
+        "cmd_run and cmd_review (review \u2192 record_review \u2192 init_db) are not followed by that check.",
+        "No test uses a copy of the inventoried pre-existing schema, i.e. the tables without runner_claims-era additions or with existing rows.",
+        "Inspection shows SCHEMA_SQL is identity-free, so current risk is low. The binding test obligation is still unmet."
+      ],
+      "correction": "Build a fixture replicating the inventoried table set with existing rows. Run status, a review that passes or rejects, and a denied run. Assert that store_identity is absent from sqlite_master and that read_store_identity returns None."
+    },
+    {
+      "id": "S5",
+      "severity": "non-blocking (coverage)",
+      "class": "ordering, concurrency and fail-closed branches",
+      "path": "tests/test_live_policy_history.py::LivePrimaryReservation; cli.py::catalog_live_lineage; store.py::make_guarded_history_reader",
+      "observation": [
+        "Reverse ordering (live action active first) is tested only for verify and report. It is missing for live review and live reproduce, and for repair as the incoming action.",
+        "The concurrency test races only live verify against live verify. A mixed live verify vs implement race is not covered.",
+        "Untested fail-closed branches: catalog read failure in catalog_live_lineage (returns True), a live_lineage callable raising (is_live=True), a reservation with no action_start row, and mixed historical profiles for one action tuple.",
+        "The cmd_run post-reservation has_other_primary override is exercised only by direct calls, not through cmd_run."
+      ],
+      "correction": "Add table-driven reverse-ordering cases for all live kinds and a mixed-kind thread race. Add exception-path cases asserting unavailable history, plus empty and mixed action_start profile cases asserting occupancy."
+    },
+    {
+      "id": "P1",
+      "severity": "low (availability; fail-closed direction)",
+      "class": "occupancy profile bound to action tuple, not reservation",
+      "path": "store.py::_action_start_profile, _reservation_occupies_primary",
+      "observation": [
+        "Profile lookup scans every action_start event for (repo, requirement, capability, candidate, action_id) instead of matching payload.reservationId to the active reservation.",
+        "Any historical live start, legacy payload without evidenceProfile, or unparseable row for the same tuple makes a current non-live verify/review/report reservation occupy the primary slot while it is active.",
+        "This never causes a false negative, because the active reservation's own start row is always included.",
+        "Precision still depends on unrelated history."
+      ],
+      "correction": "Prefer resolving the start event by reservationId, keeping None \u2192 occupy for missing or ambiguous rows. This is optional within 1.1a; disclose it if unchanged."
+    },
+    {
+      "id": "P2",
+      "severity": "low",
+      "class": "classification re-reads catalog (TOCTOU)",
+      "path": "cli.py::catalog_live_lineage, cmd_run",
+      "observation": [
+        "The reader decides live vs non-live by re-reading actions.json at every call.",
+        "cmd_run assesses the `action` it read earlier.",
+        "If the catalog changes between the reads, a live-profile action can be assessed against an unguarded snapshot. Example: a live action replaced by a non-live one in the same lineage.",
+        "Post-reservation revalidation of the action exists only on the commandRef/runner path. Report actions are never revalidated.",
+        "Unreachable in production today because live authority is unavailable, and the threat model is a non-adversarial local user."
+      ],
+      "correction": "Bind classification to the action set already read for the command, or re-verify catalog equality after reservation for every kind. Record this as a known limitation if deferred."
+    },
+    {
+      "id": "P3",
+      "severity": "later obligation (not a 1.1a defect)",
+      "class": "anchored lineage presence \u2260 history completeness; non-atomic reads",
+      "path": "store.py::get_live_history, _exact_lineage_recorded",
+      "observation": [
+        "Any event in the exact lineage satisfies 'recorded', including plugin-written action_start/action_end, review or admin rows. Once anchored, such a store reports verified zero failures. For example, the canonical SP01.6 report start/end rows would qualify.",
+        "The identity read, lineage check and history read also use three separate connections with no shared snapshot."
+      ],
+      "correction": "Before 1.3 identity adoption, replace the presence test with reconciled outcome inventory. Perform the identity, lineage and history reads in one read transaction. Do not cite the anchored fixture as adoption evidence."
+    },
+    {
+      "id": "R1",
+      "severity": "integration risk (out-of-scope module)",
+      "class": "guarded reader not universal across plugin consumers",
+      "path": "hook.py::handle_session_start, handle_pre_tool_use (make_history_reader)",
+      "observation": [
+        "The hook still uses the unguarded reader.",
+        "For a live-profile lineage it can show a 'Next' action and permit `run --action` based on counted-zero history.",
+        "The CLI re-gates the run, so this is advisory only.",
+        "It still contradicts the rule that history is 'never verified zero' in host-visible context."
+      ],
+      "correction": "Track this for the next hook-scope change: switch the hook to make_guarded_history_reader with catalog_live_lineage."
+    },
+    {
+      "id": "R2",
+      "severity": "preexisting risk (out of scope)",
+      "class": "named resolution is now the sole clearing path, but receipt authenticity is weak",
+      "path": "store.py::record_review, get_history; cli.py::cmd_review",
+      "observation": [
+        "The self-review check runs only when `author` is present, so omitting author bypasses it.",
+        "Any APPROVED receipt, whatever its scope, is stored as result_review and can remove the findings it names.",
+        "The approach_changed and reproducer_verified events can be written by any record_event caller.",
+        "The universal named-only change is correct; these issues predate it and remain open."
+      ],
+      "correction": "Carry this into 1.2 (closed labels) and later work on receipt authenticity. Do not describe 1.1a as relabeling non-result approvals."
+    },
+    {
+      "id": "R3",
+      "severity": "preexisting (informational)",
+      "class": "admin primary asymmetry",
+      "path": "store.py::LEGACY_PRIMARY_KINDS vs policy.py::PRIMARY_BLOCKED_KINDS",
+      "observation": "A non-live admin is blocked by an occupied primary slot but does not itself occupy or transactionally check it. Only the post-reservation recheck protects it. This matches the spec's implement/repair wording and is unchanged by the candidate.",
+      "correction": "No 1.1a change required; record it."
+    }
+  ],
+  "validation": {
+    "method": "Full-source reading of the supplied current bytes along these paths: cli main \u2192 make_guarded_history_reader \u2192 records.load_snapshot/_apply_history/_select_next \u2192 store.get_history/get_live_history; cmd_status/next/run (pre-assess, reserve, has_other_primary override, report finish, runner revalidation)/review; store.reserve (BEGIN IMMEDIATE, incoming occupancy), _any_other_primary, _action_start_profile, init_db/SCHEMA_SQL, read_store_identity (mode=ro); policy.assess order and live branches. Mutation reasoning was applied against the 49 target tests and the relevant test_execution/test_policy cases.",
+    "confirmedBehavior": [
+      "An exact 'finalized-financial-settlement' profile of any kind, including report and admin, is denied by history, primary and retry gates. Live repair keeps the readiness exception; F4 and F5 are satisfied. Non-live semantics are unchanged.",
+      "Live occupancy is symmetric across reserve's transactional check, get_history primaryActive and has_other_primary. An unknown or missing start profile occupies the slot.",
+      "An APPROVED receipt removes only named findings within the queried lineage. Clear-all is gone, so F6 is satisfied.",
+      "The production CLI passes no identity_anchor. Live lineages therefore always receive None, and catalog read errors fail closed. SCHEMA_SQL and bootstrap create no identity table, and read_store_identity opens the store read-only.",
+      "Root-reported live DB, WAL and SHM digests and row counts were unchanged across the target and full runs (F7 evidence as supplied)."
+    ],
+    "testsRun": "none (no tools used, per instruction)",
+    "hashesRecomputed": false
+  },
+  "limitations": [
+    "No tools were run. File SHA-256 values and candidateSha256 were not recomputed. The 49/223 pass results are the root's reported evidence and were not rerun.",
+    "Prior store.py, policy.py and cli.py bytes were not supplied, so change attribution is inferred. S1\u2013S5 findings concern the supplied current tests, not a diff.",
+    "test_records.py fixtures, reproduce_driver.py, the canonical-store inventory rows and the live reservation statuses were not inspected. P1's practical impact on existing live-store action_start payloads is unverified.",
+    "The cmd_run post-reservation path for a live action cannot be reached with current fixtures, which lack authority. Its correctness was established by reading the code, not by execution.",
+    "This is one of two required source votes. It grants no live admission, resource authority, identity adoption or result acceptance. Items 1.2, 1.3, 1.5 and 2\u20136 remain pending and are not waived."
+  ]
+}

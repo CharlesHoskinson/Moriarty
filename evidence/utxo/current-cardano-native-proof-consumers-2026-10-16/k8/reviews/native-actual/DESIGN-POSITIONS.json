@@ -1,0 +1,92 @@
+[
+  {
+    "clause": "Author only this K8 native-consumer operator candidate (runner/operator.py, AUTH-CANDIDATE.json, EXECUTION-PROPOSAL.json, README.md, DESIGN-POSITIONS.json) as source text, with no filesystem write, execution, compiler or sandbox probe, native curve operation, RNG, proof, key, wallet, signing, network, ledger or nested agents by the author.",
+    "clauseId": "NC-C1-author-source-only",
+    "position": "AGREE",
+    "rationale": "Historical author position FOR retained; the R2 delivery was source text only and this review likewise executed nothing."
+  },
+  {
+    "clause": "The falsifiable predicate is exactly: the unchanged pvc2/groth16.verify_digest returns TRUE on the published 488-byte VK, 192-byte proof and 32-byte statement digest through actual Aiken BLS12-381 builtins, and FALSE for the actual N1 re-derived body digest, N2 re-derived context digest and N3 A/C-swapped proof, with the 10 fixed test expectations (4 pairing, 5 auxiliary, 1 malformed-length fail) derived from the pinned test source before any run.",
+    "clauseId": "NC-C2-falsifiable-predicate",
+    "position": "AGREE",
+    "rationale": "Predicate text is exact (groth16.ak:52, test.ak:31-113) and, per F3/F4, is now observed true in scoped form; agreement is with the predicate, not with any broader PASS."
+  },
+  {
+    "clause": "The project scope is the smallest unchanged production-module harness justified by the actual import closure (pvc2/bytes, pvc2/types, pvc2/groth16 plus generated k8_fixture and k8_genuine_proof_test, aiken.toml and published aiken.lock, stdlib v2.2.0 in the exact old OPX1p build/packages placement), and it cannot qualify the whole old package or any C2 wrapper.",
+    "clauseId": "NC-C3-narrow-closure-scope",
+    "position": "AGREE",
+    "rationale": "Staged intake confirms exactly toml/lock plus the 5 AK files; no C2 wrapper or whole-package qualification follows (F7)."
+  },
+  {
+    "clause": "Original aiken.toml and published aiken.lock are copied byte-verbatim with no production renaming or aliasing, the K8 fixture (5269B, 1b9e2a9a...) and its manifest (2939B, 3b4a4640...) are the actually-adopted existing bytes, and every other existing byte is pinned by size and SHA-256 from INPUT-INDEX.json. Root fills the review candidate by literal string replacement of the single operatorSha256 placeholder only, preserving formatting and indent with status still CANDIDATE_NOT_AUTHORIZED; exactly two typed fills (operatorSha256 to the actual materialised hash, and status to AUTHORIZED_EXACT_ONE_RUN) occur only when a real AUTH.json is materialised after fresh agreement, with no other or hidden change.",
+    "clauseId": "NC-C4-pinned-bytes-one-placeholder",
+    "position": "AGREE",
+    "rationale": "AUTH.json in intake is exactly the two-fill materialisation (operatorSha256 bd7487..., status AUTHORIZED_EXACT_ONE_RUN) and staged hashes match the pins; that AUTH is now consumed (F5)."
+  },
+  {
+    "clause": "The known data-only Aiken binary (38299808B, sha256 4257cc8b..., mode 644) is verified against its manifest, size and hash before a copy-only staging to mode 555 and is never executed in place; the pin identifies the existing v1.1.24 release data and does not prove the binary was rebuilt from indexed source, and no compiler recompilation occurs.",
+    "clauseId": "NC-C5-binary-staging",
+    "position": "AGREE",
+    "rationale": "RESULT releaseIdentityDeclared states manifest-declared provenance only, binary body not mirrored; agreement is limited to that receipt-level claim."
+  },
+  {
+    "clause": "At most two Aiken calls run, in the exact forms 'check --skip-tests --trace-filter all --trace-level silent' then 'check --trace-filter all --trace-level silent --match-tests pvc2/k8_genuine_proof_test', with no --version, --help, misc probe, retry, 147/472 parent suites, cost benches, blueprint, native build or prover call.",
+    "clauseId": "NC-C6-two-calls-exact-cli",
+    "position": "AGREE",
+    "rationale": "Observed: exactly 2 launch attempts, both exit 0, attempts 1 retries 0 (RESULT.json:2-4,80,149)."
+  },
+  {
+    "clause": "Each compiler launch runs once inside bwrap with --unshare-all, --die-with-parent, --new-session and --clearenv, binding only the staged static musl binary read-only at /tool/aiken and the fresh public project read-write at /work plus tmpfs /tmp and minimal /dev and /proc; capability is UNPROBED, failure is terminal, and there is no unshare-only fallback, overwrite or quiet retry.",
+    "clauseId": "NC-C7-bwrap-containment",
+    "position": "AGREE",
+    "rationale": "Recorded argv in RESULT.json steps matches this containment; runs succeeded inside it with no fallback or retry."
+  },
+  {
+    "clause": "Finite caps are proposed, not measured: 600s inner wall plus 10s kill-after per Aiken step, a 620s operator parent wait and 20s bounded cleanup per step (SIGTERM then SIGKILL to the timeout-leader process group, with bwrap new-session descendants tied by --die-with-parent and the PID namespace rather than by that group signal alone, and no hard real-time kill claim for uninterruptible OS states), CPU 300:310, 8 GiB address space, core 0, 16 MiB per plain-file log, a planned aggregate charge of 2*(620+20)=1280s plus a declared 120s preparation/final reserve giving a 1400s whole-operator wall with 10s kill-after, actual wall and waited-children CPU recorded honestly, spawn attempts counted before Popen, stop after the first nonzero or failed step with a terminal report even if step 2 never starts, and no ceiling reset or retry on breach. The superseded nominal 1220s figure covered only the two inner 610s caps.",
+    "clauseId": "NC-C8-finite-caps-honest-metrics",
+    "position": "AGREE",
+    "rationale": "Caps held trivially (6.013s outer wall); waited-children CPU 0.234848s is honestly not transitive/native CPU (capture RESULT)."
+  },
+  {
+    "clause": "Output validation is schema-exact against the aiken-1.1.24 telemetry/json.rs FinishedTests document: whole stdout must parse as one JSON object with keys exactly {seed, summary, modules}, seed a u32 integer, both summaries exactly total=10/passed=10/failed=0 with kind unit=10/property=0 as integers not booleans, exactly one module named pvc2/k8_genuine_proof_test, exactly 10 test rows in pinned source-definition order with no duplicates, missing or extra titles, every status 'pass', on_failure 'succeed_immediately' only for k8_short_vk_is_refused and 'fail_immediately' for the other nine, and execution_units {mem, cpu} as non-negative integers recorded as run evaluation units, not an on-chain budget. Missing, truncated, polluted or non-JSON output, any nonzero step exit, and the {note: all-10-names} counterexample all fail closed; no substring search and no garbage stripping is used.",
+    "clauseId": "NC-C9-fail-closed-output",
+    "position": "DISAGREE",
+    "rationale": "DISAGREE as written: the succeed_immediately expectation for plain `fail` is refuted by test_like.rs:27-30 and def_test_fail.snap:51 (plain fail -> SucceedEventually -> succeed_eventually), which the actual run produced. The schema-exact remainder is sound; the clause must be corrected in a future ordinary validation meaning (fail -> succeed_eventually, fail once -> succeed_immediately). This revises only future validation wording, not this run's proof expectations."
+  },
+  {
+    "clause": "Native authority is zero until a fresh non-author full source/effect/resource audit, a fresh agreement and the exact AUTH exist; the root materialises R2 by AST/JSON inspection only, fills the operatorSha256 placeholder by literal replacement for review, materialises a real AUTH only by the two typed fills in NC-C4 after fresh agreement, and an actual result still requires a mandatory post-run fresh audit, so this source claims no approval, no execution and no PASS.",
+    "clauseId": "NC-C10-no-authority-no-pass",
+    "position": "AGREE",
+    "rationale": "That sequence is what occurred; this review is the mandatory post-run fresh audit and it grants no approval, execution or unqualified PASS."
+  },
+  {
+    "clause": "Future native execution under a new exact AUTH (the prior K8-C11 subject: fixture generation then aiken check --skip-tests then targeted --match-tests pvc2/k8_genuine_proof_test under the stated finite bounds) is authorised by this source position.",
+    "clauseId": "NC-C11-native-execution-authority-preserved-abstain",
+    "position": "ABSTAIN",
+    "rationale": "Historical NC-C11 ABSTAIN preserved exactly; not counted as a vote or agreement by this reviewer either."
+  },
+  {
+    "clause": "All 20 UTxO families, ACTUS 277/18/32 and DS01-07, DeFi 72 and DA01-24, general financial duties, recursion, private handoff, bounded multi-parent PCD, universal certificates and real Preprod remain required and open, with VK-to-matrix link unproved, single-party controller forgeability, fabricated ledger premises and unmeasured transitive CPU retained, no compatibility percentage, and C2 typed builder/expiry, compiled applied B9 genuine hash, FX1, inclusion with qualified transaction ExUnits and real Preprod as the next stages after direct pairing.",
+    "clauseId": "NC-C12-full-scope-retained-open",
+    "position": "AGREE",
+    "rationale": "Nothing in this scoped run touches that scope; all listed families/obligations remain open with no percentage."
+  },
+  {
+    "clause": "Future native execution of this R2 revised source is supported by the author only under a new exact AUTH materialised after a fresh non-author audit and a fresh AGREE, by exactly the two typed fills in NC-C4, under the revised NC-C8 caps (600s+10s per Aiken step, 620s parent wait plus 20s cleanup per step, planned charge 1280s plus 120s preparation/final reserve = 1400s whole-operator wall with 10s kill-after), at most two Aiken calls, one attempt and zero retries, with schema-exact NC-C9 output validation. This author FOR is a source position on the revised text and caps only: it is not a non-author AGREE, not approval of unaudited materialised bytes, not an AUTH and not an execution, and the historical NC-C11 ABSTAIN is not counted toward it.",
+    "clauseId": "NC-C13-new-auth-runtime-author-for",
+    "position": "DISAGREE",
+    "rationale": "DISAGREE as written prospectively because it incorporates the NC-C9 succeed_immediately error; historically the run it authorised is complete and consumed, and this disagreement neither invalidates the raw compiler evidence (F3/F4) nor creates any new retry authority."
+  },
+  {
+    "clause": "AUTH and result integrity are strict and self-limiting: every caps value is an integer not a boolean, every pin entry is exactly {path string, bytes integer not boolean, sha256 string}, every expectedTests entry is exactly {name string, fail boolean} with unknown fields rejected; the operator parses the exact DATA-ONLY-MANIFEST binary entry and declared releaseTarget and records release identity as manifest-declared only (not binary-derived, no --version); host 14 pins are checked before and in the terminal path, staged 5 .ak files, toml/lock, 38 stdlib files, packages.toml and the staged tool (hash and mode 555) are re-checked after the run with any failure flipping a completed status to FAILED while preserving the test evidence; RESULT.json is written only into a fresh root this run created, an early failure yields a valid stdout JSON record instead, and a RESULT write failure returns nonzero with an explicit error.",
+    "clauseId": "NC-C14-strict-auth-and-postchecks",
+    "position": "AGREE",
+    "rationale": "Observed postchecks held (host/staged unchanged true in RESULT.json) and the only terminal downgrade was the F1 label mismatch, preserving test evidence as designed."
+  },
+  {
+    "clause": "scopedNativeAikenConsumerPrerequisiteClosed may be adopted solely as: the unchanged pvc2/groth16.verify_digest, compiled and run by the pinned Aiken 1.1.24 data-only binary in the consumed one-attempt offline bwrap run, returned Bool True for the public 488-byte VK / 192-byte proof / 32-byte statement digest and Bool False for the N1 re-derived body digest, N2 re-derived context digest and N3 A/C-swapped proof; the 9 normal (fail_immediately) rows all pass (4 pairing + 5 support), the 10th raw unit (malformed short-VK plain-`fail`) passes with the parser-correct succeed_eventually label, wrapper status remains FAILED, Aiken VM execution_units are not ledger ExUnits, K6 single-party forgeability and unauthenticated context limits are retained, and no C2 wrapper, compiled B9 hash, FX1, ledger or Preprod predicate is included.",
+    "clauseId": "SCOPED-ADOPTION-actual-native-consumer-prerequisite",
+    "position": "AGREE",
+    "rationale": "This reviewer's scoped adoption position, grounded in F2-F6 and CC-1..CC-5; it is finite ordinary evidence adoption, not a rerun, not a relabelled operator success, and not proof/target acceptance."
+  }
+]

@@ -1,0 +1,9 @@
+# Eleven-API consumer handoff navigation fragment
+
+This is a bounded source-attributed navigation delta. It preserves the 1,583-node and 3,863-link base graph as exact ordered prefixes and adds 11 EXTRACTED nodes and 14 EXTRACTED links. Every new node has an incident link. No source, security contract, or consumer wiring was changed.
+
+The root adoption record applies to the exact 23,252-byte eleven-API host source and 82 observed ordinary methods. The separately pinned ordinary result records four passing suites: 13 data-factory + 19 statement + 31 request + 19 encoder methods (82 total). Canonical Opus qualification records 37 literal positions as AGREE; canonical Muse qualification records the actual non-security audit for the same source. The adoption record says publication was not yet copied to `utxo` at its 20:38:23Z timestamp, actual consumer integration is false, Preview/Preprod testing is false, and native authority is zero.
+
+F-01 records `lovelace=None` as canonical no-ada and `lovelace=0` as a retained zero entry that consumers must choose explicitly. The root source-facts qualification reports 19 output pins, 15 source pins, and 20 exact excerpt blocks matched; its scope remains historical source facts, not consumer integration. The current builder facts still describe fixture-based K10 inputs and no direct Rust ProofExport JSON consumer. Expiry is caller-declared and absent from exported `envV2`; historical R2 expiry phrasing does not establish proof binding. Saved EnvV2 CBOR/token literals and a separate local ACCEPT_UNIT do not provide an independent crypto oracle or ledger result.
+
+The Opus consumer source-contract process record is timestamped 20:40:36Z as running. This fragment records that process snapshot only and does not infer a result or continuing liveness. Graphify token accounting is UNKNOWN.

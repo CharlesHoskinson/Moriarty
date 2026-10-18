@@ -1,0 +1,188 @@
+[
+  {
+    "reviewToken": "webs-readers-20261017-H04",
+    "persona": "An assurance architect reading for clarity",
+    "summary": "The page's core idea is understandable on a first read: a financial program states rules, a prover produces proofs for them, and a Cardano validator checks that the proofs match the transaction. The invoice arithmetic (112 funded, 35 paid, 2 fee, 37 debited, 75 left against 65 invoice plus 10 reserve) is internally consistent. What a first-time reader cannot pin down is the physical form of a Strand and a Web, how many transactions one payment takes, who signs what, and which parts are proven versus checked by the validator. The diagrams are one generic template repeated across applications: they show proof-coverage bookkeeping but no transactions, no money, no state change and no Strand boundaries. The sentence \"These are the names for the evidence that travels with it\" names the objects without saying what they are. The page also presents the 112-CASH funding as the contract's behaviour, while its own technical notes say the source program funds 110 and is 2 short, and that the 112 backing is a proposed policy. Several terms collide (claim, check, condition, statement, verification, claim token), and the setup-count slider is not connected to any of the five applications. I read only three of the eleven images, so the diagram verdict rests on those three plus page text.",
+    "comprehension": [
+      {
+        "task": "(1) What a Web and a Strand contain",
+        "myAnswer": "A Strand is one Groth16 proof plus its public claim plus fields that tie it to one transaction. A Web is the set of Strands a contract requires for one transaction, and settlement needs all of them. Technical-page detail adds that a Strand becomes a claim output on-chain, and a Web's settlement consumes those outputs. From that I can say a Strand is at least the proof and its public statement, and the Web is the required-set collection.",
+        "pageEvidence": "Main body: 'A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction.' and 'A Web collects the Strands a contract requires for a transaction.' Step 3 of 'How a Web reaches settlement': 'An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA.' Tech notes: 'n required Strands mean n Issue transactions plus one settlement.'",
+        "whatIStillCannotExplain": "Whether a Strand is a datum, a redeemer argument, a UTxO, or only the proof bytes; whether 'Web' is a transaction object, a bundle or just the set of claim outputs consumed at settlement. The invoice diagram draws a Web as a 'PROOF COLLECTION' oval, which suggests a bundle, while settlement suggests a set of UTxOs. The page never says which. Also unexplained: how many Strands the invoice payment has (1, 3 or another number)."
+      },
+      {
+        "task": "(2) How a proof connects to real transaction inputs and outputs",
+        "myAnswer": "The statement's public inputs carry a digest of statement bytes. At settlement the validator rebuilds those bytes from the transaction and spent state and compares them with the claim whose proof was checked earlier. So the link is a digest comparison plus rebuilt fields, and the proof itself is not re-run at settlement.",
+        "pageEvidence": "Invoice panel: 'The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified.' Proof section: 'The validator rebuilds those bytes from the transaction, so a correct calculation cannot be attached to a different payment.' Settlement step: 'Settlement consumes every required claim output and burns its claim token.'",
+        "whatIStillCannotExplain": "Which exact transaction fields are hashed into the statement (escrow input reference, output addresses, amounts, datum?). No example statement layout or digest value is shown. 'Whose proof was verified' is not located in time: the reader is not told that verification happens at Issue until the Q&A and technical notes. The page does not show one input UTxO, one output UTxO, or one datum next to the arithmetic."
+      },
+      {
+        "task": "(3) A complete concrete payment workflow",
+        "myAnswer": "I can reconstruct a plausible sequence: escrow funded to 112 (funder and transaction unknown); owner signs an intent with caps; prover runs partial(35) on the opening state (duty 100, cash 112) and produces proofs covering the three checks; one or more Issue transactions each verify a proof and mint a claim output with min-ADA and a claim token; a settlement transaction consumes all claim outputs, burns their tokens, requires claimant signatures, rebuilds statements, and produces seller 35, fee recipient 2 and a new escrow state of 75 with duties 65 and 10; the application waits for finality and reads back outputs.",
+        "pageEvidence": "Steps 1 to 4 under 'How a Web reaches settlement'; the invoice worksheet financial result lines; Q&A 'How do I know the payment happened?'.",
+        "whatIStillCannotExplain": "Who funds the opening 112 and in which transaction; the owner intent's actual numbers (the 37 gross cap is never stated as an intent limit); who the claimant is for this payment (seller, buyer or prover); who signs and pays for each Issue transaction; the claim token's name and minting policy; the new escrow datum; and the number of Issue transactions for a 35 CASH partial. The page offers no single worked transaction list."
+      },
+      {
+        "task": "(4) Distinguishing conditions, proofs and on-chain claim outputs",
+        "myAnswer": "A condition is a rule the contract requires (for example the payment calculation). A proof is a Groth16 object that may cover several conditions. A claim output is the on-chain record created when a proof is checked at Issue. Settlement needs every condition covered by a claim output that matches the transaction.",
+        "pageEvidence": "Invoice panel: 'A condition is something the contract requires... A Strand contains a Groth16 proof, its public claim...' Diagram: checks 1, 2, 3 feed one 'Web'. Step 3: 'This output records checked evidence for later settlement.'",
+        "whatIStillCannotExplain": "The page uses condition, check, claim, statement and Strand for overlapping things. 'Required check' is the button label, 'condition' the text, 'the claim' the inspector heading, 'statement' in the proof section, and 'proof-claim output' or 'claim output' on-chain. I cannot tell whether one check equals one claim, one Strand, or one proof. The issuance 'Supply limit' check is said to be enforced by the minting policy, which makes it unclear whether it is a proof condition at all."
+      },
+      {
+        "task": "(5) What gets set up and how to count setups",
+        "myAnswer": "Groth16 needs one phase 2 per distinct compiled circuit and phase 1 can be shared when curve, format and capacity match. The count follows compiled circuits, not predicates, catalogue entries or claim types. So the total is the number of distinct compiled circuits plus the number of phase-1 parameter sets used. The page says there is no fixed Cardano-wide total.",
+        "pageEvidence": "Setup section: 'Each distinct circuit needs its own second phase.' Slider: '1 shared phase 1 + 5 phase 2'. Caption: 'These are stages, not 5 + 1 complete ceremonies.' 'How many setups for all of Cardano?': 'There is no fixed Cardano-wide total.'",
+        "whatIStillCannotExplain": "How many compiled circuits the invoice payment, the DEX, issuance, loan and treasury examples need, since the slider's 5 is not tied to them. What a phase-1 output and a phase-2 output look like as files, and what a developer receives. Whether the current setup is a test setup (the link says so; the setup text does not). The '5 + 1' caption is confusing when the slider shows '1 + 5'."
+      }
+    ],
+    "missingDepth": [
+      {
+        "section": "Strand and Web physical form",
+        "missingExplanation": "The page names the objects but never says what they are on-chain or in a transaction.",
+        "concreteExampleNeeded": "A table for the invoice payment listing each Strand: its proof bytes, public statement fields, claim-output address and value, claim token name, and the Issue transaction that creates it. Then one line showing the settlement transaction's inputs and reference data.",
+        "whyItMatters": "Without this a reader cannot tell whether a Web is a bundle, a set of outputs or a transaction, which is the central object of the product."
+      },
+      {
+        "section": "Concrete payment transaction list",
+        "missingExplanation": "The 'How a Web reaches settlement' steps are generic and do not give the transaction count or outputs for the invoice example.",
+        "concreteExampleNeeded": "A numbered list of the actual transactions for the 35 CASH partial (for example Issue A, Issue B, Settlement), each with inputs, outputs, signers and the datum of the new escrow state, with the 37 and 2 and 75 amounts placed in those outputs.",
+        "whyItMatters": "The user asked for a concrete payment workflow; the page gives a conceptual one and leaves the reader to guess the counts and signers."
+      },
+      {
+        "section": "Opening funding and owner intent",
+        "missingExplanation": "The 112 funding appears as present-tense fact in the worksheet, but no funder, transaction or intent amount is given. The technical notes say the source funds 110 and the 112 policy is proposed.",
+        "concreteExampleNeeded": "A side-by-side of the source path (open 110, partial 35 debits 37, cash 73 against duties 75) and the design path (open 112, cash 75 against duties 75), plus an intent with the four caps filled in (gross 37, fee 2, net floor 35, liability 0).",
+        "whyItMatters": "The main example reads as a finished contract, but the reader cannot reconcile it with the cited source."
+      },
+      {
+        "section": "Lifecycle endpoint of the invoice",
+        "missingExplanation": "The worksheet says 'Paying the full invoice uses a separate action' and never shows what happens to the 10 CASH reserve or to the escrow after finish.",
+        "concreteExampleNeeded": "A final-state row: after finish, escrow holds the remaining cash, the reserve duty remains 10, and the state cannot close. Say so in one sentence.",
+        "whyItMatters": "A reader who follows the partial-payment example reaches a state with an unexplained permanent reserve and no end state."
+      },
+      {
+        "section": "Setup count for the applications",
+        "missingExplanation": "The 1 + 5 slider is not tied to any application, so the count is abstract.",
+        "concreteExampleNeeded": "For the invoice example: list the compiled circuits (payment calculation, fee, remaining obligations, possibly merged), their phase-2 count, and the one shared phase-1 set. Then show the same for one other application.",
+        "whyItMatters": "Counting setups is the question the user asked; the slider teaches the arithmetic but not the mapping from claims to circuits."
+      },
+      {
+        "section": "What the validator checks versus what the proof shows",
+        "missingExplanation": "Some 'What the claim says' texts contain actual-output facts (for example each owner receives 92 B) that the notes say are validator checks, not proof content.",
+        "concreteExampleNeeded": "A two-column table for the DEX: left column 'proved by the Strand' (pool arithmetic over stated reserves); right column 'checked by the validator against actual outputs' (each owner's received amount). Include the pool reserves and the 92 B arithmetic so a reader can verify it.",
+        "whyItMatters": "The page's own rule is that a proof attests arithmetic over values the validator recomputes; the card blurs that boundary."
+      },
+      {
+        "section": "Treasury quotient",
+        "missingExplanation": "The call allocate(true,23,7,2) has no divisor argument, yet the text says 'Dividing 23 by 3'. The mapping from quotient 7 to alpha 14 A, beta 7 A and fees 2 A is not explained.",
+        "concreteExampleNeeded": "Name each argument of allocate (units, quotient, remainder, approved) and show the 2 + 1 share split that produces 14, 7 and 2.",
+        "whyItMatters": "A reader cannot check the treasury arithmetic from the page."
+      },
+      {
+        "section": "Privacy boundary",
+        "missingExplanation": "The fact that the invoice amounts are public while the witness is hidden appears only in the book-passage section at the foot of the page.",
+        "concreteExampleNeeded": "One sentence beside the invoice worksheet: the proof hides intermediate values, but the 35, 2 and 75 amounts appear in outputs and are public.",
+        "whyItMatters": "Readers will assume a zero-knowledge payment is private; the page's own notes say otherwise."
+      }
+    ],
+    "diagramFindings": [
+      {
+        "diagram": "Invoice 'Contract requirements' diagram (invoice-diagram.png)",
+        "whatIActuallyInspected": "The captured invoice-payment panel: three numbered cards (Payment calculation, Separate program fee, Remaining obligations), each labelled 'Required check', with lines converging on a 'Web / PROOF COLLECTION' oval; the Payment calculation card is selected, its inspector shows the claim text, and the status box reads '3 of 3 conditions covered.'",
+        "whatItTeaches": "A reader learns that a Web gathers several required checks and that the Web is complete when all are covered. The inspector shows the claim text for a selected check.",
+        "whatItFailsToShow": "No Strand boundary, no proof, no transaction, no validator, no money (112, 35, 2, 37, 75 do not appear in the diagram), no state change from the spent escrow to the next state, and no direction of flow out of the Web. The numbers 1, 2, 3 read like an order of steps, but the text says they are not ordered. The 'What the validator receives' line has no arrow to any validator.",
+        "replacementOrRevision": "Replace the proof-collection oval with a transaction flow: left, the opening escrow (112); centre, the partial(35) transition; right, outputs (seller 35, fee recipient 2, escrow 75 with duties 65 and 10). Draw each Strand as a box with its check list and an arrow to the Issue transaction that creates it, then an arrow into the settlement transaction. Label arrows with what moves (proof, claim token, datum)."
+      },
+      {
+        "diagram": "Token issuance 'Contract requirements' diagram (issuance-diagram.png)",
+        "whatIActuallyInspected": "The captured issuance panel: same three-card template, with 'Supply limit', 'Recipient amounts' and 'Separate token obligations'; the supply-limit inspector text 'The application asset\u2019s own minting policy enforces the cap' is visible.",
+        "whatItTeaches": "A reader sees that issuance uses the same proof-coverage template. The inspector text notes a minting policy enforces the cap.",
+        "whatItFailsToShow": "The diagram is visually identical to the invoice one, so it teaches nothing issuance-specific. No mint, no supply counter (300 of 1,000, 700 remaining), no recipients (180 and 120), no claim token. It does not show which party enforces the cap, so the reader cannot tell whether the cap is in the proof or in the policy.",
+        "replacementOrRevision": "Draw the minting policy and the proof as separate boxes. Show supply as a number before and after (0 to 300 of 1,000, 700 capacity), recipients as outputs (180 and 120), and mark which arrows are proof-covered and which are policy-enforced."
+      },
+      {
+        "diagram": "Architecture seven-concern list (architecture.png)",
+        "whatIActuallyInspected": "The seven-item left list (Setup through Verification, with the Verification item active) and the right-hand card for '07 / Verification' with its question 'Does this proof belong to this transaction?' and the Result 'Issue and settlement transactions'.",
+        "whatItTeaches": "A reader learns the seven concern names and that Verification is the last step connecting to Cardano.",
+        "whatItFailsToShow": "No dependency arrows, though the page says the concerns influence one another. Every item has the same \u2197 glyph, so navigation and dependency look alike. The Verification card uses one word for two things: the pairing check (done at Issue, per the text) and the binding of statement to transaction (done at settlement). The card's question says 'belong to this transaction' while the body says 'checks each Groth16 proof'.",
+        "replacementOrRevision": "Replace the list with a left-to-right pipeline: program source to constraints to keys and witness to proof to claim output to settlement check. Mark each arrow with the artifact passed along (R1CS, proving key, proof, claim output, digest), and split Verification into 'pairing check at Issue' and 'binding check at settlement'."
+      }
+    ],
+    "proseProblems": [
+      {
+        "location": "Worksheet intro, 'Invoice escrow' section",
+        "exactQuote": "The escrow\u2014the account holding the funds\u2014starts with 112 CASH.",
+        "problem": "Presented as contract fact, but the technical notes say the cited source (S12) funds 110 and is 2 short; the 112 backing is a proposed application policy. The reader is never told the example is a design choice here.",
+        "suggestedRewrite": "The worksheet uses a funding design of 112 CASH, not the cited source's 110. One sentence beside the slider: 'The source program opens escrow at 110 and does not back the fee; this worksheet funds 112 to show the design.'"
+      },
+      {
+        "location": "Treasury, 'Division and remainder' inspector",
+        "exactQuote": "Dividing 23 by 3 gives 7 with a remainder of 2: 23 = 3 \u00d7 7 + 2, and the remainder is less than 3. The program call is allocate(true,23,7,2), where true supplies the approval flag.",
+        "problem": "The call has no divisor argument, so the reader cannot find the 3 in it. 'true' is explained but the other three arguments are not named.",
+        "suggestedRewrite": "'The program call is allocate(true, 23, 7, 2): units is 23 and the divisor is 3 (given separately as the units argument), quotient 7, remainder 2, approved true.' Then name each argument in one line."
+      },
+      {
+        "location": "Main 'What are Webs and Strands?' section",
+        "exactQuote": "The payment above has several conditions to check. These are the names for the evidence that travels with it.",
+        "problem": "Names the objects but never says what a Strand or Web physically is, so the reader cannot picture the thing that travels.",
+        "suggestedRewrite": "'A Strand is one Groth16 proof with its public claim, sent in an Issue transaction that creates one claim output. A Web is the set of those claim outputs that one settlement transaction consumes.' Then a worked example listing them for the invoice payment."
+      },
+      {
+        "location": "Verification card (layer 7)",
+        "exactQuote": "Does this proof belong to this transaction?",
+        "problem": "The question is about binding, but the body says the proof is checked when issued; 'verification' is used for both the pairing check and the binding check, and the reader cannot tell which happens where.",
+        "suggestedRewrite": "'Does this claim belong to this transaction?' and in the body: 'The proof is checked when its claim is issued. Settlement checks that the claim belongs to its transaction.'"
+      },
+      {
+        "location": "How a Web reaches settlement, step 4 and the Q&A on reclaim",
+        "exactQuote": "Settlement consumes it and burns the claim token.",
+        "problem": "'The claim token' is never introduced, and it is unclear who mints it at Issue. Step 3 says the output 'does not pay the seller or mint the application\u2019s asset' but never mentions a claim token.",
+        "suggestedRewrite": "In step 3, add: 'The Issue transaction also mints one claim token under the claim policy; the token's name and policy are shown in the example below.' Then explain the burn in step 4."
+      },
+      {
+        "location": "Token issuance, 'Supply limit' inspector",
+        "exactQuote": "The application asset\u2019s own minting policy enforces the cap and continues the supply state from its predecessor.",
+        "problem": "The cap is shown as a required proof condition, but the text says the minting policy enforces it. The reader cannot tell whether the proof covers the cap or not.",
+        "suggestedRewrite": "Either state 'The proof covers the arithmetic 300 \u2264 1,000; the minting policy enforces the cap on the minted supply', or move the check out of the Web's required set."
+      },
+      {
+        "location": "DEX, 'Each owner's result' inspector",
+        "exactQuote": "Two orders each offer 100 A and require at least 90 B net; each owner receives 92 B.",
+        "problem": "Listed as claim content, but actual received amounts belong to the consuming validator according to the page's own rule, and no pool reserves are given to derive the 92 B.",
+        "suggestedRewrite": "'The pool arithmetic gives 92 B to each order from reserves X and Y (shown). The validator then checks that each recipient's actual output is at least 90 B.' Show X and Y."
+      },
+      {
+        "location": "Treasury, 'Funds retained for obligations' inspector",
+        "exactQuote": "The treasury keeps enough of assets A and B to cover the new reserve and rebate obligations.",
+        "problem": "Presented as a required check, but the technical notes say full backing (25 A and 10 B) is a proposed policy and the source only requires non-negative custody (23 A and 4 B).",
+        "suggestedRewrite": "'The source requires only non-negative custody: 23 A and 4 B. Full backing (2 A and 6 B retained) is a proposed policy the consumer would enforce.'"
+      },
+      {
+        "location": "Zero-knowledge privacy, book-passage section at the foot of the page",
+        "exactQuote": "On Cardano, zero-knowledge hides only the witness. Amounts in settlement outputs and in statements the validator rebuilds are public.",
+        "problem": "This is the most important privacy fact for the invoice example, but it appears only near the end and in a source-check list. The worksheet's 35, 2 and 75 amounts are public outputs.",
+        "suggestedRewrite": "Move one sentence beside the invoice worksheet: 'The proof hides intermediate values only. The 35 CASH payment, the 2 CASH fee and the 75 CASH remainder appear in transaction outputs and are public.'"
+      },
+      {
+        "location": "Setup, 'What makes a ceremony trustworthy' and the slider caption",
+        "exactQuote": "For 5 distinct circuits, phase 1 can be shared and phase 2 runs 5 times. These are stages, not 5 + 1 complete ceremonies.",
+        "problem": "The slider shows '1 shared phase 1 + 5 phase 2' but the caption says '5 + 1', and the reader cannot tell whether six stages make one or several ceremonies.",
+        "suggestedRewrite": "'Five distinct circuits need five phase-2 runs and share one phase-1 set: six stages in total, not six ceremonies.'"
+      }
+    ],
+    "priorityChanges": [
+      "Define the physical objects in one worked example: for the invoice payment, list each Strand, claim output, claim token, datum and transaction (Issue and settlement) with inputs, outputs and signers. Replace the generic 'How a Web reaches settlement' steps with that list, then keep the generic steps as a summary.",
+      "Reconcile the invoice funding in one place: state that the cited source funds 110 with a 2 CASH shortfall, that 112 is the design example, who funds the opening 112, and what the reserve and escrow look like after finish. Do not repeat this disclaimer on every card.",
+      "Replace the Web proof-collection diagram and the issuance diagram (which are the same template) with transaction-flow diagrams that show money, claim outputs and state change. Show the opening state, the partial, the outputs (35, 2, 75 with duties 65 and 10) and the settlement transaction, and make the issuance diagram show supply and recipients.",
+      "Separate what a proof attests, what the validator checks against actual outputs, and what owners and claimants sign. Apply this to the DEX (92 B and the pool), treasury (funds retained) and issuance (supply cap) cards, with a short 'proved / checked / signed' key.",
+      "Tie the setup-count slider to the five applications: give the invoice example's compiled circuit count and setup stages, fix the '5 + 1' caption, and say in one sentence what a phase-1 and phase-2 artifact is and which setup is the current test setup."
+    ],
+    "inspectedImages": [
+      "/home/charl/webs-reader-round-20261017/packet/invoice-diagram.png",
+      "/home/charl/webs-reader-round-20261017/packet/issuance-diagram.png",
+      "/home/charl/webs-reader-round-20261017/packet/architecture.png"
+    ],
+    "limitations": "Image reading worked. I inspected 3 of the 11 supplied screenshots: invoice-diagram.png, issuance-diagram.png and architecture.png. I did not inspect dex-diagram.png, loan-diagram.png, treasury-diagram.png, invoice-missing-coverage.png, settlement-stages.png, setup-counter.png, mobile-invoice-diagram.png or desktop-opening.png, so my statements about the DEX, loan and treasury states and the removed-coverage state rest on the page text and the five-application JSON, not on the images. I did not navigate a browser; states were captured by the root. Plan mode was active; I performed read-only actions only and did not write the plan file because this review needs no edits. This is model-reader clarity feedback, not a protocol or security audit: I did not evaluate the cryptography or the security claims, only whether the text and diagrams explain them.",
+    "verdict": "NEEDS_MORE_DEPTH"
+  }
+]

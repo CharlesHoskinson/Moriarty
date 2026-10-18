@@ -1,0 +1,50 @@
+[
+  {
+    "clauseId": "CP01",
+    "clause": "The r2 consumer shall be a new pure module c2_issue_artifacts_r2.py whose only import statements are import hashlib and import host_codec and whose only public function is prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults, applying the CI02 ARG checks unchanged; it shall not import, patch or replace the adopted v1 module c2_issue_artifacts.py (15231 B, SHA-256 23c3f99d5e0aacfdacc462803b605b5c3c47b6e7e2b5b18b217a562fa0e80f76), whose bytes, CI01-CI12 contract, format, eight labels and test history stay immutable.",
+    "position": "FOR",
+    "rationale": "Keeps the immutable v1 history (S05 componentSha256, S01 CI01/CI02) and gives r2 a separate identity, so admission changes cannot silently alter what was adopted."
+  },
+  {
+    "clauseId": "CP02",
+    "clause": "When ARG passes, the consumer shall refuse with C2I-SETUP unless the setup record has exactly the 12 SetupRecord keys; format, trustProfile, notice, curve, snark and encoding equal the export.rs constants; driver equals DRIVER_ID mori-k2-driver/0.1.0-k2s1+k4h1; provingKeySha256 is 64 lowercase hex; provingKeyBytes is an exact int in 1..2**64-1; relation is an exact dict; verifyingKeyHex is exactly 976 lowercase hex; and unkeyed BLAKE2b-256 of the 488 VK bytes equals vkDigestBlake2b256.",
+    "position": "FOR",
+    "rationale": "Closes the R01 driver and u64 gaps against S09 parse_setup_record and S10 DRIVER_ID. The driver remains a declared name, not provenance."
+  },
+  {
+    "clauseId": "CP03",
+    "clause": "When SETUP passes, the consumer shall refuse with C2I-PROFILE unless the relation has exactly the 29 RelationDescriptor keys of relation.rs with the kinds in C2-PROFILE-R2-API.json, including language moriarty/1, semantics moriarty-core/1 and adapter SettlementHashV2; the nine check_profile digests as 64 lowercase hex and sourceSha256 as 64 lowercase hex or null; logicalWork as a canonical unsigned decimal of at most 39 digits and value at most 2**128-1; the ABI v2 statementTagHex and familyIdHex literals; headerLen 343, instanceVariables 3, publicInputCount 2 and bodyLen 0..261801; and abi2ShapeBytesHex as even lowercase hex of at most 524288 characters, length-checked before scanning, whose unkeyed BLAKE2b-256 equals abi2ShapeDigest.",
+    "position": "FOR",
+    "rationale": "Mirrors S08 deny_unknown_fields and check_profile, plus S11 parse_u128_decimal, on the actual 29 fields (not 30). This preserves the current moriarty/1 and moriarty-core/1 language requirement without recompiling."
+  },
+  {
+    "clauseId": "CP04",
+    "clause": "While admitting either record, the consumer shall accept an integer only as an exact int (never bool) within its declared range and a key or string value only as an exact str containing no code point in U+D800..U+DFFF, and shall otherwise refuse with the code of the stage that admits the enclosing object.",
+    "position": "FOR",
+    "rationale": "Closes the S03 F06 lone-surrogate superset point and keeps the Rust integer widths (S08, S09) without bool confusion."
+  },
+  {
+    "clauseId": "CP05",
+    "clause": "When PROFILE passes, the consumer shall apply the CI05-CI09 checks, narrowed only by CP04, in the order EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO, and shall describe the whole admission only as a declared subset of Rust parse_setup_record and check_export, never as equivalence; statement re-encode, VK and proof curve or subgroup validity, the setupRecordSha256 file-byte link, parse_json limits and the Groth16 pairing shall remain labelled non-claims.",
+    "position": "FOR",
+    "rationale": "Applies R02. encoding.rs, claim.rs and input.rs are unread, so those checks are explicit non-claims rather than asserted equivalence with S09."
+  },
+  {
+    "clauseId": "CP06",
+    "clause": "When every check passes, the consumer shall return an exact fresh dict with the 12 CI10 keys built as in CI10, except that format is moriarty-c2-issue-artifacts/2 and labels is exactly the 14-entry r2 label map; every r2-admitted input shall also be v1-admitted, and for such input envCborHex, envelopeTokenNameHex, issueCborHex and mintValueCborHex shall equal the v1 values.",
+    "position": "FOR",
+    "rationale": "A distinct format and labels prevent silent confusion with v1. The subset property and byte-equal outputs make the migration checkable."
+  },
+  {
+    "clauseId": "CP07",
+    "clause": "If any check fails, then the consumer shall raise exactly ValueError whose message starts with C2I-<STAGE>: for the first failing stage in the order ARG, SETUP, PROFILE, EXPORT, RELATION, STATEMENT, CONTEXT, DIGEST, PROOF, CARDANO, BUILD, shall return no partial result, shall never mutate or retain either input on success or refusal, and shall perform no I/O and use no clock, environment, randomness, logging, caching or global mutation.",
+    "position": "FOR",
+    "rationale": "Extends the CI11 discipline with the new PROFILE stage and makes no-mutation on refusal paths an explicit obligation (R03)."
+  },
+  {
+    "clauseId": "CP08",
+    "clause": "The r2 records shall keep builderReliancePermitted false until a new r2 implementation, an independent non-author audit, root-observed meaningful RED then GREEN of ordinary tests covering obligations T00-T17, and a new downstream CB contract that explicitly accepts format moriarty-c2-issue-artifacts/2 with its 14 labels all exist, and shall keep every native, operator, wallet, prover, VM and deploy flag false regardless; a CB r1 consumer expecting format /1 or eight labels shall refuse r2 output and shall not treat it as compatible.",
+    "position": "FOR",
+    "rationale": "Preserves S05 builderReliancePermitted false and zero authority, and makes the CB r1 incompatibility explicit rather than silent."
+  }
+]

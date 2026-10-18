@@ -1,0 +1,35 @@
+{
+  "observed_at": "2026-09-12T21:38:35.760097+00:00",
+  "scope": "Independent read-only source, DT and retained interpreter disassembly. No K/Java/compiler/interpreter/strace execution; original artifacts unchanged.",
+  "conclusion": "Crash phase and root cause unproven. Concrete recursive evaluator stack growth exists, but smaller than naive eval-frame counting; do not author speculative traversal repair as established root cause.",
+  "hashes": {
+    ".worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/expression-v1-kompiled/interpreter": "32869ebd481d5c6bd0d5b0d7e4a8697b4ce514677b3b0695805211a0fc4cb212",
+    ".worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-v1.k": "92dd659e94f2d12df4ed22b7bedc531b6a2eda3b19971f25e9b4d0f3767c99bb",
+    ".worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-wire.k": "185edc656aa1274a294b1ae43a5e0bbf1b2e6bfb4c7f2ed008f80b97bdf329a4",
+    ".worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-json.k": "eec6a39c247eb714953569d08d3751885881243cc97aaf6fa6668c5126434bd8",
+    ".worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/trace-106.stderr": "5a5ef35093ea3f40495a70a519233de90f3108670e226132d8150ed7c277ff21"
+  },
+  "source_findings": [
+    "exRequestInput traverses complete request through exJValid/exJListValid, including metadata. exComponentsBound later traverses core through exJsonBytes/exListBytes.",
+    "eval dispatchers restore rsp then tail-jump apply rules; their 72/104/120/136-byte frames do not accumulate per metadata level.",
+    "apply_rule_1570 retains 40 bytes plus return address; object and pair valid rules tail-jump. Approximate depth-only slope 48 bytes/Option, 285456 bytes at 5947.",
+    "apply_rule_1584 retains 40+8 bytes; apply_rule_1585 retains 56+8 bytes; singleton 1592 tail-jumps. Approximate depth-only slope 112 bytes/Option,666064 bytes at 5947. Excludes outer frames, helpers and other semantic families; actual stack limit unknown.",
+    "Full deeply nested request remains in request cell at output. finish_rewriting calls print_configuration; print_configuration_internal calls visit_children. Output recursion is not excluded by an empty final JSON.",
+    "print_configuration_internal has 216-byte locals plus 48 bytes saved registers and8-byte return; visit_children has 104-byte locals plus8-byte return. These are materially larger backend traversal frames. No claim of actual path depth or overflow."
+  ],
+  "diagnostic_interpretation": {
+    "keep": "Prospective bounded original-krun strace -f -k -e trace=process,signal -e signal=SIGSEGV diagnostic, once admitted; preserve 20/5/60 limits. Source13 is accepted only; native current accounting/admission remains unresolved. Do not substitute debugger or broaden run.",
+    "input_phase": "Interpreter SIGSEGV unwind containing parse_configuration[0x207e90,0x2082ec), construct_initial_configuration[0x207310,0x207e87), deserialize_configuration or kore_parser::pattern supports input phase. Input failure is not K semantic rejection.",
+    "evaluator_phase": "Unwind containing repeated apply_rule_1570/1584/1585 and corresponding eval functions supports identified evaluator traversal. Other exType/shape/value frames require their own targeted attribution.",
+    "output_phase": "finish_rewriting[0x2129e0,0x212b66), print_configuration_internal[0x213a20,0x214631), visit_children[0x15e600,0x168a2c) support output path when caller chain confirms final printing; finish_rewriting alone also occurs in stuck-function paths.",
+    "gc_phase": "kore_collect[0x271dd0,0x27214e) or migration frames support GC involvement but are not alone proof of GC defect.",
+    "limitations": "strace -k may fail to unwind deep/custom-tail-call stacks. Missing frames or truncation cannot distinguish phases. Resolve PIE load bias/module-relative offsets before matching static addresses. Any alternate diagnostic needs its applicable review, not an automatic new attempt."
+  },
+  "expected_controls_specified_only": [
+    "Exact trace106 metadata 5947/Core65536 accepted, work charged once per existing fixture contract; compare full decoded result to existing oracle.",
+    "Metadata 5948/Core65547 rejects INPUT_BOUND; preserve precedence, no profile truncation.",
+    "Shallow ConstructNone success and semantically invalid nested metadata failure retain existing result/work/error behavior.",
+    "If traversal repair is later justified, directly preserve JSON escaping/UTF8/string bounds and malformed JSON-value validation; same-size shallow-vs-deep control distinguishes structural depth from byte volume.",
+    "Full final conformance after source repair; this diagnosis alone closes no LL02/formal/Preview predicate."
+  ]
+}

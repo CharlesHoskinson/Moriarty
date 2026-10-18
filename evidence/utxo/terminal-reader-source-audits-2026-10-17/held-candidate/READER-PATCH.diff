@@ -1,0 +1,103 @@
+PROPOSAL ONLY — NOT APPLIED. This unified diff shows the minimal, additive
+change from the live reader to the candidate. It is NOT applied to the live
+reader or to any current job. The current reader
+(/home/charl/moriarty-c2-opus55-restored-20261017/run_source_task.py, mirrored
+here as CURRENT-READER.py) is unchanged. Apply only after two fresh agreeing
+actual Opus 5.5 audits and a root decision (see EXPORT-POLICY.md).
+
+The normal path (no flag) and the ordinary `--export-only` path are byte-for-
+byte unchanged. The only additions are (a) a pure, self-contained selection
+function at the top of the module, and (b) a new `--export-terminal-review`
+branch that implies export-only, reads the captured stream read-only, appends
+two new files via exclusive-create, and exits before any existing record is
+written or mutated.
+
+--- a/run_source_task.py
++++ b/run_source_task_candidate.py
+@@ -1,3 +1,69 @@
+ from pathlib import Path
+ import sys,json,subprocess,os,hashlib,datetime,re,jsonschema
++def select_terminal_structured_review(events,review_token,schema,requested_model,exit_code,provider,input_pins_unchanged,retained_whole_candidates=None):
++ """Pure, side-effect-free selection for the opt-in --export-terminal-review path.
++
++ Export EXACTLY the typed structured_output dict carried on the single
++ successful provider `result` event, and nothing else. There is deliberately
++ NO fallback to assistant text, partial output, nested tool arguments or
++ quoted/embedded JSON: the recursive whole-stream walk is never used here, so
++ a draft/quoted/nested duplicate (even a schema-valid one) can never override
++ the final typed object. Any ambiguity, identity drift, schema/token mismatch
++ or missing canonical object is a STOP.
++
++ events: provider-envelope dicts in stream order (non-dicts are ignored).
++ Returns {'decision':'EXPORT'|'STOP','reason':str,'review':dict|None,
++ 'receipt':dict}. No exception is raised for policy STOPs, so this function is
++ fully self-contained and unit-extractable. It references only json and
++ jsonschema; it mutates nothing and reads no files.
++ """
++ def stop(reason,**extra):
++  receipt={'policy':'terminal-structured-output-only','decision':'STOP','reason':reason,'noTextOrPartialFallback':True}
++  receipt.update(extra)
++  return {'decision':'STOP','reason':reason,'review':None,'receipt':receipt}
++ if provider!='claude':return stop('NON_CLAUDE_PROVIDER')
++ if requested_model!='claude-opus-5-5':return stop('REQUESTED_MODEL_NOT_OPUS55')
++ if exit_code!=0:return stop('NON_ZERO_OR_MISSING_TERMINAL_EXIT')
++ if not input_pins_unchanged:return stop('INPUT_PINS_CHANGED')
++ assistant_models={}
++ for e in events:
++  if isinstance(e,dict) and e.get('type')=='assistant' and isinstance(e.get('message'),dict):
++   name=e['message'].get('model')
++   if isinstance(name,str) and name.startswith(('claude-','gemini-','muse-')):assistant_models[name]=assistant_models.get(name,0)+1
++ if not assistant_models:return stop('NO_ACTUAL_ASSISTANT_MODEL_FRAMES',assistantEnvelopeModelCounts=assistant_models)
++ if set(assistant_models)!={'claude-opus-5-5'}:return stop('MIXED_OR_WRONG_ACTUAL_ASSISTANT_MODEL',assistantEnvelopeModelCounts=assistant_models)
++ results=[e for e in events if isinstance(e,dict) and e.get('type')=='result']
++ if len(results)==0:return stop('NO_TERMINAL_RESULT_EVENT',assistantEnvelopeModelCounts=assistant_models)
++ if len(results)>1:return stop('MULTIPLE_TERMINAL_RESULT_EVENTS',terminalResultEvents=len(results),assistantEnvelopeModelCounts=assistant_models)
++ result=results[0]
++ if result.get('is_error') or result.get('subtype')!='success':return stop('FAILED_OR_NON_SUCCESS_TERMINAL_RESULT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ if 'structured_output' not in result:return stop('STRUCTURED_OUTPUT_ABSENT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ obj=result['structured_output']
++ if not isinstance(obj,dict):return stop('STRUCTURED_OUTPUT_NOT_DICT',terminalResultEvents=1,structuredOutputKind=type(obj).__name__,assistantEnvelopeModelCounts=assistant_models)
++ if obj.get('reviewToken')!=review_token:return stop('REVIEW_TOKEN_MISMATCH',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ try:jsonschema.validate(obj,schema)
++ except jsonschema.ValidationError as exc:return stop('SCHEMA_INVALID',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models,schemaValidator=str(exc.validator))
++ canonical=json.dumps(obj,sort_keys=True)
++ matched=None
++ if retained_whole_candidates is not None:
++  keys=[json.dumps(c,sort_keys=True) for c in retained_whole_candidates if isinstance(c,dict)]
++  if canonical not in keys:return stop('CANONICAL_OBJECT_NOT_IN_RETAINED',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++  matched=True
++ receipt={'policy':'terminal-structured-output-only','decision':'EXPORT','reason':'SINGLE_CANONICAL_STRUCTURED_OUTPUT','reviewToken':review_token,'requestedModel':requested_model,'exclusiveActualAssistantModel':'claude-opus-5-5','assistantEnvelopeModelCounts':assistant_models,'terminalResultEvents':1,'structuredOutputKind':'dict','terminalExitCode':exit_code,'inputPinsUnchanged':True,'provider':provider,'identityMatchedRetainedCandidate':bool(matched),'noTextOrPartialFallback':True,'selection':'result.structured_output on the single success result event only'}
++ return {'decision':'EXPORT','reason':'SINGLE_CANONICAL_STRUCTURED_OUTPUT','review':obj,'receipt':receipt}
+ R=Path(__file__).resolve().parent;D=R/'jobs'/sys.argv[1];T=json.loads((D/'TASK.json').read_text());W=Path(T['packet']);M=json.loads((W/'MANIFEST.json').read_text());schema=json.loads((D/'OUTPUT-SCHEMA.json').read_text());now=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat();sha=lambda b:hashlib.sha256(b).hexdigest()
+ def changed():return [p['path'] for p in M['files'] if sha((W/p['path']).read_bytes())!=p['sha256']]
+ assert not changed();prompt=(D/'PROMPT.md').read_text();assert len(prompt.encode())<125000
+ export_only='--export-only' in sys.argv
++terminal_review_export='--export-terminal-review' in sys.argv
++if terminal_review_export:export_only=True  # new flag implies export-only; a provider is never dispatched in this mode
++if terminal_review_export:
++ if (D/'TERMINAL-EXPORT.json').exists() or (D/'TERMINAL-REVIEW.json').exists():raise SystemExit('terminal export artifacts already present; refusing to overwrite')
++ rec=json.loads((D/'PROCESS.json').read_text())
++ events=[]
++ for line in (D/'provider.private.jsonl').read_text().splitlines():
++  s=line.strip()
++  if not s:continue
++  try:events.append(json.loads(s))
++  except ValueError:pass
++ retained=None
++ for name in ['AMBIGUOUS-COMPLETE-REVIEWS.json','WHOLE-SCHEMA-VALID-CANDIDATES.json','REVIEW.json']:
++  fp=D/name
++  if fp.exists():
++   loaded=json.loads(fp.read_text());retained=loaded if isinstance(loaded,list) else [loaded];break
++ outcome=select_terminal_structured_review(events,T['reviewToken'],schema,T['model'],rec.get('exitCode'),T['provider'],not changed(),retained)
++ receipt=dict(outcome['receipt']);receipt.update(id=T['id'],exportMode='terminal-structured-output-only',decidedAt=now(),legacyRecursiveWholeObjectCount=rec.get('completeTerminalReviews'),legacyReaderRecordPreserved=True,nativeAuthority=0,sourceGreenExecuted=False)
++ with (D/'TERMINAL-EXPORT.json').open('x') as f:f.write(json.dumps(receipt,indent=2)+'\n')
++ if outcome['decision']=='EXPORT':
++  with (D/'TERMINAL-REVIEW.json').open('x') as f:f.write(json.dumps(outcome['review'],indent=2)+'\n')
++ print(json.dumps(receipt),flush=True)
++ raise SystemExit(0 if outcome['decision']=='EXPORT' else 2)
+ if export_only:
+  rec=json.loads((D/'PROCESS.json').read_text());p=None
+  pid=rec.get('pid')
+@@ (remainder of the file — the recursive walk, diagnostics, and the normal
+@@ PROCESS.json / REVIEW.json / AMBIGUOUS-COMPLETE-REVIEWS.json write-out — is
+@@ unchanged from CURRENT-READER.py.)

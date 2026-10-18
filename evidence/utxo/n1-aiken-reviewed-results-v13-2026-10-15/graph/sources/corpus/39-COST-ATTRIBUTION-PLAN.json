@@ -1,0 +1,116 @@
+{
+  "format": "p3s1r1-w0-cost-attribution-plan/1",
+  "status": "FROZEN BEFORE ANY RUN (W0/W1 source author, claude-opus-5-5). Rules, tolerances and falsifiers below are fixed now and must not be altered after observing results. Any result outside them is reported as a falsified model or prediction, never refitted.",
+  "quantity": "Host CEK execution_units (mem, cpu) printed by `aiken check` v1.1.24+bacbeb3 under its default cost model at --trace-filter all --trace-level silent (the A1 setting). These are NOT ledger ExUnits, NOT the Preprod PlutusV3 cost model and NOT a measurement of the compiled validator wrapper (X1/PX04).",
+  "harnessDecodeVsLedger": "Stage D is aiken/cbor.deserialise over the fixture ScriptContext plus test_ctx field rebuilding and datum/redeemer downcasts. On chain the ledger passes the context as Data and the compiled wrapper does its own (different) decoding. D is subtracted to approximate validator logic; it is not an estimate of wrapper cost. A ledger-shaped X1 measurement stays a separate future step (PB-03) and must not be replaced by D.",
+  "contexts": ["P01 (fx.ctx_p01)", "P04 (fx.ctx_p04)", "P07.0 (fx.ctx_p07_0)", "P07.1 (fx.ctx_p07_1)"],
+  "benchShape": {
+    "rule": "Each bench decodes once, builds only the stages in its closure (EXPECTED-COMPONENTS.json), evaluates one subject once, and returns a Bool. No component bench builds diag.settle_facts, a named list or another component.",
+    "stageClosures": {
+      "D": ["D"],
+      "B": ["D", "B"],
+      "SD": ["D", "B", "SD"],
+      "E": ["D", "B", "E"],
+      "S": ["D", "B", "E", "S"],
+      "C": ["D", "B", "C"],
+      "A": ["D", "B", "A"],
+      "SC": ["D", "B", "E", "SC"],
+      "M": ["D", "B", "E", "A", "SC", "M"],
+      "ST": ["D", "B", "SD", "E", "C", "A", "SC", "M", "ST"],
+      "N": ["D", "B", "SD", "E", "C", "A", "SC", "M", "ST", "S", "N"]
+    }
+  },
+  "definitions": {
+    "bench(x)": "observed mem (and separately cpu) of test w0_<ctx>_<x>",
+    "stageMarginals": {
+      "D": "bench(decode)",
+      "B": "bench(stage_base) - bench(decode)",
+      "SD": "bench(stage_shape_digest) - bench(stage_base)",
+      "E": "bench(stage_effects) - bench(stage_base)",
+      "S": "bench(stage_snapshot) - bench(stage_effects)",
+      "C": "bench(stage_claim_input) - bench(stage_base)",
+      "A": "bench(stage_signers) - bench(stage_base)",
+      "SC": "bench(stage_scenario) - bench(stage_effects)",
+      "M": "bench(stage_messages) - bench(stage_scenario) - A",
+      "ST": "bench(stage_statement) - bench(stage_messages) - SD - C",
+      "N": "bench(stage_next) - bench(stage_statement) - S"
+    },
+    "componentMarginals": {
+      "rule": "k(x) = bench(x) - bench(prefix(x)), where prefix(x) is the stage bench whose closure equals x's closure",
+      "prefix": {
+        "custody_pre": "stage_base", "claim_script": "stage_base", "shape_structure": "stage_base", "shape_cells": "stage_base",
+        "intent_window": "stage_base", "own_mint": "stage_base", "topup": "stage_base", "reserve_floor": "stage_base", "global_outputs": "stage_base",
+        "shape_digest": "stage_shape_digest",
+        "recomputed": "stage_effects", "bounds": "stage_effects", "authority_shape": "stage_effects", "payouts": "stage_effects",
+        "claim": "stage_claim_input",
+        "intent_effects": "stage_snapshot",
+        "intent_native": "stage_signers",
+        "statement_digest": "stage_statement",
+        "continuation": "stage_next"
+      }
+    }
+  },
+  "additiveModel": {
+    "statement": "bench(gate) = D + B + SD + E + S + C + A + SC + M + ST + N + sum over the 19 components of k(x) + r, where r is the residual.",
+    "whyNotExactSum": [
+      "Shared setup: every component bench repeats D and its stage closure; only marginals (differences) are summed, so shared work counts once.",
+      "Cached work: production builds each stage once and passes it to every component that needs it; the model counts each stage marginal once for the same reason.",
+      "Strict vs short-circuit: on these POSITIVE contexts every component is True, so the production gate evaluates every stage and every component (no short-circuit saving applies). Internal short-circuits inside a component (and/list.all) are part of k(x) and identical in bench and gate.",
+      "Overhead not in any marginal: the gate's if/and chain, Some/list.map of signature checks, stage record construction and field access patterns that differ from the bench helpers, the bench forcing predicates (W0-AUTHOR, a few thousand mem each) and per-test compiler/optimizer differences."
+    ],
+    "tolerance": {
+      "mem": "|r| <= max(0.010 * (bench(gate) - D), 300000)",
+      "cpu": "|r| <= max(0.010 * (bench(gate).cpu - D.cpu), 100000000)",
+      "perMarginalSanity": "every stage and component marginal >= -50000 mem and >= -20000000 cpu"
+    },
+    "falsifiers": [
+      "Residual outside tolerance for any context: the additive model is FALSIFIED for that context. Report bench values and r; do not change tolerances, add terms or drop benches afterwards.",
+      "A marginal below the sanity floor: the bench shape is INVALID for that marginal (likely optimizer elimination or reordering); report it as such and exclude it from W2 attribution, without substitution.",
+      "Any W0 test failing or halting: its truth expectation (EXPECTED-COMPONENTS.json) is FAILED; no cost from that test is used."
+    ]
+  },
+  "derivedReports": {
+    "logicExcludingHarnessDecode": "bench(gate) - D per context (host CEK; still includes no wrapper decode and no signature verification).",
+    "p07TwoThreadHostEstimate": "(bench(gate,P07.0) - D(P07.0)) + (bench(gate,P07.1) - D(P07.1)), labelled a host estimate of S2 logic for one atomic two-thread transaction without signatures, wrapper decode or the C2 release; not a ledger figure.",
+    "shares": "Each stage marginal and component marginal as a fraction of bench(gate) - D, per context.",
+    "diagOverhead": "bench(diag_gate) - bench(gate): cost of named labels, the parts list, the facts record and evaluating all components without the gate's ordering."
+  },
+  "w1DeltaObservations": {
+    "rule": "Same tool, version, flags and fixture bytes; the R1 test bodies are unchanged except for diag call targets, so the per-test difference attributes the W1 change. The R1 values come from the adopted A1 run (root A1-TEST-RESULTS.json sha 925570330ad7c92c3ebda3169a24fda666aae3f10eb5a8da37f9cdefbca4b1d5, copied, not recomputed).",
+    "pairs": [
+      {"test": "p01_r1_facts_match_fixtures", "r1Mem": 74140029, "r1Cpu": 20631803584},
+      {"test": "p04_r1_facts_match_fixtures", "r1Mem": 93442414, "r1Cpu": 26075610531},
+      {"test": "p01_r1_accept", "r1Mem": 148331133, "r1Cpu": 40953792702},
+      {"test": "p04_r1_accept", "r1Mem": 186935295, "r1Cpu": 51775518046},
+      {"test": "p07_0_r1_accept", "r1Mem": 188575471, "r1Cpu": 51436792952},
+      {"test": "p07_1_r1_accept", "r1Mem": 208714819, "r1Cpu": 56964090172},
+      {"test": "p07_0_r1_full_refuses_placeholder_signatures", "r1Mem": 94250082, "r1Cpu": 25746942873},
+      {"test": "sequential_chain_reserve_r1", "r1Mem": 28272972, "r1Cpu": 7492758878, "role": "control: decode-only test whose code path W1 does not touch; a change here indicates a harness/tool difference and invalidates all W1 delta attributions"}
+    ],
+    "directionalPredictions": [
+      {"id": "PD-1", "prediction": "every *_r1_accept test above is lower than R1 (its second pass is now the lean production gate and messages share signer-independent JSON)", "confidence": "moderate", "falsifier": "any listed accept test >= its R1 value"},
+      {"id": "PD-2", "prediction": "p01/p04 facts_match tests are lower than R1 (shared intent fragments render once instead of once per signer)", "confidence": "low: stage-record construction and field access add cost that may cancel the saving", "falsifier": "either facts_match test >= its R1 value"},
+      {"id": "PD-3", "prediction": "sequential_chain_reserve_r1 is exactly equal to R1 (28,272,972 / 7,492,758,878)", "confidence": "high", "falsifier": "any difference"}
+    ],
+    "notPredicted": "No numeric W1 saving is predicted. No claim that any value fits a ledger limit."
+  },
+  "w2DecisionInputs": {
+    "status": "Inputs for later consequential proposals only (W2, W2b, W3 need the two-vote rule and a fresh security review). Nothing here activates them.",
+    "readings": [
+      "W2 (typed-intent digest) is supported only if SC + M is the largest share of bench(gate) - D in at least P01 and P04.",
+      "W2b (move recomputation into the proved relation) is supported only if E + S + k(recomputed) + k(intent_effects) + k(payouts) + ST outweigh SC + M; it also needs the K2 relation work and a proof that the relation includes exactly those conditions.",
+      "W3 (withdraw-zero coordinator) is indicated for P07 if per-thread repeated work (k(global_outputs), C, k(claim), D-independent base work) times thread count is material, independently of W2."
+    ],
+    "limit": "None of these readings is a ledger result. Ledger fit still needs X1 under the pinned Preprod PlutusV3 cost model (PB-03, PB-04)."
+  },
+  "sizeObservations": {
+    "rule": "From the A2-style build of this candidate (EXECUTION-PROPOSAL.json): compiled bytes per validator, applied S2 hash and bytes, and a search of each compiledCode hex for the hex of the R1 gate labels.",
+    "predictions": [
+      {"id": "PS-1", "prediction": "no R1 gate label (own_token, single_token, burned, claimant_signs, spent_or_expired, custody_pre, shape_structure, shape_cells, intent_effects, intent_native, intent_window, authority_shape, statement_digest, global_outputs, reserve_owner_auth, rows_zero, duties_zero, cont_ref_script, seed_spent, chain_zero, no_ref_script) occurs in the C2 or S2 compiledCode", "confidence": "high", "falsifier": "any occurrence"},
+      {"id": "PS-2", "prediction": "C2 compiled bytes < 2,911", "confidence": "moderate", "falsifier": ">= 2,911"},
+      {"id": "PS-3", "prediction": "S2 unapplied compiled bytes < 30,728", "confidence": "low: stage records add field-access code", "falsifier": ">= 30,728"},
+      {"id": "PS-4", "prediction": "S2 applied compiled bytes remain > 16,384 (PB-01 NOT closed by W1)", "confidence": "high", "falsifier": "<= 16,384, which would still need M-SZ deploy-transaction measurement before any fit statement"}
+    ]
+  },
+  "unmeasuredHere": ["C2 Groth16 issue cost (needs K2 VK/proof)", "signature verification cost with valid signatures (FX1)", "compiled wrapper decode (X1)", "Preprod cost model", "per-transaction totals including the C2 release", "deploy transaction sizes"]
+}

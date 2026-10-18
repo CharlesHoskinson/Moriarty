@@ -1,0 +1,71 @@
+{
+ "format": "c2-builder-api/1",
+ "status": "AUTHOR_PROPOSED_SOURCE_ONLY; not implemented, run, reviewed or adopted",
+ "author": "claude-opus-5-5 HIGH, tools off",
+ "contract": "C2-BUILDER-CONTRACT.md CB01-CB12",
+ "dependency": {
+  "consumer": "c2_issue_artifacts.prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) per CI01-CI12; AUTHOR-PROPOSED, ordinary RED observed, implementation pending; consumed unchanged",
+  "assumedResult": "exact 12-key CI section 4 dict; labels an exact dict of 8 pairs; *Hex values lowercase",
+  "onIncompatibility": "STOP; adapt neither the consumer nor the builder"
+ },
+ "module": {
+  "file": "build_k10_inputs_r3.py",
+  "beside": "build_k10_inputs.py, 24480 B, sha256 6c1cde7f971a4c3ade25a3089f22f557fe2290b3b1266c4c18b6b4b7ce918d00, unchanged",
+  "imports": ["hashlib", "json", "os", "re", "stat", "sys", "build_k10_inputs as legacy", "c2_issue_artifacts", "host_codec"],
+  "sysPath": "never mutated by r3; the importer places the dedicated directory first"
+ },
+ "functions": {
+  "parse_expiry(text) -> int": "ARGV; Opus",
+  "read_public_file(path, cap) -> bytes": "READ; Opus",
+  "parse_public_json(raw, cap) -> dict": "JSON; Opus",
+  "check_setup_link(export, setup_raw) -> str": "LINK; Opus",
+  "legacy_env_from_host(env_data) -> legacy Constr": "BRIDGE; Opus",
+  "plan_outputs(b9_raw, export_raw, setup_raw, expiry) -> dict[str, bytes]": "ARGV, JSON(export 1048576), JSON(setup 65536), LINK, POLICY, CONSUMER, BRIDGE, RENDER. Opus owns the stage order and the BRIDGE block; Sol owns the case table, legacy render calls and manifest assembly",
+  "main(argv) -> int": "ARGV, OUTDIR, READ, plan, WRITE, REREAD. Sol wires; Opus owns the OUTDIR/READ policy and the exclusive writer"
+ },
+ "argv": ["prog", "b9-applied.json", "proof-export.json", "setup-record.json", "expiry-ms: full ASCII match 0|[1-9][0-9]{0,19}, <= 2**64-1", "output-dir: must not lexist, parent is an existing dir, basename [a-z0-9][a-z0-9._-]{0,99}"],
+ "caps": {"b9Bytes": 16777216, "exportBytes": 1048576, "setupBytes": 65536, "jsonDepth": 16, "jsonIntChars": 20},
+ "refusal": {
+  "form": "ValueError starting 'C2B-<STAGE>:'; main prints exactly one stderr line, no stdout, returns 2",
+  "stages": ["ARGV", "OUTDIR", "READ", "JSON", "LINK", "POLICY", "CONSUMER", "BRIDGE", "WRITE", "REREAD"],
+  "consumerWrap": "C2B-CONSUMER: <original C2I message>",
+  "unexpected": "non-ValueError environmental errors propagate"
+ },
+ "bridge": {
+  "disposition": "reuse legacy uplc_term, script_context, value_map, cbor_encode, flip_first_bit and extract_compiled unchanged; no general host-Data-to-UPLC renderer",
+  "envV2": "exact host shape -> legacy Constr; legacy cbor_encode == envCborHex bytes; blake2b256 == envelopeTokenNameHex",
+  "value": "legacy cbor_encode(value_map(policy, token, 1)) == mintValueCborHex (no-ada, F01)",
+  "issue": "exact leaves 488/192 equal to the setup VK and export proof bytes; host encode_data(issueData) == issueCborHex; host-only, because the legacy encoder fails closed above 64 bytes",
+  "t7": "legacy env CBOR == host encode_data(build_env_data(...flipped vk digest...))"
+ },
+ "outputs": {
+  "files": ["script.hex", "contexts/K10-T1-positive-genuine-issue.uplc.txt", "contexts/K10-T5-quantity-two-reject.uplc.txt", "contexts/K10-T6-token-name-bitflip-reject.uplc.txt", "contexts/K10-T7-vk-digest-bitflip-reject.uplc.txt", "manifest.json"],
+  "encoding": "script.hex = code_hex plus newline; context = '(con data (' + legacy.uplc_term(script_context) + '))' plus newline; manifest = json.dumps(indent=2, sort_keys=True) plus newline; UTF-8",
+  "writeOrder": "mkdir outdir and contexts (exclusive); script.hex; contexts; re-read inputs; manifest.json last",
+  "fileOpen": "O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, mode 0644",
+  "stdout": "one JSON line {output: argv[5], cases: 4}"
+ },
+ "manifest": {
+  "format": "cardano-k2-k10-public-inputs/2",
+  "keptFromR2": "auditSourcePins, compiledValidatorTitle, policyIdHex, positiveEnvelopeCborHex, positiveTokenNameHex, proofBytes, scriptCompiledBytes, scriptHashAlgorithm, scriptHashClaimedHex, scriptHashClassification, scriptHashIndependentlyRecomputedHex, scriptHashPreimage, scriptHexFile, scriptInnerFlatBytes, statementDigestHex, vkBytes, vkDigestHex, cases (R2 per-case keys); R2 strings and semantics are copied verbatim",
+  "new": "builderRevision build_k10_inputs_r3; consumerFormat; consumerLabels (verbatim); builderLabels and limitations exactly as in test_c2_builder.py; flags (all false); expiry; claimantVkhHex; settleOutref {transactionIdHex, outputIndex}; issueCborHex; mintValueCborHex; setupRecordSha256 (file-checked); inputs [{role, sha256, bytes}] for b9-applied, proof-export, setup-record; coverageGaps T2-T4 status NOT_GENERATED_HISTORICAL_FIXTURE_ONLY"
+ },
+ "cases": {"T1": "consumer env, token, qty 1", "T5": "qty 2", "T6": "token first bit flipped", "T7": "env vk digest first bit flipped, token recomputed", "T2-T4": "coverage gap; historical 7-case output preserved; no synthetic proofs"},
+ "ownership": {
+  "opusSecurity": "argv/expiry, bounded no-follow read, strict JSON, file-byte link, policy pin gate, EnvV2 bridge and every equality check, stage order, exclusive writer",
+  "solMechanical": "main dispatch, case table, legacy render calls, manifest field copy, stdout/stderr reporting",
+  "review": "fresh non-author Opus on the actual combined code and results; fresh Muse on the Sol glue; same-provider independence is context only"
+ },
+ "prerequisites": ["c2_issue_artifacts.py implemented, with its own ordinary run observed and its bytes/sha recorded by root", "inputs/b9-applied.json staged with sha 10baa1794e0ae286cd780978408552fc0e994426367c2b92117e2c4b46ad1d36, byte count recorded", "inputs/HIST-09-positive-script-context.txt equal to the archived 09 bytes", "K6 fixtures 5800 B and 3926 B, host 23252 B and legacy 24480 B, as pinned in the test", "absent required public file: BLOCKED, never synthesized"],
+ "envelope": {
+  "layout": "isolated/ (555, files 444): test_c2_builder.py, build_k10_inputs.py, host_codec.py, c2_issue_artifacts.py, inputs/ (555); r3 absent at RED. scratch/ beside it (700, empty)",
+  "command": "python3 -I -B isolated/test_c2_builder.py, once, no retry, after root inspects all sources and effects",
+  "limits": "timeout 20 s, CPU 20 s, address space 512 MiB, fsize 2 MiB, core 0, PATH/LANG/PYTHONDONTWRITEBYTECODE only, no network, total <= 1200 s",
+  "pins": "before/after sha256 and bytes of every isolated file unchanged",
+  "scratchRosterRED": "empty",
+  "scratchRosterGREEN": "out-k6/ (contexts/ + 6 files), pre-existing/ (empty), link-out -> pre-existing, oversize.json (1048577 B), input-link.json -> isolated/inputs/K6-PUBLIC-PROOF.json",
+  "distinctFrom": "the CI pure envelope; this one adds a writable scratch"
+ },
+ "red": "test_01 passes; test_02-test_10 fail with 'missing implementation: build_k10_inputs_r3.py'; 0 errors. Any setUpModule error, pin mismatch, ImportError or test_01 failure: STOP, not RED",
+ "flags": {"native": false, "operator": false, "wallet": false, "prover": false, "vm": false, "deploy": false, "builderImplemented": false, "previewTested": false, "preprodTested": false}
+}

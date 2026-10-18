@@ -1,0 +1,72 @@
+[
+  {
+    "evidence": "Luna block in R2 graph.json lines 21680-21901 lists exactly luna_n10_n9, luna_financial_29, luna_dual_native_verify, luna_pk_decode_vk, luna_scope_open, luna_k6_adoption, luna_k6_trust_limits, luna_public_pairing_open, luna_public_record, luna_aiken_boundary, luna_export_effects, luna_k7_capsule, luna_k6_k7_companion, luna_k6_capsule, luna_k6_resources, luna_invoice_proof, all EXTRACTED, community 65. Link tail lines 83022-83276 lists exactly 17 luna_k6k7_edge_* records. fragment_updates tail (lines 83511-83536) records base 1424/3687, added 16/17, EXTRACTED 16/17, navigation_only true.",
+    "id": "CC-01-counts",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "16 new nodes / 17 new links confirmed in actual R2 graph.json records (not assumed from report text)."
+  },
+  {
+    "evidence": "R1 graph.json luna_k7_capsule source_location is '#/publicationRelativePath' (R1 Luna block line 21836); R2 graph.json same node is '#/entrypoint' (line 21836) with identical claim text. POINTER-INTAKE-R1.json records the R1 bad pointer; POINTER-INTAKE-R2.json lines 8-15 and READ-COVERAGE.json repair block lines 97-117 record the single-field repair. K7 PUBLICATION.json has entrypoint at line 6 and no publicationRelativePath field (that field exists in K6 PUBLICATION.json line 7), so the new pointer resolves.",
+    "id": "CC-02-r2-repair",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "R2 one-field repair verified; R1 failure preserved, claim unchanged."
+  },
+  {
+    "evidence": "POINTER-INTAKE-R2.json resolvedPointers contains 33 entries (16 nodes + 17 edges), all resolvesAsSourceLocator true; only luna_k6k7_edge_014 has exactUrlAnchorCase false. Graph.json edge_014 source_location is '#Scope-limitations-and-first-blocked-boundary' (line 83030); K7 reviews/actual/REPORT.md line 15 heading is '## Scope, limitations, and first blocked boundary', which case-folds to that anchor but GitHub's fragment is lowercase '#scope-limitations-and-first-blocked-boundary'.",
+    "id": "CC-03-anchor-case",
+    "requiredFix": "Optional, non-blocking: if Luna later wants exact GitHub fragments, lowercase edge_014 source_location to '#scope-limitations-and-first-blocked-boundary'. No change required for navigationPublicationReady.",
+    "severity": "minor",
+    "summary": "33/33 pointers resolve as locators; one Markdown anchor differs only by case and is not a rendered URL."
+  },
+  {
+    "evidence": "SOURCE-MANIFEST.json lists 12 files at source_commit 8360447be4b6eeb737a670baf98a78114b7e63f2; each sha256 matches INPUT-INDEX.json (e.g. K6 README 88c39a8d\u2026, K6 adoption 83a6e4fd\u2026, d092 report d0926597\u2026, g6 81b1fe0d\u2026, proof 93019863\u2026, K7 setup 86b588fe\u2026, EXPORT af066b34\u2026). fragment_updates records source_commit 8360447\u2026 and source_path_bases 'inherited unchanged'; SOURCE-MANIFEST source_path_bases_changed false.",
+    "id": "CC-04-pins-commit",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "All 12 source pins exact; current 8360447 commit consistently recorded."
+  },
+  {
+    "evidence": "luna_invoice_proof cites only invoice-partial.proof.json #/action ('partial'); honesty is established by K6-ACTUAL-ADOPTION.json acceptedObservations (honestCurrentCompiledRelationProofProduced true) plus freshActualReviewSha256 d0926597\u2026 whose REPORT.md verdict closes nativeRoundtripPrerequisiteClosed, and edge_002 adopts_result_for links adoption to the proof. luna_dual_native_verify cites #/acceptedObservations/nativeSourceRecompiledVerificationAccepted; the export-only twin field nativeExportOnlyVerificationAccepted is also true in the same object, so the dual claim is supported by the cited file though not by the single pointer alone.",
+    "id": "CC-05-honesty-dual",
+    "requiredFix": "",
+    "severity": "minor",
+    "summary": "Proof-honesty and dual-verify claims are supported by adoption + d092 review, not by the single cited JSON fields alone; no overclaim once links are followed."
+  },
+  {
+    "evidence": "g6.json: descriptorGuardObserved true, n10DescriptorField abi2ShapeBytesHex, n9DescriptorGuardObserved false, N9 reason records UnknownAction preceding require_same. luna_n10_n9 claim matches. g6 claims slotsChecked 29, pairingVerifiedByThisGate false, nativePairingRequiredSeparately true; luna_financial_29 claim lists the financial values and GRAPH_REPORT.md line 7 correctly calls it a separate byte-gate observation. K6 adoption resourceQualification: authDefinedAggregateChargeCpu 19, actualTransitiveNativeCpu 'UNMEASURED; not19, notP6charge1, notlauncherCHILDREN0.382541'; luna_k6_resources claim matches. EXPORT-RECEIPT.json effects: protectedRecordReads 1, pkByteReads/nativeCalls/rngCalls/subprocessCalls/retries 0; K7 adoption countsQualification states these are source+terminal stop-points, not independent instrumentation, and luna_export_effects only quotes the receipt.",
+    "id": "CC-06-qualifications",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "N10-observed vs N9-not, 29-slot financial scope, nominal CPU 19 vs unmeasured transitive CPU, and K7 effect counts are all accurately qualified in graph claims."
+  },
+  {
+    "evidence": "K6 adoption limitations: class0ControllerCanForge true, consumerCanCheckVkToMatrixLink false; proof.json premises state setup controller could forge and context is caller-declared; K7 adoption preserved field repeats Class0forgeable/contextfabricated/VKmatrixlinkfalse. Graph nodes luna_k6_trust_limits and luna_public_pairing_open (publicPairingReexecutionObserved false) carry these limits; no new node asserts pairing, matrix-link, or ledger truth. Setup record verifyingKeyHex is 488-byte public VK; K7 REPORT.md confirms no proving-key payload, only public PK metadata; graph claims no PK export.",
+    "id": "CC-07-trust-limits",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "Forgeable Class-0, fabricated context, VK-to-matrix link false, and 488-byte public-VK-only (no PK) limits preserved; no false VK-matrix link."
+  },
+  {
+    "evidence": "graph.html line 6 loads vis-network 9.1.6 from unpkg.com with SRI; line 66 stats read '1440 nodes \u00b7 3704 edges \u00b7 66 communities' (=1424+16, 3687+17); LEGEND cid 65 'Current Rust Groth16 result and public VK boundary' count 16. However nodesDS mapping (lines 79-84) carries only id/label/color/size/font/title/community/source_file/file_type/degree \u2014 no source_location, claim, evidence_sha256 or node_type. README.md line 11 documents R1 HTML sha256 == R2 HTML sha256 (1802b9d65\u2026), consistent with the citation field not being embedded in HTML.",
+    "id": "CC-08-html",
+    "requiredFix": "",
+    "severity": "minor",
+    "summary": "HTML embeds navigation labels/counts only; it does not carry the R2 citation JSON property, so R1==R2 HTML bytes are expected and disclosed. CDN dependency disclosed in README and GRAPH_REPORT."
+  },
+  {
+    "evidence": "READ-COVERAGE.json lines 93-95: own_record_source_file and source_file are 'READ-COVERAGE.json' with source_location '#', resolving directly under the R2 root with no 'observations/' prefix. Inherited base metadata still contains historical references such as observations/first-setup-git-source-record.json in the k5e correction (graph.json line 83400) and fragment_metadata fourwayRunState 'completed with test and prediction failures; unadopted' \u2014 these are inherited payloads that must stay unchanged and do not contradict the new community-65 nodes, which make no global run-status claim.",
+    "id": "CC-09-coverage-root",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "READ-COVERAGE own relative root resolves; inherited historical/unrun statuses retained without misleading global contradiction from new nodes."
+  },
+  {
+    "evidence": "K6 README.md line 7 states the 3926-byte setup record and 488-byte VK are not published in that capsule; K7 PUBLICATION.json proofCompanion (line 9) links to the K6 proof and K7 adoption closes only publicRecordExportPrerequisiteClosed. GRAPH_REPORT.md line 11 states K7 'closes the public verification-input availability gap. It does not record an independent public pairing re-execution.' Graphify version is recorded as 0.9.91 (graph fragment_metadata, README) with no 'latest' claim; token accounting recorded unknown/unavailable in README, GRAPH_REPORT and fragment metadata. No Luna node performs adoption; edges use context 'source-navigation' and fragment navigation_only true.",
+    "id": "CC-10-k6k7-version",
+    "requiredFix": "",
+    "severity": "info",
+    "summary": "K6 historical no-VK-in-that-capsule vs later K7 companion is clear; Graphify 0.9.91 is observed-not-latest; no source-graph adoption is implied by mapping."
+  }
+]

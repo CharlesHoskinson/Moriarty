@@ -1,0 +1,1349 @@
+Fresh independent Claude Opus5 medium requirements review ONLY task1.3 accountingproducer+actualCLI source. Full revised49k spec below addresses prior O13-1..3/5. Observercontract unchanged and alreadybothapproved, sourceimplementationrunningseparately; reviewproducer scope now, do not revoke unchangedobserver unnecessarily. Exactcontext/identity/launch, parentobservations, preflightprimarytransaction, continuouswalletlock, durablebeforemasterintents, replayrollback, exactDecimal arithmetic all specified. Actualresourcegrant/sourcecompletion/instanceadoption/livefunds notyetavailable; no fabricated permission. Review sufficient stableimplementationcontract; finite sourcework allowedwithoutconcreteinstance. Return conciseJSON reviewer/model/effort candidateSha256 verdict APPROVED/CHANGES_REQUIRED mayBeginProducer approvedScope findings with concrete gaps only. Scope later executor consumes definedinterface; its source pending. No toolusage.
+CANDIDATE SHA256 3ae3eaa0542a2c563e11cd936de3798c982d038ccf7472f0404a9c58c5aa44f5
+MANIFEST
+{
+  "head": "89b0c7b9809b501c091223c78f6dd2df8581936c",
+  "scope": "Task1.3 producer requirements revision, observer unchanged previouslyapproved; no concretegrant/liveadoption",
+  "files": [
+    {
+      "path": "openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md",
+      "sha256": "429391810e73c3bb40a93253307a0de0ed65f71064049b1744ce8da8070c54dd"
+    },
+    {
+      "path": "openspec/changes/afk-live-financial-execution/specs/afk-live-financial-execution/spec.md",
+      "sha256": "9e6d6de6b73a329a571209442cb0cfba0b57bc2d33b2c171ba7f68adab8c08ba"
+    },
+    {
+      "path": "openspec/changes/afk-live-financial-execution/tasks.md",
+      "sha256": "3c5ea4aaf9103771fdc143388e2dfc070b29e53574ec3a315b290822a5b3a4a0"
+    },
+    {
+      "path": "openspec/changes/afk-live-financial-execution/proposal.md",
+      "sha256": "145eb2842fb56af7847f3271c96c151a938ae12b2a4bdeeb0c9ad775a4b7ece0"
+    },
+    {
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/records.py",
+      "sha256": "fc060de774f74e3209939fb12a3ab1093793946463d80b0cafcdcb93dd6ff093"
+    },
+    {
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+      "sha256": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a"
+    },
+    {
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+      "sha256": "7588e0fef3fd2c778e0bc42987cdb5207ae41aabd67886ff0afbebbb6edce947"
+    },
+    {
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+      "sha256": "a4a7d05877210402347f833037a03ce7db01d2cbd5a284526149a7a48c00329b"
+    }
+  ]
+}
+
+FULL FILE openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md
+## ADDED Requirements
+
+### Requirement: Item 1.3 concrete source producer and existing caller
+After both fresh specification approvals, Grok SHALL implement import-safe `plugins/moriarty-dev/scripts/moriarty_dev/accounting.py`, called by existing `cli.py::cmd_run` for the exact `finalized-financial-settlement` profile. It SHALL provide preparation, current-projection validation and one-shot launch-claim operations within existing runner/store/record modules. It SHALL not create a new service, scheduler or alternate launcher. Tests SHALL use explicit isolated master, budget lock, projection, admission records and SQLite files including WAL/SHM; live stores/locks/registries and identity adoption remain untouched.
+
+Input SHALL be the selected registered action, frozen hash-bound runner plan, canonical-store anchor and history reconciliation, contained current accounting reference, actual master path, exact reviewed resource amendment and both vote references, and current public observation references, discovered only through the authenticated resource-context requirement below. Output SHALL be either a named denial with no financial child, or a durable debit/current projection and a single matching plugin/master launch claim consumed by the existing guarded run. Missing or malformed authority/identity/projection input SHALL reject; tests may supply anchored fixture arguments, while live authority must come only from separately reviewed contained admission evidence. The separately declared read-only preflight allowance below is the sole exception allowing observation work before funding evidence exists.
+
+The existing runner-plan validation SHALL be factored so preflight can verify exact executable/launcher/argv/action/candidate bytes before a debit exists. The single actual caller order is specified below; no final-admission-before-debit cycle or skip of final admission is allowed. Changed source after freeze needs both new source reviews and new current admission.
+
+#### Scenario: Real integrated source path
+- **WHEN** isolated real producer/runner/CLI code receives complete current fixture authority, accounting and both claim owners
+- **THEN** it commits exactly one debit before one stubbed child call through the actual caller, with independently recomputable output and no live writes.
+
+#### Scenario: Missing instance evidence
+- **WHEN** a concrete grant, canonical anchor/history, observation or final executor is absent
+- **THEN** the source emits a named unavailable result before financial debit/launch; only the expressly authorized read-only preflight below may obtain a missing funding observation. Deterministic source repair/testing may proceed without inventing instance values.
+
+### Requirement: Authenticated context discovery and closed evidence payloads
+Within the same hash-bound resource amendment's existing `resources` object, `executionContext` SHALL contain exactly `path,sha256` for a contained immutable file. Its digest SHALL be committed by the immutable projection through a new required field `executionContextSha256`, so both projection resource votes also approve this context. The producer SHALL reject missing/disagreeing context digests; no argument, environment variable, CLI override or free-standing I2/SP01 reconciliation file supplies authority. `cli.py::cmd_run` SHALL resolve this context before constructing its live history reader and pass the positively validated anchor/history into existing store consumers. Ordinary non-live initialization/status/review SHALL not acquire authority or write tokens through this route.
+
+The context SHALL contain exactly `schema,repository,gitCommonDir,store,history,observer,correspondencePath,expected,observerExecution`, with schema `moriarty.i2-execution-context/1`. Repository and gitCommonDir SHALL be canonical absolute identities for the authorized checkout/common directory, checked by the existing repository resolver. Store SHALL contain exactly `path,identityToken,inventory`, where path equals the canonical resolver's SQLite path and inventory is a contained immutable `{path,sha256}` reference to the pre-adoption inventory. The persisted in-store token SHALL exactly match identityToken. This declares a later reviewed adoption target; a missing token is unavailable, not permission to create it. Linked worktrees must resolve to the same authorized common store.
+
+History SHALL be a contained immutable `{path,sha256}` reference. Its closed payload SHALL contain exactly `schema,repositoryKeys,requirement,capability,receipts,outcomes,eventBindings`, schema `moriarty.i2-retained-history/1`. RepositoryKeys is the exact reviewed list of historical checkout/common-directory keys to include, and requirement/capability are the current selected action's exact lineage. Receipts is a list of contained immutable `{path,sha256}` references to actual retained loan/related-operation outcomes. Each outcomes entry SHALL contain exactly `receiptSha256,defectClass,outcome,resolvedBy`, where outcome is exactly `failed`, `unknown` or `verified-success`, and resolvedBy is a list of explicit same-defect resolution receipt digests (empty means unresolved). Each eventBindings entry SHALL contain exactly `repository,requirement,capability,eventIds`, identifying already reconciled canonical-store rows. Verify those rows and receipt contents; unknown outcomes are not zero failures. Every referenced failed/unknown outcome must remain represented in history until an explicit applicable resolution is verified. Empty history/receipt/event mappings or mismatched checkout lineage deny the live action. Actual live reconciliation and token adoption are separately reviewed operations, not automatic initialization.
+
+Observer SHALL contain exactly `entryPath,entrySha256,receiptPath,maxAgeSeconds,preflightSeconds,preflightAttempts,lockPath`. Entry identifies the pinned contained observer source in the candidate; maxAgeSeconds SHALL be 120, preflightSeconds SHALL be 125 (90-second observer + 5-second stop grace + 30-second launch/retention allowance), and preflightAttempts SHALL be 1. ReceiptPath and correspondencePath SHALL be contained mutable evidence destinations outside source inputs/binding inputs/runner plan; lockPath SHALL be the explicitly approved existing exclusive wallet-use lock destination. Acquisition must fail on active/unknown ownership; no lock stealing or identity reset. The immutable context pins these destinations and bounds, not future observation contents.
+
+The mutable observer receipt SHALL contain exactly `schema,allocationId,preflightChargeId,sourceSha256,observedAt,syncTime,network,roleIdentity,amounts,unitNames,finalityRef,pendingUseDispositionSha256,canonicalInputsUnchanged,childrenStopped`; schema `moriarty.i2-funding-observation/1`. Amounts SHALL be exact nonnegative integer decimal strings by selected asset identity, and unitNames an equal-key map of explicit units. Bind allocation/source/role/network to the context and actual final plan; validate timestamps, independent pending-use receipt and both true unchanged/stop facts against retained observer evidence rather than trust caller-written booleans. The producer SHALL create final correspondence only from its own successful bounded observer result, rejecting a preexisting arbitrary receipt.
+
+ObservedAt and syncTime SHALL be UTC ISO-8601 strings; network SHALL contain exactly `networkId,genesisHash,protocolVersion` and roleIdentity exactly `publicKey,address`, all matched to the final plan and genuine observations. FinalityRef SHALL be a contained immutable `{path,sha256}` reference to the actual public state/finality evidence. PendingUseDispositionSha256 SHALL identify one of the exact reviewed history receipts, not an unrelated caller digest. CanonicalInputsUnchanged and childrenStopped SHALL be booleans, checked against the actual bounded observer's retained execution/containment evidence.
+
+The mutable correspondence SHALL contain exactly `schema,allocationId,executionContextSha256,masterSha256,projectionSha256,observationSha256,preflightChargeId,runtimeChargeId,reservationId`, schema `moriarty.i2-current-correspondence/1`. RuntimeChargeId/reservationId may be null before the financial debit/reservation. Under the existing master lock, the consumer SHALL verify every current digest, exact ownership and allowed transition; the final live check requires matching non-null runtime IDs. Observation refresh updates only mutable receipts/correspondence, not immutable context, runner digest, binding or a prior charge.
+
+#### Scenario: Actual CLI discovers an anchored valid fixture
+- **WHEN** isolated real cmd_run follows binding → amendment → projection/context/votes and validates the closed canonical store/history records and matching mutable correspondence
+- **THEN** it supplies that exact anchor and reconciled lineage to the real history reader and proceeds to the remaining guarded checks, rather than always returning unavailable or accepting an override.
+
+#### Scenario: Unbound context or seeded evidence
+- **WHEN** an anchor/history/observer receipt is supplied outside the committed context, a resource vote binds another context, canonical-store event mapping is absent, a receipt is caller-fabricated or any closed payload has missing/extra fields
+- **THEN** admission rejects; a new unrelated store event or self-asserted observed balance cannot establish authority.
+
+### Requirement: Separately charged bounded read-only preflight
+The exact resource projection and both votes SHALL include the context's 125-second one-attempt observer allowance within G and its single resource-operation use within N, separately from the financial runtime allowance. The producer may initialize the approved grant, acquire the declared exclusive wallet-use lock and commit this preflight-only charge before wallet funding observation exists, but only after source/resource/context/canonical-history authorization and non-funding preflight checks pass. This bounded read-only authority permits no financial submission, proving, wallet persistence or runtime debit. No extra clock/grant is inferred from the desire to observe funding.
+
+New debit rows SHALL use purpose exactly `funding-preflight` or `financial-runtime`. Both count toward S/n and preserve master dispatch history; a funding-preflight charge reserves exactly 125 seconds before that observer child and consumes its one approved preflight attempt even on failure. Its one-shot master claim binds the exact observer source/argv/bound digest and canonical ownership; it is executed as the explicitly authorized bounded sub-operation of existing cmd_run, not a new public campaign/action. The financial runtime later uses the existing plugin reservation plus master claim sequence. A funding-preflight is not loan-case attempt 3 because it cannot submit a financial transaction; only the financial-runtime debit commits that cumulative attempt. If the observer fails or fresh evidence expires, retain the preflight charge and deny runtime; no second preflight is authorized by this one-attempt context. A further observer allocation requires new explicit reviewed resource authority, not a free refresh.
+
+The accounting parent SHALL hold the exclusive wallet OS lock continuously from observation through runtime cleanup and validated containment acknowledgment. Runtime handover changes the bound ownership record without releasing or transferring the OS lock; the executor validates that record and the authenticated parent channel rather than reacquiring the lock. The parent releases only its own lock after containment. Parent death or unknown containment leaves durable unresolved ownership blocking a successor even if the OS lock is released. Source tests SHALL cover same-owner handover, competitor rejection, parent loss, observer timeout/stop failure, missing lock and attempted free retry.
+
+#### Scenario: Funding observation without a circular grant dependency
+- **WHEN** exact source/resource votes authorize G/N including one 125-second read-only preflight, but current funding is not yet observed
+- **THEN** only that charged exclusive preflight may run; its successful current receipt can satisfy later funding admission, while failure consumes its allowance without starting or charging financial attempt 3.
+
+### Requirement: Closed existing accounting fields and bounded successor semantics
+The producer SHALL preserve the existing `moriarty.supervised-accounting/1` top-level key family and `currentAccounting`'s closed `schema,path,passBinding,passLedger` fields. Original authority SHA SHALL remain `f6b7f17d1bda437d5f83abc656ccf4a0d9c7a57a83995668387c29bd0328f492`. Observation/identity/claim metadata SHALL not be added as unknown top-level keys. Preserve all original ledger bytes and historical rows; new charge/reservation entries may carry exact scoped provenance validated by this producer. Unknown historical costs remain unknown in referenced immutable dispositions, never a synthetic numeric zero.
+
+An explicit two-vote successor amendment MAY close historical residual credit through a new `reserved` row and place exclusively new bounded credit in one `successorEnvelopes` entry. A new closure row SHALL contain exactly `id,seconds,basis,sourceSha256,amendmentSha256`, where basis is exactly `historical-credit-closure-not-paid-cost`, seconds is a nonnegative integer and digests bind the original/current grant evidence. Use conservative ceiling for fractional represented remainder (7 seconds for the inspected approximately 6.95267 seconds), with no rounding refund or assertion of actual historical payment. A deficit is not erased. Old envelopes SHALL have no spendable current remainder; their originals remain immutable. No historical remainder may be borrowed into a new grant.
+
+The current MC02 envelope SHALL use existing `remainingReservedSeconds,workerDispatches,workerDispatchLimit` plus exact immutable grant identity/provenance committed by resource evidence. The following authenticated owner-mode requirement fixes its active-grant semantics while preserving top-level MC01 ownership. Missing the concrete reviewed projection instance SHALL reject with `resource-package-projection-unresolved`; implementing these exact deterministic semantics on isolated fixtures does not adopt a live instance.
+
+The concrete amendment SHALL state exact seconds, partitions, master/package/aggregate dispatch increments, current envelope identity and public attempt/submission/fee bounds. It SHALL disposition the unestablished 197630/71 ancestry and the two later direct delegated amendments honestly, without inventing retrospective majority approval. The September 7 successor authority permits two substantive votes on the exact new grant; specification approval and the eight-hour clock are not these votes. Immutable vote paths/digests SHALL be checked before application; each amendment applies once.
+
+#### Scenario: New grant only
+- **WHEN** a reviewed concrete successor closes all historical credit, preserves unknowns and supplies an exact enforceable active MC02 projection
+- **THEN** spendable credit is at most the new grant minus its actual committed usage, with old limits/counters preserved as history and no lifetime-global total claim.
+
+#### Scenario: Shape-valid fabricated credit
+- **WHEN** the input omits external charges, guesses unknown costs, relabels package ownership, lacks the exact projection disposition, repeats an amendment, uses missing votes or presents invalid numeric/extra top-level fields
+- **THEN** the actual producer/consumer rejects before debit or launch, even if the old reader alone would accept its shape.
+
+### Requirement: Authenticated MC02 envelope on the preserved MC01 master
+For `finalized-financial-settlement`, the producer SHALL select the campaign from the canonical campaign store and read its contained `resourceAmendment`, whose exact bytes SHALL be committed by the verified campaign binding's `inputs`. Within that amendment's existing `resources` object, `projection` SHALL contain exactly `path,sha256`, and `votes` SHALL contain exactly two distinct `{path,sha256}` references. All references SHALL resolve contained immutable files. Each substantive approving vote SHALL bind the same projection digest and applicable grant scope. No unbound envelope selection or caller override is accepted. Votes bind the immutable projection rather than the final amendment's digest; the final amendment includes their references, then the binding is frozen, avoiding self-reference.
+
+The projection file SHALL contain exactly `schema,predecessor,ledgerOwner,selectedOwner,envelopeId,grantSeconds,grantDispatches,closureSeconds,closureAdjustmentSeconds,campaignId,actionId,historicalDispositions,executionContextSha256`. Schema is `moriarty.mc02-successor-projection/1`; predecessor is exactly `{path,sha256}` for the original external master; owner values are exactly `MC01` and `MC02`; historicalDispositions is a list of distinct contained `{path,sha256}` references to explicit historical closure/deficit/authority dispositions. The predecessor path is the producer's explicitly authorized external-master input, never an excuse for the reader to bypass containment. Campaign/action/envelope identity and executionContextSha256 SHALL exactly match the current admitted scope and committed execution context. Concrete predecessor digest and historical dispositions remain subject to separate resource votes.
+
+Before first application, verify the predecessor digest against the locked actual master and retain those exact predecessor bytes in immutable existing admission evidence. Subsequent validations SHALL authenticate that retained predecessor by its committed digest and current master/projection correspondence; they SHALL not require the legitimately advanced master to keep its old digest or permit replay of the first application. Historical disposition evidence SHALL reference the exact retained predecessor path/digest so that U, M and preserved fields remain independently recomputable after mutation.
+
+Let G=grantSeconds and N=grantDispatches, positive integers; C=closureSeconds and D=closureAdjustmentSeconds, nonnegative integers. Preserve predecessor `package=MC01`, `charges`, `planning_charge_seconds`, `planning_overhead_reserved_seconds`, `package_limit_seconds`, `worker_dispatches` and `worker_dispatch_limit` unchanged. Preserve every existing external row's owner and bytes. Append new MC02 debits only to `externalPackageCharges`, with `package=MC02`, current `envelope` ID and exact charge/action/candidate/runner identifiers. Do not move old rows or relabel top-level MC01 52/52 as MC02 usage.
+
+Let M be predecessor master_limit_seconds and U be its planning plus overhead plus all ordinary/external charges and reserved rows. Require C=ceil(max(0,M-U)), using the specified closure row, and D=max(0,ceil(U+C)-M). The exact resource votes SHALL approve D separately as nonspendable closure reconciliation and any pre-existing deficit disposition; the formula itself grants nothing. Set current master_limit_seconds=M+D+G. Omitted/unapproved D or deficit disposition rejects a fully reserved G instead of silently increasing the ceiling. Any integer rounding slack SHALL remain nonspendable outside G. Unknown historical actual costs remain unknown in immutable dispositions, never credit.
+
+The current envelope SHALL contain exactly `owner,projectionSha256,amendmentSha256,remainingReservedSeconds,workerDispatches,workerDispatchLimit`, with owner MC02, exact approved provenance, remainingReservedSeconds=G-S, workerDispatches=n and workerDispatchLimit=N. S and n SHALL be independently recomputed from committed current-envelope debit rows, not trusted counters alone. A corresponding reserved row for that envelope SHALL contain exactly `id,seconds,basis,sourceSha256,amendmentSha256`, use basis `mc02-successor-reserve-not-paid-cost`, and start at seconds=G. A debit of c atomically decreases that row by c and appends the same-c MC02 external charge; remaining reserve and envelope remainder stay equal. Current master used therefore equals U+C+G regardless of S. All old residual reserves/envelopes are nonspendable under the reviewed closure disposition; no old reserve or master rounding slack supplements the selected grant. If an unresolved old cost could still consume this active envelope, deny launch until explicitly dispositioned.
+
+Top-level externalWorkerDispatches SHALL equal its predecessor value plus n, and master_worker_dispatch_limit its predecessor value plus N. In the observed predecessor these are 31+n and 83+N; aggregate usage remains 52+31+n. The current MC02 envelope's active package limit is G and N, not a lifetime MC02 total. Before each new debit require S+c<=G, n+1<=N and aggregate usage+1<=aggregate ceiling, in addition to source/history/attempt/funding constraints. Every live kind consumes the same bounds; failures and partial initialization never refund or decrement committed usage.
+
+In this authenticated mode only, `records._remaining_from_current` SHALL invoke `accounting`'s current-projection validator before choosing package semantics. Match the authenticated selected owner MC02 to campaign ownership while independently requiring ledger owner MC01. Replace the legacy MC01 `package_used=planning+overhead+charges`, package ceiling and top-level worker checks for this action with S/G and n/N; retain full master summation, aggregate dispatch verification and all common identity/authority checks. Legacy profiles retain their existing behavior. A declared envelope owner or action profile alone cannot enable this branch without the hash-bound amendment/projection/votes.
+
+#### Scenario: Preserved master with active MC02 quota
+- **WHEN** isolated actual producer/reader code authenticates the exact MC02 projection and votes, reserves G, then transfers c into a current-envelope external charge
+- **THEN** MC01 owner/rows/counters remain unchanged, master used stays U+C+G, MC02 remaining equals G-c, aggregate dispatch increases once, and only this authenticated active quota governs the MC02 action.
+
+#### Scenario: Projection arithmetic or authority mismatch
+- **WHEN** selected owner/scope, predecessor digest, votes, G/N/C/D, historical disposition, reserve-transfer identity, recomputed S/n or unchanged predecessor fields disagree
+- **THEN** current-resource validation rejects without live debit/launch or borrowing from old credit, even if top-level JSON shape is valid.
+
+### Requirement: Single allocation, all-kind limits and prepaid boundary
+For the live action, its resource allocation SHALL occur once in `resourceAmendment`; binding `resources.allocationSeconds` SHALL be absent or zero and the same grant SHALL not recur in `successorAmendments`. Hash identity, not different filenames, SHALL identify duplicates. The producer SHALL enforce current-envelope, selected-package and aggregate-master time/dispatch and Preview attempt/submission bounds for every live kind, including report/admin/verify/review/reproduce. A new resource vote must expressly extend exhausted aggregate 83/83 or package ceilings where applicable; it cannot reset the retained 52/52 MC01 counter.
+
+At the limit a genuinely prepaid invocation may claim and launch once. The exact current charge of c seconds is already included in S and the external charges. For a predicate expressed as available-for-this-invocation versus c, define A=G-S+c only for that exact previously committed charge and require A>=c; after accounting for that invocation the remainder is A-c=G-S. This is a validation credit for its already reserved execution, not new spendable grant or a refund; every other caller sees only G-S. Retain master nonnegative slack validation without requiring the fully reserved G to appear a second time as unreserved master headroom. The current reader's final nonnegative-remainder contract may equivalently use G-S directly in the prepaid branch and SHALL NOT subtract c again. Require declared action cost<=c and the exact charge/runner bound<=G.
+
+Before `store.reserve`, the exact plugin charge claim SHALL be absent and the master launch claim unclaimed. After reserve, final rechecks MAY accept only the same current reservation with identical action/candidate/runner/debit/store identity while its master launch claim is still unclaimed; another reservation or a previously claimed/launched invocation rejects. Launch then requires the single durable master transition already specified below. Equality S=G or n=N is valid only for this matching own prepaid invocation; it cannot authorize a new debit or replay. Reservations/fees/attempts remain consumed on failure, and actual paid fees remain separately observed.
+
+#### Scenario: Last authorized resource race
+- **WHEN** two real isolated callers compete for one remaining dispatch or the same final seconds
+- **THEN** existing lock/store serialization lets at most one commit and launch; both kind-switch and duplicated allocation paths reject.
+
+#### Scenario: Own prepaid equality and post-reservation recheck
+- **WHEN** the exact c-second debit makes S=G or n=N and the CLI rechecks after claiming its own identical reservation but before the master launch transition
+- **THEN** A=G-S+c covers exactly c once and final remainder G-S is nonnegative; that own invocation passes resource validation while another reservation, changed charge or completed launch is denied.
+
+### Requirement: Master projection and global one-shot claim
+The master remains at its existing external location, accessed by the explicit producer under `budget.lock`; `records.py` and `runner.py` continue to read only contained projection paths. Write/fsync temporary master/projection/admission correspondence files, replace and fsync their directories. Separate replacements SHALL not be called one atomic transaction. Current correspondence evidence SHALL bind exact master/projection generations/digests and be checked under the lock before final launch. Interrupted/mismatched correspondence yields unavailable credit until explicit reconciliation.
+
+New debit rows SHALL contain exactly `id,seconds,actionId,candidateHash,runnerDigest,package,envelope,storeIdentity,reservationId,launchClaim,purpose`, with package MC02, the authenticated current envelope ID and purpose exactly funding-preflight or financial-runtime. Every preflight debit SHALL bind its already occupied preflight reservation. A financial-runtime debit intent SHALL initially bind that same owned preflight reservation as its predecessor ownership; the atomic handover records its new unique runtime reservation and preserves the predecessor relation in the canonical counterpart event. Before the own-runtime-reservation recheck, the matching master row and correspondence SHALL be updated to that runtime reservation while launchClaim remains `unclaimed`, then launchClaim transitions once to `claimed` before launch. Preflight and runtime each have a non-null canonical SQLite counterpart and separately scoped one-shot master claim; an intent is consumption, not proof of a launch. The persisted in-store identity must positively match the authorized canonical repository anchor. For financial-runtime the master claim and existing SQLite unique charge claim both bind the same ownership; a claim token is not just a filename. No second `claimed` transition or launch is allowed for either purpose. Recovery never clears/rewrites consumed rows.
+
+The canonical inventory `canonical-store-before-source.json` records no persisted token and only SP01 design/report events. Concrete token adoption and loan-history reconciliation SHALL be independently reviewed against that original inventory; no ordinary initializer/status/review call or override can create authority. Normalize checkout/common-directory event identity through that reviewed reconciliation and retain every linked-worktree/external failure; no unrelated seeded event or renamed capability establishes zero failures. These live-instance mutations remain pending after source repair.
+
+Observation/correspondence digests SHALL be mutable evidence outside candidate inputs, binding inputs and runner plan, bound in final admission. Refreshing them SHALL not change candidate, runner digest, binding hash or committed debit.
+
+#### Scenario: Persistence and claim crash matrix
+- **WHEN** isolated fault injection interrupts before debit, after debit before projection, between file replacements, between SQLite/master claim, or after master claim before child launch
+- **THEN** no unauthorized child starts; committed charges remain consumed, correspondence/claim disagreement denies, and an unlaunched committed invocation receives an explicit failed/unknown disposition without retry credit.
+
+#### Scenario: Store rollback or clone replay
+- **WHEN** an already committed debit is presented with another clone/default-resolved store, a new/fallback store, a restored same-token pre-claim backup or conflicting ownership
+- **THEN** canonical identity and master one-shot claim deny another launch while preserving the existing SQLite guard and historical charge.
+
+### Requirement: Exact attempts and actual submission consumer
+Retained loan allocations/runs SHALL establish exactly two prior consumed loan attempts before the proposed cumulative attempt 3; zero master Preview counters and cumulative reservation totals are not attempt evidence. The new invocation SHALL have at most four public submission calls for the actual deploy → initialize → accrue → settle path, subject to both resource votes and confirmation that the final executor uses that path. A charged but unlaunched attempt consumes attempt 3 with zero observed submissions plus its reserved maximum; no attempt 4 follows automatically.
+
+The actual producer SHALL bind and reconcile the existing `ledger/providers.mjs` durable reservation path, `bindingFor` and submission guard with the invocation/accounting identity. Every SDK submission/retry must reach that guard; a Python launch counter alone is insufficient. Exact DUST SPECK fee ceilings, selected token/domain gross ceilings and actual paid indexer fee units SHALL remain distinct. No tNight/USD conversion, refund against gross debit or unknown-unit equivalence is inferred. Final concrete financial bounds remain pending resource votes.
+
+#### Scenario: Retry and attempt accounting
+- **WHEN** four allowed submissions are consumed or attempt 3 commits then fails before launch
+- **THEN** a fifth submission, counter reset, reservation-path switch or fourth invocation is denied and every real transaction/failed attempt remains retained.
+
+### Requirement: Independently bound observer launch and resource identities
+`expected` SHALL contain exactly `allocationId,network,roleIdentity,selectedToken,walletStateDirectory,seedPath,pendingUseDisposition`, with network exactly `{networkId,genesisHash,protocolVersion}`, roleIdentity exactly `{publicKey,address}`, selectedToken exactly `{id,unit}`, and pendingUseDisposition an immutable contained `{path,sha256}` reference already admitted in history. Paths to original seed/state are canonical absolute private-input identities, not values to publish or create. Observer output identity SHALL match this independently reviewed expectation; self-consistency between any seed and snapshot is insufficient. The eventual executor's authenticated plan SHALL match this same expected record before runtime debit.
+
+`observerExecution` SHALL contain exactly `interpreter,entry,files,sdkClosure,launcher,argv,environment,parentEvidencePath`, with interpreter/entry/launcher exact `{path,sha256}` records, files an exact path→digest map, sdkClosure a `{path,sha256}` immutable contained manifest reference whose file map contains canonical absolute installed SDK files and hashes, argv an exact string array, environment an exact string map, and parentEvidencePath a contained exclusive evidence destination. `interpreter` SHALL be the absolute Node executable; entry SHALL equal the separately pinned observer entry. Launcher SHALL be the existing Foreman launcher, invoked with fixed `--timeout 90 --grace 5 --require-containment strong`, through the same exact pinned Node interpreter used for the observer; both executable invocations SHALL be checked against that interpreter digest. A different interpreter requires a changed reviewed context, not an inherited PATH choice. All argv file operands SHALL appear in files; external executable/SDK files are admitted only by this closed plan. Environment SHALL be constructed from its exact reviewed map, not inherited wholesale; keys that inject Node code/loaders or override network/private-input destinations SHALL reject unless explicitly part of reviewed source semantics. No secret value belongs in argv or environment. The observer reads expected input paths from the immutable context argument, not caller overrides.
+
+The parent accounting preflight SHALL independently compute before/after digests and metadata of canonical seed and dust/unshielded snapshot bytes through strict no-symlink/owner-only file reads without printing contents, retain only digests/metadata, and compare them. It SHALL derive child containment from its actual Foreman process result and retained terminal/containment observations, not observer booleans. The observer's own child-stop result remains separately required. Parent evidence SHALL bind exact launch-plan/source/context digests, output digest, process exit and containment, canonical before/after input observations, and start/end times. Missing or inconsistent parent evidence makes receipt unavailable. `canonicalInputsUnchanged` and `childrenStopped` SHALL be derived from that evidence and cannot be supplied as authority by the child.
+
+Each resource vote SHALL contain exactly `schema,reviewer,model,role,scope,candidateSha256,verdict,findings`, schema `moriarty.i2-resource-vote/1`, role `independent-resource-reviewer`, scope `MC02 active-envelope grant and execution context`, candidateSha256 equal the immutable projection-file SHA-256, verdict `APPROVED`, and findings a list of strings. The two fresh non-author votes SHALL identify `claude-opus-5` and `gpt-6-astra`, respectively, with actual returned identities preserved. Missing, substituted, same-author, mismatched-scope or nonterminal receipts deny. These are later resource votes, not specification votes.
+
+The actual budget lock SHALL be `Path(projection.predecessor.path).with_suffix('.lock')`; this deterministic path is authorized by the reviewed predecessor reference, and a caller-supplied different lock SHALL reject. The wallet-use ownership record path SHALL be exactly observer.lockPath plus `.ownership.json`, with exclusive initial creation and durable owned-state updates. It SHALL bind context digest, projection digest, canonical store identity, preflight reservation ID and preflight charge ID. Runtime handover SHALL atomically update that record to the committed runtime charge ID/reservation ID without releasing the operating-system lock. The executor SHALL discover this record through the immutable context's observer.lockPath and validate it against its authenticated context/projection and master claim. The executor discovers the context from its immutable resource-authority operand, then verifies the ownership record using its authenticated invocation handoff. No wallet-lock token is placed in dynamic argv/environment. Ownership mismatch or absent handover denies before wallet access. A lock-file record does not replace the held OS lock.
+
+
+#### Scenario: Self-consistent wrong identity or unpinned observer
+- **WHEN** a seed and restored snapshot agree with each other but differ from reviewed expected identity, interpreter/SDK/argv differs, a vote scope/digest is wrong or parent evidence disagrees with child claims
+- **THEN** the actual producer rejects before financial debit and retains the actual preflight disposition; child booleans or caller flags cannot establish funding authority.
+
+### Requirement: Single preflight caller and occupied-primary handover
+The live branch of `cli.py::cmd_run` SHALL select action and authenticate the context first, compare its passed db_path to the canonical resolver/context store path, then reconstruct its history reader using the validated token/history. It SHALL reject a mismatched db_path or caller history-reader authority. Legacy branches retain current initialization. An isolated repository may resolve its own explicitly anchored fixture store.
+
+Add a non-granting `accounting.predebit_gate` callable that verifies authenticated source/runner-plan bytes plus canonical history, repeated-defect, primary and stop predicates without requiring a runner debit. It SHALL return `PREDEBIT_ELIGIBLE` or a named denial, never final policy allow. The history/primary/retry predicate logic SHALL be shared with existing policy; no synthetic `resourcesAvailable:true` snapshot or suppression of an actual history failure is allowed. Only the post-debit existing full snapshot/policy and runner validation can admit resources.
+
+The exact sequence SHALL be: authenticate action/context/projection/votes and factorized runner plan; non-granting predebit gate; acquire canonical primary preflight reservation and wallet-use lock; application/debit counterpart and master/projection commit; preflight master one-shot claim; bounded observer; parent evidence and validated funding receipt/correspondence; recheck source/history/own-primary/freshness; runtime debit counterpart and master/projection commit; existing full prepaid snapshot/policy and load_runner; atomic primary handover to runtime reservation; post-reservation own-primary/full resource checks; wallet-lock handover record; master one-shot runtime claim; existing execute; terminal cleanup/disposition. Failure at any stage starts no later child and never refunds committed charges.
+
+A new `store.reserve_preflight` operation SHALL claim the same primary exclusion domain as the selected live action under BEGIN IMMEDIATE, before observer debit or child. It SHALL carry the selected action/candidate/store identity and preflight chargeId. All other primary work SHALL see it occupied. Runtime `store.reserve` handover SHALL validate the same owned preflight reservation and close/supersede it while inserting the runtime reservation in one BEGIN IMMEDIATE transaction; no unoccupied primary interval is permitted. Rechecks shall exclude only the caller's exact own reservation, never other primary owners. Failed preflight retains consumption and an explicit failed/unknown disposition; close the preflight reservation only with verified child containment and released owned wallet state, otherwise keep primary occupancy unresolved. No second observer attempt is implied.
+
+Set post-debit launch allowance L=30 seconds. Before runtime debit require both observedAt and syncTime ages at most90 seconds, not future, and at least30 seconds remain in every applicable absolute execution/admission deadline. Immediately before execute require both ages at most120 seconds. If work consumes the30second margin after debit, retain charged-but-unlaunched/expired disposition; do not rerun observer or refund attempt3. All boundaries SHALL use one recorded time basis with explicit UTC conversion and monotonic elapsed deadline checks.
+
+
+#### Scenario: No occupancy gap or fresh-observation retry
+- **WHEN** another primary competes during observer execution or the real caller hands preflight ownership to runtime under an isolated SQLite transaction
+- **THEN** exactly the original owned reservation remains continuously exclusive; a stale or delayed post-debit observation denies without refund, second observer or replacement attempt.
+
+### Requirement: Durable debit intent and rollback-resistant first application
+First grant application SHALL reserve an exclusive immutable application marker in the directory containing the context-bound correspondencePath with O_CREAT|O_EXCL|O_NOFOLLOW and fsync file/directory before modifying the master. Its basename SHALL be `grant-application-<projectionSha256>.json`; its body SHALL bind predecessor digest, projection/amendment/context digests, canonical store identity and application ID. A surviving marker SHALL prevent a second first application even if master/projection/correspondence have been restored to predecessor bytes. It is retained on failure; ambiguous partial application requires explicit reconciliation, never delete-and-retry.
+
+Before each master debit replacement, the existing canonical SQLite store SHALL commit a unique debit-intent counterpart keyed by chargeId through an existing event/claim transaction, binding purpose, full seconds, action/candidate/runner/envelope/store identity and owned preflight reservation identity, plus the runtime handover target once allocated. The runtime intent is committed while its preflight owner still occupies primary; the later handover appends the new runtime reservation relation without rewriting the original intent. A counterpart is irreversible consumption intent for recovery purposes; it is not proof of child execution. Then write the matching master debit/projection/correspondence. Before any child, both copies and immutable application marker SHALL agree. Existing counterpart with absent/older/different master debit SHALL deny `resource-master-rollback-or-incomplete-debit`; no new debit, preflight or runtime launch follows. Master debit without counterpart SHALL likewise deny. An intent committed before a master-write failure remains consumed/unavailable until reviewed reconciliation and cannot silently reopen grant or attempt capacity.
+
+The preflight SHALL no longer have a null SQLite counterpart. Runtime debit SHALL have its own counterpart before any reservation handover; do not postpone counterpart creation until runner_claims insertion. Distinguish durable debit-intent evidence from the existing final unique launch claim so creation of the intent does not falsely mean launched. Both use the existing SQLite store; no new ledger/service is introduced.
+
+Fault tests SHALL independently roll back master/projection/correspondence after application intent, preflight debit, preflight completion, runtime debit and launch claim. The surviving immutable marker/SQLite counterpart SHALL deny reapplication, second observer and relaunch. Rolling back SQLite alone must still be denied by master/marker evidence. Joint rollback of all independently retained evidence is outside this evidence model and must not be claimed detected.
+
+
+#### Scenario: Restored master or failed debit replacement
+- **WHEN** master/projection/correspondence are restored after a preflight debit, runtime intent or first application, or a write fails after the canonical intent commits
+- **THEN** the surviving marker and counterpart deny duplicate allocation/observation/launch and retain consumption; absent master progress never proves unused capacity.
+
+### Requirement: Exact allocation arithmetic without duplicate credit
+For this mode `_amendment_seconds(resourceAmendment)` SHALL equal G exactly. Binding allocation SHALL be absent/zero; successor amendment allocation SHALL be absent/zero, and no duplicate grant digest is permitted. Compute U,C,D and all comparison sums from exact original JSON numeric tokens using Decimal or Fraction, rejecting booleans/nonfinite/negative values. Do not convert through binary float before ceiling or resource comparisons. Original historical bytes remain unchanged; arithmetic representation does not rewrite their numeric text. The normative fixture SHALL include the inspected fractional planning value and test values immediately on either side of integer closure boundaries.
+
+
+#### Scenario: Fractional closure and exact allocation
+- **WHEN** isolated fixtures use planning_charge_seconds 2323.0473305040214, neighboring integer closure boundaries, a duplicate grant or resource-amendment amount different from G
+- **THEN** original JSON numeric tokens determine exact C/D and ceiling comparisons, and duplicate/mismatched allocation rejects without creating floating-point or secondary-envelope credit.
+
+### Requirement: Direct nonpersisting SDK funding observer
+Source scope includes `experiments/moriarty-midnight-financial/ledger/observe-preview-funding.mjs`, invoked as a bounded child by accounting preflight. It SHALL directly use the pinned SDK `DustWallet(configuration).restore` and `UnshieldedWallet(configuration).restore`, their child `start`, `waitForSyncedState(0n)` and `stop` APIs. Reuse strict original snapshot/identity checks from `preview-bootstrap.mjs:76–89`, not `launchPreviewFinancialCase`, `createWallet`, check-balance or the facade's submission/proving services. Use NoOp transaction history and an outer 90-second maximum with 5-second stop grace. This permits only synchronization of a disposable restored in-memory copy; canonical wallet files/keys/identity and chain/contract state remain unchanged.
+
+The observer privately reads only the existing seed and dust/unshielded snapshots necessary to derive and verify the original role identity, with original owner-only/no-symlink validation. It SHALL not create a wallet, fallback on failed restore, read role secrets/contract passwords, serialize/persist wallet state, register, transfer, balance, sign, prove, finalize or submit. Clear temporary sensitive buffers where supported; log no private state/error objects. Stop every partially initialized child; containment failure makes observation unavailable. Independent tests SHALL compare canonical input bytes/digests before/after and trap every forbidden API/write.
+
+Unshielded funding SHALL use exact selected-token available balances. DUST funding SHALL sum `availableCoins[*].generatedNow` at native sync time, excluding pending entries; raw `balance(Date)` and hypothetical generation are not substitutes. SDK restore resets `pendingDust`, so independent old-allocation/finality/persistence history SHALL rule out unresolved prior spend before declaring funds unreserved. Missing that evidence yields unavailable funding. Require connected/strictly-complete progress, exact original public key/address/network, canonical network/protocol reference, sync/observation age at most 120 seconds at launch, no future timestamps and explicit units. Output only public aggregate funding/identity/freshness metadata to a separate evidence destination.
+
+Pending-use reconciliation SHALL cover the actual retained allocation/reservation/persistence/finality lineage for the two identified Preview loan allocations, intervening swaps and any other material observed use of this wallet, together with exclusive current wallet ownership and fresh SDK sync. Unresolved material observed use SHALL block funding. Exhaustive proof against hypothetical external use, or host-global lifetime accounting of unrelated accounts, SHALL NOT be added as a funding predicate; retain those limits honestly without treating known pending ambiguity as resolved.
+
+#### Scenario: Strict observed funds
+- **WHEN** isolated real observer logic restores the original identity without fallback, syncs within bounds, has independently cleared pending-spend lineage, and all canonical files remain unchanged
+- **THEN** it returns exact timestamped available token/DUST quantities for admission comparison; observation is not spend reservation or a promise of finality.
+
+#### Scenario: Unavailable or mutating observer
+- **WHEN** identity differs, restore fails, old pending spend is unresolved, units/timestamps are unknown, sync/stop times out, a forbidden API/write is attempted or snapshot bytes change
+- **THEN** funding is unavailable and live admission fails. Empty restored pending state, a recent indexer tip or green fixture alone cannot pass.
+
+### Requirement: Source approval and live adoption stay separate
+These requirements authorize no concrete grant, live wallet observation or adoption. Both fresh reviewers must approve this exact source specification before implementation; source tests then exercise real producer/caller/observer code entirely on isolated fixtures and transports, followed by both frozen full-source audits. A later concrete grant, exact MC02 projection disposition, canonical history/token adoption, prior-attempt reconciliation, final executor and live observations are separately reviewed prerequisites to the existing guarded run. Their absence SHALL be reported precisely while eligible deterministic source work proceeds; no new record service or broad historical survey is required.
+
+#### Scenario: Source-ready but instance-blocked
+- **WHEN** actual isolated producer/observer tests and both source reviews pass but concrete resource/adoption evidence remains pending
+- **THEN** record only source readiness, preserve named live blockers and continue their concrete preparation without claiming admission or financial acceptance.
+
+FULL FILE openspec/changes/afk-live-financial-execution/specs/afk-live-financial-execution/spec.md
+## ADDED Requirements
+
+### Requirement: Per-item specification approval before execution
+For each item, the orchestrator SHALL write its concrete missing predicate, current affected producer/consumer paths, applicable constraints, independently checkable positive/rejection outcomes and completion evidence in OpenSpec before implementation or actionful execution. Fresh non-author Opus and Astra medium SHALL independently approve the exact full applicable specification bytes, with substantive verdicts retained in existing session/deliverable records. Both approvals are required; specification approval SHALL NOT replace source approval, resource authority, live admission or actual-result approval. Routine read-only inspection and specification authoring may precede this gate.
+
+Both reviewers MAY explicitly approve the same deterministic source-repair subparts of item 1 (tasks 1.1a, 1.2, the direct observer and accounting-producer source subparts of 1.3, and their corresponding isolated checks in 1.4) while resource proposal/application remains pending. Such approval SHALL name its exact scope and exclude live accounting mutation, amendment application and dispatch. It SHALL NOT authorize unapproved subparts or weaken any final admission predicate.
+
+Task 1.1a is the separately bounded scope for repair of the reproduced live-profile policy, canonical-history selection, approval-ingestion and bidirectional primary-occupancy guards in existing `policy.py`, `store.py` and their `cli.py` callers, with isolated tests. This scope SHALL exclude `records.py` live labels/bridge, runner/ledger producer changes, resource amendment implementation, actual history reconciliation and live registration/dispatch. Missing later live-instance evidence SHALL keep live admission unavailable but SHALL NOT prevent implementing and testing these deterministic rejection guards after both same-scope specification approvals.
+
+#### Scenario: Approved current item
+- **WHEN** both reviewers approve the same exact specification revision and the item-specific prerequisites hold
+- **THEN** Grok may implement that item, or the orchestrator may execute its authorized action through the applicable guarded path, and the result remains pending actual verification.
+
+#### Scenario: Missing or changed specification
+- **WHEN** an item lacks requirements, either auditor is unavailable or has a blocking finding, or relevant requirement bytes change after review
+- **THEN** implementation/execution for that item does not start until both fresh current specification approvals exist; old verdicts remain history.
+
+The observer and producer subparts of 1.3 MAY receive separate same-scope requirement approvals against their concrete accounting specification. Neither approval grants live accounting/application, token/history adoption or dispatch. Retained 1.1a/1.2 approvals remain applicable only to their exact unchanged scoped predicates; later implementation stages are not a renewed request for already reviewed scope.
+
+### Requirement: Item 1 — Current binding identity with preserved history
+The repair SHALL trace the real binding/candidate producer and `records.py` consumers and create a reviewed bounded current I2 binding/action/admission using the existing record family. It SHALL inspect changed SP01 prerequisite inputs and determine their actual applicability without rewriting immutable historical bindings, hashes, source approvals or failure receipts. Historical SP01 rehashing SHALL NOT substitute for a current I2 action. The selected action, campaign, stage, profile, worktree, authority, command and full executable/source closure SHALL refer to the same applicable current candidate. Historical design approval SHALL remain design-scoped.
+
+Item 1 SHALL reproduce the current reader's rejection of a truthfully labeled live I2 record and repair the affected binding, review, acceptance and evidence-applicability consumers within their existing modules. A current I2 live record SHALL carry truthful live binding status, full-candidate source-review scope, source-acceptance status distinct from actual-result acceptance, and `finalized-financial-settlement` evidence profile. It SHALL NOT obtain live authority through `admitted-design-subset-only`, `RP01-MC02 specified design consistency only`, `complete-design-subset-only`, `syntax` or `local-runtime`. Existing historical design semantics SHALL remain intact. `.moriarty-dev/verify-loan-design.py` reads its historical binding internally and SHALL NOT serve as the live I2 caller.
+
+Before item 1.2 discrimination tests or repair, its specification SHALL fix the exact closed live binding-status, source-review-scope, source-acceptance-status and digest-algorithm strings. Consumers SHALL use exact equality against those closed values, never prefix/substring admission. This later label refinement is excluded from task 1.1a; its live discriminator is already fixed as exactly `finalized-financial-settlement`.
+
+#### Scenario: Legitimate current binding
+- **WHEN** a reviewed current record binds all applicable current inputs and owned files, with valid stage/profile lineage and current source reviews
+- **THEN** the reviewed repaired reader accepts currentness only for the truthful live scope, while historical records retain their original bytes and wider acceptance remains unchanged.
+
+#### Scenario: Live authority disguised as design
+- **WHEN** a live action uses design-only binding/review/acceptance labels or a syntax/local-runtime profile
+- **THEN** the repaired reader rejects live admission; regression checks still accept authentic historical SP01 design records only under their original design semantics.
+
+#### Scenario: Near-miss live labels
+- **WHEN** a purported live status, review scope, acceptance status or digest algorithm differs from its exact closed value, including a design label with an added suffix
+- **THEN** item 1.2's consumer rejects it rather than admitting through prefix or substring matching.
+
+#### Scenario: Stale or mismatched identity
+- **WHEN** a bound input changes, a candidate/command/worktree/campaign/profile is mismatched, or an old approval is presented for changed bytes
+- **THEN** the dependent action is rejected before launch; copying a current hash into a historical receipt does not repair admission.
+
+### Requirement: Item 1 — Authenticate the SP01 prerequisite without rewriting history
+Item 1 SHALL retain the exact diff from the SP01 document bytes committed by the historical binding to current bytes and obtain both independent reviewers' disposition of its effect on the accepted RP01-MC02 subset. If non-substantive, the repaired prerequisite consumer MAY authenticate retained original bytes against the unchanged historical binding and candidate hashes using a narrowly scoped bridge analogous to the existing publication bridge. The bridge SHALL bind the exact original/current document hashes and reviewed diff disposition in existing evidence. If substantive or original bytes are unavailable, the prerequisite SHALL remain unmet until a new reviewed design acceptance exists. A bridge SHALL NOT claim acceptance of changed substantive semantics.
+
+A current non-historical I2 campaign/admission record SHALL reference the bridge by digest; the bridge SHALL pin the original/current path and hash, diff digest and both disposition receipts. Its only permitted substitution is the SP01 document path identified in the proposal, in the prerequisite binding and candidate-manifest input checks. Every other input SHALL verify against current bytes. Fixture authenticity SHALL rest on historical hash equality, not its location under tests. Changed fixture/current bytes, diff or disposition SHALL invalidate the bridge. Registered historical SP01 design actions SHALL remain stale against changed current inputs.
+
+#### Scenario: Reviewed non-substantive prerequisite change
+- **WHEN** original SP01 bytes match every historical commitment and both reviewers classify the exact bound-to-current diff as non-substantive to the accepted subset
+- **THEN** the reviewed bridge restores only that prerequisite's eligibility without changing the historical records or granting live authority itself.
+
+#### Scenario: Invalid prerequisite bridge
+- **WHEN** original bytes are missing, historical hashes are edited/rehashed, the current diff is unreviewed, or a substantive change lacks new design acceptance
+- **THEN** prerequisite verification fails and the dependent I2 action stays ineligible, with the original bytes and limitation preserved.
+
+#### Scenario: Unauthenticated or overbroad prerequisite bridge
+- **WHEN** a bridge substitutes another path or lacks a current digest-bound reference to its exact disposition receipts
+- **THEN** the consumer rejects it without promoting any prerequisite or changing historical records.
+
+### Requirement: Item 1 — Genuine cumulative accounting and live observations
+The repair SHALL identify the existing authoritative accounting producer or missing invocation and connect its real observations to the path consumed by `currentAccounting`. A manually fabricated shape-valid snapshot SHALL NOT satisfy this requirement. Any narrowly necessary producer/consumer repair SHALL include its actual caller and evidence of the defect. The current accounting family SHALL remain closed and preserve authority/package identity, all applicable historical charges, reservations, amendments, worker counts, and externally charged package use. The actual master budget SHALL be reconciled as well as the package/allocation budget; a new package SHALL NOT conceal master exhaustion. Any master increase SHALL require an explicit reviewed bounded amendment under standing authority, never a guessed replacement limit. The existing runner SHALL require the exact single debit for the admitted action/candidate/runner before launch; a refresh SHALL NOT duplicate a debit or reset consumed attempts.
+
+Existing allocation/admission evidence SHALL bind the public Preview network, wallet/role identity, current observation time and source, applicable contract state, available resources, attempt counters and ceilings to the proposed action. The admission check SHALL refresh these observations immediately before dispatch and reject a changed identity or resources that no longer cover the admitted maximum. Do not put secrets in accounting or add unrecognized wallet fields to `ACCOUNTING_KEYS`. Missing/ambiguous observations SHALL remain unavailable. Reservations, native fee reservations, actual paid fees and available balances SHALL be distinguished, including unresolved unit conversions. Refunds SHALL NOT erase gross debits; fees SHALL count against net goals.
+
+Observation records SHALL identify a source demonstrated not to mutate wallet state or keys, network, role identity and `observedAt`. Maximum admissible age is 120 seconds at actual launch; missing, future-dated or older observations SHALL be rejected. `check-balance` SHALL NOT establish this observation because its current caller creates/persists wallet state; any replacement must meet the same non-mutating constraint. Public observation records SHALL contain no secrets and SHALL NOT require weakening `SECRET_PARTS` or path containment, or renaming private material to bypass those checks. If a non-mutating funding observation is unavailable, funding and live admission SHALL remain unavailable.
+
+The actual producer/admission path SHALL verify the reviewed amendment chain and enforce aggregate master and per-package dispatch ceilings even where the current reader omits those checks. It SHALL charge each allocation envelope once, preserve package ownership, serialize budget updates under the existing lock and atomically persist pre-launch debits/counters. Repeated reconciliation SHALL NOT create another charge for the same recorded attempt. Preserve the original authority identity; extend limits only by the explicit reviewed amendment. Mutable accounting SHALL remain outside immutable candidate/binding input hashes, with the exact debit still bound to the action/candidate/runner.
+
+Under `budget.lock`, admission SHALL verify that the repository-contained `currentAccounting` projection corresponds exactly to the locked master generation, with a digest/generation recorded in existing reconciliation/admission evidence rather than a new `ACCOUNTING_KEYS` field. Missing master, projection divergence or interrupted persistence SHALL fail closed. Preserve and integrate `store.reserve`'s existing transactional unique charge claim: budget and plugin reservation SHALL agree on action, candidate, runner digest and debit, and one debit SHALL authorize at most one launch. Reuse after claim, launch, completion, failure or crash SHALL be denied without creating credit. Recoverable inconsistency SHALL retain charges and require explicit reconciliation; no observation reset or refund may clear it.
+
+Before launch, the master debit/claim under `budget.lock` SHALL bind the exact plugin store identity and its reservation ownership, including action, candidate and runner digest. The existing store/runner integration SHALL reject an absent, recreated or different store for that committed debit; a fresh SQLite file SHALL NOT erase global consumption. Retain the existing persistent unique charge claim, with master-bound store identity and complete ownership checked rather than introducing a new ledger service. Observation and projection-correspondence records SHALL remain mutable evidence outside candidate inputs, binding inputs and the runner plan, with their current digests bound in admission evidence. Refreshing them SHALL NOT change the runner digest, binding hash or debit.
+
+Store identity SHALL be an in-store persisted token, not only a filename. Later approved producer/reservation work SHALL require a master-side one-shot claim transition under `budget.lock` in addition to the SQLite claim before launch. The transition SHALL not repeat, including when a same-identity pre-claim backup is restored. A crash between SQLite claim and master claim persistence SHALL deny launch and retain consumption until explicit reconciliation; no retry may infer credit from the missing counterpart. This deeper producer integration is outside task 1.1a.
+
+Item 1 SHALL exercise real producer/reader/runner/reservation code against isolated copies of ledgers and records. It SHALL NOT apply a live master amendment, debit the live budget or increment live dispatch/attempt counters for the pre-freeze loan runner. Amendment review may finish in item 1; live application occurs only during item 3's final reservation sequence. A debit for superseded bytes SHALL remain consumed and SHALL NOT be reassigned.
+
+Isolation SHALL include the plugin SQLite store, reservations, claims, events and budget lock. Item 1 checks SHALL NOT write the live store, change live operational history or acquire the live budget lock; runtime destinations SHALL be explicitly isolated, not resolved through checkout defaults. Item 1 action/binding material placed in live records SHALL be non-dispatchable before freeze and superseded during item 3 without inheriting admission.
+
+Guarded `status` is observational at the product level but writes `admin_intervals`; `review` writes review events and SHALL NOT be treated as read-only. Task 1.1 inspection SHALL use direct read-only SQL/source inspection or copied stores. If repository startup requires live `status`, retain before/after store digests and table counts and identify its permitted administrative interval writes separately; this exception SHALL NOT permit test events, claims, reservations or review-ingestion writes. Task 1.1a/1.4 verification SHALL run all such CLI calls against copies and require unchanged live-store digests/counts across its test interval.
+
+An amendment enabling the new loan submission SHALL explicitly name original MC02 task 3.2's two-public-attempt-per-case ceiling and bound the new invocation as cumulative loan-case attempt 3, never attempt 1 of another pair. It SHALL retain the original two consumed attempts and record the extension's effect on acceptance; the extension SHALL NOT be described as compliance with the original two-attempt bound.
+
+That amendment SHALL derive the prior loan-case attempt count from retained run records and fail if they do not establish exactly two; neither the stale zero master counter nor reserved transaction totals establish that count. It SHALL separately bound the maximum public transaction submissions within this invocation. Once the live debit and attempt increment commit, a later denial or crash before launch SHALL still consume cumulative attempt 3, recorded as charged-but-unlaunched when applicable, and SHALL NOT authorize attempt 4. Unknown applicable global resource history SHALL remain unavailable; no guessed total or fresh allocation substitutes for required master reconciliation.
+
+The standing authority in `raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md` permits reviewed bounded successor allocations while preserving historical charges. As a conditional alternative to deriving spendable historical remainder, two substantive resource votes MAY approve an exact bounded successor grant that explicitly closes every historical residual/unknown allocation to further spendable credit. This SHALL preserve every old ledger, counter, charge and unknown value, permit new credit solely from the exact new grant, and enforce that limit through the existing producer/consumer and admission records. It SHALL NOT assert a lifetime global total or reset loan-case attempt counts. This option requires both current specification approvals and later votes on the concrete resource amendment; it is not approved or applied by this text. If the existing record family cannot express/enforce the grant and closure honestly, dependent execution SHALL remain blocked with that exact interface gap. Active-grant reconciliation SHALL account for all charges against that grant; unknown costs of closed grants SHALL remain historical unknowns, never zero or spendable remainder.
+
+#### Scenario: Reconciled admissible resources
+- **WHEN** genuine observations and complete applicable history establish remaining master/package/allocation resources, wallet funding and unconsumed explicitly authorized attempts sufficient for the exact bounded action
+- **THEN** the producer supplies current accounting, independent reviewers can recompute the totals from retained source records, and existing admission may accept the resource predicate without inventing credit.
+
+#### Scenario: Invalid or exhausted resources
+- **WHEN** observations are missing/stale, wallet/network/campaign identity differs, history is partial, an allocation is consumed, master/package dispatches are exhausted, an amendment is unreviewed, an envelope is double-counted, funds/time are insufficient, or the runner debit is absent, duplicated or mismatched
+- **THEN** live admission fails before launch, retains the specific cause and consumed totals, and no replacement identity or retry silently restores credit.
+
+#### Scenario: Observation freshness and source rejection
+- **WHEN** an observation is older than 120 seconds at launch, future-dated, missing identity/time, or produced by a wallet-mutating source
+- **THEN** live admission rejects it without changing wallet state, weakening secret/path checks or substituting a shape-valid balance.
+
+#### Scenario: Last authorized dispatch race and prepaid boundary
+- **WHEN** two callers contend for the last authorized dispatch or remaining seconds
+- **THEN** exactly one may commit the debit and claim and launch; the other is denied. The one legitimately prepaid invocation may launch once when its own committed counter reaches the ceiling, without raising the ceiling or permitting another launch.
+
+#### Scenario: Crash around debit and projection persistence
+- **WHEN** fault injection interrupts before debit commit, after commit but before launch, or between master/projection writes
+- **THEN** respectively no launch occurs; the committed charge remains consumed with explicit recovery evidence and no refund; or correspondence failure denies all spendable credit from the incomplete projection. No failure outcome authorizes a duplicate launch.
+
+#### Scenario: Reservation ownership or replay failure
+- **WHEN** debit/action/candidate/runner ownership differs between budget and plugin reservation, or a claimed debit is reused after any terminal outcome or crash
+- **THEN** the integrated existing reservation guard rejects launch and preserves both the original charge and claim.
+
+#### Scenario: Replay through another or recreated store
+- **WHEN** a second clone/git common directory, non-git fallback, or deleted/recreated SQLite store presents an already committed master debit
+- **THEN** launch is denied because its master-bound store/claim identity does not match, and the debit remains consumed.
+
+#### Scenario: Restored claim store or interrupted cross-store claim
+- **WHEN** a same-token pre-claim SQLite backup is restored or execution crashes between SQLite and master claim persistence
+- **THEN** the existing modules' integrated master one-shot claim prevents another launch, and missing agreement remains unavailable with charges retained.
+
+#### Scenario: Ambiguous attempt count or charged-but-unlaunched invocation
+- **WHEN** retained runs do not establish exactly two prior loan attempts, the within-attempt submission bound is absent, or attempt 3 is charged but fails before launch
+- **THEN** respectively the amendment/admission is denied, admission is denied, or attempt 3 remains consumed with no permission for a fourth attempt.
+
+#### Scenario: Explicit bounded successor grant
+- **WHEN** both resource votes approve a concrete successor amendment, all historical allocations are explicitly nonspendable, and existing consumers enforce only the exact new grant with its current charges
+- **THEN** that bounded grant may provide current resource authority without claiming quantified lifetime costs; absent votes, enforceable closure, or exact new-grant accounting denies this route.
+
+#### Scenario: Live action kind cannot bypass ceilings
+- **WHEN** a live action is registered as verify, reproduce or review, or any other kind
+- **THEN** it remains subject to aggregate master, package and Preview submission-attempt ceilings; a reader's kind-specific omission grants no exemption.
+
+#### Scenario: Clock authority mistaken for spend authority
+- **WHEN** the eight-hour block or an old reservation is offered as permission for another loan submission
+- **THEN** the allocation remains consumed until a separate explicit bounded amendment receives the required substantive votes and the current admission checks pass.
+
+### Requirement: Item 1 — Operational history is evidence
+The repair SHALL resolve history from retained real terminal outcomes and containment evidence. A software parser/producer defect SHALL be reproduced before repair. Unknown outcomes SHALL NOT become successful exits or verified zero-failure counts. Two failures of the same defect class SHALL require reproduction and a changed approach before another broad retry.
+
+Every live I2 action with `finalized-financial-settlement` profile SHALL obey operational-history, repeated-failure/reproduction and primary-reservation gates regardless of registered kind. Item 1 SHALL minimally repair the existing policy/store/CLI consumers where the actual reproduced kind exemptions permit a live bypass. Requirement/capability lineage SHALL truthfully continue retained loan-executor defect history; a renamed lineage SHALL NOT reset counts or outstanding findings. Specification, source and resource approvals SHALL NOT be ingested as actual-result reviews or clear findings they do not explicitly resolve. Preserve unknown outcomes and existing claim semantics.
+
+Live-profile history SHALL come only from the canonical plugin store of the authorized repository, with its persisted identity anchored in existing block records before source repair and ultimately bound by the master debit. Task 1.1 SHALL inventory the exact repository/requirement/capability lineage keys, store events and retained failures that exist only in external receipts. If no persisted identity exists, record its absence; creating/adopting live identity or reconciling external history is separately gated work, not task 1.1a. Missing canonical identity or missing events for that exact retained loan-executor lineage SHALL yield unavailable history, never verified zero failures. A fresh unrelated event SHALL NOT establish loan history. Test destination overrides SHALL not be accepted as live admission/debit authority; isolated tests exercise the rejection or explicitly anchored fixture simulation without enabling a live override.
+
+A live-profile action SHALL both obey and occupy the primary slot regardless of kind. `store.reserve`'s transactional check, `get_history`'s `primaryActive` and `has_other_primary`'s post-reservation recheck SHALL apply the same rule in both start orderings. These existing consumers and CLI callers form task 1.1a's production repair boundary.
+
+#### Scenario: Live kind, lineage or approval cannot shed history
+- **WHEN** live verify/review/reproduce has unresolved history, two unresolved same-defect failures without verified reproduction and changed approach, or an active primary reservation
+- **THEN** the action is denied by the same gates as the corresponding live implementation; renaming its requirement/capability does not discard the retained defect count, and specification/source/resource approval ingestion leaves unrelated unresolved findings unchanged.
+
+#### Scenario: Noncanonical or seeded history store
+- **WHEN** a live-profile action reads a fresh, unrelated-event-seeded, isolation-override, restored-unreconciled or other-clone store, or its canonical store lacks recorded events for the inventoried loan lineage
+- **THEN** history is unavailable and admission/debit binding is denied; fixture-only test setup does not constitute live adoption or history reconciliation.
+
+#### Scenario: Primary occupancy in both orderings
+- **WHEN** an implement/repair action is active before live verify/review/reproduce, or that live action is active before implement/repair
+- **THEN** the second reservation is rejected transactionally and by the post-reservation check; live occupancy remains visible through `primaryActive` until its real terminal disposition.
+
+#### Scenario: Recoverable terminal record
+- **WHEN** retained process identity, terminal outcome and containment establish an outcome that a reproduced parser defect had missed
+- **THEN** the repaired consumer reports that outcome and keeps the original record and reproducer.
+
+#### Scenario: Unavailable raw exit
+- **WHEN** the historical loan has financial output but no retained raw main exit before unit unload
+- **THEN** the raw-exit predicate stays unmet; neither output text nor an administrative history reset establishes success.
+
+### Requirement: Item 2 — Complete callable loan lifecycle
+Grok SHALL connect the real bounded executor to `retain_loan_main_exit`, its durable writer, exit selection and explicit cleanup owner. The callable path SHALL preserve startup invocation identity, poll running-to-terminal within the original deadline, and durably retain the real main-process terminal observation before deliberate stop. Success SHALL require raw main exit zero observed before stop and separate verified outer containment. The process SHALL NOT be stopped merely to manufacture terminal success. A stopped incomplete draft or helper-only packet SHALL NOT be installed as the complete path.
+
+#### Scenario: Successful callable invocation
+- **WHEN** the same launched invocation transitions from running to exited with raw exit zero, terminal evidence is fsynced before stop, and independent outer containment succeeds
+- **THEN** the caller retains those ordered facts and returns a scoped successful process result pending financial/result audits.
+
+#### Scenario: Lifecycle fault matrix
+- **WHEN** offline injections through the actual caller exercise malformed startup/process identity, invocation mismatch, preexisting stop evidence, nonzero main exit, terminal write/fsync failure, stop nonzero/exception/timeout, deadline crossing or invalid containment ordering
+- **THEN** every case has an independently specified non-success outcome and an explicit cleanup owner; terminal persistence failure does not authorize an evidence-driven premature stop, and the original outer timeout/containment procedure remains responsible for cleanup.
+
+#### Scenario: Stop succeeded but its receipt cannot persist
+- **WHEN** an actual successful stop is followed by stop-receipt write/fsync failure
+- **THEN** the result preserves actual stop success and persistence failure as separate observations, does not label the stop itself failed, and does not grant full successful evidence retention.
+
+### Requirement: Item 3 — Exact live admission and one bounded invocation
+Before dispatch, the orchestrator SHALL freeze the full executable/runtime closure and obtain both fresh concurrent non-author source audits of the exact candidate, then refresh wallet/resource observations and demonstrate applicable guarded admission. The registered live action SHALL bind its actual command, candidate, reviewed explicit allocation, debit and limits. SP01 syntax or SP05 local-runtime approval SHALL NOT admit public execution. Registered campaign dispatch SHALL use the existing plugin `run --action` path; absent mapping or unsupported admission must be repaired within this item, never bypassed. Source changes after review SHALL require both new source audits and renewed admission.
+
+The final sequence SHALL be: reviewed frozen source plus explicit reviewed resource authorization; final preflight of identity, observations, remaining ceilings and deadline; locked application of the authorized amendment and atomic persistent debit/counters with matching projection; then guarded final admission, unique plugin reservation and launch under the same consistency/replay controls. Final plugin admission SHALL NOT be required before its prerequisite debit exists. Any failure after debit commit SHALL retain the charge and deny launch unless that same first authorized reservation can be established without replay or ambiguity. Recheck observation age at actual launch; delays past 120 seconds SHALL fail closed or require fresh non-mutating observations before launch, never another debit for the same attempt.
+
+Item 3's refinement SHALL fix an exact admitted maximum duration of at most 1800 seconds under the existing runner, grace within its 1–10 second range, and a charge covering at least timeout + grace + 30 seconds; any change to these bounds requires its own reviewed specification/source repair. An outer runner kill SHALL be retained as non-success with ambiguous completion and consumed charge, never successful raw-main-exit evidence. The concrete duration, independent containment and both result reviews SHALL fit the fixed block deadline before dispatch.
+
+#### Scenario: Admitted loan run fits the deadline
+- **WHEN** all item 1 and item 2 predicates hold, both source audits pass, one new bounded loan invocation is explicitly admitted, and its maximum run, cleanup and both result reviews fit before `2026-09-11T14:46:18Z`
+- **THEN** the guarded action may run once, retaining raw process evidence, before-state, native transaction bytes, complete effects and public submission/finality observations; all attempts and costs accrue to existing history.
+
+#### Scenario: Denied or late launch
+- **WHEN** admission is missing/stale, a reviewer is unavailable, only a historical design action is eligible, the block has reached T0 + 6.5 hours, or the complete run/cleanup/review bound cannot fit
+- **THEN** no new live launch occurs; retain the concrete blocker and mark the execution objective incomplete. A continuation does not reset the deadline or allocation.
+
+#### Scenario: Public transaction notification
+- **WHEN** an actual public transaction submission or later status is observed
+- **THEN** record the observation through the existing notify procedure, emit its transaction ID and observed status in the conversation before a network summary, and use deliver only after the host-visible message exists; unresolved finality remains explicit.
+
+### Requirement: Item 4 — Actual financial result and original MC02 acceptance
+Both fresh selected auditors SHALL independently review the full exact actual-result evidence after independently recomputable native-byte decoding, complete-effect comparison, indexed success, canonical node finality and exact state readback. Source votes SHALL NOT count as result votes. Compare the frozen loan fixture's token/domain, roles, dues, recipients, transfers, all debits/credits, fees, approvals and writes, preserving residual duties and inner-incomplete flags. Preserve the original MC02 manifest provenance and reconcile each original positive/rejection criterion once in existing records. Reuse accepted swap evidence only after checking scope, bytes and lineage; excluded distinct-counterparty funding/signatures SHALL remain a gap until applicable evidence resolves it.
+
+The later explicit user routing in `raw/assignments/moriarty-grok-opus-astra-routing-2026-09-10.md`, reaffirmed for this AFK block, SHALL supersede MC02's older Fable/GPT-6 named identities for future package closure: Grok 4.6 high authors; fresh Opus and Astra medium audit. Record this disposition for MC02 task 5.3 while retaining historical actual reviewer identities. Item 4 SHALL also explicitly reconcile MC02 task 3.2: record the reviewed cumulative attempt-3 extension and its acceptance disposition, or leave the criterion unmet. Neither later routing nor the attempt extension waives any financial/formal acceptance predicate.
+
+#### Scenario: Newly accepted loan predicate
+- **WHEN** the new invocation has retained raw exit zero, independent containment, complete decoded financial effects matching independent local expectations, required finality/readback and both current substantive result approvals
+- **THEN** record precisely the newly accepted financial predicate, with actual costs and mandatory proof claims unavailable until MC05; aggregate I2 remains open unless every original criterion is covered.
+
+#### Scenario: Incomplete or invalid effects
+- **WHEN** comparison finds a wrong recipient/domain, excess fee, missing debit, extra approval, undeclared write, missing role/funding evidence, or a required rejection that mutates state or lacks evidence
+- **THEN** result acceptance fails for that predicate and aggregate promotion stays blocked, even if network submission or process exit succeeded.
+
+#### Scenario: Unsupported promotion
+- **WHEN** old loan success output, a narrower swap, local tests, source approval or network success is offered as raw-exit evidence, full I2/SP05 completion, compiler correspondence, history certification or mandatory PCD
+- **THEN** reject that claim while retaining any independently approved narrower financial result.
+
+### Requirement: Item 5 — Reviewed publication and honest handoff
+The orchestrator SHALL publish only reviewed owned changes under standing GitHub authority, preserve unrelated dirty work and immutable history, and exclude credentials/private witness material. Final records SHALL report actual resource use, completed predicates, unresolved gaps, process containment and one next executable action in the existing session/acceptance/checkpoint locations. No new scheduler or acceptance register SHALL be added. A loop SHALL be reported armed only after current live runtime confirms that state.
+
+#### Scenario: Publish and close the interval
+- **WHEN** reviewed owned bytes and scoped results are ready before the deadline
+- **THEN** publish those bytes, retain review/result references and the six existing session measurements, verify cleanup, and leave a precise continuation without marking the full-roadmap goal complete.
+
+#### Scenario: Incomplete execution or unsafe publication set
+- **WHEN** live execution did not occur or failed, finality/audits/containment remain unresolved, or the publication set contains unreviewed/unrelated/private material
+- **THEN** retain reviewed repairs and exact failures, mark the block's execution objective incomplete, and exclude the affected publication material until resolved.
+
+### Requirement: Item 6 — Optional bounded F0 diagnosis
+Only after binding/accounting readiness and with noncompeting independent capacity, the orchestrator MAY perform at most thirty minutes of read-only F0 diagnosis. Its specification SHALL name the source/interface question and required observations before work. The finding SHALL identify the actual outer verifier, transcript, VK, carried accumulator, constrained finalizer, SRS/export owner and deployment provenance, or state the exact missing interface/fit blocker. It SHALL NOT authorize larger k, a proof campaign or a new backend. Consequential GO/resource decisions retain existing independent votes and admission.
+
+#### Scenario: Scoped source finding
+- **WHEN** the bounded inspection establishes a source route or locates a missing required interface
+- **THEN** record that source-supported finding in the existing F0 record with its limitations; no native/PCD acceptance follows from source inspection.
+
+#### Scenario: Competing or inconclusive lane
+- **WHEN** F0 would delay the loan path, the thirty-minute limit is reached, or essential fit/interface evidence remains absent
+- **THEN** drop or stop the lane, keep dependent proving stopped and retain the precise blocker without filling the remaining clock with new packets.
+
+FULL FILE openspec/changes/afk-live-financial-execution/tasks.md
+# AFK live financial execution tasks
+
+All items are specified-only. The specification's existence completes no item. Use the existing eight-hour plan and current routing. Record specification revision/digest and both non-author Opus/Astra medium verdicts in existing session/deliverable records before starting each item. One full-package review may explicitly cover multiple item specifications; recheck applicability immediately before each item, and changed relevant requirements require both fresh approvals. Specification, source, resource, live-admission and actual-result scopes remain separate.
+
+## 1. Repair current binding/accounting and prepare bounded resources
+
+- [ ] 1.S Obtain both independent current specification approvals and expected outcomes before implementation. Both reviewers may separately approve the same exact source scope for 1.1a, 1.2, the 1.3 direct observer, or the 1.3 accounting producer with its corresponding isolated 1.4 checks while concrete resources remain pending. Each scope excludes live accounting/application, token/history adoption and dispatch and does not approve other subparts.
+- [ ] 1.1 Inspect guarded status, producers and existing records/runner/policy/store/CLI consumers. Use the retained pure-policy live-kind reproducer first; preserve its unresolved-history/retry/primary findings and reproduce targeted store-identity/lineage issues before repair. Retain exact paths and observations in existing block records.
+- [ ] 1.1a After RED tests and both explicit same-scope approvals, repair only the reproduced policy/primary/review-history guards in existing policy.py/store.py and their cli.py callers. Inventory canonical store identity or its absence, exact lineage keys and external-only failure receipts before source changes. Test noncanonical/seeded history rejection, preserved scoped findings and primary occupancy in both orderings on isolated SQLite/locks. No records.py live-label/bridge repair, runner/producer work, resource application, live identity creation/history reconciliation or dispatch is included.
+- [ ] 1.2 Reproduce rejection of truthful live I2 records and minimally repair existing binding/review/acceptance/profile consumers, including historical-design regression tests. Retain the exact SP01 historical-to-current diff; obtain reviewed non-substantive disposition and authenticated original-byte bridge, or leave the prerequisite unmet pending new design acceptance. Establish the new bounded I2 action/binding; do not use the historical SP01 checker as its caller.
+- [ ] 1.3 Restore the genuine accounting producer or its invocation; reconcile active master/package limits, applicable charges/reservations/attempts and amendments. If historical remainder cannot be established, prepare only the specification's conditional exact successor-grant option under the September 7 authority, with all historical allocations nonspendable and unknown lifetime costs preserved. Require separate concrete resource votes and existing-record enforcement before live application; otherwise retain the exact blocker. Obtain non-mutating public observations through the admission path and preserve fee-unit uncertainty.
+- [ ] 1.4 Run real producer/reader/runner/policy/reservation code with isolated ledgers, records, SQLite store and budget lock. Cover truthful live/design discrimination, single-path bridge authentication, non-mutating observation freshness, identity/evidence failure, debit/store replay, race/prepaid/crash boundaries, attempt/submission reconciliation and all-kind resource/history/retry/primary gates. Confirm renamed lineage and scoped approval do not erase findings. Verify live master, lock, SQLite reservations/claims/events and operational history are untouched. Any pre-freeze live registration is explicitly non-dispatchable.
+
+Scope 1.1a's tests are only the corresponding policy/store/history/CLI checks in 1.4; fixture ledgers do not approve or test a nonexistent real producer. Producer race/crash/attempt checks follow separate 1.3 specification approval and implementation. Live startup-status administrative writes must have before/after digests/counts; all repair tests and status/review checks run on copied stores. Item 1.2 must fix its exact closed live labels before its own tests; it is not part of 1.1a approval.
+- [ ] 1.5 Obtain both current source audits for changed executable bytes and required substantive votes for the explicit bounded allocation/master amendment, naming cumulative loan-case attempt 3 and MC02 3.2's original ceiling. Demonstrate repaired scope-correct binding/accounting on isolated records; defer live amendment application and debit until item 3's frozen executor and final reservation sequence.
+
+## 2. Deliver the complete callable executor
+
+- [ ] 2.S Refresh concrete caller paths and independently expected lifecycle outcomes in OpenSpec; obtain both current specification approvals before Grok implementation.
+- [ ] 2.1 Include executor → collector → durable writer → exit selector → explicit cleanup owner. Keep the same Grok author through consolidated repairs; isolate owned changes.
+- [ ] 2.2 Establish meaningful failing checks before behavioral repairs and run the full callable offline lifecycle fault matrix from the specification. Do not import historical actionful scripts.
+- [ ] 2.3 Inspect the real product entry point and freeze the entire candidate only after all current failures are addressed. Retain local test outputs and limits. Both fresh source audits occur before item 3 dispatch.
+
+## 3. Admit and execute one bounded real loan invocation
+
+- [ ] 3.S Record the actual command/action, loan predicate, exact maximum duration within the 1800-second runner cap, bounded grace/charge, public submission limit and resource/deadline constraints; obtain both current specification approvals before actionful execution.
+- [ ] 3.1 Obtain both fresh concurrent full-candidate source audits. Bind current runtime closure, candidate, real debit, reviewed allocation and current wallet/resource observations to the existing guarded live action. Repair absent actual command/admission mapping within approved scope.
+- [ ] 3.2 After source/resource authorization, preflight exact bytes, non-mutating observations no older than 120 seconds at launch, ceilings and deadline. Under existing consistency controls, apply the reviewed amendment and atomically persist debit/counters/projection, then obtain guarded final admission and the existing unique reservation before launch. Preserve charges on subsequent failure; do not require final admission before its debit prerequisite or reuse a consumed allocation.
+- [ ] 3.3 Run once through the guarded CLI if eligible. Retain raw main exit before stop, durable ordering, independent containment, native bytes and actual resource/attempt history. Apply public transaction notification/delivery rules to real observations.
+
+## 4. Audit the actual result and reconcile MC02
+
+- [ ] 4.S Confirm the exact financial/rejection requirements and evidence paths; obtain both current specification approvals before result-check execution.
+- [ ] 4.1 Independently decode actual native transaction bytes and complete effects; establish indexed success, canonical finality and exact readback. Preserve failed/unknown outcomes and residual duties.
+- [ ] 4.2 Obtain both fresh full actual-result audits with the correct returned identities, exact evidence digest and explicit acceptance scope.
+- [ ] 4.3 Map every original MC02 criterion to accepted applicable evidence, missing evidence or a precise blocker in existing records. Explicitly dispose of task 3.2's cumulative third-attempt extension and task 5.3's future-reviewer override under the September 10 user routing; preserve original limits and historical identities. Check swap lineage and counterparty/adverse gaps. Recompute acceptance only when all mandatory predicates and amendment dispositions are covered; preserve uncertified I2 and full SP05's SP01 dependency.
+
+## 5. Publish, contain and leave a precise checkpoint
+
+- [ ] 5.S Confirm the concrete publication/cleanup scope and obtain both current specification approvals before the item begins.
+- [ ] 5.1 Publish reviewed owned changes under standing authority; preserve user work, immutable failures and private material. Do not start another live/proof dispatch after T0 + 6.5 hours.
+- [ ] 5.2 Complete established containment and record any unresolved process state. Reserve the final 45 minutes for publication, cleanup and handoff.
+- [ ] 5.3 Record existing six measurements, actual costs, accepted predicates, precise blockers and one next action. Mark the eight-hour execution objective incomplete if its real-run/result requirements remain unmet. Preserve remaining full-roadmap obligations and the prior objective in existing history; do not falsely complete either objective.
+
+## 6. Optional read-only F0 diagnosis
+
+- [ ] 6.S Only if binding/accounting readiness is resolved and independent capacity is available, specify the targeted source/interface question and obtain both specification approvals.
+- [ ] 6.1 Inspect for at most thirty minutes without competing with loan work; record source symbols/provenance and exact missing interface/fit facts in the existing F0 record.
+- [ ] 6.2 Keep dependent proving stopped unless separately authorized prerequisites and decisions are satisfied. No proof dispatch or larger-k retry belongs to this block.
+
+## Verification evidence
+
+Select actual existing callable tests after inspecting the repaired entry point. Record exact commands and observed results with the owned candidate; do not advertise unimplemented placeholders as working commands. Before claiming a gate passes, capture current guarded status/admission and actual output. Independent scenario coverage, both required reviews and real ledger evidence determine acceptance; a green checker alone does not.
+
+FULL FILE openspec/changes/afk-live-financial-execution/proposal.md
+# AFK live financial execution
+
+Status: specified-only; independent specification approval pending. This package grants no admission and records no completed implementation or accepted result.
+
+## Why
+
+The eight-hour block must repair execution readiness and deliver a real, independently audited loan invocation. The reviewed collector exists, but its CLI refuses live collection. Current guarded status reports stale SP01 binding/candidate inputs and missing current accounting. Existing SP01 design and SP05 local-runtime action mappings do not authorize a public loan.
+
+The user requires OpenSpec requirements for every item before execution and delegates audit/approval while AFK. This package supplies that specification step within the existing workflow.
+
+Revision 3 follows a targeted pure-policy reproduction after two review cycles. `deliverables/afk-live-financial-execution-2026-09-11/policy-live-kind-reproducer.json` demonstrates that live verify/review/reproduce kinds bypass unresolved-history/retry/primary gates while implement is denied. Requirements now close that concrete policy/store/CLI gap, bind global debit ownership to the existing SQLite store identity, and specify single-path bridge discovery and fully isolated tests. Prior review verdicts remain historical; this revision requires both fresh approvals. Earlier truthful live labels, 120-second observations, cumulative accounting and independent review requirements remain.
+
+Revision 4 established the separately bounded task 1.1a scope: repair the already reproduced policy, primary occupancy and review/history consumers in policy/store/CLI with isolated tests. It adds canonical history anchoring and exact lineage inventory, bidirectional occupancy, explicit treatment of status administrative writes, and later store-token/master-claim and closed-label obligations. No ledger producer, live-label bridge or live-instance resource evidence is approved by this source scope. Reviewers distinguish adequacy of these deterministic guards from later live-history reconciliation and resource implementation. The subsequent concrete specifications permit separate same-scope source approvals for 1.2, the 1.3 direct observer and the 1.3 accounting producer, each with isolated tests. These scopes exclude live accounting/application, token/history adoption and dispatch; actual approval evidence remains in the retained scoped review records.
+
+Read-only SQL at revision 4 identified the authorized repository's canonical store as `/home/charl/Moriarty/.git/moriarty-dev/state.sqlite3`. The inspected schema has no persisted identity-token table. Its only nonempty event lineage is repository `/home/charl/Moriarty/.worktrees/moriarty-dev-plugin-grok`, requirement `SP01.6`, capability `loan-swap-subset`: event IDs 3–6 are report/design-verification start/end records. Catalog lineage `SP05.1` / `fixed-financial-driver` has no corresponding event rows; reproducer lineage `SP05` / `loan-executor` is synthetic and cannot establish live history. Numerous blank-lineage administrative events are not loan outcomes. `deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/attempt-result-01.json` and its actual-result reviews retain the external loan raw-exit limitation; those receipts do not appear as loan-lineage store events. This absence mandates unavailable live history until separately reviewed reconciliation; it does not block isolated task 1.1a rejection-guard tests or authorize identity creation.
+
+## What changes
+
+Each item follows requirements → independent specification approval → Grok implementation or authorized execution → actual checks → both applicable fresh audits → scoped result. Fresh Claude Opus (`claude-opus-5`) and GPT-6 Astra medium review the full exact specification/candidate independently. Grok 4.6 high implements. Returned identities, effort, verdict scope and historical dissent remain recorded.
+
+The items are: (1) current I2 binding/action/accounting repair and bounded allocation; (2) complete callable loan executor; (3) final exact-candidate live admission and one bounded invocation; (4) financial/result review and original MC02 reconciliation; (5) publication and containment/handoff; (6) optional read-only F0 diagnosis. Item 6 cannot displace financial execution. Item 1 may receive approval and begin while later item specifications are refined; each later item must receive its own applicable current approval before work begins.
+
+## Scope and clock
+
+The controlling plan is `docs/superpowers/plans/2026-09-11-eight-hour-afk-development.md`. T0 is `2026-09-11T06:46:18Z`; the deadline is `2026-09-11T14:46:18Z`, including waits and reviews. Reserve the last 45 minutes for publication, cleanup and handoff. From T0 + 6.5 hours, launch no new live or proof dispatch. Earlier launches must leave enough time for their admitted maximum duration, cleanup and both result audits. No clock reset on continuation.
+
+The block creates no funds, attempts or proof authority. The historical loan allocation's two attempts remain consumed. Any new allocation requires an explicit bounded amendment reviewed under standing authority and all applicable admission gates. Missing services or evidence leave the execution objective incomplete.
+
+Item 1 verifies repairs against isolated ledger/record copies. Only item 3 applies the reviewed live amendment and debit after final candidate freeze, source/resource authorization and preflight; the prepaid debit then permits guarded final admission and unique reservation. The existing SQLite charge claim remains part of the single-launch control. No final-admission-before-debit cycle is required.
+
+Use existing campaign, accounting, operational-history, result and session records. Do not create a scheduler, evidence framework or alternate acceptance register. Preserve wallet identities, keys, contract state, immutable receipts and unrelated work. Full I2 acceptance requires every original MC02 predicate; I2 remains uncertified until MC05. Full SP05 additionally requires SP01.
+
+## Observed implementation boundary
+
+Inspected `plugins/moriarty-dev/scripts/moriarty_dev/records.py`:
+
+- `_verify_binding` verifies `moriarty.sp01-execution-binding/1`, its exact binding hash and input hashes. The current SP01 binding commits an older `openspec/sprints/sp01-financial-contract-and-execution-admission.md` hash.
+- The existing binding/review/acceptance and evidence-applicability checks support design/local scopes, not truthfully labeled live I2 admission. Reproduce that rejection and repair only the affected existing consumers, retaining historical design semantics. The stale SP01 prerequisite requires authenticated retained original bytes plus a reviewed exact-diff disposition, or new reviewed design acceptance for substantive change; updating old hashes is not a resolution.
+- `_verify_resource` reads the selected campaign's `currentAccounting`. `_remaining_from_current` accepts the closed `moriarty.supervised-accounting/1` family, with `charges`, `reserved`, `externalPackageCharges`, planning charges, package/master limits and dispatch counters. It explicitly refuses the historical `resourceRuntimeSnapshot` path as current credit.
+- The current accounting shape does not contain wallet identity or observation timestamps. Do not silently add unknown fields or claim those checks already exist. Bind genuine public wallet/resource observations through the existing allocation/admission evidence and review their actual consumer before dispatch; change a consumer only for an independently specified, reproduced gap.
+- `runner.py::load_runner` requires one existing debit matching action, candidate, runner digest and charged seconds. The runner does not produce accounting or create credit. A missing producer/invocation remains an implementation obligation; tests that manufacture accounting fixtures are not that producer.
+- `.moriarty-dev/actions.json` currently declares syntax/local-runtime actions. `.moriarty-dev/commands.json` does not supply the proposed live executor. Refresh these facts before implementation; valid design verification is not live admission.
+
+Inspected `deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/cli.py` and `loan_exit_operator.py`: `collect-once` refuses; `retain_loan_main_exit` delegates to the collector after a separately admitted launch. The caller, durable writer, exit decision and cleanup path must be integrated and tested together. Never import historical actionful scripts in offline tests.
+
+`deliverables/sp05-loan-executor-grok-2026-09-11/root-prerequisite-inspection01.json` records historical reservation totals, not paid fees or comprehensive global totals; it also records three changed local modules. Reinspect current closure and costs rather than reusing those observations as current authority.
+
+The concrete SP01 comparison is `plugins/moriarty-dev/tests/fixtures/sp01-financial-contract-and-execution-admission.md` (SHA-256 `fdb586d9bf05f2fbf7e9c2294be49854528db20e575faf9aaa1144b033908172`, provenance commit `f173efe91f598e1a862d941c1c854692d9219a6b` documented by the adjacent `README.md`) against `openspec/sprints/sp01-financial-contract-and-execution-admission.md` (SHA-256 `bc60ffef020b282954f5543db3b00f51f06d45dd113cd68d853967ff50acc23b`). The inspected diff relaxes redundant routine-work packet requirements and adds specified-only report refinements explicitly preserving recorded atomic/RP01-MC02 foundations. Non-substantive impact on the accepted SP01.6 subset is a hypothesis requiring both reviewers' exact-diff disposition, not established acceptance in this proposal.
+
+The September 11 accounting inspection located the retained master at `~/.local/state/moriarty/mc01-supervised-20260907/budget.json`: master limit 210890 seconds, planning 2323.0473305040214, overhead 165, charges 108960, reservations 300 and external charges 99135 leave approximately 6.95267 seconds. Package dispatches are 52/52 and aggregate dispatches are 83/83. These observations cannot fund the new action. The retained producer `~/.local/state/moriarty/moriarty-dev-plugin-20260908/successor-binding-03/run.py` uses `budget.lock`, transfers reservations into pre-launch charges/dispatches and replaces accounting atomically. Inspect it as text; do not replay it. Restore its relevant existing accounting operation with the reviewed current amendment and caller.
+
+Consumer limitations must be handled explicitly: `_verify_resource` adds amendment, successor and binding allocations, so repeating one envelope across those fields can double-count apparent credit. `_remaining_from_current` does not itself enforce the aggregate master dispatch ceiling or authenticate amendment votes. The real producer/admission path must enforce those obligations; shape-valid reader success is insufficient. Preserve the original authority identity and reconcile any reviewed ceiling/counter extension cumulatively. Keep mutable accounting outside candidate/binding input hashes; the runner's exact debit identity binds the action/candidate/runner without creating a circular hash commitment.
+
+The retained master totals above are one observed ledger, not proof of complete global historical accounting. Unknown costs cannot establish spendable historical remainder. The September 7 twelve-sprint authority explicitly allows majority resource decisions and bounded successor allocations while preserving charges. The specification therefore includes a conditional exact new grant with historical allocations closed to spendable credit, only after both specification approvals, later concrete resource votes and verified enforcement through existing records. It does not quantify lifetime costs, reset counters or approve that option now; an inexpressible grant/closure stays blocked. Retained run records must establish exactly two prior loan-case attempts before the separately bounded third attempt; a committed but unlaunched third attempt remains consumed. Public submissions within that invocation need their own explicit bound.
+
+## Acceptance
+
+The normative requirements and positive/rejection scenarios are in `specs/afk-live-financial-execution/spec.md`. `tasks.md` gives the per-item specification gate and completion evidence. No checkbox is satisfied by this package's existence. Preserve original MC02 acceptance and later model-routing overrides together.
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/records.py _verify_resource
+def _verify_resource(root, campaign_id, record, program, binding_obj, action, missing):
+    relative = record.get("resourceAmendment")
+    if type(relative) is not str or relative == "":
+        missing.append("resourceAmendment-unresolved:" + campaign_id)
+        return False
+    path = _contained_file(root, relative, missing, "resource")
+    if path is None:
+        missing.append("resourceAmendment-missing:" + campaign_id)
+        return False
+    payload = _load_json_path(path, missing, relative)
+    if type(payload) is not dict:
+        missing.append("resourceAmendment-not-object:" + campaign_id)
+        return False
+    if payload == {}:
+        missing.append("resource-empty:" + campaign_id)
+        return False
+    extra_amendment = [k for k in payload if k not in RESOURCE_AMENDMENT_KEYS]
+    if extra_amendment:
+        for k in extra_amendment:
+            missing.append("unknown-resourceAmendment-field:" + k)
+        return False
+    schema = payload.get("schema")
+    if schema is not None and schema not in RESOURCE_SCHEMAS:
+        missing.append("resource-schema-unresolved:" + str(schema))
+        return False
+    authority = payload.get("authority")
+    if type(authority) is not str or authority == "":
+        missing.append("resource-authority-unresolved:" + campaign_id)
+        return False
+    if _contained_file(root, authority, missing, "resource-authority") is None:
+        return False
+    alloc = _amendment_seconds(payload, campaign_id, missing)
+    if alloc is None:
+        return False
+    res_scope = payload.get("scope")
+    camp_scope = record.get("scope")
+    if res_scope is not None:
+        if type(res_scope) is not str or res_scope == "":
+            missing.append("resource-scope-unresolved:" + campaign_id)
+            return False
+        if type(camp_scope) is str and res_scope != camp_scope:
+            missing.append("resource-scope-mismatch:" + campaign_id)
+            return False
+    successors = record.get("successorAmendments")
+    if successors is None:
+        successors = []
+    if type(successors) is not list:
+        missing.append("successorAmendments-unresolved:" + campaign_id)
+        return False
+    for item in successors:
+        if type(item) is not str:
+            missing.append("successorAmendments-unresolved:" + campaign_id)
+            return False
+        extra = _load_amendment_file(root, item, campaign_id, missing)
+        if extra is None:
+            return False
+        alloc += extra
+    if type(binding_obj) is dict:
+        resources = binding_obj.get("resources")
+        if type(resources) is dict:
+            bound = resources.get("allocationSeconds")
+            if bound is not None:
+                if type(bound) is not int:
+                    missing.append("binding-allocation-invalid:" + campaign_id)
+                    return False
+                alloc += bound
+    if alloc <= 0:
+        missing.append("resource-allocation-invalid:" + campaign_id)
+        return False
+    historical = None
+    if type(program) is dict:
+        runtime = program.get("resourceRuntimeSnapshot")
+        if type(runtime) is dict:
+            historical = runtime.get("path")
+    spec = record.get("currentAccounting")
+    if spec is None:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return False
+    remaining = _remaining_from_current(
+        root, spec, record, binding_obj, action, alloc, historical, campaign_id, missing
+    )
+    if remaining is None:
+        return False
+    if remaining < 0:
+        missing.append("resource-exhausted:" + campaign_id)
+        return False
+    return True
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/records.py _amendment_seconds
+def _amendment_seconds(payload, campaign_id, missing):
+    if "allocationSeconds" in payload:
+        value = payload["allocationSeconds"]
+        if type(value) is not int or value <= 0:
+            missing.append("resource-allocation-invalid:" + campaign_id)
+            return None
+        additional = payload.get("additionalSeconds")
+        if additional is None:
+            return value
+        if type(additional) is not int or additional < 0:
+            missing.append("resource-allocation-invalid:" + campaign_id)
+            return None
+        return value + additional
+    additional = payload.get("additionalSeconds")
+    if type(additional) is not int or additional <= 0:
+        missing.append("resource-allocation-invalid:" + campaign_id)
+        return None
+    return additional
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/records.py _remaining_from_current
+def _remaining_from_current(
+    root, spec, record, binding_obj, action, alloc, historical, campaign_id, missing
+):
+    if type(spec) is not dict:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    extra = [key for key in spec if key not in CURRENT_ACCOUNTING_KEYS]
+    for key in extra:
+        missing.append("unknown-currentAccounting-field:" + key)
+        return None
+    if spec.get("schema") != ACCOUNTING_SCHEMA:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    relative = spec.get("path")
+    if type(relative) is not str or relative == "":
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    if type(historical) is str and os.path.normpath(relative) == os.path.normpath(historical):
+        missing.append("resource-historical-snapshot:" + campaign_id)
+        return None
+    path = _contained_file(root, relative, missing, "current-accounting")
+    if path is None:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    payload = _load_json_path(path, missing, relative)
+    if type(payload) is not dict:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    extra_acc = [key for key in payload if key not in ACCOUNTING_KEYS]
+    for key in extra_acc:
+        missing.append("unknown-accounting-field:" + key)
+        return None
+    if payload.get("schema") != ACCOUNTING_SCHEMA:
+        missing.append("resource-snapshot-schema-unresolved:" + str(payload.get("schema")))
+        return None
+    auth_sha = payload.get("authority_sha256")
+    if type(auth_sha) is not str or auth_sha.lower() != "f6b7f17d1bda437d5f83abc656ccf4a0d9c7a57a83995668387c29bd0328f492":
+        missing.append("resource-authority-mismatch:" + campaign_id)
+        return None
+    planning = _nonneg_number(payload.get("planning_charge_seconds"), True)
+    overhead = _nonneg_number(payload.get("planning_overhead_reserved_seconds"), True)
+    if planning is None or overhead is None:
+        missing.append("resource-planning-unresolved:" + campaign_id)
+        return None
+    master_limit = payload.get("master_limit_seconds")
+    package_limit = payload.get("package_limit_seconds")
+    if type(master_limit) is not int or master_limit <= 0:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    if type(package_limit) is not int or package_limit <= 0:
+        missing.append("resource-live-state-unavailable:" + campaign_id)
+        return None
+    package = payload.get("package")
+    rec_owners = _owners_of(record.get("owner"))
+    if type(package) is not str or package == "":
+        missing.append("resource-scope-mismatch:" + campaign_id)
+        return None
+    if rec_owners and package not in rec_owners:
+        missing.append("resource-scope-mismatch:" + campaign_id)
+        return None
+    charges = _seconds_list(payload.get("charges"), missing, campaign_id)
+    reserved = _seconds_list(payload.get("reserved"), missing, campaign_id)
+    external = _seconds_list(payload.get("externalPackageCharges"), missing, campaign_id)
+    if charges is None or reserved is None or external is None:
+        return None
+    master_used = planning + overhead + charges + reserved + external
+    package_used = planning + overhead + charges
+    pass_binding = _optional_pass_record(
+        root, spec.get("passBinding"), PASS_BINDING_OPTIONAL, missing, "pass-binding"
+    )
+    if pass_binding is False:
+        return None
+    if type(pass_binding) is dict:
+        if pass_binding.get("schema") == "moriarty.plugin-focused-source-pass/1" and record.get("stage") != "plugin":
+            missing.append("resource-scope-mismatch:" + campaign_id)
+            return None
+        pb_scope = pass_binding.get("scope")
+        rec_scope = record.get("scope")
+        if type(pb_scope) is not str or (rec_scope and pb_scope != rec_scope and pass_binding.get("schema") != "moriarty.plugin-focused-source-pass/1"):
+            missing.append("resource-scope-mismatch:" + campaign_id)
+            return None
+        pb_worktree = pass_binding.get("worktree")
+        if type(pb_worktree) is not str or os.path.normpath(pb_worktree) != os.path.normpath(str(root)):
+            missing.append("resource-worktree-mismatch:" + campaign_id)
+            return None
+        pb_parent = pass_binding.get("parentCandidate")
+        if type(pb_parent) is not str or pb_parent != record.get("candidateHash"):
+            missing.append("resource-candidate-mismatch:" + campaign_id)
+            return None
+    pass_ledger = _optional_pass_record(
+        root, spec.get("passLedger"), PASS_LEDGER_KEYS, missing, "pass-ledger"
+    )
+    if pass_ledger is False:
+        return None
+    if type(pass_ledger) is dict and pass_ledger.get("stopped") is True:
+        missing.append("resource-pass-stopped:" + campaign_id)
+        return None
+    cost = _action_cost(action, binding_obj, pass_binding, campaign_id, missing)
+    if cost is None:
+        return None
+    prepaid = False
+    runners = binding_obj.get("runners", {}) if type(binding_obj) is dict else {}
+    if type(runners) is dict and action["id"] in runners:
+        # A command declaration cannot create credit. Resolve the campaign's
+        # hash-bound runner and its exact existing debit before recognizing it.
+        # load_runner checks source/debit identity without calling this reader.
+        try:
+            from moriarty_dev.runner import load_runner
+            plan, _ = load_runner(root, action)
+            if not cost <= plan["chargedSeconds"] <= alloc:
+                raise ValueError("debit does not match the admitted action bound")
+            prepaid = True
+        except Exception as exc:
+            missing.append("resource-runner-debit-unresolved:" + str(exc))
+            return None
+    envelope_remain = None
+    if type(pass_binding) is dict:
+        envelope_id = pass_binding.get("envelope")
+        envelopes = payload.get("successorEnvelopes")
+        if type(envelope_id) is str and envelope_id != "":
+            if type(envelopes) is not dict or envelope_id not in envelopes:
+                missing.append("resource-envelope-unresolved:" + envelope_id)
+                return None
+            env = envelopes[envelope_id]
+            if type(env) is not dict:
+                missing.append("resource-envelope-unresolved:" + envelope_id)
+                return None
+            envelope_remain = env.get("remainingReservedSeconds")
+            if type(envelope_remain) is not int:
+                missing.append("resource-envelope-unresolved:" + envelope_id)
+                return None
+            env_dispatches = env.get("workerDispatches")
+            env_limit = env.get("workerDispatchLimit")
+            if action["kind"] in IMPLEMENT_KINDS:
+                if type(env_dispatches) is not int or type(env_limit) is not int:
+                    missing.append("resource-dispatch-unresolved:" + campaign_id)
+                    return None
+                if env_dispatches >= env_limit:
+                    missing.append("resource-dispatch-exhausted:" + campaign_id)
+                    return None
+    if action["kind"] in IMPLEMENT_KINDS:
+        dispatches = payload.get("worker_dispatches")
+        dispatch_limit = payload.get("worker_dispatch_limit")
+        if type(dispatches) is not int or type(dispatch_limit) is not int:
+            missing.append("resource-dispatch-unresolved:" + campaign_id)
+            return None
+        if dispatches >= dispatch_limit:
+            missing.append("resource-dispatch-exhausted:" + campaign_id)
+            return None
+    remainders = [
+        master_limit - master_used,
+        package_limit - package_used,
+        alloc,
+    ]
+    if type(envelope_remain) is int:
+        remainders.append(envelope_remain)
+    # The existing debit already contributes to master_used/package_used.
+    remaining = min(remainders) - (0 if prepaid else cost)
+    return remaining
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/records.py _apply_history
+def _apply_history(history_reader, root, action, snap, missing):
+    if history_reader is None:
+        missing.append("operational-history")
+        snap["sameDefectFailures"] = None
+        snap["adminCycles"] = None
+        snap["adminSeconds"] = None
+        return
+    if not callable(history_reader):
+        missing.append("operational-history-not-callable")
+        snap["sameDefectFailures"] = None
+        snap["adminCycles"] = None
+        snap["adminSeconds"] = None
+        return
+    lineage = {
+        "repository": _repository_identity(root, missing),
+        "requirement": action["requirement"],
+        "capability": action["capability"],
+    }
+    try:
+        payload = history_reader(lineage)
+    except Exception as exc:
+        missing.append("operational-history-error:" + type(exc).__name__)
+        snap["sameDefectFailures"] = None
+        snap["adminCycles"] = None
+        snap["adminSeconds"] = None
+        return
+    if payload is None:
+        missing.append("operational-history")
+        snap["sameDefectFailures"] = None
+        snap["adminCycles"] = None
+        snap["adminSeconds"] = None
+        return
+    if type(payload) is not dict:
+        missing.append("operational-history-invalid")
+        snap["sameDefectFailures"] = None
+        snap["adminCycles"] = None
+        snap["adminSeconds"] = None
+        return
+    extra = [key for key in payload if key not in HISTORY_KEYS]
+    if extra:
+        missing.append("operational-history-invalid")
+        snap["sameDefectFailures"] = None
+        snap["adminCycles"] = None
+        snap["adminSeconds"] = None
+        return
+    for key in HISTORY_INT_KEYS:
+        value = payload.get(key)
+        if value is None:
+            snap[key] = None
+            continue
+        if type(value) is not int or value < 0:
+            missing.append("operational-history-type:" + key)
+            return
+        snap[key] = value
+    for key in HISTORY_BOOL_KEYS:
+        value = payload.get(key)
+        if type(value) is not bool:
+            missing.append("operational-history-type:" + key)
+            return
+        snap[key] = value
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/runner.py load_runner
+def load_runner(root, action):
+    """Resolve through the same campaign and hashed binding as source admission."""
+    root = Path(root).resolve()
+    program = _json(_contained(root, "openspec/moriarty-completion-program.json"))
+    store = program["reportReconciliation"]["stageAdmission"]["campaignRecordStore"]
+    campaigns = _json(_contained(root, store))["campaigns"]
+    if not action["admissionRef"].startswith("campaign:"):
+        raise ValueError("runner requires existing campaign authority")
+    campaign_id = action["admissionRef"][len("campaign:"):]
+    campaign = campaigns[campaign_id]
+    missing = []
+    valid, binding = records._verify_binding(root, campaign_id, campaign, missing)
+    if not valid or not records._verify_candidate(root, campaign_id, campaign, missing):
+        raise ValueError("runner admission changed: " + ", ".join(missing))
+    plan = binding.get("runners", {}).get(action["id"])
+    if type(plan) is not dict:
+        raise ValueError("no authenticated admitted-runner authority is registered")
+    required = {"schema", "action", "argv", "files", "launcher", "launcherFiles",
+                "timeoutSeconds", "graceSeconds", "outputLimitBytes", "chargeId", "chargedSeconds", "accountingPath"}
+    if set(plan) - (required | {"assertion"}) or not required.issubset(plan):
+        raise ValueError("unsupported runner binding fields")
+    if plan["schema"] != "moriarty.bound-runner/1" or plan["action"] != action or campaign["candidateHash"] != action["candidate"]:
+        raise ValueError("runner action/candidate binding mismatch")
+    ref, fragment = action["commandRef"].split("#", 1)
+    entry = _json(_contained(root, ref))["commands"][fragment]
+    argv = plan["argv"]
+    if type(argv) is not list or not argv or any(type(x) is not str or not x for x in argv):
+        raise ValueError("invalid bound argv")
+    if entry != {"argv": argv}:
+        raise ValueError("command mapping differs from admitted runner")
+    if not Path(argv[0]).is_absolute() or not os.access(argv[0], os.X_OK):
+        raise ValueError("runner executable must be an absolute executable path")
+    _check_files(root, plan["files"], argv[0])
+    for arg in argv[1:]:
+        if not arg.startswith("-") and (root / arg).is_file() and arg not in plan["files"]:
+            raise ValueError("argv file is not hash-bound: " + arg)
+    launcher = plan["launcher"]
+    if type(launcher) is not list or len(launcher) != 2 or launcher[1] != str(FOREMAN_LAUNCHER):
+        raise ValueError("runner must use the existing Foreman launcher")
+    if not Path(launcher[0]).is_absolute() or not os.access(launcher[0], os.X_OK):
+        raise ValueError("launcher executable must be absolute")
+    if str(FOREMAN_LAUNCHER) not in plan["launcherFiles"]:
+        raise ValueError("Foreman bytes are not hash-bound")
+    _check_files(root, plan["launcherFiles"], launcher[0])
+    for key, low, high in (("timeoutSeconds", 1, 1800), ("graceSeconds", 1, 10), ("outputLimitBytes", 256, 1048576)):
+        if type(plan[key]) is not int or not low <= plan[key] <= high:
+            raise ValueError("invalid runner bound: " + key)
+    if type(plan["chargedSeconds"]) is not int or plan["chargedSeconds"] < plan["timeoutSeconds"] + plan["graceSeconds"] + 30:
+        raise ValueError("charge does not cover startup, execution and cleanup")
+    if type(plan["chargeId"]) is not str or not plan["chargeId"].strip():
+        raise ValueError("runner charge identity unavailable")
+    assertion = plan.get("assertion")
+    if action["kind"] == "reproduce":
+        if type(assertion) is not dict or set(assertion) != {"id", "exitCode", "stdoutSha256"}:
+            raise ValueError("reproducer requires an admitted behavioral assertion")
+        if type(assertion["id"]) is not str or not assertion["id"].strip():
+            raise ValueError("empty behavioral assertion ID")
+        if type(assertion["exitCode"]) is not int or not 2 <= assertion["exitCode"] <= 123:
+            raise ValueError("behavioral exit must differ from ordinary failure and timeout")
+        if type(assertion["stdoutSha256"]) is not str or len(assertion["stdoutSha256"]) != 64:
+            raise ValueError("behavioral output commitment unavailable")
+    elif assertion is not None:
+        raise ValueError("assertion supplied for a non-reproducer")
+    digest = hashlib.sha256(json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    if campaign["currentAccounting"]["path"] != plan["accountingPath"]:
+        raise ValueError("charge source differs from current campaign accounting")
+    budget = _json(_contained(root, plan["accountingPath"]))
+    charges = budget["charges"] + budget["externalPackageCharges"]
+    matching = [row for row in charges if row.get("id") == plan["chargeId"]]
+    if len(matching) != 1:
+        raise ValueError("exactly one existing debit is required")
+    charge = matching[0]
+    expected = {"seconds": plan["chargedSeconds"], "candidateHash": action["candidate"],
+                "actionId": action["id"], "runnerDigest": digest}
+    if any(charge.get(k) != v for k, v in expected.items()):
+        raise ValueError("existing debit is not bound to this runner/action/candidate")
+    return plan, digest
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/runner.py execute
+def execute(root, plan, digest, reservation_id):
+    """Observe the actual process; retain bounded output while hashing all bytes."""
+    command = [*plan["launcher"], "--timeout", str(plan["timeoutSeconds"]),
+               "--grace", str(plan["graceSeconds"]), "--require-containment", "strong", "--", *plan["argv"]]
+    started = time.monotonic()
+    proc = subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    selector = selectors.DefaultSelector()
+    streams = {"stdout": bytearray(), "stderr": bytearray()}
+    hashes = {name: hashlib.sha256() for name in streams}
+    sizes = {name: 0 for name in streams}
+    for pipe, name in ((proc.stdout, "stdout"), (proc.stderr, "stderr")):
+        selector.register(pipe, selectors.EVENT_READ, name)
+    limit = plan["outputLimitBytes"]
+    ambiguous = False
+    try:
+        while selector.get_map() or proc.poll() is None:
+            if time.monotonic() - started > plan["timeoutSeconds"] + plan["graceSeconds"] + 30:
+                ambiguous = True
+                os.killpg(proc.pid, signal.SIGKILL)
+                break
+            for key, _ in selector.select(0.1):
+                chunk = os.read(key.fileobj.fileno(), 16384)
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                name = key.data
+                hashes[name].update(chunk)
+                sizes[name] += len(chunk)
+                streams[name].extend(chunk[:max(0, limit - len(streams[name]))])
+        ret = proc.wait(timeout=5)
+        # A signal, launcher failure, or namespace signal encoding does not
+        # establish completion. Foreman's confirmed timeout uses exit 124.
+        ambiguous = ambiguous or ret < 0 or ret >= 125
+    finally:
+        selector.close()
+        proc.stdout.close()
+        proc.stderr.close()
+    overflow = any(size > limit for size in sizes.values())
+    assertion = plan.get("assertion")
+    verified = bool(not ambiguous and not overflow and assertion and ret == assertion["exitCode"]
+                    and hashes["stdout"].hexdigest() == assertion["stdoutSha256"])
+    observed = {"actionId": plan["action"]["id"], "candidateHash": plan["action"]["candidate"],
+                "runnerDigest": digest, "chargeId": plan["chargeId"], "reservationId": reservation_id,
+                "argv": command, "exitCode": ret, "elapsedSeconds": time.monotonic() - started,
+                "outputSha256": {name: h.hexdigest() for name, h in hashes.items()}, "outputBytes": sizes,
+                "completionAmbiguous": ambiguous, "outputLimitExceeded": overflow,
+                "behavioralAssertions": [{"assertionId": assertion["id"], "candidateHash": plan["action"]["candidate"],
+                                          "outcome": "defect-observed"}] if verified else []}
+    return {"exitCode": ret, "stdout": streams["stdout"].decode("utf-8", errors="replace"),
+            "stderr": streams["stderr"].decode("utf-8", errors="replace"), "runnerReceipt": observed}
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/cli.py cmd_run
+def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: bool):
+    t0 = time.time()
+    try:
+        actions = read_actions(str(repo))
+    except Exception as exc:
+        sys.stderr.write(f"Error reading actions: {exc}\n")
+        sys.exit(3)
+
+    matching = [a for a in actions if a["id"] == action_id]
+    if not matching:
+        sys.stderr.write(f"Unknown action: {action_id}\n")
+        sys.exit(3)
+    action = matching[0]
+
+    snap = load_snapshot(str(repo), action_id, history_reader=history_reader)
+    decision = assess(snap, action)
+
+    if not decision["allow"]:
+        msg = f"Policy denied action '{action_id}': {decision['reasonCode']}. Next: {decision['nextActionId']}"
+        if as_json:
+            print(json.dumps({"error": msg, "decision": decision}))
+        else:
+            sys.stderr.write(msg + "\n")
+        sys.exit(2)
+
+    try:
+        runner, runner_digest = _load_admitted_runner(repo, action)
+    except Exception as exc:
+        msg = f"Launch unavailable for '{action_id}': {exc}"
+        if as_json:
+            print(json.dumps({"error": msg, "reasonCode": "RUNNER_UNAVAILABLE"}))
+        else:
+            sys.stderr.write(msg + "\n")
+        sys.exit(2)
+
+    try:
+        res_id = reserve(db_path, str(repo), action, snap, charge_id=runner["chargeId"])
+    except ReservationConflictError as exc:
+        sys.stderr.write(f"Reservation conflict: {exc}\n")
+        sys.exit(2)
+    except Exception as exc:
+        sys.stderr.write(f"Store error during reservation: {exc}\n")
+        sys.exit(3)
+
+    # Immediately revalidate snapshot and policy after reservation
+    post_snap = load_snapshot(str(repo), action_id, history_reader=history_reader)
+    post_snap["primaryActive"] = has_other_primary(db_path, res_id)
+    post_dec = assess(post_snap, action)
+    if not post_dec["allow"]:
+        finish(db_path, res_id, {"error": f"Policy denied after reservation: {post_dec['reasonCode']}"}, status="failed")
+        msg = f"Policy denied action '{action_id}' after reservation: {post_dec['reasonCode']}"
+        if as_json:
+            print(json.dumps({"error": msg, "decision": post_dec}))
+        else:
+            sys.stderr.write(msg + "\n")
+        sys.exit(2)
+
+    command_ref = action.get("commandRef", "")
+    if not command_ref or action.get("kind") == "report":
+        finish(db_path, res_id, {"exitCode": 0}, status="finished")
+        if as_json:
+            print(json.dumps({"success": True, "action": action_id}))
+        sys.exit(0)
+
+    # Revalidate action and runner bytes after reservation, before launch.
+    try:
+        current_action = next(a for a in read_actions(str(repo)) if a.get("id") == action_id)
+        current_runner, current_digest = _load_admitted_runner(repo, current_action)
+        if current_action != action or current_digest != runner_digest:
+            raise ValueError("admitted action or runner changed after reservation")
+    except Exception as exc:
+        finish(db_path, res_id, {"error": f"Runner revalidation failed: {exc}"}, status="failed")
+        sys.stderr.write(f"Runner revalidation failed: {exc}\n")
+        sys.exit(2)
+
+    receipt = None
+    try:
+        receipt = execute(repo, runner, runner_digest, res_id)
+        observed = receipt["runnerReceipt"]
+        # Check current command/input and durable debit again before claiming
+        # completion. Changed evidence or supervisor loss stays unresolved.
+        _, terminal_digest = _load_admitted_runner(repo, action)
+        if terminal_digest != runner_digest or observed["completionAmbiguous"]:
+            raise StoreError("Runner completion is ambiguous; reservation and charge remain claimed")
+        verified = bool(observed["behavioralAssertions"])
+        success = not observed["outputLimitExceeded"] and (
+            verified if action["kind"] == "reproduce" else receipt["exitCode"] == 0
+        )
+        if verified:
+            record_event(db_path, str(repo), action["requirement"], action["capability"],
+                         action["candidate"], action_id, "reproducer_verified", receipt)
+        finish(db_path, res_id, receipt, status="finished" if success else "failed")
+        result = {"success": success, "action": action_id, "exitCode": receipt["exitCode"],
+                  "chargeId": runner["chargeId"], "reservationId": res_id}
+        if action["kind"] == "reproduce":
+            result["reproducerVerified"] = verified
+        if as_json:
+            print(json.dumps(result))
+        elif not success:
+            sys.stderr.write("Bound runner did not establish the required result\n")
+        sys.exit(0 if success else 4)
+    except Exception as exc:
+        # Parent/process death is not evidence that its children and charge
+        # stopped. Keep the reservation active and preserve the uncertainty.
+        record_event(db_path, str(repo), action["requirement"], action["capability"],
+                     action["candidate"], action_id, "runner_unresolved", {"error": str(exc), "reservationId": res_id, "receipt": receipt})
+        sys.stderr.write(f"Runner completion unresolved: {exc}\n")
+        sys.exit(4)
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/store.py get_db_path
+def get_db_path(repo_root: str | Path) -> Path:
+    repo_path = Path(repo_root).resolve()
+    git_entry = repo_path / ".git"
+    try:
+        if git_entry.is_file():
+            text = git_entry.read_text(encoding="utf-8").strip()
+            if text.startswith("gitdir:"):
+                gitdir = Path(text.split("gitdir:", 1)[1].strip())
+                if not gitdir.is_absolute():
+                    gitdir = (repo_path / gitdir).resolve()
+                commondir_file = gitdir / "commondir"
+                if commondir_file.is_file():
+                    cd_text = commondir_file.read_text(encoding="utf-8").strip()
+                    common = Path(cd_text)
+                    if not common.is_absolute():
+                        common = (gitdir / common).resolve()
+                    target = common / "moriarty-dev" / "state.sqlite3"
+                    return target
+                return gitdir / "moriarty-dev" / "state.sqlite3"
+        elif git_entry.is_dir():
+            return git_entry / "moriarty-dev" / "state.sqlite3"
+    except Exception:
+        pass
+    fallback = repo_path / ".moriarty-dev" / "state.sqlite3"
+    return fallback
+
+UNCHANGED CONTEXT FUNCTION plugins/moriarty-dev/scripts/moriarty_dev/store.py reserve
+def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: str | None = None) -> str:
+    conn = init_db(db_path)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        action_kind = action.get("kind", "")
+        if action_kind in ("implement", "repair"):
+            active = conn.execute(
+                "SELECT id FROM reservations WHERE status = 'active' "
+                "AND action_kind IN ('implement', 'repair') LIMIT 1"
+            ).fetchone()
+            if active:
+                raise ReservationConflictError(
+                    f"Unresolved primary implementation reservation already exists: {active[0]}"
+                )
+
+        res_id = str(uuid.uuid4())
+        if charge_id is not None:
+            try:
+                conn.execute("INSERT INTO runner_claims (charge_id, reservation_id) VALUES (?, ?)", (charge_id, res_id))
+            except sqlite3.IntegrityError as exc:
+                raise ReservationConflictError("Existing charge already claimed: " + charge_id) from exc
+        pid = os.getpid()
+        now = _now_iso()
+        conn.execute(
+            """
+            INSERT INTO reservations (
+                id, repository, requirement, capability, candidate,
+                action_id, action_kind, pid, status, reserved_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
+            """,
+            (
+                res_id,
+                repo,
+                action.get("requirement", ""),
+                action.get("capability", ""),
+                action.get("candidate", ""),
+                action.get("id", ""),
+                action_kind,
+                pid,
+                now,
+            ),
+        )
+
+        conn.execute(
+            """
+            INSERT INTO events (
+                repository, requirement, capability, candidate,
+                action_id, event_kind, observed_at, payload_json
+            ) VALUES (?, ?, ?, ?, ?, 'action_start', ?, ?)
+            """,
+            (
+                repo,
+                action.get("requirement", ""),
+                action.get("capability", ""),
+                action.get("candidate", ""),
+                action.get("id", ""),
+                now,
+                json.dumps({"action": action, "snapshot": snapshot}),
+            ),
+        )
+        conn.commit()
+        return res_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+PRIOR Opus07 findings forresolution:
+{
+  "reviewer": "fresh-independent-claude-opus-focused13",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "identityBasis": "Fresh delegated Claude Opus medium assignment; no separate provider attestation available to this reviewer.",
+  "candidateSha256": "3ee54f0062164e43cea52f323e98120b67cd564b6ed45ae5de67c0dded26b45e",
+  "verdict": "PARTIALLY APPROVED: 1.3 direct nonpersisting SDK funding-observer source and its isolated tests APPROVED; MC02 projection/arithmetic contract adequate (R05-A1 substantively resolved); 1.3 accounting producer and actual cmd_run integration BLOCKED on O13-1, O13-2 and O13-3",
+  "approvedScope": "Requirements approval for source implementation of experiments/moriarty-midnight-financial/ledger/observe-preview-funding.mjs and its callable isolated tests only, under 'Direct nonpersisting SDK funding observer' plus the O13-6 conditions. Tests use controlled SDK doubles or transports and fixture seeds/snapshots. Excluded: accounting.py, cmd_run/records/runner/store changes, preflight charge, wallet-use lock acquisition or handoff, receipt/correspondence writing, and any real observer invocation. Also excluded: concrete grant, MC02 projection instance, resource votes, token/history adoption, live wallet read, budget.lock acquisition, debit, claim or dispatch. The finding that the MC02 envelope arithmetic is adequate (O13-5) is a requirements judgment. It does not authorize producer implementation before O13-1..3 are revised and both reviewers approve the new bytes. The other required reviewer must independently approve the same bytes and a compatible scope. Frozen implemented bytes then need both fresh full-source audits.",
+  "approvedItems": [
+    "1.3 direct nonpersisting SDK funding-observer module and its isolated 1.4 checks (conditions O13-6)"
+  ],
+  "mayBeginProducer": false,
+  "mayBeginObserver": true,
+  "findings": [
+    {
+      "id": "O13-1",
+      "severity": "blocking for producer/CLI integration",
+      "path": "specs/afk-live-accounting/spec.md#Authenticated context discovery and closed evidence payloads; #Separately charged bounded read-only preflight; #Direct nonpersisting SDK funding observer",
+      "finding": "The closed immutable payloads have no field for several values the spec requires the producer to bind. (a) The receipt must 'bind allocation/source/role/network to the context', but the context's exact field set (schema, repository, gitCommonDir, store, history, observer, correspondencePath) has no expected allocationId, roleIdentity {publicKey,address}, network {networkId,genesisHash,protocolVersion}, selected token identity or wallet-state location. The projection also has none; it holds campaign/action/envelope IDs only. The runner plan's closed keys have none, and 'final plan' has no concrete source because the item-2 executor is not frozen. As written, the only possible identity check is seed/snapshot self-consistency, so any internally consistent funded wallet could satisfy funding admission. (b) The preflight claim must bind the 'exact observer source/argv/bound digest', and the observer must use a 'pinned SDK'. Observer fields name only entryPath/entrySha256. Nothing pins the node interpreter, the SDK closure (which lives in another worktree's node_modules outside candidate containment), the launcher or containment mode, the argv, or the environment. That is unpinned code with private seed access. (c) canonicalInputsUnchanged and childrenStopped must be checked against 'retained observer execution/containment evidence', but no independent parent-side producer of that evidence is named. Without one, both values are self-reported by the process that read the secrets. (d) Resource votes must 'bind the same projection digest' but have no exact receipt contract. Scope string, verdict, candidateSha256 formula and required reviewer identities are unstated, unlike the precisely specified SP01 disposition receipts. So a positive fixture is not independently calculable. (e) The wallet-use lock 'ownership token' must be handed to the admitted executor. The runner argv is static and hash-bound, and execute() passes no bound env, so no handoff channel exists that leaves the runner digest unchanged. (f) The budget.lock location relative to projection.predecessor.path is implicit.",
+      "requiredCorrection": "Add exact closed fields, e.g. context.observer or a sibling closed object, for: expected allocationId; network triple; role publicKey/address; selected token id; wallet-state directory; and an observer launch plan. The launch plan names absolute interpreter path+sha256, SDK closure manifest {path,sha256} with per-file hashes, existing Foreman launcher with --timeout 90 --grace 5 --require-containment strong, and exact argv/env allowlist. State that the parent computes before/after canonical wallet-file digests and derives childrenStopped from the Foreman containment result. Define the resource vote receipt fields, exact scope string, verdict APPROVED, candidateSha256 = projection sha256, and the two required distinct fresh non-author identities. Define wallet-lock handoff as a lock-file ownership record keyed by the committed runtime chargeId/reservationId, validated by the executor from the projection, not argv/env. State that budget.lock is the sibling of projection.predecessor.path. Test values may be fixtures; field set and checks must be normative.",
+      "expectedOutcome": "A positive isolated fixture can then be recomputed end to end. Substituting the wallet, network, token, interpreter, SDK file or launcher, or supplying a caller-asserted unchanged/stopped boolean or an unbound vote scope, each rejects before any debit."
+    },
+    {
+      "id": "O13-2",
+      "severity": "blocking for producer/CLI integration",
+      "path": "specs/afk-live-accounting/spec.md#Item 1.3 concrete source producer and existing caller; cli.py::cmd_run; records.py::_remaining_from_current; specs/afk-live-financial-execution/spec.md#Operational history is evidence",
+      "finding": "The live cmd_run sequence is not one explicit, consistent interface. (a) The normative sequence (authorization \u2192 debit/projection \u2192 final prepaid admission \u2192 reserve \u2192 post checks \u2192 master claim \u2192 execute) omits the preflight debit, observer claim, observer child, receipt and correspondence steps defined in a later requirement. (b) A pre-debit 'canonical-history/primary/retry preflight' is required, but it cannot use existing load_snapshot/assess. For a runner-registered action, _remaining_from_current calls load_runner, which raises without the debit, so the resource predicate always denies before debit. The spec names no history/primary/retry-only callable and no non-granting pending-prepaid resource state. An implementer must either skip the pre-debit gate, and then attempt 3 can be charged for a predictably denied action, or weaken the reader. (c) The spec requires cmd_run to resolve the context 'before constructing its live history reader'. Current cmd_run receives history_reader and db_path already constructed by its caller, so the exact CLI boundary is undefined, including rejection of a db_path that differs from context.store.path. (d) The preflight has a null plugin reservation, so the primary slot is unoccupied during the up-to-125-second observer. That contradicts 'a live-profile action SHALL both obey and occupy the primary slot regardless of kind'. An implement/repair reservation taken in that window, or between the runtime debit and store.reserve, makes the post-debit final admission deny, which consumes cumulative attempt 3 without launch. (e) Nothing requires a freshness margin before the runtime debit. An observation at age 115 s can pass and then expire before launch, again consuming attempt 3; the spec forbids a second preflight.",
+      "requiredCorrection": "Write one ordered live-profile cmd_run sequence including the preflight substeps. Name the pre-debit gate callable, e.g. policy history/retry/primary assessment with the resource predicate excluded and unable to grant allow, and state that only post-debit load_snapshot may accept resources. State where the live history reader and db_path are constructed and that live mode rejects any db_path other than the canonical resolver/context store path. Specify primary occupancy from preflight through runtime reservation. Either use a preflight plugin reservation that the runtime reservation supersedes inside one BEGIN IMMEDIATE, or explicitly accept the window with an immediately-before-debit primary recheck and a named charged-but-unlaunched 'primary-preempted' disposition. Require a pre-runtime-debit observation age of at most 120 \u2212 L seconds for a stated post-debit launch allowance L.",
+      "expectedOutcome": "Tests through the actual cmd_run cover: a pre-debit history/retry/primary denial with no debit; implement reserved during observer and during debit\u2192reserve, with the specified outcome; age just under/over the margin; and a db_path override rejected in live mode while an isolated repo root resolves its own anchored fixture store."
+    },
+    {
+      "id": "O13-3",
+      "severity": "blocking for producer (replay/refund hardening)",
+      "path": "specs/afk-live-accounting/spec.md#Authenticated MC02 envelope on the preserved MC01 master; #Master projection and global one-shot claim",
+      "finding": "The spec detects rollback of the SQLite store via the master claim, but not rollback of the master. First versus subsequent application is decided from master state: 'verify the predecessor digest against the locked actual master' before first application. If the master, projection and mutable correspondence are restored to predecessor bytes, e.g. during a crash 'reconciliation', the amendment re-applies with a fresh G and N. A committed funding-preflight has a null plugin reservation and therefore no SQLite counterpart, so it becomes replayable: a second secret-reading observer run with no new authority. A runtime debit committed before store.reserve also has no runner_claims row, so attempt 3 is silently refunded. This contradicts 'each amendment applies once', 'no second preflight' and 'charged-but-unlaunched consumes attempt 3'.",
+      "requiredCorrection": "Make first application write-once in immutable evidence. If the retained predecessor evidence exists, re-application is denied even when the master digest equals the predecessor. Require a durable counterpart outside the master before any child starts: a SQLite event or claim row for the preflight chargeId, and for the runtime chargeId at debit commit. A master missing a debit that the counterpart records then denies with retained consumption.",
+      "expectedOutcome": "Fault tests restore master+projection+correspondence to the predecessor or to a pre-debit generation after each commit point. Every case denies re-application, re-preflight and relaunch, and records explicit unavailable/reconciliation state."
+    },
+    {
+      "id": "O13-4",
+      "severity": "non-blocking; fix in the same revision",
+      "path": "specs/afk-live-financial-execution/spec.md#Per-item specification approval before execution; tasks.md 1.S; proposal.md Revision 4",
+      "finding": "The per-item requirement enumerates only 1.1a, 1.2 and the matching 1.4 checks as item-1 source subparts reviewers MAY approve while resources are pending, and says approval 'SHALL NOT authorize unapproved subparts'. It still names 1.1a as the 'immediate next approval scope'. The accounting spec separately authorizes 1.3 source work after both approvals. The more specific accounting requirement 'Source approval and live adoption stay separate' governs this observer approval, but the enumerations conflict literally.",
+      "requiredCorrection": "Add the 1.3 observer and producer source subparts to the enumerated MAY list with the same exclusions. Update the stale 'immediate next scope' text in spec.md, tasks.md 1.S and the proposal.",
+      "expectedOutcome": "No text-level ambiguity about whether a 1.3 source approval is permitted."
+    },
+    {
+      "id": "O13-5",
+      "severity": "non-blocking; R05-A1 substantively resolved",
+      "path": "specs/afk-live-accounting/spec.md#Authenticated MC02 envelope on the preserved MC01 master; #Single allocation, all-kind limits and prepaid boundary; records.py::_verify_resource/_remaining_from_current",
+      "finding": "The arithmetic is complete and consistent with the existing reader. For the inspected master: M=210890; U=2323.0473305040214+165+108960+300+99135=210883.0473305\u2026; C=ceil(6.95267)=7; D=ceil(U+C)\u2212M=1; limit=M+D+G. Master used stays U+C+G across the reserve\u2192external transfer, leaving slack \u22480.95267 \u2265 0. With M an integer and M \u2265 U, D \u2208 {0,1}; deficits go to D and require a disposition. Keeping MC01 top-level rows/counters and appending MC02 rows to externalPackageCharges with S/n recomputed from rows is non-duplicating. At S=G the prepaid branch computes min(slack, G\u2212S, alloc)\u22120 \u2265 0 without subtracting c again. Before a debit the producer, not the reader, enforces S+c \u2264 G, n+1 \u2264 N and aggregate+1 \u2264 83+N. Preflight and runtime both count toward S and n, so a successful run needs N \u2265 2 and G \u2265 125+c. No hash self-reference: candidate \u2192 context \u2192 projection \u2192 votes \u2192 amendment \u2192 binding, with master/receipt/correspondence mutable. Two small gaps: (i) nothing states that _amendment_seconds(resourceAmendment) equals G, yet the reader's prepaid check uses chargedSeconds \u2264 alloc; (ii) float parsing can misround ceil when M\u2212U is near an integer.",
+      "requiredCorrection": "State alloc = amendment seconds = G exactly, with successor and binding allocations zero. Compute U, C and D from exact decimal parsing of the JSON number text (Decimal/Fraction), not binary floats.",
+      "expectedOutcome": "The normative worked fixture (above values, one 125-second preflight, one c-second runtime debit, S=G equality) is independently recomputable. The omitted-row, wrong-owner, duplicate-amendment, stale-predecessor and old-reserve-borrowing variants reject."
+    },
+    {
+      "id": "O13-6",
+      "severity": "non-blocking conditions on approved observer scope",
+      "path": "specs/afk-live-accounting/spec.md#Direct nonpersisting SDK funding observer; funding-observer-source-diagnosis.md",
+      "finding": "The observer requirement is concrete enough to implement and test independently of the producer. It fixes: direct DustWallet/UnshieldedWallet restore/start/waitForSyncedState(0n)/stop; strict preview-bootstrap identity checks with no createWallet/check-balance/facade; NoOp history; a 90-second outer bound and 5-second stop grace; generatedNow-only DUST excluding pending coins; selected-token available balance; connected, strictly complete progress; and stop-on-partial-init. Its authority inputs are unanchored until O13-1, so the module must not choose them itself.",
+      "requiredCorrection": "Implementation conditions: take expected network triple, role publicKey/address, selected token id, wallet-state directory and output destination as explicit caller inputs, and reject any mismatch. Never read role secrets or contract passwords. On any restore failure exit with a named unavailable result, with no fallback. Write only a public aggregate result to the given destination, never inside wallet state. Report ready only after every created child's stop is confirmed. Tests must trap forbidden modules/APIs and filesystem writes, and compare fixture seed/snapshot digests from the test harness (parent side) before and after. They must cover stale/future syncTime, identity/network mismatch, restore failure, sync timeout, stop failure/timeout and late completion after deadline. Do not implement lock, charge, receipt-field completion (allocationId, preflightChargeId, pendingUseDispositionSha256) or correspondence in this scope.",
+      "expectedOutcome": "A callable observer whose output the later producer can consume. Its approval does not establish funding, the accounting caller or 1.3 completion."
+    }
+  ],
+  "limitations": [
+    "Requirements review only, from bytes supplied inline in the request. This session had no repository filesystem access, so neither the listed file digests nor the candidate manifest digest were independently recomputed. canonical-store-before-source.json, providers.mjs, preview-bootstrap.mjs, policy.py and the full records/CLI dependency closure were not inspected.",
+    "No guarded status/review call, tests, SDK import, network call, wallet read, budget.lock acquisition or store write was performed by this reviewer.",
+    "Astra review05 (candidate 19b1\u2026) was read as historical context only. This review does not substitute for Astra's fresh vote on candidate 3ee54f00\u2026.",
+    "Practical risk, not a source defect: restoring a snapshot last persisted on 2026-09-10 may not reach strictly complete sync within 90 seconds. The one-attempt preflight would then be consumed and new resource authority required. No live timing was measured.",
+    "Grants no SP01 disposition, concrete G/N/C/D instance, resource vote, token/history adoption, funding observation, debit, dispatch, actual-result acceptance, I2 completion or SP05/SP01 progress. No 1.2 or item-2 vote is given."
+  ]
+}

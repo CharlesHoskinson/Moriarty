@@ -1,0 +1,128 @@
+--- r2-tools/copy_verify_r2.py (reviewed, executed as E0r2)
++++ r3-tools/copy_verify_r3.py (PROPOSED)
+@@ -1,20 +1,25 @@
+ #!/usr/bin/env python3
+-"""PROPOSED E0r2 copy + identity tool (fresh-reviewer r2 plumbing; stdlib only; UNREVIEWED).
+-
+-Successor of the reviewer's tools/copy_verify.py, for identity/copy plumbing only:
+-- every expected digest comes from the caller's authorization record via --expect and
+-  is compared with bytes; nothing is taken from a candidate flag or claimed field;
+-- BUILD-MANIFEST and Core-closure identities are RECOMPUTED from the planned bytes
+-  (and, with --copy, from the copied tree), and a mismatch is a STOP;
+-- the frozen reviewer packet (REVIEW-MANIFEST.json files) is copied unchanged to
+-  review/, and the r2 plumbing (R2-MANIFEST.json files) is added beside it under
+-  review/ without overwriting any frozen path.
++"""PROPOSED E0r3 copy + identity tool (evidence-repair resume author; stdlib only; UNREVIEWED,
++NEVER RUN). Needs a fresh non-author review of its effects before any use.
++
++Minimal successor of the reviewed plumbing-r2/r2-tools/copy_verify_r2.py (sha256 of that
++file is recorded in EXECUTION-PROPOSAL.json). The only changes:
++- a sixth positional directory R3_DIR (this lane's review-overlay/) and a sixth required
++  --expect key r3_manifest (SHA-256 of R3_DIR/R3-MANIFEST.json);
++- the R3-MANIFEST files are copied to review/<path> beside the r2 overlay, and
++  review/R3-MANIFEST.json is added; a destination collision with any frozen (42) or r2
++  path is a STOP, exactly as r2 refuses to overwrite frozen paths;
++- counts gain review_r3; the output format is r3-e0-identity/1.
++Every expected digest comes from the caller's authorization record via --expect and is
++compared with bytes. BUILD-MANIFEST and Core-closure identities are RECOMPUTED from the
++planned bytes (and, with --copy, from the copied tree) by the unchanged r2 rules.
+ 
+ Usage:
+-  python3 -I copy_verify_r2.py --dry-run CHECKOUT CANDIDATE PREV_REVIEW R2_DIR --expect K=SHA ...
+-  python3 -I copy_verify_r2.py --copy    CHECKOUT CANDIDATE PREV_REVIEW R2_DIR DEST --expect K=SHA ...
+-Required keys: source_manifest build_manifest core_closure review_manifest r2_manifest.
+-Exit 0 = PASS, 2 = usage, 3 = STOP. --dry-run writes nothing.
++  python3 -I copy_verify_r3.py --dry-run CHECKOUT CANDIDATE PREV_REVIEW R2_DIR R3_DIR --expect K=SHA ...
++  python3 -I copy_verify_r3.py --copy    CHECKOUT CANDIDATE PREV_REVIEW R2_DIR R3_DIR DEST --expect K=SHA ...
++Required keys: source_manifest build_manifest core_closure review_manifest r2_manifest r3_manifest.
++Exit 0 = PASS, 2 = usage, 3 = STOP. --dry-run writes nothing. Effects with --copy: creates
++DEST (must not exist) and regular files below it; reads only the named directories.
+ """
+ import hashlib
+ import json
+@@ -27,7 +32,7 @@
+ resource.setrlimit(resource.RLIMIT_CPU, (60, 60))
+ resource.setrlimit(resource.RLIMIT_AS, (1 << 30, 1 << 30))
+ 
+-KEYS = ("source_manifest", "build_manifest", "core_closure", "review_manifest", "r2_manifest")
++KEYS = ("source_manifest", "build_manifest", "core_closure", "review_manifest", "r2_manifest", "r3_manifest")
+ 
+ 
+ def usage(msg):
+@@ -43,11 +48,11 @@
+ if not positional or positional[0] not in ("--dry-run", "--copy"):
+     usage("first argument must be --dry-run or --copy")
+ mode = positional[0]
+-need = 5 if mode == "--copy" else 4
++need = 6 if mode == "--copy" else 5
+ if len(positional) - 1 != need:
+     usage(f"{mode} takes {need} paths")
+-checkout, candidate, prev, r2 = positional[1:5]
+-dest = positional[5] if mode == "--copy" else None
++checkout, candidate, prev, r2, r3 = positional[1:6]
++dest = positional[6] if mode == "--copy" else None
+ expect = {}
+ for p in pairs:
+     k, _, v = p.partition("=")
+@@ -72,12 +77,13 @@
+ 
+ 
+ stops = []
+-rec = {"format": "r2-e0-identity/1", "mode": mode, "expect": expect}
++rec = {"format": "r3-e0-identity/1", "mode": mode, "expect": expect}
+ 
+ # 1. Manifests: digest of the actual bytes must equal the authorization record.
+ manifest_paths = {"source_manifest": os.path.join(candidate, "SOURCE-MANIFEST.json"),
+                   "review_manifest": os.path.join(prev, "REVIEW-MANIFEST.json"),
+-                  "r2_manifest": os.path.join(r2, "R2-MANIFEST.json")}
++                  "r2_manifest": os.path.join(r2, "R2-MANIFEST.json"),
++                  "r3_manifest": os.path.join(r3, "R3-MANIFEST.json")}
+ manifests = {}
+ for k, p in manifest_paths.items():
+     b = read(p)
+@@ -106,10 +112,14 @@
+ for f in manifests["r2_manifest"]["files"]:
+     plan.append((os.path.join(r2, f["path"]), "review/" + f["path"], f["sha256"]))
+ plan.append((manifest_paths["r2_manifest"], "review/R2-MANIFEST.json", expect["r2_manifest"]))
++r2_review = {"review/" + f["path"] for f in manifests["r2_manifest"]["files"]} | {"review/R2-MANIFEST.json"}
++for f in manifests["r3_manifest"]["files"]:
++    plan.append((os.path.join(r3, f["path"]), "review/" + f["path"], f["sha256"]))
++plan.append((manifest_paths["r3_manifest"], "review/R3-MANIFEST.json", expect["r3_manifest"]))
+ dests = [d for _, d, _ in plan]
+ dupes = sorted({d for d in dests if dests.count(d) > 1})
+ if dupes:
+-    stops.append(f"destination collisions (r2 may not overwrite frozen paths): {dupes}")
++    stops.append(f"destination collisions (r2/r3 may not overwrite frozen or earlier paths): {dupes}")
+ if any(os.path.isabs(d) or ".." in d.split("/") for d in dests):
+     stops.append("a planned destination is absolute or escapes the layout")
+ 
+@@ -125,7 +135,8 @@
+ rec["source_mismatches"] = bad
+ rec["counts"] = {top: sum(1 for d in dests if d.startswith(top + "/")) for top in ("moriarty", "r1cs", "review")}
+ rec["counts"]["review_frozen"] = len(frozen_review)
+-rec["counts"]["review_r2"] = rec["counts"]["review"] - len(frozen_review)
++rec["counts"]["review_r2"] = len(r2_review)
++rec["counts"]["review_r3"] = rec["counts"]["review"] - len(frozen_review) - len(r2_review)
+ 
+ # 4. Copy (only with --copy and only if nothing has stopped so far).
+ if mode == "--copy" and not stops:
+@@ -163,7 +174,7 @@
+     return read(src)
+ 
+ 
+-# 5. Identity recomputation (from planned bytes, or from the copy).
++# 5. Identity recomputation (from planned bytes, or from the copy). Unchanged r2 rules.
+ if not bad:
+     mfiles = tree_files("moriarty")
+     rows = [{"path": p, "sha256": sha(tree_bytes("moriarty", p)), "bytes": len(tree_bytes("moriarty", p))} for p in mfiles]
+@@ -195,6 +206,10 @@
+     rec["build_manifest_entries"] = len(listed)
+     if sorted(listed) != rule:
+         stops.append("BUILD-MANIFEST entry set differs from Cargo.toml + src/** of the copied crate")
++    # Predicted compiler_build_digest (arithmetic only; the harness prints the observed one).
++    rec["compiler_build_digest_predicted"] = sha(compact({"compiler_source_manifest_sha256": sha(bm_bytes),
++                                                          "core_closure_sha256": closure}))
++
+ 
+ # 6. Informational currentness (bytes above are the STOP criteria).
+ def git_head(path):

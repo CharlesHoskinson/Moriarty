@@ -1,0 +1,86 @@
+{
+ "schema": "moriarty-review-read-coverage/1",
+ "date": "2026-10-15",
+ "reviewer": "claude-opus-5-5 (self-reported; requested effort high; neither self-verifiable)",
+ "method": "Read tool only, on explicit paths from root manifests, INDEX.json, PRE-LAUNCH-COPIES.json and the frozen records. No listing, glob, grep, stat or recursive scan. Large files were read in line-offset chunks to EOF. I computed no hashes; every sha cited is copied from root or frozen records.",
+ "contextNote": "This review ran across one context summarization. Reads made before it are recorded from the summary; reads after it are recorded directly. Nothing below was re-derived from memory alone without a record.",
+ "bases": {
+  "RUN": "/home/charl/moriarty-eutxo-validation-2026-10-12/cardano-catalogue-v12-n1-run-20261015",
+  "FREEZE": "/home/charl/moriarty-eutxo-validation-2026-10-12/cardano-catalogue-v12-c5-mutants-independent-freeze-review-20261015",
+  "SPEC": "/home/charl/moriarty-eutxo-validation-2026-10-12/cardano-catalogue-v12-c5-mutant-spec-source-20261015",
+  "N1DECISION": "/home/charl/moriarty-eutxo-validation-2026-10-12/cardano-catalogue-v12-n1-scoped-execution-decision-20261015"
+ },
+ "fullOutcomeReads": {
+  "C5ReviewParts_all16_toEOF": [
+   "RUN/C5-REVIEW-PARTS/INDEX.json",
+   "RUN/C5-REVIEW-PARTS/result-objects.jsonl (340 of 340 lines; chunked)",
+   "RUN/C5-REVIEW-PARTS/normative-mismatches.jsonl (21 of 21)",
+   "RUN/C5-REVIEW-PARTS/raw-cli-objects.jsonl (11 of 11)",
+   "RUN/C5-REVIEW-PARTS/cli-observations.jsonl (108 of 108)",
+   "RUN/C5-REVIEW-PARTS/M1-rows.jsonl ... M12-rows.jsonl (282 of 282 each; 3384 rows)"
+  ],
+  "C5RunRecords": [
+   "RUN/C5-DECISION.json",
+   "RUN/C5-PRE-LAUNCH.json",
+   "RUN/C5-ACCOUNTING.json (two parts)",
+   "RUN/C5-OBSERVATIONS.json",
+   "RUN/C5-REVIEW-TABLE-MANIFEST.json"
+  ],
+  "freezeAndSpec": [
+   "FREEZE/MUTANTS-FROZEN.json (full before summarization; lines 1-319 re-read after it to confirm modes and decisive strings)",
+   "FREEZE/REPORT.md",
+   "FREEZE/VOTES.md",
+   "FREEZE/ELIGIBILITY-BOUNDARIES.md",
+   "FREEZE/ROOT-REVIEW-MANIFEST.json",
+   "SPEC/MUTANT-SPECS.json (two parts)"
+  ],
+  "N1Packet": [
+   "RUN/OBSERVATIONS-C0-C4-C6.json",
+   "RUN/RESULT-MANIFEST-C0-C4-C6.json (2790 lines to EOF; 556-path listing, structural)",
+   "RUN/PRE-LAUNCH-COPIES.json",
+   "RUN/INVOCATIONS.json",
+   "N1DECISION/DECISION.json (explicitly referenced by PRE-LAUNCH-COPIES; sha 0ec71d60 per root)",
+   "RUN/ctl/C4-00/RESULT.json",
+   "RUN/ctl/C6-build-00/RESULT.json",
+   "RUN/ctl/C6-N1N2-02/POSTCHECK-QUALIFICATION.json",
+   "RUN/ctl/C6-N1N2-04/POSTCHECK-QUALIFICATION.json",
+   "RUN/mutants/M13-N1/src/MUTANT.json"
+  ],
+  "sourceInspection": [
+   "RUN/src-patched/mcpcat/admission.py (full; 280 lines; N1 guard at 154-162)"
+  ],
+  "startupDocuments": "SKILL.md, execution-focus.md, AGENTS.md, MORIARTY-PRODUCT-CONTRACT.md, SECURITY-ROUTING.md (read before summarization; exact paths not retained in the summary)"
+ },
+ "structuralOrHashOnlyCoverage": {
+  "statement": "Known only through root manifests, row rawBatchSha256 or result refs. Not opened, not rehashed.",
+  "items": [
+   "RUN/C5-REVIEW-TABLE.json (by instruction; replaced by the 16 split parts)",
+   "RUN/pack282-mut/runs/C5-M1..M12/batch-00..14.json (180 raw batch files; rawBatchSha256 per row only)",
+   "RUN/pack282-mut/runs/C5-M*/cli-work/*/stdout (108; covered by cli-observations plus 11 deduplicated raw CLI objects)",
+   "C5 per-child ctl LAUNCH/RESULT/STDOUT/STDERR (covered by C5-ACCOUNTING only)",
+   "RUN/C5-ROW-RESULTS/M*.json (not opened)",
+   "RUN/n1n2-current|n1n2-patched|n1n2-m13/batch-00..04.json and cli-work/* (RESULT-MANIFEST hashes; OBSERVATIONS mutationDelta used for outcomes)",
+   "RUN/n1n2-dry/dry.json",
+   "RUN/pack282-patched/runs/P282-N1PAT/batch-00..14.json and cli-work/* (C3)",
+   "RUN/ctl/C0-00, C1-00..04, C2-00..04, C3-00..14, C6-N1N2-00..04 LAUNCH/RESULT/STDOUT/STDERR (hash and size only; every STDERR listed at 0 B / e3b0c442)",
+   "RUN/auth-task/runs/AUTH-N1PAT/AUTH-RESULTS.json and cli-work/*",
+   "RUN/src-current/mcpcat/*.py (14) and src-patched other 13 files (root hash equality relied on)",
+   "RUN/mutants/M1..M12/src/* and RUN/mutants/M13-N1/src/mcpcat/* (root/freeze hashes; the freeze reviewer read the changed regions; I read only tracebacks inside result objects)",
+   "Frozen harness and oracle inputs: harness/driver.py, world_ind.py, mcj_ind.py, launch.py, pack/independent-pack.json, positive-controls.json, policy-grant-data.json, RUN-PLAN.json, inputs/* (hash-pinned in FREEZE and MUTANTS-FROZEN; oracle content reviewed through row outcomes and frozen expectations only)",
+   "SPEC/ROOT-MATERIALIZATION-COMPLETE.json, SPEC/ROOT-MATERIALIZATION-FAILURE.json, M12-CORRECTION.json (relied on MUTANTS-FROZEN governingRecords)"
+  ]
+ },
+ "missingOrDisclosed": [
+  "RUN/DECISION.json does not exist; the N1 decision was read at the explicit referenced path N1DECISION/DECISION.json",
+  "INDEX.json prose says 168 raw CLI observations; its own file listing and my read show 108"
+ ],
+ "neverRead": [
+  "provider-result*",
+  "process.stderr",
+  "model PROMPT / PROCESS / FINAL files and wrappers",
+  "credentials, keys, caches",
+  "live A1 / RR03 drafts",
+  "the original frozen pack beyond the explicit 20 files (no model task listings)"
+ ],
+ "rehashClaim": "None. I made no claim to have independently rehashed any file or tree. Root will hash this folder's public outputs after terminal."
+}

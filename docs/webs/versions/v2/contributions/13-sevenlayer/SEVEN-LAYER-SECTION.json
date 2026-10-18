@@ -1,0 +1,114 @@
+{
+  "kicker": "Proving Nothing · seven layers",
+  "title": "Seven layers of a Moriarty Web",
+  "intro": "Proving Nothing describes every zero-knowledge system through seven layers: interdependent concerns, not seven runtime phases that execute in order. Read through them, a Moriarty Web is one system: financial rules become constraints, a private witness satisfies them, Groth16 seals a proof for each Strand, and a Cardano consumer accepts the transition only when every required Strand matches the transaction it settles.",
+  "selectorLabel": "Choose a layer",
+  "panelLabel": "Layer detail",
+  "artifactLabel": "What this layer produces",
+  "dependenciesLabel": "Draws on layers",
+  "layers": [
+    {
+      "number": 1,
+      "name": "Setup",
+      "headline": "Keys made for one compiled relation",
+      "body": "Groth16 derives proving and verifying keys from secret randomness for one compiled circuit. Each distinct compiled relation needs its own setup; the count follows circuits, not predicates or catalogue entries. Whoever keeps that randomness can forge proofs, so soundness assumes it is destroyed.",
+      "artifact": "Proving key and verifying key",
+      "dependencies": [4, 5, 6],
+      "mapping": "Catalogue entries and owner intents name the verifying key."
+    },
+    {
+      "number": 2,
+      "name": "Language",
+      "headline": "Financial rules written as a program",
+      "body": "Moriarty programs state what an action may do: payment arithmetic, fees kept separate from repayment, caps an owner signs, and duties that continue. The compiler turns that source into constraints; a rule left unconstrained is a rule no proof enforces.",
+      "artifact": "Moriarty source program",
+      "dependencies": [4],
+      "mapping": "Moriarty rules for payments, fees, caps and duties."
+    },
+    {
+      "number": 3,
+      "name": "Witness",
+      "headline": "Every step, recorded by the prover",
+      "body": "The prover runs the program over its inputs and records every intermediate value. Zero-knowledge keeps this assignment hidden, but only the assignment: amounts that appear in Cardano outputs or in the statement stay public. Witness generation must not leak values through its own behavior.",
+      "artifact": "Full witness assignment",
+      "dependencies": [2, 4],
+      "mapping": "One whole-execution witness can serve several Strand roles."
+    },
+    {
+      "number": 4,
+      "name": "Arithmetization",
+      "headline": "Every rule becomes an equation",
+      "body": "The compiled program becomes rank-1 constraints over a prime field, which Groth16 encodes as a quadratic arithmetic program. A valid witness satisfies every constraint. The public inputs carry a statement digest; an in-circuit BLAKE2b gadget ties them to the statement bytes.",
+      "artifact": "R1CS matrices",
+      "dependencies": [2, 5, 6],
+      "mapping": "Caps, fees and duty updates become constraints."
+    },
+    {
+      "number": 5,
+      "name": "Proof System",
+      "headline": "A short certificate of correct computation",
+      "body": "Groth16 turns the witness into a constant-size proof checked by one pairing equation. Under an honest setup, knowledge soundness means a verifying proof shows the prover knew a satisfying witness; zero-knowledge means the proof reveals nothing beyond its statement. It never shows the statement's values describe the real ledger.",
+      "artifact": "Groth16 proof",
+      "dependencies": [1, 4, 6],
+      "mapping": "Each Strand carries one proof."
+    },
+    {
+      "number": 6,
+      "name": "Cryptographic Bedrock",
+      "headline": "Hard problems underneath",
+      "body": "A pairing-friendly elliptic curve supplies Groth16's groups and scalar field; Groth16's soundness argument holds in the generic bilinear group model. BLAKE2b collision resistance binds statement bytes to digests. Signatures authenticate owner intents and claimant releases. These primitives support the proof core and fix what it can express.",
+      "artifact": "Curve, hash and signature parameters",
+      "dependencies": [],
+      "mapping": "Cardano scripts evaluate the pairing check and hashes."
+    },
+    {
+      "number": 7,
+      "name": "Verification",
+      "headline": "Proof meets ledger",
+      "body": "A claim policy checks each Groth16 proof and mints a proof-claim output. One settlement transaction consumes every Strand the Web requires; the validator rebuilds each statement from the transaction and spent state, requires claimant signatures and enforces signed caps. Outside facts need a named issuer, authentication path and freshness limit.",
+      "artifact": "Issue and settlement transactions",
+      "dependencies": [1, 5, 6],
+      "mapping": "All-or-nothing Web consumer on Cardano."
+    }
+  ],
+  "relationshipsTitle": "How the layers lean on each other",
+  "relationships": [
+    "Layers 4, 5 and 6 form the proof core: the scalar field, the R1CS encoding and Groth16's pairing check are chosen as one design, not three.",
+    "Setup follows the compiled relation. Changing a rule changes the circuit, and a changed circuit needs a new setup and a new verifying key.",
+    "The proof and the ledger divide the work. Layers 3 to 5 show the statement's arithmetic is correct; Layer 7 checks, from the transaction itself, that the statement describes this step.",
+    "The verifier reaches down. Cardano scripts must run the pairing check, which constrains the curve and proof system beneath them.",
+    "The numbering follows how a reader meets the system, not the order of engineering decisions; the dependency lists here sketch the main pressures, not a complete graph."
+  ],
+  "mappingTitle": "From book layer to Moriarty Web",
+  "mappingHeaders": ["Proving Nothing layer", "In a Moriarty Web"],
+  "credit": "The seven-layer framework comes from Proving Nothing, cited at a pinned commit. The book explains zero-knowledge systems in general; the Moriarty mappings on this page are ours, not the book's.",
+  "sourceUrl": "https://github.com/CharlesHoskinson/sevenlayer/blob/2789e5a63972276e20bc6144733ef9824ced9e49/proving-nothing.md",
+  "sourceLabel": "Proving Nothing (sevenlayer, commit 2789e5a)",
+  "sourceRefs": [
+    {
+      "label": "The Seven Layers at a Glance",
+      "url": "https://github.com/CharlesHoskinson/sevenlayer/blob/2789e5a63972276e20bc6144733ef9824ced9e49/proving-nothing.md?plain=1#L272-L298",
+      "pointer": "Lines 272–298: the seven layers as interdependent organs"
+    },
+    {
+      "label": "Universal versus Circuit-Specific Setups",
+      "url": "https://github.com/CharlesHoskinson/sevenlayer/blob/2789e5a63972276e20bc6144733ef9824ced9e49/proving-nothing.md?plain=1#L609-L621",
+      "pointer": "Lines 609–621: a Groth16 setup is specific to one circuit"
+    },
+    {
+      "label": "The Proof Core: Layers 4, 5, and 6",
+      "url": "https://github.com/CharlesHoskinson/sevenlayer/blob/2789e5a63972276e20bc6144733ef9824ced9e49/proving-nothing.md?plain=1#L2340-L2353",
+      "pointer": "Lines 2340–2353: separate concerns, joint implementation"
+    },
+    {
+      "label": "The Causal Web: Why It Is a DAG, Not a Stack",
+      "url": "https://github.com/CharlesHoskinson/sevenlayer/blob/2789e5a63972276e20bc6144733ef9824ced9e49/proving-nothing.md?plain=1#L4460-L4479",
+      "pointer": "Lines 4460–4479: upward and downward pressures between layers"
+    },
+    {
+      "label": "Groth, On the Size of Pairing-based Non-interactive Arguments (EUROCRYPT 2016)",
+      "url": "https://eprint.iacr.org/2016/260",
+      "pointer": "Sections 2.2 and 3.2: Setup(R), knowledge soundness, zero-knowledge, verification equation"
+    }
+  ]
+}

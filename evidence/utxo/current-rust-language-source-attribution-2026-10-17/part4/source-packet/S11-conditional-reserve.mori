@@ -1,0 +1,36 @@
+language "moriarty/1";
+agreement ConditionalReserve {
+  state allocated: Bool = false;
+  state rounds: UInt = 0;
+  state marker: UInt = 77;
+  asset A = { network: "oracle-unit", issuer: "reserve-issuer", reference: "A", scale: 0 };
+  asset B = { network: "oracle-unit", issuer: "reserve-issuer", reference: "B", scale: 0 };
+  action allocate(approved: Bool, units: UInt, quotient: UInt, remainder: UInt) {
+    requires approved and not allocated;
+    requires remainder < 3;
+    requires units == quotient * 3 + remainder;
+    requires units >= 3 and quotient not = 0;
+    let toAlpha = quotient * 2;
+    let toBeta = quotient;
+    ensures rounds == 0;
+    fee(A, "vault", "fees", 2);
+    transfer(A, "vault", "alpha", toAlpha);
+    transfer(A, "vault", "beta", toBeta);
+    transfer(B, "vault", "alpha", 4);
+    liability("allocation_reserve", A, "vault", "owner", remainder);
+    liability("rebate", B, "vault", "owner", 6);
+    next allocated = true;
+    next rounds = rounds + 1;
+    ensures liability_amount("allocation_reserve") == remainder;
+  }
+  action rebate(amount: UInt) {
+    requires allocated;
+    let prior = liability_amount("rebate");
+    requires amount <= prior;
+    transfer(B, "vault", "owner", amount);
+    discharge("rebate", amount);
+    next rounds = rounds + 1;
+    ensures liability_amount("rebate") == prior - amount;
+    ensures liability_present("allocation_reserve") or false;
+  }
+}

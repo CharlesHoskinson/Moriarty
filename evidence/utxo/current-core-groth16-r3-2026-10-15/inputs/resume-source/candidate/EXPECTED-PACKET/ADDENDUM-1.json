@@ -1,0 +1,69 @@
+{
+  "format": "mori-r1cs-expected-packet-addendum/1",
+  "author": "Claude Opus 5.5 (claude-opus-5-5), compiler source author, r2 recovery lane",
+  "classification": "Errata and additional expectations frozen BEFORE any r2 test assertion was written. Errata are source-author derivations against current Core source (6c7b1fda). Additional values are transcribed from frozen non-author oracle packets (attributed per row) or derived by plain integer arithmetic / canonical-JSON hashing over those packets. Nothing here was obtained by running a Moriarty parser, evaluator, compiler or test. Not an independent implementation oracle; fresh non-author held-out vectors and hostile witness mutations remain required before any execution is scored.",
+  "original_packet_unchanged": "FREEZE.json, AUTHOR-EXPECTATIONS.json, REUSED-FIXTURES.json, SEMANTIC-REQUIREMENTS.md and fresh/*.mori keep their prior bytes; this addendum supersedes nothing silently and lists every deviation below.",
+  "errata": [
+    {
+      "id": "E-T1",
+      "applies_to": "AUTHOR-EXPECTATIONS.json tamper_expectations T1",
+      "frozen_text": "change any single body slot (input, pre, post or effect) by +1, or flip a Bool slot -> unsatisfiable; every body slot is functionally determined by the pre-state and inputs",
+      "defect": "Pre slots are inputs of the transition function, not outputs of it. Flipping the pre `reserve` duty presence 0 -> 1 (amount 0) in invoice-open yields the present-zero pre-state. Core accepts that pre-state: scenario_snapshot accepts a registry-named row with the registered identity (runtime.rs:652-659); `requires not liability_present(\"invoice\")` reads only invoice; Liability(reserve) finds the row, keeps before = 0 and writes after = 14 (runtime.rs:796-826). Post state, post duties and every effect are unchanged.",
+      "corrected_expectation": "In invoice-open with PublicCap(38): flipping pre duty `reserve` present 0 -> 1 is SATISFIABLE (a different valid statement). Every other single change of a body slot (lo limb +1, hi limb +1, Bool flip) is UNSATISFIABLE, including pre `invoice` present 0 -> 1 (requires refuses), pre `reserve`/`invoice` amount +1 while absent (canonicality) and every post/effect/input change.",
+      "source": "runtime.rs:528-667, 787-836"
+    },
+    {
+      "id": "E-T4",
+      "applies_to": "AUTHOR-EXPECTATIONS.json tamper_expectations T4",
+      "frozen_text": "base oracle invoice-open; non-canonical limb pair (lo + 2^64, hi - 1) on a UInt slot whose hi >= 1",
+      "defect": "invoice-open has no UInt slot with hi >= 1 (all values are below 2^64), so the limb mutation cannot be formed there.",
+      "corrected_expectation": "Limb mutation base moved to vector A1 (input `a` = u128_max, hi = 2^64 - 1): public (lo + 2^64, hi - 1) on input `a` is UNSATISFIABLE. The Bool part stays on invoice-open: pre state `opened` public slot set to 2 is UNSATISFIABLE."
+    }
+  ],
+  "additional_expectations": {
+    "program_hashes": {
+      "method": "SHA-256 of the frozen oracle *.expected-program.json re-serialized with recursively sorted keys and compact separators (the intent::canonical rule, intent.rs:72-88). Method validated before use: the same computation over the staged oracle's delivery/reserve expected programs reproduces the program_hash fields recorded in that oracle's own frozen expected plans (511bcac3... and 60ff43af...).",
+      "installment-invoice.mori": "d3b3c02933020e7da2623d5d83acf83c47c72ceb3953d155141af9527cb900d9",
+      "conditional-reserve.mori": "5e3751b24330656fa4d831b2574e13b24c5f1661a573de6d85370d6be50d4621",
+      "delivery.mori (moriarty/2)": "511bcac385cba4fc9b2452b71013a0cfdaa507661684c8f357a7dc647368465e",
+      "reserve.mori (moriarty/2)": "60ff43afae17f7d7d4f32e734f4cb841aff28552a7ec8223948a55e3b25b550a",
+      "delivery.mori plan_hash": "0405200b4e9758ffdd0daede5db60ccb0698f504f7f17b1531450fc99c19ce25",
+      "reserve.mori plan_hash": "634bf5ef487e9f4b2a2828d89a6dd2afe158e0edc9514437fbae04245dbf7ef7"
+    },
+    "accounting_summary": {
+      "binding": "AccountingBinding::GrossDebitAndFees. Debit cells are the represented cells named as `from` by a Transfer or Fee of the action, in cell order. gross = sum of Transfer and Fee amounts from the cell (self-transfers included, as intent.rs:297-306 counts `from == signer`); fees = sum of Fee amounts from the cell.",
+      "rows": [
+        {"id": "G1", "program": "installment-invoice.mori", "action": "open", "fixture": "invoice-open.json", "debit_cells": [["CASH", "buyer"]], "gross": ["107"], "fees": ["3"], "source": "current-core-independent-oracles EXPECTED-OUTCOMES.md: 'open buyer107 (transfer104+fee3)'"},
+        {"id": "G2", "program": "installment-invoice.mori", "action": "partial", "fixture": "invoice-partial.json", "debit_cells": [["CASH", "escrow"]], "gross": ["37"], "fees": ["2"], "source": "same: 'partial escrow37 (fee2+transfer35)'"},
+        {"id": "G3", "program": "installment-invoice.mori", "action": "finish", "fixture": "invoice-finish.json", "debit_cells": [["CASH", "escrow"]], "gross": ["55"], "fees": ["0"], "source": "same: 'finish escrow55'"},
+        {"id": "G4", "program": "conditional-reserve.mori", "action": "allocate", "fixture": "reserve-allocate.json", "debit_cells": [["A", "vault"], ["B", "vault"]], "gross": ["23", "4"], "fees": ["2", "0"], "source": "same: 'Allocate gross debit: vault23 A including fee2 ..., and vault4 B'"},
+        {"id": "G5", "program": "conditional-reserve.mori", "action": "rebate", "fixture": "reserve-rebate4.json", "debit_cells": [["B", "vault"]], "gross": ["4"], "fees": ["0"], "source": "same: 'Rebate debits vault4 B then2 B'"},
+        {"id": "G6", "program": "conditional-reserve.mori", "action": "rebate", "fixture": "reserve-rebate2.json", "debit_cells": [["B", "vault"]], "gross": ["2"], "fees": ["0"], "source": "same"},
+        {"id": "G7", "program": "payroll-ledger.mori", "action": "pay", "vector": "P1", "debit_cells": [["USD", "employer"], ["USD", "worker"]], "gross": ["22", "21"], "fees": ["1", "0"], "source": "AUTHOR-EXPECTATIONS.json P1 derivation (author derivation): 'Gross debit employer 22 (21 transfer + 1 fee), worker 21 (self-transfer)'"}
+      ],
+      "tamper": "G-T1: in G1, public gross lo limb + 1 is UNSATISFIABLE; public fees lo limb + 1 is UNSATISFIABLE; top limb set to 2^16 is UNSATISFIABLE."
+    },
+    "staged_plan": {
+      "source": "pr54-independent-staged-positive-oracles-20261015 expected plans, copied byte-for-byte to fixtures/staged/ (COPY-RECORD.json)",
+      "delivery.deliver": {"segments": 2, "segment_cost": ["5", "6"], "committed_before": ["0", "5"], "plan_total": "11", "sites": [{"site": 1, "ordinal": 2, "label": "delivery"}]},
+      "reserve.allocate": {"segments": 3, "segment_cost": ["11", "15", "10"], "committed_before": ["0", "11", "26"], "plan_total": "36", "sites": [{"site": 1, "ordinal": 3, "label": "approval"}, {"site": 2, "ordinal": 8, "label": "settlement"}]},
+      "segment_statement_ranges": {
+        "delivery.deliver": [[0, 2], [2, 5]],
+        "reserve.allocate": [[0, 3], [3, 8], [8, 12]],
+        "derivation": "author derivation from stage/cost.rs:70-108: segment j runs from entry site j's ordinal (0 for start) to the next site's ordinal (exclusive) or the statement count"
+      },
+      "resume_guard_dispatch_cost": {
+        "delivery site 1": "2",
+        "reserve site 1": "4",
+        "reserve site 2": "2",
+        "source": "staged oracle EXPECTED-OUTCOMES.md: false ready costs 2; false approval costs 1 dispatch + 3 nodes = 4; false settlement costs 2"
+      },
+      "compile_outcome": "compile_source refuses every moriarty/2 source with CompileError::StagedNotLowered carrying this plan; no relation is produced"
+    },
+    "public_input_counts_without_cap": {
+      "rule": "frozen counts minus the 2 cap fields",
+      "installment-invoice.open": 68,
+      "self-move.move": "12 header + inputs 2 + pre cell 2 + post cell 2 + effect 2 = 20"
+    }
+  }
+}

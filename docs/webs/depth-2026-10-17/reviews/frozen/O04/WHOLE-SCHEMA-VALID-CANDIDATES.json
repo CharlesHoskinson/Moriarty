@@ -1,0 +1,93 @@
+[
+  {
+    "reviewToken": "moriarty-webs-v4-frozen-O04",
+    "verdict": "READY",
+    "summary": "Fresh nonauthor audit of the cryptographic and security wording in the final frozen candidate (artifact 1cb5a795\u202625cff4). The hash in PAGE-REPORT.json matches the one in app/ARTIFACT-CHECK.json. ARTIFACT-CHECK lists 101 PASS checks. For every runtime file I compared (App.jsx, DepthContent.jsx, CryptographicDetail.jsx, depth COPY.json, data.generated.json and the others), the PAGE-REPORT build pins match MANIFEST.json. I did not recompute any hash.\n\n**O03 corrections.** All four are present byte-for-byte as listed in FOUR-REVIEWER-CORRECTIONS.json, and each renders:\n- proofExplanation[1] now says a passing check concerns only the relation whose verification key accepted it (CryptographicDetail.jsx:11).\n- The reclaim action is scoped to the reviewed source, with earlier reclaim marked as only proposed (:72).\n- cardinality[2] says one claim per Issue in the reviewed source, with batch issuance only proposed (:66).\n- The invoice-claim node reads 'One whole-execution proof checked at Issue' (DepthContent.jsx:9).\n\nNo other change contradicts these or brings back an earlier O01/O02 defect. Specifically:\n- The page keeps the three-way split between the two Groth16 public field elements, the statement bytes (witness bits, but public in practice) and the remaining witness.\n- Asset key reuse stays qualified by the unread identity.rs.\n- There is no claim that a proof checked under another verification key is refused.\n- No Issue sponsor, fee or collateral funder, min-ADA supplier or released-min-ADA beneficiary is named.\n- Soundness, collision-resistance and gadget-correspondence conditions are stated, with the forgeable single-party test setup next to them.\n- The not-built list is rendered.\n- NotBound/TouchedOnly scope is explained.\n- Key migration, batch issuance, earlier reclaim and proof-at-consumption are marked proposed.\n\n**Frozen copy.** The V2 technical object, security cards, setup trust text and approved counter conditions are preserved, and check-artifact.mjs enforces them by equality.\n\n**Independent expectations.** All hold:\n- Invoice: 112 = 35 + 2 + 75, with duties 65 + 10.\n- Source open(90,10): 110 is shown separately and leaves 73 against 75.\n- The checked-in request 109/90/14 leaves 72/55/14 and is labelled a different scenario.\n- The invoice uses one whole-execution Strand, one Issue and one settlement, never three proof producers.\n- Issuance: 300 = 180 + 120, with 700 of capacity that is explicitly not debt.\n- Loan: 100 + 5 \u2212 35 = 70, against a 37 gross cash debit.\n- Treasury pays 14 + 7 + 2 = 23 A plus 4 B and retains 2 A / 6 B against two duties. The fixed 2 A fee is kept separate from the remainder-based reserve.\n- No pool reserves, accrual rates, datum layouts, signer assignments or network-cost numbers are invented.\n\n**Findings.** I found no blocking or major issue in scope. Four minor, nonblocking items remain:\n1. The onchain Issue and Settle lifecycle cards describe the unbuilt consumer in unqualified present tense. The source-reading caveat sits one disclosure lower in the same section, which the integration rule allows.\n2. The new setup-stage row says each phase is 'sound only if its transcript verifies', which misstates what transcript verification does.\n3. ProofPackaging uses 'issuance route', which can be confused with the Token issuance application.\n4. Outside security scope: the loan diagram title says 'Debt changes by 35 CASH', but debt falls by 30 net (100 + 5 \u2212 35 = 70). 35 is the discharge.\n\nREADY means no blocking or major issue in the assigned cryptographic and security wording scope. It is not security, protocol, product or ledger acceptance, and it does not authorize native, setup, proving, signing or deployment work.",
+    "filesRead": [
+      "MANIFEST.json",
+      "CHANGES.md",
+      "PAGE-REPORT.json",
+      "app/ARTIFACT-CHECK.json",
+      "app/src/App.jsx",
+      "app/src/TransactionDiagram.jsx",
+      "app/src/transaction-diagram.css",
+      "app/src/DepthContent.jsx",
+      "app/src/CryptographicDetail.jsx",
+      "app/src/ConcernGraph.jsx",
+      "app/src/concern-graph.css",
+      "app/src/SevenLayers.jsx",
+      "app/src/Groth16.jsx",
+      "app/src/invoice.mjs",
+      "app/src/data.generated.json",
+      "app/src/app.css",
+      "app/src/brand.css",
+      "app/src/depth.css",
+      "app/build.mjs",
+      "app/check-artifact.mjs",
+      "depth-2026-10-17/COPY.json",
+      "depth-2026-10-17/DESIGN-AND-PLAN.md",
+      "depth-2026-10-17/reader-study/SYNTHESIS.md",
+      "depth-2026-10-17/narrative/SOURCE-NOTES.md",
+      "depth-2026-10-17/applications/SOURCE-NOTES.md",
+      "contributions/11-v2-security/V2-COPY.json",
+      "contributions/14-review-corrections/PRESENTATION-PATCHES.json",
+      "contributions/14-review-corrections/COUNT-CLARIFICATION.json",
+      "reference-inputs/concept/integrated-r2/CONCEPT.md",
+      "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md",
+      "app/src/main.jsx",
+      "app/src/editorial.mjs",
+      "app/src/presentation.mjs",
+      "PREVIOUS-OPUS-REVIEW.json",
+      "PREVIOUS-GEMINI-REVIEW.json",
+      "OPUS-AUTHORED-CORRECTIONS.json",
+      "SECOND-OPUS-REVIEW.json",
+      "SECOND-GEMINI-REVIEW.json",
+      "O02-APPLIED.json",
+      "FUNDING-ATTRIBUTION-REPRO.json",
+      "editorial-2026-10-17/COPY.json",
+      "PREVIOUS-READY-OPUS.json",
+      "PREVIOUS-READY-GEMINI.json",
+      "FOUR-REVIEWER-CORRECTIONS.json"
+    ],
+    "findings": [
+      {
+        "severity": "minor (nonblocking in assigned scope)",
+        "location": "app/src/CryptographicDetail.jsx:59-61 (SettlementLifecycle lanes 'Offchain \u00b7 prepare the authorized calculation' and 'Onchain \u00b7 issue evidence, then spend it') rendering depth-2026-10-17/COPY.json opus.lifecycle.stages[id=issue].action ('The claim policy checks the Groth16 proof and mints exactly one proof-claim output.') and stages[id=settle].action ('The validator rebuilds each statement \u2026 and enforces the signed caps, payments, custody and continuing duties.')",
+        "problem": "The two visible onchain cards describe claim-policy and validator behavior in present tense, with no inline scope. The not-built list (sourceSetupStatus[3]) says the all-or-nothing Web consumer and partial-step enforcement do not exist. The frozen issuance-route card's evidence stage is 'V2 SOURCE READING (structural); not observed onchain'. Several things already qualify this: the BindingReference lead in the same section ('a reading of unadopted, uncompiled V2 source, not observed behavior'), the table caption 'Source-described responsibilities', the cardinality text 'structural readings of source', and the security-card link. Under the frozen integrationRule's one-disclosure-away allowance and the user's present-tense presentation directive, this is therefore not blocking. Still, a reader who stops at the cards could take them as observed onchain behavior.",
+        "requiredChange": "In CryptographicDetail.jsx:61, change the lane heading to 'Onchain \u00b7 issue evidence, then spend it (reviewed V2 source design; not observed onchain)'. Alternatively, append to opus.lifecycle.intro: 'The onchain stages below follow a reading of unadopted, uncompiled V2 source; no onchain transaction is recorded.' Leave the card text unchanged.",
+        "source": "V2-COPY.json technical.trustNotes issuance-route evidenceStage ('V2 SOURCE READING (structural); not observed onchain'); data.generated.json security.diagramRules DR-06 ('Label it V2 SOURCE READING, structural, not observed'); security.statusScope.integrationRule; COPY.json opus.groth16.sourceSetupStatus[2]-[3]."
+      },
+      {
+        "severity": "minor (nonblocking in assigned scope)",
+        "location": "depth-2026-10-17/COPY.json opus.lifecycle.stages[id=setup].signersAndFunding ('\u2026 Each phase is sound only if its transcript verifies and at least one participant in it was honest.'), rendered in the 'Signatures, funding and transaction counts' table at app/src/CryptographicDetail.jsx:65",
+        "problem": "This new Opus row treats transcript verification as a necessary condition for soundness. The keys are sound when no party retains the full setup randomness, that is, when at least one honest participant discarded their contribution. Transcript verification is how outsiders gain assurance that this holds and that the phase was computed correctly. It is not what makes the keys sound. The frozen trust text on the same page uses the more accurate sufficiency framing ('A multi-party phase is trustworthy when its transcript verifies and at least one participant in that phase was honest'). The frozen counter.conditions sentence uses similar 'only if' wording, but it is check-enforced approved copy, so only the new row should change.",
+        "requiredChange": "Replace the last sentence of the setup signersAndFunding with: 'A phase can be relied on when its transcript verifies and at least one participant in it was honest and discarded their randomness.' Do not edit the frozen counter.conditions or trust text.",
+        "source": "data.generated.json groth16.trust (frozen GROTH16-SECTION trust text); COPY.json opus.groth16.setupExplanation[3]; COUNT-CLARIFICATION.json answer and approvedCounterConditions."
+      },
+      {
+        "severity": "minor (nonblocking)",
+        "location": "app/src/DepthContent.jsx:55 (ProofPackaging: 'The issuance route then creates one claim output in one Issue transaction, followed by one settlement transaction.')",
+        "problem": "'Issuance route' is the frozen source's name for proof-claim issuance. On this page, however, it appears just before the Explorer, whose tabs include 'Token issuance', and is unscoped. A reader can confuse proof-claim issuance with minting the application token. The page elsewhere stresses that these are separate (FAQ 'Does a proof claim mint my application's token?'). The sentence is also not scoped to the reviewed source.",
+        "requiredChange": "Replace with: 'On the reviewed Issue route, one Issue transaction checks the proof and creates one claim output, and one settlement transaction later consumes it. A proof claim never mints the application's own token.'",
+        "source": "V2-COPY.json technical.trustNotes issuance-route; editorial-2026-10-17/COPY.json main.faqs claim-vs-asset; COPY.json models[1].note ('Web proof-claim issuance does not mint the application asset')."
+      },
+      {
+        "severity": "minor (outside security scope; referral)",
+        "location": "depth-2026-10-17/COPY.json models[id=loan].title ('Debt changes by 35 CASH while the payer spends 37 CASH'), rendered as the TransactionDiagram h3 (app/src/TransactionDiagram.jsx:28) on the Loan repayment tab",
+        "problem": "The net debt change in the illustrated period is 100 \u2192 70, which is 30 CASH (accrual +5, discharge \u221235). 35 is the discharge, not the change in debt. This title is the most prominent statement of the case, and it blurs the very difference between duty movement and cash movement that the case is meant to teach. The body text, nodes and checks are correct.",
+        "requiredChange": "Change the title to 'Repayment discharges 35 CASH of debt while the payer spends 37 CASH'.",
+        "source": "COPY.json models[id=loan] nodes loan-debt-after ('100 + 5 = 105 \u2026 105 \u2212 35 = 70 CASH still owed') and checks loan-duty; cases.loan.details[0]; user expectation 'loan100+5-35=70 versus cashdebit37'."
+      }
+    ],
+    "limits": [
+      "This is a source-level wording audit, done with the Read tool on the 43 packet files plus MANIFEST.json. No shell, build, render, browser, network, setup, proving, verification, signing or ledger action was performed. I did not read index.html, the embedded PNG data URL or the bundled React code. Browser and visual QA belong to root, and I make no claim about rendered appearance.",
+      "I did not recompute SHA-256 values. The artifact hash comes from PAGE-REPORT.json and app/ARTIFACT-CHECK.json, and I compared the PAGE-REPORT pins with the MANIFEST entries by reading them.",
+      "Several build inputs are not in the packet: GROTH16-SECTION.json, SEVEN-LAYER-SECTION.json, SECURITY-COPY.json, scenarios.json, invoice-fixtures.json, learning.json, MESSAGING.md and the S12/S13 sources. I assessed their rendered effect through data.generated.json, which I read in full, and through the editorial and presentation adapters.",
+      "The external material the sources cite was not available: Groth 2016, snarkjs, the Filecoin attestations, the SECURITY-ERRATA rows, the S07/S08 records, identity.rs, the Rust README and the V2 Aiken/Rust source. My judgments rest on the supplied frozen summaries and the literal invoice source excerpt.",
+      "Some new copy says the S13 allocation reserve is owed to the owner. I could not verify that creditor attribution because S13 was not supplied, and I did not judge it as a security matter.",
+      "The COPY.json opus fields that are not rendered (summary, sourceNotes, setupExplanation, most openQuestions, limits, ledgerClaimsExplanation[1] and [3], the setup/genesis/assemble/observe card actions) were checked for consistency but not treated as visible claims.",
+      "The verdict covers only cryptographic and security explanatory wording, plus referrals. READY is not product, protocol, security or ledger acceptance, and it does not authorize implementation, native SDK work, setup, proving, signing or deployment.",
+      "Plan mode was active and only the Read and StructuredOutput tools were available, so no plan file was written. This structured review is the requested deliverable."
+    ]
+  }
+]

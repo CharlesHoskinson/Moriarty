@@ -1,0 +1,67 @@
+{
+  "schema": "moriarty.executor-hang-diagnosis/1",
+  "timestampUtc": "2026-09-13T18:49:21.049632+00:00",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effort": "high"
+  },
+  "scope": "Bounded read-only diagnosis of reported executor test hang; no final candidate or release approval",
+  "candidateRoot": "/home/charl/Moriarty-wt-moriarty-ll-successor-20260913b-implement-handoff-fable-repair",
+  "startup": {
+    "installedDevelopSkillRead": true,
+    "agentsRead": true,
+    "activeRoutingRead": true,
+    "pluginStatusChecked": true,
+    "pendingTransactions": [],
+    "dependentDispatchBlocked": true
+  },
+  "priorRun": {
+    "command": "timeout 300 node --test ledger/executor-caller.test.mjs ledger/invocation-handoff.test.mjs",
+    "observationSource": "Parent agent task handoff",
+    "reportedElapsedSeconds": 288,
+    "inspection": {
+      "timeoutPid2615601": "absent",
+      "nodeParentPid2615603": "absent",
+      "testPid2615611": "zombie; no inspectable live handles"
+    },
+    "originalLoadedSourceHashes": "unavailable"
+  },
+  "manifestSha256": {
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs": "a4b54aad06d74f6b286f3c1463d359fb0bda40626c277ef91f9784c912c9f1dc",
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs": "019723faffdf41e2d6be8c74c2c8806f113378fe8a11f6cbb9c069be40319223",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs": "b47797546c5982a6f8f1b5b05d5e320fd9f410ab83148a2d1130bd42ff205519",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs": "70f2b1cd1eabe05d18331d36420415d45c56700305a305bcc89dd623da338f5f"
+  },
+  "endManifestSha256": {
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs": "a4b54aad06d74f6b286f3c1463d359fb0bda40626c277ef91f9784c912c9f1dc",
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs": "019723faffdf41e2d6be8c74c2c8806f113378fe8a11f6cbb9c069be40319223",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs": "b47797546c5982a6f8f1b5b05d5e320fd9f410ab83148a2d1130bd42ff205519",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs": "70f2b1cd1eabe05d18331d36420415d45c56700305a305bcc89dd623da338f5f"
+  },
+  "sourceDriftDuringInspection": false,
+  "actualChecks": [
+    {
+      "command": "node --test --test-name-pattern='configured handoff|immediate child connection|H3b|H3a' ledger/executor-caller.test.mjs",
+      "cwd": "/home/charl/Moriarty-wt-moriarty-ll-successor-20260913b-implement-handoff-fable-repair/experiments/moriarty-midnight-financial",
+      "exitCode": 0,
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "durationMs": 429.725036
+    }
+  ],
+  "diagnosis": {
+    "verdict": "NOT_REPRODUCED_ON_INSPECTED_BYTES",
+    "exactCause": "Unconfirmed; original process had already exited and its live handles were unavailable.",
+    "candidateHypothesis": "An open real socket/server or pending socket-close callback can keep this test process alive; inspected real-socket cases do not reproduce it. This is a hypothesis, not a proven root cause.",
+    "teardownObservation": "handoffHandles/afterEach client cleanup already exists in base; it is not a newly verified fix. Current executor cleanup aborts protocol, detaches listeners, destroys tracked sockets, and bounds server close. New late-allocation tests finish in the selected subset.",
+    "clearRemainingHangRegression": "None established within this bounded inspection."
+  },
+  "recommendation": "Do not apply an unsupported patch based on this diagnosis. After Fable finishes, run the exact frozen focused candidate with bounded timeout and capture output. If the hang recurs, collect live handle/resource types and sockets before timeout, especially open Server/Socket handles after test completion. Ensure every test-owned accepted socket is destroyed before awaiting server.close.",
+  "limits": [
+    "No full suite repeated.",
+    "No source edited, processes killed, real accounting or services modified.",
+    "Focused pass does not establish the original timeout cause or approve H1/H3 or production/release behavior.",
+    "Fable remained active; final review must freeze and hash its completed candidate."
+  ]
+}

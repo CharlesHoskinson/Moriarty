@@ -1,0 +1,66 @@
+{
+  "proposals": [
+    {
+      "id": "setupcount-layer1",
+      "title": "What a Groth16 setup is tied to",
+      "bookReference": "B08-EXACT-MANUSCRIPT-SECTIONS.json: source B07-proving-nothing.md lines 272-298 (seven-layer overview) and 609-621 (Universal versus Circuit-Specific Setups); B05, same heading.",
+      "sourceSupport": "G02 (snarkjs README and guide) uses compiled circuits and describes common Phase 1 plus circuit-specific Phase 2. G04 (Filecoin Phase2 Attestations README) says Phase 2 is per circuit. G05 (Groth 2016 paper abstract) supports proof shape, not a Webs circuit inventory.",
+      "websiteMapping": "Make Layer 1 a visible technical section. Explain setup parameters and keys in plain language, then make circuit-specific versus shared setup material explicit. Distinguish circuit structure from statement and witness values.",
+      "readerCopy": "Groth16 setup is tied to a compiled circuit. Reusing that circuit for different inputs does not by itself require a new setup. Change its constraints or supported bounds, and you may have a different circuit that needs its own Phase 2 setup.",
+      "interaction": "Expandable two-column explainer: 'same circuit, new inputs' versus 'changed compiled constraints'; show whether the example changes the circuit-specific setup count, with a note that the compiled artifact determines the answer.",
+      "diagram": "Circuit source and compiler -> compiled circuit C1 -> Phase 2 setup and keys for C1. Two different statement/witness instances enter the same C1 box and share its circuit identity. A changed compiled circuit C2 branches to its own Phase 2 setup.",
+      "questions": [
+        "Which compilation artifact and compatibility criteria will the site treat as identifying a distinct circuit?",
+        "Does the supported toolchain expose a reliable circuit digest for readers to inspect?"
+      ],
+      "limits": "Do not imply input-value changes trigger setup. Do not present source-code equality alone as proof of compiled-circuit identity. Final cryptographic wording belongs to Opus 5.5."
+    },
+    {
+      "id": "setupcount-phases",
+      "title": "One shared Phase 1 can feed many Phase 2 setups",
+      "bookReference": "B05, 'Universal versus Circuit-Specific Setups'; B08 source lines 609-621. The book’s contrast is between circuit-specific Groth16 setup and universal-SRS proof systems.",
+      "sourceSupport": "G02 says projects can pick a round from common Phase 1 for circuit-specific Phase 2. G04 says Filecoin ran Phase 1 once and uses its output for each circuit’s Phase 2. These support the phase distinction for the cited workflows, not universal compatibility across arbitrary curves or parameter sizes.",
+      "websiteMapping": "Show ceremony counts by phase rather than a single unlabeled 'setup count'. Allow a compatible shared Phase 1 row and a per-distinct-circuit Phase 2 row, with compatibility assumptions visible.",
+      "readerCopy": "A compatible Phase 1 transcript can be shared. Groth16 still needs a circuit-specific Phase 2 setup for each distinct compiled circuit. Sharing Phase 1 does not turn Groth16 into a universal per-circuit key system.",
+      "interaction": "For a hypothetical K, show K Phase 2 setups and one shared Phase 1 only when the selected circuits fit the same Phase 1 domain. Let the reader toggle separate Phase 1 domains to see the count change.",
+      "diagram": "Compatible Phase 1 transcript -> parallel branches to Circuit A / Phase 2 A, Circuit B / Phase 2 B, ... Circuit K / Phase 2 K. Caption: 'Illustrative; K is user supplied; compatibility must be established.'",
+      "questions": [
+        "What curve, size bound, and setup implementation would define a compatible Phase 1 domain for the intended example?",
+        "Should page terminology count phases, ceremonies, or ceremony rounds separately?"
+      ],
+      "limits": "The K calculator is hypothetical only. Do not claim one Phase 1 covers all Cardano circuits or combine incompatible setup domains."
+    },
+    {
+      "id": "cardano-inventory",
+      "title": "Why the Cardano-wide setup total is unknown",
+      "bookReference": "B08 source lines 272-298 and 609-621; the chapter presents setup as one layer of a broader, interdependent system.",
+      "sourceSupport": "V2-COPY.json says the 235 identifiers are pre-dedup review identifiers, not proven properties, and labels retained families as requirements rather than supported ports; it explicitly says required setup count is unknown. G04 illustrates that a circuit inventory must account for variants: its note distinguishes 32GiB and 64GiB phase2 setups.",
+      "websiteMapping": "Place a short inventory status beside the calculator. Explain that a count needs a defined scope, a compiled-circuit inventory, versions/variants, and setup-domain compatibility. Keep Cardano ecosystem scope separate from the Webs catalogue.",
+      "readerCopy": "We cannot give a reliable setup total for all Cardano applications from this catalogue. The 235 review identifiers and 20 families are not compiled-circuit counts. The total remains unknown until the scope and circuit inventory are established.",
+      "interaction": "A transparent inventory worksheet can accept named circuits and variants as hypothetical entries, then calculate Phase 2 counts and shared Phase 1 domains. Default to an empty inventory and show 'No audited total available.'",
+      "diagram": "Scope definition -> deduplicated compiled-circuit inventory -> group by compatible Phase 1 domain -> count one Phase 2 per distinct circuit; display unknown until the inventory is sourced.",
+      "questions": [
+        "What exact boundary does 'entire Cardano' mean: deployed applications at a date, one protocol family, or future application possibilities?",
+        "Which deployed circuits, versions, parameter variants, curves, and ceremony records can be sourced and verified?",
+        "How will identical circuits reused by multiple applications be deduplicated?"
+      ],
+      "limits": "Do not infer a total from review IDs, project families, applications, or transaction instances. Do not claim the website has surveyed Cardano’s deployed circuits."
+    },
+    {
+      "id": "bounded-circuit-design",
+      "title": "Bundling cases can change the count, within explicit bounds",
+      "bookReference": "B08 source lines 272-298 on layer interdependence and lines 609-621 on circuit-specific setup and alternatives.",
+      "sourceSupport": "G02 and G04 support that Phase 2 is tied to a circuit in their Groth16 workflows. The supplied materials do not demonstrate a Moriarty generic circuit or prove that bundling would be efficient or safe.",
+      "websiteMapping": "Offer parameterized and bundled relations as design options in a clearly hypothetical panel. Describe the tradeoff between fewer compiled circuits and a broader/larger relation; require explicit limits and do not claim future-proof coverage.",
+      "readerCopy": "A single circuit can sometimes express several bounded cases, which may reduce the number of circuit-specific setups. It covers only the cases and limits encoded in that circuit. New cases outside those limits still need a changed circuit and setup.",
+      "interaction": "Compare K separate hypothetical circuits with one hypothetical bounded bundle. Show the assumed relation coverage and mark circuit size, performance, auditability, and setup suitability as unknown until measured and reviewed.",
+      "diagram": "Option A: Relation 1 -> Circuit 1 / Phase 2; Relation 2 -> Circuit 2 / Phase 2. Option B: bounded Relation 1+2 -> Circuit B / Phase 2, with the bound and selector logic drawn inside the circuit box.",
+      "questions": [
+        "Can the intended relation safely encode the cases behind this proposed bundle, including selector and range checks?",
+        "What resource, review, and maintenance costs would bundling add?",
+        "Would a bound change alter the compiled constraints and require a new Phase 2 setup?"
+      ],
+      "limits": "Present as a design possibility, not an existing Webs capability or a solution for all future Cardano programs. No universal bounded circuit can be assumed to cover unspecified future relations."
+    }
+  ]
+}

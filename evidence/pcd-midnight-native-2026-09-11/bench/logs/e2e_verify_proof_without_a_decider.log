@@ -1,0 +1,55 @@
+start 2026-09-11T00:41:59-06:00
+    Finished `release` profile [optimized] target(s) in 0.16s
+     Running tests/verify_proof_e2e.rs (target/release/deps/verify_proof_e2e-2205454d1bfdafa1)
+
+running 1 test
+test verify_proof_without_a_decider ... BENCH test_srs unsafe_setup_k=19 ms=15329.9 hwm_mb=293.6
+BENCH inner relation=verify_proof_e2e::Echo k=4 keygen_vk_ms=7.8 keygen_pk_ms=5.0 prove_ms=33.4 proof_bytes=2528 hwm_mb=297.7
+BENCH inner cost_model=CircuitModel { k: 4, rows: 1, table_rows: 1, nb_unusable_rows: 6, max_deg: 5, advice_columns: 5, fixed_columns: 25, lookups: 1, permutations: 8, column_queries: 34, point_sets: 4, size: 2496 }
+BENCH inner offcircuit_verify_proof_prepare_ms=5.28 vk_blob_bytes=1230
+BENCH outer k=18 cost_model=CircuitModel { k: 18, rows: 150966, table_rows: 253969, nb_unusable_rows: 7, max_deg: 5, advice_columns: 15, fixed_columns: 45, lookups: 5, permutations: 18, column_queries: 69, point_sets: 5, size: 6320 }
+BENCH outer keygen_vk_plus_pk_ms=79917.9 hwm_mb=3266.5
+BENCH outer prove_guard_on_ms=34773.4 plonk_proof_bytes=6432 tagged_proof_bytes=6550 accumulators=1 accumulator_pi_elems=12 statement_len=1 hwm_mb=4167.9
+BENCH outer verify_with_deferred_pairing n=10 min_ms=4.99 median_ms=5.88 max_ms=6.07
+BENCH neg=V1_accumulator_replaced_by_trivial ms=4.93 outcome=REJECTED(Invalid outer proof)
+BENCH neg=V2_flipped_outer_proof_byte ms=5.26 outcome=REJECTED(Invalid outer proof)
+BENCH neg=V3_statement_extra_element ms=0.41 outcome=REJECTED(Invalid outer proof)
+BENCH outer prove_guard_off_ms=34668.2 hwm_mb=4167.9
+BENCH outer verify_guard_off_ms=6.11
+BENCH neg=P1_tampered_inner_proof_prove ms=33537.7 outcome=ACCEPTED
+BENCH neg=P1b_tampered_inner_proof_check ms=6.3 outcome=ACCEPTED
+BENCH neg=P2_wrong_inner_instance_prove ms=33931.4 outcome=ACCEPTED
+BENCH neg=P3_vk_hash_not_in_side_table_check ms=0.0 outcome=REJECTED(no verifying key in `verify_proof_vks` for vk_hash 0x73d64287897dc3ce8f10ff6d5a6b6f63f0f3f471767bd25058a76558327575c0)
+BENCH neg=P3b_vk_hash_not_in_side_table_prove ms=0.0 outcome=REJECTED(no verifying key in `verify_proof_vks` for vk_hash 0x73d64287897dc3ce8f10ff6d5a6b6f63f0f3f471767bd25058a76558327575c0)
+BENCH neg=P4_padded_vk_blob_check ms=1.3 outcome=REJECTED(`verify_proof_vks` entry has 1 trailing bytes after its verifying key)
+BENCH neg=P5_wrong_decider_tag_check ms=6.0 outcome=REJECTED(a `Collapsed` inner proof's instance must end with the 12 fields of a collapsed accumulator, but it has 1)
+BENCH neg=P6_missing_inner_proof_witness_check ms=0.0 outcome=REJECTED(Not enough proof witnesses: ran out at index 0)
+BENCH end test=without_a_decider hwm_mb=4168.3
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 250.43s
+
+	Command being timed: "cargo test --release -p midnight-zkir-v3 --test verify_proof_e2e -- --ignored --nocapture --exact verify_proof_without_a_decider --test-threads=1"
+	User time (seconds): 972.51
+	System time (seconds): 11.23
+	Percent of CPU this job got: 392%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 4:10.66
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 4268316
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 5526847
+	Voluntary context switches: 56604
+	Involuntary context switches: 191633
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+exit=0 2026-09-11T00:46:10-06:00

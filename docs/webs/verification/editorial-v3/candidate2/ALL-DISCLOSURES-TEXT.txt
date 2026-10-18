@@ -1,0 +1,983 @@
+Skip to content
+MORIARTY
+Webs for Cardano
+Payment example
+Applications
+Settlement
+Groth16
+Technical notes
+
+Moriarty on Cardano
+
+Prove what a Cardano transaction does.
+
+Moriarty is a language for financial contracts. Webs let a Cardano application attach proofs to a transaction, so its validator can check that the contract’s rules were followed.
+
+For an invoice payment, that means checking how much reaches the seller and how much is still owed after the fee. The example below follows those amounts through a single payment.
+
+Follow a payment
+↓
+How the proofs work
+↗
+Moriarty · Webs and Strands
+01A payment example
+Paying part of an invoice
+
+A payment changes both the escrow balance and the amount owed. Move the slider to see why the fee must be accounted for separately.
+
+Invoice escrow
+Choose how much to pay the seller
+
+The invoice is for 100 CASH, with a separate reserve obligation of 10 CASH. The escrow—the account holding the funds—starts with 112 CASH. Each partial payment costs a 2 CASH program fee.
+
+Payment to the seller
+35 CASH
+1 CASH
+99 CASH
+
+Choose 1–99 CASH for a partial payment. Paying the full invoice uses a separate closing action.
+
+112 CASH · fee included
+110 CASH · without the fee allowance
+
+Selected: 112 CASH · fee included.
+
+The extra 2 CASH funds the fee for this payment. Afterward, the remaining cash covers both the unpaid invoice and the reserve.
+
+Opening escrow funding
+112 CASH
+Seller receives
+35 CASH
+Program fee recipient receives
+2 CASH
+Gross escrow debit
+37 CASH
+Cash remaining
+75 CASH
+Invoice still owed
+65
+Reserve obligation
+10
+Total still owed
+75
+Cash
+Owed
+
+The remaining 75 CASH covers 75 CASH still owed.
+
+The seller’s 35 CASH reduces the invoice balance. The 2 CASH fee does not. The 10 CASH reserve obligation remains.
+
+This example funds one partial payment. Another partial payment would need another 2 CASH fee allowance. Cardano network fees, collateral and the minimum ADA held in proof-claim outputs are separate; this worksheet does not estimate them.
+
+CASH is an example unit in the invoice program. A partial payment still needs all of its proofs. An unpaid balance does not make the Web incomplete.
+
+Invoice source and funding details
+↗
+What are Webs and Strands?
+
+The payment above has several conditions to check. These are the names for the evidence that travels with it.
+
+Strand
+
+A Strand carries one Groth16 proof, the claim it proves and the information that ties it to a particular transaction. For an invoice, its claim might cover the payment calculation and the unpaid balance.
+
+Web
+
+A Web collects the Strands a contract requires for a transaction. The contract sets those requirements. Settlement needs every required condition covered by a matching Strand.
+
+How can an application reuse a kind of claim?
+
+A claim specification describes a kind of claim: what it asserts, which inputs it uses and which compiled rules it must satisfy. It can be reused across transactions; a proof for an old state cannot simply be reused for a changed one.
+
+02Applications
+What does each contract need to prove?
+
+An invoice is one use for a Web. Choose another application to see the conditions its contract checks. Select a condition to read the claim and where its inputs come from; remove it to see why an incomplete set cannot settle.
+
+01
+Invoice payment
+02
+Exchange orders
+03
+Token issuance
+04
+Loan repayment
+05
+Treasury allocation
+Invoice payment
+
+Pay part of an invoice out of escrow. The seller receives 35 CASH, the 2 CASH program fee goes to the fee recipient, and the unpaid invoice and reserve duties stay on the record.
+
+Shared invoice example · 35 CASH payment · 112 CASH funding
+Change the amount
+↓
+Contract requirements
+Select a check below
+1
+Payment arithmetic
+Required check
+2
+Fee accounting
+Required check
+3
+Duty continuation
+Required check
+Web
+PROOF COLLECTION
+
+Each button is a condition the contract requires. A proof can cover more than one condition.
+
+All required conditions are covered. The Web can be submitted for settlement; the validator still checks it against the actual transaction.
+
+3 of 3 conditions covered.
+
+Selected check
+Payment arithmetic
+
+The seller payment matches the chosen partial amount.
+
+What the claim says
+Opening invoice duty 100 CASH; payment 35 CASH; escrow debit for payment and fee 37 CASH.
+Where the inputs come from
+The opening duty comes from the escrow state this transition spends, and CASH is the asset the invoice program declares.
+Remove proof coverage for this check
+The contract still requires it.
+Financial result
+Seller receives 35 CASH; the program fee recipient receives 2 CASH.
+Gross escrow debit is 37 CASH; 75 CASH remains in escrow.
+Invoice duty 65 CASH and reserve duty 10 CASH continue: total 75 CASH.
+What the validator receives
+
+A Web covering these conditions, bound to the transaction that spends the contract state.
+
+How the proof connects to the transaction
+
+A condition is something the contract requires, such as a correct fee calculation. A Strand contains a Groth16 proof, its public claim and the information tying it to this transaction. One proof can cover several conditions. The settlement validator rebuilds the claim from the transaction and checks that it matches the claim whose proof was verified. An external price or delivery record still needs an authenticated source and a freshness rule.
+
+03On Cardano
+How a Web reaches settlement
+
+The example uses an issuance route: proofs are checked in earlier transactions, then their on-chain claim outputs are consumed together at settlement. Creating those outputs does not execute the invoice payment.
+
+Step 1
+The owner signs limits
+
+Before proving, the owner signs an intent that limits what may leave the account and what each recipient must receive. It also identifies the permitted fees, validity window and proof relation. A one-time nonce prevents the same authorization being used again.
+
+Step 2
+A prover builds the Web
+
+The prover runs the financial program and produces the required Strands. Each claim is tied to the state being spent, its sequence number, the settlement script, the catalogue, signed intents and claimant. One execution proof can cover several required conditions.
+
+Step 3
+Proof claims go on-chain
+
+An Issue transaction verifies one Groth16 proof and creates a claim output holding minimum ADA. This output records checked evidence for later settlement. It does not pay the seller or mint the application’s asset.
+
+Step 4
+The transaction settles
+
+Settlement consumes every required claim output and burns its claim token. The validator rebuilds the claims from the transaction, checks the signed limits and requires the claimants’ signatures. The application then checks inclusion and its required finality, and reads back the payments and remaining obligations.
+
+Issuance assumptions and funding
+↗
+04Building an application
+From a financial program to a transaction
+
+Write the agreement in Moriarty, then connect its claims to the Cardano validator that spends the contract state. The application must keep those claims consistent with the transaction it builds.
+
+Write the agreement
+Describe the financial state and the actions that may change it.
+Include payment rules, fees and any obligations that survive the action.
+Specify the claims
+Identify the conditions this transaction must satisfy.
+Match each claim to a compiled relation and its verification key.
+Build and submit the transaction
+Collect the required Strands into a Web.
+The consuming validator checks the claims against the transaction and enforces the authorized effects.
+Check the owner’s actual outcome
+
+For a swap, an owner can limit the input amount and require a minimum net receipt of the output asset. The validator checks the recipient’s actual output against those signed limits. Pool arithmetic alone does not establish that the owner received the agreed amount.
+
+Carry unpaid obligations into the next state
+
+A loan payment leaves a remaining debt. A partial invoice payment leaves an unpaid balance. The next contract state records those amounts so later transactions can continue the agreement.
+
+Browse the Moriarty source
+↗
+Compiler interfaces and implementation notes
+↗
+05The proof system
+Groth16 proofs and trusted setup
+
+Groth16 lets a prover show that a computation satisfies a fixed set of constraints without publishing its private inputs. A Strand uses it to carry a compact proof that the financial calculation follows those rules. Here is what the proof contains, what the validator checks and why setup is needed.
+
+Public information
+The statement
+
+The statement says what is being proved. In a Web, the public inputs carry a digest of the statement bytes. The validator rebuilds those bytes from the transaction, so a correct calculation cannot be attached to a different payment. A proof alone does not authenticate an external price or document.
+
+Private information
+The witness
+
+The witness contains the other values needed to satisfy the circuit, including intermediate calculations. The proof hides those values. Anything already published in a Cardano output or the public statement remains public.
+
+The check
+Proof and verification key
+
+The proving key lets a prover create a proof from the statement and witness. The validator uses the verification key and public inputs to check a proof of three group elements with a pairing equation. Both keys are public; the secret that must be destroyed belongs to setup.
+
+Why there is a trusted setup
+
+Groth16 needs parameters for the exact compiled circuit. Setup derives the proving and verification keys using secret randomness. If someone retains that randomness, they can forge proofs. A common ceremony divides this work into two phases so part of it can be shared.
+
+Phase 1
+Parameters that circuits can share
+
+Often called powers of tau, this phase prepares parameters for a particular curve and capacity. Circuits can reuse them when their curve and format are compatible and they fit within that capacity.
+
+Phase 2
+Keys for one compiled circuit
+
+Each distinct circuit needs its own second phase. Its constraints, public-input layout and bounds determine which keys are valid. New values can reuse those keys; a changed circuit needs a new phase 2.
+
+Try a circuit count
+How many setup stages are needed?
+
+Assume these circuits share a compatible curve and format, and one phase-1 parameter set is large enough for all of them. Change the count to see what can be reused.
+
+Distinct compiled circuits
+−
++
+
+1 shared phase 1 + 8 phase 2
+
+For 8 distinct circuits, phase 1 can be shared and phase 2 runs 8 times. These are stages, not 8 + 1 complete ceremonies.
+
+The count holds only if every circuit uses the same curve and format and fits the shared phase-1 capacity. Smaller circuits need no extra phase 1. Each stage yields sound keys only if its transcript verifies and at least one participant in it was honest.
+
+When can the same keys be used again?
+The amounts or users change
+
+The keys can be reused if the compiled circuit stays the same. New transactions and different public-input values do not, by themselves, require setup again.
+
+The compiled rules change
+
+A circuit with different constraints, bounds or public-input layout needs a new phase 2. A new Groth16 wrapper also has its own circuit. Aggregation does not remove setup for the base circuits.
+
+One bounded circuit covers several kinds of claim
+
+A parameterized circuit can cover many claims within fixed bounds. That is how a catalogue can contain more claim types than circuits. It does not make the circuit unbounded.
+
+What makes a ceremony trustworthy?
+
+Proving and verification keys are public. The secret is the setup randomness, often called toxic waste. Anyone who holds it can produce verifying proofs for statements that have no witness, so it must not survive the setup. A multi-party phase is trustworthy when its transcript verifies and at least one participant in that phase was honest, under the protocol's assumptions. Every phase needs that property.
+
+How many setups for all of Cardano?
+
+There is no fixed Cardano-wide total. Count one phase 2 for each distinct compiled circuit, including wrappers. Count phase 1 separately for each compatible parameter set those circuits use; an existing set can be reused if its capacity is sufficient. The catalogue’s 235 review identifiers, 20 pattern families and seven architectural concerns are not circuit counts. A total requires a frozen inventory of compiled circuits.
+
+Read the status of Moriarty’s current test setup
+↗
+Sources
+Groth, On the Size of Pairing-based Non-interactive Arguments (EUROCRYPT 2016)
+
+§2.2 Setup(R), Sim; §3.2 construction and efficiency
+
+snarkjs README
+
+Steps 1-8 (phase 1), 15-22 (Groth16 phase 2)
+
+Filecoin phase 2 attestations
+
+Description of Trusted-Setup Phases
+
+Moriarty implementation status
+
+technical.trustNotes setup-keys
+
+06Architecture
+What makes a proof meaningful?
+
+A proof is useful only if it checks the right program against the right inputs. These seven concerns explain the connection, from the financial rules a developer writes to the checks a Cardano validator performs. They influence one another; the numbers are not seven execution steps.
+
+1
+Setup
+Keys for the compiled circuit
+↗
+2
+Language
+The financial program
+↗
+3
+Witness
+The prover’s private inputs
+↗
+4
+Arithmetization
+Equations the proof can check
+↗
+5
+Proof System
+The proof construction
+↗
+6
+Cryptographic Bedrock
+Curves, hashes and signatures
+↗
+7
+Verification
+The connection to Cardano
+↗
+03 / Witness
+Which values satisfy those rules?
+
+The prover runs the program over its inputs and records every intermediate value. Zero-knowledge keeps this assignment hidden, but only the assignment: amounts that appear in Cardano outputs or in the statement stay public. Witness generation must not leak values through its own behavior.
+
+Result
+
+Full witness assignment
+
+Related example
+Invoice inputs and remaining duties
+↗
+Related concerns
+2 · Language ↗
+4 · Arithmetization ↗
+How these concerns affect one another
+Layers 4, 5 and 6 form the proof core: the scalar field, the R1CS encoding and Groth16's pairing check are chosen as one design, not three.
+Setup follows the compiled relation. Changing a rule changes the circuit, and a changed circuit needs a new setup and a new verifying key.
+The proof and the ledger divide the work. Layers 3 to 5 show the statement's arithmetic is correct; Layer 7 checks, from the transaction itself, that the statement describes this step.
+The verifier reaches down. Cardano scripts must run the pairing check, which constrains the curve and proof system beneath them.
+The numbering follows how a reader meets the system, not the order of engineering decisions; the dependency lists here sketch the main pressures, not a complete graph.
+See how all seven concerns apply to a Web
+Where each concern appears in a Web
+1 · Setup
+Catalogue entries and owner intents name the verifying key.
+2 · Language
+Moriarty rules for payments, fees, caps and duties.
+3 · Witness
+One whole-execution witness can serve several Strand roles.
+4 · Arithmetization
+Caps, fees and duty updates become constraints.
+5 · Proof System
+Each Strand carries one proof.
+6 · Cryptographic Bedrock
+Cardano scripts evaluate the pairing check and hashes.
+7 · Verification
+All-or-nothing Web consumer on Cardano.
+Sources and the seven-layer framework
+
+This explanation uses the seven-layer framework from Proving Nothing, a book about zero-knowledge systems. The application to Moriarty is developed here.
+
+Read the framework and its source passages
+
+The Seven Layers at a Glance
+
+Lines 272–298: the seven layers as interdependent organs
+
+Universal versus Circuit-Specific Setups
+
+Lines 609–621: a Groth16 setup is specific to one circuit
+
+The Proof Core: Layers 4, 5, and 6
+
+Lines 2340–2353: separate concerns, joint implementation
+
+The Causal Web: Why It Is a DAG, Not a Stack
+
+Lines 4460–4479: upward and downward pressures between layers
+
+Groth, On the Size of Pairing-based Non-interactive Arguments (EUROCRYPT 2016)
+
+Sections 2.2 and 3.2: Setup(R), knowledge soundness, zero-knowledge, verification equation
+
+07Questions
+Using Webs in an application
+
+Answers about authorization, unused proof claims and transaction costs.
+
+Does a proof claim mint my application’s token?
+
+No. Issuing a proof claim creates an output that records checked evidence. Settlement consumes it and burns the claim token. Your application’s token has its own minting policy, which controls supply, recipients and any issuance cap.
+
+Assumptions and implementation details
+↗
+Do I need permission from Moriarty to build an application?
+
+No. Developers can write, compile, prove and deploy programs in the supported language without approval from Moriarty maintainers. The application still has to follow the ledger’s rules and respect the authorization of anyone whose assets it moves. A contract may also define access rules for its own users.
+
+Assumptions and implementation details
+↗
+What does the owner authorize?
+
+The owner signs an intent before proving. It defines per-asset limits on gross debits, fees and new liabilities, as well as the minimum net amount each beneficiary must receive. Its validity window, one-time nonce and exact proof relation limit where and when it can be used. Network fees are shown separately.
+
+Assumptions and implementation details
+↗
+Who signs the settlement transaction?
+
+Each proof-claim output names a claimant. Consuming it at settlement requires that claimant’s signature and burns the claim token. The validator also checks the prior signed intents of the accounts being debited. Those owner authorizations and the later claimant signatures serve different purposes.
+
+Assumptions and implementation details
+↗
+How do I know the payment happened?
+
+Check that the transaction was included, wait for the finality your application requires, then read back the actual outputs and remaining obligations. Reconcile those amounts with the owner’s signed intent. A timeout leaves the outcome unknown; it does not establish that the payment failed.
+
+Assumptions and implementation details
+↗
+Can a partial payment have a complete Web?
+
+Yes. Completeness means every required condition for this payment has proof coverage. It does not mean the entire invoice has been paid. The unpaid invoice balance and reserve obligation remain in the next state.
+
+Assumptions and implementation details
+↗
+What if the Web never settles?
+
+The issued claim outputs keep holding their minimum ADA. Their claimant can reclaim them after the chosen expiry by signing a reclaim transaction. If a catalogue account advances its sequence through revocation, or a competing settlement spends the same state, the old claims can no longer settle and must wait for expiry.
+
+Assumptions and implementation details
+↗
+Does splitting a Web into more Strands reduce the cost?
+
+Each Strand needs its own Issue transaction on this route, and its claim output holds minimum ADA until settlement or reclaim. A single execution proof covering several conditions may be simpler. Comparing costs requires measuring complete transactions on the target network; splitting alone does not establish a saving.
+
+Assumptions and implementation details
+↗
+08Technical notes
+Implementation and evidence
+
+The guide explains the complete design. The records below describe what has been implemented and tested, with the remaining assumptions and integration work.
+
+Implementation status and evidence
+Research & implementation record
+
+The page above describes Moriarty Webs as designed. This section records where the implementation stands. Supplied records include one current-Rust invoice-partial Groth16 roundtrip (S07) and seven local compiled-C2-wrapper cases (S08: one acceptance and six mutation rejections), with a single-party test setup whose operator can forge proofs and caller-fabricated proof contexts. No on-chain transaction is recorded. Descriptions of the consumer, claim policy, owner intents, duties and Close are Opus readings of unadopted, uncompiled V2 Aiken/Rust source, not observed behavior, and no supplied record pins the S07/S08 binaries or compiled bytes to that source. Of the composition argument, only conditional T1 is adopted; T2, T3 (compiled circuit/VK/BLAKE2b gadget correspondence) and the full WP migration are open. Not yet built: the all-or-nothing Web consumer and required-set enforcement, partial-step enforcement, real-context proofs, genuine intent signatures, the CLI/SDK and transaction build/submit/observe interfaces, a wallet signing display, the funding and backing actions behind the 112 CASH and 25 A / 10 B designs, reserve-duty discharge, batch issuance and any production setup ceremony. S08’s local VM figures are not ledger cost, and no cost, latency or portability advantage is measured or claimed.
+
+Setup and keys
+↗
+
+RECORDED limitation (forgeable test setup); V2 SOURCE READING; total setup count UNKNOWN
+
+What ties a Strand to its step
+↗
+
+V2 SOURCE READING (unadopted, uncompiled); T3 OPEN
+
+What has actually been recorded
+↗
+
+RECORDED (local, scoped)
+
+The cards below keep the reviewed role06 wording exactly. Labels such as PROPOSED, OPEN, PREMISE and V2 SOURCE READING describe the implementation status of the design explained above.
+
+What a verifying proof shows
+
+Under an honest setup and Groth16 knowledge soundness, a verifying proof shows the prover knew a witness satisfying the compiled constraints for its two public inputs. Linking those inputs to statement bytes additionally rests on the in-circuit BLAKE2b gadget and on BLAKE2b collision resistance. It never authenticates those bytes. A proof over supplied values does not make them an authenticated ledger fact or a true outside observation. A concrete execution proof, a universal property certificate and an authenticated ledger claim are different assertions; the latter two are not established Strand kinds.
+
+Assumptions & limits
+The current class-0 test setup is forgeable by its operator, so no production security claim follows.
+Whether the compiled constraints and verifying key match your source is OPEN (T3: compiled circuit/VK and BLAKE2b gadget correspondence).
+Outside facts keep their named issuer, predicate, authentication path and freshness limits.
+Reference-input reads are PROPOSED: the validator must read the datum itself and authenticate its origin. PREMISE: being unspent at application shows presence only, with no exclusivity or history. A validity interval neither dates nor authenticates a datum.
+SEC06-P06 PROPOSED; still needs real-context stale-sequence and expired-attestation cases, changed-reference-datum and forged-origin negatives, N5/N7–N9 at V, and a separately scoped real-context proof.
+
+Evidence stage: Assumption-bound Groth16 meaning; T3 OPEN; reference-input path PROPOSED
+
+ERR-16 / ERR-17 / ERR-01 / ERR-11 / CL-27 / CL-45 / CL-49 / S07 /limitations/universalPropertyCertificate / S07 /limitations/class0ControllerCanForge / SEC06-P06 PROPOSED
+
+What has actually been recorded
+
+Evidence layers (DEMO ONLY): H ordinary host tests captured (K4H, S04; fresh actual-result review pending) | N 1 local roundtrip (S07) | V 1 local C2 wrapper, 7 cases (S08) | P none. One genuine proof was accepted by a compiled C2 wrapper in a local VM with fabricated context (S08); no on-chain transaction is recorded. S08 /cases/0 records cpu 2222340191 and mem 205312 for the whole compiled C2 Issue evaluation, including its pairing; it is neither an isolated verification cost nor ledger ExUnits, fee or transaction fit. Every recorded proof context in the supplied sources is caller-fabricated (S07, S08).
+
+Assumptions & limits
+No supplied record pins the recorded runs to the later V2 source bytes; V2 readings elsewhere on this page are not evidence about these runs.
+Named runtime guards behind the six S08 rejections were not instrumented.
+All 20 retained S02 families are requirements, not supported ports. The 235 catalogue IDs are pre-dedup review identifiers, not accepted or proven properties; the original 42/52 lists remain unrecovered.
+Moriarty's broader target remains Midnight ZKIRv3 and native proof infrastructure; Cardano is an additional experiment and does not qualify Midnight. Preview-first and later Preprod end-to-end acceptance remain required for claimed targets.
+SEC06-P08 PROPOSED (developer trust report); still needs a DEMO ONLY S07/S08 report with these qualified layers, fresh nonsecurity wording review and fresh security review. No new evidence is inferred from this layer wording.
+
+Evidence stage: RECORDED (local, scoped)
+
+ERR-18 / ERR-17 / ERR-05 / ERR-19 / CL-11 / CL-12 / CL-13 / CL-14 / CL-31 / CL-32 / CL-33 / CL-34 / S07 /scope / S08 /cases / S08 /scopeLimitations / SEC06-P08 PROPOSED
+
+Setup and keys
+
+The current test setup can be forged by its operator; whether the verifying key matches the compiled relation is OPEN. Groth16 needs a separate setup per distinct compiled circuit (R1CS matrices), not per logical predicate. In the current Rust source the predicate digest is a circuit constant, so each distinct relation identity is a distinct circuit. The required total setup count is unknown; predicate, catalogue and family counts do not determine it. No production ceremony is recorded in the supplied sources, and none is proposed here.
+
+Assumptions & limits
+A future universal circuit or Midnight's universal PLONK/KZG SRS would change the comparison (PROPOSED or target-specific).
+V2 SOURCE READING: catalogue VK digests are fixed at genesis and carried unchanged, and Close requires zero balances and duties, so any key change needs a PROPOSED key migration action that carries residual duties.
+Intent revocation (Revoke) advances seq; it is not key migration.
+SEC06-P07 PROPOSED; still needs an old-VK-refused-after-migration negative, a setup-class report and independent review of any future ceremony.
+
+Evidence stage: RECORDED limitation (forgeable test setup); V2 SOURCE READING; total setup count UNKNOWN
+
+ERR-14 / ERR-28 / ERR-17 / CL-14 / CL-32 / CL-43 / SEC06-P07 PROPOSED
+
+What ties a Strand to its step
+
+V2 SOURCE READING: tag, family, predicate_digest, shape_digest and body_len are circuit constants; the context fields vk_digest through intents_digest (bytes 112..339, including claimant_vkh) are free booleanized witness bits that are hashed, not interpreted. The consumer, not the circuit, ties those fields to the transaction: the settling validator rebuilds each statement from the transaction and the spent thread state, so a claim made for another thread step, catalogue, claimant or intent set does not match. Claimant binding happens at consumption, not at issuance: C2 Issue does not compare the claimant with the statement, so a mismatched envelope can be minted but cannot settle. This source-level binding is separate from T3, which stays OPEN.
+
+Assumptions & limits
+The class-0 setup operator can forge a proof for any digest and any claimant. The claimant is prover-chosen bytes, not an authenticated prover identity.
+Builders select claim inputs; the ledger spends each claim once (PREMISE). A copied proof can be re-issued with the same claimant and a new expiry; only that claimant can release it.
+Catalogue program_hash and source_hash are visible, covered by catalogue_digest and signed in every owner intent. No on-chain check links them to predicate_digest or vk_digest: that link is a CATALOGUE-AUTHOR ASSERTION and VK-to-matrix is OPEN. Exact predicate-digest field coverage depends on identity.rs, which the reviewer did not read.
+The statement's network byte is declared by the catalogue and not compared with the executing ledger; separation across networks rests on outref uniqueness (PREMISE).
+SEC06-P03 and SEC06-P04 PROPOSED; still need competing-claimant and same-claimant duplicate negatives, second-party source→relation→predicate reproduction, refusal-list coverage, N5/N7–N9, a T3 method, reviewed T2/T3 and F07–F10, a non-test setup, and cross-network replay analysis if the network byte is relied on.
+
+Evidence stage: V2 SOURCE READING (unadopted, uncompiled); T3 OPEN
+
+ERR-02 / ERR-03 / ERR-13 / ERR-07 / ERR-16 / CL-36 / CL-39 / CL-40 / CL-45 / CL-46 / SEC06-P03 PROPOSED / SEC06-P04 PROPOSED
+
+Where proofs are checked: the issuance route
+
+In the reviewed V2 source, each proof is checked when its claim is issued: the C2 claim policy checks a Groth16 proof and mints one claim output per Issue transaction. Claims must exist before settlement. The settlement transaction consumes them, recomputes each statement and compares it with the digest checked at issuance; it does not verify the proof again. Each consumed claim needs its claimant's signature on the settlement transaction and the burn of its token. Structurally, n required Strands mean n Issue transactions plus one settlement, excluding one-time genesis and any post-expiry reclaim. These counts are readings of uncompiled source, not measurements.
+
+Assumptions & limits
+Each claim output locks min-ADA from issuance until settlement or claimant-signed reclaim after the claimant-chosen expiry. Several envelopes can exist per statement digest.
+Safe but not live: any catalogue account may Revoke (advancing seq), and a competing settlement may spend the outref, orphaning issued claims and locking their value until expiry. Earlier reclaim is PROPOSED (OPEN).
+Batch issuance needs a C2 change (PROPOSED). Proof-at-consumption is a different PROPOSED design needing a new redeemer and in-settlement pairings, with size and budget unmeasured. Mempool chaining is a node premise outside the sources.
+V2 source already refuses two claims for one consumed outref; S09's role-level refusal is an unadopted proposal and not deduplication permission.
+Owner intents are signed before proving; claimant settlement signatures are a later, distinct event. Proof collection or claim-output creation executes no effect.
+Still needs orphan-after-Revoke, competing-settlement and post-expiry reclaim cases, and a qualified complete-path measurement of both verification placements.
+
+Evidence stage: V2 SOURCE READING (structural); not observed onchain
+
+ERR-04 / ERR-06 / ERR-07 / ERR-12 / ERR-25 / ERR-26 / ERR-27 / CL-02 / CL-30 / CL-47 / CL-50 / SEC06-P04 PROPOSED
+
+Complete and incomplete Webs
+
+PROPOSED: a Web settles only when every Strand its contract requires is present. An incomplete Web has no authority over thread effects. On the issuance route its already-issued claim outputs exist on-chain, lock value, and remain releasable only by their claimant. In the first proposed supported profile, the consumer refuses universal property certificates, authenticated-history claims, private handoff, recursive parents and multiparent joins as UNSUPPORTED; they remain required Web tracks, each needing its own trust path and evidence before any profile accepts it.
+
+Assumptions & limits
+All-or-nothing acceptance and a consumer-derived required set are PROPOSED; no Web consumer, second genuine relation or general cardinality exists in this packet.
+Depicting several Strand roles does not establish separate relations or producers. A whole-execution proof may cover several claim specifications; naming source expressions fee or liability does not create independent proof producers.
+A01 adopts only conditional T1: the all-role conjunction equals whole-action Core over one decoded body, modulo premise G including output well-formedness, a covering WebPlan, whole-action compilation first and the same field. There is no implementation, no T2, no T3 and no full WP migration (F07–F10); builder reliance is not permitted.
+OPEN: whether a consumer can enforce a fully authorized partial financial step that carries every proof that step requires, distinct from a missing proof.
+SEC06-P01 and SEC06-P02 PROPOSED; still need N1/N12 and unknown-class refusal, a report-level test that an incomplete set never renders as accepted, N1–N4/N6/N11/N14 at H/V, a wrong-action-index case, a required-set display, separate future-profile designs and fresh security review of reused V2 mechanisms.
+
+Evidence stage: PROPOSED; CONDITIONAL_ARGUMENT for T1 only
+
+ERR-01 / ERR-15 / ERR-10 / ERR-20 / ERR-27 / CL-03 / CL-15 / CL-16 / CL-17 / CL-21 / CL-37 / CL-38 / SEC06-P01 PROPOSED / SEC06-P02 PROPOSED
+
+Effects, allocation and authority
+
+V2 SOURCE READING: owner intents sign per-asset gross_cap, fee_cap, net_floor and liability_cap for a beneficiary, a validity window, nonce = seq and the target predicate, VK and shape digests. Duties change only through recorded accruals and discharges, and a thread with a nonzero duty cannot close. The thread datum carries the complete custody snapshot, which custody must equal exactly. Actual output allocation is the consuming validator's job; a proof can attest arithmetic only over values the validator recomputes. A profile chooses either strict one-output-per-obligation or a consumer-recomputed amount partition that admits coalesced payments, with every obligation allocated exactly once.
+
+Assumptions & limits
+The source strict-output rule covers redeemers of one S2 script hash only, not other scripts or S2 versions. No input value may count toward two obligations; ledger single-spend alone is not a value partition.
+Circuit-level NotBound/TouchedOnly limits remain. A general multi-UTxO authenticated frame, role sets, cross-script allocation and partial-completion rules are PROPOSED.
+No genuine intent signature is observed in the supplied proof records.
+A supplied approved=true is consented to by the effect-derived required signers, and by a listed advancer if any; that is the debited account's consent, not a separate governance decision. A distinct approver must be a required signer, an advancer or an authenticated input.
+SEC06-P05 PROPOSED; still needs double-satisfaction negatives across scripts and S2 versions, a coalesced positive under partition, fee-over-cap and dropped-duty cases, the approver-coverage lint, a genuine validator-checked signature in real context, and independent custody/duty/backing accounting with a backing-policy negative.
+
+Evidence stage: V2 SOURCE READING; allocation policy PROPOSED per profile
+
+ERR-08 / ERR-09 / ERR-10 / ERR-23 / ERR-24 / CL-22 / CL-25 / CL-41 / CL-48 / CL-51 / SEC06-P05 PROPOSED
+
+Duties, backing and fees
+
+S12 and S13 source behavior requires non-negative custody, not full backing of liabilities. S12 funds escrow at 110: partial(35) debits 37 and leaves 73 against duties of 75 (invoice 65, reserve 10), which is 2 short. Funding 112 would back one partial; each further partial charges another 2 that no duty reflects. That backing is a PROPOSED application policy. S12 has no extra transfer and no reserve-duty-return action; after finish, escrow holds 8 against reserve duty 10, and the nonzero reserve duty blocks V2 Close. S13 allocate(true,23,7,2) needs at least 23 A and 4 B for non-negative custody; 25 A and 10 B is PROPOSED full backing, and S13 has no action discharging allocation_reserve.
+
+Assumptions & limits
+Source-only arithmetic, not execution. The V2 Close zero-duty condition is an uncompiled-source reading.
+Even under the proposed 112 policy the reserve duty stays 10 and Close stays blocked; discharge or migration needs a program change.
+S13 units is checked only arithmetically (23 = 3×7 + 2) and is never debited.
+A program-asset fee is not debt repayment and not a network fee. Network fees, collateral, claim-output min-ADA and the V2 thread reserve (lovelace returned on Close) are separate funding items; a reserve duty is a program liability.
+Delivery evidence and dispute rules remain named assumptions. Still needs independent open/partial/finish/reserve-return accounting and a backing-policy negative.
+
+Evidence stage: Source arithmetic reading; full backing PROPOSED
+
+ERR-21 / ERR-22 / ERR-25 / ERR-28 / CL-19 / CL-20 / CL-25 / CL-26 / CL-52 / S12 actions / S13 action allocate / SEC06-P05 PROPOSED
+
+What the interactive page does
+
+The invoice worksheet is local browser arithmetic over the S12 fixture values; it does not execute Moriarty, produce or check a proof, or create a transaction or ledger state. The explorer’s remove and restore control shows the consumer rule; a complete Web on this page is not proof verification, acceptance or settlement. Role cards state what each transition must prove; they do not claim fifteen independently implemented proof producers, and the supplied proof evidence concerns one invoice-partial relation. DEX, issuance and loan amounts are worked examples with no supplied source program; issuance additionally needs an application mint policy, which is distinct from the C2 claim policy. Identifiers shown in the explorer are placeholders. Cost: more Strands can duplicate context hashing, range constraints, exports, issuance and verification, and whole execution may be preferable; no measurement exists.
+
+Assumptions & limits
+
+Evidence stage: Page scope
+
+invoice-fixtures.json /description / scenarios.json / CONCEPT.md Optimization without assumed savings / ERR-15 / CL-29 / CL-30
+
+Permissionless use and retained scope
+
+Moriarty is a permissionless language of provable intention: any developer may author, compile, prove, publish and deploy programs in the supported language without approval from Moriarty maintainers, an agent council, Foreman, a hosted solver or a program registry. Objective validity rules, resource costs and asset-owner authorization still apply, and application-specific access control remains expressible without becoming a deployment restriction. Optional hosted proving, relaying or indexing services are never required. Moriarty's broader target remains Midnight ZKIRv3 and native proof infrastructure; Cardano is an additional experiment and does not replace that contract or qualify Midnight. Preview-first and later Preprod end-to-end acceptance remain required for claimed targets. No claim is made that a Cardano Web ports to another target unchanged.
+
+Evidence stage: Product contract (S03) and retained scope
+
+S03 introduction, Product boundary, Execution target and certified basis, Verification versus project process / SECURITY-ERRATA approvedDraftClaims (permissionless tooling) / learning.json /broaderScope / S07 /allRequiredScopeRetained / CONCEPT.md Evidence appendix and retained breadth
+
+Transaction signers and authorization boundaries
+
+What the reviewed V2 source fixes (uncompiled-source reading): owners sign intents before proving; each intent signs per-asset gross_cap, fee_cap, net_floor and liability_cap for a beneficiary, a validity window, nonce = seq and the target predicate, VK and shape digests. Each Issue transaction carries one proof, checked by the C2 claim policy, and mints one claim output. The settlement transaction requires the signature of each claimant whose claim output it consumes and burns that output’s token. Unused claims are reclaimed with the claimant’s signature after the claimant-chosen expiry. A supplied approved=true is consented to by the effect-derived required signers, and by a listed advancer if any; that is the debited account’s consent, not a separate governance decision. The claimant is prover-chosen bytes bound at consumption, not an authenticated prover identity. Open: no transaction-by-transaction signer matrix (intent authorization, each Issue, settlement, reclaim) is published; the supplied material does not state who must sign an Issue transaction; no genuine intent signature is observed in the supplied proof records; no wallet signing display exists.
+
+Acceptance, finality and effect readback
+
+Design: after submission the application separates inclusion, required finality and complete readback of outputs and remaining duties, and reconciles actual per-asset effects against the signed intents; a timeout leaves observation unknown and is not evidence of nonexecution. Status: no transaction build, submit or observe interface exists; no on-chain transaction is recorded; the acceptance and readback signal for a supported target still has to be defined and demonstrated, Preview first and later Preprod.
+
+Invoice source, asset and funding comparison
+
+Invoice. The worksheet uses the fee-funded design: escrow opens with 112 CASH. The S12 source differs from this design. S12 open(90,10) funds escrow with exactly 110 CASH (invoice duty 100 = 90 + 10, reserve duty 10) and charges the buyer a separate 3 CASH opening fee, a gross debit of 113. On that source path one partial of amount a debits a + 2 and leaves 110 − a − 2 against duties of 110 − a: always 2 short (at 35: debit 37, cash 73 against duties 65 + 10 = 75). S12 checks only non-negative custody, not backing, and has no extra-funding transfer, so 112 needs a program change and a consumer-enforced backing policy. The buyer’s opening debit under the 112 design is not specified by any source. 112 backs one partial only; each further partial charges escrow another 2 that no duty reflects, so a sequence of partials needs a further funding rule. S12 has no reserve-duty-return action: after finish the source path leaves 8 against reserve duty 10 and the 112 path leaves 10 against 10, and the nonzero reserve duty blocks V2 Close on either path; discharge or migration needs a program change. Treasury. S13 allocate(true,23,7,2) needs only 23 A and 4 B for non-negative custody; holding 25 A and 10 B so that 2 A and 6 B remain is a full-backing policy a consumer must enforce. units is checked only arithmetically (23 = 3×7 + 2) and is never debited. rebate(amount) can discharge the B rebate; S13 has no action discharging allocation_reserve, so Close stays blocked. DEX, issuance and loan amounts are worked examples with no supplied source program.
+
+Cardano network fees, collateral, the min-ADA held by each proof-claim output from issuance until settlement or claimant-signed post-expiry reclaim, and the V2 thread reserve (lovelace returned on Close) are separate from the CASH amounts in the worksheet. None is estimated on this page. A program-asset fee is neither debt repayment nor a network fee, and a reserve duty is a program liability, not the thread reserve.
+
+CASH fixture identity: network oracle-unit, issuer invoice-issuer, reference cash, scale 0.
+
+One step only. Each further partial has another 2 CASH source fee, so a sequence needs a further funding rule.
+Amounts 0 and 100 are refused by partial against opening duty 100. Their arithmetic rows are hypothetical only.
+finish() is a different source action: it transfers the closing invoice amount without the partial fee.
+After source funding 110, partial(35), then finish(): cash is 8, invoice duty is present at zero, and reserve duty remains 10.
+S12 contains no reserve-duty-return action.
+Network fees, collateral, claim-output min-ADA, and the V2 thread reserve are separate from the worksheet’s CASH source fees.
+Source notes
+Invoice source · S12-installment-invoice.mori
+actions open, partial, finish
+CL-20 · CLAIMS-REGISTER.json
+/claims/19
+CL-26 · CLAIMS-REGISTER.json
+/claims/25
+CL-52 · CLAIMS-REGISTER.json
+/claims/51
+Opus 5.5 ERR-22 · SECURITY-ERRATA.json
+/rows/21
+Opus 5.5 ERR-25 · SECURITY-ERRATA.json
+/rows/24
+Opus 5.5 ERR-28 · SECURITY-ERRATA.json
+/rows/27
+Current source interfaces and developer entry point
+
+The source README documents mori-k2 compile --source FILE --selector FILE and mori-k2 inspect --source FILE --request FILE --vk-digest HEX. It separately documents setup, prove and verify with their required files. These commands were not run for this page. An inspect exit of zero can include violated rows.
+
+The page is a self-contained React explanation with local arithmetic. It makes no wallet connection, signature, proof, network request or transaction. The explorer shows proof roles; it does not contain concrete proof instances.
+
+Read the repository documentation
+↗
+
+S04-RUST-README.md · Build and ordinary reproduction / Proof API boundary; DEVELOPER-EXPERIENCE.md · First-use walkthrough
+
+Correspondence and the complete retained scope
+
+A01 adopts only conditional T1: the all-role conjunction equals whole-action Core over one decoded body, modulo premise G including output well-formedness, a covering WebPlan, whole-action compilation first and the same field.
+
+There is no implementation, no T2, no T3 and no full WP migration (F07–F10); builder reliance is not permitted.
+
+One example does not establish compatibility. The wider language and evidence requirements remain open.
+
+Requirements, not supported ports.
+
+S01
+S02
+S03
+S04
+escrow-time
+interval-boundary
+joint-role
+oracle-observation
+bilateral atomic escrow swap
+constant-product exact rounding/slippage with serialized pool continuation
+order execution versus timeout cancellation
+two-order batch exact input coverage and injective output allocation / same-output double satisfaction
+F01-origination
+F02-interest-period
+F03-partial-repayment-residual-liability
+F04-fee-gross-net-policy
+AP01
+AP02
+AP03
+AP04
+General financial obligations
+Universal property certificates
+Authenticated history
+Recursion
+Private handoff
+Bounded multiparent PCD
+
+ACTUS: 277 fixtures, 18 executable types, 32 taxonomy dispositions and DS01–07.
+
+DeFi: 72 rows, DA01–24, held-outs, intent cases and regressions.
+
+Midnight ZKIRv3 and native proof infrastructure remain the broader target; Cardano is an additional experiment.
+
+Preview-first and later Preprod end-to-end acceptance remain required for claimed targets.
+
+235 pre-dedup review identifiers, not proven properties. Original 42/52 lists remain unrecovered. Required setup count is unknown.
+
+Source notes
+Exact retained family IDs · S02-PATTERN-INVENTORY.json
+Retained financial and composition scope · S07-K6-ACTUAL-ADOPTION.json
+/allRequiredScopeRetained
+Broader target and provenance boundaries · CONCEPT.md
+Evidence appendix and retained breadth
+Source-reading scope and evidence-stage glossary
+
+Every V2 consumer or claim-policy description here is an Opus source-level reading of unadopted, uncompiled Aiken/Rust files. It is not observed compiled behavior and not exact-source evidence for the recorded S07 roundtrip or the S08 compiled C2-wrapper (K10) runs: no supplied record pins those binaries or compiled bytes to the reviewed source. The four-piece settle implementation and byte/type helpers were not supplied to the reviewer; four-piece reuse rests on S09 and source comments.
+
+RECORDED
+Recorded observation in a supplied S07/S08 record; local and scoped, not ledger acceptance.
+V2_SOURCE_READING
+Opus reading of unadopted, uncompiled V2 source; not observed behavior.
+CONDITIONAL_ARGUMENT
+A01/A02 conditional source-design argument only (T1 modulo premises).
+PROPOSED
+Design proposal; not adopted, implemented or enforced.
+OPEN
+Unresolved; nothing in this packet closes it.
+PREMISE
+Cardano ledger rule assumed; not contained in the sources.
+ILLUSTRATION
+Page-local example data or state; no proof, transaction or ledger meaning.
+
+Security presentation copy by role06 (requested Opus 5.5 HIGH) for a PROPOSED local draft of the Webs and Strands page, used with SECURITY-ERRATA.json. V2 descriptions are Opus source-level readings of unadopted, uncompiled code; recorded results are local and scoped, with a forgeable test setup and fabricated contexts. No security approval, adoption, release or publication is implied. Fresh review of the final page is pending.
+
+Case research and integration dependencies
+Invoice payment
+These are future proof roles, not three existing proof producers.
+Funding 112 is a proposed backing policy; S12 contains no extra-funding action.
+Every further partial charges another 2 CASH. One extra fee budget does not fund a sequence of partials.
+The source has no reserve-duty-return action. Staged delivery and recovery need additional implementation.
+Role premises and source records
+Payment arithmetic
+
+The worksheet supplies an illustrative opening state; an application would need its actual predecessor and exact CASH identity.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Fee accounting
+
+Source S12 names escrow, seller, fees, and CASH; actual outputs still need the consuming validator.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Duty continuation
+
+The starting duty amounts are worksheet premises; a real application must bind them to its predecessor.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Source notes
+Invoice source: open / partial / finish · S12-installment-invoice.mori
+actions open, partial, finish
+Selected invoice walkthrough · CONCEPT.md
+#a-first-reference-app-that-teaches-the-model
+Invoice page copy · MESSAGING.md
+#show-the-payment-show-the-fee-show-what-remains
+CL-20 · CLAIMS-REGISTER.json
+/claims/19
+CL-26 · CLAIMS-REGISTER.json
+/claims/25
+Opus 5.5 ERR-22 · SECURITY-ERRATA.json
+/rows/21
+Opus 5.5 ERR-28 · SECURITY-ERRATA.json
+/rows/27
+Exchange orders
+Identify supported order and pool relations and their actual proof producers.
+Choose and enforce actual-output allocation for the consumer’s profile.
+Supply exact asset, recipient, fee, rounding, continuation, and cancellation rules.
+Role premises and source records
+Order arithmetic
+
+Exact asset identities, owner limits, and actual outputs must be supplied and bound by a real application.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Pool arithmetic
+
+No pool reserve or price observation is supplied here; pool state provenance remains a required input.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. No pool computation or verified price is shown.
+
+Batch accounting
+
+Actual output allocation belongs to the consuming validator under its selected profile.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. The strict illustration uses a separate output per order; coalesced-payment partition is a separate policy choice.
+
+Source notes
+Two-order allocation target · S02-PATTERN-INVENTORY.json
+/11
+Pool rounding target · S02-PATTERN-INVENTORY.json
+/9
+Order cancellation target · S02-PATTERN-INVENTORY.json
+/10
+Selected DEX case · CONCEPT.md
+#five-application-cases
+CL-22 · CLAIMS-REGISTER.json
+/claims/21
+CL-51 · CLAIMS-REGISTER.json
+/claims/50
+Opus 5.5 ERR-08 · SECURITY-ERRATA.json
+/rows/7
+Opus 5.5 ERR-23 · SECURITY-ERRATA.json
+/rows/22
+Token issuance
+Implement supported application mint/burn semantics and actual mint-policy enforcement.
+Continue supply state and bind exact recipients and assets.
+Define any separate redemption duty; external eligibility documents retain their issuer and freshness assumptions.
+Role premises and source records
+Supply arithmetic
+
+The issuer policy, exact application asset, and supply predecessor need an actual authenticated path.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Distribution arithmetic
+
+Recipient identities and actual mint and payment outputs must be enforced by the applicable policies and validators.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Duty accounting
+
+Any servicing promise needs named parties, an exact asset, and a defined creation and discharge rule.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. This illustration supplies no redemption agreement.
+
+Source notes
+Supply and liability meanings · S03-MORIARTY-PRODUCT-CONTRACT.md
+#what-provable-intention-means
+Selected issuance case · CONCEPT.md
+#five-application-cases
+Issuance page card · MESSAGING.md
+#five-use-case-cards
+CL-23 · CLAIMS-REGISTER.json
+/claims/22
+Loan repayment
+Define period, rate, rounding, and any observation freshness rule.
+Bind actual loan payments and the continuing debt to the authorized transition.
+Supply separate origination and collateral policies; this lesson establishes no ACTUS conformance.
+Role premises and source records
+Accrual arithmetic
+
+The agreement must supply the period, rate, rounding, and provenance of any variable-rate observation.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. No rate source or live accrual is supplied.
+
+Payment accounting
+
+The actual payer, lender, fee recipient, and exact asset must agree with owner authorization and transaction effects.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Debt continuation
+
+A real continuation must bind the predecessor duty and its explicit accrual and discharge entries.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Source notes
+Origination target · S02-PATTERN-INVENTORY.json
+/12
+Interest-period target · S02-PATTERN-INVENTORY.json
+/13
+Partial repayment target · S02-PATTERN-INVENTORY.json
+/14
+Gross/fee/net target · S02-PATTERN-INVENTORY.json
+/15
+Typed duty accounting · S03-MORIARTY-PRODUCT-CONTRACT.md
+#what-provable-intention-means
+Selected loan case · CONCEPT.md
+#five-application-cases
+CL-24 · CLAIMS-REGISTER.json
+/claims/23
+Treasury allocation
+Give a distinct governance decision its named authentication path where the policy requires one.
+Bind actual beneficiaries, fees, custody, and the continuing reserve duties.
+Full backing is proposed application policy, beyond source non-negative custody.
+A reserve-duty discharge or migration requires additional program work.
+Role premises and source records
+Quotient arithmetic
+
+The approved input is a supplied parameter in S13; separate governance authentication remains a dependency.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Transfer accounting
+
+Actual vault custody, exact A and B identities, recipient outputs, and owner authorization need the consuming profile.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate.
+
+Reserve accounting
+
+Opening custody is an explicit premise; proposed full backing needs a consumer-enforced policy.
+
+Illustrative requirement only: no concrete proof instance or independent producer is supplied. These arithmetic checks may share one whole-execution proof. Actual signatures and validator enforcement remain separate. Source minimum custody is 23 A / 4 B; backing is a separate policy.
+
+Source notes
+Conditional reserve source · S13-conditional-reserve.mori
+actions allocate, rebate
+Selected treasury case · CONCEPT.md
+#five-application-cases
+Treasury page card · MESSAGING.md
+#five-use-case-cards
+CL-25 · CLAIMS-REGISTER.json
+/claims/24
+CL-52 · CLAIMS-REGISTER.json
+/claims/51
+Opus 5.5 ERR-09 · SECURITY-ERRATA.json
+/rows/8
+Opus 5.5 ERR-21 · SECURITY-ERRATA.json
+/rows/20
+Opus 5.5 ERR-24 · SECURITY-ERRATA.json
+/rows/23
+Opus 5.5 ERR-28 · SECURITY-ERRATA.json
+/rows/27
+Book passages and source checks
+
+These checks cover the passages used on this page; they do not certify the whole book.
+
+On Cardano, zero-knowledge hides only the witness. Amounts in settlement outputs and in statements the validator rebuilds are public.
+
+V2-COPY proofRoleExplanation and lifecycle 'settle': the validator rebuilds each statement from the transaction and reads back the actual outputs. G05 §2.2: zero-knowledge covers the witness, not the statement.
+
+The book and the Groth paper describe Groth16 verification differently.
+
+Book lines 609–621 say 'two pairing checks… three distinct pairing computations'. G05 §3.2 says verification checks a single pairing product equation using 3 pairings.
+
+Groth16 knowledge soundness is proven in the generic bilinear group model, not from discrete-log hardness alone. Claimant bytes are not an authenticated prover identity.
+
+G05 Theorem 3. V2-COPY binding-chain assumptions.
+
+Source notes
+User v2 presentation steering · moriarty-webs-react-draft-20261016/USER-V2-PRESENTATION-STEERING.json
+/verbatim, /interpretation
+Role06 security cards, glossary and invoice rules · moriarty-webs-react-draft-20261016/contributions/06-security/SECURITY-COPY.json
+/cards, /glossaryClarifications, /invoiceRules
+Security errata ERR-01 to ERR-28 · moriarty-webs-ten-study-20261016/security-reviewed/SECURITY-ERRATA.json
+/rows, /approvedDraftClaims
+Invoice worksheet fixtures · moriarty-webs-react-draft-20261016/contributions/04-scenarios/invoice-fixtures.json
+/opening, /partial, /fundingModes, /fixtures, /limitations
+Five use-case scenarios · moriarty-webs-react-draft-20261016/contributions/04-scenarios/scenarios.json
+/0 to /4 strands
+Invoice source actions · moriarty-webs-ten-study-20261016/sources/S12-installment-invoice.mori
+actions open, partial, finish
+Conditional reserve source · moriarty-webs-ten-study-20261016/sources/S13-conditional-reserve.mori
+actions allocate, rebate
+Permissionless product contract · reference-inputs/concept/sources/S03-MORIARTY-PRODUCT-CONTRACT.md
+Product boundary; Execution target and certified basis; Verification versus project process
+Integrated concept · reference-inputs/concept/integrated-r2/CONCEPT.md
+How an application would use a Web; Five application cases; Optimization without assumed savings; Evidence appendix and retained breadth
+Retained broader scope · moriarty-webs-react-draft-20261016/contributions/08-learning/learning.json
+/broaderScope
+S07 invoice-partial roundtrip · moriarty-webs-ten-study-20261016/sources/S07-K6-ACTUAL-ADOPTION.json
+/scope, /limitations, /allRequiredScopeRetained
+S08 compiled C2 wrapper cases · moriarty-webs-ten-study-20261016/sources/S08-K10-ACTUAL-ADOPTION.json
+/predicate, /cases, /scopeLimitations
+Conditional T1 adoption · A01 public record
+/scope, /firstBlockedBoundary
+MORIARTY
+
+Webs and Strands for Cardano
+2026
+
+GitHub
+↗
+Implementation notes
+Sources and credits
+
+Artwork adapted from the Moriarty repository banner. The architecture section uses the seven-layer framework from Proving Nothing; its source passages are linked in that section.
+
+React, React DOM, Scheduler and esbuild: MIT. Full notices are embedded in this file.

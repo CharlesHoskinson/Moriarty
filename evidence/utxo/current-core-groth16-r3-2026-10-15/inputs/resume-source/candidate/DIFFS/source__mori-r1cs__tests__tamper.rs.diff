@@ -1,0 +1,20 @@
+--- origin-r2/source/mori-r1cs/tests/tamper.rs
++++ successor/source/mori-r1cs/tests/tamper.rs
+@@ -7,7 +7,7 @@
+ use mori_r1cs::*;
+ 
+ fn open() -> (CompiledRelation, TransitionValues) {
+-    let rel = compile(INVOICE, options("open", CapBinding::PublicCap));
++    let rel = compile_ok(INVOICE, options("open", CapBinding::PublicCap));
+     let oracle = oracle_case("invoice-open");
+     let values = oracle_values(&rel, &oracle, Some(oracle.cap));
+     (rel, values)
+@@ -153,7 +153,7 @@
+ 
+ #[test]
+ fn comparison_flag_and_strict_less_than_cannot_be_forged() {
+-    let rel = compile(INVOICE, options("partial", CapBinding::PublicCap));
++    let rel = compile_ok(INVOICE, options("partial", CapBinding::PublicCap));
+     let oracle = oracle_case("invoice-partial");
+     let honest = oracle_values(&rel, &oracle, Some(oracle.cap));
+     // T5: flip the Lt flag witness of `amount < opening` (statement 2).

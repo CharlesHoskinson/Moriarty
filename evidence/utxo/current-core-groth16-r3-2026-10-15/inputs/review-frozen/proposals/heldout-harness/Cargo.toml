@@ -1,0 +1,21 @@
+[package]
+name = "mori-r1cs-heldout"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "PROPOSED, UNCOMPILED reviewer-authored held-out harness for the mori-r1cs candidate. Separate crate so the candidate bytes and BUILD-MANIFEST stay unchanged. Never built or run by the reviewer."
+
+# Standalone root, like the candidate and the mori-cardano metadata consumer.
+[workspace]
+
+# Paths assume the isolated layout in ../../CORRECTED-EXECUTION-REQUEST.json:
+#   <root>/moriarty/  pinned Core closure copy
+#   <root>/r1cs/      candidate task tree copy
+#   <root>/review/    this review directory copy (heldout/, HOSTILE-CLAIMS-ADDENDUM.json, proposals/)
+[dev-dependencies]
+mori-r1cs = { path = "../../../r1cs/source/mori-r1cs" }
+mori-core = { path = "../../../moriarty/crates/mori-core" }
+ark-bls12-381 = { version = "=0.4.0", default-features = false, features = ["curve"] }
+ark-relations = { version = "=0.4.0", default-features = false }
+serde_json = "=1.0.151"

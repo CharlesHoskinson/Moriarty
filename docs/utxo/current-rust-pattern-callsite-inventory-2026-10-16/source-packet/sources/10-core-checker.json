@@ -1,0 +1,16 @@
+{
+  "sourceId": "10-core-checker",
+  "originalPath": "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/runtime.rs",
+  "originalBytes": 37400,
+  "originalSha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+  "kind": "exact-line-excerpts",
+  "excerpts": [
+    {
+      "firstLine": 120,
+      "lastLine": 154,
+      "sourceText": "pub fn validate(program: &Program) -> Result<(), Error> {\n    if program.language != LANGUAGE || program.semantics != SEMANTICS {\n        return Err(failure(\n            \"profile\",\n            \"Unsupported language or semantics identity.\",\n        ));\n    }\n    if !identifier(&program.name) {\n        return Err(failure(\n            \"name\",\n            \"Agreement name must be a non-reserved ASCII identifier of at most 64 bytes.\",\n        ));\n    }\n    if program.actions.is_empty() {\n        return Err(failure(\"program\", \"Program needs at least one action.\"));\n    }\n    if program.states.len() + program.assets.len() + program.actions.len() > MAX_DECLARATIONS\n        || program.expressions.len() > MAX_EXPRESSIONS\n    {\n        return Err(failure(\n            \"bound\",\n            \"Program exceeds finite declaration/expression bounds.\",\n        ));\n    }\n    names(\n        program\n            .states\n            .iter()\n            .map(|s| s.name.as_str())\n            .chain(program.assets.iter().map(|a| a.name.as_str())),\n        \"declaration\",\n    )?;\n    names(program.actions.iter().map(|a| a.name.as_str()), \"action\")?;\n    let mut identities = BTreeSet::new();\n    for asset in &program.assets {\n",
+      "excerptBytes": 1214,
+      "excerptSha256": "d1252347bee134041b2ebeb93aed931a5f0143517118f82bac3d872a0ef01acb"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "basePath": "test_plutus_data_serialisation.py",
+  "baseSha256": "3332655980c68496aabd547ad108f5ccefd4c82dda2951fe91c67b1504c17288",
+  "replacements": [
+    {
+      "oldText": "            case.assertTrue(\n                isinstance(node, ast.ImportFrom) and node.module == '__future__',\n                'import audit: host_codec.py line %d imports a module' % node.lineno)\n",
+      "newText": "            # Phase gate (I1-SCOPE-R2): __future__, or exactly `import hashlib` for the\n            # statement digest APIs of host_codec.py; every other import is refused.\n            case.assertTrue(\n                (isinstance(node, ast.ImportFrom) and node.module == '__future__')\n                or (isinstance(node, ast.Import) and len(node.names) == 1\n                    and node.names[0].name == 'hashlib'\n                    and node.names[0].asname is None),\n                'import audit: host_codec.py line %d imports a module' % node.lineno)\n",
+      "reason": "Loader-only phase-gate replacement allowed by I1-SCOPE-R2. All 19 selected encoder behaviour methods load through load_host_codec, whose AST gate currently admits only __future__ ImportFrom nodes. The statement add-on needs one module-level `import hashlib`. This change keeps the __future__ admission word for word, admits only an ast.Import with exactly one alias named 'hashlib' and asname None, and still refuses every other import, including `from hashlib import ...`, aliased imports and dotted names. FORBIDDEN_NAMES, the ast.Name audit, the regular-file, __file__ and unchanged-bytes checks, FUTURE_APIS, test_phase1_scope_gate_only_encode_data_public (still excluded from the 19), every byte vector, every MALFORMED/SUBCLASS/bounds/rejection row and all test names are unchanged. The anchor occurs exactly once in the base file."
+    }
+  ]
+}

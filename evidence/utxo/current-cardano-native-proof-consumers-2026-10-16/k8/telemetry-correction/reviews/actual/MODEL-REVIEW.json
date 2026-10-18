@@ -1,0 +1,224 @@
+{
+  "coverage": {
+    "limitations": "Read-only mirror review; no shell/code execution, network, setup, RNG, proof, key, wallet, signing, ledger or nested agents performed by this reviewer. Same-family fresh independence (muse-wonder-1.0), not cross-provider. Explicit user Gemini/Muse fallback after original Opus author timed out. No provider identity, authority or approval invented beyond indexed records.",
+    "readPaths": [
+      "INPUT-INDEX.json (35 entries)",
+      "candidate validate_capture.py 8286B 6efb4731 (full 210 lines)",
+      "candidate README.md 3184B 1fa08acf (full)",
+      "candidate EXECUTION-PROPOSAL.json 2214B 438fb097 (full)",
+      "candidate DESIGN-POSITIONS.json 6462B ffee03b0 (8 clauses, full)",
+      "candidate ROOT-SOURCE-MANIFEST.json 1556B 17f84cf8 (full)",
+      "actual VALIDATION.json 4164B 1db9d384 (full 141 lines)",
+      "runner /tmp/run-k8-reviewed-captured-telemetry-validation-20261016.py 3680B 0839785b (full)",
+      "actual staged k8_genuine_proof_test.ak 4782B d25c3811 (full 113 lines)",
+      "actual step2-k8-tests.stdout.log 2914B 9ac4871e (full 118 lines)",
+      "actual RESULT.json 4875B 5bc3033c (full 161 lines)",
+      "root SOURCE-ORDINARY-ADOPTION.json 13976B 24555908 (8 FOR + 8 AGREE, full)",
+      "root PREPARED.json 3344B 2f7410d0 (full ARGV/env/pins)",
+      "root RESULT.json 3121B 5c51451d (exit 0, wall 0.035918605, CPU 0.035714, full)",
+      "root stdout.log 132B 970e96fa / stderr.log 0B e3b0c442",
+      "independent source review REPORT.md 7674B 2a6fcfa3 (full)",
+      "independent source review ADOPTION-RECOMMENDATION.json 3020B f2f62e9a (full)",
+      "independent source review DESIGN-POSITIONS.json 6676B e19bff90 (8 AGREE, full)",
+      "USER-GEMINI-MUSE-FALLBACK-CONFIRMATION 441B 64a5f7bc (full)",
+      "K8-ACTUAL-ADOPTION.json 5015B 99541a43 (full 108 lines)",
+      "aiken test_like.rs 5880B 67d5173a (full)",
+      "def_test_fail.snap 1703B ab853e76 (full)",
+      "telemetry json.rs 9835B 4f9917ac (full)",
+      "validator muse-source READ-COVERAGE.json 3134B 93be1096 (full)",
+      "independent source review PROCESS.json 1115B e0efa7b9 (full)"
+    ],
+    "unreadPaths": [
+      "aiken-lang ast.rs 76683B ba883256 (not opened in full; not relied upon - test_like.rs, def_test_fail.snap and telemetry/json.rs pin the mode mapping)",
+      "aiken-project test_framework.rs 19922B e46b100a (not opened; not relied upon for ordinary validation)",
+      "prior native-consumer independent review REPORT.md 5518B 85e4248f / FINDINGS.json 7311B 8790b5c9 / ADOPTION-RECOMMENDATION.json 1155B 6114ff76 / DESIGN-POSITIONS.json 12913B 89f01ccf (relied upon only via K8-ACTUAL-ADOPTION.json 99541a43 adopting 85e4248f and via VALIDATION/root records; not re-opened as direct bodies in this review)",
+      "METADATA-MISMATCH-REPRODUCTION.json 1576B 6087f483 and ROOT-INTAKE-MANIFEST.json 8157B f52da9fd (pins cross-checked via INPUT-INDEX, candidate PINS, PREPARED and root RESULT; bodies not re-opened)",
+      "validator muse-source REPORT.md 19212B eb19de8d / MODEL-REVIEW.json 40153B 7c94e262 / PROCESS.json 1098B 858f5f71 (extraction variance assessed via ROOT-SOURCE-MANIFEST.json; bodies not re-opened beyond READ-COVERAGE)",
+      "Any file not listed in INPUT-INDEX.json"
+    ]
+  },
+  "crosschecks": [
+    {
+      "evidence": "validate_capture.py:40 TEST_RE, :104-121 source_modes: once->succeed_immediately, plain fail substring->succeed_eventually, else fail_immediately; k8_genuine_proof_test.ak:31-109 nine normal, :111 plain fail; telemetry stdout:109 succeed_eventually; VALIDATION.json:129-138 row 10 expected_on_failure=succeed_eventually matches on_failure. Aiken ground truth test_like.rs:27-30,51 and def_test_fail.snap:51, json.rs:89-93.",
+      "id": "X1-mode-grammar",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Parser mode mapping verified independently against Aiken source, not blind PASS"
+    },
+    {
+      "evidence": "validate_capture.py:22-26 PINS = INPUT-INDEX entries and PREPARED sourceAndInputs; root RESULT sourceAndInputsUnchanged=true, sourceAndInputsAfter pins identical (4 source + 3 inputs). VALIDATION.json:3-19 inputs record same bytes/sha256.",
+      "id": "X2-pins-unchanged",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "4 source + 3 input pins unchanged before/after"
+    },
+    {
+      "evidence": "PREPARED.json:2-22 argv exactly EXECUTION-PROPOSAL.json:8-16 template materialised; env PATH/HOME/LC_ALL/TZ, stdin DEVNULL, closeFds true, cwd candidate root; root RESULT attempts=1 retries=0 exitCode=0. Runner py:16-20 builds same argv/env and subprocess.run close_fds DEVNULL.",
+      "id": "X3-argv-fidelity",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Exact ARGV ordinary timeout30+5 CPU10:15 AS256MiB core0 python -I minimal env reproduced"
+    },
+    {
+      "evidence": "telemetry stdout:2-11 summary 10/10/0 unit10 property0, :14 module, :24-114 ten pass rows; validate_capture.py:90-101,139-169 strict checks; VALIDATION rows 1-9 fail_immediately, row10 succeed_eventually - not old wrong immediate.",
+      "id": "X4-strict-telemetry",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Full strict 10 rows + both typed summaries unit10 property0 verified"
+    },
+    {
+      "evidence": "Original RESULT.json:5 error and :21 FAILED; VALIDATION.json:21-26 nativeReexecuted false, newNativeAuthority false, originalWrapperStatus FAILED unchanged; validate_capture.py:173-176,182-183 preserves. K8-ACTUAL-ADOPTION:10,66,95 pending flag at capture time.",
+      "id": "X5-failed-preserved",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Original whole 5bc3 FAILED same error preserved, not relabelled"
+    },
+    {
+      "evidence": "VALIDATION.json sole output per root RESULT validation pin 4164B 1db9d384 and runner assert sorted(O.iterdir())==[VALIDATION.json]; stdout 'wrote .../VALIDATION.json', stderr 0B. Flags :23-37 ordinaryValidationOnly true, raw 10, normal 9, pairing 4 titles.",
+      "id": "X6-sole-output",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Sole fresh VALIDATION.json 4164B 1db9d384 derived record correct"
+    },
+    {
+      "evidence": "ROOT-SOURCE-MANIFEST.json:4 deliveryProtocolVariance, :6-31 four files with sha256 matching INPUT-INDEX candidate entries; source review REPORT:13 assessed variance non-blocking, fully inspected.",
+      "id": "X7-extraction-variance",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Root extraction variance mechanical, recorded, source fully reviewed"
+    }
+  ],
+  "findings": [
+    {
+      "evidence": "validate_capture.py:104-121 derives modes; telemetry stdout:109 succeed_eventually for k8_short_vk_is_refused (plain fail at k8_genuine_proof_test.ak:111); VALIDATION.json:134-135 expected_on_failure=succeed_eventually. Ground truth test_like.rs:27-30 (fail once->SucceedImmediately, plain fail->SucceedEventually), :51 default FailImmediately, def_test_fail.snap:51, json.rs:89-93. Nine normal rows fail_immediately in VALIDATION.json:44-128.",
+      "id": "F1",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Ordinary TelemetryCorrectionClosed: metadata/parser existing-data gap only. Expected mode per actual source grammar is 9 normal fail_immediately + one plain-fail succeed_eventually (not old wrong immediate). Bad label repaired against actual input, not blind PASS."
+    },
+    {
+      "evidence": "Root RESULT.json:3-6 exitCode 0, wallSeconds 0.035918605, childrenCpuSeconds 0.035714; stderr 0B e3b0c442, stdout 132B wrote VALIDATION.json; attempts 1 retries 0; sourceAndInputsUnchanged true (4 source + 3 inputs). PREPARED.json argv timeout --kill-after=5s 30s prlimit --cpu=10:15 --as=268435456 --core=0 python3 -I, minimal env, DEVNULL, closeFds. VALIDATION.json 4164B sha256 1db9d384d23da9bca96e8c2f14e7e8ae87a66587313ae27293725f2ed285696a sole output.",
+      "id": "F2",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Actual single ordinary data-validation run verified: exit 0, bounded 35ms data operation, sole fresh VALIDATION.json."
+    },
+    {
+      "evidence": "VALIDATION.json:21-26,37 seed 248222808; telemetry stdout:2 seed 248222808, summaries 10/10/0 kind unit10 property0 at :3-10 and :15-23, module pvc2/k8_genuine_proof_test :14, 10 pass rows :24-114 with typed execution_units. validate_capture.py:65-101 no_dupes/exact_keys/bool-excluded ints, :140-142 u32 seed, :163-167 non-negative int units.",
+      "id": "F3",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Full strict validation holds: 10 rows, both typed summaries, unit 10 property 0, seed, source pins, original result whole 5bc3 FAILED same error preserved."
+    },
+    {
+      "evidence": "VALIDATION.json:22-26,30-37; validate_capture.py:177-197 record construction contains no proofVerifiedNow/native PASS/ledger qualification. K8-ACTUAL-ADOPTION.json:5-6,95-106 scoped predicate and limitations retained; README.md:20-28 acknowledges predicate, recomputes none.",
+      "id": "F4",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Sole output is new derived record ordinaryValidationOnly true, nativeReexecuted false, newNativeAuthority false, originalWrapperStatus FAILED unchanged; raw 10, normal 9, pairing titles 4 are old adopted 85e4248f/99541a43 labels, not new security theorems, proof, crypto acceptance or native PASS."
+    },
+    {
+      "evidence": "validate_capture.py:8-13 imports only argparse/hashlib/json/re/sys/pathlib; no subprocess/socket/RNG/key imports. README.md:17-18, EXECUTION-PROPOSAL prohibited list. Runner py:20 single subprocess.run of the bounded argv only.",
+      "id": "F5",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "No native prefix run, PK, proof, RNG, network or ledger after spent K8 scope in validator, proposal or actual run."
+    },
+    {
+      "evidence": "ROOT-SOURCE-MANIFEST.json:4-5 variance text, :7-31 four files (validate_capture.py, README.md, EXECUTION-PROPOSAL.json, DESIGN-POSITIONS.json designated File 4) with sha256 matching INPUT-INDEX. Independent source review REPORT.md:13 fully inspected, not blocker.",
+      "id": "F6",
+      "requiredFix": "none",
+      "severity": "info",
+      "summary": "Root source extraction variance is mechanical and recorded: files[] empty but full 3 report fences + designated positions array; source fully reviewed, not new logic."
+    },
+    {
+      "evidence": "K8-ACTUAL-ADOPTION.json:95 ordinaryMetadataValidatorRepairPending true and :107 publicationPending true are capture-time facts. This review supplies the fresh actual audit; closure must be a new companion record referencing old immutable adoption, not an edit. VALIDATION/root RESULT actualResultIndependentlyReviewed was false at run time (root RESULT:58).",
+      "id": "F7",
+      "requiredFix": "Create companion closure record referencing old immutable 99541a43 adoption and this new ordinary actual review; do not overwrite old 99541 pending flag, do not relabel old native RESULT/AUTH, no crypto predicate/adoption change/counter reset.",
+      "severity": "info",
+      "summary": "No relabel of old native RESULT/AUTH or overwrite of old adopted 99541 pending flag is permitted; closure requires companion record."
+    },
+    {
+      "evidence": "Prompt-supplied current fact corroborated as separate scope; validator README.md:58-59 'pending source audit' wording is historical source text only and must not be read as current claim K9 globally unrun. No K9 body was in this review's judged scope.",
+      "id": "F8",
+      "requiredFix": "none for K8 scope; do not cite validator README K9 wording as current global fact",
+      "severity": "info",
+      "summary": "Native K9 is separate scope: actually run 7 local cases PASS, current fresh 361 actual review / root 76cc already adopted; nothing to judge here."
+    },
+    {
+      "evidence": "K8-ACTUAL-ADOPTION.json:97-99,100-106; candidate README.md:24-28; DESIGN-POSITIONS VC-C8. First blocked path is now non-metadata: compiled C2 applied B9 wrapper / genuine hash / FX1 / qualified cost / Preprod actual tx.",
+      "id": "F9",
+      "requiredFix": "none within K8 ordinary scope; pursue first blocked boundary as separate scope",
+      "severity": "info",
+      "summary": "All 20 UTxO families, ACTUS/DeFi/general, recursion, private handoff, multi-parent universal, real Preprod, forgeable Class-0, context-fabricated, VK-matrix unproved, native CPU unmeasured remain open; no percentage of full compatibility."
+    }
+  ],
+  "positions": [
+    {
+      "clause": "This delivery authors only four source files (validate_capture.py, README.md, EXECUTION-PROPOSAL.json, DESIGN-POSITIONS.json) as ordinary public-data parser-correction text, with no execution, filesystem write by the author, shell, crypto curve operation, SDK, RNG, proof generation, setup, key/PK, wallet, signing, network, ledger, or nested agents, and zero new native authority.",
+      "clauseId": "VC-C1-author-source-only",
+      "position": "AGREE",
+      "rationale": "Author FOR and fresh source-review AGREE in SOURCE-ORDINARY-ADOPTION.json; validate_capture.py imports only stdlib, ROOT-SOURCE-MANIFEST SOURCE_ONLY_UNEXECUTED_UNAPPROVED, fallback nativeExecutionAuthorityCreated false. This actual review concurs."
+    },
+    {
+      "clause": "The validator consumes only the three captured public inputs pinned in INPUT-INDEX.json (source 4782 B d25c3811132ee99dab4bba9862ec87147931c80cd516e6eae5940e2088551eec, telemetry 2914 B 9ac4871e8923873843d607b42648f31987834ac1fdbf79cf5b7607898a015800, original result 4875 B 5bc3033c0274cb50f2d3e473c74974a547bd4a896c5e7cd1d4e82c47b45ece8f), each read bounded at 65536 bytes before parse or hash, and it regenerates no proof and reruns no native test.",
+      "clauseId": "VC-C2-captured-inputs-only-byte-pins",
+      "position": "AGREE",
+      "rationale": "validate_capture.py:15,48-62 bounded read then size/SHA before parse; actual VALIDATION inputs and root RESULT unchanged pins match."
+    },
+    {
+      "clause": "Source checking is a fixed-fixture check over the entire pinned source bytes: exactly 10 line-anchored declarations matching ^test <name>()( fail( once)?)? { in pinned order, with parser-provided modes normal -> fail_immediately, plain fail -> succeed_eventually, and fail once -> succeed_immediately, the pinned default source having 9 normal declarations and one plain fail; no arbitrary source-grammar claim is made.",
+      "clauseId": "VC-C3-fixed-source-parser-mapping",
+      "position": "AGREE",
+      "rationale": "test_like.rs:27-30,51, def_test_fail.snap:51, json.rs:89-93; actual source 9 normal + plain fail at :111 yields VALIDATION 9 fail_immediately + 1 succeed_eventually."
+    },
+    {
+      "clause": "Telemetry validation is strict and typed: duplicate JSON keys and unknown fields are rejected for the known telemetry objects, the module is exactly pvc2/k8_genuine_proof_test, the 10 ordered titles have no missing, extra or duplicate rows and every status is pass, each row's on_failure equals its source-derived expected mode, both summaries are exactly 10/10/0 with kind unit 10/property 0 as integers not booleans, the seed is an integer with 0 <= seed <= 4294967295, and every row has exactly title/status/on_failure/execution_units{mem,cpu} with typed non-negative integer units; no arbitrary-string name passes.",
+      "clauseId": "VC-C4-strict-typed-telemetry",
+      "position": "AGREE",
+      "rationale": "validate_capture.py:65-101,139-169; actual telemetry seed 248222808, summaries 10/10/0 unit10 property0, 10 pass rows satisfy every guard."
+    },
+    {
+      "clause": "The original result is checked as a whole pinned byte string plus status FAILED and its sole error 'step2 JSON on_failure mismatch for k8_short_vk_is_refused: want succeed_immediately' in last-mode-unchanged form; the validator preserves FAILED, never overwrites the old record, requires a fresh absent output directory, writes solely its own exclusive VALIDATION.json recording the three input pins and the flags ordinaryValidationOnly true, nativeReexecuted false, newNativeAuthority false, originalWrapperStatus FAILED, originalWrapperStatusChanged false, rawCapturedPassedUnits 10, normalRows 9, pairingOutcomesCount 4, and on any validation failure writes to stderr, exits nonzero, and refuses fresh output.",
+      "clauseId": "VC-C5-failed-preservation-exclusive-output",
+      "position": "AGREE",
+      "rationale": "Original RESULT:5,21 FAILED + error; validate_capture.py:131-133,199-204 exclusive fresh output; actual VALIDATION sole fresh file with all flags verified."
+    },
+    {
+      "clause": "No field or wording in the validator or its output claims proofVerifiedNow, a fresh native PASS, nativeCryptoExUnitsQualified, ledger ExUnit qualification, or a new security theorem; the four crypto-role test names are the pinned original titles under the previously adopted 85e predicate, acknowledged as captured identity, not new computation.",
+      "clauseId": "VC-C6-no-new-proof-claim",
+      "position": "AGREE",
+      "rationale": "VALIDATION record contains no such claim; K8-ACTUAL-ADOPTION:95-106 limits predicate, retains forgeability/context/unmeasured-CPU."
+    },
+    {
+      "clause": "The one proposed ordinary run is exactly /usr/bin/timeout --signal=TERM --kill-after=5s 30s /usr/bin/prlimit --cpu=10:15 --as=268435456 --core=0 /usr/bin/python3 -I <abs validate_capture.py> --source <abs staged k8_genuine_proof_test.ak> --telemetry <abs step2-k8-tests.stdout.log> --original-result <abs RESULT.json> --output-dir <abs fresh BASE/current-cardano-k2-k8-captured-telemetry-validation-20261016>, with minimal env PATH=/usr/bin:/bin, HOME=/nonexistent, LC_ALL=C, TZ=UTC, stdin from /dev/null, close-fds, CWD at the candidate root, one attempt and zero retries; no new native AUTH is needed for this ordinary public-input read, and root checks the three byte pins before and after.",
+      "clauseId": "VC-C7-one-bounded-ordinary-run",
+      "position": "AGREE",
+      "rationale": "PREPARED.json materialises exactly this argv/env/stdin/closeFds/cwd; root RESULT exit 0, 1 attempt 0 retries, pins unchanged."
+    },
+    {
+      "clause": "All 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates and real Preprod remain open, with single-party forgeability, fabricated/context premises, the unproved VK-to-matrix link and unmeasured transitive native CPU retained, no compatibility percentage, and the ledger/Preprod/C2-compiled-wrapper/whole-language-coverage questions untouched by this K8 record-metadata repair; the separately authored K9 native 7-case operator and its pending source audit are out of scope here.",
+      "clauseId": "VC-C8-full-scope-retained-open",
+      "position": "AGREE",
+      "rationale": "K8-ACTUAL-ADOPTION:100-106 and README:24-28 retain scope. Note K9 wording in clause/README is historical source text; current K9 separate adoption (7 local PASS, fresh 361, root 76cc) is outside this judgement and not contradicted."
+    }
+  ],
+  "recommendation": {
+    "authorityProposalReady": false,
+    "firstBlockedBoundary": "First blocked remaining path is no longer metadata: compiled C2 APPLIED B9 wrapper / genuine hash / FX1 / qualified cost / Preprod actual transaction. Within K8 ordinary scope there is no source or result blocker. If the ordinary run had passed (it did: exit 0), the next gate is that compiled-wrapper/genuine-hash/FX1/qualified-cost/Preprod scope as a separate authorisation, not a metadata repair.",
+    "fixtureGenerationReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "operatorSourceReady": true,
+    "ordinaryCaptureValidationReady": true,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "K8 ordinary captured telemetry validator only; no generic remaining-roster, canonical-unit or sourceEvidenceClasses boilerplate, no self-test framework",
+    "ordinaryTelemetryCorrectionClosed": true,
+    "publicRecordExportPrerequisiteClosed": true,
+    "publicVerificationInputsPublishable": true,
+    "scope": "K8 ordinary captured telemetry validator (named scope only). Source readiness: yes - four materialised source files plus ROOT-SOURCE-MANIFEST fully read and correct as ordinary parser correction. Finite ordinary evidence: yes - one actual bounded run exit 0 in 0.0359s wall / 0.0357s CPU, no stderr, 4 source + 3 input pins unchanged, sole fresh VALIDATION.json 4164B 1db9d384 with 9 fail_immediately + 1 succeed_eventually, strict 10 rows, both summaries 10/10/0 unit10 property0, seed 248222808. Proposed authority: none new proposed or granted by this review; the already-executed ordinary run required no new native AUTH. Actual proof/target acceptance: unchanged - original wrapper FAILED preserved, 4 pairing titles are old adopted 85e4248f/99541a43 captured labels, no new proof/crypto acceptance/native PASS, no C2 compiled wrapper, genuine hash/FX1, qualified ledger ExUnits or Preprod acceptance. Proposed closure: companion closure record referencing old immutable 99541a43 adoption and this new ordinary actual review; old pending flag remains a captured-time fact with later closure, no overwrite, no crypto predicate/adoption change, no counter reset. No extra verification reruns or new tests needed: actual source/program unchanged, bounded 35ms data operation.",
+    "sourceReady": true,
+    "verdict": "ordinary_telemetry_correction_closed__metadata_parser_existing_data_only__actual_run_exit0_sole_VALIDATION__wrapper_FAILED_preserved__no_new_native_authority__companion_closure_proposed__first_blocked_compiled_C2_B9_genuineHash_FX1_qualifiedCost_Preprod"
+  },
+  "report": "# K8 captured-telemetry validator \u2014 independent actual review (fresh non-author)\n\n## Verdict\n\n**OrdinaryTelemetryCorrectionClosed: yes \u2014 metadata/parser existing-data gap only, not new proof, crypto acceptance or native PASS.** The one actual single ordinary data-validation run succeeded (exit 0, wall 0.035918605s, children CPU 0.035714s, no stderr), with 4 source + 3 input pins unchanged, producing sole fresh `VALIDATION.json` (4164 B, sha256 `1db9d384d23da9bca96e8c2f14e7e8ae87a66587313ae27293725f2ed285696a`). This reviewer is fresh NONAUTHOR, not validator author, native source or result author. Scope name is exactly **K8 ordinary captured telemetry validator**.\n\nSource readiness, finite ordinary evidence, proposed authority and actual proof/target acceptance are distinct. Source readiness is yes as inspected text. Finite ordinary evidence is the completed bounded run above. Proposed authority is none new. Actual proof/target acceptance is unchanged from the prior scoped adoption.\n\n## Findings\n\nThe bad label repair was checked against actual input, not blind PASS. Per actual source grammar the expected modes are **9 normal `fail_immediately` + one plain-`fail` `succeed_eventually`** (not the old wrong `succeed_immediately`): [validate_capture.py:104](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-captured-telemetry-validator-candidate-20261016/validate_capture.py:104), [test_like.rs:27](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/aiken-fixed-compiler-release-discovery-20261015/v1.1.24-data-only/source-data/aiken-1.1.24/crates/aiken-lang/src/parser/definition/test_like.rs:27), [def_test_fail.snap:51](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/aiken-fixed-compiler-release-discovery-20261015/v1.1.24-data-only/source-data/aiken-1.1.24/crates/aiken-lang/src/parser/definition/snapshots/def_test_fail.snap:51), [json.rs:89](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/aiken-fixed-compiler-release-discovery-20261015/v1.1.24-data-only/source-data/aiken-1.1.24/crates/aiken-project/src/telemetry/json.rs:89). The pinned source has the plain fail at [k8_genuine_proof_test.ak:111](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-public-actual-intake-20261016/staged/lib/pvc2/k8_genuine_proof_test.ak:111); telemetry reports `succeed_eventually` at stdout line 109; `VALIDATION.json` rows record 9 `fail_immediately` and the final row `succeed_eventually`.\n\nFull strictness holds: 10 rows, both typed summaries 10/10/0 with kind unit 10 / property 0, seed 248222808, source pins, and the original result as whole 5bc3 FAILED with the same single error preserved ([RESULT.json:5](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k8-native-consumer-public-actual-intake-20261016/run/receipts/RESULT.json:5)). The exact ARGV was ordinary `timeout 30s` (+5s kill-after) / `prlimit --cpu=10:15 --as=268435456 --core=0` / `python3 -I`, minimal env, DEVNULL stdin, close-fds, output fresh, 1 attempt 0 retries, root capture and delta verified. The sole output is a new derived record with `ordinaryValidationOnly=true`, `nativeReexecuted=false`, `newNativeAuthority=false`, `originalWrapperStatus=FAILED` unchanged, raw 10, normal 9, pairing titles 4 \u2014 old adopted 85e4248f / 99541a43 labels, not new security theorems. The root source extraction variance (`files[]` empty but full 3 report fences + designated positions array) is mechanical, recorded in `ROOT-SOURCE-MANIFEST.json`, and the source was fully reviewed; it is not new logic.\n\nNo native prefix run, PK, proof, RNG, network or ledger occurred after the spent K8 scope. No relabelling of the old native RESULT/AUTH and no overwrite of the old adopted 99541 pending flag is permitted.\n\n## Scope, limitations and closure\n\nAll 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates and real Preprod remain open, with forgeable Class-0, context-fabricated premises, VK-matrix unproved and native CPU unmeasured retained. No percentage of full compatibility is claimed. Native K9 is a separate scope (actually run 7 local cases PASS, current fresh 361 actual review / root 76cc already adopted; nothing to judge here); the validator README future K9 wording is historical source text only, not a current claim that K9 is globally unrun. Unread evidence is listed in coverage (notably `ast.rs` outside the relied-upon mapping and `test_framework.rs`); unresolved evidence is none within K8 ordinary scope beyond the proposed companion record.\n\n**First blocked boundary:** the first blocked remaining path is **compiled C2 APPLIED B9 wrapper / genuine hash / FX1 / qualified cost / Preprod actual transaction** \u2014 not metadata anymore if passed. **Proposed closure:** a companion closure record referencing the old immutable adoption (99541a43) and this new ordinary actual review; the old pending flag remains a captured-time fact with later closure, with no crypto predicate, adoption change or counter reset.\n\n**Independence:** fresh independent muse-wonder-1.0 HIGH reviewer in a new context under the indexed explicit user Gemini/Muse fallback after the original Opus author timed out. I did not author the candidate, operator, source review or executed results, and I executed nothing. Same-family fresh review, not cross-provider; no provider identity, authority or approval invented. No extra verification reruns or new tests are needed: the actual source/program is unchanged and the bounded 35 ms data operation is fully evidenced.",
+  "reviewToken": "current-cardano-k2-k8-captured-telemetry-validator-independent-muse-actual-review-20261016"
+}

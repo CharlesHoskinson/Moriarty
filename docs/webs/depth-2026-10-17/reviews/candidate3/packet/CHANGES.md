@@ -1,0 +1,7 @@
+Candidate3 applies all 12 O01 security-wording findings using exact Opus C01 expected/replacement values (22 JSON values plus6 source replacements); preserves immutable frozen technical/evidence contributions. The old blanket unbuilt CLI/SDK claim is narrowed to missing Web/transaction interfaces, since the actual experimental mori-k2 CLI is documented.
+
+Gemini G21 mobile table bug is corrected with explicit data-label values matching actual headers, with a new browser check. Its typo and unused imports/map are fixed. The graph and adjacent panel now both use the deduplicated undirected neighbourhood; a new independent seven-neighbour-set browser check verifies this. Graph cards are more compact on desktop while mobile keeps the original wrapping.
+
+G21 security referral: the unused/stale-claims drawer now renders the exact Opus-authored failureBranch[1] mechanics starting after its first sentence (split('. ').slice(1).join('. ')). This displays Any catalogue account can Revoke and copied/mismatched envelope details; it omits the unsupported unqualified opening The design is safe... statement. Please explicitly assess that source-excerpt selection in the fresh Opus audit. No new security prose was supplied by root for this selection.
+
+Current HTML and sources are a new candidate. Previous READY or CHANGES_REQUIRED results apply only to candidate2, not newbytes. These reviews are source audits only, with separate root browser/visual QA. No native/proof/setup/wallet/ledger activity.

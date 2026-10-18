@@ -1,0 +1,105 @@
+{
+  "format": "root-K5-placement-instructions/1",
+  "taskToken": "K5-MUSE-SOURCE-R2-20261016",
+  "status": "INSTRUCTIONS FOR THE ROOT ONLY. This file authorizes nothing, creates no attempt, budget, key or crypto permission, and must not be executed by the source author.",
+  "paths": {
+    "BASE": "/home/charl/moriarty-eutxo-validation-2026-10-12",
+    "sourceOriginThisCandidate": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-setup-operator-muse-source-r2-20261016/candidate",
+    "M5materializedRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-setup-operator-materialized-20261016",
+    "OWN": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-setup-operator-materialized-20261016/operator/request",
+    "RR5rootRecords": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-root-records-20261016",
+    "T5runDirectory": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k5-single-party-test-setup-20261016",
+    "TKk4hRunDirectory": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k4h-hostile-local-execution-20261016"
+  },
+  "absentBeforePlacement": [
+    "M5materializedRoot must not exist before the root materializes this candidate there",
+    "RR5rootRecords must not exist before the root creates it in step 3 below",
+    "T5runDirectory must not exist before step P1 creates it; P1 refuses if it exists in any form, including as a link"
+  ],
+  "placementStepsInOrder": [
+    "1. Verify the candidate file list against OWN-OUTPUT-ALLOWLIST.json: exactly the listed files, no more, no fewer, each a regular file with no link component. Reject any absolute or parent-relative path inside the candidate.",
+    "2. Create M5materializedRoot and materialize every candidate file byte for byte at its listed relative path (packet documents at the M5 root, operator files under operator/request/). At this point M5 contains exactly the 26 candidate files and no other file.",
+    "3. Create RR5rootRecords, root-owned. Compute SHA-256 of each materialized operator file named by operator/request/data/k5-operator-files.paths and write RR5/K5-OPERATOR-PINS.sha256 as one '<sha256>  <absolute OWN path>' line per file, sorted by path.",
+    "4. Write the root-owned M5/ROOT-SOURCE-MANIFEST.json in format root-K5-source-materialization/1 (schema below). Its files array covers exactly the 26 candidate files materialized in steps 1-2, exactly once each, sorted by path, and contains no entry for ROOT-SOURCE-MANIFEST.json itself and no entry for any RR5 root record. After the manifest final bytes are written, write RR5/K5-MATERIALIZATION-PIN.sha256 as the single line '<sha256 of the final ROOT-SOURCE-MANIFEST.json bytes>  <absolute path of ROOT-SOURCE-MANIFEST.json>'; that external root pin, not a self-entry, binds the manifest. No other file is added to M5.",
+    "5. Seek a fresh non-author Gemini source and effect review of the materialized bytes (all steps, probe, both Python gates, data pins and these instructions). It must report zero blocking findings and name the SHA-256 of RR5/K5-OPERATOR-PINS.sha256. No author self-review counts.",
+    "6. Record two substantive agreeing positions on each of K5-1, K5-2, K5-4M, K5-5, K5-7, K5-8 and K5-8A in a root tally file. The author's first positions in DESIGN-POSITIONS.json count as at most one position per clause and never as the second.",
+    "7. Confirm the K4H actual-result review has closed independently of its raw captured results: KH3 10/10 ok, KH6 PASS, KH5 binaries unchanged, KH3 finished without compiling, no relation-level security finding, and the K4H tree may be read for K5. Record its report path and SHA-256. Do not invent or assume any K4H binary hash: take releaseMoriK2Sha256 only from the closed review's naming of TK/receipts/KH-binaries-pre.sha256 after verifying that file's own bytes.",
+    "8. Write RR5/K5-PRECONDITIONS.json, RR5/K5-AUTHORIZATION.json and RR5/K5-PRE-LAUNCH.json in the exact schemas below, with real values obtained in steps 5-7. A missing, malformed, placeholder, repeated or mismatched value is a refusal in P1 and P0 before any effect; no default is ever substituted.",
+    "9. Confirm T5runDirectory is absent, then dispatch P1 exactly once under the authorization. Each later step runs exactly once, in the OPERATOR-STEPS.md order, with the literal invocation shown there."
+  ],
+  "schemas": {
+    "ROOT-SOURCE-MANIFEST.json": {
+      "format": "root-K5-source-materialization/1",
+      "root": "<absolute M5materializedRoot>",
+      "files": [{"path": "<relative path as in OWN-OUTPUT-ALLOWLIST.json>", "sha256": "<64 lowercase hex>"}],
+      "rules": "Exact keys format, root, files at the top level and exact keys path, sha256 in every entry. Every one of the 26 candidate files materialized from OWN-OUTPUT-ALLOWLIST.json appears exactly once, sorted by path, with the SHA-256 of its materialized bytes. ROOT-SOURCE-MANIFEST.json itself is root-owned, is not a candidate file, and has no entry in files; RR5/K5-OPERATOR-PINS.sha256, RR5/K5-MATERIALIZATION-PIN.sha256, RR5/K5-PRECONDITIONS.json, RR5/K5-AUTHORIZATION.json, RR5/K5-PRE-LAUNCH.json and every future review or tally record are likewise separately root-owned and have no entry in files. The final manifest bytes are pinned only by RR5/K5-MATERIALIZATION-PIN.sha256. operatorPinsSha256 binding: the manifest entries under operator/request/ must equal RR5/K5-OPERATOR-PINS.sha256 entry for entry; k5_preconditions.py enforces the exact manifest shape, the complete 26-path coverage, and this operator-pin equality."
+    },
+    "RR5/K5-PRECONDITIONS.json": {
+      "format": "root-K5-preconditions/1",
+      "exactKeys": ["format", "k4hTarget", "k4hActualResultReview", "k4hReceipts", "releaseMoriK2Sha256", "k5SourceReview", "k5PositionTally", "dvK21R"],
+      "k4hTarget": "<absolute TKk4hRunDirectory>",
+      "k4hActualResultReview": {
+        "exactKeys": ["reportPath", "reportSha256", "closed", "kh3OkCount", "kh6Verdict", "kh5BinariesUnchanged", "kh3FinishedWithoutCompiling", "relationSecurityFinding", "k4hTreeReadForK5Permitted"],
+        "requiredValues": {"closed": true, "kh3OkCount": 10, "kh6Verdict": "PASS", "kh5BinariesUnchanged": true, "kh3FinishedWithoutCompiling": true, "relationSecurityFinding": false, "k4hTreeReadForK5Permitted": true},
+        "reportPathAndSha256": "path and SHA-256 of the closed K4H actual-result review report; the file is re-hashed by k5_preconditions.py"
+      },
+      "k4hReceipts": {
+        "exactKeys": ["KH-binaries-pre.sha256", "KH-binaries-post.sha256", "KH6.json", "KH3-ok-names.txt", "stage-K4H-final.json"],
+        "values": "SHA-256 of each file under TK/receipts/; pre and post binary lists must be byte-identical and name mori-k2 plus exactly one hostile_tier executable"
+      },
+      "releaseMoriK2Sha256": "SHA-256 of the K4H release mori-k2 exactly as named in the verified KH-binaries-pre.sha256; never a value copied from this candidate",
+      "k5SourceReview": {
+        "exactKeys": ["reportPath", "reportSha256", "blockingFindings", "operatorPinsSha256"],
+        "requiredValues": {"blockingFindings": 0},
+        "operatorPinsSha256": "must equal the SHA-256 of RR5/K5-OPERATOR-PINS.sha256 itself"
+      },
+      "k5PositionTally": {
+        "exactKeys": ["path", "sha256", "clauses"],
+        "clauses": {"exactKeys": ["K5-1", "K5-2", "K5-4M", "K5-5", "K5-7", "K5-8", "K5-8A"], "values": "integer count of substantive agreeing positions per clause, each at least 2"}
+      },
+      "dvK21R": {
+        "exactKeys": ["textSha256", "positions"],
+        "textSha256": "SHA-256 of the exact DV-K2-1-R custody text; must begin b04371a2",
+        "positions": "integer, at least 2"
+      }
+    },
+    "RR5/K5-AUTHORIZATION.json": {
+      "format": "root-K5-single-party-test-setup-authorization/1",
+      "requiredValues": {
+        "target": "<absolute T5runDirectory>",
+        "steps": ["P1", "P0", "Q5", "K5a", "K5b", "K5M", "K5g", "H5", "Z51", "Z52"],
+        "attempts": 1,
+        "retries": 0,
+        "relation": "invoice/partial",
+        "setupInvocations": 1,
+        "trustProfile": "single-party-test-setup/1",
+        "custodyClause": "DV-K2-1-R",
+        "proveVerifyPairing": false,
+        "publishKeyMaterial": false,
+        "networkWalletLedger": false,
+        "operatorPinsSha256": "SHA-256 of RR5/K5-OPERATOR-PINS.sha256",
+        "preconditionsSha256": "SHA-256 of RR5/K5-PRECONDITIONS.json",
+        "materializationManifestSha256": "the manifest hash named by RR5/K5-MATERIALIZATION-PIN.sha256",
+        "dvK21RTextSha256": "the same value as K5-PRECONDITIONS.json dvK21R.textSha256"
+      },
+      "rules": "Written only as a separate exact authorization after placement steps 5-7. It names one attempt and zero retries. Any extra or missing required value refuses in k5_preconditions.py."
+    },
+    "RR5/K5-PRE-LAUNCH.json": {
+      "format": "root-K5-pre-launch/1",
+      "requiredValues": {
+        "targetAbsent": true,
+        "operatorFilesRehashedBeforeP1": true,
+        "authorizationSha256": "SHA-256 of RR5/K5-AUTHORIZATION.json"
+      }
+    }
+  },
+  "afterTheRun": [
+    "A fresh independent actual-result review reads the full public logs, journals and receipts and closes or refuses the run. Until it closes, T5/w and especially T5/w/keys stay unread apart from the guarded metadata hashes in K5g and Z51, and nothing is deleted.",
+    "Key deletion, if ordered at all, is a later separately reviewed exact custody step at review close, unless that review names a follow-up retaining the key. It is never part of this operator and never a general witness wipe."
+  ],
+  "neverDo": [
+    "Never fill any schema field with a placeholder, an assumed K4H result, an assumed binary hash or a hash copied from this candidate's expectations.",
+    "Never dispatch P1 before placement steps 3-8 are complete, and never re-dispatch any step.",
+    "Never read, copy or publish T5/w/keys content, any proving key, SRS, cache, wallet or private material as part of placement or review records."
+  ]
+}

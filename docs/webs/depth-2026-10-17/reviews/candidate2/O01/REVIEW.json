@@ -1,0 +1,132 @@
+{
+  "reviewToken": "moriarty-webs-v4-final-O01",
+  "summary": "Nonauthor audit of the cryptographic and security wording in the full v4 candidate. I read every manifest file, including the whole of data.generated.json. The quantitative work checks out against the independent expectations: 112 = 35 + 2 + 75 with duties 65 + 10; source 110 leaves 73 against 75 and the page states the 2-CASH gap; the checked-in request 109/90/14 leaves 72/55/14 and is labelled a different scenario; the invoice uses one Strand, not three proof producers; issuance is 300 = 180 + 120 with 700 of capacity that is not debt; the loan is 100 + 5 \u2212 35 = 70 against a 37 cash debit; treasury pays 14 + 7 + 2 = 23 A and retains 2 A / 6 B against two duties, with the fee kept separate from the remainder. The frozen technical copy (V2 technical, security cards, setup trust, count conditions) is preserved and stays one disclosure away. Most of the new Opus exposition is careful: the proof is checked at Issue and not again at settlement, the statement is rebuilt by the validator, the claimant is prover-chosen bytes, the recorded setup is forgeable, the setup count is unknown, and conditions, Strands, claim outputs and transactions are counted separately. Four statements are major problems in this scope. (1) The Groth16 explanation of public inputs versus witness mixes up the two-element Groth16 public input with the Web statement bytes, which are in-circuit witness bits. (2) The setup-count copy says new assets reuse a relation's keys and that the count does not depend on assets. The supplied sources do not support this for the current compiler. (3) A binding card says a claim issued under another verification key will not match the rebuilt statement. No supplied source shows the claim policy tying its verifying key to the free vk_digest field. (4) The reclaim stage names the claimant as payer of the network fee, which source notes Q06 leaves unresolved. There are also several minor overclaims and absolutes. None of these touches the frozen evidence. They are fixable copy edits in depth-2026-10-17/COPY.json (opus.*), CryptographicDetail.jsx, DepthContent.jsx and App.jsx.",
+  "verdict": "CHANGES_REQUIRED",
+  "filesRead": [
+    "MANIFEST.json",
+    "PAGE-REPORT.json",
+    "app/ARTIFACT-CHECK.json",
+    "app/src/App.jsx",
+    "app/src/TransactionDiagram.jsx",
+    "app/src/transaction-diagram.css",
+    "app/src/DepthContent.jsx",
+    "app/src/CryptographicDetail.jsx",
+    "app/src/ConcernGraph.jsx",
+    "app/src/concern-graph.css",
+    "app/src/SevenLayers.jsx",
+    "app/src/Groth16.jsx",
+    "app/src/invoice.mjs",
+    "app/src/data.generated.json",
+    "app/src/app.css",
+    "app/src/brand.css",
+    "app/src/depth.css",
+    "app/build.mjs",
+    "app/check-artifact.mjs",
+    "depth-2026-10-17/COPY.json",
+    "depth-2026-10-17/DESIGN-AND-PLAN.md",
+    "depth-2026-10-17/reader-study/SYNTHESIS.md",
+    "depth-2026-10-17/narrative/SOURCE-NOTES.md",
+    "depth-2026-10-17/applications/SOURCE-NOTES.md",
+    "contributions/11-v2-security/V2-COPY.json",
+    "contributions/14-review-corrections/PRESENTATION-PATCHES.json",
+    "contributions/14-review-corrections/COUNT-CLARIFICATION.json",
+    "reference-inputs/concept/integrated-r2/CONCEPT.md",
+    "reference-inputs/concept/integrated-r2/DEVELOPER-EXPERIENCE.md",
+    "app/src/main.jsx",
+    "app/src/editorial.mjs",
+    "app/src/presentation.mjs"
+  ],
+  "findings": [
+    {
+      "severity": "major",
+      "location": "depth-2026-10-17/COPY.json opus.groth16.proofExplanation[0], publicAndPrivateInputs[0], publicAndPrivateInputs[2] (rendered at app/src/CryptographicDetail.jsx:11-13 under 'What the verifier actually checks' / 'A private witness and a public transaction'); publicAndPrivateInputs[1] in the drawer at CryptographicDetail.jsx:26",
+      "problem": "The copy uses 'statement' in two incompatible senses. proofExplanation[0] says 'A few wires are public, and together they form the statement. All the other wires make up the witness \u2026 It reveals nothing else about the witness.' publicAndPrivateInputs[0] then calls the statement the step description (spent state, seq, script, catalogue, intents, claimant, body values) and says only its digest is exposed by the two public inputs. publicAndPrivateInputs[1], in the drawer, says the context fields are free witness bits. A reader concludes either that the statement bytes are Groth16 public inputs (wrong: only the two digest-carrying inputs are) or that the body and context values are hidden witness (wrong in practice: they are rebuilt from public ledger data). publicAndPrivateInputs[2] ('The witness is every other value\u2026') deepens the ambiguity, because the statement bytes themselves sit on witness wires.",
+      "requiredChange": "State the three-way split explicitly in the visible text. (a) Groth16 public inputs: the two field elements carrying the statement digest. (b) Statement bytes: the step description, which the circuit hashes from in-circuit witness bits via the BLAKE2b gadget; they are public in practice because the validator and any observer rebuild them from the transaction and spent state. (c) The remaining witness values: hidden by zero-knowledge only to the extent they cannot be reconstructed from public data. Replace 'All the other wires make up the witness \u2026 reveals nothing else' with wording that does not equate 'not a public input' with 'private'.",
+      "source": "V2-COPY.json technical.trustNotes binding-chain ('context fields vk_digest through intents_digest \u2026 are free booleanized witness bits that are hashed, not interpreted') and proof-meaning ('witness satisfying the compiled constraints for its two public inputs'); PRESENTATION-PATCHES.json OP-07 ('the public inputs carry a digest of the statement bytes'); data.generated.json bookFindings F1 (zero-knowledge hides only the witness; statement amounts are public)."
+    },
+    {
+      "severity": "major",
+      "location": "depth-2026-10-17/COPY.json opus.groth16.countExplanation[0] (rendered in the drawer 'How parameterized reuse fits the current compiler', app/src/CryptographicDetail.jsx:24-25)",
+      "problem": "'The count does not depend on how many transactions, wallets, users, claims, assets or logical properties exist on Cardano. New transactions, users, assets and public-input values inside an unchanged compiled relation all reuse its keys.' Including assets is unsupported for the current compiler, and the drawer title explicitly scopes the text to that compiler. The asset identity is a literal declared in the Moriarty program (installment-invoice.mori: asset CASH = {network\u2026}). predicate_digest is a compiled constant, and its exact field coverage depends on unread identity.rs. So a different asset may change the program, the predicate identity and therefore the circuit and its phase 2. The frozen counting sources list transactions and public-input values, never assets.",
+      "requiredChange": "Remove 'assets' from both lists. Alternatively, qualify it: 'an asset reuses the keys only if its identity is a free value of the compiled relation; in the current source the asset is declared in the program, and whether it enters predicate_digest depends on identity.rs, which was not read.'",
+      "source": "V2-COPY.json technical.trustNotes setup-keys ('setup per distinct compiled circuit \u2026 predicate digest is a circuit constant') and binding-chain assumptions ('Exact predicate-digest field coverage depends on identity.rs, which the reviewer did not read'); data.generated.json groth16.reuseExamples[0] ('New transactions and different public-input values do not, by themselves, require setup again'); COPY.json invoiceSource.source.text (asset CASH declared in source)."
+    },
+    {
+      "severity": "major",
+      "location": "depth-2026-10-17/COPY.json opus.binding[3] 'Verifier and verification key' body, third sentence (rendered by BindingReference at app/src/CryptographicDetail.jsx:34, included at :74)",
+      "problem": "'A claim issued under another key does not match the statement the validator rebuilds from the catalogue.' The supplied sources say vk_digest is a free witness context field that is hashed, not interpreted. A prover can therefore put the catalogue's vk_digest bytes into a statement whose proof was checked under some other key. The mismatch the sentence promises holds only if the claim policy verifies under the key named by vk_digest, or is otherwise bound to the catalogue key. No supplied source says that. The frozen binding-chain copy lists 'another thread step, catalogue, claimant or intent set' as non-matching, not 'another key'. The sentence adds a binding guarantee the sources do not contain.",
+      "requiredChange": "Delete the sentence or replace it with source-bounded wording: 'vk_digest is hashed into the statement and owner intents sign the target VK digest. The supplied sources do not state how the claim policy ties the key it verifies under to that field, and VK-to-matrix correspondence is OPEN.' Optionally add this to openQuestions.",
+      "source": "V2-COPY.json technical.trustNotes binding-chain body and assumptions (free context bits, consumer ties fields, VK-to-matrix OPEN); V2-COPY.json technical.signerBoundary (intents sign target VK digest); CONCEPT.md 'Later-source readings and their limits'."
+    },
+    {
+      "severity": "major",
+      "location": "depth-2026-10-17/COPY.json opus.lifecycle.stages[id=reclaim].signersAndFunding ('The claimant signs and pays the network fee.'), rendered in the funding table at app/src/CryptographicDetail.jsx:64 and in the 'Unused claims, stale state and readback' drawer at CryptographicDetail.jsx:71",
+      "problem": "This assigns the reclaim network-fee payer to the claimant. The sources establish only that the claimant signs the reclaim. The source-notes question register explicitly leaves 'Who pays each network fee, collateral and any thread reserve?' unknown. The page therefore invents a funding assignment the brief prohibits.",
+      "requiredChange": "Change it to 'The claimant signs. The supplied sources do not state who funds the reclaim transaction's network fee and collateral.'",
+      "source": "depth-2026-10-17/narrative/SOURCE-NOTES.md Q06; V2-COPY.json technical.signerBoundary ('Unused claims are reclaimed with the claimant's signature after the claimant-chosen expiry'); V2-COPY.json technical.networkFeeNote."
+    },
+    {
+      "severity": "minor",
+      "location": "depth-2026-10-17/COPY.json opus.lifecycle.stages[id=authorize].signersAndFunding ('Signing the intent costs no ADA.'), rendered at app/src/CryptographicDetail.jsx:64",
+      "problem": "This is a cost claim (zero ADA) with no supplied source. The brief forbids inventing network-cost numbers. How intent signatures reach the ledger, and what that costs, is not specified.",
+      "requiredChange": "Replace with 'Signing is an offchain act; the supplied sources state no ADA cost for it,' or delete the sentence.",
+      "source": "V2-COPY.json technical.networkFeeNote and signerBoundary; SOURCE-NOTES.md Q05/Q06."
+    },
+    {
+      "severity": "minor",
+      "location": "depth-2026-10-17/COPY.json opus.groth16.circuitIdentityExample[2] (rendered at app/src/CryptographicDetail.jsx:23)",
+      "problem": "Two problems. First, 'The conditional-reserve allocate action \u2026 makes it a distinct circuit with its own phase 2' reads as if S13 allocate has, or definitely would have, a compiled relation under the current path. No compilation of S13 is supplied, and predicate_digest coverage is unread. Second, 'putting that new key into use requires a key-migration action' does not say that key migration is PROPOSED and absent from the reviewed source.",
+      "requiredChange": "Make it conditional: 'If compiled under the current path, allocate would be a distinct relation\u2026'. Add '(a proposed action; the reviewed source has no key migration)' after the key-migration clause.",
+      "source": "V2-COPY.json technical.trustNotes setup-keys assumptions ('PROPOSED key migration action'); binding-chain assumptions (identity.rs unread); data.generated.json security.glossaryClarifications 'Intent revocation / key migration'."
+    },
+    {
+      "severity": "minor",
+      "location": "depth-2026-10-17/COPY.json opus.groth16.proofExplanation[4] (rendered at app/src/CryptographicDetail.jsx:15)",
+      "problem": "'Webs currently carry concrete execution proofs only' implies operating Webs. No Web consumer exists, and the frozen copy frames this as a design and profile limit.",
+      "requiredChange": "Use 'In the current design, a Strand can only be a concrete execution proof; the other two are not established Strand kinds.'",
+      "source": "V2-COPY.json technical.trustNotes proof-meaning and web-completeness ('no Web consumer \u2026 exists in this packet'); technical.summary 'Not yet built'."
+    },
+    {
+      "severity": "minor",
+      "location": "depth-2026-10-17/COPY.json opus.groth16.proofExplanation[2] ('could only have come from a satisfying assignment'), proofExplanation[3] ('depends on two further things'), circuitIdentityExample[1] ('so their digests differ'), binding[2] ('a proof can only exist for the predicate and shape its circuit fixes')",
+      "problem": "These are unsafe absolutes. The pairing check gives computational assurance only, under knowledge soundness and an honest setup. Digest inequality rests on collision resistance. 'Two further things' implies an exhaustive list, yet the frozen card also leaves the T3 gadget/VK correspondence OPEN. Next to these sentences, the recorded setup is forgeable by its operator.",
+      "requiredChange": "Soften to 'could, under these assumptions, only have come\u2026'; 'differ except with negligible probability (BLAKE2b collision resistance)'; and add after the BLAKE2b sentence 'and on the gadget actually matching its specification (T3, OPEN)'.",
+      "source": "V2-COPY.json technical.trustNotes proof-meaning body and assumptions (T3 OPEN, forgeable class-0 setup)."
+    },
+    {
+      "severity": "minor",
+      "location": "app/src/CryptographicDetail.jsx:38-46 (SetupEvidence and ImplementationSummary both render opus.groth16.sourceSetupStatus.slice(0,3))",
+      "problem": "The visible 'Current implementation' summary in Evidence, and the setup drawer, drop sourceSetupStatus[3]: the inventory of components that do not exist yet (Web consumer, required-set enforcement, real-context proofs, genuine intent signatures, 112 and 25/10 funding actions, reserve discharge). The present-tense lifecycle section is therefore not matched by a visible 'not built' statement. The list survives only inside the technical.summary drawer. Separately, the summary 'Who performed the recorded setup?' does not say the setup is forgeable.",
+      "requiredChange": "Render all four sourceSetupStatus paragraphs in ImplementationSummary, or at least the [3] list. Retitle the SetupEvidence summary, for example 'The recorded setup is a single-party test setup that can forge proofs'.",
+      "source": "COPY.json opus.groth16.sourceSetupStatus[3]; V2-COPY.json technical.summary; data.generated.json security.statusScope.integrationRule (do not drop assumptions)."
+    },
+    {
+      "severity": "minor",
+      "location": "app/src/DepthContent.jsx:65-66 (selector explanation and the 'Read the actual relation selector' drawer)",
+      "problem": "The walkthrough shows cap: NotBound and frame: TouchedOnly but says only that the adapter and accounting choices 'describe the relation being compiled'. Nearby copy says the whole-execution proof 'covers their arithmetic together' and owner intents sign caps. A reader may infer that signed caps and the full ledger frame are enforced in-circuit.",
+      "requiredChange": "Add: 'NotBound means this relation has no cap slot, so signed caps are enforced by the consumer, not this circuit. TouchedOnly means it does not authenticate a complete ledger frame.'",
+      "source": "CONCEPT.md 'Evidence appendix' ('TouchedOnly does not authenticate a complete ledger frame, and NotBound has no cap slot'); V2-COPY.json effects-authority assumptions ('Circuit-level NotBound/TouchedOnly limits remain')."
+    },
+    {
+      "severity": "minor",
+      "location": "app/src/CryptographicDetail.jsx:62 ('Opening the agreement and any later recovery are separate transactions.')",
+      "problem": "'Recovery' is ambiguous in the invoice context. It can be read as a reserve-recovery action, which S12 does not have, rather than the post-expiry claim reclaim.",
+      "requiredChange": "Use 'Opening the agreement, one-time genesis and any post-expiry claim reclaim are separate transactions; the source has no reserve-return action.'",
+      "source": "V2-COPY.json technical.trustNotes issuance-route ('excluding one-time genesis and any post-expiry reclaim') and duties-backing-fees (no reserve-duty-return action)."
+    },
+    {
+      "severity": "minor",
+      "location": "app/src/App.jsx:113 (hero h1 'Prove what a Cardano transaction does.')",
+      "problem": "The headline says proofs establish what a transaction does. The frozen proof meaning says a proof never shows the statement's values describe the real ledger; the validator's rebuild supplies the ledger facts. The headline overclaims what the proof establishes.",
+      "requiredChange": "Use, for example, 'Prove a Cardano transaction followed the contract's rules', or 'Check what a Cardano transaction does against its contract', consistent with heroBody.",
+      "source": "V2-COPY.json technical.trustNotes proof-meaning ('It never authenticates those bytes'); v2.main.proofRoleExplanation; data.generated.json security.forbiddenPhrases ('proven on Cardano')."
+    }
+  ],
+  "limits": [
+    "Source-level wording audit only. I did not run, render or screenshot the page, read the generated index.html, or check any images. Browser and visual QA belong to root.",
+    "I did not recompute SHA-256 values for the packet files or the artifact. That needs a shell or tooling outside the packet, which was not authorized.",
+    "External documents cited by the sources (Groth 2016, snarkjs, Filecoin attestations, SECURITY-ERRATA rows, the S07/S08 records, identity.rs, the Aiken/Rust V2 source) were not available. Judgments rest on the supplied frozen summaries.",
+    "Verdict scope: cryptographic and security explanatory wording only. This is not product, protocol, security or ledger acceptance, and it does not authorize implementation, native SDK work, setup, proving, signing or deployment.",
+    "Plan mode was active and no plan file was written. This structured review is the requested deliverable."
+  ]
+}

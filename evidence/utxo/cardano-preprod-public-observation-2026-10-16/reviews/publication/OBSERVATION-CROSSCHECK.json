@@ -1,0 +1,58 @@
+[
+  {
+    "evidence": "README table README.md:13-17 lists 7598/00e6906f, 214/958eeb27, 2/4f53cda1, 7141/6df4af02, 214/958eeb27; PUBLICATION.json:32-58 rawBodyPins repeats identical bytes/SHA; actual RESULT.json:92-93,114-115,136-137,158-159,180-181 records same size/SHA per step; INPUT-INDEX entries for steps 01-05 list same pins. Directly opened 02 and 05 are byte-identical single-line tip arrays (hash 553229bd..., epoch 319, abs_slot 136479015, block 5299378), 03 is '[]'. This is pin-to-pin textual agreement plus direct body inspection, NOT reviewer recomputation.",
+    "id": "X1-raw-pins-textual",
+    "requiredFix": "None in stage. Root ordinary verifier must recompute all hashes at publication; do not treat this review as hash recomputation.",
+    "severity": "info",
+    "summary": "Five raw body pins agree across README, PUBLICATION, actual RESULT, COPY-MANIFEST and INPUT-INDEX."
+  },
+  {
+    "evidence": "COPY-MANIFEST.json:11-13 copiedPayloadCount=99, copiedPayloadBytes=1298062, 89 frozen mirrored under payload/inputs/<original without leading slash>, no dedup/rewrite; files tail COPY-MANIFEST.json:890-897 ends with root adoption 2929B/5d9fef85; sourceMap COPY-MANIFEST.json:899-1296 maps originalSourcePath->publicationRelativePath for payloads plus reviews/actual/* and root adoption, missingNamedFiles=[] at :1297. OWN-OUTPUT-ALLOWLIST.json:4-5 allowedFileCount=103 and :110-620 pinnedFiles include README/PUBLICATION/COPY-MANIFEST and all payload/review/root paths; PUBLICATION.json:12-21 copied 99/1298062, frozen 89/1174197, totalStagedFiles=103; README.md:37 89/1174197 + 8 actual-review outputs + freeze + adoption =99, +4 packaging=103.",
+    "id": "X2-99-payloads-103-stage-sourceMap",
+    "requiredFix": "None. Root verifier to recount/re-hash 99+4 at copy time.",
+    "severity": "info",
+    "summary": "99 payload references/pins and lossless sourceMap are structurally consistent across COPY-MANIFEST, OWN allowlist, PUBLICATION and README."
+  },
+  {
+    "evidence": "README.md:37 inline links [PUBLICATION.json](PUBLICATION.json) and [COPY-MANIFEST.json](COPY-MANIFEST.json); reference definitions README.md:41-60 define adoption, actual-review, recommendation, coverage, freeze, receipt, capture, scope, spent, source, expectations, r1, parsers, gemini-recovery, gemini-report, raw1-raw5 =20 definitions. 20+2=22 distinct repository-relative targets, all present as stage paths in OWN-OUTPUT-ALLOWLIST allowedFiles (e.g. root/PUBLIC-OBSERVATION-ACTUAL-ADOPTION.json, reviews/actual/REPORT.md, payload .../steps/01-05) and in PUBLICATION.json:71-151 keyArtifacts. No target requires opening an original absolute path.",
+    "id": "X3-readme-22-targets",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "All 22 distinct README targets (20 reference definitions + 2 inline links) resolve to repository-relative staged files."
+  },
+  {
+    "evidence": "Actual RESULT.json:74-75 started 2026-10-16T14:50:18.994672Z finished 14:50:29.059060Z, steps :76-186 each status 200, attempts_controller=1, retries_arg=1, error=null, response_url=url, POST request_body_sha256 38133215... at :131; adoption root/PUBLIC-OBSERVATION-ACTUAL-ADOPTION.json:32-34 attemptSpent=true attempts=1 retries=0; crosscheck CC1 cites ATTEMPT-LEDGER/ATTEMPT-SPENT. README.md:19-21 one batch, zero retries, no paging, same-provider bracket not atomic/authenticated, genesis magic 1/Testnet/systemstart 1654041600 and identical tips epoch319/Conway/slot136479015/block5299378/hash553229bd... directly matches raw 02/05 and RESULT :39-71.",
+    "id": "X4-five200-one-batch-spent-bracket",
+    "requiredFix": "None. Any future query is a separate scope; do not auto-retry this spent batch.",
+    "severity": "info",
+    "summary": "Exact 14:50 UTC five-HTTP200/one-batch/no-retries/SPENT claim is faithfully stated as provider bracket only."
+  },
+  {
+    "evidence": "Actual RESULT.json:13-18 address_utxos content_range='*/*', completeness_proven=false, row_count_bounded=0, fund_status provider_reports_empty_bounded_result_completeness_unknown at :10; raw 03 body '[]' (2B). README.md:5 and PUBLICATION.json:162-167 fundingAtCapture statement NOT_OBSERVED, never zero/unfunded/current absence; later Preview tx 9ea68a9b... explicitly separate/excluded README.md:5, PUBLICATION.json:168-171. Adoption :27 same qualification.",
+    "id": "X5-funding-not-observed",
+    "requiredFix": "None. Downstream must never restate as zero/unfunded/current absence.",
+    "severity": "info",
+    "summary": "Raw [] with ContentRange */* is correctly preserved as funding NOT OBSERVED at capture."
+  },
+  {
+    "evidence": "Raw 04 head shows protocol_major 11/minor 0, max_tx_size 16384, max_tx_ex_mem 17500000, max_tx_ex_steps 10000000000, cost_models PlutusV1/V2/V3 raw arrays; RESULT.json:20-38 whitelists only scalars and marks cost_models format unknown_cannot_cost_evaluate. README.md:23 and PUBLICATION.json:223-228 state ordering/units/application unestablished, no fee/minADA/ExUnits/size-fit/K10 qualification, EraHistory unverified (no EraHistory claim found in README/PUBLICATION/adoption). Parser RESULT.json:9,142-145 16/16 matched, 6 AST pure nodes only, not network/cookie/proxy/ledger; README.md:29 preserves that limit and 'not network cookie/proxy test' scope, plus R1 NOT_READY history and failed checks.",
+    "id": "X6-costmodels-era-fee-unverified-parsers",
+    "requiredFix": "None.",
+    "severity": "info",
+    "summary": "Cost-model/EraHistory/fee/minADA/ExUnits/size-fit remain explicitly unverified; 16 parser cases are finite pure-parser samples only."
+  },
+  {
+    "evidence": "Stage file list in OWN allowlist contains only payload/inputs/** public captures, reviews/actual/*, root adoption and 4 packaging docs; PUBLICATION.json:230 scopeExclusions and COPY-MANIFEST.json:1298 exclude Preview funding, withdrawal packet, binaries/archives, private provider output, key/PK/SRS/cache, /w paths. Search over stage for .skey/mnemonic/seed/private-key/credential found only prose/code mentions (no wallet keys, PK/SRS/cache bodies or tool binary). Included root-capture stderr.log is pinned 0B/e3b0c442 empty in INPUT-INDEX, not private content. Fallback confirmation :4-6 'if opus goes down, use gemini and muse', nativeExecutionAuthorityCreated=false; README.md:27-29 preserves 15 author-FOR + one Gemini reviewer (REVIEW-2 truncated, REVIEW-3 complete, 3 token objects 1 invalid/2 valid), R1 failures, actual Muse same-family/non-author, HIGH requested/effort not observed.",
+    "id": "X7-public-only-history-preserved",
+    "requiredFix": "None. Preserve staged PUBLICATION.json unchanged as pending snapshot.",
+    "severity": "info",
+    "summary": "No private material leakage found; historical identities, failed source checks, Muse read limits and fallback routing are preserved."
+  },
+  {
+    "evidence": "PUBLICATION.json:3-8 status STAGED_PENDING_FRESH_MUSE_PUBLICATION_AUDIT, published=false, publicationApproved=false, newQueryOrRuntimeAuthority=false, target evidence/utxo/cardano-preprod-public-observation-2026-10-16; README.md:7 publication review pending, actual recommendation leaves public export flags false (ADOPTION-RECOMMENDATION.json:9-10 publicRecordExport/publicVerification false, :4-5 native/authority false, publicObservationPrerequisiteClosed=true only). Prior publication review PROCESS.json:12-20 terminal exitCode=2 distinctStructuredReviews=0; QUALIFICATION.json:7-9 incorrect newly added --disable-contributor-mode vs prior --contributor-mode off, exact exit cause not established, candidate unchanged, old job not rerun.",
+    "id": "X8-pending-snapshot-prior-failure",
+    "requiredFix": "Root must publish the 103 files unchanged to evidence/utxo/cardano-preprod-public-observation-2026-10-16 and record actual publication ONLY in a distinct root/PUBLICATION-COMPLETED.json companion; do not rewrite staged PUBLICATION.json, source results, or invent a cause for terminal 2 beyond the launcher qualification.",
+    "severity": "info",
+    "summary": "Staged PUBLICATION.json is correctly an original pending snapshot; prior terminal-2 zero-review failure is preserved without invented diagnosis."
+  }
+]

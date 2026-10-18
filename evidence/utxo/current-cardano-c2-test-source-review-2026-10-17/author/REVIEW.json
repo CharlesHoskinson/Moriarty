@@ -1,0 +1,110 @@
+{
+  "reviewToken": "c2-r2-full-test-source-direct-opus55-restored-20261017",
+  "report": "The test source is complete but has not been run. Part B (helpers and case tables) and Part C (18 test methods, then `unittest.main(verbosity=2)`) were appended after the `# === C2-R2-TEST-PART-A-END ===` marker. The append was a single Edit that kept the marker and added text after it, so the 7864-byte Part A prefix is unchanged byte for byte. Requirements were read only from the manifest paths: S33 sections 6 and 7, S34, S45, S48, S49, S51, S10, S11 (v1 source), S14, S15 (K2), S16 (K6), S22 (host), S23 (v1 test) and S35. Expected stages and v1 columns are literals copied from S33 section 6 and checked by reading the v1 and host source; none comes from running anything.\n\nWhat the file contains:\n- **Part B:** the helpers S49 asks for (`_same` with dict support, `_env` with K6 defaults, `_issue_cbor`, `_mint_cbor`, `_flip`, `_mutated` with a remove-key marker, and `_Hooked` with more hooks than v1 had), plus `_token` (NON-ORACLE hashlib expectation), `_containers` and `_globals`. It also has one case table per row (`ARG_CASES`, `T04`, `T05A`/`T05B`/`T05C`, `T06` to `T13`, `T14`, `T16`) and the `TAMPER` table keyed by the 11 stages, where BUILD is empty because it is unreachable.\n- **Part C:** the class `C2IssueArtifactR2Tests` with `test_T00` to `test_T17`. T05 runs its cases as subTests labelled T05a, T05b and T05c.\n- **r2 first:** T01 to T17 each call `_prepare()` as their first statement. T00 never calls it.\n\nExpected RED (my prediction, not observed): 18 methods run, T00 passes, and T01 to T17 each fail with the missing-r2 phrase.\n\nNext step: a fresh full-source review by a non-author Opus 5.5 instance, then envelope admission, must come before any RED run.",
+  "sourceComplete": true,
+  "outputFile": "/home/charl/moriarty-c2-opus55-restored-20261017/source-output/test_c2_issue_artifacts_r2.py",
+  "prefixPreserved": true,
+  "coverage": [
+    {
+      "testId": "T00",
+      "method": "test_T00_pins_fixtures_and_literals_without_r2",
+      "cases": "Re-reads the host, v1, K6 and K2 files and checks byte size and SHA-256 against the pins; this includes the setup size of 3926 bytes. Checks the loaded FIX bytes the same way. The strict loader must refuse duplicate keys, NaN, Infinity and -Infinity. Checks the 12 setup keys, the 29 relation keys (13 consumed by v1, 16 not), and the export and nested key sets. Repeats the literal provenance checks from v1 test_01, plus driver, headerLen 343 and bodyLen 378. Also checks the 16 labels with the 8 v1 labels as a subset, and the structure of the TAMPER table (BUILD empty). Makes no call to r2 and no assertion about it."
+    },
+    {
+      "testId": "T01",
+      "method": "test_T01_sole_function_imports_and_seven_host_apis",
+      "cases": "Import lines must be exactly `import hashlib` and `import host_codec`. Signature: 3 positional parameters (none positional-only) plus keyword-only policy_id, no *args or **kwargs, exact parameter names, no defaults. prepare_c2_issue must be the only public callable. No host API name may appear in the r2 namespace, the namespace must hold the host and hashlib modules, and it must not reference v1. The r2 bytes are re-executed against a counting host proxy in sys.modules, which is restored in a finally block, and all seven APIs must be called on K6."
+    },
+    {
+      "testId": "T02",
+      "method": "test_T02_k6_admitted_cbor_labels_keys_expiry_policy_matrix",
+      "cases": "Expiries 0, 23, 24, 2**32, 1893456000000 and 2**64-1, each with HIST_POLICY and 01x28. Checks format /2, exactly 12 keys and exactly 16 labels. envCborHex must be ENV_PREFIX plus the literal head plus ff, and equal HIST_ENV_CBOR at the historical expiry. The token must be HIST_TOKEN at the historical expiry and the NON-ORACLE hashlib value elsewhere. Also checks issueCborHex as the literal 710-byte chunk framing, mintValueCborHex as literal framing, the envData, issueData and mintValueData structures, the expiry, policyIdHex and setupRecordSha256Declared values, and that the four byte fields equal v1."
+    },
+    {
+      "testId": "T03",
+      "method": "test_T03_argument_types_refused_before_records_are_touched",
+      "cases": "Either record given as a list, None, a str or a _Hooked dict subclass (8 cases). Expiry -1, 2**64, True, None, float or str. Policy of 27 or 29 bytes, bytearray, str or None. Both r2 and v1 must refuse at ARG. Afterwards the records must equal their deep copies, and the hooked dicts' keys, read through dict itself, must be unchanged."
+    },
+    {
+      "testId": "T04",
+      "method": "test_T04_setup_record_refused_at_setup",
+      "cases": "A one-character change to each of the six fixed fields. Driver one-character change (v1 ADMIT) or int (v1 SETUP). provingKeySha256 uppercase or 63 hex characters. provingKeyBytes 0, -1 or True (v1 SETUP), or 2**64 (v1 ADMIT). An extra key, and each of the 12 keys missing. Relation as a list. VK of 974 hex characters, or uppercase. vkDigest flipped. r2 must refuse at SETUP."
+    },
+    {
+      "testId": "T05",
+      "method": "test_T05_relation_profile_subtests_T05a_T05b_T05c",
+      "cases": "T05a, 34 cases, r2 PROFILE / v1 SETUP: each of the 13 v1-consumed keys missing; the six digests as 63 hex or uppercase; tag or family flipped; headerLen 342; bodyLen -1 or 261802; publicInputCount 3; actionIndex 65536 or True; action as int. T05b, 57 cases, r2 PROFILE / v1 ADMIT: each of the 16 non-consumed keys missing; an extra key; language, semantics or adapter changed by one character; four digests as 63 hex or uppercase; all 12 logicalWork forms (empty, 01, +1, -1, 40 digits, 2**128, Arabic-Indic, 1_0, leading space, trailing LF, 5000 digits, int 28); instanceVariables 4; relationVersion, constraints or witnessVariables as True, -1 or 2**64; relationFormat, logicalCostProfile or fieldModulusLeHex as int; abi2ShapeBytesHex odd length, uppercase, 524290 characters or one byte flipped. T05c: setup-side abi2ShapeDigest replaced by another valid hex64, r2 PROFILE / v1 RELATION."
+    },
+    {
+      "testId": "T06",
+      "method": "test_T06_surrogate_code_points_by_stage_owner",
+      "cases": "U+D800 in relationFormat, logicalCostProfile or fieldModulusLeHex: PROFILE, v1 ADMIT. In a relation extra key (marked REDUNDANT): PROFILE, v1 ADMIT. In relation action alone: PROFILE, v1 RELATION. Consistently in relation action, export action and catalogue name: PROFILE, v1 ADMIT. In export action alone: EXPORT, v1 RELATION. In catalogue name, intentTargetHashV2 or intentAnchor alone: EXPORT, v1 CARDANO. In statementHex, proofHex or x1: STATEMENT, PROOF or DIGEST, same as v1."
+    },
+    {
+      "testId": "T07",
+      "method": "test_T07_export_closed_schema_and_exact_types",
+      "cases": "An extra key in the export and in each of the six nested objects, plus expiry inside envV2. Every field of all seven objects missing (49 cases). The six nested objects given as lists. networkId, version or claimKind 256. actionIndex, consumedIx, outputIndex or index 65536. seq 2**64. Each of the 8 int fields set to True. action as int. sourceSha256 as 64 uppercase A. premises reordered, given as a tuple, with 5 items, or with one character changed. r2 and v1 must both refuse at EXPORT."
+    },
+    {
+      "testId": "T08",
+      "method": "test_T08_relation_identity",
+      "cases": "Export side: each of the 8 identity keys alone set to another valid value (digests 00x32, sourceSha256 null, action full, actionIndex 2), and vkDigestBlake2b256 alone. Relation side: programHash, compilerBuildDigest, r1csSha256 or predicateDigest set to 00x32; sourceSha256 null; action full; actionIndex 2. RELATION for both r2 and v1."
+    },
+    {
+      "testId": "T09",
+      "method": "test_T09_statement_framing",
+      "cases": "statementHex as 00x262145, odd length, uppercase, or containing g. A byte flip at offset 0, 16, 48, 80 or 112. Last byte removed. Relation bodyLen 377. STATEMENT for both."
+    },
+    {
+      "testId": "T10",
+      "method": "test_T10_context_equals_header",
+      "cases": "Each of the 10 context fields changed alone, using a replacement of the same type and in range. Statement byte 144 flipped. networkId 1 in both statement byte 172 and the context. CONTEXT for both."
+    },
+    {
+      "testId": "T11",
+      "method": "test_T11_digest_and_public_inputs",
+      "cases": "statementDigest 00x32. Body byte 400 flipped. x1 or x2 set to the string '0' (not the int). x1 with a leading 0. DIGEST for both."
+    },
+    {
+      "testId": "T12",
+      "method": "test_T12_proof_length_and_hex",
+      "cases": "proofHex uppercase, 382 or 386 characters, or containing g. PROOF for both."
+    },
+    {
+      "testId": "T13",
+      "method": "test_T13_cardano_derivation",
+      "cases": "Each envV2 field changed: version 3, claimKind 1, familyId, the two digests, claimantVkh, the settleOutref fields and statementDigest. Each catalogueActionEntry field changed: name full, index 2, and the three digests. intentTargetHashV2 changed. intentAnchor changed. CARDANO for both."
+    },
+    {
+      "testId": "T14",
+      "method": "test_T14_first_failing_stage_wins_for_all_nine_pairs",
+      "cases": "All nine pairs from ARG/SETUP to PROOF/CARDANO with the S33 faults; the earlier stage must win, with the v1 values from S33. SETUP/PROFILE is v1 ADMIT and PROFILE/EXPORT is v1 EXPORT. The table is checked for adjacent stages and exactly two faults per pair. BUILD is excluded as unreachable."
+    },
+    {
+      "testId": "T15",
+      "method": "test_T15_detachment_nonaliasing_and_source_effects",
+      "cases": "Inputs must equal their deep copies after a success, after each T14 first-fault refusal, and after a CARDANO fault. The result must hold no input container by identity, and two results must share no mutable container. Mutating one result must not change a later result. r2 module keys, value identities and mutable globals must be unchanged and hold no input or result container. The host namespace must not be patched. The r2 source is scanned for the v1 test_11 fixture-identity and effect tokens plus 'global'."
+    },
+    {
+      "testId": "T16",
+      "method": "test_T16_strictness_only_v1_admits_r2_refuses",
+      "cases": "Exactly 65 strictness cases from S34 T16StrictnessCases: T04 driver one-character change (SETUP); T04 provingKeyBytes 2**64 (SETUP); all 57 T05b cases (PROFILE); the three T06 relation-string U+D800 cases (PROFILE); the T06 relation extra key (PROFILE); the T06 consistent action case (PROFILE); and T14 driver change plus language (SETUP). In each, v1 must return /1 with the 8 labels and the historical Env and token. T02 and T17 are excluded."
+    },
+    {
+      "testId": "T17",
+      "method": "test_T17_synthetic_changed_context_both_admit",
+      "cases": "A synthetic fixture labelled SYNTHETIC_NOT_PROOF_NOT_ORACLE, built inside the test from K6: claimant 66x28 at offset 144, settleHash b3x28 at 173, consumedTxid 33x32 at 233, consumedIx 7 at 265, seq 2 at 267, networkId still 0. The digest and x1/x2 are computed with hashlib and int.from_bytes, never the host. All listed export fields are updated and proofHex is left unchanged. Uses HIST_EXPIRY and HIST_POLICY explicitly. r2 and v1 must both admit. envCborHex must equal the literal framing segments, the token must equal the NON-ORACLE hashlib value, and the four byte fields must equal v1."
+    }
+  ],
+  "limitations": [
+    "Not executed: there was no shell, import, compile or run, so syntax and the RED and GREEN outcomes are unverified. The RED prediction (18 run, T00 passes, T01-T17 fail with the missing-r2 phrase) is a prediction only.",
+    "A full-source review by a fresh non-author Opus 5.5 instance, then envelope admission, must happen before any RED run. This authoring grants no execution, adoption or builder-reliance authority. Native authority is 0.",
+    "Non-blocking conflict with the prefix, flagged and left unchanged: the Part A docstring says expected digests and tokens are never a call to a production hash. S33 section 6 and the T17 row require hashlib NON-ORACLE token expectations and test-computed T17 digest and x1/x2 values. Part B follows S33, which is normative, and labels these values NON-ORACLE and SYNTHETIC_NOT_PROOF_NOT_ORACLE in its comments. The prefix docstring is imprecise on this point.",
+    "The CP04 source constraints (no input-proportional copy, never str.encode, length checked before scan) cannot be told apart by any test outcome (S45 R4-L02). They need source inspection of the implementation later, and no test result counts as behavioural evidence for them. The optional '.encode(' token suggested in R4-L02 was not added to the T15 scan, because it is outside the literal T15 row.",
+    "Hashlib token expectations and the agreement between the shared host and v1 are NON-ORACLE consistency checks. They do not verify any proof and say nothing about Rust acceptance.",
+    "The T01 import check and the T15 token check are line and substring scans, inherited from the v1 test pattern. A docstring line starting with 'from ', or a comment containing 'global', would cause a false failure.",
+    "T15 deep-copies the r2 module globals that are containers. A global container holding an object that cannot be deep-copied would make T15 error rather than fail.",
+    "T00 assumes Python 3.8+ behaviour and the pinned fixture bytes. T01 uses co_posonlyargcount, which needs Python 3.8+. The '5000 digits' logicalWork case relies on r2 checking length before calling int() (the limit on int digit strings)."
+  ],
+  "executed": false
+}

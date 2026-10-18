@@ -1,0 +1,259 @@
+{
+  "decidedAt": "2026-10-15T21:29:39.752148+00:00",
+  "decision": "AUTHORIZE_EXACT_P3S1_R1_H_A1_AND_CONDITIONAL_A2_LOCAL_ONCE",
+  "targetMustBeAbsent": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-p3-r1-aiken-local-execution-20261015",
+  "sourceManifestSha256": "00ec34ef64afa7b55816c59494bbf1592e4d6c05fdf1417ba7217d572893a8df",
+  "preLaunchSha256": "3a22a8b1aa0a3b0efd3536c0f779688e6562ccb87f7fec6d3f6b33c8c7d39d11",
+  "reviewReportSha256": "4a045f15b22f1727b4ed1928b34c24dcafd88462ef2fd62d60764a925ba7ee99",
+  "reviewManifestSha256": "c75c657c12c73d8d78f87be794f70b6c0e658e393b67c0db99495d73742e8005",
+  "clauses": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "CHANGE replacement originalA1/A2 request rows"
+  ],
+  "votes": [
+    {
+      "voter": "V12 source author",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-p3-r1-aiken-execution-readiness-source-20261015/VOTES.md",
+      "sha256": "3eb8500f9e6a9773653ab2eb29ba398fca887d8d302c201808df90605f9935fb",
+      "position": "FOR E1-E5 with perclause effect/resource reasons, counted substantive"
+    },
+    {
+      "voter": "V13 fresh nonauthor Opus5.5 context",
+      "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-p3-r1-aiken-readiness-independent-effect-review-20261015/VOTES.md",
+      "sha256": "4d00e4156c7b5e501b9a3563fba809e69bffffac21e238f66381339b2ec85514",
+      "position": "FOR exact E1-E5, AGREECHANGE; independent source/effect/resource traces, no dissent"
+    }
+  ],
+  "voteTally": "2agreeing substantivepositions perclause; context-levelindependence,samefamily",
+  "maxStepShellChildren": 25,
+  "retries": 0,
+  "perStepCommand": "env -i PATH=/usr/bin:/bin HOME=$T/empty-home TZ=UTC /usr/bin/bash --noprofile --norc $OWN/steps/<FILE>.sh < /dev/null",
+  "resourceBounds": {
+    "ASperProcess": 34359738368,
+    "core": 0,
+    "nice": 10,
+    "stepWallsSeconds": [
+      {
+        "id": "P1",
+        "file": "steps/P1.sh",
+        "wall": null,
+        "does": "mkdir $T atomically (fails and writes nothing if $T exists), then logs receipts journal bin help a2 tmp empty-home empty-xdg-cache empty-xdg-config empty-xdg-data probe-cwd",
+        "onFail": "STOP; nothing else runs; no F steps (T may not be ours)"
+      },
+      {
+        "id": "P0",
+        "file": "steps/P0.sh",
+        "wall": 120,
+        "does": "all input pins; R1 aiken/ tree exactly 16 files / 3 dirs / no other entries, never built in place; stdlib tree 38/13/0; DATA-ONLY 0644; tool presence; records whether /usr/bin/time exists",
+        "onFail": "STOP -> F1, F2"
+      },
+      {
+        "id": "P2",
+        "file": "steps/P2.sh",
+        "wall": 120,
+        "does": "reused aiken_stage_bin.py: gated byte copy to $T/bin/aiken, mode 0600, receipt staging.json",
+        "onFail": "STOP -> F1, F2"
+      },
+      {
+        "id": "P3",
+        "file": "steps/P3.sh",
+        "wall": 30,
+        "does": "re-hash copy, chmod 0555 on the copy only",
+        "onFail": "STOP -> F1, F2"
+      },
+      {
+        "id": "P4",
+        "file": "steps/P4.sh",
+        "wall": 30,
+        "does": "user+net namespace probe shows only lo",
+        "onFail": "STOP -> F1, F2"
+      },
+      {
+        "id": "H1",
+        "file": "steps/H1.sh",
+        "wall": 60,
+        "does": "first execution of the copy in this task: --version, exact gate 'aiken v1.1.24+bacbeb3' -> help/version.txt",
+        "onFail": "BLOCKED(tool-identity) -> Hp, F1, F2"
+      },
+      {
+        "id": "H2",
+        "file": "steps/H2.sh",
+        "wall": 60,
+        "does": "check --help -> help/check.txt",
+        "onFail": "A1 BLOCKED(help) -> Hp, F1, F2"
+      },
+      {
+        "id": "H3",
+        "file": "steps/H3.sh",
+        "wall": 60,
+        "does": "build --help -> help/build.txt",
+        "onFail": "A2 DEFERRED only; continue"
+      },
+      {
+        "id": "H4",
+        "file": "steps/H4.sh",
+        "wall": 60,
+        "does": "blueprint apply --help -> help/blueprint-apply.txt",
+        "onFail": "A2 DEFERRED only; continue"
+      },
+      {
+        "id": "H5",
+        "file": "steps/H5.sh",
+        "wall": 60,
+        "does": "blueprint hash --help -> help/blueprint-hash.txt (needed: A2 derives the applied S2 hash with the pinned tool rather than trusting a blueprint field)",
+        "onFail": "A2 DEFERRED only; continue"
+      },
+      {
+        "id": "Hp",
+        "file": "steps/Hp.sh",
+        "wall": 60,
+        "always": true,
+        "does": "binary sha + 0555; five empty dirs empty; tmp listing; freeze help/ (receipts/help-freeze.json); chmod 0444 help files",
+        "onFail": "BLOCKED(hygiene) -> F1, F2"
+      },
+      {
+        "id": "D1",
+        "root": true,
+        "does": "Select A1 variant from the frozen help/check.txt per decisions.D1; record the choice and the quoted help lines in the root record before A1pl",
+        "onFail": "A1 BLOCKED(help) -> F1, F2; the observed help goes to a new author round"
+      },
+      {
+        "id": "A1pl",
+        "file": "steps/A1pl.sh",
+        "wall": 120,
+        "does": "Sol helper (in a fresh network namespace) places the 16 files into $T/run; coreutils re-check 16 hashes, 17 files incl. PLACEMENT-RECEIPT.json, 3 dirs; stdlib byte copy + packages.toml + checks (STDLIB-PLACEMENT.json); aiken.lock absent",
+        "onFail": "BLOCKED(layout) -> F1, F2"
+      },
+      {
+        "id": "A1f",
+        "file": "steps/A1f.sh",
+        "wall": 60,
+        "does": "freeze run tree before check (predicted 56 files)",
+        "onFail": "STOP -> F1, F2"
+      },
+      {
+        "id": "A1",
+        "file": "steps/A1-TF.sh OR steps/A1-TL.sh (per D1; never both)",
+        "wall": 1800,
+        "does": "aiken check at trace level silent (filter all when available); peak RSS via /usr/bin/time -v if present",
+        "onFail": "classify (outcomes) -> A1p, A1x, F1, F2; no A2"
+      },
+      {
+        "id": "A1p",
+        "file": "steps/A1p.sh",
+        "wall": 120,
+        "always": true,
+        "does": "binary, empty dirs, project and stdlib unchanged, build/packages exactly two entries, packages.toml, aiken.lock single package without etag, top-level listing, tmp listing, freeze run-after-A1",
+        "onFail": "A1 not GREEN: BLOCKED(hygiene) or BLOCKED(fetch) per the failing check -> A1x, F1, F2"
+      },
+      {
+        "id": "A1x",
+        "file": "steps/A1x.sh",
+        "wall": 60,
+        "always": "if logs/A1.log exists",
+        "does": "non-gating extraction of module/title/status/on_failure/mem/cpu to receipts/A1-tests.tsv (+ summary/seed line)",
+        "onFail": "recorded only; the result reviewer parses logs/A1.log directly"
+      },
+      {
+        "id": "D2",
+        "root": true,
+        "does": "A2 eligibility per decisions.D2 (A1 GREEN by the comparison rule, and help criteria). Record the outcome; if not met, record A2 DEFERRED with the exact missing items",
+        "onFail": "skip to F1, F2 (A1 is not affected)"
+      },
+      {
+        "id": "A2b",
+        "file": "steps/A2b-TF.sh OR steps/A2b-TL.sh (same variant letter as A1)",
+        "wall": 900,
+        "does": "aiken build with the A1 trace settings; sha of plutus.json; read-only copy a2/plutus.unapplied.json",
+        "onFail": "A2bp, A2p, F1, F2"
+      },
+      {
+        "id": "A2bp",
+        "file": "steps/A2bp.sh",
+        "wall": 120,
+        "always": "after A2b",
+        "does": "A1p checks + plutus.json present; freeze run-after-A2b",
+        "onFail": "stop A2 -> A2p, F1, F2"
+      },
+      {
+        "id": "A2t",
+        "file": "steps/A2t.sh",
+        "wall": 60,
+        "does": "titles/hashes/CBOR sizes of the unapplied blueprint; exactly one distinct 56-hex C2 hash among titles 'c2.*'; at least one 's2.*' title",
+        "onFail": "stop A2 -> A2p, F1, F2"
+      },
+      {
+        "id": "A2a",
+        "file": "steps/A2a.sh",
+        "wall": 300,
+        "does": "blueprint apply --in a2/plutus.unapplied.json --out a2/plutus.applied.json --module s2 --validator s2 581c<C2>; unapplied copies re-verified",
+        "onFail": "stop A2 -> A2p, F1, F2"
+      },
+      {
+        "id": "A2h",
+        "file": "steps/A2h.sh",
+        "wall": 120,
+        "does": "blueprint hash --in a2/plutus.applied.json --module s2 --validator s2 -> receipts/s2-applied-hash.txt (56 hex)",
+        "onFail": "stop A2 -> A2p, F1, F2"
+      },
+      {
+        "id": "A2r",
+        "file": "steps/A2r.sh",
+        "wall": 60,
+        "does": "non-gating record of applied titles/hashes/sizes and the 16,384-byte comparison figure",
+        "onFail": "recorded only"
+      },
+      {
+        "id": "A2p",
+        "file": "steps/A2p.sh",
+        "wall": 120,
+        "always": "at the end of any started A2 stage",
+        "does": "binary, empty dirs, unapplied blueprints unchanged, applied made read-only, freeze run and a2",
+        "onFail": "recorded; A2 not GREEN"
+      },
+      {
+        "id": "F1",
+        "file": "steps/F1.sh",
+        "wall": 120,
+        "always": "after P1 succeeded",
+        "does": "R1 packet and aiken/ tree unchanged and unbuilt; Sol helper, reused tools, stdlib pin/files unchanged; DATA-ONLY binary unchanged, 0644",
+        "onFail": "recorded; run not GREEN"
+      },
+      {
+        "id": "F2",
+        "file": "steps/F2.sh",
+        "wall": null,
+        "always": "last",
+        "does": "freeze logs receipts help a2 -> receipts/task-final.json; exit in $T/F2.exit",
+        "onFail": "recorded"
+      }
+    ],
+    "worstCaseFullWallSecondsIncludingGrace": 6000,
+    "A1OnlyWorstCaseSecondsIncludingGrace": 3900,
+    "P1andF2Unwrapped": "Reviewed precedent trivialplacement/freeze; no new aggregate cap or file-size cap"
+  },
+  "stopAndAlwaysRules": "EXECUTION-PROPOSAL.json and freshreviewELIGIBILITY-BOUNDARIES.md: missing.exit fail; abnormalnontimeoutexit BLOCKEDtool-abnormal; finalGREENA1onlyafterF1; A2conditionalD2cannotblockA1; no native rerun",
+  "acceptedResidualsAttributed": "Opus REPORTsection5: no mountnamespace,userfilesystem/pathUNIXsocket access remains;fixedbinary/helpers reviewed,no FSIZE cap/no syscalltrace,P1/F2unwrapped. These accepted for this singleboundedlocalnosecretuse only; R1stillrequiresmountview.",
+  "excluded": [
+    "R1RustABI2 execution",
+    "FX1signer",
+    "X1compiledwrapper",
+    "A1mledgerExUnits",
+    "K2setup/prove/key/VK/SRS",
+    "existingwallet/privatekey",
+    "SDK",
+    "ledger",
+    "Preprod",
+    "funds",
+    "network",
+    "install",
+    "retry",
+    "newcontroller/framework"
+  ],
+  "adoption": "NONE until fresh Opus actual-result review",
+  "productBoundary": "Maintainerlocaltestscope only; publiclanguagepermissionless."
+}

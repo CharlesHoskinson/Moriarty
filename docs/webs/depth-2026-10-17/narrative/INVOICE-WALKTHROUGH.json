@@ -1,0 +1,513 @@
+{
+  "format": "moriarty-webs-invoice-display/1",
+  "purpose": "Ordinary educational display data for one partial invoice payment. It is not a proof export, transaction, datum schema, request artifact or execution receipt.",
+  "evidenceClass": "editorial-illustration-derived-from-inspected-source",
+  "title": "One partial payment, one whole-execution proof design",
+  "asset": {
+    "displayName": "CASH",
+    "network": "oracle-unit",
+    "issuer": "invoice-issuer",
+    "reference": "cash",
+    "scale": 0,
+    "scope": "Source-fixture asset identity; no Cardano policy ID or deployed asset identity is asserted."
+  },
+  "scenario": {
+    "action": "partial",
+    "inputs": {
+      "amount": 35
+    },
+    "fundingPolicy": {
+      "label": "Proposed 112 CASH funding for one partial payment",
+      "openingCash": 112,
+      "invoiceBacking": 100,
+      "reserveBacking": 10,
+      "onePartialFeeAllowance": 2,
+      "implementedBySuppliedOpen": false,
+      "openingTransaction": null,
+      "payerOfAdditionalTwo": null
+    },
+    "before": {
+      "state": {
+        "opened": true,
+        "paid": 0,
+        "marker": 7
+      },
+      "escrowCash": 112,
+      "invoiceDuty": {
+        "name": "invoice",
+        "debtor": "escrow",
+        "creditor": "seller",
+        "amount": 100,
+        "present": true
+      },
+      "reserveDuty": {
+        "name": "reserve",
+        "debtor": "escrow",
+        "creditor": "buyer",
+        "amount": 10,
+        "present": true
+      },
+      "recipientDeltasBaseline": {
+        "seller": 0,
+        "fees": 0
+      }
+    },
+    "after": {
+      "state": {
+        "opened": true,
+        "paid": 35,
+        "marker": 7
+      },
+      "escrowCash": 75,
+      "invoiceDuty": {
+        "name": "invoice",
+        "debtor": "escrow",
+        "creditor": "seller",
+        "amount": 65,
+        "present": true
+      },
+      "reserveDuty": {
+        "name": "reserve",
+        "debtor": "escrow",
+        "creditor": "buyer",
+        "amount": 10,
+        "present": true
+      },
+      "recipientDeltas": {
+        "seller": 35,
+        "fees": 2
+      }
+    },
+    "orderedSourceEffects": [
+      {
+        "order": 1,
+        "kind": "fee",
+        "from": "escrow",
+        "to": "fees",
+        "amount": 2,
+        "asset": "CASH"
+      },
+      {
+        "order": 2,
+        "kind": "transfer",
+        "from": "escrow",
+        "to": "seller",
+        "amount": 35,
+        "asset": "CASH"
+      },
+      {
+        "order": 3,
+        "kind": "discharge",
+        "duty": "invoice",
+        "amount": 35,
+        "asset": "CASH"
+      },
+      {
+        "order": 4,
+        "kind": "stateUpdate",
+        "field": "paid",
+        "from": 0,
+        "to": 35
+      }
+    ],
+    "preserved": [
+      "opened remains true",
+      "marker remains 7",
+      "reserve duty remains present at 10 CASH",
+      "invoice duty identity remains escrow-to-seller in CASH",
+      "Any other state needs the selected profile and consumer framing; no complete ledger frame is claimed."
+    ],
+    "equations": [
+      {
+        "label": "Custody conservation",
+        "expression": "112 = 35 + 2 + 75",
+        "left": 112,
+        "right": 112
+      },
+      {
+        "label": "Invoice duty",
+        "expression": "100 + 0 - 35 = 65",
+        "left": 65,
+        "right": 65
+      },
+      {
+        "label": "Reserve duty",
+        "expression": "10 + 0 - 0 = 10",
+        "left": 10,
+        "right": 10
+      },
+      {
+        "label": "Continuing duties",
+        "expression": "65 + 10 = 75",
+        "left": 75,
+        "right": 75
+      },
+      {
+        "label": "Gross debit",
+        "expression": "35 + 2 = 37",
+        "left": 37,
+        "right": 37
+      }
+    ],
+    "newLiabilities": 0,
+    "sourceRefs": [
+      "N05",
+      "N06",
+      "N07"
+    ]
+  },
+  "conditionCoverage": {
+    "model": "one-whole-execution-relation",
+    "displayedCheckCount": 3,
+    "plannedProofInstanceCount": 1,
+    "actualProofInstancesIncluded": 0,
+    "explanation": "The three displayed checks explain aspects of the same partial action. A single whole-execution relation can cover them together. This display does not remove independent pieces of a proof or demonstrate a required-set consumer.",
+    "conditions": [
+      {
+        "id": "payment",
+        "label": "Payment and custody",
+        "assertion": "The selected partial amount is 35, is positive and is below the opening invoice duty of 100; seller receives 35 and escrow custody changes with every financial effect.",
+        "source": "partial requires, transfer and selected accounting profile",
+        "coveredByPlannedRelation": "partial-whole-execution"
+      },
+      {
+        "id": "fee",
+        "label": "Separate fee",
+        "assertion": "The ordered program effect charges 2 CASH from escrow to fees; this adds to gross debit and does not discharge the invoice.",
+        "source": "partial fee before transfer",
+        "coveredByPlannedRelation": "partial-whole-execution"
+      },
+      {
+        "id": "duties",
+        "label": "Continuing agreement",
+        "assertion": "Discharge reduces invoice 100 to 65, paid increases 0 to 35 and reserve duty remains 10; opened stays true and marker stays 7.",
+        "source": "partial discharge, next and ensures; unchanged source fields",
+        "coveredByPlannedRelation": "partial-whole-execution"
+      }
+    ],
+    "plannedStrand": {
+      "displayId": "partial-whole-execution",
+      "meaning": "One proposed proof instance plus statement and binding metadata",
+      "proofBytes": null,
+      "publicInputs": null,
+      "verificationKeyIdentity": null,
+      "statementBytes": null,
+      "transactionReference": null
+    },
+    "sourceRefs": [
+      "N06",
+      "N08"
+    ]
+  },
+  "statementExplanation": {
+    "humanMeaning": "For this program and partial action, this predecessor and authorized input amount 35 lead to the stated ordered effects and continuing state.",
+    "financialFieldsForReader": {
+      "openingEscrowCash": 112,
+      "openingInvoiceDuty": 100,
+      "openingReserveDuty": 10,
+      "paymentToSeller": 35,
+      "feeToFees": 2,
+      "closingEscrowCash": 75,
+      "closingInvoiceDuty": 65,
+      "closingReserveDuty": 10
+    },
+    "bindingSubjects": [
+      "program and selected relation",
+      "compiler/semantics profile",
+      "predecessor state reference and sequence",
+      "settlement consumer",
+      "catalogue and verification-key identities",
+      "authorized intents",
+      "claimant"
+    ],
+    "serializedPayload": null,
+    "sourceOrTransactionMapping": "Reader-level subjects only. Exact byte offsets, transaction field paths and consumer schema are not supplied by this display.",
+    "sourceRefs": [
+      "N02",
+      "N08",
+      "N09",
+      "N11"
+    ]
+  },
+  "participants": [
+    {
+      "id": "buyer",
+      "role": "Creditor of reserve duty and funding account in literal open source",
+      "known": "open transfers source-computed funding from buyer and charges buyer a separate 3 CASH fee.",
+      "notAssigned": "No signer or sponsor of the extra 2 CASH in the proposed funding policy is identified."
+    },
+    {
+      "id": "seller",
+      "role": "Invoice creditor and recipient of payment",
+      "known": "Receives 35 CASH in this partial action.",
+      "notAssigned": "This source account label does not establish a particular wallet key or signing role."
+    },
+    {
+      "id": "escrow",
+      "role": "Custody account and debtor for both duties",
+      "known": "Pays 37 CASH total and retains 75 in the proposed illustration.",
+      "notAssigned": "The supplied invoice source does not identify the human or key authorizing an escrow intent."
+    },
+    {
+      "id": "fees",
+      "role": "Program fee recipient",
+      "known": "Receives 2 CASH from escrow for the partial action.",
+      "notAssigned": "Not identified as the network fee recipient or sponsor."
+    },
+    {
+      "id": "prover",
+      "role": "Producer of a proof instance",
+      "known": "Would produce evidence for the selected relation and statement.",
+      "notAssigned": "No service, proof identity or executed proof is assigned in this display."
+    },
+    {
+      "id": "builder",
+      "role": "Assembler of transaction candidate",
+      "known": "Would select inputs and outputs under consumer rules and obtain required authorization.",
+      "notAssigned": "No shipping general Web builder or transaction format is asserted."
+    },
+    {
+      "id": "claimant",
+      "role": "Party named for claim-output release",
+      "known": "Opus source reading requires each claimant signature at settlement and claimant-signed reclaim after expiry.",
+      "notAssigned": "The claimant is not assigned to buyer, seller, prover or builder."
+    }
+  ],
+  "lifecycleDisplay": {
+    "status": "Source-described route applied conceptually to the one-Strand teaching design; not observed transactions.",
+    "openingExcluded": true,
+    "issueTransactionCount": 1,
+    "settlementTransactionCount": 1,
+    "claimOutputCount": 1,
+    "steps": [
+      {
+        "id": "authorize",
+        "lane": "offchain",
+        "title": "Prepare authorized intent",
+        "inputs": [
+          "identified financial action",
+          "owner constraints",
+          "consumer context"
+        ],
+        "outputs": [
+          "authorized intent needed before a statement that commits to it"
+        ],
+        "funding": null,
+        "signers": "Owner authorization required; identity and signing format unresolved for this invoice."
+      },
+      {
+        "id": "prove",
+        "lane": "offchain",
+        "title": "Produce one whole-execution Strand",
+        "inputs": [
+          "source/relation identity",
+          "statement",
+          "witness"
+        ],
+        "outputs": [
+          "one proof instance with its statement and binding metadata"
+        ],
+        "funding": null,
+        "signers": "Proof production is distinct from owner authorization and transaction signing."
+      },
+      {
+        "id": "issue",
+        "lane": "onchain-source-design",
+        "title": "Issue transaction",
+        "inputs": [
+          "proof and required claim-policy data",
+          "separately funded ledger resources"
+        ],
+        "outputs": [
+          "one claim output holding minimum ADA",
+          "one claim token"
+        ],
+        "programCashPaidToSeller": 0,
+        "claimTokenDelta": 1,
+        "minAda": null,
+        "networkFee": null,
+        "signers": "Issue signer/funder matrix not specified in supplied material.",
+        "proofVerification": "At Issue, per the reviewed source reading."
+      },
+      {
+        "id": "settle",
+        "lane": "onchain-source-design",
+        "title": "Settlement transaction",
+        "inputs": [
+          "escrow predecessor state",
+          "one required claim output",
+          "authorized intents and other consumer-required data"
+        ],
+        "outputs": [
+          "seller payment 35 CASH",
+          "fee payment 2 CASH",
+          "continuing escrow 75 CASH and duties 65/10",
+          "claim release effects under consumer rules"
+        ],
+        "claimTokenDelta": -1,
+        "networkFee": null,
+        "signers": "Each consumed claim claimant signs; owner-intent authorization is a separate requirement. Full transaction signer matrix unresolved.",
+        "proofVerification": "Settlement reconstructs and compares the statement; the described route does not verify the proof again."
+      },
+      {
+        "id": "observe",
+        "lane": "offchain-observation",
+        "title": "Reconcile actual effects",
+        "inputs": [
+          "submitted transaction reference and target observations"
+        ],
+        "outputs": [
+          "separate inclusion, finality and complete effect readback"
+        ],
+        "transactionReference": null,
+        "observation": "Not performed by this display."
+      }
+    ],
+    "unusedClaimNote": "Per the reviewed source, issued claims hold minimum ADA until settlement or claimant-signed reclaim after expiry. Reclaim timing and funds must be specified in a concrete integration.",
+    "sourceRefs": [
+      "N09",
+      "N11"
+    ]
+  },
+  "fundingComparison": [
+    {
+      "label": "Proposed teaching policy",
+      "openingCash": 112,
+      "invoiceDutyBefore": 100,
+      "reserveDutyBefore": 10,
+      "sellerPayment": 35,
+      "partialFee": 2,
+      "closingCash": 75,
+      "closingInvoiceDuty": 65,
+      "closingReserveDuty": 10,
+      "closingDutyTotal": 75,
+      "custodyMinusDuties": 0,
+      "evidence": "arithmetic illustration only",
+      "origin": "No supplied action creates the extra funding."
+    },
+    {
+      "label": "Literal source open(90,10), followed arithmetically by partial(35)",
+      "openingCash": 110,
+      "invoiceDutyBefore": 100,
+      "reserveDutyBefore": 10,
+      "sellerPayment": 35,
+      "partialFee": 2,
+      "closingCash": 73,
+      "closingInvoiceDuty": 65,
+      "closingReserveDuty": 10,
+      "closingDutyTotal": 75,
+      "custodyMinusDuties": -2,
+      "evidence": "source-derived worksheet, not a run",
+      "origin": "Source open adds 10 to principal, transfers 110 and separately charges buyer opening fee 3; buyer gross opening debit 113."
+    },
+    {
+      "label": "Checked-in k2 invoice request specimen",
+      "openingCash": 109,
+      "invoiceDutyBefore": 90,
+      "reserveDutyBefore": 14,
+      "sellerPayment": 35,
+      "partialFee": 2,
+      "closingCash": 72,
+      "closingInvoiceDuty": 55,
+      "closingReserveDuty": 14,
+      "closingDutyTotal": 69,
+      "custodyMinusDuties": 3,
+      "evidence": "request input values inspected; after-values independently derived, not rerun",
+      "origin": "k2/requests/invoice-partial.request.json; synthetic caller-supplied context; not the teaching scenario."
+    }
+  ],
+  "laterLifecycleNotes": [
+    {
+      "action": "another partial",
+      "sourceFee": 2,
+      "meaning": "Another 2 CASH fee reduces custody without discharging a duty. The 112 teaching allowance funds only one partial."
+    },
+    {
+      "action": "finish after this partial under proposed funding arithmetic",
+      "sellerPayment": 65,
+      "additionalSourceFinishFee": 0,
+      "closingEscrowCash": 10,
+      "invoiceDuty": 0,
+      "invoicePresent": true,
+      "reserveDuty": 10,
+      "opened": false,
+      "paid": 100,
+      "evidence": "Source arithmetic applied to proposed state, not execution."
+    },
+    {
+      "action": "finish after source 110-funded worksheet",
+      "sellerPayment": 65,
+      "additionalSourceFinishFee": 0,
+      "closingEscrowCash": 8,
+      "invoiceDuty": 0,
+      "invoicePresent": true,
+      "reserveDuty": 10,
+      "opened": false,
+      "paid": 100,
+      "evidence": "Source-derived arithmetic, not execution."
+    },
+    {
+      "action": "reserve return / discharge",
+      "availableInSuppliedSource": false,
+      "meaning": "No reserve-return or reserve-discharge action exists. A program change and separately qualified integration are required."
+    },
+    {
+      "action": "Close in reviewed V2 source",
+      "condition": "zero balances and duties",
+      "qualification": "Opus source-level interpretation only; remaining reserve duty blocks this condition."
+    }
+  ],
+  "developerArtifacts": {
+    "source": {
+      "path": "experiments/moriarty-cardano-rust/r1cs/fixtures/reused/installment-invoice.mori",
+      "text": "language \"moriarty/1\";\nagreement InstallmentInvoice {\n  state opened: Bool = false;\n  state paid: UInt = 0;\n  state marker: UInt = 7;\n  asset CASH = { network: \"oracle-unit\", issuer: \"invoice-issuer\", reference: \"cash\", scale: 0 };\n  action open(principal: UInt, reserve: UInt) {\n    requires not opened;\n    ensures paid == 0;\n    requires not liability_present(\"invoice\");\n    let face = principal + 10;\n    let funding = face + reserve;\n    transfer(CASH, \"buyer\", \"escrow\", funding);\n    fee(CASH, \"buyer\", \"fees\", 3);\n    liability(\"invoice\", CASH, \"escrow\", \"seller\", principal);\n    liability(\"invoice\", CASH, \"escrow\", \"seller\", 10);\n    liability(\"reserve\", CASH, \"escrow\", \"buyer\", reserve);\n    next opened = true;\n    ensures liability_amount(\"invoice\") == face and liability_amount(\"reserve\") == reserve;\n  }\n  action partial(amount: UInt) {\n    requires opened and amount > 0;\n    let opening = liability_amount(\"invoice\");\n    requires amount < opening;\n    fee(CASH, \"escrow\", \"fees\", 2);\n    transfer(CASH, \"escrow\", \"seller\", amount);\n    discharge(\"invoice\", amount);\n    next paid = paid + amount;\n    ensures liability_amount(\"invoice\") == opening - amount;\n  }\n  action finish() {\n    requires opened;\n    let closing = liability_amount(\"invoice\");\n    transfer(CASH, \"escrow\", \"seller\", closing);\n    discharge(\"invoice\", closing);\n    next paid = paid + closing;\n    next opened = false;\n    ensures liability_present(\"invoice\") and liability_amount(\"invoice\") == 0;\n  }\n}\n",
+      "scope": "Literal inspected source, unchanged."
+    },
+    "selectorPath": "experiments/moriarty-cardano-rust/k2/requests/invoice-partial.selector.json",
+    "selector": {
+      "format": "moriarty-k2-relation-selector/1",
+      "language": "moriarty/1",
+      "semantics": "moriarty-core/1",
+      "action": "partial",
+      "adapter": "SettlementHashV2",
+      "cap": "NotBound",
+      "accounting": "GrossDebitAndFees",
+      "frame": "TouchedOnly"
+    },
+    "requestPath": "experiments/moriarty-cardano-rust/k2/requests/invoice-partial.request.json",
+    "requestScope": "Actual file uses 109 escrow / 90 invoice / 14 reserve and synthetic context. No request for the proposed 112 scenario was generated or executed.",
+    "localOutputs": [
+      "relation descriptor",
+      "statement bytes/digest",
+      "two public inputs",
+      "decoded ordered body slots",
+      "fixedMatrix.violated and related matrix comparison fields"
+    ],
+    "packageStopsBefore": "The documented proof export emits no Plutus Data/CBOR or transaction. A general Web-to-transaction path is not established.",
+    "sourceRefs": [
+      "N10"
+    ]
+  },
+  "excludedFromCashWorksheet": [
+    "Cardano network fees",
+    "collateral",
+    "claim-output minimum ADA",
+    "thread-reserve lovelace",
+    "optional service fees"
+  ],
+  "unresolvedQuestionIds": [
+    "Q01",
+    "Q02",
+    "Q03",
+    "Q04",
+    "Q05",
+    "Q06",
+    "Q07",
+    "Q08",
+    "Q09",
+    "Q10",
+    "Q11",
+    "Q12"
+  ],
+  "securityInterpretation": "No security judgment is supplied. Consumer and authorization descriptions retain their attributed source-reading scope; Opus owns assessment."
+}

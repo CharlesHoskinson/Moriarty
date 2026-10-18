@@ -1,0 +1,92 @@
+[
+  {
+    "clauseId": "DF-01",
+    "clause": "host_codec.py keeps its current 19096 bytes (SHA-256 8f59b28f8307c789dc1f4abe7251b0de661156af130650e9b358bceb668df377) as an exact byte prefix, and the existing first-16134-byte preservation pin stays authoritative. build_value_data, build_output_reference, build_env_data and build_c2_mint_data are added only in an appended suffix, giving eleven public APIs. The suffix must not rebind, wrap, shadow or alter any top-level name of the prefix; the seven existing APIs keep their code and behaviour.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Protects the provisional seven-API host and its narrow passes; makes the increment auditable as a pure suffix."
+  },
+  {
+    "clauseId": "DF-02",
+    "clause": "Each factory is pure and deterministic: no I/O, environment, clock, randomness, global or cached mutable state, argument mutation, subprocess, network, SDK or native call, and no call to encode_data, hashing or the statement helpers. In this increment the suffix adds no import and uses no eval, exec, compile, open, __import__, breakpoint, input, globals, locals, vars, getattr, setattr, delattr, __builtins__, global, nonlocal or dunder attribute access. A later increment may replace this phase gate only through a fresh audit of the actual combined candidate.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Building tuples needs no imports or effects; the gate is scoped to this phase so it does not permanently forbid future APIs or imports."
+  },
+  {
+    "clauseId": "DF-03",
+    "clause": "Each factory returns a Data node in the lowercase tagged-tuple algebra admitted by encode_data: ('int', int), ('bytes', bytes), ('list', list), ('map', list of 2-tuples), ('constr', index, list). Every node and map pair is an exact tuple; every container is an exact list created by that call and shared with no argument and no other call; every integer is an exact int; every bytes leaf is exact bytes equal to the caller's value. The build_inputs.py uppercase tuples ('I', 'B', 'Constr', 'List', 'Map') and UPLC text are not outputs.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Matches the reviewed encoder's admission rule A1 and prevents aliasing or cache-poisoning between callers."
+  },
+  {
+    "clauseId": "DF-04",
+    "clause": "Exact type means type(x) is T. An int parameter refuses bool and int subclasses; a bytes parameter refuses bytearray, memoryview, str (including hex text) and bytes subclasses; list, tuple and str parameters refuse subclasses. None is accepted only where a clause names it. Nothing is coerced, sorted, truncated, padded or defaulted.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Subclasses can override comparison and length; coercion like build_inputs.py int(i)/list(f) hides caller errors."
+  },
+  {
+    "clauseId": "DF-05",
+    "clause": "Every refusal raises ValueError (a private subclass is allowed) and returns nothing. The message is fixed text beginning with the refusal prefix of the failing check (a parameter or element path followed by a colon) and never contains or formats an argument value. Checks run in parameter order and, within a parameter, in the listed order; the first failing check decides the error. No argument value may cause TypeError, OverflowError, RecursionError or any other exception class; Python call-protocol errors (missing or unknown parameters) are outside this clause.",
+    "position": "AUTHOR_FOR",
+    "rationale": "A deterministic, testable refusal order that does not leak inputs, consistent with the host's path-prefixed ValueError style."
+  },
+  {
+    "clauseId": "DF-06",
+    "clause": "build_output_reference(transaction_id, output_index) returns ('constr', 0, [('bytes', transaction_id), ('int', output_index)]). transaction_id is exact bytes of length 32, else transaction_id:; output_index is an exact int in 0..65535, else output_index:. SOURCE: transaction.ak OutputReference single constructor and field order; claim.ak well_formed 32-byte id and 0 <= index < 65536 for settle_outref. DESIGN: applying the 16-bit bound to every reference this factory builds.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Direct from the primary Aiken declaration and the C2 well_formed bounds; the generalised bound is disclosed as design."
+  },
+  {
+    "clauseId": "DF-07",
+    "clause": "build_value_data(lovelace, tokens) returns ('map', entries). If lovelace is an int, the first entry is (('bytes', b''), ('map', [(('bytes', b''), ('int', lovelace))])), also when lovelace is 0; if lovelace is None there is no ada entry. Each maximal run of consecutive tokens with the same policy then yields one entry (('bytes', policy), ('map', [(('bytes', name), ('int', quantity)), ...])) in input order. None with [] yields ('map', []). SOURCE (consumer only): the map-of-maps shape, ada under the empty policy and empty name, and the empty mint map follow build_inputs.py value(), thread_value and value([]). DESIGN: the None/0 lovelace convention.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Covers output values with ada and mint values without ada while staying honest that assets.ak is unread."
+  },
+  {
+    "clauseId": "DF-08",
+    "clause": "lovelace is None or an exact int in 0..2^64-1, else lovelace:. tokens is an exact list of at most 256 elements, else tokens:. Elements are then checked one at a time in index order, each completely before the next: an exact tuple of length 3, else tokens[]:; policy exact bytes of length 28, else tokens[].policy:; name exact bytes of length 0..32, else tokens[].name:; quantity an exact nonzero int in -(2^64-1)..2^64-1, else tokens[].quantity:; and, after the first element, (policy, name) strictly greater than the previous pair under bytewise unsigned lexicographic order, else tokens.order:. The factory never sorts, merges or drops entries. These bounds and the ordering rule are DESIGN, not ledger or Aiken law.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Refusing instead of normalising keeps the caller's order visible; the bounds keep the encoding within CBOR major types 0/1 and the encoder bounds; nothing is promoted to ledger law."
+  },
+  {
+    "clauseId": "DF-09",
+    "clause": "build_env_data(predicate_digest, vk_digest, claimant_vkh, settle_transaction_id, settle_output_index, statement_digest, expiry) returns ('constr', 0, [('int', 2), ('int', 0), ('bytes', b'MRG16-PVC-FAM2-G16-BLS-ARK04-HL2'), ('bytes', predicate_digest), ('bytes', vk_digest), ('bytes', claimant_vkh), ('constr', 0, [('bytes', settle_transaction_id), ('int', settle_output_index)]), ('bytes', statement_digest), ('int', expiry)]). predicate_digest, vk_digest, settle_transaction_id and statement_digest are exact bytes of length 32; claimant_vkh is exact bytes of length 28; settle_output_index is an exact int in 0..65535; expiry is an exact int in 0..2^64-1. Each refusal prefix is the parameter name followed by a colon. SOURCE: types.ak EnvV2 field order; claim.ak well_formed version 2, claim_kind 0, family_id core.family_v2, lengths and index bounds; core.ak family_v2. DESIGN: fixing the three constants and the expiry range.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The factory can only emit envelopes whose fixed fields satisfy well_formed; malformed-envelope negative fixtures stay explicit hand-written Data."
+  },
+  {
+    "clauseId": "DF-10",
+    "clause": "build_c2_mint_data(kind, vk=None, proof=None): kind is the exact str 'Issue' or 'Burn', else kind:. For 'Issue', vk and then proof must each be exact bytes of length 1..65536, else vk: or proof:, and the result is ('constr', 0, [('bytes', vk), ('bytes', proof)]). For 'Burn', vk and then proof must each be None, else vk: or proof:, and the result is ('constr', 1, []). SOURCE: types.ak C2Mint { Issue { vk, proof }, Burn } declaration and field order. DESIGN: the selector strings, the length bounds and refusing payloads for Burn.",
+    "position": "AUTHOR_FOR",
+    "rationale": "The redeemer shape comes from source; payloads are opaque public bytes; refusing a Burn payload avoids silently dropping it."
+  },
+  {
+    "clauseId": "DF-11",
+    "clause": "Factories check structure only. They do not check that vk_digest equals blake2b_256(vk), that statement_digest matches any statement, that a VK or proof is a valid Groth16 or curve encoding, or that any key hash, policy, transaction id, index or expiry exists, is authentic or is current. They compute no envelope token name, build no transaction and evaluate no validator. All arguments are caller-supplied and unauthenticated; outputs are local Data fixtures, not ledger evidence.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Keeps semantic, cryptographic and ledger checks with claim.ak, groth16 and Core/Rust, and prevents overclaiming."
+  },
+  {
+    "clauseId": "DF-12",
+    "clause": "Every factory output is admitted by the prefix encode_data: depth at most 3, at most 1029 expanded nodes, bytes leaves of at most 65536 bytes and integers within CBOR major types 0 and 1, so no bignum or tag-102 form arises; constructor indices are only 0 and 1 (tags 121 and 122).",
+    "position": "AUTHOR_FOR",
+    "rationale": "Guarantees composition with the reviewed encoder; avoids the X2 tag-102 round-trip gap."
+  },
+  {
+    "clauseId": "DF-13",
+    "clause": "UNVERIFIED and not claimed: stdlib cardano/assets.ak and aiken/collection/dict.ak (Value representation, key order, zero-quantity and ada-entry conventions), pvc2/groth16.ak (VK and proof sizes), the ledger ScriptContext builder, and equality of the Sol-capture types.ak with the utxo-worktree types.ak used by core.ak and claim.ak. The Value shape rests only on the build_inputs.py consumer; DF-07 and DF-08 choices are API conventions. No compiled-validator, VM, ledger or Preprod correspondence is claimed.",
+    "position": "AUTHOR_FOR",
+    "rationale": "States the honest limits of the current source."
+  },
+  {
+    "clauseId": "DF-14",
+    "clause": "test_data_factories.py has 13 test methods: test_00 pins the 19096-byte prefix and its SHA-256 and inspects the suffix best-effort; test_01..test_12 compare factory outputs with literal Data and literal CBOR bytes and check refusals. Before the factories exist test_00 passes and each of test_01..test_12 fails with an AssertionError containing 'missing implementation', with no error, skip or expected failure. The test reads only the regular non-symlink sibling host_codec.py (lstat, O_NOFOLLOW, 2 MiB cap), executes exactly the pinned bytes it inspected, writes nothing and uses no network, subprocess, RNG, VM, proof, SDK or private material. Root runs it only after full human source and effect inspection of both files, as python3 -I -B /abs/dir/test_data_factories.py in a dedicated directory holding only the two files, with wall 10 s, CPU 10 s, address space 512 MiB, file size 2 MiB, core 0 and a minimal secret-free environment.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Gives a RED baseline that cannot be satisfied by a fallback; expected values never come from code under test."
+  },
+  {
+    "clauseId": "DF-15",
+    "clause": "This is an author proposal by claude-opus-5-5 with tools off and nothing executed. Sol HIGH implements; a fresh Muse audits that implementation; a fresh non-author Opus later audits the actual combined host plus statement increment, preserving these literal clauses (same provider; independence is context only). Passing tests are narrow local host Data checks, not Rust, VM, ledger, security, financial or Preprod acceptance, and every operational and native authority stays closed.",
+    "position": "AUTHOR_FOR",
+    "rationale": "Separates author, implementer and auditors, and stops passes being promoted beyond their scope."
+  }
+]

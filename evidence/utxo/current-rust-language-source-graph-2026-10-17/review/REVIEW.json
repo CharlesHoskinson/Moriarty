@@ -1,0 +1,92 @@
+{
+  "coverage": [
+    {
+      "checked": "Full 63-line (3,015-byte) bounded packet manifest read completely (lines 1-63); verified format moriarty-bounded-source-packet/1, 9 listed packet payloads with byte sizes and SHA-256 digests, bounded scope declaration, and nativeAuthority=0.",
+      "read": true,
+      "sourceId": "MANIFEST.json"
+    },
+    {
+      "checked": "Full 2,558-line (138,354-byte) projection read completely across bounded views (lines 1-800, 801-1600, 1601-2367, 2360-2405, 2401-2558); independently verified all 148 projected nodes (61 CLAIM_OBJECT, 37 PROFILE_LABEL, 30 CITED_SOURCE_IDENTITY, 20 UNLOCATED_PATTERN_FAMILY) against ADMISSION-SOURCE-TABLE.json, PATTERN-INVENTORY.json, and CORE-ALL61-LITERAL-ATTRIBUTION-ADOPTION.json.",
+      "read": true,
+      "sourceId": "GRAPH-PROJECTION.json"
+    },
+    {
+      "checked": "Full 1,676-line (196,818-byte) parent source table read completely across overlapping bounded views (lines 1-345, 340-550, 551-805, 801-1089, 1085-1350, 1351-1676); independently checked all 61 claims (/claims/0../claims/60), all 37 profile anchors (/claims/i/profile), all 30 cited-source identity anchors (29 at /claims/i/citations/j and 1 at /familyInventory/0/citations/0), and all 20 familyInventory records (/familyInventory/0../familyInventory/19) including exact physical line ranges and literals.",
+      "read": true,
+      "sourceId": "ADMISSION-SOURCE-TABLE.json"
+    },
+    {
+      "checked": "Full 121-line (3,366-byte) adoption record read completely (lines 1-121); verified parentTableSha256 23a186d5f142239eab03fe6239ef188799f3fda539b2c356803a57cd5e3ed706 and exact 61-claim partition membership across Parts 1-4 (18+12+12+19=61, 0 duplicates, 0 missing), separate source snapshots (Core main 8174e52975d8db9bf59636fea0fa338c0f47c855 vs backend 54fc7a1a54106245abb1a5ef6e16407464e1b654), and all readiness flags false / nativeAuthority=0.",
+      "read": true,
+      "sourceId": "CORE-ALL61-LITERAL-ATTRIBUTION-ADOPTION.json"
+    },
+    {
+      "checked": "Full 123-line (4,701-byte) pattern inventory read completely (lines 1-123); verified all 20 pattern family IDs and names (S01-S04, escrow-time, interval-boundary, joint-role, oracle-observation, 4 swaps-batch entries, F01-F04, AP01-AP04) against ADMISSION-SOURCE-TABLE.json and GRAPH-PROJECTION.json without following case_file pointers.",
+      "read": true,
+      "sourceId": "PATTERN-INVENTORY.json"
+    },
+    {
+      "checked": "Full 16-line (2,433-byte) v2 graph candidate report read completely (lines 1-16); checked input hash citations, 67-node anchor repair description (noting prose shorthand /claims/i/citations/j vs actual /familyInventory/0/citations/0 for PATTERN-INVENTORY.json), and preserved non-semantic/non-runtime scope.",
+      "read": true,
+      "sourceId": "GRAPH_REPORT.md"
+    },
+    {
+      "checked": "Full 98-line (3,849-byte) author/candidate check record read completely (lines 1-98) as attributed evidence (actual_model_identity gpt-6-luna); inspected reported 289-node/481-edge counts, node_kind_counts, 67 anchor repairs, and Luna-reported Graphify 0.9.92 default-dedup roundtrip checks.",
+      "read": true,
+      "sourceId": "SOURCE-CHECKS.json"
+    },
+    {
+      "checked": "Full 1,035-line (26,204-byte) root mechanical check record read completely across bounded views (lines 1-800, 801-1035) as attributed evidence; verified all 67 changedNodes entries (37 PROFILE_LABEL, 30 CITED_SOURCE_IDENTITY), 8 added anchor fields per node, changedExistingFields=[], 770 parent pointer/excerpt/hash checks, and graphifyDefaultRoundtripIndependentByRoot=false.",
+      "read": true,
+      "sourceId": "ROOT-MECHANICAL-CHECK.json"
+    },
+    {
+      "checked": "Full 823-line (19,482-byte) prior mechanical stop record read completely across bounded views (lines 1-800, 801-823); verified that the exact 67 node IDs (37 PROFILE_LABEL, 30 CITED_SOURCE_IDENTITY) flagged for missing parent anchors in prior candidate af3a4e171a50dc8fbc00322109867bf79410107c6db7578a6882e05462bd74ab match the 67 repaired nodes in ROOT-MECHANICAL-CHECK.json and GRAPH-PROJECTION.json.",
+      "read": true,
+      "sourceId": "ORIGINAL-MISSING-ANCHORS.json"
+    },
+    {
+      "checked": "Full 51-line (1,847-byte) installed tool verification record read completely (lines 1-51) as attributed evidence; noted 3 API files (graphify/build.py, graphify/diagnostics.py, graphify/cli.py) matching official 0.9.92 wheel, restored optional tree-sitter-sql 0.3.11, and managed Foreman skill aliases retained at 0.9.91.",
+      "read": true,
+      "sourceId": "GRAPHIFYY-0.9.92-INSTALLED-VERIFICATION.json"
+    }
+  ],
+  "findings": [
+    {
+      "evidence": "All 37 PROFILE_LABEL nodes and 30 CITED_SOURCE_IDENTITY nodes (67 total, matching the exact 67 IDs in ORIGINAL-MISSING-ANCHORS.json and ROOT-MECHANICAL-CHECK.json) in GRAPH-PROJECTION.json carry explicit parent_json_pointer, parent_line_start, parent_line_end, source_document (\"ADMISSION-SOURCE-TABLE.json\"), source_location, and source_sha256 (\"23a186d5f142239eab03fe6239ef188799f3fda539b2c356803a57cd5e3ed706\"). Every pointer and physical line range resolves to the first matching profile or citation metadata entry in ADMISSION-SOURCE-TABLE.json, while cited body digests are kept separately in source_identity_sha256_literal with source_body_opened=false.",
+      "id": "F01-67-NEW-NODE-ANCHORS-VERIFIED",
+      "requiredFix": "None; the 67 missing node anchors identified in ORIGINAL-MISSING-ANCHORS.json are accurately repaired in the projected v2 nodes.",
+      "severity": "info"
+    },
+    {
+      "evidence": "All 61 CLAIM_OBJECT nodes (/claims/0 through /claims/60: 9 CALL_EDGE, 1 INFERENCE, 46 SOURCE_DECLARATION, 5 UNINSPECTED_BOUNDARY) and all 20 UNLOCATED_PATTERN_FAMILY nodes (/familyInventory/0 through /familyInventory/19) in GRAPH-PROJECTION.json preserve exact IDs, classifications, profiles, statements,UNLOCATED_IN_THIS_PACKET mappings, empty constructs_literal arrays, reason_literal strings, and physical line ranges from ADMISSION-SOURCE-TABLE.json, matching all 20 ID/name pairs in PATTERN-INVENTORY.json and exact 61-claim membership across the 4 parts in CORE-ALL61-LITERAL-ATTRIBUTION-ADOPTION.json.",
+      "id": "F02-61-CLAIMS-AND-20-FAMILIES-LITERAL-PRESERVATION",
+      "requiredFix": "None; literal preservation across all 61 claim nodes and 20 unlocated family nodes is verified.",
+      "severity": "info"
+    },
+    {
+      "evidence": "GRAPH_REPORT.md line 10 states as shorthand that \"30 cited-source identity nodes each point to the first matching /claims/i/citations/j object\", whereas in GRAPH-PROJECTION.json (lines 1935-1950) and ADMISSION-SOURCE-TABLE.json (lines 1227-1233), 29 CITED_SOURCE_IDENTITY nodes point to /claims/i/citations/j and 1 node (body:4ee53faaf7ba6209fb2b for PATTERN-INVENTORY.json) points to /familyInventory/0/citations/0 (the first matching citation metadata object for PATTERN-INVENTORY.json in ADMISSION-SOURCE-TABLE.json).",
+      "id": "F03-REPORT-PROSE-POINTER-SHORTHAND",
+      "requiredFix": "No graph or projection anchor change required; if GRAPH_REPORT.md prose is updated later, note that 29 cited-source identity anchors use /claims/i/citations/j and 1 (PATTERN-INVENTORY.json) uses /familyInventory/0/citations/0.",
+      "severity": "low"
+    },
+    {
+      "evidence": "GRAPH-PROJECTION.json projects 148 nodes (61 CLAIM_OBJECT, 37 PROFILE_LABEL, 30 CITED_SOURCE_IDENTITY, 20 UNLOCATED_PATTERN_FAMILY) with redundant display/excerpts omitted. The full 2.5 MB graph.json (289 nodes, 481 edges), including 120 SOURCE_CITATION_RECORD nodes, 21 other metadata nodes, 481 directed edge semantics, graph.html UI, and Graphify 0.9.92 execution are outside this bounded packet and were not directly inspected; SOURCE-CHECKS.json and ROOT-MECHANICAL-CHECK.json (770 parent pointer/excerpt/hash checks, graphifyDefaultRoundtripIndependentByRoot=false) and GRAPHIFYY-0.9.92-INSTALLED-VERIFICATION.json (3 API files matched to official wheel, managed Foreman skill aliases at 0.9.91) are treated strictly as attributed evidence. Separate source snapshots (Core main 8174e52975d8db9bf59636fea0fa338c0f47c855 vs backend 54fc7a1a54106245abb1a5ef6e16407464e1b654) and uninspected lexer/driver/helper/Sherlock boundaries remain open.",
+      "id": "F04-BOUNDED-SCOPE-AND-ATTRIBUTED-EVIDENCE-LIMITS",
+      "requiredFix": "Do not treat this bounded 148-node/67-anchor source-attribution review as whole-graph approval, supply-chain approval, cross-snapshot equivalence, or semantic/runtime/security/proof/ledger closure.",
+      "severity": "info"
+    }
+  ],
+  "recommendation": {
+    "firstBlockedBoundary": "Full 2.5 MB graph.json outside the 148-node projection (120 SOURCE_CITATION_RECORD nodes, 21 other metadata nodes, and 481 edge semantics), graph.html/UI, independent Graphify 0.9.92 roundtrip execution, and uninspected Core/backend source bodies and runtime/security/proof/ledger boundaries.",
+    "ledgerReady": false,
+    "nativeAuthority": 0,
+    "operatorReady": false,
+    "runtimeReady": false,
+    "securityReady": false,
+    "sourceAttributionReady": true,
+    "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+  },
+  "reviewToken": "core-language-graph-v2-bounded-gemini4-argon-high-20261017",
+  "summary": "Independent nonauthor bounded source-attribution review completed (requested model Gemini 4 Argon High via AGY; provider/routing identity metadata is not independently attested). All 10 files in the bounded packet (MANIFEST.json plus all 9 listed payloads) were read in full using read-only bounded file views inside the packet without shell, code execution, or following external/provenance/case_file/cited-body paths. The falsifiable predicate holds across all 148 projected nodes in GRAPH-PROJECTION.json: (1) all 67 newly anchored nodes (37 PROFILE_LABEL and 30 CITED_SOURCE_IDENTITY, matching the exact 67 node IDs in ORIGINAL-MISSING-ANCHORS.json and ROOT-MECHANICAL-CHECK.json) carry accurate parent_json_pointer, physical line ranges (parent_line_start/parent_line_end), source_location, source_document (\"ADMISSION-SOURCE-TABLE.json\"), and parent-table source_sha256 (\"23a186d5f142239eab03fe6239ef188799f3fda539b2c356803a57cd5e3ed706\"), with each PROFILE_LABEL pointing to the first matching /claims/i/profile line and each CITED_SOURCE_IDENTITY pointing to the first matching citation metadata object in ADMISSION-SOURCE-TABLE.json (29 under /claims/i/citations/j and 1 for PATTERN-INVENTORY.json under /familyInventory/0/citations/0; GRAPH_REPORT.md line 10 states /claims/i/citations/j as prose shorthand) while preserving the cited-body digest in source_identity_sha256_literal with source_body_opened=false; (2) all 61 projected CLAIM_OBJECT nodes (/claims/0../claims/60) preserve exact claim IDs, statements, classifications (9 CALL_EDGE, 1 INFERENCE, 46 SOURCE_DECLARATION, 5 UNINSPECTED_BOUNDARY), profile literals, and parent line ranges from ADMISSION-SOURCE-TABLE.json and match exact membership in CORE-ALL61-LITERAL-ATTRIBUTION-ADOPTION.json (Parts 1-4: 18+12+12+19=61); and (3) all 20 projected UNLOCATED_PATTERN_FAMILY nodes (/familyInventory/0../familyInventory/19) preserve exact IDs, names, UNINSPECTED_BOUNDARY classifications, UNLOCATED_IN_THIS_PACKET mappings, empty constructs_literal arrays, and reason_literal strings from ADMISSION-SOURCE-TABLE.json and PATTERN-INVENTORY.json, with no family-to-claim support edges or pattern implementation claims. SOURCE-CHECKS.json, ROOT-MECHANICAL-CHECK.json (reporting 289 nodes, 481 edges, 770 parent pointer/range/hash/excerpt checks, 67 added anchors, unchanged original assertions/edges, and Luna-reported Graphify 0.9.92 default-dedup roundtrip not independently rerun by root or this review), and GRAPHIFYY-0.9.92-INSTALLED-VERIFICATION.json (reporting 3 API files matching official PyPI wheel while managed Foreman skill aliases retain 0.9.91) were inspected strictly as attributed evidence, not whole-graph or whole-supply-chain approval. Full 2.5 MB graph.json, 120 SOURCE_CITATION_RECORD nodes, 21 other nodes, 481 edge semantics, HTML/UI, Graphify API source, later driver34/lexer53/Sherlock26 notes, and cross-snapshot equivalence between Core main 8174e52975d8db9bf59636fea0fa338c0f47c855 and backend 54fc7a1a54106245abb1a5ef6e16407464e1b654 remain outside this bounded review. sourceAttributionReady is true ONLY for the projected 148-node / 67-anchor repair scope; runtimeReady=false, securityReady=false, ledgerReady=false, operatorReady=false, and nativeAuthority=0."
+}

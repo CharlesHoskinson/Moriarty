@@ -1,0 +1,263 @@
+{
+ "schema": "moriarty-cardano-c5-independent-actual-result-classifications/1",
+ "date": "2026-10-15",
+ "reviewer": {
+  "model": "claude-opus-5-5 (self-reported from the runtime environment; not self-verifiable)",
+  "requestedEffort": "high (as requested by the user; effort is not observable or self-verifiable)",
+  "role": "fresh non-author independent actual-result reviewer for N1 C0-C4/C6 and C5",
+  "independence": "Fresh context. Did not author MUTANT-SPECS, M12-CORRECTION, MUTANTS-FROZEN, the N1 patch, the checker, the frozen pack, the driver, the run, or any root record. Same model id as every other author/reviewer in this chain: context independence only, not vendor or model diversity.",
+  "tools": "Read, Write only (Edit unused). No shell, grep, glob, listing, interpreter, import, hash computation, network, subagent, key, proof, wallet or ledger action."
+ },
+ "trustBoundary": "Every sha256 here is copied from root records or frozen files. I computed none and rehashed nothing. All C5/N1 executions are root's mechanical observations, not my own executions.",
+ "killRuleApplied": "MUTANTS-FROZEN.json killRule verbatim: a required killer counts only if baseline C3 PASS (all frozen required killers carry baselineC3 PASS; C3 observed 282/282 PASS on the patched tree); a mutant is KILLED iff >=1 eligible required killer FAILs in a valid batch; driver failures and non-required FAILs never kill; M1 can only be EXPECTED_SURVIVOR_GAP (AMB-5) and is never a pack pass. Decisive qualifier applied as a reporting qualifier only.",
+ "runValidity": {
+  "children": "180 of 180 COMPLETED, exit 0, validBatch true (C5-ACCOUNTING.json, root-reported)",
+  "retries": 0,
+  "earlyKillStop": false,
+  "driverFailuresObserved": 0,
+  "harnessErrorRowsObserved": 0,
+  "rowsReadByMe": "3384 of 3384 driver rows (12 x 282) read to EOF from the 12 split row files",
+  "batchLayoutObserved": "batches 0-11 x 22 rows, batch 12 x 9, batch 13 x 8 CLI rows, batch 14 x 1 (PC-F10) per mutant"
+ },
+ "mutants": [
+  {
+   "mutantId": "M1",
+   "edit": "admission.py:113 dispute grant loses 'pref in g.predicate_refs' (key-only dispute)",
+   "rootCounts": {"PASS": 282, "FAIL": 0},
+   "observedCounts": {"PASS": 282, "FAIL": 0},
+   "classification": "EXPECTED_SURVIVOR_GAP",
+   "gapId": "AMB-5",
+   "requiredKillers": [],
+   "allBatchesValid": true,
+   "unexpectedDetections": [],
+   "blastRadius": [],
+   "note": "Never a pass of the pack. The frozen pack has no dispute grant covering a record's key under a different predicate, so the dropped clause is unobservable. AMB-5 remains OPEN."
+  },
+  {
+   "mutantId": "M2",
+   "edit": "admission.py:113 dispute grant loses 'vk in g.covers' (predicate-only dispute)",
+   "rootCounts": {"PASS": 281, "FAIL": 1},
+   "observedCounts": {"PASS": 281, "FAIL": 1},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "PC-F08", "batch": 12, "disposition": "FAIL", "resultRef": "88c2b5a5", "observed": {"outcome": "REFUSED", "codes": ["ADM_AUDIT_DISPUTED"]}, "mismatchRef": "dc4ce7", "mismatches": ["outcome REFUSED != ADMITTED_STRUCTURAL", "codes ['ADM_AUDIT_DISPUTED'] != exactly []"], "decisive": true}
+   ],
+   "blastRadius": [],
+   "controlExceptions": ["PC-F08 is the only positive control predicted to fail anywhere in C5 (M2 only), used intentionally as M2's killer"],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M3",
+   "edit": "admission.py:125 approve grant loses 'pref in g.predicate_refs'",
+   "rootCounts": {"PASS": 281, "FAIL": 1},
+   "observedCounts": {"PASS": 281, "FAIL": 1},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B1F-PRED", "batch": 0, "disposition": "FAIL", "resultRef": "a00239f5 (= PC-F03 world, STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED)", "mismatchRef": "2b97a0", "mismatches": ["outcome STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED != REFUSED", "missing code BND_EVIDENCE_UPGRADE"], "decisive": true}
+   ],
+   "blastRadius": [],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M4",
+   "edit": "admission.py:125 approve grant loses 'vk in g.covers' (grant transplant across keys)",
+   "rootCounts": {"PASS": 279, "FAIL": 3},
+   "observedCounts": {"PASS": 279, "FAIL": 3},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B1F-KEY", "batch": 0, "disposition": "FAIL", "resultRef": "a00239f5", "mismatchRef": "2b97a0", "decisive": true},
+    {"id": "B1F-KEY-ADM", "batch": 0, "disposition": "FAIL", "resultRef": "f3d9f73b (ADMITTED_STRUCTURAL)", "mismatchRef": "225455", "mismatches": ["outcome ADMITTED_STRUCTURAL != REFUSED", "missing code ADM_AUDIT_REQUIREMENT_UNMET"], "decisive": true}
+   ],
+   "blastRadius": [
+    {"id": "B1F-CP-KEY", "batch": 1, "resultRef": "5c3031dc (= PC-F04 world, ADMITTED_STRUCTURAL)", "mismatchRef": "225455", "predictedInformational": true}
+   ],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M5",
+   "edit": "admission.py:127 credited scopes no longer intersected with the grant's scopes",
+   "rootCounts": {"PASS": 278, "FAIL": 4},
+   "observedCounts": {"PASS": 278, "FAIL": 4},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B1F-SCOPE-GRANT", "batch": 0, "disposition": "FAIL", "resultRef": "a00239f5", "mismatchRef": "2b97a0", "decisive": true},
+    {"id": "B1F-CE1", "batch": 0, "disposition": "FAIL", "resultRef": "8203077b (STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED)", "mismatchRef": "2b97a0", "decisive": true},
+    {"id": "B1F-CE1-ADM", "batch": 0, "disposition": "FAIL", "resultRef": "18adc713 (ADMITTED_STRUCTURAL)", "mismatchRef": "225455", "decisive": true}
+   ],
+   "blastRadius": [
+    {"id": "B1F-CP-UNMET", "batch": 1, "resultRef": "5c3031dc", "mismatchRef": "225455", "predictedInformational": true}
+   ],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M6",
+   "edit": "admission.py:119 a record's own cited dispute from a granted pair is ignored",
+   "rootCounts": {"PASS": 281, "FAIL": 1},
+   "observedCounts": {"PASS": 281, "FAIL": 1},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B1F-RECORD-DISCLOSED-DISPUTE", "batch": 1, "disposition": "FAIL", "resultRef": "5c0e3269 (ADMITTED_STRUCTURAL, label audit-refs-not-accepted-by-consumer)", "mismatchRef": "f959e0", "mismatches": ["outcome ADMITTED_STRUCTURAL != REFUSED", "missing code ADM_AUDIT_DISPUTED"], "decisive": true}
+   ],
+   "blastRadius": [],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M7",
+   "edit": "api.py three-edit accept-and-launder: /1 refusal branch deleted; legacy auditor pairs read as approve-scoped grants over all scopes, keys and predicates",
+   "editCountVerified": "3 edits per MUTANTS-FROZEN (I did not re-read the mutant file; the traceback in result 54a19284 shows the laundering line at mutants/M7/src/mcpcat/api.py:94)",
+   "rootCounts": {"PASS": 271, "FAIL": 11},
+   "observedCounts": {"PASS": 271, "FAIL": 11},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B1-CE1", "batch": 0, "resultRef": "8203077b", "mismatchRef": "c56827", "decisive": true},
+    {"id": "B1-CE1-ADM", "batch": 0, "resultRef": "18adc713", "mismatchRef": "afa048", "decisive": true},
+    {"id": "B1-CE2", "batch": 0, "resultRef": "a00239f5", "mismatchRef": "c56827", "decisive": true},
+    {"id": "B1-CE3", "batch": 0, "resultRef": "2309f51e (= PC-L03 world, ADMITTED_STRUCTURAL)", "mismatchRef": "afa048", "decisive": true},
+    {"id": "B1-CE3-BND", "batch": 0, "resultRef": "ed95c7b5 (= PC-L05 world)", "mismatchRef": "c56827", "decisive": true},
+    {"id": "B1-CE4", "batch": 0, "resultRef": "5c3031dc", "mismatchRef": "afa048", "decisive": true},
+    {"id": "B1-L-DISCLOSED", "batch": 0, "resultRef": "40cbda36 (REFUSED [ADM_AUDIT_DISPUTED]) = frozen predictedObserved", "mismatchRef": "728ff9", "decisive": true},
+    {"id": "B1-L-REPORT", "batch": 0, "resultRef": "cd17f4d2 (REFUSED [BND_EVIDENCE_UPGRADE]) = frozen predictedObserved", "mismatchRef": "728ff9", "decisive": true},
+    {"id": "B1-L-GRANTSHAPE-V1", "batch": 0, "resultRef": "849c82f1 (READY)", "mismatchRef": "60d6bc", "decisive": true}
+   ],
+   "allRequiredFailed": "9 of 9 frozen required killers FAIL, each carrying 'missing code CTX_POLICY_SCHEMA'",
+   "blastRadius": [
+    {"id": "B2-POL-REPORT", "batch": 2, "resultRef": "90f4d462 (REFUSED [BND_ADMISSION_REFUSED, BND_EVIDENCE_UPGRADE])", "mismatchRef": "728ff9", "mode": "predicate", "predictedInformational": true},
+    {"id": "SW-POL-accepted_auditors-list", "batch": 10, "resultRef": "54a19284", "mismatchRef": "053592", "mode": "exception TypeError 'list indices must be integers or slices, not str'", "predictedInformational": true, "note": "exception-mode blast radius; not part of M7's kill mode, which is predicate"}
+   ],
+   "specificityHeld": ["B1F-S01", "B1F-S12", "SW-POL-accepted_auditors-int", "SW-POL-accepted_auditors-dict", "PC-L02", "PC-L14"],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M8",
+   "edit": "fieldtypes.py DEC '$' anchor + match instead of fullmatch (decimal with trailing newline accepted)",
+   "rootCounts": {"PASS": 275, "FAIL": 7},
+   "observedCounts": {"PASS": 275, "FAIL": 7},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B2-CE5", "batch": 1, "resultRef": "51897802", "mismatchRef": "921912", "decisive": true},
+    {"id": "B2-CLI-CE5", "batch": 13, "resultRef": "2ea2cd1f (exitCode 0, STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED)", "mismatchRef": "cfbac1", "mismatches": ["exitCode 0 != 1", "outcome STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED != REFUSED", "missing code BND_STATEMENT_TYPE"], "decisive": true},
+    {"id": "B2-MIN", "batch": 3, "resultRef": "f25bc050 (VALID)", "mismatchRef": "e18823", "decisive": true},
+    {"id": "B2-MAX", "batch": 3, "resultRef": "4616af8d (VALID)", "mismatchRef": "e18823", "decisive": true}
+   ],
+   "blastRadius": [
+    {"id": "B2-OUTREF-IDX", "batch": 2, "resultRef": "2c437801", "mismatchRef": "921912", "predictedInformational": true},
+    {"id": "B2-MAX-THRESHOLD", "batch": 3, "resultRef": "0e9dbecb", "mismatchRef": "e18823", "predictedInformational": true},
+    {"id": "B2-VALUE", "batch": 3, "resultRef": "58a94778", "mismatchRef": "e18823", "predictedInformational": true}
+   ],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M9",
+   "edit": "fieldtypes.py HEX64 '$' anchor + match instead of fullmatch (64-hex with trailing newline accepted)",
+   "rootCounts": {"PASS": 264, "FAIL": 18},
+   "observedCounts": {"PASS": 264, "FAIL": 18},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B2-DENY-ALIAS", "batch": 2, "resultRef": "2309f51e (ADMITTED_STRUCTURAL)", "mismatchRef": "afa048", "decisive": true},
+    {"id": "B2-CE7", "batch": 2, "resultRef": "69c1d60c (REFUSED [ADM_VK_NOT_IN_POLICY]) = frozen predictedObserved", "mismatchRef": "515577", "decisive": true},
+    {"id": "B2-CE7-COPIED", "batch": 2, "resultRef": "fcdd8d96 (ADMITTED_STRUCTURAL)", "mismatchRef": "afa048", "decisive": true}
+   ],
+   "blastRadius": [
+    {"id": "B1F-S05", "resultRef": "849c82f1", "mismatchRef": "60d6bc", "predictedInformational": true},
+    {"id": "B1F-S06", "resultRef": "849c82f1", "mismatchRef": "60d6bc", "predictedInformational": true},
+    {"id": "B2-CE6-TXID", "resultRef": "8c5b9372", "mismatchRef": "921912", "predictedInformational": true},
+    {"id": "B2-B32-SP", "resultRef": "c3b6039b", "mismatchRef": "921912", "predictedInformational": true},
+    {"id": "B2-B32-CC", "resultRef": "9fb2edef", "mismatchRef": "921912", "predictedInformational": true},
+    {"id": "B2-B32-CC-ADM", "resultRef": "c807a0cd", "mismatchRef": "306990", "predictedInformational": true},
+    {"id": "B2-PROGRAM", "resultRef": "f7e85282", "mismatchRef": "f3e2ab", "predictedInformational": true},
+    {"id": "B2-OUTREF-TX", "resultRef": "217818b4", "mismatchRef": "921912", "predictedInformational": true},
+    {"id": "B2-CE7-COPIED-BND", "resultRef": "f2d49736", "mismatchRef": "c56827", "predictedInformational": true},
+    {"id": "B2-RELID", "resultRef": "cc91cf2b", "mismatchRef": "7374d6", "predictedInformational": true},
+    {"id": "B2-TRANSCRIPT", "resultRef": "53a1b0fe", "mismatchRef": "7374d6", "predictedInformational": true},
+    {"id": "B2-BUILD", "resultRef": "f5894611", "mismatchRef": "7374d6", "predictedInformational": true},
+    {"id": "B2-POL-CATDIGEST", "resultRef": "d6eaf926", "mismatchRef": "728ff9", "predictedInformational": true},
+    {"id": "B2-POL-LOG", "resultRef": "35710ea7", "mismatchRef": "728ff9", "predictedInformational": true},
+    {"id": "B2-MANIFEST-FILESHA", "resultRef": "33081676 (= PC-L01 VALID world)", "mismatchRef": "68325a", "predictedInformational": true}
+   ],
+   "nonFailingDelta": [
+    {"id": "B2-SCRIPT", "batch": 2, "disposition": "PASS", "resultRef": "f7a883e0 (REFUSED [ADM_SCHEMA], note 'verifier_profile must be {kind, script_hash(56 hex or null)}')", "otherMutantsResultRef": "849e105a", "note": "Same oracle outcome, different result object. Most likely one schema error disappeared under the weakened HEX64 while the 56-hex verifier_profile check still refused; baseline object contents not resolved by me. Not a kill and not a blast-radius FAIL."}
+   ],
+   "excluded": "OPT-M9-N1 (N1-REVOKE-ALIAS-ADM under M9) was not included and not resource-authorized; it is not counted.",
+   "unexpected": []
+  },
+  {
+   "mutantId": "M10",
+   "edit": "catalogue.py ID_RE uses \\d and drops re.ASCII (Unicode digits accepted in ids)",
+   "rootCounts": {"PASS": 280, "FAIL": 2},
+   "observedCounts": {"PASS": 280, "FAIL": 2},
+   "classification": "KILLED_BY_PREDICATE",
+   "frozenExpected": "KILLED_BY_PREDICATE",
+   "requiredKillers": [
+    {"id": "B2-CE8-ID-ARABIC", "batch": 3, "resultRef": "b9ab6a60 (VALID)", "mismatchRef": "85872d", "decisive": true},
+    {"id": "B2-ID-FULLWIDTH", "batch": 3, "resultRef": "4e33f8f0 (VALID)", "mismatchRef": "85872d", "decisive": true}
+   ],
+   "blastRadius": [],
+   "specificityHeld": ["B2-ID-NL"],
+   "unexpected": []
+  },
+  {
+   "mutantId": "M11",
+   "edit": "catalogue.py:218,221 semantic_prose iterates 'fields or []' / 'cons or []' (two fields, list-type guard removed)",
+   "rootCounts": {"PASS": 271, "FAIL": 11},
+   "observedCounts": {"PASS": 271, "FAIL": 11},
+   "classification": "KILLED_MIXED",
+   "frozenExpected": "KILLED_MIXED (exception on 8 library targets, predicate on the CLI target)",
+   "requiredKillers": [
+    {"id": "B3-CE9-FIELDS", "batch": 3, "resultRef": "5bae3b8e", "exception": {"type": "TypeError", "message": "'int' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-CONS", "batch": 3, "resultRef": "67b61b4f", "exception": {"type": "TypeError", "message": "'int' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-FIELDS-TRUE", "batch": 3, "resultRef": "f2cc3006", "exception": {"type": "TypeError", "message": "'bool' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-CONS-TRUE", "batch": 3, "resultRef": "e282b46f", "exception": {"type": "TypeError", "message": "'bool' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-PLN02", "batch": 3, "resultRef": "5bae3b8e", "exception": {"type": "TypeError", "message": "'int' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-CTX", "batch": 3, "resultRef": "e6777290", "exception": {"type": "TypeError", "message": "'int' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-ADM", "batch": 4, "resultRef": "63d17e5a", "exception": {"type": "TypeError", "message": "'int' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-BND", "batch": 4, "resultRef": "0c6d3335", "exception": {"type": "TypeError", "message": "'int' object is not iterable"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE9-CLI", "batch": 13, "resultRef": "9749c809", "rawCliObject": "7c9aaccb", "observed": {"exitCode": 2, "outcome": "REFUSED", "codes": ["CLI_INTERNAL_ERROR"], "detail": "TypeError: 'int' object is not iterable", "stdoutIsJson": true, "stderrHasTraceback": false, "stderrSha256": "e3b0c442 (empty)"}, "mismatchRef": "9b80fd", "mismatches": ["exitCode 2 != 1", "outcome REFUSED != INVALID", "missing code CAT_STATEMENT_SCHEMA", "forbidden code CLI_INTERNAL_ERROR"], "cliConditionMet": true, "decisive": true, "nature": "library exception surfaced by cli.py's outer except as a fail-closed structured refusal, not checker predicate logic"}
+   ],
+   "blastRadius": [
+    {"id": "SW-PLN01-statementSchema.fields-int", "batch": 6, "resultRef": "5bae3b8e", "mode": "exception TypeError", "predictedInformational": true},
+    {"id": "SW-PLN01-statementSchema.binding_constraints-int", "batch": 6, "resultRef": "67b61b4f", "mode": "exception TypeError", "predictedInformational": true}
+   ],
+   "specificityHeld": ["SW-PLN01-statementSchema.fields-list", "-fields-dict", "-binding_constraints-list", "-binding_constraints-dict"],
+   "exceptionRootedNote": "Every M11 detection is exception-rooted: no detection came from a graceful checker refusal. The mutation is caught because it crashes (library) or is crash-surfaced as CLI_INTERNAL_ERROR (CLI).",
+   "unexpected": []
+  },
+  {
+   "mutantId": "M12",
+   "edit": "catalogue.py:660 relatedRows membership test drops 'isinstance(x, str) and' (corrected literal per M12-CORRECTION, applied before execution)",
+   "rootCounts": {"PASS": 276, "FAIL": 6},
+   "observedCounts": {"PASS": 276, "FAIL": 6},
+   "classification": "KILLED_MIXED",
+   "frozenExpected": "KILLED_MIXED (exception on 4 library targets, predicate on the CLI target)",
+   "requiredKillers": [
+    {"id": "B3-CE10", "batch": 4, "resultRef": "5c9e2a67", "exception": {"type": "TypeError", "message": "cannot use 'list' as a set element (unhashable type: 'list')"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE10-DICT", "batch": 4, "resultRef": "a69e6be1", "exception": {"type": "TypeError", "message": "cannot use 'dict' as a set element (unhashable type: 'dict')"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE10-LATE", "batch": 4, "resultRef": "5c9e2a67", "exception": {"type": "TypeError", "message": "cannot use 'list' as a set element (unhashable type: 'list')"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE10-BND", "batch": 4, "resultRef": "a4530d12", "exception": {"type": "TypeError", "message": "cannot use 'list' as a set element (unhashable type: 'list')"}, "mismatchRef": "053592", "decisive": true},
+    {"id": "B3-CE10-CLI", "batch": 13, "resultRef": "ebbbdd3f", "rawCliObject": "da9faa38", "observed": {"exitCode": 2, "outcome": "REFUSED", "codes": ["CLI_INTERNAL_ERROR"], "detail": "TypeError: cannot use 'list' as a set element (unhashable type: 'list')", "stdoutIsJson": true, "stderrHasTraceback": false, "stderrSha256": "e3b0c442 (empty)"}, "mismatchRef": "9a1a49", "mismatches": ["exitCode 2 != 1", "outcome REFUSED != INVALID", "missing code CAT_PATTERN_FAMILY", "forbidden code CLI_INTERNAL_ERROR"], "cliConditionMet": true, "decisive": true, "nature": "library exception surfaced as fail-closed structured CLI refusal"}
+   ],
+   "messageWordingNote": "Python 3.14 wording 'cannot use 'list' as a set element (unhashable type: 'list')' still contains the frozen fragment verbatim; decisive by substring rule. Fragments are interpreter-version dependent.",
+   "blastRadius": [
+    {"id": "SW-PF0-relatedRows-list", "batch": 6, "resultRef": "5c9e2a67", "mode": "exception TypeError unhashable list", "predictedInformational": true}
+   ],
+   "specificityHeld": ["SW-PF0-relatedRows-int", "SW-PF0-relatedRows-dict"],
+   "exceptionRootedNote": "Every M12 detection is exception-rooted, as for M11.",
+   "unexpected": []
+  }
+ ],
+ "crossMutant": {
+  "requiredKillersNondecisive": [],
+  "predictionDiscrepancies": [],
+  "unexpectedFailRows": [],
+  "controlFails": ["PC-F08 under M2 only (frozen intended killer)"],
+  "everyFailSetEqualsRequiredPlusInformational": true,
+  "noPackPassClaim": "M1 is reported only as EXPECTED_SURVIVOR_GAP; no aggregate pass or mutation-score figure is reported."
+ }
+}

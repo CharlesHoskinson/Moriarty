@@ -1,0 +1,88 @@
+{
+  "format": "sevenlayer-translation-proposals/1",
+  "layer": 4,
+  "layerName": "Arithmetization",
+  "status": "educational proposals for review; not adopted copy or implementation claims",
+  "proposals": [
+    {
+      "id": "l4-rule-to-constraints",
+      "title": "Turn the financial rule into checkable relationships",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 17-78 (finite-field equations and spreadsheet analogy); lines 86-110 (R1CS form).",
+      "sourceSupport": [
+        {"classification": "BOOK_FACT", "reference": "The chapter frames arithmetization as representing computation with polynomial relationships over a finite field and uses rows and columns as an introductory analogy."},
+        {"classification": "PRIMARY_SOURCE_SUPPORT", "reference": "G05.txt, abstract and §1: the paper describes an argument for arithmetic-circuit satisfiability and polynomial equations; this does not identify Moriarty's circuit format."},
+        {"classification": "MORIARTY_MAPPING", "reference": "invoice-fixtures.json, /opening and /partial: invoice amount rules, the separate fee, and the unchanged reserve duty."}
+      ],
+      "websiteMapping": "Introduce Layer 4 as the step that writes down what must be true of the values in a financial transition. Keep the consumer's financial rule distinct from the particular constraint system used to encode it. Do not claim that an identified Web or Strand has a recovered circuit.",
+      "readerCopy": "A financial rule names what a payment must do. Arithmetization writes relationships that can check the payment, fee, and remaining duties together. The equations describe the values in a statement; the transaction and its validator still determine which real state those values refer to.",
+      "interaction": "Expand a simple relation sketch for the invoice example: gross debit equals seller payment plus program fee; closing cash equals opening cash minus gross debit; invoice duty falls by the seller payment; reserve duty stays the same. Label this a teaching sketch built from the supplied fixture.",
+      "diagram": "Rule → named values → polynomial constraints → checked relation. Place 'transaction/validator premises' beside the relation as a separate input boundary, not as another arithmetic equation.",
+      "questions": ["Opus: Does the sentence about proof statements and transaction premises match the approved security wording?", "Opus: Does any displayed equation need an explicit range or equality condition to avoid suggesting that a few sample arithmetic rows fully define the relation?"] ,
+      "limits": ["No supplied circuit inventory ties this example to a compiled Moriarty/Web relation.", "Do not imply that a proof establishes authenticity, signatures, delivery, or settlement."]
+    },
+    {
+      "id": "l4-invoice-arithmetic",
+      "title": "Follow one payment and keep the amounts separate",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 37-78 (variables and rules in rows); lines 747-773 (limits of analogy and field arithmetic).",
+      "sourceSupport": [
+        {"classification": "MORIARTY_MAPPING", "reference": "invoice-fixtures.json, /opening: 110 CASH source opening cash, 100 invoice duty, 10 reserve duty; /partial: amount must be >0 and <100, with a separate fee of 2 CASH."},
+        {"classification": "MORIARTY_MAPPING", "reference": "invoice-fixtures.json, fixture for source110-amount35 and proposed112-amount35: amount 35, seller receipt 35, fee receipt 2, gross debit 37, invoice duty 65, reserve duty 10; source110 closes with cash 73 and a backing gap of 2, while proposed112 closes with cash 75 and duties 75."},
+        {"classification": "MORIARTY_MAPPING", "reference": "invoice-fixtures.json, /fundingModes and /limitations: 112 assumes two extra CASH and supports one partial only; S12 has no extra-funding action; later partials incur another fee."}
+      ],
+      "websiteMapping": "Use the supplied invoice worksheet as the concrete value source. Explain that payment reduces invoice duty, the program fee is a separate receipt and debit, and reserve duty survives. Show source funding and extra funding as distinct assumptions. Avoid treating the backing gap as the source action's amount-rule refusal.",
+      "readerCopy": "For a 35 CASH payment, the seller receives 35 and the fee recipient receives 2, so escrow pays out 37. The invoice duty falls from 100 to 65; the 10 CASH reserve duty stays. With 110 CASH in source funding, 73 remains against 75 of duties. A separate example adds 2 CASH to cover this one fee, leaving 75 against 75.",
+      "interaction": "An amount control from 1 through 99 updates seller receipt, fee, gross debit, closing cash, invoice duty, reserve duty and total duties. A funding selector switches between 110 source CASH and 112 with the explicitly assumed extra allowance. Display backing gap separately from the partial-payment rule. Mark the view as browser arithmetic, not a proof or transaction.",
+      "diagram": "Opening cash → seller payment + program fee → closing cash; in parallel, opening invoice duty → payment reduces duty, while reserve duty continues unchanged. Show backing comparison as a separate policy check.",
+      "questions": ["Opus: Confirm the distinction between source-valid partial amount and a separate backing-policy condition in final copy.", "Opus: Confirm that 'extra funding' is clearly described as an assumption, because the source action has no extra-funding action.", "Should the page use the source 110 mode alone or show the proposed 112 comparison alongside it?"] ,
+      "limits": ["CASH is the fixture's example unit, not a Cardano token.", "The extra 2 CASH assumption covers one partial only; repeated partials require a funding rule.", "The fixture's network fees, collateral, min-ADA, and thread reserve are separate from its CASH arithmetic.", "A worksheet calculation is not a compiled constraint, Groth16 proof, validator execution, or ledger result."]
+    },
+    {
+      "id": "l4-integer-ranges",
+      "title": "A field value needs a range rule to mean an amount",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 37-78 (field elements and polynomial relationships); lines 635-685 (chapter's ZKIR range-constraint discussion); lines 747-760 (field arithmetic differs from native integer arithmetic).",
+      "sourceSupport": [
+        {"classification": "BOOK_FACT", "reference": "The chapter says field arithmetic is modulo a prime and its ZKIR discussion distinguishes field-valued operations from bounded integer types, naming constrain_bits as a range enforcement mechanism."},
+        {"classification": "MORIARTY_MAPPING", "reference": "invoice-fixtures.json uses bounded integer CASH amounts and a slider range of 1..99 for the partial-payment example."},
+        {"classification": "INFERENCE", "reference": "An educational display should show that arithmetic equality alone does not express every application-level range or comparison rule."}
+      ],
+      "websiteMapping": "Connect the book's finite-field explanation to financial amounts without asserting a Moriarty encoding. Explain that field arithmetic wraps modulo the field size, while the worksheet intends bounded nonnegative integer amounts. Range and comparison checks are additional parts of a relation where required.",
+      "readerCopy": "A proof circuit does arithmetic in a finite field, where values wrap around at the field size. An invoice rule uses ordinary bounded amounts. The relation must also constrain values to the intended range before its field equations can stand for that financial rule.",
+      "interaction": "Show the amount 35 first as an ordinary fixture amount and then as a field element with a separate range-check badge. Let the reader expand the badge to see the idea of constraining a value to a permitted interval. Avoid showing a specific bit-decomposition or claiming it matches an implementation.",
+      "diagram": "Field equation + required range rule + required comparison rule → intended bounded financial relation.",
+      "questions": ["Opus: Confirm the proposed plain-language explanation of field wraparound and range checks.", "Opus: Review any specific bound or arithmetic claim against the exact target proof system before adoption."] ,
+      "limits": ["The chapter's implementation-specific ZKIR claims are not independently established by the supplied Groth paper.", "Do not imply a specific range-check gadget, circuit cost, opcode inventory, or field for Moriarty Webs."]
+    },
+    {
+      "id": "l4-constraint-layouts",
+      "title": "One computation can have different constraint layouts",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 80-270 (R1CS, AIR, PLONKish and shared computation example); lines 270-342 (CCS).",
+      "sourceSupport": [
+        {"classification": "BOOK_FACT", "reference": "The chapter presents R1CS, AIR, and PLONKish as different organizations for constraints and introduces CCS as a framework expressing those forms."},
+        {"classification": "PRIMARY_SOURCE_SUPPORT", "reference": "G05.txt, abstract and §1, scopes its construction to arithmetic-circuit satisfiability. It does not validate every later taxonomy or claim in the book."},
+        {"classification": "UNRESOLVED", "reference": "No supplied Moriarty source names the constraint format for this invoice example or maps it to R1CS, AIR, PLONKish, or CCS."}
+      ],
+      "websiteMapping": "If a layout comparison is useful, use the chapter's small arithmetic example and label it as general ZK education. Keep it separate from the invoice worksheet and from any asserted Moriarty architecture. Avoid unsupported language that one format is selected or universally dominant for Moriarty.",
+      "readerCopy": "Constraint systems organize the same required relationships in different ways. R1CS uses multiplication-shaped rows; AIR describes repeated transitions; PLONKish systems combine gates and wiring rules. CCS gives a shared way to describe several of these forms. The layout changes how the relation is represented, not the financial rule it is meant to express.",
+      "interaction": "Offer a static tab switch for the book's x·(x+1) example: show the R1CS rows, AIR trace idea, and PLONKish gates. Do not present constraint counts as a benchmark or map these layouts onto a Web.",
+      "diagram": "Same rule → three illustrative organizations (R1CS / AIR / PLONKish); CCS shown as a unifying description. Add a note that the choice can be coupled to other proof-core design choices.",
+      "questions": ["Opus: Fact-check taxonomy and comparative copy, especially claims that sound universal or current-market-wide.", "Is a comparison useful on this product page, or should it remain in a technical explainer?"] ,
+      "limits": ["A layout comparison is general book material, not evidence of a Moriarty backend.", "The chapter's wider performance, adoption, and convergence claims remain outside this scoped translation."]
+    },
+    {
+      "id": "l4-proof-boundary",
+      "title": "Correct arithmetic does not supply its own premises",
+      "bookReference": "L4-EXACT-CHAPTER.md, lines 17-35 and 747-773; connect to B08 exact manuscript sections for Chapter 12 / trust and verification boundary where adopted copy requires it.",
+      "sourceSupport": [
+        {"classification": "BOOK_FACT", "reference": "The chapter describes constraints as checking whether encoded relationships hold and warns that its analogies have limits."},
+        {"classification": "MORIARTY_MAPPING", "reference": "V2-COPY.json, main.proofRoleExplanation and lifecycleSteps: supplied proposed copy distinguishes proof computation from transaction facts and validator rebuilding of statements."},
+        {"classification": "UNRESOLVED", "reference": "V2-COPY is authored security copy, not an independent fact-check or evidence that a particular Layer 4 relation is implemented."}
+      ],
+      "websiteMapping": "Use a boundary card beside any arithmetic demo: the demo illustrates the relation's math; real application use also depends on its statement, transaction premises, owner authorization, and the consumer's acceptance logic. Opus owns approval of the exact security wording.",
+      "readerCopy": "A constraint relation can check arithmetic over the values it receives. It does not decide by itself which ledger state those values describe or whether the application should accept a transition. Those questions belong to the statement and the system that consumes it.",
+      "interaction": "Let a reader remove the 'statement and transaction context' panel from a diagram. The display then shows that the equations still have numbers to calculate but no link to a particular real transition. This is a conceptual diagram only; do not simulate a proof pass/fail.",
+      "diagram": "Values in a statement → arithmetic relation; transaction and validator → premises and acceptance. Connect them with an explicit binding step, pending Opus-approved exact wording.",
+      "questions": ["Opus: Approve or replace every security-boundary sentence before it appears as product copy.", "Which exact approved references support the statement-binding and validator-rebuilding language?"] ,
+      "limits": ["Do not say that arithmetic constraints prove ledger truth, authorization, external facts, or settlement.", "Do not imply the worksheet produces a Strand, proof claim, Groth16 proof, or on-chain effect."]
+    }
+  ]
+}

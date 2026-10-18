@@ -1,0 +1,61 @@
+{
+  "format": "c2-consumer-integration-plan/1",
+  "status": "AUTHOR_PROPOSED_SOURCE_ONLY_NOT_APPLIED",
+  "author": "claude-opus-5-5 HIGH, tools off; not reviewed",
+  "nativeAuthority": 0,
+  "consumer": {
+    "module": "c2_issue_artifacts.py",
+    "callable": "prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id)",
+    "contract": "C2-ISSUE-ARTIFACT-CONTRACT.md CI01-CI12",
+    "implemented": false
+  },
+  "historicalBuilder": {
+    "source": "current-cardano-k2-k10-primary-hash-input-adapter-r2-candidate-20261016/tools/build_k10_inputs.py",
+    "sha256": "6c1cde7f971a4c3ade25a3089f22f557fe2290b3b1266c4c18b6b4b7ce918d00",
+    "bytes": 24480,
+    "modified": false
+  },
+  "historicalOperator": {
+    "source": "current-cardano-k2-k10-compiled-wrapper-operator-materialized-20261016/runner/operator.py",
+    "sha256": "a5a8a49cd524eb08a6e0207a001ca419bd4fc643e8b15a307e9dba968fd6246e",
+    "modified": false,
+    "boundary": "Pins the generated manifest and seven frozen UPLC context files; new contexts need a separately authorized operator revision. No controller/operator patch is supplied, inspected or routed around."
+  },
+  "plannedRevision": {
+    "file": "new build_k10_inputs_r3.py beside, never in place of, the historical builder",
+    "glueOwner": "Sol HIGH after contract freeze and the Opus consumer implementation",
+    "glueReview": "fresh Meta Muse high",
+    "combinedReview": "fresh non-author Opus on the actual consumer+host and actual results"
+  },
+  "callsites": [
+    {"lines": "437-441", "current": "usage <b9-applied.json> <k8_fixture.ak> <output-dir>", "plan": "usage <b9-applied.json> <proof-export.json> <setup-record.json> <expiry-ms> <output-dir>; expiry required canonical decimal; no TEST_EXPIRY default"},
+    {"lines": "451-453", "current": "read_pinned(fixture_path, PIN_K8_FIXTURE); extract_fixture", "plan": "read_pinned both records with explicit SHA-256 pins; strict JSON (duplicate keys and NaN refused); refuse unless sha256(setup bytes) == export.setupRecordSha256, the file-byte link the dict API cannot check"},
+    {"lines": "454-457", "current": "policy = independently recomputed compiled script hash", "plan": "unchanged; move before the consumer call; result = prepare_c2_issue(export, setup, expiry, policy_id=policy)"},
+    {"lines": "458-459", "current": "vk, proof, vk_d, stmt_d from fixture", "plan": "vk, proof = issueData byte leaves; vk_d, claimant, outref, stmt_d, expiry = envData fields 4, 5, 6, 7, 8"},
+    {"lines": "460-463", "current": "envelope_cbor == frozen_positive_cbor; pos_name = blake2b256(pos_cbor)", "plan": "revision env_data takes claimant/outref/expiry parameters instead of module constants; require legacy envelope_cbor bytes == bytes.fromhex(envCborHex) and pos_name == envelopeTokenNameHex; frozen_positive_cbor kept only as the K6 regression"},
+    {"lines": "464-480", "current": "seven cases using fixture n1/n2/n3 constants", "plan": "T1, T5, T6, T7 derive from the consumer result; T2-T4 need n1/n2 statement digests and n3 proof absent from ProofExport: keep the pinned historical k8_fixture.ak only as a labelled historical negative source, or drop with recorded coverage loss; no synthetic proof generation"},
+    {"lines": "481-502", "current": "script_context and manifest with legacy Constr/B/I/Map/List", "plan": "legacy objects rebuilt from consumer byte leaves; manifest adds envelopeCborHex, tokenNameHex, expiry labelled CALLER_SUPPLIED_NOT_PROOF_BOUND and context labelled CALLER_DECLARED_UNAUTHENTICATED; fee 0, zero txid, everything interval and empty inputs stay fabricated historical placeholders"}
+  ],
+  "legacyBoundary": {
+    "mismatch": "host lowercase tagged tuples ('constr', 'bytes', 'int', 'map', 'list') vs legacy uppercase Constr/B/I/Map/List objects rendered by uplc_term (unread); the archived operator consumes UPLC text",
+    "disposition": "NOT_ASSUMED_COMPATIBLE",
+    "envV2": "finite byte equality of legacy envelope_cbor and consumer envCborHex per call",
+    "issue": "legacy encoder fails closed on the >64-byte chunked path (EXPECTATIONS cborRule), so Issue CBOR is host-only; the legacy redeemer uses equal byte leaves",
+    "laterBridge": "any direct host-Data to UPLC renderer requires a separate finite reviewed bridge whose acceptance reproduces 09-positive-script-context.txt byte-for-byte for K6"
+  },
+  "demonstrationLevels": {
+    "k6Reproduction": "consumer on K6 export+setup at expiry 1893456000000 must reproduce historical Env CBOR and token 9fd5c53f...; reproduction of the historical builder only, not an independent oracle",
+    "secondRealCurrentContextProof": "NOT_PRODUCED; needs a new Rust proof over real Preview-derived context under separate prover authority",
+    "onChainAcceptance": "NOT_ATTEMPTED; Preview first, Preprod separately later"
+  },
+  "openGaps": [
+    "production byte parser, file I/O and CLI",
+    "setupRecordSha256 file-byte check at the I/O layer",
+    "VK/proof curve validity and Groth16 pairing",
+    "VK-to-matrix, compiler and hash-gadget correspondence",
+    "authenticated ledger/provider context",
+    "Full20 UTxO, ACTUS and DeFi obligations",
+    "shared-program/property certification; universal, recursive, private and multi-parent PCD"
+  ],
+  "flags": {"native": false, "operator": false, "wallet": false, "prover": false, "vm": false, "deploy": false, "consumerIntegrated": false, "previewTested": false, "preprodTested": false}
+}

@@ -1,0 +1,211 @@
+{
+  "recordType": "CONDITIONAL_R4_SOURCE_CONTRACT_ADOPTION_FOR_TEST_AUTHORING",
+  "createdAt": "2026-10-17T05:23:34.647127+00:00",
+  "candidateFiles": [
+    {
+      "id": "S36",
+      "path": "S36-C2-BUILDER-R4-CONTRACT.md",
+      "originalPublicSource": "/home/charl/moriarty-c2-opus48-20261017/r4-candidate/C2-BUILDER-R4-CONTRACT.md",
+      "bytes": 28131,
+      "sha256": "b0aa395e72ea82f9dd3ddf5aa9a1156eeca9f9b91a1df3a0431ef83b41660d0a"
+    },
+    {
+      "id": "S37",
+      "path": "S37-C2-BUILDER-R4-API.json",
+      "originalPublicSource": "/home/charl/moriarty-c2-opus48-20261017/r4-candidate/C2-BUILDER-R4-API.json",
+      "bytes": 13080,
+      "sha256": "2cfefb338a62b02d11552f51b9c87d96569390b434021db6b75303cdcef7171f"
+    },
+    {
+      "id": "S38",
+      "path": "S38-S29-DESIGN-POSITIONS.json",
+      "originalPublicSource": "/home/charl/moriarty-c2-resume-20261017/r4-packet/S29-DESIGN-POSITIONS.json",
+      "bytes": 13825,
+      "sha256": "9db2ce53078dc74c17bb29ce57374387155bbfa2a044cd5f415c18075434cfcd"
+    }
+  ],
+  "all41FrozenAndOriginalPinsRevalidated": true,
+  "votes": [
+    {
+      "job": "R4-FRESH-REVIEW-OPUS48",
+      "requestedModel": "claude-opus-4-8",
+      "actualMainAssistantModels": {
+        "claude-opus-4-8": 28
+      },
+      "requestedEffort": "high",
+      "actualEffortIndependentlyObserved": false,
+      "review": "/home/charl/moriarty-c2-opus48-20261017/jobs/R4-FRESH-REVIEW-OPUS48/REVIEW.json",
+      "sha256": "60cdf6efac938b97d5d7660f24f3f13af09c0c040a1232307c65b595a4dfe88d",
+      "exactClauseVotes": "CB401-CB412 AGREE",
+      "findings": [
+        {
+          "id": "R4-F01-cb411-stage8-close-cleanup-asymmetry",
+          "severity": "low",
+          "evidence": "S36 \u00a73 stage 8: 'A close OSError is C2B-WRITE with cleanup. A print error propagates and the output stays complete.' Cleanup unlinks the files, contexts and output dir this call created. By stage 8 the manifest has already been published via os.rename (stage 7).",
+          "requiredFix": "Non-blocking. Implementation/test review should confirm that treating a post-publication dir-fd close OSError as C2B-WRITE-with-cleanup (tearing down an already-complete, atomically-published output) is the intended fail-safe. It never leaves an invalid/partial manifest, and a close on an O_RDONLY directory fd is practically unreachable in CPython, so this is a documented residual, not a defect. Consider recording explicitly that a close failure after rename removes a valid output."
+        },
+        {
+          "id": "R4-F02-cb409-env-crosscheck-is-consistency-not-oracle",
+          "severity": "low",
+          "evidence": "CB409 requires envData == host_codec.build_env_data over predicateDigest/vkDigest/claimantVkh/consumedTxid/consumedIx/statementDigest of the admitted export and expiry \u2014 the same host function the consumer used, over export fields the consumer already validated at its EXPORT/STATEMENT/DIGEST/CARDANO stages. Host build_env_data (S22 L621) and the consumer host path share host_codec.",
+          "requiredFix": "None to the clause. The equality is a consistency/byte-identity cross-check, not independent verification, and CB412 correctly disclaims all verification. Carry the NON-ORACLE framing into test authoring and the r2/combined audit so the cross-check is not read as establishing anything about the proof, VK or Rust acceptance."
+        },
+        {
+          "id": "R4-F03-cp04-scan-constraints-source-only",
+          "severity": "low",
+          "evidence": "S39/S35 carry R4-L02 and L02: CP04 scan constraints (no input-proportional copy, never str.encode, length-before-scan) are not behaviorally discriminable by T00-T17; R4 CONSUMER/BRIDGE relies on r2 for these. S36 CB412 keeps r2 reliance open pending CP08.",
+          "requiredFix": "Non-blocking for R4 source-readiness. The pending r2 implementation review (and the separate CP08 reliance decision) must source-inspect these constraints; R4 must not treat r2 admission as establishing them. Already consistent with CB412 and the contract's OPEN tracks."
+        },
+        {
+          "id": "R4-F04-cb406-not-rust-parse-json",
+          "severity": "info",
+          "evidence": "S36 CB406/\u00a710 and S37 constants: builder JSON gate is depth 16, no node bound; Rust parse_limited is depth 32, 65536 nodes, 1 MiB (CP \u00a73). jsonParseLimits label stays NOT_CHECKED.",
+          "requiredFix": "None. Verified internally consistent; no Rust-acceptance or parse-limit inference is drawn. Keep the label and \u00a710 non-claim."
+        },
+        {
+          "id": "R4-F05-reconstruction-and-routing-provenance",
+          "severity": "info",
+          "evidence": "S41 RECONSTRUCTION.json: S36/S37 built by applying R4-DEPENDENCY-DELTA-OPUS to frozen S27/S28; originalRequestedModel claude-opus-5-5, originalReturnedMainModel claude-opus-4-8, originalDisposition unqualified/unadopted. S40 permits 4.8 prospectively; sourceAdopted=false, implementationAuthored=false, nativeAuthority 0.",
+          "requiredFix": "None. I independently confirmed the 12 clause literals in actual S36/S38 are unchanged. Root should keep both this fresh vote and a second independent vote; neither is adoption."
+        }
+      ],
+      "coverage": {
+        "readPaths": [
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/MANIFEST.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S36-C2-BUILDER-R4-CONTRACT.md",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S37-C2-BUILDER-R4-API.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S38-S29-DESIGN-POSITIONS.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S41-RECONSTRUCTION.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S22-host_codec.py",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S24-build_k10_inputs.py",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S17-C2-MECHANICAL-RENDERER.py.txt",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S18-INTEGRATION-CONTRACT.md",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S25-K2-PUBLIC-SETUP-RECORD.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S26-K6-PUBLIC-PROOF.json",
+          "S31-S33-C2-PROFILE-R2-CONTRACT.md (reviewed inline as provided DATA)",
+          "S32-S34-C2-PROFILE-R2-API.json (reviewed inline as provided DATA)",
+          "S39-POLICY-READOPTION.json (reviewed inline as provided DATA)",
+          "S40-moriarty-opus-4-8-security-routing (reviewed inline as provided DATA)"
+        ],
+        "unreadPaths": [
+          "S03-DESIGN-POSITIONS.json",
+          "S04-SOURCE-MANIFEST.json",
+          "S05-ROOT-DEPENDENCY-NOTICE.json",
+          "S08-DESIGN-POSITIONS.json",
+          "S09-SOURCE-MANIFEST.json",
+          "S10-MODEL-REVIEW.json",
+          "S11-ROOT-QUALIFICATION.json",
+          "S12-build_k10_inputs_r3.prefix.py.txt",
+          "S13-PREFIX-CONTRACT.json",
+          "S14-C2-BUILDER-CONTRACT.md",
+          "S15-C2-BUILDER-API.json",
+          "S16-test_c2_builder.py",
+          "S19-C2-PROFILE-R2-CONTRACT.md",
+          "S20-C2-PROFILE-R2-API.json",
+          "S21-SOURCE-ADOPTION.json",
+          "S23-c2_issue_artifacts.py",
+          "S27-C2-BUILDER-R4-CONTRACT.md",
+          "S28-C2-BUILDER-R4-API.json",
+          "S29-DESIGN-POSITIONS.json",
+          "S30-SOURCE-MANIFEST.json",
+          "S33-S35-DESIGN-POSITIONS.json",
+          "S34-POLICY-ADOPTION.json",
+          "S35-REVIEW.json"
+        ],
+        "limitations": "No writes/shell/imports/execution/web and no original-path following, per instruction: all SHA-256/byte pins in the MANIFEST and contracts were taken as root-mechanically verified and not recomputed; independent expected runtime behaviour is prediction, not execution (no RED/GREEN observed). I did not open S16 (R3 test_c2_builder.py), so the 33-key MANIFEST_KEYS set, CASE_KEYS and ROSTER that CB410/CB413 copy as literals were cross-referenced only via S37/S18 citations, not line-verified; this is a test/manifest-authoring detail, not a clause-literal correctness issue. The v1 body (S23), the old reconciled source (S27-S30, superseded by the S41 delta I read) and R3 history (S10-S15) were not opened because they are prohibited-for-reliance or immutable-history and not the current candidate. S31/S32/S39/S40 were reviewed from the inline DATA in the task (which the actual S36/S37/S38 files I opened corroborate), not re-opened as files. The reconstruction delta (S41) spans were accepted as mechanically applied; I confirmed the resulting 12 clause literals in actual S36/S38 are verbatim. r2 adoption, implementation, tests and Rust acceptance remain out of scope and OPEN."
+      }
+    },
+    {
+      "job": "R4-SECOND-REVIEW-OPUS48",
+      "requestedModel": "claude-opus-4-8",
+      "actualMainAssistantModels": {
+        "claude-opus-4-8": 19
+      },
+      "requestedEffort": "high",
+      "actualEffortIndependentlyObserved": false,
+      "review": "/home/charl/moriarty-c2-opus48-20261017/jobs/R4-SECOND-REVIEW-OPUS48/REVIEW.json",
+      "sha256": "6795c662d72f9414bb33f3bbd48e09d9de1036e29c859c7154d34bae468c6a9e",
+      "exactClauseVotes": "CB401-CB412 AGREE",
+      "findings": [
+        {
+          "id": "R4-F01-read-public-file-not-reusable-from-r3",
+          "severity": "low",
+          "evidence": "S12 read_public_file/_read_regular_fd convert fstat and os.read OSErrors to 'C2B-READ: ...' (S12 lines 62, 71) and omit the advisory no-follow lstat and O_NOCTTY. CB405 (S36/S38) requires a no-follow lstat S_ISREG precheck, O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC|O_NOCTTY, mapping ONLY the listed lstat/open errno classes to C2B-READ, and letting every fstat/read/close OSError propagate unconverted after a best-effort close.",
+          "requiredFix": "The fresh R4 prefix must re-author read_public_file to CB405; the R3 body is NOT reusable verbatim. Test review must assert fstat/read/close OSErrors propagate (not C2B-READ) and that the lstat/O_NOCTTY precheck exists. Contract-consistent; section 0 permits reuse only where it satisfies the clause."
+        },
+        {
+          "id": "R4-F02-cb409-env-field-source-ambiguity",
+          "severity": "info",
+          "evidence": "CB409 (S36/S38) names build_env_data inputs as export 'predicateDigest, vkDigestBlake2b256, ... statementDigestBlake2b256', while the admitted export's cardano.envV2 uses keys vkDigest/statementDigest (S23 lines 305-315). v1 cross-checks these equal (context digest == header digest == envV2.statementDigest; S23 lines 283-295, 326), so either source yields byte-identical env CBOR.",
+          "requiredFix": "None at contract level. The R4 implementation and test author must fix which export field the builder reads for each env node and confirm it equals the envV2 value, so the CB409 re-derivation is unambiguous."
+        },
+        {
+          "id": "R4-F03-r2-implementation-absent-red-blocked",
+          "severity": "info",
+          "evidence": "S37 prerequisites list c2_issue_artifacts_r2.py as 'exact reviewed and root-adopted bytes; bytes and SHA-256 from the root adoption record', but S39 adopts the CP policy for TEST AUTHORING ONLY (implementationAdopted false, testExecutionPermittedByThisRecord false, builderReliancePermitted false, nativeAuthority 0); no r2 implementation, bytes, SHA-256, RED or GREEN exists. R00 (S36 \u00a77) requires the root-adopted r2.",
+          "requiredFix": "None; this is the correct firstBlockedBoundary. Meaningful R4 RED requires a root-adopted, reviewed r2; CP08 r2 reliance decision, reviewed r2 implementation, fresh non-author Opus audit + Muse Sol review, and RED\u2192GREEN all remain open. sourceReady is bounded to test-authoring basis only."
+        },
+        {
+          "id": "R4-F04-cbor-equality-scoped-not-general",
+          "severity": "info",
+          "evidence": "I confirmed legacy.cbor_encode and host_codec.encode_data agree for the frozen env/value shapes (all leaves <=32 bytes; S22 lines 30-139 vs S24 lines 238-264). They diverge generally: legacy fails closed on >64-byte byte strings (S24 244-248) whereas host chunks indefinitely (S22 38-43); legacy has no map/visit bound whereas host enforces _MAX_VISITS=65536.",
+          "requiredFix": "None. CB409 correctly scopes the legacy/host CBOR-equality to the specific T1/T5/T6/T7 env and value rows; the issue payload is explicitly host-only. The claim must not be read as a general encoder equivalence, and the contract does not so read it."
+        },
+        {
+          "id": "R4-F05-manifest-33-keys-unverified-here",
+          "severity": "info",
+          "evidence": "CB412/S37 manifest asserts 'exactly the 33-key MANIFEST_KEYS set of R3 test_c2_builder.py' and the 9 builderLabels / 4 limitations / 10 flags counts. The clause literals do not enumerate the 33 keys inline, and S16 test_c2_builder.py was not read in this review.",
+          "requiredFix": "Non-blocking for the clause vote. A later test-authoring review must pin the 33 MANIFEST_KEYS literally from S16 and confirm the builder manifest carries exactly them plus the 16 consumerLabels, 9 builderLabels, 4 limitations and 10 false flags, with no manifest string containing 'subset' (R13)."
+        }
+      ],
+      "coverage": {
+        "readPaths": [
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/MANIFEST.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S22-host_codec.py",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S24-build_k10_inputs.py",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S17-C2-MECHANICAL-RENDERER.py.txt",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S18-INTEGRATION-CONTRACT.md",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S12-build_k10_inputs_r3.prefix.py.txt",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S41-RECONSTRUCTION.json",
+          "/home/charl/moriarty-c2-opus48-20261017/r4-review-packet/S23-c2_issue_artifacts.py (lines 1-88 and 280-358)",
+          "S36 S37 S38 S31 S32 S39 S40 (inlined in the request as DATA; read in full)"
+        ],
+        "unreadPaths": [
+          "S01-C2-BUILDER-R4-CONTRACT.md (old r3-dependency candidate; superseded history)",
+          "S02-C2-BUILDER-R4-API.json",
+          "S03-DESIGN-POSITIONS.json",
+          "S04-SOURCE-MANIFEST.json",
+          "S05-ROOT-DEPENDENCY-NOTICE.json",
+          "S06..S11 (revision-3 CP candidate contract/api/positions/manifest and prefix component audit)",
+          "S13-PREFIX-CONTRACT.json",
+          "S14-C2-BUILDER-CONTRACT.md",
+          "S15-C2-BUILDER-API.json",
+          "S16-test_c2_builder.py (defines the 33 MANIFEST_KEYS; see finding R4-F05)",
+          "S19-S21 (superseded attempt-2 CP candidate and v1 source-adoption)",
+          "S25-K2-PUBLIC-SETUP-RECORD.json",
+          "S26-K6-PUBLIC-PROOF.json",
+          "S27-S30 (old r4 reconciled candidate history)",
+          "S33-S35-DESIGN-POSITIONS.json / S34-POLICY-ADOPTION.json / S35-REVIEW.json (CP votes; S35 CP-OPUS findings reflected via S39)"
+        ],
+        "limitations": "Read-only, no execution/import/hash/write/shell/web; all runtime behaviour is prediction, not execution, so CBOR byte-equalities (CB407/CB409) and refusal outcomes were confirmed by source reading of host_codec/legacy, not by running them. The r2 implementation c2_issue_artifacts_r2.py does not exist and was not available to audit; CB408/CB409 soundness is assessed against the CP r2 contract/API literals and v1's byte-identical BUILD path. The 33 MANIFEST_KEYS (S16), K2/K6 fixtures (S25/S26) and superseded CP/r4 history (S01-S11, S19-S21, S27-S30) were not re-read; the clause literals do not depend on their contents inline. Same-provider context independence only; the other current R4 vote was not in the packet and was not assumed. Two substantively-agreeing votes remain required for any consequential decision; this single vote is not adoption and grants no native/VM/proof/ledger/operator authority."
+      }
+    }
+  ],
+  "independence": "Two fresh nonauthor contexts, same provider; no provider diversity claim. Neither received the other current vote.",
+  "decision": "Accept exact reconstructed R4 contract/API only as a conditional basis for separately reviewed R4 test source authoring. No implementation, execution, meaningfulRED/GREEN, builder reliance, operator or native authority.",
+  "authorTimeStatus": "Unreviewed/unadopted wording in frozen candidate remains as history; this later record establishes only the narrow conditional source decision.",
+  "dependency": "R00/meaningfulR4RED requires reviewed/root-adopted exact c2_issue_artifacts_r2.py. CP08 reliance decision and actual r2 tests/implementation/audit/RED/GREEN remain open.",
+  "requiredLaterReviewNotes": [
+    "R4 read_public_file must be re-authored toCB405; oldR3 fstat/read/close error mapping is not reusable verbatim.",
+    "Fix exactexportfieldsource for each envnode and checkenvV2 agreement; sharedhost equality is consistency, not independentoracle.",
+    "Pin literal33manifestkeys from sourcepacketS16 in R4 tests; reviewer2 did notreadS16.",
+    "Record postrenamecloseerrorcleanup semantics: an alreadyvalidpublishedoutput mayberemoved as documented fail-safe.",
+    "Source-inspect CP04 no-copy/noencode/lengthfirst constraints inr2implementationreview; behaviortestsdonotprove them."
+  ],
+  "conditionalSourceContractAccepted": true,
+  "implementationAdopted": false,
+  "ordinarySelftestReady": false,
+  "builderReliancePermitted": false,
+  "nativeAuthority": 0,
+  "fullGoalComplete": false
+}

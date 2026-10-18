@@ -1,0 +1,23 @@
+[
+  {
+    "evidence": "Candidate launcher.py:242-345 implements Collector with lock/EOF/error state and snapshot(), drain_collectors over one deadline, and main consuming one snapshot per stream; LAUNCHER.patch shows the same two hunks against R2 launcher b2b0d908 and the removal of both join(timeout=5) calls and both buffered pipe closes; the prior review REPORT.md:9 and FINDINGS.json F1-DRAIN-60-EXCEEDED required exactly this repair.",
+    "id": "N1-F1-REPAIRED-NO-MATERIAL-SOURCE-BUG",
+    "requiredFix": "No fix. Do not demand hypothetical infrastructure or cosmetic updates to the superseded proposal wording; the older 'fresh actual-result review is underway' snapshot in LAUNCH-PROPOSAL.json/README.md is historical and is superseded by the actually closed 0e65ccb1 review and f36f85ec adoption.",
+    "severity": "NO-MATERIAL-BLOCKER",
+    "summary": "No material source bug was found in the entire repaired runtime candidate. The original F1 blocker is eliminated in the exact new bytes, and no other AUTH, crypto, custody, or operative effect was changed by the repair."
+  },
+  {
+    "evidence": "ordinary_selftest.py:108 asserts hashlib.sha256(snap[0]).hexdigest() != snap[1] or snap[2] == len(snap[0]) on a snapshot whose retained prefix is 8 bytes and whose observed count is 20, so the first disjunct is expected to hold regardless of coherence; ordinary_selftest.py:137 replicates the launcher drain-complete predicate locally instead of invoking launcher main, and the fake-clock stubs at :42-57 model join timing rather than real threads against a 60-second clock.",
+    "id": "N2-SELFTEST-ASSERTION-LIMITS",
+    "requiredFix": "No source change required for readiness. Root's later actual audit of the single ordinary run should record these as finite-evidence limits; the exact assertions at ordinary_selftest.py:109-111, :116, and :127-139 still give non-vacuous evidence for prefix bound, full hash, observed count, overflow, EOF completion, and read-error exclusion.",
+    "severity": "TEST-ONLY-LIMITATION-NOT-A-BLOCKER",
+    "summary": "One labelled coherence assertion in the new ordinary harness is near-vacuous and the PASS predicate is replicated rather than executed through main; these limit the weight of the future finite evidence but do not block the bounded command or the launcher source."
+  },
+  {
+    "evidence": "LAUNCH-PROPOSAL.json materialization requires exactly four M6 files at 0444 in a 0555 directory with no selftest.py or bytecode, RR6 attestation/AUTHORIZATION-RECORD.json/AUTH.json/launcher.py/LAUNCH-RECORD.json/LAUNCH.stdout/LAUNCH.stderr create-exclusive, and M6/T6/RR6 fresh paths asserted absent; candidate launcher.py:121-130 and operator.py:226-236 read and hash only the four named files and neither enumerates M6, and launcher.py:234-238 checks only T6 and the three launch outputs for absence. LAUNCH-PROPOSAL.json intakeAfterTerminal limits root intake to the 90 declared AUTH publication paths plus receipts/FREEZE-MANIFEST.json and T6 LAYOUT-STATUS.json, never a recursive T6 walk.",
+    "id": "N3-MATERIALIZATION-AND-INTAKE-ROOT-DUTIES",
+    "requiredFix": "No launcher change. After this review and the one bounded ordinary run, root alone materializes M6 and RR6 exactly as proposed, creates the actual 16-field AUTHORIZATION-RECORD.json binding the actual source adoption (bfc7854a), the actual fresh reviews, the ordinary adoption, the new AUTH, the K5 records, and the exact launcher (b07f7e27) and AUTH bytes by externally computed SHA-256, and later intakes only the 90 declared public paths plus FREEZE-MANIFEST.json/LAYOUT-STATUS.json. No future SHA is invented in this review, root never reads /w or private material for these duties, and the actual record does not yet exist.",
+    "severity": "OBSERVATION-NOT-A-BLOCKER",
+    "summary": "Exact materialization, directory modes, attestation, the future authorization record, and scoped intake are root duties proposed in the launch proposal, not properties enforced by launcher code."
+  }
+]

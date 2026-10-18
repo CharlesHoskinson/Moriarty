@@ -1,0 +1,127 @@
+{
+  "schema": "moriarty.wrapper-context-review/1",
+  "recordedAt": "2026-09-13T18:59:50.619909+00:00",
+  "reviewer": "gpt-6-astra",
+  "requestedEffort": "high",
+  "verdict": "REPRODUCED_TEST_ENVIRONMENT_ORPHAN_REAP_DEPENDENCY",
+  "summary": "The same two unchanged tests fail inside installed Foreman strong containment because deadline-killed children remain zombies adopted by its namespace PID1. The PID observations use the correct namespace. A bounded test-only subreaper harness reaps those orphans without signaling them and makes both original assertions pass. This establishes no live child escape or wrapper lifetime defect; it also does not establish full production PID1/container acceptance.",
+  "cause": [
+    {
+      "type": "source fact",
+      "path": "/home/charl/Moriarty/plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py:262",
+      "fact": "assert_pid_gone checks /proc/<pid> absence without distinguishing live process from zombie. Both affected tests launch the static wrapper as ordinary subprocess, not namespace PID1."
+    },
+    {
+      "type": "source fact",
+      "path": "/home/charl/Moriarty/plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c:449",
+      "fact": "At absolute deadline supervise sends SIGKILL to owned child group and breaks. final_reap lines389-394 sees now>=deadline, performs only nonblocking waitpid drains and returns. Child may not yet be waitable; wrapper then exits124. This bounded deadline path deliberately has no post-deadline reap grace."
+    },
+    {
+      "type": "source fact",
+      "path": "/home/charl/Moriarty/plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c:595",
+      "fact": "Wrapper sets PR_SET_CHILD_SUBREAPER, but it cannot reap after it exits. When it is an ordinary subprocess, remaining dying children move to the next ancestor reaper. When truly PID1, its exit tears down its private namespace; the specification permits reaping until no children or fixed deadline requires PID1 exit."
+    },
+    {
+      "type": "source fact",
+      "path": "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js:16376",
+      "fact": "Installed launcher uses unshare --user --map-current-user --pid --mount-proc --fork --kill-child and reexecs Node launcher within that namespace. Its source uses node child_process spawn/wait for tracked children; no explicit waitpid/subreaper/general orphan-reap path found in current packages/launcher/src or installed bundle."
+    },
+    {
+      "type": "experiment observation",
+      "path": "/tmp/moriarty-wrapper-context-strong.log",
+      "fact": "Pytest PID8 and /proc/self8 share pid:[4026532501] with Node MainThread PID1. Both failed child records show comm child, state Z, ppid1, same namespace; no namespace mismatch in observed PIDs. First test reached PID assertion after passing wrapper return124 and timing assertions."
+    },
+    {
+      "type": "experiment observation",
+      "path": "/tmp/moriarty-wrapper-context-reaper.log",
+      "fact": "Test-only PR_SET_CHILD_SUBREAPER harness at PID8 parents pytest PID9 in the same Foreman namespace, invokes unchanged assertions and sends no signals. It reaps adopted child21 with status-9, orphan wrapper23 with124, child24 with-9, pytest9 with0; both tests pass and loop ends at ECHILD."
+    }
+  ],
+  "experiments": [
+    {
+      "name": "Same two tests under strong with diagnostic-only assertion wrapper",
+      "command": [
+        "node",
+        "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+        "--timeout",
+        "20",
+        "--grace",
+        "1",
+        "--require-containment",
+        "strong",
+        "--",
+        "python3",
+        "/tmp/moriarty-wrapper-context-probe.py"
+      ],
+      "cwd": "/home/charl/Moriarty/plugins/moriarty-dev",
+      "launcherExit": 1,
+      "pytest": "2 failed in5.91s",
+      "effect": "Actual original test bodies and original assert_pid_gone called. Extra diagnostics only on failure; no assertion suppression. Test fixture compiles static wrapper/child into temporary files."
+    },
+    {
+      "name": "Same tests under strong with test-only reaper",
+      "command": [
+        "node",
+        "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+        "--timeout",
+        "20",
+        "--grace",
+        "1",
+        "--require-containment",
+        "strong",
+        "--",
+        "python3",
+        "/tmp/moriarty-wrapper-test-reaper.py"
+      ],
+      "cwd": "/home/charl/Moriarty/plugins/moriarty-dev",
+      "launcherExit": 0,
+      "pytest": "2 passed in1.53s",
+      "effect": "Harness15sec internal bound, launcher20sec. Only waits for adopted children; no kill/termination call, no wrapper/source/Foreman changes. All original assertions retained."
+    },
+    {
+      "name": "Parent root outside-strong run",
+      "pytest": "2 passed in1.59s",
+      "evidenceClass": "Reported by parent; not independently rerun here",
+      "interpretation": "Consistent with a functioning outer adopter/reaper but this report does not infer that host adopter identity without measurement."
+    }
+  ],
+  "minimalCorrection": {
+    "recommendation": "Use a scoped isolated test reaper for precisely the deadline-expiry and dead-external-launcher tests when run inside a parent namespace whose PID1 does not drain adopted zombies. Run original assertions unchanged and retain explicit adopted-child statuses and bounded completion evidence. An equivalent dedicated subprocess fixture with PR_SET_CHILD_SUBREAPER is sufficient; no new framework or global Foreman change is needed.",
+    "mustPreserve": [
+      "Harness does not signal/kill prover or wrapper; otherwise it could mask a failed lifetime bound.",
+      "Do not change assert_pid_gone globally into merely state==Z or ignore failure; retain eventual absence after legitimate adoption/reaping.",
+      "Retain wrapper deadline result124, bounded timing, and explicit SIGKILL child statuses; retain distinction between wrapper-reaped and harness-adopted processes.",
+      "Scope the helper to deadline/orphan tests. Do not wrap pre-deadline test_forked_grandchild_is_killed_and_reaped blindly: automatic outer reaping could conceal that wrapper-specific predicate.",
+      "Keep existing real PID1 namespace tests for detached process groups and abrupt PID1 death; they establish separate kernel teardown/heartbeat predicates. Namespace-unavailable remains explicit, not skipped as a pass.",
+      "For production, verify actual admitted container entrypoint is this static wrapper at PID1, with private PID namespace/restart policy/mounts/control and lifetime; strong outer Foreman containment is not equivalent to the prover being PID1.",
+      "Pin/freeze/review any eventual source test harness change; this read-only diagnostic has not installed one."
+    ],
+    "alternative": "Move the affected lifetime scenarios into a deliberately constructed private PID namespace with the wrapper itself as PID1, observe namespace teardown and retained status/heartbeat from outside. Preserve the external-launcher-death scenario without kill-on-parent-death accidentally supplying the termination under test. This is more test surgery than a scoped reaper."
+  },
+  "acceptanceImplications": [
+    "Record original22pass/2fail report honestly alongside context diagnosis; do not convert it to a blanket pass or erase it.",
+    "The two reproduced failures are orphan/zombie absence checks under an outer init without observed reaping, not evidence that child code continues executing past deadline.",
+    "Actual wrapper deadline execution is supported by original124/timing and reaper-observed SIGKILL statuses. Complete own-reaping and production namespace guarantees remain separate predicates.",
+    "No C deadline extension is justified by this discrepancy: adding waiting beyond absolute bound would weaken the specified lifetime guarantee.",
+    "No global Foreman repair or weakening of strong containment is necessary for the next Python integration source gate; use honest scoped environment correction and retain actual PID1/container acceptance requirements."
+  ],
+  "sourceManifestSha256": {
+    "/home/charl/Moriarty/plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": "0cf96fb4c8407d0a2a5ad8a197548e5ccace4e4a819de0c81fe73990e452f90b",
+    "/home/charl/Moriarty/plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": "d0b08d72d5fa8d1d85a4b1d6f6c43e26b07f4615f0ca0e76126407157cf11691",
+    "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js": "63b934958c6dd883a4420d1e33a48338366e58223929c23b47873a199a9ec322",
+    "/home/charl/foreman/packages/launcher/src/platform.ts": "8762290917352f97c13df8b22541e60eb9b8a128d3bbd0f577732357cbd42382",
+    "/home/charl/foreman/packages/launcher/src/services.ts": "00f33d68bb9361efdddbe3019ad86e77f77084810028250f055fe4c72f800e93"
+  },
+  "artifactManifestSha256": {
+    "/tmp/moriarty-wrapper-context-probe.py": "2c97da91958a561c5cff5ab25bd15ffd7e92a488a0267ddca10c58089fcc638b",
+    "/tmp/moriarty-wrapper-test-reaper.py": "9d3dd9f42f4cc57da1b13eb7fd130ac6791009bd9baea12387e93a3e71e4b8fe",
+    "/tmp/moriarty-wrapper-context-strong.log": "b03dccc1a79d17459ac410e06f4d1c1728a94c8ba29c62528118fb66385b96fd",
+    "/tmp/moriarty-wrapper-context-reaper.log": "c0db5d4a778f4ae06ee82a1be3fdf31229a1f8bd95a733941fa8de9dacd0110a"
+  },
+  "limits": [
+    "No repository source edits, global launcher changes, Docker, systemd, network or live accounting writes. Required status may record its normal administrative interval.",
+    "Only two tests were rerun in each bounded invocation; no full suite or live PID1-container verification.",
+    "PIDs/namespaces are ephemeral probe facts, not current process identities for later operations.",
+    "Temporary probes/logs are retained under /tmp; they are diagnostic evidence, not approved production transport."
+  ]
+}

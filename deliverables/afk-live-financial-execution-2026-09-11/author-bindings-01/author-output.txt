@@ -1,0 +1,1618 @@
+Implementing exact live-source labels, dual non-author reviews, source-only acceptance, the SP01 prerequisite bridge, and non-result receipt classification. Historical design checks stay unchanged. Isolated tests only; no live registration or accounting.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/records.py
+@@
+ from datetime import datetime
+ import hashlib
+ import json
+ import os
+ from pathlib import Path
++import difflib
+@@
+ ACCEPTANCE_COMPLETE = frozenset(("complete-design-subset-only",))
+ DESIGN_SCOPE = "RP01-MC02 specified design consistency only"
++LIVE_BINDING_STATUS = "admitted-i2-source-only"
++LIVE_CAMPAIGN_STATUS = "admitted-i2-source-only"
++LIVE_REVIEW_SCOPE = "I2 live executor source correctness only"
++LIVE_ACCEPTANCE_STATUS = "complete-i2-source-only"
++LIVE_DIGEST_ALGORITHM = "SHA256 compact sorted-key JSON of ownedFiles mapping"
++LIVE_STAGE = "i2"
++LIVE_OWNER = "MC02"
++LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
++OPUS_REVIEWER = "claude-opus-5"
++ASTRA_REVIEWER = "gpt-6-astra"
++REVIEW_EFFORT_MEDIUM = "medium"
++SP01_BRIDGE_SCHEMA = "moriarty.sp01-prerequisite-disposition/1"
++SP01_PATH = "openspec/sprints/sp01-financial-contract-and-execution-admission.md"
++SP01_ORIGINAL_PATH = (
++    "plugins/moriarty-dev/tests/fixtures/sp01-financial-contract-and-execution-admission.md"
++)
++SP01_ORIGINAL_SHA = "fdb586d9bf05f2fbf7e9c2294be49854528db20e575faf9aaa1144b033908172"
++SP01_CURRENT_SHA = "bc60ffef020b282954f5543db3b00f51f06d45dd113cd68d853967ff50acc23b"
++SP01_DISPOSITION_SCOPE = "SP01 RP01-MC02 non-substantive prerequisite disposition only"
++SP01_NONSUBSTANTIVE_FINDING = "non-substantive impact on accepted RP01-MC02"
++BRIDGE_KEYS = (
++    "schema",
++    "path",
++    "originalPath",
++    "originalSha256",
++    "currentSha256",
++    "diffPath",
++    "diffSha256",
++    "opusDisposition",
++    "astraDisposition",
++)
++DISPOSITION_REF_KEYS = ("path", "sha256")
++LIVE_ACCEPTANCE_REQUIRED = ("candidateHash", "review", "sourceCandidate", "status")
+@@
+ def _entry_eligible(sprints, program, campaigns, root, requirement, missing):
++def _entry_eligible(sprints, program, campaigns, root, requirement, missing, substitutions=None):
+     gate = _find_gate(sprints, requirement)
+     if gate is None:
+         missing.append("entryGate-unresolved:" + requirement)
+         return False
+@@
+     for required in requires:
+         if not _stage_complete(
+             required, stages, campaigns, root, missing, visiting, done
++            required, stages, campaigns, root, missing, visiting, done, substitutions
+         ):
+             return False
+     return True
+@@
+ def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done):
++def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done, substitutions=None):
+     if stage_id in done:
+         return True
+@@
+     if not _prerequisite_campaign(stage, campaigns, root, missing):
++    prereq_subs = substitutions if stage_id == "rp01-mc02" else None
++    if not _prerequisite_campaign(stage, campaigns, root, missing, substitutions=prereq_subs):
+         return False
+@@
+         if not _stage_complete(
+             req, stages, campaigns, root, missing, visiting, done
+         ):
+@@
+ def _prerequisite_campaign(stage, campaigns, root, missing):
++def _prerequisite_campaign(stage, campaigns, root, missing, substitutions=None):
+@@
+     binding_ok, _binding = _verify_binding(
+         root, campaign_id, record, missing, expected_stage=stage_id
++        root, campaign_id, record, missing, expected_stage=stage_id, substitutions=substitutions
+     )
+     if not binding_ok:
+         return False
+-    return _verify_candidate(root, campaign_id, record, missing)
++    return _verify_candidate(root, campaign_id, record, missing, substitutions=substitutions)
+@@
+     entry_eligible = False
+     if program_ok and sprints_ok:
+         entry_eligible = _entry_eligible(
+             sprints,
+             program,
+             campaigns if campaign_ok else None,
+             root,
+             action["requirement"],
+             missing,
++            substitutions=_live_bridge_substitutions(
++                root, action, campaigns if campaign_ok else None, missing
++            ),
+         )
+@@
+     if _campaign_is_complete(status):
+         return rank <= EVIDENCE_PROFILES.index("syntax")
++    if status == LIVE_CAMPAIGN_STATUS:
++        return profile == LIVE_EVIDENCE_PROFILE or rank <= EVIDENCE_PROFILES.index(
++            "local-runtime"
++        )
+     if status.startswith("admitted-"):
+         return rank <= EVIDENCE_PROFILES.index("local-runtime")
+     return False
+@@
+ def _verify_binding(root, campaign_id, record, missing, expected_stage=None):
++def _verify_binding(root, campaign_id, record, missing, expected_stage=None, substitutions=None):
+@@
+     if payload.get("status") != "admitted-design-subset-only":
+         missing.append("binding-status-unsupported:" + str(payload.get("status")))
+         return False, None
++    live = record.get("status") == LIVE_CAMPAIGN_STATUS
++    bind_status = payload.get("status")
++    if live:
++        if bind_status != LIVE_BINDING_STATUS:
++            missing.append("binding-status-unsupported:" + str(bind_status))
++            return False, None
++        if payload.get("stage") != LIVE_STAGE or record.get("stage") != LIVE_STAGE:
++            missing.append("binding-stage-mismatch:" + campaign_id)
++            return False, None
++        if LIVE_OWNER not in _owners_of(record.get("owner")):
++            missing.append("campaign-owner-mismatch:" + campaign_id)
++            return False, None
++    elif bind_status != "admitted-design-subset-only":
++        missing.append("binding-status-unsupported:" + str(bind_status))
++        return False, None
+@@
+     if not _verify_path_map(root, payload.get("inputs"), missing, "binding-input"):
++    if not _verify_path_map(
++        root, payload.get("inputs"), missing, "binding-input", substitutions=substitutions
++    ):
+         return False, None
+@@
+ def _verify_path_map(root, mapping, missing, kind):
++def _verify_path_map(root, mapping, missing, kind, substitutions=None):
+     if mapping is None:
+         return True
+     if type(mapping) is not dict:
+         missing.append(kind + "-unresolved")
+         return False
++    substitutions = substitutions or {}
+     for rel, digest in mapping.items():
+         if type(rel) is not str or type(digest) is not str:
+             missing.append(kind + "-unresolved")
+             return False
++        if rel in substitutions:
++            data = substitutions[rel]
++            if type(data) is not bytes or hashlib.sha256(data).hexdigest() != digest.lower():
++                missing.append(kind + "-stale:" + rel)
++                return False
++            continue
+         path = _contained_file(root, rel, missing, kind)
+@@
+ def _verify_candidate(root, campaign_id, record, missing):
++def _verify_candidate(root, campaign_id, record, missing, substitutions=None):
+@@
+     if type(algo) is not str or "SHA256" not in algo:
+         missing.append("digestAlgorithm-unsupported:" + campaign_id)
+         return False
++    live = record.get("status") == LIVE_CAMPAIGN_STATUS
++    if live:
++        if algo != LIVE_DIGEST_ALGORITHM:
++            missing.append("digestAlgorithm-unsupported:" + campaign_id)
++            return False
++    elif type(algo) is not str or "SHA256" not in algo:
++        missing.append("digestAlgorithm-unsupported:" + campaign_id)
++        return False
+@@
+     review_rel = record.get("review")
+-    if type(review_rel) is str and review_rel != "":
+-        if not _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing):
+-            return False
+-    elif _campaign_is_complete(record.get("status")):
+-        missing.append("review-unresolved:" + campaign_id)
+-        return False
++    if live:
++        if not _apply_live_source_reviews(root, record, candidate_sha, campaign_id, missing):
++            return False
++    elif type(review_rel) is str and review_rel != "":
++        if not _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing):
++            return False
++    elif _campaign_is_complete(record.get("status")):
++        missing.append("review-unresolved:" + campaign_id)
++        return False
+     published_skip = None
+     acc_rel = record.get("acceptance")
+     if type(acc_rel) is str and acc_rel != "":
+         published_skip = _apply_acceptance(
+             root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=record.get("review")
++            root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=record.get("review"), live=live
+         )
+         if published_skip is False:
+             return False
+-    elif _campaign_is_complete(record.get("status")):
++    elif live or _campaign_is_complete(record.get("status")):
+         missing.append("acceptance-unresolved:" + campaign_id)
+         return False
+@@
+     return _verify_path_map(root, inputs, missing, "candidate-input")
++    return _verify_path_map(
++        root, inputs, missing, "candidate-input", substitutions=substitutions
++    )
+@@
+ def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=None):
++def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=None, live=False):
+@@
+     for field in ACCEPTANCE_REQUIRED:
++    required = LIVE_ACCEPTANCE_REQUIRED if live else ACCEPTANCE_REQUIRED
++    for field in required:
+         value = acceptance.get(field)
+         if type(value) is not str or value == "":
+             missing.append("acceptance-field-unresolved:" + field)
+             return False
+     status = acceptance.get("status")
++    if live:
++        if status != LIVE_ACCEPTANCE_STATUS:
++            missing.append("acceptance-status-unsupported:" + str(status))
++            return False
++        acc_hash = acceptance.get("candidateHash")
++        if acc_hash.lower() != candidate_sha.lower():
++            missing.append("acceptance-candidateHash-conflict:" + campaign_id)
++            return False
++        if expected_review is not None and acceptance.get("review") != expected_review:
++            missing.append("acceptance-review-conflict:" + campaign_id)
++            return False
++        source = acceptance.get("sourceCandidate")
++        src_path = _contained_file(root, source, missing, "sourceCandidate")
++        if src_path is None or src_path != man_path:
++            missing.append("acceptance-sourceCandidate-conflict:" + campaign_id)
++            return False
++        unchanged = acceptance.get("unchangedPayloadHashes")
++        if unchanged is None:
++            unchanged = {}
++        if type(unchanged) is not dict:
++            missing.append("acceptance-unchanged-unresolved:" + campaign_id)
++            return False
++        for rel, digest in unchanged.items():
++            if type(rel) is not str or type(digest) is not str:
++                missing.append("acceptance-unchanged-unresolved:" + campaign_id)
++                return False
++            frozen = owned.get(rel)
++            if type(frozen) is not str or frozen.lower() != digest.lower():
++                missing.append("acceptance-unchanged-conflict:" + rel)
++                return False
++        return None
+     if not _acceptance_is_complete(status):
+         missing.append("acceptance-status-unsupported:" + str(status))
+         return False
+@@
+     if rev_scope != DESIGN_SCOPE:
+         missing.append("review-scope-unsupported:" + campaign_id)
+         return False
+@@
+     if record.get("stage") != "rp01-mc02":
+         missing.append("review-scope-unsupported:" + campaign_id)
+         return False
++def _live_bridge_substitutions(root, action, campaigns, missing):
++    ref = action.get("admissionRef") if type(action) is dict else None
++    if type(ref) is not str or not ref.startswith("campaign:") or campaigns is None:
++        return None
++    table = campaigns.get("campaigns") if type(campaigns) is dict else None
++    if type(table) is not dict:
++        return None
++    record = table.get(ref[len("campaign:") :])
++    if type(record) is not dict or record.get("status") != LIVE_CAMPAIGN_STATUS:
++        return None
++    return _verify_sp01_bridge(root, record, missing)
++
++
++def _verify_sp01_bridge(root, record, missing):
++    rel = record.get("reconciliation")
++    if type(rel) is not str or rel == "":
++        missing.append("reconciliation-unresolved")
++        return None
++    path = _contained_file(root, rel, missing, "reconciliation")
++    if path is None:
++        return None
++    payload = _load_json_path(path, missing, rel)
++    if type(payload) is not dict:
++        missing.append("reconciliation-not-object")
++        return None
++    extra = [key for key in payload if key not in BRIDGE_KEYS]
++    absent = [key for key in BRIDGE_KEYS if key not in payload]
++    for key in extra:
++        missing.append("unknown-reconciliation-field:" + key)
++        return None
++    for key in absent:
++        missing.append("missing-reconciliation-field:" + key)
++        return None
++    if payload.get("schema") != SP01_BRIDGE_SCHEMA:
++        missing.append("reconciliation-schema-unresolved:" + str(payload.get("schema")))
++        return None
++    if payload.get("path") != SP01_PATH or payload.get("originalPath") != SP01_ORIGINAL_PATH:
++        missing.append("reconciliation-path-unsupported")
++        return None
++    if payload.get("originalSha256") != SP01_ORIGINAL_SHA:
++        missing.append("reconciliation-original-hash-mismatch")
++        return None
++    if payload.get("currentSha256") != SP01_CURRENT_SHA:
++        missing.append("reconciliation-current-hash-mismatch")
++        return None
++    original_path = _contained_file(root, SP01_ORIGINAL_PATH, missing, "sp01-original")
++    current_path = _contained_file(root, SP01_PATH, missing, "sp01-current")
++    diff_rel = payload.get("diffPath")
++    if type(diff_rel) is not str or type(payload.get("diffSha256")) is not str:
++        missing.append("reconciliation-diff-unresolved")
++        return None
++    diff_path = _contained_file(root, diff_rel, missing, "sp01-diff")
++    if original_path is None or current_path is None or diff_path is None:
++        return None
++    original = _read_bytes(original_path, missing, SP01_ORIGINAL_PATH)
++    current = _read_bytes(current_path, missing, SP01_PATH)
++    diff_bytes = _read_bytes(diff_path, missing, diff_rel)
++    if original is None or current is None or diff_bytes is None:
++        return None
++    if hashlib.sha256(original).hexdigest() != SP01_ORIGINAL_SHA:
++        missing.append("reconciliation-original-stale")
++        return None
++    if hashlib.sha256(current).hexdigest() != SP01_CURRENT_SHA:
++        missing.append("reconciliation-current-stale")
++        return None
++    if hashlib.sha256(diff_bytes).hexdigest() != payload["diffSha256"].lower():
++        missing.append("reconciliation-diff-stale")
++        return None
++    regenerated = _sp01_unified_diff(original, current)
++    if regenerated != diff_bytes:
++        missing.append("reconciliation-diff-mismatch")
++        return None
++    tuple_digest = hashlib.sha256(
++        json.dumps(
++            {
++                "currentSha256": SP01_CURRENT_SHA,
++                "diffSha256": payload["diffSha256"].lower(),
++                "originalSha256": SP01_ORIGINAL_SHA,
++            },
++            separators=(",", ":"),
++            sort_keys=True,
++        ).encode("utf-8")
++    ).hexdigest()
++    if not _apply_disposition_receipt(
++        root, payload.get("opusDisposition"), OPUS_REVIEWER, tuple_digest, missing
++    ):
++        return None
++    if not _apply_disposition_receipt(
++        root, payload.get("astraDisposition"), ASTRA_REVIEWER, tuple_digest, missing
++    ):
++        return None
++    return {SP01_PATH: original}
++
++
++def _sp01_unified_diff(original, current):
++    lines = difflib.unified_diff(
++        original.decode("utf-8").splitlines(keepends=True),
++        current.decode("utf-8").splitlines(keepends=True),
++        fromfile=SP01_ORIGINAL_PATH,
++        tofile=SP01_PATH,
++        n=3,
++        lineterm="\n",
++    )
++    return "".join(lines).encode("utf-8")
++
++
++def _apply_disposition_receipt(root, ref, expected_reviewer, tuple_digest, missing):
++    if type(ref) is not dict:
++        missing.append("disposition-ref-unresolved")
++        return False
++    extra = [key for key in ref if key not in DISPOSITION_REF_KEYS]
++    if extra or any(key not in ref for key in DISPOSITION_REF_KEYS):
++        missing.append("disposition-ref-unresolved")
++        return False
++    rel = ref.get("path")
++    digest = ref.get("sha256")
++    if type(rel) is not str or type(digest) is not str:
++        missing.append("disposition-ref-unresolved")
++        return False
++    path = _contained_file(root, rel, missing, "disposition")
++    if path is None:
++        return False
++    data = _read_bytes(path, missing, rel)
++    if data is None:
++        return False
++    if hashlib.sha256(data).hexdigest() != digest.lower():
++        missing.append("disposition-stale:" + rel)
++        return False
++    review = _parse_json(data, missing, rel)
++    if type(review) is not dict:
++        missing.append("disposition-not-object")
++        return False
++    extra_rev = [key for key in review if key not in REVIEW_KEYS]
++    if extra_rev:
++        missing.append("unknown-review-field:" + extra_rev[0])
++        return False
++    for field in REVIEW_REQUIRED:
++        value = review.get(field)
++        if type(value) is not str or value == "":
++            missing.append("review-field-unresolved:" + field)
++            return False
++    if review.get("verdict") != REVIEW_VERDICT_PASS:
++        missing.append("disposition-verdict-unresolved")
++        return False
++    if review.get("scope") != SP01_DISPOSITION_SCOPE:
++        missing.append("disposition-scope-unsupported")
++        return False
++    if review.get("reviewer") != expected_reviewer:
++        missing.append("disposition-reviewer-unsupported:" + str(review.get("reviewer")))
++        return False
++    if review.get("effort") != REVIEW_EFFORT_MEDIUM:
++        missing.append("disposition-effort-unsupported:" + str(review.get("effort")))
++        return False
++    if str(review.get("candidateSha256", "")).lower() != tuple_digest.lower():
++        missing.append("disposition-candidateSha256-conflict")
++        return False
++    findings = review.get("findings")
++    if type(findings) is not list or not _findings_approve_nonsubstantive(findings):
++        missing.append("disposition-findings-unresolved")
++        return False
++    return True
++
++
++def _findings_approve_nonsubstantive(findings):
++    for item in findings:
++        text = item if type(item) is str else json.dumps(item)
++        if SP01_NONSUBSTANTIVE_FINDING in text:
++            return True
++    return False
++
++
++def _apply_live_source_reviews(root, record, candidate_sha, campaign_id, missing):
++    opus_rel = record.get("review")
++    astra_rel = record.get("sourceReview")
++    if type(opus_rel) is not str or opus_rel == "" or type(astra_rel) is not str or astra_rel == "":
++        missing.append("review-unresolved:" + campaign_id)
++        return False
++    if record.get("scope") != LIVE_REVIEW_SCOPE:
++        missing.append("review-scope-unsupported:" + campaign_id)
++        return False
++    if not _apply_live_review(root, opus_rel, OPUS_REVIEWER, candidate_sha, campaign_id, missing):
++        return False
++    if not _apply_live_review(root, astra_rel, ASTRA_REVIEWER, candidate_sha, campaign_id, missing):
++        return False
++    return True
++
++
++def _apply_live_review(root, review_rel, expected_reviewer, candidate_sha, campaign_id, missing):
++    rev_path = _contained_file(root, review_rel, missing, "review")
++    if rev_path is None:
++        return False
++    review = _load_json_path(rev_path, missing, review_rel)
++    if type(review) is not dict:
++        missing.append("review-not-object:" + campaign_id)
++        return False
++    extra = [key for key in review if key not in REVIEW_KEYS]
++    for key in extra:
++        missing.append("unknown-review-field:" + key)
++        return False
++    for field in REVIEW_REQUIRED:
++        value = review.get(field)
++        if type(value) is not str or value == "":
++            missing.append("review-field-unresolved:" + field)
++            return False
++    if review.get("effort") != REVIEW_EFFORT_MEDIUM:
++        missing.append("review-effort-unsupported:" + str(review.get("effort")))
++        return False
++    findings = review.get("findings")
++    if type(findings) is not list:
++        missing.append("review-findings-unresolved:" + campaign_id)
++        return False
++    if str(review.get("candidateSha256", "")).lower() != candidate_sha.lower():
++        missing.append("review-candidateSha256-conflict:" + campaign_id)
++        return False
++    if review.get("scope") != LIVE_REVIEW_SCOPE:
++        missing.append("review-scope-unsupported:" + campaign_id)
++        return False
++    if review.get("verdict") != REVIEW_VERDICT_PASS:
++        missing.append("review-verdict-unresolved:" + campaign_id)
++        return False
++    if review.get("reviewer") != expected_reviewer:
++        missing.append("review-reviewer-unsupported:" + str(review.get("reviewer")))
++        return False
++    reviewer = review.get("reviewer")
++    lowered = reviewer.lower()
++    if lowered.startswith("author") or "author-" in lowered:
++        missing.append("review-reviewer-not-independent:" + reviewer)
++        return False
++    return True
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/store.py
+@@
+ LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
+ LEGACY_PRIMARY_KINDS = frozenset(("implement", "repair"))
+ KNOWN_NONLIVE_PROFILES = frozenset(("local-runtime", "syntax"))
++NON_RESULT_REVIEW_SCOPES = frozenset(
++    (
++        "I2 live executor source correctness only",
++        "SP01 RP01-MC02 non-substantive prerequisite disposition only",
++        "source",
++        "specification",
++        "resource",
++    )
++)
+@@
+     verdict = receipt_data.get("verdict", receipt_data.get("scopedVerdict", ""))
+     findings = receipt_data.get("findings")
+     if findings is None:
+         findings = receipt_data.get("blockers", [])
+ 
+     conn = init_db(db_path)
+     now = _now_iso()
+     try:
+         with conn:
+-            event_kind = "result_review" if verdict == "APPROVED" else "result_review_failure"
++            if verdict == "APPROVED":
++                if scope in NON_RESULT_REVIEW_SCOPES:
++                    event_kind = "source_review"
++                else:
++                    event_kind = "result_review"
++            else:
++                event_kind = "result_review_failure"
+             conn.execute(
+*** Add File: plugins/moriarty-dev/tests/test_live_bindings.py
++"""Isolated live-source binding, review, acceptance and SP01-bridge tests."""
++from __future__ import annotations
++
++import difflib
++import hashlib
++import json
++import sqlite3
++import sys
++import tempfile
++import unittest
++from pathlib import Path
++
++SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
++TESTS_DIR = Path(__file__).resolve().parent
++if str(SCRIPTS_DIR) not in sys.path:
++    sys.path.insert(0, str(SCRIPTS_DIR))
++if str(TESTS_DIR) not in sys.path:
++    sys.path.insert(0, str(TESTS_DIR))
++
++import test_records as tr
++from moriarty_dev.cli import cmd_review
++from moriarty_dev.policy import assess
++from moriarty_dev.records import load_snapshot, read_actions
++from moriarty_dev.store import get_history, init_db, record_event, record_review
++
++LIVE_STATUS = "admitted-i2-source-only"
++LIVE_SCOPE = "I2 live executor source correctness only"
++LIVE_ACCEPT = "complete-i2-source-only"
++LIVE_DIGEST = "SHA256 compact sorted-key JSON of ownedFiles mapping"
++SP01_PATH = "openspec/sprints/sp01-financial-contract-and-execution-admission.md"
++SP01_ORIGINAL = (
++    "plugins/moriarty-dev/tests/fixtures/sp01-financial-contract-and-execution-admission.md"
++)
++SP01_ORIGINAL_SHA = "fdb586d9bf05f2fbf7e9c2294be49854528db20e575faf9aaa1144b033908172"
++SP01_CURRENT_SHA = "bc60ffef020b282954f5543db3b00f51f06d45dd113cd68d853967ff50acc23b"
++SP01_SCOPE = "SP01 RP01-MC02 non-substantive prerequisite disposition only"
++SOURCE_ROOT = Path(__file__).resolve().parents[3]
++
++
++def sha256_bytes(data: bytes) -> str:
++    return hashlib.sha256(data).hexdigest()
++
++
++def compact_owned(owned: dict) -> str:
++    return sha256_bytes(
++        json.dumps(owned, separators=(",", ":"), sort_keys=True).encode("utf-8")
++    )
++
++
++class LiveSourceBindings(unittest.TestCase):
++    def setUp(self):
++        self.temp, self.root = tr.make_repo()
++        self.addCleanup(self.temp.cleanup)
++        self.program_path, self.sprints_path, self.campaign_path = tr.copy_genuine_registers(
++            self.root
++        )
++        self.program = tr.load_json(self.program_path)
++        self.campaigns = tr.load_json(self.campaign_path)
++        tr.write_commands(self.root)
++        self.source = self.root / "experiments" / "live-source.txt"
++        self.source.parent.mkdir(parents=True, exist_ok=True)
++        self.source.write_bytes(b"live-source-v1\n")
++        self.owned = {
++            "experiments/live-source.txt": sha256_bytes(self.source.read_bytes())
++        }
++        self.candidate = compact_owned(self.owned)
++        self._install_current_sp01()
++
++    def _install_current_sp01(self):
++        current_src = SOURCE_ROOT / SP01_PATH
++        original_src = Path(__file__).resolve().parent / "fixtures" / Path(SP01_PATH).name
++        dest_current = self.root / SP01_PATH
++        dest_original = self.root / SP01_ORIGINAL
++        dest_current.parent.mkdir(parents=True, exist_ok=True)
++        dest_original.parent.mkdir(parents=True, exist_ok=True)
++        dest_current.write_bytes(current_src.read_bytes())
++        dest_original.write_bytes(original_src.read_bytes())
++        self.original_bytes = dest_original.read_bytes()
++        self.current_bytes = dest_current.read_bytes()
++        self.assertEqual(sha256_bytes(self.original_bytes), SP01_ORIGINAL_SHA)
++        self.assertEqual(sha256_bytes(self.current_bytes), SP01_CURRENT_SHA)
++        diff = "".join(
++            difflib.unified_diff(
++                self.original_bytes.decode("utf-8").splitlines(keepends=True),
++                self.current_bytes.decode("utf-8").splitlines(keepends=True),
++                fromfile=SP01_ORIGINAL,
++                tofile=SP01_PATH,
++                n=3,
++                lineterm="\n",
++            )
++        ).encode("utf-8")
++        self.diff_rel = "evidence/i2-live-source/sp01.diff"
++        diff_path = self.root / self.diff_rel
++        diff_path.parent.mkdir(parents=True, exist_ok=True)
++        diff_path.write_bytes(diff)
++        self.diff_sha = sha256_bytes(diff)
++        self.tuple_sha = compact_owned(
++            {
++                "currentSha256": SP01_CURRENT_SHA,
++                "diffSha256": self.diff_sha,
++                "originalSha256": SP01_ORIGINAL_SHA,
++            }
++        )
++
++    def _write_review(self, rel, reviewer):
++        payload = {
++            "candidateSha256": self.candidate,
++            "effort": "medium",
++            "findings": [],
++            "recordedAt": "2026-09-11T08:00:00+00:00",
++            "reviewer": reviewer,
++            "scope": LIVE_SCOPE,
++            "verdict": "APPROVED",
++        }
++        path = self.root / rel
++        path.parent.mkdir(parents=True, exist_ok=True)
++        path.write_text(json.dumps(payload, indent=2) + "\n")
++        return rel, sha256_bytes(path.read_bytes())
++
++    def _write_disposition(self, rel, reviewer):
++        payload = {
++            "candidateSha256": self.tuple_sha,
++            "effort": "medium",
++            "findings": [
++                "non-substantive impact on accepted RP01-MC02"
++            ],
++            "recordedAt": "2026-09-11T08:00:00+00:00",
++            "reviewer": reviewer,
++            "scope": SP01_SCOPE,
++            "verdict": "APPROVED",
++        }
++        path = self.root / rel
++        path.parent.mkdir(parents=True, exist_ok=True)
++        path.write_text(json.dumps(payload, indent=2) + "\n")
++        return {"path": rel, "sha256": sha256_bytes(path.read_bytes())}
++
++    def _write_live_records(self, **mutate):
++        opus_rel = "evidence/i2-live-source/opus-review.json"
++        astra_rel = "evidence/i2-live-source/astra-review.json"
++        self._write_review(opus_rel, "claude-opus-5")
++        self._write_review(astra_rel, "gpt-6-astra")
++        opus_disp = self._write_disposition(
++            "evidence/i2-live-source/opus-sp01.json", "claude-opus-5"
++        )
++        astra_disp = self._write_disposition(
++            "evidence/i2-live-source/astra-sp01.json", "gpt-6-astra"
++        )
++        bridge_rel = "evidence/i2-live-source/sp01-bridge.json"
++        bridge = {
++            "schema": "moriarty.sp01-prerequisite-disposition/1",
++            "path": SP01_PATH,
++            "originalPath": SP01_ORIGINAL,
++            "originalSha256": SP01_ORIGINAL_SHA,
++            "currentSha256": SP01_CURRENT_SHA,
++            "diffPath": self.diff_rel,
++            "diffSha256": self.diff_sha,
++            "opusDisposition": opus_disp,
++            "astraDisposition": astra_disp,
++        }
++        tr.write_json(self.root / bridge_rel, bridge)
++        man_rel = "evidence/i2-live-source/candidate.json"
++        tr.write_json(
++            self.root / man_rel,
++            {
++                "candidateSha256": self.candidate,
++                "digestAlgorithm": LIVE_DIGEST,
++                "ownedFiles": self.owned,
++                "inputs": {SP01_PATH: SP01_CURRENT_SHA},
++            },
++        )
++        acc_rel = "evidence/i2-live-source/acceptance.json"
++        tr.write_json(
++            self.root / acc_rel,
++            {
++                "candidateHash": self.candidate,
++                "review": opus_rel,
++                "sourceCandidate": man_rel,
++                "status": LIVE_ACCEPT,
++            },
++        )
++        authority = "raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md"
++        tr.copy_relative(self.root, authority)
++        bind_rel = "evidence/i2-live-source/binding.json"
++        inputs = {
++            opus_rel: sha256_bytes((self.root / opus_rel).read_bytes()),
++            astra_rel: sha256_bytes((self.root / astra_rel).read_bytes()),
++            acc_rel: sha256_bytes((self.root / acc_rel).read_bytes()),
++            bridge_rel: sha256_bytes((self.root / bridge_rel).read_bytes()),
++            opus_disp["path"]: opus_disp["sha256"],
++            astra_disp["path"]: astra_disp["sha256"],
++            authority: sha256_bytes((self.root / authority).read_bytes()),
++        }
++        binding = {
++            "schema": "moriarty.sp01-execution-binding/1",
++            "status": LIVE_STATUS,
++            "authority": authority,
++            "scope": LIVE_SCOPE,
++            "stage": "i2",
++            "resources": {"allocationSeconds": 600},
++            "inputs": inputs,
++        }
++        tr.write_json(self.root / bind_rel, binding)
++        bind_hash = sha256_bytes((self.root / bind_rel).read_bytes())
++        resource_rel = "evidence/i2-live-source/resource-amendment.json"
++        tr.write_json(
++            self.root / resource_rel,
++            {
++                "schema": "moriarty.delegated-resource-amendment/1",
++                "authority": authority,
++                "allocationSeconds": 600,
++                "scope": LIVE_SCOPE,
++            },
++        )
++        record = {
++            "stage": "i2",
++            "owner": "MC02",
++            "status": LIVE_STATUS,
++            "scope": LIVE_SCOPE,
++            "binding": bind_rel,
++            "bindingSha256": bind_hash,
++            "resourceAmendment": resource_rel,
++            "candidateHash": self.candidate,
++            "candidateManifest": man_rel,
++            "acceptance": acc_rel,
++            "review": opus_rel,
++            "sourceReview": astra_rel,
++            "reconciliation": bridge_rel,
++        }
++        record.update(mutate)
++        self.campaigns["campaigns"]["i2-live-source-01"] = record
++        tr.stage_by_id(self.program, "i2")["campaignRecordId"] = "i2-live-source-01"
++        sprints = tr.load_json(self.sprints_path)
++        tr.use_supported_i2_prereq(self.program, sprints)
++        tr.dump_json(self.program_path, self.program)
++        tr.dump_json(self.sprints_path, sprints)
++        tr.dump_json(self.campaign_path, self.campaigns)
++        tr.write_actions(
++            self.root,
++            [
++                {
++                    "id": "sp05-live-source-verify",
++                    "requirement": "SP05.2",
++                    "capability": "live-executor-source",
++                    "kind": "verify",
++                    "candidate": self.candidate,
++                    "admissionRef": "campaign:i2-live-source-01",
++                    "commandRef": "commands.json#driver",
++                    "evidenceProfile": "finalized-financial-settlement",
++                },
++                tr.loan_action("report"),
++            ],
++        )
++        return record
++
++    def _snap(self, action_id="sp05-live-source-verify"):
++        return load_snapshot(str(self.root), action_id, history_reader=tr.verified_history())
++
++    def test_positive_live_source_predicates(self):
++        self._write_live_records()
++        snap = self._snap()
++        self.assertTrue(snap["candidateCurrent"], snap["missingEvidence"])
++        self.assertTrue(snap["authorityCurrent"], snap["missingEvidence"])
++        self.assertFalse(snap["resourceAdmitted"])
++        self.assertTrue(
++            any("resource-live-state-unavailable" in item for item in snap["missingEvidence"])
++        )
++        action = [row for row in read_actions(str(self.root)) if row["id"] == "sp05-live-source-verify"][0]
++        self.assertFalse(assess(snap, action)["allow"])
++
++    def test_design_suffix_and_case_and_digest_near_misses(self):
++        self._write_live_records()
++        bind = self.root / "evidence/i2-live-source/binding.json"
++        body = tr.load_json(bind)
++        body["status"] = LIVE_STATUS + "-suffix"
++        tr.dump_json(bind, body)
++        self.campaigns["campaigns"]["i2-live-source-01"]["bindingSha256"] = sha256_bytes(bind.read_bytes())
++        tr.dump_json(self.campaign_path, self.campaigns)
++        snap = self._snap()
++        self.assertFalse(snap["authorityCurrent"])
++        self.assertTrue(any("binding-status" in item for item in snap["missingEvidence"]))
++
++        self.setUp()
++        self._write_live_records()
++        bind = self.root / "evidence/i2-live-source/binding.json"
++        body = tr.load_json(bind)
++        body["status"] = LIVE_STATUS.upper()
++        tr.dump_json(bind, body)
++        self.campaigns["campaigns"]["i2-live-source-01"]["bindingSha256"] = sha256_bytes(bind.read_bytes())
++        tr.dump_json(self.campaign_path, self.campaigns)
++        snap = self._snap()
++        self.assertFalse(snap["authorityCurrent"])
++
++        self.setUp()
++        self._write_live_records()
++        man = self.root / "evidence/i2-live-source/candidate.json"
++        body = tr.load_json(man)
++        body["digestAlgorithm"] = "SHA256"
++        tr.dump_json(man, body)
++        snap = self._snap()
++        self.assertFalse(snap["candidateCurrent"])
++        self.assertTrue(any("digestAlgorithm" in item for item in snap["missingEvidence"]))
++
++    def test_missing_astra_and_wrong_identity_and_effort(self):
++        self._write_live_records()
++        del self.campaigns["campaigns"]["i2-live-source-01"]["sourceReview"]
++        tr.dump_json(self.campaign_path, self.campaigns)
++        snap = self._snap()
++        self.assertFalse(snap["candidateCurrent"])
++
++        self.setUp()
++        self._write_live_records()
++        astra = self.root / "evidence/i2-live-source/astra-review.json"
++        body = tr.load_json(astra)
++        body["reviewer"] = "claude-opus-5"
++        tr.dump_json(astra, body)
++        snap = self._snap()
++        self.assertFalse(snap["candidateCurrent"])
++        self.assertTrue(any("reviewer" in item for item in snap["missingEvidence"]))
++
++        self.setUp()
++        self._write_live_records()
++        opus = self.root / "evidence/i2-live-source/opus-review.json"
++        body = tr.load_json(opus)
++        body["effort"] = "high"
++        tr.dump_json(opus, body)
++        snap = self._snap()
++        self.assertFalse(snap["candidateCurrent"])
++        self.assertTrue(any("effort" in item for item in snap["missingEvidence"]))
++
++    def test_historical_design_still_current_and_stale_sp01_without_bridge(self):
++        tr.write_actions(self.root, [tr.loan_action("report")])
++        # current SP01 bytes are already installed; historical loan must go stale
++        snap = load_snapshot(str(self.root), "sp01-loan-report")
++        self.assertFalse(snap["candidateCurrent"] or snap["authorityCurrent"])
++        self.assertTrue(
++            any("stale" in item or "binding" in item for item in snap["missingEvidence"])
++        )
++
++    def test_bridge_wrong_path_rejected(self):
++        self._write_live_records()
++        bridge = self.root / "evidence/i2-live-source/sp01-bridge.json"
++        body = tr.load_json(bridge)
++        body["path"] = "openspec/sprints/SP05.md"
++        tr.dump_json(bridge, body)
++        bind = self.root / "evidence/i2-live-source/binding.json"
++        inputs = tr.load_json(bind)["inputs"]
++        inputs["evidence/i2-live-source/sp01-bridge.json"] = sha256_bytes(bridge.read_bytes())
++        payload = tr.load_json(bind)
++        payload["inputs"] = inputs
++        tr.dump_json(bind, payload)
++        self.campaigns["campaigns"]["i2-live-source-01"]["bindingSha256"] = sha256_bytes(
++            bind.read_bytes()
++        )
++        tr.dump_json(self.campaign_path, self.campaigns)
++        snap = self._snap()
++        self.assertTrue(any("reconciliation-path" in item for item in snap["missingEvidence"]))
++
++    def test_cli_source_scope_is_not_result_and_does_not_clear_findings(self):
++        self._write_live_records()
++        db = self.root / ".moriarty-dev" / "state.sqlite3"
++        init_db(db).close()
++        record_event(
++            db,
++            str(self.root),
++            "SP05.2",
++            "live-executor-source",
++            self.candidate,
++            "sp05-live-source-verify",
++            "defect_failure",
++            {"findingId": "KEEP-ME"},
++        )
++        self.assertEqual(
++            get_history(db, str(self.root), "SP05.2", "live-executor-source")[
++                "sameDefectFailures"
++            ],
++            1,
++        )
++        receipt = {
++            "author": "grok-4.6",
++            "reviewer": "claude-opus-5",
++            "candidateHash": self.candidate,
++            "scope": LIVE_SCOPE,
++            "verdict": "APPROVED",
++            "requirement": "SP05.2",
++            "capability": "live-executor-source",
++            "effort": "medium",
++            "findings": [],
++            "recordedAt": "2026-09-11T08:00:00+00:00",
++            "candidateSha256": self.candidate,
++        }
++        record_review(db, str(self.root), receipt)
++        hist = get_history(db, str(self.root), "SP05.2", "live-executor-source")
++        self.assertEqual(hist["sameDefectFailures"], 1)
++        conn = sqlite3.connect(str(db))
++        try:
++            kinds = [
++                row[0]
++                for row in conn.execute(
++                    "SELECT event_kind FROM events WHERE event_kind LIKE '%review%'"
++                )
++            ]
++        finally:
++            conn.close()
++        self.assertIn("source_review", kinds)
++        self.assertNotIn("result_review", kinds)
++
++    def test_source_approval_never_counts_as_result_success(self):
++        self._write_live_records()
++        snap = self._snap()
++        action = [row for row in read_actions(str(self.root)) if row["kind"] == "verify"][0]
++        decision = assess(snap, action)
++        self.assertFalse(decision["allow"])
++        self.assertNotEqual(decision["reasonCode"], "ALLOWED")
++
++
++if __name__ == "__main__":
++    unittest.main()
+*** End of File
+*** End Patch
+```
+
+There are several issues in the records.py patch I need to fix before sending:
+
+1. I duplicated `_apply_review` ending incorrectly - I inserted new functions in the middle of `_apply_review` after the stage check, leaving the rest of `_apply_review` dangling.
+
+2. `_verify_candidate` still has the old `if type(algo) is not str or "SHA256" not in algo` AND the new live check - I tried to replace but the hunk might leave both.
+
+3. `_entry_eligible` function signature - I showed both old and new def lines incorrectly.
+
+4. `_apply_acceptance` call still has old line plus new.
+
+Let me carefully rewrite the records.py changes as clean hunks that match the actual file.
+
+Looking at `_apply_review` - I need to insert new functions AFTER `_apply_review` completes, not in the middle.
+
+The `_apply_review` function ends with:
+```
+    reviewer = review.get("reviewer")
+    lowered = reviewer.lower()
+    if lowered.startswith("author") or "author-" in lowered:
+        missing.append("review-reviewer-not-independent:" + reviewer)
+        return False
+    return True
+```
+
+I should add live functions after that, before `_verify_resource`.
+
+For `_verify_candidate` algo check, replace the existing block entirely.
+
+For `_entry_eligible`, just change the signature and the _stage_complete call.
+
+Let me also fix `_evidence_applicable` - for live status, spec says evidence profile `finalized-financial-settlement`. Should we also allow lower ranks? Spec: exact live evidence profile. I'll only allow exact finalized-financial-settlement for live status:
+
+```
+if status == LIVE_CAMPAIGN_STATUS:
+    return profile == LIVE_EVIDENCE_PROFILE
+```
+
+Near-miss using syntax on live campaign would fail evidenceProfile-inapplicable. Good.
+
+For `_apply_acceptance` the call site:
+```
+        published_skip = _apply_acceptance(
+            root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=record.get("review")
+        )
+```
+change to add live=live.
+
+And the function definition add live=False and early branch after extra keys check, before required fields... Actually live uses different required fields so branch before the required loop.
+
+Let me look at my `_verify_candidate` algo hunk again. Current file:
+```
+    if type(algo) is not str or "SHA256" not in algo:
+        missing.append("digestAlgorithm-unsupported:" + campaign_id)
+        return False
+```
+
+Replace with live exact / historical substring.
+
+The `_apply_review` insertion was wrong. I'll put new helpers after `_apply_review`'s return True, before `_verify_resource`.
+
+Also `_entry_eligible` - I accidentally listed both def lines. Correct hunk:
+
+```
+-def _entry_eligible(sprints, program, campaigns, root, requirement, missing):
++def _entry_eligible(sprints, program, campaigns, root, requirement, missing, substitutions=None):
+```
+
+And the _stage_complete call inside the loop.
+
+For `_stage_complete` recursive call, keep substitutions=None implicitly by not passing the outer substitutions... currently:
+```
+        if not _stage_complete(
+            req, stages, campaigns, root, missing, visiting, done
+        ):
+```
+Don't add substitutions so recursive requires don't get the bridge. Good - leave recursive call unchanged.
+
+Only the `_prerequisite_campaign` call inside `_stage_complete` uses prereq_subs.
+
+Fix `_verify_binding` status: I added live check AFTER the old `if payload.get("status") != "admitted-design-subset-only"` which would already reject live. Must REPLACE the old check, not add after.
+
+Correct:
+```
+-    if payload.get("status") != "admitted-design-subset-only":
+-        missing.append("binding-status-unsupported:" + str(payload.get("status")))
+-        return False, None
++    live = record.get("status") == LIVE_CAMPAIGN_STATUS
++    bind_status = payload.get("status")
++    ...
+```
+
+Let me also fix `_apply_acceptance` - the `for field in ACCEPTANCE_REQUIRED` should become conditional.
+
+I'll produce a cleaner records.py patch. The test file and store.py were OK.
+
+For `_verify_candidate` review section, I need to replace the block from review_rel through acceptance-unresolved.
+
+Looking at the call `_apply_acceptance` - the original doesn't have `live=`.
+
+Let me also check: `_binding_stage_and_profile` for live is skipped because campaign is not complete. We check stage in `_verify_binding` for live. Good.
+
+`_campaign_matches_gate` evidence profile: live status + settlement profile. `_evidence_applicable` returns True. Good.
+
+Owner MC02 vs gate campaignOwner - i2 gate should include MC02. Genuine sprints likely have MC02 for SP05.
+
+Capability live-executor-source vs texts: requirement SP05.2, scope LIVE_SCOPE, i2 purpose. "live", "executor", "source" all in LIVE_SCOPE. Good.
+
+Let me fix the records.py patch properly in the final output. I'll replace the messy records.py section.
+
+Also I need to fix `_apply_review` - I left a duplicate insertion of `def _live_bridge` after the stage check. Remove that from the middle of `_apply_review`.
+
+There's a bug in `_verify_candidate`: I still have both:
+```
+    if type(algo) is not str or "SHA256" not in algo:
+        ...
+    live = ...
+    if live:
+        if algo != LIVE_DIGEST_ALGORITHM:
+```
+If I don't remove the first check, live exact algorithm contains SHA256 so it would pass the first check then the second. Historical "SHA256 foo" still works. Live with exact algorithm also contains SHA256 so first check passes. Live with "SHA256" only fails second. Good actually if BOTH remain!
+
+Wait: live exact string contains "SHA256", so substring check passes. Then exact check. If we only have substring, "SHA256" alone would pass - we need the exact check for live. Having both is OK if live check comes after and is exact.
+
+I'll keep both for safety: substring first (rejects no-SHA256), then live exact.
+
+For historical "SHA256 compact..." would also pass live exact if they used that string. Unlikely on design records.
+
+Let me also fix the `_apply_acceptance` required fields: if I only change the loop to `required = LIVE_ACCEPTANCE_REQUIRED if live else ACCEPTANCE_REQUIRED` before the loop, then live skips publication if I add `if live: ... return None` after the common candidateHash/sourceCandidate/review checks that already follow.
+
+Looking at existing `_apply_acceptance` after required fields:
+- status complete check
+- candidateHash
+- expected_review
+- sourceCandidate
+- unchanged hashes
+- publication bridge
+
+For live, after required LIVE fields and live status, do hash/source/review/unchanged, return None.
+
+I'll insert the live branch after extra keys, replacing the required loop start.
+
+Let me write a cleaner patch for records.py only with correct context.
+
+Also `test_historical_design_still_current_and_stale_sp01_without_bridge` overwrites SP01 in setUp via `_install_current_sp01` before the test writes loan-only actions. So loan is stale. The test name says historical still current AND stale without bridge - that's two things. I should split: first test copy genuine WITHOUT overwriting SP01.
+
+In setUp I always install current SP01, which breaks historical. For historical-still-current, skip overwriting or restore fixture bytes.
+
+I'll change setUp to NOT overwrite SP01 by default. `_write_live_records` and bridge tests call `_install_current_sp01`. Historical test uses fixture copy from copy_genuine_registers (original bytes).
+
+copy_relative for SP01 uses fixture. setUp copy_genuine then `_install_current_sp01` overwrites. Remove `_install_current_sp01` from setUp; call it from `_write_live_records`.
+
+Positive live test needs current SP01 for bridge hashes. `_write_live_records` should call `_install_current_sp01`.
+
+Historical test: don't call `_write_live_records`, just loan report after copy_genuine - fixture SP01, should be candidateCurrent True.
+
+Add that as `test_authentic_historical_design_remains_accepted`.
+
+Stale test: `_install_current_sp01` then loan report → stale.
+
+Good.
+
+Fix `_write_live_records` to call `_install_current_sp01` first.
+
+`compact_owned` for tuple uses keys currentSha256, diffSha256, originalSha256 - sort_keys True matches records.py json.dumps sort_keys=True. Good.
+
+Disposition candidateSha256 uses tuple of those three. records.py uses payload["diffSha256"].lower() - we write lowercase hex from sha256_bytes. Good.
+
+Let me also fix `_evidence_applicable` to exact settlement only for live.
+
+cmd_review imported but unused in tests - I used record_review directly. User asked CLI source predicate. I should call cmd_review. Live fixture may have authorityCurrent True. cmd_review needs receipt file and may fail campaign scope... campaign scope is LIVE_SCOPE, receipt scope LIVE_SCOPE. candidate match. Could work.
+
+cmd_review uses sys.exit. Wrap SystemExit.
+
+If authorityCurrent is True and candidateCurrent True, review ingests.
+
+I'll add a cmd_review call in the CLI test. Need to write receipt file and catch SystemExit.
+
+```python
+from io import StringIO
+import contextlib
+receipt_path = self.root / "ingest.json"
+receipt_path.write_text(...)
+err = StringIO()
+with contextlib.redirect_stdout(StringIO()), contextlib.redirect_stderr(err):
+    try:
+        cmd_review(self.root, db, str(receipt_path), True, "sp05-live-source-verify")
+    except SystemExit as e:
+        code = e.code
+```
+
+If authority fails, that's still "source approval never success". The record_review direct call tests classification.
+
+I'll keep record_review for event_kind and add cmd_review if authority allows.
+
+Need `from moriarty_dev.store import get_db_path` - we used `self.root / ".moriarty-dev" / "state.sqlite3"` without git that's the fallback. make_repo git_inits, so get_db_path is `.git/moriarty-dev/state.sqlite3`. BUG in test!
+
+tr.make_repo git_init. get_db_path → root/.git/moriarty-dev/state.sqlite3.
+
+I must use get_db_path(self.root) in the test.
+
+```python
+from moriarty_dev.store import get_db_path, get_history, init_db, record_event, record_review
+db = get_db_path(self.root)
+```
+
+Fix that.
+
+Let me produce the final complete patch with corrected records.py hunks.
+
+I'll re-read _verify_binding around status to get exact lines.
+
+```
+    if payload.get("status") != "admitted-design-subset-only":
+        missing.append("binding-status-unsupported:" + str(payload.get("status")))
+        return False, None
+    if _contained_file(root, payload["authority"], missing, "binding-authority") is None:
+```
+
+Replace status check only.
+
+`_verify_path_map` signature and loop.
+
+`_verify_candidate` - add substitutions to def and last path_map; live reviews; live acceptance; digest.
+
+`_apply_acceptance` def and live branch.
+
+After `_apply_review` add helpers.
+
+`_entry_eligible`, `_stage_complete`, `_prerequisite_campaign` signatures.
+
+`_action_flags` entry_eligible call.
+
+`_evidence_applicable`.
+
+`import difflib`.
+
+store.py NON_RESULT and record_review.
+
+test_live_bindings.py as Add File.
+
+Let me also fix `_apply_acceptance` live branch: extra keys still validated against ACCEPTANCE_KEYS so live acceptance cannot have unknown fields. LIVE_ACCEPTANCE_REQUIRED subset is enough; extra allowed keys like derivation can be absent.
+
+If live acceptance includes publishedControlPath, extra check allows it (in ACCEPTANCE_KEYS) but we skip transform. Fine.
+
+Double-check `_verify_binding` live uses record status LIVE_CAMPAIGN_STATUS. Binding payload status LIVE_BINDING_STATUS. Same string.
+
+I think we're good. Let me write the final patch more carefully for records.py by using smaller unique hunks.
+
+For inserting functions after `_apply_review`, context:
+
+```
+    if lowered.startswith("author") or "author-" in lowered:
+        missing.append("review-reviewer-not-independent:" + reviewer)
+        return False
+    return True
+
+
+def _verify_resource(
+```
+
+Insert between return True and def _verify_resource.
+
+For `_verify_candidate` last lines:
+```
+    if not _verify_path_map(root, freeze_bytes, missing, "candidate-source"):
+        return False
+    return _verify_path_map(root, inputs, missing, "candidate-input")
+```
+
+Change last return.
+
+Let me also add substitutions=None to `_verify_binding` def line.
+
+Existing: `def _verify_binding(root, campaign_id, record, missing, expected_stage=None):`
+
+I'll output the complete patch now.The records.py hunks below replace the earlier draft: live status is checked **instead of** the design-only status, helpers are appended **after** `_apply_review`, and the SP01 bridge is passed only into the `rp01-mc02` prerequisite.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/records.py
+@@
+ from datetime import datetime
+ import hashlib
+ import json
+ import os
+ from pathlib import Path
++import difflib
+ 
+ from moriarty_dev.policy import assess
+@@
+ ACCEPTANCE_COMPLETE = frozenset(("complete-design-subset-only",))
+ DESIGN_SCOPE = "RP01-MC02 specified design consistency only"
++LIVE_BINDING_STATUS = "admitted-i2-source-only"
++LIVE_CAMPAIGN_STATUS = "admitted-i2-source-only"
++LIVE_REVIEW_SCOPE = "I2 live executor source correctness only"
++LIVE_ACCEPTANCE_STATUS = "complete-i2-source-only"
++LIVE_DIGEST_ALGORITHM = "SHA256 compact sorted-key JSON of ownedFiles mapping"
++LIVE_STAGE = "i2"
++LIVE_OWNER = "MC02"
++LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
++OPUS_REVIEWER = "claude-opus-5"
++ASTRA_REVIEWER = "gpt-6-astra"
++REVIEW_EFFORT_MEDIUM = "medium"
++SP01_BRIDGE_SCHEMA = "moriarty.sp01-prerequisite-disposition/1"
++SP01_PATH = "openspec/sprints/sp01-financial-contract-and-execution-admission.md"
++SP01_ORIGINAL_PATH = (
++    "plugins/moriarty-dev/tests/fixtures/sp01-financial-contract-and-execution-admission.md"
++)
++SP01_ORIGINAL_SHA = "fdb586d9bf05f2fbf7e9c2294be49854528db20e575faf9aaa1144b033908172"
++SP01_CURRENT_SHA = "bc60ffef020b282954f5543db3b00f51f06d45dd113cd68d853967ff50acc23b"
++SP01_DISPOSITION_SCOPE = "SP01 RP01-MC02 non-substantive prerequisite disposition only"
++SP01_NONSUBSTANTIVE_FINDING = "non-substantive impact on accepted RP01-MC02"
++BRIDGE_KEYS = (
++    "schema",
++    "path",
++    "originalPath",
++    "originalSha256",
++    "currentSha256",
++    "diffPath",
++    "diffSha256",
++    "opusDisposition",
++    "astraDisposition",
++)
++DISPOSITION_REF_KEYS = ("path", "sha256")
++LIVE_ACCEPTANCE_REQUIRED = ("candidateHash", "review", "sourceCandidate", "status")
+ STAGE_ADMISSION_SCHEMA = "openspec/report-stage-admission.schema.json"
+@@
+-def _entry_eligible(sprints, program, campaigns, root, requirement, missing):
++def _entry_eligible(sprints, program, campaigns, root, requirement, missing, substitutions=None):
+     gate = _find_gate(sprints, requirement)
+@@
+     visiting = set()
+     done = set()
+     for required in requires:
+         if not _stage_complete(
+-            required, stages, campaigns, root, missing, visiting, done
++            required, stages, campaigns, root, missing, visiting, done, substitutions
+         ):
+             return False
+     return True
+@@
+-def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done):
++def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done, substitutions=None):
+     if stage_id in done:
+         return True
+@@
+     if type(value) is not str or value == "":
+             missing.append("required-stage-evidence-missing:" + stage_id + ":" + field)
+             return False
+-    if not _prerequisite_campaign(stage, campaigns, root, missing):
++    prereq_subs = substitutions if stage_id == "rp01-mc02" else None
++    if not _prerequisite_campaign(stage, campaigns, root, missing, substitutions=prereq_subs):
+         return False
+@@
+-def _prerequisite_campaign(stage, campaigns, root, missing):
++def _prerequisite_campaign(stage, campaigns, root, missing, substitutions=None):
+@@
+     binding_ok, _binding = _verify_binding(
+-        root, campaign_id, record, missing, expected_stage=stage_id
++        root, campaign_id, record, missing, expected_stage=stage_id, substitutions=substitutions
+     )
+     if not binding_ok:
+         return False
+-    return _verify_candidate(root, campaign_id, record, missing)
++    return _verify_candidate(root, campaign_id, record, missing, substitutions=substitutions)
+@@
+     entry_eligible = False
+     if program_ok and sprints_ok:
+         entry_eligible = _entry_eligible(
+             sprints,
+             program,
+             campaigns if campaign_ok else None,
+             root,
+             action["requirement"],
+             missing,
++            substitutions=_live_bridge_substitutions(
++                root, action, campaigns if campaign_ok else None, missing
++            ),
+         )
+@@
+     if _campaign_is_complete(status):
+         return rank <= EVIDENCE_PROFILES.index("syntax")
++    if status == LIVE_CAMPAIGN_STATUS:
++        return profile == LIVE_EVIDENCE_PROFILE
+     if status.startswith("admitted-"):
+         return rank <= EVIDENCE_PROFILES.index("local-runtime")
+     return False
+@@
+-def _verify_binding(root, campaign_id, record, missing, expected_stage=None):
++def _verify_binding(root, campaign_id, record, missing, expected_stage=None, substitutions=None):
+@@
+-    if payload.get("status") != "admitted-design-subset-only":
+-        missing.append("binding-status-unsupported:" + str(payload.get("status")))
+-        return False, None
++    live = record.get("status") == LIVE_CAMPAIGN_STATUS
++    bind_status = payload.get("status")
++    if live:
++        if bind_status != LIVE_BINDING_STATUS:
++            missing.append("binding-status-unsupported:" + str(bind_status))
++            return False, None
++        if payload.get("stage") != LIVE_STAGE or record.get("stage") != LIVE_STAGE:
++            missing.append("binding-stage-mismatch:" + campaign_id)
++            return False, None
++        if LIVE_OWNER not in _owners_of(record.get("owner")):
++            missing.append("campaign-owner-mismatch:" + campaign_id)
++            return False, None
++    elif bind_status != "admitted-design-subset-only":
++        missing.append("binding-status-unsupported:" + str(bind_status))
++        return False, None
+     if _contained_file(root, payload["authority"], missing, "binding-authority") is None:
+         return False, None
+@@
+-    if not _verify_path_map(root, payload.get("inputs"), missing, "binding-input"):
++    if not _verify_path_map(
++        root, payload.get("inputs"), missing, "binding-input", substitutions=substitutions
++    ):
+         return False, None
+@@
+-def _verify_path_map(root, mapping, missing, kind):
++def _verify_path_map(root, mapping, missing, kind, substitutions=None):
+     if mapping is None:
+         return True
+     if type(mapping) is not dict:
+         missing.append(kind + "-unresolved")
+         return False
++    substitutions = substitutions or {}
+     for rel, digest in mapping.items():
+         if type(rel) is not str or type(digest) is not str:
+             missing.append(kind + "-unresolved")
+             return False
++        if rel in substitutions:
++            data = substitutions[rel]
++            if type(data) is not bytes or hashlib.sha256(data).hexdigest() != digest.lower():
++                missing.append(kind + "-stale:" + rel)
++                return False
++            continue
+         path = _contained_file(root, rel, missing, kind)
+         if path is None:
+             return False
+@@
+-def _verify_candidate(root, campaign_id, record, missing):
++def _verify_candidate(root, campaign_id, record, missing, substitutions=None):
+@@
+     algo = manifest.get("digestAlgorithm")
+     candidate_sha = manifest.get("candidateSha256")
+     if type(candidate_sha) is not str or candidate_sha == "":
+         missing.append("candidateSha256-unresolved:" + campaign_id)
+         return False
+-    if type(algo) is not str or "SHA256" not in algo:
++    live = record.get("status") == LIVE_CAMPAIGN_STATUS
++    if live:
++        if algo != LIVE_DIGEST_ALGORITHM:
++            missing.append("digestAlgorithm-unsupported:" + campaign_id)
++            return False
++    elif type(algo) is not str or "SHA256" not in algo:
+         missing.append("digestAlgorithm-unsupported:" + campaign_id)
+         return False
+@@
+     inputs = manifest.get("inputs")
+     if type(inputs) is not dict:
+         missing.append("candidate-inputs-unresolved:" + campaign_id)
+         return False
+     review_rel = record.get("review")
+-    if type(review_rel) is str and review_rel != "":
++    if live:
++        if not _apply_live_source_reviews(root, record, candidate_sha, campaign_id, missing):
++            return False
++    elif type(review_rel) is str and review_rel != "":
+         if not _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing):
+             return False
+     elif _campaign_is_complete(record.get("status")):
+         missing.append("review-unresolved:" + campaign_id)
+         return False
+     published_skip = None
+     acc_rel = record.get("acceptance")
+     if type(acc_rel) is str and acc_rel != "":
+         published_skip = _apply_acceptance(
+-            root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=record.get("review")
++            root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=record.get("review"), live=live
+         )
+         if published_skip is False:
+             return False
+-    elif _campaign_is_complete(record.get("status")):
++    elif live or _campaign_is_complete(record.get("status")):
+         missing.append("acceptance-unresolved:" + campaign_id)
+         return False
+@@
+     freeze_bytes = {
+         rel: digest
+         for rel, digest in owned.items()
+         if rel != published_skip
+     }
+     if not _verify_path_map(root, freeze_bytes, missing, "candidate-source"):
+         return False
+-    return _verify_path_map(root, inputs, missing, "candidate-input")
++    return _verify_path_map(
++        root, inputs, missing, "candidate-input", substitutions=substitutions
++    )
+@@
+-def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=None):
++def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=None, live=False):
+@@
+     for key in extra:
+         missing.append("unknown-acceptance-field:" + key)
+         return False
+-    for field in ACCEPTANCE_REQUIRED:
++    required = LIVE_ACCEPTANCE_REQUIRED if live else ACCEPTANCE_REQUIRED
++    for field in required:
+         value = acceptance.get(field)
+         if type(value) is not str or value == "":
+             missing.append("acceptance-field-unresolved:" + field)
+             return False
+     status = acceptance.get("status")
++    if live:
++        if status != LIVE_ACCEPTANCE_STATUS:
++            missing.append("acceptance-status-unsupported:" + str(status))
++            return False
++        acc_hash = acceptance.get("candidateHash")
++        if acc_hash.lower() != candidate_sha.lower():
++            missing.append("acceptance-candidateHash-conflict:" + campaign_id)
++            return False
++        if expected_review is not None and acceptance.get("review") != expected_review:
++            missing.append("acceptance-review-conflict:" + campaign_id)
++            return False
++        source = acceptance.get("sourceCandidate")
++        src_path = _contained_file(root, source, missing, "sourceCandidate")
++        if src_path is None or src_path != man_path:
++            missing.append("acceptance-sourceCandidate-conflict:" + campaign_id)
++            return False
++        unchanged = acceptance.get("unchangedPayloadHashes")
++        if unchanged is None:
++            unchanged = {}
++        if type(unchanged) is not dict:
++            missing.append("acceptance-unchanged-unresolved:" + campaign_id)
++            return False
++        for rel, digest in unchanged.items():
++            if type(rel) is not str or type(digest) is not str:
++                missing.append("acceptance-unchanged-unresolved:" + campaign_id)
++                return False
++            frozen = owned.get(rel)
++            if type(frozen) is not str or frozen.lower() != digest.lower():
++                missing.append("acceptance-unchanged-conflict:" + rel)
++                return False
++        return None
+     if not _acceptance_is_complete(status):
+         missing.append("acceptance-status-unsupported:" + str(status))
+         return False
+@@
+         missing.append("review-reviewer-not-independent:" + reviewer)
+         return False
+     return True
++
++
++def _live_bridge_substitutions(root, action, campaigns, missing):
++    ref = action.get("admissionRef") if type(action) is dict else None
++    if type(ref) is not str or not ref.startswith("campaign:") or campaigns is None:
++        return None
++    table = campaigns.get("campaigns") if type(campaigns) is dict else None
++    if type(table) is not dict:
++        return None
++    record = table.get(ref[len("campaign:") :])
++    if type(record) is not dict or record.get("status") != LIVE_CAMPAIGN_STATUS:
++        return None
++    return _verify_sp01_bridge(root, record, missing)
++
++
++def _verify_sp01_bridge(root, record, missing):
++    rel = record.get("reconciliation")
++    if type(rel) is not str or rel == "":
++        missing.append("reconciliation-unresolved")
++        return None
++    path = _contained_file(root, rel, missing, "reconciliation")
++    if path is None:
++        return None
++    payload = _load_json_path(path, missing, rel)
++    if type(payload) is not dict:
++        missing.append("reconciliation-not-object")
++        return None
++    extra = [key for key in payload if key not in BRIDGE_KEYS]
++    absent = [key for key in BRIDGE_KEYS if key not in payload]
++    if extra:
++        missing.append("unknown-reconciliation-field:" + extra[0])
++        return None
++    if absent:
++        missing.append("missing-reconciliation-field:" + absent[0])
++        return None
++    if payload.get("schema") != SP01_BRIDGE_SCHEMA:
++        missing.append("reconciliation-schema-unresolved:" + str(payload.get("schema")))
++        return None
++    if payload.get("path") != SP01_PATH or payload.get("originalPath") != SP01_ORIGINAL_PATH:
++        missing.append("reconciliation-path-unsupported")
++        return None
++    if payload.get("originalSha256") != SP01_ORIGINAL_SHA:
++        missing.append("reconciliation-original-hash-mismatch")
++        return None
++    if payload.get("currentSha256") != SP01_CURRENT_SHA:
++        missing.append("reconciliation-current-hash-mismatch")
++        return None
++    original_path = _contained_file(root, SP01_ORIGINAL_PATH, missing, "sp01-original")
++    current_path = _contained_file(root, SP01_PATH, missing, "sp01-current")
++    diff_rel = payload.get("diffPath")
++    if type(diff_rel) is not str or type(payload.get("diffSha256")) is not str:
++        missing.append("reconciliation-diff-unresolved")
++        return None
++    diff_path = _contained_file(root, diff_rel, missing, "sp01-diff")
++    if original_path is None or current_path is None or diff_path is None:
++        return None
++    original = _read_bytes(original_path, missing, SP01_ORIGINAL_PATH)
++    current = _read_bytes(current_path, missing, SP01_PATH)
++    diff_bytes = _read_bytes(diff_path, missing, diff_rel)
++    if original is None or current is None or diff_bytes is None:
++        return None
++    if hashlib.sha256(original).hexdigest() != SP01_ORIGINAL_SHA:
++        missing.append("reconciliation-original-stale")
++        return None
++    if hashlib.sha256(current).hexdigest() != SP01_CURRENT_SHA:
++        missing.append("reconciliation-current-stale")
++        return None
++    if hashlib.sha256(diff_bytes).hexdigest() != str(payload["diffSha256"]).lower():
++        missing.append("reconciliation-diff-stale")
++        return None
++    if _sp01_unified_diff(original, current) != diff_bytes:
++        missing.append("reconciliation-diff-mismatch")
++        return None
++    tuple_digest = hashlib.sha256(
++        json.dumps(
++            {
++                "currentSha256": SP01_CURRENT_SHA,
++                "diffSha256": str(payload["diffSha256"]).lower(),
++                "originalSha256": SP01_ORIGINAL_SHA,
++            },
++            separators=(",", ":"),
++            sort_keys=True,
++        ).encode("utf-8")
++    ).hexdigest()
++    if not _apply_disposition_receipt(
++        root, payload.get("opusDisposition"), OPUS_REVIEWER, tuple_digest, missing
++    ):
++        return None
++    if not _apply_disposition_receipt(
++        root, payload.get("astraDisposition"), ASTRA_REVIEWER, tuple_digest, missing
++    ):
++        return None
++    return {SP01_PATH: original}
++
++
++def _sp01_unified_diff(original, current):
++    lines = difflib.unified_diff(
++        original.decode("utf-8").splitlines(keepends=True),
++        current.decode("utf-8").splitlines(keepends=True),
++        fromfile=SP01_ORIGINAL_PATH,
++        tofile=SP01_PATH,
++        n=3,
++        lineterm="\n",
++    )
++    return "".join(lines).encode("utf-8")
++
++
++def _apply_disposition_receipt(root, ref, expected_reviewer, tuple_digest, missing):
++    if type(ref) is not dict:
++        missing.append("disposition-ref-unresolved")
++        return False
++    extra = [key for key in ref if key not in DISPOSITION_REF_KEYS]
++    if extra or any(key not in ref for key in DISPOSITION_REF_KEYS):
++        missing.append("disposition-ref-unresolved")
++        return False
++    rel = ref.get("path")
++    digest = ref.get("sha256")
++    if type(rel) is

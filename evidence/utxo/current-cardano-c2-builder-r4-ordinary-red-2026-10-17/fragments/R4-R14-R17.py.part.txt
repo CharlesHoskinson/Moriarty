@@ -1,0 +1,136 @@
+class TestR14ToR17(R4TestBase):
+    """R14-R17: CLI success effects, CLI refusals and precedence, the unprivileged WRITE and
+    REREAD-cleanup paths, and host call counters. Each method loads R4 first with self.r4(),
+    so at RED the one and only failure is the shared MISSING AssertionError and no later
+    assertion or filesystem effect runs. Every expected value is a frozen contract/API literal,
+    a prefix formatter or a pinned-fixture fact, never output of build_k10_inputs_r4.py. Each
+    method keeps its writes under one case_scratch() directory. No os/builtins/json/R4 patch;
+    wrappers touch only r2, host_codec and legacy through the prefix helpers."""
+
+    def test_r14_cli_success_tree_modes_stdout(self):
+        self.r4()
+        # Read the real process umask without a net change, then run with it in force. The
+        # transient set/restore is the only portable way to observe umask; disclosed in notes.
+        umask = os.umask(0o022)
+        os.umask(umask)
+        scratch = self.case_scratch()
+        out = scratch / "out"
+        result = self.run_main(HERE / B9, HERE / EXP, HERE / SET, K6_EXPIRY_TEXT, out)
+        # Exit 0, empty stderr, exactly one stdout JSON line {"output": argv[5], "cases": 4}.
+        self.assert_cli_success(result, out)
+        # Exact roster: script.hex, the four contexts, manifest.json and the contexts dir only.
+        self.assertEqual(tree(out), sorted(ROSTER + ["contexts/"]))
+        # No manifest.json.tmp survives the atomic rename.
+        self.assertNotIn("manifest.json.tmp", tree(out))
+        # File mode is 0o644 & ~umask; the output and contexts directories are 0o755 & ~umask.
+        file_mode, dir_mode = 0o644 & ~umask, 0o755 & ~umask
+        for rel in ROSTER:
+            info = os.lstat(out / rel)
+            self.assertTrue(stat.S_ISREG(info.st_mode), rel)
+            self.assertEqual(stat.S_IMODE(info.st_mode), file_mode, rel)
+        for path in (out, out / "contexts"):
+            info = os.lstat(path)
+            self.assertTrue(stat.S_ISDIR(info.st_mode), str(path))
+            self.assertEqual(stat.S_IMODE(info.st_mode), dir_mode, str(path))
+        # The envelope inputs are read only: the three pinned sources are byte unchanged.
+        self.assert_inputs_unchanged()
+
+    def test_r15_cli_refusals_and_precedence(self):
+        self.r4()
+        scratch = self.case_scratch()
+        exists = scratch / "exists"
+        os.mkdir(exists, 0o700)  # a pre-existing output path forces OUTDIR
+        baseline = tree(scratch)
+        b9, exp, setp = HERE / B9, HERE / EXP, HERE / SET
+        absent = scratch / "absent.json"  # never created: drives READ
+        cases = [
+            # One failing stage per argv.
+            ((b9, exp, setp, K6_EXPIRY_TEXT), "C2B-ARGV"),                          # arity 5
+            ((b9, exp, setp, "01", scratch / "n1"), "C2B-ARGV"),                    # non-canonical expiry
+            ((b9, exp, setp, K6_EXPIRY_TEXT, exists), "C2B-OUTDIR"),                # output already present
+            ((b9, exp, setp, K6_EXPIRY_TEXT, scratch / "Bad Name"), "C2B-OUTDIR"),  # basename off the regex
+            ((absent, exp, setp, K6_EXPIRY_TEXT, scratch / "n2"), "C2B-READ"),      # first input absent
+            # Precedence ARGV > OUTDIR > READ on a single argv each.
+            ((absent, exp, setp, "01", exists), "C2B-ARGV"),                        # ARGV beats OUTDIR and READ
+            ((absent, exp, setp, K6_EXPIRY_TEXT, exists), "C2B-OUTDIR"),            # OUTDIR beats READ
+        ]
+        for args, code in cases:
+            with self.subTest(code=code, last=str(args[-1])):
+                self.assert_cli_refusal(self.run_main(*args), code)
+        # Every refusal created nothing: the scratch tree is exactly the pre-existing dir.
+        self.assertEqual(tree(scratch), baseline)
+
+    def test_r16_unprivileged_write_and_reread_cleanup(self):
+        self.r4()
+        require_unprivileged()  # uid 0 is STOP here, never RED and never bypassed
+        scratch = self.case_scratch()
+        # Part 1: a 0o555 parent makes the first mkdir fail, so WRITE refuses and nothing is made.
+        read_only = scratch / "ro"
+        os.mkdir(read_only, 0o555)
+        try:
+            result = self.run_main(HERE / B9, HERE / EXP, HERE / SET, K6_EXPIRY_TEXT,
+                                   read_only / "out")
+            self.assert_cli_refusal(result, "C2B-WRITE")
+            self.assertEqual(tree(read_only), [])
+        finally:
+            os.chmod(read_only, 0o700)  # restore so the scratch tree stays cleanable
+        # Part 2: a consumer wrapper edits a scratch input copy between READ and REREAD; REREAD
+        # sees the byte difference and cleanup removes the output that WRITE created.
+        b9_copy, export_copy, setup_copy = self.copy_inputs(scratch)
+        out = scratch / "out"
+
+        def after(_result):
+            fd = os.open(setup_copy, os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW | os.O_CLOEXEC)
+            try:
+                view = memoryview(RAW[SET] + b" ")  # same genuine bytes plus one trailing space
+                while view:
+                    view = view[os.write(fd, view):]
+            finally:
+                os.close(fd)
+        with self.consumer_wrapper(after):
+            result = self.run_main(b9_copy, export_copy, setup_copy, K6_EXPIRY_TEXT, out)
+        self.assert_cli_refusal(result, "C2B-REREAD")
+        # The output and its contents are gone; only the input copies and the empty ro dir remain.
+        self.assertEqual(tree(scratch),
+                         sorted(["ro/", "b9-applied.json", "proof-export.json",
+                                 "setup-record.json"]))
+
+    def test_r17_host_call_counters_and_no_outside_effects(self):
+        self.r4()
+        # Baseline: the consumer alone, on deep copies, reaches its host APIs and mutates
+        # neither parsed record. policy_id is the historical 28-byte policy id, as R00 uses.
+        export, setup = fresh_export(), fresh_setup()
+        with contextlib.ExitStack() as stack:
+            calls = {name: stack.enter_context(self.counted(host_codec, name))
+                     for name in CONSUMER_HOST_APIS}
+            r2.prepare_c2_issue(export, setup, K6_EXPIRY, policy_id=bytes.fromhex(POLICY))
+            consumer_counts = {name: len(calls[name]) for name in CONSUMER_HOST_APIS}
+        self.assertEqual((export, setup), (fresh_export(), fresh_setup()))
+        # Full CLI run: consumer plus builder host calls, with the same inputs, output in scratch.
+        scratch = self.case_scratch()
+        out = scratch / "out"
+        with contextlib.ExitStack() as stack:
+            calls = {name: stack.enter_context(self.counted(host_codec, name))
+                     for name in CONSUMER_HOST_APIS}
+            result = self.run_main(HERE / B9, HERE / EXP, HERE / SET, K6_EXPIRY_TEXT, out)
+            run_counts = {name: len(calls[name]) for name in CONSUMER_HOST_APIS}
+        self.assert_cli_success(result, out)
+        # The consumer reaches all seven host APIs (API dependency.consumerHostApis).
+        for name in CONSUMER_HOST_APIS:
+            self.assertGreaterEqual(consumer_counts[name], 1, name)
+        # The builder's own host calls (the run over the identical consumer baseline) are exactly
+        # its four APIs; the three consumer-only APIs receive no additional builder call.
+        builder_used = {name for name in CONSUMER_HOST_APIS
+                        if run_counts[name] > consumer_counts[name]}
+        self.assertEqual(builder_used, set(BUILDER_HOST_APIS))
+        for name in CONSUMER_HOST_APIS:
+            if name not in BUILDER_HOST_APIS:
+                self.assertEqual(run_counts[name], consumer_counts[name], name)
+        # No file outside scratch touched: the three pinned inputs are unchanged and the only
+        # new artifacts are the exact roster under the case scratch output directory.
+        self.assert_inputs_unchanged()
+        self.assertEqual(tree(out), sorted(ROSTER + ["contexts/"]))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

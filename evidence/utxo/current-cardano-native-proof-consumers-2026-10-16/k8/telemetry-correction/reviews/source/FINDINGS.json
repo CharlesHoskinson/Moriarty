@@ -1,0 +1,37 @@
+[
+  {
+    "evidence": "k8_genuine_proof_test.ak:111 plain fail with no once; test_like.rs:27-30,51, def_test_fail.snap:51, telemetry/json.rs:89-93; telemetry stdout:109 succeed_eventually; RESULT.json:5 operator wanted succeed_immediately; METADATA-MISMATCH-REPRODUCTION:30-35 and prior FINDINGS F1 classify the operator/R1/R2 defect. validate_capture.py:114-120 implements plain fail->succeed_eventually, fail once->succeed_immediately, normal->fail_immediately.",
+    "id": "F1-plain-fail-metadata-fix-correct",
+    "requiredFix": "None in the validator. Do not rerun native tests, do not rewrite the historical run, and do not treat the fix as a post-hoc proof-expectation change; the source annotation and captured telemetry never changed.",
+    "severity": "defect-closed-by-this-source",
+    "summary": "The original metadata expectation was wrong; the new validator encodes the parser-correct mapping derived from actual declarations."
+  },
+  {
+    "evidence": "Telemetry stdout:2 seed 248222808, :3-11 and :15-23 summaries 10/10/0 kind unit 10 property 0, :14 module pvc2/k8_genuine_proof_test, rows :24-115 all status pass with exact keys title/status/on_failure/execution_units{mem,cpu} and non-negative integer units; validate_capture.py:139-169 enforces duplicate-key, unknown-field, bool-excluded int, u32 seed, both summaries, ordered 10 titles, per-row mode equality and typed units.",
+    "id": "F2-actual-telemetry-accepted-strictly",
+    "requiredFix": "None. The exact actual inputs are accepted by inspection of every encoded check; wrong-field, wrong-mode, duplicate, unknown-key, non-bool-int and garbage-name variants fail closed under the same guards.",
+    "severity": "verified",
+    "summary": "All 10 raw unit rows, 9 normal plus 1 plain-fail, are classified correctly against the source grammar without inventing new crypto bits."
+  },
+  {
+    "evidence": "RESULT.json whole pin 4875/5bc3033c plus status FAILED :21 and exact error :5 are checked at validate_capture.py:25,170-176; the validator deliberately does not duplicate the giant RESULT guard schema (README:38-41) because whole-byte pinning subsumes it. Exclusive fresh output is enforced :131-133,199-204 and outputs list is solely VALIDATION.json :196.",
+    "id": "F3-original-result-and-output-integrity",
+    "requiredFix": "None. Root checks source/input SHA before and after, uses only the fresh output directory, and leaves every historical record untouched.",
+    "severity": "verified",
+    "summary": "Original-result guards are not duplicated as a giant schema; pin plus FAILED/error checks and exclusive sole output are sufficient."
+  },
+  {
+    "evidence": "Author MODEL-REVIEW.json files[] is empty, but REPORT.md:11-328 supplies File 1-3 complete fenced bodies and :326-328 explicitly designates the top-level positions array as File 4; ROOT-SOURCE-MANIFEST:4-5,11-29 records mechanical extraction with final newline only, no authored code and no protocol variance in logic. Materialised candidate files were read in full and match those bodies.",
+    "id": "F4-files-empty-protocol-variance-not-blocking",
+    "requiredFix": "None. Record the variance as done; do not invent additional provider files or votes.",
+    "severity": "verified",
+    "summary": "Provider files[] emptiness is an explicit delivery-protocol variance, not a completeness blocker, because the source is complete, unchanged and freshly inspected."
+  },
+  {
+    "evidence": "validate_capture.py:177-196 sets ordinaryValidationOnly true, nativeReexecuted false, newNativeAuthority false, originalWrapperStatus FAILED unchanged, rawCapturedPassedUnits 10, normalRows 9, pairingOutcomesCount 4 with PAIRING_TITLES EXPECTED_TITLES[:4] :39. K8-ACTUAL-ADOPTION:10,66,95-106 preserves FAILED and retains forgeability/context/VK-matrix/CPU qualifications; validator README:20-28 acknowledges the 85e/99541 predicate and recomputes none of it.",
+    "id": "F5-no-new-native-or-proof-claim",
+    "requiredFix": "None. Post-run audit must verify the emitted VALIDATION.json carries exactly these flags and no proofVerifiedNow, fresh native PASS, ExUnit qualification or security-theorem wording.",
+    "severity": "boundary",
+    "summary": "Output claims are ordinary validation only; the 4 pairing outcomes are already-adopted captured labels, not refreshed acceptance."
+  }
+]

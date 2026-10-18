@@ -1,0 +1,108 @@
+{
+ "schema": "moriarty-cardano-n1-c5-independent-review-findings/1",
+ "date": "2026-10-15",
+ "reviewer": "claude-opus-5-5 (self-reported; requested effort high; neither self-verifiable)",
+ "blockers": [],
+ "blockerStatement": "No finding blocks the scoped structural UNIT adoption of the exact reviewed N1 schema patch. Every item below is a qualification or an open gap carried forward, not a defect in the observed results.",
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "OPEN_GAP",
+   "title": "AMB-5 dispute-grant predicate scoping is unobservable by the frozen pack",
+   "evidence": "M1 (dispute grant drops the predicate_refs test) survived all 15 valid batches with 282 PASS and 0 FAIL, exactly as frozen.",
+   "impact": "A checker regression that lets a dispute grant for one predicate refuse a record of the same key under another predicate would go unnoticed by the 282 pack. That direction is over-refusal (fail-closed), not over-admission, so it is an availability or correctness gap, not an admission bypass.",
+   "carryForward": "AMB-5 stays OPEN. Closing it needs a new independently authored case, not a refit."
+  },
+  {
+   "id": "F2",
+   "severity": "OPEN_GAP",
+   "title": "N1 guard x weakened HEX64 interaction (OPT-M9-N1) not tested",
+   "evidence": "MUTANTS-FROZEN M9 optionalN1Killer: OPT-M9-N1 not included and not resource-authorized. The N1 guard relies on fieldtypes.is_hex64 being a full match; M9 shows the 282 pack catches a '$'-anchored HEX64 elsewhere (3 required plus 15 informational FAILs), but not on the N1 revocation-alias path.",
+   "impact": "The N1 guard and the HEX64 validator are both needed for the N1 property; only the guard is mutation-evidenced on the N1 path (C6 M13-N1)."
+  },
+  {
+   "id": "F3",
+   "severity": "QUALIFICATION",
+   "title": "M11 and M12 detections are all exception-rooted",
+   "evidence": "Every library killer fails with 'exception TypeError'. The CLI killers fail with CLI_INTERNAL_ERROR exit 2, which cli.py's outer except turns into a structured refusal (stdoutIsJson true, stderrHasTraceback false).",
+   "impact": "The pack detects these type-guard removals because the checker crashes, not because it refuses gracefully. Fail-closed is preserved. The frozen mode KILLED_MIXED is honest about this; it must not be cited as predicate-logic coverage."
+  },
+  {
+   "id": "F4",
+   "severity": "QUALIFICATION",
+   "title": "Exception message fragments are interpreter-version dependent",
+   "evidence": "M12 messages read \"cannot use 'list' as a set element (unhashable type: 'list')\" (Python 3.14 wording; python3 resolves to /usr/bin/python3.14). The frozen fragment \"unhashable type: 'list'\" is a verbatim substring, so all M12 killers are decisive.",
+   "impact": "Decisiveness for exception kills is tied to the interpreter. A different CPython could change the wording and turn a decisive kill into KILLED_NONDECISIVE without any change to the checker."
+  },
+  {
+   "id": "F5",
+   "severity": "OBSERVATION",
+   "title": "M9 changes a passing result object (B2-SCRIPT)",
+   "evidence": "Under M9, B2-SCRIPT PASSes with result f7a883e0 (REFUSED [ADM_SCHEMA], note on verifier_profile). Under M12 the same case is 849e105a.",
+   "impact": "The weakened HEX64 changes internal behaviour even where the oracle outcome is unchanged; the 56-hex verifier_profile check still refuses. This is not a kill and not blast radius. I did not resolve the baseline 849e105a object, so the exact delta is a hypothesis."
+  },
+  {
+   "id": "F6",
+   "severity": "QUALIFICATION",
+   "title": "Whole-log fail-closed availability effect of the N1 guard",
+   "evidence": "src-patched/mcpcat/admission.py:154-162: any schema-invalid sibling in the consumer-pinned record log adds ADM_RECORDS_SCHEMA and refuses every record checked against that log.",
+   "impact": "Security-correct (fail-closed), and consistent with the consumer pinning record_log_digest. Operationally, one malformed log entry denies admission for all records under that log. This is accepted design, not a defect; it should be documented for consumers."
+  },
+  {
+   "id": "F7",
+   "severity": "QUALIFICATION",
+   "title": "Independence and oracle grade",
+   "evidence": "Every author and reviewer is the same model id (context independence only). The N2 cohort (23) is a consistency set, not an independent oracle. AUTH50 is same-author (C4 RESULT evidenceLabel 'AUTH (same-author expectations)'). The 282 pack is the only independently authored oracle in scope.",
+   "impact": "Test grades are kept separate in REPORT.md. AUTH and N2 PASS results support but do not establish the property."
+  },
+  {
+   "id": "F8",
+   "severity": "QUALIFICATION",
+   "title": "CLI input-mutation evidence is post-hash only",
+   "evidence": "C6 POSTCHECK-QUALIFICATION records (batch 02 and 04): CLI rows carry result.inputFileSha256 post-call hashes and no inputsMutatedByCall before/after flag; root bookkeeping KeyErrors occurred after the children exited 0 with RESULT saved; no rerun and no refit. C5 CLI results likewise carry post-call inputFileSha256 only.",
+   "impact": "No library-style before/after mutation claim may be made for CLI rows."
+  },
+  {
+   "id": "F9",
+   "severity": "QUALIFICATION",
+   "title": "Network isolation not demonstrated; timeout binary is uutils coreutils",
+   "evidence": "C4 U-NET-PROBE SKIPPED; isolation rests on the unshare --net wrapper (sha 41c65e55) only. /usr/bin/timeout resolves to /usr/lib/cargo/bin/coreutils/timeout (f84e76ea), not GNU coreutils. No C5 child timed out, so timeout semantics did not affect any result.",
+   "impact": "Root checked only the boundaries of inspected files; there was no full-system write audit. The C0 and C4 wrapper elapsed times are unknown."
+  },
+  {
+   "id": "F10",
+   "severity": "RECORD_DISCREPANCY",
+   "title": "INDEX.json prose says 168 raw CLI observations; the file holds 108",
+   "evidence": "C5-REVIEW-PARTS/INDEX.json 'format' text says '168rawCLI observations', the user brief repeats 168, but the same INDEX lists cli-observations.jsonl with 108 lines. I read 108 lines, which equals 12 mutants x 9 CLI rows (8 in batch 13 plus PC-F10 in batch 14). raw-cli-objects.jsonl holds 11 deduplicated objects.",
+   "impact": "Prose error only; no result is affected. 108 is correct by construction."
+  },
+  {
+   "id": "F11",
+   "severity": "RECORD_DISCREPANCY",
+   "title": "No DECISION.json at the run root",
+   "evidence": "cardano-catalogue-v12-n1-run-20261015/DECISION.json does not exist. PRE-LAUNCH-COPIES.json names the decision at cardano-catalogue-v12-n1-scoped-execution-decision-20261015/DECISION.json (sha 0ec71d60, as in INVOCATIONS.json). I followed that explicit reference and read it.",
+   "impact": "None; disclosed per the brief."
+  },
+  {
+   "id": "F12",
+   "severity": "OBSERVATION",
+   "title": "C6 reproduces C1 at stdout-hash level",
+   "evidence": "RESULT-MANIFEST-C0-C4-C6: the STDOUT sha of every batch pair matches: C6-N1N2-00/C1-00 26027d20, 01 846116ca, 02 540953ba, 03 aa07f1c5, 04 a19b3794. M13-N1 is the patched admission.py with the single line bad_siblings = [] (MUTANT.json). OBSERVATIONS mutationDelta lists the same 8 FAIL ids for C6 as for C1.",
+   "impact": "Strong structural evidence that the 7-line guard is the operative change. C6 is a behavioural restoration, not a byte revert: M13 admission.py (2e343ab1, 17132 B) differs from src-current (7b8c1730, 16608 B)."
+  }
+ ],
+ "preservedOpen": [
+  "Unsigned grants: consumer grants are unauthenticated; no grant authenticity is established",
+  "U9 STRUCTURAL_UNVERIFIED",
+  "settlement UNSUPPORTED (pinned settlementBoundary; no adopted S_settle0 ABI)",
+  "bridge original 42/52 gap",
+  "all 20 pattern families (CAT_PATTERN_FAMILY 'exactly 20 families must be carried')",
+  "ACTUS / DeFi / general obligations",
+  "recursion, private composition, multi-parent composition",
+  "U-M-MC-SP-G exits",
+  "Preprod",
+  "AMB-5",
+  "OPT-M9-N1",
+  "HD1"
+ ]
+}

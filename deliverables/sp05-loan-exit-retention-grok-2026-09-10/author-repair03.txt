@@ -1,0 +1,867 @@
+Continue same SP05 AUTHOR task. Root applied completed source exactly; tool-free route persists. Return ONLY compact JSON {"edits":[{"path":"...","old":"exact unique existing text","new":"replacement"}],"report":{"checksPending":[...]}}. Do NOT re-emit whole files. No tools/XML. Repair three demonstrated issues without broad refactor.
+1 ROOT01: existing explicit-stop.json in evidence_dir before collect, with scripted valid startup/matching loaded-exited terminal, currently returns exitRetained=true, STOP_FAILED_AFTER_RETENTION and calls show/stop. Reject this reused/post-stop evidence state before claiming fresh retention; preserve existing record and make no show/stop calls for that pre-existing stop evidence. Cover file and symlink marker. Do not rewrite history.
+2 ROOT02: require_startup_identity(MainPID=True with active/loaded/nonzeroID) accepts the ID. Require a canonical positive decimal PID STRING from systemctl, rejecting booleans/numbers/fractions/sign/whitespace/zero/noncanonical strings. Add focused tests.
+3 Existing suite21tests has one failure test_financial_text_cannot_bypass_fields: expected EXIT_ZERO_NOT_ESTABLISHED but observed MALFORMED_SHOW for FINANCIAL_COMPLETE=yes key (underscore violates strict systemd-property grammar). Preserve parser rejection; correct both financial-text rejection expectations with evidence, do not loosen validation to pass tests. Keep asserts of no exitRetained and no success.
+No actual service/financial acceptance. Root runs tests after exact edits. All normative context from previous turn applies. Keep output compact with precise unique snippets.
+
+===== deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/launch_contract.py =====
+"""Launch and show properties required to retain a loaded main-process exit.
+
+Provenance is the inspected preview-swap-exit-01 launcher and terminal
+observation. This module does not admit an allocation, choose resource
+limits, or name a live unit.
+"""
+import re
+
+STARTUP_SHOW_PROPERTIES = (
+    "LoadState,ActiveState,SubState,MainPID,ControlGroup,"
+    "ActiveEnterTimestampMonotonic,InvocationID"
+)
+TERMINAL_SHOW_PROPERTIES = (
+    "LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,"
+    "MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+)
+RETENTION_SYSTEMD_RUN_PROPERTIES = (
+    "Type=exec",
+    "RemainAfterExit=yes",
+)
+
+SCOPE = (
+    "Actual loaded main exit retained before explicit unit stop. "
+    "Not financial or containment acceptance."
+)
+
+
+def require_invocation_id(value):
+    if (
+        not isinstance(value, str)
+        or not re.fullmatch(r"[0-9a-f]{32}", value)
+        or value == "0" * 32
+    ):
+        raise ValueError("INVOCATION_REQUIRED")
+    if int(value, 16) <= 0:
+        raise ValueError("INVOCATION_REQUIRED")
+    return value
+
+
+def require_startup_identity(observed):
+    if not isinstance(observed, dict):
+        raise ValueError("STARTUP_IDENTITY_REQUIRED")
+    if observed.get("LoadState") != "loaded":
+        raise ValueError("STARTUP_IDENTITY_REQUIRED")
+    if observed.get("ActiveState") != "active":
+        raise ValueError("STARTUP_IDENTITY_REQUIRED")
+    try:
+        main_pid = int(observed.get("MainPID", "0"))
+    except (TypeError, ValueError):
+        raise ValueError("STARTUP_IDENTITY_REQUIRED")
+    if main_pid <= 0:
+        raise ValueError("STARTUP_IDENTITY_REQUIRED")
+    try:
+        return require_invocation_id(observed.get("InvocationID"))
+    except ValueError:
+        raise ValueError("STARTUP_IDENTITY_REQUIRED")
+
+
+def require_unit_name(unit):
+    if not isinstance(unit, str) or not re.fullmatch(r"[A-Za-z0-9:_.@-]+\.service", unit):
+        raise ValueError("UNIT_REQUIRED")
+    return unit
+
+
+def terminal_show_argv(unit):
+    return [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        require_unit_name(unit),
+        "--property=" + TERMINAL_SHOW_PROPERTIES,
+    ]
+
+
+def explicit_stop_argv(unit):
+    return [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        require_unit_name(unit),
+    ]
+
+
+def describe_contract():
+    return {
+        "retentionSystemdRunProperties": list(RETENTION_SYSTEMD_RUN_PROPERTIES),
+        "startupShowProperties": STARTUP_SHOW_PROPERTIES,
+        "terminalShowProperties": TERMINAL_SHOW_PROPERTIES,
+        "terminalShowArgvTemplate": terminal_show_argv("unit.service"),
+        "explicitStopArgvTemplate": explicit_stop_argv("unit.service"),
+        "terminalPredicateExpected": {
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "SubState": "exited",
+            "Type": "exec",
+            "RemainAfterExit": "yes",
+            "Transient": "yes",
+            "MainPID": "0",
+            "Result": "success",
+            "ExecMainCode": "1",
+            "ExecMainStatus": "0",
+            "InvocationID": "same-nonzero-32-hex-startup-id",
+        },
+        "execMainCodeMeaning": (
+            "ExecMainCode=1 is CLD_EXITED; ExecMainStatus=0 is the main exit code. "
+            "ExecMainCode=0 with ExecMainStatus=0 is an unloaded-unit default, not exit zero."
+        ),
+        "caller": "loan_exit_operator.retain_loan_main_exit",
+        "admission": None,
+        "liveCollectionAuthorized": False,
+        "financialAcceptance": False,
+        "containmentAcceptance": False,
+        "sp05Complete": False,
+        "scope": SCOPE,
+    }
+
+===== deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py =====
+"""Collect a loaded systemd main-exit observation and persist it before stop.
+
+Import does not call systemctl, docker, or a network. A separately admitted
+loan executor calls retain_exit_evidence with an explicit transport.
+"""
+import datetime
+import hashlib
+import json
+import os
+import pathlib
+import re
+import subprocess
+
+from launch_contract import (
+    SCOPE,
+    TERMINAL_SHOW_PROPERTIES,
+    describe_contract,
+    explicit_stop_argv,
+    require_startup_identity,
+    require_unit_name,
+    terminal_show_argv,
+)
+from terminal_predicate import require_exit_zero
+
+KNOWN_CODES = {
+    "INVOCATION_REQUIRED",
+    "EXIT_ZERO_NOT_ESTABLISHED",
+    "STARTUP_IDENTITY_REQUIRED",
+    "UNIT_REQUIRED",
+    "EVIDENCE_DIR_REQUIRED",
+    "MALFORMED_SHOW",
+    "DUPLICATE_FIELD",
+    "SHOW_FAILED",
+    "PERSISTENCE_FAILED",
+    "RECORD_TOO_LARGE",
+    "ARGV_REQUIRED",
+    "PROPERTIES_REQUIRED",
+    "EXPLICIT_RUNNER_REQUIRED",
+}
+_PROPERTY_KEY = re.compile(r"[A-Za-z][A-Za-z0-9]*")
+
+
+class CommandResult(object):
+    def __init__(self, argv, returncode, stdout="", stderr=""):
+        self.argv = list(argv)
+        self.returncode = int(returncode)
+        self.stdout = stdout if isinstance(stdout, str) else ""
+        self.stderr = stderr if isinstance(stderr, str) else ""
+
+
+def parse_systemctl_show(stdout):
+    if not isinstance(stdout, str) or stdout == "":
+        raise ValueError("MALFORMED_SHOW")
+    fields = {}
+    saw_line = False
+    for line in stdout.splitlines():
+        if line == "":
+            continue
+        saw_line = True
+        if "=" not in line:
+            raise ValueError("MALFORMED_SHOW")
+        key, value = line.split("=", 1)
+        if key == "" or _PROPERTY_KEY.fullmatch(key) is None:
+            raise ValueError("MALFORMED_SHOW")
+        if key in fields:
+            raise ValueError("DUPLICATE_FIELD")
+        fields[key] = value
+    if not saw_line or not fields:
+        raise ValueError("MALFORMED_SHOW")
+    return fields
+
+
+def require_evidence_dir(path):
+    evidence = pathlib.Path(path)
+    if evidence.is_symlink() or not evidence.is_dir():
+        raise ValueError("EVIDENCE_DIR_REQUIRED")
+    return evidence
+
+
+def durable_exclusive_save(path, value):
+    path = pathlib.Path(path)
+    if path.exists() or path.is_symlink():
+        raise FileExistsError("PERSISTENCE_FAILED")
+    raw = (json.dumps(value, indent=2) + "\n").encode("utf-8")
+    if len(raw) > 65536:
+        raise ValueError("RECORD_TOO_LARGE")
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    try:
+        remaining = memoryview(raw)
+        while remaining:
+            n = os.write(fd, remaining)
+            if n <= 0:
+                raise OSError("PERSISTENCE_FAILED")
+            remaining = remaining[n:]
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    dirfd = os.open(str(path.parent), os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(dirfd)
+    finally:
+        os.close(dirfd)
+
+
+def _now_utc():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def _sha256_file(path):
+    return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+
+
+def _code(error):
+    if isinstance(error, ValueError) and str(error) in KNOWN_CODES:
+        return str(error)
+    if isinstance(error, FileExistsError):
+        return "PERSISTENCE_FAILED"
+    if isinstance(error, OSError):
+        return "PERSISTENCE_FAILED"
+    return type(error).__name__
+
+
+def _coerce_result(result, argv):
+    if isinstance(result, CommandResult):
+        return result
+    returncode = getattr(result, "returncode", None)
+    if returncode is None:
+        raise ValueError("SHOW_FAILED")
+    return CommandResult(
+        list(getattr(result, "args", argv)),
+        returncode,
+        getattr(result, "stdout", "") or "",
+        getattr(result, "stderr", "") or "",
+    )
+
+
+def invoke_user_systemctl(argv, timeout=30):
+    """Run argv with subprocess.run. Not called on import or by this packet CLI."""
+    if not isinstance(argv, (list, tuple)) or not argv:
+        raise ValueError("ARGV_REQUIRED")
+    command = []
+    for part in argv:
+        if not isinstance(part, str):
+            raise ValueError("ARGV_REQUIRED")
+        command.append(part)
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    return CommandResult(command, completed.returncode, completed.stdout, completed.stderr)
+
+
+class UserSystemctlTransport(object):
+    """User-instance systemctl transport.
+
+    Construct with an explicit runner. Offline tests pass a scripted runner.
+    A separately admitted executor may pass invoke_user_systemctl. This class
+    is not constructed on import or by cli.py in this packet.
+    """
+
+    def __init__(self, runner):
+        if runner is None or not callable(runner):
+            raise TypeError("EXPLICIT_RUNNER_REQUIRED")
+        self._runner = runner
+
+    def show(self, unit, properties):
+        if not isinstance(properties, str) or properties == "":
+            raise ValueError("PROPERTIES_REQUIRED")
+        argv = [
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            require_unit_name(unit),
+            "--property=" + properties,
+        ]
+        return _coerce_result(self._runner(argv), argv)
+
+    def stop(self, unit):
+        argv = explicit_stop_argv(unit)
+        return _coerce_result(self._runner(argv), argv)
+
+
+def _fail_status(exit_retained, explicit_stop_completed):
+    if exit_retained and explicit_stop_completed:
+        return "EXIT_RETAINED_THEN_STOP_COMPLETED"
+    if exit_retained:
+        return "STOP_FAILED_AFTER_RETENTION"
+    return "RETENTION_FAILED"
+
+
+def retain_exit_evidence(unit, startup_observed, transport, evidence_dir, now_utc=None):
+    """Bind startup InvocationID, observe, persist raw/validated evidence, then stop.
+
+    Does not report exit retention unless the validated record was durably
+    saved before the stop call. FINANCIAL_COMPLETE text is not consulted.
+    """
+    if not __debug__:
+        raise RuntimeError("ASSERTIONS_REQUIRED")
+    clock = now_utc or _now_utc
+    sequence = []
+    invocation = None
+    rejected = None
+    predicate = None
+    persist_failed = False
+    observation_digest = None
+    stop_attempted = False
+    explicit_stop_completed = False
+    show_result = None
+    stop_result = None
+    observation_path = None
+    stop_path = None
+    record = {
+        "scope": SCOPE,
+        "financialAcceptance": False,
+        "containmentAcceptance": False,
+        "admission": None,
+        "predicate": None,
+        "rejected": None,
+        "observed": None,
+    }
+
+    try:
+        unit = require_unit_name(unit)
+        evidence_dir = require_evidence_dir(evidence_dir)
+    except ValueError as error:
+        return {
+            "status": "RETENTION_FAILED",
+            "exitRetained": False,
+            "explicitStopCompleted": False,
+            "stopAttempted": False,
+            "sequence": sequence,
+            "unit": None,
+            "startupInvocationId": None,
+            "predicate": None,
+            "rejected": _code(error),
+            "terminalObservationPath": None,
+            "terminalObservationSha256": None,
+            "explicitStopPath": None,
+            "financialAcceptance": False,
+            "containmentAcceptance": False,
+            "sp05Complete": False,
+            "admission": None,
+            "scope": SCOPE,
+            "errorClass": type(error).__name__,
+        }
+
+    observation_path = evidence_dir / "terminal-observation.json"
+    stop_path = evidence_dir / "explicit-stop.json"
+    show_argv = terminal_show_argv(unit)
+    stop_argv = explicit_stop_argv(unit)
+
+    try:
+        invocation = require_startup_identity(startup_observed)
+    except ValueError as error:
+        rejected = _code(error)
+
+    sequence.append("show")
+    try:
+        show_result = transport.show(unit, TERMINAL_SHOW_PROPERTIES)
+        if not hasattr(show_result, "returncode"):
+            raise ValueError("SHOW_FAILED")
+        if not isinstance(getattr(show_result, "stdout", ""), str):
+            raise ValueError("SHOW_FAILED")
+    except Exception as error:
+        if rejected is None:
+            rejected = "SHOW_FAILED" if not isinstance(error, ValueError) else _code(error)
+        record["errorClass"] = type(error).__name__
+        show_result = None
+
+    record["observedAtUtc"] = clock()
+    record["argv"] = list(getattr(show_result, "argv", show_argv) or show_argv)
+    record["returnCode"] = int(getattr(show_result, "returncode", 1))
+    record["stdout"] = getattr(show_result, "stdout", "") or ""
+    record["stderr"] = getattr(show_result, "stderr", "") or ""
+    record["startupInvocationId"] = invocation
+    record["rejected"] = rejected
+
+    show_ok = show_result is not None and int(show_result.returncode) == 0
+    if not show_ok and rejected is None:
+        rejected = "SHOW_FAILED"
+        record["rejected"] = rejected
+
+    if show_ok:
+        try:
+            fields = parse_systemctl_show(record["stdout"])
+            record["observed"] = fields
+            if invocation is not None and rejected is None:
+                predicate = require_exit_zero(fields, invocation)
+                record["predicate"] = predicate
+        except ValueError as error:
+            rejected = _code(error)
+            record["rejected"] = rejected
+            record["predicate"] = None
+            if record["observed"] is None:
+                try:
+                    record["observed"] = parse_systemctl_show(record["stdout"])
+                except ValueError:
+                    record["observed"] = None
+
+    sequence.append("persist")
+    try:
+        durable_exclusive_save(observation_path, record)
+        observation_digest = _sha256_file(observation_path)
+    except Exception as error:
+        persist_failed = True
+        if rejected is None:
+            rejected = _code(error)
+        record["rejected"] = rejected
+
+    exit_retained = (
+        predicate is not None
+        and predicate.get("status") == "EXIT_ZERO_OBSERVED"
+        and predicate.get("exitCode") == 0
+        and predicate.get("externalContainmentEstablished") is False
+        and not persist_failed
+        and rejected is None
+        and observation_path is not None
+        and observation_path.is_file()
+        and observation_digest is not None
+    )
+    if not exit_retained:
+        predicate = None
+
+    sequence.append("stop")
+    stop_attempted = True
+    try:
+        stop_result = transport.stop(unit)
+        if not hasattr(stop_result, "returncode"):
+            raise ValueError("SHOW_FAILED")
+        stop_record = {
+            "observedAtUtc": clock(),
+            "argv": list(getattr(stop_result, "argv", stop_argv) or stop_argv),
+            "returnCode": int(stop_result.returncode),
+            "stdout": getattr(stop_result, "stdout", "") or "",
+            "stderr": getattr(stop_result, "stderr", "") or "",
+            "terminalBeforeStopSha256": observation_digest,
+            "exitRetained": exit_retained,
+            "financialAcceptance": False,
+            "containmentAcceptance": False,
+        }
+        durable_exclusive_save(stop_path, stop_record)
+        explicit_stop_completed = int(stop_result.returncode) == 0 and stop_path.is_file()
+    except Exception:
+        explicit_stop_completed = False
+
+    return {
+        "status": _fail_status(exit_retained, explicit_stop_completed),
+        "exitRetained": exit_retained,
+        "explicitStopCompleted": explicit_stop_completed,
+        "stopAttempted": stop_attempted,
+        "sequence": sequence,
+        "unit": unit,
+        "startupInvocationId": invocation,
+        "predicate": predicate,
+        "rejected": None if exit_retained else rejected,
+        "terminalObservationPath": str(observation_path) if observation_path.is_file() else None,
+        "terminalObservationSha256": observation_digest,
+        "explicitStopPath": str(stop_path) if stop_path.is_file() else None,
+        "financialAcceptance": False,
+        "containmentAcceptance": False,
+        "sp05Complete": False,
+        "admission": None,
+        "scope": SCOPE,
+    }
+
+===== deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/test_exit_retention.py =====
+import importlib
+import json
+import pathlib
+import subprocess
+import sys
+import tempfile
+import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
+
+_CANDIDATE = pathlib.Path(__file__).resolve().parent
+if str(_CANDIDATE) not in sys.path:
+    sys.path.insert(0, str(_CANDIDATE))
+
+import cli
+from exit_retention import (
+    CommandResult,
+    UserSystemctlTransport,
+    parse_systemctl_show,
+    retain_exit_evidence,
+)
+from launch_contract import require_startup_identity
+from loan_exit_operator import retain_loan_main_exit
+
+_FIN = pathlib.Path(__file__).resolve().parents[2] / "sp05-financial-integration-2026-09-09"
+LOAN_TERMINAL = _FIN / "preview-loan-exit-01" / "terminal-observation-01.json"
+LOAN_STARTUP = _FIN / "preview-loan-exit-01" / "launcher-active.json"
+SWAP_TERMINAL = _FIN / "preview-swap-exit-01" / "terminal-observation-01.json"
+SWAP_STARTUP = _FIN / "preview-swap-exit-01" / "launcher-active.json"
+SWAP_UNIT = "moriarty-sp05-preview-swap-exit-01.service"
+LOAN_UNIT = "moriarty-sp05-preview-loan-exit-01.service"
+TEST_UNIT = "moriarty-sp05-loan-exit-next.service"
+FIXED_CLOCK = lambda: "2026-09-10T00:00:00+00:00"
+
+
+def _swap_stdout():
+    return json.loads(SWAP_TERMINAL.read_text())["stdout"]
+
+
+def _loan_stdout():
+    return json.loads(LOAN_TERMINAL.read_text())["systemdShow"]
+
+
+def _swap_startup():
+    return json.loads(SWAP_STARTUP.read_text())["observed"]
+
+
+def _loan_startup():
+    return json.loads(LOAN_STARTUP.read_text())["observed"]
+
+
+class ScriptedTransport(object):
+    def __init__(self, show_stdout, show_code=0, stop_code=0, evidence_dir=None, stop_raises=None):
+        self.show_stdout = show_stdout
+        self.show_code = show_code
+        self.stop_code = stop_code
+        self.stop_raises = stop_raises
+        self.evidence_dir = pathlib.Path(evidence_dir) if evidence_dir is not None else None
+        self.calls = []
+        self.observation_present_at_stop = None
+
+    def show(self, unit, properties):
+        present = False
+        if self.evidence_dir is not None:
+            present = (self.evidence_dir / "terminal-observation.json").is_file()
+        self.calls.append(("show", unit, properties, present))
+        return CommandResult(
+            ["/usr/bin/systemctl", "--user", "show", unit, "--property=" + properties],
+            self.show_code,
+            self.show_stdout,
+            "",
+        )
+
+    def stop(self, unit):
+        present = False
+        if self.evidence_dir is not None:
+            present = (self.evidence_dir / "terminal-observation.json").is_file()
+        self.observation_present_at_stop = present
+        self.calls.append(("stop", unit, present))
+        if self.stop_raises is not None:
+            raise self.stop_raises
+        return CommandResult(
+            ["/usr/bin/timeout", "--signal=KILL", "25s", "/usr/bin/systemctl", "--user", "stop", unit],
+            self.stop_code,
+            "",
+            "",
+        )
+
+
+class StatefulTransport(object):
+    def __init__(self, loaded_stdout, unloaded_stdout):
+        self.loaded_stdout = loaded_stdout
+        self.unloaded_stdout = unloaded_stdout
+        self.stopped = False
+
+    def show(self, unit, properties):
+        stdout = self.unloaded_stdout if self.stopped else self.loaded_stdout
+        return CommandResult(["show", unit], 0, stdout, "")
+
+    def stop(self, unit):
+        self.stopped = True
+        return CommandResult(["stop", unit], 0, "", "")
+
+
+class ExitRetention(unittest.TestCase):
+    def _retain(self, transport, startup, unit, evidence_dir):
+        return retain_loan_main_exit(
+            unit=unit,
+            startup_observed=startup,
+            transport=transport,
+            evidence_dir=evidence_dir,
+            now_utc=FIXED_CLOCK,
+        )
+
+    def test_happy_path_save_before_stop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(_swap_stdout(), evidence_dir=evidence)
+            result = self._retain(transport, _swap_startup(), SWAP_UNIT, evidence)
+            self.assertEqual(result["sequence"], ["show", "persist", "stop"])
+            self.assertEqual(transport.calls[0][0], "show")
+            self.assertFalse(transport.calls[0][3])
+            self.assertEqual(transport.calls[1][0], "stop")
+            self.assertTrue(transport.calls[1][2])
+            self.assertTrue(transport.observation_present_at_stop)
+            self.assertTrue(result["exitRetained"])
+            self.assertTrue(result["explicitStopCompleted"])
+            self.assertEqual(result["status"], "EXIT_RETAINED_THEN_STOP_COMPLETED")
+            self.assertFalse(result["financialAcceptance"])
+            self.assertFalse(result["containmentAcceptance"])
+            self.assertFalse(result["sp05Complete"])
+            self.assertIsNone(result["admission"])
+            saved = json.loads((evidence / "terminal-observation.json").read_text())
+            self.assertEqual(saved["predicate"]["status"], "EXIT_ZERO_OBSERVED")
+            self.assertEqual(saved["startupInvocationId"], "b58efe5700db4dd3a63fd097fc5a1652")
+            stop = json.loads((evidence / "explicit-stop.json").read_text())
+            self.assertEqual(stop["terminalBeforeStopSha256"], result["terminalObservationSha256"])
+            self.assertIn("InvocationID", transport.calls[0][2])
+            self.assertIn("RemainAfterExit", transport.calls[0][2])
+
+    def test_authentic_swap_sequence_through_operator(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(_swap_stdout(), evidence_dir=evidence)
+            result = retain_exit_evidence(
+                SWAP_UNIT, _swap_startup(), transport, evidence, now_utc=FIXED_CLOCK
+            )
+            self.assertTrue(result["exitRetained"])
+            self.assertEqual(result["predicate"]["invocationId"], _swap_startup()["InvocationID"])
+            self.assertEqual(result["startupInvocationId"], require_startup_identity(_swap_startup()))
+
+    def test_authentic_loan_terminal_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(_loan_stdout(), evidence_dir=evidence)
+            result = self._retain(transport, dict(_swap_startup()), LOAN_UNIT, evidence)
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["status"], "RETENTION_FAILED")
+            self.assertEqual(result["rejected"], "EXIT_ZERO_NOT_ESTABLISHED")
+            self.assertIsNone(result["predicate"])
+            self.assertTrue(result["stopAttempted"])
+            saved = json.loads((evidence / "terminal-observation.json").read_text())
+            self.assertEqual(saved["stdout"], _loan_stdout())
+            self.assertNotEqual(saved.get("predicate"), {"status": "EXIT_ZERO_OBSERVED"})
+            self.assertFalse(saved["financialAcceptance"])
+
+    def test_loan_startup_cannot_bind(self):
+        with self.assertRaisesRegex(ValueError, "STARTUP_IDENTITY_REQUIRED"):
+            require_startup_identity(_loan_startup())
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(_swap_stdout(), evidence_dir=evidence)
+            result = self._retain(transport, _loan_startup(), LOAN_UNIT, evidence)
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["rejected"], "STARTUP_IDENTITY_REQUIRED")
+            self.assertIsNone(result["startupInvocationId"])
+            self.assertTrue(result["stopAttempted"])
+
+    def test_invalid_startup_ids(self):
+        base = dict(_swap_startup())
+        for value in [None, "", "0" * 32, "ABC" * 10 + "abcd", "1" * 31, "g" * 32]:
+            observed = dict(base)
+            observed["InvocationID"] = value
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "STARTUP_IDENTITY_REQUIRED"):
+                    require_startup_identity(observed)
+        unloaded = dict(base)
+        unloaded["LoadState"] = "not-found"
+        with self.assertRaisesRegex(ValueError, "STARTUP_IDENTITY_REQUIRED"):
+            require_startup_identity(unloaded)
+        dead = dict(base)
+        dead["MainPID"] = "0"
+        with self.assertRaisesRegex(ValueError, "STARTUP_IDENTITY_REQUIRED"):
+            require_startup_identity(dead)
+
+    def test_identity_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            startup = dict(_swap_startup())
+            startup["InvocationID"] = "c" * 32
+            transport = ScriptedTransport(_swap_stdout(), evidence_dir=evidence)
+            result = self._retain(transport, startup, SWAP_UNIT, evidence)
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["rejected"], "EXIT_ZERO_NOT_ESTABLISHED")
+            self.assertEqual(result["startupInvocationId"], "c" * 32)
+
+    def test_duplicate_and_malformed_show(self):
+        with self.assertRaisesRegex(ValueError, "DUPLICATE_FIELD"):
+            parse_systemctl_show("LoadState=loaded\nLoadState=loaded\n")
+        with self.assertRaisesRegex(ValueError, "MALFORMED_SHOW"):
+            parse_systemctl_show("FINANCIAL_COMPLETE\nLoadState=loaded\n")
+        with self.assertRaisesRegex(ValueError, "MALFORMED_SHOW"):
+            parse_systemctl_show("")
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(
+                "LoadState=loaded\nLoadState=not-found\n", evidence_dir=evidence
+            )
+            result = self._retain(transport, _swap_startup(), TEST_UNIT, evidence)
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["rejected"], "DUPLICATE_FIELD")
+
+    def test_failed_persistence_does_not_report_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            (evidence / "terminal-observation.json").write_text("preexisting\n")
+            transport = ScriptedTransport(_swap_stdout(), evidence_dir=evidence)
+            result = self._retain(transport, _swap_startup(), SWAP_UNIT, evidence)
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["status"], "RETENTION_FAILED")
+            self.assertEqual(result["rejected"], "PERSISTENCE_FAILED")
+            self.assertIsNone(result["predicate"])
+            self.assertEqual((evidence / "terminal-observation.json").read_text(), "preexisting\n")
+            self.assertTrue(result["stopAttempted"])
+            self.assertEqual(transport.calls[-1][0], "stop")
+
+    def test_failed_stop_after_retention(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(_swap_stdout(), stop_code=5, evidence_dir=evidence)
+            result = self._retain(transport, _swap_startup(), SWAP_UNIT, evidence)
+            self.assertTrue(result["exitRetained"])
+            self.assertFalse(result["explicitStopCompleted"])
+            self.assertEqual(result["status"], "STOP_FAILED_AFTER_RETENTION")
+            self.assertFalse(result["financialAcceptance"])
+            saved = json.loads((evidence / "terminal-observation.json").read_text())
+            self.assertEqual(saved["predicate"]["status"], "EXIT_ZERO_OBSERVED")
+
+    def test_stop_exception_after_retention_is_not_command_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            transport = ScriptedTransport(
+                _swap_stdout(), evidence_dir=evidence, stop_raises=OSError("stop")
+            )
+            result = self._retain(transport, _swap_startup(), SWAP_UNIT, evidence)
+            self.assertTrue(result["exitRetained"])
+            self.assertFalse(result["explicitStopCompleted"])
+            self.assertEqual(result["status"], "STOP_FAILED_AFTER_RETENTION")
+
+    def test_post_stop_observation_rejected(self):
+        transport = StatefulTransport(_swap_stdout(), _loan_stdout())
+        with tempfile.TemporaryDirectory() as first:
+            result = self._retain(transport, _swap_startup(), SWAP_UNIT, pathlib.Path(first))
+            self.assertTrue(result["exitRetained"])
+            self.assertTrue(transport.stopped)
+        with tempfile.TemporaryDirectory() as second:
+            later = self._retain(transport, _swap_startup(), SWAP_UNIT, pathlib.Path(second))
+            self.assertFalse(later["exitRetained"])
+            self.assertEqual(later["rejected"], "EXIT_ZERO_NOT_ESTABLISHED")
+            saved = json.loads((pathlib.Path(second) / "terminal-observation.json").read_text())
+            self.assertEqual(saved["observed"]["LoadState"], "not-found")
+
+    def test_financial_text_cannot_bypass_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            result = self._retain(
+                ScriptedTransport("FINANCIAL_COMPLETE=yes\n", evidence_dir=evidence),
+                _swap_startup(),
+                TEST_UNIT,
+                evidence,
+            )
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["rejected"], "EXIT_ZERO_NOT_ESTABLISHED")
+            self.assertIsNone(result["predicate"])
+            saved = json.loads((evidence / "terminal-observation.json").read_text())
+            self.assertIn("FINANCIAL_COMPLETE", saved["stdout"])
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            rescued = _loan_stdout() + "FINANCIAL_COMPLETE=yes\n"
+            result = self._retain(
+                ScriptedTransport(rescued, evidence_dir=evidence),
+                _swap_startup(),
+                LOAN_UNIT,
+                evidence,
+            )
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["status"], "RETENTION_FAILED")
+            self.assertEqual(result["rejected"], "EXIT_ZERO_NOT_ESTABLISHED")
+            self.assertNotEqual(result["status"], "EXIT_RETAINED_THEN_STOP_COMPLETED")
+
+    def test_show_failed_and_bad_inputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            result = self._retain(
+                ScriptedTransport("", show_code=1, evidence_dir=evidence),
+                _swap_startup(),
+                TEST_UNIT,
+                evidence,
+            )
+            self.assertFalse(result["exitRetained"])
+            self.assertEqual(result["rejected"], "SHOW_FAILED")
+        missing = retain_loan_main_exit(
+            SWAP_UNIT, _swap_startup(), ScriptedTransport(_swap_stdout()), "/no/such/loan-exit-dir", now_utc=FIXED_CLOCK
+        )
+        self.assertEqual(missing["rejected"], "EVIDENCE_DIR_REQUIRED")
+        self.assertFalse(missing["stopAttempted"])
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = retain_loan_main_exit(
+                "../evil.service", _swap_startup(), ScriptedTransport(_swap_stdout()), pathlib.Path(tmp), now_utc=FIXED_CLOCK
+            )
+            self.assertEqual(bad["rejected"], "UNIT_REQUIRED")
+            self.assertFalse(bad["stopAttempted"])
+
+    def test_cli_import_safe_and_collect_once_refuses(self):
+        importlib.reload(cli)
+        with redirect_stderr(StringIO()) as err:
+            self.assertEqual(cli.main([]), 2)
+            self.assertEqual(cli.main(["collect-once", "--admission", "nope"]), 2)
+        self.assertIn("no admission", err.getvalue())
+        with redirect_stdout(StringIO()) as out:
+            self.assertEqual(cli.main(["describe"]), 0)
+        payload = json.loads(out.getvalue())
+        self.assertIsNone(payload["admission"])
+        self.assertFalse(payload["liveCollectionAuthorized"])
+        self.assertFalse(payload["financialAcceptance"])
+        self.assertEqual(payload["caller"], "loan_exit_operator.retain_loan_main_exit")
+
+    def test_controlled_subprocess_standin_not_live_service(self):
+        with self.assertRaisesRegex(TypeError, "EXPLICIT_RUNNER_REQUIRED"):
+            UserSystemctlTransport(None)
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = pathlib.Path(tmp)
+            shown = evidence / "show.txt"
+            shown.write_text(_swap_stdout())
+
+            def runner(argv):
+                kind = "show" if "show" in argv else "stop"
+                return subprocess.run(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import pathlib,sys; p=pathlib.Path(sys.argv[1]); sys.stdout.write(p.read_text() if sys.argv[2]=='show' else '')",
+                        str(shown),
+                        kind,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+
+            result = self._retain(
+                UserSystemctlTransport(runner), _swap_startup(), SWAP_UNIT, evidence
+            )
+            self.assertTrue(result["exitRetained"])
+            self.assertEqual(result["sequence"], ["show", "persist", "stop"])
+            self.assertFalse(result["financialAcceptance"])
+            self.assertIsNone(result["admission"])
+
+
+if __name__ == "__main__":
+    unittest.main()

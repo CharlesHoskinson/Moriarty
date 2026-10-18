@@ -1,0 +1,132 @@
+{
+  "recordType": "C2_R2_REV4_READOPTION_FOR_TEST_AUTHORING_ONLY",
+  "createdAt": "2026-10-17T04:45:16.442991+00:00",
+  "supersedesTemporarySuspension": "POLICY-QUALIFICATION-CORRECTION.json",
+  "digestErratum": "REVIEW-DIGEST-REPRESENTATION-ERRATUM.json",
+  "candidatePins": {
+    "S33": {
+      "bytes": 30809,
+      "sha256": "6e2c3989ede633901d7d1a95ee3a081c8eb628fbea199c1aa2858a3eaa2cba34"
+    },
+    "S34": {
+      "bytes": 8563,
+      "sha256": "0f592eea77df7531be1edf1685b2b7290add7f9873cda2e11f99c9aed436c3af"
+    },
+    "S35": {
+      "bytes": 7631,
+      "sha256": "a863c35ba6b22a41c2d9a8a5d7f87c8a076b4cc92927cc4a10f71e1683cf5e44"
+    }
+  },
+  "all40OriginalAndPacketPinsRevalidated": true,
+  "votes": [
+    {
+      "job": "CP-OPUS",
+      "requestedModel": "claude-opus-5-5",
+      "actualAssistantModels": {
+        "claude-opus-5-5": 52
+      },
+      "review": "/home/charl/moriarty-c2-resume-20261017/jobs/CP-OPUS/REVIEW.json",
+      "reviewSha256": "64f19dcb429e338addc88de24a0965574a7a3361b92493df2b6c8c0fc79bddae",
+      "sourceReady": true,
+      "positions": "CP01-CP08 exact literals AGREE",
+      "requestedEffort": "high",
+      "actualEffortIndependentlyObserved": false,
+      "findings": [
+        {
+          "id": "R4-L01-section3-serde-wording",
+          "severity": "low",
+          "summary": "Section 3 lists 'serde DTO decoding' under Not performed. Yet r2 performs closed-key checks (12/29/export field names) and integer-width checks that are the Python analogue of serde deny_unknown_fields typed decoding. 'Each ... mirrors a named check' also maps the EXPORT-stage hex-width checks only onto later Rust equality comparisons. This is wording imprecision, not an admission-relation claim.",
+          "evidence": "S33 \u00a73 'Not performed: ... serde DTO decoding' versus CP02/CP03/CI05 closed schemas and u8/u16/u64 ranges. S18 SetupRecord/ProofExport #[serde(deny_unknown_fields)] decoded inside parse_json (S28). S18 check_export validates programHash, setupRecordSha256 and context hex only through same()/equality. The 'Added by r2' list already covers sourceSha256-key-required (the Option\u2192None serde difference) and the exact-int rules.",
+          "requiredFix": "Non-blocking. In test-review notes or a later text revision, say that serde mechanics (Option-missing\u2192None, numeric coercion, UTF-8 decoding) are not reproduced, and that the closed-key and width checks are r2 Python analogues. No clause change or re-vote is needed."
+        },
+        {
+          "id": "R4-L02-CP04-constraints-source-review-only",
+          "severity": "low",
+          "summary": "The CP04 scan constraints (no input-proportional copy, never str.encode, length-before-scan for abi2ShapeBytesHex/statementHex) cannot be discriminated by T00-T17 outcomes. T06 detects only wrong stages and subclass leaks, and an implementation that catches UnicodeEncodeError and re-raises ValueError would pass every test.",
+          "evidence": "S33 CP04 and stage notes; T06/T15 rows; the meaningfulness list covers only a no-scan mutant. The T15 token scan reuses v1 test_11 tokens (S23), which do not include 'encode('.",
+          "requiredFix": "The test reviewer and the later implementation reviewer must source-inspect these constraints. Optionally add '.encode(' to the T15 effect-token scan, since r2 needs no encode call. Non-blocking."
+        },
+        {
+          "id": "R4-I03-S31-scope",
+          "severity": "info",
+          "summary": "S31 supports 'the never-run docstrings are not evidence that nothing ran'. It records custody-only binary-source correspondence and does not pin the exact lib.rs (1b13cdc5\u2026) or abi2.rs (51fa1063\u2026) bytes as the compiled sources. So 'stale' is scoped history, not exact-byte provenance.",
+          "evidence": "S31 limitations.binarySourceCorrespondence 'custody evidence, not mathematical binary proof'; its pins cover only proofExport/setupRecord/vk/statement digests. S33 \u00a78 already keeps driverId DECLARED_NAME_NOT_PROVENANCE and circuitVkCorrespondence OPEN.",
+          "requiredFix": "None. Keep the labels and the scoped wording, and infer no universal correspondence."
+        },
+        {
+          "id": "R4-I04-test-authoring-precision",
+          "severity": "info",
+          "summary": "Some rows rely on the test author choosing schema-valid replacement values, so that the fault reaches the intended stage: T10 'each of the 10 context fields changed alone', the T13 field changes and the T08 'another valid value'. For T17, the 'literal expected envCborHex' that feeds the hashlib token is literal framing plus a test-computed NON-ORACLE statement-digest segment.",
+          "evidence": "S33 \u00a76 rows T08, T10, T13 and T17, and the token-expectation preamble. S11 shows EXPORT type/width checks precede CONTEXT/CARDANO.",
+          "requiredFix": "Test review must confirm that each replacement is in-range and of exact type. Keep the T17 digest segment labelled NON-ORACLE."
+        },
+        {
+          "id": "R4-I05-T16-duplication",
+          "severity": "info",
+          "summary": "T16 repeats v1-ADMIT assertions already made in the v1 columns of T04, T05b, T06 and T14. This is consistent and not a contradiction, and it does not affect the 18-method count.",
+          "evidence": "S33 T04/T05b/T06/T14 v1 cells versus the T16 enumerated list; API tests.T16StrictnessCases.",
+          "requiredFix": "None."
+        }
+      ]
+    },
+    {
+      "job": "CP-SECOND-OPUS",
+      "requestedModel": "claude-opus-5-5",
+      "actualAssistantModels": {
+        "claude-opus-5-5": 53
+      },
+      "review": "/home/charl/moriarty-c2-resume-20261017/jobs/CP-SECOND-OPUS/REVIEW.json",
+      "reviewSha256": "a39b0a2626c5d6ea3d25842e9e2a612fc79988c67905180baa8b4a75db8c24e1",
+      "sourceReady": true,
+      "positions": "CP01-CP08 exact literals AGREE",
+      "requestedEffort": "high",
+      "actualEffortIndependentlyObserved": false,
+      "findings": [
+        {
+          "id": "L01-api-strictness-sampling-wording",
+          "severity": "low",
+          "summary": "API compatibility.strictnessVsV1 says strictness is 'sampled by T16 only'. The v1 columns of T04 (driver one-char change, provingKeyBytes 2**64), T05b (v1 ADMIT), T06 (v1 ADMIT cases) and T14 (SETUP/PROFILE, v1 ADMIT) also assert v1-admit/r2-refuse on the same inputs. CP06 and section 5 are correct, because they only say T16 samples nothing but strictness.",
+          "evidence": "S34 compatibility.strictnessVsV1. S33 section 6: T04 'v1 SETUP unless noted' with '(v1 ADMIT)' parentheticals; T05b v1 ADMIT; T06 '(v1 ADMIT)'; T14 '(...; v1 ADMIT)'. S33 CP06 and section 5 wording.",
+          "requiredFix": "No contract change required. In the test review, read it as 'T16 is the dedicated strictness collection'. Optionally reword it in a later revision. This does not affect CP06."
+        },
+        {
+          "id": "L02-type-valid-tamper-values",
+          "severity": "low",
+          "summary": "T11's 'x1 or x2 alone set to 0' must use the str '0'. An int 0 would be refused at EXPORT (CI05 str kind) rather than DIGEST. Likewise, the T10 'changed alone' and T13 field changes must keep valid types and ranges, or the expected stage moves to EXPORT.",
+          "evidence": "S11 _PUBLIC_INPUTS x1/x2 _TEXT and _admit 'str'. S33 CP04 defers only the surrogate scan of x1/x2, not their exact-str type. S33 T11 row.",
+          "requiredFix": "The test author uses '0' (str) and type-valid replacement values. The test reviewer checks this. No clause change."
+        },
+        {
+          "id": "L03-T17-call-defaults-unstated",
+          "severity": "low",
+          "summary": "T17 does not state the expiry or policy used. Its 'literal framing' envCborHex depends on the expiry head.",
+          "evidence": "S33 T17 row; the S23 call() defaults are HIST_EXPIRY and POLICY.",
+          "requiredFix": "The test author states HIST_EXPIRY and HIST_POLICY explicitly (or another literal pair) for T17. Review it with the test."
+        },
+        {
+          "id": "I01-serde-dto-terminology",
+          "severity": "info",
+          "summary": "Section 3 lists 'serde DTO decoding' as not performed, while the closed-key and field-type checks are said to mirror parse_setup_record (deny_unknown_fields DTOs). The intent is consistent: r2 mirrors key closure and types but not serde semantics, for example a missing Option key read as None, which r2 refuses and lists as Added-by-r2.",
+          "evidence": "S33 section 3 Performed/Not performed/Added by r2; S18 parse_setup_record via parse_json; S28 parse_json.",
+          "requiredFix": "None. Terminology note only; it is not an acceptance claim."
+        },
+        {
+          "id": "I02-staleness-and-independence-scope",
+          "severity": "info",
+          "summary": "Calling the lib.rs/abi2.rs 'never compiled or run' docstrings stale rests on the S31 root-adopted round trip, whose binary-source correspondence is custody evidence only. The contract says so. This review is a fresh context from the same provider as the author and did not see the other independent review.",
+          "evidence": "S31 limitations.binarySourceCorrespondence; S33 section 8; S40 history/independence.",
+          "requiredFix": "None. Root records this vote alongside the separate independent review. Neither vote is adoption."
+        }
+      ]
+    }
+  ],
+  "independence": "Two fresh nonauthor contexts, same provider. No provider diversity claimed. Neither was given the other current vote.",
+  "decision": "Adopt exact revision4 policy solely as the basis for Opus-authored test source, followed by fresh nonauthor source review before any ordinary RED. No implementation, result, builder reliance or native authority.",
+  "historicalMuse": "Preserved, not needed for this two-Opus decision. Original producer digest matches exact report text plus newline; apparent whole-JSON mismatch was root error and is withdrawn.",
+  "sourcePolicyAdoptedForTestAuthoring": true,
+  "implementationAdopted": false,
+  "testExecutionPermittedByThisRecord": false,
+  "builderReliancePermitted": false,
+  "nativeAuthority": 0,
+  "next": "Complete18method test source under actualOpus5.5 identity, fresh source review and envelope admission before meaningful RED. Source constraints CP04 require inspection, not behavioral inference."
+}

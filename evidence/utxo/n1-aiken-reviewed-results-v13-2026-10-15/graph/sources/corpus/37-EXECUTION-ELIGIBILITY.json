@@ -1,0 +1,78 @@
+{
+ "format": "rr03-owner-constraints-execution-eligibility-review/1",
+ "authority": "NONE. This is a source/effects judgment by the reviewer. It grants, requests and uses no authority. The root decides each step. Native/SDK authority stays zero.",
+ "reviewer": "claude-opus-5-5 (runtime-stated); fresh non-author context",
+ "candidate": "root-materialized RR-03 candidate (ROOT-MATERIALIZATION.json, 40 files, as cited by the root)",
+ "userAuthorizationContext": "The user already authorizes measured Groth16/Preprod prototype work under reviewed scope. No new user confirmation is inferred from the author's E-3 wording; E-3 needs a reviewed scoped plan and a root decision, not a further user question.",
+ "steps": [
+  {
+   "id": "E-0",
+   "status": "DONE BY ROOT",
+   "note": "fixtures_r1.ak mechanically copied (sha 23d40ff2...2c, 1,038,458 B); 13 copyOfR1 files hash-equal to R1 per the root; zero transcription defects (root record, not re-hashed here)"
+  },
+  {
+   "id": "E-L",
+   "kind": "lock preparation (ordinary, offline)",
+   "eligibility": "ELIGIBLE IN PRINCIPLE after the root fixes the exact procedure",
+   "conditions": [
+    "a reviewed Cargo.lock for the standalone crate, generated offline from vendored sources, adding zero registry packages beyond the Core closure set",
+    "serde_json resolves to exactly 1.0.151 (the manifest pins =1.0.151) or the requirement is relaxed to the Core caret form by a reviewed byte change",
+    "no install, fetch or network"
+   ]
+  },
+  {
+   "id": "E-1",
+   "kind": "cargo test of candidate/owner-constraints (ordinary local Rust tests; no SDK, proof, network or ledger)",
+   "eligibility": "ELIGIBLE IN PRINCIPLE after E-L and the RV1-06/RV1-07 conditions",
+   "conditions": [
+    "layout: <root>/moriarty = exactly the CORE-CLOSURE-PINS.json files (closure f47318a2...35ed, each hash-checked); <root>/constraints = a copy of the materialized folder",
+    "explicit toolchain RUSTUP_TOOLCHAIN=1.99.0 (rust-toolchain.toml does not apply outside <root>/moriarty)",
+    "no ancestor .cargo/config or .cargo/config.toml; task-local CARGO_HOME with only the reviewed source replacement",
+    "mount view exposing only <root>, the toolchain and the vendored registry; env -i; network namespace unshared; task-local HOME/TMPDIR",
+    "argv fixed before authority, for example cargo test --offline --locked --manifest-path <root>/constraints/candidate/owner-constraints/Cargo.toml",
+    "publish the test log and an explicit allowlist only, never target/"
+   ],
+   "keyEffect": "tests derive secp256k1 keys in memory from public labels and sign in memory; no key file, wallet path or existing key is touched; the derived keys are public and test-only",
+   "expected": "92 test functions (51 frozen_invoice, 8 frozen_heldout, 13 supplementary_sx, 11 correspondence, 9 author_supplemental). Grading per ORACLE-COVERAGE.json. Any mismatch is a failed prediction; no expectation byte is edited.",
+   "notEvidenceOf": ["Cardano or Midnight acceptance", "proof soundness", "general program soundness"]
+  },
+  {
+   "id": "E-2",
+   "kind": "aiken check of candidate/aiken-constraints",
+   "eligibility": "ELIGIBLE IN PRINCIPLE under the A-1 conditions",
+   "conditions": [
+    "pinned Aiken v1.1.24 binary (hash-matched copy), isolated first execution",
+    "stdlib v2.2.0: the 38 pinned files pre-placed offline; any fetch is BLOCKED",
+    "fixed argv and trace level recorded before authority (same as the A-1 run that produced the 146 baseline)",
+    "scratch copy of the 20-file package; env -i; network unshared"
+   ],
+   "expected": "178 tests: 146 unchanged R1 tests (settle_r1_test 110 with 27 fail tests, unit_r1_test 9 with 1, unit_test 27 with 9) plus settle_v3_test 20 and constraints_test 12. The R1 tests must re-pass on the changed thread.ak. A compile failure in any lib module, test support included, blocks the whole package.",
+   "notEvidenceOf": ["full thread.settle acceptance (signatures excluded)", "compiled-wrapper behaviour (X-1)", "ledger serialise_data equality (OEX7)", "ExUnits, size or deployability"]
+  },
+  {
+   "id": "E-2b",
+   "kind": "aiken build and blueprint apply (identity and size record only)",
+   "eligibility": "ELIGIBLE IN PRINCIPLE after a green E-2, same trace level",
+   "note": "Records a new S2 hash and size. The R1 S2 was 30,764 B against an observed maxTxSize of 16,384 B; the RR-03 S2 is larger source. No deployability or Preprod fit may be claimed."
+  },
+  {
+   "id": "E-3",
+   "kind": "signed /3 vectors for full thread.settle and signature-dependent refusals",
+   "eligibility": "NOT ELIGIBLE under this review",
+   "missing": [
+    "a reviewed, scoped test-signing plan: fresh in-memory test keys (or the public-label test keys), never wallet or existing keys, no funds, no network",
+    "a reviewed BIP-340 / RFC 6979 low-S signer and a fixture generator over the rebuilt /3 messages",
+    "green E-1 and E-2"
+   ],
+   "rowsItWouldCover": ["RP-1..RP-6, RP-8, RP-9 at Cardano", "PF-3, PF-4 at Cardano", "SX-07, SX-08, SX-09, SX-15 at Cardano", "MX-1 finish and MX-2 partial refusals at Cardano", "full-settle positives P-A, P-B, P-A89, P-A32, P-A40, MX-1"]
+  },
+  {
+   "id": "E-4",
+   "kind": "independent actual-result review",
+   "eligibility": "REQUIRED after any execution",
+   "note": "A fresh non-author Opus review compares outcomes with the frozen V12 oracle, separately with the V13 SX layer and the author rows, using ORACLE-COVERAGE.json grades."
+  }
+ ],
+ "neverEligibleHere": ["setup, proving, key generation for authority, VK or circuit changes", "Preprod, wallets, funds, ledger submission", "moving the crate into mori-core (integrator step with a re-pinned closure)", "merging with live W0/W1 work (future integration only)"],
+ "rr03": "High and open until execution passes the frozen oracle and an independent actual-result review accepts the outcome"
+}

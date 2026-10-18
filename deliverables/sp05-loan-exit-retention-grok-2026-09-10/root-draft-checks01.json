@@ -1,0 +1,58 @@
+{
+  "scope": "Root checks of incomplete Grok draft; no service or financial action",
+  "candidateFiles": [
+    {
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/cli.py",
+      "sha256": "01227e7a13afa4fdced705668f6bf87001f5a3ac2abc7a373748bb4ae82561ec"
+    },
+    {
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py",
+      "sha256": "2b84a67199b26e233bea03782aad1f2d8900d76708bf0b9ef1f1bb1af748bdf3"
+    },
+    {
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/launch_contract.py",
+      "sha256": "0eee04ff9c1ac3dc644c629c64a406790190a53222be77601930c75adee8b7e7"
+    },
+    {
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/loan_exit_operator.py",
+      "sha256": "199081726b5682cf1362f0bdb316a26c094b5d0ddbd310bb184dee834e7fb2ef"
+    },
+    {
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/terminal_predicate.py",
+      "sha256": "25a9724f63b8a89c5e1159b0060d4d040557709e24e16cf08746fee53765b9e9"
+    },
+    {
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/test_terminal_predicate.py",
+      "sha256": "a6a406977dfd7a1bf860d0708bcfe58d543690e006ef2055c686b46d233b9f30"
+    }
+  ],
+  "tests": {
+    "command": "python3 -m unittest discover -s deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate -p test_terminal_predicate.py -v",
+    "exitCode": 0,
+    "testsRun": 6
+  },
+  "findings": [
+    {
+      "id": "ROOT01",
+      "requirement": "Reject post-stop collection in the same evidence directory",
+      "reproducer": "Create explicit-stop.json in a temporary evidence directory before calling retain_loan_main_exit with otherwise valid startup and scripted loaded/exited matching terminal fields.",
+      "observed": {
+        "exitRetained": true,
+        "status": "STOP_FAILED_AFTER_RETENTION",
+        "calls": [
+          "show",
+          "stop"
+        ]
+      },
+      "expected": "Reject reused/post-stop evidence state before claiming fresh exit retention; preserve old record. Add caller test."
+    },
+    {
+      "id": "ROOT02",
+      "requirement": "Malformed startup PID must not satisfy startup identity",
+      "reproducer": "require_startup_identity with MainPID=True, active/loaded and nonzero32hex InvocationID",
+      "observed": "InvocationID accepted",
+      "expected": "Reject boolean/numeric malformed fields; require canonical positive PID string from systemctl. Add negative cases."
+    }
+  ],
+  "status": "CHANGES_REQUIRED_BEFORE_FREEZE"
+}

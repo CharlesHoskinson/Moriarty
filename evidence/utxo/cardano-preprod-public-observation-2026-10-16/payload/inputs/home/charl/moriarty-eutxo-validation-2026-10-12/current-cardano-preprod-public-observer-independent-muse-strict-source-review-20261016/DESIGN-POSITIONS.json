@@ -1,0 +1,56 @@
+[
+  {
+    "clause": "Exactly one batch of at most five sequential calls in the fixed order genesis, tip, address_utxos, epoch_params with explicit chosen epoch, tip; no paging, repeated address observation, or batch retry.",
+    "clauseId": "P01",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "observe.py:260-270 fixed sequential five; EXPECTATIONS.json:7-13. Controller-level only; DNS/wire count not claimed."
+  },
+  {
+    "clause": "Use literal retries=1 at Scrapling session and request level for exactly one controller-level attempt; never retries=0.",
+    "clauseId": "P02",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "static.py:232,248 max(1,retries or 1)/range; retries=1 observe.py:214,257-259; curl retry default 0 session.py:241,899 also one."
+  },
+  {
+    "clause": "Pin follow_redirects=False, max_redirects=0, verify=True, stealthy_headers=False, impersonate=None; reject any redirect history or canonical-URL difference.",
+    "clauseId": "P03",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "observe.py:214-217,236-249,256-259 mapped in static.py:125-130. Candidate-level pin agreed; env CA/proxy residual is F2, not this pin text."
+  },
+  {
+    "clause": "Accept only HTTP 200 application/json, append raw bytes before validation, preserve partial RESULT/ledger on failure, and never accept a partial failed response.",
+    "clauseId": "P04",
+    "position": "FOR (author) + DISAGREE (fresh)",
+    "rationale": "200/JSON/raw-before-validate and Abort partial paths observe.py:239-253,281-288 hold, but absolute preserve claim fails F4: no save before launch, session-enter can leave no RESULT, non-Abort leaves STARTED no terminal."
+  },
+  {
+    "clause": "Check the 2 MiB bound before persist/JSON while honestly stating Scrapling buffers the whole body first; treat any address-space limit as a bound, not a strict download cap.",
+    "clauseId": "P05",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "observe.py:12-15,239-243; Response.body materialized custom.py:83-86."
+  },
+  {
+    "clause": "Freeze provider genesis checks to documented string fields equal to static Preprod values (networkmagic 1, networkid Testnet, epochlength 432000, slotlength 1, systemstart 1654041600), coercing only documented strings.",
+    "clauseId": "P06",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "observe.py:31-35,78-93; selected-contracts.json:1005-1052; preprod-shelley-genesis.json:36-38,63-71."
+  },
+  {
+    "clause": "Bound tx_index as a non-bool integer 0..32767 from the SQL smallint source, require unique outrefs and is_spent exactly false, and keep value as a raw non-negative decimal string with no ADA/lovelace conversion.",
+    "clauseId": "P07",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "observe.py:143-167; address_utxos.sql:4,32,44; SOURCE-CONTRACTS.md:37."
+  },
+  {
+    "clause": "Treat empty UTxO arrays as valid provider-reported unfunded, exactly-1000 rows and any Content-Range as bounded-set-only, cost_models as opaque/unsupported, and changed tips as AMBIGUOUS rather than an authenticated snapshot.",
+    "clauseId": "P08",
+    "position": "FOR (author) + DISAGREE (fresh)",
+    "rationale": "Empty/1000/cost_models/AMBIGUOUS largely observe.py:126-141,272-280, but 'any Content-Range as bounded-set-only' is not implemented (F3): header only retained observe.py:234-235, never evaluated, so empty completeness claim can be false."
+  },
+  {
+    "clause": "Keep this deliverable source-only: root materializes fresh, a fresh full non-author audit follows, and only a separately reviewed single public run may produce a qualifying provider observation.",
+    "clauseId": "P09",
+    "position": "FOR (author) + AGREE (fresh)",
+    "rationale": "README.md:3,27; EXECUTION-PROPOSAL.json:3,14 status NOT_AUTHORIZED and required steps. Agreement is to source-only stance only; it creates no execution authority and this review is not that run."
+  }
+]

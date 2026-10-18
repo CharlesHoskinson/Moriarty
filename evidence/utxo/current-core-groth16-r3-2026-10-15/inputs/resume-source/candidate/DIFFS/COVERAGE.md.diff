@@ -1,0 +1,38 @@
+--- origin-r2/COVERAGE.md
++++ successor/COVERAGE.md
+@@ -56,8 +56,8 @@
+ | `Program.expressions` | Lowered per statement as above |
+ | `Program.actions` | One relation per action; action index in the header |
+ | `Scenario.state`, `inputs` | Pre-state and input slots, typed |
+-| `Scenario.balances` | Represented cells: touched cells plus optional `FrameCells::Include`. Other rows are a frame-completeness target obligation |
+-| `Scenario.liabilities` | One `(present, amount)` cell per source-registry duty, sorted by name |
++| `Scenario.balances` | Represented cells: touched cells plus optional `FrameCells::Include`. Other rows are a frame-completeness target obligation. Whether a represented row exists at all is a **target premise**: balance cells have no presence bit (review F-04) |
++| `Scenario.liabilities` | One `(present, amount)` cell per source-registry duty, sorted by name. An unregistered incoming duty (no source `Liability`) cannot be represented, and no duty-frame option exists (review F-05); its preservation is a target obligation |
+ | `Execution.pre`, `post`, `effects` | Public body and effect slots |
+ | `Execution.steps` | Every step value is a constrained internal wire. Step snapshots are not published, because they are determined by pre-state and inputs |
+ | `CostReport` | `W` is a header constant; with `CapBinding::PublicCap` the circuit enforces `W ≤ cap` |
+@@ -80,16 +80,21 @@
+ | Scalar field under 198 bits; a circuit over another field | `Field` | The exact-integer arguments need `r > 2^195` |
+ | All-zero compiler build or Core closure digest | `Identity` | The build identity is mandatory |
+ | `ClaimantBoundAbiV1Pending` adapter | `Adapter(Unadopted)` | That ABI is frozen but unreviewed; no mapping is defined |
+-| Initial ledger target with any Emit in the program | `initial_ledger_target_admits` → `TargetRefusal` | Two adopted votes (target policy). Full Emit stays a required future track |
++| Initial ledger target with any Emit in the program | `initial_ledger_target_admits` → `TargetRefusal` | Two adopted votes (target policy). Full Emit stays a required future track. Not called by `compile` or any adapter here (review F-10): a future target adapter must wire it, under review |
++| Hand-built `Assignment` with wrong vector lengths | `AssignmentShape` from `CompiledRelation::circuit` | Review F-12: refused before synthesis instead of panicking. Lengths only; every value check stays with the constraints |
+ | Rejection proofs (proving that an input is refused) | not produced | Refusal semantics are declared below; only success relations exist |
+ 
+ ## Refusal semantics on the success path (declared, not proven)
+ 
+-Every Core refusal reachable for an admitted `/1` action has no satisfying success assignment. The cases: overflow (Add, Mul, credit, accrual), underflow (Sub), insufficient balance (self-transfer included), false `requires`/`ensures`, unknown residual liability, discharge exceeding the residual, and meter exhaustion with a bound cap. Admission and scenario refusals are compile-time facts or slot typing. The full list is `coverage::REFUSALS`. A separate rejection relation (code and step) is future work.
++Every Core refusal reachable for an admitted `/1` action has no satisfying success assignment, **except one premise row**. The excluded cases: overflow (Add, Mul, credit, accrual), underflow (Sub), insufficient balance (self-transfer included), false `requires`/`ensures`, unknown residual liability, discharge exceeding the residual, and meter exhaustion with a bound cap. Admission and scenario refusals are compile-time facts or slot typing.
++
++The exception is `mori::core::balance` for a **missing explicit balance row** (`runtime.rs:609-627`). Its status is `TargetPremise`, not `Constant`: the layout has no balance presence bit, so a prover can claim a pre-balance of 0 for a row that the Core scenario lacks, and the relation is satisfiable (review F-04; reviewer mutation M-14 is expected SATISFIABLE). A target must authenticate row existence, or a reviewed presence bit must be added. The full list is `coverage::REFUSALS`. A separate rejection relation (code and step) is future work.
+ 
+ ## Target obligations outside the transition relation
+ 
+-`adapter::TARGET_OBLIGATIONS` lists them: pre-state authenticity (ScriptCustodied datum binding versus KeyHeldExternal unauthenticated premises), frame completeness, the physical asset delta, debit authority and owner intent limits, replay and consumption, ledger phase and failure outcomes, and setup provenance. A pure transition proof neither authenticates a ledger nor moves an asset.
++`adapter::TARGET_OBLIGATIONS` lists them: pre-state authenticity (ScriptCustodied datum binding versus KeyHeldExternal unauthenticated premises), balance-row existence (the F-04 premise), frame completeness (including the F-05 gap: unregistered incoming duties cannot be represented, so no P3 or ABI mapping may claim a complete frame), the physical asset delta, debit authority and owner intent limits, replay and consumption, ledger phase and failure outcomes, and setup provenance. A pure transition proof neither authenticates a ledger nor moves an asset.
++
++Debit authority here is only a named obligation. This crate implements none, and it takes no position on the disputed P3-7 text: the later ABI review (`f3ae8556…`, V6) requires authority for every debited account, custody-held balances included, plus thread-advance authority and a signed intent in the statement. That requirement stands unreconciled with the earlier external-account wording.
+ 
+ ## Remaining required work (none waived; no whole-language percentage)
+ 

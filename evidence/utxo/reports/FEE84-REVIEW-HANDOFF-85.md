@@ -1,0 +1,9 @@
+# Independent fee-helper review84 completed
+
+Reviewer3456a5e1-d1c9-4880-9246-a9416a00d5a4 Grok4.7high exec58521 TERMINALexit0. Parent FULL read REVIEW7634/FINDINGS5263/RESULT1434/MACHINE2715/PROGRESS946/ARTIFACTS. All13 declared files plus helperinput/freeze match. Immutable evidence /home/charl/moriarty-eutxo-validation-2026-10-12/fee84-reviewed-freeze85, SNAPSHOT SHA51b3542a45a7a0fab0dd1283eca49caa35014eba201ceaec5970de2e1962ca99; includes15sealed84files plus interrupted80 nestedprobes/failures preserved.
+
+Verdict APPROVE_SCOPED_OFFLINE_OUTPUT_FEE_HELPER ONLY on source 75a5aba8738027a5b54f4a2fb2f1deaac3f772fcd0e8b2aa28a676cb996e712f. No blockers for captured Cash/full13Head offline outputs/fees. NOT APPROVE_SCOPED_T1_NATIVE_IMPLEMENTATION or ledger/PCD proof; two fresh full integratedcodeaudits still required beforeactualnode/keygen/genesis/funding/mint/submits.
+
+Read FULL frozen review84/REVIEW.md+FINDINGS.md; routine N1 canonicalwholeJSONfee integer token nofraction/exponent; N2 explicit assumptionprefix notsubstring; N3 rejectstringdatumintsbeforeCLI orwriteexactnumericJSONtokens andrefuseunsafeJSnumber. Scope S1 refscriptfee omissioncorrectcurrentrefinputsnone butfuturecallerwithnonzero refscript mustsupplyactualsize andfeeargv; S2 recalcfeeafteractualmeasuredexunitsinbody; S3 actualsignedwitnesscount evidenceexternal; S4 postCLIdatum/refscriptdigestwindows remainresidual controlledinputsnotwrongobservedcoins. Do not edit frozen77/84; author repairedhelper copy in WT orown83 thenwholecandidatesourceclosure; old84approvaldoesnotcoverchangedbytes. Codeintegrationnowauthorized no extradesigngate.
+
+Independent probes actualCLI matchedsixcapturedstdout, crossbandCoinstable, bigint/emptyassetname/duplicateassets/refscriptDecodedsize controls, unsafequantity/errorforms refusals, offlineflags neverraised by arbitraryprovenancelabel. Numericvalues are observationsnotfuturebudgetpins. All20/privatePCD/nativeworkflowremainOPEN.
