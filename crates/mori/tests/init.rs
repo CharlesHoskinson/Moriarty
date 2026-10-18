@@ -325,6 +325,21 @@ fn transfer_zero_and_unfunded_are_exact_reference_refusals() {
 #[cfg(unix)]
 #[test]
 fn generated_commands_use_the_creating_rust_cli_without_path_lookup() {
+    use std::os::unix::fs::PermissionsExt;
+
+    // Resolve the host tool before clearing PATH in the external project children.
+    let shell = std::env::var_os("PATH")
+        .and_then(|path| {
+            std::env::split_paths(&path)
+                .map(|directory| directory.join("sh"))
+                .find(|candidate| {
+                    fs::metadata(candidate).is_ok_and(|metadata| {
+                        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+                    })
+                })
+        })
+        .expect("the test host PATH must supply a POSIX sh");
+    let shell = fs::canonicalize(shell).expect("resolve the host shell before changing directory");
     let f = Files::new();
     let tools = f.path("Rust CLI's tools 🧪");
     fs::create_dir(&tools).unwrap();
@@ -347,7 +362,7 @@ fn generated_commands_use_the_creating_rust_cli_without_path_lookup() {
             .split_once("```")
             .unwrap()
             .0;
-        let mut c = Command::new("/bin/sh");
+        let mut c = Command::new(&shell);
         c.current_dir(&dir)
             .env("PATH", "")
             .args(["-c", &format!("set -e\n{commands}")]);
