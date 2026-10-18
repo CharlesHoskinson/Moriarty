@@ -6,8 +6,10 @@ Core/2 `stage::load`, `stage::start` and `stage::resume` APIs. The language,
 semantics and continuation formats are unchanged. `moriarty-tests/1` keeps its
 existing atomic consumer and report format.
 
-This candidate is source-only: build, public command execution, tests and
-actual-output comparisons are **UNRUN**. The checked-in
+Public CLI builds, command execution, CLI tests and CLI actual-output
+comparisons remain **UNRUN**. The shared report-library extraction below has
+its own narrower, initially unrun check; it does not qualify these CLI paths.
+The checked-in
 [examples](../models/core-stage-tests/mori-tests.json) now name six complete
 normal report candidates copied exactly from the separately authored
 [R3 freeze](../models/core-stage-tests/independent-oracle-r3/INDEPENDENT-FREEZE.json),
@@ -131,3 +133,29 @@ once-only consumption, circuit correspondence or complete conditional recovery.
 U3, M10, the partial/conditional requirements, helper/circuit/native work and
 every retained roadmap exit remain open. Security and hostile-test judgments
 remain assigned to Opus; this document supplies none.
+
+## Shared library report constructor
+
+`mori_core::stage::outcome_report` renders the complete typed waiting, complete
+or rejected outcome without running a program or performing I/O. Both staged
+`simulate` output and the staged-test harness call it. The three local
+qualification labels, full report fields and existing CLI exit behavior are
+preserved. The generic private inspect-report writer remains separate.
+
+The SDK-free library integration target `stage_reports` exercises TwoDeliveries
+and QuotedFee through actual `stage::load`, `start` and `resume` calls. Each
+successor uses the actual pending continuation. It compares all six reports to
+the unchanged complete R3 expectations in
+[`crates/fixtures/core-stage-reports`](../crates/fixtures/core-stage-reports/README.md),
+then compares pretty serialization plus one newline to those exact file bytes.
+The synchronized copy preserves the original model files and their provenance.
+Its independent copy freeze is
+`885663843203a1fe2f7820884d17f56e98b5dd10a3bbee654829ac649187203e`.
+
+These changed-source tests are **UNRUN** until a separately recorded actual
+result binds their exact source tree. The byte assertion is a new finite Core
+serialization check, not inherited R3 approval of public stdout formatting.
+It does not exercise the CLI writer, aggregate, process exit or I/O failures.
+Rejected envelopes and hostile cases are outside these two positive library
+cases. All fourteen original draft gaps and the full language, native, proof
+and target acceptance obligations remain open.

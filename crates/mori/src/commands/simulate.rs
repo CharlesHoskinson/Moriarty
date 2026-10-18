@@ -151,46 +151,12 @@ pub(super) fn print_stage_report(mut report: serde_json::Value) -> super::Result
 fn print_stage_result(
     result: Result<mori_core::stage::StageOutcome, mori_core::stage::StageRejection>,
 ) -> super::Result<ExitCode> {
-    use mori_core::stage::StageOutcome;
-    let (report, exit) = match result {
-        Ok(StageOutcome::Waiting {
-            advanced,
-            segment,
-            continuation,
-            attempted,
-            residual,
-        }) => {
-            let committed = continuation.logical.committed;
-            (
-                serde_json::json!({
-                    "status":"waiting", "advanced":advanced, "segment":segment,
-                    "continuation":continuation, "attempted":attempted,
-                    "committed":committed, "residual":residual
-                }),
-                ExitCode::SUCCESS,
-            )
-        }
-        Ok(StageOutcome::Complete {
-            segment,
-            committed,
-            attempted,
-            residual,
-        }) => (
-            serde_json::json!({
-                "status":"complete", "segment":segment, "attempted":attempted,
-                "committed":committed, "residual":residual
-            }),
-            ExitCode::SUCCESS,
-        ),
-        Err(rejected) => (
-            serde_json::json!({
-                "status":"rejected", "error":rejected.error,
-                "attempted":rejected.attempted, "committed":rejected.committed
-            }),
-            ExitCode::FAILURE,
-        ),
+    let exit = if result.is_ok() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
     };
-    print_stage_report(report)?;
+    super::core_io::print(&mori_core::stage::outcome_report(result))?;
     Ok(exit)
 }
 

@@ -10,12 +10,14 @@ pub mod decode;
 mod digest;
 mod plan;
 mod profile;
+mod report;
 mod validate;
 
 pub use crate::LOGICAL_COST_PROFILE_2;
 pub use admit::{resume, start};
 pub use plan::{ActionPlan, AwaitSite, CaptureSlot, Origin, StageBinder, StagePlan};
 pub use profile::{require_core1, require_core2};
+pub use report::outcome_report;
 
 use crate::{Error, Execution, Liability, Program, Snapshot, UInt, Value};
 use serde::{Deserialize, Serialize};
