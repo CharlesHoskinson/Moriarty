@@ -1,0 +1,8 @@
+recovery "moriarty-recovery/1";
+for agreement ProposedForwardCompensation;
+on action purchase at await fulfilment {
+  compensate pay_part(outcome_known: Bool, compensation: UInt) when outcome_known {
+    transfer(PAY, "reserve", "buyer", compensation);
+    discharge("remedy", compensation);
+  }
+}

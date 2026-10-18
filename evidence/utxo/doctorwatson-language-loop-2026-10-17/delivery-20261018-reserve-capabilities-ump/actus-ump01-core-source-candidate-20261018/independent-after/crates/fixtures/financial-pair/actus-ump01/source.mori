@@ -1,0 +1,23 @@
+language "moriarty/1";
+agreement UndefinedMaturityInitialExchange {
+  asset USD = { network: "actus-reference", issuer: "fixture-only", reference: "USD", scale: 0 };
+  state exchangeRecorded: Bool = false;
+  state statusTime: UInt = 20121215000000;
+  state nominalInterestRate: UInt = 0;
+  state accruedInterest: UInt = 0;
+
+  action initialExchange(eventTime: UInt) {
+    requires not exchangeRecorded;
+    requires not liability_present("ump01_principal");
+    requires eventTime == 20130101000000;
+    let principal = 1000;
+    transfer(USD, "lender", "borrower", principal);
+    liability("ump01_principal", USD, "borrower", "lender", principal);
+    next nominalInterestRate = 0;
+    next accruedInterest = 0;
+    next statusTime = eventTime;
+    next exchangeRecorded = true;
+    ensures liability_present("ump01_principal") and liability_amount("ump01_principal") == principal;
+    emit "IED"(eventTime);
+  }
+}

@@ -1,0 +1,94 @@
+--- a/packages/moriarty-beta/GETTING-STARTED.md
++++ b/packages/moriarty-beta/GETTING-STARTED.md
+@@ -26,9 +26,28 @@
+ 
+ `init` refuses an existing directory. `--template transfer` is the default;
+ `--template repay` creates `repayment.mori` instead of `invoice.mori`.
+-For an installation outside the checkout, run `npm pack` here, then install that
+-local `.tgz` into your project with `npm install /absolute/path/to/archive.tgz`.
+-Run `npx mori` there. No npm registry publication is claimed.
++For an installation outside the checkout, run `npm pack` here; its prepack step
++builds the archive. Install that local `.tgz` into your own project. In bash or zsh,
++replace both absolute paths below, then define a launcher for the installed beta:
++
++```sh
++cd /absolute/path/to/your/project
++npm install /absolute/path/to/archive.tgz
++MORI_BETA_PKG="$PWD/node_modules/@moriarty-lang/beta"
++mori() { node "$MORI_BETA_PKG/dist/cli.js" "$@"; }
++mori init invoice
++cd invoice
++mori check invoice.mori --json
++mori test .
++mori simulate invoice.mori --action pay --scenario scenario.json
++```
++
++The `invoice` directory must not exist yet. Keep using the same terminal: the
++function selects the installed beta CLI even after changing directories, so the
++starter README's `mori` commands need no global install or repository metadata.
++In a new terminal, return to your install project and define the function again.
++`npx mori` is also available from that install project. No npm registry publication
++is claimed. These local examples still return **PreparedUnqualified**.
+ `mori COMMAND --help` shows the command's arguments. Exit 0 means the requested
+ local operation completed: a preparation remains unqualified. Exit 1 means
+ rejection, unsupported execution, test mismatch or a command/file error.
+--- a/docs/NATIVE-CORE.md
++++ b/docs/NATIVE-CORE.md
+@@ -9,11 +9,33 @@
+ `cargo run -p mori --locked --` prefix selects the Rust workspace CLI; the Node
+ `@moriarty-lang/beta` package also installs a command named `mori`, but accepts a
+ separate beta source profile and supplies no Rust compiler. The Rust package
+-uses its default `native` feature here. A `--no-default-features` build supplies
+-local Core reference tooling only; Midnight compile/call/proof, targeted
+-inspection, trace/replay and JubJub profiles require `native`. This checkout
+-workflow does not establish a standalone Rust installation or completed external
+-proof/submission qualification.
++uses its default `native` feature in the native examples below. Midnight
++compile/call/proof, targeted inspection, trace/replay and JubJub profiles require
++`native`. The separate `source6-expansion` feature enables the explicit
++`expand --emit-source6-transfer` route; it does not enable native support.
++
++For a local Core starter without the native backend, select the Rust binary and
++disable default features explicitly. From the repository root, with Rust 1.99.0
++and Cargo available:
++
++```sh
++cargo run -p mori --locked --no-default-features --bin mori -- init NEW_DIR
++cd NEW_DIR
++```
++
++The parent directory must exist and `NEW_DIR` must be new. Add `--template repay`
++after `NEW_DIR` to create a repayment starter. The generated `README.md` contains
++`check`, `simulate` and `test` commands using the quoted absolute path of the Rust
++executable that created it. Run those commands from the starter directory. They
++use `source.mori`, `scenario.json` and `mori-tests.json`; the transfer action is
++`pay` and the repayment action is `repay`. If you move the executable, update its
++path in that README. No beta shell function or global `mori` selection is needed.
++
++This selects source-only local reference behavior; dependency resolution and a
++successful build remain separate from running the examples. It creates no proof,
++deployment or settlement. This checkout workflow does not establish a standalone
++Rust installation or completed external proof/submission qualification. Return
++to the repository root before running the native-feature examples below.
+ 
+ ```sh
+ cargo run -p mori --locked -- check examples/core/language/counter.mori --json
+@@ -24,14 +46,10 @@
+   --target toolchains/ledger-9.json --out build-batch
+ ```
+ 
+-`cargo run -p mori --locked -- init NEW_DIR` creates a Core transfer starter. `--template repay`
+-creates a repayment starter. Before running the generated README commands from
+-its project directory, replace their `mori` executable with an absolute path to
+-the Rust binary built from this checkout. Those commands check, simulate and
+-test the complete expected post-state and ordered effects.
+-The destination must not exist, and its parent must exist. An I/O failure
+-can leave an incomplete project. Choose a new destination before retrying.
+-These starters use local example assets and reference execution.
++The starter commands above check, simulate and test the complete expected
++post-state and ordered effects. The TEST asset and accounts are local examples.
++An I/O failure can leave an incomplete project. Choose a new destination before
++retrying.
+ 
+ `check` reads at most 1 MiB plus one refusal byte through the shared bounded
+ reader; both Core and beta retain their 65,536-byte source grammar limit.

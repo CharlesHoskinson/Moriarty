@@ -1,0 +1,109 @@
+{
+  "classification": "proposed common semantic JSON codec; schema-only, no expected trace values; not actual Quint ITF wire",
+  "top_level": {
+    "initial": "FinancialFrame",
+    "prefix": "FinancialFrame",
+    "observations": "ordered array of Observation"
+  },
+  "scalars": {
+    "int": "JSON number containing an exact nonnegative normal-example integer; not UInt128 decimal wire; no arbitrary precision/general overflow claim",
+    "bool": "JSON boolean",
+    "str": "JSON string",
+    "Specimen": "JSON string Escrow or Reserve",
+    "InvocationStatus": "JSON string NotInvoked, Waiting, Complete or BusinessRejected"
+  },
+  "containers": {
+    "str -> int": "JSON object; exact key set/value equality, object member order irrelevant; duplicate map keys not a supported input",
+    "List[T]": "JSON array; all elements retained in original order, including empty arrays",
+    "record": "JSON object retaining every field below; no omitted-field defaults or wildcard comparisons"
+  },
+  "FinancialFrame": {
+    "specimen": "Specimen",
+    "inputValue": "int",
+    "balances": "str -> int",
+    "programState": "str -> int",
+    "dutyPresent": "bool",
+    "dutyAmount": "int",
+    "pendingSite": "int",
+    "captureValues": "List[int]",
+    "logicalAttempted": "int",
+    "logicalCommitted": "int",
+    "effects": "List[NormalEffect]"
+  },
+  "PendingState": {
+    "specimen": "Specimen",
+    "balances": "str -> int",
+    "programState": "str -> int",
+    "dutyPresent": "bool",
+    "dutyAmount": "int",
+    "site": "int",
+    "captures": "List[int]",
+    "committed": "int"
+  },
+  "Invocation": {
+    "status": "InvocationStatus",
+    "attempted": "int",
+    "advanced": "bool",
+    "hasSegment": "bool",
+    "newContinuation": "bool",
+    "effects": "List[ResumeEffect]",
+    "sourceSteps": "List[int]",
+    "errorSteps": "List[int]"
+  },
+  "Observation": {
+    "c": "PendingState",
+    "last": "Invocation",
+    "attemptedTotal": "int"
+  },
+  "NormalEffect": {
+    "Transfer(int)": {
+      "tag": "literal Transfer",
+      "amount": "payload int"
+    },
+    "StateChange(record)": {
+      "tag": "literal StateChange",
+      "before": "payload.before int",
+      "after": "payload.after int"
+    },
+    "LiabilityChange(record)": {
+      "tag": "literal LiabilityChange",
+      "before": "payload.before int",
+      "after": "payload.after int"
+    }
+  },
+  "ResumeEffect": {
+    "StateValue(record)": {
+      "tag": "literal StateValue",
+      "name": "payload.name str",
+      "before": "payload.before int",
+      "after": "payload.after int"
+    },
+    "TransferAmount(int)": {
+      "tag": "literal TransferAmount",
+      "amount": "payload int"
+    },
+    "DutyValue(record)": {
+      "tag": "literal DutyValue",
+      "before": "payload.before int",
+      "after": "payload.after int"
+    },
+    "FeeAmount(int)": {
+      "tag": "literal FeeAmount",
+      "amount": "payload int"
+    },
+    "EmitQuote(int)": {
+      "tag": "literal EmitQuote",
+      "quote": "payload int"
+    }
+  },
+  "adapter_contracts": [
+    "Asset/duty/capture names and types are fixed external specimen context. They are not invented dynamic model fields; check them on the Rust side before projection.",
+    "FinancialFrame is represented separately at initialization and after the start prefix. Lifecycle initCase uses firstContinuation plus emptyInvocation. It is not a synthetic Waiting start invocation.",
+    "Lifecycle Observation.attemptedTotal is outside c and includes prefix work. It is not the committed count or a cap.",
+    "Completed c is an abstract post-state, not an emitted Rust Continuation. Rust Complete has no advanced field; adapter maps its existing segment to advanced=true and newContinuation=false.",
+    "Waiting.newContinuation denotes advanced replacement boundary, not allocation or pointer identity; false observation retains its actual input continuation.",
+    "Do not map ABI padded capture slots to the logical capture list.",
+    "Do not infer Rust typed statement/ExprId/per-step snapshot or decimal-wire correspondence from this codec.",
+    "No actual Quint trace serializer or decoder has yet been executed. A later ITF capture requires an explicit documented conversion into this proposed common codec."
+  ]
+}

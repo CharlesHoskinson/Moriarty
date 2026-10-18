@@ -1,0 +1,274 @@
+{
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "mori-mcp-check/1"
+        },
+        "kind": {
+          "const": "check"
+        },
+        "scope": {
+          "const": "source-check-only"
+        },
+        "file": {
+          "type": "string"
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "checked_profile": {
+          "enum": [
+            "moriarty-beta/1",
+            "moriarty/1",
+            "moriarty/2"
+          ]
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected"
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "beta"
+                  },
+                  "code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "severity": {
+                    "enum": [
+                      "error",
+                      "warning",
+                      "advice"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "help": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "labels": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "span": {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4294967295
+                            }
+                          },
+                          "required": [
+                            "start",
+                            "end"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "text": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "primary": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "span",
+                        "text",
+                        "primary"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "code",
+                  "severity",
+                  "message",
+                  "help",
+                  "labels"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "core"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "offset": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 4294967295
+                  },
+                  "step": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 65535
+                  }
+                },
+                "required": [
+                  "kind",
+                  "code",
+                  "message",
+                  "offset",
+                  "step"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "stage_qualification": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "qualification": {
+                  "const": "local-reference-stage"
+                },
+                "authentication": {
+                  "const": "none"
+                },
+                "consumption": {
+                  "const": "untracked"
+                }
+              },
+              "required": [
+                "qualification",
+                "authentication",
+                "consumption"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "format",
+        "kind",
+        "scope",
+        "file",
+        "source_hash",
+        "checked_profile",
+        "status",
+        "diagnostics",
+        "stage_qualification"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "checked_profile": {
+                "const": "moriarty/2"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "stage_qualification": {
+                "type": "object",
+                "properties": {
+                  "qualification": {
+                    "const": "local-reference-stage"
+                  },
+                  "authentication": {
+                    "const": "none"
+                  },
+                  "consumption": {
+                    "const": "untracked"
+                  }
+                },
+                "required": [
+                  "qualification",
+                  "authentication",
+                  "consumption"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "stage_qualification": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "mori-mcp-check/1"
+        },
+        "kind": {
+          "const": "tool_error"
+        },
+        "code": {
+          "const": "source_too_large"
+        },
+        "message": {
+          "type": "string"
+        },
+        "limit_bytes": {
+          "const": 1048576
+        }
+      },
+      "required": [
+        "format",
+        "kind",
+        "code",
+        "message",
+        "limit_bytes"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

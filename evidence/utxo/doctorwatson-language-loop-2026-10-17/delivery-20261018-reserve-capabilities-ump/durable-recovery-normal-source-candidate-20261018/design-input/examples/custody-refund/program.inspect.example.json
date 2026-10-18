@@ -1,0 +1,339 @@
+{
+  "format": "moriarty-recovery-program/1",
+  "source_profile": "moriarty-recovery/1",
+  "semantics": "moriarty-core2-recovery/1",
+  "base": {
+    "language": "moriarty/2",
+    "semantics": "moriarty-core/2",
+    "name": "ProposedCustodyRefund",
+    "states": [
+      {
+        "name": "marker",
+        "ty": "UInt",
+        "initial": {
+          "type": "UInt",
+          "value": "77"
+        }
+      }
+    ],
+    "assets": [
+      {
+        "name": "PAY",
+        "identity": {
+          "issuer": "independent-recovery-custody-refund",
+          "network": "local",
+          "reference": "PAY",
+          "scale": 0
+        }
+      },
+      {
+        "name": "BOND",
+        "identity": {
+          "issuer": "independent-recovery-custody-refund",
+          "network": "local",
+          "reference": "BOND",
+          "scale": 0
+        }
+      }
+    ],
+    "expressions": [
+      {
+        "kind": "Name",
+        "name": "auditAmount"
+      },
+      {
+        "kind": "Name",
+        "name": "retainedFee"
+      },
+      {
+        "kind": "Name",
+        "name": "principal"
+      },
+      {
+        "kind": "Name",
+        "name": "principal"
+      },
+      {
+        "kind": "Name",
+        "name": "accepted"
+      },
+      {
+        "kind": "Name",
+        "name": "principal"
+      },
+      {
+        "kind": "Name",
+        "name": "principal"
+      },
+      {
+        "kind": "Name",
+        "name": "refundAmount"
+      },
+      {
+        "kind": "Name",
+        "name": "refundAmount"
+      }
+    ],
+    "actions": [
+      {
+        "name": "recordAudit",
+        "inputs": [
+          {
+            "name": "auditAmount",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Liability",
+            "name": "audit",
+            "asset": "BOND",
+            "debtor": "observer",
+            "creditor": "auditor",
+            "amount": 0
+          }
+        ]
+      },
+      {
+        "name": "fund",
+        "inputs": [
+          {
+            "name": "principal",
+            "ty": "UInt"
+          },
+          {
+            "name": "retainedFee",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Fee",
+            "asset": "PAY",
+            "from": "buyer",
+            "to": "treasury",
+            "amount": 1
+          },
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "buyer",
+            "to": "escrow",
+            "amount": 2
+          },
+          {
+            "kind": "Liability",
+            "name": "custody-refund",
+            "asset": "PAY",
+            "debtor": "escrow",
+            "creditor": "buyer",
+            "amount": 3
+          },
+          {
+            "kind": "Await",
+            "label": "acceptance",
+            "binders": [
+              {
+                "name": "accepted",
+                "ty": "Bool"
+              }
+            ],
+            "guard": 4
+          },
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "escrow",
+            "to": "merchant",
+            "amount": 5
+          },
+          {
+            "kind": "Discharge",
+            "name": "custody-refund",
+            "amount": 6
+          }
+        ]
+      },
+      {
+        "name": "refundControlled",
+        "inputs": [
+          {
+            "name": "refundAmount",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "escrow",
+            "to": "buyer",
+            "amount": 7
+          },
+          {
+            "kind": "Discharge",
+            "name": "custody-refund",
+            "amount": 8
+          }
+        ]
+      }
+    ]
+  },
+  "module": {
+    "agreement": "ProposedCustodyRefund",
+    "sites": [
+      {
+        "action": "fund",
+        "await_label": "acceptance",
+        "site": 1,
+        "await_ordinal": 3,
+        "handlers": [
+          {
+            "name": "return_principal",
+            "kind": "refund",
+            "binders": [
+              {
+                "name": "outcome_known",
+                "ty": "Bool"
+              }
+            ],
+            "captures": [
+              {
+                "name": "principal",
+                "ty": "UInt",
+                "origin": "Input",
+                "ordinal": 0
+              },
+              {
+                "name": "retainedFee",
+                "ty": "UInt",
+                "origin": "Input",
+                "ordinal": 1
+              }
+            ],
+            "expressions": [
+              {
+                "kind": "Name",
+                "name": "outcome_known"
+              },
+              {
+                "kind": "Name",
+                "name": "principal"
+              },
+              {
+                "kind": "Name",
+                "name": "principal"
+              }
+            ],
+            "guard": 0,
+            "statements": [
+              {
+                "kind": "Transfer",
+                "asset": "PAY",
+                "from": "escrow",
+                "to": "buyer",
+                "amount": 1
+              },
+              {
+                "kind": "Discharge",
+                "name": "custody-refund",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "format": "moriarty-recovery-plan/1",
+    "base_plan": {
+      "format": "moriarty-stage-plan/1",
+      "program_hash": "{{OWNER_BASE_PROGRAM_ID}}",
+      "actions": [
+        {
+          "action": "recordAudit",
+          "statement_count": 1,
+          "sites": [],
+          "segment_cost": [
+            "2"
+          ],
+          "committed_before": [
+            "0"
+          ],
+          "plan_total": "2"
+        },
+        {
+          "action": "fund",
+          "statement_count": 6,
+          "sites": [
+            {
+              "site": 1,
+              "ordinal": 3,
+              "label": "acceptance",
+              "binders": [
+                {
+                  "name": "accepted",
+                  "ty": "Bool"
+                }
+              ],
+              "captures": [
+                {
+                  "name": "principal",
+                  "ty": "UInt",
+                  "origin": "Input",
+                  "ordinal": 0
+                },
+                {
+                  "name": "retainedFee",
+                  "ty": "UInt",
+                  "origin": "Input",
+                  "ordinal": 1
+                }
+              ]
+            }
+          ],
+          "segment_cost": [
+            "7",
+            "6"
+          ],
+          "committed_before": [
+            "0",
+            "7"
+          ],
+          "plan_total": "13"
+        },
+        {
+          "action": "refundControlled",
+          "statement_count": 2,
+          "sites": [],
+          "segment_cost": [
+            "4"
+          ],
+          "committed_before": [
+            "0"
+          ],
+          "plan_total": "4"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "action": "fund",
+        "forward_total": "13",
+        "successful_path_ceiling": "13",
+        "arms": [
+          {
+            "site": 1,
+            "handler": "return_principal",
+            "guard_cost": "2",
+            "body_cost": "4",
+            "recovery_cost": "6",
+            "committed_before": "7",
+            "successful_path_total": "13"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "profile": "moriarty-tests/recovery/1",
+  "cases": [
+    {
+      "name": "custody-refund-durable-public",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "fund",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "recover",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "recover.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "recover-direct.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "reopen-closed.report.example.json"
+        }
+      ]
+    }
+  ]
+}

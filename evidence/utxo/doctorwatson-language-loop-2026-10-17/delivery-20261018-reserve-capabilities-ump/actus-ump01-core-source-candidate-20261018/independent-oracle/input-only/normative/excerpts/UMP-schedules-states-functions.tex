@@ -1,0 +1,79 @@
+%%%%%%%%%%%%%%%%%%%% subsection: ump %%%%%%%%%%%%%%%%%%%%
+
+\subsection{UMP: Undefined Maturity Profile}\label{sec:ump}
+
+
+% ---------------------- table: ump schedule ----------------------
+\begin{schedule}{UMP}
+	AD & & Same as PAM \\
+	\hline
+	IED & & Same as PAM \\
+	\hline
+	PR & $\vec{t}^{PR}=\obs{ev}{\attr{CID},i}{t_0}$ & with $i\in\{\attr{PR},\attr{PI}\}$\\
+	\hline
+	FP & & Same as PAM \\
+	\hline
+	IPCI & $\vec{t}^{IPCI} = \begin{cases}
+					\undef & \text{if}\quad \attr{IPNR}=\undef \\
+					\sdl{s}{\attr{IPCL}}{\svar{Md}{t_0}} & \text{else} \end{cases}$ &
+				where\par
+				$s=\begin{cases} \attr{IPANX} & \text{if}\quad \attr{IPANX}\neq\undef\\
+						\attr{IED}+\attr{IPCL} & \text{else} \end{cases}$ \\
+	\hline
+	RR & & Same as PAM \\
+	\hline
+	RRF & & Same as PAM \\
+	\hline
+	CE & & Same as PAM \\
+\end{schedule}
+
+
+% ---------------------- table: ump states ----------------------
+\begin{states}{UMP}
+	$\svar{Md}{}$ & $\svar{Md}{t_0} = \begin{cases} s & \text{if}\quad \obs{ev}{\attr{CID}}{t_0}\neq\{\} \\
+							\tmax & \text{else} \end{cases}$
+			& where\par
+			$s=\sup t, t\in\tev{\obs{ev}{\attr{CID},i}{t_0}}$\par
+			$i\in\{\attr{PR},\attr{PI}\}$ \\
+	\hline
+  	$\svar{Nt}{}$ & & Same as PAM \\
+	\hline
+	$\svar{Ipnr}{}$ & & Same as PAM \\
+  	\hline
+  	$\svar{Ipac}{}$ & & Same as PAM \\
+	\hline
+  	$\svar{Feac}{}$ & & Same as PAM \\
+  	\hline
+  	$\svar{Prf}{}$ & & Same as PAM \\
+	\hline
+	$\svar{Sd}{}$ & & Same as PAM \\
+\end{states}
+
+
+% ---------------------- table: ump functions ----------------------
+\begin{functions}{UMP}
+	AD & \pof{AD}{PAM} & \stf{AD}{PAM} \\
+	\hline
+	IED & \pof{IED}{CLM} & \stf{IED}{PAM} \\
+	\hline
+	PR & $\fev{e_t^{PR}}$ & {$\begin{aligned}
+				\svar{Ipac}{t^+} &= \svar{Ipac}{t^-}+\yfr{\svar{Sd}{t^-}}{t}\svar{Ipnr}{t^-}\svar{Nt}{t^-} \\
+				\svar{Feac}{t^+} &= \begin{cases} \svar{Feac}{t^-} + \yfr{\svar{Sd}{t^-}}{t}\svar{Nt}{t^-}\attr{FER} & \text{if} \quad \attr{FEB}=\text{'N'} \\
+					\frac{\yfr{t^-}{t}}{\yfr{t^-}{t^+}}\attr{FER} & \text{else} \end{cases} \\
+				\svar{Nt}{t^+} &= \svar{Nt}{t^-}-\fev{e_t^{PR}} \\
+				\svar{Sd}{t^+} &= t \end{aligned}$} \\
+	\hline
+	FP & \pof{FP}{PAM}
+		& \stf{FP}{PAM} \\
+	\hline
+	IPCI & \pof{IPCI}{PAM}
+		& \stf{IPCI}{PAM} \\
+	\hline
+	RR & \pof{RR}{PAM}
+		& \stf{RR}{PAM} \\
+	\hline
+	RRF & \pof{RRF}{PAM}
+		& \stf{RRF}{PAM} \\
+	\hline
+	CE & \pof{CE}{PAM} & \stf{AD}{PAM} \\
+\end{functions}

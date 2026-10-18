@@ -1,0 +1,410 @@
+//! Static logical work of successful segments (C3).
+//!
+//! The evaluator charges one unit per statement dispatch and one per distinct
+//! expression node it visits. Its cache is per statement, and `And`/`Or`
+//! evaluate both operands, so a successful statement costs exactly
+//! `1 + |nodes reachable from its root expression|`, independent of values.
+//! Segment j runs from entry site j (0 = start) and stops at the next await,
+//! whose entry charge of 1 is paid but whose guard belongs to segment j+1.
+use super::{ActionPlan, StageLogical, StagePlan};
+use crate::policy::{Cost, Meter};
+use crate::{Error, Expr, ExprId, Program, Statement, UInt};
+
+fn overflow() -> Error {
+    Error::new("bound", "Stage logical plan exceeds u128.")
+}
+
+fn add(a: UInt, b: UInt) -> Result<UInt, Error> {
+    a.0.checked_add(b.0).map(UInt).ok_or_else(overflow)
+}
+
+/// Distinct expression nodes reachable from `root`: the per-statement cache
+/// charges each shared DAG node once.
+fn expression_nodes(program: &Program, root: ExprId) -> Result<u128, Error> {
+    let mut seen = vec![false; program.expressions.len()];
+    let mut pending = vec![root];
+    let mut count = 0_u128;
+    while let Some(id) = pending.pop() {
+        let index = usize::from(id);
+        let node = program
+            .expressions
+            .get(index)
+            .ok_or_else(|| Error::new("expression", "Expression index out of bounds."))?;
+        if std::mem::replace(&mut seen[index], true) {
+            continue;
+        }
+        count += 1;
+        match node {
+            #[cfg(feature = "core-floor-div-draft")]
+            Expr::FloorDiv { .. } => {
+                return Err(Error::new("profile", "FloorDiv is not a staged expression."));
+            }
+            Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),
+            Expr::Not { value } => pending.push(*value),
+            Expr::LiabilityPresent { .. }
+            | Expr::LiabilityAmount { .. }
+            | Expr::Literal { .. }
+            | Expr::Name { .. } => {}
+        }
+    }
+    Ok(count)
+}
+
+fn root(statement: &Statement) -> ExprId {
+    match statement {
+        Statement::Await { guard, .. } => *guard,
+        Statement::Let { value, .. }
+        | Statement::Next { value, .. }
+        | Statement::Emit { value, .. } => *value,
+        Statement::Requires { predicate } | Statement::Ensures { predicate } => *predicate,
+        Statement::Transfer { amount, .. }
+        | Statement::Fee { amount, .. }
+        | Statement::Liability { amount, .. }
+        | Statement::Discharge { amount, .. } => *amount,
+    }
+}
+
+/// Successful cost of one statement. For an Await this is its resume dispatch
+/// plus guard; reaching an Await at segment exit costs 1 instead.
+pub(crate) fn statement_cost(program: &Program, statement: &Statement) -> Result<UInt, Error> {
+    let nodes = expression_nodes(program, root(statement))?;
+    nodes.checked_add(1).map(UInt).ok_or_else(overflow)
+}
+
+fn segment_cost(
+    program: &Program,
+    action: usize,
+    plan: &ActionPlan,
+    segment: usize,
+) -> Result<UInt, Error> {
+    let statements = &program
+        .actions
+        .get(action)
+        .ok_or_else(|| Error::new("program", "Stage plan invariant violated: action."))?
+        .statements;
+    let ordinal = |site: usize| -> Result<usize, Error> {
+        plan.sites
+            .get(site - 1)
+            .map(|s| usize::from(s.ordinal))
+            .filter(|ordinal| *ordinal < statements.len())
+            .ok_or_else(|| Error::new("program", "Stage plan invariant violated: site."))
+    };
+    let n = plan.sites.len();
+    let begin = if segment == 0 { 0 } else { ordinal(segment)? };
+    let end = if segment == n {
+        statements.len()
+    } else {
+        ordinal(segment + 1)?
+    };
+    if begin >= end && !(segment == 0 && begin == end) {
+        return Err(Error::new(
+            "program",
+            "Stage plan invariant violated: ordinals.",
+        ));
+    }
+    let mut total = UInt(0);
+    for (offset, statement) in statements[begin..end].iter().enumerate() {
+        // Only an advance's first statement is an Await (its dispatch).
+        if matches!(statement, Statement::Await { .. }) && (segment == 0 || offset != 0) {
+            return Err(Error::new(
+                "program",
+                "Stage plan invariant violated: unplanned await.",
+            ));
+        }
+        total = add(total, statement_cost(program, statement)?)?;
+    }
+    if segment < n {
+        total = add(total, UInt(1))?;
+    }
+    Ok(total)
+}
+
+/// Fills `segment_cost`, `committed_before` and `plan_total` for every action
+/// of a Sol-built plan whose cost vectors are still empty.
+pub(crate) fn fill(program: &Program, plan: &mut StagePlan) -> Result<(), Error> {
+    if plan.actions.len() != program.actions.len() {
+        return Err(Error::new(
+            "program",
+            "Stage plan invariant violated: action count.",
+        ));
+    }
+    for (index, action) in plan.actions.iter_mut().enumerate() {
+        if !action.segment_cost.is_empty()
+            || !action.committed_before.is_empty()
+            || action.plan_total != UInt(0)
+        {
+            return Err(Error::new(
+                "program",
+                "Stage plan invariant violated: costs are already filled.",
+            ));
+        }
+        let mut costs = Vec::with_capacity(action.sites.len() + 1);
+        let mut committed = Vec::with_capacity(action.sites.len() + 1);
+        let mut total = UInt(0);
+        for segment in 0..=action.sites.len() {
+            let cost = segment_cost(program, index, action, segment)?;
+            committed.push(total);
+            total = add(total, cost)?;
+            costs.push(cost);
+        }
+        action.segment_cost = costs;
+        action.committed_before = committed;
+        action.plan_total = total;
+    }
+    Ok(())
+}
+
+/// Attempted work of a resume whose guard at `site` is false: one dispatch
+/// plus the guard's distinct nodes. Committed work is unchanged by it.
+pub(crate) fn dispatch_cost(
+    program: &Program,
+    plan: &ActionPlan,
+    site: u16,
+) -> Result<UInt, Error> {
+    let action = program
+        .actions
+        .iter()
+        .find(|a| a.name == plan.action)
+        .ok_or_else(|| Error::new("stage_site", "Unknown staged action."))?;
+    let statement = usize::from(site)
+        .checked_sub(1)
+        .and_then(|i| plan.sites.get(i))
+        .and_then(|s| action.statements.get(usize::from(s.ordinal)))
+        .filter(|s| matches!(s, Statement::Await { .. }))
+        .ok_or_else(|| Error::new("stage_site", "Pending site is not an await of this action."))?;
+    statement_cost(program, statement)
+}
+
+/// Start refusal before evaluation (C3). Without a cap there is no admission
+/// check. Returns the meter limit of segment 0.
+pub(crate) fn start_preflight(plan: &ActionPlan, cap: Option<UInt>) -> Result<UInt, Error> {
+    let first = *plan
+        .segment_cost
+        .first()
+        .ok_or_else(|| Error::new("stage_logical", "Stage plan has no segment costs."))?;
+    if let Some(cap) = cap
+        && plan.plan_total > cap
+    {
+        return Err(Error::new(
+            "stage_logical",
+            "Action plan total exceeds the logical cap.",
+        ));
+    }
+    Ok(first)
+}
+
+/// R6. Call only after R1-R5 admitted `site`. The CLI cap checks this
+/// invocation only and can never raise the stored cap, which the output
+/// continuation carries unchanged. Returns the meter limit of segment `site`.
+pub(crate) fn resume_preflight(
+    plan: &ActionPlan,
+    site: u16,
+    logical: &StageLogical,
+    cli_cap: Option<UInt>,
+) -> Result<UInt, Error> {
+    let refuse = |message: &str| Error::new("stage_logical", message);
+    let index = usize::from(site);
+    let (Some(before), Some(cost)) = (
+        plan.committed_before.get(index),
+        plan.segment_cost.get(index),
+    ) else {
+        return Err(refuse("Pending site has no planned segment."));
+    };
+    if index == 0 || logical.committed != *before {
+        return Err(refuse("Committed work differs from the stage plan."));
+    }
+    let needed = logical
+        .committed
+        .0
+        .checked_add(cost.0)
+        .ok_or_else(|| refuse("Committed work overflows u128."))?;
+    let effective = match (cli_cap, logical.cap) {
+        (Some(cli), Some(stored)) if cli > stored => {
+            return Err(refuse("Logical cap cannot exceed the stored cap."));
+        }
+        (Some(cli), _) => Some(cli),
+        (None, stored) => stored,
+    };
+    if effective.is_some_and(|cap| needed > cap.0) {
+        return Err(refuse("Next segment exceeds the logical cap."));
+    }
+    Ok(*cost)
+}
+
+pub(crate) fn segment_meter(limit: UInt) -> Meter {
+    Meter::new(Cost {
+        logical: limit,
+        ..Cost::default()
+    })
+}
+
+/// H26: the evaluator must have charged exactly the planned work.
+pub(crate) fn require_static(meter: &Meter, expected: UInt) -> Result<(), Error> {
+    if meter.used().logical != expected {
+        return Err(Error::new("stage_logical", "static cost premise violated"));
+    }
+    Ok(())
+}
+
+/// Committed work after segment `segment` succeeds.
+pub(crate) fn committed_after(plan: &ActionPlan, segment: usize) -> Result<UInt, Error> {
+    match (
+        plan.committed_before.get(segment),
+        plan.segment_cost.get(segment),
+    ) {
+        (Some(before), Some(cost)) => add(*before, *cost),
+        _ => Err(Error::new(
+            "stage_logical",
+            "Segment is absent from the stage plan.",
+        )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::policy::CostPlane;
+    use crate::{Action, BinaryOp, InputDecl, Type};
+
+    fn plan(costs: &[u128]) -> ActionPlan {
+        let mut before = Vec::new();
+        let mut total = 0_u128;
+        for cost in costs {
+            before.push(UInt(total));
+            total = total.saturating_add(*cost);
+        }
+        ActionPlan {
+            action: "a".into(),
+            statement_count: 0,
+            sites: Vec::new(),
+            segment_cost: costs.iter().copied().map(UInt).collect(),
+            committed_before: before,
+            plan_total: UInt(total),
+        }
+    }
+    fn logical(committed: u128, cap: Option<u128>) -> StageLogical {
+        StageLogical {
+            profile: crate::LOGICAL_COST_PROFILE_2.into(),
+            cap: cap.map(UInt),
+            committed: UInt(committed),
+        }
+    }
+    fn code(result: Result<UInt, Error>) -> String {
+        result.unwrap_err().code
+    }
+
+    #[test]
+    fn shared_dag_nodes_are_charged_once_per_statement() {
+        let program = Program {
+            language: super::super::LANGUAGE_2.into(),
+            semantics: super::super::SEMANTICS_2.into(),
+            name: "D".into(),
+            states: vec![],
+            assets: vec![],
+            expressions: vec![
+                Expr::Name { name: "x".into() },
+                Expr::Binary {
+                    op: BinaryOp::Add,
+                    lhs: 0,
+                    rhs: 0,
+                },
+                Expr::Binary {
+                    op: BinaryOp::Mul,
+                    lhs: 1,
+                    rhs: 1,
+                },
+            ],
+            actions: vec![Action {
+                name: "a".into(),
+                inputs: vec![InputDecl {
+                    name: "x".into(),
+                    ty: Type::UInt,
+                }],
+                statements: vec![Statement::Let {
+                    name: "y".into(),
+                    value: 2,
+                }],
+            }],
+        };
+        let statement = &program.actions[0].statements[0];
+        assert_eq!(statement_cost(&program, statement).unwrap(), UInt(4));
+    }
+
+    #[test]
+    fn start_preflight_refuses_only_an_unaffordable_plan_total() {
+        let p = plan(&[5, 6]);
+        assert_eq!(start_preflight(&p, None).unwrap(), UInt(5));
+        assert_eq!(start_preflight(&p, Some(UInt(11))).unwrap(), UInt(5));
+        assert_eq!(
+            code(start_preflight(&p, Some(UInt(10)))),
+            "mori::core::stage_logical"
+        );
+    }
+
+    #[test]
+    fn resume_preflight_enforces_plan_committed_and_never_raises_the_stored_cap() {
+        let p = plan(&[5, 6]);
+        let run = |l: StageLogical, cli: Option<u128>| resume_preflight(&p, 1, &l, cli.map(UInt));
+        assert_eq!(run(logical(5, None), None).unwrap(), UInt(6));
+        assert_eq!(run(logical(5, Some(11)), None).unwrap(), UInt(6));
+        assert_eq!(run(logical(5, Some(11)), Some(11)).unwrap(), UInt(6));
+        assert_eq!(run(logical(5, None), Some(11)).unwrap(), UInt(6));
+        for (l, cli) in [
+            (logical(4, None), None),         // H8: committed below plan
+            (logical(6, None), None),         // H8: committed above plan
+            (logical(5, Some(11)), Some(12)), // H8: CLI cap above stored cap
+            (logical(5, Some(11)), Some(10)), // H8: committed + segment > CLI cap
+            (logical(5, Some(10)), None),     // committed + segment > stored cap
+            (logical(5, None), Some(10)),
+        ] {
+            assert_eq!(code(run(l, cli)), "mori::core::stage_logical");
+        }
+        for site in [0, 2, u16::MAX] {
+            assert_eq!(
+                code(resume_preflight(&p, site, &logical(0, None), None)),
+                "mori::core::stage_logical"
+            );
+        }
+        let huge = ActionPlan {
+            committed_before: vec![UInt(0), UInt(u128::MAX)],
+            ..plan(&[u128::MAX, 1])
+        };
+        assert_eq!(
+            code(resume_preflight(&huge, 1, &logical(u128::MAX, None), None)),
+            "mori::core::stage_logical"
+        );
+    }
+
+    #[test]
+    fn h26_require_static_rejects_any_meter_difference() {
+        let mut meter = segment_meter(UInt(6));
+        for _ in 0..5 {
+            meter.charge(CostPlane::Logical, UInt(1)).unwrap();
+        }
+        let error = require_static(&meter, UInt(6)).unwrap_err();
+        assert_eq!(error.code, "mori::core::stage_logical");
+        assert_eq!(error.message, "static cost premise violated");
+        meter.charge(CostPlane::Logical, UInt(1)).unwrap();
+        assert!(require_static(&meter, UInt(6)).is_ok());
+        assert!(require_static(&meter, UInt(5)).is_err());
+        // The planned limit is a hard ceiling: excess work cannot be metered.
+        assert!(meter.charge(CostPlane::Logical, UInt(1)).is_err());
+    }
+
+    #[test]
+    fn committed_after_is_checked_prefix_plus_segment() {
+        let p = plan(&[11, 15, 10]);
+        assert_eq!(committed_after(&p, 0).unwrap(), UInt(11));
+        assert_eq!(committed_after(&p, 1).unwrap(), UInt(26));
+        assert_eq!(committed_after(&p, 2).unwrap(), UInt(36));
+        assert!(committed_after(&p, 3).is_err());
+        let huge = ActionPlan {
+            committed_before: vec![UInt(0), UInt(u128::MAX)],
+            ..plan(&[u128::MAX, 1])
+        };
+        assert_eq!(
+            committed_after(&huge, 1).unwrap_err().code,
+            "mori::core::bound"
+        );
+    }
+}

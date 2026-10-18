@@ -1,0 +1,148 @@
+{
+  "schema": "moriarty.source-candidate/1",
+  "task": "Exact-current-main source refresh of L20 full Program/Plan/Continuation roundtrip",
+  "status": "unchanged source candidate re-pinned; compile and test execution unrun",
+  "baselineCommit": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
+  "baselineTree": "b44043fba64fa2bd396d18412adb3472434c70ac",
+  "changedPaths": [
+    "crates/mori-core/tests/program_plan_roundtrip.rs"
+  ],
+  "predicate": "One ordinary successful supported Core/2 invoice Program and costed Plan export/reopen preserves every JSON value, and the same program prefix produces a continuation whose complete exported and typed-reopened value preserves a present-zero paid invoice versus an absent registered later credit.",
+  "consumerTrace": [
+    {
+      "source": "crates/mori-core/src/stage/mod.rs",
+      "observation": "load parses/adopts/costs the complete Core/2 Program and StagePlan; accessors expose both shared values."
+    },
+    {
+      "source": "crates/mori-core/src/json.rs",
+      "observation": "export serializes, checks bounded JSON and ASCII-escapes; parse returns serde_json::Value with duplicate/depth/node/byte checks."
+    },
+    {
+      "source": "crates/mori-core/src/ir.rs",
+      "observation": "Program and Await-bearing shared Statement serialize; generic shared Program decoding routes through frozen v1 without Await. This is not a typed Core/2 Program reopen API."
+    },
+    {
+      "source": "crates/mori-core/src/stage/plan.rs",
+      "observation": "StagePlan/ActionPlan/AwaitSite serialize but do not derive Deserialize. Reopening Plan here is JSON value reopening, not StagePlan admission."
+    },
+    {
+      "source": "crates/mori-core/src/stage/decode.rs",
+      "observation": "Public continuation decoder returns the typed Continuation; this is the actual typed reopen consumer exercised by the proposed test."
+    },
+    {
+      "source": "crates/mori-core/src/stage/admit.rs",
+      "observation": "start constructs waiting continuation from committed boundary and capture layout, with local program/plan hashes and static committed work."
+    },
+    {
+      "source": "crates/mori/src/commands/inspect.rs",
+      "observation": "Core/2 inspect without target serializes all program fields and stage_plan through a report. New test checks owning library export/reopen, not CLI envelope or process execution."
+    }
+  ],
+  "existingTestGap": {
+    "crates/mori-core/tests/disjoint_program_plan.rs": "Full Program and Plan literal comparisons exist under non-default core2-disjoint-draft; they also assert independently frozen canonical bytes. New case does not claim that stronger independent byte-oracle status.",
+    "crates/mori-core/tests/program_ir_contract.rs": "Full Core/1 Program oracles cover Counter/empty-frame; no new Core/2 financial continuation roundtrip.",
+    "crates/mori-core/tests/json_export.rs": "Generic escaped-string and size cases, not this full Program/Plan/continuation object.",
+    "crates/mori-core/tests/stage_reports.rs": "Complete runtime outcome fixture comparisons, not complete hand-authored Program/Plan values on this distinct program."
+  },
+  "manualOracle": {
+    "input": {
+      "quantity": "14",
+      "alice": "50",
+      "merchant": "0",
+      "observer": "4",
+      "treasury": "0",
+      "liabilities": []
+    },
+    "arithmetic": [
+      "owed = 14 + 3 = 17",
+      "alice closing = 50 - 17 - 2 = 31",
+      "merchant closing = 0 + 17 = 17",
+      "treasury closing = 0 + 2 = 2",
+      "observer preserved = 4",
+      "paid-invoice opening0 + creation17 - discharge17 = closing0, row retained",
+      "later-credit is registered only by the uninvoked action and has no row",
+      "principal is set to input14; scale3 does not rescale atomic units"
+    ],
+    "parserLayout": "State literal and asset scale do not push expression nodes. All 13 explicit expression nodes and both actions are hand-enumerated in source order, including the unused action literal.",
+    "captureLayout": [
+      {
+        "name": "quantity",
+        "type": "UInt",
+        "origin": "Input",
+        "ordinal": 0
+      },
+      {
+        "name": "owed",
+        "type": "UInt",
+        "origin": "Let",
+        "ordinal": 0
+      }
+    ],
+    "await": {
+      "site": 1,
+      "statementOrdinal": 6,
+      "binders": [
+        {
+          "name": "accepted",
+          "ty": "Bool"
+        }
+      ]
+    },
+    "costDerivation": {
+      "payStatements": [
+        "let owed: 1 dispatch + 3 nodes = 4",
+        "create liability:1+1=2",
+        "transfer:1+1=2",
+        "fee:1+1=2",
+        "discharge:1+1=2",
+        "next principal:1+1=2",
+        "reach await:1 entry charge"
+      ],
+      "payStart": "4+2+2+2+2+2+1=15",
+      "payResume": "await dispatch+guard2 plus three emits2 each = 8",
+      "payTotal": "15+8=23",
+      "openCredit": "1 dispatch + literal1 = 2"
+    },
+    "completeExpectedObjects": "All Program, Plan, scenario and Continuation non-hash fields are authored literals in the test; none is copied from stage::load, start, resume, evaluator or exported actual values."
+  },
+  "producerDerivedCodecAssumptions": [
+    "Expected local program_hash is intent::hash_bytes(intent::canonical(expected_program)); expected local plan_hash uses the same recipe over the manually costed expected_plan. These use the production canonical codec and hash helper, not independently authored canonical bytes or an independent digest oracle.",
+    "serde_json::json and Value share serde_json with the producer. Full literal comparisons distinguish wrong field membership/order/values but do not prove codec soundness, cryptographic binding or independent target correspondence.",
+    "No canonical hash/preimage bytes are invented or recorded as observed results. File SHA-256 pins identify custody bytes only."
+  ],
+  "readLimits": [
+    "Installed develop skill reloaded; exact current commit AGENTS read. All 30 relevant original baseline full-file bodies compared against exact current Git blobs and proven byte-identical. Previously inspected full API bodies therefore remain the exact selected source, without inferring unchanged behavior in other tree files.",
+    "Complete source bytes are retained under baseline/ and fullsource/; these are an explicit relevant source/context closure, not a full buildable repository.",
+    "The public JSON export/parse, Serialize-only Program/Plan boundary, typed Continuation decoder, parser expression order, capture planner, static-cost schedule, local stage start constructor and relevant zero-duty runtime source remain unchanged.",
+    "Operational guarded status executed read-only from parent-selected K with -B; it reports historical SP01 blockers. It does not establish exact-E4D runtime or product behavior and dispatched nothing.",
+    "No compiler, formatter, Clippy, Cargo test, native/SDK/proof/VM/provider/network/wallet/ledger command executed. No shared or Git mutation. No existing freeze written."
+  ],
+  "limitations": [
+    "No Rust parse/build, rustfmt, Clippy, Cargo test or test result observed. No RED/GREEN evidence claimed.",
+    "No proof that test currently compiles or passes; all test execution is unrun.",
+    "No suffix resume is performed by the proposed regression; present-zero versus absent distinction is the exact continuation boundary vector, not newly established post-resume read results.",
+    "No complete StageOutcome/Execution/effects/history oracle asserted by this test.",
+    "Program/Plan reopen is Value-level only; no new typed DTO/admission path or profile is implemented.",
+    "No changes to Cargo, production consumers, shared repository, Git refs/index/worktree or existing R artifacts.",
+    "No security judgment, hostile test, authentication/currentness/consumption claim, native proof, ledger settlement or parent roadmap acceptance.",
+    "Whole-tree changes outside the 30 compared files may affect build/test integration; source equivalence is not a compiler/result observation.",
+    "The unchanged expected non-hash values are literal source/finite arithmetic oracles, not a general independent financial semantics proof or a golden for arbitrary source programs."
+  ],
+  "guidelines": "One ordinary library integration regression, no dependencies/features/path mounts. Uses explicit full-value literals like existing program_ir_contract/disjoint_program_plan rather than insta snapshots; this finite oracle convention is a documented difference from the general snapshot guidance. No general guideline/toolchain conformance asserted.",
+  "futureOrdinaryCheck": {
+    "command": "cargo test --frozen -j1 -p mori-core --no-default-features --test program_plan_roundtrip -- --test-threads=1",
+    "status": "specified only; not run",
+    "scope": "Only after integrator source/result review and current execution-scope inspection. Default feature-free Core target; no SDK/native compatibility feature requested."
+  },
+  "startupRef": "STARTUP-STATUS.json",
+  "sourceEquivalenceRef": "SOURCE-EQUIVALENCE.json",
+  "originalFreezeRef": "ORIGINAL-FREEZE-PINS.json",
+  "exactCandidateSource": "fullsource/crates/mori-core/tests/program_plan_roundtrip.rs",
+  "patch": "candidate.patch",
+  "oracleScope": {
+    "financialExpectedValues": "Hand-authored finite source-level arithmetic and boundary expectations; no imported evaluator outputs. Useful independent literals, but source preparation alone does not establish financial correctness.",
+    "codecExpectedFields": "Full Program/Plan and Continuation JSON values compare all fields. Expected program/plan hash fields are computed using the producer canonical/hash codec over literal expected objects, so hash linkage is producer-codec consistency, not independent canonical preimage/golden identity evidence.",
+    "presentZeroVersusAbsent": "Expected boundary contains exactly the paid-invoice liability with amount0 and no later-credit row. The proposed test asserts whole continuation values before and after typed reopening; no suffix resume/read claim is made.",
+    "unchangedSource": "No test-source change was justified because all relevant exact API/dependency/source/test bodies match the original baseline byte-for-byte."
+  }
+}

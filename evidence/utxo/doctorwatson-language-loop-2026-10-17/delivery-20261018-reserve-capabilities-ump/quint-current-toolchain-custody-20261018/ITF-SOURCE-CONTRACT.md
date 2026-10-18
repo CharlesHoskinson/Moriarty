@@ -1,0 +1,13 @@
+# Installed ITF source contract — source inspection only
+
+The installed Quint0.32.0 `dist/src/itf.js:69–139` defines `toItf`; its complete file and hash are retained. `cliReporting.js:253–268` adds metadata and writes only when an explicit `--out-itf` template is supplied. These are source facts; no trace was executed or decoded by this task.
+
+The serializer maps mathematical integers to `{"#bigint":"decimal"}`, lists to JSON arrays, maps to `{"#map":[[key,value],...]}`, records to objects and sum values to `{"tag":label,"value":payload}`. Unit sum payloads must be checked against the actual declared unit representation, not silently discarded. It adds state metadata indexes and top-level trace/source/time metadata; those are capture data rather than the shared semantic state.
+
+That format differs from `input-only/COMMON-PROJECTION-CODEC.json`: the proposed common codec uses exact normal JSON integer values, maps as objects, nullary Specimen/status tags as strings and explicitly named effect payload members. A future decoder must establish each conversion from actual captured data, preserve complete record fields and list order, reject unsupported shapes rather than invent missing fields, and retain the source capture. No decoder is implemented or executed here; this text is not its approval.
+
+The main model variable is `observation`, introduced by the imported lifecycle module. The new test explicitly initializes it and applies four ordered resume calls; source structure suggests five lifecycle states. Its module/namespace spelling and actual state count remain to be observed. Do not assume a namespace key or fabricate states from expected literals.
+
+The initial and post-prefix FinancialFrame values are asserted as pure expressions by the proposed test. They are not separate state vars in the lifecycle module and should not be described as an emitted initial/prefix frame trace. Direct captured-stream comparison can compare the actual lifecycle Observation records; initial/prefix assertions are separate evidence unless an explicitly scoped actual-value exporter is later provided. A completed model c is an abstract post-state, not a Rust Continuation.
+
+`runtime/impl/evaluator.js:266–377` returns on the selected deterministic test and calls its trace hook. `cliCommands.js:255` can return success when the selected list is empty. `cliReporting.js:265` can print an ITF conversion failure without making the overall passed-test result a failure. Thus require one actually passing selected run definition and a nonempty, complete, independently checked ITF capture; do not accept only exit0 or a sampled count as proof of correspondence.

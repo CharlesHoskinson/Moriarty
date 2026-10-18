@@ -1,0 +1,85 @@
+pub enum Type {
+    UInt,
+    Bool,
+}
+
+pub enum Value {
+    UInt(UInt),
+    Bool(bool),
+}
+
+pub struct AssetId {
+    pub network: String,
+    pub issuer: String,
+    pub reference: String,
+    pub scale: u8,
+}
+
+pub struct Balance {
+    pub account: String,
+    pub asset: AssetId,
+    pub amount: UInt,
+}
+
+pub struct Liability {
+    pub name: String,
+    pub asset: AssetId,
+    pub debtor: String,
+    pub creditor: String,
+    pub amount: UInt,
+}
+
+pub struct Snapshot {
+    pub state: BTreeMap<String, Value>,
+    pub balances: Vec<Balance>,
+    pub liabilities: Vec<Liability>,
+}
+
+pub enum Effect {
+    State {
+        name: String,
+        before: Value,
+        after: Value,
+    },
+    Transfer {
+        asset: AssetId,
+        from: String,
+        to: String,
+        amount: UInt,
+    },
+    Fee {
+        asset: AssetId,
+        from: String,
+        to: String,
+        amount: UInt,
+    },
+    Liability {
+        name: String,
+        asset: AssetId,
+        debtor: String,
+        creditor: String,
+        before: UInt,
+        after: UInt,
+    },
+    Emit {
+        name: String,
+        value: Value,
+    },
+}
+
+pub struct Step {
+    pub index: u16,
+    pub statement: Statement,
+    pub value: Option<Value>,
+    pub snapshot: Snapshot,
+    pub effects: Vec<Effect>,
+}
+
+pub struct Execution {
+    pub semantics: String,
+    pub action: String,
+    pub pre: Snapshot,
+    pub post: Snapshot,
+    pub steps: Vec<Step>,
+    pub effects: Vec<Effect>,
+}

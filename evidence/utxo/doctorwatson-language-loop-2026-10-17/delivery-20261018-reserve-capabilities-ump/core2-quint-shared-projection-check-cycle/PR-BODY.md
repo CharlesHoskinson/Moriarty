@@ -1,0 +1,5 @@
+Add a concrete Rust/Quint comparison for the existing reserve lifecycle: failed conditions preserve pending state while attempted work continues to accrue. Both consumers are checked against a separately frozen complete financial/work expectation.
+
+Validation on `f15214ab7a885a4dc3194002cbacbb56841fdcbf`: new Rust regression 1 passed; continuation helper suite 5 passed; Quint 0.32.0 typecheck and one explicitly selected TypeScript deterministic test passed. The five actual captured ITF observations decode to exactly the Rust observations and independent oracle. Committed work is 11/11/26/26/36; cumulative attempted work is 11/15/30/32/42; final residual duty is 5.
+
+Scope: one finite normal reserve trace and explicit bounded adapter. Initial/prefix Quint frames are pure assertions, separate from emitted lifecycle observations. No exhaustive invariant, circuit, native proof, ledger or target qualification. Fresh independent source/result review remains pending; this PR is draft. Root export parsing initially assumed the marker began a line; that evidence-handling error is retained and corrected without rerunning the consumers.

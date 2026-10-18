@@ -1,0 +1,194 @@
+{
+  "format": "next-ordinary-positive-source-cases/1",
+  "classification": "Recommendations and author arithmetic recipes, not independently frozen expected fixtures or observed results",
+  "existing_qtymin": "Both actions already observed through Rust and actual Node consumer; do not duplicate",
+  "cases": [
+    {
+      "priority": 1,
+      "name": "MaxRebatePayout",
+      "status": "Currently admitted Rust transfer source slice; no matching imported public-consumer receipt for these expression branches",
+      "rules": [
+        "max choosing first argument",
+        "Qty subtraction",
+        "left Scalar*Qty",
+        "atoms",
+        "nonzero transfer fee"
+      ],
+      "source_expression": "max(a: 2 * (4.50 USD - atoms(asset: USD, value: 50)), b: 7.00 USD)",
+      "scale": 2,
+      "fee_expression": "atoms(asset: USD, value: 25)",
+      "author_arithmetic_recipe": {
+        "first_arg_atoms": "2*(450-50)=800",
+        "second_arg_atoms": "700",
+        "value": "800",
+        "fee": "25",
+        "gross": "825"
+      },
+      "opening": {
+        "balances": [
+          [
+            "Owner",
+            "2000"
+          ],
+          [
+            "Recipient",
+            "5"
+          ],
+          [
+            "Fee",
+            "7"
+          ]
+        ],
+        "allowance": {
+          "owner": "Owner",
+          "remaining": "2000",
+          "spent": "25"
+        },
+        "work_remaining": "12",
+        "work_spent": "2"
+      },
+      "caps": {
+        "gross_cap": "850",
+        "fee_cap": "25",
+        "net_floor": "800"
+      },
+      "conditional_financial_projection": {
+        "balances": [
+          [
+            "Owner",
+            "1175"
+          ],
+          [
+            "Recipient",
+            "805"
+          ],
+          [
+            "Fee",
+            "32"
+          ]
+        ],
+        "allowance": {
+          "owner": "Owner",
+          "remaining": "1175",
+          "spent": "850"
+        }
+      },
+      "ordered_effect_recipe": [
+        "Debit(Owner,825)",
+        "Credit(Recipient,800)",
+        "Credit(Fee,25)",
+        "UseAllowance(Owner,825)",
+        "UseReplay(selected nonce)",
+        "AdvanceHead(pre,post)"
+      ],
+      "falsifiable_predicate": "Actual public Rust beta check and raw Source6 stdout for the selected action, consumed untouched by parseAndLowerSource6 and prepareSource6S0Unqualified, match an independently frozen complete Source6 AST and ordered effect/financial recipe for value800 fee25; capture full actual result before any assertion. Preserve actual result/qualification without inventing acceptance or measured work.",
+      "first_boundary": "No source implementation change justified by current branch inspection; author public test/fixtures and obtain separate oracle freeze first.",
+      "unknown": [
+        "complete unselected Program",
+        "backend Target/Artifact",
+        "actual output/process",
+        "measured work/postwork",
+        "qualification/status",
+        "native/proof/ledger"
+      ]
+    },
+    {
+      "priority": 2,
+      "name": "AccruedPartialRepayment",
+      "status": "Checker-admitted and existing TS Source6/Node beta consumer supported; Rust transfer emitter explicitly unsupported",
+      "rules": [
+        "repay named call",
+        "RepayAccrualFirst",
+        "two balance cells",
+        "one outstanding obligation",
+        "SetObligation",
+        "accrual-first partial duty"
+      ],
+      "source_operation": "repay(obligation: Loan, payer: Payer, amount: 0.30 USD)",
+      "scale": 2,
+      "opening": {
+        "balances": [
+          [
+            "Payer",
+            "1000"
+          ],
+          [
+            "Creditor",
+            "5"
+          ]
+        ],
+        "allowance": {
+          "owner": "Payer",
+          "remaining": "1000",
+          "spent": "25"
+        },
+        "obligation": {
+          "id": "Loan",
+          "debtor": "Payer",
+          "creditor": "Creditor",
+          "asset": "USD",
+          "principal": "100",
+          "accrued": "10",
+          "outstanding": "110",
+          "status": "Outstanding"
+        }
+      },
+      "caps": {
+        "gross_cap": "30",
+        "fee_cap": "0",
+        "net_floor": "0"
+      },
+      "author_arithmetic_recipe": {
+        "payment": "30",
+        "accrued_reduction": "min(30,10)=10",
+        "principal_reduction": "30-10=20",
+        "principal_post": "80",
+        "accrued_post": "0",
+        "outstanding_post": "80"
+      },
+      "conditional_financial_projection": {
+        "balances": [
+          [
+            "Payer",
+            "970"
+          ],
+          [
+            "Creditor",
+            "35"
+          ]
+        ],
+        "allowance": {
+          "owner": "Payer",
+          "remaining": "970",
+          "spent": "55"
+        },
+        "obligation": {
+          "principal": "80",
+          "accrued": "0",
+          "outstanding": "80",
+          "status": "Outstanding"
+        }
+      },
+      "ordered_effect_recipe": [
+        "Debit(Payer,30)",
+        "Credit(Creditor,30)",
+        "SetObligation(Loan,80,0,80,Outstanding)",
+        "UseAllowance(Payer,30)",
+        "UseReplay(selected nonce)",
+        "AdvanceHead(pre,post)"
+      ],
+      "falsifiable_predicate": "After a separately scoped ordinary Rust emission/scenario extension that reuses existing repayment semantics, actual public Rust output must match independent complete Source6 AST/effects/financial expectations through the same actual TS consumer. Under current bytes, explicitly report Rust unsupported_operation; a Node-package-only positive must name that distinct consumer.",
+      "first_boundary": "crates/mori-source6/src/transfer.rs extract requires transfer; LocalTransferScenario is fixed3 balances with no obligation; CLI transfer option rejects obligation. This source-inventory task does not modify that boundary.",
+      "independent_premise": "Source6 contract line36 prescribes min(n,accrued), principal residual, outstanding and six ordered effects; repayment floor must be0.",
+      "unknown": [
+        "new Rust emitter implementation",
+        "independent whole fixture freeze",
+        "actual output/process",
+        "whole Program/Target/Artifact",
+        "measured work/postwork",
+        "qualification/status",
+        "native/proof/ledger"
+      ]
+    }
+  ]
+}
