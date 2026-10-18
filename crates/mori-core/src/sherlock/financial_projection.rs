@@ -1,5 +1,8 @@
-//! Read-only observations of the existing public Core/2 stage carrier.
-//! No evaluation, transition, financial policy or target correspondence occurs.
+//! Owning invocation observations of the existing public Core/2 stage carrier.
+//! `start_observed` and `resume_observed` call the existing stage producer once,
+//! retain its exact arguments/result, and publish a complete borrowed observation.
+//! No transition, financial policy or target correspondence is changed.
+//! The lower-level diagnostic projectors below perform no evaluation.
 //! `project_invocation` retains the full actual program, captured input and raw
 //! result alongside complete borrowed state/steps/effects/duties/work. It does
 //! not establish that those arguments produced that result or passed admission.
@@ -15,7 +18,7 @@ use crate::{AssetId, Effect, Error, Execution, Liability, Scenario, Snapshot, St
 use crate::stage::StagedProgram;
 
 /// Every field of one existing execution, borrowed without reduction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct ExecutionObservation<'a> {
     pub semantics: &'a str,
     pub action: &'a str,
@@ -26,7 +29,7 @@ pub struct ExecutionObservation<'a> {
 }
 
 /// One published successful segment, including both pending frames.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct SegmentObservation<'a> {
     pub action: &'a str,
     pub frame_pre: &'a PendingFrame,
@@ -39,7 +42,7 @@ pub struct SegmentObservation<'a> {
 /// No absent segment is replaced by an empty execution. In particular a false
 /// await guard retains `segment: None`, while a successful zero-effect segment
 /// remains `Some` and keeps its steps, frames and complete state.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum FinancialObservation<'a> {
     Waiting {
         advanced: bool,
@@ -68,7 +71,7 @@ pub enum FinancialObservation<'a> {
 /// represented here and the returned result at the existing `stage::resume`
 /// call site. The staged program argument and its actual identity are omitted;
 /// the continuation's claimed hashes do not substitute for that argument.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct ResumeFinancialObservation<'a> {
     pub input: &'a Continuation,
     pub event: &'a StageEvent,
@@ -250,14 +253,15 @@ pub enum TentativePublication {
     UnavailableFromStageRejection,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum InvocationInput<'a> {
     Start { action: &'a str, scenario: &'a Scenario, cap: Option<UInt> },
     Resume { continuation: &'a Continuation, event: &'a StageEvent,
         cli_action: Option<&'a str>, cli_cap: Option<UInt> },
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct InvocationObservation<'a> {
+    #[serde(serialize_with = "serialize_staged_program")]
     pub program: &'a StagedProgram,
     pub input: InvocationInput<'a>,
     pub result: &'a Result<StageOutcome, StageRejection>,
@@ -357,4 +361,139 @@ pub fn project_invocation<'a>(
     };
     InvocationObservation { program, input, result, outcome: project_stage_result(result),
         accounting, tentative_publication }
+}
+
+
+/// Serialize every public component of the actual staged program context.
+/// The program is already admitted by `stage::load`; hashes are identifiers,
+/// not authentication or an independent correspondence certificate.
+fn serialize_staged_program<S>(program: &&StagedProgram, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    #[derive(serde::Serialize)]
+    struct Context<'a> {
+        program: &'a crate::Program,
+        plan: &'a crate::stage::StagePlan,
+        program_hash: String,
+        plan_hash: String,
+    }
+    fn hex(bytes: [u8; 32]) -> String {
+        bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+    serde::Serialize::serialize(&Context {
+        program: program.program(),
+        plan: program.plan(),
+        program_hash: hex(program.program_hash()),
+        plan_hash: hex(program.plan_hash()),
+    }, serializer)
+}
+
+// Only the owning functions construct this input/result pair. Public diagnostic
+// project_invocation remains available, but cannot construct ProducedInvocation.
+#[derive(Debug)]
+enum CapturedInvocationInput {
+    Start { action: String, scenario: Scenario, cap: Option<UInt> },
+    Resume { continuation: Continuation, event: StageEvent,
+        cli_action: Option<String>, cli_cap: Option<UInt> },
+}
+
+/// The exact program, captured arguments and raw result of one real stage call.
+///
+/// Private fields prevent replacing the result or arguments. Borrowing this
+/// record establishes the same-call relationship, not authentication, event
+/// provenance, continuation consumption or native/financial correspondence.
+/// The profile remains the existing local Core/2 stage carrier.
+#[derive(Debug)]
+pub struct ProducedInvocation<'p> {
+    program: &'p StagedProgram,
+    input: CapturedInvocationInput,
+    result: Result<StageOutcome, StageRejection>,
+}
+
+/// Calls existing Core/2 start exactly once, retaining the consumed input value.
+/// Cloning the scenario for the call preserves the equal original in the record.
+pub fn start_observed<'p>(
+    program: &'p StagedProgram,
+    action: String,
+    scenario: Scenario,
+    cap: Option<UInt>,
+) -> ProducedInvocation<'p> {
+    let result = crate::stage::start(program, &action, scenario.clone(), cap);
+    ProducedInvocation {
+        program, input: CapturedInvocationInput::Start { action, scenario, cap }, result,
+    }
+}
+
+/// Calls existing Core/2 resume exactly once with the captured continuation,
+/// event and CLI flags. The original raw rejection/work fields remain intact.
+pub fn resume_observed<'p>(
+    program: &'p StagedProgram,
+    continuation: Continuation,
+    event: StageEvent,
+    cli_action: Option<String>,
+    cli_cap: Option<UInt>,
+) -> ProducedInvocation<'p> {
+    let result = crate::stage::resume(program, continuation.clone(), event.clone(),
+        cli_action.as_deref(), cli_cap);
+    ProducedInvocation {
+        program,
+        input: CapturedInvocationInput::Resume { continuation, event, cli_action, cli_cap },
+        result,
+    }
+}
+
+impl ProducedInvocation<'_> {
+    /// The unmodified result returned by this record's single stage call.
+    pub fn raw_result(&self) -> &Result<StageOutcome, StageRejection> {
+        &self.result
+    }
+
+    /// Borrows this same program, exact captured input and original raw result.
+    /// No producer, parser or evaluator is called while building this view.
+    pub fn observation(&self) -> InvocationObservation<'_> {
+        let input = match &self.input {
+            CapturedInvocationInput::Start { action, scenario, cap } => {
+                InvocationInput::Start { action, scenario, cap: *cap }
+            }
+            CapturedInvocationInput::Resume { continuation, event, cli_action, cli_cap } => {
+                InvocationInput::Resume { continuation, event,
+                    cli_action: cli_action.as_deref(), cli_cap: *cli_cap }
+            }
+        };
+        project_invocation(self.program, input, &self.result)
+    }
+
+    /// Complete JSON publication shared with the actual Core/2 simulate branch.
+    /// Existing status/segment/continuation/work/residual fields and local labels
+    /// remain, with the entire serialized invocation added. This is per-call
+    /// accounting, not cumulative history, a B runtime, or target acceptance.
+    pub fn publication(&self) -> Result<serde_json::Value, serde_json::Error> {
+        let mut report = match &self.result {
+            Ok(StageOutcome::Waiting { advanced, segment, continuation, attempted, residual }) => {
+                serde_json::json!({
+                    "status": "waiting", "advanced": advanced, "segment": segment,
+                    "continuation": continuation, "attempted": attempted,
+                    "committed": continuation.logical.committed, "residual": residual,
+                })
+            }
+            Ok(StageOutcome::Complete { segment, committed, attempted, residual }) => {
+                serde_json::json!({
+                    "status": "complete", "segment": segment, "attempted": attempted,
+                    "committed": committed, "residual": residual,
+                })
+            }
+            Err(rejected) => serde_json::json!({
+                "status": "rejected", "error": rejected.error,
+                "attempted": rejected.attempted, "committed": rejected.committed,
+            }),
+        };
+        let observation = serde_json::to_value(self.observation())?;
+        let object = report.as_object_mut().expect("stage reports are JSON objects");
+        object.insert("financial_observation".into(), observation);
+        for (name, value) in crate::stage::STAGE_LABELS {
+            object.insert(name.into(), serde_json::Value::String(value.into()));
+        }
+        Ok(report)
+    }
 }

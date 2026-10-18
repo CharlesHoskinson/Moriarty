@@ -27,10 +27,10 @@ Neither aggregate equality nor a technical chunk creates a financial commit.
 
 The [captured positive result](../../results/sherlock-financial-observation-20261018/README.md)
 observes the first paid prefix, an unchanged false-await continuation and a true
-resume that completes. This is scoped Core/2 producer/adapter evidence. A
-Sherlock financial state/step producer and its relationship to the adapter remain
-unobserved, so the general UIREQ-017 clause stays open; UIREQ-018 lowering and
-UIREQ-019 later local failure also remain open. These observations do not fill
+resume that completes. This is scoped Core/2 producer/adapter evidence. At that historical cut the
+financial producer/adapter relationship remained unobserved and UIREQ-017 stayed
+open; the owning path and final review below add the new source/result evidence.
+UIREQ-018 lowering and UIREQ-019 later local failure remain open. These observations do not fill
 the separate PassT or native/ledger evidence gaps above.
 
 `StageRejection` returns error and work counters without a discarded tentative
@@ -38,3 +38,21 @@ snapshot/effect carrier or replacement continuation. The adapter preserves that
 absence. A caller's retained pre-call continuation remains input; it cannot be
 presented as a returned rollback result. The [how-to](../how-to/observe-stage-financial-result.md)
 shows capture at the existing stage call sites.
+
+
+## Same-call ownership is a narrower connection than settlement
+
+The [owning financial producer candidate](../../results/sherlock-owning-financial-producer-20261018/README.md)
+connects one existing Core/2 stage invocation to a complete observation: private
+record fields keep the actual program, inputs/flags and returned Result together.
+Its shared publisher serializes that record without another evaluator call.
+The exact positive start/false/true sequence passed full in-memory comparisons;
+no persisted actual financial report or enclosing CLI execution is claimed.
+This advances the producer/adapter relationship beyond arbitrary diagnostic
+pairing while retaining local-reference-stage, unauthenticated and untracked
+consumption labels. It creates no payment policy, authenticated history, universal
+await lowering or ledger transition. The final actual-result/interface review recommends whole017 closure within this
+declared domain; Root owns semantic adoption. Universal lowering and later local
+failure remain separate requirements.
+
+Root has now [adopted whole UIREQ-017](../../results/sherlock-owning-financial-producer-20261018/ROOT-FINANCIAL-PRODUCER-ADOPTION.json). The [current requirement report](../../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json) confirms fourteen current original closures. The source-only enclosing CLI and separate lowering, failure, authentication, proof and settlement qualifications above remain.

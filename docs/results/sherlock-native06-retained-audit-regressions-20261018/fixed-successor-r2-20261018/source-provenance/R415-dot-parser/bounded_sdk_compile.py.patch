@@ -1,0 +1,26 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/406-native06-accounting-guard-test-candidate/afterimages/bounded_sdk_compile.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/415-native06-dot-segment-guard-test-candidate/afterimages/bounded_sdk_compile.py
+@@ -933,8 +933,8 @@
+     worktree=absolute(str(worktree))
+     need(type(word) is str and '\0' not in word and word!='' and '//' not in word and not word.endswith('/'),'non-normalized dep-info path')
+     raw_parts=word[1:].split('/') if word.startswith('/') else word.split('/')
+-    need(all(p not in ('','.') for p in raw_parts),'non-normalized dep-info path')
+-    if '..' not in raw_parts:
++    need(all(p!='' for p in raw_parts) and raw_parts[-1] not in ('.','..'),'non-normalized dep-info path')
++    if '.' not in raw_parts and '..' not in raw_parts:
+         p=Path(word) if word.startswith('/') else worktree/word
+         return str(absolute(str(p)))
+     if word.startswith('/'):
+@@ -946,9 +946,10 @@
+         base=worktree;rel_parts=raw_parts
+     stack=[];ascended=[]
+     for part in rel_parts:
+-        if part=='..':
++        if part in ('.','..'):
+             need(bool(stack),'non-normalized dep-info path')
+-            ascended.append(base.joinpath(*stack));stack.pop()
++            ascended.append(base.joinpath(*stack))
++            if part=='..':stack.pop()
+         else:stack.append(part)
+     need(bool(stack),'non-normalized dep-info path')
+     norm=base.joinpath(*stack);raw=base/('/'.join(rel_parts))

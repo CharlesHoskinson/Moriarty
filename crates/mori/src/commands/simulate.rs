@@ -144,18 +144,28 @@ fn print_stage_result(
     Ok(exit)
 }
 
+/// Publication for the actual owning Core/2 call; this does not select the
+/// explicit Sherlock pure Core/draft HostOnly route or relabel its profile.
+fn print_produced_stage_result(
+    produced: &mori_core::sherlock_financial_projection::ProducedInvocation<'_>,
+) -> super::Result<ExitCode> {
+    let report = produced.publication().map_err(super::core_io::operation)?;
+    print_stage_report(report)?;
+    Ok(if produced.raw_result().is_ok() { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+}
+
 /// `--resume`: reads the source, then the continuation, then the event.
 /// Bounded-read, strict-decode, load and admission failures are labelled stage
 /// rejections; a source the filesystem cannot read keeps the legacy error.
 /// Nothing is recorded, so the same file can be resumed again (untracked).
 fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
-    use mori_core::stage::{self, StageOutcome, StageRejection, decode};
+    use mori_core::stage::{self, StageRejection, decode};
     let event_path = args
         .event
         .as_deref()
         .ok_or_else(|| super::core_io::operation("--resume requires --event"))?;
     let source = super::core_io::read_source(&args.file)?;
-    let result = (|| -> Result<StageOutcome, StageRejection> {
+    let loaded = (|| -> Result<(stage::StagedProgram, stage::Continuation, stage::StageEvent), StageRejection> {
         let program = stage::load(&source).map_err(no_work)?;
         let continuation = decode::read_bounded(
             resume,
@@ -167,16 +177,24 @@ fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
         let event = decode::read_bounded(event_path, decode::MAX_EVENT_BYTES, decode::EVENT_TOO_LARGE)
             .and_then(|text| decode::event(&text))
             .map_err(no_work)?;
-        stage::resume(&program, continuation, event, args.action.as_deref(), args.logical_cap)
+        Ok((program, continuation, event))
     })();
-    print_stage_result(result)
+    match loaded {
+        Ok((program, continuation, event)) => {
+            let produced = mori_core::sherlock_financial_projection::resume_observed(
+                &program, continuation, event, args.action.clone(), args.logical_cap,
+            );
+            print_produced_stage_result(&produced)
+        }
+        Err(rejected) => print_stage_result(Err(rejected)),
+    }
 }
 
 /// A `/2` start. Load and scenario failures are labelled stage rejections; the
 /// scenario keeps the legacy 1 MiB strict reader.
 fn run_stage_start(args: &Args, source: &str, action: &str, scenario: &Path) -> super::Result<ExitCode> {
-    use mori_core::stage::{self, StageOutcome, StageRejection, decode};
-    let result = (|| -> Result<StageOutcome, StageRejection> {
+    use mori_core::stage::{self, StageRejection, decode};
+    let loaded = (|| -> Result<(stage::StagedProgram, mori_core::Scenario), StageRejection> {
         let program = stage::load(source).map_err(no_work)?;
         let text = decode::read_bounded(scenario, 1_048_576, "Scenario JSON exceeds 1 MiB")
             .map_err(no_work)?;
@@ -189,9 +207,17 @@ fn run_stage_start(args: &Args, source: &str, action: &str, scenario: &Path) -> 
                 step: None,
             })
         })?;
-        stage::start(&program, action, scenario, args.logical_cap)
+        Ok((program, scenario))
     })();
-    print_stage_result(result)
+    match loaded {
+        Ok((program, scenario)) => {
+            let produced = mori_core::sherlock_financial_projection::start_observed(
+                &program, action.to_owned(), scenario, args.logical_cap,
+            );
+            print_produced_stage_result(&produced)
+        }
+        Err(rejected) => print_stage_result(Err(rejected)),
+    }
 }
 
 /// A refusal before any segment evaluation: no work attempted or committed.
