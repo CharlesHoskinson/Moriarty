@@ -3,6 +3,8 @@ use crate::shell::Shell;
 use serde::Deserialize;
 use std::{path::PathBuf, process::ExitCode};
 
+#[cfg(feature = "core2-disjoint-draft")]
+mod disjoint_test;
 mod stage_test;
 
 #[derive(Debug, clap::Args)]
@@ -40,6 +42,16 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let value: serde_json::Value = core_io::read_json(&args.dir.join("mori-tests.json"))?;
     if value.get("profile").and_then(serde_json::Value::as_str) == Some("moriarty-tests/2") {
         return stage_test::run(&args.dir, value, shell);
+    }
+    if value.get("profile").and_then(serde_json::Value::as_str)
+        == Some("moriarty-tests/disjoint-draft/1")
+    {
+        #[cfg(feature = "core2-disjoint-draft")]
+        return disjoint_test::run(&args.dir, value, shell);
+        #[cfg(not(feature = "core2-disjoint-draft"))]
+        return Err(core_io::operation(
+            "disjoint draft requires feature core2-disjoint-draft",
+        ));
     }
     let manifest: Manifest = serde_json::from_value(value).map_err(core_io::operation)?;
     if manifest.profile != "moriarty-tests/1"

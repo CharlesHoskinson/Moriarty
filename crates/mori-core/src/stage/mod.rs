@@ -8,6 +8,8 @@ mod admit;
 mod cost;
 pub mod decode;
 mod digest;
+#[cfg(feature = "core2-disjoint-draft")]
+pub mod disjoint;
 mod plan;
 mod profile;
 mod report;
