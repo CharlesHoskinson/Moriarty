@@ -1,0 +1,196 @@
+- minItems on includes, git_checkouts[].files or executable_pins, beyond what 4.2 implies.
+- The device minLength, beyond the no-null rule.
+- Schema string patterns, beyond NAP, NRP and the hex rules.
+- Correspondence between configs and real files: validate never compares pins with files, quota mountpoints with paths, or archive paths with any staging data.
+
+4.4 Order and isolation
+- Predicates are checked in a fixed internal order, and the first failing one raises. Which predicate fires is UNSPECIFIED.
+- Each negative must change only the predicate it targets, so that its Refusal can only come from that predicate.
+
+4.5 Type confusion
+- Where a str is required (any NRP, commit, blob, sha256, package_checksum or digest), a non-str value may raise TypeError instead of Refusal.
+- An element of masks that is not a str may raise TypeError instead of Refusal; an unhashable element, for example a list or dict, does raise TypeError. This overrides the masks NAP item in 4.2.
+- A dict key that is not a str, at any depth below the top level of c, may raise TypeError instead of Refusal. This overrides the 4.2 key-set items for such keys.
+- None of the values described in the three items above is ever accepted or coerced.
+- Where a list is required, a non-list value refuses for masks, acquired_archives, source_copy_mounts and git_checkouts (4.2), unless it is a dict with a non-str key (see above). For every other list-valued field the outcome for a non-list value is UNSPECIFIED; do not test it.
+- A test of such input must use assertRaises((guard.Refusal, TypeError)) and nothing narrower.
+
+IF-5 link_rows(c) -> dict and declared_links(c) -> frozenset
+- link_rows:
+  - Reads only c['git_checkouts'] (relative_root, commit and files of each entry; relative, blob and mode of each file row).
+  - Returns {link path: (commit, relative, blob)} for rows whose mode is exactly the str '120000'. Other rows are excluded.
+  - Keys are '/'-separated str.
+  - Performs no I/O and no validation; it does not consult GIT_SYMLINKS.
+- declared_links:
+  - Returns frozenset(pathlib.Path(c['paths']['source_home']) / key for each key of link_rows(c)).
+  - Performs no I/O.
+  - Raises Refusal if a key is not an NRP.
+- Synthetic link paths are therefore allowed in IF-11 and IF-12 tests.
+
+IF-6 link_identity(path) -> (text: bytes, oid: str)
+- path is a str or pathlib.Path naming a NAP.
+- Raises Refusal, with no coercion, when:
+  - path is not a NAP;
+  - any ancestor of path is a symlink;
+  - path is not a symlink (a regular file or a directory);
+  - the lstat size is < 33 or > 55;
+  - the two stable_stat results differ, or len(text) differs from the first lstat size.
+- Raises OSError when path does not exist.
+- Order of operations:
+  1. ancestor check;
+  2. first stable_stat(path);
+  3. exactly one os.readlink, with the bytes form of the path;
+  4. second stable_stat(path).
+- Every refusal before step 3 happens without any readlink call.
+- Returns the raw link text bytes, and the lowercase 40-hex SHA-1 over b'blob ' + decimal ASCII length + one NUL byte + text.
+- It never opens, follows, resolves, stats-with-follow or reads the target.
+- stable_stat(path) is an IF-14 seam:
+  - It returns a dict with keys device, inode, size, mtime_ns, mode and links, taken from os.lstat(path).
+  - link_identity calls it exactly twice on every call in which os.readlink returns: once before and once after the readlink. On a refusal before readlink, the number of calls is UNSPECIFIED. tree_hashes also uses it for regular files.
+  - A drift test should wrap the real function and alter one key only on the second call.
+
+IF-7 link_target(relative_link, text, regular_rows) -> str
+- Arguments:
+  - relative_link: the link row's checkout-relative NRP, as a str.
+  - text: bytes.
+  - regular_rows: a container of checkout-relative str, meaning the same checkout's rows whose mode is not '120000'. It is queried with 'in'.
+- It is purely lexical and makes no filesystem call of any kind. The 33..55 size bound is not applied here.
+- Algorithm:
+  - Start from the components of relative_link's parent. This list is empty for a link at the checkout root.
+  - For each '/'-separated component of text: '..' removes the last component, and any other component appends.
+  - Zero or more leading '..' components are allowed.
+- Raises Refusal when:
+  - any byte is outside 0x21..0x7E, so space 0x20, tab, NUL, DEL and every byte >= 0x80 all refuse;
+  - text starts with '/' or is empty;
+  - any component is '' or '.', so '//', a trailing '/', './x' and 'x/./y' all refuse;
+  - a '..' follows a non-'..' component (ascending after descending);
+  - a '..' would remove a component when none remain (escaping above the checkout root);
+  - text consists only of '..' components;
+  - '.git' is an exact component of the resulting path, including components inherited from the link's own parent ('.gitignore' and '.github' are allowed);
+  - the resulting path is not in regular_rows.
+- Returns the resulting path as a '/'-joined str.
+- TypeError if text is not bytes. Do not test this.
+
+IF-8 walk_tree(root, links=frozenset()) -> (files, found, dirs), and walk_files(root) -> files
+- Arguments:
+  - root: a str or Path naming the NAP of an existing directory.
+  - links: a set or frozenset of pathlib.Path, each equal to pathlib.Path(root) / relative. Matching uses Path equality, so str elements never match.
+- Behaviour:
+  - Every directory is listed through a directory fd opened with O_NOFOLLOW.
+  - Entries are classified without following links.
+  - A symlink is never opened, stat'ed through or descended.
+- Returns:
+  - files: a sorted list of Path for regular files;
+  - found: a set of Path for symlinks that are in links;
+  - dirs: a sorted list of Path for directories, excluding root itself.
+  - files and dirs are sorted in pathlib.Path order, which can differ from the order of their str forms. Build expected lists with sorted() over Path objects.
+- Raises Refusal when:
+  - root is not a NAP;
+  - root, or an ancestor of root, is a symlink;
+  - any symlink in the tree is not in links;
+  - a path in links is present as a regular file or a directory;
+  - there is an entry that is not a regular file, directory or symlink. Do not create FIFOs, sockets or devices.
+- A path in links that is absent is NOT refused by walk_tree. It is simply absent from found.
+- Raises OSError when root is missing or is not a directory, or when root or any directory in the tree has mode 0o000. That case assumes the run uid is non-root and holds no effective capability that overrides file permission checks (IF-0). Other partial-permission modes, such as a directory that is readable but not searchable, are UNSPECIFIED; do not test them.
+- walk_files(root) equals walk_tree(root)[0] with no declared links, so any symlink refuses.
+
+IF-9 tree_hashes(root, links=frozenset()) -> dict
+- First it runs walk_tree(root, links), so every IF-8 outcome applies first.
+- It then raises Refusal if found != set(links) (a missing declared link). This happens before any file content or link text is read and before any readlink.
+- Keys:
+  - the '/'-separated str path, relative to root, of each regular file and each declared link;
+  - directories are not keys, so empty directories are invisible.
+- Values:
+  - for a regular file: the lowercase 64-hex SHA-256 of its bytes;
+  - for a declared link: 'git-symlink:' + the 40-hex oid from link_identity. Every declared link's text must therefore be 33..55 bytes, or Refusal results.
+- Raises Refusal if a regular file's stable_stat changes during hashing.
+- Raises OSError if a regular file is unreadable.
+- It never opens, follows or reads a link target.
+- A regular file's content is read by os.open with O_NOFOLLOW followed by os.fdopen, which calls io.open with an int fd. Around tree_hashes, freeze_source and frozen_source, a spy on os.open, io.open or builtins.open must forward every call and judge calls by path, ignoring int arguments; never trap these functions there.
+
+IF-10 chmod_nofollow(path, directory) -> None
+- It opens path with O_RDONLY | O_NOFOLLOW | O_CLOEXEC, adding O_DIRECTORY when directory is True, and then calls fstat.
+- It changes the mode only through os.fchmod on that fd, always closes any fd it opened, and never calls os.chmod.
+- Success cases:
+  - a regular file with directory=False: the new mode is the old permission bits with all write bits (0o222) cleared;
+  - a directory with directory=True: the new mode is exactly 0o555.
+- Raises OSError, with no mode change, when:
+  - path is a symlink, for either value of directory;
+  - directory=True on a non-directory;
+  - path is missing.
+- Raises Refusal, with no mode change, when:
+  - directory=False on a directory (the open succeeds and the fstat type mismatches);
+  - any other fstat type mismatch. Simulate this only by patching os.fstat; never create FIFOs.
+
+IF-11 freeze_source(c) -> None
+- What it reads from c:
+  - c['paths']['source_home']: the NAP of a real directory with no symlink ancestors;
+  - c['paths']['packet']: a NAP str;
+  - c['git_checkouts'], through declared_links, unless declared_links is patched.
+  - When jload and receipt are patched, nothing else in c is read.
+- It calls jload exactly once, with pathlib.Path(packet) / 'C_RAW_IDENTITIES.json'. The 'files' entry of the returned dict is the expected map.
+- If tree_hashes(source_home, declared_links(c)) != expected, it raises Refusal before any mode change and without calling receipt. A Refusal or OSError from the walk or hashing propagates the same way.
+- Otherwise:
+  - every regular file gets chmod_nofollow(file, False);
+  - then every directory gets chmod_nofollow(dir, True), deepest first;
+  - then root gets chmod_nofollow(root, True).
+- Declared links are never opened or chmod'ed. Every os.open during freeze_source includes O_NOFOLLOW, and os.chmod is never called.
+- Finally it calls receipt exactly once, positionally: receipt(c, 'D_FREEZE.json', value, 'D').
+  - value is a dict with exactly the keys 'H_S' and 'files'.
+  - 'H_S' is a 64-hex str whose derivation is UNSPECIFIED.
+  - 'files' equals expected.
+- receipt is a driver tripwire (IF-14). It MUST be patched in every test that can reach it.
+
+IF-12 frozen_source(c) -> dict
+- It needs c['paths']['source_home'] and c['paths']['packet'], plus git_checkouts unless declared_links is patched.
+- It calls jload exactly once, with pathlib.Path(packet) / 'D_FREEZE.json'.
+- If tree_hashes(source_home, declared_links(c)) == returned['files'], it returns the very object jload returned (identity). Otherwise it raises Refusal.
+- A Refusal or OSError from the walk or hashing propagates.
+- Each of these changes is detected as Refusal:
+  - changed bytes in a regular file;
+  - a regular file added or removed anywhere, including in a new subdirectory;
+  - a declared link removed;
+  - a declared link replaced by a regular file or a directory;
+  - a declared link's text changed (new text of 33..55 bytes with a different blob);
+  - a new undeclared symlink anywhere;
+  - a regular file replaced by a symlink.
+- Not covered, and out of contract (do not assert either way): mode bits, ownership, timestamps, empty directories added or removed, and directory permissions.
+- After freeze_source, directories are 0o555 and files have no write bits. A mutation test must first restore owner write permission on the specific real objects it changes.
+
+IF-13 approved_includes(c)
+- Full pins:
+  - embedded: ac397cfd5e0952b01ae1b892997808e95e13d3ac10ecff2e90418e484fab57d7;
+  - amendments: 3676da94b6ad533a2276271c55c3c47b8c4473170b1200cf0dcae2b362fbda5d. This is the SHA-256 of AMENDMENTS.proposed.json, which cannot contain its own hash.
+- It first raises Refusal unless c['bindings']['embedded']['sha256'] equals the embedded pin exactly.
+- It then raises Refusal unless c['bindings']['amendments']['sha256'] equals the amendments pin exactly.
+- Both checks happen before any jload call. Every other value refuses, including the predecessor 78daa6750da05e14a353398dece97e505a4e2b4fe826987962b71937a7a499c2, uppercase forms and one-character changes.
+- When both pins match, the next action is jload(c['bindings']['amendments']['path']), called with that str.
+- Positive control:
+  - patch jload with a function that raises a test-local exception;
+  - the call must raise that exception;
+  - the first jload argument must equal the amendments path.
+- Behaviour after the first jload is UNSPECIFIED; do not assert it.
+- jload MUST be patched in every approved_includes test.
+
+IF-14 Seams, harness and tripwires
+- Patchable module attributes, looked up at call time. Patch them with unittest.mock.patch.object(guard, name, ...).
+  - jload(path): returns the parsed JSON value.
+  - receipt(c, name, value, phase).
+  - stable_stat(path): returns a dict, as described in IF-6.
+  - declared_links(c).
+- guard.os is the stdlib os module. Patching guard.os.X patches os.X process-wide while the patch is active.
+- Before loading tests, the future driver replaces 28 guard attributes with tripwires. A call to any of them raises AssertionError('ordinary driver tripwire: ...'), which fails the test unless that name is patched for that call. The 28 attributes are:
+  main, run, worker, consent, freeze_inputs, stage, verify_raw, metadata_check, output_check, executing_identity, bound_identities, old_home_stats, check_pin, quotas, check_tmpfs, owned_paths, write_new, receipt, sealed_memfd, network_pending, _cg_text, _cg_children, _cg_writable, _cg_dirstat, _cg_mkdir, _cg_rmdir, _cg_write, _mount_rows.
+- The driver also replaces 17 host surfaces process-wide in the same way:
+  subprocess.Popen, os.system, os.fork, os.forkpty, os.posix_spawn, os.posix_spawnp, os.execv, os.execve, os.execvp, os.execvpe, os.memfd_create, socket.socket, socket.socketpair, signal.signal, signal.setitimer, signal.alarm, resource.setrlimit.
+- Among IF-4 to IF-13, only freeze_source reaches a tripwire (receipt).
+
+IF-15 Out of contract (UNSPECIFIED; never assert)
+- exception messages;
+- which validate predicate fires first;
+- any syscall sequence other than the ones stated above;
+- how H_S is derived;
+- any function not named in IF-4 to IF-13, including verify_raw (which is tripwired);
+- paths that start with exactly two slashes;
+- real host paths and host state;
+- the adequacy of any number.

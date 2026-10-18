@@ -1,0 +1,56 @@
+            for child in ('/test-only', '/a/b'):
+                with self.subTest(commit=commit, path=path + child):
+                    self.assert_refused(self.mutated(lambda c: checkout(c, commit)['files'].append(
+                        {'relative': path + child, 'blob': h40(child), 'mode': '100644'})))
+
+    def test_other_checkout_rooted_at_or_beneath_link_refused(self):
+        # Contract item 1: any Git row lying beneath a declared link path is refused. Read in
+        # source-home space this includes rows of the other checkout. Owner adjudicates if contested.
+        for suffix in ('', '/nested'):
+            with self.subTest(suffix=suffix):
+                self.assert_refused(self.mutated(lambda c: checkout(c, CA0).update(
+                    relative_root=ROOTS[C04] + '/' + VK + suffix)))
+
+    def test_include_or_generated_at_or_under_link_refused(self):
+        for commit, path, _ in sorted(owner_triples()):
+            link = ROOTS[commit] + '/' + path
+            with self.subTest(link=link):
+                for rel in (link, link + '/test-only'):
+                    self.assert_refused(self.mutated(lambda c: c['includes'].append(
+                        {'relative': rel, 'algorithm': 'git-blob', 'digest': h40(rel),
+                         'source_identifier': commit + ':' + path})))
+                for name, kind in (('.cargo-ok', 'cargo-ok'), ('.cargo-checksum.json', 'cargo-checksum')):
+                    self.assert_refused(self.mutated(lambda c: c['expected_generated_files'].append(
+                        {'relative': link + '/' + name, 'kind': kind})))
+        sibling = ROOTS[CA0] + '/' + VK + '.orig'
+        self.assert_valid(self.mutated(lambda c: c['includes'].append(
+            {'relative': sibling, 'algorithm': 'git-blob', 'digest': h40(sibling),
+             'source_identifier': CA0 + ':' + VK + '.orig'})))
+
+    def test_amendment_pin_refused_before_any_reader(self):
+        bad = [('amendments', AM_OLD), ('amendments', AM_NEW.upper()),
+               ('amendments', AM_NEW[:-1] + 'e'), ('embedded', h64('wrong-embedded'))]
+        for key, value in bad:
+            with self.subTest(key=key, value=value):
+                c = self.mutated(lambda c: c['bindings'][key].update(sha256=value))
+                reader = mock.Mock(side_effect=AssertionError('reader reached before pin refusal'))
+                with forbid_io(reader) as calls:
+                    with self.assertRaises(G.Refusal):
+                        G.approved_includes(c)
+                self.assertEqual(calls, [])
+                reader.assert_not_called()
+        # Exact new AM pin plus unchanged embedded pin passes both pins and only then reaches a reader.
+        # The sentinel stops there; no SDK inventory acceptance is simulated.
+        reader = mock.Mock(side_effect=ReachedReader)
+        with forbid_io(reader) as calls:
+            with self.assertRaises(ReachedReader):
+                G.approved_includes(copy.deepcopy(self.base))
+        self.assertEqual(calls, [])
+        bound = {self.base['bindings'][k]['path'] for k in ('embedded', 'amendments')}
+        self.assertTrue(reader.call_args_list)
+        for call in reader.call_args_list:
+            self.assertIn(call.args[0], bound)
+
+
+if __name__ == '__main__':
+    unittest.main()

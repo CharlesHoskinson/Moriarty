@@ -1,0 +1,173 @@
+      "namespace_tmpfs_bytes": "16 MiB for workers, B and E; 64 MiB for F. Charged inside the phase memcg. The consumer is in sandbox_args, which is not supplied (see reading_limits)."
+    },
+    "total_wall_seconds": 6720,
+    "supervisor_cpu_seconds": 10800,
+    "cgroup": {
+      "envelope_path": "/moriarty-a102-compile-r1",
+      "supervisor_leaf_name": "supervisor",
+      "phase_parent_name": "phases",
+      "envelope_memory_max": 21474836480,
+      "envelope_pids_max": 1088,
+      "envelope_cpu_max": "500000 100000"
+    },
+    "cgroup_operator_contract": {
+      "E": "/sys/fs/cgroup/moriarty-a102-compile-r1: a top-level cgroup outside systemd units. Created by a root operator, dir root:root 0755. memory.max=21474836480, memory.swap.max=0, pids.max=1088, cpu.max='500000 100000', cgroup.subtree_control='+cpu +memory +pids'. All files stay root:root 0644 except cgroup.procs, which is chowned 1000:1000. That is the only supervisor-writable E file, and it serves as the migration common ancestor. E holds no processes; its only children are supervisor and phases.",
+      "L": "E/supervisor: root:root 0755, all files root-owned. memory.max=1610612736, memory.swap.max=0, pids.max=64, cpu.max='100000 100000'. subtree_control is empty and there are no children. These values are set by the operator; the runner does not check them.",
+      "P": "E/phases: created by root with memory.max=18534076416, memory.swap.max=0, pids.max=1024, cpu.max='400000 100000' and cgroup.subtree_control='+cpu +memory +pids', all set before delegation. Then chown 1000:1000 on the P directory, P/cgroup.procs, P/cgroup.threads and P/cgroup.subtree_control only. P resource files stay root-owned, so the supervisor cannot raise them. The runner creates the phase children itself.",
+      "constraints": "uid 1000 owns nothing at or above E except E/cgroup.procs and cannot write any E/L/P cap. Escape out of E needs write on a root-owned ancestor's cgroup.procs, which is denied. Entering E's internal node fails because controllers are enabled (no-internal-process rule). The supervisor must have CapPrm/CapEff/CapAmb = 0, uid = euid = 1000, and /proc/self/cgroup exactly '0::/moriarty-a102-compile-r1/supervisor'. No agent ever holds root; a human operator performs every root step.",
+      "host_predicates_OBSERVATION_REQUIRED": "Exactly one cgroup2 mount at /sys/fs/cgroup and no mount beneath it. /proc/self/cgroup is a single line. /sys/fs/cgroup/cgroup.subtree_control contains cpu, memory and pids. cgroup.kill is present. A WSL2 hybrid layout would fail supervisor_envelope; this assistant's session reports a WSL2 kernel, and whether that is the execution host is unobserved."
+    },
+    "quota_mounts": {
+      "source_home": {
+        "mountpoint": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/a102-compile-exec-r1/source-home",
+        "mount_id": "OBSERVATION_REQUIRED(Q-OBS)",
+        "device": "OBSERVATION_REQUIRED(Q-OBS)",
+        "max_bytes": 1287098368,
+        "max_inodes": 524288,
+        "flags": "rw,nosuid,nodev,noexec,huge=never,size=1287098368,nr_inodes=524288,mode=0700,uid=1000,gid=1000"
+      },
+      "target_tmp": {
+        "mountpoint": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/a102-compile-exec-r1",
+        "mount_id": "OBSERVATION_REQUIRED(Q-OBS)",
+        "device": "OBSERVATION_REQUIRED(Q-OBS)",
+        "max_bytes": 8589934592,
+        "max_inodes": 524288,
+        "flags": "rw,nosuid,nodev,huge=never,size=8589934592,nr_inodes=524288,mode=0700,uid=1000,gid=1000 (exec is required: build scripts and proc macros run and load from target)"
+      },
+      "packet": {
+        "mountpoint": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/a102-compile-exec-r1/packet",
+        "mount_id": "OBSERVATION_REQUIRED(Q-OBS)",
+        "device": "OBSERVATION_REQUIRED(Q-OBS)",
+        "max_bytes": 67108864,
+        "max_inodes": 4096,
+        "flags": "rw,nosuid,nodev,noexec,huge=never,size=67108864,nr_inodes=4096,mode=0700,uid=1000,gid=1000"
+      },
+      "Q-OBS_predicate": "Observed after provisioning and before final config assembly, from a uid-1000 shell in the same mount namespace the launch will use. Exactly one /proc/self/mountinfo row has field5 == mountpoint. mount_id := int(field1). device := field3 major:minor string. fstype after ' - ' == tmpfs. Mount options include rw, nosuid and nodev, plus noexec for source-home and packet. statvfs f_blocks\u00d7f_frsize == max_bytes and f_files == max_inodes. The three devices differ. The only mounts beneath the execution root are source-home and packet. Each mountpoint is owned 1000:1000 with mode 0700. Values are recorded, never predicted; any remount or reboot invalidates them and every downstream receipt.",
+      "reviewability_decision": "Q-OBS does NOT block the user decision on sizes, flags and provisioning. It DOES block execution and the final config. IDs exist only after provisioning, and provisioning needs that user decision. Tier receipts are therefore minted later, against the final config."
+    },
+    "tmpfs_and_cgroup_provisioning_draft": [
+      "OP-0 (uid 1000, read-only): host predicates. MemAvailable \u2265 23622320128 (envelope plus a 2 GiB host reserve). cgroup predicates as above. /usr/bin/bwrap has no setuid bit, and unprivileged userns is permitted for bwrap (user.max_user_namespaces > 0; AppArmor userns restriction allows bwrap). Both fresh paths are absent. If any check fails, stop and return to the user.",
+      "OP-1 (uid 1000): mkdir -m 0700 <execution_root>; mkdir -m 0755 <config dir>.",
+      "OP-2 (root): mount -t tmpfs -o <target_tmp flags> tmpfs <execution_root>; mount --make-private <execution_root>.",
+      "OP-3 (uid 1000): mkdir -m 0700 the six children source-home, target, tmp, packet, empty-home and mask-empty.",
+      "OP-4 (root): mount -t tmpfs -o <source_home flags> tmpfs <source-home>; mount --make-private. Then the same for <packet> with the packet flags.",
+      "OP-5 (root): create and configure E, L and P exactly as cgroup_operator_contract, then apply the chowns.",
+      "OP-6 (uid 1000): record Q-OBS; the old_home_stat_manifest is taken after the link-text pre-check."
+    ],
+    "memory_accounting": {
+      "principle": "tmpfs pages, plus inode and dentry kernel memory, are charged to the writing task's memcg. With swap.max = 0 they cannot be reclaimed. Charges from removed phase cgroups stay counted under P and E until teardown frees the pages. Page cache from read-only binds is charged to the reader and is reclaimable. Namespace tmpfs is charged inside each phase. This is general kernel semantics, not observed on this kernel.",
+      "tmpfs_total_bytes": 9944141824,
+      "F_live_bytes": 8589934592,
+      "supervisor_bytes": 536870912,
+      "cache_kernel_margin_bytes": 1073741824,
+      "conservative_need_bytes": 20144689152,
+      "arithmetic": "tmpfs 1287098368 + 8589934592 + 67108864 = 9944141824. Add F 8589934592, supervisor 536870912 and margin 1073741824: total 20144689152. This double-counts F's own tmpfs writes, so it is conservative. Envelope 21474836480 leaves 1330147328 slack. P 18534076416 = tmpfs total + F, and L 1610612736 = supervisor + margin, so P + L = 20144689152 \u2264 E. Envelope OOM therefore cannot pre-empt a phase cap. Pids: 1088 = P 1024 + L 64. CPU: E 5 = P 4 + L 1.",
+      "F_effective_target_capacity": "At most 8589934592 minus peak F process RSS (-j4) minus F tmp and namespace-tmpfs writes. Debug test-build target size is unobserved. Exceeding it is a cgroup OOM, which is terminal. This is the most likely resource failure, and only a source change to the 8 GiB owner ceiling could remove it; that is out of scope.",
+      "host_capacity": "UNOBSERVED. No assumption is made. The OP-0 gate is MemAvailable \u2265 23622320128. Fewer than 4 online CPUs is a wall-cap risk only, not a safety risk."
+    },
+    "supervisor_launch_draft": {
+      "steps": "In a root operator shell, once: echo $$ > /sys/fs/cgroup/moriarty-a102-compile-r1/supervisor/cgroup.procs; then exec /usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups --inh-caps=-all --bounding-set=-all --no-new-privs -- /usr/bin/env -i LANG=C PATH=/usr/bin:/bin /usr/bin/python3 -I -B -S <bindings.runner.path> <the runner's documented execution CLI with paths.config and nothing else>.",
+      "notes": "The exec chain keeps the PID, so L contains exactly the supervisor. --clear-groups drops supplementary groups such as docker. setpriv and env are operator tools, not runner pins; the operator records their sha256. The CLI argv tail is copied factually from the amended README or main(), which is not supplied here."
+    },
+    "phase_controls": {
+      "common": "Each phase runs as Popen ['/usr/bin/bwrap','--args',<sealed memfd>] with env={}, stdin /dev/null and close_fds. In-sandbox argv is ['/usr/bin/python3','-I','-B','-S','/proc/self/fd/<stage>',<stage_fd>,<sock_fd>,<token_fd>,*target], with audit workers adding ['--config-sha256',<sha>,'--worker-fd',<fd>]. A seccomp listener kills the whole phase cgroup on any network syscall. Limits: RLIMIT_FSIZE = file_bytes, RLIMIT_CORE = 0, inherited RLIMIT_CPU = 10800. One phase group, one deadline, populated == 0 required at exit. One attempt, no retry, no skip; any refusal is terminal and the marker persists. Every bind, mask and read-only flag comes from the existing sandbox_args (not supplied); equality with this table is a review predicate.",
+      "A0": {
+        "target": "freeze_inputs worker (sandbox_args(c,'A0',True,False))",
+        "reads": "Read-only: the 6 copy-source mounts, binding files and toolchain. The 52 loose containers are stat-only, first observation, no decompression.",
+        "writes": "Packet only.",
+        "link_text_reads": "none",
+        "host_units": "none",
+        "am": "AM-4 (A0 first-observation clause)"
+      },
+      "A": {
+        "target": "stage worker",
+        "reads": "Read-only: the copy-source mounts.",
+        "writes": "source-home (staged archives, index cache, git db, about 201 MB) and packet.",
+        "link_text_reads": "none",
+        "host_units": "none",
+        "am": "AM-4 materialization"
+      },
+      "B": {
+        "argv": [
+          "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo",
+          "fetch",
+          "--frozen"
+        ],
+        "cwd": "/home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016",
+        "env": {
+          "PATH": "CARGO_PATH (runner constant)",
+          "CARGO_HOME": "<execution_root>/source-home",
+          "HOME": "<execution_root>/empty-home",
+          "TMPDIR": "<execution_root>/tmp",
+          "LANG": "C"
+        },
+        "reads": "Read-only: the worktree (lock dfffb853) and the toolchain.",
+        "writes": "source-home (crate extraction about 750.7 MB, Git checkouts about 77.6 MB) and tmp.",
+        "link_text_reads": "none by the runner. Cargo is expected to materialize the 16 entries as symlinks; that is unobserved.",
+        "host_units": "none (fetch builds nothing)",
+        "am": "AM-4 raw Git decompression and checkout, crate extraction"
+      },
+      "C": {
+        "target": "verify_raw worker",
+        "reads": "source-home",
+        "writes": "packet (C_RAW_IDENTITIES.json)",
+        "link_text_reads": "AM-4-LT authentication of the 16 links only",
+        "host_units": "none",
+        "am": "AM-4 raw identity hashing + AM-4-LT"
+      },
+      "D": {
+        "target": "freeze_source worker",
+        "reads": "source-home",
+        "writes": "Mode bits via chmod_nofollow only; the declared links are never chmodded. Packet (D_FREEZE.json).",
+        "link_text_reads": "AM-4-LT re-identity",
+        "host_units": "none",
+        "am": "AM-4 identity + AM-4-LT"
+      },
+      "E": {
+        "variants": "precheck worker, then cargo, then metadata_check audit, all in one group under the 120 s deadline",
+        "argv": [
+          "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo",
+          "metadata",
+          "--frozen",
+          "--format-version",
+          "1",
+          "--filter-platform",
+          "x86_64-unknown-linux-gnu"
+        ],
+        "cwd": "worktree",
+        "env": "as B",
+        "reads": "Frozen source-home and the worktree, both read-only.",
+        "writes": "tmp; stdout to the packet log",
+        "link_text_reads": "AM-4-LT re-identity in precheck and audit",
+        "host_units": "none",
+        "am": "Existing R5 Tier-1 phase. The AM-4 text does not name cargo metadata, and this is unchanged."
+      },
+      "F": {
+        "variants": "precheck, then cargo, then output_check audit",
+        "argv": [
+          "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo",
+          "test",
+          "--no-run",
+          "--frozen",
+          "-p",
+          "mori-backend",
+          "--lib",
+          "-j4"
+        ],
+        "cwd": "worktree",
+        "env": "as B, plus CARGO_TARGET_DIR=<execution_root>/target",
+        "reads": "Read-only: frozen source-home, worktree and toolchain. The read-set audit through dep-info accepts only .rs files under source-home or the worktree plus the 40 includes; any other source-home input refuses.",
+        "writes": "target and tmp",
+        "link_text_reads": "AM-4-LT re-identity in precheck and audit",
+        "host_units": "Only the 8 SDK host units and at most 93 third-party units in HOST_UNIT_SUPERSET fd41e446, vendored build branch only. Actual applicability is unobserved.",
+        "am": "AM-1/AM-2/AM-3 (Tier 2), the single compile-host native exception",
+        "outputs": "Quarantined. Never executed, never copied, destroyed at teardown. native_outputs_accepted = false."
+      }
+    },
+    "am4_linktext_addendum": {
+      "wording": "AM-4-LT (proposed Tier-1 addendum to AM-4; not granted). Within the single granted run only, the runner with sha256 5ebe346935250d527e1827b26b7ddcd1a2a1fcb9d5c4b3a6a24c5b8ea572b7e7 may obtain, by readlink without following, the link text (33 to 55 bytes each) of exactly the 16 Git mode-120000 entries enumerated in its GIT_SYMLINKS constant: 8 under commit 04c9c5d9bcebb8d4427d8589fb54d58a55599c14 and 8 under commit a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1. This is permitted in phase C to authenticate against the bound blob SHA-1, and in D, E-precheck, E-audit, F-precheck and F-audit for frozen re-identity. No link target is opened, stat'ed, resolved, hashed or read by the runner through these entries. Target identity is established only through the target's own regular tree row under unchanged AM-4. Cargo's own handling of these entries in B, E and F is not enforced by the runner and is unobserved. This addendum changes neither AM-1 to AM-3 nor the AMENDMENTS.json pin 78daa6750da05e14a353398dece97e505a4e2b4fe826987962b71937a7a499c2. It retains the original R5 APPROVED_SOURCE_WITH_LIMITS limitation and the SOURCE_INCOMPATIBLE_R5 classification of unchanged R5 (028f950b). It is effective only if that runner is adopted after fresh security and Muse review and independent tests.",
+      "binding_method": "No code change and no new config field. bindings.amendments stays 78daa675 and the runner still enforces that pin. The addendum is materialized later as a standalone file, outside build roots, containing exactly the wording above. Its sha256 is unknown now and is not fabricated. Each of the security, muse, root, tier1 and tier2 receipts must cite verbatim (a) 78daa675, (b) the AM-4-LT file sha256 and (c) runner 5ebe3469. The runtime scope is enforced by the runner bytes, which bindings.runner binds; the receipts bind the authority text. If the receipts cite differing AM-4-LT hashes, the request is not ready."
+    },
+    "fatal_premise_assessment": {
+      "status": "NOT_KNOWN_FATAL; CONDITIONALLY_FATAL",
+      "blocks": [

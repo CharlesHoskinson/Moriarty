@@ -1,0 +1,115 @@
+            by_path_subj[c_subj['review_receipts'][receipt_key]['path']]['subject_manifest_sha256'] = h64('f')
+            with self.assertRaisesRegex(guard.Refusal, 'review subject identity'):
+                run_consent_with_mocks(c_subj, by_path_subj)
+
+        c_disagree = make_routing_config('tier1')
+        by_path_disagree = make_records(c_disagree)
+        by_path_disagree[c_disagree['review_receipts']['nonsecurity']['path']]['source_manifest_sha256'] = h64('4')
+        with self.assertRaisesRegex(guard.Refusal, 'review candidates differ'):
+            run_consent_with_mocks(c_disagree, by_path_disagree)
+
+    def test_consent_refuses_root_and_tier_binding_mismatches(self):
+        c_legacy_root = make_routing_config('tier1')
+        by_path_legacy_root = make_records(c_legacy_root)
+        root_rec = by_path_legacy_root[c_legacy_root['review_receipts']['root']['path']]
+        root_rec['muse_receipt_sha256'] = root_rec.pop('nonsecurity_receipt_sha256')
+        with self.assertRaisesRegex(guard.Refusal, 'schema keys: Root admission'):
+            run_consent_with_mocks(c_legacy_root, by_path_legacy_root)
+
+        for root_field, bad_val, expected_msg in [
+            ('admitted_mode', 'tier1-and-compile', 'Root mode/decision'),
+            ('runner_sha256', h64('f'), 'Root candidate binding'),
+            ('subject_manifest_sha256', h64('f'), 'Root candidate binding'),
+            ('config_inputs_sha256', h64('f'), 'Root candidate binding'),
+            ('security_receipt_sha256', h64('f'), 'Root review binding'),
+            ('nonsecurity_receipt_sha256', h64('f'), 'Root review binding'),
+        ]:
+            c = make_routing_config('tier1')
+            by_path = make_records(c)
+            by_path[c['review_receipts']['root']['path']][root_field] = bad_val
+            with self.assertRaisesRegex(guard.Refusal, expected_msg):
+                run_consent_with_mocks(c, by_path)
+
+        for t1_field, bad_val, expected_msg in [
+            ('root_receipt_sha256', h64('f'), 'grant Root identity'),
+            ('config_inputs_sha256', h64('f'), 'grant scope identity'),
+            ('amendments_sha256', h64('f'), 'grant scope identity'),
+        ]:
+            c = make_routing_config('tier1')
+            by_path = make_records(c)
+            by_path[c['review_receipts']['tier1']['path']][t1_field] = bad_val
+            with self.assertRaisesRegex(guard.Refusal, expected_msg):
+                run_consent_with_mocks(c, by_path)
+
+        for t2_field, bad_val, expected_msg in [
+            ('root_receipt_sha256', h64('f'), 'grant Root identity'),
+            ('config_inputs_sha256', h64('f'), 'grant scope identity'),
+            ('amendments_sha256', h64('f'), 'grant scope identity'),
+            ('tier1_receipt_sha256', h64('f'), 'Tier 2 predecessor grant'),
+        ]:
+            c = make_routing_config('tier1-and-compile')
+            by_path = make_records(c)
+            by_path[c['review_receipts']['tier2']['path']][t2_field] = bad_val
+            with self.assertRaisesRegex(guard.Refusal, expected_msg):
+                run_consent_with_mocks(c, by_path)
+
+        c_ci_tamper = make_routing_config('tier1')
+        by_path_ci_tamper = make_records(c_ci_tamper)
+        by_path_ci_tamper[c_ci_tamper['bindings']['config_inputs']['path']]['cpu_arch'] = 'tampered'
+        with self.assertRaisesRegex(guard.Refusal, 'configuration projection differs'):
+            run_consent_with_mocks(c_ci_tamper, by_path_ci_tamper)
+
+    def test_decision_records_schema_locks_routing_tuples_and_nonsecurity_defs(self):
+        defs = DECISION_SCHEMA_JSON['$defs']
+        self.assertEqual(set(defs.keys()), {'security', 'nonsecurity', 'root', 'tier1', 'tier2'})
+        self.assertNotIn('muse', defs)
+        expected_req = [
+            'schema_version',
+            'authority_granted_by_this_file_alone',
+            'kind',
+            'reviewer_role',
+            'decision',
+            'primary_model',
+            'requested_model',
+            'returned_identity',
+            'effort',
+            'fallback_status',
+            'terminal_sha256',
+            'report_sha256',
+            'runner_sha256',
+            'source_manifest_sha256',
+            'subject_manifest_sha256',
+        ]
+        for key in ('security', 'nonsecurity'):
+            d = defs[key]
+            self.assertEqual(d['required'], expected_req)
+            self.assertEqual(d['properties']['primary_model'], {'const': 'claude-opus-5-5'})
+            self.assertEqual(
+                d['properties']['requested_model'],
+                {'enum': ['claude-opus-5-5', 'gemini-4-argon-high']},
+            )
+            self.assertEqual(
+                d['properties']['returned_identity'],
+                {'enum': ['claude-opus-5-5', 'gemini-4-argon-high']},
+            )
+            self.assertEqual(len(d['oneOf']), 2)
+            b0 = d['oneOf'][0]['properties']
+            b1 = d['oneOf'][1]['properties']
+            self.assertEqual(
+                (b0['primary_model']['const'], b0['requested_model']['const'], b0['returned_identity']['const'], b0['effort']['const'], b0['fallback_status']['const']),
+                ('claude-opus-5-5', 'claude-opus-5-5', 'claude-opus-5-5', 'high', 'primary'),
+            )
+            self.assertEqual(
+                (b1['primary_model']['const'], b1['requested_model']['const'], b1['returned_identity']['const'], b1['effort']['const'], b1['fallback_status']['const']),
+                ('claude-opus-5-5', 'gemini-4-argon-high', 'gemini-4-argon-high', 'high', 'standing_opus_quota_outage_fallback'),
+            )
+        root_def = defs['root']
+        self.assertIn('nonsecurity_receipt_sha256', root_def['required'])
+        self.assertNotIn('muse_receipt_sha256', root_def['required'])
+        rr_schema = CONFIG_SCHEMA_JSON['properties']['review_receipts']
+        self.assertEqual(rr_schema['required'], ['security', 'nonsecurity', 'root', 'tier1'])
+        self.assertNotIn('muse', rr_schema['properties'])
+
+
+if __name__ == '__main__':
+    unittest.main()

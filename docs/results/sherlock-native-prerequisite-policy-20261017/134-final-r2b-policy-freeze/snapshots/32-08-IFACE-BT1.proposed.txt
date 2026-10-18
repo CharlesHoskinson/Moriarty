@@ -1,0 +1,435 @@
+IFACE-BT1 (corrected, cycle 1): interface contract for the BT-1 blind test author
+Status: PROPOSED, UNADOPTED, UNEXECUTED. Grants nothing.
+Author: the designated security contract owner (canonical claude-opus-5-5), who has seen the implementation. The blind author has not seen it and must not.
+Root records this file's SHA-256 outside this file.
+This text states observable behaviour and data contracts only. It reproduces no implementation code. Anything marked UNSPECIFIED must not be asserted by any test. Where README.md, AMENDMENTS.proposed.json or CONTRACT-ADDENDUM.json wording differs from this text (for example, README.md says the walk refuses unreadable directories), this text governs every assertion.
+
+IF-0 Subject and access
+- Module: bounded_sdk_compile.
+- Guard bytes SHA-256: fc1c1c980541d5d8dffb49f3ed4001f3f9e62e1f732f9ea9bae47ce1cb22f5bf.
+- The run driver verifies these bytes. Tests never open, read, hash, import or exec the guard file.
+- Obtain the module only as sys.modules['bounded_sdk_compile'], which the driver preloads. Raise if it is absent.
+- Environment: interpreter /usr/bin/python3 (observed realpath /usr/bin/python3.14), Linux, non-root uid. The filesystem type of TMPDIR and the effective capabilities of the run are not observed by any record cited here; Root must record both before launch.
+- Tests may call only the functions in IF-4 to IF-13. Apart from those functions, guard.Refusal, guard.os and the IF-14 seams, tests may read only the three guard attributes named in IF-2.
+- Patching is limited to the IF-14 seams and to stdlib functions that are wrapped for spying or replaced for trapping. The only other permitted replacements are the two this contract requires to return a modified result: os.readlink returning text of a different length (IF-6) and os.fstat returning a mismatched file type (IF-10).
+
+IF-1 Exceptions
+- Refusal is defined as class Refusal(RuntimeError).
+- Every contract predicate failure below raises Refusal. Assert it with assertRaises(guard.Refusal).
+- Where a case below says OSError, the stdlib OSError propagates unwrapped. Its subclass is UNSPECIFIED unless one is named. Assert OSError.
+- For inputs whose outcome this contract states, TypeError arises only as described in IF-4.5 and IF-7. Inputs whose outcome is UNSPECIFIED are not tested.
+- Exception message text is UNSPECIFIED everywhere. Never use assertRaisesRegex on a guard exception, and never inspect the str() of one.
+
+IF-2 Constants
+- Tests read from the guard only GIT_SYMLINK_MODE, GIT_SYMLINK_TEXT_BYTES and GIT_SYMLINKS, and O0 asserts only those three.
+- C04, CA0, CARGO, TOOLCHAIN, WORKTREE and REQUIRED_MASKS below are contract literals: take them from this text, never from the guard. Whether the guard has an attribute with any of these six names, and its type, is UNSPECIFIED.
+- GIT_SYMLINK_MODE == '120000' (a str).
+- GIT_SYMLINK_TEXT_BYTES == (33, 55) (a tuple of int; both bounds inclusive).
+- GIT_SYMLINKS is a frozenset of exactly 16 tuples (commit, path, oid), all str.
+  - It equals {(r['commit'], r['path'], r['oid']) for r in rows} over the rows of exact16_git_symlinks.json.
+  - There are 8 rows per commit, for commits C04 = 04c9c5d9bcebb8d4427d8589fb54d58a55599c14 and CA0 = a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1.
+- validate compares config values against the literal strings below. These are config data only; validate never touches them on disk.
+  - CARGO = /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo
+  - TOOLCHAIN = /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu
+  - WORKTREE = /home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016
+  - REQUIRED_MASKS is these 8 strings:
+    - /run
+    - /var/lib/docker
+    - /nix/var/nix/daemon-socket
+    - /nix/var/determinate
+    - /home/charl
+    - /home/charl/.cargo
+    - /sys/fs/cgroup
+    - /home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014
+
+IF-3 Value domains
+- NAP (normalized absolute path):
+  - a str that starts with '/';
+  - equal to str(pathlib.Path(s)), so it has no trailing '/', no inner '//' and no '/./';
+  - no '..' component and no NUL.
+  - A value starting with exactly two slashes is UNSPECIFIED.
+- NRP (normalized relative path):
+  - a str that is not absolute;
+  - equal to str(pathlib.PurePosixPath(s));
+  - no '..' component, and not '.' or ''.
+  - So './a', 'a/', 'a//b' and 'a/./b' are not NRP.
+- HEX64 is exactly 64 characters from 0-9a-f. HEX40 is exactly 40 characters from 0-9a-f. Uppercase is never accepted.
+- PIN: a dict with exactly the keys path (a NAP) and sha256 (a HEX64).
+- Positive int: the type is exactly int and the value is > 0. True and 1.0 both refuse.
+- Link path of a checkout row: str(PurePosixPath(relative_root) / relative), which is relative_root + '/' + relative.
+
+IF-4 validate(c) -> c
+
+4.0 General
+- When it accepts, validate returns the same object c (identity) and does not mutate c.
+- It performs no I/O of any kind: no open, stat, lstat, readlink, listdir, scandir or jload.
+- validate is INDEPENDENT of config.schema.json. It does not run the schema and does not implement all of it, and it enforces predicates the schema lacks (4.2, 4.3). So a schema-valid config may be refused, and a schema-invalid config may be accepted.
+- Acceptance says nothing about real host paths, pins, quotas, mounts, cgroups, provisioning or numeric adequacy.
+- The value 1 satisfies every numeric ceiling that validate checks. That shows only that the config passes validate. It does not show that any resource is adequate.
+
+4.1 Positive base recipe
+A config built by exactly this procedure is accepted.
+Start from a deep copy of the dict parsed from the adjacent config.example.json. Keep all its other values unchanged, and set the following:
+ a. source_authoring_only = False. mode stays 'tier1'. external_tier_consent stays {'tier1': False, 'tier2': False}.
+ b. bindings.config_inputs = a PIN.
+    Recommended for reuse in IF-13: set bindings.amendments.sha256 to the full amendments pin of IF-13. bindings.embedded.sha256 already equals the full embedded pin.
+ c. masks = a list of the 8 REQUIRED_MASKS.
+ d. Every one of the 7 x 13 limits values = 1.
+    - Phases: A0, A, B, C, D, E, F.
+    - Keys: wall_seconds, memory_bytes, pids, cpu_quota_us, cpu_period_us, cpu_time_us, stdout_bytes, stderr_bytes, packet_bytes, source_bytes, target_tmp_bytes, file_bytes, namespace_tmpfs_bytes.
+ e. cgroup = {'envelope_path': '/test-only/envelope', 'supervisor_leaf_name': 'test-supervisor', 'phase_parent_name': 'test-phases', 'envelope_memory_max': 1, 'envelope_pids_max': 1, 'envelope_cpu_max': '1 1'}.
+ f. Each of the 3 quota_mounts: keep its mountpoint, and set mount_id 1, device 'test-only-device', max_bytes 1, max_inodes 1.
+ g. review_receipts = exactly the keys security, muse, root and tier1, each a PIN.
+ h. old_home_stat_manifest = a PIN.
+ i. total_wall_seconds = 1 and supervisor_cpu_seconds = 1.
+ j. registry_roots = a list of exactly 423 dicts {'archive': NRP, 'source_relative': NRP, 'package_checksum': HEX64}. Distinct values are recommended but not required.
+ k. git_checkouts = a list of exactly 2 dicts {'relative_root': NRP, 'commit': ..., 'files': [...]}.
+    - One dict has commit C04 and the other CA0.
+    - The two relative_root values must differ, and neither may be a path-ancestor of the other. Recommended: 'git/checkouts/test-ledger/04c9c5d' and 'git/checkouts/test-ledger/a01a1ea'.
+    - Each files list contains the 8 fixture rows of that commit, each as {'relative': path, 'blob': oid, 'mode': '120000'}.
+    - Each files list also contains at least one regular row {'relative': NRP, 'blob': HEX40, 'mode': '100644' or '100755'}.
+    - Every relative is unique within its checkout. No regular row may have one of the same checkout's '120000' paths as a path-ancestor.
+ l. includes = a list of valid include rows (4.2). It may be empty.
+ m. expected_generated_files = a list of valid generated rows (4.2). It may be empty.
+
+Recommendations and notes:
+- Give the base one git-blob include and one archive-member include, plus one generated row of each kind, so that negatives can mutate an existing valid row.
+- The example's own paths, acquired_archives, source_copy_mounts, readonly_tools, executable_pins, source_manifest, the other bindings, quota mountpoints, cpu_arch and version already satisfy 4.2.
+- tier1-and-compile variant (also accepted): set mode = 'tier1-and-compile' and add review_receipts.tier2 = a PIN. In this mode validate checks external_tier_consent only for bool type.
+- Extra NAP masks beyond the 8 are accepted.
+- A limit value exactly equal to its ceiling is accepted, and so is a log value of 16777216.
+
+4.2 Refusal predicates
+With the base otherwise intact, each item below raises Refusal.
+
+Top level, version and mode:
+- c is not a dict, or its key set is not exactly the 24 top-level keys of config.example.json (a key is missing or extra).
+- version is not equal to 2 under Python ==. So 2.0 does not refuse; use 1 or 3 as refusal values.
+- mode is not 'tier1' or 'tier1-and-compile'.
+
+No-null rule:
+- Any None anywhere in c, at any depth, as a dict value or a list item.
+- Any str value anywhere that is '', contains NUL, or starts with 'UNBOUND'. Dict keys are not checked by this rule.
+
+acquired_archives:
+- Not a list of exactly 5, or any entry not a PIN.
+
+Scalar fields:
+- total_wall_seconds or supervisor_cpu_seconds is not a positive int.
+- external_tier_consent keys are not exactly tier1 and tier2, or a value is not a bool.
+- source_authoring_only is not the object False. For example, 0 refuses.
+- cpu_arch is not 'x86_64-unknown-linux-gnu'.
+
+bindings:
+- Keys are not exactly runner, config_inputs, subject, staging, host_units, embedded and amendments.
+- Any value is not a PIN. validate does not compare pin values with fixed hashes.
+
+paths:
+- Keys are not exactly worktree, execution_root, source_home, target, tmp, packet, empty_home, mask_empty and config.
+- Any value is not a NAP.
+- worktree is not WORKTREE.
+- Any of source_home, target, tmp, packet, empty_home or mask_empty has a pathlib parent other than execution_root.
+- The 9 values are not pairwise distinct.
+
+masks:
+- masks is not a list.
+- REQUIRED_MASKS is not a subset of masks.
+- Any mask is not a NAP.
+
+readonly_tools:
+- Any entry is not a NAP, or set(readonly_tools) is not {TOOLCHAIN}.
+
+source_copy_mounts:
+- Not a list of exactly 6, or any entry is not a NAP.
+- set(source_copy_mounts) does not equal {'/home/charl/.cargo'} union the 5 acquired_archives paths, or that union does not have size 6.
+
+limits:
+- Phase keys are not exactly the 7 phases, or any phase's keys are not exactly the 13 keys.
+- Any value is not a positive int.
+- Any stdout_bytes or stderr_bytes is > 16777216.
+- Ceilings are inclusive:
+  - A: wall_seconds <= 900; memory_bytes <= 2147483648.
+  - B: wall_seconds <= 600; memory_bytes <= 2147483648; pids <= 256; source_bytes <= 1287099500.
+  - C: wall_seconds <= 1200; memory_bytes <= 2147483648; packet_bytes <= 67108864.
+  - E: wall_seconds <= 120; memory_bytes <= 2147483648; pids <= 256; source_bytes <= 1287099500.
+  - F: wall_seconds <= 2700; memory_bytes <= 8589934592; pids <= 1024; target_tmp_bytes <= 21474836480.
+  - A0 and D have no ceilings beyond positivity and the log ceilings.
+
+cgroup:
+- Keys are not exactly envelope_path, supervisor_leaf_name, phase_parent_name, envelope_memory_max, envelope_pids_max and envelope_cpu_max.
+- envelope_path:
+  - is not a NAP; or
+  - is not one or more segments, each '/' followed by one character of [A-Za-z0-9_] and then 0 to 127 characters of [A-Za-z0-9_.@-]; or
+  - has a segment starting with 'cgroup.'.
+- Either child name is not a str of one [a-z] character followed by 0 to 62 characters of [a-z0-9-], or it starts with 'sdk-once-'.
+- The two child names are equal.
+- envelope_memory_max or envelope_pids_max is not a positive int.
+- envelope_cpu_max is not a str of two space-separated decimal integers, each starting with a nonzero digit.
+
+quota_mounts:
+- Keys are not exactly source_home, target_tmp and packet.
+- Any entry's keys are not exactly mountpoint, mount_id, device, max_bytes and max_inodes.
+- mountpoint is not a NAP.
+- mount_id, max_bytes or max_inodes is not a positive int.
+- device is subject only to the no-null rule.
+
+review_receipts:
+- In mode tier1, keys are not exactly security, muse, root and tier1.
+- In mode tier1-and-compile, keys are not exactly those four plus tier2.
+- Any value is not a PIN.
+
+Manifests:
+- old_home_stat_manifest or source_manifest is not a PIN.
+
+executable_pins:
+- Any entry's keys are not exactly path, realpath and sha256.
+- path or realpath is not a NAP, or sha256 is not a HEX64.
+- The set of paths is not a superset of {CARGO, '/usr/bin/bwrap', '/usr/bin/python3'}.
+
+registry_roots:
+- Any entry's keys are not exactly archive, source_relative and package_checksum.
+- archive or source_relative is not an NRP, or package_checksum is not a HEX64.
+- The length is not 423.
+
+git_checkouts:
+- Not a list of exactly 2.
+- An entry's keys are not exactly relative_root, commit and files.
+- relative_root is not an NRP, or commit is not a HEX40.
+- A file row's keys are not exactly relative, blob and mode.
+- relative is not an NRP, or blob is not a HEX40.
+- mode is not one of the str values '100644', '100755' or '120000'. The int 120000 refuses.
+- A relative is duplicated within one checkout.
+- A '120000' row's (commit, relative, blob) is not in GIT_SYMLINKS.
+- For one checkout, the set of its '120000' triples does not equal the GIT_SYMLINKS triples of its commit. Omission, re-moding a link row to '100644' or '100755', re-blobbing and rotation all hit this rule.
+- A row lies strictly beneath one of the same checkout's link paths.
+- The set of the two commits is not {C04, CA0}. A foreign commit and a duplicated commit both hit this rule.
+- The two relative_root values are equal, or one is a path-ancestor of the other. This applies in either direction, whether or not the inner root is at or under a link path.
+- The combined link paths are not 16 distinct strings.
+
+includes:
+- An entry's keys are not exactly relative, algorithm, digest and source_identifier.
+- relative is not an NRP.
+- algorithm is not 'archive-member' or 'git-blob'.
+- digest is not a HEX64 for archive-member, or not a HEX40 for git-blob.
+- relative ends in '.zkir', '.bzkir' or '.prover'.
+- relative is duplicated.
+- source_identifier is subject only to the no-null rule.
+
+expected_generated_files:
+- An entry's keys are not exactly relative and kind.
+- relative is not an NRP.
+- kind is not cargo-ok, cargo-checksum, cargo-lockfile or git-control.
+- A cargo-ok row whose last path component is not '.cargo-ok'.
+- A cargo-checksum row whose last component is not '.cargo-checksum.json'.
+- A cargo-lockfile row whose whole relative is not one of '.package-cache', '.package-cache-mutate', '.global-cache', '.global-cache-wal' or '.global-cache-shm'.
+- A git-control row whose relative does not start with '<relative_root of some checkout>/.git/'.
+
+Link paths:
+- Any include or generated relative equals a link path, or starts with a link path + '/'.
+
+Isolation notes:
+- The link paths ending spend.zkir and spend.bzkir also carry excluded include suffixes. An include AT a link path therefore isolates the link predicate only for the other 6 link names.
+- For the 'under' case, use the link path + '/child.bin'.
+- A generated row AT a link path cannot satisfy any kind rule. Test generated rows only under a link: the link path + '/.cargo-ok' with kind cargo-ok, or + '/.cargo-checksum.json' with kind cargo-checksum.
+
+4.3 Schema constraints validate does NOT enforce
+Do not write refusal tests for these. Acceptance is not a required property and need not be asserted.
+- tier1 mode with external_tier_consent.tier2 True.
+- uniqueItems on masks or readonly_tools. For example, readonly_tools [TOOLCHAIN, TOOLCHAIN].
+- The schema's source_copy_mounts enum of the example's exact strings.
+- minItems on includes, git_checkouts[].files or executable_pins, beyond what 4.2 implies.
+- The device minLength, beyond the no-null rule.
+- Schema string patterns, beyond NAP, NRP and the hex rules.
+- Correspondence between configs and real files: validate never compares pins with files, quota mountpoints with paths, or archive paths with any staging data.
+
+4.4 Order and isolation
+- Predicates are checked in a fixed internal order, and the first failing one raises. Which predicate fires is UNSPECIFIED.
+- Each negative must change only the predicate it targets, so that its Refusal can only come from that predicate.
+
+4.5 Type confusion
+- Where a str is required (any NRP, commit, blob, sha256, package_checksum or digest), a non-str value may raise TypeError instead of Refusal.
+- An element of masks that is not a str may raise TypeError instead of Refusal; an unhashable element, for example a list or dict, does raise TypeError. This overrides the masks NAP item in 4.2.
+- A dict key that is not a str, at any depth below the top level of c, may raise TypeError instead of Refusal. This overrides the 4.2 key-set items for such keys.
+- None of the values described in the three items above is ever accepted or coerced.
+- Where a list is required, a non-list value refuses for masks, acquired_archives, source_copy_mounts and git_checkouts (4.2), unless it is a dict with a non-str key (see above). For every other list-valued field the outcome for a non-list value is UNSPECIFIED; do not test it.
+- A test of such input must use assertRaises((guard.Refusal, TypeError)) and nothing narrower.
+
+IF-5 link_rows(c) -> dict and declared_links(c) -> frozenset
+- link_rows:
+  - Reads only c['git_checkouts'] (relative_root, commit and files of each entry; relative, blob and mode of each file row).
+  - Returns {link path: (commit, relative, blob)} for rows whose mode is exactly the str '120000'. Other rows are excluded.
+  - Keys are '/'-separated str.
+  - Performs no I/O and no validation; it does not consult GIT_SYMLINKS.
+- declared_links:
+  - Returns frozenset(pathlib.Path(c['paths']['source_home']) / key for each key of link_rows(c)).
+  - Performs no I/O.
+  - Raises Refusal if a key is not an NRP.
+- Synthetic link paths are therefore allowed in IF-11 and IF-12 tests.
+
+IF-6 link_identity(path) -> (text: bytes, oid: str)
+- path is a str or pathlib.Path naming a NAP.
+- Raises Refusal, with no coercion, when:
+  - path is not a NAP;
+  - any ancestor of path is a symlink;
+  - path is not a symlink (a regular file or a directory);
+  - the lstat size is < 33 or > 55;
+  - the two stable_stat results differ, or len(text) differs from the first lstat size.
+- Raises OSError when path does not exist.
+- Order of operations:
+  1. ancestor check;
+  2. first stable_stat(path);
+  3. exactly one os.readlink, with the bytes form of the path;
+  4. second stable_stat(path).
+- Every refusal before step 3 happens without any readlink call.
+- Returns the raw link text bytes, and the lowercase 40-hex SHA-1 over b'blob ' + decimal ASCII length + one NUL byte + text.
+- It never opens, follows, resolves, stats-with-follow or reads the target.
+- stable_stat(path) is an IF-14 seam:
+  - It returns a dict with keys device, inode, size, mtime_ns, mode and links, taken from os.lstat(path).
+  - link_identity calls it exactly twice on every call in which os.readlink returns: once before and once after the readlink. On a refusal before readlink, the number of calls is UNSPECIFIED. tree_hashes also uses it for regular files.
+  - A drift test should wrap the real function and alter one key only on the second call.
+
+IF-7 link_target(relative_link, text, regular_rows) -> str
+- Arguments:
+  - relative_link: the link row's checkout-relative NRP, as a str.
+  - text: bytes.
+  - regular_rows: a container of checkout-relative str, meaning the same checkout's rows whose mode is not '120000'. It is queried with 'in'.
+- It is purely lexical and makes no filesystem call of any kind. The 33..55 size bound is not applied here.
+- Algorithm:
+  - Start from the components of relative_link's parent. This list is empty for a link at the checkout root.
+  - For each '/'-separated component of text: '..' removes the last component, and any other component appends.
+  - Zero or more leading '..' components are allowed.
+- Raises Refusal when:
+  - any byte is outside 0x21..0x7E, so space 0x20, tab, NUL, DEL and every byte >= 0x80 all refuse;
+  - text starts with '/' or is empty;
+  - any component is '' or '.', so '//', a trailing '/', './x' and 'x/./y' all refuse;
+  - a '..' follows a non-'..' component (ascending after descending);
+  - a '..' would remove a component when none remain (escaping above the checkout root);
+  - text consists only of '..' components;
+  - '.git' is an exact component of the resulting path, including components inherited from the link's own parent ('.gitignore' and '.github' are allowed);
+  - the resulting path is not in regular_rows.
+- Returns the resulting path as a '/'-joined str.
+- TypeError if text is not bytes. Do not test this.
+
+IF-8 walk_tree(root, links=frozenset()) -> (files, found, dirs), and walk_files(root) -> files
+- Arguments:
+  - root: a str or Path naming the NAP of an existing directory.
+  - links: a set or frozenset of pathlib.Path, each equal to pathlib.Path(root) / relative. Matching uses Path equality, so str elements never match.
+- Behaviour:
+  - Every directory is listed through a directory fd opened with O_NOFOLLOW.
+  - Entries are classified without following links.
+  - A symlink is never opened, stat'ed through or descended.
+- Returns:
+  - files: a sorted list of Path for regular files;
+  - found: a set of Path for symlinks that are in links;
+  - dirs: a sorted list of Path for directories, excluding root itself.
+  - files and dirs are sorted in pathlib.Path order, which can differ from the order of their str forms. Build expected lists with sorted() over Path objects.
+- Raises Refusal when:
+  - root is not a NAP;
+  - root, or an ancestor of root, is a symlink;
+  - any symlink in the tree is not in links;
+  - a path in links is present as a regular file or a directory;
+  - there is an entry that is not a regular file, directory or symlink. Do not create FIFOs, sockets or devices.
+- A path in links that is absent is NOT refused by walk_tree. It is simply absent from found.
+- Raises OSError when root is missing or is not a directory, or when root or any directory in the tree has mode 0o000. That case assumes the run uid is non-root and holds no effective capability that overrides file permission checks (IF-0). Other partial-permission modes, such as a directory that is readable but not searchable, are UNSPECIFIED; do not test them.
+- walk_files(root) equals walk_tree(root)[0] with no declared links, so any symlink refuses.
+
+IF-9 tree_hashes(root, links=frozenset()) -> dict
+- First it runs walk_tree(root, links), so every IF-8 outcome applies first.
+- It then raises Refusal if found != set(links) (a missing declared link). This happens before any file content or link text is read and before any readlink.
+- Keys:
+  - the '/'-separated str path, relative to root, of each regular file and each declared link;
+  - directories are not keys, so empty directories are invisible.
+- Values:
+  - for a regular file: the lowercase 64-hex SHA-256 of its bytes;
+  - for a declared link: 'git-symlink:' + the 40-hex oid from link_identity. Every declared link's text must therefore be 33..55 bytes, or Refusal results.
+- Raises Refusal if a regular file's stable_stat changes during hashing.
+- Raises OSError if a regular file is unreadable.
+- It never opens, follows or reads a link target.
+- A regular file's content is read by os.open with O_NOFOLLOW followed by os.fdopen, which calls io.open with an int fd. Around tree_hashes, freeze_source and frozen_source, a spy on os.open, io.open or builtins.open must forward every call and judge calls by path, ignoring int arguments; never trap these functions there.
+
+IF-10 chmod_nofollow(path, directory) -> None
+- It opens path with O_RDONLY | O_NOFOLLOW | O_CLOEXEC, adding O_DIRECTORY when directory is True, and then calls fstat.
+- It changes the mode only through os.fchmod on that fd, always closes any fd it opened, and never calls os.chmod.
+- Success cases:
+  - a regular file with directory=False: the new mode is the old permission bits with all write bits (0o222) cleared;
+  - a directory with directory=True: the new mode is exactly 0o555.
+- Raises OSError, with no mode change, when:
+  - path is a symlink, for either value of directory;
+  - directory=True on a non-directory;
+  - path is missing.
+- Raises Refusal, with no mode change, when:
+  - directory=False on a directory (the open succeeds and the fstat type mismatches);
+  - any other fstat type mismatch. Simulate this only by patching os.fstat; never create FIFOs.
+
+IF-11 freeze_source(c) -> None
+- What it reads from c:
+  - c['paths']['source_home']: the NAP of a real directory with no symlink ancestors;
+  - c['paths']['packet']: a NAP str;
+  - c['git_checkouts'], through declared_links, unless declared_links is patched.
+  - When jload and receipt are patched, nothing else in c is read.
+- It calls jload exactly once, with pathlib.Path(packet) / 'C_RAW_IDENTITIES.json'. The 'files' entry of the returned dict is the expected map.
+- If tree_hashes(source_home, declared_links(c)) != expected, it raises Refusal before any mode change and without calling receipt. A Refusal or OSError from the walk or hashing propagates the same way.
+- Otherwise:
+  - every regular file gets chmod_nofollow(file, False);
+  - then every directory gets chmod_nofollow(dir, True), deepest first;
+  - then root gets chmod_nofollow(root, True).
+- Declared links are never opened or chmod'ed. Every os.open during freeze_source includes O_NOFOLLOW, and os.chmod is never called.
+- Finally it calls receipt exactly once, positionally: receipt(c, 'D_FREEZE.json', value, 'D').
+  - value is a dict with exactly the keys 'H_S' and 'files'.
+  - 'H_S' is a 64-hex str whose derivation is UNSPECIFIED.
+  - 'files' equals expected.
+- receipt is a driver tripwire (IF-14). It MUST be patched in every test that can reach it.
+
+IF-12 frozen_source(c) -> dict
+- It needs c['paths']['source_home'] and c['paths']['packet'], plus git_checkouts unless declared_links is patched.
+- It calls jload exactly once, with pathlib.Path(packet) / 'D_FREEZE.json'.
+- If tree_hashes(source_home, declared_links(c)) == returned['files'], it returns the very object jload returned (identity). Otherwise it raises Refusal.
+- A Refusal or OSError from the walk or hashing propagates.
+- Each of these changes is detected as Refusal:
+  - changed bytes in a regular file;
+  - a regular file added or removed anywhere, including in a new subdirectory;
+  - a declared link removed;
+  - a declared link replaced by a regular file or a directory;
+  - a declared link's text changed (new text of 33..55 bytes with a different blob);
+  - a new undeclared symlink anywhere;
+  - a regular file replaced by a symlink.
+- Not covered, and out of contract (do not assert either way): mode bits, ownership, timestamps, empty directories added or removed, and directory permissions.
+- After freeze_source, directories are 0o555 and files have no write bits. A mutation test must first restore owner write permission on the specific real objects it changes.
+
+IF-13 approved_includes(c)
+- Full pins:
+  - embedded: ac397cfd5e0952b01ae1b892997808e95e13d3ac10ecff2e90418e484fab57d7;
+  - amendments: 3676da94b6ad533a2276271c55c3c47b8c4473170b1200cf0dcae2b362fbda5d. This is the SHA-256 of AMENDMENTS.proposed.json, which cannot contain its own hash.
+- It first raises Refusal unless c['bindings']['embedded']['sha256'] equals the embedded pin exactly.
+- It then raises Refusal unless c['bindings']['amendments']['sha256'] equals the amendments pin exactly.
+- Both checks happen before any jload call. Every other value refuses, including the predecessor 78daa6750da05e14a353398dece97e505a4e2b4fe826987962b71937a7a499c2, uppercase forms and one-character changes.
+- When both pins match, the next action is jload(c['bindings']['amendments']['path']), called with that str.
+- Positive control:
+  - patch jload with a function that raises a test-local exception;
+  - the call must raise that exception;
+  - the first jload argument must equal the amendments path.
+- Behaviour after the first jload is UNSPECIFIED; do not assert it.
+- jload MUST be patched in every approved_includes test.
+
+IF-14 Seams, harness and tripwires
+- Patchable module attributes, looked up at call time. Patch them with unittest.mock.patch.object(guard, name, ...).
+  - jload(path): returns the parsed JSON value.
+  - receipt(c, name, value, phase).
+  - stable_stat(path): returns a dict, as described in IF-6.
+  - declared_links(c).
+- guard.os is the stdlib os module. Patching guard.os.X patches os.X process-wide while the patch is active.
+- Before loading tests, the future driver replaces 28 guard attributes with tripwires. A call to any of them raises AssertionError('ordinary driver tripwire: ...'), which fails the test unless that name is patched for that call. The 28 attributes are:
+  main, run, worker, consent, freeze_inputs, stage, verify_raw, metadata_check, output_check, executing_identity, bound_identities, old_home_stats, check_pin, quotas, check_tmpfs, owned_paths, write_new, receipt, sealed_memfd, network_pending, _cg_text, _cg_children, _cg_writable, _cg_dirstat, _cg_mkdir, _cg_rmdir, _cg_write, _mount_rows.
+- The driver also replaces 17 host surfaces process-wide in the same way:
+  subprocess.Popen, os.system, os.fork, os.forkpty, os.posix_spawn, os.posix_spawnp, os.execv, os.execve, os.execvp, os.execvpe, os.memfd_create, socket.socket, socket.socketpair, signal.signal, signal.setitimer, signal.alarm, resource.setrlimit.
+- Among IF-4 to IF-13, only freeze_source reaches a tripwire (receipt).
+
+IF-15 Out of contract (UNSPECIFIED; never assert)
+- exception messages;
+- which validate predicate fires first;
+- any syscall sequence other than the ones stated above;
+- how H_S is derived;
+- any function not named in IF-4 to IF-13, including verify_raw (which is tripwired);
+- paths that start with exactly two slashes;
+- real host paths and host state;
+- the adequacy of any number.
