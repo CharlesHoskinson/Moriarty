@@ -16,11 +16,13 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Compile dedicated draft fixtures to HostOnly artifacts](how-to/compile-draft-program.md)
 - [Observe a Core2 stage financial result](how-to/observe-stage-financial-result.md)
 - [Use typed word arithmetic](how-to/use-typed-word-arithmetic.md)
+- [Prepare owned generic program types](how-to/prepare-generic-program-types.md)
 
 ## Reference
 
 - [Components](reference/components.md)
 - [Nominal declaration preparation API](reference/nominal-declaration-api.md)
+- [Whole-program generic type preparation API](reference/generic-program-preparation-api.md)
 - [Profiles and results](reference/profiles-results.md)
 - [Resource manifest report API](reference/resource-manifest-api.md)
 - [Host machine](reference/host-machine.md)
@@ -41,6 +43,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Resource reporting boundaries](explanation/resource-reporting-boundaries.md)
 - [Source occurrence identity](explanation/source-occurrence-identity.md)
 - [Nominal declaration preparation and runtime](explanation/nominal-declaration-boundary.md)
+- [Whole-program type preparation and runtime](explanation/whole-program-types-and-runtime.md)
 - [Relations, witnesses and ledger](explanation/relations-witnesses-ledger.md)
 - [Evidence and acceptance](explanation/evidence-and-acceptance.md)
 - [Chunks and financial boundaries](explanation/chunks-and-financial-boundaries.md)

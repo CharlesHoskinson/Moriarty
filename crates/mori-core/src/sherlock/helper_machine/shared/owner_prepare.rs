@@ -478,6 +478,241 @@ pub fn prepare_nominal_declarations(
     })
 }
 
+fn pass_t_wrong(loc: &str) -> super::owner_ext_type_builder::ExtTypeBuildError {
+    super::owner_ext_type_builder::ExtTypeBuildError::Host( super::HostViolation {
+        kind: super::HostViolationKind::WrongVariant,
+        clause: None,
+        rule: None,
+        locator: Some(loc.to_string()),
+    })
+}
+
+fn reject_absent_fin_expr(
+    expr: &super::owner_ext_t3_uses::ExtExpr,
+) -> Result<Option<&str>, Tooling> {
+    use super::owner_ext_t3_uses::ExtExpr;
+    match expr {
+        ExtExpr::StateRead { .. }
+        | ExtExpr::LiabilityPresent { .. }
+        | ExtExpr::LiabilityAmount { .. }
+        | ExtExpr::Fin { .. }
+        | ExtExpr::Await { .. } => Err(Tooling::UnsupportedFeature {
+            feature: FeatureKind::FinancialSyntax,
+            locator: None,
+        }),
+        _ => Ok(None),
+    }
+}
+
+fn ensure_absent_finance_source(
+    program: &super::owner_ext_source_program::ExtProgram,
+) -> Result<(), Tooling> {
+    use super::ext_source_traversal::walk_ext_expr_preorder;
+    if !program.assets.is_empty() || !program.states.is_empty() || !program.inputs.is_empty() {
+        return Err(Tooling::UnsupportedFeature {
+            feature: FeatureKind::FinancialSyntax,
+            locator: None,
+        });
+    }
+    walk_ext_expr_preorder(&program.entry, |e| reject_absent_fin_expr(e).map(|_| ()))?;
+    for function in &program.functions {
+        walk_ext_expr_preorder(&function.body, |e| reject_absent_fin_expr(e).map(|_| ()))?;
+    }
+    Ok(())
+}
+
+fn collect_ext_program_names(
+    program: &super::owner_ext_source_program::ExtProgram,
+    l: &LayoutSchemaC,
+) -> Result<
+    (Vec<String>, super::owner_ext_type_builder::PassBTypeNameIds),
+    super::owner_ext_type_builder::ExtTypeBuildError,
+> {
+    use super::ext_pass_b_walk::for_each_ext_program_name;
+    use super::owner_ext_type_builder::ExtTypeBuildError;
+    ensure_absent_finance_source(program).map_err(ExtTypeBuildError::CoreTooling)?;
+    let mut distinct: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    let mut bytes_total: u128 = 0;
+    for_each_ext_program_name(
+        program,
+        &mut |n| push_distinct_name(&mut distinct, &mut bytes_total, n, l),
+        &mut reject_absent_fin_expr,
+    )
+    .map_err(ExtTypeBuildError::CoreTooling)?;
+    let interned_names: Vec<String> = distinct.into_iter().map(|s| s.to_string()).collect();
+    let decl_ids = bind_owner_decl_name_ids(&program.types, &interned_names)
+        .map_err(ExtTypeBuildError::CoreTooling)?;
+    Ok((interned_names, decl_ids))
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PassTOutput {
+    pub tables: super::owner_ext_type_builder::BuiltAdtTypeTables,
+    pub records: Vec<super::owner_ext_t3_uses::T3Record>,
+}
+
+pub struct PassTSession<'v, 's> {
+    view: &'v super::owner_ext_type_builder::CheckedTypeDeclView<'v>,
+    builder: super::owner_ext_type_builder::OwnerExtTypeBuilder<'v>,
+    walker: super::owner_ext_t3_uses::T3UseWalker<'s>,
+    locator: Option<LocatorC>,
+    records: Vec<super::owner_ext_t3_uses::T3Record>,
+    poisoned: bool,
+}
+
+impl<'v, 's> PassTSession<'v, 's> {
+    pub fn begin(
+        domain: GrammarDomain,
+        view: &'v super::owner_ext_type_builder::CheckedTypeDeclView<'v>,
+        functions: &'s [super::owner_ext_t3_uses::ExtFunction],
+        entry: &'s super::owner_ext_t3_uses::ExtExpr,
+        locator: Option<LocatorC>,
+    ) -> Result<Self, super::owner_ext_type_builder::ExtTypeBuildError> {
+        use super::owner_ext_prepare_types::drain_pending_keys;
+        use super::owner_ext_t3_uses::T3UseWalker;
+        use super::owner_ext_type_builder::OwnerExtTypeBuilder;
+        if domain == GrammarDomain::DedicatedSorts {
+            return Err(pass_t_wrong("pass T under DedicatedSorts (G-10)"));
+        }
+        let mut builder = OwnerExtTypeBuilder::new_checked(view)?;
+        for &d in view.non_parameterized_decls() {
+            builder.register_non_parameterized_decl(d)?;
+        }
+        drain_pending_keys(view, &mut builder, locator.clone())?;
+        Ok(Self {
+            view,
+            builder,
+            walker: T3UseWalker::new(functions, entry),
+            locator,
+            records: Vec::new(),
+            poisoned: false,
+        })
+    }
+
+    pub fn process_next_use(
+        &mut self,
+    ) -> Result<Option<super::owner_ext_t3_uses::T3Record>, super::owner_ext_type_builder::ExtTypeBuildError> {
+        if self.poisoned {
+            return Err(pass_t_wrong("pass T session poisoned"));
+        }
+        let r = self.step();
+        if r.is_err() {
+            self.poisoned = true;
+        }
+        r
+    }
+
+    fn step(
+        &mut self,
+    ) -> Result<Option<super::owner_ext_t3_uses::T3Record>, super::owner_ext_type_builder::ExtTypeBuildError> {
+        use super::owner_ext_prepare_types::drain_pending_keys;
+        use super::owner_ext_t3_uses::{T3Record, T3UseKind};
+        let u = match self.walker.next_use()? {
+            Some(u) => u,
+            None => return Ok(None),
+        };
+        if self.builder.has_pending_keys() {
+            return Err(pass_t_wrong("T3 use with undrained FIFO"));
+        }
+        let b = &mut self.builder;
+        let (type_id, ctor_use) = match u.kind {
+            T3UseKind::Signature { ty } => (b.resolve_type_expr(ty, None, self.locator.clone())?, None),
+            T3UseKind::Constructor { ty, ctor, arity } => {
+                let r = b.resolve_construct_use(ty, ctor, arity, self.locator.clone())?;
+                (r.type_id, Some(r))
+            }
+            T3UseKind::PatternCtor { ty, ctor, arity } => {
+                let r = b.resolve_pattern_ctor_use(ty, ctor, arity, self.locator.clone())?;
+                (r.type_id, Some(r))
+            }
+        };
+        drain_pending_keys(self.view, &mut self.builder, self.locator.clone())?;
+        let ctor_id = match ctor_use {
+            Some(r) => Some(self.builder.resolved_ctor_id(r)?),
+            None => None,
+        };
+        let rec = T3Record { site: u.site, type_id, ctor_id };
+        self.records.push(rec);
+        Ok(Some(rec))
+    }
+
+    pub fn records(&self) -> &[super::owner_ext_t3_uses::T3Record] {
+        &self.records
+    }
+
+    pub fn finish(self) -> Result<PassTOutput, super::owner_ext_type_builder::ExtTypeBuildError> {
+        if self.poisoned || !self.walker.is_finished() {
+            return Err(pass_t_wrong("pass T finish before every T3 use processed"));
+        }
+        let tables = self.builder.finish()?;
+        Ok(PassTOutput { tables, records: self.records })
+    }
+}
+
+pub fn run_pass_t<'v, 's>(
+    domain: GrammarDomain,
+    view: &'v super::owner_ext_type_builder::CheckedTypeDeclView<'v>,
+    functions: &'s [super::owner_ext_t3_uses::ExtFunction],
+    entry: &'s super::owner_ext_t3_uses::ExtExpr,
+    locator: Option<LocatorC>,
+) -> Result<PassTOutput, super::owner_ext_type_builder::ExtTypeBuildError> {
+    let mut s = PassTSession::begin(domain, view, functions, entry, locator)?;
+    while s.process_next_use()?.is_some() {}
+    s.finish()
+}
+
+pub struct PreparedExtProgramSource {
+    pub program: super::owner_ext_source_program::ExtProgram,
+    pub domain: super::owner_ext_source_program::ExtDomain,
+    pub interned_names: Vec<String>,
+    pub decl_name_ids: super::owner_ext_type_builder::PassBTypeNameIds,
+    pub tables: super::owner_ext_type_builder::BuiltAdtTypeTables,
+    pub t3_records: Vec<super::owner_ext_t3_uses::T3Record>,
+}
+
+pub fn prepare_ext_program_types(
+    program: super::owner_ext_source_program::ExtProgram,
+    layout: &LayoutSchemaC,
+    domain: super::owner_ext_source_program::ExtDomain,
+    locator: Option<LocatorC>,
+) -> Result<PreparedExtProgramSource, super::owner_ext_type_builder::ExtTypeBuildError> {
+    use super::nominal_declaration_order::walk_declaration_type_occurrences;
+    use super::owner_ext_type_builder::{CheckedTypeDeclView, ExtTypeBuildError};
+    if layout.boundary_capacities_present {
+        return Err(ExtTypeBuildError::CoreTooling(Tooling::UnsupportedFeature {
+            feature: FeatureKind::BoundarySection,
+            locator: None,
+        }));
+    }
+    if !domain.is_finance_absent() {
+        return Err(ExtTypeBuildError::CoreTooling(Tooling::UnsupportedFeature {
+            feature: FeatureKind::FinancialInput,
+            locator: None,
+        }));
+    }
+    let (interned_names, decl_name_ids) = collect_ext_program_names(&program, layout)?;
+    let pass_t = {
+        let view = CheckedTypeDeclView::new_checked(
+            domain.grammar_domain,
+            &program.types,
+            &decl_name_ids,
+            &layout.bounds,
+        )?;
+        walk_declaration_type_occurrences(&view, |occ, _path, ty_expr| {
+            view.validate_declaration_type_occurrence(occ, ty_expr)
+        })?;
+        run_pass_t(domain.grammar_domain, &view, &program.functions, &program.entry, locator)?
+    };
+    Ok(PreparedExtProgramSource {
+        program,
+        domain,
+        interned_names,
+        decl_name_ids,
+        tables: pass_t.tables,
+        t3_records: pass_t.records,
+    })
+}
+
 /// Checked nominal declaration table producer binding declaration names into the unified
 /// Pass-B name pool of `program` + `decls`.
 pub fn prepare_program_nominal_declarations(

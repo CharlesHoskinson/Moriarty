@@ -39,9 +39,11 @@ matching source arm, retain binder occurrence paths and fresh bindings, and
 avoid executing unselected arm bodies. Constructor table source order alone is
 not evidence of either field evaluation or matching behavior.
 
-The full T3 source type-use walk, generic expression/constant/declaration/program
-tables and admission, iterative decoding, witness and boundary representations
-also remain outside this source unit. Existing DedicatedSorts behavior and its
+A separate [whole-program preparation unit](../reference/generic-program-preparation-api.md)
+now retains the owned extended source and observes T3 signatures followed by
+entry/function-body uses on the same type builder. Generic expression/constant/
+program lowering and admission, iterative decoding, witness and boundary
+representations remain outside that preparation result. Existing DedicatedSorts behavior and its
 nine frames do not implement those generic features. Strict recursive-first and
 recursive-last field tests and a genuine declaration-driven ordered-match case
 remain independent observable requirements.

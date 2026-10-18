@@ -89,3 +89,25 @@ actual F03 engine capture, paired K/Quint agreement or UIREQ-021 acceptance.
 ## Native06 retained-audit successor — observed refusal
 
 The [exact successor audit](../../results/sherlock-native06-retained-audit-regressions-20261018/fixed-successor-r2-20261018/README.md) exited2 after19.7301seconds: `run-unit lacks dep-info-associated compiled build script`. Five selected SDK-free parser/output methods and one new synthetic successor method passed beforehand; they are distinct from the failed real audit. No Cargo/passed-prefix replay or SDK executable/proof/target run is claimed. The prospective inventory comparison reports3,971 target stat records and3,544 total old regular-file hashes unchanged; outputs remain quarantined/unaccepted and cleanup owed. Host acceptance remains13/35; this result closes no clause and adds no circuit iteration.
+
+
+## Adopted finite F03 model-projection report — current15
+
+Root's [original021 adoption](../../results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json)
+records the finite projection-report clause/scenario as satisfied after the final
+[APPROVE_WITH_LIMITS review](../../results/sherlock-k-quint-f03-actual-20261018/reviews/actual-result-whole021/REPORT.md).
+Current original closures are15/35 after this adoption; earlier dated counts above
+retain their own cuts. The actual F03/fuel93/stack64 K/Quint comparison retains
+95 complete snapshots and94 edges:93 charges and free publication rule80,
+UInt6 and logical frame peak11. All eleven shared fields, full ordered rule/charge
+mapping, numeric bounds, hidden steps, representation differences and unmatched
+finance/wait behavior are named. Agreement is finite trace agreement, not refinement.
+
+The [complete archive](../../results/sherlock-k-quint-f03-actual-20261018/README.md)
+keeps the actual K195children+initializer/488files, real95-state Quint ITF,
+three passive passes with517 unchanged pins, full outputs and independent oracle.
+The later seven map-key helper/log guards passed with518 unchanged pins; they do
+not cover decode_capture end-to-end chain propagation, the six assembler guard
+categories or multiline single-item guards. General candidate04 assembler/decoder
+installation remains unadopted. No full corpus, theorem, B/finance, circuit/native
+proof or target result follows from original021's finite reporting acceptance.

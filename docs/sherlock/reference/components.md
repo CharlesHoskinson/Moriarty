@@ -33,3 +33,15 @@ The installed public `shared::{prepare_nominal_declarations, prepare_program_nom
 ## Product scope
 
 Full Sherlock v1, formal, ACTUS/DeFi, complete-effects, signed-intent, transition/history, residual-duty and target obligations remain required. Maintainer review/resource controls are not public compile/prove/deploy permissions. Private-fork work/data remain outside this corpus. See [product contract](../../MORIARTY-PRODUCT-CONTRACT.md) and [acceptance](../explanation/evidence-and-acceptance.md).
+
+## Whole-program generic type preparation
+
+`shared::prepare_ext_program_types` now retains the owned ExtProgram, explicit
+domain, unified names, complete type/constructor/field tables and exact T3 records
+from one checked builder. Its [public API](generic-program-preparation-api.md)
+and [four-operation/two-test result](../../results/sherlock-generic-one-builder-preparation-20261018/README.md)
+cover two independently frozen generic preparation fixtures. T3 visits signatures
+first, then entry/function-body uses; this is separate from the earlier
+declaration-only producer. No prepared JSON was persisted and no optional Schedule
+case or generic runtime was run. UIREQ034 stays OPEN; C/P lowering, admission,
+ConstructorFields and ordered MatchPlan execution remain separate.
