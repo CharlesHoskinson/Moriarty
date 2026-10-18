@@ -394,14 +394,24 @@ pub fn language(source: &str) -> Result<&'static str, Error> {
             actions: vec![],
         },
     };
-    parser.expect("language")?;
-    let profile = parser.string()?;
+    let expected = format!(
+        "language \"{LANGUAGE}\" or \"{}\"",
+        crate::stage::LANGUAGE_2
+    );
+    parser.expect("language").map_err(|mut error| {
+        error.message = format!("Expected {expected}. {}", error.message);
+        error
+    })?;
+    let profile = parser.string().map_err(|mut error| {
+        error.message = format!("Expected {expected}. {}", error.message);
+        error
+    })?;
     match profile.as_str() {
         LANGUAGE => Ok(LANGUAGE),
         crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),
         _ => Err(parser.error(
             "profile",
-            format!("Expected language \"{LANGUAGE}\"; found {profile:?}."),
+            format!("Expected {expected}; found {profile:?}."),
         )),
     }
 }
