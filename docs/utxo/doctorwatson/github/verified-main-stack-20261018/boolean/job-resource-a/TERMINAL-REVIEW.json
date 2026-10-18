@@ -1,0 +1,59 @@
+{
+  "checks": {
+    "deadlineCleanup": "Verified in host/future_runner.py (_run_new_process, lines 434-470) and terminal/*/CLEANUP.json: subprocess runs in a new session (start_new_session=True) under /usr/bin/timeout --signal=TERM --kill-after=5s <wallSeconds>s with parent monotonic deadline = wallSeconds + 5. On loop exit or timeout, stdout is closed and SIGKILL is sent via os.killpg to the owned process group if running or present. Public CLEANUP.json receipts for A5, procedure3, and procedure4 all confirm captureReachedEOF=true and ownedGroupRemaining=false.",
+    "finiteBudget": "Verified: two independent 420+5s host-resource votes (850s) plus one 900+5s full review request (905s) sum to 1755s of subprocess outer+grace allocations. This is a finite one-use subprocess allocation sum rather than a strict parent wall-clock bound because pin hashing, file I/O, and bounded final wait(timeout=1) sit outside the subprocess deadline. The 900+5s allowance is strictly single-use with no retry, default, or replenishment, and expires on any terminal outcome.",
+    "loaderPinsArgv": "Verified in host/future_runner.py (load_task and build_argv, lines 236-291): requires absolute paths, pins and SHA256-verifies task JSON, packet/MANIFEST.json, every manifest-listed relative file (rejecting '..' or absolute paths), promptFile (<125000 UTF-8 bytes), schemaFile, and agy_terminal_selector.py (SELECTOR_SHA256), records future_runner.py's own digest, re-checks pins_match(bundle['pins']) post-run, and builds a single-launch argv with --model gemini-4-argon-high --effort high --mode plan --sandbox --disable-slash-commands --add-dir <packet> --output-format stream-json --json-schema <schemaFile> --print-timeout 0.",
+    "priorCohorts": "Verified in PROPOSAL.md (lines 11, 17) and TASK-AND-PROMPT.diff (lines 89-90): expired 900s financial/owner3, stdin 420s x3, native financial 600+5s, and prior 420+5s attempts (procedure3, procedure4, A5) remain consumed and unchanged. No prior cohort is reset or replenished, and no partial capture or prior opinion is salvaged or transferred.",
+    "rootGate": "Verified in PROPOSAL.md (lines 11, 15, 19) and host/future_runner.py (run_one, lines 473-499): future_runner.py enforces a fresh output directory (exist_ok=False) per launch but implements no persistent cross-run cohort counter and does not gate EXPORT on cleanup['ownedGroupRemaining']. Root must manually verify two complete exported agreeing host votes and their CLEANUP.json receipts, explicitly adopt the amendment before dispatching the single 900+5s run, verify post-run CLEANUP.json alongside any exported TERMINAL-REVIEW.json, and record allowance expiration on any terminal result.",
+    "strictTerminal": "Verified in host/agy_terminal_selector.py (select_terminal_review, lines 538-657) and host/future_runner.py (finish_capture, lines 400-407): EXPORT requires capture.complete (EOF reached), captureParseErrors == 0, all events dict, terminal_exit_code == 0, input_pins_unchanged is True, exactly one result event at the final position (result_position == event_count), nested result.status == 'SUCCESS', nested result.structured_output dict matching reviewToken, and Draft 2020-12 jsonschema validation with an empty non-retrieving Registry(), with no recursive or text fallback.",
+    "unchangedProductContract": "Verified in CURRENT-A5-TASK.json, PROPOSED-FULL-REVIEW-TASK.json, TASK-AND-PROMPT.diff, and SUBJECT-AND-BINDINGS.json: only id, wallSeconds (420 to 900), promptFile, and promptSha256 change. The product packet path, MANIFEST.json (39c9bb08...), PRIMARY.md (339901B, bc465f01...), OUTPUT.schema.json (4026B, 0c10afdf...), BEFORE-AFTER-SCOPE.json (11074B, a88d9917...), reviewToken (mori-boolean-ce7-current-complete-20261018-a5), model (gemini-4-argon-high), and full 9-path/93-body combined SOURCE+ACTUAL read/output obligations are preserved intact.",
+    "unknowns": "Verified in PROPOSAL.md (lines 13, 15) and terminal/A5/LIVE-METADATA.json: underlying cause of the 420s exit-124 timeouts, actual backend model identity behind the unattested cliInitModelLabels string, extent of mandatory product body reading achieved in prior runs, context/output fit, and whether 900+5s is sufficient to complete and export a valid review remain UNKNOWN. Extending wallSeconds to 900s carries no guarantee of completion or valid export."
+  },
+  "decision": "approve",
+  "dissent": [
+    "No dissent from approving the single-use 900+5s resource amendment, provided root strictly enforces two prerequisites not automated by host/future_runner.py: (1) manual one-use cohort accounting so the 900+5s task is launched at most once and recorded expired on any terminal outcome, and (2) explicit post-run verification that CLEANUP.json reports ownedGroupRemaining=false and captureReachedEOF=true, because finish_capture determines EXPORT before CLEANUP.json is written and does not gate EXPORT on process-group absence."
+  ],
+  "evidence": [
+    {
+      "anchor": "\"id\": \"mori-boolean-ce7-current-complete-finite900-20261018-a6\" ... \"wallSeconds\": 900",
+      "implication": "Confirms that PROPOSED-FULL-REVIEW-TASK.json changes only id, promptFile, promptSha256, and wallSeconds (from 420 to 900) while preserving model, packet, manifestSha256, schemaFile, schemaSha256, reviewToken, and scope identically to CURRENT-A5-TASK.json.",
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/boolean-ce7-current-finite900-resource-proposal-20261018/PROPOSED-FULL-REVIEW-TASK.json"
+    },
+    {
+      "anchor": "+Only ordinary readonly public file/JSON/hash inspection. ... One fresh normal900+5request only after two substantive agreeing independent ordinary resource votes and explicit root adoption, same strict runner/selector, no dispatch by preparer/retry/default/native600reset; this single allowance expires on terminal and does not renew any prior resource cohort.",
+      "implication": "Confirms via TASK-AND-PROMPT.diff that the only prompt change between packet/PROMPT.md and PROPOSED-FULL-REVIEW-PROMPT.md is the final governance sentence updating 420+5 to a single gated 900+5 allowance without altering any 9-path/93-body read or schema output requirements.",
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/boolean-ce7-current-finite900-resource-proposal-20261018/TASK-AND-PROMPT.diff"
+    },
+    {
+      "anchor": "if type(task.get(\"wallSeconds\")) is not int or task[\"wallSeconds\"] <= 0: ... return [\"/usr/bin/timeout\", \"--signal=TERM\", \"--kill-after=5s\", str(task[\"wallSeconds\"]) + \"s\", \"/home/charl/.local/bin/agy\", \"--model\", task[\"model\"], \"--effort\", \"high\",",
+      "implication": "Confirms that host/future_runner.py already supports wallSeconds=900 without code modification, passing 900s with a 5s kill-after grace to /usr/bin/timeout and enforcing a matching monotonic parent deadline (wallSeconds + 5) and SIGKILL process-group cleanup.",
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/agy-terminal-live-metadata-20261018/future_runner.py"
+    },
+    {
+      "anchor": "if type(terminal_exit_code) is not int or terminal_exit_code != 0: return outcome(\"NONZERO_OR_MISSING_EXIT\") ... if result_position != event_count: return outcome(\"RESULT_NOT_LAST\")",
+      "implication": "Confirms that host/agy_terminal_selector.py strictly enforces exit code 0, unchanged input pins, zero parse errors, a single final SUCCESS result event, exact reviewToken match, and Draft 2020-12 schema validation with an empty Registry before permitting EXPORT.",
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/agy-terminal-live-metadata-20261018/agy_terminal_selector.py"
+    },
+    {
+      "anchor": "\"step_update\": 74, \"result\": 1 ... \"observedAfterSeconds\": 420.040631 ... \"stdoutBytes\": 76226, \"captureReachedEOF\": true ... \"code\": 124, \"observedAfterSeconds\": 420.486439",
+      "implication": "Demonstrates from A5 public transport metadata and cleanup receipts that the 420s run actively streamed 74 step_update events (76226 bytes) before hitting the 420s timeout (exit 124, NO_EXPORT) with clean EOF and full process-group termination (ownedGroupRemaining=false), motivating a bounded 900+5s allocation while leaving root cause and 900s adequacy unknown.",
+      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/boolean-current-ce7-complete-review-20261018/job-current-a5/LIVE-METADATA.json"
+    }
+  ],
+  "limitations": [
+    "Read scope was strictly limited to the mandatory host decision packet PRIMARY.md (41959 bytes, 840 lines, read completely once across two nonoverlapping bounded views: lines 1-800 and 801-840) and OUTPUT-VOTE-A.schema.json (3294 bytes, 158 lines).",
+    "The opaque 339901-byte product PRIMARY.md and its companion product files (MANIFEST.json, BEFORE-AFTER-SCOPE.json, product OUTPUT.schema.json) were not read and are outside the scope of this host-resource vote.",
+    "No private capture files (provider.private.jsonl, stderr.private, agy.private.log) were inspected, and no product, provider, or runtime commands were executed.",
+    "Actual backend model identity is not attested by the host runner or selector, and this resource decision provides zero source, actual-result, security, financial, or merge approval."
+  ],
+  "productApproval": false,
+  "rationale": "Approve the exact one-use CURRENT ce7 combined SOURCE+ACTUAL resource amendment increasing wallSeconds from 420 to 900 (plus the existing 5s cleanup grace) for a single fresh dispatch of PROPOSED-FULL-REVIEW-TASK.json, strictly conditioned on two independent substantive agreeing host-resource votes and explicit root adoption prior to launch. Public transport receipts for A5 (and prior procedure3/procedure4 attempts) show clean timeout termination at 420s (exit 124, NO_EXPORT, captureReachedEOF=true, ownedGroupRemaining=false) after active streaming (74 step_updates and 76226 stdout bytes in A5). Extending the finite outer subprocess bound to 900+5s (within a 1755s summed outer+grace allocation across two 420+5s votes and one 900+5s review) requires zero changes to future_runner.py or agy_terminal_selector.py and preserves all 9-path/93-body product inputs, hashes, schema validation, token binding, and strict terminal selection intact.",
+  "readCoverage": {
+    "unreadMandatoryBodies": [],
+    "wholePrimaryRead": true
+  },
+  "reportedIdentity": "Antigravity (Gemini 4 Argon High; session-reported human-readable model label, unattested backend identity)",
+  "requestedModel": "gemini-4-argon-high/HIGH",
+  "reviewToken": "mori-boolean-ce7-finite900-resource-a-20261018-v1",
+  "subjectSha256": "16d25fa1cf504d14e9686d9f5ff132cae4d03f895d02c35cb35db70160be188a"
+}
