@@ -68,10 +68,15 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
             .target
             .as_ref()
             .ok_or_else(|| super::core_io::operation("--trace requires --target"))?;
+        #[cfg(feature = "native")]
         let target = super::core_io::read_json(path)?;
+        #[cfg(feature = "native")]
         let authorization = args.authorization.load(&target)?;
+        #[cfg(feature = "native")]
         let source = super::core_io::read_source(&args.file)?;
+        #[cfg(feature = "native")]
         let scenario = super::core_io::read_json(scenario_path)?;
+        #[cfg(feature = "native")]
         return match mori_backend::replay::generate(
             &source,
             action,
@@ -90,6 +95,11 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
                 Ok(ExitCode::FAILURE)
             }
         };
+        #[cfg(not(feature = "native"))]
+        {
+            let _ = path;
+            return super::native_unavailable();
+        }
     }
     if args.target.is_some() || args.authorization.present() {
         return Err(super::core_io::operation(

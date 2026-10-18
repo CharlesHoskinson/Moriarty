@@ -1,15 +1,17 @@
 //! Explicit installed-call inputs and create-new publication. No proving
 //! provider, parameter fallback or alternate TransitionClaim consumer exists.
+#[cfg(feature = "native")]
 use super::{core_io, proof_io};
+#[cfg(feature = "native")]
 use crate::{error::CliError, shell::Shell};
+#[cfg(feature = "native")]
 use mori_ledger::{
     call_artifacts::{self, ArtifactLeaves},
     profile::{CallRequest, InstalledDeployment, NativeWorkLimits},
 };
-use std::{
-    path::{Path, PathBuf},
-    process::ExitCode,
-};
+use std::path::PathBuf;
+#[cfg(feature = "native")]
+use std::{path::Path, process::ExitCode};
 #[derive(Debug, clap::Args)]
 pub struct Input {
     pub file: PathBuf,
@@ -28,6 +30,7 @@ pub struct Input {
     #[arg(long)]
     pub work_limits: PathBuf,
 }
+#[cfg(feature = "native")]
 pub struct Inputs {
     pub source: String,
     pub program: mori_core::Program,
@@ -37,6 +40,7 @@ pub struct Inputs {
     pub request: CallRequest,
     pub limits: NativeWorkLimits,
 }
+#[cfg(feature = "native")]
 pub fn limits(path: &Path) -> super::Result<NativeWorkLimits> {
     let text = text(path, mori_ledger::codec::INPUT_BYTES as u64)?;
     let value = NativeWorkLimits::from_json(&text).map_err(core_io::operation)?;
@@ -47,9 +51,11 @@ pub fn limits(path: &Path) -> super::Result<NativeWorkLimits> {
     }
     Ok(value)
 }
+#[cfg(feature = "native")]
 pub fn binary(path: &Path, cap: u64) -> super::Result<Vec<u8>> {
     call_artifacts::read_bounded_file(path, cap).map_err(core_io::operation)
 }
+#[cfg(feature = "native")]
 pub fn text(path: &Path, cap: u64) -> super::Result<String> {
     String::from_utf8(binary(
         path,
@@ -57,11 +63,13 @@ pub fn text(path: &Path, cap: u64) -> super::Result<String> {
     )?)
     .map_err(core_io::operation)
 }
+#[cfg(feature = "native")]
 pub fn program(path: &Path, cap: u64) -> super::Result<(String, mori_core::Program)> {
     let source = text(path, cap)?;
     let program = mori_core::parse(&source).map_err(core_io::operation)?;
     Ok((source, program))
 }
+#[cfg(feature = "native")]
 impl Input {
     pub fn read(&self) -> super::Result<Inputs> {
         let limits = limits(&self.work_limits)?;
@@ -102,9 +110,11 @@ impl Input {
         })
     }
 }
+#[cfg(feature = "native")]
 pub fn require_new(out: &Path) -> super::Result<()> {
     proof_io::require_new(out)
 }
+#[cfg(feature = "native")]
 pub fn publish(out: &Path, artifact: &ArtifactLeaves) -> super::Result<()> {
     std::fs::create_dir(out).map_err(|source| CliError::Write {
         path: out.into(),
@@ -112,12 +122,14 @@ pub fn publish(out: &Path, artifact: &ArtifactLeaves) -> super::Result<()> {
     })?;
     publish_leaves(out, artifact)
 }
+#[cfg(feature = "native")]
 fn publish_leaves(out: &Path, artifact: &ArtifactLeaves) -> super::Result<()> {
     for (name, bytes) in &artifact.leaves {
         proof_io::publish_new(&out.join(name), bytes)?;
     }
     proof_io::publish_new(&out.join(artifact.marker_name), &artifact.marker)
 }
+#[cfg(feature = "native")]
 pub fn status(shell: &mut Shell, label: &str, action: &str, out: &Path) -> ExitCode {
     shell.status(
         label,
@@ -129,7 +141,7 @@ pub fn status(shell: &mut Shell, label: &str, action: &str, out: &Path) -> ExitC
     );
     ExitCode::SUCCESS
 }
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
     #[test]

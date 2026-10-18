@@ -1,6 +1,10 @@
-use std::{collections::BTreeSet, path::PathBuf, process::ExitCode};
+#[cfg(feature = "native")]
+use std::collections::BTreeSet;
+use std::{path::PathBuf, process::ExitCode};
 
+#[cfg(feature = "native")]
 use mori_backend::{Artifact, CircuitArtifact, PublicBinding};
+#[cfg(feature = "native")]
 use mori_core::{Action, BinaryOp, Expr, ExprId, Program, Statement, Type};
 use serde_json::{Value, json};
 
@@ -16,6 +20,10 @@ pub struct Args {
 }
 
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    #[cfg(not(feature = "native"))]
+    if args.target.is_some() {
+        return super::native_unavailable();
+    }
     let source = super::core_io::read_source(&args.file)?;
     if args.target.is_none()
         && mori_core::language(&source).is_ok_and(|language| language == "moriarty/2")
@@ -36,6 +44,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
         }))?;
         return Ok(ExitCode::SUCCESS);
     }
+    #[cfg(feature = "native")]
     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
         // The enforcement map reports the /3 relation. A Core2 --target refuses
         // with Core's typed profile error before reading the target, backend
@@ -49,6 +58,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     }
     let program = mori_core::parse(&source).map_err(super::core_io::operation)?;
     let enforcement = match args.target {
+        #[cfg(feature = "native")]
         Some(path) => {
             let target: mori_backend::Target = super::core_io::read_json(&path)?;
             // Use the same whole-program admission and explicit mode as compile.
@@ -61,6 +71,8 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
             .map_err(super::core_io::operation)?;
             enforcement_report(&source, &program, &artifact)?
         }
+        #[cfg(not(feature = "native"))]
+        Some(_) => return super::native_unavailable(),
         None => Value::Null,
     };
     let qualification = if enforcement.is_null() {
@@ -88,13 +100,16 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
+#[cfg(feature = "native")]
 fn encoded(predicates: &[&str]) -> Value {
     json!({"status": "encoded-not-verified", "predicates": predicates})
 }
+#[cfg(feature = "native")]
 fn reference(predicates: &[&str]) -> Value {
     json!({"status": "available-not-executed", "predicates": predicates})
 }
 
+#[cfg(feature = "native")]
 fn enforcement_report(
     source: &str,
     program: &Program,
@@ -146,6 +161,7 @@ fn enforcement_report(
     }))
 }
 
+#[cfg(feature = "native")]
 fn action_report(
     program: &Program,
     action: &Action,
@@ -199,6 +215,7 @@ fn action_report(
     }))
 }
 
+#[cfg(feature = "native")]
 fn public_field(position: usize, binding: &PublicBinding) -> Value {
     let range = match binding.ty {
         Type::UInt => "unsigned 128-bit range",
@@ -244,6 +261,7 @@ fn public_field(position: usize, binding: &PublicBinding) -> Value {
     })
 }
 
+#[cfg(feature = "native")]
 fn authorization_rule(name: &str) -> &'static str {
     match name {
         "payload.lo" | "payload.hi" => {
@@ -283,6 +301,7 @@ fn authorization_rule(name: &str) -> &'static str {
 
 /// Legacy enforcement-map helpers are `/1`-only. An Await reaching them gets
 /// Core's typed `/1` profile refusal, never a panic or an omitted statement.
+#[cfg(feature = "native")]
 fn core1_refusal() -> mori_core::Error {
     mori_core::Error {
         code: "mori::core::profile".into(),
@@ -292,6 +311,7 @@ fn core1_refusal() -> mori_core::Error {
     }
 }
 
+#[cfg(feature = "native")]
 fn statement_rule(statement: &Statement) -> super::Result<&'static str> {
     Ok(match statement {
         Statement::Await { .. } => return Err(super::core_io::operation(core1_refusal())),
@@ -317,6 +337,7 @@ fn statement_rule(statement: &Statement) -> super::Result<&'static str> {
     })
 }
 
+#[cfg(feature = "native")]
 fn expression_constraints(program: &Program, action: &Action) -> super::Result<Vec<Value>> {
     // Report only reachable expression nodes. Some nodes are shared by a
     // statement's DAG; iterating the sorted set is bounded and deterministic.
@@ -368,6 +389,7 @@ fn expression_constraints(program: &Program, action: &Action) -> super::Result<V
     }).collect())
 }
 
+#[cfg(feature = "native")]
 fn unknown_premises() -> Vec<Value> {
     [
         ("ledger-authentication", "opening state/balances/duty presence and full ledger frame, custody, funding and phase correspondence"),

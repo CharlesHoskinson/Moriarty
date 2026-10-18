@@ -1,10 +1,11 @@
+#[cfg(feature = "native")]
 use super::{core_io, proof_io};
-use crate::{error::CliError, shell::Shell};
-use std::{
-    io::Read,
-    path::{Path, PathBuf},
-    process::ExitCode,
-};
+#[cfg(feature = "native")]
+use crate::error::CliError;
+use crate::shell::Shell;
+#[cfg(feature = "native")]
+use std::{io::Read, path::Path};
+use std::{path::PathBuf, process::ExitCode};
 
 #[derive(Debug, clap::Args)]
 pub struct Args {
@@ -29,6 +30,7 @@ pub struct Args {
     #[arg(long)]
     pub inspect_static: Option<PathBuf>,
 }
+#[cfg(feature = "native")]
 pub(crate) fn artifact_bytes(path: &Path) -> super::Result<Vec<u8>> {
     let file = std::fs::File::open(path).map_err(|source| CliError::Read {
         path: path.into(),
@@ -46,6 +48,7 @@ pub(crate) fn artifact_bytes(path: &Path) -> super::Result<Vec<u8>> {
     }
     Ok(bytes)
 }
+#[cfg(feature = "native")]
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     validate_shape(&args)?;
     if args.all_actions {
@@ -81,6 +84,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 // Shape validation precedes all source, limits and bundle reads.
+#[cfg(feature = "native")]
 fn validate_shape(args: &Args) -> super::Result<()> {
     let bad = |message| core_io::operation(message);
     if args.all_actions {
@@ -117,11 +121,13 @@ fn validate_shape(args: &Args) -> super::Result<()> {
     }
     Ok(())
 }
+#[cfg(feature = "native")]
 fn static_text(path: &Path, cap: usize) -> super::Result<String> {
     let bytes =
         mori_ledger::static_compile::read_static_input(path, cap).map_err(core_io::operation)?;
     String::from_utf8(bytes).map_err(|_| core_io::operation("static input must be UTF-8"))
 }
+#[cfg(feature = "native")]
 fn run_static(args: &Args, shell: &mut Shell) -> super::Result<ExitCode> {
     use mori_ledger::{
         codec,
@@ -245,12 +251,14 @@ fn run_static(args: &Args, shell: &mut Shell) -> super::Result<ExitCode> {
     }
     Ok(ExitCode::SUCCESS)
 }
+#[cfg(feature = "native")]
 fn publish_static(
     out: &Path,
     output: &mori_ledger::call_artifacts::ArtifactLeaves,
 ) -> super::Result<()> {
     publish_static_with(out, output, proof_io::publish_new)
 }
+#[cfg(feature = "native")]
 fn publish_static_with(
     out: &Path,
     output: &mori_ledger::call_artifacts::ArtifactLeaves,
@@ -267,13 +275,14 @@ fn publish_static_with(
     // Successful marker publication follows every complete source/action leaf.
     writer(&out.join(output.marker_name), &output.marker)
 }
+#[cfg(feature = "native")]
 fn publish(out: &Path, ir: &[u8], manifest: &[u8]) -> super::Result<()> {
     proof_io::publish_new(&out.join("relation.zkir.bin"), ir)?;
     // Completion marker follows the complete source-static IR leaf.
     proof_io::publish_new(&out.join("manifest.json"), manifest)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
     #[test]
@@ -381,4 +390,21 @@ mod tests {
         assert_eq!(std::fs::read(file).unwrap(), b"keep");
         std::fs::remove_dir_all(dir).unwrap();
     }
+}
+
+#[cfg(not(feature = "native"))]
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let _ = (
+        &args.file,
+        &args.action,
+        &args.deployment,
+        &args.out,
+        &args.all_actions,
+        &args.static_bindings,
+        &args.authorization,
+        &args.signer_policy,
+        &args.work_limits,
+        &args.inspect_static,
+    );
+    super::native_unavailable()
 }
