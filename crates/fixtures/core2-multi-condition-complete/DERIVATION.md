@@ -1,0 +1,43 @@
+# Independent multi-condition derivation
+
+This is a post-adoption, source/DTO-contract-exposed independent expectation packet, frozen before any consumer of these new expectations runs. It is not blinded or preimplementation work. The author of the input packet supplied no expected financial, work or execution values. No current parser, evaluator, plan builder, report implementation, test candidate, actual output or proposed assertion body was read or executed. `derive_literal_oracles.py` assembles explicitly written literals using only standard-library JSON, hash, copy and arithmetic operations; it is not a Mori parser or reference implementation.
+
+The original input-only packet is copied exactly under `input-custody/`, including its manifest and checksum. `PREPARATION.json` is the unchanged historical pre-input checkpoint, not the present state of readiness. Its cancellation diagnosis remains separate: no cancellation, refund, compensation or terminal recovery transition is selected here.
+
+## Representation and identity
+
+The adopted M01 supplement of `input-custody/normative-basis/docs/CORE-STAGED-TESTS.md` supplies every whole Program field, fresh occurrence allocation, left-to-right postorder, precedence, declaration ordering and exact statement metadata. One state initializer UInt77 is stored directly and allocates no expression. One asset and one action retain their source identities. The five roots are 0,1,6,7,8. Expressions0 and1 are separate `amount` occurrences. The guard allocates documentObserved2, approvedAmount3, amount4, Ge(3,4)5, And(2,5)6. The suffix allocates fresh amount7 and amount8. Thus the full arena has nine nodes; no input/event value is substituted into Program.
+
+The adopted site/capture clauses give site1, original statement ordinal2, local binder order documentObserved:Bool then approvedAmount:UInt, and one captured action input amount:UInt with origin Input and ordinal0. The pending site's own binders are not captures. Idle has site0/captures[]. The filled plan has statement_count5, segment_cost["5","10"], committed_before["0","5"], plan_total"15".
+
+The verbatim designated-owner M03 F4 in that same normative document supplies canonical local identity encoding. The independent assembly writes complete compact recursive lexical-key UTF-8 Program and filled Plan preimages with no LF/prefix/framing and independently computes SHA256. `LOCAL-IDENTITIES.json` identifies the exact preimages and digests. These are local observational descriptors only, not authenticated bindings, replay protection or proof/ledger evidence.
+
+## Financial operation premise and full frames
+
+For this finite normal admitted example, the explicitly used shared financial-operation premise is: Transfer subtracts its evaluated UInt amount from the named source account and adds the same amount to its named destination for the exact asset; Liability creates the absent named row with the written exact asset/debtor/creditor and amount; Discharge subtracts its evaluated amount from that existing duty, retaining a present-zero row. Every other state/balance/duty row is preserved. This is ordinary finite operation arithmetic under the adopted /2 clauses' existing financial transitions, not inheritance of a Core/1 report schema or a new global Core/2 semantics choice. The Core/1 financial observation extension was read as background only and is explicitly scoped to /1; the /2 report, value, snapshot and effect rules here come from the independently adopted /2 document.
+
+Opening ordered balances (alice,bob,escrow,observer) are (20,2,3,9), total34, marker UInt77 and no duties. Funding10 gives (10,2,13,9), then creates delivery10 without moving tokens. Both false events leave this exact funded boundary and complete continuation unchanged. Final delivery10 gives (10,12,3,9), then duty10-10=present0. The asset total remains34 at each prefix. Alice's net debit10 equals Bob's net receipt10; escrow's opening3 and observer9 are preserved. Two distinct transfers have gross debit10 each (turnover20), not a fee or a net user debit20. Explicit fees are0 because no Fee statement occurs; no external/native fee is inferred. No mint, burn, division, interest/accrual, reserve-floor, dust, refund or settlement policy is asserted. Funding creates the duty independently of token movement, payment does not discharge it implicitly, and discharge has its own separate effect.
+
+The complete expected reports retain every initial/preserved row, all five emitted Steps, exact statements/ExprIds, outer typed results, every prefix snapshot, ordered Step effect deltas and each segment's concatenation. Await entry emits no Step. Accepted true Await emits original index2/root6/value Booltrue with unchanged funded snapshot and effects[]. Discharge outer value is UInt10, while closing duty is present0 and residual[]. No normal false guard emits a segment, Step, snapshot or effects.
+
+## Events and logical work
+
+Each event is a complete fresh tuple, not partial accumulated evidence. The predicates are true AND (9>=10)=false; false AND (12>=10)=false; true AND (12>=10)=true. In particular the second event must not reuse the first event's documentObserved=true. The names designate unauthenticated local Bool/UInt inputs only; no signature, external document verification, approval or evidence authenticity is asserted.
+
+The adopted /2 schedule charges dispatch1 plus each distinct expression node with a fresh per-statement cache and eager Boolean operands. Start transfer2 + liability2 + await-entry1 =5. Every resume guard is dispatch1 + five nodes =6, including the left-false event. True resume adds transfer2 + discharge2 =10. Thus attempted per invocation is5/6/6/10; committed successful prefix is5/5/5/15; cumulative attempted is5/11/17/27. The12 unsuccessful guard units remain attempted and do not inflate committed. No cap-refusal or admission precedence is inferred; all selected stored caps and overrides are null.
+
+## Field provenance and bytes
+
+- Literal source/scenario/events: exact source/input identities, initial balances/state, action amount and observations.
+- Adopted M01: entire Program and all expression/statement fields, roots and declaration arrays.
+- Adopted site/capture and M03: whole filled Plan layout/cost fields, canonical preimages, local descriptor strings and Continuation identity fields.
+- Adopted /2 Step/segment/status clauses: all snapshots, typed values, effect shapes, segment framing, unchanged false continuation, Waiting versus Complete exact root keys, residual extraction and logical projection.
+- Explicit finite operation arithmetic above: all moved/remaining amounts, duty evolution and preserved frames.
+- Adopted /2 schedule: every logical work quantity; no circuit or ledger cost.
+- Adopted /2 public process/ASCII rendering clause: each complete stdout, terminal singleLF, empty stderr and exit0. All selected strings are safe ASCII without control characters, so standard literal JSON assembly exactly implements the independently specified key ordering/indentation/escaping. Report JSON and stdout artifacts intentionally have identical bytes, but their value and process claims remain separate. Library pretty-byte behavior is UNASSERTED.
+
+Historical related exposures include earlier R3 report/fixture custody, independent financial/Core2/Source6 and composition oracle authorship, public DTO reads, incidentally displayed earlier residual and InputDecl-to-StageBinder helper snippets, and a prior disjoint composition authored codec explicitly marked source-derived. Those are not new compiler-wire proof and were not used to obtain current output quantities. Current public normative documents contain historical examples; those background examples do not supply these new nine-node Program, local digests or multi-condition reports. No claim of complete implementation nonexposure is made.
+
+Static validation checks literal graph/root ordering, all copied pins, total34 at every financial prefix, prefix/Step/effect consistency, full false continuation equality, output ASCII/singleLF and inventory hashes. It does not observe parser or evaluator behavior. Future consumers must pass only their actual immediately previous continuation to resume; expected reports may be compared but never used to seed runtime.
+
+All14 original gaps, original freezes/failures/counters, complete composition modes and U0-U7/M1-M17/MC/SP/G/full-finance/ACTUS/DeFi/native/target/proof/ledger acceptance exits remain unchanged. The selected finite normal expectation fields have no remaining unspecified scalar or ID under the cited adopted premises; library pretty bytes, cancellation semantics and the wider guarantees remain outside this assertion.
