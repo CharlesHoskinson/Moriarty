@@ -1,3 +1,7 @@
+## Persistent formal lanes and compaction recovery — October 18
+
+Keep the dedicated Clean, Quint and K lanes alongside the primary Sherlock implementation after every compaction or restart. Recover all three from the [implementation loop](docs/sherlock/implementation-loop.md#recover-all-three-formal-lanes-after-compaction) and latest typed Root continuation in `.moriarty-dev/runtime/sherlock-review-20261017/295-root-runtime-integration/`. Revalidate actual agent/process state before continuing or replacing a lane. Carry forward each exact source cut, pending check/review, independent oracle, next action and unsupported scope. A completed subtask does not retire its lane while counterpart work remains. This is part of the existing DoctorWatson loop, with no new factory or acceptance gate.
+
 ## Latest beta automation override — October18UTC
 
 The user explicitly removes human-only operation and human approval requirements:
