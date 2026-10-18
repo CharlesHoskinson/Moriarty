@@ -1,0 +1,7 @@
+Source-only inspect header error propagation, base615
+
+CANDIDATE.patch changes exactly one source-only expression in inspect.rs and adds one real public-process regression. Source-only inspect currently drops language() Err, falls into the /1 parser and replaces the established dual-profile diagnostic. Preserve the producer error through existing operation/main/Shell rendering. No new JSON shape or helper: inspect has no --json flag. Valid Core1/Core2 report paths are unchanged; full target/native branch and helpers stay byte-identical.
+
+EXPECTATIONS.json and12physical source/error/full stdout/full stderr inputs are frozen before execution (EXPECTATIONS.sha256). Literals are explicitly source-exposed from parser and existing ordinary simulate regression, not independent financial/work expectations or actual inspect captures. New test captures all3public inspect processes before assertions, including on RED. Existing capabilities/Core2 continuation selectors give valid-profile controls; expectations are unchanged.
+
+Full production before/after, full new test, exact source pins and direct-context files are physical. REGRESSION-PLAN lists3ordinary exact SDK-free test argv, all UNRUN by author. Root alone integrates, executes and reviews. No provider/Git/shared-worktree/product/native/SDK/proof/wallet operation occurred; no security judgment. All original grammar/family/financial/work and U/M/MC/SP/G exits retained. Do not regenerate frozen expectations from candidate output.

@@ -1,0 +1,12 @@
+# Complete path and source premises
+
+All paths below are full retained bodies under current-source/ with SOURCE-PINS.json identities.
+
+- Original EARS UNI-018: openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md requires explicit implemented language versions and refusal boundaries. The product contract keeps public developer tooling permissionless; this changes an ordinary diagnostic only.
+- crates/mori-core/src/parser.rs:366, public language(), lexes real source and returns existing profile/syntax Error before admission. UTF-8 offsets are byte positions from actual lexer spans. crates/mori-core/src/ir.rs contains the complete Error DTO/Display; crates/mori-lexer/src retains the full lexer/decoder path.
+- crates/mori/src/commands/simulate.rs: ordinary run dispatch reads source at109, currently discards language Err at111, then parses Core/1. The two-line replacement propagates that Err using existing core_io::operation. Earlier trace/signed/target/resume paths are retained verbatim and not exercised. /2 start at210ff reads scenario and uses stage::load/start, existing outcome_report and JSON emission.
+- crates/mori/src/commands/core_io.rs:158 uses existing CliError::Operation and sanitized Display; error.rs, shell.rs:75 and main.rs:16 retain complete presentation and exit paths. check_source.rs already preserves the same producer error; its existing check_header_dispatch integration test is comparison evidence, not a substitute for public simulate.
+- crates/mori-core/src/stage/{mod,validate,plan,cost,decode,digest,profile,admit,report}.rs, json.rs, runtime.rs and ir.rs are retained complete. Core/2 dispatch follows actual admission/start/report. No helper substitutes the runtime. CORE-STAGED-TESTS.md:198 explicitly specifies normal empty completion; CORE-EXECUTION-REPORTS.md and ir.rs define complete Execution fields used by the empty control.
+- CLI human render source: current-source/crates/mori/src/{shell,error,display,main}.rs and retained pinned miette/textwrap bodies in renderer-source/ with RENDERER-SOURCE-PINS.json. Frozen streams assume piped stderr, --color never, default width80, unicode miette theme and current operation Display. No emitted stream was observed by this author.
+
+Full prior scope/fixtures/expected Program pairs and current public Core/2 consumer remain retained. Read-only startup historical plugin blockers remain historical and no campaign/provider dispatch occurred. No financial, proof, security, Target or native capability is inferred from these premises.

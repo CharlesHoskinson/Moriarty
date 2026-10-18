@@ -1,0 +1,353 @@
+{
+  "actualReadLimits": [],
+  "actualResultAssessment": {
+    "capturedProcessCoverage": [
+      {
+        "case": "unknown",
+        "completeInputsProcessRawStreamsAndProducerDtoRead": true,
+        "phase": "red",
+        "scopeAssessment": "Complete raw capture read for red/unknown: header.mori is 17 bytes (`language \"other\";`, sha256 9d14df0aa37e44ff2c8f6e8ae15b5f9e691a1f30c95d42ab4bd28e978e48865b); process.json records `mori --color never inspect header.mori` exiting with status 1 (sha256 f9475abd417861b33f3a6f88b3b618c12c8e93a13fb0b91611f2018eac779712); producer-error.json records the in-process `mori_core::language` Error DTO (`code: \"mori::core::profile\"`, `message: \"Expected language \\\"moriarty/1\\\" or \\\"moriarty/2\\\"; found \\\"other\\\".\"`, `offset: 16`, `step: null`, sha256 4c0a6a11d2578e5f9a15c5cbb64f5f38943f4159ffbd2f7ff786767cfdabb9e1); stdout.bin is 0 bytes (sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); stderr.txt is 95 bytes (`  \u00d7 mori::command: mori::core::profile: Expected language \"moriarty/1\"; found\\n  \u2502 \"other\".\\n\\n`, sha256 fa1bc7c97be79fd483f0af60ff91f89dcba675cb3854ea0acee897560157881f), proving the pre-fix Core1 fallback diagnostic on stderr and causing the first human-stream assertion failure in RED. Public human stderr contains no byte offset field."
+      },
+      {
+        "case": "missing",
+        "completeInputsProcessRawStreamsAndProducerDtoRead": true,
+        "phase": "red",
+        "scopeAssessment": "Complete raw capture read for red/missing: header.mori is 10 bytes (`language ;`, sha256 1f535fd2398b3d68b92477d7ad6749d6882da0a7c5f16b2c838fb8e7084b2525); process.json records `mori --color never inspect header.mori` exiting with status 1 (sha256 f9475abd417861b33f3a6f88b3b618c12c8e93a13fb0b91611f2018eac779712); producer-error.json records `code: \"mori::core::syntax\"`, `message: \"Expected language \\\"moriarty/1\\\" or \\\"moriarty/2\\\". Expected a quoted string.\"`, `offset: 9`, `step: null` (sha256 e0cc20f0a0de44057c525285796d4511ede821c115d6eb022bea56e228656ba1); stdout.bin is 0 bytes (sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); stderr.txt is 67 bytes (`  \u00d7 mori::command: mori::core::syntax: Expected a quoted string.\\n\\n`, sha256 fb2f278f2014913605551ef83ac2f016a3460e13048c21c66f6fc02d14df5e94), demonstrating that pre-fix `inspect` dropped the `Expected language \"moriarty/1\" or \"moriarty/2\".` prefix when falling through to `mori_core::parse`. Captured before the assertion loop panicked on `unknown`."
+      },
+      {
+        "case": "commented",
+        "completeInputsProcessRawStreamsAndProducerDtoRead": true,
+        "phase": "red",
+        "scopeAssessment": "Complete raw capture read for red/commented: header.mori is 26 bytes (`// caf\u00e9\\nlanguage \"other\";`, sha256 8b7d3911a422b3ad5c29d74e9d59e46d1313ed4e25effd54612cd4588618c190); process.json records `mori --color never inspect header.mori` exiting with status 1 (sha256 f9475abd417861b33f3a6f88b3b618c12c8e93a13fb0b91611f2018eac779712); producer-error.json records `code: \"mori::core::profile\"`, `message: \"Expected language \\\"moriarty/1\\\" or \\\"moriarty/2\\\"; found \\\"other\\\".\"`, `offset: 25`, `step: null` (sha256 86eb77194ae9241df956aac201ce90446d8fc0898f88fa8cc19a8e594373953f); stdout.bin is 0 bytes (sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); stderr.txt is 95 bytes (`  \u00d7 mori::command: mori::core::profile: Expected language \"moriarty/1\"; found\\n  \u2502 \"other\".\\n\\n`, sha256 fa1bc7c97be79fd483f0af60ff91f89dcba675cb3854ea0acee897560157881f), showing the same pre-fix Core1 fallback on stderr while the producer DTO preserves UTF-8 byte offset 25 across the 2-byte `\u00e9` in `// caf\u00e9\\n`. Captured before the assertion loop panicked on `unknown`."
+      },
+      {
+        "case": "unknown",
+        "completeInputsProcessRawStreamsAndProducerDtoRead": true,
+        "phase": "green",
+        "scopeAssessment": "Complete raw capture read for green/unknown: header.mori is 17 bytes (`language \"other\";`, sha256 9d14df0aa37e44ff2c8f6e8ae15b5f9e691a1f30c95d42ab4bd28e978e48865b); process.json records status 1 (sha256 f9475abd417861b33f3a6f88b3b618c12c8e93a13fb0b91611f2018eac779712); producer-error.json matches the frozen expectation (`code: \"mori::core::profile\"`, offset 16, `step: null`, sha256 4c0a6a11d2578e5f9a15c5cbb64f5f38943f4159ffbd2f7ff786767cfdabb9e1); stdout.bin is 0 bytes (sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); stderr.txt is 111 bytes (`  \u00d7 mori::command: mori::core::profile: Expected language \"moriarty/1\" or\\n  \u2502 \"moriarty/2\"; found \"other\".\\n\\n`, sha256 bde52d25b439cafd2526c6df31c3060a763e44079990dd4c6267dda196fb241e), matching the frozen expectation and passing all four Rust assertions in GREEN."
+      },
+      {
+        "case": "missing",
+        "completeInputsProcessRawStreamsAndProducerDtoRead": true,
+        "phase": "green",
+        "scopeAssessment": "Complete raw capture read for green/missing: header.mori is 10 bytes (`language ;`, sha256 1f535fd2398b3d68b92477d7ad6749d6882da0a7c5f16b2c838fb8e7084b2525); process.json records status 1 (sha256 f9475abd417861b33f3a6f88b3b618c12c8e93a13fb0b91611f2018eac779712); producer-error.json matches the frozen expectation (`code: \"mori::core::syntax\"`, `message: \"Expected language \\\"moriarty/1\\\" or \\\"moriarty/2\\\". Expected a quoted string.\"`, offset 9, `step: null`, sha256 e0cc20f0a0de44057c525285796d4511ede821c115d6eb022bea56e228656ba1); stdout.bin is 0 bytes (sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); stderr.txt is 121 bytes (`  \u00d7 mori::command: mori::core::syntax: Expected language \"moriarty/1\" or\\n  \u2502 \"moriarty/2\". Expected a quoted string.\\n\\n`, sha256 ee5e996d685f0f7efdd99d69b52a63edb2503d8624504bc571c8014ccb1a1551), matching the frozen expectation and passing all four Rust assertions in GREEN."
+      },
+      {
+        "case": "commented",
+        "completeInputsProcessRawStreamsAndProducerDtoRead": true,
+        "phase": "green",
+        "scopeAssessment": "Complete raw capture read for green/commented: header.mori is 26 bytes (`// caf\u00e9\\nlanguage \"other\";`, sha256 8b7d3911a422b3ad5c29d74e9d59e46d1313ed4e25effd54612cd4588618c190); process.json records status 1 (sha256 f9475abd417861b33f3a6f88b3b618c12c8e93a13fb0b91611f2018eac779712); producer-error.json matches the frozen expectation (`code: \"mori::core::profile\"`, offset 25, `step: null`, sha256 86eb77194ae9241df956aac201ce90446d8fc0898f88fa8cc19a8e594373953f); stdout.bin is 0 bytes (sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855); stderr.txt is 111 bytes (`  \u00d7 mori::command: mori::core::profile: Expected language \"moriarty/1\" or\\n  \u2502 \"moriarty/2\"; found \"other\".\\n\\n`, sha256 bde52d25b439cafd2526c6df31c3060a763e44079990dd4c6267dda196fb241e), matching the frozen expectation and passing all four Rust assertions in GREEN. Note that human stderr is identical to `green/unknown` because `mori_core::Error`'s `Display` implementation omits `offset` (25 vs 16), which is verified via `producer-error.json` and the in-process `assert_eq!(error, expected, ...)`."
+      }
+    ],
+    "formattingDeltaDisposition": "The original author candidate test `actual/AUTHOR-TEST-BEFORE-FORMAT.rs` (5410 bytes, sha256 38d4b9fd8da39b6b3b2a03f78cd93f20abaa3fb77fb2f264aa5b68b25b969f9b) failed `rustfmt --check` with exit code 1 solely because `let args = [\\n            \"--color\",\\n            \"never\",\\n            \"inspect\",\\n            \"header.mori\",\\n        ];` at lines 94-99 was wrapped across 6 lines. Root formatted the file prior to RED/GREEN into `source/crates/mori/tests/inspect_header_dispatch.rs` (5351 bytes, sha256 f925bcc0ccd78f5a9cc9512f03718830a39475ddd98385531eaff6e90a9b43c3), collapsing that single array declaration onto line 94 (`let args = [\"--color\", \"never\", \"inspect\", \"header.mori\"];`) as recorded in `FORMAT-EXACT.diff` and `actual/FORMAT-ONLY-DELTA.json` (`rustfmtExit: 0`). All three `CASES` expectation literals (`source`, `expected_error`, `expected_stderr`) and all test logic are 100% byte-identical before and after formatting, and our source assessment anchors strictly to the actual tested and committed post-format file.",
+    "phaseCoverage": [
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "red",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms RED ran `inspect_header_dispatch` against pre-fix `inspect.rs` and failed at line 159 on the `unknown` case's human stderr assertion because pre-fix `inspect` fell through to `mori_core::parse` and emitted the narrower `/1`-only profile message (left, 95 bytes) instead of the dual-profile `mori_core::language` message (right, 111 bytes).",
+            "exactQuote": "thread 'source_only_inspect_keeps_complete_header_errors' (958175) panicked at crates/mori/tests/inspect_header_dispatch.rs:159:9:\nassertion `left == right` failed: unknown: complete human stream",
+            "packetPath": "actual/red/STDOUT.log"
+          },
+          {
+            "analysis": "Confirms cargo compiled the workspace and executed the `inspect_header_dispatch` test binary, which exited with failure (exit code 101 in `actual/red/RESULT.json`).",
+            "exactQuote": "     Running tests/inspect_header_dispatch.rs (/tmp/doctorwatson-inspect-header-gi06yedp/target/debug/deps/inspect_header_dispatch-889c2d13c12c703d)\nerror: test failed, to rerun pass `-p mori --test inspect_header_dispatch`",
+            "packetPath": "actual/red/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      },
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "green",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms that after the sole one-expression mutation in `crates/mori/src/commands/inspect.rs`, the aggregate test `source_only_inspect_keeps_complete_header_errors` passed all four assertions (producer Error DTO, exit status 1, empty stdout, and exact wrapped human stderr) across all three header cases (`unknown`, `missing`, `commented`).",
+            "exactQuote": "running 1 test\ntest source_only_inspect_keeps_complete_header_errors ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+            "packetPath": "actual/green/STDOUT.log"
+          },
+          {
+            "analysis": "Confirms cargo recompiled `mori` after the `inspect.rs` mutation and ran the exact same `inspect_header_dispatch` test binary to completion with exit code 0.",
+            "exactQuote": "   Compiling mori v0.1.0 (/home/charl/Moriarty/.worktrees/utxo-positive-wave32-20261018/crates/mori)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.93s\n     Running tests/inspect_header_dispatch.rs (/tmp/doctorwatson-inspect-header-gi06yedp/target/debug/deps/inspect_header_dispatch-889c2d13c12c703d)",
+            "packetPath": "actual/green/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      },
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "core1-positive",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms the positive control `reported_core_profiles_select_real_source_only_cli_consumers` in `tests/capabilities.rs` passed with exit code 0, verifying valid Core1 (`moriarty/1`) and Core2 (`moriarty/2`) `check --json` and source-only `inspect` routing and file snapshot preservation.",
+            "exactQuote": "running 1 test\ntest reported_core_profiles_select_real_source_only_cli_consumers ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.01s",
+            "packetPath": "actual/core1-positive/STDOUT.log"
+          },
+          {
+            "analysis": "Confirms `tests/capabilities.rs` compiled and executed cleanly under `--no-default-features` with `--exact --test-threads=1`.",
+            "exactQuote": "     Running tests/capabilities.rs (/tmp/doctorwatson-inspect-header-gi06yedp/target/debug/deps/capabilities-eaaf6a0f3fc9fecc)",
+            "packetPath": "actual/core1-positive/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      },
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "core2-positive",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms the Core2 positive control `check_and_source_inspect_route_core_two_without_legacy_consumers` in `tests/core_continuations.rs` passed with exit code 0 on `reserve.mori`.",
+            "exactQuote": "running 1 test\ntest check_and_source_inspect_route_core_two_without_legacy_consumers ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.01s",
+            "packetPath": "actual/core2-positive/STDOUT.log"
+          },
+          {
+            "analysis": "Confirms `tests/core_continuations.rs` compiled and ran cleanly under `--no-default-features` with `--exact --test-threads=1`.",
+            "exactQuote": "     Running tests/core_continuations.rs (/tmp/doctorwatson-inspect-header-gi06yedp/target/debug/deps/core_continuations-be03372060c9de90)",
+            "packetPath": "actual/core2-positive/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      }
+    ],
+    "positiveControlAssertionScope": "The two executed positive controls (`capabilities::reported_core_profiles_select_real_source_only_cli_consumers` and `core_continuations::check_and_source_inspect_route_core_two_without_legacy_consumers`) verify only their written assertions: (1) `capabilities --json` profile metadata (`sourceProfile`, `semanticsProfile`, `sourceHeader`, `core2-inspect` `outputProfile == null`) and valid `rust-core1` (`moriarty/1`) / `rust-core2` (`moriarty/2`) `check --json` and source-only `inspect` JSON fields (`status`, `language`, `semantics`, `enforcement_report: null`, `qualification`, `authentication`, `consumption`, `format`, `stage_plan.format`), plus directory file-snapshot preservation; and (2) `reserve.mori` (`ReserveContinuationOracle`) `check --json` and source-only `inspect` exit success, empty stderr, `normal_output_labels_from_opus` (`authentication: \"none\"`, `consumption: \"untracked\"`, `qualification: \"local-reference-stage\"`), `checked[\"language\"] == \"moriarty/2\"`, `inspected[\"semantics\"] == \"moriarty-core/2\"`, and `inspected[\"stage_plan\"][\"actions\"][0][\"segment_cost\"] == [\"11\", \"15\", \"10\"]`. Neither positive control asserts complete byte-for-byte public stdout report equality, executes `simulate` or native `--target` compilation/inspection, or exercises the unused `reserve`, `compatibility_v1`, or `escrow` branches of `normal-oracle.json`. `tests/core_continuations.rs` retains its pre-existing `include_str!(\"../../../examples/core/continuations/...\")` external fixture mount as an acknowledged existing guideline deviation.",
+    "reason": "Approve actualResultAssessment: The root driver (`actual/COMPLETE-ROOT-DRIVER.py`) executed a clean, reproducible 4-phase verification (`red`, `green`, `core1-positive`, `core2-positive`) against base commit `615eceee9c6250d2f203cb5807d5c75482dbdb5d` (tree `4a78114c06d5fbb858a4bf97b922c0446fabe978`) resulting in candidate commit `4c03df51f78337d1a9e17cfaaabbbea112fef0df` (tree `27b0211b04921485afae58603811549b7b93cb7d`) with all 903 source pins verified (`actual/POST-COMMIT-BINDING.json`, `SOURCE-RESULT-CUSTODY.json`) and zero lingering session processes (`ownedSessionRemaining: []`). In `red`, all three CLI processes (`unknown`, `missing`, `commented`) were captured to `actual/red/public-cli/` before the first Rust assertion on `unknown` human stderr panicked with exit code 101; independent comparison (`actual/FROZEN-OBSERVATION-COMPARISON.json`) confirms all three RED captures had exact producer Error DTOs (offsets 16, 9, 25), exit status 1, and 0-byte stdout, while all three human stderr streams differed from the frozen repair (`95`, `67`, and `95` bytes vs `111`, `121`, and `111` bytes). After the sole production mutation in `crates/mori/src/commands/inspect.rs` (`actual/SOURCE-MUTATION.json`), `green` passed (exit 0) and all three GREEN raw process captures matched the frozen expectations across producer Error DTO, exit status 1, 0-byte stdout, and wrapped 80-column human stderr. Both positive controls (`core1-positive` and `core2-positive`) passed (exit 0) within their written assertion scope.",
+    "redAssertionReachabilityDisposition": "In `source/crates/mori/tests/inspect_header_dispatch.rs` (lines 585-616 of `FULL-INPUT.md`), `source_only_inspect_keeps_complete_header_errors` is a single aggregate `#[test]` function that first iterates over all 3 `CASES` (`unknown`, `missing`, `commented`), invoking `mori_core::language(case.source)` and `project.run(case.name, case.source)` and persisting `header.mori`, `process.json`, `producer-error.json`, `stdout.bin`, and `stderr.txt` for all 3 cases into a `Vec` before running any assertions. In the subsequent `for (case, error, output) in captured` loop during phase `red`, the first 3 assertions for `unknown` (`error == expected`, `output.status.code() == Some(1)`, `output.stdout.is_empty()`) succeeded, and the 4th assertion at line 159 (`output.stderr == case.expected_stderr.as_bytes()`) panicked on `unknown`, terminating the test with exit code 101 before the Rust loop reached the assertions for `missing` and `commented`. Because process execution and disk capture preceded the assertion loop, all 3 RED cases were completely captured in `actual/red/public-cli/{unknown,missing,commented}/` and verified in `actual/FROZEN-OBSERVATION-COMPARISON.json` and `SOURCE-RESULT-CUSTODY.json`, and all 12 assertions across all 3 cases subsequently executed and passed in `green`.",
+    "verdict": "approve"
+  },
+  "dissent": [
+    {
+      "consequence": "Does not block approval of the candidate source change or actual RED/GREEN/positive-control evidence, but bounds what the review certifies: GREEN is recorded as 1 passing Rust test function covering 3 header cases (with RED leaving `missing` and `commented` loop assertions unreached in Rust after capturing their processes), and the diagnostic expectations are certified as ordinary source-exposed regression checks rather than an independent oracle.",
+      "evidence": "`crates/mori/tests/inspect_header_dispatch.rs` lines 135-166 define a single `#[test] fn source_only_inspect_keeps_complete_header_errors()` iterating over `CASES: [HeaderCase; 3]`, which panics at line 159 on `unknown` during `red` (`actual/red/STDOUT.log` line 2246 of `FULL-INPUT.md`); `actual/EXPECTATIONS.json` line 1075 explicitly records that the expected values were inspected from `parser::language` and existing `simulate_header_dispatch` literals prior to execution.",
+      "position": "Concur with approving both `sourceAssessment` and `actualResultAssessment`, while dissenting from any characterization of the new test as three independent Rust `#[test]` cases in RED or of the frozen expectations as an independent non-source-exposed oracle.",
+      "scope": "Aggregate single-test structure in `inspect_header_dispatch.rs` and source-exposed diagnostic expectation provenance"
+    }
+  ],
+  "findings": [
+    {
+      "evidence": "In `source/crates/mori/tests/inspect_header_dispatch.rs` lines 135-166 (`FULL-INPUT.md` lines 585-616), all three cases (`unknown`, `missing`, `commented`) are asserted in one `for (case, error, output) in captured` loop inside `fn source_only_inspect_keeps_complete_header_errors()`, causing `actual/red/STDOUT.log` to panic at `inspect_header_dispatch.rs:159:9` on `unknown: complete human stream` before executing the Rust assertions for `missing` and `commented` during `red`.",
+      "issue": "Because `source_only_inspect_keeps_complete_header_errors` aggregates all three header cases into a single `#[test]` function, a failure on the first case (`unknown`) prevents the Rust assertion loop from reaching the `missing` and `commented` assertions during the RED phase, relying on pre-assertion disk capture (`MORI_INSPECT_HEADER_OBSERVATIONS`) and external comparison (`FROZEN-OBSERVATION-COMPARISON.json`) to observe the RED stderr mismatch for `missing` and `commented`.",
+      "line": 154,
+      "path": "crates/mori/tests/inspect_header_dispatch.rs",
+      "requestedChange": "No blocking change required for this candidate since `captured` collects and writes all three cases to disk before the assertion loop and GREEN runs all assertions across all three cases; future multi-case CLI regressions may optionally use separate `#[test]` functions per case if independent Rust test-runner reachability on failure is desired.",
+      "severity": "informational"
+    },
+    {
+      "evidence": "In `source/crates/mori/src/commands/inspect.rs` lines 47-58 (`FULL-INPUT.md` lines 84-95), `#[cfg(feature = \"native\")] if mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\")` remains unchanged when `args.target.is_some()`, falling through to `mori_core::parse(&source)` at line 59 when `language(&source)` returns `Err`.",
+      "issue": "The `#[cfg(feature = \"native\")]` `--target` branch at `inspect.rs:48` still uses `mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\")`, which is intentionally untouched by this source-only (`args.target.is_none()`) repair and unexercised by `--no-default-features` test runs.",
+      "line": 48,
+      "path": "crates/mori/src/commands/inspect.rs",
+      "requestedChange": "None in this candidate; preserve the strict source-only boundary and leave any `--target` / `native` header dispatch behavior to a separate native-scoped change if desired.",
+      "severity": "informational"
+    }
+  ],
+  "limitations": [
+    "This review is strictly a static source and captured-result review with zero product, Cargo, Git, provider, SDK, native, prover, verifier, wallet, or ledger execution performed by the reviewer.",
+    "All four executed test phases (`red`, `green`, `core1-positive`, `core2-positive`) ran with `--no-default-features`; the `#[cfg(feature = \"native\")]` blocks in `crates/mori/src/commands/inspect.rs` (including line 48's `is_ok_and` probe when `args.target.is_some()` and all downstream enforcement-report helpers at lines 103-409) were neither compiled nor executed in these runs, though their source bytes were read completely and verified unchanged against `actual/INSPECT-BEFORE.rs`.",
+    "In phase `red`, the single aggregate test `source_only_inspect_keeps_complete_header_errors` panicked at `crates/mori/tests/inspect_header_dispatch.rs:159:9` on the first case (`unknown` human stderr), so the Rust assertion statements for `missing` and `commented` were unreached during `red`; their RED behavior is established by the pre-assertion raw process captures in `actual/red/public-cli/{missing,commented}/` and `actual/FROZEN-OBSERVATION-COMPARISON.json`, and all three cases' assertions were reached and passed in `green`.",
+    "The public human stderr stream rendered through `core_io::operation` and `mori_diagnostics::render::render_colored` formats `mori_core::Error` via its `Display` impl (`{code}: {message}`) wrapped to 80 columns and does not include the UTF-8 byte `offset` field (`16`, `9`, `25`), which is tested in-process via `mori_core::language(case.source)` (`producer-error.json`) rather than parsed from CLI stderr.",
+    "The frozen diagnostic expectations in `actual/EXPECTATIONS.json` and `crates/mori/tests/inspect_header_dispatch.rs` are source-exposed ordinary diagnostic literals derived from `mori_core::parser::language` and existing CLI rendering conventions, not an independent financial, cryptographic, or work oracle.",
+    "The positive controls (`capabilities::reported_core_profiles_select_real_source_only_cli_consumers` and `core_continuations::check_and_source_inspect_route_core_two_without_legacy_consumers`) verify only their explicitly written JSON field and file-preservation assertions; they do not assert full stdout byte equality, do not execute `simulate` or unused branches of `normal-oracle.json` (`reserve`, `compatibility_v1`, `escrow`), and retain existing external fixture paths (`examples/core/continuations/...`) as an acknowledged pre-existing guideline deviation.",
+    "The full 903-row before/after source pin manifests (`SOURCE-PINS-BEFORE.json`, `SOURCE-PINS-AFTER.json`) and unused oracle branches are held in physical custody and summarized via `SOURCE-RESULT-CUSTODY.json` and `actual/POST-COMMIT-BINDING.json`; this review makes no claim of reading all 903 unchanged repository files or auditing the entire repository. Broader 148/292/20 and U0-U7/M1-M17/MC/SP/G, financial, composition, proof, and target obligations remain unchanged."
+  ],
+  "mandatoryInputCoverage": {
+    "coverageSummary": "Read the entire `FULL-INPUT.md` (all 8286 lines, 332852 bytes, SHA256 bb8a3f9692d214825aaf204b6f480a31a9567fd28a7f41f07def7e82b9e0881d) once across contiguous line slices without any byte truncation, plus the complete `REVIEW-RESPONSE.schema.json` (1670 lines, 54257 bytes), `MANDATORY-INPUTS.json` (712 lines, 24212 bytes), and `REVIEW-REQUEST.md` (14 lines, 5697 bytes). All 141 mandatory files enumerated in `MANDATORY-INPUTS.json` and the schema enum were read completely. No claim is made of reading the full 903-row unchanged repository manifests or unused control oracle branches (`reserve`, `compatibility_v1`, `escrow`) that are preserved in physical custody only.",
+    "entireInlineInputRead": true,
+    "filesReadCompletely": [
+      "FORMAT-EXACT.diff",
+      "source/crates/mori/src/commands/inspect.rs",
+      "source/crates/mori/tests/inspect_header_dispatch.rs",
+      "actual/AUTHOR-TEST-BEFORE-FORMAT.rs",
+      "actual/CHECK-PLAN.json",
+      "actual/COMPLETE-ROOT-DRIVER.py",
+      "actual/EXPECTATIONS.json",
+      "actual/EXPECTATIONS.sha256",
+      "actual/FINAL-RESULT.json",
+      "actual/FORMAT-ONLY-DELTA.json",
+      "actual/FROZEN-OBSERVATION-COMPARISON.json",
+      "actual/INSPECT-BEFORE.rs",
+      "actual/POST-COMMIT-BINDING.json",
+      "actual/SOURCE-MUTATION.json",
+      "actual/core1-positive/CHILD.json",
+      "actual/core1-positive/RESULT.json",
+      "actual/core1-positive/START.json",
+      "actual/core1-positive/STDERR.log",
+      "actual/core1-positive/STDOUT.log",
+      "actual/core2-positive/CHILD.json",
+      "actual/core2-positive/RESULT.json",
+      "actual/core2-positive/START.json",
+      "actual/core2-positive/STDERR.log",
+      "actual/core2-positive/STDOUT.log",
+      "actual/green/CHILD.json",
+      "actual/green/RESULT.json",
+      "actual/green/START.json",
+      "actual/green/STDERR.log",
+      "actual/green/STDOUT.log",
+      "actual/green/public-cli/commented/header.mori",
+      "actual/green/public-cli/commented/process.json",
+      "actual/green/public-cli/commented/producer-error.json",
+      "actual/green/public-cli/commented/stderr.txt",
+      "actual/green/public-cli/commented/stdout.bin",
+      "actual/green/public-cli/missing/header.mori",
+      "actual/green/public-cli/missing/process.json",
+      "actual/green/public-cli/missing/producer-error.json",
+      "actual/green/public-cli/missing/stderr.txt",
+      "actual/green/public-cli/missing/stdout.bin",
+      "actual/green/public-cli/unknown/header.mori",
+      "actual/green/public-cli/unknown/process.json",
+      "actual/green/public-cli/unknown/producer-error.json",
+      "actual/green/public-cli/unknown/stderr.txt",
+      "actual/green/public-cli/unknown/stdout.bin",
+      "actual/red/CHILD.json",
+      "actual/red/RESULT.json",
+      "actual/red/START.json",
+      "actual/red/STDERR.log",
+      "actual/red/STDOUT.log",
+      "actual/red/public-cli/commented/header.mori",
+      "actual/red/public-cli/commented/process.json",
+      "actual/red/public-cli/commented/producer-error.json",
+      "actual/red/public-cli/commented/stderr.txt",
+      "actual/red/public-cli/commented/stdout.bin",
+      "actual/red/public-cli/missing/header.mori",
+      "actual/red/public-cli/missing/process.json",
+      "actual/red/public-cli/missing/producer-error.json",
+      "actual/red/public-cli/missing/stderr.txt",
+      "actual/red/public-cli/missing/stdout.bin",
+      "actual/red/public-cli/unknown/header.mori",
+      "actual/red/public-cli/unknown/process.json",
+      "actual/red/public-cli/unknown/producer-error.json",
+      "actual/red/public-cli/unknown/stderr.txt",
+      "actual/red/public-cli/unknown/stdout.bin",
+      "original-author/README.md",
+      "original-author/FINDING.json",
+      "original-author/REGRESSION-PLAN.json",
+      "original-author/STATIC-VALIDATION.json",
+      "original-author/expectations/commented/header.mori",
+      "original-author/expectations/commented/producer-error.json",
+      "original-author/expectations/commented/stderr.txt",
+      "original-author/expectations/commented/stdout.bin",
+      "original-author/expectations/missing/header.mori",
+      "original-author/expectations/missing/producer-error.json",
+      "original-author/expectations/missing/stderr.txt",
+      "original-author/expectations/missing/stdout.bin",
+      "original-author/expectations/unknown/header.mori",
+      "original-author/expectations/unknown/producer-error.json",
+      "original-author/expectations/unknown/stderr.txt",
+      "original-author/expectations/unknown/stdout.bin",
+      "source/crates/mori/src/main.rs",
+      "source/crates/mori/src/commands/mod.rs",
+      "source/crates/mori/src/shell.rs",
+      "source/crates/mori/src/error.rs",
+      "source/crates/mori/src/display.rs",
+      "source/crates/mori/src/commands/check.rs",
+      "source/crates/mori/src/commands/check_source.rs",
+      "source/crates/mori-core/src/parser.rs",
+      "source/crates/mori-core/src/json.rs",
+      "source/crates/mori-lexer/src/lib.rs",
+      "source/crates/mori-lexer/src/token.rs",
+      "source/crates/mori-lexer/src/string.rs",
+      "source/crates/mori-lexer/src/scan.rs",
+      "source/crates/mori/Cargo.toml",
+      "source/crates/mori-core/Cargo.toml",
+      "source/rust-toolchain.toml",
+      "units/core_io-read_source.rs",
+      "units/core_io-operation.rs",
+      "units/core_io-print.rs",
+      "units/simulate-print-stage-report.rs",
+      "units/profile-constants.rs",
+      "units/core-Error-dto.rs",
+      "units/existing-library-header-test.rs",
+      "units/stage-profile-labels.rs",
+      "units/staged-program-accessors.rs",
+      "units/stage-load.rs",
+      "units/cli-global-options.rs",
+      "units/cli-color-conversion.rs",
+      "units/mori-diagnostics-render-production.rs",
+      "units/check-json-production.rs",
+      "units/capabilities-positive-helpers.rs",
+      "units/capabilities-positive-test.rs",
+      "units/core2-positive-helpers.rs",
+      "units/core2-positive-test.rs",
+      "source/examples/core/continuations/reserve.mori",
+      "positive-oracle-used-values-and-provenance.json",
+      "source/crates/mori/src/commands/capabilities.rs",
+      "POSITIVE-CONTROL-SCOPE.json",
+      "units/miette-graphical-handler-types.rs",
+      "units/miette-new-themed.rs",
+      "units/miette-with-links.rs",
+      "units/miette-with-width.rs",
+      "units/miette-render-report.rs",
+      "units/miette-render-report-inner.rs",
+      "units/miette-render-header.rs",
+      "units/miette-render-causes.rs",
+      "units/miette-render-footer.rs",
+      "units/miette-render-related.rs",
+      "units/miette-render-snippets.rs",
+      "units/miette-wrap.rs",
+      "renderer/miette-7.6.0/src/handlers/theme.rs",
+      "renderer/textwrap-0.16.4/src/options.rs",
+      "renderer/textwrap-0.16.4/src/word_separators.rs",
+      "renderer/textwrap-0.16.4/src/wrap_algorithms.rs",
+      "units/UNI-018.md",
+      "units/RUST-diagnostics-testing-cli.md",
+      "units/permissionless-product-boundary.md",
+      "SOURCE-RESULT-CUSTODY.json",
+      "SOURCE-UNIT-MAP.json",
+      "CANDIDATE.json",
+      "REVIEW-REQUEST.md"
+    ],
+    "unreadMandatoryFiles": []
+  },
+  "reviewToken": "mori-inspect-header-4c03df51-1c16daa2586f6b619ae6",
+  "sourceAssessment": {
+    "changedPathCoverage": [
+      {
+        "completeBodyRead": true,
+        "path": "crates/mori/src/commands/inspect.rs",
+        "quoteAnchors": [
+          {
+            "analysis": "Sole production change vs `actual/INSPECT-BEFORE.rs` line 29: when `args.target.is_none()`, `mori_core::language(&source)` errors are now propagated immediately through `super::core_io::operation` (`CliError::Operation` -> `mori_diagnostics::Report`) instead of being converted to `false` by `.is_ok_and(...)` and falling through to the `/1`-only `mori_core::parse(&source)` at line 59. Because `args.target.is_none()` remains the first operand of `&&`, short-circuit evaluation guarantees that `--target` invocations do not execute this probe.",
+            "exactQuote": "    if args.target.is_none()\n        && mori_core::language(&source).map_err(super::core_io::operation)? == \"moriarty/2\"\n    {",
+            "originalLine": 28
+          },
+          {
+            "analysis": "Preserves the existing `#[cfg(feature = \"native\")]` Core2 `--target` refusal branch and all downstream target/enforcement-report helpers (lines 47-409) verbatim and byte-identical to `actual/INSPECT-BEFORE.rs`.",
+            "exactQuote": "    #[cfg(feature = \"native\")]\n    if mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\") {",
+            "originalLine": 47
+          },
+          {
+            "analysis": "Preserves the existing Core1 (`moriarty/1`) parse and `\"moriarty-enforcement-report/1\"` report path when `mori_core::language(&source)` succeeds with `\"moriarty/1\"` (so `== \"moriarty/2\"` is `false`).",
+            "exactQuote": "    let program = mori_core::parse(&source).map_err(super::core_io::operation)?;",
+            "originalLine": 59
+          }
+        ],
+        "sha256": "0016e768e086f0e6abdd616e4765838df8563392aaf9a7ea708e8e63bb9d8c78"
+      },
+      {
+        "completeBodyRead": true,
+        "path": "crates/mori/tests/inspect_header_dispatch.rs",
+        "quoteAnchors": [
+          {
+            "analysis": "Root-formatted single-line `args` array (the sole formatting delta from `actual/AUTHOR-TEST-BEFORE-FORMAT.rs` lines 94-99), invoking the real `CARGO_BIN_EXE_mori` binary with `--color never inspect header.mori` so `Shell::report` renders plain Unicode miette output wrapped at `WIDTH = 80`.",
+            "exactQuote": "        let args = [\"--color\", \"never\", \"inspect\", \"header.mori\"];",
+            "originalLine": 94
+          },
+          {
+            "analysis": "Captures both the in-process `mori_core::language(case.source)` producer `Error` DTO (`producer-error.json`) and the public subprocess execution (`output`, persisted to `stdout.bin`, `stderr.txt`, and `process.json`) for all three `CASES` (`unknown`, `missing`, `commented`) into `captured` before any assertion runs.",
+            "exactQuote": "            let error = mori_core::language(case.source)\n                .err()\n                .map(|error| serde_json::to_value(error).unwrap())\n                .unwrap_or(Value::Null);\n            let output = project.run(case.name, case.source);",
+            "originalLine": 141
+          },
+          {
+            "analysis": "Asserts for each case that the producer `Error` DTO (including `code`, `message`, UTF-8 byte `offset` 16/9/25, and `step: null`), exit status `Some(1)`, empty `stdout`, and complete wrapped human `stderr` bytes match the frozen expectations.",
+            "exactQuote": "        assert_eq!(error, expected, \"{}: complete producer Error\", case.name);\n        assert_eq!(output.status.code(), Some(1), \"{}\", case.name);\n        assert!(output.stdout.is_empty(), \"{}: complete stdout\", case.name);\n        assert_eq!(\n            output.stderr,\n            case.expected_stderr.as_bytes(),\n            \"{}: complete human stream\",\n            case.name\n        );",
+            "originalLine": 156
+          }
+        ],
+        "sha256": "f925bcc0ccd78f5a9cc9512f03718830a39475ddd98385531eaff6e90a9b43c3"
+      }
+    ],
+    "reason": "Approve sourceAssessment: Candidate commit 4c03df51f78337d1a9e17cfaaabbbea112fef0df (tree 27b0211b04921485afae58603811549b7b93cb7d, parent 615eceee9c6250d2f203cb5807d5c75482dbdb5d) modifies precisely two files (`crates/mori/src/commands/inspect.rs` and `crates/mori/tests/inspect_header_dispatch.rs`). In `crates/mori/src/commands/inspect.rs`, line 29 changes `mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\")` to `mori_core::language(&source).map_err(super::core_io::operation)? == \"moriarty/2\"` inside the `if args.target.is_none() && ...` guard. Previously, when `mori_core::language(&source)` returned `Err` on an unknown or malformed header in source-only `mori inspect`, `.is_ok_and(...)` discarded the dual-profile `mori_core::Error` (`Expected language \"moriarty/1\" or \"moriarty/2\"...`) and fell through to `mori_core::parse(&source)` at line 59, which emitted the narrower Core1-only profile error (`Expected language \"moriarty/1\"; found ...`) or bare syntax error (`Expected a quoted string.`). With the change, source-only `inspect` preserves the exact producer `mori_core::Error` and routes it through `core_io::operation`, `main.rs`, `Shell::report`, and `mori_diagnostics::render::render_colored` (miette `GraphicalReportHandler` with `GraphicalTheme::unicode()`, `WIDTH = 80`, `with_links(false)`), leaving stdout empty and exiting with code 1. Valid `moriarty/2` and `moriarty/1` source-only inspect paths, the non-native `--target` guard at lines 23-26, and the entire `#[cfg(feature = \"native\")]` `--target` branch and helpers at lines 47-409 remain byte-identical to `actual/INSPECT-BEFORE.rs`. The new integration test `crates/mori/tests/inspect_header_dispatch.rs` (after root's single-expression `rustfmt` line-wrap normalization on line 94) cleanly captures all three subprocess runs before assertions and verifies both the complete `mori_core::Error` DTO (including UTF-8 byte offsets 16, 9, and 25) and the public CLI exit code, empty stdout, and wrapped human stderr.",
+    "verdict": "approve"
+  },
+  "verdict": "approve"
+}

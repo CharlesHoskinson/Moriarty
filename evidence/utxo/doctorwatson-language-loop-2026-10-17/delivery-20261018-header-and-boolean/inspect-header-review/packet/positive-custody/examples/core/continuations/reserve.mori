@@ -1,0 +1,21 @@
+language "moriarty/2";
+agreement ReserveContinuationOracle {
+  asset CREDIT = { network: "local", issuer: "continuation-reserve-oracle", reference: "UNIT", scale: 0 };
+  state basis: UInt = 40;
+  state allocated: UInt = 0;
+  state marker: UInt = 77;
+  action allocate(extra: UInt) {
+    let held = basis + extra;
+    next basis = basis - 5;
+    liability("allocation", CREDIT, "reserve", "target", held);
+    await approval(quote: UInt) when quote >= held;
+    next allocated = held;
+    transfer(CREDIT, "reserve", "target", held);
+    discharge("allocation", held);
+    next basis = basis + quote;
+    await settlement(ready: Bool) when ready;
+    requires quote <= 50;
+    fee(CREDIT, "reserve", "treasury", extra);
+    emit "settled_quote"(quote);
+  }
+}
