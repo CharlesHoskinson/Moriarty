@@ -99,3 +99,16 @@ names the missing privileged operator source, fresh observations, final bindings
 and grants. Select those exact dependencies; do not repeat unchanged policy
 reviews or the ordinary69 cohort. Native authority0/C4/R2/60460 and the stopped
 amendment stay in their recorded states until their actual predicates are met.
+
+## Current EARS delivery selection — October18
+
+The [live N01 resource result](../results/sherlock-live-resource-chunks-20261018/README.md)
+observes the missing whole/twochunk producer case. Preserve it and the earlier
+supplieddata check; next implement actual identity/profile reporting with
+independent expected fields and an explicit compatible report version. Whole013
+stays open until its remaining predicates are met. The financial adapter's first
+integration check found invalid sourcewide liability registration in its input.
+Correct that input, independently derive the changed Program/Plan identities,
+and select the discriminating check again only on the changed candidate. Do not
+rerun its already passed production-library compilation without a source change.
+These are current selections within the active full-EARS goal, not a new loop.
