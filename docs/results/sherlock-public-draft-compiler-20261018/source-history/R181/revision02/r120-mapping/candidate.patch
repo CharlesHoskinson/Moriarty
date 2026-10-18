@@ -1,0 +1,84 @@
+--- a/crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs
+@@ -45,9 +45,8 @@
+     }
+ }
+ 
+-/// Required extents, not a working admission implementation. No values or
+-/// relationships are chosen here. Designated owner owns their final schema,
+-/// meanings, checks, error representation and source-depth/drop disposition.
++/// Explicit extents; the parser projection below chooses no numerical values.
++/// Checker/copy limits and source-depth/drop admission remain separate work.
+ #[derive(Clone, Copy, Serialize, Deserialize)]
+ #[serde(deny_unknown_fields)]
+ pub struct DraftPreprocessingExtents {
+@@ -56,10 +55,33 @@
+     pub max_functions: UsizeDecimal,
+     pub max_parameters_per_function: UsizeDecimal,
+     pub max_total_parameters: UsizeDecimal,
++    /// Syntactic Expr + Pattern occurrences, including repeated source uses.
++    /// Maps to DraftParseBudget::max_ast_occurrences, without pointer deduplication.
+     pub max_ast_nodes: UsizeDecimal,
++    /// Active parser descent bodies; maps to max_parser_recursion_depth.
++    /// Parentheses consume this extent even though they create no Expr node.
+     pub max_parse_depth: UsizeDecimal,
++    /// Longest Expr root-to-leaf path, leaf depth one; distinct from parser,
++    /// checker and copy depth. No default or alias to another extent.
++    pub max_structural_ast_depth: UsizeDecimal,
+     pub max_type_depth: UsizeDecimal,
+     pub max_copy_depth: UsizeDecimal,
++}
++
++impl DraftPreprocessingExtents {
++    /// Exact parser projection only; no checker/copy/drop/evaluator admission.
++    pub fn parser_budget(self) -> crate::sherlock_draft::DraftParseBudget {
++        crate::sherlock_draft::DraftParseBudget {
++            max_source_bytes: self.max_source_bytes.0,
++            max_tokens: self.max_tokens.0,
++            max_functions: self.max_functions.0,
++            max_parameters_per_function: self.max_parameters_per_function.0,
++            max_total_parameters: self.max_total_parameters.0,
++            max_ast_occurrences: self.max_ast_nodes.0,
++            max_parser_recursion_depth: self.max_parse_depth.0,
++            max_structural_ast_depth: self.max_structural_ast_depth.0,
++        }
++    }
+ }
+ 
+ /// Separate schema: Core HostBounds action fields are never silently renamed
+--- a/crates/mori-core/src/sherlock/compile_artifact/draft_diagnostics.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact/draft_diagnostics.rs
+@@ -1,7 +1,7 @@
+ //! Exact ordinary source/type diagnostic field projections. These are not
+-//! runtime Outcomes and do not interpret designated-owner guard diagnostics.
++//! runtime Outcomes. Parser budget errors retain their typed resource and counts.
+ use serde_json::{json, Value};
+-use crate::sherlock_draft::DraftError;
++use crate::sherlock_draft::{DraftBudgetResource, DraftError};
+ use crate::sherlock_draft_types::{DraftTypeError, DraftTypeErrorKind};
+ use super::draft_report::{SourceLocation, SourceSort, SourceSpan};
+ 
+@@ -14,6 +14,23 @@
+         DraftError::UIntLiteral { span, text } => json!({"UIntLiteral": {
+             "span": SourceSpan::from(span), "text": text,
+         }}),
++        DraftError::Budget(exceeded) => {
++            let resource = match exceeded.resource {
++                DraftBudgetResource::SourceBytes => "SourceBytes",
++                DraftBudgetResource::Tokens => "Tokens",
++                DraftBudgetResource::Functions => "Functions",
++                DraftBudgetResource::ParametersPerFunction => "ParametersPerFunction",
++                DraftBudgetResource::TotalParameters => "TotalParameters",
++                DraftBudgetResource::AstOccurrences => "AstOccurrences",
++                DraftBudgetResource::ParserRecursionDepth => "ParserRecursionDepth",
++                DraftBudgetResource::StructuralAstDepth => "StructuralAstDepth",
++            };
++            json!({"Budget": {
++                "resource": resource,
++                "limit": exceeded.limit.to_string(),
++                "observed": exceeded.observed.to_string(),
++            }})
++        },
+     }
+ }
+ 

@@ -1,0 +1,210 @@
+//! First public compiler's parameter-free Core/1 -> actual HostOnly B artifact.
+//! Source candidate only: no constraint plan, native export or target execution.
+//! The selected route reuses production preparation/admission. Evaluation occurs
+//! only in the explicit observe branch, through the original run consumer.
+use std::collections::BTreeMap;
+use serde::Serialize;
+use serde_json::{json, Value};
+use crate::sherlock::helper_machine::core_action_consumer::{
+    preflight_action_inputs, preflight_source_global, prepare_scalar_action_host,
+    run_scalar_action, validate_config, ConsumerError,
+};
+use crate::sherlock::helper_machine::shared::StepEventC;
+use crate::sherlock_source::ScalarActionReport;
+
+#[path = "compile_artifact/config.rs"]
+pub mod config;
+#[path = "compile_artifact/wire.rs"]
+mod wire;
+use config::ExecutionConfig;
+use wire::OwnerWire;
+
+pub const EXECUTION_PROFILE: &str = "sherlock-helper-microstep/1";
+
+/// Output-only JSON trees below come from typed exhaustive owner projections.
+/// They are not accepted back as an executable image or as admission authority.
+#[derive(Serialize)]
+pub struct CompileArtifact {
+    pub format: &'static str,
+    pub qualification: &'static str,
+    pub source: SourceIdentity,
+    pub execution_profile: &'static str,
+    pub input_policy: InputPolicy,
+    pub config: ConfigIdentity,
+    pub target: TargetDescriptor,
+    pub preparation: ScalarActionReport,
+    pub admission: Value,
+    pub plans: Plans,
+    pub observation: Observation,
+    pub evidence: Evidence,
+}
+#[derive(Serialize)]
+#[serde(tag = "status", rename_all = "kebab-case")]
+pub enum Observation {
+    NotRequested { evaluation_performed: bool },
+    Observed {
+        evaluation_performed: bool,
+        summary: Value,
+        events_forwarded: String,
+        image: Value,
+        resource_report: crate::sherlock::helper_machine::resource_report::ResourceReport,
+    },
+}
+impl CompileArtifact {
+    /// Preserve the real completed-run metadata on later serialization/publication failure.
+    pub fn failure(&self, stage: &'static str, message: impl Into<String>) -> CompileFailure {
+        let (evaluation_performed, events_forwarded, completed) = match &self.observation {
+            Observation::NotRequested { .. } => (false, "0".to_owned(), false),
+            Observation::Observed { events_forwarded, .. } => (true, events_forwarded.clone(), true),
+        };
+        CompileFailure { stage, actual_error:json!({"message":message.into()}),
+            evaluation_performed, events_forwarded, completed }
+    }
+}
+
+#[derive(Serialize)]
+pub struct SourceIdentity {
+    pub language: String, pub semantics: String, pub agreement: String,
+    pub action: String, pub action_index: String, pub source_digest: String,
+}
+#[derive(Serialize)]
+pub struct InputPolicy { pub kind: &'static str, pub declared: Vec<String>, pub supplied: Vec<String> }
+#[derive(Serialize)]
+pub struct ConfigIdentity { #[serde(flatten)] pub fields: ExecutionConfig, pub file_digest: String }
+#[derive(Serialize)]
+pub struct TargetDescriptor { pub descriptor: Value, pub file_digest: String }
+#[derive(Serialize)]
+pub struct Plan { pub status: &'static str, pub artifact: Option<()>, pub reason: &'static str }
+#[derive(Serialize)]
+pub struct Plans { pub witness: Plan, pub constraint: Plan, pub export: Plan }
+#[derive(Serialize)]
+pub struct Evidence {
+    pub source_preparation: &'static str, pub host_observation: &'static str,
+    pub native: &'static str, pub target: &'static str, pub acceptance: &'static str,
+}
+
+/// Structured original diagnostic payloads, never a manufactured owner outcome.
+#[derive(Serialize)]
+pub struct CompileFailure {
+    pub stage: &'static str,
+    pub actual_error: Value,
+    pub evaluation_performed: bool,
+    pub events_forwarded: String,
+    pub completed: bool,
+}
+impl CompileFailure {
+    pub fn input(stage: &'static str, error: impl Into<String>) -> Self {
+        Self { stage, actual_error: json!({"message":error.into()}),
+            evaluation_performed:false, events_forwarded:"0".into(), completed:false }
+    }
+    fn core(stage: &'static str, error: crate::Error) -> Self {
+        Self { stage, actual_error:json!(error), evaluation_performed:false,
+            events_forwarded:"0".into(), completed:false }
+    }
+    fn consumer(error: ConsumerError) -> Self {
+        let (stage, actual_error, evaluation_performed, events_forwarded, completed) = match error {
+            ConsumerError::HostGuard(error) => ("host-guard", error.owner_wire(), false, 0, false),
+            ConsumerError::CoreValidation(error) => ("parse", json!(error), false, 0, false),
+            ConsumerError::SourceProjection(error) => ("source-projection", json!(error), false, 0, false),
+            ConsumerError::Admit(error) => ("admit", error.owner_wire(), false, 0, false),
+            ConsumerError::AdmitRun(error) => ("admit-run", error.owner_wire(), false, 0, false),
+            ConsumerError::Run { violation, events_forwarded } =>
+                ("run", violation.owner_wire(), true, events_forwarded, false),
+            ConsumerError::Observation { violation, summary, events_forwarded } =>
+                ("observation", json!({"violation":violation.owner_wire(),
+                    "summary":summary.owner_wire()}), true, events_forwarded, true),
+        };
+        Self { stage, actual_error, evaluation_performed,
+            events_forwarded:events_forwarded.to_string(), completed }
+    }
+}
+
+pub fn parse_config(source: &str) -> Result<ExecutionConfig, CompileFailure> {
+    let value = crate::json::parse(source).map_err(|error| CompileFailure::core("config", error))?;
+    let config: ExecutionConfig = serde_json::from_value(value)
+        .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+    // Wire-only shape constraint. Existing host admission decides numerical policy.
+    config.consumer().map_err(|error| CompileFailure::input("config", error))?;
+    Ok(config)
+}
+
+/// SDK-free product entry point. No defaults, scenarios, fixture-name selection,
+/// Core evaluation, constraint generation or native/backend dispatch occur here.
+/// `observe` preserves a distinct caller execution dependency; false never runs.
+pub fn compile_host(
+    source: &str,
+    action_name: &str,
+    config_source: &str,
+    target_source: &str,
+    observe: bool,
+) -> Result<CompileArtifact, CompileFailure> {
+    let config = parse_config(config_source)?;
+    let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
+    let target_descriptor = crate::json::parse(target_source)
+        .map_err(|error| CompileFailure::core("config", error))?;
+    validate_config(&consumer)
+        .map_err(|error| CompileFailure::consumer(ConsumerError::HostGuard(error)))?;
+    let program = crate::parse(source).map_err(|error| CompileFailure::core("parse", error))?;
+    preflight_source_global(&program, &consumer).map_err(CompileFailure::consumer)?;
+    let action_index = program.actions.iter().position(|action| action.name == action_name)
+        .ok_or_else(|| CompileFailure::input("select", format!("unknown action: {action_name}")))?;
+    let inputs = BTreeMap::<String, crate::Value>::new();
+    let action = preflight_action_inputs(&program, action_index, &inputs, &consumer)
+        .map_err(CompileFailure::consumer)?;
+    if !action.inputs.is_empty() {
+        return Err(CompileFailure {
+            stage:"select", actual_error:json!({"unsupported":"parameterized-action",
+                "action":action.name, "action_index":action_index.to_string(),
+                "declared_inputs":action.inputs}), evaluation_performed:false,
+            events_forwarded:"0".into(), completed:false,
+        });
+    }
+    // Each branch owns exactly one admission/image pair. In observe mode the
+    // pair comes only from run_scalar_action, never a separate first preparation.
+    let (preparation, admission, observation) = if observe {
+        let mut sink = |_event: &StepEventC| {};
+        let run = run_scalar_action(&program, action_index, &inputs, &consumer, &mut sink)
+            .map_err(CompileFailure::consumer)?;
+        let actual = run.observe().map_err(CompileFailure::consumer)?;
+        let admission = wire::admission(&actual);
+        let resource = run.resource_report().map_err(CompileFailure::consumer)?;
+        let observation = Observation::Observed {
+            evaluation_performed:true, summary:run.completed.summary.owner_wire(),
+            events_forwarded:run.completed.events_forwarded.to_string(),
+            image:wire::image(&actual.image), resource_report:resource,
+        };
+        (run.preparation, admission, observation)
+    } else {
+        let prepared = prepare_scalar_action_host(&program, action_index, &inputs, &consumer)
+            .map_err(CompileFailure::consumer)?;
+        let actual = prepared.observe().map_err(|error| CompileFailure {
+            stage:"observation", actual_error:error.owner_wire(), evaluation_performed:false,
+            events_forwarded:"0".into(), completed:false,
+        })?;
+        let admission = wire::admission(&actual);
+        (prepared.preparation, admission,
+            Observation::NotRequested { evaluation_performed:false })
+    };
+    Ok(CompileArtifact {
+        format:"sherlock-host-artifact/1",
+        qualification:"host-only-scalar-value-projection; no effects/constraints/native/target qualification",
+        source:SourceIdentity { language:program.language, semantics:program.semantics,
+            agreement:program.name, action:action_name.to_owned(), action_index:action_index.to_string(),
+            source_digest:crate::intent::hash_bytes(source.as_bytes()) },
+        execution_profile:EXECUTION_PROFILE,
+        input_policy:InputPolicy { kind:"parameter-free", declared:vec![], supplied:vec![] },
+        config:ConfigIdentity { fields:config.clone(), file_digest:crate::intent::hash_bytes(config_source.as_bytes()) },
+        target:TargetDescriptor { descriptor:target_descriptor,
+            file_digest:crate::intent::hash_bytes(target_source.as_bytes()) },
+        preparation, admission,
+        plans:Plans {
+            witness:Plan { status:"not-implemented", artifact:None, reason:"no exported WitnessPlan in this batch" },
+            constraint:Plan { status:"not-implemented", artifact:None, reason:"no Sherlock constraint emission in this batch" },
+            export:Plan { status:"unsupported", artifact:None, reason:"HostOnly source route has no native exporter" },
+        },
+        observation,
+        evidence:Evidence { source_preparation:"prepared-and-admitted",
+            host_observation:if observe {"observed"} else {"unrun"},
+            native:"unrun", target:"unrun", acceptance:"none" },
+    })
+}

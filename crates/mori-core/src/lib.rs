@@ -10,12 +10,10 @@ pub mod sherlock;
 #[path = "sherlock/compile_artifact.rs"]
 pub mod sherlock_compile_artifact;
 
-// Unregistered draft source capability: Core-only ordinary host test proposal.
+// Explicit dedicated-draft host preparation; ordinary Core grammar is unchanged.
 // These lexer-dependent modules stay outside Sherlock's standalone Std graph.
-#[cfg(test)]
 #[path = "sherlock/draft_source.rs"]
 mod sherlock_draft;
-#[cfg(test)]
 #[path = "sherlock/draft_typecheck.rs"]
 mod sherlock_draft_types;
 #[cfg(test)]

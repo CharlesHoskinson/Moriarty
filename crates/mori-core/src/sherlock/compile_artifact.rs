@@ -1,7 +1,7 @@
-//! First public compiler's parameter-free Core/1 -> actual HostOnly B artifact.
+//! Selected Core scalar or explicit dedicated-draft HostOnly B preparation.
 //! Source candidate only: no constraint plan, native export or target execution.
-//! The selected route reuses production preparation/admission. Evaluation occurs
-//! only in the explicit observe branch, through the original run consumer.
+//! Both source routes use the existing B owner. Only the unchanged Core route
+//! has an explicit observe branch; draft preparation never executes B steps.
 use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -16,6 +16,14 @@ use crate::sherlock_source::ScalarActionReport;
 pub mod config;
 #[path = "compile_artifact/wire.rs"]
 mod wire;
+#[path = "compile_artifact/recursive_source.rs"]
+pub(crate) mod recursive_source;
+#[path = "compile_artifact/draft_contract.rs"]
+pub mod draft_contract;
+#[path = "compile_artifact/draft_report.rs"]
+pub mod draft_report;
+#[path = "compile_artifact/draft_diagnostics.rs"]
+mod draft_diagnostics;
 use config::ExecutionConfig;
 use wire::OwnerWire;
 
@@ -101,6 +109,19 @@ impl CompileFailure {
         Self { stage, actual_error:json!(error), evaluation_performed:false,
             events_forwarded:"0".into(), completed:false }
     }
+    /// Preserve the bounded draft preparation stage and its complete typed error.
+    fn draft_source(error: recursive_source::DraftSourceFailure) -> Self {
+        use recursive_source::DraftSourceFailure;
+        let (stage, actual_error) = match error {
+            DraftSourceFailure::Source(error) => ("parse", draft_diagnostics::source(error)),
+            DraftSourceFailure::Types(error) => ("typecheck", draft_diagnostics::types(error)),
+            DraftSourceFailure::Copy(error) => ("copy", draft_diagnostics::copy(error)),
+            DraftSourceFailure::Admit(error) => ("admit", error.owner_wire()),
+            DraftSourceFailure::AdmitRun(error) => ("admit-run", error.owner_wire()),
+        };
+        Self { stage, actual_error, evaluation_performed:false,
+            events_forwarded:"0".into(), completed:false }
+    }
     fn consumer(error: ConsumerError) -> Self {
         let (stage, actual_error, evaluation_performed, events_forwarded, completed) = match error {
             ConsumerError::HostGuard(error) => ("host-guard", error.owner_wire(), false, 0, false),
@@ -126,6 +147,16 @@ pub fn parse_config(source: &str) -> Result<ExecutionConfig, CompileFailure> {
     // Wire-only shape constraint. Existing host admission decides numerical policy.
     config.consumer().map_err(|error| CompileFailure::input("config", error))?;
     Ok(config)
+}
+
+/// Decode only the distinct draft wire shape. The designated-owner constructor
+/// decides the supplied preprocessing/owner configuration policy before work.
+pub fn parse_draft_config(source: &str)
+    -> Result<draft_contract::DraftExecutionConfig, CompileFailure>
+{
+    let value = crate::json::parse(source).map_err(|error| CompileFailure::core("config", error))?;
+    serde_json::from_value(value)
+        .map_err(|error| CompileFailure::input("config", error.to_string()))
 }
 
 /// SDK-free product entry point. No defaults, scenarios, fixture-name selection,
@@ -206,5 +237,53 @@ pub fn compile_host(
         evidence:Evidence { source_preparation:"prepared-and-admitted",
             host_observation:if observe {"observed"} else {"unrun"},
             native:"unrun", target:"unrun", acceptance:"none" },
+    })
+}
+
+/// Compile the explicit dedicated-draft source to real admitted HostOnly tables
+/// and their unstepped genesis image. Every parser/type/copy extent is supplied
+/// by the caller and forwarded to the actual R181/R200/R208 constructor seam.
+/// No source evaluation, B step, native export or unbounded fallback occurs.
+/// This is preparation only: A/B cleanup, owner/report allocations and H1's
+/// process-wide heap/stack/time guarantees remain separate owner premises.
+pub fn compile_draft_host(
+    source: &str,
+    config_source: &str,
+    target_source: &str,
+) -> Result<draft_report::DraftCompileArtifact, CompileFailure> {
+    let config = parse_draft_config(config_source)?;
+    let target_descriptor = crate::json::parse(target_source)
+        .map_err(|error| CompileFailure::core("config", error))?;
+    let budget = recursive_source::DraftPreparationBudget {
+        parse: config.preprocessing.parser_budget(),
+        max_type_depth: config.preprocessing.max_type_depth.0,
+        copy: config.preprocessing.copy_budget(),
+    };
+    let bounds = config.bounds.owner();
+    let layout = config.layout.owner(bounds);
+    let fuel = config.fuel.owner();
+    let stack = config.stack.owner();
+    let checked = recursive_source::prepare_checked_draft_bounded(
+        source, budget.parse, budget.max_type_depth,
+    ).map_err(CompileFailure::draft_source)?;
+    let admitted = recursive_source::admit_checked_draft_bounded(
+        checked, &budget.copy, &bounds, &layout, &fuel, &stack,
+    ).map_err(CompileFailure::draft_source)?;
+    // Project precisely this fresh pair before any execution. No separately
+    // prepared identity, fabricated view or second admission is substituted.
+    draft_report::project_admitted_preparation(
+        &admitted,
+        crate::intent::hash_bytes(source.as_bytes()),
+        draft_contract::DraftConfigIdentity {
+            fields: config,
+            file_digest: crate::intent::hash_bytes(config_source.as_bytes()),
+        },
+        TargetDescriptor {
+            descriptor: target_descriptor,
+            file_digest: crate::intent::hash_bytes(target_source.as_bytes()),
+        },
+    ).map_err(|error| CompileFailure {
+        stage:"observation", actual_error:error.owner_wire(),
+        evaluation_performed:false, events_forwarded:"0".into(), completed:false,
     })
 }
