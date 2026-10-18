@@ -1,0 +1,10 @@
+--- frozen-v1/run_batch.py
++++ v2/run_batch.py
+@@ -157,6 +157,7 @@
+         result = {'finishedAt': now(), 'exitCode': code, 'wallSeconds': time.monotonic() - began,
+             'stdoutSha256': sha(phase / 'STDOUT.log'), 'stderrSha256': sha(phase / 'STDERR.log'),
+             'validationComplete': False}
++        write(phase / 'RESULT.json', result)  # Terminal facts survive every later post-check failure.
+         result['sourceAfter'] = verify_all(contract, expected_hash)
+         result['sourceAfter']['emptyAncestorConfigsVerified'] = verify_configs(plan['absentAncestorConfigs'])
+         write(phase / 'RESULT.json', result)

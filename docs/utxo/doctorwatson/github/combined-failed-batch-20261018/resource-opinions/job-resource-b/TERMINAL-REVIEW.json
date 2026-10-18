@@ -1,0 +1,96 @@
+{
+  "assessments": {
+    "binaryCustody": "Distinct binary custody is enforced across all three phases. Phase 1 asserts target/debug/mori exists immediately after check_source_dispatch passes, hashes it (role: no-default-features financial check CLI), and writes FINANCIAL-BINARY-IDENTITY.json before Phase 2 Cargo execution can overwrite target/debug/mori. Phase 2 asserts target/debug/mori exists after source6_expand passes, records quantity_hash in SOURCE6-BINARY-IDENTITY.json (role: no-default-features + source6-expansion CLI), and never conflates it with the Phase 1 binary. Phase 3 verifies target/debug/mori equals quantity_hash before launch, writes phase BINARY-IDENTITY.json, binds MORI_RUST_BIN to that path, and after Node exits verifies both that target/debug/mori still matches quantity_hash and that node-observations/run.json recorded the identical binarySha256.",
+    "boundedDiagnostics": "Diagnostics remain strictly bounded to the original lightweight routine: cpu_sample is invoked at most 12 times at 10s intervals solely during the first 90s while child.poll() is None, bounded by min(sample_deadline, active_deadline), with no extension to 600s and no post-terminal or kill-grace sampling. Each sample records /proc/pressure/cpu and /proc/<pid>/stat ticks for processes verified to belong to active_sid. Both OWNED-CPU-PSI.json and DIAGNOSIS.md/OBSERVATIONS.json properly qualify that global PSI (98.30% some over 80.001s in quantity90) is not causal attribution to the owned session and matched (pid, startTimeTicks) tick deltas (3.02 CPU-seconds lower bound) omit first-seen, reaped, unsampled, and post-80s work.",
+    "deadlineAndCleanup": "The worker is launched with start_new_session=True so active_sid equals child.pid and encompasses the timeout wrapper, worker, and all phase children. If time.monotonic() reaches active_deadline (began + 605s), the parent immediately sends SIGKILL to process group active_sid via os.killpg, performs a nonblocking child.poll(), writes CHILD-RESULT.json and OWNED-CPU-PSI.json, and raises TimeoutError in finally without removing the temporary root. On normal or pre-605s exit, owned_members(active_sid, active_deadline) checks /usr/bin/ps --sid for residual processes (with a <=0.25s bounded timeout), writes PROCESS-CLEANUP.json, kills any residual session members in finally, and removes the temporary root via shutil.rmtree(root) only when residual is empty and no cleanup_error occurred. In v2, worker() also writes phase RESULT.json with terminal exitCode, wallSeconds, and stdout/stderr SHA256 immediately after child.wait() before running post-phase verify_all/verify_configs so terminal facts survive any post-check failure.",
+    "evidenceLimits": "This review is strictly an ordinary host-resource vote with no product, compiler, test, or provider execution and no source, semantic, cryptographic, or security approval. Full current SOURCE+RESULT review remains mandatory after execution. Financial check_source_dispatch tests validate 12 internal CLI calls in memory against 6 author/schema-exposed expected stdout streams without exporting 12 separate CLI captures or establishing an independent financial oracle or evaluator trace. Quantity Rust/Node checks cover only a finite Source/6 expansion and capped-remittance slice against the 24-file/23-freeze independent oracle while retaining documented omissions (UNKNOWN.json) and unasserted fields. Passing the batch does not establish compiler Artifact/SDK/native/proof/ledger qualification, parent closure, a 600s completion guarantee, or canonical backend model attestation.",
+    "oneAttemptAndPriorAllocations": "BOUND-CANDIDATE.json sets productExecutionAuthorizedByThisFile=false. Execution of this single batch requires two substantive agreeing independent host-resource votes and explicit manual root adoption/admission. Output directory creation uses mkdir(exist_ok=False) on /home/charl/moriarty-c2-opus55-restored-20261017/combined-financial-quantity-finite600-check-cycle-20261018 as a same-path collision guard while root governance enforces the one-attempt limit, with no retry, loop, or fallback in run_batch.py. Prior failed attempts (financial90 exit 124 at 90.021s, financial180 exit 124 at 180.172s, quantity90 exit 124 at 90.034s) remain consumed, and unrelated native financial600+5 authority/counters remain untouched.",
+    "phaseConfigurations": "All three sequential phases preserve their exact required configurations and selectors without merging features across variants: (1) financial-source-check-tests runs cargo test --frozen -j1 -p mori --no-default-features --test check_source_dispatch financial_ -- --test-threads=1 and asserts 6 passed / 0 failed / 8 filtered plus all 6 named financial test lines; (2) public-quantity-min runs cargo test --frozen -j1 -p mori --no-default-features --features source6-expansion --test source6_expand -- quantity_min_selects_both_operands_through_public_source6_expansion --exact --test-threads=1, reusing the within-batch CARGO_TARGET_DIR for unchanged shared dependencies while rebuilding feature-dependent units, and asserts 1 passed / 0 failed / 7 filtered; (3) node-capped-public-consumer runs /usr/local/bin/node --test on rust-source6-capped-remittance.mjs with only two explicit extra environment variables (MORI_RUST_BIN and MORI_SOURCE6_OBSERVATIONS) over the base 13 environment and asserts 2 tests / 2 pass / 0 fail.",
+    "sourceToolEnvironmentPins": "verify_all and load_contract mechanically bind checkout /home/charl/Moriarty/.worktrees/utxo-quantity-min-main-20261018 at HEAD f68946c6c2c5894fe333ba50132d6435d90e6521 and tree 839567428d591be73abe6032068a505aa5b8279c (clean porcelain status), driver SHA256 908bb7a6e916f622f07aaf6e4eeac29f734533fa1d7ef8b49c3435953244b5f5, interpreter /usr/bin/python3.14, 982 pinned files in PINNED-SOURCES.json (d1261927e1f3ab97e73416bb7a2ad1419725062ed39a18d18a52ca4e32a44f8f), 46 unchanged financial/quantity candidate bodies in ROOT-SOURCE-BINDING.json (395bb4040d41fb2e26594d511c603f7bea31bac171f15f73abcb3417c977b58e), 7 resolved tool binaries in TOOL-PINS.json (03a06ed63c69a217fd2357cc9d1a6cdb7dd869a2626726fcb615298578c44d01), and 33 expectation files (24 quantity oracle files/23 freeze entries, 3 financial author freeze files, 6 financial expected stdout streams) in EXPECTATION-PINS.json (5593d86a29759e10d36c0519d962e2a093672079914bc38fc3200e061bd4539e). A fresh isolated temp root provides cwd, tmp, target, and cargo-home (symlinking only registry and git from /home/charl/.cargo) under an exact 13-variable offline environment with verified absence of ancestor .cargo/config and .cargo/config.toml files before/after the batch and before/after each phase.",
+    "wholeBatchBudget": "The proposal wraps one worker process and all three sequential phases (including Cargo compilations, test executions, and per-phase pre/post source, tool, expectation, and config-absence checks) in a single outer /usr/bin/timeout --signal=TERM --kill-after=5s 600s invocation under a 605s parent monotonic deadline, while keeping heavy pre-batch and post-batch verify_all checks outside the 600s child timer. No per-phase timeout, budget renewal, standalone build, or retry is permitted. Reusing one fresh within-batch CARGO_TARGET_DIR directly addresses the repeated cold-build compilation timeouts observed in financial90 (90.021s, 132 Compiling starts), financial180 (180.172s, 81 starts), and quantity90 (90.034s, 47 starts under 98.30% global CPU PSI some)."
+  },
+  "dissent": [],
+  "evidence": [
+    "BOUND-CANDIDATE.json (6bdab972402a41709ed7bc72a286ba86460185498766370163adbe4a4cf4408e) binds driverSha256 908bb7a6e916f622f07aaf6e4eeac29f734533fa1d7ef8b49c3435953244b5f5, checkout HEAD f68946c6c2c5894fe333ba50132d6435d90e6521, tree 839567428d591be73abe6032068a505aa5b8279c, wholeBatchWallSeconds=600, killGraceSeconds=5, and productExecutionAuthorizedByThisFile=false.",
+    "run_batch.py spawns one outer /usr/bin/timeout --signal=TERM --kill-after=5s 600s worker with start_new_session=True and enforces active_deadline = began + 605s with immediate os.killpg(active_sid, signal.SIGKILL) and no extra grace upon parent deadline expiration.",
+    "worker() in run_batch.py executes all three steps sequentially in the inherited timeout-owned session without start_new_session or per-phase timeout wrappers, writing terminal phase RESULT.json facts immediately after child.wait() before post-phase pin and config checks (TERMINAL-FACTS-FIRST.diff).",
+    "Phase 1 (--no-default-features, check_source_dispatch financial_) and Phase 2 (--no-default-features --features source6-expansion, source6_expand quantity_min_selects_both_operands_through_public_source6_expansion --exact) keep distinct feature flags while sharing the fresh within-batch CARGO_TARGET_DIR; FINANCIAL-BINARY-IDENTITY.json is persisted before Phase 2 overwrites target/debug/mori, and SOURCE6-BINARY-IDENTITY.json + BINARY-IDENTITY.json + node-observations/run.json verify Phase 3 consumes the exact Phase 2 binary.",
+    "Prior failure records confirm all three earlier attempts (financial90: 90.021s exit 124, financial180: 180.172s exit 124, quantity90: 90.034s exit 124) terminated in cold compilation with empty stdout and clean session/root cleanup; OBSERVATIONS.json documents 3.02 CPU-seconds lower bound across 9 samples and 78.643490s global PSI some stall over 80.001233s during quantity90."
+  ],
+  "findings": [
+    {
+      "reason": "Single outer 600s TERM + 5s KILL timeout wraps the worker and all three sequential phases under one session (start_new_session=True) and a 605s parent monotonic deadline, while initial and final batch verify_all checks run outside child wall time.",
+      "reference": "run_batch.py:182-298, BOUND-CANDIDATE.json:33-86"
+    },
+    {
+      "reason": "Phase terminal facts (finishedAt, exitCode, wallSeconds, stdoutSha256, stderrSha256, validationComplete=False) are written to phase/RESULT.json immediately after child.wait() and before post-phase verify_all/verify_configs, ensuring terminal execution records survive any post-check exception.",
+      "reference": "run_batch.py:153-163, REVISION-NOTE.json:1-9, TERMINAL-FACTS-FIRST.diff:1-11"
+    },
+    {
+      "reason": "Phase 1 and Phase 2 preserve distinct Cargo feature selections (--no-default-features vs. --no-default-features --features source6-expansion) and record separate SHA256 custody files (FINANCIAL-BINARY-IDENTITY.json and SOURCE6-BINARY-IDENTITY.json) before target/debug/mori can be overwritten or consumed by Node.",
+      "reference": "run_batch.py:130-180, BOUND-CANDIDATE.json:35-85"
+    },
+    {
+      "reason": "Environment isolation enforces an exact 13-variable base offline environment (plus 2 explicit Node variables in Phase 3), fresh temporary cwd/tmp/cargo-home/target directories, and verified absence of ancestor .cargo/config and .cargo/config.toml files before/after the batch and each phase.",
+      "reference": "run_batch.py:109-145, 200-221, ENVIRONMENT-CONTRACT.json:1-25"
+    },
+    {
+      "reason": "Deadline and cleanup handling kills the owned process group on 605s expiry, verifies empty session membership via ps --sid, and retains the temporary root if parent_expired, cleanup_error, or residual processes occur.",
+      "reference": "run_batch.py:29-43, 240-316, prior-failures/quantity90/CLEANUP.json:1-10"
+    },
+    {
+      "reason": "CPU and PSI telemetry is capped at 12 samples at 10s intervals within the first 90s while the child is live, with explicit qualification that global PSI is not causal attribution and matched PID/startTimeTicks deltas are only a lower bound.",
+      "reference": "run_batch.py:46-75, 234-273, diagnosis/DIAGNOSIS.md:1-42, diagnosis/OBSERVATIONS.json:1-249"
+    }
+  ],
+  "limitations": [
+    "This vote approves only the ordinary host-resource allocation for one combined 600+5 batch and grants no source, semantic, security, cryptographic, or result approval; a full post-execution SOURCE+RESULT review remains mandatory.",
+    "PINNED-SOURCES.json (982 files) and opaque product source bodies were verified by frozen hash binding and structural metadata rather than audited line-by-line for semantic correctness in this host-resource vote.",
+    "Within-batch target reuse is a plausible engineering mitigation for repeated cold compilation under high host CPU pressure, but neither the 3.02 CPU-second lower bound nor the 98.30% global PSI some observation establishes exact timeout causation or guarantees completion within 600s.",
+    "Financial check_source_dispatch tests validate 12 internal CLI calls against 6 author/schema-exposed expected stdout streams in memory without separate per-call capture files or an independent financial semantic/work oracle.",
+    "Quantity Rust and Node checks cover only a finite Source/6 expansion and capped-remittance slice against the 24-file/23-freeze independent oracle, retaining documented omissions (UNKNOWN.json) and unasserted fields, and establish no full evaluator trace, Core/work oracle, compiler Artifact/SDK/native/proof/ledger qualification, or parent requirement closure.",
+    "CLI model selection (gemini-4-argon-high) recorded by transport reference tooling is a client label only and does not provide canonical backend model attestation (actualBackendIdentityAttested=false)."
+  ],
+  "readScope": [
+    "PRIMARY.md",
+    "run_batch.py",
+    "BOUND-CANDIDATE.json",
+    "ENVIRONMENT-CONTRACT.json",
+    "TOOL-PINS.json",
+    "EXPECTATION-PINS.json",
+    "ROOT-SOURCE-BINDING.json",
+    "diagnosis/DIAGNOSIS.md",
+    "diagnosis/OBSERVATIONS.json",
+    "transport-reference/future_runner.py",
+    "transport-reference/agy_terminal_selector.py",
+    "prior-failures/financial90/financial-source-check-tests/START.json",
+    "prior-failures/financial90/financial-source-check-tests/RESULT.json",
+    "prior-failures/financial90/financial-source-check-tests/STDOUT.log",
+    "prior-failures/financial90/financial-source-check-tests/STDERR.log",
+    "prior-failures/financial90/FINAL-RESULT.json",
+    "prior-failures/financial180/financial-source-check-tests/START.json",
+    "prior-failures/financial180/financial-source-check-tests/RESULT.json",
+    "prior-failures/financial180/financial-source-check-tests/STDOUT.log",
+    "prior-failures/financial180/financial-source-check-tests/STDERR.log",
+    "prior-failures/financial180/FINAL-RESULT.json",
+    "prior-failures/quantity90/public-quantity-min/START.json",
+    "prior-failures/quantity90/public-quantity-min/RESULT.json",
+    "prior-failures/quantity90/public-quantity-min/STDOUT.log",
+    "prior-failures/quantity90/public-quantity-min/STDERR.log",
+    "prior-failures/quantity90/public-quantity-min/PROCESS-CLEANUP.json",
+    "prior-failures/quantity90/CLEANUP.json",
+    "prior-failures/quantity90/RESULT.json",
+    "MANIFEST.json",
+    "VOTE-A-PROMPT.md",
+    "VOTE-B-PROMPT.md",
+    "VOTE-A-SCHEMA.json",
+    "VOTE-B-SCHEMA.json",
+    "REVISION-NOTE.json",
+    "STATIC-VALIDATION.json",
+    "TERMINAL-FACTS-FIRST.diff"
+  ],
+  "reason": "Approve exact one ordinary 600s TERM + 5s KILL whole-batch host-resource allocation (BOUND-CANDIDATE.json 6bdab972402a41709ed7bc72a286ba86460185498766370163adbe4a4cf4408e, driver run_batch.py 908bb7a6e916f622f07aaf6e4eeac29f734533fa1d7ef8b49c3435953244b5f5). The proposal preserves exact phase feature selections (--no-default-features for check_source_dispatch financial_ and --no-default-features --features source6-expansion for source6_expand quantity_min_selects_both_operands_through_public_source6_expansion, followed by the 2 Node consumer cases), reuses one fresh isolated target directory strictly within this single batch without standalone builds or cross-batch warming, maintains distinct cryptographic binary custody between the financial and Source6 binaries, writes terminal phase RESULT.json facts before post-phase verification checks, enforces a single timeout-owned session with a 605s parent SIGKILL ceiling and root-retention on residual/unknown cleanup state, keeps CPU/PSI diagnostics bounded to <=12 samples in the first 90s, and preserves all consumed prior allocations and unrelated native authority unchanged.",
+  "reviewToken": "combined-financial-quantity-finite600-vote-b-20261018-v1",
+  "reviewedContractSha256": "6bdab972402a41709ed7bc72a286ba86460185498766370163adbe4a4cf4408e",
+  "verdict": "approve-exact-one-batch"
+}
