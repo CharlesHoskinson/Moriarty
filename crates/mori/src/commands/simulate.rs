@@ -108,7 +108,8 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     }
     let source = super::core_io::read_source(&args.file)?;
     // Hook: /2 routing. A /2 start keeps every core failure labelled.
-    if mori_core::language(&source) == Ok(mori_core::stage::LANGUAGE_2) {
+    let language = mori_core::language(&source).map_err(super::core_io::operation)?;
+    if language == mori_core::stage::LANGUAGE_2 {
         return run_stage_start(&args, &source, action, scenario_path);
     }
     let program = mori_core::parse(&source).map_err(super::core_io::operation)?;
