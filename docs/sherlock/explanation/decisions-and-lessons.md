@@ -49,8 +49,13 @@ line-convention corrections stay visible; no passing prefix was rerun. Root
 installed the fourteen source files, then accepted R315's result/installation
 review and added all six consumer files. The reviewed R316 reference update
 restored CURRENT11/35 with no findings; the old CURRENT10/stale025 cut is retained.
-That restores reporting currentness without a new semantic closure. Full CLI/
-files remain UNRUN.
+That restores reporting currentness without a new semantic closure. R322 later
+passed four phases through the actual selected handler/production reads and
+JSON export/printing, preserving complete ChainTotal/BranchTotal stdout reports.
+A separate saved-files-only verifier checked frozen R324 predicates without a
+second owner run. R324's oracle author discloses prior report-implementation
+exposure; the oracle supplies no independent exact B-clock/full-table/trace
+expectation. Full root CLI/global/outer dispatch and file publication remain UNRUN.
 Fixed owner semantics gain no new circuit/transition rule; no circuit/website
 iteration or B04 completion is claimed. Earlier journal entries and R279
 observations retain their exact dated scope.

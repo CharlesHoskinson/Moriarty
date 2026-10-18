@@ -1439,3 +1439,42 @@ For future DoctorWatson work, distinguish volatile ancestor metadata from pinned
 Two [existing-tool sandbox probes](../docs/results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/ordinary-dependency-probes/README.md) each passed in about16 milliseconds with no output: basic namespace startup, then the six exact empty-directory masks. These checks used no SDK or native build. Their passing scope excludes the sealed-memfd trampoline and seccomp listener handoff; those remain the next discriminator. Preserve exact dependency boundaries rather than describing `/bin/true` as a successful compiler sandbox.
 
 The work selector also still contained already-adopted UIREQ002. Root removed only that row, retained all24 remaining action objects and additional obligations, and aligned the checklist/loop with the existing11/35 current adopted report. The evidence ledger and acceptance decisions are unchanged. Do not spend another iteration requeueing an unchanged closed reporting clause.
+
+
+### DW-72 — Verify provider-visible coverage before adopting a review
+
+R333's prepared prompt was 319,384 bytes and locally hash-pinned, but the actual
+reviewer reported 131,446 bytes clipped inside a repeated R324 contract. Both
+complete handler outputs and actual receipts were visible: the reviewer verified
+the scoped four-phase result and approved the exact seven source/fixture files.
+All five later documentation bodies were missing, so it explicitly abstained on
+documentation. Preserve that raw negative and its separate scoped approvals;
+CLI exit zero, provider SUCCESS, local hashes and unchanged pins did not establish
+complete delivery or complete reading.
+
+Supply only the missing five-doc tail in the same non-author context; do not
+rerun the passed handler or requeue approved source/result prefixes. Deduplicate
+unchanged bodies and keep source-only inline requests empirically at or below
+150 KB, with smaller packets when possible. That is a delivery practice, not a
+semantic-approval gate or a guarantee against truncation. The reviewer must
+explicitly identify unavailable content and withhold unsupported judgments.
+Any later docs acceptance needs its own actual complete-reading verdict.
+
+No subject retry, new requirement closure, public developer permission gate or
+replacement orchestration framework follows from this delivery correction.
+
+
+### DW-73 — Pin historical citations to immutable source copies
+
+An append preserved all 312 old source lines, but changed the complete file hash.
+The existing evidence reader correctly reported two historical citations stale
+when they still named the live file at its old hash. All eleven adopted original
+rows remained current. Preserve the negative; do not replace a historical hash
+with the new implementation hash or change the reader to suppress the finding.
+
+Copy the exact old source to the public result archive and retarget only those
+two citation paths, preserving their hash, line span, claim and acceptance. After
+independent compatibility review, the reader reported current with no findings.
+UIREQ-035 and SCON-013 now record partial implementation and observed baseline
+tests while their cache, streaming and complete-prefix acceptance stays OPEN.
+The interpreter tests did not need to run again for this reference correction.

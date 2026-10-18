@@ -355,9 +355,10 @@ mechanical extraction and specified R299/R301 ordinary operations. Root installe
 the exact fourteen files after R311 source/result review. R310 now supplies the
 new report consumer observation below. R315 returned SUCCESS, Root installed
 its exact six test/fixture files and verified all twenty source/test files;
-reviewed R316 reporting-document compatibility was applied. No enclosing CLI/global handler,
-input-file I/O or public simulation command has run. Earlier R279 public Rust
-runtime observations remain separate evidence.
+reviewed R316 reporting-document compatibility was applied. R322 later observed
+the real selected handler, production file reads and JSON export/printing through
+a direct consumer on two fixed inputs. The enclosing root CLI/global dispatch
+has not run. Earlier R279 public Rust runtime observations remain separate evidence.
 
 The intended command is:
 
@@ -400,7 +401,9 @@ succeeds. A later serialization failure uses `run.failure(...)` to retain actual
 completion/count metadata; failed output I/O is not a guarantee of a printed
 JSON failure. A successful report wrapper is not a manufactured Halted result.
 R310 now observes the report API and JSON serialization in its external Rust
-consumer. Command exit behavior and file/output handling remain UNRUN.
+consumer. R322's direct selected-handler processes later exited successfully and
+persisted complete output for both fixed programs; negative/error exit behavior
+and the enclosing CLI remain UNRUN.
 
 The external Rust test consumes the same production Clap `Args` via
 `augment_args`/`FromArgMatches`, then calls shared pure `selection`. Its frozen
@@ -438,10 +441,39 @@ R310 report result, installed the exact six consumer files and verified all
 twenty source/test files. Two reviewed R316 document-reference operations restored
 the existing reader to CURRENT11/35 with 24 originals and 25 refinements open,
 no findings and no new requirement acceptance. The prior CURRENT10/stale025
-negative remains unchanged. Enclosing CLI/global-handler/file behavior still
-lacks observation, so B04 remains unchecked. See the
+negative remains unchanged. Enclosing root CLI/global dispatch, compile
+`--observe` and file publication still lack observation, so B04 remains unchecked. See the
 [source and receipt archive](../../results/sherlock-simulate-report-20261018/README.md).
 This documentation update executes no reader or subject code.
+
+### Real selected-handler reports: observed
+
+R322 passed four serial phases without a retry: helper compilation, ChainTotal
+handler execution, BranchTotal handler execution and a saved-files-only check.
+The direct consumer parses genuine production Args and runs the complete selected
+handler with production source/config/target reads, `run_draft_host`, report,
+`mori_core::json::export` and `println!`. The unchanged production 1 MiB rules
+apply. All 1,997 input pins matched before and after. Compilation emitted no
+diagnostics; dep-info names ten exact members: nine Rust files and one
+`include_str!` JSON fixture. R325's earlier nine-total wording remains alongside
+the additive count correction; source and argv did not change.
+
+Complete stdout JSON is preserved: 59,814 bytes for ChainTotal and 64,160 for
+BranchTotal, with both exits zero and empty stderr. The separate verifier reads
+those two saved outputs and frozen R324 predicates; it does not run the owner
+again. It passed independent UInt 7/8 and source/config/target identities,
+genesis/post-state separation, declared keysets and same-output counter relations.
+R324 discloses earlier report-implementation exposure and incidental declaration
+conversion context; it did not inspect this handler/harness or new outputs before
+freezing expectations. These are bounded checks, without independently expected
+complete tables, exact B-clock totals or an event/intermediate-state trace.
+
+The seven-file extraction preserves public `Report` signatures and error text/source chains
+but changes the private diagnostic's concrete downcast type; the helper does not
+compile `core_io`/parent dispatch or establish full-crate downcast compatibility.
+Full root CLI/global/outer dispatch, negative-handler/default-Core coverage,
+compile `--observe`, file publication, H1/formal/native/target and whole B04 remain
+separate. This observation proposes no new EARS adoption or developer approval gate.
 
 ## Explicit CLI selection
 

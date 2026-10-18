@@ -12,6 +12,7 @@ pub mod check;
 pub mod compile;
 pub mod compile_call;
 mod core_io;
+mod source_io;
 pub mod expand;
 pub mod format;
 pub mod init;

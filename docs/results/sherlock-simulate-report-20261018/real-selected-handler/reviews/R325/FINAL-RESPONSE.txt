@@ -1,0 +1,97 @@
+{
+  "coverage": {
+    "inline_complete": true,
+    "prior_context_available": true,
+    "inline_bodies_read": 37,
+    "tool_calls": 0,
+    "omissions_and_boundaries": [
+      "INLINE_COMPLETE_FOR_SCOPED_QUESTIONS: All 7 R322 candidate files, 3 worktree preimages, 5 shared `cli_args`/`display` files, 4 real consumers (`mori-diagnostics/src/lib.rs`, `mori-core/src/json.rs`, `draft_simulation_report.rs`, `draft_execution.rs`), `B04-EXACT-SECTION.md`, R324 `HANDOFF.md`/`FREEZE.json`/`READSET.json`, R307 inherited freeze/fixtures, R322 `HANDOFF.json`/`MECHANICAL-MOVE-VALIDATION.json`/`CONSUMER-AUTHORSHIP.json`/`INHERITED-INDEPENDENT-INPUT-FREEZE.json`/`CACHED-DEPENDENCY-ASSESSMENT.json`/`PROPOSED-FOUR-PHASES.json`, and `ROOT-CAPTURE-CODE.txt` were read in full inline.",
+      "REFERENCED_METADATA_NOT_INLINE: `SOURCE-SNAPSHOT.json` (08c49642...), `CANDIDATE-MANIFEST.json` (c1cdbaa0...), `CANDIDATE.patch` (0164097b...), `DECLARATION-FIRST.json` (4f667628...), `PASSIVE-VERIFICATION.json` (33c8339a...), and a finalized R322 `FLAT-INPUT-PINS.json` are referenced by hash only.",
+      "UNSHOWN_ENCLOSING_MORI_CRATE: `crates/mori/src/error.rs`, `crates/mori/src/shell.rs`, `crates/mori/src/commands/simulate.rs` (reviewed in R300), and other `crates/mori/src/commands/*.rs` modules are outside the R322 helper compile and not reprinted inline."
+    ]
+  },
+  "identity": {
+    "CID": "5bbfb99c-d07d-4659-81fa-29f4d817d7d9",
+    "original_cwd": "/tmp/moriarty-r300-shared-cli-source-review-y9gzlvos",
+    "primary_role": "Opus5.5HIGH independent non-author review; standing observed-outage fallback selected by Root",
+    "actual_transport_model": "gemini-4-argon-high",
+    "source_author_R322_or_R324": false,
+    "prior_R315_result_sha256": "3d22b9bcdd680dbff0f4010c3a42ff2dc99996769ec49851d9e5a906c",
+    "qualification": "Fresh non-author review of R322/R324 source and prospective operations; no approval inherited from R300/R311/R315; counts/hashes prove delivery identity only, not semantic comprehension."
+  },
+  "q1_source": {
+    "classification": "APPROVED_SCOPED_7_FILE_CANDIDATE_SOURCE_FOR_DIRECT_HANDLER_CONSUMER_UNRUN",
+    "candidates_verified": {
+      "core_io.rs": {"bytes": 14884, "sha256": "ce91a0abbeeee60e32c45fdf41f5058b85ef94f1c130f0958b71bcd5f60dedc5", "preimage_sha256": "391fd3015649cac5f3089a2e6b424be9fdbb8ba76258c2dbd57ec2e97c013006"},
+      "commands/mod.rs": {"bytes": 2422, "sha256": "87666f0b4e91a4f9e7b63fa98563c675641f40e1987b35097eff4ca221e76e2e", "preimage_sha256": "34ceaabb846836fad4b0df7ddc788dff37c786bfbed9397b8358330a87e3c081"},
+      "simulate_sherlock.rs": {"bytes": 2426, "sha256": "e4a1c6526d5ba4fd24dc6b101af85cc70c9807d0c1dabe4229e059c76bf21a53", "preimage_sha256": "b8481d0fd220718e71bf2ff37ac4346ce1991fb7b729aaebbe14f6da88a17c48"},
+      "source_io.rs": {"bytes": 1727, "sha256": "37e831f1cc70777439965c6b4e7b5fd6674807c41c4004676b7ab03f6497068e"},
+      "selected_simulate_adapter.rs": {"bytes": 283, "sha256": "973d3b18ab91e48b4abb81d829d1cebc826defd895a6b5c4985389123f8340cb"},
+      "real_simulate_handler.rs": {"bytes": 9358, "sha256": "33a798b8c06f242dffb1d407030447efb4e2e4e9da42cd27040897a7182cfd9d"},
+      "EXPECTED-OUTPUT-CONTRACT.json": {"bytes": 24325, "sha256": "fa2333d359855ecef1c77f3f9c5210561222741e7a734c820b52ccde6defac46"}
+    },
+    "findings": [
+      "Exact extraction: `source_io.rs` preserves the exact 1 MiB read bound (`file.take(1_048_577)` and `source.len() > 1_048_576` -> `operation(\"input file exceeds 1 MiB\")`), `crate::display::text` control/non-ASCII escaping, `#[source] std::io::Error` chaining, and `mori_core::json::export(value).map_err(operation)?` + `println!(\"{display}\")`. `core_io.rs` re-exports `pub use super::source_io::{operation, print, read_source};` with unchanged `Report`-returning signatures, and `commands/mod.rs` adds only `mod source_io;`.",
+      "Single-import handler preservation: `simulate_sherlock.rs` changes only `use super::super::core_io;` -> `use super::super::source_io as core_io;`. Selection (`selection(args)?`), read order (`args.file` stage `\"source\"`, `config` stage `\"config\"`, `target` stage `\"config\"`), no-op `StepEventC` sink, `run_draft_host`, `draft_simulation_report::report`, `core_io::print` (`\"serialization\"` failure stage), and `ExitCode::SUCCESS` iff `OutcomeC::Halted` remain byte-exact.",
+      "Genuine helper composition: `real_simulate_handler.rs` and `selected_simulate_adapter.rs` wire the real `cli_args.rs`, `display.rs`, `source_io.rs`, and `simulate_sherlock.rs` modules without any mock or second evaluator.",
+      "Explicit `CliError` -> `SourceIoError` downcast assessment: `source_io::{read_source, operation, print}` wrap private `SourceIoError::{Read, Operation}` into `mori_diagnostics::Report` instead of `crate::error::CliError::{Read, Operation}`. Display strings (`\"mori::command: {message}\"`, `\"could not read `{}`\"`), `#[source]` chaining, and `Diagnostic` implementation are identical, and all inline consumers (`simulate_sherlock.rs` via `.to_string()`, `core_io.rs` tests via `.to_string()`/`shell.report`, `real_simulate_handler.rs` via `{error}`) are downcast-free. However, because `error.rs`, `shell.rs`, and other `commands/*.rs` files are not inline and `core_io.rs`/`commands/mod.rs` are not compiled by R322, absence of `Report::downcast_ref::<CliError>()` across the full `mori` binary crate is NOT proven by this helper build and remains a separate full-CLI check."
+    ]
+  },
+  "q2_oracle_verifier": {
+    "classification": "APPROVED_R324_FROZEN_PERSISTED_STDOUT_CONTRACT_AND_HARNESS_VERIFIER_WITH_DISCLOSED_EXPOSURE",
+    "contract_sha256": "fa2333d359855ecef1c77f3f9c5210561222741e7a734c820b52ccde6defac46",
+    "freeze_sha256": "232b85d364b71865a4c638bde97fc9b112292cf26e94282fbb25a331fad28085",
+    "findings": [
+      "Provenance & independence: Frozen at `2026-10-18T05:38:55.641806+00:00` prior to `real_simulate_handler.rs` (`05:40:23Z`) and prior to any handler output. Discloses prior R301 report-implementation exposure (`implementationUnexposed: false`) and incidental `Counter`/`Outcome`/`RunInput`/failure-constructor lines in declaration reads (`READSET.json` ea77555a...), while inheriting R307's pre-implementation independent expectations (`53d2d78d...`) and fixed inputs (`chain-total.mori` 3cec9862... -> `\"7\"`, `branch-total.mori` fbf56e7b... -> `\"8\"`, `config.json` 3406712e..., `target.json` b7b9069a...).",
+      "Faithful saved-file-only verifier: `--verify-report-files` reads only the 2 persisted stdout files via `source_io::read_source` + `mori_core::json::parse` (enforcing single JSON object, `<=1 MiB`, depth `<=32`, nodes `<=65,536`, no duplicate keys, no trailing tokens) and never calls `selected_simulate::run`, `run_draft_host`, `report`, or `observe`.",
+      "Complete structural & relational checks: Verifies all 23 `exactObjectKeySets`, all 60 `commonExactJsonPointerValues`, case `/preparation/source`, non-empty plan/unmeasured reasons, canonical decimal counter strings, `Halted` `Const`/`Data` lookup to `U128.n == \"7\"`/`\"8\"`, `Return` control, `image.outcome == summary.outcome != genesis.outcome`, `events_forwarded == summary.events == run_summary.events > 0`, 4-way counter equality, `consumed_work + remaining_work == 4096`, `helper_work <= consumed_work`, resource `halted` outcome mapping, and `supplied` bounds/capacities wire conventions without fabricating an exact B-clock or callback oracle."
+    ]
+  },
+  "q3_ordinary_operations": {
+    "proposal_sha256": "4c54323a1fb0b433c10d28e8bcc0767729df8cc906e04c957d2942ce34d009d8",
+    "overall_classification": "CONDITIONALLY_ELIGIBLE_FOUR_PHASE_ORDINARY_OPERATION_PENDING_FINAL_FLATTENED_PIN_MANIFEST",
+    "phases": {
+      "compileRealSelectedSimulateHandlerConsumer": {
+        "classification": "CONDITIONALLY_ELIGIBLE_ORDINARY_CACHED_LIB_AND_PROC_MACRO_BIN_COMPILE",
+        "wallSeconds": 30,
+        "scope": "Compiles `real_simulate_handler.rs` (9 files via `#[path]`/`include_str!`) against cached R299 `libclap.rlib` (`libclap_derive.so`), R301 `libmori_core.rlib` (53db3f27...), and R24 `libserde`, `libserde_json`, `libmori_diagnostics` (b3eabcb3...), `libthiserror` (23666ad8..., loading `libthiserror_impl-8dc4877d23f123cd.so` df6f0ef6...) with `x86_64-linux-gnu-gcc-15 -fuse-ld=bfd`."
+      },
+      "actualHandler_chain-total": {
+        "classification": "CONDITIONALLY_ELIGIBLE_ORDINARY_SELECTED_HANDLER_EXECUTION",
+        "wallSeconds": 10,
+        "scope": "Runs compiled binary on `chain-total.mori` with `--execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry --execution-config .../config.json --target .../target.json`, saving full raw stdout/stderr to `captures/chain-total.{stdout,stderr}`."
+      },
+      "actualHandler_branch-total": {
+        "classification": "CONDITIONALLY_ELIGIBLE_ORDINARY_SELECTED_HANDLER_EXECUTION",
+        "wallSeconds": 10,
+        "scope": "Runs compiled binary on `branch-total.mori` with the same flags, saving full raw stdout/stderr to `captures/branch-total.{stdout,stderr}`."
+      },
+      "verifyTwoPersistedCompleteHandlerOutputs": {
+        "classification": "CONDITIONALLY_ELIGIBLE_ORDINARY_SAVED_FILE_VERIFIER_EXECUTION",
+        "wallSeconds": 10,
+        "scope": "Runs `real-selected-simulate-handler --verify-report-files captures/chain-total.stdout captures/branch-total.stdout` reading only the persisted stdout files."
+      }
+    },
+    "preconditions_required_before_root_selection": [
+      "QA/Root must finalize and verify the missing flattened transitive input pin manifest (`missingFinalDispatchMetadata` in `PROPOSED-FOUR-PHASES.json`) covering `SOURCE-SNAPSHOT.json` (08c49642...), all 9 compiled source/fixture files in `snapshot/`, `libmori_diagnostics`, `libmiette`, `libthiserror`, `libthiserror_impl.so`, and all transitive R299/R301/R191/R24 `.rlib`/`.so`/toolchain/linker/sysroot inputs.",
+      "Re-verify that all 138 currentW `mori-core`/`mori-lexer` sources still match the R301 `libmori_core.rlib` (53db3f27...) closure.",
+      "After Phase 1, pin the generated `real-selected-simulate-handler` binary and `.d` file and verify normalized `.d` membership equals the exact 9 snapshot source/fixture files before running Phases 2-4.",
+      "Enforce serial fail-stop (`131072B` stream cap, process-group SIGKILL on cap, `retry=false`): do not run Phase 4 if Phase 1, 2, or 3 exits non-zero, times out, or hits stream cap."
+    ]
+  },
+  "q4_scope_and_next": {
+    "observable_on_later_four_phase_pass": [
+      "End-to-end execution of the real production `commands::simulate_sherlock::run` handler, shared `cli_args::simulate::{Args, selection}`, real `source_io::read_source` 1 MiB-bounded file reads, `run_draft_host`, `draft_simulation_report::report`, and `source_io::print` (`mori_core::json::export` ASCII-escaped pretty JSON + newline) in two separate OS processes (`ChainTotal` -> `\"7\"`, `BranchTotal` -> `\"8\"`), with complete persisted stdout JSON reports verified against the R324 contract."
+    ],
+    "remains_unobserved_and_open": [
+      "Enclosing root `Cli` (`crates/mori/src/cli.rs`), `commands::mod::run`, outer `commands::simulate::run` dispatch, compilation of `core_io.rs`/`commands/mod.rs` and full `mori` binary (including `mori_backend`/`mori_ledger`), and any `CliError` downcast check in unshown `mori` modules.",
+      "`mori compile` / `--observe` CLI route and file publication, negative handler/input/serialization error-output tests, general bounds/default-Core regression matrix, and **B04** (which remains unchecked).",
+      "Independent callback count witness (not in persisted stdout), exact B-clock totals, full `StepEventC` trace/intermediate images, 26 named-unproved correspondence mappings, 5 owner/H1 gaps (GAP-1..5), 3 runtime premises (PREMISE-RT-1..3), and native/target/SDK/ledger verification.",
+      "Existing 11/35 adopted original clauses (including `UIREQ-002`, `UIREQ-022`, `UIREQ-025`) remain unchanged; passed `UIREQ-002` reporting is not requeued. Later actual 4-phase execution results and any worktree installation require separate post-execution review."
+    ]
+  },
+  "original_EARS_closure_claim": false,
+  "execution_authority": 0,
+  "native_authority": 0,
+  "end_marker": "END-R325-REAL-HANDLER-SOURCE-ORDINARY-REVIEW"
+}

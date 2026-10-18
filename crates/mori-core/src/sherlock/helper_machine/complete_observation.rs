@@ -310,3 +310,54 @@ pub fn first_discontinuity<'a>(initial: &'a HostSnapshot,
         expected:&records[final_record].after, observed:returned,
     })
 }
+
+
+/// Optional witness materialization around the SAME existing fixed-owner step.
+/// The raw event/boundaries remain complete and unmodified. No run loop or
+/// transition evaluator is introduced. All plan/decode failures are tooling
+/// failures after the real step; raw boundaries survive and no retry is implied.
+pub struct PlannedObservedStep {
+    pub observed: ObservedStep,
+    pub before: super::witness_plan::MaterializedSnapshot,
+    pub after: super::witness_plan::MaterializedSnapshot,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WitnessSide { Before, After }
+pub enum PlannedStepError {
+    Owner(CaptureStepError),
+    Materialization {
+        side: WitnessSide,
+        failure: super::witness_plan::WitnessFailure,
+        observed: Box<ObservedStep>,
+        completed_before: Option<Box<super::witness_plan::MaterializedSnapshot>>,
+    },
+}
+/// Execute existing record_step exactly once, then materialize its OWN saved
+/// boundaries. A tooling failure does not roll back or erase the actual step.
+/// Original capture/record_step signatures, raw semantics and owner errors stay
+/// unchanged. Cloning/decoding retains complete values; host costs remain H1 gaps.
+pub fn record_step_with_plan(admitted: &Admitted, image: &mut MachineImage)
+    -> Result<PlannedObservedStep, PlannedStepError>
+{
+    use super::witness_plan::{materialize_for, LifetimeUnit};
+    let observed = record_step(admitted, image).map_err(PlannedStepError::Owner)?;
+    let (before_raw, after_raw) = match &observed {
+        ObservedStep::Event(record) => (&record.before, &record.after),
+        ObservedStep::Terminal { before, after } => (before, after),
+    };
+    let before = match materialize_for(before_raw, LifetimeUnit::RecordBefore) {
+        Ok(value) => value,
+        Err(failure) => return Err(PlannedStepError::Materialization {
+            side: WitnessSide::Before, failure, observed: Box::new(observed),
+            completed_before: None,
+        }),
+    };
+    let after = match materialize_for(after_raw, LifetimeUnit::RecordAfter) {
+        Ok(value) => value,
+        Err(failure) => return Err(PlannedStepError::Materialization {
+            side: WitnessSide::After, failure, observed: Box::new(observed),
+            completed_before: Some(Box::new(before)),
+        }),
+    };
+    Ok(PlannedObservedStep { observed, before, after })
+}

@@ -1,0 +1,22 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/309-C-source-coverage-and-human-request/listener-handoff-owner-diagnosis/host-only-discriminator-independent-review/bwrap_handoff_diag.owner-proposed.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/329-minimal-diagnostic-command-placement/bwrap_handoff_diag.owner-minimal-correction.py
+@@ -176,7 +176,9 @@
+         args += [
+             '--remount-ro', '/home/charl', '--clearenv',
+             '--setenv', 'PATH', '/usr/bin:/bin', '--setenv', 'LANG', 'C',
+-            '--chdir', '/', '--',
++            '--chdir', '/',
++        ]
++        cmd = [
+             '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/' + str(stage_fd),
+             str(stage_fd), str(child.fileno()), str(token_fd), '/bin/true',
+         ]
+@@ -187,7 +189,7 @@
+             os.setsid()
+ 
+         proc = subprocess.Popen(
+-            ['/usr/bin/bwrap', '--args', str(fd)],
++            ['/usr/bin/bwrap', '--args', str(fd), '--', *cmd],
+             stdin=subprocess.DEVNULL,
+             stdout=subprocess.PIPE,
+             stderr=subprocess.PIPE,
