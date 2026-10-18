@@ -1380,3 +1380,10 @@ Source judgment, prospective operation classification, captured execution and
 actual-result review remain separate records. Readable complete input and an
 explicit successful terminal are checked before adoption. This iteration adds
 no new original EARS acceptance, circuit/website iteration or native authority.
+
+
+## DW-68 — Honor explicit beta automation overrides
+
+The user removed human-only operation and approval requirements for beta work. Root recorded the override in AGENTS/the implementation loop, observed working noninteractive sudo, and completed the existing OP0..OP6 host setup without changing its source or resource limits. The [actual receipts](../docs/results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/README.md) replace the missing live provisioning evidence.
+
+DoctorWatson must apply current user authorization before recovering historical operator/approval queues. Keep objective resource/correctness checks and distinguish live setup from final configuration, native compilation, proofs and target outcomes. Do not regenerate a human-only request after that requirement was removed. Preserve historical refusals and policy records rather than rewriting their past meaning.
