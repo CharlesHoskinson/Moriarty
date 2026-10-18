@@ -15,10 +15,14 @@ This is reversible source/data integration, not a program-output comparison.
 Builds, tests, public CLI/evaluator execution and actual-output comparisons are
 **UNRUN**; comparison admission is **NOT_GRANTED** and native authority is **0**.
 Source/data/publication review dispositions belong to the
-[final audit binding](../../docs/audits/2026-10-16/core-staged-tests-r3/REVIEW-BINDING.json),
-which Root must supply before publication. No approval is assumed here. Immutable
-capture-time review-pending fields in the frozen records remain historical;
-consult that binding for later dispositions. No runtime/printed-byte-format,
+[header-correction audit binding](../../docs/audits/2026-10-16/core-staged-tests-r3/header-correction-r1/REVIEW-BINDING.json)
+for the PR75 head before this documentation cleanup. Its source/draft-only
+dispositions do not approve these changed documentation bytes, ready-for-review,
+merge or execution. The [earlier binding](../../docs/audits/2026-10-16/core-staged-tests-r3/REVIEW-BINDING.json)
+retains its historical candidate scope. Fresh applicable reviews and a separate
+execution-admission decision remain required before ready-for-review or merge.
+Immutable capture-time review-pending fields in the frozen records remain historical;
+consult each binding for its exact candidate and later dispositions. No runtime/printed-byte-format,
 financial/native, proof or parent-roadmap acceptance follows from this data.
 
 ## R7 premise and complete program identity
