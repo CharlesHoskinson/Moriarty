@@ -321,3 +321,60 @@ fn transfer_zero_and_unfunded_are_exact_reference_refusals() {
         assert!(report(&o).get("execution").is_none());
     }
 }
+
+#[cfg(unix)]
+#[test]
+fn generated_commands_use_the_creating_rust_cli_without_path_lookup() {
+    let f = Files::new();
+    let tools = f.path("Rust CLI's tools 🧪");
+    fs::create_dir(&tools).unwrap();
+    let executable = tools.join("mori");
+    fs::copy(env!("CARGO_BIN_EXE_mori"), &executable).unwrap();
+    for template in ["transfer", "repay"] {
+        let dir = f.path(template);
+        let mut c = Command::new(&executable);
+        c.current_dir(&f.0)
+            .env("PATH", "")
+            .arg("init")
+            .arg(&dir)
+            .args(["--template", template]);
+        success(&invoke(c));
+        let readme = fs::read_to_string(dir.join("README.md")).unwrap();
+        let commands = readme
+            .split_once("```sh\n")
+            .unwrap()
+            .1
+            .split_once("```")
+            .unwrap()
+            .0;
+        let mut c = Command::new("/bin/sh");
+        c.current_dir(&dir)
+            .env("PATH", "")
+            .args(["-c", &format!("set -e\n{commands}")]);
+        let o = invoke(c);
+        success(&o);
+        let reports: Vec<Value> = serde_json::Deserializer::from_slice(&o.stdout)
+            .into_iter()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(reports.len(), 3);
+        assert!(readme.contains("Rust CLI"));
+        assert!(readme.contains("moriarty-core/1"));
+        assert_eq!(reports[0]["status"], "accepted");
+        assert_eq!(reports[0]["language"], "moriarty/1");
+        assert_eq!(reports[1]["status"], "accepted");
+        assert_eq!(reports[1]["qualification"], "local-reference-execution");
+        assert_eq!(reports[1]["execution"]["semantics"], "moriarty-core/1");
+        let (post, effects) = if template == "transfer" {
+            expected("25", "75", "25", None)
+        } else {
+            expected("30", "70", "30", Some("70"))
+        };
+        assert_eq!(reports[1]["execution"]["post"], post);
+        assert_eq!(reports[1]["execution"]["effects"], effects);
+        assert_eq!(reports[2]["status"], "passed");
+        assert_eq!(reports[2]["cases"][0]["actual"]["Ok"]["post"], post);
+        assert_eq!(reports[2]["cases"][0]["actual"]["Ok"]["effects"], effects);
+        assert_eq!(project_bytes(&dir).len(), 4);
+    }
+}
