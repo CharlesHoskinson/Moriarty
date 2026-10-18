@@ -1,0 +1,578 @@
+#!/usr/bin/env python3
+"""M-HASH independent ordinary script-hash recomputation: unittest SOURCE. NOT RUN BY ITS AUTHOR.
+
+Contract: MHASH-CONTRACT.md (C1-C8); API, effects and predictions: MHASH-API.json.
+Root-only invocation after independent review:  python3 -I -B test_independent_script_hash.py -v
+
+Expected values are frozen public literals: the CIP-0057 hello_world example and the seven captured
+Aiken tool receipts (comparison values, not independent oracles). This file computes no BLAKE2b
+digest and never calls the implementation to obtain an expected value; sha256 is used only for
+packet pins. Test-side CBOR byte-string headers build *inputs* only.
+
+T00 tests need no implementation. Every other test loads the future independent_script_hash.py
+lazily and fails with an explicit M-HASH-RED assertion while it is absent.
+"""
+import ast
+import copy
+import hashlib
+import importlib.util
+import json
+import os
+import unittest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PACKET = os.environ.get("MHASH_PACKET_DIR",
+                        "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-author-packet")
+IMPL_PATH = os.path.join(HERE, "independent_script_hash.py")
+RED = "M-HASH-RED: independent_script_hash.py is absent; no implementation has been written"
+
+# path -> (bytes, sha256), frozen from MANIFEST.json (checkoutHead 2b83a8c3...).
+PINS = {
+    "Ledger-Plutus-Language.hs": (22874, "233660eff9726f07c0c4eec6db851f011aa00d6dd4b42d67584df18ff9c0f8f4"),
+    "Ledger-Hashes.hs": (14025, "9a357dcb1fdbc231a08e45317be2d779544e535356668f881bbc0aa9ff95a542"),
+    "Ledger-Keys-Internal.hs": (4893, "212375b923e179e063211349f0558e293e1f77027d71281faff320e457a8f649"),
+    "CIP-0057.md": (34778, "76f416579ef10ccf8e05b20bc5f3f85cc8e8547d497105bedfa4566a8160959f"),
+    "SOURCES.json": (4206, "10a4107af188070cf256c82f68822eb2149515306f09a97dda42600e3ba01254"),
+    "FOUR-PIECE-README.md": (6827, "6930e42b6ceaa7904051d85cf58233f11e9394ba88037533b6774effee497c7d"),
+    "ACTUAL-ADOPTION.json": (2732, "a6a9b2ec8c6551d2b0a142aecf55bbdec765abc1542580e4e47d2f576cb49e14"),
+    "EXISTING-TOOL-CHAIN-CHECK.py": (12362, "4dd5b2c1550a9523ee9e8aec31bf0e83e7149411401dcf5591d25235fbd5d736"),
+    "B9-APPLIED-BLUEPRINT.json": (308672, "10baa1794e0ae286cd780978408552fc0e994426367c2b92117e2c4b46ad1d36"),
+    "SIZES.json": (3205, "6b29d8e50bb7257ceb378a24563182185a7f6cb327ae8b7960c99facfdd0066e"),
+    "hash-c2-final.txt": (57, "14b5981e684e51869d8ad6cd6e946c6b7beed4d1dee810eb0d3b9e6f8eaef594"),
+    "hash-vi-final.txt": (57, "9166a2a87659ab39132fbe65d62cdb44680d8bb18208a64675adff0ed4a25af9"),
+    "hash-vs1-final.txt": (57, "6eef5f749ec020489ba79013a283e38cc7188c3f240e5971a62c177f0cd0452d"),
+    "hash-vs2-final.txt": (57, "ed587df60bae38423b4f01f7455489224a8b438d4f18ddd62226b7a33a97637d"),
+    "hash-vs3-final.txt": (57, "2b78d5ed7bd869420bcfc15a5f0cb97e0875c212c844fda43b6aa43d8decfefa"),
+    "hash-vs4-final.txt": (57, "669527c886a94bda9f49327d848944399b8c4bbab6624817c7e5f418ba62dbcc"),
+    "hash-s2p.txt": (57, "316ae29dfac5bdd6002041cc50c4031960cefaf4d35b41ec6dedb44dacb7f92a"),
+    "FIXTURE-STRUCTURE.json": (5393, "cb46aa279c7feb818b8c7ec7adfebae519f58ffcf7d8d62467c1696f2f457e39"),
+}
+
+# Primary vector: CIP-0057.md:382,425-426 (cipsCommit befcdb75...), plutusVersion "v2".
+CIP57_CODE = (
+    "58ad0100003232322225333004323253330063372e646e64004dd71980098010022400"
+    "09210d48656c6c6f2c20576f726c642100132333001001375866004600666004600600"
+    "89000240206eb8cc008c00c019200022253335573e004294054ccc024cdc79bae300a0"
+    "0200114a226660060066016004002294088c8ccc0040052000003222333300a3370e00"
+    "8004016466600800866e0000d2002300d001001235573c6ea8004526165734ae855d11"
+)
+CIP57_HASH = "5e1e8fa84f2b557ddc362329413caa3fd89a1be26bfd24be05ce0a02"
+
+# Seven captured Aiken tool receipts (comparison values, MHASH-CONTRACT C6).
+RECEIPTS = {
+    "c2": ("hash-c2-final.txt", "6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1"),
+    "vi": ("hash-vi-final.txt", "fc2266228a6a5072946ba7bef649be56fd984ee851d50e57977c1f64"),
+    "vs1": ("hash-vs1-final.txt", "a0631f45663b4127c3286c3627b9cd728ba80665e94b0fde06a42758"),
+    "vs2": ("hash-vs2-final.txt", "6b56ebd20741cdbd37f355d6ded01e8d5c498c34a729657dddeba3f2"),
+    "vs3": ("hash-vs3-final.txt", "8759332dc1cd320381a04512c96ce3f3c3266a859ae6597ebc4008ba"),
+    "vs4": ("hash-vs4-final.txt", "0af4f7bc09c249e2418823bfaf466feb06770eff1f4d842edf866fb3"),
+    "s2p": ("hash-s2p.txt", "e315b315819a3c7695eb2d33fb468d2186b7be4cfba485c34850f255"),
+}
+# group -> (titles, compiledCode hex characters, prefix), frozen from FIXTURE-STRUCTURE.json.
+GROUPS = {
+    "c2": (("c2.c2.mint", "c2.c2.spend", "c2.c2.else"), 5540, "590acf01010029800aba2aba"),
+    "s2p": (("s2p.s2p.mint", "s2p.s2p.spend", "s2p.s2p.else"), 26036, "5932d7010100333333222222"),
+    "vi": (("vi.vi.withdraw", "vi.vi.else"), 25568, "5931ed0101003229800aba2a"),
+    "vs1": (("vs1.vs1.withdraw", "vs1.vs1.else"), 13718, "591ac801010029800aba2aba"),
+    "vs2": (("vs2.vs2.withdraw", "vs2.vs2.else"), 19880, "5926d101010029800aba2aba"),
+    "vs3": (("vs3.vs3.withdraw", "vs3.vs3.else"), 21664, "592a4d010100332229800aba"),
+    "vs4": (("vs4.vs4.withdraw", "vs4.vs4.else"), 21650, "592a4601010029800aba2aba"),
+}
+ALL_TITLES = {t for ts, _, _ in GROUPS.values() for t in ts}
+
+# MHASH-CONTRACT C4/C5 local tool bounds (not Cardano protocol limits).
+MAX_COMPILED_CODE_BYTES = 32768
+MAX_BLUEPRINT_BYTES = 1048576
+MAX_VALIDATORS = 64
+
+ALLOWED_IMPORTS = {"hashlib", "json", "re", "typing", "__future__"}
+BANNED_NAMES = {"open", "eval", "exec", "compile", "__import__", "input", "breakpoint",
+                "globals", "locals", "vars"}
+
+_cache = {}
+
+
+def _read(name):
+    with open(os.path.join(PACKET, name), "rb") as f:
+        return f.read()
+
+
+def _strict_json(raw):
+    def hook(pairs):
+        keys = [k for k, _ in pairs]
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate JSON key in fixture")
+        return dict(pairs)
+    return json.loads(raw.decode("utf-8"), object_pairs_hook=hook)
+
+
+def _b9():
+    if "b9" not in _cache:
+        raw = _read("B9-APPLIED-BLUEPRINT.json")
+        doc = _strict_json(raw)
+        by_title = {v["title"]: v for v in doc["validators"]}
+        codes = {g: by_title[ts[0]]["compiledCode"] for g, (ts, _, _) in GROUPS.items()}
+        _cache["b9"] = (raw, doc, codes)
+    return _cache["b9"]
+
+
+def _cip57_doc_bytes():
+    """The CIP-0057 'Aiken's Hello World' JSON example, sliced verbatim from the pinned document."""
+    text = _read("CIP-0057.md").decode("utf-8")
+    start = text.index("```json\n", text.index("<summary>Aiken's Hello World</summary>")) + len("```json\n")
+    return text[start:text.index("\n```", start)].encode("utf-8")
+
+
+def _bstr(payload):
+    """Minimal definite-length CBOR major-type-2 header + payload; builds test inputs only."""
+    n = len(payload)
+    if n < 24:
+        return bytes([0x40 + n]) + payload
+    if n < 256:
+        return bytes([0x58, n]) + payload
+    if n < 65536:
+        return bytes([0x59]) + n.to_bytes(2, "big") + payload
+    return bytes([0x5a]) + n.to_bytes(4, "big") + payload
+
+
+def _flip_byte(code_hex, index):
+    """Replace one payload byte (hex pair at byte index) keeping CBOR framing intact."""
+    i = 2 * index
+    return code_hex[:i] + "%02x" % (int(code_hex[i:i + 2], 16) ^ 0x01) + code_hex[i + 2:]
+
+
+def _flip_nibble(h):
+    return ("1" if h[0] != "1" else "2") + h[1:]
+
+
+def _impl_source():
+    if not os.path.isfile(IMPL_PATH):
+        raise AssertionError(RED)
+    with open(IMPL_PATH, encoding="utf-8") as f:
+        return f.read()
+
+
+def _static_problems(src):
+    problems = []
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, ast.Import):
+            problems += ["import " + a.name for a in node.names if a.name.split(".")[0] not in ALLOWED_IMPORTS]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level != 0 or (node.module or "").split(".")[0] not in ALLOWED_IMPORTS:
+                problems.append("from-import %r level %d" % (node.module, node.level))
+        elif isinstance(node, ast.Name) and node.id in BANNED_NAMES:
+            problems.append("name " + node.id)
+    return problems
+
+
+def _impl():
+    if "impl" not in _cache:
+        src = _impl_source()
+        problems = _static_problems(src)
+        if problems:
+            raise AssertionError("M-HASH static guard refused to execute implementation: %s" % problems)
+        spec = importlib.util.spec_from_file_location("independent_script_hash", IMPL_PATH)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _cache["impl"] = mod
+    return _cache["impl"]
+
+
+class Base(unittest.TestCase):
+    def assertInputError(self, fn, *args):
+        m = _impl()
+        with self.assertRaises(m.ScriptHashInputError) as cm:
+            fn(*args)
+        self.assertNotIsInstance(cm.exception, m.ScriptHashMismatchError)
+
+    def assertMismatch(self, raw):
+        m = _impl()
+        with self.assertRaises(m.ScriptHashMismatchError) as cm:
+            m.check_blueprint(raw)
+        self.assertNotIsInstance(cm.exception, m.ScriptHashInputError)
+
+    def assertHex56(self, h):
+        self.assertIs(type(h), str)
+        self.assertEqual(len(h), 56)
+        self.assertTrue(all(c in "0123456789abcdef" for c in h), h)
+
+
+class T00FixtureProvenance(Base):
+    """Passes without any implementation: pins, primary-source anchors, fixture structure."""
+
+    def test_t00_packet_pins(self):
+        manifest = {e["path"]: e for e in _strict_json(_read("MANIFEST.json"))["files"]}
+        for name, (size, sha) in PINS.items():
+            with self.subTest(file=name):
+                raw = _read(name)
+                self.assertEqual(len(raw), size)
+                self.assertEqual(hashlib.sha256(raw).hexdigest(), sha)
+                self.assertEqual((manifest[name]["bytes"], manifest[name]["sha256"]), (size, sha))
+        self.assertNotIn("Ledger-Core-Script.hs", manifest)
+        src = _strict_json(_read("SOURCES.json"))
+        self.assertEqual(src["ledgerCommit"], "d6eec237df7884aa7ee9854b4b1a83679d9eb99b")
+        self.assertEqual(src["cipsCommit"], "befcdb75289cb6571ffba6dbece3249ad2bfd491")
+        status = {e["path"]: (e["status"], e["sha256"]) for e in src["files"]}
+        self.assertEqual(status["Ledger-Core-Script.hs"][0], 404)  # preserved failed acquisition
+        for name in ("Ledger-Plutus-Language.hs", "Ledger-Hashes.hs", "Ledger-Keys-Internal.hs", "CIP-0057.md"):
+            self.assertEqual(status[name], (200, PINS[name][1]))
+
+    def test_t00_primary_source_anchors(self):
+        lang = _read("Ledger-Plutus-Language.hs").decode("utf-8")
+        for anchor in (
+            "Hash.hashWith id (BS.singleton (plutusLanguageTag plutusScript) <> originalBytes plutusScript)",
+            "originalBytes (PlutusBinary binaryBlutus) = fromShort binaryBlutus",
+            "isLanguage = SPlutusV2\n  plutusLanguageTag _ = 0x02",
+            "isLanguage = SPlutusV3\n  plutusLanguageTag _ = 0x03",
+            "encodeListLen 2 <> encodeEnum lang <> encCBOR binaryScript",
+            "P.CBORDeserialiseError",
+            "P.RemainderError",
+            "  = PlutusV1\n  | PlutusV2\n  | PlutusV3\n  | PlutusV4\n",
+        ):
+            self.assertIn(anchor, lang)
+        self.assertIn("ScriptHash (Hash.Hash ADDRHASH EraIndependentScript)",
+                      _read("Ledger-Hashes.hs").decode("utf-8"))
+        self.assertIn("type ADDRHASH = Hash.Blake2b_224", _read("Ledger-Keys-Internal.hs").decode("utf-8"))
+        cip = _read("CIP-0057.md").decode("utf-8")
+        for anchor in ("The full compiled and cbor-encoded serialized flat script",
+                       "A blake2b-224 hash digest of the validator script, as found in addresses",
+                       '"plutusVersion": "v2"',
+                       '"compiledCode": "%s"' % CIP57_CODE,
+                       '"hash": "%s"' % CIP57_HASH):
+            self.assertIn(anchor, cip)
+
+    def test_t00_cip57_vector_framing(self):
+        raw = bytes.fromhex(CIP57_CODE)
+        self.assertEqual((raw[0], raw[1], len(raw)), (0x58, 0xAD, 2 + 0xAD))
+        self.assertEqual(len(CIP57_HASH), 56)
+        doc = _strict_json(_cip57_doc_bytes())
+        self.assertEqual(doc["preamble"]["plutusVersion"], "v2")
+        self.assertEqual([(v["title"], v["compiledCode"], v["hash"], v.get("parameters", []))
+                          for v in doc["validators"]],
+                         [("hello_world", CIP57_CODE, CIP57_HASH, [])])
+
+    def test_t00_b9_structure_and_receipts(self):
+        _, doc, codes = _b9()
+        fixture = _strict_json(_read("FIXTURE-STRUCTURE.json"))
+        sizes = _strict_json(_read("SIZES.json"))["validators"]
+        self.assertEqual(doc["preamble"]["plutusVersion"], "v3")
+        vals = doc["validators"]
+        self.assertEqual(len(vals), 16)
+        self.assertEqual({v["title"] for v in vals}, ALL_TITLES)
+        self.assertEqual(len({v["title"] for v in vals}), 16)
+        fx = {h["title"]: h for h in fixture["handlers"]}
+        self.assertEqual(set(fx), ALL_TITLES)
+        for g, (titles, chars, prefix) in GROUPS.items():
+            receipt_name, receipt = RECEIPTS[g]
+            with self.subTest(group=g):
+                self.assertEqual(_read(receipt_name), (receipt + "\n").encode("ascii"))
+                self.assertEqual(fixture["expectedHashesFromCapturedToolReceipts"][g], receipt)
+                code = codes[g]
+                self.assertEqual(len(code), chars)
+                self.assertEqual(len(code), 2 * sizes[g]["appliedBytes"])
+                self.assertTrue(code.startswith(prefix))
+                b = bytes.fromhex(code)
+                self.assertEqual(b[0], 0x59)
+                self.assertEqual(int.from_bytes(b[1:3], "big") + 3, len(b))
+                for t in titles:
+                    v = next(x for x in vals if x["title"] == t)
+                    self.assertEqual((v["compiledCode"], v["hash"], v.get("parameters", [])), (code, receipt, []))
+                    self.assertEqual((fx[t]["declaredHash"], fx[t]["remainingParameters"]), (receipt, []))
+        self.assertEqual(len({r for _, r in RECEIPTS.values()}), 7)
+        self.assertEqual(len(set(codes.values())), 7)
+
+    def test_t00_existing_tool_leaves_mhash_open(self):
+        tool = _read("EXISTING-TOOL-CHAIN-CHECK.py").decode("utf-8")
+        self.assertIn("(M-HASH open)", tool)
+        self.assertNotIn("blake2", tool.lower())  # tool-derived consistency only; never recomputed
+        adoption = _strict_json(_read("ACTUAL-ADOPTION.json"))
+        self.assertIn("Independent script hashes M-HASH", adoption["notEstablished"])
+        self.assertIs(adoption["newNativeCryptoAuthority"], False)
+        self.assertIn("independent recomputation (M-HASH) remains open",
+                      _read("FOUR-PIECE-README.md").decode("utf-8"))
+
+
+class T01ScriptHash(Base):
+
+    def test_api_surface(self):
+        m = _impl()
+        self.assertTrue(callable(m.script_hash))
+        self.assertTrue(callable(m.check_blueprint))
+        self.assertTrue(issubclass(m.ScriptHashInputError, ValueError))
+        self.assertTrue(issubclass(m.ScriptHashMismatchError, ValueError))
+        self.assertFalse(issubclass(m.ScriptHashInputError, m.ScriptHashMismatchError))
+        self.assertFalse(issubclass(m.ScriptHashMismatchError, m.ScriptHashInputError))
+        self.assertEqual(m.MAX_COMPILED_CODE_BYTES, MAX_COMPILED_CODE_BYTES)
+        self.assertEqual(m.MAX_BLUEPRINT_BYTES, MAX_BLUEPRINT_BYTES)
+        self.assertEqual(m.MAX_VALIDATORS, MAX_VALIDATORS)
+        self.assertEqual(set(m.ADMITTED_PLUTUS_VERSIONS), {"v2", "v3"})
+
+    def test_static_purity(self):
+        self.assertEqual(_static_problems(_impl_source()), [])
+        _impl()
+
+    def test_cip57_primary_vector(self):
+        m = _impl()
+        h = m.script_hash("v2", CIP57_CODE)
+        self.assertHex56(h)
+        self.assertEqual(h, CIP57_HASH)
+        self.assertEqual(m.script_hash("v2", CIP57_CODE), h)
+
+    def test_b9_all_sixteen_handlers_v3(self):
+        m = _impl()
+        _, doc, _ = _b9()
+        by_title = {v["title"]: v for v in doc["validators"]}
+        for g, (titles, _, _) in GROUPS.items():
+            for t in titles:
+                with self.subTest(title=t):
+                    self.assertEqual(m.script_hash("v3", by_title[t]["compiledCode"]), RECEIPTS[g][1])
+
+    def test_language_tag_sensitivity(self):
+        m = _impl()
+        _, _, codes = _b9()
+        self.assertNotEqual(m.script_hash("v3", CIP57_CODE), CIP57_HASH)
+        for g, code in codes.items():
+            with self.subTest(group=g):
+                v2 = m.script_hash("v2", code)
+                self.assertNotEqual(v2, RECEIPTS[g][1])
+                self.assertNotEqual(v2, m.script_hash("v3", code))
+        for bad in (None, b"v2", 2, 3, "V2", "v1", "v4", "PlutusV2", "plutusV3", "", " v2", "v3\n", "v3 "):
+            with self.subTest(version=bad):
+                self.assertInputError(m.script_hash, bad, CIP57_CODE)
+
+    def test_cbor_boundary_variants(self):
+        m = _impl()
+        _, _, codes = _b9()
+        for name, code, want in (("cip57", CIP57_CODE, CIP57_HASH), ("c2", codes["c2"], RECEIPTS["c2"][1])):
+            raw = bytes.fromhex(code)
+            ver = "v2" if name == "cip57" else "v3"
+            with self.subTest(case=name + "/double-wrapped"):
+                h = m.script_hash(ver, _bstr(raw).hex())
+                self.assertHex56(h)
+                self.assertNotEqual(h, want)
+            payload_hex = code[4:] if name == "cip57" else code[6:]
+            for label, variant in (
+                ("stripped-payload", payload_hex),
+                ("envelope-enum1", "8201" + _bstr(raw).hex()),
+                ("envelope-enum2", "8202" + _bstr(raw).hex()),
+                ("text-string-major", ("78" + code[2:4] if name == "cip57" else "79" + code[2:6]) + payload_hex),
+                ("indefinite", "5f" + code + "ff"),
+                ("four-byte-header", "5a" + (len(raw) - (2 if name == "cip57" else 3)).to_bytes(4, "big").hex()
+                 + payload_hex),
+            ):
+                with self.subTest(case=name + "/" + label):
+                    self.assertInputError(m.script_hash, ver, variant)
+        self.assertInputError(m.script_hash, "v2", "5900ad" + CIP57_CODE[4:])  # non-minimal header
+
+    def test_length_and_trailing(self):
+        m = _impl()
+        for label, variant in (
+            ("truncated-one-byte", CIP57_CODE[:-2]),
+            ("header-only", CIP57_CODE[:4]),
+            ("lone-header-byte", "58"),
+            ("truncated-length", "5900"),
+            ("trailing-byte", CIP57_CODE + "00"),
+            ("concatenated", CIP57_CODE + CIP57_CODE),
+            ("length-plus-one", "58ae" + CIP57_CODE[4:]),
+            ("length-minus-one", "58ac" + CIP57_CODE[4:]),
+        ):
+            with self.subTest(case=label):
+                self.assertInputError(m.script_hash, "v2", variant)
+
+    def test_hex_and_type_inputs(self):
+        m = _impl()
+        # CORRECTION (ROOT-CAUSE.md): the frozen literal CIP57_CODE[10:20] is the decimal-digit run
+        # "3232322225", so CIP57_CODE[10:20].upper() was a no-op and the former "mixed-case" variant
+        # equalled CIP57_CODE verbatim -- the accepted canonical input, not a mixed-case string. The
+        # slice [40:50] of the same frozen literal is "2e646e6400", which upper-cases to "2E646E6400".
+        # The construction below is thus a genuine mixed-case hex string of the identical bytes. The
+        # three independent literal assertions pin that it really contains uppercase A-F and differs
+        # from the admitted lowercase input, so this negative fixture can never silently degenerate
+        # again. No implementation, framing, tag, vector, bound or oracle value is touched.
+        mixed_case = CIP57_CODE[:40] + CIP57_CODE[40:50].upper() + CIP57_CODE[50:]
+        self.assertNotEqual(mixed_case, CIP57_CODE)  # genuinely altered, not a digit-only no-op
+        self.assertTrue(any(c in "ABCDEF" for c in mixed_case))  # contains uppercase hex A-F
+        self.assertEqual(mixed_case.lower(), CIP57_CODE)  # same bytes; only letter case differs
+        for label, variant in (
+            ("uppercase", CIP57_CODE.upper()),
+            ("mixed-case", mixed_case),
+            ("leading-space", " " + CIP57_CODE),
+            ("trailing-newline", CIP57_CODE + "\n"),
+            ("inner-space", CIP57_CODE[:4] + " " + CIP57_CODE[4:]),
+            ("0x-prefix", "0x" + CIP57_CODE),
+            ("odd-length", CIP57_CODE[:-1]),
+            ("non-hex", CIP57_CODE[:-2] + "zz"),
+            ("fullwidth-digits", CIP57_CODE[:-2] + "１１"),
+            ("empty", ""),
+            ("bytes", bytes.fromhex(CIP57_CODE)),
+            ("bytearray", bytearray.fromhex(CIP57_CODE)),
+            ("none", None),
+            ("int", 123),
+            ("list", [CIP57_CODE]),
+        ):
+            with self.subTest(case=label):
+                self.assertInputError(m.script_hash, "v2", variant)
+
+    def test_tool_bounds(self):
+        m = _impl()
+        at = _bstr(b"\x01" * (MAX_COMPILED_CODE_BYTES - 3))
+        self.assertEqual((at[0], len(at)), (0x59, MAX_COMPILED_CODE_BYTES))
+        self.assertHex56(m.script_hash("v3", at.hex()))
+        over = _bstr(b"\x01" * (MAX_COMPILED_CODE_BYTES - 2))
+        self.assertEqual(len(over), MAX_COMPILED_CODE_BYTES + 1)
+        for label, variant in (
+            ("over-bound", over.hex()),
+            ("huge-hex", "00" * 500000),
+            ("short-form", _bstr(b"\x01\x02\x03").hex()),
+            ("non-minimal-58", "5817" + "01" * 23),
+            ("non-minimal-59", "5900ff" + "01" * 255),
+            ("empty-bstr", "40"),
+        ):
+            with self.subTest(case=label):
+                self.assertInputError(m.script_hash, "v3", variant)
+
+    def test_single_byte_substitution(self):
+        m = _impl()
+        _, _, codes = _b9()
+        for name, ver, code, want in (("cip57", "v2", CIP57_CODE, CIP57_HASH),
+                                      ("c2", "v3", codes["c2"], RECEIPTS["c2"][1]),
+                                      ("s2p", "v3", codes["s2p"], RECEIPTS["s2p"][1])):
+            n = len(code) // 2
+            for idx in (n - 1, n // 2, 4):
+                with self.subTest(case=name, byte=idx):
+                    h = m.script_hash(ver, _flip_byte(code, idx))
+                    self.assertHex56(h)
+                    self.assertNotEqual(h, want)
+
+
+class T02Blueprint(Base):
+
+    def test_b9_blueprint_all_sixteen_grouped_seven(self):
+        m = _impl()
+        raw, _, _ = _b9()
+        got = m.check_blueprint(raw)
+        self.assertIsInstance(got, dict)
+        self.assertEqual(set(got), ALL_TITLES)
+        for g, (titles, _, _) in GROUPS.items():
+            with self.subTest(group=g):
+                self.assertEqual({got[t] for t in titles}, {RECEIPTS[g][1]})
+        self.assertEqual(len(set(got.values())), 7)
+
+    def test_cip57_example_blueprint_and_bound_controls(self):
+        m = _impl()
+        self.assertEqual(m.check_blueprint(_cip57_doc_bytes()), {"hello_world": CIP57_HASH})
+        entry = {"title": "a", "compiledCode": CIP57_CODE, "hash": CIP57_HASH, "parameters": []}
+        doc = {"preamble": {"title": "t", "plutusVersion": "v2"}, "validators": [entry]}
+        self.assertEqual(m.check_blueprint(json.dumps(doc).encode()), {"a": CIP57_HASH})
+        base = json.dumps(doc).encode()
+        padded = base + b" " * (MAX_BLUEPRINT_BYTES - len(base))
+        self.assertEqual(len(padded), MAX_BLUEPRINT_BYTES)
+        self.assertEqual(m.check_blueprint(padded), {"a": CIP57_HASH})
+        many = dict(doc, validators=[dict(entry, title="h%d" % i) for i in range(MAX_VALIDATORS)])
+        got = m.check_blueprint(json.dumps(many).encode())
+        self.assertEqual(len(got), MAX_VALIDATORS)
+        self.assertEqual(set(got.values()), {CIP57_HASH})
+
+    def test_code_hash_substitution(self):
+        m = _impl()
+        _, doc0, codes = _b9()
+
+        def mutate(fn):
+            d = copy.deepcopy(doc0)
+            fn(d)
+            return json.dumps(d).encode("utf-8")
+
+        def each(d, titles, key, value):
+            for v in d["validators"]:
+                if v["title"] in titles:
+                    v[key] = value(v[key])
+
+        cases = (
+            ("c2-code-from-vi", lambda d: each(d, GROUPS["c2"][0], "compiledCode", lambda _: codes["vi"])),
+            ("s2p-hash-from-vs3", lambda d: each(d, GROUPS["s2p"][0], "hash", lambda _: RECEIPTS["vs3"][1])),
+            ("one-handler-code-byte", lambda d: each(d, {"c2.c2.spend"}, "compiledCode",
+                                                     lambda c: _flip_byte(c, len(c) // 2 - 1))),
+            ("one-handler-hash-nibble", lambda d: each(d, {"vs4.vs4.else"}, "hash", _flip_nibble)),
+            ("preamble-v2", lambda d: d["preamble"].__setitem__("plutusVersion", "v2")),
+        )
+        for label, fn in cases:
+            with self.subTest(case=label):
+                self.assertMismatch(mutate(fn))
+        cip = _strict_json(_cip57_doc_bytes())
+        cip["preamble"]["plutusVersion"] = "v3"
+        self.assertMismatch(json.dumps(cip).encode())
+
+        def consistent_swap(d):
+            for v in d["validators"]:
+                g = "vi" if v["title"] in GROUPS["c2"][0] else "c2" if v["title"] in GROUPS["vi"][0] else None
+                if g:
+                    v["compiledCode"], v["hash"] = codes[g], RECEIPTS[g][1]
+        got = m.check_blueprint(mutate(consistent_swap))
+        self.assertEqual(got["c2.c2.mint"], RECEIPTS["vi"][1])
+        self.assertNotEqual(got["c2.c2.mint"], RECEIPTS["c2"][1])  # only pinned receipts detect this (C5)
+
+    def test_blueprint_malformed(self):
+        m = _impl()
+        entry = {"title": "a", "compiledCode": CIP57_CODE, "hash": CIP57_HASH}
+        pre = {"title": "t", "plutusVersion": "v2"}
+
+        def doc(preamble=pre, validators=None):
+            d = {"preamble": preamble, "validators": [dict(entry)] if validators is None else validators}
+            return json.dumps(d).encode()
+
+        def ent(**kw):
+            e = dict(entry)
+            for k, v in kw.items():
+                if v is KeyError:
+                    e.pop(k)
+                else:
+                    e[k] = v
+            return [e]
+
+        dup_entry = ('{"preamble":{"title":"t","plutusVersion":"v2"},"validators":[{"title":"a",'
+                     '"compiledCode":"%s","hash":"%s","hash":"%s"}]}'
+                     % (CIP57_CODE, _flip_nibble(CIP57_HASH), CIP57_HASH)).encode()
+        dup_pre = ('{"preamble":{"title":"t","plutusVersion":"v3","plutusVersion":"v2"},"validators":'
+                   '[{"title":"a","compiledCode":"%s","hash":"%s"}]}' % (CIP57_CODE, CIP57_HASH)).encode()
+        ok = doc()
+        cases = (
+            ("str-input", ok.decode()),
+            ("invalid-utf8", b"\xff\xfe" + ok),
+            ("invalid-json", b"{"),
+            ("top-level-array", b"[]"),
+            ("missing-preamble", json.dumps({"validators": [entry]}).encode()),
+            ("preamble-null", doc(preamble=None)),
+            ("preamble-not-object", doc(preamble="v2")),
+            ("missing-plutusVersion", doc(preamble={"title": "t"})),
+            ("plutusVersion-v4", doc(preamble={"title": "t", "plutusVersion": "v4"})),
+            ("plutusVersion-int", doc(preamble={"title": "t", "plutusVersion": 2})),
+            ("missing-validators", json.dumps({"preamble": pre}).encode()),
+            ("validators-object", doc(validators={"a": entry})),
+            ("validators-empty", doc(validators=[])),
+            ("entry-not-object", doc(validators=["a"])),
+            ("missing-title", doc(validators=ent(title=KeyError))),
+            ("empty-title", doc(validators=ent(title=""))),
+            ("int-title", doc(validators=ent(title=1))),
+            ("duplicate-title", doc(validators=[dict(entry), dict(entry)])),
+            ("missing-compiledCode", doc(validators=ent(compiledCode=KeyError))),
+            ("missing-hash", doc(validators=ent(hash=KeyError))),
+            ("hash-width-32-bytes", doc(validators=ent(hash=CIP57_HASH + "00000000"))),
+            ("hash-width-27-bytes", doc(validators=ent(hash=CIP57_HASH[:54]))),
+            ("hash-uppercase", doc(validators=ent(hash=CIP57_HASH.upper()))),
+            ("hash-int", doc(validators=ent(hash=5))),
+            ("code-uppercase", doc(validators=ent(compiledCode=CIP57_CODE.upper()))),
+            ("code-stripped", doc(validators=ent(compiledCode=CIP57_CODE[4:]))),
+            ("parameters-remaining", doc(validators=ent(parameters=[{"title": "p", "schema": {}}]))),
+            ("parameters-not-list", doc(validators=ent(parameters="p"))),
+            ("duplicate-key-entry", dup_entry),
+            ("duplicate-key-preamble", dup_pre),
+            ("over-size", ok + b" " * (MAX_BLUEPRINT_BYTES + 1 - len(ok))),
+            ("too-many-validators", doc(validators=[dict(entry, title="h%d" % i) for i in range(MAX_VALIDATORS + 1)])),
+        )
+        for label, raw in cases:
+            with self.subTest(case=label):
+                self.assertInputError(m.check_blueprint, raw)
+
+
+if __name__ == "__main__":
+    unittest.main()

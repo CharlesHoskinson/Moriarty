@@ -1,0 +1,207 @@
+{
+  "format": "mhash-d7-addendum-test-contract/1",
+  "status": "PROPOSED TEST SOURCE ONLY. Not executed, imported, compiled, linted, hashed or reviewed by anyone. Author is not a vote. No sourceReady, acceptance, runtime or native grant.",
+  "author": {"requestedModel": "claude-opus-5-5", "effort": "high", "role": "independent D7 test-source author; checker implementation not read"},
+  "testFile": {
+    "path": "mhash-d7-test-source-output/test_script_hash_addendum.py",
+    "bytesAndSha256": "not computed by the author (no hashing tool used); root pins them at freeze, before any review vote",
+    "standalone": "does not import, read or execute the frozen 19-method test (28091 B, a1c00918...), which stays byte-unchanged and is not rewritten",
+    "invocation": "python3 -I -B /input/test_script_hash_addendum.py -v",
+    "imports": ["ast", "hashlib", "itertools", "json", "os", "types", "unittest"],
+    "noSysQuery": "the test imports no sys module and queries no interpreter setting; premises P1/P2 are probed only by calling stdlib json.loads on the test's own control text"
+  },
+  "normativeBasis": {
+    "contract": "MHASH-CONTRACT.md C4, C5 (types, strict UTF-8 JSON, parameters absent or [], disjoint ValueError subclasses, {title: hash} result)",
+    "api": "MHASH-API.json api.exceptions, api.functions",
+    "proposedClarifications": "MHASH-IMPLEMENTATION-ADDENDUM.md D2 (precedence), D3.1-D3.4 (strict decode, BOM, constants, library error mapping), D4 (exact builtin types), D7 (gap list). All PROPOSED and NOT ACCEPTED: a GREEN of this test would show only that the checker matches these proposals, not that they are adopted",
+    "openNotAsserted": "D8: no closed CIP-57 schema, no title length/normalisation limit, no lone-surrogate-escape policy is asserted either way",
+    "positiveVector": "CIP-0057.md 'Aiken's Hello World' example sliced verbatim (plutusVersion v2, compiledCode 58ad...5d11, hash 5e1e8fa84f2b557ddc362329413caa3fd89a1be26bfd24be05ce0a02, CIP:382,425-426)",
+    "expectationRule": "the only expected digest is the frozen CIP literal; no BLAKE2b is computed; the implementation is never used to obtain an expected value; sha256 is used only for the two packet pins"
+  },
+  "loader": {
+    "kind": "lazy; first statement of every implementation method is self.api() -> _impl()",
+    "absent": "AssertionError('M-HASH-D7-RED: independent_script_hash.py is absent; no implementation is present'), a unittest failure, never ImportError; never cached",
+    "symlink": "AssertionError('M-HASH-D7 loader refused: independent_script_hash.py is a symlink')",
+    "present": "one read of at most 1 MiB; strict UTF-8 decode; ast.parse; the same import allowlist (hashlib, json, re, typing, __future__) and banned-name lint as the baseline; then exec of compile() of exactly the linted AST into a fresh types.ModuleType. There is no second read, no SourceFileLoader, no .pyc read, and no sys.path or sys.modules insertion",
+    "label": "the lint is a lint, not a sandbox (D1). Containment is the envelope plus the mandatory line-by-line review of the checker"
+  },
+  "packetInputs": {
+    "dir": "MHASH_PACKET_DIR, default /packet",
+    "files": {
+      "CIP-0057.md": {"bytes": 34778, "sha256": "76f416579ef10ccf8e05b20bc5f3f85cc8e8547d497105bedfa4566a8160959f"},
+      "SOURCES.json": {"bytes": 4206, "sha256": "10a4107af188070cf256c82f68822eb2149515306f09a97dda42600e3ba01254", "checks": "cipsCommit befcdb75289cb6571ffba6dbece3249ad2bfd491; CIP-0057.md status 200 with the same bytes and sha256"}
+    },
+    "pinSource": "packet MANIFEST.json entries for these files; identical to the baseline test PINS. Not recomputed by the author"
+  },
+  "fixedControlParameters": {"DEEP": 100000, "INT_DIGITS": 50000, "SHALLOW": 16, "FLIP_INDEX": 100, "MAX_BLUEPRINT_BYTES": 1048576, "maxValidatorsPerControl": 3, "autotuning": "none; these values are never adjusted at run time"},
+  "interpreterPremises": [
+    {
+      "id": "P1",
+      "statement": "Under the reviewed sandbox interpreter, stdlib json.loads(str) on each deep-nesting control (100000 nested arrays, about 200 KB; 100000 nested objects, about 600 KB, both under an unread top-level member) raises exactly RecursionError and does not crash",
+      "basis": "CPython json scanner recursion guard (C-level limit in 3.12/3.13, stack-based check in 3.14, Python recursion limit for the pure-Python scanner). Not inspected; a premise only",
+      "probe": "T00 and T16.1 call stdlib json.loads with no hooks on the control. The checker reportedly adds object_pairs_hook/parse_constant, which do not change array/object recursion depth (premise)",
+      "ifUnmet": "T00 fails with 'M-HASH-D7-PREMISE P1 not met ... BLOCKED'. The RED is invalid: STOP. Do not tune DEEP and do not change the expectation. A segfault or kill is a STOP, not a result",
+      "portableAlternative": "BLOCKED: an interpreter-independent refusal would need a tool depth limit that no approved clause defines"
+    },
+    {
+      "id": "P2",
+      "statement": "Under the reviewed sandbox interpreter, stdlib json.loads(str) on the int-digit control (a 50000-digit decimal integer as the unread datum-schema 'index' value) raises exactly ValueError (not JSONDecodeError)",
+      "basis": "CPython >= 3.11 default int_max_str_digits = 4300 (also in some 3.7-3.10 security releases). -I ignores PYTHONINTMAXSTRDIGITS and the argv has no -X int_max_str_digits. Not inspected; a premise only",
+      "probe": "T00 and T16.2",
+      "ifUnmet": "T00 fails with 'M-HASH-D7-PREMISE P2 not met ... BLOCKED'. The RED is invalid: STOP. Cost if the limit is absent: one 50000-digit conversion, milliseconds",
+      "portableAlternative": "BLOCKED: an interpreter-independent refusal would need a tool integer-size limit that no approved clause defines"
+    }
+  ],
+  "exceptionAssertions": "Every negative asserts type(exc) is exactly ScriptHashInputError or exactly ScriptHashMismatchError, never just 'some ValueError'. Every implementation method first asserts that both classes are ValueError subclasses and that neither subclasses the other. Tripwire hooks raise TripwireError(Exception), which is not a ValueError; a consulted hook therefore surfaces as an error, and a hook that is consulted and then swallowed surfaces through the non-empty log assertion",
+  "methodCount": 14,
+  "methods": [
+    {
+      "id": "T00", "name": "T00AddendumProvenance.test_t00_provenance_controls_and_premises", "needsImpl": false,
+      "expected": "pass with no implementation present",
+      "checks": [
+        "2 pins (size + sha256); SOURCES cipsCommit and the CIP-0057.md 200/bytes/sha256 entry",
+        "CIP text anchors: compiledCode field text, hash field text, plutusVersion v2, compiledCode literal, hash literal",
+        "CIP57_CODE framing 58 ad, 175 B",
+        "slice: ASCII, starts '{\\n', anchor counts (preamble 1, datum/redeemer index 2, description 1), no NaN/Infinity/UTF-8 BOM/'parameters'/'x-d7-unread'; strict parse gives v2 and a single hello_world entry with the frozen code and hash; json.dumps round trip of the parsed entry equals the slice document",
+        "mismatch materials: flipped hash differs and is 56 lowercase hex; flipped code byte 100 keeps length and the 58ad header",
+        "33 named controls exist; each is exact bytes and strictly below 1048576 B",
+        "6 positive controls strict-parse to the hello_world entry, with parameters absent or []",
+        "5 BOM controls decode with their codec to the slice text; the UTF-8-BOM control is strict UTF-8 starting with U+FEFF; the 4 UTF-16/32 BOM controls are invalid UTF-8",
+        "4 no-BOM UTF-16/32 controls decode with their codec to the slice text, and are valid UTF-8 containing NUL",
+        "4 invalid-UTF-8 controls raise UnicodeDecodeError under strict decode, and parse to hello_world under errors='replace' (otherwise well formed)",
+        "6 constant controls are refused by the test's own parse_constant, but parse with default json.loads (the only defect is the constant)",
+        "5 parameter controls carry exactly null/false/0/\"\"/{} with exact type",
+        "P1 on 2 deep controls; P2 on the int control",
+        "tripwire subclass and __class__ impostor for str and bytes: isinstance true, type() differs, no hook fired during construction or isinstance"
+      ]
+    },
+    {
+      "id": "T10.1", "name": "T10Precedence.test_d2_malformed_entry_wins_in_every_order", "needsImpl": true, "normative": "D2, C4, C5",
+      "positive": [{"input": "CIP slice", "expect": {"hello_world": "5e1e8fa8...0a02"}}],
+      "negatives": {
+        "entries": {"ok": "CIP entry titled 'ok'", "mismatch": "CIP entry titled 'mismatch' with hash first nibble flipped (well-formed 56 lowercase hex)", "malformed": "CIP entry titled 'malformed' with one malformation"},
+        "malformations": ["code-trailing-byte (compiledCode + '00')", "hash-uppercase", "parameters-remaining [{title:p, schema:{}}]", "parameters-null", "empty-title ''"],
+        "orders": "all 6 permutations of (ok, mismatch, malformed) plus both orders of (mismatch, malformed)",
+        "count": 40,
+        "expect": "exactly ScriptHashInputError for every one of the 40 documents, whatever the position of the mismatching entry"
+      }
+    },
+    {
+      "id": "T10.2", "name": "T10Precedence.test_d2_mismatch_at_every_position_and_order", "needsImpl": true, "normative": "C5 every entry recomputed, D2",
+      "positive": [{"input": "3 CIP entries titled first/second/third", "expect": "each title -> 5e1e8fa8...0a02"}],
+      "negatives": [
+        {"cases": "hash-nibble flip at position 0, 1, 2 of the 3 identical entries", "count": 3, "expect": "exactly ScriptHashMismatchError"},
+        {"cases": "payload byte 100 flipped in compiledCode (framing intact) at position 0, 1, 2", "count": 3, "expect": "exactly ScriptHashMismatchError"},
+        {"cases": "(ok, mismatch) and (mismatch, ok)", "count": 2, "expect": "exactly ScriptHashMismatchError"}
+      ],
+      "note": "CIP-derived substitute for the order dependence of MC10's first-handler-per-group shortcut. The B9 variant is not covered (B9 is not in this packet)"
+    },
+    {
+      "id": "T11", "name": "T11FreshResult.test_fresh_detached_result_across_calls", "needsImpl": true, "normative": "C5 returns {title: recomputed_hash}; D7 fresh detached result",
+      "expect": [
+        "r1 = check(CIP) == {hello_world: H}, with str keys and values",
+        "after r1 is mutated (value replaced, key injected): r2 = check(CIP) == {hello_world: H}, r2 is not r1, r1 keeps its mutation",
+        "r3 = check(2-entry CIP doc first/second) == {first: H, second: H}; r3 is neither r1 nor r2; r2 unchanged",
+        "after r2.clear() and r3.pop('first'): fresh calls again return {hello_world: H} and {first: H, second: H}; r2 == {} and r3 == {second: H} (later calls do not write into earlier results)"
+      ]
+    },
+    {
+      "id": "T12.1", "name": "T12StrictDecode.test_d3_utf8_bom_refused", "needsImpl": true, "normative": "D3.2",
+      "positive": [{"input": "CIP slice", "expect": "{hello_world: H}"}],
+      "negatives": [{"input": "EF BB BF + CIP slice", "expect": "exactly ScriptHashInputError"}]
+    },
+    {
+      "id": "T12.2", "name": "T12StrictDecode.test_d3_utf16_utf32_with_and_without_bom_refused", "needsImpl": true, "normative": "D3.1, C5 strict UTF-8",
+      "positive": [{"input": "CIP slice", "expect": "{hello_world: H}"}],
+      "negatives": [{"inputs": ["UTF-16-LE + BOM FF FE", "UTF-16-BE + BOM FE FF", "UTF-32-LE + BOM FF FE 00 00", "UTF-32-BE + BOM 00 00 FE FF", "UTF-16-LE no BOM", "UTF-16-BE no BOM", "UTF-32-LE no BOM", "UTF-32-BE no BOM"], "count": 8, "expect": "exactly ScriptHashInputError each"}]
+    },
+    {
+      "id": "T12.3", "name": "T12StrictDecode.test_d3_invalid_utf8_in_unread_string_refused", "needsImpl": true, "normative": "D3.1 strict codec (overlong, encoded surrogate)",
+      "positive": [{"input": "CIP slice", "expect": "{hello_world: H}"}],
+      "negatives": [{"inputs": ["C0 AF overlong", "ED A0 80 encoded surrogate", "E2 82 truncated sequence", "F4 90 80 80 above U+10FFFF"], "where": "inside the unread preamble description string", "count": 4, "expect": "exactly ScriptHashInputError each"}],
+      "note": "raw invalid UTF-8 bytes only; JSON '\\uD800'-style escapes are D8-open and are not tested"
+    },
+    {
+      "id": "T13.1", "name": "T13Constants.test_d3_nan_and_infinity_refused_anywhere", "needsImpl": true, "normative": "D3.3",
+      "positive": [{"input": "CIP slice", "expect": "{hello_world: H}"}, {"input": "extra unread top-level member 0.5", "expect": "{hello_world: H}"}],
+      "negatives": [{"inputs": ["NaN top-level extra", "Infinity top-level extra", "-Infinity top-level extra", "NaN preamble extra", "NaN as datum-schema index", "-Infinity as datum-schema index"], "count": 6, "expect": "exactly ScriptHashInputError each"}]
+    },
+    {
+      "id": "T13.2", "name": "T13Constants.test_d3_overflowing_finite_literal_left_as_is", "needsImpl": true, "normative": "D3.3 (non-finite result from a finite literal in a field the tool never reads is left as is)",
+      "positive": [{"input": "extra unread top-level member 1e999", "expect": "{hello_world: H}"}],
+      "note": "no refusal invented for 1e999"
+    },
+    {
+      "id": "T14", "name": "T14Parameters.test_parameters_null_and_non_list_refused", "needsImpl": true, "normative": "C5 parameters absent or []",
+      "positive": [{"input": "CIP slice (parameters absent)", "expect": "{hello_world: H}"}, {"input": "parameters []", "expect": "{hello_world: H}"}],
+      "negatives": [{"inputs": ["parameters null", "parameters false", "parameters 0", "parameters \"\"", "parameters {}"], "count": 5, "expect": "exactly ScriptHashInputError each"}]
+    },
+    {
+      "id": "T15.1", "name": "T15ExactTypes.test_d4_script_hash_exact_str_only", "needsImpl": true, "normative": "D4, C4, API script_hash(str, str)",
+      "positive": [{"input": "script_hash('v2', CIP57_CODE)", "expect": "5e1e8fa8...0a02"}],
+      "negatives": [{"inputs": ["plain str subclass 'v2'", "plain str subclass CIP57_CODE", "tripwire str subclass 'v2'", "tripwire str subclass CIP57_CODE", "__class__ impostor 'v2'", "__class__ impostor CIP57_CODE", "version True", "code True", "code memoryview(ascii)"], "count": 9, "expect": "exactly ScriptHashInputError each, and no tripwire hook consulted (log == [])"}],
+      "tripwireHooks": "__eq__, __ne__, __hash__, __iter__, __getitem__, __contains__, __bytes__ and the content methods encode/decode/startswith/lower/strip/find/count/isascii/hex where present. __len__, __repr__ and __str__ are deliberately not tripped, so no check-ordering beyond D4 is imposed"
+    },
+    {
+      "id": "T15.2", "name": "T15ExactTypes.test_d4_check_blueprint_exact_bytes_only", "needsImpl": true, "normative": "D4, C5, API check_blueprint(bytes)",
+      "positive": [{"input": "bytes(CIP slice)", "expect": "{hello_world: H}"}, {"input": "json.dumps round trip of the CIP doc", "expect": "{hello_world: H}"}],
+      "negatives": [{"inputs": ["bytearray(slice)", "memoryview(slice)", "plain bytes subclass(slice)", "tripwire bytes subclass(slice)", "__class__ impostor reporting bytes", "None", "preamble.plutusVersion true", "title true", "compiledCode true", "hash true"], "count": 10, "expect": "exactly ScriptHashInputError each, and no tripwire hook consulted (log == [])"}]
+    },
+    {
+      "id": "T16.1", "name": "T16ParserLimits.test_d3_deep_nesting_maps_to_input_error", "needsImpl": true, "normative": "D3.4 (RecursionError -> ScriptHashInputError), premise P1",
+      "positive": [{"input": "extra unread top-level member nested 16 arrays deep", "expect": "{hello_world: H}"}],
+      "negatives": [{"inputs": ["100000 nested arrays", "100000 nested objects"], "count": 2, "expect": "P1 holds, then exactly ScriptHashInputError (a leaked RecursionError is an error)"}]
+    },
+    {
+      "id": "T16.2", "name": "T16ParserLimits.test_d3_int_digit_limit_maps_to_input_error", "needsImpl": true, "normative": "D3.4 (int-digit ValueError -> ScriptHashInputError), premise P2",
+      "positive": [{"input": "datum-schema index 12345", "expect": "{hello_world: H}"}],
+      "negatives": [{"input": "datum-schema index with 50000 digits (a CIP-valid non-negative integer)", "count": 1, "expect": "P2 holds, then exactly ScriptHashInputError (a leaked plain ValueError is an error)"}]
+    }
+  ],
+  "outcomeTotals": {"positiveAssertions": "every implementation method has at least one positive control from the same CIP base, so a checker that refuses everything cannot pass", "exactInputErrorNegatives": 86, "exactMismatchNegatives": 8, "premiseProbes": "3 in T00, repeated in T16 (3)"},
+  "predictedRED": {
+    "stage": "missing-implementation RED; /input holds only this test",
+    "ran": 14, "pass": 1, "failures": 13, "errors": 0, "exit": 1,
+    "passing": ["T00"],
+    "failingMessage": "every one of the 13 implementation methods fails with exactly 'AssertionError: M-HASH-D7-RED: independent_script_hash.py is absent; no implementation is present'",
+    "summaryLines": ["Ran 14 tests", "FAILED (failures=13)"],
+    "invalidRED": "any T00 failure or error (pin, transcription, anchor, control construction, premise P1/P2), any error, any other failure message, an ImportError, a crash/timeout/kill, or extra entries afterwards: STOP, no retry, re-review the source"
+  },
+  "predictedGREEN": {
+    "stage": "later; same unmodified test plus the reviewed checker (9070 B, 4f6af890... as reported by the reviews; not read or verified by this author)",
+    "ran": 14, "pass": 14, "failures": 0, "errors": 0, "exit": 0, "summaryLines": ["Ran 14 tests", "OK"],
+    "derivation": "derived from the D2-D4 text and C4/C5 only, not from the checker. It is conditional on: (a) the checker implementing D2-D4 as the two implementation reviews report (their source claims are reported assertions, not my observation); (b) P1 and P2; (c) the shared-primitive premise that CPython BLAKE2b-224 over 0x02||compiledCode equals the Aiken-produced CIP literal (as in baseline T01.3)",
+    "onFailure": "STOP with no retry. Do not weaken, skip or retune this test and do not edit the checker without fresh review. A GREEN would show conformance to proposed D2-D4, not their adoption"
+  },
+  "notCoveredOrBlocked": [
+    {"item": "Portable, interpreter-independent nesting-depth and integer-size refusal", "status": "BLOCKED: needs an unapproved tool limit; covered only under the explicit premises P1/P2"},
+    {"item": "D4 exact types of parsed JSON containers/fields (type(x) is dict/list/str after parsing)", "status": "not covered: json.loads on bytes input produces only exact builtins, so it is not observable through the public API without patching json. No fake coverage"},
+    {"item": "MC10 on B9 (first versus non-first handler of c2/vs4)", "status": "not covered with B9, which is absent from this packet; T10.2 covers the per-position property on CIP-derived identical entries"},
+    {"item": "D2 message content (first mismatching index, mismatch count) and 'all entries recomputed before raising'", "status": "not asserted; message format is not a D7 gap, and recomputation order is not externally observable"},
+    {"item": "D3.5 no exception chaining to library exceptions that hold the input", "status": "not covered; not in the D7 list. Candidate for a future, separately reviewed revision"},
+    {"item": "JSON string-escape decoding (the escaped u0030 example in D3)", "status": "deliberately not tested while the Seat B documentation-label ambiguity awaits security-owner disposition"},
+    {"item": "D8 policies (titles, lone-surrogate escapes, unknown fields)", "status": "open; not asserted either way, apart from the disclosed reliance below"}
+  ],
+  "d8Reliance": "Nine controls (extra-finite-number, extra-overflow-1e999, extra-shallow-nesting, nan-top, infinity-top, neg-infinity-top, nan-preamble, deep-array-nesting, deep-object-nesting) add one extra member named 'x-d7-unread' (top level, or preamble for nan-preamble). Its positive controls (0.5, 1e999, shallow nesting) assume that an extra unread member is accepted, as already sanctioned for 1e999 in unread extra fields. This asserts no closure. If a future reviewed decision closes the schema, these positive controls fail visibly and need re-review; they never mask a closure. The int-digit and datum-index NaN/-Infinity controls use the existing CIP datum-schema 'index' slot, so they do not depend on D8",
+  "futureEffectsProposal": {
+    "status": "PROPOSAL ONLY: needs root full-effects inspection, two fresh independent security design/effects reviews and a root decision BEFORE any execution. No execution by the author and no assumed authority. One attempt per separately approved stage. The baseline 19-method GREEN is not repeated. Baseline, checker and fixture PINS are unchanged",
+    "stages": [
+      {"stage": "D7-RED", "input": "/input holds exactly 1 regular file: test_script_hash_addendum.py at its root-pinned bytes/sha256", "expected": "predictedRED"},
+      {"stage": "D7-GREEN", "input": "/input holds exactly 2 regular files: test_script_hash_addendum.py (same root pin, unmodified) and independent_script_hash.py (reviewed checker 9070 B, 4f6af890..., after its own mandatory line-by-line effects review)", "expected": "predictedGREEN", "precondition": "D7-RED accepted by root; separate approval"}
+    ],
+    "packet": "/packet holds exactly 2 regular files: CIP-0057.md (34778 B, 76f41657...) and SOURCES.json (4206 B, 10a4107a...), separately named minimal public provenance. No B9, no ledger sources, no supplements, no frozen baseline test",
+    "modes": "files 0444, directories 0555; no __pycache__, symlinks or extra entries in /input or /packet",
+    "rootChecks": "exact before/after listings, sizes, sha256 and modes for /input and /packet; implementation absence confirmed for D7-RED; STOP on any difference",
+    "envelope": "timeout --kill-after=2s 10s; prlimit cpu 10, as 536870912, fsize 2097152, core 0; bwrap --unshare-all --die-with-parent --new-session; read-only /usr (+ /bin, /lib, /lib64 symlinks), /proc, minimal /dev, read-only /input and /packet; --clearenv with minimal PATH, LANG and MHASH_PACKET_DIR=/packet; python3 -I -B /input/test_script_hash_addendum.py -v",
+    "effectsOfTest": "reads only /packet/CIP-0057.md, /packet/SOURCES.json and (GREEN only) /input/independent_script_hash.py; no writes, network, subprocess or environment use beyond MHASH_PACKET_DIR; exec only of the linted checker AST",
+    "estimatedCost": "under 1 s CPU, under 64 MiB. Largest control about 0.6 MB; the deep-nesting probes stop at the interpreter's recursion guard (P1)",
+    "residuals": "bwrap's tmpfs root is ephemeral and writable without --remount-ro / (inherited, reported by review B-I2); -S is absent so site .pth files under read-only /usr run; a stack-overflow crash under P1 is contained by the envelope and is a STOP",
+    "meaningfulnessControls": "not selected by the author. Mutants of the checker (for example first-error-in-document-order, cached result dict, BOM stripping, json.loads(bytes), default constants, null treated as absent, isinstance checks, leaked RecursionError/ValueError) are to be chosen by independent auditors under a separately reviewed envelope; none is automatic and no runner is provided"
+  },
+  "nonClaims": [
+    "No test was run; RED and GREEN are predictions",
+    "The historical reviews are not relabelled; the Seat B whole-object ambiguity stays pending security-owner disposition; there is no dual approval",
+    "No BLAKE2b, CBOR, hash or protocol rule is added; altered documents are negative controls, not ledger data; no UPLC/proof/ledger oracle",
+    "M-HASH stays OPEN. All 20 UTxO families, general financial/ACTUS/DeFi, PCD/recursion, private handoff, multi-parent composition and real Preprod stay open. Native authority 0"
+  ]
+}
