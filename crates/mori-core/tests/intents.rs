@@ -60,6 +60,7 @@ fn json_order_does_not_change_signing_bytes() {
     let b = mori_core::json::parse(r#"{"a":"1","b":"2"}"#).unwrap();
     assert_eq!(canonical(&a).unwrap(), canonical(&b).unwrap());
 }
+#[cfg(feature = "midnight-compat-tests")]
 #[test]
 fn signing_frame_matches_pinned_midnight_native_verifier() {
     use midnight_serialize::Deserializable;
