@@ -1,0 +1,9 @@
+# Proposed compiler command: fresh execution/resource reviews
+
+This wrapper preserves the complete frozen candidate under `candidate/`, including every original full source file, WHOLE object, manifest, historical limitation and cap. The original packet is unchanged. Current metadata adds fourteen ancestor Cargo-config absence checks (no content read), seven command-file rehashes (no invocation), and read-only clean Git/source identity checks. These preparation observations are not execution admission and must not be assumed to remain fresh indefinitely. Root alone admits and executes after substantive exact-scope decisions.
+
+The requested review is the ONE literal 600s + 5s, seventeen-initial-variable, cold-target compiler test proposal, including AWS_LC_SYS_USE_SYSTEM=0. No compiler/runtime test is being run during this review. Both fresh contexts must independently decide the whole exact scope; earlier narrow source owners are not execution votes.
+
+The finite originals expose genuine IR serde/load/field FFI/C/assembly and ordinary dependency build/proc-macro compilation TCB assumptions. Manual declaration closure and Cargo tree/metadata are not selected compilation-unit graphs, proof of no I/O, or source-complete certification. Root asks for a bounded owner decision with explicit assumptions, constraints and unresolved gaps, not an infinite closure walk. Preserve old C4/k17 outcomes and every original U0-U7/M/MC/SP/G exit.
+
+Review dispatch uses the existing run_source_task.py helper: AGY sandbox plan mode, model gemini-4-argon-high and effort high, outer timeout 420s plus 5s TERM grace. The helper's AGY print-timeout is 600s; the smaller outer cap governs this provider attempt. No restarting a review after an observation timeout. No review authority to execute compiler, build scripts, proc macros, SDK, VM, models, proof, k/degree, SRS/key, wallet, ledger, network acquisition, or modify inputs.

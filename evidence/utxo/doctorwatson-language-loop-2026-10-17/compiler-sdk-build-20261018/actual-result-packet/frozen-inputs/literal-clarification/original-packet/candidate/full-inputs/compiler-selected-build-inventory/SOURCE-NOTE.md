@@ -1,0 +1,31 @@
+# Backend stages build-source inventory
+
+Frozen source facts and manual package-boundary interpretation only. The proposed command remains **unrun**:
+
+```text
+cargo test --frozen -j 1 -p mori-backend --test stages legacy_counter_abi_and_payment_effects_match_existing_frozen_snapshots -- --exact --test-threads=1
+```
+
+`--test stages` selects one integration binary; the later exact test filter does not narrow its compilation. The binary and ordinary backend library compile with the backend normal dependencies and its own dev dependencies (`insta 1.49.0`, `proptest 1.11.0`). Backend has no feature table/default members and no explicit test feature restriction. Its dependencies retain their normal default-feature requests; dependency packages' own self-test dev features do not propagate just because backend is tested. The dependency library is not its own unit-test target. SDK workspace default-members/profiles/resolver do not select consumer packages: Moriarty root resolver3/patches/profiles govern the consumer request. No selected Cargo unit graph was generated.
+
+The retained test parses Counter and contrasting Payment source and calls the production compiler twice. This inventory adds no new program/oracle/financial/compiler-result evidence. All other source in stages.rs still compiles, including its ignored baseline test. Exact include_str inputs and hashes are in the matrix.
+
+## Concrete boundary findings
+
+The normal zkir-v3 -> transient-crypto edge explicitly requests `cli`, which forwards to base-crypto `cli` and its optional indicatif dependency. This is an actual declaration edge even though the backend test is not a command-line utility. Mori-core's optional midnight-compat-tests is not requested by backend; SDK proptest self-dev requests likewise do not activate automatically. Curves0.3.1 defaults are serde/std; its blst edge is nonoptional with defaults. blst's default feature list is empty, but its C/assembly build.rs remains a separate source fact. No global feature-union conclusion is inferred through missing manifests.
+
+**Onchain runtime is not assigned to this selector.** The finite Cargo.lock adjacency diagnostic from backend has 381 identities, with no path to midnight-onchain-runtime/state/vm/ledger, even before target/feature pruning. Inspected direct SDK normal manifests also show no such edge. Lock adjacency is not a selected graph; this negative diagnostic prevents importing unrelated workspace runtime builds into the backend selector. The runtime comparison is included because requested: default=[vendored], with Scheme invocation only in its `CARGO_FEATURE_VENDORED != "1"` branch. Vendored program_fragments.rs exists in the pinned extraction. generate-rust-macros.ss and ../flake.lock are absent from that extraction (flake.lock is a rerun declaration, not an explicit file read in this build.rs). Scheme absolute path is unresolved and no lookup ran. Ledger's defaults and zswap's explicit vendored request are separate incoming declarations, not backend selection.
+
+**blst's actual branch remains unresolved.** Packaged server.c, assembly.S, win64 assembly and normal generators are copied in the FFI packet. Prebuilt libblst.a is absent from that archive; eventual build source-tree state was not queried. Conditional source fallback, architecture/MSVC assembly choice, portable/force-adx/target-feature/host ADX branches and cc compiler/archiver/tool-wrapper decisions are inventoried literally. No host cfg/environment, compiler identity or filesystem prebuilt probe ran. Unknown absolute tool paths are precise unresolved inputs, not assumed `/usr/bin/cc` or Scheme paths.
+
+## Exact missing-source frontier
+
+103 available-manifest declaration edges end at 57 unique exact locked identities outside these packets. These are finite source-availability leaves, with target/optional/dev distinctions retained; they are not a broad blocker or selection/admission verdict. Highest direct leaves include backend's futures0.3.34, insta1.49.0, proptest1.11.0, rand0.8.8, sha2 0.11.0 and thiserror2.0.21; Core additionally has k2560.13.4 and the lexer dependencies. Pinned SDK normal leaves include midnight-proofs0.8.3, midnight-circuits7.2.4, midnight-zk-stdlib2.3.5, derive-where1.7.0, fake2.10.0, pastey0.2.3 and reqwest0.13.5. Exact checksums and edge conditions are machine-readable; no package cache lookup/acquisition occurred here. Build.rs/proc-macro/default features of missing source are explicitly unknown, not inferred from lock names.
+
+Full source namespaces matter: the lock contains git and registry midnight-storage-core1.2.0, storage-macros1.0.0 and serialize-macros1.0.0 identities. The SDK snapshot supplies only its pinned git identity. The old transient-crypto2.2.0 a01a source is not substituted with the 04c9 v3 source. Available packet copies of legacy curves0.2.1 or syn major versions are not evidence that those units are selected. Optional ff_derive/rustc-std-workspace declarations without owner lock edges remain explicit unresolved/nonselected declarations, not guessed identities.
+
+## Pins, scope and preservation
+
+50 manifest packages inventoried (five Moriarty libraries, eight directly followed SDK source packages, three SDK runtime-context packages, 34 previously acquired registry identities); 11 known effective build scripts and 8 proc-macro libraries are declaration inventory across that finite set, **not a selected-unit count**. Every source reference carries byte hashes; SDK sources also carry exact commit/blob pins. Moriarty lock `659ca9ca7df02e4ff4e3c2b424fa2d6b95d73e596fdf85d0046df423ced4dbb5`; SDK `04c9c5d9bcebb8d4427d8589fb54d58a55599c14`. The two frozen registry packets were reverified (707 and808 source files) and remain unchanged. Only this output directory was written.
+
+Startup loaded develop/AGENTS/product contract and read-only status. Historical status blockers/counters remain retained; they do not select this task. No Cargo/metadata/rustc/build/proc-macro/package/source/runtime/SDK/VM/model/proof/key/SRS execution, network, private/config/provider/auth reads, cache acquisition or checkout/Git edits occurred. This lane supplies no security/no-I/O/resource judgment or execution admission. Full original U0–U7/M/MC/SP/G exits, failures, limits and reviewer rosters remain unchanged/open.

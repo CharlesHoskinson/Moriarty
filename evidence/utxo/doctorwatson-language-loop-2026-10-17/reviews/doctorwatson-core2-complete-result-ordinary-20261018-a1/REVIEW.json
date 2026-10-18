@@ -1,0 +1,39 @@
+{
+  "filesRead": [
+    "source/candidate/crates/mori/tests/core2_escrow_complete.rs",
+    "source/formatting/AUTHOR-ORIGINAL.rs",
+    "source/formatting/RUSTFMT.json",
+    "source/formatting/FORMATTING.diff",
+    "source/independent-oracle/escrow.program.expected.json",
+    "source/independent-oracle/escrow.plan.expected.json",
+    "source/independent-oracle/start.report.expected.json",
+    "source/independent-oracle/start.stdout.expected.json",
+    "source/independent-oracle/delivery-false.report.expected.json",
+    "source/independent-oracle/delivery-false.stdout.expected.json",
+    "source/independent-oracle/delivery-true.report.expected.json",
+    "source/independent-oracle/delivery-true.stdout.expected.json",
+    "actual/attempt-1/START.json",
+    "actual/attempt-1/CHILD.json",
+    "actual/attempt-1/RESULT.json",
+    "actual/attempt-1/CLEANUP.json",
+    "actual/attempt-1/STDOUT.log",
+    "actual/attempt-1/STDERR.log"
+  ],
+  "findings": [
+    "Execution provenance and hygiene: START.json, CHILD.json, RESULT.json, CLEANUP.json, STDOUT.log, and STDERR.log confirm one cold offline --frozen -j1 run of core2_escrow_complete on commit 718b1b020718c6b23a12846d32d5d2db9f14de7c / tree 1e3fc1912705ce349353accaee7924644e684012 with 13 env vars (no HOME), 90s+5s timeout, exit 0 in 54.704761924s, 3 passed / 0 failed / 0 ignored / 0 filtered, unchanged post-run git state, and owned temp root removal.",
+    "Program and filled Plan predicate: escrow_public_load_matches_complete_program_and_filled_plan verifies stage::load against escrow.program.expected.json (5-node deliver action: Transfer, Liability, Await, Transfer, Discharge; ExprIds 0..4; PAY asset; marker=77 state) and escrow.plan.expected.json (moriarty-stage-plan/1, program_hash 511bcac3..., committed_before [0,5], segment_cost [5,6], plan_total 11, site 1 ordinal 2 capturing input amount).",
+    "Library staged flow predicate: escrow_library_start_false_observation_and_delivery_match_complete_reports verifies stage::start, stage::resume, and stage::outcome_report across start (attempted 5, committed 5), false observation (attempted 2, committed 5, advanced false, null segment, continuation identical to pre-observation), and true delivery (attempted 6, committed 11, complete status, empty residual, closing release liability amount 0) using only the preceding continuation.",
+    "CLI subprocess predicate: escrow_cli_start_false_observation_and_delivery_match_complete_public_bytes runs 3 real CARGO_BIN_EXE_mori subprocesses chaining only the saved actual continuation JSON across start, delivery-false, and delivery-true, verifying exit 0, empty stderr, ASCII stdout, full report JSON equality, and exact byte match against *.stdout.expected.json (library pretty-print bytes are outside the contract; CLI stdout was asserted in-test, not archived separately).",
+    "Formatting and oracle custody: RUSTFMT.json and FORMATTING.diff confirm author original 9e4a373b... vs formatted c8a48dbc... differs only by line-wrapping one 6-element command .args([...]) literal in core2_escrow_complete.rs, with all independent oracle JSON fixtures unchanged."
+  ],
+  "limitations": [
+    "Review is scoped to the 18 inline primary evidence bodies (did not read all 745 unchanged source files). Any merge recommendation is strictly conditioned on separate resolution of pending independent full-source review doctorwatson-core2-complete-source-ordinary-20261018-a1 and separate owner M03 integration/security audit.",
+    "Actual CLI subprocess stdout payloads and intermediate continuation files were captured and asserted inside the passing Rust test rather than archived as separate raw process artifacts; no independent manual readback of raw CLI stdout outside the test execution log is claimed.",
+    "Custodian exposure is disclosed (post-adoption public DTO and normative reads incidentally exposed residual helper and InputDecl-to-StageBinder conversion; not blind/pre-implementation), and the test/source author is implementation-exposed, though goldens were not selected from product output.",
+    "All 14 staged gaps remain OPEN with original dispositions; no parent, U0-U7, M1-M17, MC/SP/G, general composition, finance, private, native, proof, ledger, authentication, or tracked consumption claim follows from this local-reference-stage observation.",
+    "Execution relies on ordinary Cargo, Rust 1.99.0 toolchain, public cache, and system linker trust assumptions without syscall tracing or aggregate process-memory bounds; START.json does not enumerate public cache symlink targets (intended mappings reside in source/PROPOSAL.json, not observed trace)."
+  ],
+  "reviewToken": "doctorwatson-core2-complete-result-ordinary-20261018-a1-whole-review",
+  "summary": "Approved finite actual-result observation for commit 718b1b020718c6b23a12846d32d5d2db9f14de7c (tree 1e3fc1912705ce349353accaee7924644e684012) and formatted test source c8a48dbccc77169822b57246b91d842573d274af31d54930d65a4d06012ddfbc from the 18-file inline primary evidence bundle. One single-attempt offline frozen -j1 cargo test execution (--no-default-features --test core2_escrow_complete -- --test-threads=1) under a 90s+5s timeout, fresh owned temporary root, and 13-variable HOME-less environment exited 0 in 54.704761924s, passing all 3 named tests (0 failed/ignored/filtered) with post-run source tree unchanged and temporary root removed. The 3 tests verify the 5-statement Program and filled stage Plan, library stage::start/resume/outcome_report across start (5/5), false observation (2/5, continuation unchanged, null segment), and true delivery (6/11, release liability retained at 0, empty residual), plus 3 CARGO_BIN_EXE_mori CLI subprocess runs matching expected ASCII stdout bytes and empty stderr. Any merge recommendation is conditioned on independent resolution of pending full-source review doctorwatson-core2-complete-source-ordinary-20261018-a1.",
+  "verdict": "approve-actual-result"
+}

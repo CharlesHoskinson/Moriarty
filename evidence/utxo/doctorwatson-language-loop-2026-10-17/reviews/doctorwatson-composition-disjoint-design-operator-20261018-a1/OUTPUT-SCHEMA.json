@@ -1,0 +1,196 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "reviewToken": {
+      "const": "doctorwatson-composition-disjoint-design-operator-20261018-a1-whole-review"
+    },
+    "verdict": {
+      "enum": [
+        "adopt-design",
+        "revise-design",
+        "abstain"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 100
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "decisionId": {
+            "enum": [
+              "D1",
+              "D2",
+              "D3",
+              "D4",
+              "D5"
+            ]
+          },
+          "vote": {
+            "enum": [
+              "adopt-design",
+              "revise-design",
+              "abstain"
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 80
+          },
+          "sourceEvidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "decisionId",
+          "vote",
+          "rationale",
+          "sourceEvidence"
+        ]
+      },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "priority": {
+            "enum": [
+              "blocking",
+              "necessary",
+              "advisory"
+            ]
+          },
+          "decisionId": {
+            "enum": [
+              "D1",
+              "D2",
+              "D3",
+              "D4",
+              "D5",
+              "integration",
+              "evidence"
+            ]
+          },
+          "file": {
+            "type": "string"
+          },
+          "lineOrSymbol": {
+            "type": "string"
+          },
+          "problem": {
+            "type": "string"
+          },
+          "requiredChange": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "priority",
+          "decisionId",
+          "file",
+          "lineOrSymbol",
+          "problem",
+          "requiredChange",
+          "evidence"
+        ]
+      }
+    },
+    "operatorDispositions": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "operator": {
+            "enum": [
+              "sequential",
+              "disjoint parallel",
+              "shared-state interleaving",
+              "atomic synchronization",
+              "asynchronous messaging"
+            ]
+          },
+          "scopeAndOpenObligation": {
+            "type": "string",
+            "minLength": 50
+          }
+        },
+        "required": [
+          "operator",
+          "scopeAndOpenObligation"
+        ]
+      }
+    },
+    "necessaryImplementationChanges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missingIndependentEvidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "securityQuestionsForDesignatedOwner": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "filesRead": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 16
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "dissent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "reviewToken",
+    "verdict",
+    "summary",
+    "decisions",
+    "findings",
+    "operatorDispositions",
+    "necessaryImplementationChanges",
+    "missingIndependentEvidence",
+    "securityQuestionsForDesignatedOwner",
+    "filesRead",
+    "limitations",
+    "dissent"
+  ]
+}

@@ -1,0 +1,16 @@
+language "moriarty/1";
+agreement IndependentCounter {
+  state count: UInt = 0;
+  state enabled: Bool = true;
+  action increment(amount: UInt) {
+    requires enabled;
+    let total = count + amount;
+    requires total <= 1000;
+    next count = total;
+    ensures count == total;
+    emit "new_count"(count);
+  }
+  action reset() {
+    next count = 0;
+  }
+}

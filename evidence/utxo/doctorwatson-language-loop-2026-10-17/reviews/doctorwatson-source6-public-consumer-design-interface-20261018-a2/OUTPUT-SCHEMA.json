@@ -1,0 +1,93 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "reviewToken": {
+      "const": "doctorwatson-source6-public-consumer-design-interface-20261018-a2-whole-review"
+    },
+    "verdict": {
+      "enum": [
+        "adopt-design",
+        "revise-design",
+        "refuse-design"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 1200
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "maxLength": 1000
+      }
+    },
+    "filesRead": {
+      "type": "array",
+      "maxItems": 15,
+      "items": {
+        "type": "string",
+        "maxLength": 250
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "maxLength": 650
+      }
+    },
+    "decisionVotes": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "decisionId": {
+            "enum": [
+              "selection_option_feature",
+              "scenario_profile_subset",
+              "raw_output_qualification",
+              "existing_refusal_precedence"
+            ]
+          },
+          "vote": {
+            "enum": [
+              "adopt",
+              "revise",
+              "refuse"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 650
+          },
+          "requiredFix": {
+            "type": "string",
+            "maxLength": 650
+          }
+        },
+        "required": [
+          "decisionId",
+          "vote",
+          "reason",
+          "requiredFix"
+        ]
+      }
+    }
+  },
+  "required": [
+    "reviewToken",
+    "verdict",
+    "summary",
+    "findings",
+    "filesRead",
+    "limitations",
+    "decisionVotes"
+  ]
+}
