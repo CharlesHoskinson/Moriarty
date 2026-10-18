@@ -114,7 +114,7 @@ pub(super) fn definitions(nodes: &[Node], order: &[NodeId], live_outs: &[NodeId]
     Ok(result)
 }
 
-fn node_failure(node: &Node, kind: FailureKind) -> WitnessFailure {
+pub(super) fn node_failure(node: &Node, kind: FailureKind) -> WitnessFailure {
     WitnessFailure { location: node.location, node: Some(node.id), kind }
 }
 fn field_values(node: &Node, fields: &[FieldBinding], args: &[&SlotValue])
@@ -133,7 +133,7 @@ fn field_values(node: &Node, fields: &[FieldBinding], args: &[&SlotValue])
     Ok(result)
 }
 
-fn operation(plan: &WitnessPlan, input: &HostSnapshot, node: &Node, args: &[&SlotValue], diagnostics: &mut HostDiagnostics)
+pub(super) fn operation(plan: &WitnessPlan, input: &HostSnapshot, node: &Node, args: &[&SlotValue], diagnostics: &mut HostDiagnostics)
     -> Result<SlotValue, WitnessFailure>
 {
     let wrong = || node_failure(node, FailureKind::WrongOperation);
@@ -206,8 +206,8 @@ fn operation(plan: &WitnessPlan, input: &HostSnapshot, node: &Node, args: &[&Slo
     })
 }
 
-pub(super) fn evaluate(plan: &WitnessPlan, input: &HostSnapshot)
-    -> Result<WitnessEvaluation, WitnessFailure>
+pub(super) fn validate(plan: &WitnessPlan)
+    -> Result<Vec<NodeId>, WitnessFailure>
 {
     let at = Location::new("plan", None, "structure");
     if plan.format != "sherlock-host-witness-plan/1" { return Err(fail(at, FailureKind::WrongOperation)); }
@@ -230,6 +230,14 @@ pub(super) fn evaluate(plan: &WitnessPlan, input: &HostSnapshot)
         }
     }
     if reads.iter().any(|count| *count != 1) { return Err(fail(at, FailureKind::IncompleteBindings)); }
+    Ok(schedule)
+}
+
+pub(super) fn evaluate(plan: &WitnessPlan, input: &HostSnapshot)
+    -> Result<WitnessEvaluation, WitnessFailure>
+{
+    let at = Location::new("plan", None, "structure");
+    let schedule = validate(plan)?;
     let mut slots: Vec<Option<SlotValue>> = vec![None; plan.nodes.len()];
     let mut diagnostics = HostDiagnostics::default();
     for id in schedule {
