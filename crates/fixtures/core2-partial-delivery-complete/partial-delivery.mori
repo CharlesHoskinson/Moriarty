@@ -1,0 +1,17 @@
+language "moriarty/2";
+agreement PartialDelivery {
+  asset PAY = { network: "local", issuer: "partial-delivery-oracle", reference: "PAY", scale: 0 };
+  state marker: UInt = 77;
+  action deliver(total: UInt, first: UInt) {
+    requires first <= total;
+    let remainder = total - first;
+    transfer(PAY, "alice", "escrow", total);
+    liability("delivery", PAY, "escrow", "bob", total);
+    await approval(ok: Bool) when ok;
+    transfer(PAY, "escrow", "bob", first);
+    discharge("delivery", first);
+    await receipt(seen: Bool) when seen;
+    transfer(PAY, "escrow", "bob", remainder);
+    discharge("delivery", remainder);
+  }
+}
