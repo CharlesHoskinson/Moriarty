@@ -53,11 +53,12 @@ target evidence retain those obligations. A blocked row names its missing
 premise and the event that can make work actionable; independent rows continue.
 
 The factory repair is complete: the existing checker consumes current evidence,
-and its regression demonstrates that a source edit invalidates closure. Ten
+and its regression demonstrates that a source edit invalidates closure. Eleven
 original host/reporting clauses are now adopted and current. Select the remaining missing
 behavior from the [current checklist](requirements-status.md) and
-`NEXT-ACTIONS.json`: the public recursive
-grammar/profile report, remaining public compiler/refusal coverage and resource accounting/chunk observations, then causal occurrence IDs and the remaining persistent, plan/DAG,
+`NEXT-ACTIONS.json`: whole-owner closed-body/unique-function admission,
+remaining public compiler/refusal coverage and resource accounting/chunk observations,
+then causal occurrence IDs and the remaining persistent, plan/DAG,
 generic, financial and formal predicates. Native work retains its actual separate
 prerequisites. Do not repeat the passed nine host cases or five compiler
 preflight bodies without a relevant change. Avoid

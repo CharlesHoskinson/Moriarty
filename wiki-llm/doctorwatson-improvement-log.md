@@ -1432,3 +1432,10 @@ Automated beta provisioning passed OP0 through OP6 without a human operator. A f
 The next launch created the one-shot marker and failed at A0 with `listener handoff failed`. Cargo and the compiler never started. Its captured A0 stdout/stderr were both empty: the source registers pipe draining after listener handoff, leaving no underlying startup error in these receipts. The designated security owner is diagnosing this boundary; no root cause, source fix or successful build is inferred. The existing evidence collection and privileged teardown both passed automatically, preserving the consumed marker and failure in the durable evidence directory.
 
 For future DoctorWatson work, distinguish volatile ancestor metadata from pinned input changes and make pre-handoff child errors available within the existing log/resource bounds. These are backlog observations for designated-owner design and review, not permission to weaken checks or repeat the failed operation unchanged.
+
+
+## DW-71 — Test the smallest failed dependency before another build
+
+Two [existing-tool sandbox probes](../docs/results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/ordinary-dependency-probes/README.md) each passed in about16 milliseconds with no output: basic namespace startup, then the six exact empty-directory masks. These checks used no SDK or native build. Their passing scope excludes the sealed-memfd trampoline and seccomp listener handoff; those remain the next discriminator. Preserve exact dependency boundaries rather than describing `/bin/true` as a successful compiler sandbox.
+
+The work selector also still contained already-adopted UIREQ002. Root removed only that row, retained all24 remaining action objects and additional obligations, and aligned the checklist/loop with the existing11/35 current adopted report. The evidence ledger and acceptance decisions are unchanged. Do not spend another iteration requeueing an unchanged closed reporting clause.
