@@ -1,0 +1,101 @@
+FILE openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md SHA256 e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b
+### Requirement: UIREQ-001 Fixed interpreter relation
+WHEN a supported program is supplied as input, the interpreter SHALL evaluate it using the same versioned transition rules used for other supported programs.
+
+#### Scenario: Two distinct programs
+- **WHEN** Factorial and list sum are loaded under the same interpreter configuration.
+- **THEN** Each uses the unchanged machine definition; only program/declaration/input data differ.
+
+
+FILE openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md SHA256 e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b
+### Requirement: UIREQ-003 Lexical call scope
+WHEN a named call enters its body, the interpreter SHALL evaluate it under the declared parameter bindings and global function table.
+
+#### Scenario: Caller-local preservation
+- **WHEN** An outer let binds x=7 while a called function binds its own x=2 and returns 2.
+- **THEN** The caller still reads x=7 after return.
+
+
+FILE openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md SHA256 e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b
+### Requirement: UIREQ-004 Strict evaluation order
+WHEN an expression has multiple evaluated operands or fields, the interpreter SHALL evaluate them once each from left to right.
+
+#### Scenario: Nested arguments
+- **WHEN** add(double(2),increment(3)) executes.
+- **THEN** The trace finishes double(2) before starting increment(3), returning 8.
+
+
+FILE openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md SHA256 e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b
+### Requirement: UIREQ-008 Selected match branch
+WHEN an ordered constructor match completes its scrutinee, the interpreter SHALL evaluate the first matching source arm under its declared field bindings.
+
+#### Scenario: Tree fold
+- **WHEN** sum(Node(Leaf(4),Leaf(5))) executes.
+- **THEN** Both leaves are visited through their selected cases and the result is 9; the scrutinee is evaluated once and unselected arm bodies do not execute.
+
+
+FILE openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md SHA256 e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b
+### Requirement: UIREQ-010 Explicit pending return
+WHEN a non-tail call is entered, the interpreter SHALL retain its pending caller computation in explicit frames.
+
+#### Scenario: Factorial multiplication
+- **WHEN** factorial(3) enters factorial(2).
+- **THEN** The pending multiplication by 3 remains represented until the callee returns.
+
+
+FILE openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md SHA256 e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b
+### Requirement: UIREQ-034 Declaration-driven ordered matching
+WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.
+
+#### Scenario: New recursive Schedule declaration
+- **WHEN** Schedule = Done | Pay(UInt128,Schedule) | Both(Schedule,Schedule) is matched by ordered arms Both(Pay(x,_),_)→x; Both(_,r)→sum(r); Pay(x,t)→x+sum(t); Done→0 on Both(Pay(4,Done),Pay(5,Done)).
+- **THEN** The selected arm is source arm one and the result is 4; a separate structural sum is 9. Nominal/constructor identity, source field order, binder occurrence paths and workMap are retained independently of compact tags or arena indices. Closed monomorphic mutually recursive groups are the initial extension; parameterized specialization needs its own finite bound, and closures/GADTs/or-patterns remain outside this adapter. Existing dedicated list/tree forms do not count as this extension's implementation.
+
+
+FILE openspec/changes/sherlock-completion-convergence/specs/sherlock-completion/spec.md SHA256 67bc5e23fd4c3181f64c64941975258d0faf500e764859288cb7dfb19840836d
+### Requirement: SCON-016 Generic declarations and ordered matches
+
+WHEN a supported generic declaration is prepared, TypeDecl/CtorLayout/MatchPlan SHALL preserve nominal identity, mutually recursive references, source field order and first matching source arm with bounded specialization.
+
+Retains: UIREQ-004, UIREQ-007, UIREQ-008, UIREQ-009, UIREQ-027, UIREQ-029, UIREQ-034; B-T02, B-T04, B-T10. Callable predicate: `generic_decl_match_runtime_complete`. Batch: B06.
+
+Current: Generic declarations/plans have source machinery; full admission/guard/runtime/native evidence remains open. Proposed acceptance remains OPEN.
+
+#### Scenario: SCON-016 positive observation
+
+- **WHEN** the independently frozen positive fixture is exercised through the named actual consumer
+- **THEN** Schedule first-arm example yields4, separate sum9 and repeated Pay4 occurrences sum8 through actual admitted runtime; a mutually recursive declaration group retains typed references.
+
+#### Scenario: SCON-016 incomplete or contrasting observation
+
+- **WHEN** the corresponding incomplete, unsupported or boundary fixture is supplied or reached
+- **THEN** Dedicated list/tree success alone is not generic support; constructor/type disagreement and unsupported parameterized/higher-order extensions retain explicit original dispositions rather than silent narrowing.
+
+#### Final03 additive subclause: SCON-016.R02
+
+GenericNominal construction SHALL have an explicit ConstructorFields semantic continuation before Build/Materialize can be treated as end-to-end construction. Its payload SHALL retain nominal type/constructor identity, source occurrence where supported, saved environment, evaluated field prefix, remaining field expressions or equivalent cursor, and eventual return context. Field evaluation SHALL be strict left-to-right and may call recursively while later fields remain pending. Introduce/return/failure/release/serialization transitions and the specified post-field-evaluation allocation point SHALL be mapped by the existing schema/selection/application owner; this clause assigns no new tags, widths, guards, charges or error codes. Current nine DedicatedSorts FrameRowC variants/refused reserved ConstructorFields and Materialize expecting evaluated fields are not that implementation. Generic admission SHALL state its binder-linearity/source-domain mapping without replacing existing equal Cons/Branch binder-name match-miss behavior with a fabricated error8.
+
+#### Scenario: SCON-016 R02 — Zero-field constructor
+
+- **WHEN** a supported zero-field nominal constructor is evaluated
+- **THEN** its identity/order and specified construction point are retained with no invented field-evaluation work
+
+#### Scenario: SCON-016 R02 — Recursive first constructor field
+
+- **WHEN** a normal constructor first field performs a named recursive call while a later field is pending
+- **THEN** ConstructorFields retains identity, source occurrence, saved environment, evaluated prefix, remaining expressions/cursor and eventual return context through the recursive call; the first result precedes later field evaluation
+
+#### Scenario: SCON-016 R02 — Recursive last constructor field
+
+- **WHEN** a normal constructor last field performs recursive work after earlier fields are evaluated
+- **THEN** the earlier evaluated prefix and saved environment remain intact while the final recursive field is pending, then construction occurs only at the specified post-field point
+
+#### Scenario: SCON-016 R02 — Cut inside incomplete constructor prefix
+
+- **WHEN** a normal technical cut occurs with an incomplete nominal-constructor field prefix
+- **THEN** export/import resumes the exact remaining field order and helper/result/frame/work state, not a Build helper supplied with pre-evaluated expected values
+
+#### Scenario: SCON-016 R02 — Equal-looking occurrences and recursive declarations
+
+- **WHEN** the normal cases include distinct equal-looking constructor occurrences, nested ordered Schedule matching and mutually recursive declarations
+- **THEN** source occurrences remain distinct, first matching arm/order and complete frame/saved-environment/helper/work/earliest-stop observations are retained; dedicated List/Tree support alone does not pass

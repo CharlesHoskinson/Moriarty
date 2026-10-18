@@ -1,0 +1,9 @@
+# Exact review scope
+
+Read full source/nominal-product-syntax.k, source/nominal-product.k and source/normal-trace-observations.k; full comparison/nominal_trace_codec.py, comparison/complete_k_wire.py and comparison/complete_wire_comparison.py; complete API/safe schema/Root ordinal policy/variant fields; five full initial literals and five full observation queries; comparison manifest with opaque5goldenpaths/pins; full17operation plan or its lossless expansion; source identity and data-only readbacks.
+
+Separate the already approved model source from new adapter/consumer source, ordinary source syntax inspection from runtime behavior, and proposed operations from Root selection. Independent expected bodies are withheld from source author; only independently produced opaque paths/hashes/sizes and safe public literals are included here. Root and independent oracle/review owners bind and inspect populated bodies separately. No semantic oracle certification follows from this source packet alone.
+
+The unchanged existing F03launch closure/import-time context and tool identities are the predecessor scope already used by Root; their pin references are in DEPENDENCY-PINS.json. This source candidate introduces no runner or provider observer. No expected module, native/SDK/circuit/proof, hostedCI, Git/W or unrelated campaign action is selected. Each listed child must remain within the exact existing caps and cleanup behavior.
+
+Source questions: preserve every declared payload before pairing; retain saved caller/frame/field prefixes and source occurrences; reject unevaluated function roots instead of accepting them as states; derive all observer ordinals exclusively from actual states; finish/persist all actual conversion before any golden read; compare complete nested values/types. Clock/canonical/physical/persistent/mutual-type/newNarg gaps remain explicit.
