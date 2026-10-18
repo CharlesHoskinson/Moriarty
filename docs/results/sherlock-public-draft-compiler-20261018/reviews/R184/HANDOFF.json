@@ -1,0 +1,148 @@
+{
+  "status": "SOURCE_AUDIT_RETURNED_APPROVE_WITH_LIMITS_NOT_EXECUTION_ADOPTION",
+  "reviewer_actual_model": [
+    {
+      "model": "gemini-4-argon-high",
+      "permission_mode": "always-proceed",
+      "cwd": "/tmp/moriarty-r184-parser-source-review-scfqq1jc"
+    }
+  ],
+  "requested_model": "gemini-4-argon-high",
+  "requested_effort": "HIGH pinned slug",
+  "author": "Sol R181; not R179 candidate",
+  "actual_exit": 0,
+  "terminal_status": "SUCCESS",
+  "elapsed_seconds": 369.59718417201657,
+  "one_provider_call": true,
+  "full_bodies": 31,
+  "required_pages": 42,
+  "actual_done_pages": 42,
+  "all_pages_once": true,
+  "summary_counts_match": true,
+  "unexpected_tools": [],
+  "input_pins_changed": [],
+  "verdict": {
+    "verdict": "APPROVE_WITH_LIMITS",
+    "root_readiness": "Ready for Root consideration of selected ordinary checks after wiring/adapting downstream R120 exhaustive DraftError match and strengthening proposed test assertions. This is NOT a generic H1, evaluator, public compiler, or native authority grant.",
+    "preserved_invariants": [
+      "Native0",
+      "C4OPEN",
+      "R2UNSAT",
+      "60460HOLD",
+      "stopped Amendment10"
+    ]
+  },
+  "owner_mandatory_corrections": [
+    {
+      "target": "BODY-23 (crates/mori-core/src/sherlock/compile_artifact/draft_diagnostics.rs L8-18) & BODY-22 (draft_contract.rs L53-63)",
+      "correction": "Before compiling R120 with R181, add `DraftError::Budget(exceeded)` arm to `draft_diagnostics::source`, document `max_ast_nodes` as syntactic `Expr + Pattern` occurrences (`max_ast_occurrences`), map `max_parse_depth` to `max_parser_recursion_depth`, and add a distinct `max_structural_ast_depth: UsizeDecimal` field to `DraftPreprocessingExtents` without reusing `max_type_depth` or `max_copy_depth`."
+    },
+    {
+      "target": "BODY-06 (tests/bounded_parser.rs L29-40, L94-125)",
+      "correction": "Add independent AST and `SourceProvenance` assertions (including R115 `ChainTotal` / `BranchTotal` provenance spans, child_paths, expression kinds, and pattern binders, plus `1 + 2 * 3` precedence structure) rather than only `assert_eq!(..., parse_draft_source(&text))`. Add exact `limit - 1` recursion boundary `max_parser_recursion_depth = 5` (`observed: 6`) for `((1))`, `max_parser_recursion_depth = 1` (`observed: 2`) for `source(\"1\")`, and a non-binary `StructuralAstDepth` case (e.g. `leaf(1)` or `if`/`match`/function body)."
+    },
+    {
+      "target": "BODY-07 (tests/lexer_token_limit.rs L5-14)",
+      "correction": "Add assertion `assert!(matches!(lex_with_token_limit(\"a @\", 2), Err(TokenLimitedLexError::TokenLimit { limit: 2, observed: 3 })))` to verify pre-scan EOF slot reservation before lexical error on the excess token."
+    }
+  ],
+  "owner_optional_refinements": [
+    {
+      "target": "BODY-01 (collect_sites L527) & BODY-02 (lex_with_token_limit L79) [Optional Hardening]",
+      "correction": "In `lex_with_token_limit` (BODY-02 L79), cap initial capacity at `(source.len() / 8 + 1).min(max_tokens).min(MAX_TOKENS)` to avoid over-reserving 8192 token slots on tiny inputs when `max_tokens` is large. In `collect_sites` (BODY-01 L527), initialize `scheduled` from `provenance.expressions.len().saturating_add(provenance.patterns.len()).saturating_add(1)` (and increment on pattern checks) so lookahead scheduling is globally cumulative across entry and function bodies."
+    }
+  ],
+  "remaining_limits": {
+    "checker_and_type_depth": "Unadmitted in R181; `sherlock_draft_types` typechecking recursion/work and `max_type_depth` enforcement remain separate.",
+    "copy_and_report_bounds": "Unadmitted in R181; general AST cloning, `max_copy_depth`, A-to-B owner lowering (`prepare_core` / `ProgramView`), and report serialization remain separate.",
+    "recursive_drop_and_cleanup": "Unmetered; dropping `Node` (`Vec<Node>`) and `Program` (`Arc<Expr>`) recurses on the host stack up to `max_structural_ast_depth`.",
+    "public_compile_consumer_and_config": "Unwired; R120 `compile_draft_host`, config schema extension for `max_structural_ast_depth`, and numerical cap policy selection remain Root-owned.",
+    "H1_and_native_authority": "H1 (unmetered host evaluator) remains open; native authority is 0; arbitrary caller limits do not guarantee native stack safety."
+  },
+  "mechanical_qualifications": [
+    {
+      "id": "PQ1",
+      "fact": "18274-byte report exceeds requested aim10000; full original retained, no truncation/retry."
+    },
+    {
+      "id": "PQ2",
+      "fact": "F-Q1-1 DraftError and F-Q2-3 Node snippets use .. abbreviation and are not literal contiguous source; actual declarations supplied in readback. Other seven finding snippets match literal or whitespace-insensitive source."
+    },
+    {
+      "id": "PQ3",
+      "fact": "F-Q3-1/optional target locates scheduled initializer atL527; actualL525. Exact source is present; location correction only."
+    },
+    {
+      "id": "PQ4",
+      "fact": "Final optional capacity/collector advice appears within mandatory_minimal_corrections array but its target explicitly labels Optional Hardening. Preserve that distinction; do not silently treat optional advice as required."
+    },
+    {
+      "id": "PQ5",
+      "fact": "AGY actual DONE summaries/path/line/byte metadata match all42 pages, but tool transport does not independently retain full tool-response bodies; no claim of cryptographically attested model comprehension."
+    },
+    {
+      "id": "PQ6",
+      "fact": "Source-only static opinion; no candidate typecheck/test/lexer/parser execution. Review is not Root integration, ordinary-command selection, H1/publicconsumer/native admission."
+    }
+  ],
+  "native_authority": 0,
+  "C4": "OPEN",
+  "R2": "UNSATISFIED",
+  "60460": "HOLD",
+  "stoppedAmendment10": "unchanged",
+  "candidate_execution": 0,
+  "WGit_writes": 0,
+  "Root_adoption": false,
+  "artifacts": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/FINAL-RESPONSE.txt",
+      "bytes": 18274,
+      "sha256": "4924a6cb540343e0a19e98aa4843d5528aebf28da9c86f768cdbeea47fea7f89"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/REPORT.md",
+      "bytes": 18275,
+      "sha256": "1a230e24aa5114abcdcc90493ccbb640ae6cf3e5c40b59960c1895cd466940b5"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/RESULT.json",
+      "bytes": 59288,
+      "sha256": "0fc28faddaedd75e7724dbe11e6f66d973a2a8e301521ca3e486d84e23879d50"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/TOOL-READ-COVERAGE.json",
+      "bytes": 24517,
+      "sha256": "633a526fe4fe6d6efbcb9b6061d88856b7d75527fc2b6d6b3fe146de25011f79"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/LITERAL-REPORT-CHECK.json",
+      "bytes": 19562,
+      "sha256": "35f303ddb9479274831740d613101d635d7570d8d44912c422d0cd7808a2497f"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/FACTUAL-QUALIFICATIONS.json",
+      "bytes": 1920,
+      "sha256": "c740a70e35515c4d20e01e752b2adb76edba6a055b02ec77fe1c5ed92825e531"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/MEMBERSHIP.json",
+      "bytes": 58234,
+      "sha256": "7576edbaadbcf4252cf3d3b6cfd565a14a996acdf405578b1a56ea5ac2d2ff59"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/PREPARATION.json",
+      "bytes": 2182,
+      "sha256": "7e99509a54a97596d70332e0c80a654b2fecb8425b1a81a676992b10132b52b8"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/PRECALL-PIN-CHECK.json",
+      "bytes": 18139,
+      "sha256": "f7f4200968db95d02cbc622a95c47384283dff6d8eb743390f610abfbb4bdccb"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/184-sol-parser-security-review/POSTCALL-PIN-CHECK.json",
+      "bytes": 18139,
+      "sha256": "f7f4200968db95d02cbc622a95c47384283dff6d8eb743390f610abfbb4bdccb"
+    }
+  ]
+}

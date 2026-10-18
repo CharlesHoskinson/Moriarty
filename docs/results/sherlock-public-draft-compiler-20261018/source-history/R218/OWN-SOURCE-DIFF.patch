@@ -1,0 +1,506 @@
+--- basis/W/crates/mori-core/src/lib.rs
++++ afterimage/crates/mori-core/src/lib.rs
+@@ -10,12 +10,10 @@
+ #[path = "sherlock/compile_artifact.rs"]
+ pub mod sherlock_compile_artifact;
+ 
+-// Unregistered draft source capability: Core-only ordinary host test proposal.
++// Explicit dedicated-draft host preparation; ordinary Core grammar is unchanged.
+ // These lexer-dependent modules stay outside Sherlock's standalone Std graph.
+-#[cfg(test)]
+ #[path = "sherlock/draft_source.rs"]
+ mod sherlock_draft;
+-#[cfg(test)]
+ #[path = "sherlock/draft_typecheck.rs"]
+ mod sherlock_draft_types;
+ #[cfg(test)]
+--- basis/W/crates/mori-core/src/sherlock/compile_artifact.rs
++++ afterimage/crates/mori-core/src/sherlock/compile_artifact.rs
+@@ -1,7 +1,7 @@
+-//! First public compiler's parameter-free Core/1 -> actual HostOnly B artifact.
++//! Selected Core scalar or explicit dedicated-draft HostOnly B preparation.
+ //! Source candidate only: no constraint plan, native export or target execution.
+-//! The selected route reuses production preparation/admission. Evaluation occurs
+-//! only in the explicit observe branch, through the original run consumer.
++//! Both source routes use the existing B owner. Only the unchanged Core route
++//! has an explicit observe branch; draft preparation never executes B steps.
+ use std::collections::BTreeMap;
+ use serde::Serialize;
+ use serde_json::{json, Value};
+@@ -16,6 +16,14 @@
+ pub mod config;
+ #[path = "compile_artifact/wire.rs"]
+ mod wire;
++#[path = "compile_artifact/recursive_source.rs"]
++pub(crate) mod recursive_source;
++#[path = "compile_artifact/draft_contract.rs"]
++pub mod draft_contract;
++#[path = "compile_artifact/draft_report.rs"]
++pub mod draft_report;
++#[path = "compile_artifact/draft_diagnostics.rs"]
++mod draft_diagnostics;
+ use config::ExecutionConfig;
+ use wire::OwnerWire;
+ 
+@@ -101,6 +109,19 @@
+         Self { stage, actual_error:json!(error), evaluation_performed:false,
+             events_forwarded:"0".into(), completed:false }
+     }
++    /// Preserve the bounded draft preparation stage and its complete typed error.
++    fn draft_source(error: recursive_source::DraftSourceFailure) -> Self {
++        use recursive_source::DraftSourceFailure;
++        let (stage, actual_error) = match error {
++            DraftSourceFailure::Source(error) => ("parse", draft_diagnostics::source(error)),
++            DraftSourceFailure::Types(error) => ("typecheck", draft_diagnostics::types(error)),
++            DraftSourceFailure::Copy(error) => ("copy", draft_diagnostics::copy(error)),
++            DraftSourceFailure::Admit(error) => ("admit", error.owner_wire()),
++            DraftSourceFailure::AdmitRun(error) => ("admit-run", error.owner_wire()),
++        };
++        Self { stage, actual_error, evaluation_performed:false,
++            events_forwarded:"0".into(), completed:false }
++    }
+     fn consumer(error: ConsumerError) -> Self {
+         let (stage, actual_error, evaluation_performed, events_forwarded, completed) = match error {
+             ConsumerError::HostGuard(error) => ("host-guard", error.owner_wire(), false, 0, false),
+@@ -126,6 +147,16 @@
+     // Wire-only shape constraint. Existing host admission decides numerical policy.
+     config.consumer().map_err(|error| CompileFailure::input("config", error))?;
+     Ok(config)
++}
++
++/// Decode only the distinct draft wire shape. The designated-owner constructor
++/// decides the supplied preprocessing/owner configuration policy before work.
++pub fn parse_draft_config(source: &str)
++    -> Result<draft_contract::DraftExecutionConfig, CompileFailure>
++{
++    let value = crate::json::parse(source).map_err(|error| CompileFailure::core("config", error))?;
++    serde_json::from_value(value)
++        .map_err(|error| CompileFailure::input("config", error.to_string()))
+ }
+ 
+ /// SDK-free product entry point. No defaults, scenarios, fixture-name selection,
+@@ -208,3 +239,51 @@
+             native:"unrun", target:"unrun", acceptance:"none" },
+     })
+ }
++
++/// Compile the explicit dedicated-draft source to real admitted HostOnly tables
++/// and their unstepped genesis image. Every parser/type/copy extent is supplied
++/// by the caller and forwarded to the actual R181/R200/R208 constructor seam.
++/// No source evaluation, B step, native export or unbounded fallback occurs.
++/// This is preparation only: A/B cleanup, owner/report allocations and H1's
++/// process-wide heap/stack/time guarantees remain separate owner premises.
++pub fn compile_draft_host(
++    source: &str,
++    config_source: &str,
++    target_source: &str,
++) -> Result<draft_report::DraftCompileArtifact, CompileFailure> {
++    let config = parse_draft_config(config_source)?;
++    let target_descriptor = crate::json::parse(target_source)
++        .map_err(|error| CompileFailure::core("config", error))?;
++    let budget = recursive_source::DraftPreparationBudget {
++        parse: config.preprocessing.parser_budget(),
++        max_type_depth: config.preprocessing.max_type_depth.0,
++        copy: config.preprocessing.copy_budget(),
++    };
++    let bounds = config.bounds.owner();
++    let layout = config.layout.owner(bounds);
++    let fuel = config.fuel.owner();
++    let stack = config.stack.owner();
++    let checked = recursive_source::prepare_checked_draft_bounded(
++        source, budget.parse, budget.max_type_depth,
++    ).map_err(CompileFailure::draft_source)?;
++    let admitted = recursive_source::admit_checked_draft_bounded(
++        checked, &budget.copy, &bounds, &layout, &fuel, &stack,
++    ).map_err(CompileFailure::draft_source)?;
++    // Project precisely this fresh pair before any execution. No separately
++    // prepared identity, fabricated view or second admission is substituted.
++    draft_report::project_admitted_preparation(
++        &admitted,
++        crate::intent::hash_bytes(source.as_bytes()),
++        draft_contract::DraftConfigIdentity {
++            fields: config,
++            file_digest: crate::intent::hash_bytes(config_source.as_bytes()),
++        },
++        TargetDescriptor {
++            descriptor: target_descriptor,
++            file_digest: crate::intent::hash_bytes(target_source.as_bytes()),
++        },
++    ).map_err(|error| CompileFailure {
++        stage:"observation", actual_error:error.owner_wire(),
++        evaluation_performed:false, events_forwarded:"0".into(), completed:false,
++    })
++}
+--- basis/W/crates/mori-core/src/sherlock/compile_artifact/config.rs
++++ afterimage/crates/mori-core/src/sherlock/compile_artifact/config.rs
+@@ -72,7 +72,7 @@
+ #[serde(tag = "kind", deny_unknown_fields)]
+ pub enum RunInput { Nat { value: U128Decimal }, Negative, NatAboveU128 }
+ impl RunInput {
+-    fn owner(self) -> RunIntC {
++    pub(crate) fn owner(self) -> RunIntC {
+         match self { Self::Nat { value } => RunIntC::Nat(value.0),
+             Self::Negative => RunIntC::Negative, Self::NatAboveU128 => RunIntC::NatAboveU128 }
+     }
+@@ -160,44 +160,10 @@
+         if self.layout.boundary_capacities_present {
+             return Err("layout.boundary_capacities_present must be false in sherlock-host-config/1");
+         }
+-        let bounds = BoundsC {
+-            code_rows: self.bounds.code_rows.0,
+-            function_rows: self.bounds.function_rows.0,
+-            code_child_slots: self.bounds.code_child_slots.0,
+-            parameter_slots: self.bounds.parameter_slots.0,
+-            pattern_rows: self.bounds.pattern_rows.0,
+-            match_plan_rows: self.bounds.match_plan_rows.0,
+-            match_arm_rows: self.bounds.match_arm_rows.0,
+-            type_rows: self.bounds.type_rows.0,
+-            constructor_rows: self.bounds.constructor_rows.0,
+-            constructor_field_slots: self.bounds.constructor_field_slots.0,
+-            max_arity: self.bounds.max_arity.0,
+-            constant_nodes: self.bounds.constant_nodes.0,
+-            constant_field_slots: self.bounds.constant_field_slots.0,
+-            data_nodes: self.bounds.data_nodes.0,
+-            data_field_slots: self.bounds.data_field_slots.0,
+-            environment_cells: self.bounds.environment_cells.0,
+-            frames: self.bounds.frames.0,
+-            helper_tasks: self.bounds.helper_tasks.0,
+-            serialization_bytes: self.bounds.serialization_bytes.0,
+-            max_reference_work: self.bounds.max_reference_work.0,
+-            max_helper_work: self.bounds.max_helper_work.0,
+-            step_cap: self.bounds.step_cap.0,
+-        };
++        let bounds = self.bounds.owner();
+         Ok(ConsumerConfig {
+             bounds,
+-            layout: LayoutSchemaC {
+-                layout_version: (self.layout.layout_version[0].clone(), self.layout.layout_version[1].clone()),
+-                field_id: None, widths: None, scalar_layout_id: None,
+-                bounds,
+-                capacities: LayoutCapacitiesC {
+-                    name_rows: self.layout.capacities.name_rows.0,
+-                    name_bytes: self.layout.capacities.name_bytes.0,
+-                    occurrence_path_slots: self.layout.capacities.occurrence_path_slots.0,
+-                    value_slots: self.layout.capacities.value_slots.0,
+-                },
+-                boundary_capacities_present: self.layout.boundary_capacities_present,
+-            },
++            layout: self.layout.owner(bounds),
+             fuel: self.fuel.owner(), stack: self.stack.owner(),
+             profile: ConsumerProfile::SherlockHelperMicrostep1,
+             grammar: GrammarDomain::DedicatedSorts, finance: FinanceInput::Absent,
+@@ -216,3 +182,50 @@
+         })
+     }
+ }
++
++// Shape-only conversions shared with the distinct draft configuration.
++// No cap defaults, numerical relationships or owner policy are introduced.
++impl Bounds {
++    pub(crate) fn owner(self) -> BoundsC {
++        BoundsC {
++            code_rows: self.code_rows.0,
++            function_rows: self.function_rows.0,
++            code_child_slots: self.code_child_slots.0,
++            parameter_slots: self.parameter_slots.0,
++            pattern_rows: self.pattern_rows.0,
++            match_plan_rows: self.match_plan_rows.0,
++            match_arm_rows: self.match_arm_rows.0,
++            type_rows: self.type_rows.0,
++            constructor_rows: self.constructor_rows.0,
++            constructor_field_slots: self.constructor_field_slots.0,
++            max_arity: self.max_arity.0,
++            constant_nodes: self.constant_nodes.0,
++            constant_field_slots: self.constant_field_slots.0,
++            data_nodes: self.data_nodes.0,
++            data_field_slots: self.data_field_slots.0,
++            environment_cells: self.environment_cells.0,
++            frames: self.frames.0,
++            helper_tasks: self.helper_tasks.0,
++            serialization_bytes: self.serialization_bytes.0,
++            max_reference_work: self.max_reference_work.0,
++            max_helper_work: self.max_helper_work.0,
++            step_cap: self.step_cap.0,
++        }
++    }
++}
++impl Layout {
++    pub(crate) fn owner(&self, bounds: BoundsC) -> LayoutSchemaC {
++        LayoutSchemaC {
++            layout_version: (self.layout_version[0].clone(), self.layout_version[1].clone()),
++            field_id: None, widths: None, scalar_layout_id: None,
++            bounds,
++            capacities: LayoutCapacitiesC {
++                name_rows: self.capacities.name_rows.0,
++                name_bytes: self.capacities.name_bytes.0,
++                occurrence_path_slots: self.capacities.occurrence_path_slots.0,
++                value_slots: self.capacities.value_slots.0,
++            },
++            boundary_capacities_present: self.boundary_capacities_present,
++        }
++    }
++}
+--- basis/R207/draft_contract.rs
++++ afterimage/crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs
+@@ -47,7 +47,8 @@
+ 
+ /// Explicit extents; the parser projection below chooses no numerical values.
+ /// Bounded-checker wiring consumes the exact max_type_depth.0.
+-/// Copy/report/drop admission and the public constructor remain separate work.
++/// Copy fields below project the exact returned R208 ABI; no numerical policy.
++/// Reporting/cleanup and global H1 guarantees remain separate work.
+ #[derive(Clone, Copy, Serialize, Deserialize)]
+ #[serde(deny_unknown_fields)]
+ pub struct DraftPreprocessingExtents {
+@@ -68,9 +69,14 @@
+     /// Active structural Expr inference depth: each body/entry root is1.
+     /// Consumed unchanged by check_program_types_bounded; no parser/copy alias.
+     pub max_type_depth: UsizeDecimal,
+-    /// Reserved for the designated bounded copy constructor, not silently ignored
+-    /// by an alleged complete public compile path. No copy policy is added here.
++    /// Structural Expr copy depth, independent of parser and checker depth.
+     pub max_copy_depth: UsizeDecimal,
++    pub max_copy_expr_nodes: UsizeDecimal,
++    pub max_copy_match_arms: UsizeDecimal,
++    pub max_copy_name_bytes: UsizeDecimal,
++    pub max_copy_list_elements: UsizeDecimal,
++    pub max_copy_tree_nodes: UsizeDecimal,
++    pub max_copy_tree_depth: UsizeDecimal,
+ }
+ 
+ impl DraftPreprocessingExtents {
+@@ -85,6 +91,25 @@
+             max_ast_occurrences: self.max_ast_nodes.0,
+             max_parser_recursion_depth: self.max_parse_depth.0,
+             max_structural_ast_depth: self.max_structural_ast_depth.0,
++        }
++    }
++}
++
++impl DraftPreprocessingExtents {
++    pub fn copy_budget(
++        self,
++    ) -> crate::sherlock::helper_machine::source_input_bridge::SourceCopyBudget {
++        crate::sherlock::helper_machine::source_input_bridge::SourceCopyBudget {
++            max_functions: self.max_functions.0,
++            max_parameters_per_function: self.max_parameters_per_function.0,
++            max_total_parameters: self.max_total_parameters.0,
++            max_expr_nodes: self.max_copy_expr_nodes.0,
++            max_copy_depth: self.max_copy_depth.0,
++            max_match_arms: self.max_copy_match_arms.0,
++            max_name_bytes: self.max_copy_name_bytes.0,
++            max_list_elements: self.max_copy_list_elements.0,
++            max_tree_nodes: self.max_copy_tree_nodes.0,
++            max_tree_depth: self.max_copy_tree_depth.0,
+         }
+     }
+ }
+--- basis/R207/draft_diagnostics.rs
++++ afterimage/crates/mori-core/src/sherlock/compile_artifact/draft_diagnostics.rs
+@@ -1,6 +1,6 @@
+ //! Exact ordinary source/type diagnostic field projections. These are not
+ //! runtime Outcomes. Budget errors retain their typed resources and counts.
+-//! R207 preparation: SOURCE_ONLY / UNRUN; no reporting resource guard is added.
++//! R218 preparation: SOURCE_ONLY / UNRUN; no reporting resource guard is added.
+ use serde_json::{json, Value};
+ use crate::sherlock_draft::{DraftBudgetResource, DraftError};
+ use crate::sherlock_draft_types::{DraftTypeBudgetResource, DraftTypeError, DraftTypeErrorKind};
+@@ -71,6 +71,39 @@
+     json!({"source": SourceLocation::from(&error.source), "kind": kind})
+ }
+ 
++pub(super) fn copy(
++    error: crate::sherlock::helper_machine::source_input_bridge::SourceCopyError,
++) -> Value {
++    use crate::sherlock::helper_machine::source_input_bridge::{
++        SourceCopyError, SourceCopyResource,
++    };
++    match error {
++        SourceCopyError::Budget(exceeded) => {
++            let resource = match exceeded.resource {
++                SourceCopyResource::Functions => "Functions",
++                SourceCopyResource::ParametersPerFunction => "ParametersPerFunction",
++                SourceCopyResource::TotalParameters => "TotalParameters",
++                SourceCopyResource::ExprNodes => "ExprNodes",
++                SourceCopyResource::CopyDepth => "CopyDepth",
++                SourceCopyResource::MatchArms => "MatchArms",
++                SourceCopyResource::NameBytes => "NameBytes",
++                SourceCopyResource::ListElements => "ListElements",
++                SourceCopyResource::TreeNodes => "TreeNodes",
++                SourceCopyResource::TreeDepth => "TreeDepth",
++            };
++            json!({
++                "Budget": {
++                    "resource": resource,
++                    "limit": exceeded.limit.to_string(),
++                    "observed": exceeded.observed.map(|n| n.to_string()),
++                    "function_index": exceeded.function_index.map(|n| n.to_string()),
++                    "child_index": exceeded.child_index.map(|n| n.to_string()),
++                }
++            })
++        }
++    }
++}
++
+ #[cfg(test)]
+ #[path = "draft_diagnostics_tests.rs"]
+ mod tests;
+--- basis/R207/draft_contract_tests.rs
++++ afterimage/crates/mori-core/src/sherlock/compile_artifact/draft_contract_tests.rs
+@@ -6,7 +6,9 @@
+ fn preprocessing_fields_roundtrip_and_project_without_extent_aliases() {
+     let input = json!({"max_source_bytes":"1","max_tokens":"2","max_functions":"3",
+         "max_parameters_per_function":"4","max_total_parameters":"5","max_ast_nodes":"6",
+-        "max_parse_depth":"7","max_structural_ast_depth":"8","max_type_depth":"9","max_copy_depth":"10"});
++        "max_parse_depth":"7","max_structural_ast_depth":"8","max_type_depth":"9","max_copy_depth":"10",
++        "max_copy_expr_nodes":"11","max_copy_match_arms":"12","max_copy_name_bytes":"13",
++        "max_copy_list_elements":"14","max_copy_tree_nodes":"15","max_copy_tree_depth":"16"});
+     let extents: DraftPreprocessingExtents = serde_json::from_value(input.clone()).unwrap();
+     assert_eq!(serde_json::to_value(extents).unwrap(), input);
+     assert_eq!(extents.parser_budget(), crate::sherlock_draft::DraftParseBudget {
+@@ -18,6 +20,11 @@
+     // The real checker consumes the exact usize max_type_depth.0; no helper/cap.
+     assert_eq!(extents.max_type_depth.0, 9);
+     assert_eq!(extents.max_copy_depth.0, 10);
++    assert_eq!(extents.copy_budget(), crate::sherlock::helper_machine::source_input_bridge::SourceCopyBudget {
++        max_functions:3, max_parameters_per_function:4, max_total_parameters:5,
++        max_expr_nodes:11, max_copy_depth:10, max_match_arms:12,
++        max_name_bytes:13, max_list_elements:14, max_tree_nodes:15, max_tree_depth:16,
++    });
+ }
+ 
+ #[test]
+--- basis/R207/draft_diagnostics_tests.rs
++++ afterimage/crates/mori-core/src/sherlock/compile_artifact/draft_diagnostics_tests.rs
+@@ -80,3 +80,23 @@
+             json!({"Budget":{"resource":name,"limit":"7","observed":"8"}}));
+     }
+ }
++
++
++#[test]
++fn every_copy_resource_and_optional_location_is_preserved() {
++    use crate::sherlock::helper_machine::source_input_bridge::{SourceCopyBudgetExceeded, SourceCopyError, SourceCopyResource};
++    for (resource, name) in [
++        (SourceCopyResource::Functions,"Functions"), (SourceCopyResource::ParametersPerFunction,"ParametersPerFunction"),
++        (SourceCopyResource::TotalParameters,"TotalParameters"), (SourceCopyResource::ExprNodes,"ExprNodes"),
++        (SourceCopyResource::CopyDepth,"CopyDepth"), (SourceCopyResource::MatchArms,"MatchArms"),
++        (SourceCopyResource::NameBytes,"NameBytes"), (SourceCopyResource::ListElements,"ListElements"),
++        (SourceCopyResource::TreeNodes,"TreeNodes"), (SourceCopyResource::TreeDepth,"TreeDepth"),
++    ] {
++        assert_eq!(copy(SourceCopyError::Budget(SourceCopyBudgetExceeded {
++            resource,limit:7,observed:Some(8),function_index:Some(2),child_index:Some(3),
++        })), json!({"Budget":{"resource":name,"limit":"7","observed":"8","function_index":"2","child_index":"3"}}));
++    }
++    assert_eq!(copy(SourceCopyError::Budget(SourceCopyBudgetExceeded {
++        resource:SourceCopyResource::NameBytes,limit:usize::MAX,observed:None,function_index:None,child_index:None,
++    })), json!({"Budget":{"resource":"NameBytes","limit":usize::MAX.to_string(),"observed":null,"function_index":null,"child_index":null}}));
++}
+--- basis/W/crates/mori/src/commands/compile.rs
++++ afterimage/crates/mori/src/commands/compile.rs
+@@ -17,10 +17,16 @@
+     /// Explicit Sherlock execution profile; omission preserves ordinary Core compilation
+     #[arg(long)]
+     pub execution_profile: Option<String>,
++    /// Explicit source dialect on the selected Sherlock route; no autodetection
++    #[arg(long, requires = "execution_profile")]
++    pub source_profile: Option<String>,
++    /// Select the draft program's sole closed entry; no external inputs
++    #[arg(long, requires = "execution_profile", conflicts_with = "action")]
++    pub entry: bool,
+     /// Exact parameter-free source action for selected Sherlock preparation
+     #[arg(long, requires = "execution_profile")]
+     pub action: Option<String>,
+-    /// Exact sherlock-host-config/1 JSON; no numerical defaults
++    /// Exact configuration for the selected source profile; no numerical defaults
+     #[arg(long, requires = "execution_profile")]
+     pub execution_config: Option<PathBuf>,
+     /// Explicit host observation after actual preparation/admission
+@@ -30,7 +36,7 @@
+ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+     let source = core_io::read_source(&args.file)?;
+     // Selected HostOnly preparation returns before either native/backend path.
+-    if args.execution_profile.is_some() {
++    if args.execution_profile.is_some() || args.source_profile.is_some() || args.entry {
+         return compile_sherlock(&args, &source, shell);
+     }
+     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
+@@ -84,14 +90,29 @@
+ /// its separate H1/command-closure dependency; flags confer no internal authority.
+ fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Result<ExitCode> {
+     use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
+-    let execute = || -> Result<(host::CompileArtifact, String), CompileFailure> {
++    use host::draft_contract::{select_source, SourceSelection};
++    let execute = || -> Result<(SelectedSherlockArtifact, String), CompileFailure> {
+         let profile = args.execution_profile.as_deref().ok_or_else(||
+             CompileFailure::input("select", "missing --execution-profile"))?;
+         if profile != host::EXECUTION_PROFILE {
+             return Err(CompileFailure::input("select", format!("unsupported execution profile: {profile}")));
+         }
+-        let action = args.action.as_deref().ok_or_else(||
+-            CompileFailure::input("select", "selected Sherlock compilation requires --action"))?;
++        let selection = select_source(args.source_profile.as_deref(), args.action.as_deref(), args.entry)
++            .map_err(|error| match error {
++                host::draft_contract::SelectionError::MissingAction =>
++                    CompileFailure::input("select", "selected Sherlock compilation requires --action"),
++                other => CompileFailure {
++                    stage: "select", actual_error: serde_json::json!({
++                        "selection_error": format!("{other:?}"),
++                        "source_profile": args.source_profile.as_deref(),
++                        "entry": args.entry, "action": args.action.as_deref(),
++                    }), evaluation_performed: false, events_forwarded: "0".into(), completed: false,
++                },
++            })?;
++        if matches!(&selection, SourceSelection::DraftEntry) && args.observe {
++            return Err(CompileFailure::input("select",
++                "draft preparation is compile-only; --observe is unsupported"));
++        }
+         let config_path = args.execution_config.as_deref().ok_or_else(||
+             CompileFailure::input("config", "selected Sherlock compilation requires --execution-config"))?;
+         let config = core_io::read_source(config_path)
+@@ -99,9 +120,13 @@
+         // Target bytes are an explicit descriptor and digest, not native support.
+         let target = core_io::read_source(&args.target)
+             .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+-        let artifact = host::compile_host(source, action, &config, &target, args.observe)?;
+-        let manifest = serde_json::to_string_pretty(&artifact)
+-            .map_err(|error| artifact.failure("observation", error.to_string()))?;
++        let artifact = match selection {
++            SourceSelection::CoreAction(action) => SelectedSherlockArtifact::Core(
++                host::compile_host(source, action, &config, &target, args.observe)?),
++            SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
++                host::compile_draft_host(source, &config, &target)?),
++        };
++        let manifest = artifact.manifest()?;
+         Ok((artifact, manifest))
+     };
+     let (artifact, manifest) = match execute() {
+@@ -120,6 +145,28 @@
+         .map_err(|error| report_sherlock_failure(&artifact.failure("publish", error.to_string())))?;
+     shell.status("Prepared", format!("Sherlock HostOnly artifact into {}", args.out.display()));
+     Ok(ExitCode::SUCCESS)
++}
++
++// Serialize the selected artifact directly: no new envelope around artifact/1.
++enum SelectedSherlockArtifact {
++    Core(mori_core::sherlock_compile_artifact::CompileArtifact),
++    Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
++}
++impl SelectedSherlockArtifact {
++    fn failure(&self, stage: &'static str, message: impl Into<String>)
++        -> mori_core::sherlock_compile_artifact::CompileFailure
++    {
++        match self { Self::Core(value) => value.failure(stage, message),
++            Self::Draft(value) => value.failure(stage, message) }
++    }
++    fn manifest(&self) -> Result<String, mori_core::sherlock_compile_artifact::CompileFailure> {
++        match self {
++            Self::Core(value) => serde_json::to_string_pretty(value)
++                .map_err(|error| value.failure("observation", error.to_string())),
++            Self::Draft(value) => serde_json::to_string_pretty(value)
++                .map_err(|error| value.failure("serialization", error.to_string())),
++        }
++    }
+ }
+ 
+ fn report_sherlock_failure(

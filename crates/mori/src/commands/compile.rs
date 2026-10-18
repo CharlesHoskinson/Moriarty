@@ -17,10 +17,16 @@ pub struct Args {
     /// Explicit Sherlock execution profile; omission preserves ordinary Core compilation
     #[arg(long)]
     pub execution_profile: Option<String>,
+    /// Explicit source dialect on the selected Sherlock route; no autodetection
+    #[arg(long, requires = "execution_profile")]
+    pub source_profile: Option<String>,
+    /// Select the draft program's sole closed entry; no external inputs
+    #[arg(long, requires = "execution_profile", conflicts_with = "action")]
+    pub entry: bool,
     /// Exact parameter-free source action for selected Sherlock preparation
     #[arg(long, requires = "execution_profile")]
     pub action: Option<String>,
-    /// Exact sherlock-host-config/1 JSON; no numerical defaults
+    /// Exact configuration for the selected source profile; no numerical defaults
     #[arg(long, requires = "execution_profile")]
     pub execution_config: Option<PathBuf>,
     /// Explicit host observation after actual preparation/admission
@@ -30,7 +36,7 @@ pub struct Args {
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let source = core_io::read_source(&args.file)?;
     // Selected HostOnly preparation returns before either native/backend path.
-    if args.execution_profile.is_some() {
+    if args.execution_profile.is_some() || args.source_profile.is_some() || args.entry {
         return compile_sherlock(&args, &source, shell);
     }
     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
@@ -84,14 +90,29 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
 /// its separate H1/command-closure dependency; flags confer no internal authority.
 fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Result<ExitCode> {
     use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
-    let execute = || -> Result<(host::CompileArtifact, String), CompileFailure> {
+    use host::draft_contract::{select_source, SourceSelection};
+    let execute = || -> Result<(SelectedSherlockArtifact, String), CompileFailure> {
         let profile = args.execution_profile.as_deref().ok_or_else(||
             CompileFailure::input("select", "missing --execution-profile"))?;
         if profile != host::EXECUTION_PROFILE {
             return Err(CompileFailure::input("select", format!("unsupported execution profile: {profile}")));
         }
-        let action = args.action.as_deref().ok_or_else(||
-            CompileFailure::input("select", "selected Sherlock compilation requires --action"))?;
+        let selection = select_source(args.source_profile.as_deref(), args.action.as_deref(), args.entry)
+            .map_err(|error| match error {
+                host::draft_contract::SelectionError::MissingAction =>
+                    CompileFailure::input("select", "selected Sherlock compilation requires --action"),
+                other => CompileFailure {
+                    stage: "select", actual_error: serde_json::json!({
+                        "selection_error": format!("{other:?}"),
+                        "source_profile": args.source_profile.as_deref(),
+                        "entry": args.entry, "action": args.action.as_deref(),
+                    }), evaluation_performed: false, events_forwarded: "0".into(), completed: false,
+                },
+            })?;
+        if matches!(&selection, SourceSelection::DraftEntry) && args.observe {
+            return Err(CompileFailure::input("select",
+                "draft preparation is compile-only; --observe is unsupported"));
+        }
         let config_path = args.execution_config.as_deref().ok_or_else(||
             CompileFailure::input("config", "selected Sherlock compilation requires --execution-config"))?;
         let config = core_io::read_source(config_path)
@@ -99,9 +120,13 @@ fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Resu
         // Target bytes are an explicit descriptor and digest, not native support.
         let target = core_io::read_source(&args.target)
             .map_err(|error| CompileFailure::input("config", error.to_string()))?;
-        let artifact = host::compile_host(source, action, &config, &target, args.observe)?;
-        let manifest = serde_json::to_string_pretty(&artifact)
-            .map_err(|error| artifact.failure("observation", error.to_string()))?;
+        let artifact = match selection {
+            SourceSelection::CoreAction(action) => SelectedSherlockArtifact::Core(
+                host::compile_host(source, action, &config, &target, args.observe)?),
+            SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
+                host::compile_draft_host(source, &config, &target)?),
+        };
+        let manifest = artifact.manifest()?;
         Ok((artifact, manifest))
     };
     let (artifact, manifest) = match execute() {
@@ -120,6 +145,28 @@ fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Resu
         .map_err(|error| report_sherlock_failure(&artifact.failure("publish", error.to_string())))?;
     shell.status("Prepared", format!("Sherlock HostOnly artifact into {}", args.out.display()));
     Ok(ExitCode::SUCCESS)
+}
+
+// Serialize the selected artifact directly: no new envelope around artifact/1.
+enum SelectedSherlockArtifact {
+    Core(mori_core::sherlock_compile_artifact::CompileArtifact),
+    Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
+}
+impl SelectedSherlockArtifact {
+    fn failure(&self, stage: &'static str, message: impl Into<String>)
+        -> mori_core::sherlock_compile_artifact::CompileFailure
+    {
+        match self { Self::Core(value) => value.failure(stage, message),
+            Self::Draft(value) => value.failure(stage, message) }
+    }
+    fn manifest(&self) -> Result<String, mori_core::sherlock_compile_artifact::CompileFailure> {
+        match self {
+            Self::Core(value) => serde_json::to_string_pretty(value)
+                .map_err(|error| value.failure("observation", error.to_string())),
+            Self::Draft(value) => serde_json::to_string_pretty(value)
+                .map_err(|error| value.failure("serialization", error.to_string())),
+        }
+    }
 }
 
 fn report_sherlock_failure(

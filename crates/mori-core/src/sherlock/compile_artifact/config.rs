@@ -72,7 +72,7 @@ impl<'de> Deserialize<'de> for RequiredNull {
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum RunInput { Nat { value: U128Decimal }, Negative, NatAboveU128 }
 impl RunInput {
-    fn owner(self) -> RunIntC {
+    pub(crate) fn owner(self) -> RunIntC {
         match self { Self::Nat { value } => RunIntC::Nat(value.0),
             Self::Negative => RunIntC::Negative, Self::NatAboveU128 => RunIntC::NatAboveU128 }
     }
@@ -160,44 +160,10 @@ impl ExecutionConfig {
         if self.layout.boundary_capacities_present {
             return Err("layout.boundary_capacities_present must be false in sherlock-host-config/1");
         }
-        let bounds = BoundsC {
-            code_rows: self.bounds.code_rows.0,
-            function_rows: self.bounds.function_rows.0,
-            code_child_slots: self.bounds.code_child_slots.0,
-            parameter_slots: self.bounds.parameter_slots.0,
-            pattern_rows: self.bounds.pattern_rows.0,
-            match_plan_rows: self.bounds.match_plan_rows.0,
-            match_arm_rows: self.bounds.match_arm_rows.0,
-            type_rows: self.bounds.type_rows.0,
-            constructor_rows: self.bounds.constructor_rows.0,
-            constructor_field_slots: self.bounds.constructor_field_slots.0,
-            max_arity: self.bounds.max_arity.0,
-            constant_nodes: self.bounds.constant_nodes.0,
-            constant_field_slots: self.bounds.constant_field_slots.0,
-            data_nodes: self.bounds.data_nodes.0,
-            data_field_slots: self.bounds.data_field_slots.0,
-            environment_cells: self.bounds.environment_cells.0,
-            frames: self.bounds.frames.0,
-            helper_tasks: self.bounds.helper_tasks.0,
-            serialization_bytes: self.bounds.serialization_bytes.0,
-            max_reference_work: self.bounds.max_reference_work.0,
-            max_helper_work: self.bounds.max_helper_work.0,
-            step_cap: self.bounds.step_cap.0,
-        };
+        let bounds = self.bounds.owner();
         Ok(ConsumerConfig {
             bounds,
-            layout: LayoutSchemaC {
-                layout_version: (self.layout.layout_version[0].clone(), self.layout.layout_version[1].clone()),
-                field_id: None, widths: None, scalar_layout_id: None,
-                bounds,
-                capacities: LayoutCapacitiesC {
-                    name_rows: self.layout.capacities.name_rows.0,
-                    name_bytes: self.layout.capacities.name_bytes.0,
-                    occurrence_path_slots: self.layout.capacities.occurrence_path_slots.0,
-                    value_slots: self.layout.capacities.value_slots.0,
-                },
-                boundary_capacities_present: self.layout.boundary_capacities_present,
-            },
+            layout: self.layout.owner(bounds),
             fuel: self.fuel.owner(), stack: self.stack.owner(),
             profile: ConsumerProfile::SherlockHelperMicrostep1,
             grammar: GrammarDomain::DedicatedSorts, finance: FinanceInput::Absent,
@@ -214,5 +180,52 @@ impl ExecutionConfig {
                 max_total_input_name_bytes: self.host.max_total_input_name_bytes.0,
             },
         })
+    }
+}
+
+// Shape-only conversions shared with the distinct draft configuration.
+// No cap defaults, numerical relationships or owner policy are introduced.
+impl Bounds {
+    pub(crate) fn owner(self) -> BoundsC {
+        BoundsC {
+            code_rows: self.code_rows.0,
+            function_rows: self.function_rows.0,
+            code_child_slots: self.code_child_slots.0,
+            parameter_slots: self.parameter_slots.0,
+            pattern_rows: self.pattern_rows.0,
+            match_plan_rows: self.match_plan_rows.0,
+            match_arm_rows: self.match_arm_rows.0,
+            type_rows: self.type_rows.0,
+            constructor_rows: self.constructor_rows.0,
+            constructor_field_slots: self.constructor_field_slots.0,
+            max_arity: self.max_arity.0,
+            constant_nodes: self.constant_nodes.0,
+            constant_field_slots: self.constant_field_slots.0,
+            data_nodes: self.data_nodes.0,
+            data_field_slots: self.data_field_slots.0,
+            environment_cells: self.environment_cells.0,
+            frames: self.frames.0,
+            helper_tasks: self.helper_tasks.0,
+            serialization_bytes: self.serialization_bytes.0,
+            max_reference_work: self.max_reference_work.0,
+            max_helper_work: self.max_helper_work.0,
+            step_cap: self.step_cap.0,
+        }
+    }
+}
+impl Layout {
+    pub(crate) fn owner(&self, bounds: BoundsC) -> LayoutSchemaC {
+        LayoutSchemaC {
+            layout_version: (self.layout_version[0].clone(), self.layout_version[1].clone()),
+            field_id: None, widths: None, scalar_layout_id: None,
+            bounds,
+            capacities: LayoutCapacitiesC {
+                name_rows: self.capacities.name_rows.0,
+                name_bytes: self.capacities.name_bytes.0,
+                occurrence_path_slots: self.capacities.occurrence_path_slots.0,
+                value_slots: self.capacities.value_slots.0,
+            },
+            boundary_capacities_present: self.boundary_capacities_present,
+        }
     }
 }

@@ -28,6 +28,43 @@ pub enum DraftTypeErrorKind {
     DuplicateParameter { name: Name, index: usize },
     DuplicatePatternBinder(Name),
     EmptyMatch,
+    Budget(DraftTypeBudgetExceeded),
+}
+
+/// Distinct preparation resource, never an evaluator Outcome/error code.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DraftTypeBudgetResource { TypeDepth }
+
+/// `source` on the containing DraftTypeError names the admitted parent.
+/// `child_index` names its refused child, or None for a refused body/entry root.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DraftTypeBudgetExceeded {
+    pub resource: DraftTypeBudgetResource,
+    pub limit: usize,
+    /// First attempted depth; None means checked depth arithmetic overflowed.
+    pub observed: Option<usize>,
+    pub child_index: Option<usize>,
+}
+
+#[derive(Clone, Copy)]
+struct DepthBudget { limit: Option<usize> }
+
+impl DepthBudget {
+    fn next_depth(self, parent_depth: usize, source: &SourceLocation,
+                  child_index: Option<usize>) -> Result<usize, DraftTypeError> {
+        let Some(limit) = self.limit else {
+            // Legacy traversal has no hidden cap and needs no depth arithmetic.
+            return Ok(0);
+        };
+        let observed = parent_depth.checked_add(1);
+        if let Some(next) = observed {
+            if next <= limit { return Ok(next); }
+        }
+        // Copy only the already-admitted parent path, never the refused child.
+        Err(error(source, DraftTypeErrorKind::Budget(DraftTypeBudgetExceeded {
+            resource: DraftTypeBudgetResource::TypeDepth, limit, observed, child_index,
+        })))
+    }
 }
 
 type Types = BTreeMap<Name, Type>;
@@ -41,9 +78,30 @@ type Types = BTreeMap<Name, Type>;
 /// This machine is a host diagnostic reference with zero native authority and no host time,
 /// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
 pub fn check_program_types(program: &Program) -> Result<DraftTypeSummary, DraftTypeError> {
+    check_program_types_inner(program, DepthBudget { limit: None })
+}
+
+/// Bound active structural Expr inference depth with an explicit inclusive limit.
+/// Roots have depth1; each Expr child adds1; every body and entry resets the root.
+/// Calls inspect signatures/arguments without descending into named callees.
+/// Checks precede child-path copies, descent and Let/Match environment copies.
+/// A budget error records the admitted parent source plus attempted child index;
+/// refused roots record their root source with no child index. This permits a
+/// precise location without first constructing the over-budget child path.
+/// Zero refuses the first root before parameter environment construction.
+/// No default, arbitrary cap, global work/heap or native-stack guarantee is given;
+/// H1 and parser/copy/report/Drop/public-consumer obligations remain separate.
+pub fn check_program_types_bounded(program: &Program, max_type_depth: usize)
+    -> Result<DraftTypeSummary, DraftTypeError> {
+    check_program_types_inner(program, DepthBudget { limit: Some(max_type_depth) })
+}
+
+fn check_program_types_inner(program: &Program, budget: DepthBudget)
+    -> Result<DraftTypeSummary, DraftTypeError> {
     let mut function_returns = Vec::new();
     for (index, function) in program.functions.iter().enumerate() {
         let source = SourceLocation { function_index: Some(index), child_path: vec![] };
+        let depth = budget.next_depth(0, &source, None)?;
         let mut environment = Types::new();
         for (parameter_index, parameter) in function.parameters.iter().enumerate() {
             if environment.insert(parameter.name.clone(), parameter.ty).is_some() {
@@ -52,12 +110,13 @@ pub fn check_program_types(program: &Program) -> Result<DraftTypeSummary, DraftT
                 }));
             }
         }
-        let actual = infer(program, &function.body, &environment, &source)?;
+        let actual = infer(program, &function.body, &environment, &source, depth, budget)?;
         require(actual, function.return_type, &source)?;
         function_returns.push(actual);
     }
     let source = SourceLocation { function_index: None, child_path: vec![] };
-    let entry_type = infer(program, &program.entry, &Types::new(), &source)?;
+    let depth = budget.next_depth(0, &source, None)?;
+    let entry_type = infer(program, &program.entry, &Types::new(), &source, depth, budget)?;
     Ok(DraftTypeSummary { function_returns, entry_type })
 }
 
@@ -65,10 +124,12 @@ fn error(source: &SourceLocation, kind: DraftTypeErrorKind) -> DraftTypeError {
     DraftTypeError { source: source.clone(), kind }
 }
 
-fn child(source: &SourceLocation, index: usize) -> SourceLocation {
+fn child(source: &SourceLocation, index: usize, depth: usize, budget: DepthBudget)
+    -> Result<(SourceLocation, usize), DraftTypeError> {
+    let child_depth = budget.next_depth(depth, source, Some(index))?;
     let mut source = source.clone();
     source.child_path.push(index);
-    source
+    Ok((source, child_depth))
 }
 
 fn require(actual: Type, expected: Type, source: &SourceLocation) -> Result<(), DraftTypeError> {
@@ -77,7 +138,7 @@ fn require(actual: Type, expected: Type, source: &SourceLocation) -> Result<(), 
 }
 
 fn infer(program: &Program, expression: &Expr, environment: &Types,
-         source: &SourceLocation) -> Result<Type, DraftTypeError> {
+         source: &SourceLocation, depth: usize, budget: DepthBudget) -> Result<Type, DraftTypeError> {
     match expression {
         Expr::Literal(value) => Ok(match value {
             Value::UInt(_) => Type::UInt, Value::Bool(_) => Type::Bool,
@@ -86,16 +147,18 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
         Expr::Var(name) => environment.get(name).copied()
             .ok_or_else(|| error(source, DraftTypeErrorKind::UnknownVariable(name.clone()))),
         Expr::Let(name, value, body) => {
-            let value_type = infer(program, value, environment, &child(source, 0))?;
+            let (value_source, value_depth) = child(source, 0, depth, budget)?;
+            let value_type = infer(program, value, environment, &value_source, value_depth, budget)?;
+            let (body_source, body_depth) = child(source, 1, depth, budget)?;
             let mut inner = environment.clone();
             inner.insert(name.clone(), value_type);
-            infer(program, body, &inner, &child(source, 1))
+            infer(program, body, &inner, &body_source, body_depth, budget)
         }
         Expr::Binary(op, left, right) => {
-            let left_source = child(source, 0);
-            let right_source = child(source, 1);
-            let left = infer(program, left, environment, &left_source)?;
-            let right = infer(program, right, environment, &right_source)?;
+            let (left_source, left_depth) = child(source, 0, depth, budget)?;
+            let left = infer(program, left, environment, &left_source, left_depth, budget)?;
+            let (right_source, right_depth) = child(source, 1, depth, budget)?;
+            let right = infer(program, right, environment, &right_source, right_depth, budget)?;
             // Frozen A equality is structural across all existing value sorts,
             // including unequal sorts. Do not silently copy Core's Eq rule.
             if *op == BinaryOp::Eq { return Ok(Type::Bool); }
@@ -111,8 +174,8 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
             Ok(result)
         }
         Expr::Unary(op, operand) => {
-            let operand_source = child(source, 0);
-            let actual = infer(program, operand, environment, &operand_source)?;
+            let (operand_source, operand_depth) = child(source, 0, depth, budget)?;
+            let actual = infer(program, operand, environment, &operand_source, operand_depth, budget)?;
             let (expected, result) = match op {
                 UnaryOp::Leaf => (Type::UInt, Type::Tree),
                 UnaryOp::Not => (Type::Bool, Type::Bool),
@@ -121,11 +184,13 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
             Ok(result)
         }
         Expr::If(condition, yes, no) => {
-            let condition_source = child(source, 0);
-            let condition = infer(program, condition, environment, &condition_source)?;
+            let (condition_source, condition_depth) = child(source, 0, depth, budget)?;
+            let condition = infer(program, condition, environment, &condition_source, condition_depth, budget)?;
             require(condition, Type::Bool, &condition_source)?;
-            let yes = infer(program, yes, environment, &child(source, 1))?;
-            let no = infer(program, no, environment, &child(source, 2))?;
+            let (yes_source, yes_depth) = child(source, 1, depth, budget)?;
+            let yes = infer(program, yes, environment, &yes_source, yes_depth, budget)?;
+            let (no_source, no_depth) = child(source, 2, depth, budget)?;
+            let no = infer(program, no, environment, &no_source, no_depth, budget)?;
             if yes == no { Ok(yes) }
             else { Err(error(source, DraftTypeErrorKind::BranchTypes { yes, no })) }
         }
@@ -139,19 +204,20 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
                     expected: function.parameters.len(), actual: arguments.len() }));
             }
             for (index, (argument, parameter)) in arguments.iter().zip(&function.parameters).enumerate() {
-                let source = child(source, index);
-                let actual = infer(program, argument, environment, &source)?;
+                let (source, argument_depth) = child(source, index, depth, budget)?;
+                let actual = infer(program, argument, environment, &source, argument_depth, budget)?;
                 require(actual, parameter.ty, &source)?;
             }
             Ok(function.return_type)
         }
         Expr::Match(scrutinee, arms) => {
-            let scrutinee_type = infer(program, scrutinee, environment, &child(source, 0))?;
+            let (scrutinee_source, scrutinee_depth) = child(source, 0, depth, budget)?;
+            let scrutinee_type = infer(program, scrutinee, environment, &scrutinee_source, scrutinee_depth, budget)?;
             let mut result = None;
             for (index, arm) in arms.iter().enumerate() {
-                let body_source = child(source, index + 1);
+                let (body_source, body_depth) = child(source, index + 1, depth, budget)?;
                 let inner = pattern_types(&arm.pattern, scrutinee_type, environment, &body_source)?;
-                let actual = infer(program, &arm.body, &inner, &body_source)?;
+                let actual = infer(program, &arm.body, &inner, &body_source, body_depth, budget)?;
                 if let Some(expected) = result {
                     if actual != expected {
                         return Err(error(&body_source, DraftTypeErrorKind::ArmTypes { expected, actual }));

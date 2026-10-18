@@ -1,0 +1,236 @@
+//! SOURCE_ONLY / UNRUN. Opus-authored typed-subset boundary checks.
+//! Expectations are handwritten from the stated DRAFT-TYPE choices only.
+use super::{check_program_types, DraftTypeError, DraftTypeErrorKind, DraftTypeSummary};
+use crate::sherlock::Type;
+use crate::sherlock_draft::{parse_draft_source, DraftError, SourceLocation};
+
+fn source(items: &str) -> String {
+    format!("language \"moriarty-sherlock-draft/1\";\nprogram T {{\n{items}\n}}\n")
+}
+
+fn check(items: &str) -> Result<DraftTypeSummary, DraftTypeError> {
+    let parsed = parse_draft_source(&source(items)).expect("well-formed syntax");
+    check_program_types(&parsed.program)
+}
+
+fn rejected(function_index: Option<usize>, path: &[usize], kind: DraftTypeErrorKind)
+    -> Result<DraftTypeSummary, DraftTypeError> {
+    Err(DraftTypeError { source: SourceLocation { function_index, child_path: path.to_vec() }, kind })
+}
+
+#[test]
+fn unknown_variable_and_arity_are_rejected_before_any_run() {
+    assert_eq!(check("entry y;"),
+        rejected(None, &[], DraftTypeErrorKind::UnknownVariable("y".into())));
+    assert_eq!(check("fn f(x: UInt): UInt { x } entry f();"), rejected(None, &[],
+        DraftTypeErrorKind::Arity { name: "f".into(), expected: 1, actual: 0 }));
+}
+
+#[test]
+fn declared_return_type_and_duplicate_binders_are_rejected() {
+    assert_eq!(check("fn f(x: UInt): Bool { x } entry f(1);"), rejected(Some(0), &[],
+        DraftTypeErrorKind::Expected { expected: Type::Bool, actual: Type::UInt }));
+    assert_eq!(check("fn f(x: UInt, x: UInt): UInt { x } entry f(1, 2);"), rejected(Some(0), &[],
+        DraftTypeErrorKind::DuplicateParameter { name: "x".into(), index: 1 }));
+    assert_eq!(check("fn f(xs: List): UInt { match xs { cons(h, h) => h, all => 0 } } entry f(nil);"),
+        rejected(Some(0), &[1], DraftTypeErrorKind::DuplicatePatternBinder("h".into())));
+}
+
+#[test]
+fn shadowed_duplicate_function_body_is_still_checked() {
+    assert_eq!(check("fn f(): UInt { 1 } fn f(): UInt { true } entry f();"), rejected(Some(1), &[],
+        DraftTypeErrorKind::Expected { expected: Type::UInt, actual: Type::Bool }));
+}
+
+#[test]
+fn pinned_choices_cross_sort_eq_and_nonexhaustive_match_are_accepted() {
+    // DRAFT-TYPE-EQUALITY as proposed: constant false when run under A.
+    assert_eq!(check("entry 1 == true;"),
+        Ok(DraftTypeSummary { function_returns: vec![], entry_type: Type::Bool }));
+    // DRAFT-TYPE-PARTIAL: accepted here; A would publish error 9 for this entry.
+    assert_eq!(check("fn f(xs: List): UInt { match xs { nil => 0 } } entry f(cons(1, nil));"),
+        Ok(DraftTypeSummary { function_returns: vec![Type::UInt], entry_type: Type::UInt }));
+}
+
+#[test]
+fn uint_literal_overflow_fails_closed_without_wrapping() {
+    // Assumes the unchanged lexer has no digit-count limit (number.rs not shown).
+    assert!(matches!(parse_draft_source(&source("entry 340282366920938463463374607431768211456;")),
+        Err(DraftError::UIntLiteral { .. })));
+}
+
+// Sol-authored AST tests for the user-authorized bounded checker. SOURCE_ONLY / UNRUN.
+// Expectations below are specified before implementation, without subject outputs.
+use super::{check_program_types_bounded, DraftTypeBudgetExceeded, DraftTypeBudgetResource};
+use crate::sherlock::{Arm, BinaryOp, Expr, ExprRef, Function, Parameter, Pattern, Program, UnaryOp, Value};
+use std::sync::Arc;
+
+fn te(expression: Expr) -> ExprRef { Arc::new(expression) }
+fn tu(value: u128) -> ExprRef { te(Expr::Literal(Value::UInt(value))) }
+fn tb(value: bool) -> ExprRef { te(Expr::Literal(Value::Bool(value))) }
+fn tp(entry: ExprRef) -> Program { Program { functions: vec![], entry } }
+fn tf(name: &str, result: Type, body: ExprRef) -> Function {
+    Function { name: name.into(), parameters: vec![], return_type: result, body }
+}
+fn depth_error(function_index: Option<usize>, parent: &[usize], child_index: Option<usize>,
+               limit: usize, observed: Option<usize>) -> DraftTypeError {
+    DraftTypeError {
+        source: SourceLocation { function_index, child_path: parent.to_vec() },
+        kind: DraftTypeErrorKind::Budget(DraftTypeBudgetExceeded {
+            resource: DraftTypeBudgetResource::TypeDepth, limit, observed, child_index,
+        }),
+    }
+}
+
+#[test]
+fn bounded_leaf_zero_and_exact_root_depth() {
+    let p = tp(tu(23));
+    assert_eq!(check_program_types_bounded(&p, 0), Err(depth_error(None, &[], None, 0, Some(1))));
+    assert_eq!(check_program_types_bounded(&p, 1), Ok(DraftTypeSummary {
+        function_returns: vec![], entry_type: Type::UInt,
+    }));
+}
+
+#[test]
+fn bounded_nested_depth_exact_first_over_and_no_hidden_cap() {
+    let p = tp(te(Expr::Unary(UnaryOp::Not, te(Expr::Unary(UnaryOp::Not, tb(true))))));
+    let expected = Ok(DraftTypeSummary { function_returns: vec![], entry_type: Type::Bool });
+    assert_eq!(check_program_types_bounded(&p, 3), expected);
+    assert_eq!(check_program_types_bounded(&p, 2), Err(depth_error(None, &[0], Some(0), 2, Some(3))));
+    assert_eq!(check_program_types_bounded(&p, usize::MAX), expected);
+}
+
+#[test]
+fn bounded_root_depth_resets_for_every_body_and_entry() {
+    let p = Program { functions: vec![tf("f", Type::UInt, tu(1)), tf("g", Type::Bool, tb(true))], entry: tu(7) };
+    assert_eq!(check_program_types_bounded(&p, 1), Ok(DraftTypeSummary {
+        function_returns: vec![Type::UInt, Type::Bool], entry_type: Type::UInt,
+    }));
+}
+
+#[test]
+fn bounded_checks_shadowed_unreachable_bodies_before_entry() {
+    let p = Program { functions: vec![tf("f", Type::UInt, tu(1)),
+        tf("f", Type::Bool, te(Expr::Unary(UnaryOp::Not, tb(true))))], entry: te(Expr::Var("entry_missing".into())) };
+    assert_eq!(check_program_types_bounded(&p, 1), Err(depth_error(Some(1), &[], Some(0), 1, Some(2))));
+    let p = Program { functions: vec![tf("f", Type::UInt, tu(1)), tf("f", Type::UInt, tb(true))], entry: tu(0) };
+    assert_eq!(check_program_types_bounded(&p, 1), rejected(Some(1), &[], DraftTypeErrorKind::Expected {
+        expected: Type::UInt, actual: Type::Bool,
+    }));
+}
+
+#[test]
+fn bounded_calls_use_first_signature_and_do_not_unroll_recursion() {
+    let p = Program { functions: vec![tf("f", Type::UInt, tu(1)), tf("f", Type::Bool, tb(true))],
+        entry: te(Expr::Call("f".into(), vec![])) };
+    assert_eq!(check_program_types_bounded(&p, 1), Ok(DraftTypeSummary {
+        function_returns: vec![Type::UInt, Type::Bool], entry_type: Type::UInt,
+    }));
+    let p = Program { functions: vec![Function { name: "loop".into(),
+        parameters: vec![Parameter { name: "x".into(), ty: Type::UInt }], return_type: Type::UInt,
+        body: te(Expr::Call("loop".into(), vec![te(Expr::Var("x".into()))])) }],
+        entry: te(Expr::Call("loop".into(), vec![tu(0)])) };
+    assert_eq!(check_program_types_bounded(&p, 2), Ok(DraftTypeSummary {
+        function_returns: vec![Type::UInt], entry_type: Type::UInt,
+    }));
+}
+
+#[test]
+fn bounded_unknown_function_and_arity_precede_argument_descent() {
+    let p = tp(te(Expr::Call("missing".into(), vec![te(Expr::Var("x".into()))])));
+    assert_eq!(check_program_types_bounded(&p, 1), rejected(None, &[], DraftTypeErrorKind::UnknownFunction("missing".into())));
+    let p = Program { functions: vec![tf("f", Type::UInt, tu(1))],
+        entry: te(Expr::Call("f".into(), vec![te(Expr::Var("x".into()))])) };
+    assert_eq!(check_program_types_bounded(&p, 1), rejected(None, &[], DraftTypeErrorKind::Arity {
+        name: "f".into(), expected: 0, actual: 1,
+    }));
+}
+
+#[test]
+fn bounded_binary_keeps_operand_inference_and_sort_error_order() {
+    let p = tp(te(Expr::Binary(BinaryOp::Add, te(Expr::Var("left_missing".into())),
+        te(Expr::Unary(UnaryOp::Not, tb(true))))));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[0], DraftTypeErrorKind::UnknownVariable("left_missing".into())));
+    let p = tp(te(Expr::Binary(BinaryOp::Add, tb(true), te(Expr::Var("right_missing".into())))));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[1], DraftTypeErrorKind::UnknownVariable("right_missing".into())));
+    let p = tp(te(Expr::Binary(BinaryOp::Add, tb(true), te(Expr::Unary(UnaryOp::Not, tb(true))))));
+    assert_eq!(check_program_types_bounded(&p, 2), Err(depth_error(None, &[1], Some(0), 2, Some(3))));
+    assert_eq!(check_program_types_bounded(&p, 3), rejected(None, &[0], DraftTypeErrorKind::Expected {
+        expected: Type::UInt, actual: Type::Bool,
+    }));
+}
+
+#[test]
+fn bounded_mixed_sort_eq_still_infers_both_operands() {
+    let p = tp(te(Expr::Binary(BinaryOp::Eq, tu(3), tb(true))));
+    assert_eq!(check_program_types_bounded(&p, 2), Ok(DraftTypeSummary {
+        function_returns: vec![], entry_type: Type::Bool,
+    }));
+    let p = tp(te(Expr::Binary(BinaryOp::Eq, tu(3), te(Expr::Var("missing".into())))));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[1], DraftTypeErrorKind::UnknownVariable("missing".into())));
+}
+
+#[test]
+fn bounded_let_value_precedence_binding_and_child_location() {
+    let p = tp(te(Expr::Let("x".into(), tu(4), te(Expr::Var("x".into())))));
+    assert_eq!(check_program_types_bounded(&p, 2), Ok(DraftTypeSummary {
+        function_returns: vec![], entry_type: Type::UInt,
+    }));
+    let p = tp(te(Expr::Let("x".into(), te(Expr::Var("value_missing".into())),
+        te(Expr::Unary(UnaryOp::Not, tb(true))))));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[0], DraftTypeErrorKind::UnknownVariable("value_missing".into())));
+    let p = tp(te(Expr::Let("x".into(), tu(4), te(Expr::Unary(UnaryOp::Not, tb(true))))));
+    assert_eq!(check_program_types_bounded(&p, 2), Err(depth_error(None, &[1], Some(0), 2, Some(3))));
+}
+
+#[test]
+fn bounded_if_condition_precedes_branches_and_join_path_is_parent() {
+    let p = tp(te(Expr::If(tu(1), te(Expr::Unary(UnaryOp::Not, tb(true))), tu(0))));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[0], DraftTypeErrorKind::Expected {
+        expected: Type::Bool, actual: Type::UInt,
+    }));
+    let p = tp(te(Expr::If(tb(true), tu(1), tb(false))));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[], DraftTypeErrorKind::BranchTypes {
+        yes: Type::UInt, no: Type::Bool,
+    }));
+}
+
+#[test]
+fn bounded_match_patterns_environment_and_arm_diagnostics() {
+    let p = tp(te(Expr::Match(te(Expr::Literal(Value::List(vec![4]))), vec![Arm {
+        pattern: Pattern::Cons("head".into(), "tail".into()), body: te(Expr::Var("head".into())),
+    }])));
+    assert_eq!(check_program_types_bounded(&p, 2), Ok(DraftTypeSummary {
+        function_returns: vec![], entry_type: Type::UInt,
+    }));
+    let p = tp(te(Expr::Match(te(Expr::Literal(Value::List(vec![]))), vec![Arm {
+        pattern: Pattern::Cons("same".into(), "same".into()), body: te(Expr::Unary(UnaryOp::Not, tb(true))),
+    }])));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[1], DraftTypeErrorKind::DuplicatePatternBinder("same".into())));
+    let p = tp(te(Expr::Match(tu(1), vec![Arm { pattern: Pattern::Var("a".into()), body: tu(1) },
+        Arm { pattern: Pattern::Var("b".into()), body: tb(false) }])));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[2], DraftTypeErrorKind::ArmTypes {
+        expected: Type::UInt, actual: Type::Bool,
+    }));
+    let p = tp(te(Expr::Match(tu(1), vec![])));
+    assert_eq!(check_program_types_bounded(&p, 2), rejected(None, &[], DraftTypeErrorKind::EmptyMatch));
+}
+
+#[test]
+fn bounded_root_refusal_precedes_parameter_environment_work() {
+    let p = Program { functions: vec![Function { name: "f".into(), parameters: vec![
+        Parameter { name: "x".into(), ty: Type::UInt }, Parameter { name: "x".into(), ty: Type::UInt },
+    ], return_type: Type::UInt, body: tu(1) }], entry: tu(0) };
+    assert_eq!(check_program_types_bounded(&p, 0), Err(depth_error(Some(0), &[], None, 0, Some(1))));
+    assert_eq!(check_program_types_bounded(&p, 1), rejected(Some(0), &[], DraftTypeErrorKind::DuplicateParameter {
+        name: "x".into(), index: 1,
+    }));
+}
+
+#[test]
+fn bounded_checked_depth_counter_overflow_has_no_fabricated_observed_value() {
+    // Direct arithmetic-helper premise: no physically impossible AST is built.
+    let parent = SourceLocation { function_index: Some(2), child_path: vec![1] };
+    assert_eq!(super::DepthBudget { limit: Some(usize::MAX) }.next_depth(usize::MAX, &parent, Some(0)),
+        Err(depth_error(Some(2), &[1], Some(0), usize::MAX, None)));
+}
