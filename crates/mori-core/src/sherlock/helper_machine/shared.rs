@@ -646,7 +646,17 @@ pub trait OwnerEngine {
 }
 
 // Root module placement only; owner body above unchanged.
+pub mod adt;
+pub mod adt_storage;
+pub mod nominal_declaration_order;
+pub mod owner_ext_prepare_types;
+pub mod owner_ext_type_builder;
 mod owner_prepare;
 mod owner_runtime;
 pub mod owner_host;
 pub mod host_implied_prefix;
+
+pub use owner_prepare::{
+    prepare_nominal_declarations, prepare_program_nominal_declarations, PreparedDeclarationScope,
+    PreparedNominalDeclarations,
+};

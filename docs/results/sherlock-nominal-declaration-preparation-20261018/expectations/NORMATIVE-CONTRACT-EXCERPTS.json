@@ -1,0 +1,61 @@
+{
+  "historical_uninstalled_extension_contract": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/b-phase0-convergence/fullB-companion-data-join-18/extension-schema.json",
+    "bytes": 211778,
+    "sha256": "68fc0c9cfec0ac9e76828a861b96e4cc3903410bc75e741867f20f693a49a900"
+  },
+  "names": "Names are visited in this order. (1) Each TypeDeclSrc in source order: its name, then for each constructor in source order its name followed by its field names in order. Parameter names are never entered. (2) Under finance Typed, the finance declaration names in source order: every AssetDeclSrc name, then every StateDeclSrc name, then every InputSrc name. (3) The R4 D-27 pass B traversal of the entry and functions, in which: Construct, ExtValue Constructor and Ctor pattern type and constructor texts contribute no names, because they are resolved and not stored; Ctor pattern binders contribute their PVar names in pattern preorder; a finance node contributes its own name texts in field order (Fin liability name; Fin name as Emit name or Request label; LiabilityPresent or LiabilityAmount name; Await label, then Await binder names in order); asset, state and account texts at finance nodes contribute nothing, because assets and states were entered at (2) and accounts are never NameIds. NameRows and NameBytes are checked incrementally per R4 pass B.",
+  "instantiation": {
+    "decision": "XR-08",
+    "source": "interfaces.md:306 'Parameterized types need separately bounded instantiation'; rules.json:7403-7407 b.coverage.additional-extensions; design.md:67",
+    "rule": [
+      "I-1 Every type use outside a TypeDeclSrc must contain no Param. This covers function parameter and return types, Construct ty, ExtValue Constructor ty at every depth and Ctor pattern ty at every depth. A violation is UnsupportedFeature{TypeVariableInSignature} at pass A, reported at the first occurrence in pass A order. Inside a TypeDeclSrc, a Param resolves by substitution or is UnknownType (TypeExprSrc). After pass T every type use is a TypeId, and no prepared row holds a type variable.",
+      "I-2 Pass T runs after pass D and before pass C, in three steps. T1: assign TypeIds 4 .. 3 + N to the non-parameterized declarations in source order, append their type rows (decl present, args (0, 0), ctorStart and ctorLen pending), and enqueue their keys (d, []) in that order. T2: drain the FIFO worklist (I-3). T3: visit the remaining type uses in order, draining the worklist after each use. The order is: every function in table order (its parameter types in order, then its return type); then the entry and each function body in occurrence preorder, taking each Construct ty, each Literal's ExtValue Constructor ty in value preorder, and each Ctor pattern ty in arm order and pattern preorder. A use resolves its args left to right and inside-out before its own key. Resolving a use also performs that use's constructor checks (ExtExpr_adt_forms, ExtPattern) before the next use is visited.",
+      "I-3 Discovery: resolving a key (d, a) that is not yet present appends one prog.types row {nameId: d's name, decl: some(d), args: the slice of a appended to prog.typeArgs at the same moment (empty for a non-parameterized d), ctorStart and ctorLen pending} with the next TypeId, and enqueues the key. A key already present reuses its TypeId, so the same key always denotes the same type. Dequeue: dequeuing key (d, a) with TypeId t first sets prog.types[t].ctorStart := active(prog.constructors) and ctorLen := d.ctors.len. Then, for each constructor of d in source order, it appends one prog.constructors row {owningType: t, nameId: the constructor name, sourceOrder: its position, fieldStart: active(prog.ctorFields), fieldLen: its field count}. For each of that constructor's fields in order, it resolves the field TypeExprSrc with Param(t_i) := a[i] (which may discover and enqueue further keys) and appends one prog.ctorFields row {nameId: the field name, type: the resolved TypeId}. Keys are enqueued exactly when their TypeIds are assigned, and the worklist is FIFO. Hence constructor slices are contiguous per type and appear in TypeId order, and field slices are contiguous per constructor.",
+      "I-4 Capacity checks are incremental and refuse at the first overflow (F5), in the order the appends happen. At the start of pass D: 4 + ExtProgram.types.len <= bounds.typeRows, else CapacityNotAdmitted{TypeRows}. This is a conservative bound that makes DeclIdx fit id(typeRows). Then: each type row append checks bounds.typeRows (TypeRows); each prog.typeArgs slot append checks bounds.typeRows (TypeRows), so argument slots share the type-row capacity; each constructor row checks bounds.constructorRows (ConstructorRows); each field slot checks bounds.constructorFieldSlots (ConstructorFieldSlots). Instances add no prog.names row, because their names are their declarations' names, entered in pass B; nameRows is therefore not checked here. Non-regular recursion such as T<A> containing T<Pair<A,A>> discovers a new key at every dequeue, so it stops deterministically at a TypeRows refusal. It is never an Outcome and never unbounded host work: keys and type expressions are processed by explicit heap worklists (C8), with work per key linear in its declaration's size.",
+      "I-5 Apply args.len must equal parameters.len >= 1 (TypeArity). Named of a parameterized declaration, and Apply of a non-parameterized one, are TypeArity (TypeExprSrc). An instance's arguments are TypeIds of already-assigned types, so every prog.typeArgs entry of instance row t is < t. A non-parameterized row has no arguments.",
+      "I-6 An instance is a nominal type in its own right: two different keys are different TypeIds, and values of different instances never match each other's Switch cases or compare equal."
+    ],
+    "identity": "Type identity is the key (DeclIdx, ordered argument TypeIds). A non-parameterized declaration's type is the key (d, []), and an instance's type is (d, a) with a.len >= 1. The key is recorded in prog.types.decl and prog.typeArgs and is part of the ProgramView compared structurally by host identity. Builtin TypeIds 0..3 have no key. Different keys are different TypeIds (I-6)."
+  },
+  "tables": {
+    "prog.types": {
+      "capacity": "bounds.typeRows",
+      "row": {
+        "nameId": "NameId of the TypeDeclSrc name. Every instance of one parameterized declaration shares that NameId. For rows 0..3, where decl is absent, the value is padding 0 and is never compared.",
+        "decl": "Opt<DeclIdx>, where DeclIdx is the declaration's 0-based index in ExtProgram.types, of width id(typeRows); it fits because pass D refuses 4 + ExtProgram.types.len > bounds.typeRows (I-4). Absent exactly for rows 0..3. Present for every user row, naming either the non-parameterized declaration itself or the parameterized declaration that an instance instantiates.",
+        "args": "{start: count(typeRows), len: ArityCount} into prog.typeArgs. Exactly (0, 0) for rows 0..3 and for a non-parameterized user type. For an instance, len = the declaration's parameters.len >= 1 (<= maxArity by G-1), and the slice holds the argument TypeIds in parameter order, each < this row's own TypeId (I-5).",
+        "ctorStart": "CtorId start of this type's contiguous slice of prog.constructors. 0 when ctorLen = 0 (UInt, Bool), consistent with the empty-slice convention (0, 0). For a user type it is written when the type's key is dequeued (I-3).",
+        "ctorLen": "count(constructorRows): 0 for UInt and Bool, 2 for List and Tree, and the declaration's ctors.len >= 1 for every user type (G-1)"
+      },
+      "order": "Rows 0..3 are UInt, Bool, List and Tree (builtin_rows; MCL design.md:35-36, 204-208). Next comes one row per non-parameterized TypeDeclSrc in source order. These are TypeIds 4 .. 3 + N, pre-assigned at pass T step T1 before any field is resolved, so mutually recursive non-parameterized declarations reference each other's final TypeIds. Then comes one row per parameterized instance key, in pass T first-discovery order (I-2, I-3). A TypeId is assigned when its key is first discovered and is final from then on. Keys are dequeued in TypeId order, because the worklist is FIFO and each key is enqueued exactly when its TypeId is assigned.",
+      "builtin_rows": "Fixed and exact (V9): row 0 UInt {nameId 0, decl absent, args (0, 0), ctorStart 0, ctorLen 0}; row 1 Bool {nameId 0, decl absent, args (0, 0), ctorStart 0, ctorLen 0}; row 2 List {nameId 0, decl absent, args (0, 0), ctorStart 0, ctorLen 2}; row 3 Tree {nameId 0, decl absent, args (0, 0), ctorStart 2, ctorLen 2}. These agree with notation.added_functions typeOfKind and ctorOfKind."
+    },
+    "prog.typeArgs": {
+      "capacity": "bounds.typeRows",
+      "row": "TypeId",
+      "note": "The argument TypeIds of the instances. One contiguous slice per instance is appended, in parameter order, at the moment the instance's type row is appended (I-3), so slices follow TypeId order. Each slot append checks bounds.typeRows incrementally and refuses with CapacityNotAdmitted{TypeRows} at the first overflow (I-4). Every entry of instance row t is < t."
+    },
+    "prog.constructors": {
+      "capacity": "bounds.constructorRows",
+      "row": {
+        "owningType": "TypeId",
+        "nameId": "NameId of the source constructor name. Instance rows carry their declaration's constructor names. For rows 0..3 the value is padding 0 and is never compared: their names Nil, Cons, Leaf and Branch are fixed by position.",
+        "sourceOrder": "ordinal within owning type",
+        "fieldStart": "CtorFieldPos",
+        "fieldLen": "ArityCount"
+      },
+      "order": "Rows 0..3 are Nil, Cons, Leaf and Branch (builtin_rows). After them come the constructor rows of the user types in TypeId order. Each type's rows are written when its key is dequeued (I-3) and appear in source order, contiguous per type. sourceOrder is the position within the owning type's slice.",
+      "builtin_rows": "Fixed and exact (V9): 0 Nil {owningType 2, nameId 0, sourceOrder 0, fieldStart 0, fieldLen 0}; 1 Cons {owningType 2, nameId 0, sourceOrder 1, fieldStart 0, fieldLen 2}; 2 Leaf {owningType 3, nameId 0, sourceOrder 0, fieldStart 2, fieldLen 1}; 3 Branch {owningType 3, nameId 0, sourceOrder 1, fieldStart 3, fieldLen 2}"
+    },
+    "prog.ctorFields": {
+      "capacity": "bounds.constructorFieldSlots",
+      "row": {
+        "nameId": "NameId of the source field name. This is metadata only, with no runtime meaning, and field names need not be distinct. For slots 0..4 the value is padding 0 and is never compared.",
+        "type": "TypeId < active(prog.types): the resolution of the source field TypeExprSrc with each Param(t_i) replaced by the instance's i-th argument TypeId (I-3). It is never a type variable."
+      },
+      "order": "Slots 0..4 are Cons:[UInt, List], Leaf:[UInt] and Branch:[Tree, Tree] (builtin_rows). After them come the field slots of the user constructor rows, in constructor-row order and contiguous per constructor; slot prog.constructors[c].fieldStart + i is source field i of c (interfaces.md:306). Slots are written when c's type key is dequeued (I-3).",
+      "builtin_rows": "Fixed and exact (V9): 0 {nameId 0, type 0}; 1 {nameId 0, type 2}; 2 {nameId 0, type 0}; 3 {nameId 0, type 3}; 4 {nameId 0, type 3}"
+    }
+  }
+}
