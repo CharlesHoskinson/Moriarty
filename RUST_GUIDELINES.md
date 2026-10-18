@@ -253,6 +253,13 @@ security approval or language-exit acceptance.
   frozen complete financial Program JSON and the public Program/v1 decoder
   instead of generated snapshots. It selects no Midnight compatibility feature
   and makes no compiler-Artifact, SDK, native-proof or ledger acceptance claim.
+- The `guarded_quantity_fee_positive`, `program_plan_roundtrip`, and
+  `core_reserve_spend_refund` regressions compare frozen financial or continuation
+  values directly instead of generating insta snapshots. Their sources and
+  expected values stay in `crates/fixtures/`; they use the ordinary Core library
+  and, for the reserve case, its public CLI. Source exposure and the exact
+  assertion boundaries are recorded with the test evidence. These tests do not
+  establish SDK, native-proof, compiler-Artifact or ledger correspondence.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
