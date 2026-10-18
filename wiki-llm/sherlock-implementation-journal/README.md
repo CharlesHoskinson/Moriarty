@@ -22,3 +22,6 @@ The circuit atlas remains the separate visual concept log, with its own authorsh
 
 
 - [Canonical runtime TypeId carriers](2026-10-18-canonical-runtime-type-carriers.md): three compiles and ten new tests passed for six consumed type-identity fields; nominal storage remains distinct from admission/runtime.
+
+
+- [October18: financial await-prefix publication](2026-10-18-financial-await-prefix.md) — complete host-reference comparisons, strict-consumer compatibility and preserved historical wire cuts; no new circuit iteration.
