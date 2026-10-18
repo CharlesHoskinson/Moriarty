@@ -1,0 +1,124 @@
+{
+  "author_context": {
+    "conversation_id": "4e8031df-879c-41c4-95d2-622cd6b5df22",
+    "task_id": "R416-revision02-post-r411-fixed-successor-source",
+    "role": "designated_security_source_owner_authoring_only",
+    "primary_model": "claude-opus-5-5",
+    "requested_model": "gemini-4-argon-high",
+    "returned_identity": "gemini-4-argon-high",
+    "effort": "high",
+    "fallback_status": "standing_opus_quota_outage_fallback",
+    "tools_or_commands_executed": 0,
+    "independent_review_vote_cast_on_own_changes": false,
+    "inline_inputs_used": [
+      "ACTUAL-CONSUMED-STATE-AND-BOUNDS.json (729b0fd917992cb3ee4e4e6ddd77d5b648ad1c750a749e65e55ad61c6cb86235)",
+      "COMPLETE-CURRENT-CANDIDATE-GUARD.py.txt (0cb83528078378baf4f6beb48e5fd5e82d7037e82c6bb6440bc0bddb088a619e)",
+      "CONSUMED-R411-AUDIT-RESULT.json (8bed7ca71af9fe477f5aa1a6239c0e37720907289f3819b6b9eb21f83bedf94d)",
+      "CONSUMED-R411-POST-COMPARISON.json (9d9e3eb1af22b3e334d95e26a17b67fcb09f232c6710effc348f3a2a8420c6c2)",
+      "ROOT-POST-R411-CGROUP-READBACK.json (184a636d460d977d3020625c9fb8175279f4af487596e9336f0b8180ecc08a17)",
+      "Same-context prior full read of test_output_retained_accounting.py (3cadfc79dffe6d9218258b98c8ae4a35af0e163390c39acb3cbb98cac71493c2)"
+    ]
+  },
+  "fixed_successor_route_design": {
+    "cli_and_mode_identifier": {
+      "cli_flag": "--retained-f-audit-r2",
+      "internal_mode_value": "r2",
+      "admitted_retained_audit_values": [
+        false,
+        true,
+        "r2"
+      ],
+      "no_arbitrary_caller_suffix_or_retry_loop": "retained_audit is strictly restricted to (False, True, 'r2'). True preserves the consumed R411 route and existing unit tests unchanged; 'r2' is the single fixed post-R411 data-only audit route."
+    },
+    "fixed_literal_packet_names": {
+      "worker_stdout": "F_retained_audit_r2.stdout",
+      "worker_stderr": "F_retained_audit_r2.stderr",
+      "quarantined_outputs_receipt": "F_RETAINED_QUARANTINED_OUTPUTS_R2.json",
+      "supervisor_result_receipt": "F_RETAINED_AUDIT_R2_RESULT.json",
+      "supervisor_failure_receipt": "TERMINAL_FAILURE_RETAINED_AUDIT_R2.json",
+      "worker_launch_nonce_marker": "USED_LAUNCH_<32B_hex_nonce>",
+      "forbidden_existing_files_on_r2_entry": [
+        "F_RESULT.json",
+        "F_QUARANTINED_OUTPUTS.json",
+        "F_RETAINED_AUDIT_RESULT.json",
+        "F_RETAINED_QUARANTINED_OUTPUTS.json",
+        "F_RETAINED_AUDIT_R2_RESULT.json",
+        "F_RETAINED_QUARANTINED_OUTPUTS_R2.json",
+        "TERMINAL_FAILURE_RETAINED_AUDIT_R2.json",
+        "F_retained_audit_r2.stdout",
+        "F_retained_audit_r2.stderr"
+      ]
+    },
+    "predecessor_and_consumed_r411_binding": {
+      "total_predecessors_bound": 19,
+      "original_15_predecessors": [
+        "A0_RESULT.json",
+        "A_RESULT.json",
+        "B_RESULT.json",
+        "C_RESULT.json",
+        "D_RESULT.json",
+        "E_RESULT.json",
+        "D_FREEZE.json",
+        "E_RESOLVED.json",
+        "F.stdout",
+        "F.stderr",
+        "F_precheck.stdout",
+        "F_precheck.stderr",
+        "F_audit.stdout",
+        "F_audit.stderr",
+        "TERMINAL_FAILURE.json"
+      ],
+      "consumed_4_r411_predecessors_and_pinned_sha256": {
+        "F_retained_audit.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "F_retained_audit.stderr": "78ee1269c2a286f0a28e4c657322649ecb2934f91f70741881067efe6dabeac0",
+        "TERMINAL_FAILURE_RETAINED_AUDIT.json": "7d37ba6e226a0852d1b6a67314c6db80acd42a66225fa78782d1cbd321208c09",
+        "USED_LAUNCH_93645c50dfc6c31930def6df095941fec5f41243bede003b450fe0c3db0cf5f3": "6996692eb1c89d9bcf83ac52ecd63d76df3902b6bb6bc3978a353431fbfef8c8"
+      },
+      "route_matching_guarantee": "In launch, sandbox_args(..., retained_audit='r2') appends --retained-f-audit-r2 to the worker argv and sets suffix='_retained_audit_r2'. Both supervisor context creation and worker verify_worker_context call prior_receipts(c, 'F', False, 'r2') (19 keys); any mismatch between supervisor and worker route flags fails closed on context['predecessors'] before worker(c, 'F', 'r2') writes F_RETAINED_QUARANTINED_OUTPUTS_R2.json."
+    },
+    "resource_accounting_and_config_cap_proposal": {
+      "proposed_config_cap_deltas": {
+        "total_wall_seconds": {
+          "old_r411": 6602,
+          "proposed_r2": 6586,
+          "derivation": "Deducts ceil(15.664219678998052s) = 16s consumed by R411 from 6602s (equivalently 6720 - 118 - 16 = 6720 - 134s, where ceil(117.9653273010044359 + 15.664219678998052) = 134s). Combined with live prior_wall deduction of A0..E (39.198380454s), effective whole-job remaining budget is 6546.801619546s <= 6720 - 157.163707755 - 15.664219679 = 6547.172072566s."
+        },
+        "limits.F.wall_seconds": {
+          "old_r411": 2582,
+          "proposed_r2": 2566,
+          "derivation": "Deducts ceil(15.664219678998052s) = 16s consumed by R411 from 2582s (2700 - 118 - 16 = 2566s <= 2700 - 117.965327301 - 15.664219679 = 2566.37045302s). Guard enforces c['total_wall_seconds']<=6586 and c['limits']['F']['wall_seconds']<=2566 on route 'r2'."
+        }
+      },
+      "unmodified_cumulative_ceilings_with_live_deductions_and_lower_bounds": {
+        "supervisor_cpu_seconds": {
+          "config_ceiling": 10800,
+          "recorded_post_r411_usage_usec": 56990698,
+          "guard_enforcement": "Reads live supervisor/cpu.stat usage_usec, enforces sup_usec >= 56990698 (refusing counter reset), and sets RLIMIT_CPU to 10800 - (sup_usec + 999999)//1000000 (<= 10743s)."
+        },
+        "limits.F.cpu_time_us": {
+          "config_ceiling": 10800000000,
+          "recorded_post_r411_phases_usage_usec": 246681730,
+          "guard_enforcement": "Reads live phases/cpu.stat usage_usec into group.prior_cpu, enforces group.prior_cpu >= 246681730 (refusing counter reset), and enforces group.prior_cpu + child_usage_usec <= 10800000000 in Group.check()."
+        },
+        "limits.F.stdout_bytes_and_stderr_bytes": {
+          "config_ceiling": 16777216,
+          "recorded_post_r411_bytes": {
+            "stdout": 0,
+            "stderr": 10331
+          },
+          "guard_enforcement": "Sums F_precheck, F, F_audit, AND F_retained_audit stdout/stderr (0B stdout, 0+10237+47+47=10331B stderr) as initial counts and enforces counts[k] + new_r2_bytes <= 16777216."
+        }
+      }
+    }
+  },
+  "gaps": {
+    "missing_semantic_premises": "NONE: With ROOT-POST-R411-CGROUP-READBACK.json (184a636d460d977d3020625c9fb8175279f4af487596e9336f0b8180ecc08a17) supplying the exact post-R411 cgroup counters, log sizes/digests, and USED_LAUNCH marker digests, all semantic and numeric inputs required to author the fixed successor route are present.",
+    "prospective_requirements_before_any_operation": [
+      "1. Independent non-author review and adoption of both the R414/R415 dep-info dot-segment parser fix and these R416 fixed-successor ('r2') guard/test edits.",
+      "2. Offline execution of the targeted unit test method test_retained_f_audit_r2_binds_consumed_r411_artifacts_and_enforces_post_r411_bounds against the updated guard candidate.",
+      "3. Refreshed config.final.json and config-inputs.json binding the new runner SHA-256, total_wall_seconds=6586, limits.F.wall_seconds=2566, and fresh review/root/tier receipt DAG.",
+      "4. Pre-run and post-run read-only NUL-delimited filetype/stat+SHA-256 inventories of target, packet, and ONE_SHOT_STARTED, plus live pre-run verification that cgroups remain unpopulated with usage_usec >= 56990698 (supervisor) and >= 246681730 (phases).",
+      "5. No native outputs are accepted (native_outputs_accepted: False); cleanup remains owed after disposition; Amendment 10/T3 remain terminal."
+    ]
+  }
+}
