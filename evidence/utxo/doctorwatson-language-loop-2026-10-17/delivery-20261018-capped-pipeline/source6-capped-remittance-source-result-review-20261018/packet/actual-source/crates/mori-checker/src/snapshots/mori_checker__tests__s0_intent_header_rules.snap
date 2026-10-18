@@ -1,0 +1,86 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Header {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account bob = { domain: Preview, id: \"bob\" };\n  account carol = { domain: Preview, id: \"carol\" };\n  intent pay = {\n    domain: Preview, asset: USD, signer: alice, key: \"k\", nonce: \"\", pre_head: \"h\",\n    valid: [0, 10],\n    gross_cap: 1 GOLD, fee_cap: 0 USD, net_floor: 1 USD,\n    operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 USD, fee: 0 USD),\n    source_hash: \"s\", policy_digest: \"p\", failure: None,\n    observations: [\"price\"], disclosures: [], retained_effects: [], retained_duties: [],\n    delegation: SuccessOnly, recovery: None,\n  };\n}\n"
+---
+mori::check::empty_claim
+
+  × The intent's `nonce` cannot be empty.
+    ╭─[test.mori:11:66]
+ 10 │   intent pay = {
+ 11 │     domain: Preview, asset: USD, signer: alice, key: "k", nonce: "", pre_head: "h",
+    ·                                                                  ─┬
+    ·                                                                   ╰── empty
+ 12 │     valid: [0, 10],
+    ╰────
+  help: This value is part of what the owner signs, so it must be filled in.
+
+mori::check::invalid_validity
+
+  × A `transfer` or `repay` intent's `valid` must be a `rounds(...)` window.
+    ╭─[test.mori:12:12]
+ 11 │     domain: Preview, asset: USD, signer: alice, key: "k", nonce: "", pre_head: "h",
+ 12 │     valid: [0, 10],
+    ·            ───┬───
+    ·               ╰── not a round window
+ 13 │     gross_cap: 1 GOLD, fee_cap: 0 USD, net_floor: 1 USD,
+    ╰────
+  help: For example:
+
+            valid: rounds(domain: Preview, from: 0, to: 100),
+
+mori::check::wrong_asset
+
+  × `gross_cap` must be a `USD` amount because it is a cap on the intent's
+  │ `asset`, but it is a `GOLD` amount.
+    ╭─[test.mori:13:16]
+ 12 │     valid: [0, 10],
+ 13 │     gross_cap: 1 GOLD, fee_cap: 0 USD, net_floor: 1 USD,
+    ·                ───┬──
+    ·                   ╰── a `GOLD` amount
+ 14 │     operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 USD, fee: 0 USD),
+    ╰────
+
+mori::check::s0_policy
+
+  × A `transfer` or `repay` intent requires `failure: SuccessOnly`, but this
+  │ is `None`.
+    ╭─[test.mori:15:52]
+ 14 │     operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 USD, fee: 0 USD),
+ 15 │     source_hash: "s", policy_digest: "p", failure: None,
+    ·                                                    ──┬─
+    ·                                                      ╰── must be `SuccessOnly`
+ 16 │     observations: ["price"], disclosures: [], retained_effects: [], retained_duties: [],
+    ╰────
+  help: Intents that run locally use the simplest policy: they succeed or fail
+        as a whole, with nothing observed, disclosed, retained, delegated or
+        recovered.
+
+mori::check::s0_policy
+
+  × A `transfer` or `repay` intent requires `observations: []`, but this is a
+  │ list of 1 item.
+    ╭─[test.mori:16:19]
+ 15 │     source_hash: "s", policy_digest: "p", failure: None,
+ 16 │     observations: ["price"], disclosures: [], retained_effects: [], retained_duties: [],
+    ·                   ────┬────
+    ·                       ╰── must be `[]`
+ 17 │     delegation: SuccessOnly, recovery: None,
+    ╰────
+  help: Intents that run locally use the simplest policy: they succeed or fail
+        as a whole, with nothing observed, disclosed, retained, delegated or
+        recovered.
+
+mori::check::s0_policy
+
+  × A `transfer` or `repay` intent requires `delegation: None`, but this is
+  │ `SuccessOnly`.
+    ╭─[test.mori:17:17]
+ 16 │     observations: ["price"], disclosures: [], retained_effects: [], retained_duties: [],
+ 17 │     delegation: SuccessOnly, recovery: None,
+    ·                 ─────┬─────
+    ·                      ╰── must be `None`
+ 18 │   };
+    ╰────
+  help: Intents that run locally use the simplest policy: they succeed or fail
+        as a whole, with nothing observed, disclosed, retained, delegated or
+        recovered.

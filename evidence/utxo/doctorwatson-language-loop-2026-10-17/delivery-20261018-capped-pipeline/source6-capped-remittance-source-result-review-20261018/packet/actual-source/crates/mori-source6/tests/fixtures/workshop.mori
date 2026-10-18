@@ -1,0 +1,20 @@
+profile "moriarty-beta/1";
+agreement WorkshopReceipt {
+ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Buyer = { domain: Local, id: "Owner" };
+ account Seller = { domain: Local, id: "Recipient" };
+ account Treasury = { domain: Local, id: "Fee" };
+ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
+ const base = 2.00 USD;
+ const supplement = 0.35 USD;
+ const price = base + supplement;
+ const fee = 0.07 USD;
+ intent Payment = {
+  domain: Local, asset: USD, signer: Buyer, key: "key2", nonce: "n2", pre_head: "s0",
+  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: price + fee, fee_cap: fee, net_floor: price,
+  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
+  source_hash: "src2", policy_digest: "policy2", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ action pay uses Payment;
+}

@@ -1,0 +1,11 @@
+language "moriarty/2";
+agreement RecipientParent {
+  asset ACK = { network: "local", issuer: "join-recipient", reference: "ACK", scale: 0 };
+  state recipientMarker: UInt = 9;
+  action await_recipient(amount: UInt) {
+    liability("recipientDuty", ACK, "recipientAgent", "recipientReceiver", amount);
+    await acceptance(accepted: Bool) when accepted;
+    transfer(ACK, "recipientAgent", "recipientReceiver", amount);
+    discharge("recipientDuty", amount);
+  }
+}

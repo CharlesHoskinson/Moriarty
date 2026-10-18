@@ -1,0 +1,47 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = pirce;\n  const fee = 1;\n  const fee = 2;\n  const total = later;\n  const later = 3;\n}\n"
+---
+mori::check::unknown_name
+
+  × I cannot find a declaration named `pirce`.
+   ╭─[test.mori:3:17]
+ 2 │ agreement Invoice {
+ 3 │   const price = pirce;
+   ·                 ──┬──
+   ·                   ╰── not declared above
+ 4 │   const fee = 1;
+   ╰────
+  help: Declare `pirce` above this line. A declaration can only use the names
+        declared above it.
+
+mori::check::duplicate_name
+
+  × `fee` is declared twice.
+   ╭─[test.mori:5:9]
+ 3 │   const price = pirce;
+ 4 │   const fee = 1;
+   ·         ─┬─
+   ·          ╰── first declared here
+ 5 │   const fee = 2;
+   ·         ─┬─
+   ·          ╰── declared again here
+ 6 │   const total = later;
+   ╰────
+  help: Each declaration and action in an agreement needs its own name.
+
+mori::check::used_before_declared
+
+  × `later` is used before it is declared.
+   ╭─[test.mori:6:17]
+ 5 │   const fee = 2;
+ 6 │   const total = later;
+   ·                 ──┬──
+   ·                   ╰── used here
+ 7 │   const later = 3;
+   ·         ──┬──
+   ·           ╰── declared further down
+ 8 │ }
+   ╰────
+  help: A declaration can only use the names declared above it. Move the
+        declaration of `later` above this line.

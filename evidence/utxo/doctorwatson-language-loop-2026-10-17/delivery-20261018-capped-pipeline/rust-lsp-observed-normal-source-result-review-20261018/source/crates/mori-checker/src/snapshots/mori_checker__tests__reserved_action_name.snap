@@ -1,0 +1,18 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  observation price = { id: \"price\", domain: Preview };\n  intent invoice = { operation: oracle.select(observation: price) };\n  action amount uses invoice;\n}\n"
+---
+mori::check::reserved_by_source6
+
+  × `amount` cannot be used as an action name.
+   ╭─[test.mori:6:10]
+ 5 │   intent invoice = { operation: oracle.select(observation: price) };
+ 6 │   action amount uses invoice;
+   ·          ───┬──
+   ·             ╰── reserved by Source/6
+ 7 │ }
+   ╰────
+  help: Agreements and actions are expanded into Source/6, which reserves
+        `amount`. Choose another name, for example:
+
+            action amount_action uses invoice;

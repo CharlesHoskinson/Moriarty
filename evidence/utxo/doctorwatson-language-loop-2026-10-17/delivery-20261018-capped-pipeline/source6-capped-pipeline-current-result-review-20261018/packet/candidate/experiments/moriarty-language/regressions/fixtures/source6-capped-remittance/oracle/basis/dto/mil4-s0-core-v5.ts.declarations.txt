@@ -1,0 +1,40 @@
+// Pinned 74a909d69639df8823a527a4d608a7516ccd69a2:experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts:10-47; DTO declarations only.
+export interface S0Balance { account: string; amount: string }
+export interface S0Allowance { owner: string; remaining: string; spent: string }
+export interface S0Obligation {
+  id: string; debtor: string; creditor: string; asset: string;
+  principal: string; accrued: string; outstanding: string;
+  status: 'Outstanding' | 'Settled';
+}
+export interface S0State {
+  core: typeof MIL4_S0_CORE; domain: string; asset: string;
+  head: string; round: string; workRemaining: string; workSpent: string;
+  balances: S0Balance[]; allowances: S0Allowance[];
+  obligations: S0Obligation[]; consumedReplay: string[];
+}
+interface S0IntentBase {
+  version: typeof MIL4_S0_INTENT; core: typeof MIL4_S0_CORE;
+  sourceProfile: typeof MIL4_S0_SOURCE; programId: string;
+  sourceHash: string; policyDigest: string; signedDigest?: string; keyRef: string;
+  domain: string; asset: string; signer: string; nonce: string;
+  preHead: string; notBefore: string; notAfter: string;
+  grossCap: string; feeCap: string; netFloor: string;
+}
+export interface S0TransferIntent extends S0IntentBase {
+  kind: 'Transfer'; recipient: string; feeRecipient: string;
+  amount: string; fee: string;
+}
+export interface S0RepayIntent extends S0IntentBase {
+  kind: 'Repay'; obligationId: string; amount: string;
+}
+export type S0Intent = S0TransferIntent | S0RepayIntent;
+
+export type S0Effect =
+  | { kind: 'Debit'; account: string; asset: string; amount: string }
+  | { kind: 'Credit'; account: string; asset: string; amount: string }
+  | { kind: 'SetObligation'; id: string; principal: string; accrued: string; outstanding: string; status: 'Outstanding' | 'Settled' }
+  | { kind: 'UseAllowance'; owner: string; amount: string }
+  | { kind: 'UseReplay'; key: string }
+  | { kind: 'AdvanceHead'; predecessor: string; successor: string };
+
+
