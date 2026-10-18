@@ -1,0 +1,244 @@
+// DECLARATIONS ONLY for independent R321 author; no implementation or outputs.
+
+
+pub struct NodeId(pub usize);
+
+
+pub struct BindingId(pub usize);
+
+
+pub enum LifetimeUnit { Snapshot, RecordBefore, RecordAfter }
+
+
+pub struct Location {
+    pub section: &'static str,
+    pub row: Option<usize>,
+    pub field: &'static str,
+}
+
+
+pub enum FailureKind {
+    MissingInput, InputChanged, IndexOverflow, CyclicValue, CyclicEnvironment,
+    WrongArity { expected: usize, actual: usize },
+    MissingDependency { dependency: NodeId },
+    WrongType { expected: ValueType, actual: ValueType },
+    InvalidNodeId, CyclicDependencies, UnstableOrder, IncompleteBindings,
+    IncompleteOutputs, WrongOperation,
+}
+
+
+pub struct WitnessFailure {
+    pub location: Location,
+    pub node: Option<NodeId>,
+    pub kind: FailureKind,
+}
+
+
+pub enum ValueNode {
+    UInt(u128), Bool(bool), Nil, U128OutOfRange,
+    Cons { head: usize, tail: usize }, Leaf { value: usize },
+    Branch { left: usize, right: usize },
+}
+
+
+pub struct DecodedValue { pub nodes: Vec<ValueNode>, pub root: usize }
+
+
+pub struct EnvironmentEntry {
+    pub binder: usize,
+    pub name: String,
+    pub value: DecodedValue,
+}
+
+
+pub type DecodedEnvironment = Vec<EnvironmentEntry>;
+
+
+pub struct Metadata {
+    pub admission: AdmissionSnapshot,
+    pub run_id: RunIdC,
+    pub control_origin: usize,
+    pub env_root: EnvRootC,
+    pub stack_limit: usize,
+    pub initial_fuel: u128,
+    pub remaining_work: u128,
+    pub consumed_work: u128,
+    pub helper_work: u128,
+    pub helper_visits: u128,
+    pub reference_cursor: u128,
+    pub alloc: AllocCounters,
+    pub active: ActiveLengths,
+    pub seg_base: SegBase,
+    /// data/data_fields/env/frames/tasks/value_slots, in that order.
+    pub table_lengths: [usize; 6],
+}
+
+
+pub enum InputPath {
+    Metadata, Constant(usize), ConstantField(usize), Data(usize), DataField(usize),
+    Environment(usize), Name(usize), Expression(usize), Function(usize),
+    Parameter(usize), Arm(usize), Pattern(usize), Occurrence(usize),
+    OccurrencePath(usize), Child(usize), Frame(usize), ScheduledFrame,
+    Control, Helper, Task(usize), Result, Outcome, ValueSlot(usize),
+}
+
+
+pub enum SourceType {
+    Metadata, Constant, Data, Reference, Environment, Name, Expression, Function,
+    Parameter, Arm, Pattern, Occurrence, Index, Frame, Control, Helper, Task,
+    Result, Outcome,
+}
+
+
+pub enum InputValue {
+    Metadata(Metadata), Constant(ConstantSnapshot), Data(DataSnapshot),
+    Reference(RefC), Environment(EnvCellC), Name(String),
+    Expression(ExpressionSnapshot), Function(FunctionRowC), Parameter(ParameterRowC),
+    Arm(ArmRowC), Pattern(PatternRowC), Occurrence(OccurrenceRowC), Index(usize),
+    Frame(FrameRowC), Control(ControlC), Helper(Option<HelperControlC>),
+    Task(HelperTaskC), Result(Option<HelperResultC>), Outcome(OutcomeC),
+}
+
+
+pub enum PayloadKind { Frame, Control, Helper, Task, Result, Outcome }
+
+
+pub enum SequenceKind { Values, Environments, Frames, Tasks, Names, Expressions, Parameters, Arms, Patterns, Occurrences, Indices, References }
+
+
+pub enum ValueType {
+    Source(SourceType), Value, Environment, Payload(PayloadKind),
+    Sequence(SequenceKind), Snapshot,
+}
+
+
+pub struct NamedValue { pub field: &'static str, pub value: SlotValue }
+
+
+pub struct DecodedPayload {
+    pub kind: PayloadKind,
+    /// Exact tag and all scalar/cursor/origin/status fields, never normalized.
+    pub raw: InputValue,
+    pub fields: Vec<NamedValue>,
+}
+
+
+pub struct DecodedSnapshot { pub metadata: Metadata, pub fields: Vec<NamedValue> }
+
+
+pub enum SlotValue {
+    Source(InputValue), Value(DecodedValue), Environment(DecodedEnvironment),
+    Payload(DecodedPayload), Sequence { kind: SequenceKind, items: Vec<SlotValue> },
+    Snapshot(DecodedSnapshot),
+}
+
+
+pub struct InputBinding {
+    pub id: BindingId,
+    pub path: InputPath,
+    pub value_type: SourceType,
+    pub immutable_value: InputValue,
+    pub location: Location,
+}
+
+
+pub struct Dependency { pub node: NodeId, pub value_type: ValueType }
+
+
+pub struct FieldBinding { pub field: &'static str, pub dependency: Dependency }
+
+
+pub enum Operation {
+    Read(BindingId),
+    /// Row, then ordered (field-reference, decoded-child) pairs.
+    Value { source: RefC, arity: usize },
+    EmptyEnvironment,
+    /// Environment-cell, name, decoded-value, previous-environment.
+    Environment,
+    Sequence { kind: SequenceKind, item_type: ValueType },
+    /// First dependency is the exact raw payload; fields are remaining inputs.
+    Payload { kind: PayloadKind, fields: Vec<FieldBinding> },
+    /// First dependency is metadata; every remaining output is named explicitly.
+    Snapshot { fields: Vec<FieldBinding> },
+}
+
+
+pub struct Node {
+    pub id: NodeId,
+    pub location: Location,
+    pub operation: Operation,
+    pub dependencies: Vec<Dependency>,
+    pub output_type: ValueType,
+}
+
+
+pub struct Definition {
+    pub value: NodeId,
+    pub producer: NodeId,
+    /// Ordered consumer edges, including repeated uses within one consumer.
+    pub consumers: Vec<NodeId>,
+    pub last_use_order: usize,
+    pub lifetime: LifetimeUnit,
+    pub live_out: bool,
+}
+
+
+pub struct WitnessPlan {
+    pub format: &'static str,
+    pub lifetime: LifetimeUnit,
+    pub inputs: Vec<InputBinding>,
+    pub nodes: Vec<Node>,
+    pub stable_topological_order: Vec<NodeId>,
+    pub definitions: Vec<Definition>,
+    pub live_outs: Vec<NodeId>,
+    pub output: NodeId,
+}
+
+
+pub struct HostDiagnostics {
+    pub evaluated_nodes: usize,
+    pub input_reads: usize,
+    pub value_constructions: usize,
+    pub environment_constructions: usize,
+    pub payload_constructions: usize,
+    pub copied_value_nodes: usize,
+    pub copied_environment_entries: usize,
+    /// Slots retained by this uncached baseline; not allocated bytes/prover memory.
+    pub retained_slots: usize,
+    pub measured_host_bytes: Option<usize>,
+    pub measured_host_time_ns: Option<u128>,
+}
+
+
+pub struct WitnessEvaluation {
+    pub decoded: DecodedSnapshot,
+    pub diagnostics: HostDiagnostics,
+}
+
+
+pub struct MaterializedSnapshot {
+    pub raw: HostSnapshot,
+    pub plan: WitnessPlan,
+    pub evaluation: WitnessEvaluation,
+}
+
+
+pub fn construct_plan(input: &HostSnapshot) -> Result<WitnessPlan, WitnessFailure>;
+
+pub fn construct_plan_for(input: &HostSnapshot, lifetime: LifetimeUnit) -> Result<WitnessPlan, WitnessFailure>;
+
+pub fn evaluate_uncached(plan: &WitnessPlan, input: &HostSnapshot) -> Result<WitnessEvaluation, WitnessFailure>;
+
+pub fn materialize(input: &HostSnapshot) -> Result<MaterializedSnapshot, WitnessFailure>;
+
+pub fn materialize_for(input: &HostSnapshot, lifetime: LifetimeUnit) -> Result<MaterializedSnapshot, WitnessFailure>;
+
+// complete_observation additions:
+
+pub struct PlannedObservedStep { pub observed: ObservedStep, pub before: MaterializedSnapshot, pub after: MaterializedSnapshot }
+
+pub enum WitnessSide { Before, After }
+
+pub enum PlannedStepError { Owner(CaptureStepError), Materialization { side: WitnessSide, failure: WitnessFailure, observed: Box<ObservedStep>, completed_before: Option<Box<MaterializedSnapshot>> } }
+
+pub fn record_step_with_plan(admitted: &Admitted, image: &mut MachineImage) -> Result<PlannedObservedStep, PlannedStepError>;

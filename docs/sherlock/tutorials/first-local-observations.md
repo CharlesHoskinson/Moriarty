@@ -82,10 +82,12 @@ or exact B clock. No transition/circuit semantics or circuit/website iteration
 changed in this tutorial; no command here was rerun for this documentation update.
 
 
-The [unrun simulate command](../how-to/compile-draft-program.md#pending-command-shape-unrun)
-adds no observed exercise step here. R299's one-test/24-row argument check and
-R301's normal Core compile have separate scoped observations. R310 also passed
-one two-program real-run/report/serialization test; that is not enclosing CLI,
-file I/O or a command printout. Those command/file observations remain UNRUN.
+The [unrun enclosing simulate command](../how-to/compile-draft-program.md#pending-command-shape-unrun)
+adds no observed tutorial exercise step here. R299's argument check, R301's Core
+compile and R310's two-program report test retain their separate observations.
+R322 later passed four phases through the actual selected handler/production IO,
+persisting both complete reports and checking frozen R324 predicates in a
+saved-files-only process.
+This does not execute the root CLI/global dispatch or the file-publication example.
 Existing tutorial commands/results stay unchanged; there is no transition/
 circuit semantic change or circuit/website iteration.

@@ -1,0 +1,136 @@
+--- a/crates/mori/src/commands/core_io.rs
++++ b/crates/mori/src/commands/core_io.rs
+@@ -1,25 +1,8 @@
+ use crate::error::CliError;
+-use serde::{Serialize, de::DeserializeOwned};
++use serde::de::DeserializeOwned;
+ use std::path::Path;
+ 
+-pub fn read_source(path: &Path) -> super::Result<String> {
+-    use std::io::Read;
+-    let file = std::fs::File::open(path).map_err(|source| CliError::Read {
+-        path: path.into(),
+-        source,
+-    })?;
+-    let mut source = String::new();
+-    file.take(1_048_577)
+-        .read_to_string(&mut source)
+-        .map_err(|source| CliError::Read {
+-            path: path.into(),
+-            source,
+-        })?;
+-    if source.len() > 1_048_576 {
+-        return Err(operation("input file exceeds 1 MiB"));
+-    }
+-    Ok(source)
+-}
++pub use super::source_io::{operation, print, read_source};
+ 
+ #[cfg(test)]
+ mod key_export_diagnostic_tests {
+@@ -155,13 +138,6 @@
+         assert!(!stderr.contains("key-bytes"));
+     }
+ }
+-pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
+-    CliError::Operation {
+-        code: "mori::command".into(),
+-        message: crate::display::text(&error.to_string()),
+-    }
+-    .into()
+-}
+ pub fn ledger_operation(error: mori_ledger::Error) -> mori_diagnostics::Report {
+     use mori_ledger::{DegreeRefusalReason, KeyExportFailureReason, KeyExportKind};
+     let mut message = crate::display::text(&error.to_string());
+@@ -241,11 +217,6 @@
+     let source = read_source(path)?;
+     let program = mori_core::parse(&source).map_err(operation)?;
+     Ok((source, program))
+-}
+-pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
+-    let display = mori_core::json::export(value).map_err(operation)?;
+-    println!("{display}");
+-    Ok(())
+ }
+ /// Trusted signed Target, separately supplied expected authority and logical time.
+ pub fn signed_target(path: &Path) -> super::Result<mori_backend::Target> {
+--- a/crates/mori/src/commands/mod.rs
++++ b/crates/mori/src/commands/mod.rs
+@@ -12,6 +12,7 @@
+ pub mod compile;
+ pub mod compile_call;
+ mod core_io;
++mod source_io;
+ pub mod expand;
+ pub mod format;
+ pub mod init;
+--- a/crates/mori/src/commands/simulate_sherlock.rs
++++ b/crates/mori/src/commands/simulate_sherlock.rs
+@@ -4,7 +4,7 @@
+ use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
+ use mori_core::sherlock::helper_machine::shared::{OutcomeC, StepEventC};
+ use super::Args;
+-use super::super::core_io;
++use super::super::source_io as core_io;
+ 
+ pub(super) use crate::cli_args::simulate::selection;
+ 
+--- a/crates/mori/src/commands/source_io.rs
++++ b/crates/mori/src/commands/source_io.rs
+@@ -0,0 +1,56 @@
++//! Production SDK-free source reading and public JSON printing.
++//! Extracted without changing existing byte/JSON/escaping/newline rules.
++use mori_diagnostics::{Diagnostic, Report};
++use serde::Serialize;
++use std::path::Path;
++
++type Result<T> = std::result::Result<T, Report>;
++
++// These display templates and source chaining match the existing CliError
++// Read/Operation variants. Backend/ledger and directory-walk errors stay there.
++#[derive(Debug, thiserror::Error)]
++enum SourceIoError {
++    #[error("{code}: {message}")]
++    Operation { code: String, message: String },
++    #[error("could not read `{}`", crate::display::text(&path.display().to_string()))]
++    Read {
++        path: std::path::PathBuf,
++        #[source]
++        source: std::io::Error,
++    },
++}
++impl Diagnostic for SourceIoError {}
++
++pub fn read_source(path: &Path) -> Result<String> {
++    use std::io::Read;
++    let file = std::fs::File::open(path).map_err(|source| SourceIoError::Read {
++        path: path.into(),
++        source,
++    })?;
++    let mut source = String::new();
++    file.take(1_048_577)
++        .read_to_string(&mut source)
++        .map_err(|source| SourceIoError::Read {
++            path: path.into(),
++            source,
++        })?;
++    if source.len() > 1_048_576 {
++        return Err(operation("input file exceeds 1 MiB"));
++    }
++    Ok(source)
++}
++
++
++pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
++    SourceIoError::Operation {
++        code: "mori::command".into(),
++        message: crate::display::text(&error.to_string()),
++    }
++    .into()
++}
++
++pub fn print<T: Serialize>(value: &T) -> Result<()> {
++    let display = mori_core::json::export(value).map_err(operation)?;
++    println!("{display}");
++    Ok(())
++}
