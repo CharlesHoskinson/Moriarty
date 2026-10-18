@@ -121,7 +121,10 @@ pub enum Command {
     Init(init::Args),
     /// Check syntax, names, types and action support
     Check(check::Args),
-    /// Compile a bounded Moriarty program into ledger-9 ZKIRv3 circuits
+    /// Compile supported Core/1 or Core/2 source into ledger-9 ZKIRv3 circuits
+    ///
+    /// Use a language "moriarty/1"; or language "moriarty/2"; source header.
+    /// Beta/1 and Source/6 text are not compiler inputs.
     #[cfg_attr(
         not(feature = "native"),
         command(
@@ -228,9 +231,15 @@ pub enum Command {
         )
     )]
     Inspect(inspect::Args),
-    /// Show the native core IR after checking an action against a scenario
+    /// Show Core/1 IR or explicitly emit beta Source/6 transfer text
+    ///
+    /// Default expansion accepts moriarty/1 Core source. The explicit
+    /// --emit-source6-transfer option emits a local beta transfer proposal.
     Expand(expand::Args),
-    /// Run an action locally against a scenario
+    /// Run a Core/1 action or Core/2 stage locally against a scenario
+    ///
+    /// Use a language "moriarty/1"; or language "moriarty/2"; source header.
+    /// moriarty-beta/1 and Source/6 text are not simulation inputs.
     #[cfg_attr(
         not(feature = "native"),
         command(
@@ -268,4 +277,50 @@ pub enum Command {
     Lsp(lsp::Args),
     /// Run the read-only MCP server over stdio
     Mcp(mcp::Args),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cli;
+    use clap::CommandFactory;
+
+    #[test]
+    fn help_distinguishes_core_consumers_from_source6_proposals() {
+        let command = Cli::command();
+        let compile = command.find_subcommand("compile").unwrap();
+        let compile_help = compile.get_long_about().unwrap().to_string();
+        for header in [r#"language "moriarty/1";"#, r#"language "moriarty/2";"#] {
+            assert!(compile_help.contains(header), "{compile_help}");
+        }
+        assert!(
+            compile_help.contains("Beta/1 and Source/6 text are not compiler inputs."),
+            "{compile_help}"
+        );
+
+        let simulate = command.find_subcommand("simulate").unwrap();
+        let simulate_help = simulate.get_long_about().unwrap().to_string();
+        for profile in ["moriarty/1", "moriarty/2"] {
+            assert!(simulate_help.contains(profile), "{simulate_help}");
+        }
+        assert!(
+            simulate_help.contains("moriarty-beta/1 and Source/6 text are not simulation inputs."),
+            "{simulate_help}"
+        );
+
+        let expand = command.find_subcommand("expand").unwrap();
+        let expand_help = expand.get_long_about().unwrap().to_string();
+        assert!(expand_help.contains("moriarty/1"), "{expand_help}");
+        let source6 = expand
+            .get_arguments()
+            .find(|argument| argument.get_id().as_str() == "emit_source6_transfer")
+            .unwrap();
+        let source6_help = source6.get_long_help().unwrap().to_string();
+        for boundary in [
+            "moriarty-beta/1",
+            "local-stipulation-only",
+            "Source/6 output is not compiled or simulated by this option.",
+        ] {
+            assert!(source6_help.contains(boundary), "{source6_help}");
+        }
+    }
 }

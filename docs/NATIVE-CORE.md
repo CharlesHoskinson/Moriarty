@@ -9,11 +9,122 @@ Run this guide's Cargo commands from the Moriarty repository root. The explicit
 `cargo run -p mori --locked --` prefix selects the Rust workspace CLI; the Node
 `@moriarty-lang/beta` package also installs a command named `mori`, but accepts a
 separate beta source profile and supplies no Rust compiler. The Rust package
-uses its default `native` feature here. A `--no-default-features` build supplies
-local Core reference tooling only; Midnight compile/call/proof, targeted
-inspection, trace/replay and JubJub profiles require `native`. This checkout
+uses its default `native` feature for the native command examples below.
+The profile walkthrough disables it: Core reference tooling and beta source
+checking remain available; explicit Source/6 expansion additionally requires
+`source6-expansion`. Midnight compile/call/proof, targeted inspection,
+trace/replay and JubJub profiles require `native`. This checkout
 workflow does not establish a standalone Rust installation or completed external
 proof/submission qualification.
+
+## Choose a source profile before running a command
+
+From the repository root, query the Rust CLI without the native feature:
+
+```sh
+cargo run -p mori --locked --no-default-features -- capabilities --json
+```
+
+`capabilities` also prints JSON without `--json`. The report's `format` is
+`moriarty-cli-capabilities/1`; `producer.buildFeatures.native` is `false` for
+this command. Select a consumer row by its `id`, then read its `inputProfile`,
+`outputProfile`, `availableInBuild` and `limitations`. `availableInBuild` means
+that a source path is compiled in. `catalogue.sourceRevision` records the
+curated inspection basis; it is not the running binary's revision. Target
+qualification is reported separately. See the [query source](../crates/mori/src/commands/capabilities.rs)
+and [public consumer tests](../crates/mori/tests/capabilities.rs).
+
+| Source header | Rust consumer | Result to expect |
+| --- | --- | --- |
+| `language "moriarty/1";` | `check`, `simulate` | Core/1 source checking and local reference execution |
+| `language "moriarty/2";` | `check`, `simulate --action …`, `simulate --resume … --event …` | Core/2 source checking and local reference stages |
+| `profile "moriarty-beta/1";` | `check`; opt-in `expand --emit-source6-transfer` for the supported transfer subset | Frontend checking; raw Source/6 proposal text from explicit expansion |
+
+For a complete Core/1 output example:
+
+```sh
+cargo run -p mori --locked --no-default-features -- check crates/fixtures/core-report-contract/counter.mori --json
+cargo run -p mori --locked --no-default-features -- simulate crates/fixtures/core-report-contract/counter.mori \
+  --action run --scenario crates/fixtures/core-report-contract/counter-amount7.scenario.json
+```
+
+The check returns `status: "accepted"` and `language: "moriarty/1"`.
+Simulation returns `status: "accepted"`, `qualification: "local-reference-execution"`
+and `execution.post.state.count: {"type":"UInt","value":"7"}`. It publishes
+both the state change and the `count` event. The [complete expected stdout](../crates/fixtures/core-report-contract/counter.unmetered.stdout.json)
+and [real CLI assertions](../crates/mori/tests/core_report_contract.rs) include
+all steps, effects and pre/post fields.
+
+For Core/2, start the shipped delivery example and save only its continuation
+object for resume. These commands use Python 3 for JSON extraction and a new
+scratch directory for output files:
+
+```sh
+scratch=$(mktemp -d)
+cargo run -p mori --locked --no-default-features -- check examples/core/continuations/delivery.mori --json
+cargo run -p mori --locked --no-default-features -- simulate examples/core/continuations/delivery.mori \
+  --action deliver --scenario examples/core/continuations/delivery-scenario.json --logical-cap 11 > "$scratch/start.json"
+python3 -c 'import json,sys; json.dump(json.load(sys.stdin)["continuation"],sys.stdout)' \
+  < "$scratch/start.json" > "$scratch/continuation.json"
+cargo run -p mori --locked --no-default-features -- simulate examples/core/continuations/delivery.mori \
+  --resume "$scratch/continuation.json" --event examples/core/continuations/delivery-true-resume-complete.json
+```
+
+The start result has `status: "waiting"`, `committed: "5"`, 10 units in
+escrow and a 10-unit `release` residual duty. The true event produces
+`status: "complete"`, `committed: "11"` and `residual: []`; bob receives 10,
+escrow becomes 0, and the liability remains present with amount 0. Both results
+retain `qualification: "local-reference-stage"`, `authentication: "none"` and
+`consumption: "untracked"`. See the [delivery source](../examples/core/continuations/delivery.mori),
+[normal CLI assertions](../crates/mori/tests/core_continuations.rs) and
+[continuation guide](CORE-CONTINUATIONS.md) for complete frames and local limits.
+
+For Rust beta transfer expansion, enable its separate feature explicitly:
+
+```sh
+cargo run -p mori --locked --no-default-features --features source6-expansion -- capabilities --json
+cargo run -p mori --locked --no-default-features --features source6-expansion -- check crates/mori/tests/fixtures/source6-expansion/invoice.mori --json
+cargo run -p mori --locked --no-default-features --features source6-expansion -- --quiet expand crates/mori/tests/fixtures/source6-expansion/invoice.mori \
+  --action pay --scenario crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json --emit-source6-transfer
+```
+
+The `beta-to-source6-transfer` consumer is available in this build. The check
+returns `status: "accepted"` and action support `local_s0`. Expansion prints
+[these exact Source/6 fixture bytes](../crates/mori/tests/fixtures/source6-expansion/invoice.source6),
+with header `profile "moriarty-financial-agreement-source/6";`. The CLI's
+`--quiet` suppresses its expansion status; Cargo may still print build messages
+to stderr. The [CLI tests](../crates/mori/tests/source6_expand.rs) assert the
+complete text. This option emits a local transfer proposal; Rust `simulate`
+and `compile` do not accept that Source/6 text as input.
+
+The separate Node beta executable performs local Core/5 preparation through
+its own `simulate` command. With Node 24+ and the package built as described in
+[getting started](../packages/moriarty-beta/GETTING-STARTED.md), run from the
+repository root:
+
+```sh
+node packages/moriarty-beta/dist/cli.js check packages/moriarty-beta/examples/local/repay/repayment.mori --json
+node packages/moriarty-beta/dist/cli.js simulate packages/moriarty-beta/examples/local/repay/repayment.mori \
+  --action repay_loan --scenario packages/moriarty-beta/examples/local/repay/scenario.json
+node packages/moriarty-beta/dist/cli.js test packages/moriarty-beta/examples/local/repay
+```
+
+These return `AuthoringChecked`, `PreparedUnqualified` and `TestsPassed`,
+respectively. The [repayment manifest](../packages/moriarty-beta/examples/local/repay/mori.tests.json)
+checks complete ordered effects and post-state: payment 3000 clears accrued
+interest 1000, reduces principal to 98000 and leaves the payer with 197000.
+See the [Node CLI tests](../packages/moriarty-beta/tests/cli.test.mjs) and
+[preparation implementation](../packages/moriarty-beta/src/bridge.ts).
+
+Compilation is a separate [Rust consumer](../crates/mori/src/commands/compile.rs)
+requiring `native`, an admitted Core source and an explicit target descriptor.
+Core/1 produces artifact/3; Core/2
+uses the distinct staged artifact/4 described in the continuation guide.
+Source checking, reference simulation, Source/6 emission and Node preparation
+retain their own result qualifications; none establishes proof or ledger
+acceptance.
+
+## Native command examples
 
 ```sh
 cargo run -p mori --locked -- check examples/core/language/counter.mori --json
