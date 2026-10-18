@@ -1,0 +1,148 @@
+{
+  "language": "moriarty/2",
+  "semantics": "moriarty-core/2",
+  "name": "RetainedPaymentObservation",
+  "states": [
+    {
+      "name": "marker",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      }
+    },
+    {
+      "name": "flag",
+      "ty": "Bool",
+      "initial": {
+        "type": "Bool",
+        "value": true
+      }
+    }
+  ],
+  "assets": [
+    {
+      "name": "UNIT",
+      "identity": {
+        "network": "local",
+        "issuer": "r151-financial-observation",
+        "reference": "UNIT",
+        "scale": 0
+      }
+    },
+    {
+      "name": "AUX",
+      "identity": {
+        "network": "local",
+        "issuer": "r151-financial-observation",
+        "reference": "AUX",
+        "scale": 0
+      }
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "30"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "2"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "30"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "ready"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "10"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "10"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "pay",
+      "inputs": [],
+      "statements": [
+        {
+          "kind": "Transfer",
+          "asset": "UNIT",
+          "from": "reserve",
+          "to": "beneficiary",
+          "amount": 0
+        },
+        {
+          "kind": "Fee",
+          "asset": "UNIT",
+          "from": "reserve",
+          "to": "fee_recipient",
+          "amount": 1
+        },
+        {
+          "kind": "Discharge",
+          "name": "pay-beneficiary",
+          "amount": 2
+        },
+        {
+          "kind": "Await",
+          "label": "release",
+          "binders": [
+            {
+              "name": "ready",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 3
+        },
+        {
+          "kind": "Transfer",
+          "asset": "UNIT",
+          "from": "reserve",
+          "to": "beneficiary",
+          "amount": 4
+        },
+        {
+          "kind": "Fee",
+          "asset": "UNIT",
+          "from": "reserve",
+          "to": "fee_recipient",
+          "amount": 5
+        },
+        {
+          "kind": "Discharge",
+          "name": "pay-beneficiary",
+          "amount": 6
+        }
+      ]
+    }
+  ]
+}

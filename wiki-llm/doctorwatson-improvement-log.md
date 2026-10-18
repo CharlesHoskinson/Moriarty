@@ -1098,3 +1098,48 @@ The report and post-read correction are retained without rerunning the reader;
 no successful initial capture-cell exit or timing was invented. Read the actual
 API/status contract before asserting wrapper metadata. The resulting report
 keeps nine adopted originals current and all remaining requirements open.
+
+
+### DW-58 — Adopt observed components and preserve the missing producer boundary
+
+The [Core/2 financial component](../docs/results/sherlock-financial-observation-20261018/README.md)
+now passes the independently revised start/false-await/true-resume comparison.
+The exact original first-paid-prefix scenario is observed on that producer and
+adapter. The general Sherlock financial extension still needs its own actual
+segment producer and adapter relationship; UIREQ-017 remains open without adding
+UIREQ-018 opcodes or a native prerequisite to its original clause. Distinguish a
+useful implemented component from the complete consuming feature.
+
+Canonical integration changed only include locations and module documentation.
+The permanent integration test compiled once; exact assertion-body and all15
+payload comparisons justify reusing the existing R176 runtime result. Its new
+binary was not executed. Preserve the earlier invalid-input failure, original
+expectations, corrected independent identities and each actual review. Eleven
+standalone expectation files are compared completely; only two hash cells of the
+large context fixture are consumed. File size is not observed-field coverage.
+
+The public module registration adds three lines and changes no existing body.
+Root explicitly adopts that compatibility, retains the original library input
+under an immutable archive path, and updates five live dependency pins. The
+selected DoctorWatson reader reports nine current adopted originals and no
+findings. Rebinding is an explicit reviewed reuse decision, not a new run of the
+old host scenarios or the unchanged254-test cohort.
+
+### DW-59 — Bound review context and record authoring exceptions exactly
+
+Repeated numerical pin inventories make reviews larger without exposing more
+behavior. Supply complete changed functions, their actual consuming path,
+independent expected values and actual command/output records. Factor repeated
+inventories by exact identity and mechanically verified set equality; state which
+source bodies were omitted. Keep delivery coverage separate from local packet
+completeness. A locally complete prompt does not disprove a provider's clipping
+report, and an empty or interrupted response supplies no approval.
+
+The user separately approved Sol authoring for parser budgets and type-checker
+depth limits, each with fresh Opus/Gemini review before candidate execution.
+Record each narrow exception and retain other ownership. The bounded parser's
+actual19 selected commands and14 passing tests are new evidence; checker source
+and native provisioner source remain separate review tasks. No model quota,
+missing response or author-time comment can change a native execution grant or
+close an unobserved requirement. These lessons improve the existing factory;
+they introduce no scheduler or new public developer permission.

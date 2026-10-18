@@ -1,0 +1,149 @@
+{
+  "source": "W/crates/mori-core/src/ir.rs and stage/mod.rs declarations; exact Rust serde representations, no R151 serializer/body inference",
+  "UInt": "u128, canonical decimal JSON string",
+  "Value": {
+    "tag": "type",
+    "content": "value",
+    "variants": {
+      "UInt": "UInt",
+      "Bool": "JSON bool"
+    }
+  },
+  "AssetId": {
+    "network": "String",
+    "issuer": "String",
+    "reference": "String",
+    "scale": "u8 JSON integer"
+  },
+  "Balance": {
+    "account": "String",
+    "asset": "AssetId",
+    "amount": "UInt"
+  },
+  "Liability": {
+    "name": "String",
+    "asset": "AssetId",
+    "debtor": "String",
+    "creditor": "String",
+    "amount": "UInt"
+  },
+  "Snapshot": {
+    "state": "BTreeMap<String,Value>",
+    "balances": "ordered Vec<Balance>",
+    "liabilities": "ordered Vec<Liability>"
+  },
+  "Effect": {
+    "serde_tag": "kind",
+    "ordered_variants": {
+      "State": {
+        "name": "String",
+        "before": "Value",
+        "after": "Value"
+      },
+      "Transfer": {
+        "asset": "AssetId",
+        "from": "String",
+        "to": "String",
+        "amount": "UInt"
+      },
+      "Fee": {
+        "asset": "AssetId",
+        "from": "String",
+        "to": "String",
+        "amount": "UInt"
+      },
+      "Liability": {
+        "name": "String",
+        "asset": "AssetId",
+        "debtor": "String",
+        "creditor": "String",
+        "before": "UInt",
+        "after": "UInt"
+      },
+      "Emit": {
+        "name": "String",
+        "value": "Value"
+      }
+    }
+  },
+  "StageLogical": {
+    "profile": "String",
+    "cap": "Option<UInt> mandatory null or string",
+    "committed": "UInt"
+  },
+  "NamedValue": {
+    "name": "String",
+    "value": "Value"
+  },
+  "Continuation": {
+    "format": "String",
+    "program_hash": "String",
+    "plan_hash": "String",
+    "action": "String",
+    "site": "u16 JSON integer",
+    "captures": "ordered Vec<NamedValue>",
+    "logical": "StageLogical",
+    "boundary": "Snapshot"
+  },
+  "StageEvent": {
+    "format": "String",
+    "action": "String",
+    "label": "String",
+    "values": "ordered Vec<NamedValue>"
+  },
+  "PendingFrame": {
+    "site": "u16 JSON integer",
+    "captures": "ordered Vec<NamedValue>"
+  },
+  "StageSegment": {
+    "action": "String",
+    "frame_pre": "PendingFrame",
+    "frame_post": "PendingFrame",
+    "execution": "Execution"
+  },
+  "Execution": {
+    "semantics": "String",
+    "action": "String",
+    "pre": "Snapshot",
+    "post": "Snapshot",
+    "steps": "ordered Vec<Step>",
+    "effects": "ordered Vec<Effect>"
+  },
+  "Step": {
+    "index": "u16 JSON integer",
+    "statement": "actual shared Statement Serialize",
+    "value": "Option<Value>, null present when none",
+    "snapshot": "Snapshot",
+    "effects": "ordered Vec<Effect>"
+  },
+  "StageOutcome": {
+    "external_variants": {
+      "Waiting": {
+        "advanced": "bool",
+        "segment": "Option<StageSegment>",
+        "continuation": "Continuation",
+        "attempted": "UInt",
+        "residual": "ordered Vec<Liability>"
+      },
+      "Complete": {
+        "segment": "StageSegment",
+        "committed": "UInt",
+        "attempted": "UInt",
+        "residual": "ordered Vec<Liability>"
+      }
+    }
+  },
+  "StageRejection": {
+    "error": "Error",
+    "attempted": "UInt",
+    "committed": "UInt"
+  },
+  "Error": {
+    "code": "String",
+    "message": "String",
+    "offset": "Option<u32>",
+    "step": "Option<u16>"
+  },
+  "field_membership_rule": "All fields retained including mandatory options/null and present-zero liability rows. Vec order/multiplicity not normalized away. Positive residual filtering is separate from boundary liability membership.",
+  "adapter_gap": "Frozen R151 interface02 supplies complete current positive typed adapter fields; no positive field gap. Borrowed observation types remain non-Serialize. Local failure diagnostic inputs remain unselected."
+}
