@@ -135,3 +135,13 @@ pub fn run_draft_host(
         },
     })
 }
+
+// The selected public draft run exposes the same owner-bound reporter.
+impl DraftHostRun {
+    pub fn resource_report_with_manifest(&self)
+        -> Result<crate::sherlock::helper_machine::resource_report::ManifestResourceReport, ConsumerError>
+    {
+        let observation = self.observe()?;
+        Ok(ResourceReport::from_owner_with_manifest(&observation, &self.completed.summary))
+    }
+}

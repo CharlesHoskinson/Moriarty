@@ -298,6 +298,186 @@ pub fn cumulative_resource_report(chunks: &[&ReferenceSlice]) -> Result<
         total_work, total_events, depth))
 }
 
+/// Actual A semantic run inputs, not B BoundsC or host-memory admission caps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReferenceRunBounds {
+    pub initial_fuel: u128,
+    pub semantic_stack_limit: usize,
+}
+
+/// Description of the existing typed K-A profile, not a new execution schedule.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReferenceProfileDomain {
+    pub scalar_bits: u16,
+    pub values: &'static str,
+    pub frame_order: &'static str,
+    pub work_clock: &'static str,
+    pub pure_helper_metering: &'static str,
+    pub terminal_publication_charge: u8,
+}
+
+/// Mandatory identity fields with no current actual A producer. This is a GAP,
+/// not a measured zero, optional-field exemption or completed ResourceManifest.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReferenceIdentityGap {
+    pub status: &'static str,
+    pub reason: &'static str,
+    pub fields: &'static [&'static str],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReferenceIdentityManifest {
+    pub format: &'static str,
+    pub reference_schedule_id: &'static str,
+    pub source_definition_sha256: &'static str,
+    pub run_bounds: ReferenceRunBounds,
+    pub profile_domain: ReferenceProfileDomain,
+    pub missing_required_identity: ReferenceIdentityGap,
+}
+
+/// Explicit successor: v1 accounting/JSON remains unchanged inside observations.
+/// No program-image/layout/lowering identifier is synthesized from Debug or K text.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReferenceIdentityResourceReport {
+    pub format: &'static str,
+    pub manifest: ReferenceIdentityManifest,
+    pub observations: ReferenceResourceReport,
+}
+
+impl ReferenceSlice {
+    /// Versioned identity-enriched report, separate from the unchanged v1 API.
+    pub fn resource_report_with_identity(&self)
+        -> Result<ReferenceIdentityResourceReport, ReferenceReportError>
+    {
+        cumulative_resource_report_with_identity(&[self])
+    }
+}
+
+/// Reuse the original complete accounting/continuity implementation once.
+/// Original run inputs come from the first actual supplied start state; v1
+/// continuity already checks their preservation and the complete bound Program.
+/// Reporting neither prepares a program image nor manufactures its identity.
+pub fn cumulative_resource_report_with_identity(chunks: &[&ReferenceSlice])
+    -> Result<ReferenceIdentityResourceReport, ReferenceReportError>
+{
+    let observations = cumulative_resource_report(chunks)?;
+    // The existing implementation already returned NoChunks for empty input.
+    let start = &chunks[0].start;
+    Ok(ReferenceIdentityResourceReport {
+        format: "moriarty-sherlock-a-resource-report/2",
+        manifest: ReferenceIdentityManifest {
+            format: "moriarty-sherlock-resource-manifest/2",
+            reference_schedule_id: PROFILE,
+            source_definition_sha256: K_SOURCE_SHA256,
+            run_bounds: ReferenceRunBounds {
+                initial_fuel: start.initial_fuel,
+                semantic_stack_limit: start.stack_limit,
+            },
+            profile_domain: ReferenceProfileDomain {
+                scalar_bits: 128,
+                values: "uint128-bool-dedicated-list-tree",
+                frame_order: "top-first",
+                work_clock: "charged-k-machine-transitions",
+                pure_helper_metering: "unmetered",
+                terminal_publication_charge: 0,
+            },
+            missing_required_identity: ReferenceIdentityGap {
+                status: "gap",
+                reason: "no-selected-producer-on-the-public-a-observation",
+                fields: &["rule-inventory-digest", "program-image-id", "layout-version",
+                    "lowering-digest"],
+            },
+        },
+        observations,
+    })
+}
+
+/// Retained schedule declarations, not measurements of another profile's run.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RetainedResourceProfile {
+    pub reference_schedule_id: &'static str,
+    pub terminal_return_charge: u8,
+    pub pure_helper_metering: &'static str,
+    pub qualification: &'static str,
+}
+pub const RETAINED_RESOURCE_PROFILES: &[RetainedResourceProfile] = &[
+    RetainedResourceProfile {
+        reference_schedule_id: "sherlock-k-a/1", terminal_return_charge: 0,
+        pure_helper_metering: "unmetered",
+        qualification: "retained-k-a-clock;no-cross-profile-fuel-equivalence",
+    },
+    RetainedResourceProfile {
+        reference_schedule_id: "sherlock-quint-a/1", terminal_return_charge: 1,
+        pure_helper_metering: "algorithm-specific",
+        qualification: "retained-quint-a-terminal-return-tick;not-an-observation-of-this-run",
+    },
+    RetainedResourceProfile {
+        reference_schedule_id: "sherlock-helper-microstep/1", terminal_return_charge: 0,
+        pure_helper_metering: "charged-microsteps",
+        qualification: "distinct-helper-schedule;no-cross-profile-fuel-equivalence-or-measured-cost-winner",
+    },
+];
+
+/// Resource-report selection metadata. Required missing identities stay gaps;
+/// neither the source definition nor a diagnostic display supplies those IDs.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReferenceResourceManifestV3 {
+    pub format: &'static str,
+    pub reference_schedule_id: &'static str,
+    pub source_definition_sha256: &'static str,
+    pub run_bounds: ReferenceRunBounds,
+    pub profile_domain: ReferenceProfileDomain,
+    pub missing_required_identity: ReferenceIdentityGap,
+    pub io_bytes: ReferenceUnmeasuredGroup,
+    pub retained_profiles: &'static [RetainedResourceProfile],
+    pub unknown_metrics: Vec<&'static str>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReferenceManifestResourceReport {
+    pub format: &'static str,
+    pub manifest: ReferenceResourceManifestV3,
+    pub observations: ReferenceResourceReport,
+}
+impl ReferenceSlice {
+    /// Opt-in selected manifest and explicit I/O status, preserving v1/v2.
+    pub fn resource_report_with_manifest(&self)
+        -> Result<ReferenceManifestResourceReport, ReferenceReportError>
+    {
+        cumulative_resource_report_with_manifest(&[self])
+    }
+}
+
+/// Use the unchanged v1 cumulative charge/continuity producer once through v2.
+/// Technical cuts add no charges. This function performs no I/O or evaluation.
+pub fn cumulative_resource_report_with_manifest(chunks: &[&ReferenceSlice])
+    -> Result<ReferenceManifestResourceReport, ReferenceReportError>
+{
+    let ReferenceIdentityResourceReport { manifest, observations, .. } =
+        cumulative_resource_report_with_identity(chunks)?;
+    let io_bytes = gap("reference-slices-carry-no-io-byte-observation", &["io-bytes"]);
+    let mut unknown_metrics = Vec::new();
+    unknown_metrics.extend_from_slice(observations.helper_work.metrics);
+    unknown_metrics.extend_from_slice(observations.helper_visits.metrics);
+    let u = observations.unmeasured;
+    for group in [u.peaks, u.physical, u.circuit, u.proof, u.host, u.overhead,
+        u.financial_target, u.event_reconciliation, u.remaining_nonhelper_reference_work] {
+        unknown_metrics.extend_from_slice(group.metrics);
+    }
+    unknown_metrics.extend_from_slice(io_bytes.metrics);
+    Ok(ReferenceManifestResourceReport {
+        format: "moriarty-sherlock-a-resource-report/3",
+        manifest: ReferenceResourceManifestV3 {
+            format: "moriarty-sherlock-resource-manifest/3",
+            reference_schedule_id: manifest.reference_schedule_id,
+            source_definition_sha256: manifest.source_definition_sha256,
+            run_bounds: manifest.run_bounds, profile_domain: manifest.profile_domain,
+            missing_required_identity: manifest.missing_required_identity,
+            io_bytes, retained_profiles: RETAINED_RESOURCE_PROFILES, unknown_metrics,
+        },
+        observations,
+    })
+}
+
 #[cfg(test)]
 #[path = "reference_slice_tests.rs"]
 mod tests;

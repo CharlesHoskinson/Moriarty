@@ -1,0 +1,46 @@
+```json
+{
+  "delivery_coverage": [
+    {
+      "file": "bounded_sdk_compile.py",
+      "pages_fully_read": [
+        "01-01",
+        "01-02",
+        "01-03",
+        "01-04",
+        "01-05"
+      ],
+      "fully_read": true
+    },
+    {
+      "file": "test_config_source.py",
+      "pages_fully_read": [
+        "02-01",
+        "02-02"
+      ],
+      "fully_read": true
+    },
+    {
+      "file": "config.example.json",
+      "pages_fully_read": [
+        "03-01"
+      ],
+      "fully_read": true
+    }
+  ],
+  "withdrawn_prior_claims": [
+    "Withdraw R392 conditional test `test_cachedir_tag_and_git_pack_generated_entries_validate_before_consent_gate` and its negative-lookahead regex `^(?!bookkeeping name$|Git control outside checkout \\\\.git$).+`, which improperly treated an early unrelated `Refusal` ('unbound/null: config.bindings.config_inputs' at `no_null(c)` line 118) on raw `config.example.json` as a positive test outcome without reaching `expected_generated_files` validation at lines 193-201.",
+    "Withdraw R392 `note_on_validate_ordering`: `In bounded_sdk_compile.py:validate(c), if source_authoring_only / external_tier_consent checks precede the L178-184 expected_generated_files loop, bad_c['source_authoring_only']=False and bad_c['external_tier_consent']={'tier1':True,'tier2':True} (matching the fixture fields used in RegisteredA102Subject) are required to reach L178-184; if Root prefers placing the new method inside RegisteredA102Subject using its existing fixture builder, supplying the unclipped RegisteredA102Subject tail of test_config_source.py (clipped by <truncated 129580 bytes>) allows a 100% exact anchor there while keeping the 54-line test untouched.` Full reading of `bounded_sdk_compile.py` lines 115-202 establishes the exact sequential order of `validate(c)` and shows that `RegisteredA102Subject` had no `validate(c)` config builder."
+  ],
+  "edits": [
+    {
+      "path": "test_config_source.py",
+      "old": "                for root_dir,dirs,files in os.walk(source_home,topdown=False):\n                    for f in files:os.chmod(Path(root_dir)/f,0o600)\n                    for d in dirs:os.chmod(Path(root_dir)/d,0o700)\n                os.chmod(source_home,0o700)\n\nif __name__=='__main__':unittest.main()\n",
+      "new": "                for root_dir,dirs,files in os.walk(source_home,topdown=False):\n                    for f in files:os.chmod(Path(root_dir)/f,0o600)\n                    for d in dirs:os.chmod(Path(root_dir)/d,0o700)\n                os.chmod(source_home,0o700)\n\n    def test_validate_accepts_cachedir_tags_and_a01a1ea_pack_and_refuses_outside_paths(self):\n        c=json.loads((Path(__file__).parent/'config.example.json').read_text())\n        c['bindings']['config_inputs']={'path':'/control/config-inputs.json','sha256':'0'*64}\n        c['masks']=sorted(runner.REQUIRED_MASKS)\n        for v in c['limits'].values():\n            for k,val in list(v.items()):\n                if val is None:v[k]=1\n        c['cgroup']=dict(CgroupFixture().cg)\n        for idx,q in enumerate(c['quota_mounts'].values(),1):\n            q.update({'mount_id':idx,'device':f'0:{idx}','max_bytes':1024,'max_inodes':1024})\n        c['review_receipts']={k:{'path':f'/control/{k}.json','sha256':'1'*64} for k in ('security','nonsecurity','root','tier1')}\n        c['old_home_stat_manifest']={'path':'/control/old-home-stat.json','sha256':'2'*64}\n        c['registry_roots']=[{'archive':f'registry/cache/index.crates.io-1949cf8c6b5b557f/pkg-{i}.crate','source_relative':f'registry/src/index.crates.io-1949cf8c6b5b557f/pkg-{i}','package_checksum':'3'*64} for i in range(423)]\n        c['git_checkouts']=[\n            {'relative_root':'git/checkouts/midnight-ledger-b2f9c59d942dfdca/04c9c5d','commit':'04c9c5d9bcebb8d4427d8589fb54d58a55599c14','files':[{'relative':rel,'blob':blob,'mode':runner.GIT_SYMLINK_MODE} for commit,rel,blob in sorted(runner.GIT_SYMLINKS) if commit=='04c9c5d9bcebb8d4427d8589fb54d58a55599c14']},\n            {'relative_root':'git/checkouts/midnight-ledger-b2f9c59d942dfdca/a01a1ea','commit':'a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1','files':[{'relative':rel,'blob':blob,'mode':runner.GIT_SYMLINK_MODE} for commit,rel,blob in sorted(runner.GIT_SYMLINKS) if commit=='a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1']},\n        ]\n        c['includes']=[]\n        c['source_authoring_only']=False\n        c['external_tier_consent']={'tier1':True,'tier2':False}\n        c['total_wall_seconds']=3600\n        c['supervisor_cpu_seconds']=300\n        pack_idx='git/checkouts/midnight-ledger-b2f9c59d942dfdca/a01a1ea/.git/objects/pack/pack-716c872865e7b9c36de2fa39603283e492a408af.idx'\n        pack_pack='git/checkouts/midnight-ledger-b2f9c59d942dfdca/a01a1ea/.git/objects/pack/pack-716c872865e7b9c36de2fa39603283e492a408af.pack'\n        c['expected_generated_files']=[\n            {'relative':'.global-cache','kind':'cargo-lockfile'},\n            {'relative':'.package-cache','kind':'cargo-lockfile'},\n            {'relative':'git/CACHEDIR.TAG','kind':'cargo-lockfile'},\n            {'relative':pack_idx,'kind':'git-control'},\n            {'relative':pack_pack,'kind':'git-control'},\n            {'relative':'registry/CACHEDIR.TAG','kind':'cargo-lockfile'},\n            {'relative':'registry/src/index.crates.io-1949cf8c6b5b557f/adler2-2.0.1/.cargo-ok','kind':'cargo-ok'},\n        ]\n        self.assertIs(runner.validate(c),c)\n        for bad_lockfile in ('CACHEDIR.TAG','other/CACHEDIR.TAG','git/sub/CACHEDIR.TAG','registry/src/CACHEDIR.TAG',pack_idx):\n            bad=copy.deepcopy(c)\n            bad['expected_generated_files'].append({'relative':bad_lockfile,'kind':'cargo-lockfile'})\n            with self.subTest(bad_lockfile=bad_lockfile),self.assertRaisesRegex(runner.Refusal,r'\\Abookkeeping name\\Z'):\n                runner.validate(bad)\n        for bad_git_control in ('git/CACHEDIR.TAG','registry/CACHEDIR.TAG','git/db/midnight-ledger-b2f9c59d942dfdca/objects/pack/pack-716c872865e7b9c36de2fa39603283e492a408af.pack','git/checkouts/midnight-ledger-b2f9c59d942dfdca/a01a1ea/Cargo.toml','git/checkouts/midnight-ledger-b2f9c59d942dfdca/other/.git/HEAD'):\n            bad=copy.deepcopy(c)\n            bad['expected_generated_files'].append({'relative':bad_git_control,'kind':'git-control'})\n            with self.subTest(bad_git_control=bad_git_control),self.assertRaisesRegex(runner.Refusal,r'\\AGit control outside checkout \\.git\\Z'):\n                runner.validate(bad)\n\nif __name__=='__main__':unittest.main()\n"
+    }
+  ],
+  "test_rationale": "Starting from `config.example.json` (15,229B), the test populates every null/authoring placeholder required by `bounded_sdk_compile.py:validate(c)` (lines 115-202) without mocking any guard function: `bindings.config_inputs`, `masks` (`sorted(runner.REQUIRED_MASKS)`), positive `limits` values within phase ceilings, `cgroup` (`CgroupFixture().cg`), `quota_mounts` positive integers/devices, `review_receipts` (`security`, `nonsecurity`, `root`, `tier1` for `mode=='tier1'`), `old_home_stat_manifest`, 423 bound `registry_roots`, the 2 pinned `git_checkouts` (`04c9c5d9...` at `git/checkouts/midnight-ledger-b2f9c59d942dfdca/04c9c5d` and `a01a1ea0...` at `git/checkouts/midnight-ledger-b2f9c59d942dfdca/a01a1ea`) with their exact 16 `runner.GIT_SYMLINKS` rows, `includes=[]`, `source_authoring_only=False`, `external_tier_consent={'tier1':True,'tier2':False}`, and positive `total_wall_seconds`/`supervisor_cpu_seconds`. In the positive branch, `expected_generated_files` includes `.global-cache`, `.package-cache`, `git/CACHEDIR.TAG`, `registry/CACHEDIR.TAG` (`kind='cargo-lockfile'`), both `a01a1ea/.git/objects/pack/pack-716c872865e7b9c36de2fa39603283e492a408af.{idx,pack}` rows (`kind='git-control'`), and a `.cargo-ok` row, and `self.assertIs(runner.validate(c), c)` verifies that `validate(c)` completes through line 202 and returns `c`. In the negative branches, mutating only `expected_generated_files` on deep copies of `c` proves that unlisted `cargo-lockfile` paths (`CACHEDIR.TAG`, `other/CACHEDIR.TAG`, `git/sub/CACHEDIR.TAG`, `registry/src/CACHEDIR.TAG`, or a pack path) fail at line 198 with exact `Refusal('bookkeeping name')`, and `git-control` paths outside `<checkout>/.git/` (`git/CACHEDIR.TAG`, `registry/CACHEDIR.TAG`, `git/db/...`, checkout worktree `Cargo.toml`, or an unconfigured checkout root) fail at line 199 with exact `Refusal('Git control outside checkout .git')`.",
+  "gaps": []
+}
+```
+END-R393-PAGED-COMPLETE-VALIDATE-ACCEPTANCE-TEST-SOURCE
