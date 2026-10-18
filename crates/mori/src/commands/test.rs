@@ -127,7 +127,7 @@ mod report_tests {
     fn case(index: usize, padding: usize) -> Value {
         json!({
             "name": format!("case-{index:03}{HOSTILE}"),
-            "passed": index % 2 == 0,
+            "passed": index.is_multiple_of(2),
             "actual": {"Ok": {
                 "pad": "\u{202e}".repeat(padding),
                 "empty": [],

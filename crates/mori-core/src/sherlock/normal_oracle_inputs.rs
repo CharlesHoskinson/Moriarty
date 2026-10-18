@@ -4,8 +4,7 @@
 use super::*;
 use std::sync::Arc;
 
-#[path = "extra_oracle_programs.rs"]
-mod extra_oracle_programs;
+use super::extra_oracle_programs;
 
 pub(super) fn expr(expression: Expr) -> ExprRef {
     Arc::new(expression)

@@ -3,7 +3,9 @@
 //! sealed program and plan, the segment and its sites, the capture and event
 //! layouts and every financial frame term. It contains no compiler identity.
 use super::frame::SegmentLayout;
-use super::{STAGE_CONTEXT_FORMAT, STAGED_ABI_VERSION, STAGED_ARTIFACT_FORMAT, STAGED_RELATION_VERSION};
+use super::{
+    STAGE_CONTEXT_FORMAT, STAGED_ABI_VERSION, STAGED_ARTIFACT_FORMAT, STAGED_RELATION_VERSION,
+};
 use crate::signed_relation::{Projection, json};
 use crate::{
     BalanceDescriptor, EffectDescriptor, Error, LiabilityDescriptor, LiabilityIdentity,
@@ -42,7 +44,10 @@ pub(crate) fn stage_context_hash(
         .filter(|action| action.name == l.action_name)
         .ok_or_else(|| error("artifact", "Segment layout names no program action."))?;
     if program.semantics != SEMANTICS_2 {
-        return Err(error("artifact", "Staged context requires moriarty-core/2."));
+        return Err(error(
+            "artifact",
+            "Staged context requires moriarty-core/2.",
+        ));
     }
     if registry != liabilities::registry(program)?.as_slice() {
         return Err(error(

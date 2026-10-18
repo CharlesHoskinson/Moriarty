@@ -327,9 +327,11 @@ fn exact_bundle(out: &Path, artifact: &Artifact) {
     assert_ne!(bytes.last(), Some(&b'\n'));
     let typed: Artifact = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(bytes, serde_json::to_vec_pretty(&typed).unwrap());
+    let projection = std::fs::read(out.join("source-projection.json")).unwrap();
+    serde_json::from_slice::<Value>(&projection).unwrap();
     assert_eq!(
         std::fs::read_dir(out).unwrap().count(),
-        artifact.circuits.len() + 1
+        artifact.circuits.len() + 2
     );
     for (i, c) in artifact.circuits.iter().enumerate() {
         assert_eq!(
@@ -443,14 +445,14 @@ fn compile_target_limits_are_checked_at_exact_envelope_and_instruction_boundarie
             .artifact_bytes;
         for cap in estimate.saturating_sub(32)..=estimate + 32 {
             t.max_artifact_bytes = cap;
-            if let Ok(a) = mori_backend::compile(&p, &t) {
-                if a.resources.artifact_bytes == cap {
-                    let mut below = t.clone();
-                    below.max_artifact_bytes -= 1;
-                    if mori_backend::compile(&p, &below).is_err() {
-                        boundary = Some((t.clone(), a));
-                        break 'anchors;
-                    }
+            if let Ok(a) = mori_backend::compile(&p, &t)
+                && a.resources.artifact_bytes == cap
+            {
+                let mut below = t.clone();
+                below.max_artifact_bytes -= 1;
+                if mori_backend::compile(&p, &below).is_err() {
+                    boundary = Some((t.clone(), a));
+                    break 'anchors;
                 }
             }
         }
@@ -598,9 +600,15 @@ fn compile_file_size_fault(first_complete: bool) {
                 "failed circuit must never be a partial final leaf"
             );
         }
+        // The projection is published whole after every circuit, if at all.
+        let projection = out.join("source-projection.json");
+        let sidecar = projection.exists();
+        if sidecar {
+            serde_json::from_slice::<Value>(&std::fs::read(&projection).unwrap()).unwrap();
+        }
         assert_eq!(
             std::fs::read_dir(out).unwrap().count(),
-            usize::from(first_complete),
+            usize::from(first_complete) + usize::from(sidecar),
             "normal-owned staging must be cleaned"
         );
     }
@@ -638,7 +646,7 @@ fn check_and_compile_preserve_unreadable_and_unwritable_path_errors() {
     let f = Files::new();
     f.setup(CORE, &Target::ledger9("local", "permissions"));
     let source = f.path("source.mori");
-    std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0)).unwrap();
+    std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0o000)).unwrap();
     let o = f.check("source.mori", &["--json"]);
     std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0o600)).unwrap();
     refused(&o);

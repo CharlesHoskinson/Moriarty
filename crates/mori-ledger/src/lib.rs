@@ -18,6 +18,11 @@ pub mod relation;
 pub mod signed;
 pub mod static_compile;
 
+// Shared fixtures for the unit tests, mounted once.
+#[cfg(test)]
+#[path = "../tests/support/mod.rs"]
+mod test_support;
+
 /// Metadata for a refused already-discovered local deployment degree.
 /// This carries no parameter bytes, paths, keys or private inputs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,8 +74,9 @@ pub enum KeyExportFailureReason {
 pub struct Error {
     pub layer: &'static str,
     pub code: &'static str,
-    degree_refusal: Option<DegreeRefusalDiagnostic>,
-    key_export: Option<KeyExportDiagnostic>,
+    // Boxed so `Result<T, Error>` stays small on the common path.
+    degree_refusal: Option<Box<DegreeRefusalDiagnostic>>,
+    key_export: Option<Box<KeyExportDiagnostic>>,
 }
 impl Error {
     pub fn new(layer: &'static str, code: &'static str) -> Self {
@@ -85,20 +91,20 @@ impl Error {
         Self::new("input", code)
     }
     pub fn with_degree_refusal(mut self, diagnostic: DegreeRefusalDiagnostic) -> Self {
-        self.degree_refusal = Some(diagnostic);
+        self.degree_refusal = Some(Box::new(diagnostic));
         self
     }
     /// None means no discovered-degree diagnostic was attached, even at degree 0.
     pub fn degree_refusal(&self) -> Option<&DegreeRefusalDiagnostic> {
-        self.degree_refusal.as_ref()
+        self.degree_refusal.as_deref()
     }
     pub fn with_key_export(mut self, diagnostic: KeyExportDiagnostic) -> Self {
-        self.key_export = Some(diagnostic);
+        self.key_export = Some(Box::new(diagnostic));
         self
     }
     /// None means no export diagnostic was attached; degree/count zero are values.
     pub fn key_export(&self) -> Option<&KeyExportDiagnostic> {
-        self.key_export.as_ref()
+        self.key_export.as_deref()
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;

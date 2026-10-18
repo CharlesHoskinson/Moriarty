@@ -291,9 +291,9 @@ pub(crate) async fn derive_all(
         // does not contain those scans; keygen_vk/keygen each repeat SDK k work.
         let degree = artifact.ir.k();
         check_degree(&artifact.manifest.action, degree, limits.max_degree, None)?;
-        if !params.contains_key(&degree) {
+        if let std::collections::btree_map::Entry::Vacant(e) = params.entry(degree) {
             let snapshot = load_new_parameters(params_dir, degree, limits, &mut parameter_total)?;
-            params.insert(degree, snapshot);
+            e.insert(snapshot);
         }
         let snapshot = &params[&degree];
         check_degree(
@@ -753,8 +753,7 @@ pub fn export_local_deployment(
 }
 
 #[cfg(test)]
-#[path = "../tests/support/mod.rs"]
-mod ordinary_support;
+use crate::test_support as ordinary_support;
 #[cfg(test)]
 mod ordinary_tests {
     use super::*;

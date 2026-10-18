@@ -1,6 +1,10 @@
 # Rust toolchain guidelines
 
 Rules for the Rust implementation of the Moriarty toolchain in `crates/`.
+Current checkout `AGENTS.md`, the product contract and explicit user steering
+control profile scope, authorization and execution boundaries. Routine repairs
+within existing authorization need no additional approval. Record intentional
+differences; these guidelines do not grant compiler, SDK or native execution.
 
 ## Target language
 
@@ -19,7 +23,7 @@ below. Error codes, messages and spans are our own.
 
 The TypeScript frontend is the reference for what the language accepts and
 what values mean, not for incidental implementation choices. Every deliberate
-difference is listed here and agreed before it is made.
+difference is listed here under the applicable user authorization.
 
 - **Comments do not count toward the 8,192-token bound.** The bound limits
   analysis, and comments are not analyzed. The TypeScript lexer counts them, so
@@ -44,6 +48,34 @@ difference is listed here and agreed before it is made.
   not part of this toolchain. They are excluded from the workspace so they still
   build standalone; the beta CLI tells users to build `experiments/midnight-crypto`
   with `--manifest-path`, which fails if the workspace claims it.
+- Every Rust file builds and tests through Cargo. No harness compiles a module
+  with `rustc` directly, and no `#[path]` mounts a file from another directory
+  or loads one file as several modules; share code through a crate or a module
+  and `use` it.
+- Code only tests use lives in test modules. Unadopted prototypes go in
+  `experiments/` or behind a feature, not in `src/` gated by `#[cfg(test)]`.
+- Never hash source text to identify an ABI, deployment, key or build. Any
+  reformat changes it. Hash the produced artifact or a declared version.
+- No absolute paths. Locate files from `env!("CARGO_MANIFEST_DIR")`.
+
+## Checks
+
+- Document and run these local checks only within their inspected scope and
+  existing execution authority:
+
+  ```
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets --locked -- -D warnings
+  cargo test --workspace --locked
+  ```
+- The optional `rust` workflow is manual only. Ordinary work does not dispatch
+  hosted CI. Source-only handoffs list unrun checks and blocked acceptance;
+  broad Rust suites do not override the zero-native boundary.
+- Fix a lint rather than silence it. An `#[allow(clippy::...)]` needs a comment
+  saying why.
+- Comments explain the code. Review status, authorship, model names, audit IDs
+  and notes like "not yet run" go in commit messages, pull requests or
+  `docs/audits/`, not in source.
 
 ## Front end
 
@@ -174,7 +206,8 @@ difference is listed here and agreed before it is made.
 - The `fancy` feature of `mori-diagnostics` enables miette's
   `fancy-no-backtrace`. The `mori` CLI turns it on; library crates turn it on
   only in `[dev-dependencies]`.
-- Use `thiserror` for errors that never point at source, such as I/O.
+- Use `thiserror` for errors that never point at source, such as I/O. No
+  `anyhow` in library crates.
 
 ## Testing
 

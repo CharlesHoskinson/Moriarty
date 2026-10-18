@@ -637,6 +637,13 @@ pub(crate) fn compile_source_static_roles(
     )
     .map(|(ir, groups, inputs, _, emissions)| (ir, groups, inputs, emissions))
 }
+type CompiledAction = (
+    IrSource,
+    Vec<Group>,
+    usize,
+    Vec<crate::signed::WireDescriptor>,
+    Vec<StatementEmission>,
+);
 // Only the typed entry points above call this shared emitter. It grants no admission.
 fn compile_inner(
     p: &Program,
@@ -644,13 +651,7 @@ fn compile_inner(
     action: &str,
     signed: Option<&crate::signed::SignedStaticBindings>,
     context: Option<[u128; 2]>,
-) -> Result<(
-    IrSource,
-    Vec<Group>,
-    usize,
-    Vec<crate::signed::WireDescriptor>,
-    Vec<StatementEmission>,
-)> {
+) -> Result<CompiledAction> {
     let a: &Action = p
         .actions
         .iter()

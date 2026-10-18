@@ -31,6 +31,8 @@ fn fixture(name: &str, scheme: &str) -> Fixture {
         prepared: serde_json::from_value(sig["prepared"].clone()).unwrap(),
     }
 }
+// The refusal carries its charged cost report by design.
+#[allow(clippy::result_large_err)]
 fn run(f: &Fixture, cap: u128, at: u128) -> Result<MeteredExecution, MeteredExecutionError> {
     verify_and_simulate_metered(
         &f.program,

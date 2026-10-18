@@ -217,7 +217,8 @@ fn rehashed_early_and_late_mutations_report_first_semantic_field() {
 fn ordered_steps_effects_finalpost_and_untouched_presentzero_refuse() {
     let c = Payment::new();
     let r = c.record();
-    let cases: [(fn(&mut Value), Option<u16>, &str); 8] = [
+    type Case = (fn(&mut Value), Option<u16>, &'static str);
+    let cases: [Case; 8] = [
         (
             |v| {
                 v["body"]["execution"]["steps"]

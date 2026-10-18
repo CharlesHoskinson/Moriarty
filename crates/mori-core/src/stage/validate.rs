@@ -300,11 +300,12 @@ pub(crate) fn plan_invariants(program: &Program, plan: &StagePlan) -> Result<(),
     }
     let state_names: BTreeSet<_> = program.states.iter().map(|s| s.name.as_str()).collect();
     for (action, ap) in program.actions.iter().zip(&plan.actions) {
-        if ap.action != action.name || usize::from(ap.statement_count) != action.statements.len()
-        {
+        if ap.action != action.name || usize::from(ap.statement_count) != action.statements.len() {
             return Err(invariant("action identity"));
         }
-        if !ap.segment_cost.is_empty() || !ap.committed_before.is_empty() || ap.plan_total != UInt(0)
+        if !ap.segment_cost.is_empty()
+            || !ap.committed_before.is_empty()
+            || ap.plan_total != UInt(0)
         {
             return Err(invariant("costs filled before costing"));
         }
@@ -398,13 +399,15 @@ pub(crate) fn plan_invariants(program: &Program, plan: &StagePlan) -> Result<(),
                     || !seen.insert(slot.name.as_str())
                     || (slot.origin != Origin::Input && slot.ordinal >= site.ordinal)
                 {
-                    return Err(invariant("capture names a state, repeats or follows its site"));
+                    return Err(invariant(
+                        "capture names a state, repeats or follows its site",
+                    ));
                 }
             }
-            if let Some(p) = previous {
-                if !site.captures.starts_with(&p.captures) {
-                    return Err(invariant("captures are not prefix-monotone"));
-                }
+            if let Some(p) = previous
+                && !site.captures.starts_with(&p.captures)
+            {
+                return Err(invariant("captures are not prefix-monotone"));
             }
             previous = Some(site);
         }
