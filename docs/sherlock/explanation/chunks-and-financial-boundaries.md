@@ -15,3 +15,26 @@ The existing Core/2 load/start/resume behavior is the starting point for the fin
 These requirements matter even when the final balance happens to match. A refund can conceal gross debit, fees can change net receipts, and an omitted pending duty can change the next segment. Complete prefix observations explain how the outcome arose. The independent proposed financial oracle currently omits the full PassT result; a comparison must remain B/F-only until that result has its own expectation.
 
 See [image/layout boundaries](../reference/image-layout.md), [bridge/ledger consumers](../reference/bridges-ledger.md) and [complete-observation comparison](../how-to/compare-complete-observations.md). [Observation boundaries](observation-boundaries.md) explains the narrower in-memory grouping API.
+
+## The current Core2 observation boundary
+
+The public [financial observation adapter](../reference/financial-observation-adapter.md)
+now retains the actual Core/2 program, captured invocation and complete returned
+stage result, with both frames, ordered steps/effects, full state, duties and
+logical work. Its account aggregates describe one published segment. A false
+await has no segment; a successful segment with no effects remains present.
+Neither aggregate equality nor a technical chunk creates a financial commit.
+
+The [captured positive result](../../results/sherlock-financial-observation-20261018/README.md)
+observes the first paid prefix, an unchanged false-await continuation and a true
+resume that completes. This is scoped Core/2 producer/adapter evidence. A
+Sherlock financial state/step producer and its relationship to the adapter remain
+unobserved, so the general UIREQ-017 clause stays open; UIREQ-018 lowering and
+UIREQ-019 later local failure also remain open. These observations do not fill
+the separate PassT or native/ledger evidence gaps above.
+
+`StageRejection` returns error and work counters without a discarded tentative
+snapshot/effect carrier or replacement continuation. The adapter preserves that
+absence. A caller's retained pre-call continuation remains input; it cannot be
+presented as a returned rollback result. The [how-to](../how-to/observe-stage-financial-result.md)
+shows capture at the existing stage call sites.
