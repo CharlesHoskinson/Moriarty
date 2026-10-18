@@ -1,0 +1,5 @@
+The compiler publication unit tests constructed their input by running the compiler. This replaces that helper with an independently frozen byte fixture decoded through the real Artifact constructor, preserving production code and the three existing refusal/order test bodies. A fourth test checks exact circuit, source-projection and manifest bytes.
+
+The fixture contains opaque transport text, not compiled ZKIR or financial/ledger evidence. The raw manifest and UTF-8 leaf expectations are documented independently under crates/fixtures/publication.
+
+Validation: exact source/fixture comparisons, JSON parsing and Git whitespace checks passed. Fresh AGY ordinary and canonical Opus4.8 source reviews approve this source-only increment; their read limits and coverage findings are retained. Cargo/Rust compilation, actual decoding and all four publication tests remain UNRUN under the current SDK-linked execution boundary. Projection-collision/marker-order refusal coverage and full compiler/target validation remain open. No EARS/product acceptance is claimed.

@@ -1,0 +1,171 @@
+{
+  "format":"doctorwatson-independent-financial-work-expectations/1",
+  "status":"specified-only; actual consumers UNRUN",
+  "language":"moriarty/1",
+  "semantics":"moriarty-core/1",
+  "logical_cost_profile":"moriarty-reference-logical-cost/1",
+  "units":"atomic integral units; never add amounts across distinct assets",
+  "prefix_encoding":{
+    "rule":"Each row is the entire observable financial snapshot after that statement. Balance/state/duty columns are complete in the declared order. Asset identities and duty tuples are exactly those in scenarios and mori-tests.json. Every listed column is required; there are no wildcards. Effects are zero-based indices into that case's complete expected.effects array in mori-tests.json; empty means no effect. Inputs and let bindings are not Snapshot.state.",
+    "presence":"null means absent; a decimal string means present, including present-zero. No other balances or duties exist in these supplied scenarios.",
+    "statement_index":"zero-based source action ordinal; no ExprId or native statement identity is asserted"
+  },
+  "invoice":{
+    "source":"installment-invoice.mori",
+    "action":"collect",
+    "balance_columns":["observer/CASH","payer/CASH","reserve/CASH","seller/CASH","treasury/CASH"],
+    "state_columns":["paid:UInt","dueDay:UInt","installments:UInt","marker:UInt"],
+    "duty_columns":["invoice:CASH:payer:seller","warranty:CASH:payer:auditor"],
+    "first":{
+      "scenario":"invoice-first.scenario.json",
+      "input_amount":"47",
+      "input_atDay":"30",
+      "pre":{"balances":["23","200","19","11","5"],"state":["0","30","0","77"],"duties":["127","9"]},
+      "prefixes":[
+        {"index":0,"balances":["23","200","19","11","5"],"state":["0","30","0","77"],"duties":["127","9"],"effects":[],"assertion":true},
+        {"index":1,"balances":["23","200","19","11","5"],"state":["0","30","0","77"],"duties":["127","9"],"effects":[],"assertion":true},
+        {"index":2,"balances":["23","200","19","11","5"],"state":["0","30","0","77"],"duties":["127","9"],"effects":[],"assertion":true},
+        {"index":3,"balances":["23","200","19","11","5"],"state":["0","30","0","77"],"duties":["127","9"],"effects":[],"captured_opening":"127"},
+        {"index":4,"balances":["23","153","19","58","5"],"state":["0","30","0","77"],"duties":["127","9"],"effects":[0]},
+        {"index":5,"balances":["23","150","19","58","8"],"state":["0","30","0","77"],"duties":["127","9"],"effects":[1]},
+        {"index":6,"balances":["23","150","19","58","8"],"state":["0","30","0","77"],"duties":["80","9"],"effects":[2]},
+        {"index":7,"balances":["23","150","19","58","8"],"state":["47","30","0","77"],"duties":["80","9"],"effects":[3]},
+        {"index":8,"balances":["23","150","19","58","8"],"state":["47","60","0","77"],"duties":["80","9"],"effects":[4]},
+        {"index":9,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[5]},
+        {"index":10,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[],"assertion":true},
+        {"index":11,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[6]}
+      ],
+      "finance":{
+        "asset":"CASH",
+        "payer_gross_debit":"50","payer_fee":"3","payer_net_balance_change":"-50",
+        "seller_gross_receipts":"47","seller_fees_paid":"0","seller_net_receipts":"47",
+        "treasury_net_receipts":"3","refunds":"0","mint":"0","burn":"0",
+        "balance_sum_opening":"258","balance_sum_closing":"258",
+        "invoice":{"opening":"127","accrued":"0","discharged":"47","closing":"80","closing_present":true},
+        "warranty":{"opening":"9","accrued":"0","discharged":"0","closing":"9","closing_present":true},
+        "reserve_balance":"19","rounding_dust":"0","unpaid_residual_duties":{"invoice":"80","warranty":"9"}
+      }
+    },
+    "final":{
+      "scenario":"invoice-final.scenario.json",
+      "input_amount":"80","input_atDay":"60",
+      "pre":{"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"]},
+      "prefixes":[
+        {"index":0,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[],"assertion":true},
+        {"index":1,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[],"assertion":true},
+        {"index":2,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[],"assertion":true},
+        {"index":3,"balances":["23","150","19","58","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[],"captured_opening":"80"},
+        {"index":4,"balances":["23","70","19","138","8"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[0]},
+        {"index":5,"balances":["23","67","19","138","11"],"state":["47","60","1","77"],"duties":["80","9"],"effects":[1]},
+        {"index":6,"balances":["23","67","19","138","11"],"state":["47","60","1","77"],"duties":["0","9"],"effects":[2]},
+        {"index":7,"balances":["23","67","19","138","11"],"state":["127","60","1","77"],"duties":["0","9"],"effects":[3]},
+        {"index":8,"balances":["23","67","19","138","11"],"state":["127","90","1","77"],"duties":["0","9"],"effects":[4]},
+        {"index":9,"balances":["23","67","19","138","11"],"state":["127","90","2","77"],"duties":["0","9"],"effects":[5]},
+        {"index":10,"balances":["23","67","19","138","11"],"state":["127","90","2","77"],"duties":["0","9"],"effects":[],"assertion":true},
+        {"index":11,"balances":["23","67","19","138","11"],"state":["127","90","2","77"],"duties":["0","9"],"effects":[6]}
+      ],
+      "finance":{
+        "asset":"CASH","payer_gross_debit":"83","payer_fee":"3","payer_net_balance_change":"-83",
+        "seller_gross_receipts":"80","seller_fees_paid":"0","seller_net_receipts":"80","treasury_net_receipts":"3",
+        "refunds":"0","mint":"0","burn":"0","balance_sum_opening":"258","balance_sum_closing":"258",
+        "invoice":{"opening":"80","accrued":"0","discharged":"80","closing":"0","closing_present":true},
+        "warranty":{"opening":"9","accrued":"0","discharged":"0","closing":"9","closing_present":true},
+        "reserve_balance":"19","rounding_dust":"0","unpaid_residual_duties":{"warranty":"9"}
+      }
+    },
+    "sequence":{
+      "required_link":"First case's complete expected post equals final case's complete supplied pre; inputs are replaced by the final case's inputs. This is a comparison obligation, not an authenticated predecessor proof.",
+      "gross_debit":"133","fees":"6","seller_net_receipts":"127","treasury_net_receipts":"6",
+      "invoice_opening":"127","invoice_accrued":"0","invoice_discharged":"127","invoice_closing":"0","invoice_closing_present":true,
+      "warranty_opening":"9","warranty_closing":"9","paid_closing":"127","installments_closing":"2","dueDay_closing":"90",
+      "logical_units":"84","completed_source_statements":"24"
+    },
+    "work":{
+      "per_collect_statements":[
+        {"index":0,"kind":"Requires","expression_nodes":"3","units":"4","cumulative":"4"},
+        {"index":1,"kind":"Requires","expression_nodes":"3","units":"4","cumulative":"8"},
+        {"index":2,"kind":"Requires","expression_nodes":"5","units":"6","cumulative":"14"},
+        {"index":3,"kind":"Let","expression_nodes":"1","units":"2","cumulative":"16"},
+        {"index":4,"kind":"Transfer","expression_nodes":"1","units":"2","cumulative":"18"},
+        {"index":5,"kind":"Fee","expression_nodes":"1","units":"2","cumulative":"20"},
+        {"index":6,"kind":"Discharge","expression_nodes":"1","units":"2","cumulative":"22"},
+        {"index":7,"kind":"Next","expression_nodes":"3","units":"4","cumulative":"26"},
+        {"index":8,"kind":"Next","expression_nodes":"3","units":"4","cumulative":"30"},
+        {"index":9,"kind":"Next","expression_nodes":"3","units":"4","cumulative":"34"},
+        {"index":10,"kind":"Ensures","expression_nodes":"5","units":"6","cumulative":"40"},
+        {"index":11,"kind":"Emit","expression_nodes":"1","units":"2","cumulative":"42"}
+      ],
+      "per_call_units":"42","metered_call_expectation":{"profile":"moriarty-reference-logical-cost/1","cap":"42","used":"42"},"completed_source_statements":"12","register_units":"4","register_status":"not part of chosen two-call sequence; unrun"
+    }
+  },
+  "reserve":{
+    "source":"conditional-reserve.mori","action":"allocate","scenario":"reserve-approved.scenario.json",
+    "balance_columns":["auditor/BOND","observer/BOND","observer/CASH","reserve/BOND","reserve/CASH","supplier/CASH","treasury/CASH"],
+    "state_columns":["allocated:UInt","closed:Bool","marker:UInt"],
+    "duty_columns":["allocation:CASH:reserve:supplier","bond:BOND:reserve:auditor","emergency:CASH:reserve:emergency"],
+    "pre":{"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":[null,"10","2"]},
+    "prefixes":[
+      {"index":0,"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":[null,"10","2"],"effects":[],"assertion":true},
+      {"index":1,"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":[null,"10","2"],"effects":[],"assertion":true},
+      {"index":2,"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":[null,"10","2"],"effects":[],"assertion":true},
+      {"index":3,"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":[null,"10","2"],"effects":[],"captured_residual":"5"},
+      {"index":4,"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":[null,"10","2"],"effects":[],"assertion":true},
+      {"index":5,"balances":["2","7","11","20","57","5","1"],"state":["0",false,"77"],"duties":["50","10","2"],"effects":[0]},
+      {"index":6,"balances":["2","7","11","20","7","55","1"],"state":["0",false,"77"],"duties":["50","10","2"],"effects":[1]},
+      {"index":7,"balances":["2","7","11","20","5","55","3"],"state":["0",false,"77"],"duties":["50","10","2"],"effects":[2]},
+      {"index":8,"balances":["2","7","11","20","5","55","3"],"state":["0",false,"77"],"duties":["0","10","2"],"effects":[3]},
+      {"index":9,"balances":["9","7","11","13","5","55","3"],"state":["0",false,"77"],"duties":["0","10","2"],"effects":[4]},
+      {"index":10,"balances":["9","7","11","13","5","55","3"],"state":["0",false,"77"],"duties":["0","3","2"],"effects":[5]},
+      {"index":11,"balances":["9","7","11","13","5","55","3"],"state":["50",false,"77"],"duties":["0","3","2"],"effects":[6]},
+      {"index":12,"balances":["9","7","11","13","5","55","3"],"state":["50",true,"77"],"duties":["0","3","2"],"effects":[7]},
+      {"index":13,"balances":["9","7","11","13","5","55","3"],"state":["50",true,"77"],"duties":["0","3","2"],"effects":[],"assertion":true},
+      {"index":14,"balances":["9","7","11","13","5","55","3"],"state":["50",true,"77"],"duties":["0","3","2"],"effects":[8]}
+    ],
+    "finance":{
+      "CASH":{"reserve_gross_debit":"52","reserve_fees_paid":"2","reserve_net_balance_change":"-52","supplier_gross_receipts":"50","supplier_fees_paid":"0","supplier_net_receipts":"50","treasury_net_receipts":"2","refunds":"0","mint":"0","burn":"0","balance_sum_opening":"74","balance_sum_closing":"74","reserve_closing":"5","protected_emergency_duty":"2","reserve_less_emergency_duty":"3","rounding_dust":"0"},
+      "BOND":{"reserve_gross_debit":"7","reserve_fees_paid":"0","reserve_net_balance_change":"-7","auditor_gross_receipts":"7","auditor_fees_paid":"0","auditor_net_receipts":"7","refunds":"0","mint":"0","burn":"0","balance_sum_opening":"29","balance_sum_closing":"29","reserve_closing":"13","rounding_dust":"0"},
+      "allocation":{"opening_present":false,"opening":"0","accrued":"50","discharged":"50","closing":"0","closing_present":true},
+      "bond":{"opening_present":true,"opening":"10","accrued":"0","discharged":"7","closing":"3","closing_present":true},
+      "emergency":{"opening_present":true,"opening":"2","accrued":"0","discharged":"0","closing":"2","closing_present":true},
+      "unpaid_residual_duties":{"bond/BOND":"3","emergency/CASH":"2"},
+      "dust_note":"CASH5 is retained reserve after transfer50 AND fee2, not rounding dust. CASH2 remains owed under emergency; CASH3 is the remaining reserve less that duty. BOND amounts cannot offset a CASH duty. No reserve balance is automatically pledged by these source statements."
+    },
+    "work":{
+      "statements":[
+        {"index":0,"kind":"Requires","expression_nodes":"4","units":"5","cumulative":"5"},
+        {"index":1,"kind":"Requires","expression_nodes":"3","units":"4","cumulative":"9"},
+        {"index":2,"kind":"Requires","expression_nodes":"3","units":"4","cumulative":"13"},
+        {"index":3,"kind":"Let","expression_nodes":"5","units":"6","cumulative":"19"},
+        {"index":4,"kind":"Requires","expression_nodes":"3","units":"4","cumulative":"23"},
+        {"index":5,"kind":"Liability","expression_nodes":"1","units":"2","cumulative":"25"},
+        {"index":6,"kind":"Transfer","expression_nodes":"1","units":"2","cumulative":"27"},
+        {"index":7,"kind":"Fee","expression_nodes":"1","units":"2","cumulative":"29"},
+        {"index":8,"kind":"Discharge","expression_nodes":"1","units":"2","cumulative":"31"},
+        {"index":9,"kind":"Transfer","expression_nodes":"1","units":"2","cumulative":"33"},
+        {"index":10,"kind":"Discharge","expression_nodes":"1","units":"2","cumulative":"35"},
+        {"index":11,"kind":"Next","expression_nodes":"1","units":"2","cumulative":"37"},
+        {"index":12,"kind":"Next","expression_nodes":"1","units":"2","cumulative":"39"},
+        {"index":13,"kind":"Ensures","expression_nodes":"3","units":"4","cumulative":"43"},
+        {"index":14,"kind":"Emit","expression_nodes":"1","units":"2","cumulative":"45"}
+      ],
+      "per_call_units":"45","metered_call_expectation":{"profile":"moriarty-reference-logical-cost/1","cap":"45","used":"45"},"completed_source_statements":"15","register_units":"6","register_status":"not executed; allocation is absent in the chosen input rather than present-zero"
+    }
+  },
+  "inapplicable_financial_fields":{
+    "interest_rate":"none in proposed contracts; no interest accrues",
+    "day_count_convention":"none; atDay/dueDay are supplied integral logical days, with a fixed increment30",
+    "amortization_allocation":"no principal/accrued-interest split; invoice is an unstructured nominal residual duty",
+    "exchange_rate":"none; no asset conversion",
+    "rounding_rule":"exact integer addition/subtraction; no division or fractional conversion",
+    "collateral_and_chain_fee":"not supplied; unknown outside local reference envelope, never assumed zero"
+  },
+  "unresolved_fields":{
+    "program_hash_and_canonical_IR":"not independently computed; no parser or implementation hash imported",
+    "ExprId_arena_indices_and_Step.statement_expression_ids":"not specified by available user-facing normative grammar; must compare semantic expressions or add an independently agreed canonical encoding before byte-exact full Execution matching",
+    "Step.value_Option_encoding":"complete financial snapshots/effects and assertion results are specified, but per-kind Some/None ABI convention is not derived from normative prose",
+    "compiled_circuit_statement_and_ABI_ids":"actual compiler unrun; target/anchor/authorization and exact relation slots not selected or security-qualified",
+    "DUST_service_external_costs_wall_time_allocations_native_rows_k_proof_size_tx_size":"unmeasured; logical schedule excludes these",
+    "authenticated_predecessor_history_and_time":"not supplied by Scenario or a second hand-authored scenario",
+    "Core2_continuations_and_composition":"no await/join/split/migration/private or recursive clause is erased or represented by host logic; these remain outside these Core1 inputs and unimplemented or separately unqualified in the required full language pipeline"
+  }
+}
