@@ -33,7 +33,11 @@ pub(super) struct HostImageUsage {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum HostLimitKind { Rows, Cells, NameBytes }
+pub(super) enum HostLimitKind {
+    Rows,
+    Cells,
+    NameBytes,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct HostEncodingRefusal {
@@ -59,41 +63,75 @@ struct ControlId(usize);
 struct FunctionId(usize);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Slice { start: usize, len: usize }
+struct Slice {
+    start: usize,
+    len: usize,
+}
 
 impl Slice {
     const EMPTY: Self = Self { start: 0, len: 0 };
-    fn get<T>(self, table: &[T]) -> &[T] { &table[self.start..self.start + self.len] }
+    fn get<T>(self, table: &[T]) -> &[T] {
+        &table[self.start..self.start + self.len]
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ExprPayload {
-    Literal(ValueId), Var(Name), Let(Name), Binary(BinaryOp), Unary(UnaryOp),
-    If, Call(Name), Match(Slice),
+    Literal(ValueId),
+    Var(Name),
+    Let(Name),
+    Binary(BinaryOp),
+    Unary(UnaryOp),
+    If,
+    Call(Name),
+    Match(Slice),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct ExprRow { payload: ExprPayload, children: Slice }
+struct ExprRow {
+    payload: ExprPayload,
+    children: Slice,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ValuePayload { UInt(u128), Bool(bool), List, TreeLeaf(u128), TreeBranch }
+enum ValuePayload {
+    UInt(u128),
+    Bool(bool),
+    List,
+    TreeLeaf(u128),
+    TreeBranch,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct ValueRow { payload: ValuePayload, fields: Slice }
+struct ValueRow {
+    payload: ValuePayload,
+    fields: Slice,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct ArmRow { pattern: Pattern, body: ExprId }
+struct ArmRow {
+    pattern: Pattern,
+    body: ExprId,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct FunctionRow {
-    name: Name, parameters: Slice, return_type: Type, body: ExprId,
+    name: Name,
+    parameters: Slice,
+    return_type: Type,
+    body: ExprId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct EnvironmentRow { bindings: Slice }
+struct EnvironmentRow {
+    bindings: Slice,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct BindingRow { name: Name, value: ValueId }
+struct BindingRow {
+    name: Name,
+    value: ValueId,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum FrameRow {
@@ -110,19 +148,31 @@ enum FrameRow {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ControlRow {
-    Eval(ExprId), Return(ValueId), Push(FrameId, ControlId, EnvironmentId),
-    Invoke(Name, Slice), Enter(Option<FunctionId>, Slice),
+    Eval(ExprId),
+    Return(ValueId),
+    Push(FrameId, ControlId, EnvironmentId),
+    Invoke(Name, Slice),
+    Enter(Option<FunctionId>, Slice),
     Bound(Option<EnvironmentId>, Type, ExprId),
     Cases(ValueId, Slice, EnvironmentId),
     CaseResult(Option<EnvironmentId>, ValueId, ExprId, Slice, EnvironmentId),
-    PrimitiveResult(Result<ValueId, u8>), Error(u8),
+    PrimitiveResult(Result<ValueId, u8>),
+    Error(u8),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum OutcomeRow { Pending, Done(ValueId), Rejected(u8), Exhausted }
+enum OutcomeRow {
+    Pending,
+    Done(ValueId),
+    Rejected(u8),
+    Exhausted,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct ProgramRoots { entry: ExprId, functions: Slice }
+struct ProgramRoots {
+    entry: ExprId,
+    functions: Slice,
+}
 
 /// Only a host proposal. Row fields are private; no state importer, public
 /// consumer or claimed A4 decodeCanonical/decodeStep/project API is supplied.
@@ -152,29 +202,57 @@ pub(super) struct MachineImageDraft {
 }
 
 impl MachineImageDraft {
-    pub(super) fn usage(&self) -> HostImageUsage { self.usage }
-    pub(super) fn limits(&self) -> HostImageLimits { self.limits }
+    pub(super) fn usage(&self) -> HostImageUsage {
+        self.usage
+    }
+    pub(super) fn limits(&self) -> HostImageLimits {
+        self.limits
+    }
 }
 
 /// Partial representation of finite typed snapshots; no semantic validity or
 /// budget-invariant check is added. The input is borrowed and is never stepped.
 /// Each persistent table row/cell/name copy is accounted before insertion.
-pub(super) fn encode_snapshot(snapshot: &Snapshot, limits: HostImageLimits)
-    -> EncodingResult<MachineImageDraft>
-{
-    let mut encoder = Encoder { image: MachineImageDraft {
-        limits, usage: HostImageUsage::default(),
-        program: ProgramRoots { entry: ExprId(0), functions: Slice::EMPTY },
-        expressions: vec![], expr_children: vec![], arms: vec![], functions: vec![],
-        parameters: vec![], values: vec![], value_ids: vec![], environments: vec![],
-        bindings: vec![], frames: vec![], frame_ids: vec![], controls: vec![],
-        control: None, environment: EnvironmentId(0), outcome: OutcomeRow::Pending,
-        stack_limit: snapshot.stack_limit, remaining_fuel: snapshot.remaining_fuel,
-        initial_fuel: snapshot.initial_fuel,
-    }};
+pub(super) fn encode_snapshot(
+    snapshot: &Snapshot,
+    limits: HostImageLimits,
+) -> EncodingResult<MachineImageDraft> {
+    let mut encoder = Encoder {
+        image: MachineImageDraft {
+            limits,
+            usage: HostImageUsage::default(),
+            program: ProgramRoots {
+                entry: ExprId(0),
+                functions: Slice::EMPTY,
+            },
+            expressions: vec![],
+            expr_children: vec![],
+            arms: vec![],
+            functions: vec![],
+            parameters: vec![],
+            values: vec![],
+            value_ids: vec![],
+            environments: vec![],
+            bindings: vec![],
+            frames: vec![],
+            frame_ids: vec![],
+            controls: vec![],
+            control: None,
+            environment: EnvironmentId(0),
+            outcome: OutcomeRow::Pending,
+            stack_limit: snapshot.stack_limit,
+            remaining_fuel: snapshot.remaining_fuel,
+            initial_fuel: snapshot.initial_fuel,
+        },
+    };
     let entry = encoder.expression(&snapshot.program.entry)?;
-    let functions = Slice { start: encoder.image.functions.len(), len: snapshot.program.functions.len() };
-    for function in &snapshot.program.functions { encoder.function(function)?; }
+    let functions = Slice {
+        start: encoder.image.functions.len(),
+        len: snapshot.program.functions.len(),
+    };
+    for function in &snapshot.program.functions {
+        encoder.function(function)?;
+    }
     encoder.image.program = ProgramRoots { entry, functions };
     let environment = encoder.environment(&snapshot.environment)?;
     encoder.image.environment = environment;
@@ -196,13 +274,21 @@ pub(super) fn encode_snapshot(snapshot: &Snapshot, limits: HostImageLimits)
     Ok(encoder.image)
 }
 
-struct Encoder { image: MachineImageDraft }
+struct Encoder {
+    image: MachineImageDraft,
+}
 
 #[derive(Clone, Copy)]
-enum ValueInput<'a> { Value(&'a Value), UInt(u128), Tree(&'a Tree) }
+enum ValueInput<'a> {
+    Value(&'a Value),
+    UInt(u128),
+    Tree(&'a Tree),
+}
 
 struct ExprTask<'a> {
-    input: &'a Expr, parent_cell: Option<usize>, parent_arm: Option<usize>,
+    input: &'a Expr,
+    parent_cell: Option<usize>,
+    parent_arm: Option<usize>,
 }
 
 impl Encoder {
@@ -210,10 +296,18 @@ impl Encoder {
         let (used, limit) = match kind {
             HostLimitKind::Rows => (&mut self.image.usage.rows, self.image.limits.rows),
             HostLimitKind::Cells => (&mut self.image.usage.cells, self.image.limits.cells),
-            HostLimitKind::NameBytes => (&mut self.image.usage.name_bytes, self.image.limits.name_bytes),
+            HostLimitKind::NameBytes => (
+                &mut self.image.usage.name_bytes,
+                self.image.limits.name_bytes,
+            ),
         };
         let Some(total) = used.checked_add(additional).filter(|total| *total <= limit) else {
-            return Err(HostEncodingRefusal { kind, used: *used, additional, limit });
+            return Err(HostEncodingRefusal {
+                kind,
+                used: *used,
+                additional,
+                limit,
+            });
         };
         *used = total;
         Ok(())
@@ -236,24 +330,38 @@ impl Encoder {
 
     fn expr_cells(&mut self, len: usize) -> EncodingResult<Slice> {
         self.account(HostLimitKind::Cells, len)?;
-        let slice = Slice { start: self.image.expr_children.len(), len };
-        self.image.expr_children.resize(slice.start + len, ExprId(0));
+        let slice = Slice {
+            start: self.image.expr_children.len(),
+            len,
+        };
+        self.image
+            .expr_children
+            .resize(slice.start + len, ExprId(0));
         Ok(slice)
     }
 
     fn value_cells(&mut self, len: usize) -> EncodingResult<Slice> {
         self.account(HostLimitKind::Cells, len)?;
-        let slice = Slice { start: self.image.value_ids.len(), len };
+        let slice = Slice {
+            start: self.image.value_ids.len(),
+            len,
+        };
         self.image.value_ids.resize(slice.start + len, ValueId(0));
         Ok(slice)
     }
 
     fn reserve_arms(&mut self, arms: &[Arm]) -> EncodingResult<Slice> {
         self.account(HostLimitKind::Rows, arms.len())?;
-        let slice = Slice { start: self.image.arms.len(), len: arms.len() };
+        let slice = Slice {
+            start: self.image.arms.len(),
+            len: arms.len(),
+        };
         for arm in arms {
             let pattern = self.pattern(&arm.pattern)?;
-            self.image.arms.push(ArmRow { pattern, body: ExprId(0) });
+            self.image.arms.push(ArmRow {
+                pattern,
+                body: ExprId(0),
+            });
         }
         Ok(slice)
     }
@@ -269,13 +377,24 @@ impl Encoder {
 
     fn expression(&mut self, expression: &ExprRef) -> EncodingResult<ExprId> {
         let root = ExprId(self.image.expressions.len());
-        let mut pending = vec![ExprTask { input: expression.as_ref(), parent_cell: None, parent_arm: None }];
+        let mut pending = vec![ExprTask {
+            input: expression.as_ref(),
+            parent_cell: None,
+            parent_arm: None,
+        }];
         while let Some(task) = pending.pop() {
             self.account(HostLimitKind::Rows, 1)?;
             let id = ExprId(self.image.expressions.len());
-            self.image.expressions.push(ExprRow { payload: ExprPayload::If, children: Slice::EMPTY });
-            if let Some(cell) = task.parent_cell { self.image.expr_children[cell] = id; }
-            if let Some(arm) = task.parent_arm { self.image.arms[arm].body = id; }
+            self.image.expressions.push(ExprRow {
+                payload: ExprPayload::If,
+                children: Slice::EMPTY,
+            });
+            if let Some(cell) = task.parent_cell {
+                self.image.expr_children[cell] = id;
+            }
+            if let Some(arm) = task.parent_arm {
+                self.image.arms[arm].body = id;
+            }
             let mut children: Vec<(&Expr, Option<usize>)> = vec![];
             let payload = match task.input {
                 Expr::Literal(value) => ExprPayload::Literal(self.value(ValueInput::Value(value))?),
@@ -293,7 +412,11 @@ impl Encoder {
                     ExprPayload::Unary(*op)
                 }
                 Expr::If(condition, yes, no) => {
-                    children.extend([(condition.as_ref(), None), (yes.as_ref(), None), (no.as_ref(), None)]);
+                    children.extend([
+                        (condition.as_ref(), None),
+                        (yes.as_ref(), None),
+                        (no.as_ref(), None),
+                    ]);
                     ExprPayload::If
                 }
                 Expr::Call(name, args) => {
@@ -303,15 +426,25 @@ impl Encoder {
                 Expr::Match(value, arms) => {
                     children.push((value.as_ref(), None));
                     let slice = self.reserve_arms(arms)?;
-                    children.extend(arms.iter().enumerate().map(|(position, arm)|
-                        (arm.body.as_ref(), Some(slice.start + position))));
+                    children.extend(
+                        arms.iter().enumerate().map(|(position, arm)| {
+                            (arm.body.as_ref(), Some(slice.start + position))
+                        }),
+                    );
                     ExprPayload::Match(slice)
                 }
             };
             let slice = self.expr_cells(children.len())?;
-            self.image.expressions[id.0] = ExprRow { payload, children: slice };
+            self.image.expressions[id.0] = ExprRow {
+                payload,
+                children: slice,
+            };
             for (position, (input, parent_arm)) in children.into_iter().enumerate().rev() {
-                pending.push(ExprTask { input, parent_cell: Some(slice.start + position), parent_arm });
+                pending.push(ExprTask {
+                    input,
+                    parent_cell: Some(slice.start + position),
+                    parent_arm,
+                });
             }
         }
         Ok(root)
@@ -332,7 +465,9 @@ impl Encoder {
         while let Some((input, parent_cell)) = pending.pop() {
             self.account(HostLimitKind::Rows, 1)?;
             let id = ValueId(self.image.values.len());
-            if let Some(cell) = parent_cell { self.image.value_ids[cell] = id; }
+            if let Some(cell) = parent_cell {
+                self.image.value_ids[cell] = id;
+            }
             let mut children = vec![];
             let payload = match input {
                 ValueInput::UInt(n) => ValuePayload::UInt(n),
@@ -345,7 +480,10 @@ impl Encoder {
                 ValueInput::Value(Value::Tree(tree)) | ValueInput::Tree(tree) => match tree {
                     Tree::Leaf(value) => ValuePayload::TreeLeaf(*value),
                     Tree::Branch(left, right) => {
-                        children.extend([ValueInput::Tree(left.as_ref()), ValueInput::Tree(right.as_ref())]);
+                        children.extend([
+                            ValueInput::Tree(left.as_ref()),
+                            ValueInput::Tree(right.as_ref()),
+                        ]);
                         ValuePayload::TreeBranch
                     }
                 },
@@ -372,21 +510,35 @@ impl Encoder {
         self.account(HostLimitKind::Rows, 1)?;
         let id = FunctionId(self.image.functions.len());
         let name = self.name(&function.name)?;
-        let parameters = Slice { start: self.image.parameters.len(), len: function.parameters.len() };
+        let parameters = Slice {
+            start: self.image.parameters.len(),
+            len: function.parameters.len(),
+        };
         self.account(HostLimitKind::Rows, parameters.len)?;
         for parameter in &function.parameters {
             let name = self.name(&parameter.name)?;
-            self.image.parameters.push(Parameter { name, ty: parameter.ty });
+            self.image.parameters.push(Parameter {
+                name,
+                ty: parameter.ty,
+            });
         }
         let body = self.expression(&function.body)?;
-        self.image.functions.push(FunctionRow { name, parameters, return_type: function.return_type, body });
+        self.image.functions.push(FunctionRow {
+            name,
+            parameters,
+            return_type: function.return_type,
+            body,
+        });
         Ok(id)
     }
 
     fn environment(&mut self, environment: &Environment) -> EncodingResult<EnvironmentId> {
         self.account(HostLimitKind::Rows, 1)?;
         let id = EnvironmentId(self.image.environments.len());
-        let bindings = Slice { start: self.image.bindings.len(), len: environment.len() };
+        let bindings = Slice {
+            start: self.image.bindings.len(),
+            len: environment.len(),
+        };
         for (name, value) in environment {
             self.account(HostLimitKind::Rows, 1)?;
             let name = self.name(name)?;
@@ -401,14 +553,30 @@ impl Encoder {
         self.account(HostLimitKind::Rows, 1)?;
         let id = FrameId(self.image.frames.len());
         let row = match frame {
-            Frame::Let(name, body, saved) => FrameRow::Let(self.name(name)?, self.expression(body)?, self.environment(saved)?),
-            Frame::Left(op, right, saved) => FrameRow::Left(*op, self.expression(right)?, self.environment(saved)?),
+            Frame::Let(name, body, saved) => FrameRow::Let(
+                self.name(name)?,
+                self.expression(body)?,
+                self.environment(saved)?,
+            ),
+            Frame::Left(op, right, saved) => {
+                FrameRow::Left(*op, self.expression(right)?, self.environment(saved)?)
+            }
             Frame::Right(op, value) => FrameRow::Right(*op, self.value(ValueInput::Value(value))?),
             Frame::Unary(op) => FrameRow::Unary(*op),
-            Frame::If(yes, no, saved) => FrameRow::If(self.expression(yes)?, self.expression(no)?, self.environment(saved)?),
-            Frame::Match(arms, saved) => FrameRow::Match(self.arms(arms)?, self.environment(saved)?),
+            Frame::If(yes, no, saved) => FrameRow::If(
+                self.expression(yes)?,
+                self.expression(no)?,
+                self.environment(saved)?,
+            ),
+            Frame::Match(arms, saved) => {
+                FrameRow::Match(self.arms(arms)?, self.environment(saved)?)
+            }
             Frame::Args(name, values, rest, saved) => FrameRow::Args(
-                self.name(name)?, self.values(values)?, self.expressions(rest)?, self.environment(saved)?),
+                self.name(name)?,
+                self.values(values)?,
+                self.expressions(rest)?,
+                self.environment(saved)?,
+            ),
             Frame::Return(ty, saved) => FrameRow::Return(*ty, self.environment(saved)?),
             Frame::Scope(saved) => FrameRow::Scope(self.environment(saved)?),
         };
@@ -440,18 +608,42 @@ impl Encoder {
             let row = match current {
                 Control::Eval(body) => ControlRow::Eval(self.expression(body)?),
                 Control::Return(value) => ControlRow::Return(self.value(ValueInput::Value(value))?),
-                Control::Invoke(name, values) => ControlRow::Invoke(self.name(name)?, self.values(values)?),
+                Control::Invoke(name, values) => {
+                    ControlRow::Invoke(self.name(name)?, self.values(values)?)
+                }
                 Control::Enter(function, values) => ControlRow::Enter(
-                    function.as_ref().map(|function| self.function(function)).transpose()?, self.values(values)?),
+                    function
+                        .as_ref()
+                        .map(|function| self.function(function))
+                        .transpose()?,
+                    self.values(values)?,
+                ),
                 Control::Bound(bindings, ty, body) => ControlRow::Bound(
-                    bindings.as_ref().map(|bindings| self.environment(bindings)).transpose()?, *ty, self.expression(body)?),
+                    bindings
+                        .as_ref()
+                        .map(|bindings| self.environment(bindings))
+                        .transpose()?,
+                    *ty,
+                    self.expression(body)?,
+                ),
                 Control::Cases(value, arms, saved) => ControlRow::Cases(
-                    self.value(ValueInput::Value(value))?, self.arms(arms)?, self.environment(saved)?),
+                    self.value(ValueInput::Value(value))?,
+                    self.arms(arms)?,
+                    self.environment(saved)?,
+                ),
                 Control::CaseResult(bindings, value, body, rest, saved) => ControlRow::CaseResult(
-                    bindings.as_ref().map(|bindings| self.environment(bindings)).transpose()?,
-                    self.value(ValueInput::Value(value))?, self.expression(body)?, self.arms(rest)?, self.environment(saved)?),
+                    bindings
+                        .as_ref()
+                        .map(|bindings| self.environment(bindings))
+                        .transpose()?,
+                    self.value(ValueInput::Value(value))?,
+                    self.expression(body)?,
+                    self.arms(rest)?,
+                    self.environment(saved)?,
+                ),
                 Control::PrimitiveResult(result) => ControlRow::PrimitiveResult(match result {
-                    Ok(value) => Ok(self.value(ValueInput::Value(value))?), Err(code) => Err(*code),
+                    Ok(value) => Ok(self.value(ValueInput::Value(value))?),
+                    Err(code) => Err(*code),
                 }),
                 Control::Error(code) => ControlRow::Error(*code),
                 Control::Push(_, _, _) => unreachable!("push chain handled iteratively"),
@@ -469,14 +661,35 @@ impl Encoder {
 pub(super) fn decode_snapshot(image: &MachineImageDraft) -> Snapshot {
     let values = decode_values(image);
     let expressions = decode_expressions(image, &values);
-    let environments: Vec<Environment> = image.environments.iter().map(|environment|
-        environment.bindings.get(&image.bindings).iter().map(|binding|
-            (binding.name.clone(), values[binding.value.0].clone())).collect()).collect();
-    let functions: Vec<Function> = image.functions.iter().map(|function| Function {
-        name: function.name.clone(), parameters: function.parameters.get(&image.parameters).to_vec(),
-        return_type: function.return_type, body: expressions[function.body.0].clone(),
-    }).collect();
-    let decoded = Decoded { image, values, expressions, environments, functions };
+    let environments: Vec<Environment> = image
+        .environments
+        .iter()
+        .map(|environment| {
+            environment
+                .bindings
+                .get(&image.bindings)
+                .iter()
+                .map(|binding| (binding.name.clone(), values[binding.value.0].clone()))
+                .collect()
+        })
+        .collect();
+    let functions: Vec<Function> = image
+        .functions
+        .iter()
+        .map(|function| Function {
+            name: function.name.clone(),
+            parameters: function.parameters.get(&image.parameters).to_vec(),
+            return_type: function.return_type,
+            body: expressions[function.body.0].clone(),
+        })
+        .collect();
+    let decoded = Decoded {
+        image,
+        values,
+        expressions,
+        environments,
+        functions,
+    };
     let outcome = match &image.outcome {
         OutcomeRow::Pending => Outcome::Pending,
         OutcomeRow::Done(value) => Outcome::Done(decoded.value(*value)),
@@ -490,9 +703,15 @@ pub(super) fn decode_snapshot(image: &MachineImageDraft) -> Snapshot {
         }),
         control: image.control.map(|root| decoded.control(root)),
         environment: decoded.environment(image.environment),
-        frames: image.frame_ids.iter().map(|id| decoded.frame(*id)).collect(),
-        stack_limit: image.stack_limit, remaining_fuel: image.remaining_fuel,
-        initial_fuel: image.initial_fuel, outcome,
+        frames: image
+            .frame_ids
+            .iter()
+            .map(|id| decoded.frame(*id))
+            .collect(),
+        stack_limit: image.stack_limit,
+        remaining_fuel: image.remaining_fuel,
+        initial_fuel: image.initial_fuel,
+        outcome,
     }
 }
 
@@ -503,7 +722,9 @@ fn decode_values(image: &MachineImageDraft) -> Vec<Value> {
     for root in 0..image.values.len() {
         let mut pending = vec![(root, false)];
         while let Some((index, visited)) = pending.pop() {
-            if values[index].is_some() { continue; }
+            if values[index].is_some() {
+                continue;
+            }
             let row = &image.values[index];
             let fields = row.fields.get(&image.value_ids);
             if !visited {
@@ -511,24 +732,38 @@ fn decode_values(image: &MachineImageDraft) -> Vec<Value> {
                 pending.extend(fields.iter().rev().map(|id| (id.0, false)));
                 continue;
             }
-            let field = |position: usize| values[fields[position].0].as_ref().expect("normal acyclic value dependency");
+            let field = |position: usize| {
+                values[fields[position].0]
+                    .as_ref()
+                    .expect("normal acyclic value dependency")
+            };
             let value = match row.payload {
                 ValuePayload::UInt(value) => Value::UInt(value),
                 ValuePayload::Bool(value) => Value::Bool(value),
-                ValuePayload::List => Value::List((0..fields.len()).map(|position| match field(position) {
-                    Value::UInt(value) => *value, _ => unreachable!("normal typed list field"),
-                }).collect()),
+                ValuePayload::List => Value::List(
+                    (0..fields.len())
+                        .map(|position| match field(position) {
+                            Value::UInt(value) => *value,
+                            _ => unreachable!("normal typed list field"),
+                        })
+                        .collect(),
+                ),
                 ValuePayload::TreeLeaf(value) => Value::Tree(Tree::Leaf(value)),
                 ValuePayload::TreeBranch => match (field(0), field(1)) {
                     (Value::Tree(left), Value::Tree(right)) => Value::Tree(Tree::Branch(
-                        Arc::new(left.clone()), Arc::new(right.clone()))),
+                        Arc::new(left.clone()),
+                        Arc::new(right.clone()),
+                    )),
                     _ => unreachable!("normal typed branch fields"),
                 },
             };
             values[index] = Some(value);
         }
     }
-    values.into_iter().map(|value| value.expect("normal value row materialized")).collect()
+    values
+        .into_iter()
+        .map(|value| value.expect("normal value row materialized"))
+        .collect()
 }
 
 fn decode_expressions(image: &MachineImageDraft, values: &[Value]) -> Vec<ExprRef> {
@@ -536,7 +771,9 @@ fn decode_expressions(image: &MachineImageDraft, values: &[Value]) -> Vec<ExprRe
     for root in 0..image.expressions.len() {
         let mut pending = vec![(root, false)];
         while let Some((index, visited)) = pending.pop() {
-            if expressions[index].is_some() { continue; }
+            if expressions[index].is_some() {
+                continue;
+            }
             let row = &image.expressions[index];
             let children = row.children.get(&image.expr_children);
             if !visited {
@@ -544,7 +781,12 @@ fn decode_expressions(image: &MachineImageDraft, values: &[Value]) -> Vec<ExprRe
                 pending.extend(children.iter().rev().map(|id| (id.0, false)));
                 continue;
             }
-            let expression = |id: ExprId| expressions[id.0].as_ref().expect("normal acyclic expression dependency").clone();
+            let expression = |id: ExprId| {
+                expressions[id.0]
+                    .as_ref()
+                    .expect("normal acyclic expression dependency")
+                    .clone()
+            };
             let child = |position: usize| expression(children[position]);
             let expr = match &row.payload {
                 ExprPayload::Literal(id) => Expr::Literal(values[id.0].clone()),
@@ -553,47 +795,98 @@ fn decode_expressions(image: &MachineImageDraft, values: &[Value]) -> Vec<ExprRe
                 ExprPayload::Binary(op) => Expr::Binary(*op, child(0), child(1)),
                 ExprPayload::Unary(op) => Expr::Unary(*op, child(0)),
                 ExprPayload::If => Expr::If(child(0), child(1), child(2)),
-                ExprPayload::Call(name) => Expr::Call(name.clone(), children.iter().map(|id| expression(*id)).collect()),
-                ExprPayload::Match(arms) => Expr::Match(child(0), arms.get(&image.arms).iter().map(|arm| Arm {
-                    pattern: arm.pattern.clone(), body: expression(arm.body),
-                }).collect()),
+                ExprPayload::Call(name) => Expr::Call(
+                    name.clone(),
+                    children.iter().map(|id| expression(*id)).collect(),
+                ),
+                ExprPayload::Match(arms) => Expr::Match(
+                    child(0),
+                    arms.get(&image.arms)
+                        .iter()
+                        .map(|arm| Arm {
+                            pattern: arm.pattern.clone(),
+                            body: expression(arm.body),
+                        })
+                        .collect(),
+                ),
             };
             expressions[index] = Some(Arc::new(expr));
         }
     }
-    expressions.into_iter().map(|expr| expr.expect("normal expression row materialized")).collect()
+    expressions
+        .into_iter()
+        .map(|expr| expr.expect("normal expression row materialized"))
+        .collect()
 }
 
 struct Decoded<'a> {
     image: &'a MachineImageDraft,
-    values: Vec<Value>, expressions: Vec<ExprRef>, environments: Vec<Environment>, functions: Vec<Function>,
+    values: Vec<Value>,
+    expressions: Vec<ExprRef>,
+    environments: Vec<Environment>,
+    functions: Vec<Function>,
 }
 
 impl Decoded<'_> {
-    fn value(&self, id: ValueId) -> Value { self.values[id.0].clone() }
-    fn expression(&self, id: ExprId) -> ExprRef { self.expressions[id.0].clone() }
-    fn environment(&self, id: EnvironmentId) -> Environment { self.environments[id.0].clone() }
+    fn value(&self, id: ValueId) -> Value {
+        self.values[id.0].clone()
+    }
+    fn expression(&self, id: ExprId) -> ExprRef {
+        self.expressions[id.0].clone()
+    }
+    fn environment(&self, id: EnvironmentId) -> Environment {
+        self.environments[id.0].clone()
+    }
     fn values(&self, slice: Slice) -> Vec<Value> {
-        slice.get(&self.image.value_ids).iter().map(|id| self.value(*id)).collect()
+        slice
+            .get(&self.image.value_ids)
+            .iter()
+            .map(|id| self.value(*id))
+            .collect()
     }
     fn expressions(&self, slice: Slice) -> Vec<ExprRef> {
-        slice.get(&self.image.expr_children).iter().map(|id| self.expression(*id)).collect()
+        slice
+            .get(&self.image.expr_children)
+            .iter()
+            .map(|id| self.expression(*id))
+            .collect()
     }
     fn arms(&self, slice: Slice) -> Vec<Arm> {
-        slice.get(&self.image.arms).iter().map(|arm| Arm {
-            pattern: arm.pattern.clone(), body: self.expression(arm.body),
-        }).collect()
+        slice
+            .get(&self.image.arms)
+            .iter()
+            .map(|arm| Arm {
+                pattern: arm.pattern.clone(),
+                body: self.expression(arm.body),
+            })
+            .collect()
     }
     fn frame(&self, id: FrameId) -> Frame {
         match &self.image.frames[id.0] {
-            FrameRow::Let(name, body, saved) => Frame::Let(name.clone(), self.expression(*body), self.environment(*saved)),
-            FrameRow::Left(op, right, saved) => Frame::Left(*op, self.expression(*right), self.environment(*saved)),
+            FrameRow::Let(name, body, saved) => Frame::Let(
+                name.clone(),
+                self.expression(*body),
+                self.environment(*saved),
+            ),
+            FrameRow::Left(op, right, saved) => {
+                Frame::Left(*op, self.expression(*right), self.environment(*saved))
+            }
             FrameRow::Right(op, value) => Frame::Right(*op, self.value(*value)),
             FrameRow::Unary(op) => Frame::Unary(*op),
-            FrameRow::If(yes, no, saved) => Frame::If(self.expression(*yes), self.expression(*no), self.environment(*saved)),
-            FrameRow::Match(arms, saved) => Frame::Match(self.arms(*arms), self.environment(*saved)),
+            FrameRow::If(yes, no, saved) => Frame::If(
+                self.expression(*yes),
+                self.expression(*no),
+                self.environment(*saved),
+            ),
+            FrameRow::Match(arms, saved) => {
+                Frame::Match(self.arms(*arms), self.environment(*saved))
+            }
             FrameRow::Args(name, values, rest, saved) => Frame::Args(
-                name.clone(), self.values(*values), self.expressions(*rest), self.environment(*saved)),
+                name.clone(),
+                self.values(*values),
+                self.expressions(*rest),
+                self.environment(*saved),
+            ),
             FrameRow::Return(ty, saved) => Frame::Return(*ty, self.environment(*saved)),
             FrameRow::Scope(saved) => Frame::Scope(self.environment(*saved)),
         }
@@ -611,24 +904,44 @@ impl Decoded<'_> {
             break match row {
                 ControlRow::Eval(body) => Control::Eval(self.expression(*body)),
                 ControlRow::Return(value) => Control::Return(self.value(*value)),
-                ControlRow::Invoke(name, values) => Control::Invoke(name.clone(), self.values(*values)),
+                ControlRow::Invoke(name, values) => {
+                    Control::Invoke(name.clone(), self.values(*values))
+                }
                 ControlRow::Enter(function, values) => Control::Enter(
-                    function.map(|id| self.functions[id.0].clone()), self.values(*values)),
+                    function.map(|id| self.functions[id.0].clone()),
+                    self.values(*values),
+                ),
                 ControlRow::Bound(bindings, ty, body) => Control::Bound(
-                    bindings.map(|id| self.environment(id)), *ty, self.expression(*body)),
+                    bindings.map(|id| self.environment(id)),
+                    *ty,
+                    self.expression(*body),
+                ),
                 ControlRow::Cases(value, arms, saved) => Control::Cases(
-                    self.value(*value), self.arms(*arms), self.environment(*saved)),
+                    self.value(*value),
+                    self.arms(*arms),
+                    self.environment(*saved),
+                ),
                 ControlRow::CaseResult(bindings, value, body, rest, saved) => Control::CaseResult(
-                    bindings.map(|id| self.environment(id)), self.value(*value), self.expression(*body), self.arms(*rest), self.environment(*saved)),
+                    bindings.map(|id| self.environment(id)),
+                    self.value(*value),
+                    self.expression(*body),
+                    self.arms(*rest),
+                    self.environment(*saved),
+                ),
                 ControlRow::PrimitiveResult(result) => Control::PrimitiveResult(match result {
-                    Ok(value) => Ok(self.value(*value)), Err(code) => Err(*code),
+                    Ok(value) => Ok(self.value(*value)),
+                    Err(code) => Err(*code),
                 }),
                 ControlRow::Error(code) => Control::Error(*code),
                 ControlRow::Push(_, _, _) => unreachable!("push chain handled iteratively"),
             };
         };
         for (frame, environment) in pushes.into_iter().rev() {
-            control = Control::Push(self.frame(frame), Box::new(control), self.environment(environment));
+            control = Control::Push(
+                self.frame(frame),
+                Box::new(control),
+                self.environment(environment),
+            );
         }
         control
     }

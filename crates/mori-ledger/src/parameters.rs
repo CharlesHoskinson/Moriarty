@@ -1,38 +1,12 @@
 //! Offline standard SRS admission for source-derived local calls.
 //! Hash the bounded immutable snapshot before upstream unchecked decoding.
 use midnight_transient_crypto::proofs::{ParamsProver, ParamsProverProvider};
+use mori_backend::parameters::{MAX_PARAMETER_BYTES, PINNED_HASHES};
 use sha2::{Digest, Sha256};
 use std::{
     io::{self, Cursor, Read},
     path::Path,
 };
-
-const MAX_PARAMETER_BYTES: u64 = 128 * 1024 * 1024;
-// Standard parameters from SDK revision 04c9c5d9bcebb8d4427d8589fb54d58a55599c14,
-// base-crypto/src/data_provider.rs EXPECTED_DATA. Preserve the existing ledger
-// consumer's 0..=19 envelope; caller-supplied hashes cannot configure trust.
-const PINNED_HASHES: [&str; 20] = [
-    "59b30b3114a34ccbbfb599376e178fb8d9b3366cae2174c2f1da20e75847f823",
-    "bbe04fe3c70d0c138447cb086b4baddc30cb8bb2a004114bc02e6f739516280e",
-    "80e15568fa1a0117db893239be7fa5e34a6bcc3a8c3bfa7709534b9cb88eb6c1",
-    "4be827a6472193df80d8f08b4b25a85baef436fdd1965d89b6af89f4ec4e99e2",
-    "232f401fad10c7ddf8828d2aa4c85c6506c5da09795998cecaeb9f75fc8f6ada",
-    "0a1c9229f315fc1868ff25f668fb83aec4d09f4f23a706b5197c692c619d72c6",
-    "cf2ad6be7d0fedf5bec2aaa35f6be4aca33053d74268fdf5aa54fcb2891ea6df",
-    "e82ae890c080188355f37feaffe91372584cd810615082d9143d4dec0453fd9d",
-    "909b707551eaaea79828e883cde6fc46ab15986c3b1d791bed462c9e2805c933",
-    "b9009f1098bcefffec3c461ab3a5e3a17f7e5599f0f08c70fcdc55a89227bcbd",
-    "46b2290933cbed4c378889e4ba971f1a92888331ffb09466acd4ff61a1e2cb42",
-    "9901589d7956ff58be0d85569b2f455b77b58c3758026ffb5bbe4807000b96d1",
-    "ef08eb3fcf62df8f72c515cffa027e681808b530cb016eea104115545ef6d5c8",
-    "d3324910969c4cc54143b8045b649e5c3a4bd5fb7b8f85fe1b770f640ce1c803",
-    "fc253016885ec830e97808c9ec920bb5cab5c21af590380a6cb5eb0538e2b244",
-    "724c7c3d779148bb113c7ee9c034b2f27db16e6bdf315fde90105a9bad00b1de",
-    "09c877216d6589b370263e18af40a030a901b41a7a7c37ef58c9901db41f05c6",
-    "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74",
-    "e8436dc5d8b598f169c127c745135d889744007e6d384ff126df8d1332522f86",
-    "8e8dc15c4362f05c912f1e770559a3945db3e58a374def416ed5d3e65ad5b10e",
-];
 
 #[derive(Clone)]
 pub(crate) struct PinnedCallParameters {

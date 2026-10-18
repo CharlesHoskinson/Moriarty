@@ -9,7 +9,11 @@ fn program(functions: Vec<Function>, entry: Expr) -> Arc<Program> {
     })
 }
 
-fn collect_trace(prog: Arc<Program>, fuel: u128, stack_limit: usize) -> (Vec<(usize, u8)>, Snapshot) {
+fn collect_trace(
+    prog: Arc<Program>,
+    fuel: u128,
+    stack_limit: usize,
+) -> (Vec<(usize, u8)>, Snapshot) {
     let mut machine = Machine::new(prog, fuel, stack_limit);
     let mut steps = Vec::new();
     while let Some(record) = machine.step() {

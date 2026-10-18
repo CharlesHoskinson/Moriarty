@@ -9,8 +9,8 @@
 
 #![cfg(test)]
 
-use super::reference_types::*;
 use super::Machine;
+use super::reference_types::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum SliceBoundaryKind {
@@ -70,8 +70,8 @@ pub(super) fn advance_m(machine: &mut Machine, m: usize) -> ReferenceSlice {
             let Some(record) = machine.step() else {
                 break;
             };
-            let cumulative = prefix_work.last().copied().expect("initial zero work")
-                + u128::from(record.charge);
+            let cumulative =
+                prefix_work.last().copied().expect("initial zero work") + u128::from(record.charge);
             let terminal = record.after.outcome != Outcome::Pending;
             prefix_work.push(cumulative);
             records.push(record);
@@ -85,9 +85,15 @@ pub(super) fn advance_m(machine: &mut Machine, m: usize) -> ReferenceSlice {
     let (stop, kind) = if end.outcome == Outcome::Pending {
         (SliceStop::TechnicalCut, SliceBoundaryKind::TechnicalCut)
     } else {
-        (SliceStop::Outcome(end.outcome.clone()), SliceBoundaryKind::Terminal)
+        (
+            SliceStop::Outcome(end.outcome.clone()),
+            SliceBoundaryKind::Terminal,
+        )
     };
-    let boundary = SliceBoundary { position: records.len(), kind };
+    let boundary = SliceBoundary {
+        position: records.len(),
+        kind,
+    };
     ReferenceSlice {
         profile_id: PROFILE,
         start,

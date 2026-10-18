@@ -87,23 +87,23 @@ pub(crate) fn registry(program: &Program) -> Result<Vec<LiabilityIdentity>, Erro
         }
     }
     for statement in program.actions.iter().flat_map(|a| &a.statements) {
-        if let Statement::Discharge { name, .. } = statement {
-            if !entries.contains_key(name) {
-                return Err(error(
-                    "unsupported",
-                    format!("Discharge {name:?} has no source-derived liability identity."),
-                ));
-            }
+        if let Statement::Discharge { name, .. } = statement
+            && !entries.contains_key(name)
+        {
+            return Err(error(
+                "unsupported",
+                format!("Discharge {name:?} has no source-derived liability identity."),
+            ));
         }
     }
     for expression in &program.expressions {
-        if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expression {
-            if !entries.contains_key(name) {
-                return Err(error(
-                    "unsupported",
-                    format!("Liability read {name:?} has no source-derived identity."),
-                ));
-            }
+        if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expression
+            && !entries.contains_key(name)
+        {
+            return Err(error(
+                "unsupported",
+                format!("Liability read {name:?} has no source-derived identity."),
+            ));
         }
     }
     Ok(entries.into_values().collect())

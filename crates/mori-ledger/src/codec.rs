@@ -46,7 +46,7 @@ pub fn hex(bytes: &[u8]) -> String {
 }
 pub fn unhex(text: &str) -> Result<Vec<u8>> {
     if text.len() > 2 * INPUT_BYTES
-        || text.len() % 2 != 0
+        || !text.len().is_multiple_of(2)
         || !text
             .bytes()
             .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))

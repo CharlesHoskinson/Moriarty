@@ -1,14 +1,15 @@
-//! SOURCE_ONLY / UNRUN: two ordinary Core-only host integration assertions.
-//! Actual execution calls below are proposed test source, never executed here.
+//! Host integration assertions for the draft image bridge.
 //! ASTs, provenance and result literals are independent handwritten expectations.
-use crate::sherlock::{Environment, Machine, Outcome, Program, Snapshot, Type, Value};
 use crate::sherlock::image_reference::ImageMachine;
 use crate::sherlock::program_image::{ExprId, SourceLocator, SourceOwner};
+use crate::sherlock::{Environment, Machine, Outcome, Program, Snapshot, Type, Value};
 use crate::sherlock_draft::SourceProvenance;
-use crate::sherlock_draft_image::{prepare_draft_image, ImageSourceSite};
+use crate::sherlock_draft_image::{ImageSourceSite, prepare_draft_image};
+use crate::sherlock_draft_tests::{
+    FACTORIAL, TREEFOLD, factorial_expected, factorial_provenance, treefold_expected,
+    treefold_provenance,
+};
 use crate::sherlock_draft_types::DraftTypeSummary;
-use crate::sherlock_draft_tests::{FACTORIAL, TREEFOLD, factorial_expected,
-    treefold_expected, factorial_provenance, treefold_provenance};
 
 // Caller choices for these two positive normal examples only. These are not new
 // host admission limits, a profile decision, recursion bounds or B capacities.
@@ -27,27 +28,45 @@ fn check_done(actual: Snapshot, expected_program: &Program, value: u128) {
     // independent 8-program/216-prefix comparisons remain separate and intact.
 }
 
-fn check_pipeline(source: &str, expected: Program, provenance: SourceProvenance,
-                  expected_value: u128) {
+fn check_pipeline(
+    source: &str,
+    expected: Program,
+    provenance: SourceProvenance,
+    expected_value: u128,
+) {
     let prepared = prepare_draft_image(source).expect("normal parse/typecheck/image preparation");
     assert_eq!(prepared.draft.program.as_ref(), &expected);
     assert_eq!(prepared.draft.provenance, provenance);
-    assert_eq!(prepared.types, DraftTypeSummary {
-        function_returns: vec![Type::UInt], entry_type: Type::UInt,
-    });
+    assert_eq!(
+        prepared.types,
+        DraftTypeSummary {
+            function_returns: vec![Type::UInt],
+            entry_type: Type::UInt,
+        }
+    );
     assert_eq!(prepared.image_sources.len(), provenance.expressions.len());
-    assert_eq!(prepared.image.source_map.len(), provenance.expressions.len());
+    assert_eq!(
+        prepared.image.source_map.len(),
+        provenance.expressions.len()
+    );
     for (index, expected_site) in provenance.expressions.iter().enumerate() {
-        assert_eq!(prepared.image_sources[index], ImageSourceSite {
-            expression: ExprId(index), source: expected_site.clone(),
-        });
-        assert_eq!(prepared.image.source_map[index], SourceLocator {
-            owner: match expected_site.source.function_index {
-                None => SourceOwner::Entry,
-                Some(index) => SourceOwner::Function(index),
-            },
-            ast_path: expected_site.source.child_path.clone(),
-        });
+        assert_eq!(
+            prepared.image_sources[index],
+            ImageSourceSite {
+                expression: ExprId(index),
+                source: expected_site.clone(),
+            }
+        );
+        assert_eq!(
+            prepared.image.source_map[index],
+            SourceLocator {
+                owner: match expected_site.source.function_index {
+                    None => SourceOwner::Entry,
+                    Some(index) => SourceOwner::Function(index),
+                },
+                ast_path: expected_site.source.child_path.clone(),
+            }
+        );
     }
     assert_eq!(prepared.image.functions.len(), 1);
     for (index, expected_function) in expected.functions.iter().enumerate() {
@@ -55,12 +74,18 @@ fn check_pipeline(source: &str, expected: Program, provenance: SourceProvenance,
         assert_eq!(row.source_table_index, index);
         assert_eq!(row.name, expected_function.name);
         assert_eq!(row.return_type, expected_function.return_type);
-        assert_eq!(&prepared.image.ordered_parameters[
-            row.parameters.start..row.parameters.start + row.parameters.len],
-            expected_function.parameters.as_slice());
-        assert_eq!(prepared.image.source_map[row.body.0], SourceLocator {
-            owner: SourceOwner::Function(index), ast_path: vec![],
-        });
+        assert_eq!(
+            &prepared.image.ordered_parameters
+                [row.parameters.start..row.parameters.start + row.parameters.len],
+            expected_function.parameters.as_slice()
+        );
+        assert_eq!(
+            prepared.image.source_map[row.body.0],
+            SourceLocator {
+                owner: SourceOwner::Function(index),
+                ast_path: vec![],
+            }
+        );
     }
 
     // Distinct genuine consumers of the parsed, checked actual Program/image.

@@ -18,9 +18,15 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-const FIXTURES: &str = "/home/charl/Moriarty/.moriarty-dev/runtime/native-liabilities-20261011/task-3-signed-sol/measurements-final";
-const RUNTIME: &str =
-    "/home/charl/Moriarty/.moriarty-dev/runtime/native-liabilities-20261011/task-4-signed-native";
+// Local runtime captures under the repository root, never committed.
+const FIXTURES: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../.moriarty-dev/runtime/native-liabilities-20261011/task-3-signed-sol/measurements-final"
+);
+const RUNTIME: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../.moriarty-dev/runtime/native-liabilities-20261011/task-4-signed-native"
+);
 const IR_SHA: &str = "b009f47c019f756f8d73c1f643433058c79715301249d1d396f42581b7a51eff";
 const SLOTS: [&str; 7] = [
     "params_load",
@@ -173,7 +179,8 @@ fn fixture() -> Fixture {
 }
 fn options() -> ProofOptions {
     ProofOptions {
-        params_dir: "/home/charl/.cache/midnight/zk-params".into(),
+        params_dir: Path::new(&std::env::var_os("HOME").unwrap_or_default())
+            .join(".cache/midnight/zk-params"),
         max_k: 13,
     }
 }

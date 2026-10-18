@@ -211,6 +211,8 @@ impl LocalSourceSponsor {
         self.fee.spent()
     }
     /// Reserve economics before interpretation, then retain actual work on either outcome.
+    // The refusal carries its charged cost report by design.
+    #[allow(clippy::result_large_err)]
     pub fn prepare(
         &mut self,
         request: SourceSponsoredRequest<'_>,

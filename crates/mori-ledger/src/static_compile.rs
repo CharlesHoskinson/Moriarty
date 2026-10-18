@@ -180,10 +180,10 @@ pub fn check_input_budget(
         }
         total = add(total, size, aggregate_cap(limits)?)?;
     }
-    if let StaticAuthorization::SignedV2 { signer_policy } = authorization {
-        if json_size(signer_policy, cap)? > crate::signed::SIGNED_JSON_BYTES {
-            return Err(refuse("policy-input-size"));
-        }
+    if let StaticAuthorization::SignedV2 { signer_policy } = authorization
+        && json_size(signer_policy, cap)? > crate::signed::SIGNED_JSON_BYTES
+    {
+        return Err(refuse("policy-input-size"));
     }
     Ok(total)
 }

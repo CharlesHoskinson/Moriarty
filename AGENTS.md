@@ -160,6 +160,22 @@ This workflow creates no public developer permission requirement.
 
 For Sherlock transition and circuit work, use the [correctness loop](docs/SHERLOCK-CORRECTNESS-LOOP.md). Iterate K, the explicit finite Quint projection, Lean/Clean and handwritten circuits on the same independently specified transition slices. Keep complete-state/prefix comparisons and per-layer gaps current; model observations, circuit checks, proofs and native results remain separate. This instruction adds no execution authority.
 
+## Rust toolchain
+
+Changes under `crates/`, `Cargo.toml`, `Cargo.lock` or `rust-toolchain.toml`
+follow [RUST_GUIDELINES.md](RUST_GUIDELINES.md) and the plugin's
+[Rust checklist](plugins/moriarty-dev/skills/develop/references/rust.md).
+Apply the user's existing authorization to routine repairs; guideline differences
+do not create another approval gate. Record intentional differences in the
+guidelines. Run CI locally and inspect each command against the current native
+execution boundary before running it. The documented Rust checks are
+`cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets --locked -- -D warnings` and
+`cargo test --workspace --locked`; broad checks remain unrun when outside scope
+or authority. Source-only handoffs report those gaps. The optional `rust`
+workflow is manual only and is not dispatched by ordinary work. Reviewers check
+guideline conformance as well as correctness.
+
 ## Prevent orchestration displacement
 
 Before recovery or dispatch, apply [the orchestration stop rules](docs/FOOTGUNS.md#orchestration-stop-rules).

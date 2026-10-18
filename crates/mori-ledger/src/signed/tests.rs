@@ -1,8 +1,7 @@
 //! Raw ordinary native compiler/VM controls, with public QA scalars only.
 //! No genuine derivation/proof capability is constructed or native work run.
-#[path = "../../tests/support/mod.rs"]
-mod support;
 use super::*;
+use crate::test_support as support;
 use crate::{prepare, relation};
 use midnight_curves::{
     Fr as Scalar, JubjubSubgroup,
@@ -2305,11 +2304,11 @@ fn nonce_v2_false_predicate_with_authority_write_refuses() {
     let mut instructions = (*o.a.ir.instructions).clone();
     let mut changed = 0;
     for instruction in &mut instructions {
-        if let midnight_zkir_v3::Instruction::Assert { cond } = instruction {
-            if Some(cond.clone()) == source_operand {
-                *cond = crate::relation::arithmetic::imm(1);
-                changed += 1;
-            }
+        if let midnight_zkir_v3::Instruction::Assert { cond } = instruction
+            && Some(cond.clone()) == source_operand
+        {
+            *cond = crate::relation::arithmetic::imm(1);
+            changed += 1;
         }
     }
     assert_eq!(changed, 1);

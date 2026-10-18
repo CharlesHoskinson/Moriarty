@@ -78,7 +78,7 @@ fn challenge_binds_trusted_context_and_candidate_bytes_with_early_semantics() {
         mori_core::intent::hash_bytes(&mori_core::intent::canonical(&bad).unwrap())
     );
     assert_ne!(c.candidate_digest, bad.record_hash);
-    assert!(c.to_json().unwrap().len() + 1 <= replay::MAX_CHALLENGE_BYTES);
+    assert!(c.to_json().unwrap().len() < replay::MAX_CHALLENGE_BYTES);
     let mut late = bad.clone();
     late.body.execution.steps[7].index = 98;
     assert_ne!(
