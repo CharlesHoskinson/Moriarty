@@ -1,0 +1,102 @@
+[
+  {
+    "filesRead": [
+      "INLINE:ACTUAL-SCOPE.md",
+      "INLINE:CANDIDATE.json",
+      "INLINE:PROPOSAL.json",
+      "INLINE:TOOL-METADATA.json",
+      "INLINE:INTEGRATION-PROPOSAL.json",
+      "INLINE:actual/START.json",
+      "INLINE:actual/CHILD.json",
+      "INLINE:actual/RESULT.json",
+      "INLINE:actual/CLEANUP.json",
+      "INLINE:actual/STDOUT.log",
+      "INLINE:actual/STDERR.log",
+      "INLINE:source-admission/ordinary/AGREED-SCHEMA-FIELDS.json",
+      "INLINE:source-admission/security-fallback/AGREED-SCHEMA-FIELDS.json",
+      "INLINE:candidate/crates/mori-core/src/stage/report.rs",
+      "INLINE:candidate/crates/mori-core/tests/stage_reports.rs",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-start.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-observed.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-approved.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-complete.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/quoted-fee-start.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/quoted-fee-complete.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/PREFLIGHT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/CARGO-CONFIG-METADATA.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/mori-core/src/stage/mod.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/mori/src/commands/simulate.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/mori/src/commands/test/stage_test.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/docs/CORE-STAGED-TESTS.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/fixtures/core-stage-reports/FREEZE.sha256",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/fixtures/core-stage-reports/mori-tests.json"
+    ],
+    "findings": [
+      "EXACT-ADMISSION-AND-PRE-SPAWN-COMPLIANCE: actual/START.json and actual/CHILD.json confirm that the single admitted attempt (attempt=1, attemptLimit=1, nativeAuthority=0, pid=424247) verified clean sourceCommit e2c3d80736c764313df2554b372fdde945f72fde and sourceTree 61bc8233eb3c0ce421ac5a80e4112eed952925a6 (sourceStatus=''), 183 source pins, 194 packet files, all 4 tool binary size/SHA-256 pins from TOOL-METADATA.json, and absence of all 14 ancestor Cargo config paths from CARGO-CONFIG-METADATA.json immediately prior to spawning the exact admitted argv (/usr/bin/timeout --signal=TERM --kill-after=5s 30s /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo test --manifest-path /home/charl/Moriarty/.worktrees/utxo-main-merge-20261017/Cargo.toml --frozen -j1 -p mori-core --no-default-features --test stage_reports -- --test-threads=1).",
+      "ISOLATION-ENVIRONMENT-AND-CLEANUP-VERIFICATION: Execution ran inside owned temporary root /tmp/doctorwatson-stage-report-check-ewjliph2 with empty cwd (/tmp/doctorwatson-stage-report-check-ewjliph2/cwd), fresh CARGO_HOME (/tmp/doctorwatson-stage-report-check-ewjliph2/cargo-home), fresh CARGO_TARGET_DIR (/tmp/doctorwatson-stage-report-check-ewjliph2/target), and fresh TMPDIR (/tmp/doctorwatson-stage-report-check-ewjliph2/tmp) under the exact 13-variable environment whitelist (CARGO_NET_OFFLINE=true, CARGO_INCREMENTAL=0, CARGO_CACHE_AUTO_CLEAN_FREQUENCY=never, GIT_CONFIG_NOSYSTEM=1, GIT_CONFIG_GLOBAL=/dev/null, GIT_CONFIG_SYSTEM=/dev/null, LANG=C.UTF-8, and pinned PATH/RUSTC/RUSTDOC, with no inherited HOME or RUSTFLAGS). actual/CLEANUP.json confirms existsAfterCleanup=false for /tmp/doctorwatson-stage-report-check-ewjliph2, publicCargoStoresPreserved=true, and aggregateChildProcessOrMemoryBoundClaimed=false.",
+      "COMPILATION-GRAPH-AND-TEST-EXECUTION-RESULT: actual/RESULT.json records exitCode=0 in wallSeconds=26.647946305000005 (within the 30s+5s timeout bound) with unchanged post-run sourceCommitAfter e2c3d80736c764313df2554b372fdde945f72fde, sourceTreeAfter 61bc8233eb3c0ce421ac5a80e4112eed952925a6, and sourceStatusAfter=''. actual/STDERR.log (SHA-256 92b9f13b704b725c9e12c76cd833cb10050fed4b303165c84ee53b86a18d5c05) records exactly 83 Compiling lines comprising 4 workspace crates (mori-span, mori-diagnostics, mori-lexer, mori-core) and 79 ordinary registry dependencies, with zero Midnight, blst, cc, cmake, or SDK compilation lines. actual/STDOUT.log (SHA-256 cf5757583a25ec2732410cd82626d59de880decfabc5837c34710b7d99459f62) records 2 passed, 0 failed, 0 ignored, 0 measured, and 0 filtered out in 0.01s for quoted_fee_full_reports_and_bytes_preserve_actual_captured_amount and two_deliveries_full_reports_and_bytes_follow_actual_continuations.",
+      "ACTUAL-ORACLE-AND-REPORT-ASSERTION-FIDELITY: In crates/mori-core/tests/stage_reports.rs and crates/mori-core/src/stage/report.rs, the 2 passed tests execute actual stage::load, stage::start, stage::resume, and stage::outcome_report(Ok(outcome)), chaining only actual runtime Waiting continuations (including verifying observed == before_observation on the non-advancing approval-false.json step and is_none() on both Complete steps) and asserting both full serde_json::Value equality and canonical pretty byte equality (serde_json::to_vec_pretty(&actual) + '\\n') across all 6 unchanged R3 golden reports (two-deliveries-start.json, two-deliveries-observed.json, two-deliveries-approved.json, two-deliveries-complete.json, quoted-fee-start.json, quoted-fee-complete.json; FREEZE.sha256 digest 885663843203a1fe2f7820884d17f56e98b5dd10a3bbee654829ac649187203e).",
+      "PROSPECTIVE-SOURCE-INTEGRATION-VERIFICATION: INTEGRATION-PROPOSAL.json records currentMainCommit 7a9ab2477f74debf868524c6c26c22ddbfc6d1be, candidateCommit e2c3d80736c764313df2554b372fdde945f72fde, candidateTree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, prospectiveMergeTree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, and equalsActualTestedTree=true. Because candidateCommit's baseCommit is 7a9ab2477f74debf868524c6c26c22ddbfc6d1be (current main), prospective source integration into main produces the exact tested tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, subject to an immediate current-base recheck prior to any branch mutation and with no remote PR existing yet."
+    ],
+    "limitations": [
+      "ONE-ATTEMPT-AUTHORITY-CONSUMED: The single admitted ordinary command attempt (attempt 1 of 1) is now consumed; zero further test, Cargo, or command execution authority exists under this admission.",
+      "EXACT-TEST-COUNT-AND-UNRUN-PATHS: Only the 2 tests in stage_reports (covering 6 positive Waiting/Complete Core/2 reports) were executed on tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6. The historical 7 tests from base 33a/7a9ab2477f74debf868524c6c26c22ddbfc6d1be were not re-executed on changed bytes and are not counted as 9 current passes. The Err(StageRejection) ('status': 'rejected') branch of mori_core::stage::outcome_report, hostile inputs, the mori CLI binary (simulate and test subcommands, core_io::print, aggregate_report, ExitCode mapping, and I/O failure paths), whole-workspace tests, rustfmt, clippy, and all native/Midnight/SDK/ledger/proof/VM/key/wallet operations remain UNRUN (nativeAuthority=0).",
+      "OPEN-R3-GAPS-AND-PARENT-ROADMAP-EXITS: Finite canonical pretty-byte equality over the 6 ASCII R3 fixtures in stage_reports.rs does not close GAP-04 for public CLI stdout formatting. All 14 R3 draft gaps (GAP-01 through GAP-14), historical C1-C6/N1-N6 constraints, and all original parent language, financial, UTXO, proof, target, and full issue exits (U0-U7, M1-M17, MC/SP/G, issues 80/81/84/85/86) remain open.",
+      "REVIEW-ROLE-AND-PROSPECTIVE-INTEGRATION-SCOPE: This review provides an independent ordinary actual-result and prospective source-integration assessment by Gemini 4 Argon (High); designated security review ownership is separate. Prospective integration approval applies strictly to integrating candidateCommit e2c3d80736c764313df2554b372fdde945f72fde (tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6) onto currentMainCommit 7a9ab2477f74debf868524c6c26c22ddbfc6d1be after verifying main has not moved; no remote PR exists yet."
+    ],
+    "reviewToken": "doctorwatson-stage-report-actual-inline-ordinary-20261018-a1-whole-review",
+    "summary": "Independent ordinary actual-result and prospective source-integration review (Gemini 4 Argon High) of the single consumed ordinary stage_reports check on candidate commit e2c3d80736c764313df2554b372fdde945f72fde (tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, base 7a9ab2477f74debf868524c6c26c22ddbfc6d1be). All pre-spawn, runtime, and post-run receipts (START.json, CHILD.json, RESULT.json, CLEANUP.json, STDOUT.log, STDERR.log) strictly satisfy the scoped admission: clean source/tree before and after, 183 source pins, 194 packet pins, 4 tool binary pins, 14 absent ancestor Cargo configs, owned isolated cwd/CARGO_HOME/CARGO_TARGET_DIR/TMPDIR, exact 13-variable environment whitelist, offline frozen single-job/single-thread execution within 26.647946305s (<30s+5s), 83 compile lines (4 workspace crates + 79 ordinary registry deps, zero Midnight/blst/cc/cmake/SDK lines), 2 passed tests (0 failed/0 ignored/0 filtered) asserting all 6 complete normal Core/2 reports and canonical pretty bytes from unchanged R3 fixtures, and verified removal of the owned temporary root. Prospective source integration of candidate commit e2c3d80736c764313df2554b372fdde945f72fde onto current main 7a9ab2477f74debf868524c6c26c22ddbfc6d1be yields the exact tested tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6 and is approved at exact scope.",
+    "toolAction": "Completing ordinary actual-result review",
+    "toolSummary": "Complete ordinary actual-result review",
+    "verdict": "approve-scoped-actual-result-and-source-integration"
+  },
+  {
+    "filesRead": [
+      "INLINE:ACTUAL-SCOPE.md",
+      "INLINE:CANDIDATE.json",
+      "INLINE:PROPOSAL.json",
+      "INLINE:TOOL-METADATA.json",
+      "INLINE:INTEGRATION-PROPOSAL.json",
+      "INLINE:actual/START.json",
+      "INLINE:actual/CHILD.json",
+      "INLINE:actual/RESULT.json",
+      "INLINE:actual/CLEANUP.json",
+      "INLINE:actual/STDOUT.log",
+      "INLINE:actual/STDERR.log",
+      "INLINE:source-admission/ordinary/AGREED-SCHEMA-FIELDS.json",
+      "INLINE:source-admission/security-fallback/AGREED-SCHEMA-FIELDS.json",
+      "INLINE:candidate/crates/mori-core/src/stage/report.rs",
+      "INLINE:candidate/crates/mori-core/tests/stage_reports.rs",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-start.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-observed.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-approved.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/two-deliveries-complete.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/quoted-fee-start.json",
+      "INLINE:candidate/crates/fixtures/core-stage-reports/quoted-fee-complete.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/PREFLIGHT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/CARGO-CONFIG-METADATA.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/mori-core/src/stage/mod.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/mori/src/commands/simulate.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/mori/src/commands/test/stage_test.rs",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/docs/CORE-STAGED-TESTS.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/fixtures/core-stage-reports/FREEZE.sha256",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/stage-report-cycle/actual-result-packet/candidate/crates/fixtures/core-stage-reports/mori-tests.json"
+    ],
+    "findings": [
+      "EXACT-ADMISSION-AND-PRE-SPAWN-COMPLIANCE: actual/START.json and actual/CHILD.json confirm that the single admitted attempt (attempt=1, attemptLimit=1, nativeAuthority=0, pid=424247) verified clean sourceCommit e2c3d80736c764313df2554b372fdde945f72fde and sourceTree 61bc8233eb3c0ce421ac5a80e4112eed952925a6 (sourceStatus=''), 183 source pins, 194 packet files, all 4 tool binary size/SHA-256 pins from TOOL-METADATA.json, and absence of all 14 ancestor Cargo config paths from CARGO-CONFIG-METADATA.json immediately prior to spawning the exact admitted argv (/usr/bin/timeout --signal=TERM --kill-after=5s 30s /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo test --manifest-path /home/charl/Moriarty/.worktrees/utxo-main-merge-20261017/Cargo.toml --frozen -j1 -p mori-core --no-default-features --test stage_reports -- --test-threads=1).",
+      "ISOLATION-ENVIRONMENT-AND-CLEANUP-VERIFICATION: Execution ran inside owned temporary root /tmp/doctorwatson-stage-report-check-ewjliph2 with empty cwd (/tmp/doctorwatson-stage-report-check-ewjliph2/cwd), fresh CARGO_HOME (/tmp/doctorwatson-stage-report-check-ewjliph2/cargo-home), fresh CARGO_TARGET_DIR (/tmp/doctorwatson-stage-report-check-ewjliph2/target), and fresh TMPDIR (/tmp/doctorwatson-stage-report-check-ewjliph2/tmp) under the exact 13-variable environment whitelist (CARGO_NET_OFFLINE=true, CARGO_INCREMENTAL=0, CARGO_CACHE_AUTO_CLEAN_FREQUENCY=never, GIT_CONFIG_NOSYSTEM=1, GIT_CONFIG_GLOBAL=/dev/null, GIT_CONFIG_SYSTEM=/dev/null, LANG=C.UTF-8, and pinned PATH/RUSTC/RUSTDOC, with no inherited HOME or RUSTFLAGS). actual/CLEANUP.json confirms existsAfterCleanup=false for /tmp/doctorwatson-stage-report-check-ewjliph2, publicCargoStoresPreserved=true, and aggregateChildProcessOrMemoryBoundClaimed=false.",
+      "COMPILATION-GRAPH-AND-TEST-EXECUTION-RESULT: actual/RESULT.json records exitCode=0 in wallSeconds=26.647946305000005 (within the 30s+5s timeout bound) with unchanged post-run sourceCommitAfter e2c3d80736c764313df2554b372fdde945f72fde, sourceTreeAfter 61bc8233eb3c0ce421ac5a80e4112eed952925a6, and sourceStatusAfter=''. actual/STDERR.log (SHA-256 92b9f13b704b725c9e12c76cd833cb10050fed4b303165c84ee53b86a18d5c05) records exactly 83 Compiling lines comprising 4 workspace crates (mori-span, mori-diagnostics, mori-lexer, mori-core) and 79 ordinary registry dependencies, with zero Midnight, blst, cc, cmake, or SDK compilation lines. actual/STDOUT.log (SHA-256 cf5757583a25ec2732410cd82626d59de880decfabc5837c34710b7d99459f62) records 2 passed, 0 failed, 0 ignored, 0 measured, and 0 filtered out in 0.01s for quoted_fee_full_reports_and_bytes_preserve_actual_captured_amount and two_deliveries_full_reports_and_bytes_follow_actual_continuations.",
+      "ACTUAL-ORACLE-AND-REPORT-ASSERTION-FIDELITY: In crates/mori-core/tests/stage_reports.rs and crates/mori-core/src/stage/report.rs, the 2 passed tests execute actual stage::load, stage::start, stage::resume, and stage::outcome_report(Ok(outcome)), chaining only actual runtime Waiting continuations (including verifying observed == before_observation on the non-advancing approval-false.json step and is_none() on both Complete steps) and asserting both full serde_json::Value equality and canonical pretty byte equality (serde_json::to_vec_pretty(&actual) + '\\n') across all 6 unchanged R3 golden reports (two-deliveries-start.json, two-deliveries-observed.json, two-deliveries-approved.json, two-deliveries-complete.json, quoted-fee-start.json, quoted-fee-complete.json; FREEZE.sha256 digest 885663843203a1fe2f7820884d17f56e98b5dd10a3bbee654829ac649187203e).",
+      "PROSPECTIVE-SOURCE-INTEGRATION-VERIFICATION: INTEGRATION-PROPOSAL.json records currentMainCommit 7a9ab2477f74debf868524c6c26c22ddbfc6d1be, candidateCommit e2c3d80736c764313df2554b372fdde945f72fde, candidateTree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, prospectiveMergeTree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, and equalsActualTestedTree=true. Because candidateCommit's baseCommit is 7a9ab2477f74debf868524c6c26c22ddbfc6d1be (current main), prospective source integration into main produces the exact tested tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, subject to an immediate current-base recheck prior to any branch mutation and with no remote PR existing yet."
+    ],
+    "limitations": [
+      "ONE-ATTEMPT-AUTHORITY-CONSUMED: The single admitted ordinary command attempt (attempt 1 of 1) is now consumed; zero further test, Cargo, or command execution authority exists under this admission.",
+      "EXACT-TEST-COUNT-AND-UNRUN-PATHS: Only the 2 tests in stage_reports (covering 6 positive Waiting/Complete Core/2 reports) were executed on tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6. The historical 7 tests from base 33a/7a9ab2477f74debf868524c6c26c22ddbfc6d1be were not re-executed on changed bytes and are not counted as 9 current passes. The Err(StageRejection) ('status': 'rejected') branch of mori_core::stage::outcome_report, hostile inputs, the mori CLI binary (simulate and test subcommands, core_io::print, aggregate_report, ExitCode mapping, and I/O failure paths), whole-workspace tests, rustfmt, clippy, and all native/Midnight/SDK/ledger/proof/VM/key/wallet operations remain UNRUN (nativeAuthority=0).",
+      "OPEN-R3-GAPS-AND-PARENT-ROADMAP-EXITS: Finite canonical pretty-byte equality over the 6 ASCII R3 fixtures in stage_reports.rs does not close GAP-04 for public CLI stdout formatting. All 14 R3 draft gaps (GAP-01 through GAP-14), historical C1-C6/N1-N6 constraints, and all original parent language, financial, UTXO, proof, target, and full issue exits (U0-U7, M1-M17, MC/SP/G, issues 80/81/84/85/86) remain open.",
+      "REVIEW-ROLE-AND-PROSPECTIVE-INTEGRATION-SCOPE: This review provides an independent ordinary actual-result and prospective source-integration assessment by Gemini 4 Argon (High); designated security review ownership is separate. Prospective integration approval applies strictly to integrating candidateCommit e2c3d80736c764313df2554b372fdde945f72fde (tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6) onto currentMainCommit 7a9ab2477f74debf868524c6c26c22ddbfc6d1be after verifying main has not moved; no remote PR exists yet."
+    ],
+    "reviewToken": "doctorwatson-stage-report-actual-inline-ordinary-20261018-a1-whole-review",
+    "summary": "Independent ordinary actual-result and prospective source-integration review (Gemini 4 Argon High) of the single consumed ordinary stage_reports check on candidate commit e2c3d80736c764313df2554b372fdde945f72fde (tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6, base 7a9ab2477f74debf868524c6c26c22ddbfc6d1be). All pre-spawn, runtime, and post-run receipts (START.json, CHILD.json, RESULT.json, CLEANUP.json, STDOUT.log, STDERR.log) strictly satisfy the scoped admission: clean source/tree before and after, 183 source pins, 194 packet pins, 4 tool binary pins, 14 absent ancestor Cargo configs, owned isolated cwd/CARGO_HOME/CARGO_TARGET_DIR/TMPDIR, exact 13-variable environment whitelist, offline frozen single-job/single-thread execution within 26.647946305s (<30s+5s), 83 compile lines (4 workspace crates + 79 ordinary registry deps, zero Midnight/blst/cc/cmake/SDK lines), 2 passed tests (0 failed/0 ignored/0 filtered) asserting all 6 complete normal Core/2 reports and canonical pretty bytes from unchanged R3 fixtures, and verified removal of the owned temporary root. Prospective source integration of candidate commit e2c3d80736c764313df2554b372fdde945f72fde onto current main 7a9ab2477f74debf868524c6c26c22ddbfc6d1be yields the exact tested tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6 and is approved at exact scope.",
+    "verdict": "approve-scoped-actual-result-and-source-integration"
+  }
+]

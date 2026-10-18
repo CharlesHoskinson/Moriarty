@@ -1,0 +1,5 @@
+# Exact source candidate and one ordinary attempt
+
+Commit e2c3d80736c764313df2554b372fdde945f72fde; tree 61bc8233eb3c0ce421ac5a80e4112eed952925a6; base 7a9ab2477f74debf868524c6c26c22ddbfc6d1be.
+All25changedpaths listed in CANDIDATE.json; full candidate files live under candidate/, original three changed files under baseline/. PATCH.diff is complete. Source/test fixture bytes must not change before attempt.
+Primary reading: CANDIDATE.json, PROPOSAL.json/md, PREFLIGHT.json, TOOL-METADATA.json, CARGO-CONFIG-METADATA.json; five changedRustfiles; both baselineCLI constructors; stage/mod/admit/decode/cost/IR serialization as needed; fixtures README/SOURCE-INVENTORY/WORK-AND-FINANCE/FREEZE, all6whole expected reports and allnormal inputs, original models PROVENANCE/DERIVATION/admission freeze, docs/CORE-STAGED-TESTS. Read required current constraints and MPLR012/localqualified scope. Complete source is supplied; do not claim every1MBunchanged file inspected if not read. No shell/test/model/network/private/provider/cache reads. One local source/check leaf only, not full language/issue closure.
