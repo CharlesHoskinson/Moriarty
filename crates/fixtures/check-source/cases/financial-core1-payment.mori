@@ -1,0 +1,9 @@
+// Normal immediate payment with a separate fee.
+language "moriarty/1";
+agreement CorePaymentCheck {
+  asset CASH = { network: "local", issuer: "check-payment", reference: "CASH", scale: 0 };
+  action pay(amount: UInt) {
+    transfer(CASH, "buyer", "merchant", amount);
+    fee(CASH, "buyer", "treasury", 2);
+  }
+}

@@ -129,3 +129,33 @@ fn core2_rejected() {
 fn beta_unicode_byte_offsets() {
     check_case("unicode-byte-offsets");
 }
+
+#[test]
+fn financial_beta_invoice() {
+    check_case("financial-beta-invoice");
+}
+
+#[test]
+fn financial_beta_repayment() {
+    check_case("financial-beta-repayment");
+}
+
+#[test]
+fn financial_core1_payment() {
+    check_case("financial-core1-payment");
+}
+
+#[test]
+fn financial_core1_loan() {
+    check_case("financial-core1-loan");
+}
+
+#[test]
+fn financial_core2_escrow() {
+    check_case("financial-core2-escrow");
+}
+
+#[test]
+fn financial_core2_rebate() {
+    check_case("financial-core2-rebate");
+}
