@@ -1,0 +1,207 @@
+//! helper_machine::shared — PROPOSED v2, not installed, not adopted.
+//! Root placement proposal (bounded, no wildcard edit):
+//!   crates/mori-core/src/sherlock/helper_machine/mod.rs        (Root/I only)
+//!   crates/mori-core/src/sherlock/helper_machine/raw.rs        (frozen raw-104, unmutated)
+//!   crates/mori-core/src/sherlock/helper_machine/shared.rs     (this file)
+//!   crates/mori-core/src/sherlock/helper_machine/shared/owner.rs
+//!        (child of `shared`; the ONLY module that may construct PreImage
+//!         internals, OwnerGuards, ValidatedPlan, Admitted, MachineImage)
+//!   crates/mori-core/src/sherlock/helper_machine/families/{legacy,scalar,
+//!        env_get,env_put,find,bind,append,validate,equal,match,bookkeeping}.rs
+//!        (siblings of `shared`, NOT descendants; private fields in `shared`
+//!         are therefore inaccessible to family bodies)
+//! Family bodies are given no typed means to admit, charge, set Outcome,
+//!   or mutate MachineImage. A family body is ordinary reviewed Rust: it can
+//!   loop, allocate, or return Err(HostViolation); the owner surfaces that Err
+//!   with the image untouched. It cannot publish an Outcome.
+//! Callable surface = trait declarations below (future S-owned bodies in
+//!   shared::owner) + the small implemented constructors/normalizers/leaves
+//!   in this file. No engine, admission, StepInv, or apply body exists yet.
+
+use std::sync::Arc;
+use super::raw::{ConstRow as RawConstRow, DataRow as RawDataRow, RuleId as RawRuleId};
+
+// ---------- plain shared enums: Copy, no raw-104 types inside ----------
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GrammarDomain { DedicatedSorts, GenericNominalExtensionReserved }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FinanceInput { Absent, TypedExtensionReserved }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SortTag { UInt, Bool, List, Tree }
+// Runtime signatures share the canonical identity of the existing ADT tables.
+pub use adt::TypeIdC;
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BinaryOp { Add, Sub, Mul, Eq, Lt, Cons, Branch }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum UnaryOp { Leaf, Not }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PatternTag { PVar, PNil, PCons, PLeaf, PBranch,
+    WildcardExtensionReserved, ConstructorExtensionReserved } // L1 restored
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BoundaryKind { None, Terminal, TechnicalCut,
+    SourceSuspensionExtensionReserved } // L1 restored; still refused in B-core
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LogicalKind { UInt, Bool, Nil, Cons, Leaf, Branch, Marker,
+    ConstructorExtensionReserved }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarMode { Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarPhase { First, Second, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NodeKind { Cons, Leaf, Branch }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BoolSelector { True, False, NotBool }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TriStatus { Pending, Positive, Negative }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BindPhase { Pairing, UnwindType, UnwindDup, UnwindInsert, Propagate, Finished }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BindStatus { Ok, Bad }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AppendPhase { Copy, Tail, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MatchPhase { Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperKind { Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FamilyId { Legacy, Scalar, EnvGet, EnvPut, Find, Bind, Append,
+    Validate, Equal, Match, BookkeepingRelease }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EventKind { LegacyComplete, HelperEnter, HelperVisit, HelperExit,
+    HelperFail, Bookkeeping, Publish, Startup }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SiteTag { EvalLiteral, EvalVar, EvalLet, EvalBinary, EvalUnary, EvalIf,
+    EvalMatch, EvalCall, Push, RetLet, RetLeft, RetRight, RetUnary, RetIf,
+    RetMatch, RetArgs, RetCall, RetScope, Invoke, Enter, Bound, Cases,
+    CaseResult, Prim }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StepInvClauseId { SI01, SI02, SI03, SI04, SI05, SI06, SI07, SI08,
+    SI09, SI10, SI11, SI12, SI13, SI14, SI15, SI16, SI17, SI18, SI19, SI20,
+    SI21, SI22, SI23, SI24 }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ViewCheck { V1, V2, V3, V4, V5, V6, V7, V8 }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CounterWidthField { WorkCounter, HelperCounter, ReferenceCursor }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CapacityKind { CodeRows, FunctionRows, CodeChildSlots, ParameterSlots,
+    PatternRows, MatchArmRows, ConstantNodes, ConstantFieldSlots, MaxArity,
+    NameRows, NameBytes, OccurrencePathSlots, ValueSlots, MaxReferenceWork,
+    Frames, SerializationBytes, PhysicalBoundaryEnvelope, StepCap,
+    CounterWidth { field: CounterWidthField } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FeatureKind { GenericAdt, FinancialSyntax, FinancialInput,
+    BoundedEncodingWithoutWidths, BoundarySection }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AdmissionReason { LayoutWidthTooSmall, ProgramViewMalformed,
+    GrammarDomainMismatch, ProfileMismatch, LayoutBoundsMismatch }
+    // GrammarDomainMismatch/ProfileMismatch: reserved, no B-core producer.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HostViolationKind { StepInvViolated, SelectUndefined, ReadOutOfBounds,
+    WrongVariant, DisabledRuleReached, ExtensionRuleReached,
+    PhysicalCapacityExceeded, ArithmeticUndefined }
+    // R4 enum only. Owner maps a foreign family RuleIdC and a rejected plan
+    // to WrongVariant{clause:None,rule:None,locator:Some("foreign rule for family"|"invalid plan")}.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GuardId { GScalarAllocNode, GScalarFields1, GScalarFields2,
+    GValidateOccLeaf, GValidateFieldNontail, GEqualPairLeaf,
+    GEqualFieldNontail, GBindTypeReject, GBindDupHit }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CapKind { DataNodes, DataFields, EnvironmentCells, HelperTasks }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ExhaustReason { Fuel, DataNodes, DataFields, EnvironmentCells,
+    HelperTasks, HelperWork, SerializationBytes }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StepDisposition { Applied, Published, ExhaustedFuelUncharged,
+    RefusedHelperWorkUncharged, RefusedCapCharged }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RunIntC { Negative, Nat(u128), NatAboveU128 }
+    // Negative fuel/stack: genesis-invalid R2. NatAboveU128 fuel: CapacityNotAdmitted{MaxReferenceWork}; stack: {Frames}. Never bool+u128.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TaskVisitC { Unvisited, Fields }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RuleIdC { KMachineEvalLiteralValid,KMachineEvalLiteralInvalid,KMachineEvalVariablePresent,KMachineEvalVariableAbsent,KMachineEvalLet,KMachineEvalBinary,KMachineEvalUnary,KMachineEvalIf,KMachineEvalMatch,KMachineEvalCallEmpty,KMachineEvalCallArguments,KMachinePushAccept,KMachinePushRefuse,KMachineReturnLet,KMachineReturnLeft,KMachineReturnRight,KMachineReturnUnary,KMachineReturnIfTrue,KMachineReturnIfFalse,KMachineReturnIfInvalid,KMachineReturnMatch,KMachineReturnArgumentsNext,KMachineReturnArgumentsFinal,KMachineReturnCallValid,KMachineReturnCallInvalid,KMachineReturnScope,KMachineInvokeFind,KMachineEnterMissing,KMachineEnterBind,KMachineBoundInvalid,KMachineBoundValid,KMachineCasesEmpty,KMachineCasesTry,KMachineCasesMiss,KMachineCasesHit,KMachinePrimitiveValue,KMachinePrimitiveError,BHelperScalarEntry,BHelperScalarTag,BHelperScalarArithmetic,BHelperScalarConstruct,BHelperScalarExit,BHelperScalarFailure,BHelperEnvGetEntry,BHelperEnvGetCell,BHelperEnvGetEmpty,BHelperEnvGetExit,BHelperEnvGetFailure,BHelperEnvPutEntry,BHelperEnvPutCell,BHelperEnvPutInsert,BHelperEnvPutEmpty,BHelperEnvPutExit,BHelperEnvPutFailure,BHelperFindEntry,BHelperFindRow,BHelperFindEmpty,BHelperFindExit,BHelperFindFailure,BHelperBindEntry,BHelperBindPair,BHelperBindEmpty,BHelperBindArity,BHelperBindType,BHelperBindDuplicate,BHelperBindInsert,BHelperBindPropagate,BHelperBindExit,BHelperBindFailure,BHelperAppendEntry,BHelperAppendCell,BHelperAppendEmpty,BHelperAppendTail,BHelperAppendCopy,BHelperAppendExit,BHelperAppendFailure,BHelperValidateEntry,BHelperValidateOccurrence,BHelperValidateField,BHelperValidateDeclaration,BHelperValidateEmpty,BHelperValidateInvalid,BHelperValidateExit,BHelperValidateFailure,BHelperEqualEntry,BHelperEqualPair,BHelperEqualField,BHelperEqualEmpty,BHelperEqualDifferent,BHelperEqualExit,BHelperEqualFailure,BHelperMatchEntry,BHelperMatchArm,BHelperMatchOccurrence,BHelperMatchField,BHelperMatchBinding,BHelperMatchDistinct,BHelperMatchDiscard,BHelperMatchNext,BHelperMatchSelected,BHelperMatchEmpty,BHelperMatchExit,BHelperMatchFailure,BBookkeepingTaskEnqueue,BBookkeepingTaskRelease,BBookkeepingResumeStore,BBookkeepingResumeRestore,KAdminStartupValid,KAdminStartupInvalid,KAdminPublishValue,KAdminPublishError,KAdminPublishExhausted }
+    // Copy shared rule carrier in R4 RuleId order. Owner alone maps &RawRuleId<->RuleIdC exhaustively; raw pin unchanged. Families match RuleIdC exhaustively; for a foreign RuleIdC they use the sole foreign-rule rendering at FamilyPlans and do not copy that RuleIdC into HostViolation.rule.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum DigestC { Unselected, Selected { format: (String, String), bytes: Vec<u8> } }
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct IdentityC { pub profile_id: u8, pub grammar_domain: GrammarDomain, pub finance: FinanceInput, pub layout_version: (String, String), pub layout_digest: DigestC, pub bounds_digest: DigestC, pub field_id: Option<(String, String)>, pub program_membership_digest: DigestC }
+    // profile_id: owner maps 0=sherlock-k-a/1,1=sherlock-quint-a/1,2=sherlock-helper-microstep/1; B-core requires 2.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RunIdC { pub identity: IdentityC, pub fuel_input: RunIntC, pub stack_limit_input: RunIntC }
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExpandedStepIdC { pub run_id: std::sync::Arc<RunIdC>, pub ordinal: u128 }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperResultTagC { Validated,EnvFound,EnvMissing,EnvUpdated,FindFound,FindMissing,BindOk,BindBad,AppendDone,ScalarValue,ScalarError,ScalarSelector,ScalarTypeTest,EqualDone,MatchMatched,MatchNoMatch }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OutcomeTagC { Running, Halted, Rejected, Exhausted }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperPhaseSummaryC { Scalar(ScalarPhase), Tri(TriStatus), Bind(BindPhase), Append(AppendPhase), Match(MatchPhase) }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct AllocDeltasC { pub data_nodes: i64, pub data_fields: i64, pub environment_cells: i64 }
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum LocatorC { Occurrence { owner_is_function: bool, function: usize, ast_path: Vec<usize> }, Table { table: String, row: usize }, Field { name: String } }
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct StepEventC { pub step_id: ExpandedStepIdC, pub rule_id: RuleIdC, pub event_kind: EventKind, pub site: Option<SiteTag>, pub helper_kind: Option<HelperKind>, pub disposition: StepDisposition, pub work_delta: u8, pub helper_work_delta: u8, pub helper_visits_delta: u8, pub reference_cursor_delta: u8, pub alloc_deltas: AllocDeltasC, pub value_slot_writes: u8, pub logical_depth_before: usize, pub logical_depth_after: usize, pub task_cursor_before: usize, pub task_cursor_after: usize, pub helper_phase_before: Option<HelperPhaseSummaryC>, pub helper_phase_after: Option<HelperPhaseSummaryC>, pub helper_cursor_before: Option<usize>, pub helper_cursor_after: Option<usize>, pub result_tag: Option<HelperResultTagC>, pub origin_reference_cursor: Option<u128>, pub source_expr_id: usize, pub source_occurrence: LocatorC, pub exhausted_kind: Option<ExhaustReason>, pub outcome_tag: OutcomeTagC, pub outcome_payload: OutcomeC, pub boundary: BoundaryKind }
+
+// ---------- shared Copy carriers (never derived over frozen raw-104) ----
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct BoundsC { pub code_rows: usize, pub function_rows: usize,
+    pub code_child_slots: usize, pub parameter_slots: usize,
+    pub pattern_rows: usize, pub match_plan_rows: usize,
+    pub match_arm_rows: usize, pub type_rows: usize,
+    pub constructor_rows: usize, pub constructor_field_slots: usize,
+    pub max_arity: usize, pub constant_nodes: usize,
+    pub constant_field_slots: usize, pub data_nodes: usize,
+    pub data_field_slots: usize, pub environment_cells: usize,
+    pub frames: usize, pub helper_tasks: usize,
+    pub serialization_bytes: usize, pub max_reference_work: u128,
+    pub max_helper_work: u128, pub step_cap: u128 } // all 22, schema #/bounds
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct LayoutCapacitiesC { pub name_rows: usize, pub name_bytes: usize,
+    pub occurrence_path_slots: usize, pub value_slots: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RefC { Const(usize), Data(usize) } // shared owned ref; owner maps to raw
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct SliceC { pub start: usize, pub len: usize }
+impl SliceC {
+    pub fn normalized(start: usize, len: usize) -> Self {
+        if len == 0 { Self { start: 0, len: 0 } } else { Self { start, len } }
+    }
+    pub fn empty() -> Self { Self { start: 0, len: 0 } }
+}
+pub type ValSliceC = SliceC; pub type FieldSliceC = SliceC;
+pub type EnvRootC = Option<usize>;
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct AllocCounters { pub data_nodes: usize, pub data_fields: usize,
+    pub environment_cells: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct ActiveLengths { pub data: usize, pub data_fields: usize,
+    pub env: usize, pub value_slots: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct HelperCommon { pub site: SiteTag, pub origin_reference_cursor: u128,
+    pub parent_resume: Option<usize> }
+    // ResumeId HOST carrier = usize in Option; always None in B-core,
+    // Some(_) = SI-08. Bounded width DEFERRED to X-05, not frozen here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarStaged { None, U128Value { n: u128 }, BoolValue { b: bool },
+    PendingNode { tag: NodeKind }, PrimError { code: u8 }, // 10|11, owner-checked
+    Selector { sel: BoolSelector }, TypeTest { ok: bool } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperControlC {
+    Scalar { common: HelperCommon, mode: ScalarMode, operand_a: RefC,
+        operand_b: Option<RefC>, expected: Option<TypeIdC>,
+        phase: ScalarPhase, reg_a: u128, staged: ScalarStaged },
+    EnvGet { common: HelperCommon, binder: usize, cursor: Option<usize>,
+        found: Option<RefC>, status: TriStatus },
+    EnvPut { common: HelperCommon, binder: usize, value: RefC, base: EnvRootC,
+        new_root: Option<usize>, status: TriStatus },
+    Find { common: HelperCommon, function_name: usize, row_cursor: usize,
+        found: Option<usize>, status: TriStatus },
+    Bind { common: HelperCommon, function: usize, params: SliceC, args: ValSliceC,
+        p_cursor: usize, a_cursor: usize, partial: EnvRootC,
+        dup_cursor: Option<usize>, phase: BindPhase, status: BindStatus },
+    Append { common: HelperCommon, src: ValSliceC, value: RefC,
+        src_cursor: usize, dest_start: usize, staged: Option<RefC>,
+        phase: AppendPhase },
+    Validate { common: HelperCommon, root: RefC, status: TriStatus },
+    Equal { common: HelperCommon, left: RefC, right: RefC, status: TriStatus },

@@ -35,3 +35,12 @@ This batch builds no circuit and calls for no circuit website iteration.
 See [the public API](../reference/generic-program-preparation-api.md),
 [the preparation guide](../how-to/prepare-generic-program-types.md) and
 [the earlier declaration boundary](nominal-declaration-boundary.md).
+
+
+## Canonical TypeId through the existing owner
+
+The [canonical carrier migration](../reference/canonical-runtime-types.md) puts the same TypeId in function and parameter signatures, PairTask, Bound, ReturnF and Scalar.expected. Source sorts still describe the four builtin types. Keeping one identity across these boundaries lets later generic work use a common carrier without claiming generic admission already exists.
+
+Three compiles and ten new tests passed. The four builtin cases follow actual prepared rows into intermediate owner state, bound values and final results; final-value equality alone would miss an unused map. A separate test roundtrips nominal IDs 4, 5 and 17 through the six storage roles. Five V8 tests preserve builtin admission and nominal refusal precedence.
+
+Generic nominal backing/admission, ConstructorFields and declaration-driven ordered MatchPlan execution remain missing. Original UIREQ034 and all 25 refinements stay open. See the [actual evidence](../../results/sherlock-canonical-runtime-types-20261018/ACTUAL-TEN-TESTS-SCOPE.json) and [Root compatibility adoption](../../results/sherlock-canonical-runtime-types-20261018/ROOT-CANONICAL-TYPEID-COMPATIBILITY-ADOPTION.json).

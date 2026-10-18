@@ -1,0 +1,13 @@
+# Independent derivation and limits
+
+The fixed canonical identity contract is UInt0, Bool1, List2, Tree3. Only that identity projection is reused from the historical extension schema; its global admission/layout/finance policy is not adopted. Existing Core source SortTag remains four variants.
+
+Each normal input calls one function with one literal argument and one parameter. K startup/publication cost zero; its machine transitions cost one each. The independently enumerated identity path is EvalCall, PushArgs, EvalLiteral, ReturnArgsFinal, Invoke, Enter, BoundOk, PushReturn, EvalVar, ReturnTypedOk: ten charges, so fuel64 leaves54. A correct parameter with a valid wrong-sort literal body uses the same ten charges but ReturnTypedBad publishes error6; the return frame and callee environment remain at rejection. A wrong-sort argument reaches BoundBad after seven charges, publishes error8 without body/return-frame entry, and fuel64 leaves57. These are the exact K reference clock and logical outcomes. No K tool or candidate ran.
+
+The complete JSON cells specify source signature identity, actual bound values, typed continuation/helper identity and logical results independently of the forthcoming carrier API. They intentionally leave numeric Name/Expr/Ref allocation IDs and absolute B counters unbound. K’s pure uiBind/uiHasType helper rewrites are not B helper/work events. No exact B work/helper/cursor/fuel value is invented from a candidate or from K charges.
+
+A builtin output equivalence run alone cannot discriminate a live carrier change from a cosmetic unused map: both must preserve those same results. The meaningful immediate discriminator is a connected structural observation of the actual changed signature/PairTask/Bound/ReturnF/Scalar fields, plus distinct arbitrary nominal IDs stored in those same fields. Those storage values do not create active nominal table rows or accepted nominal programs. Because actual Ext C/P/typed ProgramView/admission/backing is absent, no genuine new nominal end-to-end outcome/work test exists yet.
+
+The chosen source strings/AST descriptors and positive/mismatch cases are normal fixed semantic examples, not new security guards or admission policies. Future selection needs the actual source review, owner-only V8 partial-decode interface, existing legitimate observation API and independent B clock evidence where exact B counters are asserted. No private engine, mock producer, new nominal evaluator or fabricated Admitted is supplied.
+
+All values here are specifications, not observed results. Twelve vectors are not twelve executed tests. Candidate body/output and protected new runtime/oracle packets remained unread; populated cells are withheld from the source author.

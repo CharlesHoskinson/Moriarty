@@ -74,10 +74,10 @@ fn k_prim(pre: &PreImage, mode: ScalarMode, a: &RefC, b: Option<&RefC>) -> Resul
 fn selector_of(pre: &PreImage, v: &RefC) -> Result<BoolSelector, HostViolation> {
     Ok(if pre.kind_of(v)? == LogicalKind::Bool { if pre.bool_of(v)? { BoolSelector::True } else { BoolSelector::False } } else { BoolSelector::NotBool })
 }
-fn has_type(pre: &PreImage, v: &RefC, t: SortTag) -> Result<bool, HostViolation> { Ok(pure_leaves::sort_of_kind(pre.kind_of(v)?) == Some(t)) }
+fn has_type(pre: &PreImage, v: &RefC, t: TypeIdC) -> Result<bool, HostViolation> { Ok(pure_leaves::sort_of_kind(pre.kind_of(v)?) == Some(t)) }
 
 // ---- Scalar: the payload b.helper.Scalar.entry installs from site, top and v.
-struct ScalarEntry { site: SiteTag, mode: ScalarMode, a: RefC, b: Option<RefC>, expected: Option<SortTag> }
+struct ScalarEntry { site: SiteTag, mode: ScalarMode, a: RefC, b: Option<RefC>, expected: Option<TypeIdC> }
 fn scalar_entry(pre: &PreImage) -> Option<ScalarEntry> {
     let v = ret_value(pre)?;
     match pre.top_frame()? {

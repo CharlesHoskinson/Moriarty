@@ -1,0 +1,187 @@
+        ControlC::Bound { binding: BoundBinding::Ok { env }, .. } => written.push(*env),
+        ControlC::Cases { saved_env, .. } => written.push(*saved_env),
+        ControlC::CaseResult { matching, saved_env, .. } => { written.push(*saved_env); if let CaseMatching::Matched { env } = matching { written.push(*env); } }
+        _ => {} } }
+    if let Write::Set(e) = &w.env_root { written.push(*e); }
+    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => written.push(frame_env(x)), FrameWrite::Pop => {} } }
+    if let Write::Set(Some(h)) = &w.helper { match h {
+        HelperControlC::EnvGet { cursor, .. } => written.push(*cursor),
+        HelperControlC::EnvPut { base, new_root, .. } => { written.push(*base); written.push(*new_root); }
+        HelperControlC::Bind { partial, dup_cursor, .. } => { written.push(*partial); written.push(*dup_cursor); }
+        HelperControlC::Match { saved_env, partial, .. } => { written.push(*saved_env); written.push(*partial); }
+        _ => {} } }
+    if let Write::Set(Some(r)) = &w.result { match r {
+        HelperResultC::EnvUpdated { cell } => written.push(Some(*cell)),
+        HelperResultC::BindOk { env } | HelperResultC::MatchMatched { env } => written.push(*env),
+        _ => {} } }
+    let copied = |id: usize| id < pre.img.active.env && envs.contains(&id);
+    for id in written.into_iter().flatten() { if Some(id) != fresh && !copied(id) { return Err(invalid_plan("SC-07 copied environment provenance")); } }
+    if let Some(p) = w.alloc_env.and_then(|cell| cell.previous) { if !copied(p) { return Err(invalid_plan("SC-07 alloc_env.previous provenance")); } }
+    Ok(())
+}
+// SC-05 for code ids: every written ExprId, ArmId, FunctionRowId, ConstId and NameId is below its admitted program
+// table (control_origin keeps its own check). Match x/y are NameIds only where pat_tag is active outside phase Arm;
+// their inactive zero columns are SI-22, not range-checked here. Data refs and EnvIds stay with SC-07/SI-13.
+fn frame_code_ids(f: &FrameRowC, exprs: &mut Vec<usize>, names: &mut Vec<usize>) {
+    exprs.push(frame_origin(f));
+    match f { FrameRowC::LetF { binder, body, .. } => { names.push(*binder); exprs.push(*body); }
+        FrameRowC::LeftF { right, .. } => exprs.push(*right),
+        FrameRowC::IfF { then_expr, else_expr, .. } => { exprs.push(*then_expr); exprs.push(*else_expr); }
+        FrameRowC::ArgsF { function_name, .. } => names.push(*function_name),
+        FrameRowC::RightF { .. } | FrameRowC::UnaryF { .. } | FrameRowC::MatchF { .. } | FrameRowC::ReturnF { .. } | FrameRowC::ScopeF { .. } => {} }
+}
+fn check_written_code_ids(pre: &PreImage, w: &PlannedWrites) -> Result<(), HostViolation> {
+    let view = &pre.admitted.body.view;
+    let mut exprs: Vec<usize> = Vec::new(); let mut fns: Vec<usize> = Vec::new(); let mut names: Vec<usize> = Vec::new();
+    let mut arms: Vec<usize> = Vec::new(); let mut refs: Vec<RefC> = Vec::new();
+    if let Write::Set(c) = &w.control { control_refs(c, &mut refs); match c {
+        ControlC::Eval { expr } => exprs.push(*expr),
+        ControlC::ScheduleNext { frame, next, .. } => { frame_code_ids(frame, &mut exprs, &mut names); exprs.push(*next); }
+        ControlC::Invoke { function_name, .. } => names.push(*function_name),
+        ControlC::Enter { function, .. } => fns.extend(*function),
+        ControlC::Bound { body, .. } | ControlC::CaseResult { body, .. } => exprs.push(*body),
+        ControlC::Return { .. } | ControlC::Cases { .. } | ControlC::PrimResult { .. } | ControlC::Error { .. } => {} } }
+    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => { frame_refs(x, &mut refs); frame_code_ids(x, &mut exprs, &mut names); } FrameWrite::Pop => {} } }
+    if let Write::Set(Some(h)) = &w.helper { let mut exempt = Vec::new(); helper_refs(h, &mut refs, &mut exempt); refs.extend(exempt); match h {
+        HelperControlC::EnvGet { binder, .. } | HelperControlC::EnvPut { binder, .. } => names.push(*binder),
+        HelperControlC::Find { function_name, found, .. } => { names.push(*function_name); fns.extend(*found); }
+        HelperControlC::Bind { function, .. } => fns.push(*function),
+        HelperControlC::Match { arm, pat_tag, x, y, phase, .. } => { arms.push(*arm); if *phase != MatchPhase::Arm { match pat_tag {
+            PatternTag::PVar | PatternTag::PLeaf => names.push(*x),
+            PatternTag::PCons | PatternTag::PBranch => { names.push(*x); names.push(*y); }
+            PatternTag::PNil | PatternTag::WildcardExtensionReserved | PatternTag::ConstructorExtensionReserved => {} } } }
+        HelperControlC::Scalar { .. } | HelperControlC::Append { .. } | HelperControlC::Validate { .. } | HelperControlC::Equal { .. } => {} } }
+    if let Write::Set(Some(r)) = &w.result { result_refs(r, &mut refs); if let HelperResultC::FindFound { function } = r { fns.push(*function); } }
+    let pushed = match &w.task_op { TaskOp::Push(t) => Some(t), TaskOp::None | TaskOp::Pop => None };
+    for t in w.task_rewrite_top.iter().chain(pushed) { let mut exempt = Vec::new(); task_refs(t, &mut refs, &mut exempt); refs.extend(exempt);
+        if let HelperTaskC::PairTask { binder, .. } = t { names.push(*binder); } }
+    if let Some(a) = &w.alloc_data { for f in match a { AllocDataWrite::Cons { fields } | AllocDataWrite::Branch { fields } => fields.as_slice(), AllocDataWrite::Leaf { field } => std::slice::from_ref(field), _ => &[] } { refs.push(*f); } }
+    if let Some(cell) = &w.alloc_env { names.push(cell.binder); refs.push(cell.value); }
+    if let Some(slot) = &w.alloc_value_slot { refs.push(*slot); }
+    let n_const = view.constants.len();
+    if exprs.iter().any(|e| *e >= view.expressions.len()) || fns.iter().any(|f| *f >= view.functions.len())
+        || names.iter().any(|n| *n >= view.names.len()) || arms.iter().any(|a| *a >= view.arms.len())
+        || refs.iter().any(|r| matches!(r, RefC::Const(id) if *id >= n_const)) {
+        return Err(invalid_plan("SC-05 written code id")); }
+    Ok(())
+}
+// ================= validate_plan / cap / physical =================
+fn slice_ok(s: SliceC, active: usize) -> bool {
+    if s.len == 0 { s.start == 0 } else { s.start.checked_add(s.len).map_or(false, |e| e <= active) }
+}
+fn derived_delta(w: &PlannedWrites) -> PlanDelta {
+    PlanDelta { alloc_data_nodes: if w.alloc_data.is_some() { 1 } else { 0 },
+        alloc_data_fields: w.alloc_data.map_or(0, |a| a.field_len() as i64),
+        alloc_environment_cells: if w.alloc_env.is_some() { 1 } else { 0 },
+        depth: match w.frame { Some(FrameWrite::Push(_)) => 1, Some(FrameWrite::Pop) => -1, _ => 0 },
+        task_live: match w.task_op { TaskOp::Push(_) => 1, TaskOp::Pop => -1, TaskOp::None => 0 },
+        active_value_slots: if w.alloc_value_slot.is_some() { 1 } else { 0 } }
+}
+fn check_slice(s: SliceC, active: usize) -> Result<(), HostViolation> {
+    if slice_ok(s, active) { Ok(()) } else { Err(invalid_plan("slice normalization")) }
+}
+fn check_ref(pre: &PreImage, r: &RefC, allow_new_data: bool) -> Result<(), HostViolation> {
+    match r { RefC::Const(id) => if *id < pre.admitted.body.view.constants.len() { Ok(()) } else { Err(invalid_plan("const ref")) },
+        RefC::Data(id) => if *id < pre.img.active.data || (allow_new_data && *id == pre.img.active.data) { Ok(()) } else { Err(invalid_plan("data ref")) } }
+}
+fn check_any_ref(pre: &PreImage, r: &RefC) -> Result<(), HostViolation> { check_ref(pre, r, true) }
+fn validate_slices_in_control(pre: &PreImage, c: &ControlC) -> Result<(), HostViolation> {
+    match c { ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } => check_slice(*args, pre.img.active.value_slots),
+        ControlC::Cases { arms, .. } => check_slice(*arms, pre.admitted.body.view.arms.len()),
+        ControlC::CaseResult { rest, .. } => check_slice(*rest, pre.admitted.body.view.arms.len()),
+        ControlC::ScheduleNext { frame, .. } => validate_slices_in_frame(pre, frame), _ => Ok(()) }
+}
+fn validate_slices_in_frame(pre: &PreImage, f: &FrameRowC) -> Result<(), HostViolation> {
+    match f { FrameRowC::MatchF { arms, .. } => check_slice(*arms, pre.admitted.body.view.arms.len()),
+        FrameRowC::ArgsF { completed, rest, .. } => { check_slice(*completed, pre.img.active.value_slots)?; check_slice(*rest, pre.admitted.body.view.children.len()) }
+        _ => Ok(()) }
+}
+fn validate_slices_in_helper(pre: &PreImage, h: &HelperControlC) -> Result<(), HostViolation> {
+    match h { HelperControlC::Bind { params, args, .. } => { check_slice(*params, pre.admitted.body.view.parameters.len())?; check_slice(*args, pre.img.active.value_slots) }
+        HelperControlC::Append { src, .. } => check_slice(*src, pre.img.active.value_slots), _ => Ok(()) }
+}
+pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, read_provenance: &[RefC], read_env_provenance: &[usize]) -> Result<ValidatedPlan, HostViolation> {
+    check_enabled(&sel.rule)?;
+    if sel.event_kind != event_kind_of(&sel.rule) || sel.helper_visits != visits_of(&sel.rule)
+        || sel.helper_eligible != (event_kind_of(&sel.rule) != EventKind::LegacyComplete) {
+        return Err(invalid_plan("Selected header")); }
+    let w = &plan.writes;
+    if derived_delta(w) != plan.delta_assert { return Err(invalid_plan("delta vs writes")); }
+    check_copied_refs(pre, w, read_provenance)?;
+    check_copied_envs(pre, w, read_env_provenance)?;
+    // Frame/task existence before charge.
+    match w.frame { Some(FrameWrite::RewriteTop(_)) | Some(FrameWrite::Pop) if pre.depth() == 0 =>
+        return Err(invalid_plan("frame existence")), _ => {} }
+    if (w.task_rewrite_top.is_some() || matches!(w.task_op, TaskOp::Pop)) && pre.task_live() == 0 {
+        return Err(invalid_plan("task existence")); }
+    // Slice normalization everywhere a slice is written.
+    if let Write::Set(c) = &w.control { validate_slices_in_control(pre, c)?; }
+    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => validate_slices_in_frame(pre, x)?, FrameWrite::Pop => {} } }
+    if let Write::Set(Some(h)) = &w.helper {
+        validate_slices_in_helper(pre, h)?;
+        if helper_common(h).parent_resume.is_some() {
+            return Err(hv(HostViolationKind::StepInvViolated, Some(StepInvClauseId::SI08), None, "parentResume present")); }
+        if let Some(want) = sel.helper_kind { if helper_kind_of(h) != want && event_kind_of(&sel.rule) != EventKind::Bookkeeping {
+            return Err(invalid_plan("helper kind")); } }
+    }
+    if let Write::Set(Some(HelperResultC::AppendDone { seq })) = &w.result { check_slice(*seq, pre.img.active.value_slots.checked_add(1).ok_or_else(|| invalid_plan("slice normalization"))?)?; }
+    // New identities are exactly the pre-image active lengths.
+    if let Some(a) = &w.alloc_data {
+        for f in match a { AllocDataWrite::Cons { fields } | AllocDataWrite::Branch { fields } => fields.as_slice(),
+            AllocDataWrite::Leaf { field } => std::slice::from_ref(field), _ => &[] } { check_ref(pre, f, false)?; }
+    }
+    if let Write::Set(Some(r)) = &w.result {
+        match r { HelperResultC::ScalarValue { value } | HelperResultC::EqualDone { value } if w.alloc_data.is_some() =>
+                if *value != RefC::Data(pre.img.active.data) { return Err(invalid_plan("new data id")); },
+            HelperResultC::EnvUpdated { cell } if w.alloc_env.is_some() =>
+                if *cell != pre.img.active.env { return Err(invalid_plan("new env id")); },
+            _ => {} }
+    }
+    if let Write::Set(Some(h)) = &w.helper {
+        match h { HelperControlC::EnvPut { new_root: Some(n), .. } | HelperControlC::Bind { partial: Some(n), .. }
+            | HelperControlC::Match { partial: Some(n), .. } if w.alloc_env.is_some() && *n != pre.img.active.env =>
+            return Err(invalid_plan("new env id in helper")), _ => {} }
+    }
+    // Error-code ranges carried by writes.
+    if let Write::Set(ControlC::Error { code }) = &w.control { if !(1..=11).contains(code) { return Err(invalid_plan("error code")); } }
+    if let Write::Set(ControlC::PrimResult { result: PrimOutcome::Error { code } }) = &w.control {
+        if !matches!(code, 10 | 11) { return Err(invalid_plan("prim error code")); } }
+    if let Write::Set(c) = &w.control_origin { if *c >= pre.admitted.body.view.expressions.len() { return Err(invalid_plan("control origin")); } }
+    // SC-05: every other written code id (ExprId, ArmId, FunctionRowId, ConstId, NameId) against its program table.
+    check_written_code_ids(pre, w)?;
+    // Result/helper membership for exit, failure, entry and legacy-consuming rows.
+    let ek = event_kind_of(&sel.rule);
+    if ek == EventKind::HelperEnter && !matches!(&w.helper, Write::Set(Some(_))) { return Err(invalid_plan("entry helper")); }
+    if matches!(ek, EventKind::HelperExit | EventKind::HelperFail) {
+        if !matches!(&w.helper, Write::Set(None)) || !matches!(&w.result, Write::Set(Some(_))) {
+            return Err(invalid_plan("exit result")); } }
+    if ek == EventKind::LegacyComplete {
+        // A row whose select_when reads r must clear the staged result.
+        // (Root's GuardEvaluator is not a parameter of the trait-shaped
+        // validate_plan, so the fixed AST table in OwnerGuards is mirrored
+        // by this literal set, identical to reads_result_root above.)
+        let reads_r = matches!(sel.rule, RuleIdC::KMachineEvalLiteralValid | RuleIdC::KMachineEvalLiteralInvalid
+            | RuleIdC::KMachineEvalVariablePresent | RuleIdC::KMachineEvalVariableAbsent | RuleIdC::KMachineReturnLet
+            | RuleIdC::KMachineReturnRight | RuleIdC::KMachineReturnUnary | RuleIdC::KMachineReturnIfTrue
+            | RuleIdC::KMachineReturnIfFalse | RuleIdC::KMachineReturnIfInvalid | RuleIdC::KMachineReturnArgumentsNext
+            | RuleIdC::KMachineReturnArgumentsFinal | RuleIdC::KMachineReturnCallValid | RuleIdC::KMachineReturnCallInvalid
+            | RuleIdC::KMachineInvokeFind | RuleIdC::KMachineEnterBind | RuleIdC::KMachineCasesTry);
+        if reads_r && !matches!(&w.result, Write::Set(None)) { return Err(invalid_plan("result not cleared")); }
+        if pre.helper().is_some() { return Err(invalid_plan("legacy with helper")); }
+    }
+    // P6 cap_refusal, fixed order, computed purely in PS from pre counters.
+    let b = &pre.admitted.body.bounds; let d = &plan.delta_assert;
+    let cap_first = if d.alloc_data_nodes > 0 && pre.img.alloc.data_nodes.checked_add(d.alloc_data_nodes as usize).map_or(true, |n| n > b.data_nodes) { Some(CapKind::DataNodes) }
+        else if d.alloc_data_fields > 0 && pre.img.alloc.data_fields.checked_add(d.alloc_data_fields as usize).map_or(true, |n| n > b.data_field_slots) { Some(CapKind::DataFields) }
+        else if d.alloc_environment_cells > 0 && pre.img.alloc.environment_cells.checked_add(d.alloc_environment_cells as usize).map_or(true, |n| n > b.environment_cells) { Some(CapKind::EnvironmentCells) }
+        else if d.task_live > 0 && pre.task_live().checked_add(d.task_live as usize).map_or(true, |n| n > b.helper_tasks) { Some(CapKind::HelperTasks) }
+        else { None };
+    Ok(ValidatedPlan::from_validated(plan.writes, plan.delta_assert, cap_first, sel.rule))
+}
+pub fn owner_cap_refusal(v: &ValidatedPlan) -> Option<CapKind> { v.cap_first }
+pub fn owner_physical_check(pre: &PreImage, v: &ValidatedPlan) -> Result<(), HostViolation> {
+    if v.cap_first.is_some() { return Ok(()); } // P6 refusal: no physical check applies.
+    let b = &pre.admitted.body.bounds; let w = &v.writes;
+    let bad = (w.alloc_data.is_some() && pre.img.active.data >= b.data_nodes)
+        || (v.delta.alloc_data_fields > 0 && pre.img.active.data_fields.checked_add(v.delta.alloc_data_fields as usize).map_or(true, |n| n > b.data_field_slots))
+        || (w.alloc_env.is_some() && pre.img.active.env >= b.environment_cells)

@@ -1,0 +1,251 @@
+// owner_runtime.proposed.rs — PROPOSED, source-only, uncompiled, unadopted.
+// Root placement: shared::owner_runtime (child of `shared`). No OwnerEngine
+// trait impl here; Root wires these free functions into its sole impl.
+// Cross-lane dependencies are explicit parameters: `families: &dyn FamilyPlans`
+// (pure row effects, other work already supplied), `guards: &OwnerGuards`,
+// and, for SI-24 only, the prepare lane's `check_program_view` function.
+use super::*;
+use super::super::raw::{ConstRow as RawConstRow, DataRow as RawDataRow, RuleId as RawRuleId};
+mod owner_si21_bind_match;
+use owner_si21_bind_match::{si21_bind_helper_ok, si21_bind_result_ok, si21_match_helper_ok, si21_match_result_ok};
+mod owner_si21_closure;
+use owner_si21_closure::{si21_helper_ok, si21_result_ok, si22_helper_ok};
+
+fn hv(kind: HostViolationKind, clause: Option<StepInvClauseId>, rule: Option<RuleIdC>, loc: &str) -> HostViolation {
+    HostViolation { kind, clause, rule, locator: Some(loc.to_string()) }
+}
+fn wrong(loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, loc) }
+fn oob(loc: &str) -> HostViolation { hv(HostViolationKind::ReadOutOfBounds, None, None, loc) }
+fn arith(loc: &str) -> HostViolation { hv(HostViolationKind::ArithmeticUndefined, None, None, loc) }
+fn invalid_plan(loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, "invalid plan") }
+fn siv(clause: StepInvClauseId, loc: &str, detail: &str) -> StepInvViolation {
+    StepInvViolation { clause, locator: Some(loc.to_string()), detail: detail.to_string() }
+}
+fn is_disabled(r: &RuleIdC) -> bool {
+    matches!(r, RuleIdC::BHelperEnvPutCell | RuleIdC::BHelperEnvPutEmpty | RuleIdC::BHelperEnvPutFailure
+        | RuleIdC::BHelperAppendFailure | RuleIdC::BHelperEqualFailure | RuleIdC::BHelperMatchEmpty
+        | RuleIdC::BBookkeepingTaskEnqueue)
+}
+fn is_extension(r: &RuleIdC) -> bool {
+    matches!(r, RuleIdC::BHelperValidateDeclaration | RuleIdC::BHelperMatchDiscard
+        | RuleIdC::BBookkeepingResumeStore | RuleIdC::BBookkeepingResumeRestore)
+}
+fn check_enabled(r: &RuleIdC) -> Result<(), HostViolation> {
+    if is_disabled(r) { Err(hv(HostViolationKind::DisabledRuleReached, None, Some(*r), "disabled rule")) }
+    else if is_extension(r) { Err(hv(HostViolationKind::ExtensionRuleReached, None, Some(*r), "extension rule")) }
+    else { Ok(()) }
+}
+
+// ================= PreImageView over const/data/program tables =================
+fn const_fields(r: &RawConstRow) -> (usize, usize) {
+    match r {
+        RawConstRow::Cons { fields, .. } | RawConstRow::Branch { fields, .. } => (fields.start.0, fields.len),
+        RawConstRow::Leaf { fields, .. } => (fields.start.0, fields.len),
+        _ => (0, 0),
+    }
+}
+fn data_fields(r: &RawDataRow) -> (usize, usize) {
+    match r {
+        RawDataRow::Cons { fields } | RawDataRow::Branch { fields } => (fields.start.0, fields.len),
+        RawDataRow::Leaf { fields } => (fields.start.0, fields.len),
+        _ => (0, 0),
+    }
+}
+fn raw_marker_free(r: &RawConstRow) -> bool {
+    match r {
+        RawConstRow::U128 { marker_free, .. } | RawConstRow::Bool { marker_free, .. }
+        | RawConstRow::Nil { marker_free } | RawConstRow::Cons { marker_free, .. }
+        | RawConstRow::Leaf { marker_free, .. } | RawConstRow::Branch { marker_free, .. }
+        | RawConstRow::U128OutOfRange { marker_free } => *marker_free,
+    }
+}
+impl<'a> PreImageView for PreImage<'a> {
+    fn control(&self) -> &ControlC { &self.img.control }
+    fn control_origin(&self) -> usize { self.img.control_origin }
+    fn env_root(&self) -> EnvRootC { self.img.env_root }
+    fn depth(&self) -> usize { self.img.frames.len() }
+    fn task_live(&self) -> usize { self.img.tasks.len() }
+    fn stack_limit(&self) -> usize { self.img.stack_limit }
+    fn outcome(&self) -> &OutcomeC { &self.img.outcome }
+    fn initial_fuel(&self) -> u128 { self.img.initial_fuel }
+    fn remaining_work(&self) -> u128 { self.img.remaining_work }
+    fn consumed_work(&self) -> u128 { self.img.consumed_work }
+    fn helper_work(&self) -> u128 { self.img.helper_work }
+    fn helper_visits(&self) -> u128 { self.img.helper_visits }
+    fn reference_cursor(&self) -> u128 { self.img.reference_cursor }
+    fn helper(&self) -> Option<&HelperControlC> { self.img.helper.as_ref() }
+    fn result(&self) -> Option<&HelperResultC> { self.img.result.as_ref() }
+    fn top_frame(&self) -> Option<&FrameRowC> { self.img.frames.last() }
+    fn top_task(&self) -> Option<&HelperTaskC> { self.img.tasks.last() }
+    fn active(&self) -> ActiveLengths { self.img.active }
+    fn alloc(&self) -> AllocCounters { self.img.alloc }
+    fn expr(&self, id: &usize) -> Result<&ExpressionRowC, HostViolation> {
+        self.admitted.body.view.expressions.get(*id).ok_or_else(|| oob("prog.expressions"))
+    }
+    fn child(&self, pos: &usize) -> Result<usize, HostViolation> {
+        self.admitted.body.view.children.get(*pos).copied().ok_or_else(|| oob("prog.children"))
+    }
+    fn function_row(&self, id: &usize) -> Result<&FunctionRowC, HostViolation> {
+        self.admitted.body.view.functions.get(*id).ok_or_else(|| oob("prog.functions"))
+    }
+    fn admitted_function_count(&self) -> usize { self.admitted.body.view.functions.len() }
+    fn parameter(&self, pos: &usize) -> Result<&ParameterRowC, HostViolation> {
+        self.admitted.body.view.parameters.get(*pos).ok_or_else(|| oob("prog.parameters"))
+    }
+    fn arm(&self, id: &usize) -> Result<&ArmRowC, HostViolation> {
+        self.admitted.body.view.arms.get(*id).ok_or_else(|| oob("prog.arms"))
+    }
+    fn pattern(&self, id: &usize) -> Result<&PatternRowC, HostViolation> {
+        self.admitted.body.view.patterns.get(*id).ok_or_else(|| oob("prog.patterns"))
+    }
+    fn occurrence(&self, id: &usize) -> Result<&OccurrenceRowC, HostViolation> {
+        self.admitted.body.view.occurrences.get(*id).ok_or_else(|| oob("prog.occurrences"))
+    }
+    fn occurrence_path(&self, s: &SliceC) -> Result<&[usize], HostViolation> {
+        if s.len == 0 { if s.start == 0 { return Ok(&[]); } return Err(oob("prog.occurrencePaths")); }
+        let end = s.start.checked_add(s.len).ok_or_else(|| arith("occurrence path end"))?;
+        self.admitted.body.view.occurrence_paths.get(s.start..end).ok_or_else(|| oob("prog.occurrencePaths"))
+    }
+    fn constant_borrowed(&self, id: &usize) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation> {
+        self.admitted.body.view.constants.get(*id).map(pure_leaves::BorrowedValueRow::Const).ok_or_else(|| oob("prog.constants"))
+    }
+    fn constant_field(&self, id: &usize) -> Result<usize, HostViolation> {
+        self.admitted.body.view.constant_fields.get(*id).copied().ok_or_else(|| oob("prog.constantFields"))
+    }
+    fn marker_free(&self, id: &usize) -> Result<bool, HostViolation> {
+        self.admitted.body.view.constants.get(*id).map(raw_marker_free).ok_or_else(|| oob("prog.constants markerFree"))
+    }
+    fn deref_borrowed(&self, r: &RefC) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation> {
+        match r {
+            RefC::Const(id) => self.constant_borrowed(id),
+            RefC::Data(id) => self.img.data.get(*id).map(pure_leaves::BorrowedValueRow::Data).ok_or_else(|| oob("img.data")),
+        }
+    }
+    fn field_at(&self, r: &RefC, i: &usize) -> Result<RefC, HostViolation> {
+        match r {
+            RefC::Const(id) => {
+                let row = self.admitted.body.view.constants.get(*id).ok_or_else(|| oob("prog.constants"))?;
+                let (start, len) = const_fields(row);
+                if *i >= len { return Err(oob("const field index")); }
+                let pos = start.checked_add(*i).ok_or_else(|| arith("const field pos"))?;
+                Ok(RefC::Const(self.constant_field(&pos)?))
+            }
+            RefC::Data(id) => {
+                let row = self.img.data.get(*id).ok_or_else(|| oob("img.data"))?;
+                let (start, len) = data_fields(row);
+                if *i >= len { return Err(oob("data field index")); }
+                let pos = start.checked_add(*i).ok_or_else(|| arith("data field pos"))?;
+                self.img.data_fields.get(pos).copied().ok_or_else(|| oob("img.dataFields"))
+            }
+        }
+    }
+    fn env_cell(&self, id: &usize) -> Result<&EnvCellC, HostViolation> {
+        self.img.env.get(*id).ok_or_else(|| oob("img.env"))
+    }
+    fn value_slot(&self, pos: &usize) -> Result<RefC, HostViolation> {
+        self.img.value_slots.get(*pos).copied().ok_or_else(|| oob("img.valueSlots"))
+    }
+    fn kind_of(&self, r: &RefC) -> Result<LogicalKind, HostViolation> {
+        Ok(pure_leaves::borrowed_kind(self.deref_borrowed(r)?))
+    }
+    fn u128_of(&self, r: &RefC) -> Result<u128, HostViolation> {
+        pure_leaves::borrowed_u128(self.deref_borrowed(r)?).ok_or_else(|| arith("u128 payload"))
+    }
+    fn bool_of(&self, r: &RefC) -> Result<bool, HostViolation> {
+        pure_leaves::borrowed_bool(self.deref_borrowed(r)?).ok_or_else(|| arith("bool payload"))
+    }
+    fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation> {
+        pure_leaves::arity_of(*k).ok_or_else(|| arith("arity undefined"))
+    }
+    fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation> {
+        pure_leaves::sort_of_kind(*k).ok_or_else(|| arith("sort undefined"))
+    }
+    fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation> {
+        let k = self.kind_of(r)?;
+        if matches!(k, LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved) { return Ok(false); }
+        Ok(self.checked_sort(&k)? == *expected)
+    }
+}
+
+// ================= OwnerGuards: nine guards + select_when + reads-r =================
+fn helper_common(h: &HelperControlC) -> HelperCommon {
+    match h { HelperControlC::Scalar { common, .. } | HelperControlC::EnvGet { common, .. }
+        | HelperControlC::EnvPut { common, .. } | HelperControlC::Find { common, .. }
+        | HelperControlC::Bind { common, .. } | HelperControlC::Append { common, .. }
+        | HelperControlC::Validate { common, .. } | HelperControlC::Equal { common, .. }
+        | HelperControlC::Match { common, .. } => *common }
+}
+fn helper_kind_of(h: &HelperControlC) -> HelperKind {
+    match h { HelperControlC::Scalar { .. } => HelperKind::Scalar, HelperControlC::EnvGet { .. } => HelperKind::EnvGet,
+        HelperControlC::EnvPut { .. } => HelperKind::EnvPut, HelperControlC::Find { .. } => HelperKind::Find,
+        HelperControlC::Bind { .. } => HelperKind::Bind, HelperControlC::Append { .. } => HelperKind::Append,
+        HelperControlC::Validate { .. } => HelperKind::Validate, HelperControlC::Equal { .. } => HelperKind::Equal,
+        HelperControlC::Match { .. } => HelperKind::Match }
+}
+impl GuardEvaluator for OwnerGuards {
+    fn eval_guard(&self, g: &GuardId, pre: &dyn PreImageView) -> Result<bool, HostViolation> {
+        match g {
+            GuardId::GScalarAllocNode => Ok(matches!(pre.helper(),
+                Some(HelperControlC::Scalar { staged: ScalarStaged::U128Value { .. } | ScalarStaged::BoolValue { .. } | ScalarStaged::PendingNode { .. }, .. }))),
+            GuardId::GScalarFields1 => Ok(matches!(pre.helper(),
+                Some(HelperControlC::Scalar { staged: ScalarStaged::PendingNode { tag: NodeKind::Leaf }, .. }))),
+            GuardId::GScalarFields2 => Ok(matches!(pre.helper(),
+                Some(HelperControlC::Scalar { staged: ScalarStaged::PendingNode { tag: NodeKind::Cons | NodeKind::Branch }, .. }))),
+            GuardId::GValidateOccLeaf => match pre.top_task() {
+                Some(HelperTaskC::ValidateTask { r, .. }) => Ok(pre.checked_arity(&pre.kind_of(r)?)? == 0),
+                _ => Err(wrong("GValidateOccLeaf task")) },
+            GuardId::GValidateFieldNontail => match pre.top_task() {
+                Some(HelperTaskC::ValidateTask { r, cursor, .. }) =>
+                    Ok(cursor.checked_add(1).ok_or_else(|| arith("validate cursor+1"))? < pre.checked_arity(&pre.kind_of(r)?)?),
+                _ => Err(wrong("GValidateFieldNontail task")) },
+            GuardId::GEqualPairLeaf => match pre.top_task() {
+                Some(HelperTaskC::EqualTask { left, .. }) => Ok(pre.checked_arity(&pre.kind_of(left)?)? == 0),
+                _ => Err(wrong("GEqualPairLeaf task")) },
+            GuardId::GEqualFieldNontail => match pre.top_task() {
+                Some(HelperTaskC::EqualTask { left, cursor, .. }) =>
+                    Ok(cursor.checked_add(1).ok_or_else(|| arith("equal cursor+1"))? < pre.checked_arity(&pre.kind_of(left)?)?),
+                _ => Err(wrong("GEqualFieldNontail task")) },
+            GuardId::GBindTypeReject => match pre.top_task() {
+                Some(HelperTaskC::PairTask { sort, arg, .. }) => Ok(pre.checked_sort(&pre.kind_of(arg)?)? != *sort),
+                _ => Err(wrong("GBindTypeReject task")) },
+            GuardId::GBindDupHit => {
+                let (dup, binder) = match (pre.helper(), pre.top_task()) {
+                    (Some(HelperControlC::Bind { dup_cursor, .. }), Some(HelperTaskC::PairTask { binder, .. })) =>
+                        (dup_cursor.ok_or_else(|| wrong("GBindDupHit dupCursor"))?, *binder),
+                    _ => return Err(wrong("GBindDupHit state")) };
+                Ok(pre.env_cell(&dup)?.binder == binder) }
+        }
+    }
+    fn eval_select_when(&self, rule: &RuleIdC, pre: &dyn PreImageView) -> Result<bool, HostViolation> {
+        owner_select_when(rule, pre, self)
+    }
+    fn reads_result_root(&self, rule: &RuleIdC) -> bool {
+        // AST Root{r} membership, fixed per row (never a substring test).
+        matches!(rule, RuleIdC::KMachineEvalLiteralValid | RuleIdC::KMachineEvalLiteralInvalid
+            | RuleIdC::KMachineEvalVariablePresent | RuleIdC::KMachineEvalVariableAbsent
+            | RuleIdC::KMachineReturnLet | RuleIdC::KMachineReturnRight | RuleIdC::KMachineReturnUnary
+            | RuleIdC::KMachineReturnIfTrue | RuleIdC::KMachineReturnIfFalse | RuleIdC::KMachineReturnIfInvalid
+            | RuleIdC::KMachineReturnArgumentsNext | RuleIdC::KMachineReturnArgumentsFinal
+            | RuleIdC::KMachineReturnCallValid | RuleIdC::KMachineReturnCallInvalid
+            | RuleIdC::KMachineInvokeFind | RuleIdC::KMachineEnterBind | RuleIdC::KMachineCasesTry)
+    }
+}
+fn res(pre: &dyn PreImageView) -> Option<HelperResultC> { pre.result().copied() }
+fn owner_select_when(rule: &RuleIdC, pre: &dyn PreImageView, g: &OwnerGuards) -> Result<bool, HostViolation> {
+    use RuleIdC::*;
+    Ok(match rule {
+        // Legacy (37): select_when verbatim from rows-supplement legacy instances.
+        KMachineEvalLiteralValid => matches!(res(pre), Some(HelperResultC::Validated { ok: true })),
+        KMachineEvalLiteralInvalid => matches!(res(pre), Some(HelperResultC::Validated { ok: false })),
+        KMachineEvalVariablePresent => matches!(res(pre), Some(HelperResultC::EnvFound { .. })),
+        KMachineEvalVariableAbsent => matches!(res(pre), Some(HelperResultC::EnvMissing)),
+        KMachineEvalLet | KMachineEvalBinary | KMachineEvalUnary | KMachineEvalIf | KMachineEvalMatch
+        | KMachineReturnLeft | KMachineReturnMatch | KMachineReturnScope => true,
+        KMachineEvalCallEmpty => match pre.control() { ControlC::Eval { expr } =>
+            matches!(pre.expr(expr)?, ExpressionRowC::Call { args, .. } if args.len == 0), _ => false },
+        KMachineEvalCallArguments => match pre.control() { ControlC::Eval { expr } =>
+            matches!(pre.expr(expr)?, ExpressionRowC::Call { args, .. } if args.len > 0), _ => false },
+        KMachinePushAccept => pre.depth() < pre.stack_limit(),
+        KMachinePushRefuse => pre.depth() >= pre.stack_limit(),
+        KMachineReturnLet => matches!(res(pre), Some(HelperResultC::EnvUpdated { .. })),
+        KMachineReturnRight => matches!(res(pre), Some(HelperResultC::ScalarValue { .. } | HelperResultC::ScalarError { .. } | HelperResultC::EqualDone { .. })),

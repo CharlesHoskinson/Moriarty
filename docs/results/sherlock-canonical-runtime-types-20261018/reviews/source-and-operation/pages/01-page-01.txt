@@ -1,0 +1,335 @@
+//! Complete explicit diagnostic wire views of the frozen public owner records.
+//! This does not define a native codec, canonical checkpoint or authenticity layer.
+use serde_json::{json, Value};
+use std::sync::Arc;
+use crate::sherlock::helper_machine::shared::*;
+use crate::sherlock::helper_machine::shared::owner_host::{HostObservation, LayoutObservation, WidthTableObservation, ImageObservation};
+use crate::sherlock::helper_machine::core_action_consumer::{ConsumerProfile, HostGuardError, HostMeasure, SourceHostBounds};
+use crate::sherlock::helper_machine::raw::{ConstRow as RawConstRow, DataRow as RawDataRow, ConstFieldSlice, ConstFieldPos, FieldSlice, FieldPos};
+
+pub trait OwnerWire { fn owner_wire(&self) -> Value; }
+impl OwnerWire for str { fn owner_wire(&self) -> Value { Value::String(self.to_owned()) } }
+macro_rules! decimal_wire { ($($ty:ty),+ $(,)?) => { $(
+    impl OwnerWire for $ty { fn owner_wire(&self) -> Value { Value::String(self.to_string()) } }
+)+ }; }
+decimal_wire!(usize, u128, i64);
+macro_rules! json_wire { ($($ty:ty),+ $(,)?) => { $(
+    impl OwnerWire for $ty { fn owner_wire(&self) -> Value { json!(self) } }
+)+ }; }
+json_wire!(bool, u8, u32, String, crate::Type);
+impl<T: OwnerWire> OwnerWire for Option<T> { fn owner_wire(&self) -> Value {
+    self.as_ref().map_or(Value::Null, OwnerWire::owner_wire)
+} }
+impl<T: OwnerWire> OwnerWire for [T] { fn owner_wire(&self) -> Value {
+    Value::Array(self.iter().map(OwnerWire::owner_wire).collect())
+} }
+impl<T: OwnerWire> OwnerWire for Vec<T> { fn owner_wire(&self) -> Value { self.as_slice().owner_wire() } }
+impl<T: OwnerWire> OwnerWire for Arc<T> { fn owner_wire(&self) -> Value { self.as_ref().owner_wire() } }
+impl<T: OwnerWire + ?Sized> OwnerWire for &T { fn owner_wire(&self) -> Value { T::owner_wire(*self) } }
+impl<A: OwnerWire, B: OwnerWire> OwnerWire for (A, B) { fn owner_wire(&self) -> Value {
+    Value::Array(vec![self.0.owner_wire(), self.1.owner_wire()])
+} }
+
+impl OwnerWire for ActiveLengths {
+    fn owner_wire(&self) -> Value {
+        let ActiveLengths { data, data_fields, env, value_slots } = self;
+        json!({"data": data.owner_wire(), "data_fields": data_fields.owner_wire(), "env": env.owner_wire(), "value_slots": value_slots.owner_wire()})
+    }
+}
+
+impl OwnerWire for AdmissionReason {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::LayoutWidthTooSmall => json!("LayoutWidthTooSmall"),
+            Self::ProgramViewMalformed => json!("ProgramViewMalformed"),
+            Self::GrammarDomainMismatch => json!("GrammarDomainMismatch"),
+            Self::ProfileMismatch => json!("ProfileMismatch"),
+            Self::LayoutBoundsMismatch => json!("LayoutBoundsMismatch"),
+        }
+    }
+}
+
+impl OwnerWire for AllocCounters {
+    fn owner_wire(&self) -> Value {
+        let AllocCounters { data_nodes, data_fields, environment_cells } = self;
+        json!({"data_nodes": data_nodes.owner_wire(), "data_fields": data_fields.owner_wire(), "environment_cells": environment_cells.owner_wire()})
+    }
+}
+
+impl OwnerWire for AppendPhase {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Copy => json!("Copy"),
+            Self::Tail => json!("Tail"),
+            Self::Done => json!("Done"),
+        }
+    }
+}
+
+impl OwnerWire for ArmRowC {
+    fn owner_wire(&self) -> Value {
+        let ArmRowC { pattern, body } = self;
+        json!({"pattern": pattern.owner_wire(), "body": body.owner_wire()})
+    }
+}
+
+impl OwnerWire for BinaryOp {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Add => json!("Add"),
+            Self::Sub => json!("Sub"),
+            Self::Mul => json!("Mul"),
+            Self::Eq => json!("Eq"),
+            Self::Lt => json!("Lt"),
+            Self::Cons => json!("Cons"),
+            Self::Branch => json!("Branch"),
+        }
+    }
+}
+
+impl OwnerWire for BindPhase {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Pairing => json!("Pairing"),
+            Self::UnwindType => json!("UnwindType"),
+            Self::UnwindDup => json!("UnwindDup"),
+            Self::UnwindInsert => json!("UnwindInsert"),
+            Self::Propagate => json!("Propagate"),
+            Self::Finished => json!("Finished"),
+        }
+    }
+}
+
+impl OwnerWire for BindStatus {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Ok => json!("Ok"),
+            Self::Bad => json!("Bad"),
+        }
+    }
+}
+
+impl OwnerWire for BoolSelector {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::True => json!("True"),
+            Self::False => json!("False"),
+            Self::NotBool => json!("NotBool"),
+        }
+    }
+}
+
+impl OwnerWire for BoundBinding {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Bad => json!("Bad"),
+            Self::Ok { env } => json!({"Ok": {"env": env.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for BoundsC {
+    fn owner_wire(&self) -> Value {
+        let BoundsC { code_rows, function_rows, code_child_slots, parameter_slots, pattern_rows, match_plan_rows, match_arm_rows, type_rows, constructor_rows, constructor_field_slots, max_arity, constant_nodes, constant_field_slots, data_nodes, data_field_slots, environment_cells, frames, helper_tasks, serialization_bytes, max_reference_work, max_helper_work, step_cap } = self;
+        json!({"code_rows": code_rows.owner_wire(), "function_rows": function_rows.owner_wire(), "code_child_slots": code_child_slots.owner_wire(), "parameter_slots": parameter_slots.owner_wire(), "pattern_rows": pattern_rows.owner_wire(), "match_plan_rows": match_plan_rows.owner_wire(), "match_arm_rows": match_arm_rows.owner_wire(), "type_rows": type_rows.owner_wire(), "constructor_rows": constructor_rows.owner_wire(), "constructor_field_slots": constructor_field_slots.owner_wire(), "max_arity": max_arity.owner_wire(), "constant_nodes": constant_nodes.owner_wire(), "constant_field_slots": constant_field_slots.owner_wire(), "data_nodes": data_nodes.owner_wire(), "data_field_slots": data_field_slots.owner_wire(), "environment_cells": environment_cells.owner_wire(), "frames": frames.owner_wire(), "helper_tasks": helper_tasks.owner_wire(), "serialization_bytes": serialization_bytes.owner_wire(), "max_reference_work": max_reference_work.owner_wire(), "max_helper_work": max_helper_work.owner_wire(), "step_cap": step_cap.owner_wire()})
+    }
+}
+
+impl OwnerWire for CapacityKind {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::CodeRows => json!("CodeRows"),
+            Self::FunctionRows => json!("FunctionRows"),
+            Self::CodeChildSlots => json!("CodeChildSlots"),
+            Self::ParameterSlots => json!("ParameterSlots"),
+            Self::PatternRows => json!("PatternRows"),
+            Self::MatchArmRows => json!("MatchArmRows"),
+            Self::ConstantNodes => json!("ConstantNodes"),
+            Self::ConstantFieldSlots => json!("ConstantFieldSlots"),
+            Self::MaxArity => json!("MaxArity"),
+            Self::NameRows => json!("NameRows"),
+            Self::NameBytes => json!("NameBytes"),
+            Self::OccurrencePathSlots => json!("OccurrencePathSlots"),
+            Self::ValueSlots => json!("ValueSlots"),
+            Self::MaxReferenceWork => json!("MaxReferenceWork"),
+            Self::Frames => json!("Frames"),
+            Self::SerializationBytes => json!("SerializationBytes"),
+            Self::PhysicalBoundaryEnvelope => json!("PhysicalBoundaryEnvelope"),
+            Self::StepCap => json!("StepCap"),
+            Self::CounterWidth { field } => json!({"CounterWidth": {"field": field.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for CaseMatching {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::NoMatch => json!("NoMatch"),
+            Self::Matched { env } => json!({"Matched": {"env": env.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for ConstFieldPos {
+    fn owner_wire(&self) -> Value {
+        self.0.owner_wire()
+    }
+}
+
+impl OwnerWire for ConstFieldSlice {
+    fn owner_wire(&self) -> Value {
+        let ConstFieldSlice { start, len } = self;
+        json!({"start": start.owner_wire(), "len": len.owner_wire()})
+    }
+}
+
+impl OwnerWire for ConsumerProfile {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::SherlockKA1 => json!("SherlockKA1"),
+            Self::SherlockQuintA1 => json!("SherlockQuintA1"),
+            Self::SherlockHelperMicrostep1 => json!("SherlockHelperMicrostep1"),
+        }
+    }
+}
+
+impl OwnerWire for ControlC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Eval { expr } => json!({"Eval": {"expr": expr.owner_wire()}}),
+            Self::Return { value } => json!({"Return": {"value": value.owner_wire()}}),
+            Self::ScheduleNext { frame, next, env } => json!({"ScheduleNext": {"frame": frame.owner_wire(), "next": next.owner_wire(), "env": env.owner_wire()}}),
+            Self::Invoke { function_name, args } => json!({"Invoke": {"function_name": function_name.owner_wire(), "args": args.owner_wire()}}),
+            Self::Enter { function, args } => json!({"Enter": {"function": function.owner_wire(), "args": args.owner_wire()}}),
+            Self::Bound { binding, return_type, body } => json!({"Bound": {"binding": binding.owner_wire(), "return_type": return_type.owner_wire(), "body": body.owner_wire()}}),
+            Self::Cases { value, arms, saved_env } => json!({"Cases": {"value": value.owner_wire(), "arms": arms.owner_wire(), "saved_env": saved_env.owner_wire()}}),
+            Self::CaseResult { matching, value, body, rest, saved_env } => json!({"CaseResult": {"matching": matching.owner_wire(), "value": value.owner_wire(), "body": body.owner_wire(), "rest": rest.owner_wire(), "saved_env": saved_env.owner_wire()}}),
+            Self::PrimResult { result } => json!({"PrimResult": {"result": result.owner_wire()}}),
+            Self::Error { code } => json!({"Error": {"code": code.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for CounterWidthField {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::WorkCounter => json!("WorkCounter"),
+            Self::HelperCounter => json!("HelperCounter"),
+            Self::ReferenceCursor => json!("ReferenceCursor"),
+        }
+    }
+}
+
+impl OwnerWire for DigestC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Unselected => json!("Unselected"),
+            Self::Selected { format, bytes } => json!({"Selected": {"format": format.owner_wire(), "bytes": bytes.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for EnvCellC {
+    fn owner_wire(&self) -> Value {
+        let EnvCellC { binder, value, previous } = self;
+        json!({"binder": binder.owner_wire(), "value": value.owner_wire(), "previous": previous.owner_wire()})
+    }
+}
+
+impl OwnerWire for EventKind {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::LegacyComplete => json!("LegacyComplete"),
+            Self::HelperEnter => json!("HelperEnter"),
+            Self::HelperVisit => json!("HelperVisit"),
+            Self::HelperExit => json!("HelperExit"),
+            Self::HelperFail => json!("HelperFail"),
+            Self::Bookkeeping => json!("Bookkeeping"),
+            Self::Publish => json!("Publish"),
+            Self::Startup => json!("Startup"),
+        }
+    }
+}
+
+impl OwnerWire for ExhaustReason {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Fuel => json!("Fuel"),
+            Self::DataNodes => json!("DataNodes"),
+            Self::DataFields => json!("DataFields"),
+            Self::EnvironmentCells => json!("EnvironmentCells"),
+            Self::HelperTasks => json!("HelperTasks"),
+            Self::HelperWork => json!("HelperWork"),
+            Self::SerializationBytes => json!("SerializationBytes"),
+        }
+    }
+}
+
+impl OwnerWire for ExpressionRowC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Literal { constant } => json!({"Literal": {"constant": constant.owner_wire()}}),
+            Self::Var { binder } => json!({"Var": {"binder": binder.owner_wire()}}),
+            Self::Let { binder, value, body } => json!({"Let": {"binder": binder.owner_wire(), "value": value.owner_wire(), "body": body.owner_wire()}}),
+            Self::Binary { op, left, right } => json!({"Binary": {"op": op.owner_wire(), "left": left.owner_wire(), "right": right.owner_wire()}}),
+            Self::Unary { op, operand } => json!({"Unary": {"op": op.owner_wire(), "operand": operand.owner_wire()}}),
+            Self::If { cond, then_expr, else_expr } => json!({"If": {"cond": cond.owner_wire(), "then_expr": then_expr.owner_wire(), "else_expr": else_expr.owner_wire()}}),
+            Self::Call { function_name, args } => json!({"Call": {"function_name": function_name.owner_wire(), "args": args.owner_wire()}}),
+            Self::Match { scrutinee, arms } => json!({"Match": {"scrutinee": scrutinee.owner_wire(), "arms": arms.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for FeatureKind {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::GenericAdt => json!("GenericAdt"),
+            Self::FinancialSyntax => json!("FinancialSyntax"),
+            Self::FinancialInput => json!("FinancialInput"),
+            Self::BoundedEncodingWithoutWidths => json!("BoundedEncodingWithoutWidths"),
+            Self::BoundarySection => json!("BoundarySection"),
+        }
+    }
+}
+
+impl OwnerWire for FieldPos {
+    fn owner_wire(&self) -> Value {
+        self.0.owner_wire()
+    }
+}
+
+impl OwnerWire for FieldSlice {
+    fn owner_wire(&self) -> Value {
+        let FieldSlice { start, len } = self;
+        json!({"start": start.owner_wire(), "len": len.owner_wire()})
+    }
+}
+
+impl OwnerWire for FinanceInput {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Absent => json!("Absent"),
+            Self::TypedExtensionReserved => json!("TypedExtensionReserved"),
+        }
+    }
+}
+
+impl OwnerWire for FrameRowC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::LetF { binder, body, saved_env, origin } => json!({"LetF": {"binder": binder.owner_wire(), "body": body.owner_wire(), "saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::LeftF { op, right, saved_env, origin } => json!({"LeftF": {"op": op.owner_wire(), "right": right.owner_wire(), "saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::RightF { op, left, origin } => json!({"RightF": {"op": op.owner_wire(), "left": left.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::UnaryF { op, origin } => json!({"UnaryF": {"op": op.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::IfF { then_expr, else_expr, saved_env, origin } => json!({"IfF": {"then_expr": then_expr.owner_wire(), "else_expr": else_expr.owner_wire(), "saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::MatchF { arms, saved_env, origin } => json!({"MatchF": {"arms": arms.owner_wire(), "saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::ArgsF { function_name, completed, rest, saved_env, origin } => json!({"ArgsF": {"function_name": function_name.owner_wire(), "completed": completed.owner_wire(), "rest": rest.owner_wire(), "saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::ReturnF { return_type, saved_env, origin } => json!({"ReturnF": {"return_type": return_type.owner_wire(), "saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+            Self::ScopeF { saved_env, origin } => json!({"ScopeF": {"saved_env": saved_env.owner_wire(), "origin": origin.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for FunctionRowC {
+    fn owner_wire(&self) -> Value {
+        let FunctionRowC { function_name, params, return_type, body } = self;

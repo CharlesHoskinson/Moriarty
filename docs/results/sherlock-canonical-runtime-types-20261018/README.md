@@ -1,0 +1,25 @@
+# Canonical runtime TypeId carriers — actual ten new tests
+
+October18 actual result supplement. Three normal Rust compiles and ten new selected tests passed: five designated-owner V8 cases, four builtin live-carrier cases and one nominal-storage-only case. Read [the complete scoped result](ACTUAL-TEN-TESTS-SCOPE.json), [immutable prefix receipts](actual/prefix-01-through-09/RESULT.json), [Root offline test09 adoption](actual/offline09-and-tail-selection/ROOT-OFFLINE-09-ADOPTION.json), [same-reviewer readback](reviews/offline09-and-tail-eligibility/REPORT.md) and [four actual tail receipts](actual/tail-10-through-13/RESULT.json). Full stdout/stderr and all 484 pin checks are retained.
+
+The first helper failed in Root's tool transcript before its attempt marker; no product command ran and no original stderr file exists. The corrected capturer later false-stopped after test09 actually passed because its diagnostic split the result across lines. That original failure remains unchanged. Root accepted the same 326-byte stdout offline after independent review, then ran only the four remaining tests. No prefix was replayed.
+
+The cfg(test) harness compiled 331 tests; only five selected new V8 tests ran, leaving 326 other Core tests unrun. Eight independent mismatch vectors were not executed. Absolute B clocks remain UNBOUND; printed counts are observations. Nominal IDs 4/5/17 are storage-only. Original034 and all 25 refinements remain OPEN; no nominal admission/runtime, correspondence, native/target or globalH1 claim follows. The continuing independent reviewer is a0ecce6e; backend-canonical model attestation is false.
+
+Source/currentness compatibility is proposed for Root's explicit adoption through [this guarded record](ROOT-CANONICAL-TYPEID-COMPATIBILITY-ADOPTION.proposed.json). It retains the 15 existing original-clause scopes without adding a closure. No binaries or private payloads are published. Historical absolute runtime paths are provenance, not portable instructions.
+
+## Historical source-review cut
+
+The earlier UNRUN statements below describe the source-review cut before the actual receipts above. Its [exact original README](history/source-review-cut/README.md) and all sealed source/oracle bytes remain available.
+
+# Canonical runtime TypeId prerequisite — source/review cut
+
+The candidate carries the existing canonical `TypeIdC` through six real signature/runtime fields: function return, parameter sort, PairTask sort, Bound return type, ReturnF return type and Scalar expected type. Source `SortTag` remains UInt/Bool/List/Tree; builtin identities remain0/1/2/3 and their diagnostic wire strings stay unchanged. IDs 4/5/17 are representable storage values only, not admitted nominal programs or runtime execution.
+
+The complete [fresh nonauthor review](reviews/source-and-operation/REPORT.md) approves the supplied source/security/normal scope and classifies the exact13 proposed ordinary operations ELIGIBLE with zero mandatory source fixes. The actual reviewer CID is a0ecce6e-21ff-4f52-8841-2b474a6127d5, using the requested/initialized Gemini4ArgonHIGH slug under the standing Opus-outage route; backend-canonical attestation is false. Security source/test author718c is not its reviewer; this is one independent vote. The unchanged report says86 pages, while [Root's coverage readback](reviews/source-and-operation/ROOT-COVERAGE-READBACK.json) records87 unique complete DONEpages,91 DONEevents and no missing page. Tool transport exposes counts/whole-page parameters, not an OS I/O proof or all tool-output bodies.
+
+Actual compilation and the ten new test runs are UNRUN at this immutable preparation cut. The [exact prospective QA](qa/proposed/PROPOSED.json) has three compilations, five new designated-owner V8 checks and the unchanged sealed four-builtin/one-nominal-storage consumer; no old passing cohort is selected. Future actual receipts and result acceptance must be added separately. Eligibility, source review and copied JSON are not a PASS. Exact B clocks remain independently unbound; K charges are not B expectations.
+
+The archive preserves all 9 candidate files,4 normal consumer/fixture files, independent expectation freeze/derivation/readset, all9 preimages, complete readable reviewed bodies/pages, full actual review/provenance, proposed QA and the complete recursive compatibility inventory. No binaries, wallet/private material, provider runner or dependency build output is included. Runtime paths in historical metadata identify original inputs and do not make this archive an installed toolchain or automatically runnable recipe.
+
+All15 existing originals need the explicit compatibility/currentness process before selective source-pin rebinds:63 current references are conditional on the actual13 operations;15 already archived references stay unchanged;3 historical canonical citations move only to identical old preimage bytes. Whole034 and all 25 refinements remain OPEN. No new original clause, nominal admission/runtime, semantic refinement, correspondence, proof, circuit, native/target or globalH1 claim is adopted by this publication preparation.

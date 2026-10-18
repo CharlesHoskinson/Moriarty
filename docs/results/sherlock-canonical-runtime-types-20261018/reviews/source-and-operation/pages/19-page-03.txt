@@ -1,0 +1,79 @@
+    pub binder: NameId,
+    pub sort: SortTag,
+}
+
+// schema /program_image_view/tables/prog.arms/row
+pub struct ArmRow {
+    pub pattern: PatternRowId,
+    pub body: ExprId,
+}
+
+// schema /program_image_view/tables/prog.patterns/row/variant
+pub enum PatternRow {
+    PVar { x: NameId },
+    PNil,
+    PCons { x: NameId, y: NameId },
+    PLeaf { x: NameId },
+    PBranch { x: NameId, y: NameId },
+}
+
+// schema /program_image_view/tables/prog.names/row
+pub struct NameRow {
+    pub bytes: Text,
+}
+
+// schema /core_program_input/CorePattern/variant
+pub enum CorePattern {
+    PVar { x: Text },
+    PNil,
+    PCons { x: Text, y: Text },
+    PLeaf { x: Text },
+    PBranch { x: Text, y: Text },
+}
+
+// schema /program_image_view/header/activeLengths
+pub struct ProgramActiveLengths {
+    pub expressions: usize,
+    pub occurrences: usize,
+    pub occurrence_paths: usize,
+    pub children: usize,
+    pub functions: usize,
+    pub parameters: usize,
+    pub arms: usize,
+    pub patterns: usize,
+    pub constants: usize,
+    pub constant_fields: usize,
+    pub names: usize,
+}
+
+// schema /program_image_view/header
+pub struct ProgramHeader {
+    pub entry: ExprId,
+    pub active_lengths: ProgramActiveLengths,
+}
+
+// schema /identity/Identity/record
+pub struct Identity {
+    pub profile_id: ProfileId,
+    pub grammar_domain: GrammarDomain,
+    pub finance: FinanceInput,
+    pub layout_version: Id,
+    pub layout_digest: Digest,
+    pub bounds_digest: Digest,
+    pub field_id: Option<Id>,
+    pub program_membership_digest: Digest,
+}
+
+// schema /identity/RunId/record
+pub struct RunId {
+    pub identity: Identity,
+    pub fuel_input: RunInt,
+    pub stack_limit_input: RunInt,
+}
+
+// schema /identity/SourceOccurrenceId/record
+pub struct SourceOccurrenceId {
+    pub program_source_digest: Digest,
+    pub owner: OccurrenceOwner,
+    pub ast_path: Vec<ChildPosition>,
+}

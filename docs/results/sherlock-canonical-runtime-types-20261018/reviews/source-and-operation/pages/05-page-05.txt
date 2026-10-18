@@ -1,0 +1,270 @@
+            if !ok { return Err(pv_err(ViewCheck::V6, "constants", Some(j), "field kind")); }
+        }
+        let expect = const_kind_of(row) != LogicalKind::Marker && fids.iter().all(|f| mf[*f]);
+        if marker_of(row) != expect { return Err(pv_err(ViewCheck::V6, "constants", Some(j), "markerFree")); }
+        mf.push(expect);
+    }
+    // V7 names: strictly ascending, byte budget, every id used.
+    let mut total_bytes: u128 = 0;
+    for (i, n) in v.names.iter().enumerate() {
+        total_bytes += n.len() as u128;
+        if i > 0 && v.names[i - 1] >= *n { return Err(pv_err(ViewCheck::V7, "names", Some(i), "not ascending")); }
+    }
+    if total_bytes > l.capacities.name_bytes as u128 {
+        return Err(pv_err(ViewCheck::V7, "names", None, "name bytes")); }
+    let mut used = vec![false; v.names.len()];
+    for e in &v.expressions { match e {
+        ExpressionRowC::Var { binder } | ExpressionRowC::Let { binder, .. } => used[*binder] = true,
+        ExpressionRowC::Call { function_name, .. } => used[*function_name] = true, _ => {} } }
+    for f in &v.functions { used[f.function_name] = true; }
+    for prm in &v.parameters { used[prm.binder] = true; }
+    for pat in &v.patterns { match pat {
+        PatternRowC::PVar { x } | PatternRowC::PLeaf { x } => used[*x] = true,
+        PatternRowC::PCons { x, y } | PatternRowC::PBranch { x, y } => { used[*x] = true; used[*y] = true; }
+        PatternRowC::PNil => {} } }
+    for (i, u) in used.iter().enumerate() { if !u {
+        return Err(pv_err(ViewCheck::V7, "names", Some(i), "unused name")); } }
+    // V8: decode iteratively (reverse ExprId order; children have larger ids),
+    // re-prepare, compare bit-for-bit. Constant unfolding is refused
+    // incrementally at bounds.constant_nodes (the C6 declared capacity,
+    // D-36); any field-shared hand view then also fails bit equality.
+    let mut decoded: Vec<Option<CoreExpr>> = (0..n_expr).map(|_| None).collect();
+    for i in (0..n_expr).rev() {
+        let e = match &v.expressions[i] {
+            ExpressionRowC::Literal { constant } => CoreExpr::Literal {
+                value: decode_const_value(*constant, v, b.constant_nodes)? },
+            ExpressionRowC::Var { binder } => CoreExpr::Var { name: v.names[*binder].clone() },
+            ExpressionRowC::Let { binder, value, body } => {
+                let val = decoded[*value].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "let value taken"))?;
+                let bod = decoded[*body].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "let body taken"))?;
+                CoreExpr::Let { name: v.names[*binder].clone(),
+                    value: Box::new(val), body: Box::new(bod) } }
+            ExpressionRowC::Binary { op, left, right } => {
+                let lf = decoded[*left].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "binary left"))?;
+                let rt = decoded[*right].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "binary right"))?;
+                CoreExpr::Binary { op: *op, left: Box::new(lf), right: Box::new(rt) } }
+            ExpressionRowC::Unary { op, operand } => {
+                let o = decoded[*operand].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "unary"))?;
+                CoreExpr::Unary { op: *op, operand: Box::new(o) } }
+            ExpressionRowC::If { cond, then_expr, else_expr } => {
+                let c = decoded[*cond].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "if cond"))?;
+                let t = decoded[*then_expr].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "if then"))?;
+                let el = decoded[*else_expr].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "if else"))?;
+                CoreExpr::If { cond: Box::new(c), then_expr: Box::new(t), else_expr: Box::new(el) } }
+            ExpressionRowC::Call { function_name, args } => {
+                let mut argv: Vec<CoreExpr> = Vec::new();
+                if args.len > 0 { for cid in &v.children[args.start..args.start + args.len] {
+                    argv.push(decoded[*cid].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "call arg"))?); } }
+                CoreExpr::Call { name: v.names[*function_name].clone(), args: argv } }
+            ExpressionRowC::Match { scrutinee, arms } => {
+                let scr = decoded[*scrutinee].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "scrutinee"))?;
+                let mut out: Vec<CoreArm> = Vec::new();
+                if arms.len > 0 { for aid in arms.start..arms.start + arms.len {
+                    let arow = &v.arms[aid];
+                    let pat = match &v.patterns[arow.pattern] {
+                        PatternRowC::PVar { x } => CorePattern::PVar { x: v.names[*x].clone() },
+                        PatternRowC::PNil => CorePattern::PNil,
+                        PatternRowC::PCons { x, y } => CorePattern::PCons {
+                            x: v.names[*x].clone(), y: v.names[*y].clone() },
+                        PatternRowC::PLeaf { x } => CorePattern::PLeaf { x: v.names[*x].clone() },
+                        PatternRowC::PBranch { x, y } => CorePattern::PBranch {
+                            x: v.names[*x].clone(), y: v.names[*y].clone() },
+                    };
+                    let bod = decoded[arow.body].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "arm body"))?;
+                    out.push(CoreArm { pattern: pat, body: bod }); } }
+                CoreExpr::Match { scrutinee: Box::new(scr), arms: out } }
+        };
+        decoded[i] = Some(e);
+    }
+    let entry = decoded[v.entry].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", None, "entry taken"))?;
+    fn decode_source_sort(sort: TypeIdC, table: &str, row: usize, detail: &str)
+        -> Result<SortTag, ProgramViewViolation> {
+        match sort {
+            TypeIdC::UInt => Ok(SortTag::UInt),
+            TypeIdC::Bool => Ok(SortTag::Bool),
+            TypeIdC::List => Ok(SortTag::List),
+            TypeIdC::Tree => Ok(SortTag::Tree),
+            _ => Err(pv_err(ViewCheck::V8, table, Some(row), detail)),
+        }
+    }
+    let mut funcs: Vec<CoreFunction> = Vec::new();
+    for (fi, f) in v.functions.iter().enumerate() {
+        let bod = decoded[f.body].take().ok_or_else(|| pv_err(ViewCheck::V8, "functions", None, "function body taken"))?;
+        let mut params: Vec<CoreParameter> = Vec::new();
+        if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {
+            let sort = decode_source_sort(
+                v.parameters[pid].sort, "parameters", pid, "non-builtin parameter sort")?;
+            params.push(CoreParameter { name: v.names[v.parameters[pid].binder].clone(),
+                sort }); } }
+        let return_type = decode_source_sort(
+            f.return_type, "functions", fi, "non-builtin return type")?;
+        funcs.push(CoreFunction { name: v.names[f.function_name].clone(),
+            parameters: params, return_type, body: bod });
+    }
+    let prog = CoreProgram { functions: funcs, entry };
+    let reprepared = prepare_core(&prog, b, l)
+        .map_err(|_| pv_err(ViewCheck::V8, "program", None, "re-prepare failed"))?;
+    if !views_equal(v, &reprepared) {
+        return Err(pv_err(ViewCheck::V8, "program", None, "view != prepare_core(decode(view))"));
+    }
+    Ok(())
+}
+
+// ------------------------------------------------------------------- admit
+pub fn admit(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
+    -> Result<Admitted, Tooling> {
+    // AD-0a layout.bounds == bounds, authoritative copy is the `b` argument.
+    if l.bounds != *b {
+        return Err(Tooling::AdmissionRejected { reason: AdmissionReason::LayoutBoundsMismatch,
+            detail: "layout.bounds != bounds".to_string(), locator: field_loc("layout.bounds") });
+    }
+    // AD-1 stepCap.
+    if b.step_cap < 1 {
+        return Err(cap_err(CapacityKind::StepCap, 1, b.step_cap, field_loc("bounds.stepCap")));
+    }
+    // AD-2a counter widths in WorkCounter, HelperCounter, ReferenceCursor order.
+    if let Some(w) = &l.widths {
+        let checks: [(CounterWidthField, u128, &str); 3] = [
+            (CounterWidthField::WorkCounter, bitlen_count(b.max_reference_work), "WorkCounter"),
+            (CounterWidthField::HelperCounter, bitlen_count(b.max_helper_work), "HelperCounter"),
+            (CounterWidthField::ReferenceCursor, bitlen_count(b.max_reference_work), "ReferenceCursor"),
+        ];
+        for (field, needed, nm) in checks {
+            let limit = w.counter_width(&field) as u128;
+            if limit < needed {
+                return Err(cap_err(CapacityKind::CounterWidth { field }, needed, limit,
+                    field_loc(&format!("layout.widths.counterWidths.{nm}"))));
+            }
+        }
+        // AD-2b index widths in derived_widths order. Absent entry reads 0.
+        let idx: [(&str, u128); 20] = [
+            ("ExprId", bitlen_id(b.code_rows as u128)),
+            ("ChildPos", bitlen_count(b.code_child_slots as u128)),
+            ("FunctionRowId", bitlen_id(b.function_rows as u128)),
+            ("FunctionCursor", bitlen_count(b.function_rows as u128)),
+            ("ParamPos", bitlen_count(b.parameter_slots as u128)),
+            ("ArmId", bitlen_id(b.match_arm_rows as u128)),
+            ("ArmPos", bitlen_count(b.match_arm_rows as u128)),
+            ("PatternRowId", bitlen_id(b.pattern_rows as u128)),
+            ("ConstId", bitlen_id(b.constant_nodes as u128)),
+            ("ConstFieldPos", bitlen_count(b.constant_field_slots as u128)),
+            ("DataId", bitlen_id(b.data_nodes as u128)),
+            ("FieldPos", bitlen_count(b.data_field_slots as u128)),
+            ("EnvId", bitlen_id(b.environment_cells as u128)),
+            ("NameId", bitlen_id(l.capacities.name_rows as u128)),
+            ("OccPathPos", bitlen_count(l.capacities.occurrence_path_slots as u128)),
+            ("ChildPosition", bitlen_count((b.max_arity as u128)
+                .max(b.match_arm_rows as u128 + 1))),
+            ("ValueSlotPos", bitlen_count(l.capacities.value_slots as u128)),
+            ("ArityCount", bitlen_count(b.max_arity as u128)),
+            ("Depth", bitlen_count(b.frames as u128)),
+            ("TaskCount", bitlen_count(b.helper_tasks as u128)),
+        ];
+        for (nm, needed) in idx {
+            let limit = w.index_width(nm) as u128;
+            if limit < needed {
+                return Err(Tooling::AdmissionRejected {
+                    reason: AdmissionReason::LayoutWidthTooSmall,
+                    detail: nm.to_string(), locator: field_loc(&format!("layout.widths.indexWidths.{nm}")) });
+            }
+        }
+        // AD-2b record widths: R4 derived_widths supplies index and
+        // counter formulas, but only a recordWidths map/ordering pointer
+        // with no per-record formula in the supplied schema. This
+        // HostOnly lane therefore refuses Bounded admission after the
+        // AD-2a and AD-2b index checks above, instead of waiving it.
+        return Err(Tooling::AdmissionRejected {
+            reason: AdmissionReason::LayoutWidthTooSmall,
+            detail: "recordWidths".to_string(),
+            locator: field_loc("layout.widths.recordWidths") });
+    }
+    // AD-3 maxArity.
+    if b.max_arity < 2 {
+        return Err(cap_err(CapacityKind::MaxArity, 2, b.max_arity as u128,
+            field_loc("bounds.maxArity")));
+    }
+    // AD-4: statement only under DedicatedSorts; produces nothing.
+    // AD-5 prepare then view check.
+    let view = prepare_core(p, b, l)?;
+    if let Err(viol) = check_program_view(&view, b, l) {
+        return Err(Tooling::AdmissionRejected {
+            reason: AdmissionReason::ProgramViewMalformed,
+            detail: format!("{:?}:{}", viol.check, viol.detail), locator: None });
+    }
+    // AD-6 boundary capacities must be absent.
+    if l.boundary_capacities_present {
+        return Err(Tooling::UnsupportedFeature { feature: FeatureKind::BoundarySection,
+            locator: field_loc("layout.boundaryCapacities") });
+    }
+    let identity = IdentityC { profile_id: 2, grammar_domain: GrammarDomain::DedicatedSorts,
+        finance: FinanceInput::Absent, layout_version: l.layout_version.clone(),
+        layout_digest: DigestC::Unselected, bounds_digest: DigestC::Unselected,
+        field_id: l.field_id.clone(), program_membership_digest: DigestC::Unselected };
+    Ok(Admitted { body: Arc::new(AdmittedBody { identity, bounds: *b, view,
+        layout: l.clone() }) })
+}
+
+// ---------------------------------------------------------------- admit_run
+// Both genesis forms store the one RunIdC that admit_run built from the
+// original fuel/stack RunIntC inputs; registers below carry converted values.
+fn genesis(a: &Admitted, run_id: Arc<RunIdC>, valid: bool, fuel: u128, stack: usize) -> MachineImage {
+    MachineImage {
+        admission: Admitted { body: Arc::clone(&a.body) }, run_id,
+        control: if valid { ControlC::Eval { expr: 0 } } else { ControlC::Error { code: 1 } },
+        control_origin: 0, env_root: None,
+        stack_limit: if valid { stack } else { 0 }, outcome: OutcomeC::Running,
+        initial_fuel: if valid { fuel } else { 0 },
+        remaining_work: if valid { fuel } else { 0 },
+        consumed_work: 0, helper_work: 0, helper_visits: 0, reference_cursor: 0,
+        alloc: AllocCounters::default(), active: ActiveLengths::default(),
+        helper: None, result: None,
+        data: Vec::new(), data_fields: Vec::new(), env: Vec::new(),
+        frames: Vec::new(), tasks: Vec::new(), value_slots: Vec::new(),
+    }
+}
+pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
+    finance: &FinanceInput) -> Result<MachineImage, Tooling> {
+    let bounds = a.body.bounds;
+    let caps = a.body.layout.capacities;
+    // R1 finance.
+    if *finance != FinanceInput::Absent {
+        return Err(Tooling::UnsupportedFeature {
+            feature: FeatureKind::FinancialInput, locator: None });
+    }
+    // RunId (schema identity.RunId) from the original three-class inputs,
+    // built before R2 returns and before R3/R4 convert fuel and stack_limit.
+    let run_id = Arc::new(RunIdC { identity: a.body.identity.clone(),
+        fuel_input: *fuel, stack_limit_input: *stack_limit });
+    // R2 negative -> genesis_invalid, not a refusal.
+    if matches!(fuel, RunIntC::Negative) || matches!(stack_limit, RunIntC::Negative) {
+        return Ok(genesis(a, run_id, false, 0, 0));
+    }
+    // R3 fuel bound.
+    let fuel_v: u128 = match fuel {
+        RunIntC::Nat(v) => *v,
+        RunIntC::NatAboveU128 => return Err(cap_err_above_u128(
+            CapacityKind::MaxReferenceWork, bounds.max_reference_work, None)),
+        // Already returned by R2 above; same genesis disposition, no panic.
+        RunIntC::Negative => return Ok(genesis(a, run_id, false, 0, 0)),
+    };
+    if fuel_v > bounds.max_reference_work {
+        return Err(cap_err(CapacityKind::MaxReferenceWork, fuel_v,
+            bounds.max_reference_work, None));
+    }
+    // R4 stack bound.
+    let stack_v: u128 = match stack_limit {
+        RunIntC::Nat(v) => *v,
+        RunIntC::NatAboveU128 => return Err(cap_err_above_u128(
+            CapacityKind::Frames, bounds.frames as u128, None)),
+        // Already returned by R2 above; same genesis disposition, no panic.
+        RunIntC::Negative => return Ok(genesis(a, run_id, false, 0, 0)),
+    };
+    if stack_v > bounds.frames as u128 {
+        return Err(cap_err(CapacityKind::Frames, stack_v, bounds.frames as u128, None));
+    }
+    // R5 value slots.
+    if fuel_v > caps.value_slots as u128 {
+        return Err(cap_err(CapacityKind::ValueSlots, fuel_v, caps.value_slots as u128, None));
+    }
+    // R6 genesis_valid. stack_v <= frames (usize) so conversion cannot fail;
+    // fail closed instead of unwrapping.
