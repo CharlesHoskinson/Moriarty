@@ -1,0 +1,733 @@
+--- v1/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs
++++ v2/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs
+@@ -6,8 +6,8 @@
+     AssetId, BinaryOp, Effect, Expr, Program, Scenario, Snapshot, Statement, UInt, Value, parse,
+     simulate, validate,
+ };
++use serde::Deserialize;
+ use serde::de::DeserializeOwned;
+-use serde::Deserialize;
+ use serde_json::{Value as Json, json};
+ use std::collections::BTreeMap;
+ 
+@@ -59,7 +59,10 @@
+ fn balance_rows(snapshot: &Snapshot) -> BTreeMap<(AssetId, String), UInt> {
+     let mut rows = BTreeMap::new();
+     for row in &snapshot.balances {
+-        assert!(rows.insert((row.asset.clone(), row.account.clone()), row.amount).is_none());
++        assert!(
++            rows.insert((row.asset.clone(), row.account.clone()), row.amount)
++                .is_none()
++        );
+     }
+     rows
+ }
+@@ -68,33 +71,71 @@
+ fn liability_rows(snapshot: &Snapshot) -> BTreeMap<DutyKey, UInt> {
+     let mut rows = BTreeMap::new();
+     for row in &snapshot.liabilities {
+-        assert!(rows.insert((
+-            row.name.clone(), row.asset.clone(), row.debtor.clone(), row.creditor.clone(),
+-        ), row.amount).is_none());
++        assert!(
++            rows.insert(
++                (
++                    row.name.clone(),
++                    row.asset.clone(),
++                    row.debtor.clone(),
++                    row.creditor.clone(),
++                ),
++                row.amount
++            )
++            .is_none()
++        );
+     }
+     rows
+ }
+ 
+ fn assert_frame(actual: &Snapshot, literal: &Json, context: &str) {
+     let expected: Snapshot = decode(literal);
+-    assert_eq!(actual.state, expected.state, "{context}: complete typed state");
+-    assert_eq!(balance_rows(actual), balance_rows(&expected), "{context}: complete balances");
+-    assert_eq!(liability_rows(actual), liability_rows(&expected), "{context}: complete duties");
++    assert_eq!(
++        actual.state, expected.state,
++        "{context}: complete typed state"
++    );
++    assert_eq!(
++        balance_rows(actual),
++        balance_rows(&expected),
++        "{context}: complete balances"
++    );
++    assert_eq!(
++        liability_rows(actual),
++        liability_rows(&expected),
++        "{context}: complete duties"
++    );
+ }
+ 
+ fn balance(snapshot: &Snapshot, asset: &AssetId, account: &str) -> UInt {
+-    let matches: Vec<_> = snapshot.balances.iter()
+-        .filter(|row| row.asset == *asset && row.account == account).collect();
+-    assert_eq!(matches.len(), 1, "one explicit balance for {account} and {asset:?}");
++    let matches: Vec<_> = snapshot
++        .balances
++        .iter()
++        .filter(|row| row.asset == *asset && row.account == account)
++        .collect();
++    assert_eq!(
++        matches.len(),
++        1,
++        "one explicit balance for {account} and {asset:?}"
++    );
+     matches[0].amount
+ }
+ 
+-fn duty<'a>(snapshot: &'a Snapshot, name: &str, asset: &AssetId, debtor: &str, creditor: &str)
+-    -> Option<&'a mori_core::Liability>
+-{
+-    let matches: Vec<_> = snapshot.liabilities.iter().filter(|row|
+-        row.name == name && row.asset == *asset && row.debtor == debtor && row.creditor == creditor
+-    ).collect();
++fn duty<'a>(
++    snapshot: &'a Snapshot,
++    name: &str,
++    asset: &AssetId,
++    debtor: &str,
++    creditor: &str,
++) -> Option<&'a mori_core::Liability> {
++    let matches: Vec<_> = snapshot
++        .liabilities
++        .iter()
++        .filter(|row| {
++            row.name == name
++                && row.asset == *asset
++                && row.debtor == debtor
++                && row.creditor == creditor
++        })
++        .collect();
+     assert!(matches.len() <= 1);
+     matches.first().copied()
+ }
+@@ -106,8 +147,14 @@
+     match &program.expressions[usize::from(id)] {
+         Expr::Name { name } => name.clone(),
+         Expr::Binary { op, lhs, rhs } => {
+-            assert!(matches!(program.expressions[usize::from(*lhs)], Expr::Name { .. }));
+-            assert!(matches!(program.expressions[usize::from(*rhs)], Expr::Name { .. }));
++            assert!(matches!(
++                program.expressions[usize::from(*lhs)],
++                Expr::Name { .. }
++            ));
++            assert!(matches!(
++                program.expressions[usize::from(*rhs)],
++                Expr::Name { .. }
++            ));
+             let symbol = match op {
+                 BinaryOp::Ge => ">=",
+                 BinaryOp::Sub => "-",
+@@ -116,7 +163,11 @@
+                 BinaryOp::Eq => "==",
+                 _ => panic!("operator outside the frozen positive specimen"),
+             };
+-            format!("{} {symbol} {}", expression_text(program, *lhs), expression_text(program, *rhs))
++            format!(
++                "{} {symbol} {}",
++                expression_text(program, *lhs),
++                expression_text(program, *rhs)
++            )
+         }
+         _ => panic!("expression shape outside this scoped representation adapter"),
+     }
+@@ -133,20 +184,47 @@
+         Statement::Ensures { predicate } => format!("ensures {};", expression(*predicate)),
+         Statement::Let { name, value } => format!("let {name} = {};", expression(*value)),
+         Statement::Next { state, value } => format!("next {state} = {};", expression(*value)),
+-        Statement::Emit { name, value } => format!("emit {}({});", quoted(name), expression(*value)),
+-        Statement::Transfer { asset, from, to, amount } => format!(
+-            "transfer({asset}, {}, {}, {});", quoted(from), quoted(to), expression(*amount)
++        Statement::Emit { name, value } => {
++            format!("emit {}({});", quoted(name), expression(*value))
++        }
++        Statement::Transfer {
++            asset,
++            from,
++            to,
++            amount,
++        } => format!(
++            "transfer({asset}, {}, {}, {});",
++            quoted(from),
++            quoted(to),
++            expression(*amount)
+         ),
+-        Statement::Fee { asset, from, to, amount } => format!(
+-            "fee({asset}, {}, {}, {});", quoted(from), quoted(to), expression(*amount)
++        Statement::Fee {
++            asset,
++            from,
++            to,
++            amount,
++        } => format!(
++            "fee({asset}, {}, {}, {});",
++            quoted(from),
++            quoted(to),
++            expression(*amount)
+         ),
+-        Statement::Liability { name, asset, debtor, creditor, amount } => format!(
+-            "liability({}, {asset}, {}, {}, {});", quoted(name), quoted(debtor),
+-            quoted(creditor), expression(*amount)
++        Statement::Liability {
++            name,
++            asset,
++            debtor,
++            creditor,
++            amount,
++        } => format!(
++            "liability({}, {asset}, {}, {}, {});",
++            quoted(name),
++            quoted(debtor),
++            quoted(creditor),
++            expression(*amount)
+         ),
+-        Statement::Discharge { name, amount } => format!(
+-            "discharge({}, {});", quoted(name), expression(*amount)
+-        ),
++        Statement::Discharge { name, amount } => {
++            format!("discharge({}, {});", quoted(name), expression(*amount))
++        }
+         Statement::Await { .. } => panic!("Await is outside this Core/1 specimen"),
+     }
+ }
+@@ -161,11 +239,26 @@
+ // Project actual raw effects and their actual adjacent frames into the independent
+ // oracle's richer semantic operations. This uses no oracle value as an input and
+ // performs no expression evaluation. Every raw Effect variant is handled.
+-fn operation(effect: &Effect, statement: &Statement, result: &Value,
+-    before: &Snapshot, after: &Snapshot) -> Json
+-{
++fn operation(
++    effect: &Effect,
++    statement: &Statement,
++    result: &Value,
++    before: &Snapshot,
++    after: &Snapshot,
++) -> Json {
+     match effect {
+-        Effect::Transfer { asset, from, to, amount } | Effect::Fee { asset, from, to, amount } => {
++        Effect::Transfer {
++            asset,
++            from,
++            to,
++            amount,
++        }
++        | Effect::Fee {
++            asset,
++            from,
++            to,
++            amount,
++        } => {
+             json!({
+                 "kind": if matches!(effect, Effect::Fee { .. }) { "fee" } else { "transfer" },
+                 "asset": asset, "from": from, "to": to, "amount": amount,
+@@ -175,7 +268,14 @@
+                 "recipient_after": balance(after, asset, to),
+             })
+         }
+-        Effect::Liability { name, asset, debtor, creditor, before: opening, after: closing } => {
++        Effect::Liability {
++            name,
++            asset,
++            debtor,
++            creditor,
++            before: opening,
++            after: closing,
++        } => {
+             let kind = match statement {
+                 Statement::Liability { .. } => "liability_add",
+                 Statement::Discharge { .. } => "discharge",
+@@ -193,7 +293,11 @@
+             }
+             projected
+         }
+-        Effect::State { name, before, after } => json!({
++        Effect::State {
++            name,
++            before,
++            after,
++        } => json!({
+             "kind": "state_write", "name": name, "before": scalar(before), "after": scalar(after),
+         }),
+         Effect::Emit { name, value } => json!({ "kind": "emit", "name": name, "value": value }),
+@@ -201,7 +305,11 @@
+ }
+ 
+ fn category(operations: &[Json], kinds: &[&str]) -> Vec<Json> {
+-    operations.iter().filter(|op| kinds.contains(&op["kind"].as_str().unwrap())).cloned().collect()
++    operations
++        .iter()
++        .filter(|op| kinds.contains(&op["kind"].as_str().unwrap()))
++        .cloned()
++        .collect()
+ }
+ 
+ #[derive(Default)]
+@@ -219,16 +327,39 @@
+     assert_eq!(rows.len(), pre.balances.len());
+     let mut actual = BTreeMap::new();
+     for row in &pre.balances {
+-        assert!(actual.insert((row.asset.clone(), row.account.clone()), Flow::default()).is_none());
++        assert!(
++            actual
++                .insert((row.asset.clone(), row.account.clone()), Flow::default())
++                .is_none()
++        );
+     }
+     for effect in effects {
+         match effect {
+-            Effect::Transfer { asset, from, to, amount } => {
+-                actual.get_mut(&(asset.clone(), from.clone())).unwrap().nonfee_debit += amount.0;
+-                actual.get_mut(&(asset.clone(), to.clone())).unwrap().gross_credit += amount.0;
++            Effect::Transfer {
++                asset,
++                from,
++                to,
++                amount,
++            } => {
++                actual
++                    .get_mut(&(asset.clone(), from.clone()))
++                    .unwrap()
++                    .nonfee_debit += amount.0;
++                actual
++                    .get_mut(&(asset.clone(), to.clone()))
++                    .unwrap()
++                    .gross_credit += amount.0;
+             }
+-            Effect::Fee { asset, from, to, amount } => {
+-                actual.get_mut(&(asset.clone(), from.clone())).unwrap().fee_debit += amount.0;
++            Effect::Fee {
++                asset,
++                from,
++                to,
++                amount,
++            } => {
++                actual
++                    .get_mut(&(asset.clone(), from.clone()))
++                    .unwrap()
++                    .fee_debit += amount.0;
+                 let recipient = actual.get_mut(&(asset.clone(), to.clone())).unwrap();
+                 recipient.gross_credit += amount.0;
+                 recipient.fee_credit += amount.0;
+@@ -245,17 +376,21 @@
+         let flow = &actual[&key];
+         let opening = balance(pre, &asset, account);
+         let closing = balance(post, &asset, account);
+-        assert_eq!(json!({
+-            "account": account, "asset": asset,
+-            "opening_amount": opening, "closing_amount": closing,
+-            "opening_present": true, "closing_present": true,
+-            "nonfee_debit": flow.nonfee_debit.to_string(),
+-            "fee_debit": flow.fee_debit.to_string(),
+-            "gross_debit_including_fees": (flow.nonfee_debit + flow.fee_debit).to_string(),
+-            "gross_credit": flow.gross_credit.to_string(),
+-            "fee_credit": flow.fee_credit.to_string(),
+-            "signed_net_flow": (i128::try_from(closing.0).unwrap() - i128::try_from(opening.0).unwrap()).to_string(),
+-        }), *expected, "complete gross/fee/net account flow for {account}");
++        assert_eq!(
++            json!({
++                "account": account, "asset": asset,
++                "opening_amount": opening, "closing_amount": closing,
++                "opening_present": true, "closing_present": true,
++                "nonfee_debit": flow.nonfee_debit.to_string(),
++                "fee_debit": flow.fee_debit.to_string(),
++                "gross_debit_including_fees": (flow.nonfee_debit + flow.fee_debit).to_string(),
++                "gross_credit": flow.gross_credit.to_string(),
++                "fee_credit": flow.fee_credit.to_string(),
++                "signed_net_flow": (i128::try_from(closing.0).unwrap() - i128::try_from(opening.0).unwrap()).to_string(),
++            }),
++            *expected,
++            "complete gross/fee/net account flow for {account}"
++        );
+     }
+     assert_eq!(seen.len(), actual.len());
+ }
+@@ -274,13 +409,17 @@
+     for expected in oracle.as_array().unwrap() {
+         let asset: AssetId = decode(&expected["asset"]);
+         assert!(seen.insert(asset.clone(), ()).is_none());
+-        assert_eq!(json!({
+-            "asset": asset,
+-            "opening_total": opening[&asset].to_string(),
+-            "closing_total": closing[&asset].to_string(),
+-            // The complete effect enum above has no mint/burn/external operation.
+-            "minted": "0", "burned": "0", "net_external_flow": "0",
+-        }), *expected, "separate token totals, excluding duties");
++        assert_eq!(
++            json!({
++                "asset": asset,
++                "opening_total": opening[&asset].to_string(),
++                "closing_total": closing[&asset].to_string(),
++                // The complete effect enum above has no mint/burn/external operation.
++                "minted": "0", "burned": "0", "net_external_flow": "0",
++            }),
++            *expected,
++            "separate token totals, excluding duties"
++        );
+     }
+     assert_eq!(seen.len(), opening.len());
+     assert_eq!(seen.len(), closing.len());
+@@ -296,24 +435,42 @@
+         let name = expected["name"].as_str().unwrap();
+         let debtor = expected["debtor"].as_str().unwrap();
+         let creditor = expected["creditor"].as_str().unwrap();
+-        assert!(seen.insert((name.to_owned(), asset.clone(), debtor.to_owned(), creditor.to_owned()), ()).is_none());
++        assert!(
++            seen.insert(
++                (
++                    name.to_owned(),
++                    asset.clone(),
++                    debtor.to_owned(),
++                    creditor.to_owned()
++                ),
++                ()
++            )
++            .is_none()
++        );
+         let opening = duty(pre, name, &asset, debtor, creditor).unwrap();
+         let closing = duty(post, name, &asset, debtor, creditor).unwrap();
+         let mut addition = 0u128;
+         let mut discharge = 0u128;
+-        for op in operations.iter().filter(|op| op["name"].as_str() == Some(name)) {
++        for op in operations
++            .iter()
++            .filter(|op| op["name"].as_str() == Some(name))
++        {
+             match op["kind"].as_str().unwrap() {
+                 "liability_add" => addition += decode::<UInt>(&op["amount"]).0,
+                 "discharge" => discharge += decode::<UInt>(&op["amount"]).0,
+                 _ => {}
+             }
+         }
+-        assert_eq!(json!({
+-            "name": name, "asset": asset, "debtor": debtor, "creditor": creditor,
+-            "opening_amount": opening.amount, "closing_amount": closing.amount,
+-            "opening_present": true, "closing_present": true,
+-            "addition": addition.to_string(), "discharge": discharge.to_string(),
+-        }), *expected, "duty evolution for {name}");
++        assert_eq!(
++            json!({
++                "name": name, "asset": asset, "debtor": debtor, "creditor": creditor,
++                "opening_amount": opening.amount, "closing_amount": closing.amount,
++                "opening_present": true, "closing_present": true,
++                "addition": addition.to_string(), "discharge": discharge.to_string(),
++            }),
++            *expected,
++            "duty evolution for {name}"
++        );
+         assert_eq!(opening.amount.0 + addition - discharge, closing.amount.0);
+     }
+ }
+@@ -326,20 +483,43 @@
+         assert_eq!(snapshot.state.get(&name), Some(&expected));
+     }
+     let reserves = oracle["reserve_balances"].as_object().unwrap();
+-    let reserve_asset = snapshot.balances.iter().find(|row| row.asset.reference == "Reserve")
+-        .expect("complete frame has the exact Reserve asset").asset.clone();
+-    let cash_asset = snapshot.balances.iter().find(|row| row.asset.reference == "Cash")
+-        .expect("complete frame has the exact Cash asset").asset.clone();
++    let reserve_asset = snapshot
++        .balances
++        .iter()
++        .find(|row| row.asset.reference == "Reserve")
++        .expect("complete frame has the exact Reserve asset")
++        .asset
++        .clone();
++    let cash_asset = snapshot
++        .balances
++        .iter()
++        .find(|row| row.asset.reference == "Cash")
++        .expect("complete frame has the exact Cash asset")
++        .asset
++        .clone();
+     // Exact identities are compared by assert_frame, not inferred from a ticker.
+     for (account, expected) in reserves {
+-        assert_eq!(balance(snapshot, &reserve_asset, account), decode::<UInt>(expected));
+-    }
+-    assert_eq!(balance(snapshot, &cash_asset, "witness"), decode::<UInt>(&oracle["witness_cash"]));
+-    let reserve_duty = snapshot.liabilities.iter().find(|row| row.name == "reserveDuty").unwrap();
++        assert_eq!(
++            balance(snapshot, &reserve_asset, account),
++            decode::<UInt>(expected)
++        );
++    }
++    assert_eq!(
++        balance(snapshot, &cash_asset, "witness"),
++        decode::<UInt>(&oracle["witness_cash"])
++    );
++    let reserve_duty = snapshot
++        .liabilities
++        .iter()
++        .find(|row| row.name == "reserveDuty")
++        .unwrap();
+     assert_eq!(reserve_duty.amount, decode::<UInt>(&oracle["reserveDuty"]));
+     let tombstone = &oracle["zero_liability"];
+-    let zero = snapshot.liabilities.iter().find(|row|
+-        Some(row.name.as_str()) == tombstone["name"].as_str()).unwrap();
++    let zero = snapshot
++        .liabilities
++        .iter()
++        .find(|row| Some(row.name.as_str()) == tombstone["name"].as_str())
++        .unwrap();
+     assert_eq!(zero.amount, decode::<UInt>(&tombstone["amount_before"]));
+     assert_eq!(zero.amount, decode::<UInt>(&tombstone["amount_after"]));
+     assert_eq!(tombstone["present_before"], true);
+@@ -350,10 +530,16 @@
+ fn guarded_quantity_fee_matches_every_complete_independent_financial_prefix() {
+     let input: Input = serde_json::from_str(INPUT).unwrap();
+     let expected: Json = serde_json::from_str(ORACLE).unwrap();
+-    assert_eq!(expected["schema"], "moriarty-independent-financial-semantic-expectation/1");
++    assert_eq!(
++        expected["schema"],
++        "moriarty-independent-financial-semantic-expectation/1"
++    );
+     assert_eq!(input.id, expected["input_id"].as_str().unwrap());
+     assert_eq!(input.action, expected["action"].as_str().unwrap());
+-    assert_eq!(input.scenario.inputs, decode::<BTreeMap<String, Value>>(&expected["inputs"]));
++    assert_eq!(
++        input.scenario.inputs,
++        decode::<BTreeMap<String, Value>>(&expected["inputs"])
++    );
+     let original = input.scenario.clone();
+ 
+     // The tested consumer is the public production path; no mock/helper evaluator.
+@@ -368,10 +554,22 @@
+     assert_frame(&execution.pre, &expected["opening_frame"], "endpoint pre");
+     assert_frame(&execution.post, &expected["closing_frame"], "endpoint post");
+     let preservation = &expected["explicit_absence_and_preservation"];
+-    assert_eq!(execution.pre.balances.len() as u64, preservation["balance_rows_before"].as_u64().unwrap());
+-    assert_eq!(execution.post.balances.len() as u64, preservation["balance_rows_after"].as_u64().unwrap());
+-    assert_eq!(execution.pre.liabilities.len() as u64, preservation["liability_rows_before"].as_u64().unwrap());
+-    assert_eq!(execution.post.liabilities.len() as u64, preservation["liability_rows_after"].as_u64().unwrap());
++    assert_eq!(
++        execution.pre.balances.len() as u64,
++        preservation["balance_rows_before"].as_u64().unwrap()
++    );
++    assert_eq!(
++        execution.post.balances.len() as u64,
++        preservation["balance_rows_after"].as_u64().unwrap()
++    );
++    assert_eq!(
++        execution.pre.liabilities.len() as u64,
++        preservation["liability_rows_before"].as_u64().unwrap()
++    );
++    assert_eq!(
++        execution.post.liabilities.len() as u64,
++        preservation["liability_rows_after"].as_u64().unwrap()
++    );
+     assert_preserved(&execution.pre, preservation);
+     assert_preserved(&execution.post, preservation);
+ 
+@@ -384,60 +582,163 @@
+     let mut bindings = BTreeMap::<String, Value>::new();
+     for (index, (step, prefix)) in execution.steps.iter().zip(prefixes).enumerate() {
+         let ordinal = index + 1;
+-        assert_eq!(prefix["statement_ordinal"].as_u64().unwrap(), ordinal as u64);
+-        assert_eq!(usize::from(step.index), index, "prefix {ordinal}: actual index");
+-        assert_eq!(statement_text(&program, &step.statement), prefix["source_statement"].as_str().unwrap(),
+-            "prefix {ordinal}: source statement meaning");
++        assert_eq!(
++            prefix["statement_ordinal"].as_u64().unwrap(),
++            ordinal as u64
++        );
++        assert_eq!(
++            usize::from(step.index),
++            index,
++            "prefix {ordinal}: actual index"
++        );
++        assert_eq!(
++            statement_text(&program, &step.statement),
++            prefix["source_statement"].as_str().unwrap(),
++            "prefix {ordinal}: source statement meaning"
++        );
+         let value = typed_result(&prefix["evaluated_expression_result"]);
+-        assert_eq!(step.value.as_ref(), Some(&value), "prefix {ordinal}: typed expression value");
+-        assert_frame(before, &prefix["opening_frame"], &format!("prefix {ordinal} opening"));
+-        assert_frame(&step.snapshot, &prefix["closing_frame"], &format!("prefix {ordinal} closing"));
++        assert_eq!(
++            step.value.as_ref(),
++            Some(&value),
++            "prefix {ordinal}: typed expression value"
++        );
++        assert_frame(
++            before,
++            &prefix["opening_frame"],
++            &format!("prefix {ordinal} opening"),
++        );
++        assert_frame(
++            &step.snapshot,
++            &prefix["closing_frame"],
++            &format!("prefix {ordinal} closing"),
++        );
+         assert_preserved(&step.snapshot, preservation);
+         if matches!(step.statement, Statement::Discharge { .. }) {
+-            let cash_flow = step.snapshot.balances.iter().map(|row|
+-                row.amount.0.abs_diff(balance(before, &row.asset, &row.account).0)
+-            ).sum::<u128>();
+-            assert_eq!(UInt(cash_flow), decode::<UInt>(&preservation["discharge_cash_flow"]));
++            let cash_flow = step
++                .snapshot
++                .balances
++                .iter()
++                .map(|row| {
++                    row.amount
++                        .0
++                        .abs_diff(balance(before, &row.asset, &row.account).0)
++                })
++                .sum::<u128>();
++            assert_eq!(
++                UInt(cash_flow),
++                decode::<UInt>(&preservation["discharge_cash_flow"])
++            );
+         }
+ 
+         // Oracle input row order is intentionally not assumed to be Core row order.
+         // Every changing and preserved state/balance/duty field was compared above.
+         let actual_result = step.value.as_ref().unwrap();
+-        let delta: Vec<_> = step.effects.iter().map(|effect|
+-            operation(effect, &step.statement, actual_result, before, &step.snapshot)
+-        ).collect();
+-        assert_eq!(json!(delta), prefix["statement_semantic_operations"],
+-            "prefix {ordinal}: complete ordered effect delta");
++        let delta: Vec<_> = step
++            .effects
++            .iter()
++            .map(|effect| {
++                operation(
++                    effect,
++                    &step.statement,
++                    actual_result,
++                    before,
++                    &step.snapshot,
++                )
++            })
++            .collect();
++        assert_eq!(
++            json!(delta),
++            prefix["statement_semantic_operations"],
++            "prefix {ordinal}: complete ordered effect delta"
++        );
+         cumulative.extend(delta);
+         raw_effects.extend(step.effects.iter().cloned());
+-        assert_eq!(json!(cumulative), prefix["cumulative_semantic_operations"],
+-            "prefix {ordinal}: complete ordered effect history");
+-        assert_eq!(json!(category(&cumulative, &["transfer", "fee", "liability_add", "discharge"])),
+-            prefix["cumulative_economic_effects"], "prefix {ordinal}: economic history");
+-        assert_eq!(json!(category(&cumulative, &["state_write"])),
+-            prefix["cumulative_state_writes"], "prefix {ordinal}: state history");
+-        assert_eq!(json!(category(&cumulative, &["emit"])),
+-            prefix["cumulative_emissions"], "prefix {ordinal}: emission history");
++        assert_eq!(
++            json!(cumulative),
++            prefix["cumulative_semantic_operations"],
++            "prefix {ordinal}: complete ordered effect history"
++        );
++        assert_eq!(
++            json!(category(
++                &cumulative,
++                &["transfer", "fee", "liability_add", "discharge"]
++            )),
++            prefix["cumulative_economic_effects"],
++            "prefix {ordinal}: economic history"
++        );
++        assert_eq!(
++            json!(category(&cumulative, &["state_write"])),
++            prefix["cumulative_state_writes"],
++            "prefix {ordinal}: state history"
++        );
++        assert_eq!(
++            json!(category(&cumulative, &["emit"])),
++            prefix["cumulative_emissions"],
++            "prefix {ordinal}: emission history"
++        );
+         if let Statement::Let { name, .. } = &step.statement {
+-            assert!(bindings.insert(name.clone(), actual_result.clone()).is_none());
+-        }
+-        assert_eq!(bindings, decode::<BTreeMap<String, Value>>(&prefix["bindings_after"]),
+-            "prefix {ordinal}: all captured binding values");
++            assert!(
++                bindings
++                    .insert(name.clone(), actual_result.clone())
++                    .is_none()
++            );
++        }
++        assert_eq!(
++            bindings,
++            decode::<BTreeMap<String, Value>>(&prefix["bindings_after"]),
++            "prefix {ordinal}: all captured binding values"
++        );
+         before = &step.snapshot;
+     }
+-    assert_eq!(bindings, decode::<BTreeMap<String, Value>>(&expected["bindings"]));
+-    assert_eq!(before, &execution.post, "last complete prefix equals endpoint post");
+-    assert_eq!(execution.effects, raw_effects, "full raw effects equal all checked ordered deltas");
++    assert_eq!(
++        bindings,
++        decode::<BTreeMap<String, Value>>(&expected["bindings"])
++    );
++    assert_eq!(
++        before, &execution.post,
++        "last complete prefix equals endpoint post"
++    );
++    assert_eq!(
++        execution.effects, raw_effects,
++        "full raw effects equal all checked ordered deltas"
++    );
+     assert_eq!(json!(cumulative), expected["ordered_semantic_operations"]);
+-    assert_eq!(json!(category(&cumulative, &["transfer", "fee", "liability_add", "discharge"])),
+-        expected["ordered_economic_effects"]);
+-    assert_eq!(json!(category(&cumulative, &["state_write"])), expected["ordered_state_writes"]);
+-    assert_eq!(json!(category(&cumulative, &["emit"])), expected["ordered_emissions"]);
+-
+-    assert_account_flows(&execution.pre, &execution.post, &execution.effects,
+-        &expected["per_account_asset_flows"]);
+-    assert_conservation(&execution.pre, &execution.post, &expected["asset_conservation"]);
+-    assert_duty_evolution(&execution.pre, &execution.post, &cumulative, &expected["liability_evolution"]);
+-    assert_eq!(input.scenario, original, "production consumer preserves the borrowed scenario");
++    assert_eq!(
++        json!(category(
++            &cumulative,
++            &["transfer", "fee", "liability_add", "discharge"]
++        )),
++        expected["ordered_economic_effects"]
++    );
++    assert_eq!(
++        json!(category(&cumulative, &["state_write"])),
++        expected["ordered_state_writes"]
++    );
++    assert_eq!(
++        json!(category(&cumulative, &["emit"])),
++        expected["ordered_emissions"]
++    );
++
++    assert_account_flows(
++        &execution.pre,
++        &execution.post,
++        &execution.effects,
++        &expected["per_account_asset_flows"],
++    );
++    assert_conservation(
++        &execution.pre,
++        &execution.post,
++        &expected["asset_conservation"],
++    );
++    assert_duty_evolution(
++        &execution.pre,
++        &execution.post,
++        &cumulative,
++        &expected["liability_evolution"],
++    );
++    assert_eq!(
++        input.scenario, original,
++        "production consumer preserves the borrowed scenario"
++    );
+     // No cost, cap49 refusal, proof, circuit, sponsor, wallet or target operation.
+ }
