@@ -253,6 +253,13 @@ security approval or language-exit acceptance.
   frozen complete financial Program JSON and the public Program/v1 decoder
   instead of generated snapshots. It selects no Midnight compatibility feature
   and makes no compiler-Artifact, SDK, native-proof or ledger acceptance claim.
+- The finite `core_boolean_check_public` target compares hand-derived complete
+  Core Program JSON and public checker streams with frozen files in
+  `crates/fixtures/core-boolean-check/` instead of generating insta snapshots.
+  Its assertions include the complete source. Parser and checker source exposure
+  is explicit; these static admission and serialization checks establish no
+  runtime predicate truth, independent financial oracle, compiler Artifact,
+  native-proof or ledger correspondence.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
