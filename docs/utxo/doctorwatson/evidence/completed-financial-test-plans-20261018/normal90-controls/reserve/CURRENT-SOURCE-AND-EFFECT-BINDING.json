@@ -1,0 +1,95 @@
+{
+  "head": "0345e172faf9e601404d7cb96211bc4e0255de4c",
+  "tree": "ea4b5c97779788ff25ca54f51725d6f759b688d9",
+  "oldPlanHead": "68decd2ccb2596c4a0b643b65bc9efea52fa4a51",
+  "oldPlanTree": "758de86ba33bdf488f9cdbf411b7dcfada8a491a",
+  "all179ProductionAndManifestBodiesSame": true,
+  "all79OriginalBodiesSame": true,
+  "sourceChanges": 0,
+  "staticLocalCrateClosure": {
+    "mori-core": [
+      "mori-lexer"
+    ],
+    "mori-lexer": [
+      "mori-diagnostics",
+      "mori-span"
+    ],
+    "mori-diagnostics": [
+      "mori-span"
+    ],
+    "mori-span": [],
+    "mori": [
+      "mori-ast",
+      "mori-checker",
+      "mori-core",
+      "mori-diagnostics",
+      "mori-fmt",
+      "mori-lexer",
+      "mori-parser",
+      "mori-span"
+    ],
+    "mori-parser": [
+      "mori-ast",
+      "mori-diagnostics",
+      "mori-lexer",
+      "mori-span"
+    ],
+    "mori-ast": [
+      "mori-lexer",
+      "mori-span"
+    ],
+    "mori-fmt": [
+      "mori-ast",
+      "mori-diagnostics",
+      "mori-lexer",
+      "mori-parser",
+      "mori-span"
+    ],
+    "mori-checker": [
+      "mori-ast",
+      "mori-diagnostics",
+      "mori-lexer",
+      "mori-parser",
+      "mori-span"
+    ]
+  },
+  "selectedEffectPath": {
+    "consumer": "reserve-spend-refund",
+    "callPath": [
+      "library test: fixture source -> mori_core::parse -> mori_core::simulate(program,run,scenario) -> runtime::simulate_with_meter(None) -> financial projection assertions",
+      "CLI test: CARGO_BIN_EXE_mori --color never simulate reserve-spend-refund.mori --action run --scenario opening.scenario.json",
+      "main/CLI -> commands::simulate::run -> legacy inputs; no resume/trace/target/authorization/logical-cap -> core_io::read_source -> language Core1 -> parse -> read_json -> simulate -> core_io::print/json::export"
+    ],
+    "sourceReads": [
+      "Full reserve source/scenario and independent financial projection/kinds/prefix fixtures",
+      "Public CLI reads the two actual observation-directory copies"
+    ],
+    "writes": [
+      "Existing Project::new creates fresh persistent observations and fs::copy inputs",
+      "Existing fs::write raw stdout.json/stderr.txt/process.json before result assertions; failure launchError process record if spawn fails"
+    ],
+    "childProcesses": [
+      "Exactly one public unmetered simulate Command::output call; no native/replay/target flags selected"
+    ],
+    "libraryCaptureHook": null,
+    "captureEnvironment": "MORI_CORE_REFUND_OBSERVATIONS"
+  },
+  "target": "mori::core_reserve_spend_refund",
+  "functions": [
+    "reserve_library_keeps_complete_financial_prefixes",
+    "reserve_public_cli_keeps_complete_financial_prefixes"
+  ],
+  "captures": [
+    "reserve-spend-refund.mori",
+    "opening.scenario.json",
+    "stdout.json",
+    "stderr.txt",
+    "process.json"
+  ],
+  "captureOrder": "Actual two inputs copied before spawn. On launched process, stdout/stderr/process written before exit/envelope/financial assertions; launch error is written before expect panic. Library parse/execution is not separately captured.",
+  "temporaryInputs": "Observation-hook Project temporary=false; actual two input copies remain in persistent cycle directory. No separate root-original-input snapshots or claimed Drop deletion.",
+  "binaryIdentity": "Process record exposes CARGO_BIN_EXE path only; driver samples binary hash AFTER whole target, no pre-call hash hook.",
+  "expectationPremises": "Independent financial projection/full20snapshots/values/effect deltas and cumulative prefixes/source kinds. Whole Program/ExprIds/raw Statement fields/exact wire/logical work remain unasserted; informational work60 is not observed or enforced.",
+  "runtimeStatus": "RESERVE_UNRUN_ON_GP; prior payout/escrow/invoice/ACTUS results do not transfer",
+  "noProductOrNativeExecutionByPreparation": true
+}

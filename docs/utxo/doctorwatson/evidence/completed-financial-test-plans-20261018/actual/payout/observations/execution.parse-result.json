@@ -1,0 +1,120 @@
+{
+  "Ok": {
+    "language": "moriarty/1",
+    "semantics": "moriarty-core/1",
+    "name": "ThreeWayPayout",
+    "states": [
+      {
+        "name": "marker",
+        "ty": "UInt",
+        "initial": {
+          "type": "UInt",
+          "value": "17"
+        }
+      }
+    ],
+    "assets": [
+      {
+        "name": "PAY",
+        "identity": {
+          "network": "local",
+          "issuer": "three-way-payout",
+          "reference": "PAY",
+          "scale": 0
+        }
+      }
+    ],
+    "expressions": [
+      {
+        "kind": "Name",
+        "name": "first"
+      },
+      {
+        "kind": "Name",
+        "name": "second"
+      },
+      {
+        "kind": "Name",
+        "name": "third"
+      },
+      {
+        "kind": "Name",
+        "name": "serviceFee"
+      },
+      {
+        "kind": "Literal",
+        "value": {
+          "type": "UInt",
+          "value": "0"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "name": "payout",
+        "inputs": [
+          {
+            "name": "first",
+            "ty": "UInt"
+          },
+          {
+            "name": "second",
+            "ty": "UInt"
+          },
+          {
+            "name": "third",
+            "ty": "UInt"
+          },
+          {
+            "name": "serviceFee",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "sender",
+            "to": "alice",
+            "amount": 0
+          },
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "sender",
+            "to": "bob",
+            "amount": 1
+          },
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "sender",
+            "to": "carol",
+            "amount": 2
+          },
+          {
+            "kind": "Fee",
+            "asset": "PAY",
+            "from": "sender",
+            "to": "treasury",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "name": "declare",
+        "inputs": [],
+        "statements": [
+          {
+            "kind": "Liability",
+            "name": "retainedDuty",
+            "asset": "PAY",
+            "debtor": "sender",
+            "creditor": "creditor",
+            "amount": 4
+          }
+        ]
+      }
+    ]
+  }
+}

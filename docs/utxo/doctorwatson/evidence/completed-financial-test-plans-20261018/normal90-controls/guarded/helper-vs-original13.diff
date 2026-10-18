@@ -1,0 +1,32 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-normal90-preparation-20261018/run_check.py
++++ /home/charl/moriarty-c2-opus55-restored-20261017/guarded-quantity-fee-normal90-preparation-20261018/run_check.py
+@@ -98,7 +98,7 @@
+               'noAutomaticRetry': True})
+         raise
+ 
+-    root = Path(tempfile.mkdtemp(prefix='doctorwatson-guarded-full-prefix-'))
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-guarded-quantity-fee-'))
+     child = None
+     result = {'head': binding['head'], 'tree': binding['tree'], 'sourceBefore': source_before,
+               'attemptConsumed': False, 'selectedCheckSatisfied': False}
+@@ -122,7 +122,7 @@
+         absent_configs = configs(root)
+         command = [tools['cargo']['path'], 'test', '--manifest-path', str(checkout / 'Cargo.toml'),
+                    '--frozen', '-j1', '-p', 'mori-core', '--no-default-features', '--test',
+-                   'guarded_quantity_fee_full_prefix_positive', '--', '--test-threads=1']
++                   'guarded_quantity_fee_positive', '--', '--test-threads=1']
+         argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '90s', *command]
+         write(cycle / 'CHECK-PLAN.json', {'at': now(), 'head': binding['head'], 'tree': binding['tree'],
+               'bindingSha256': args.binding_sha, 'argv': argv, 'cwd': str(root / 'cwd'),
+@@ -204,7 +204,10 @@
+                 assert len(summaries) == 1, 'Require one whole selected target summary.'
+                 summary = dict(zip(['passed', 'failed', 'ignored', 'measured', 'filtered'], map(int, summaries[0])))
+                 assert summary == {'passed': 1, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
+-                assert 'test guarded_quantity_fee_matches_every_complete_independent_financial_prefix ... ok' in text
++                for name in (
++                    'guarded_quantity_arithmetic_keeps_fee_effects_and_residual_duties',
++                ):
++                    assert f'test {name} ... ok' in text
+                 result['rustSummary'] = summary
+                 result['wholeSelectedTargetPredicate'] = True
+             else:
