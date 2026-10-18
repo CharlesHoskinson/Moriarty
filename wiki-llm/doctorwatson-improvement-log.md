@@ -1060,3 +1060,41 @@ that failure and stop assuming locally complete input implies complete provider
 context. Verify delivered coverage, prefer scoped full call paths or verified
 pages, and check factual citations mechanically. Do not use model-written
 cryptographic strings as the authoritative source manifest.
+
+### DW-57 — Count the selected set and validate financial fixture admission
+
+The [live chunk result](../docs/results/sherlock-live-resource-chunks-20261018/README.md)
+passed using two real Machine instances and complete independent states/reports.
+The fresh result review accepted that limited observation and kept original013
+open for manifest/profile gaps. It also reconciled a preparatory count error:
+the named files enumerate460 pin occurrences and425 unique paths, exactly the
+actual precheck set. The original483/442 assertion remains preserved. Compute
+counts from the selected records, compare exact sets and preserve contradictory
+summaries; never manufacture a missing-file list to fit a stated count.
+
+The first financial-adapter test compiled successfully but failed before its
+positive prefix. The source did not register either liability present in the
+starting snapshot. Stage admission rejected auditDuty with attempted0/committed0.
+The input repair adds an unselected declaration action; an independent author
+must derive the changed complete Program/Plan and continuation identities before
+another selected test. Keep the original failure, financial expectations and
+source frozen. Do not weaken identity validation or copy actual output into an
+expected positive result. This financial evidence remains unpublished at this
+entry; no financial requirement is closed by it.
+
+Two Root receipt-processing mistakes were separate from the product result:
+relative names in different freezes collided, and include records used the
+snapshot field rather than path. Both were diagnosed from actual metadata.
+The latter interrupted processing after three successful compilations; those
+compilations were preserved and not repeated. List and exact-test commands ran
+once afterward, with input/generated-output pins rechecked. Inspect actual
+record shapes and normalize declared relative paths against their own origins
+before selecting children. These are observed workflow lessons, not new factory
+code or a native authority change.
+
+The selected requirement-report helper returns `current`; the CLI wrapper uses
+`pass`. Root initially asserted the CLI word against the helper's valid report.
+The report and post-read correction are retained without rerunning the reader;
+no successful initial capture-cell exit or timing was invented. Read the actual
+API/status contract before asserting wrapper metadata. The resulting report
+keeps nine adopted originals current and all remaining requirements open.
