@@ -65,3 +65,15 @@ Expect `status: pass`, `supplied_observation_status: match` and `first_differenc
 Continue with [compare complete observations](../how-to/compare-complete-observations.md) for your own captured artifact. See [DoctorWatson reference](../reference/doctorwatson.md) for command options and [profiles and results](../reference/profiles-results.md) for the report vocabulary.
 
 For the evidence distinction behind these results, read [evidence and acceptance](../explanation/evidence-and-acceptance.md).
+
+
+## Supported-profile documentation update: no exercise change
+
+The [draft supported-profile report](../reference/draft-source-compiler.md#supported-profile-report)
+adds returned compiler metadata; it changes no transition or circuit semantics
+used in this exercise. The tutorial commands and their historical observations
+are unchanged. R256's two new report tests passed; the
+[separate file-publication example](../how-to/compile-draft-program.md#inspect-the-supported-profile-field)
+remains unrun. The separate runtime candidate compiled, but its first test was refused before
+stepping under the original capacity input; corrected input is under review.
+No runtime 7/8 or new circuit/website observation is added to this exercise.

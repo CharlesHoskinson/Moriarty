@@ -11,3 +11,5 @@ This journal records implementation findings, design decisions, short rationales
 After each frozen implementation iteration, record the source or result identity, what was learned, the resulting implementation choice, the check that supports it, and the next unresolved question. Label observations, interpretations and proposals separately. Preserve failed attempts and earlier entries; add a dated correction when evidence changes. Root integrates entries from parallel workers so their edits do not collide.
 
 The circuit atlas remains the separate visual concept log, with its own authorship and source snapshots. A journal entry is not a new circuit iteration, a security audit or a milestone completion.
+
+- [October18: public source, report observations and pending runtime](2026-10-18-profile-runtime-knowledge.md) — dated source/results/review boundaries; no new closure or circuit semantics.
