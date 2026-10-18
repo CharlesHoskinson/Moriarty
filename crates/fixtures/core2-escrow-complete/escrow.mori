@@ -1,0 +1,12 @@
+language "moriarty/2";
+agreement ContinuationEscrowOracle {
+  asset PAY = { network: "local", issuer: "continuation-escrow-oracle", reference: "PAY", scale: 0 };
+  state marker: UInt = 77;
+  action deliver(amount: UInt) {
+    transfer(PAY, "alice", "escrow", amount);
+    liability("release", PAY, "escrow", "bob", amount);
+    await delivery(ready: Bool) when ready;
+    transfer(PAY, "escrow", "bob", amount);
+    discharge("release", amount);
+  }
+}
