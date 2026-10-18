@@ -53,3 +53,12 @@ The immutable prefix receipt records a controller false-stop after test09 actual
 The [Root adoption record](../../results/sherlock-canonical-runtime-types-20261018/ROOT-CANONICAL-TYPEID-COMPATIBILITY-ADOPTION.json) accompanies integration: 63 current source references are rebound, three historical citations retain their old bytes through archive paths, and the two affected live document pins use the composed documents. The 15 existing original-clause scopes are retained; this adds no closure. Original UIREQ034 and all 25 refinements remain open.
 
 One continuing independent reviewer, a0ecce6e, supplied the source and offline-readback opinions; backend-canonical model attestation is false. Root's source-review readback counts 87 unique complete pages, correcting the report's 86. The [result summary](../../results/sherlock-canonical-runtime-types-20261018/ACTUAL-TEN-TESTS-SCOPE.json) separates tested scope from unrun vectors and unbound absolute B clocks.
+
+
+## Dated evidence classes — October18
+
+The [literal035 adoption](../../results/sherlock-four-lane-progress-20261018/witness035/ROOT-ORIGINAL035-ADOPTION.json) accepts the original deterministic witness-dataflow clause with its finite limits. The matching reader reports16 current adopted originals and19 open; all25 refinements remain open. Preserve earlier15-adopted observations as dated history.
+
+[The new Clean evidence](../../results/sherlock-four-lane-progress-20261018/addenda/20261018-literal035-clean-circuit/clean/sherlock-nominal-proof-scope-20261018.md) consists of four kernel-accepted modules and38 named generic-reference theorems, merged by FenrirPR11. The public final source/result/fork-scope opinion says APPROVE, while its transport terminal remains ERROR. Both facts belong to the evidence record. Theorems retain their stated premises and do not establish complete production/B/native correspondence.
+
+The installed checked-Add handwritten circuit source and its eight authored tests are a separate source increment. Actual SDK compilation, constraint checks, proofs and target acceptance are unrun at this cut. The [circuit concept log](../../../wiki-llm/sherlock-circuit-atlas/README.md) illustrates source construction incrementally; it does not publish a live site or turn an unrun test into execution evidence.

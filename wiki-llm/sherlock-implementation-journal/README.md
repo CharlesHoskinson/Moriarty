@@ -25,3 +25,5 @@ The circuit atlas remains the separate visual concept log, with its own authorsh
 
 
 - [October18: financial await-prefix publication](2026-10-18-financial-await-prefix.md) — complete host-reference comparisons, strict-consumer compatibility and preserved historical wire cuts; no new circuit iteration.
+
+- [October18: literal035 adoption, Clean theorem slice and checked-Add source](2026-10-18-literal035-clean-circuit.md) — current16 cut, qualified Fenrir merge and unrun circuit source remain distinct.

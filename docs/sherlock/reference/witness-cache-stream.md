@@ -86,3 +86,8 @@ with final literals 6/7/8; factorial also stopped and resumed the same image.
 The tests are authored differential checks, not an independent complete B-prefix
 or work oracle. UIREQ-035, SCON-013/024 and full B-to-A boundary/clock correspondence
 remain open. See [the streaming guide](../how-to/stream-owner-witnesses.md).
+
+
+## Literal UIREQ035 adoption — October18 dated cut
+
+[Root adopted the original035 clause](../../results/sherlock-four-lane-progress-20261018/witness035/ROOT-ORIGINAL035-ADOPTION.json) after the independent literal-clause result review and actual complete A/B0 comparisons. The actual registration compiled and discovered nine names without running their bodies again. The [currentness readback](../../results/sherlock-four-lane-progress-20261018/witness035/ROOT-CURRENTNESS-READBACK.json) records16 adopted originals,19 open originals and all25 refinements open, with no integrity findings. Its checks attest declared evidence currentness; the separate Root decision supplies semantic adoption. Finite workload and in-process assertion limits remain in that adoption record. Earlier open/pending cuts above are historical.

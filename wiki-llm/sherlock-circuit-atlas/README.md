@@ -181,3 +181,8 @@ assets, rendered scene or deployment.
 - [Editorial update013 — financial await-prefix host evidence](UPDATE-013-FINANCIAL-AWAIT-PREFIX.md): consumed returned-prefix publication and two fixed positive consumers; no new circuit source, iteration005 remains latest.
 
 - [Editorial update 014 — complete observations and portable prefixes](UPDATE-014-COMPLETE-OBSERVATIONS-AND-PORTABLE-PREFIXES.md): full-field comparison and distinct portability stages; concept only, circuit iteration 005 remains latest.
+
+
+## Circuit source iterations006/007 — October18 dated staging
+
+[006: checked Add and staged outcomes](ITERATION-006-CHECKED-ADD-AND-STAGED-OUTCOMES.md) and its [historical provenance](ITERATION-006-STATUS-AND-PROVENANCE.md) retain the exact source/concept freeze. Root subsequently installed the exact three006 Add files at short head334e1d08 under draftPR263; SDK compilation, eight tests and constraint/proof execution remain unrun. [007: staged-result completion](ITERATION-007-STAGED-RESULT-COMPLETION.md) and its [provenance](ITERATION-007-STATUS-AND-PROVENANCE.md) describe returned R-only source, not an installed or executed completion circuit. These factual notes are Root/Sol drafts grounded in actual Gemini4ArgonHIGH source, not Opus creative replies. Earlier005/latest labels preserve their historical cuts. The finished site goes live only when the whole Sherlock goal is finished and accepted; no website is built or deployed here. [Dated source/evidence bindings](../../docs/results/sherlock-four-lane-progress-20261018/addenda/20261018-literal035-clean-circuit/EVIDENCE.json).
