@@ -1,0 +1,45 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-clean-20261018/afterimage/clean/fork/Clean/Sherlock/ConstructorFields.lean
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-clean-20261018/batch01-correction01/afterimage/clean/fork/Clean/Sherlock/ConstructorFields.lean
+@@ -60,8 +60,8 @@
+ 
+ /-- Start at an explicit evaluated prefix. Technical cuts retain this complete prefix. -/
+ def beginFrom (typeId : TypeId) (ctorId : CtorId) (origin : Nat)
+-    (prefix : List Value) (expressions : List Expr) (saved : Env) : Cursor Expr Value Env :=
+-  schedule { typeId, ctorId, origin, completedValues := prefix,
++    (fieldPrefix : List Value) (expressions : List Expr) (saved : Env) : Cursor Expr Value Env :=
++  schedule { typeId, ctorId, origin, completedValues := fieldPrefix,
+     remainingExprs := expressions, savedEnvironment := saved }
+ 
+ def beginFields (typeId : TypeId) (ctorId : CtorId) (origin : Nat)
+@@ -109,15 +109,15 @@
+ 
+ /-- With the full field count, returned values accumulate exactly in source order. -/
+ theorem runReturned_complete (typeId : TypeId) (ctorId : CtorId) (origin : Nat)
+-    (expressions : List Expr) (values : List Value) (saved : Env) (prefix : List Value)
++    (expressions : List Expr) (values : List Value) (saved : Env) (fieldPrefix : List Value)
+     (hLength : expressions.length = values.length) :
+-    runReturned values (beginFrom typeId ctorId origin prefix expressions saved) =
+-      some (.build { typeId, ctorId, origin, fields := prefix ++ values,
++    runReturned values (beginFrom typeId ctorId origin fieldPrefix expressions saved) =
++      some (.build { typeId, ctorId, origin, fields := fieldPrefix ++ values,
+         savedEnvironment := saved }) := by
+-  induction expressions generalizing values prefix with
++  induction expressions generalizing values fieldPrefix with
+   | nil =>
+     cases values with
+-    | nil => rfl
++    | nil => simp [runReturned, beginFrom, schedule]
+     | cons value rest => simp at hLength
+   | cons expression expressions ih =>
+     cases values with
+@@ -125,8 +125,8 @@
+     | cons value values =>
+       have hTail : expressions.length = values.length := Nat.succ.inj hLength
+       change runReturned values
+-        (beginFrom typeId ctorId origin (prefix ++ [value]) expressions saved) = _
+-      rw [ih values (prefix ++ [value]) hTail]
++        (beginFrom typeId ctorId origin (fieldPrefix ++ [value]) expressions saved) = _
++      rw [ih values (fieldPrefix ++ [value]) hTail]
+       simp only [List.append_assoc, List.singleton_append]
+ 
+ /-- Each child starts in the saved environment, with field expressions and results in order. -/
