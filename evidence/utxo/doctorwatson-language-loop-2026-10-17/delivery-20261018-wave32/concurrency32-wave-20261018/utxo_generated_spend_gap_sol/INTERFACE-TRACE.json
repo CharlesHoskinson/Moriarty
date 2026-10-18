@@ -1,0 +1,250 @@
+{
+  "commit": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+  "status": "EXACT_CALLER_INTERFACE_REPORT_NO_PATCH",
+  "trace": [
+    {
+      "id": "package-entry",
+      "fact": "Private npm experiment package invokes existing CLI; no published bundle files/export manifest is defined here.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/package.json",
+          "blob": "10cc77cbd4f5435a4b038e41d23343b6cd972b57",
+          "sha256": "3d4b451e933df67b75b55428252c417a270d5ccf91b01e39dd0b83905cab4ace",
+          "lineStart": 1,
+          "lineEnd": 10,
+          "source": "{\n  \"name\": \"moriarty-eutxo-public-experiment\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"test\": \"node --test tests/*.test.mjs\",\n    \"compile\": \"node src/cli.mjs compile --source examples/revision-step.mori --manifest examples/revision-step.manifest.json --out artifacts\",\n    \"validate\": \"node src/cli.mjs validate --designers /home/charl/moriarty-eutxo-validation-2026-10-12/designers --manifest examples/revision-step.manifest.json --out artifacts\"\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "id": "atomic-input-manifest",
+      "fact": "CLI reads input manifest JSON and passes the object to compilePublic. admitPublicAtomic retains the manifest in its returned object. The input schema literal is moriarty-eutxo-public-manifest/1.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/examples/revision-step.manifest.json",
+          "blob": "f8e9e28a87d777d19f2a95bfb1f488d7406babcf",
+          "sha256": "675bf9c47b38618489d35960841c4ec709e0c4d78562ce201a85bc8894df56ee",
+          "lineStart": 1,
+          "lineEnd": 7,
+          "source": "{\n  \"schemaVersion\": \"moriarty-eutxo-public-manifest/1\",\n  \"capability\": \"public-atomic-experiment\",\n  \"production\": false,\n  \"privateClaims\": \"unsupported\",\n  \"timePredicate\": \"TIME_PREDICATE_v1\",\n  \"domain\": {\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/cli.mjs",
+          "blob": "aa5722282da1c10c6d36928fef0d3a24a0f6f438",
+          "sha256": "5f88ec51a97ea835d85ed03c62153ff6dc221d460bab6b58f2cb34c84abb55c0",
+          "lineStart": 338,
+          "lineEnd": 344,
+          "source": "const manifestPath = arg('--manifest', join(ROOT, 'examples/revision-step.manifest.json'));\nconst manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));\nconst out = takeOut(join(ROOT, 'artifacts'));\n\nif (command === 'compile') {\n  const source = arg('--source', join(ROOT, 'examples/revision-step.mori'));\n  const result = compilePublic({ source, manifest, outDir: out });\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/admit.mjs",
+          "blob": "aca9066efbf38996dfbe8ea3a3304e4217be1e53",
+          "sha256": "e1a156d05ac52b6e6e0d5a79e1619377e907495d909f8a07a90f66a04e0fbf65",
+          "lineStart": 36,
+          "lineEnd": 40,
+          "source": "export function admitPublicAtomic(input, manifest) {\n  if (!manifest || manifest.schemaVersion !== 'moriarty-eutxo-public-manifest/1') {\n    return fail('MANIFEST_SCHEMA');\n  }\n  if (manifest.production === true) return fail('PRODUCTION_CLAIM_FORBIDDEN');\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/admit.mjs",
+          "blob": "aca9066efbf38996dfbe8ea3a3304e4217be1e53",
+          "sha256": "e1a156d05ac52b6e6e0d5a79e1619377e907495d909f8a07a90f66a04e0fbf65",
+          "lineStart": 172,
+          "lineEnd": 179,
+          "source": "    },\n    bound,\n    manifest,\n    requiredActors: [...requiredActors],\n    unsupportedPrivateClaims: [...m.requiredClaims],\n    privateVerification: 'explicitly-not-performed',\n    admittedEffects: kinds,\n  };\n"
+        }
+      ]
+    },
+    {
+      "id": "atomic-output",
+      "fact": "Atomic producer writes atomic.ak, sample datum/redeemer, data schemas and admission JSON; returns artifacts, validatorPath and blueprintPath. CLI projects those paths to artifacts, validator and blueprint.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/src/compile-public.mjs",
+          "blob": "999d190c5772eac9d2aea52fae4954c95c4dcfe3",
+          "sha256": "0608380722782d916bf24155c3921adacbe6f63fe527325f9ab11abe9b4214ed",
+          "lineStart": 172,
+          "lineEnd": 184,
+          "source": "    const toolchain = spawnSync(AIKEN, ['--version'], { encoding: 'utf8', env: aikenEnv() });\n    const hashes = {\n      sourceHash: bound.manifest.sourceHash,\n      programHash: bound.programHash,\n      boundsHash: bound.manifest.bounds.boundsHash,\n      manifestHash: sha256(JSON.stringify(man)),\n      validatorHash: sha256(lowered.validator),\n      toolchain: (toolchain.stdout || '').trim(),\n    };\n    writeFileSync(join(outDir, 'atomic.ak'), lowered.validator);\n    writeFileSync(join(outDir, 'sample-datum.json'), JSON.stringify(lowered.sampleDatum, null, 2) + '\\n');\n    writeFileSync(join(outDir, 'sample-redeemer.json'), JSON.stringify(lowered.sampleRedeemer, null, 2) + '\\n');\n    writeFileSync(join(outDir, 'data-schemas.json'), JSON.stringify(lowered.schemas, null, 2) + '\\n');\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/compile-public.mjs",
+          "blob": "999d190c5772eac9d2aea52fae4954c95c4dcfe3",
+          "sha256": "0608380722782d916bf24155c3921adacbe6f63fe527325f9ab11abe9b4214ed",
+          "lineStart": 199,
+          "lineEnd": 231,
+          "source": "    const ok = check.status === 0 && build.status === 0 && existsSync(blueprintSrc);\n    if (ok) {\n      cpSync(blueprintSrc, publishedBlueprint);\n      const uplcDir = join(isolated, 'artifacts');\n      if (existsSync(uplcDir)) {\n        mkdirSync(join(outDir), { recursive: true });\n        for (const name of readdirSync(uplcDir).filter(n => n.endsWith('.uplc'))) {\n          cpSync(join(uplcDir, name), join(outDir, name));\n        }\n      }\n      writeFileSync(join(PROJECT, 'validators/atomic.ak'), lowered.validator);\n      cpSync(publishedBlueprint, join(PROJECT, 'plutus.json'));\n    }\n    return {\n      ok,\n      admission: admitted,\n      metadata: { ...lowered.metadata, hashes, positiveUplcValidation: lowered.positiveUplcValidation === true },\n      check: {\n        status: check.status,\n        stdout: check.stdout,\n        stderr: check.stderr,\n        tests: parsed.tests,\n        summary: parsed.summary,\n        parseOk: parsed.ok,\n        parseErrors: parsed.errors,\n        missingTests: testMatch.missing,\n        unexpectedFail: testMatch.unexpectedFail,\n      },\n      build: { status: build.status, stdout: build.stdout, stderr: build.stderr },\n      artifacts: outDir,\n      validatorPath: join(outDir, 'atomic.ak'),\n      blueprintPath: ok && existsSync(publishedBlueprint) ? publishedBlueprint : null,\n      positiveUplcValidation: ok && lowered.positiveUplcValidation === true,\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/cli.mjs",
+          "blob": "aa5722282da1c10c6d36928fef0d3a24a0f6f438",
+          "sha256": "5f88ec51a97ea835d85ed03c62153ff6dc221d460bab6b58f2cb34c84abb55c0",
+          "lineStart": 344,
+          "lineEnd": 357,
+          "source": "  const result = compilePublic({ source, manifest, outDir: out });\n  process.stdout.write(JSON.stringify({\n    ok: result.ok,\n    programHash: result.metadata?.programHash,\n    admission: result.admission?.ok === false ? result.admission : { ok: true, capability: result.admission?.capability, privateVerification: result.admission?.privateVerification },\n    checkStatus: result.check?.status,\n    buildStatus: result.build?.status,\n    artifacts: result.artifacts,\n    blueprint: result.blueprintPath,\n    validator: result.validatorPath,\n    checkStderr: result.ok ? undefined : result.check?.stderr,\n    buildStderr: result.ok ? undefined : result.build?.stderr,\n  }, null, 2) + '\\n');\n  process.exit(result.ok ? 0 : 1);\n"
+        }
+      ]
+    },
+    {
+      "id": "documented-leaves",
+      "fact": "README documents named leaves for atomic artifacts and identifies the external parent driver boundary.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/README.md",
+          "blob": "21779c63f50f043682b35c9fb2e1805b189f9c8c",
+          "sha256": "091ff4bfcfec771d53f8d2a1a6e0d5f67ebc752d592a64bae86f9d05be4d7add",
+          "lineStart": 51,
+          "lineEnd": 74,
+          "source": "## Artifacts (`experiments/moriarty-eutxo/artifacts/`)\n\n| file | role |\n| --- | --- |\n| `plutus.json` | CIP-57 blueprint, Plutus V3, validator title `atomic.atomic.spend`; published only after a successful isolated Aiken build |\n| `atomic.atomic.spend.uplc` | textual UPLC dump |\n| `atomic.ak` | generated validator (source-derived Core lowering) |\n| `sample-datum.json` | genesis `HeadDatum` for the parent Yaci/Lucid driver |\n| `sample-redeemer.json` | `Step` constructor 0, actor `payer`, payout `5` |\n| `data-schemas.json` | Plutus Data field order and genesis constructor note |\n| `admission.json` | capability, TIME_PREDICATE, native subset, hashes, unverified private claims |\n| `matrix.json` | 20 representative patterns with linked cases; native overlay records the public prototype and keeps designer families unsupported |\n\nParent native driver (not this experiment) should submit the compiled `atomic.atomic.spend` script with:\n\n- one genuine-head script input carrying thread NFT `policy=aaaaaaaa\u2026aa` / `name=48454144` (`HEAD`) and inline `HeadDatum`\n- VerificationKey wallet inputs that realize the source net CASH deltas\n- exactly one continuation at the same full script address, same value including ADA, thread qty 1, source-computed post datum\n- unique exact-quantity `Transfer`/`Fee` outputs (no shared double-satisfaction)\n- required debiting-party VKH in `extra_signatories`\n- finite validity interval; `obs.now` is last inclusive POSIX millisecond (`TIME_PREDICATE_v1`)\n- mapped-asset mint quantity 0\n\nDummy script hash in unit tests is `ee\u2026ee`. The parent ledger driver must use the real compiled script address. The isolated final native driver lives in the task root, not this package. See **Isolated final native** below.\n"
+        }
+      ]
+    },
+    {
+      "id": "custody-output-metadata-only",
+      "fact": "Custody writes custody.ak and returns validatorPath; its CLI projects validatorPath and blueprintPath. Gate correctness is outside this lane and not assessed.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+          "blob": "2857e14f74955cfad24891354992fcecc794d9e7",
+          "sha256": "572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680",
+          "lineStart": 320,
+          "lineEnd": 326,
+          "source": "  const expectedTests = [...lowered.expectedTests, ...bound.expectedTests];\n  if (syntheticTime) expectedTests.push({ title: 'sibling_frozen_program_hash_differs', status: 'success' });\n  const validatorPath = join(outDir, 'custody.ak');\n  writeFileSync(validatorPath, validator);\n  const isolated = createIsolatedCustodyProject();\n  const published = join(outDir, 'plutus.json');\n  try {\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+          "blob": "2857e14f74955cfad24891354992fcecc794d9e7",
+          "sha256": "572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680",
+          "lineStart": 393,
+          "lineEnd": 405,
+          "source": "      layer: production ? 'calibrated-sibling-offline' : 'source-uplc-unit',\n      hashes: admitted.hashes,\n      instanceId: admitted.instanceId,\n      applied,\n      validatorPath,\n      missingTests: missing,\n      checkStatus,\n      buildStatus: build.status,\n      blueprintPath: compiled ? published : null,\n      check: { status: checkStatus, stdout: check.stdout, stderr: check.stderr, tests: parsed.tests, missing },\n      build: { status: build.status, stdout: build.stdout, stderr: build.stderr },\n      oracleBound: bound.bound,\n      oracleSkipped: bound.skipped,\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/cli.mjs",
+          "blob": "aa5722282da1c10c6d36928fef0d3a24a0f6f438",
+          "sha256": "5f88ec51a97ea835d85ed03c62153ff6dc221d460bab6b58f2cb34c84abb55c0",
+          "lineStart": 317,
+          "lineEnd": 331,
+          "source": "  process.stdout.write(JSON.stringify({\n    ok: result.ok,\n    code: result.code,\n    ledgerExecution: false,\n    nativePins: false,\n    layer: result.layer || 'source-uplc-unit',\n    hashes: result.hashes,\n    instanceId: result.instanceId,\n    checkStatus: result.check?.status,\n    buildStatus: result.build?.status,\n    blueprint: result.blueprintPath,\n    validator: result.validatorPath,\n    missing: result.check?.missing,\n  }, null, 2) + '\\n');\n  process.exit(result.ok ? 0 : 1);\n"
+        }
+      ]
+    },
+    {
+      "id": "native-source-cache",
+      "fact": "Direct API caller stores blueprintPath and blueprintSha256 in its source-cache report; it does not consume the CLI JSON projection.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+          "blob": "03f4a092bbf166f7b9205e11f0e7228923b1ebb1",
+          "sha256": "3c621003f9d4c5e00e9b5efafd21ee058aebb2d8886569b199670561b1c9f469",
+          "lineStart": 1298,
+          "lineEnd": 1358,
+          "source": "  const { compileCustody } = await import('./compile-custody.mjs');\n  const compileRoot = evidenceRoot || REPAIR_ROOT;\n  const outDir = join(compileRoot, 'checks/source-compile', sha256);\n  const compiled = compileCustody({\n    sourcePath,\n    seedPath,\n    casesPath: join(DESIGNER, 'cases.json'),\n    expectedReleasePath: join(DESIGNER, 'E13-release-real-custody.expected.json'),\n    expectedRefundPath: join(DESIGNER, 'E11-refund-real-custody.expected.json'),\n    residualPath: join(DESIGNER, 'financial-residual-custody-v5.json'),\n    manifest,\n    outDir,\n  });\n  if (!compiled.ok || !compiled.blueprintPath || !existsSync(compiled.blueprintPath)) {\n    return closed(compiled.code || 'SOURCE_COMPILE_FAILED', {\n      compiled: false,\n      sha256,\n      admitted: true,\n      path: sourcePath,\n      checkStatus: compiled.check?.status ?? null,\n      buildStatus: compiled.build?.status ?? null,\n      missing: compiled.check?.missing || compiled.missingTests || null,\n    });\n  }\n  const cacheDir = evidenceRoot ? join(evidenceRoot, 'checks/source-cache') : SOURCE_CACHE;\n  mkdirSync(cacheDir, { recursive: true });\n  const blueprintPath = join(cacheDir, `${sha256}.plutus.json`);\n  cpSync(compiled.blueprintPath, blueprintPath);\n  const blueprintSha256 = fileHash(blueprintPath);\n  const record = {\n    sourceHash: sha256,\n    seedHash,\n    manifestHash,\n    aikenRealpath: identity?.real || null,\n    aikenVersion: identity?.version || null,\n    checkStatus: compiled.check?.status ?? null,\n    buildStatus: compiled.build?.status ?? null,\n    blueprintPath,\n    blueprintSha256,\n    commands: ['check', 'build --uplc'],\n  };\n  const recordPath = join(cacheDir, `${sha256}.json`);\n  writeFileSync(recordPath, `${JSON.stringify(record, null, 2)}\\n`);\n  return {\n    ok: true,\n    code: 'SOURCE_COMPILED',\n    sha256,\n    path: sourcePath,\n    compiled: true,\n    admitted: true,\n    cacheHit: false,\n    compilerInvoked: true,\n    checkStatus: record.checkStatus,\n    buildStatus: record.buildStatus,\n    blueprintPath,\n    blueprintSha256,\n    aiken: record.aikenRealpath,\n    aikenVersion: record.aikenVersion,\n    hashes: admitted.hashes,\n    instanceId: admitted.instanceId,\n    commands: record.commands,\n"
+        }
+      ]
+    },
+    {
+      "id": "unit-application-output",
+      "fact": "applyUnitParameters persists plutus.applied.json, cash.script.json and apply-report.json when persistDir is provided. That API is distinct from applyHeadToCashPolicy. No artifact role or guard interpretation is made here.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/src/apply-head.mjs",
+          "blob": "84cdea08eb7d068e88d19db0e4f3c0a3798fca3b",
+          "sha256": "663bfd1e887c48e6363f8080727d277b7d8db4b7d9caaa77a516fc52e44f3202",
+          "lineStart": 208,
+          "lineEnd": 219,
+          "source": "  if (persistDir) {\n    writeFileSync(join(persistDir, 'plutus.applied.json'), JSON.stringify(appliedBp));\n    writeFileSync(join(persistDir, 'cash.script.json'), JSON.stringify({\n      type: 'PlutusScriptV3',\n      description: 'fail-closed cash measurement validator',\n      cborHex: cash.compiledCode,\n    }));\n    writeFileSync(join(persistDir, 'apply-report.json'), JSON.stringify(report, null, 2) + '\\n');\n  }\n  return report;\n}\n\n"
+        }
+      ]
+    },
+    {
+      "id": "funding-application-output",
+      "fact": "applyHeadToCashPolicy writes head.applied.script.json with type PlutusScriptV3 and returns scriptPath. Existing caller passes source blueprintPath to that function and carries returned scriptPath to builders.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/src/apply-head.mjs",
+          "blob": "84cdea08eb7d068e88d19db0e4f3c0a3798fca3b",
+          "sha256": "663bfd1e887c48e6363f8080727d277b7d8db4b7d9caaa77a516fc52e44f3202",
+          "lineStart": 396,
+          "lineEnd": 417,
+          "source": "  const scriptPath = join(workDir, 'head.applied.script.json');\n  writeFileSync(scriptPath, JSON.stringify({\n    type: 'PlutusScriptV3',\n    description: 'financial head applied to the approved cash policy',\n    cborHex: appliedMint.compiledCode,\n  }));\n  return {\n    ok: true,\n    code: 'HEAD_APPLIED_TO_CASH_POLICY',\n    appliedHash: appliedMint.hash,\n    unappliedHash: head.hash,\n    cashPolicyId,\n    unusedFailClosedCash: embedded.hash,\n    instanceId: instance.instanceId,\n    genesis: genesis.genesis,\n    scriptPath,\n    unitRoles: manifest.unitFixture === true,\n    ledgerExecution: false,\n    nativePins: false,\n    cashCanMint: false,\n  };\n}\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+          "blob": "03f4a092bbf166f7b9205e11f0e7228923b1ebb1",
+          "sha256": "3c621003f9d4c5e00e9b5efafd21ee058aebb2d8886569b199670561b1c9f469",
+          "lineStart": 1798,
+          "lineEnd": 1809,
+          "source": "  }\n  const head = stages.inputs.head;\n  const headApply = applyHeadToCashPolicy({\n    blueprintPath: stages.source.blueprintPath,\n    cashPolicyId: cashCompile.policyId,\n    hashes,\n    manifest,\n    seedTxId: head.txId,\n    seedIndex: head.index,\n    workDir: join(workDir, 'head'),\n  });\n  if (!headApply.ok) {\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+          "blob": "03f4a092bbf166f7b9205e11f0e7228923b1ebb1",
+          "sha256": "3c621003f9d4c5e00e9b5efafd21ee058aebb2d8886569b199670561b1c9f469",
+          "lineStart": 1866,
+          "lineEnd": 1875,
+          "source": "    collateral: headFees.collateral,\n    outFile: join(artifactDir, 'head-open.body.json'),\n    ...offlineBody,\n    mintAssets: [{ quantity: '1', policyId: headApply.appliedHash, assetName: '48656164' }],\n    mintScriptPath: headApply.scriptPath,\n    outputScriptPath: headApply.scriptPath,\n    inlineDatumJson: JSON.stringify(datum.plutus),\n    assets: [\n      { quantity: '1', policyId: headApply.appliedHash, assetName: '48656164' },\n      { quantity: '100', policyId: cashCompile.policyId, assetName: '43617368' },\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+          "blob": "03f4a092bbf166f7b9205e11f0e7228923b1ebb1",
+          "sha256": "3c621003f9d4c5e00e9b5efafd21ee058aebb2d8886569b199670561b1c9f469",
+          "lineStart": 1944,
+          "lineEnd": 1954,
+          "source": "          requiredSignerHash: spec.requiredSignerHash,\n          paymentVkeyCbor: spec.paymentVkeyCbor,\n          payoutVkeyHex,\n          networkMagic: common.networkMagic,\n          offlineExecutionUnits: common.offlineExecutionUnits,\n          workRoot: workDir,\n          spendScriptPath: headApply.scriptPath,\n          redeemerJson: JSON.stringify(redeemerForSpend(terminal, pair)),\n          invalidBefore: interval.invalidBefore,\n          invalidHereafter: interval.invalidHereafter,\n          feeLovelace: spec.feeLovelace,\n"
+        }
+      ]
+    },
+    {
+      "id": "transaction-path-consumer",
+      "fact": "Body implementation passes outputScriptPath to --payment-script-file and mintScriptPath to --mint-script-file; spend implementation passes spendScriptPath to --tx-in-script-file. No execution or security judgment is supplied.",
+      "citations": [
+        {
+          "path": "experiments/moriarty-eutxo/src/native-body.mjs",
+          "blob": "5d29048b94e8066a785bf2e5bee09ebd0a222766",
+          "sha256": "32d37808b57e178faf86e2e7eaf82ac45d1888712cede4b5877b47a25428bcc7",
+          "lineStart": 289,
+          "lineEnd": 292,
+          "source": "    let addressArgs;\n    if (spec.outputScriptPath) {\n      if (!plutusScriptFile(spec.outputScriptPath)) return closed('OUTPUT_SCRIPT_REJECTED');\n      addressArgs = ['address', 'build', '--payment-script-file', spec.outputScriptPath, '--testnet-magic', magic.text];\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/native-body.mjs",
+          "blob": "5d29048b94e8066a785bf2e5bee09ebd0a222766",
+          "sha256": "32d37808b57e178faf86e2e7eaf82ac45d1888712cede4b5877b47a25428bcc7",
+          "lineStart": 319,
+          "lineEnd": 329,
+          "source": "    if (mintText) {\n      const real = isRealCli(cliPath);\n      let script = spec.mintScriptPath || null;\n      if (!script) {\n        if (real) return closed('MINT_SCRIPT_ABSENT');\n        script = join(dir, 'mint.marker');\n        writeFileSync(script, 'unit-marker-not-a-compiled-cash-policy\\n');\n      } else if (real && !plutusScriptFile(script)) {\n        return closed('MINT_SCRIPT_REJECTED');\n      }\n      args.push('--mint', mintText, '--mint-script-file', script, '--mint-redeemer-value', '{\"int\":0}');\n"
+        },
+        {
+          "path": "experiments/moriarty-eutxo/src/native-body.mjs",
+          "blob": "5d29048b94e8066a785bf2e5bee09ebd0a222766",
+          "sha256": "32d37808b57e178faf86e2e7eaf82ac45d1888712cede4b5877b47a25428bcc7",
+          "lineStart": 625,
+          "lineEnd": 630,
+          "source": "    const args = [\n      'conway', 'transaction', 'build-raw',\n      '--tx-in', head,\n      '--tx-in-script-file', spec.spendScriptPath,\n      '--tx-in-redeemer-file', redeemerFile,\n    ];\n"
+        }
+      ]
+    },
+    {
+      "id": "original-requirement-boundary",
+      "fact": "EUC-012 requires co-published artifacts/dependency manifest but supplies no literal JSON key name for generatedAiken, artifactFormat or a packaged artifact-path index. Design describes proposed compileFinancial/lowerFinancial interfaces. Selecting/authoring cryptographic publication relations remains owner work.",
+      "citations": [
+        {
+          "path": "openspec/changes/eutxo-compiler-correspondence/specs/eutxo-compiler/spec.md",
+          "blob": "e2c8ff08198c21eb8e182b0b431fb7c0cc3834bb",
+          "sha256": "bbf910d7a5c006fe09b3d960817dabcce767927973a39046bf15ec8bd12b5bbe",
+          "lineStart": 124,
+          "lineEnd": 144,
+          "source": "### Requirement: EUC-012 Artifact publication and failure isolation\nWHEN compilation succeeds, the compiler SHALL publish the generated Aiken, checked blueprint, UPLC bytes, Cardano credential, source-file digest, and dependency manifest from one isolated output directory. IF admission, Aiken check, Aiken build, required tests, or blueprint parsing fails, THEN the compiler SHALL return nonzero and leave no success blueprint. IF artifacts or dependencies drift after verification, THEN consumption SHALL refuse the stale manifest.\n\n#### Scenario: Positive Publish a checked result\n- **WHEN** check, build, and required named tests succeed on pinned files\n- **THEN** the blueprint references exactly the compiled source manifest\n\n#### Scenario: Negative Refuse stale success\n- **WHEN** a prior plutus.json exists and the next build fails\n- **THEN** the old blueprint cannot be returned as the new compilation result\n\n### Requirement: EUC-013 Executed generated spending correspondence\nWHEN compiler correspondence is measured, the test consumer SHALL run the actual generated spending entrypoint on reconstructed transaction context and source-envelope inputs. Accepted cases SHALL compare complete ordinary post, canonical admitted financialPost, ordered effects, and workRemaining against the independent source envelope. Rejected cases SHALL require spending refusal and preserve sourceCode separately.\n\n#### Scenario: Positive Challenge fixed control posts\n- **WHEN** release-lender-balance-7, prior used ids, and revision-4 are supplied\n- **THEN** generated outputs retain 107, PriorSpend plus Release1, and revision 5 respectively\n\n#### Scenario: Negative Reject helper-only evidence\n- **WHEN** only a lifecycle codec or pure helper has run\n- **THEN** the report leaves generated-spending correspondence unperformed\n"
+        },
+        {
+          "path": "openspec/changes/eutxo-compiler-correspondence/design.md",
+          "blob": "2f3d28ffa8e4f884e515687165713c93f2c6ab80",
+          "sha256": "a28bca2e2d3e07ff00bb3cec4ca10165659b9791e37e98de23a539c4ea656188",
+          "lineStart": 15,
+          "lineEnd": 24,
+          "source": "\n## Proposed interfaces and output\nProposed `routeFinancialSource({sourceText, profile, capabilities})` selects the existing source factory. It returns derived schema/Core or `{ok:false, layer, code, span}`.\nProposed `inventoryFinancialCore(elaborated)` returns ordered constructor paths, type rules, effect schema dependencies, and work rules.\nProposed `lowerFinancial({elaborated, inventory, bounds, bindings, abiVersion})` returns Aiken modules and a correspondence manifest.\nProposed `compileFinancial({sourcePath, seedPath, boundsPath, runtimePinsPath, outputDir, capability})` returns the manifest and checked blueprint only after required checks.\nThese signatures are planned interfaces. They are not callable today.\n\nThe manifest contains profile, contract, lifecycle schema, action tags, constructor rules, source and generated hashes, full dependency pins, bounds preimage, work model, instance identity recipe, supported capabilities, refusal layers, and result evidence paths. It records Aiken source SHA-256 separately from UPLC bytes and Cardano blake2b-224 credentials.\n\n"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,345 @@
+{
+  "upstream_dictionary_commit": "356f7663f26091105cc4fef4ae3496942dcf0ebf",
+  "terms": {
+    "dayCountConvention": {
+      "identifier": "dayCountConvention",
+      "group": "Interest",
+      "name": "Day Count Convention",
+      "acronym": "IPDC",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "actualActual",
+          "name": "Actual/Actual",
+          "acronym": "AA",
+          "description": "Year fractions accrue on the basis of the actual number of days per month and per year in the respective period.\r"
+        },
+        {
+          "option": "1",
+          "identifier": "actualThreeSixty",
+          "name": "Actual Three Sixty",
+          "acronym": "A360",
+          "description": "Year fractions accrue on the basis of the actual number of days per month and 360 days per year in the respective period.\r"
+        },
+        {
+          "option": "2",
+          "identifier": "actualThreeSixtyFive",
+          "name": "Actual Three Sixty Five",
+          "acronym": "A365",
+          "description": "Year fractions accrue on the basis of the actual number of days per month and 365 days per year in the respective period.\r"
+        },
+        {
+          "option": "3",
+          "identifier": "thirtyEThreeSixtyISDA",
+          "name": "Thirty E Three Sixty ISDA",
+          "acronym": "30E360ISDA",
+          "description": "Year fractions accrue on the basis of 30 days per month and 360 days per year in the respective period (ISDA method).\r"
+        },
+        {
+          "option": "4",
+          "identifier": "thirtyEThreeSixty",
+          "name": "Thirty E Three Sixty",
+          "acronym": "30E360",
+          "description": "Year fractions accrue on the basis of 30 days per month and 360 days per year in the respective period.\r"
+        },
+        {
+          "option": "5",
+          "identifier": "twentyEightEThreeThirtySix",
+          "name": "Twenty Eight E Three Thirty Six",
+          "acronym": "28E336",
+          "description": "Year fractions accrue on the basis of 28 days per month and 336 days per year in the respective period."
+        }
+      ],
+      "default": "",
+      "description": "Method defining how days are counted between two dates. This finally defines the year fraction in accrual calculations."
+    },
+    "feeRate": {
+      "identifier": "feeRate",
+      "group": "Fees",
+      "name": "Fee Rate",
+      "acronym": "FER",
+      "type": "Real",
+      "allowedValues": [],
+      "default": "",
+      "description": "Rate of Fee which is a percentage of the underlying or FER is an absolute amount. For all contracts where FEB does not apply (cf. business rules), FER is interpreted as an absolute amount."
+    },
+    "feeBasis": {
+      "identifier": "feeBasis",
+      "group": "Fees",
+      "name": "Fee Basis",
+      "acronym": "FEB",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "absoluteValue",
+          "name": "Absolute Value",
+          "acronym": "A",
+          "description": "The fee rate represents an absolute value.\r"
+        },
+        {
+          "option": "1",
+          "identifier": "nonimalValueOfTheUnderlying",
+          "name": "Nominal Value of the Underlying",
+          "acronym": "N",
+          "description": "The fee rate represents a rate that accrues fees on the basis of the nominal value of the underlying."
+        }
+      ],
+      "default": "",
+      "description": "Basis, on which Fee is calculated. For FEB=\u2019A\u2019, FER is interpreted as an absolute amount to be paid at every FP event and for FEB=\u2019N\u2019, FER represents a rate at which FP amounts accrue on the basis of the contract\u2019s NT."
+    },
+    "feeAccrued": {
+      "identifier": "feeAccrued",
+      "group": "Fees",
+      "name": "Fee Accrued",
+      "acronym": "FEAC",
+      "type": "Real",
+      "allowedValues": [],
+      "default": "",
+      "description": "Accrued fees as per SD"
+    },
+    "nominalInterestRate": {
+      "identifier": "nominalInterestRate",
+      "group": "Interest",
+      "name": "Nominal Interest Rate",
+      "acronym": "IPNR",
+      "type": "Real",
+      "allowedValues": [],
+      "default": "",
+      "description": "The nominal interest rate which will be used to calculate accruals and the next interest payment at the next IP date. NT multiplied with IPNR is the base for the interest payment calculation. The relevant time period is a function of IPDC. \r\nIf the contract is variable (RRANX set) this field is periodically updated per SD. \r\nIn the case of plan vanilla interest rate swaps (IRSPV) this defines the rate of fixed leg."
+    },
+    "notionalPrincipal": {
+      "identifier": "notionalPrincipal",
+      "group": "Notional Principal",
+      "name": "Notional Principal",
+      "acronym": "NT",
+      "type": "Real",
+      "allowedValues": [
+        "Positive"
+      ],
+      "default": "",
+      "description": "Current nominal value of the contract. For debt instrument this is the current remaining notional outstanding. \r\nNT is generally the basis on which interest payments are calculated. If IPCBS is set, IPCBS may introduce a different basis for interest payment calculation."
+    },
+    "accruedInterest": {
+      "identifier": "accruedInterest",
+      "group": "Interest",
+      "name": "Accrued Interest",
+      "acronym": "IPAC",
+      "type": "Real",
+      "allowedValues": [],
+      "default": "",
+      "description": "Accrued interest as per SD. In case of NULL, this value will be recalculated using IPANX, IPCL and IPNR information. Can be used to represent irregular next IP payments."
+    },
+    "businessDayConvention": {
+      "identifier": "businessDayConvention",
+      "group": "Calendar",
+      "name": "Business Day Convention",
+      "acronym": "BDC",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "noShift",
+          "name": "No Shift",
+          "acronym": "NOS",
+          "description": "No shift applied to non-business days.\r"
+        },
+        {
+          "option": "1",
+          "identifier": "shiftCalculateFollowing",
+          "name": "Shift-Calculate Following",
+          "acronym": "SCF",
+          "description": "Shift event dates first then calculate accruals etc. Strictly shift to the next following business day.\r"
+        },
+        {
+          "option": "2",
+          "identifier": "shiftCalculateModifiedFollowing",
+          "name": "Shift-Calculate Modified-Following",
+          "acronym": "SCMF",
+          "description": "Shift event dates first then calculate accruals etc. Shift to the next following business day if this falls in the same month. Shift to the most recent preceding business day otherwise.\r"
+        },
+        {
+          "option": "3",
+          "identifier": "calculateShiftFollowing",
+          "name": "Calculate-Shift Following",
+          "acronym": "CSF",
+          "description": "Calculate accruals etc. first then shift event dates. Strictly shift to the next following business day.\r"
+        },
+        {
+          "option": "4",
+          "identifier": "calculateShiftModifiedFollowing",
+          "name": "Calculate-Shift Modified-Following",
+          "acronym": "CSMF",
+          "description": "Calculate accruals etc. first then shift event dates. Shift to the next following business day if this falls in the same month. Shift to the most recent preceding business day otherwise.\r"
+        },
+        {
+          "option": "5",
+          "identifier": "shiftCalculatePreceding",
+          "name": "Shift-Calculate Preceding",
+          "acronym": "SCP",
+          "description": "Shift event dates first then calculate accruals etc. Strictly shift to the most recent preceding business day.\r"
+        },
+        {
+          "option": "6",
+          "identifier": "shiftCalculateModifiedPreceding",
+          "name": "Shift-Calculate Modified-Preceding",
+          "acronym": "SCMP",
+          "description": "Shift event dates first then calculate accruals etc. Shift to the most recent preceding business day if this falls in the same month. Shift to the next following business day otherwise.\r"
+        },
+        {
+          "option": "7",
+          "identifier": "calculateShiftPreceding",
+          "name": "Calculate-Shift Preceding",
+          "acronym": "CSP",
+          "description": "Calculate accruals etc. first then shift event dates. Strictly shift to the most recent preceding business day.\r"
+        },
+        {
+          "option": "8",
+          "identifier": "calculateShiftModifiedPreceding",
+          "name": "Calculate-Shift Modified-Preceding",
+          "acronym": "SCMP",
+          "description": "Calculate accruals etc. first then shift event dates. Shift to the most recent preceding business day if this falls in the same month. Shift to the next following business day otherwise."
+        }
+      ],
+      "default": "nos",
+      "description": "BDC's are linked to a calendar. Calendars have working and non-working days. A BDC value other than N means that cash flows cannot fall on non-working days, they must be shifted to the next business day (following) or the previous on (preceding).\r\nThese two simple rules get refined twofold:\r\n- Following modified (preceding): Same like following (preceding), however if a cash flow gets shifted into a new month, then  it is shifted to preceding (following) business day.\r\n- Shift/calculate (SC) and calculate/shift (CS). Accrual, principal, and possibly other calculations are affected by this choice. In the case of SC first the dates are shifted and after the shift cash flows are calculated. In the case of CS it is the other way round.\r\nAttention: Does not affect non-cyclical dates such as PRD, MD, TD, IPCED since they can be set to the correct date directly."
+    },
+    "calendar": {
+      "identifier": "calendar",
+      "group": "Calendar",
+      "name": "Calendar",
+      "acronym": "CLDR",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "noCalendar",
+          "name": "No Calendar",
+          "acronym": "NC",
+          "description": "No holidays defined\r"
+        },
+        {
+          "option": "1",
+          "identifier": "mondayToFriday",
+          "name": "MondayToFriday",
+          "acronym": "MF",
+          "description": "Saturdays and Sundays are holidays"
+        }
+      ],
+      "default": "noCalendar",
+      "description": "Calendar defines the non-working days which affect the dates of contract events (CDE's) in combination with EOMC and BDC. Custom calendars can be added as additional enum options."
+    },
+    "penaltyType": {
+      "identifier": "penaltyType",
+      "group": "Optionality",
+      "name": "Penalty Type",
+      "acronym": "PYTP",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "noPenalty",
+          "name": "No Penalty",
+          "acronym": "N",
+          "description": "No penalty applies.\r"
+        },
+        {
+          "option": "1",
+          "identifier": "fixedPenalty",
+          "name": "Fixed Penalty",
+          "acronym": "A",
+          "description": "A fixed amount applies as penalty.\r"
+        },
+        {
+          "option": "2",
+          "identifier": "relativePenalty",
+          "name": "Relative Penalty",
+          "acronym": "R",
+          "description": "A penalty relative to the notional outstanding applies.\r"
+        },
+        {
+          "option": "3",
+          "identifier": "interestRateDifferential",
+          "name": "Interest Rate Differential",
+          "acronym": "I",
+          "description": "A penalty based on the current interest rate differential relative to the notional outstanding applies."
+        }
+      ],
+      "default": "O",
+      "description": "Defines whether prepayment is linked to a penalty and of which kind."
+    },
+    "prepaymentEffect": {
+      "identifier": "prepaymentEffect",
+      "group": "Optionality",
+      "name": "Prepayment Effect",
+      "acronym": "PPEF",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "noPrepayment",
+          "name": "No Prepayment",
+          "acronym": "N",
+          "description": "Prepayment is not allowed under the agreement.\r"
+        },
+        {
+          "option": "1",
+          "identifier": "prepaymentReducesRedemptionAmount",
+          "name": "Prepayment Reduces Redemption Amount",
+          "acronym": "A",
+          "description": "Prepayment is allowed and reduces the redemption amount for the remaining period up to maturity.\r"
+        },
+        {
+          "option": "2",
+          "identifier": "prepaymentReducesMaturity",
+          "name": "Prepayment Reduces Maturity",
+          "acronym": "M",
+          "description": "Prepayment is allowed and reduces the maturity."
+        }
+      ],
+      "default": "N",
+      "description": "This attribute defines whether or not the right of prepayment exists and if yes, how prepayment affects the remaining principal redemption schedule of the contract"
+    },
+    "scalingEffect": {
+      "identifier": "scalingEffect",
+      "group": "Notional Principal",
+      "name": "Scaling Effect",
+      "acronym": "SCEF",
+      "type": "Enum",
+      "allowedValues": [
+        {
+          "option": "0",
+          "identifier": "noScaling",
+          "name": "No Scaling",
+          "acronym": "000",
+          "description": "No scaling applies.\r"
+        },
+        {
+          "option": "1",
+          "identifier": "interestIsScaled",
+          "name": "Interest is Scaled",
+          "acronym": "I00",
+          "description": "Scaling applies only to interest.\r"
+        },
+        {
+          "option": "2",
+          "identifier": "principalIsScaled",
+          "name": "Principal is Scaled",
+          "acronym": "0N0",
+          "description": "Scaling applies only to principal.\r"
+        },
+        {
+          "option": "3",
+          "identifier": "interestAndPrincipalIsScaled",
+          "name": "Interest and Principal is Scaled",
+          "acronym": "IN0",
+          "description": "Scaling applies to interest and principal.\r"
+        }
+      ],
+      "default": "000\r\n",
+      "description": "Indicates which payments are scaled. I = Interest payments, N = Nominal payments and M = Maximum deferred interest amount. They can be scaled in any combination."
+    }
+  },
+  "scope": "Lossless input definition objects from full retained original aggregate"
+}

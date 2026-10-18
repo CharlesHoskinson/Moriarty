@@ -1,0 +1,72 @@
+{
+  "basis": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+  "scope": "Source-grounded mapping inventory; no compiler or SDK result",
+  "rows": [
+    {
+      "field": "Program semantics / selected Target",
+      "compilerCarrier": "Artifact.semantics, Artifact.target; source Program digest",
+      "mapping": "compile_mode clones semantics/Target into complete Artifact; CLI serializes that complete object",
+      "disposition": "Present in existing public consumer; no demonstrated ordinary omission"
+    },
+    {
+      "field": "All declared pre/post states, including PrintRun campaign / Invoice marker / Reserve marker",
+      "compilerCarrier": "public_inputs pre_state/post_state roles by source name/type",
+      "mapping": "lower_action_segment visits every declared state before/after statements; actual values come from later Scenario/Execution reconstruction",
+      "disposition": "Slots present. compile receives no Scenario and does not freeze runtime state values"
+    },
+    {
+      "field": "Selected typed action inputs",
+      "compilerCarrier": "public_inputs input roles by declared names/types",
+      "mapping": "lower_action_segment visits action.inputs; financial_values reads s.inputs by binding name",
+      "disposition": "Existing source-to-slot and Scenario-to-value paths found; no runtime result asserted"
+    },
+    {
+      "field": "Touched exact asset/account identities",
+      "compilerCarrier": "balance_frame plus pre/post balance bindings",
+      "mapping": "BTreeSet contains both Transfer/Fee endpoints; full AssetId is copied into descriptors",
+      "disposition": "Source-derived touched sets: PrintRun CREDIT coop/printer/sponsor; Invoice CASH payer/seller/treasury; Reserve BOND auditor/reserve and CASH reserve/supplier/treasury. No independent absolute packing oracle asserted"
+    },
+    {
+      "field": "Fixed transfer/fee, Next and Emit effects in source order",
+      "compilerCarrier": "effect_frame step/kind/name/asset/from/to/public_positions",
+      "mapping": "Statement iteration builds each effect; existing financial_values matches descriptor sequence to actual e.effects and extracts value fields",
+      "disposition": "Mapping exists. This is source inventory only, not constraint/soundness or SDK validation"
+    },
+    {
+      "field": "Registered source-wide duties",
+      "compilerCarrier": "liability_frame with pre/post presence/amount positions",
+      "mapping": "registry scans Liability statements in all actions; compile allocates every registry identity even if current action leaves it untouched",
+      "disposition": "Invoice source identities invoice/warranty and Reserve allocation/bond/emergency are mapped. PrintRun source registry empty"
+    },
+    {
+      "field": "PrintRun incoming maintenance identity/amount11",
+      "compilerCarrier": "None in existing empty liability_frame",
+      "mapping": "reconstruct_statement first calls liability_slots(registry, scenario.liabilities) at signed_relation.rs687; unknown name returns existing unsupported error at proving.rs647",
+      "disposition": "First concrete exact-scenario consumer boundary. No silent dropping is proposed; existing closed profile refuses before simulation"
+    },
+    {
+      "field": "Untouched STAMP accounts, CREDIT observer and maintenance; Invoice/Reserve observer/reserve balances",
+      "compilerCarrier": "Full Core Execution snapshots locally; not arbitrary new compiled ABI entries",
+      "mapping": "Core scenario_snapshot clones all rows; compiler intentionally frames only touched balances and source-declared duties",
+      "disposition": "Local full oracle retained; authenticated outside-frame/ledger mapping stays open under existing backend contract"
+    },
+    {
+      "field": "Full Program / raw Statement / ExprId / standalone Artifact wire oracle",
+      "compilerCarrier": "Program digest and partial source-static report, not a full source/replay value export",
+      "mapping": "No independently frozen complete compiler-wire mapping is supplied by this task",
+      "disposition": "Explicit pre-existing evidence/interface gap; not filled with producer-derived goldens"
+    },
+    {
+      "field": "Sherlock source-static action projection",
+      "compilerCarrier": "source-projection.json compilation.projection.actions",
+      "mapping": "source_adapter returns Unsupported at state-or-asset-declaration for each of these financial programs; compile_reported returns real Artifact unchanged",
+      "disposition": "Intentional scalar metadata boundary, not refusal by Core compiler or lost financial lowering"
+    },
+    {
+      "field": "CLI publication of complete returned compiler Artifact",
+      "compilerCarrier": "artifact.json plus exact circuit.zkir files and separate source-projection.json",
+      "mapping": "compile.rs47 obtains real reported compilation;56 serializes complete Artifact; publish_artifact writes circuit bytes then sidecar then manifest",
+      "disposition": "No field whitelist or demonstrated ordinary serialization loss on this route"
+    }
+  ]
+}

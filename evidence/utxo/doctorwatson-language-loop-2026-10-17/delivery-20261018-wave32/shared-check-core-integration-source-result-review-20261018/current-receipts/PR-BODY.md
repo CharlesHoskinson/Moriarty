@@ -1,0 +1,5 @@
+The CLI and tooling adapters need one source checker that preserves the existing beta/Core1/Core2 reports. Extract a shared source-dispatch helper and route `mori check` through it while keeping exact report order, spans, exits and Core2 stage labels. JSON construction stays behind the JSON output path.
+
+Integrated current main049395532c43b17c54bdbc5a529535b521dc56df atca95950817a68277d46308570f22e40dbf6796c9 (tree423da55aa235facdc33e778092f6306c3dd110a9). The complete PR diff and all21changed source bodies are identical to the previous64c6 candidate; the integration adds main's reviewed Core tests.
+
+Actual local validation on that combined tree:10publicCLItests passed with0filtered in53.529s;4Coretests passed with0filtered in17.676s;8newdirect checks matched the original complete baseline stdout bytes and exit codes, with empty stderr. Source/tree stayed clean and the owned temporary root was removed. Fresh full-candidate ordinary source/result review is being prepared for this exact head. MCP SDK integration, financial/compiler/native/ledger qualification and original parent requirements remain open.

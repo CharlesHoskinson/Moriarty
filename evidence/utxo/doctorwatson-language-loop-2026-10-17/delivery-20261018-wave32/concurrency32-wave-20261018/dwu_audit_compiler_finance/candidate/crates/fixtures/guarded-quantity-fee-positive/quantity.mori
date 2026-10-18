@@ -1,0 +1,30 @@
+language "moriarty/1";
+agreement GuardedQuantityFee {
+  asset Cash = { network: "ordinary-core", issuer: "example-issuer", reference: "Cash", scale: 0 };
+  asset Reserve = { network: "ordinary-core", issuer: "example-issuer", reference: "Reserve", scale: 0 };
+  state filled: UInt = 4;
+  state lastGross: UInt = 0;
+  state marker: UInt = 91;
+  state active: Bool = true;
+
+  action first_ge(first: UInt, second: UInt, price: UInt, baseFee: UInt, settleAmount: UInt) {
+    requires first >= second;
+    requires active;
+    let maximum = first;
+    let minimum = second;
+    let quantity = maximum - minimum;
+    let quote = quantity * price;
+    let feeCharge = baseFee + minimum;
+    let gross = quote + feeCharge;
+    transfer(Cash, "buyer", "seller", quote);
+    fee(Cash, "buyer", "treasury", feeCharge);
+    liability("delivery", Cash, "seller", "buyer", quote);
+    discharge("delivery", settleAmount);
+    next filled = filled + quantity;
+    next lastGross = gross;
+    emit "max"(maximum);
+    emit "min"(minimum);
+    emit "quantity"(quantity);
+    ensures lastGross == gross;
+  }
+}

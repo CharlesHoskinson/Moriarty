@@ -1,0 +1,237 @@
+{
+  "concreteChecks": [
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "+- The finite Core `financial_program_wire_contract` target uses independently\n+  frozen complete financial Program JSON and the public Program/v1 decoder\n+  instead of generated snapshots. It selects no Midnight compatibility feature\n+  and makes no compiler-Artifact, SDK, native-proof or ledger acceptance claim.",
+        "lineOrJsonPointer": "L6-L9",
+        "path": "RUST-GUIDELINES.diff"
+      },
+      "reasoning": "Verifies that theRUST_GUIDELINES.md diff scopes `financial_program_wire_contract` to independently frozen complete financial Program JSON and public `Program`/`v1` decoding without Midnight compatibility features or compiler/SDK/native-proof/ledger claims, while preserving the `crates/fixtures/` workspace-isolation rule.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    let expected: Value = serde_json::from_str(frozen_program)\n        .expect(\"independently frozen complete Program JSON must decode\");\n    let actual = parse(source).expect(\"exact source must parse through the real Core consumer\");\n    let bytes = serde_json::to_vec(&actual).expect(\"complete Program must serialize\");\n    let actual_wire: Value = serde_json::from_slice(&bytes).expect(\"complete wire must be JSON\");\n    assert_eq!(\n        actual_wire, expected,\n        \"every Program field and nested cell must match\"\n    );\n\n    // Actual shared public decoding routes through the frozen Core/1 DTO.\n    let reopened: Program =\n        serde_json::from_slice(&bytes).expect(\"public Program wire must reopen\");\n    assert_eq!(\n        reopened, actual,\n        \"reopening must preserve the complete parsed Program\"\n    );\n    assert_eq!(serde_json::to_value(&reopened).unwrap(), expected);\n\n    // This is a codec/adapter check, separate from the independent equality above.\n    let frozen_v1: v1::Program = serde_json::from_str(frozen_program).unwrap();\n    let converted: Program = frozen_v1.into();\n    assert_eq!(converted, actual);",
+        "lineOrJsonPointer": "L15-L37",
+        "path": "changed/crates/mori-core/tests/financial_program_wire_contract.rs"
+      },
+      "reasoning": "Verifies that `financial_program_wire_contract.rs` first checks complete serialized `Program` JSON equality against the independently frozen fixture (`actual_wire == expected`) and separately checks shared-codec reopening via `Program` (`decode_via_v1!`) and `v1::Program` conversion (`From<v1::Program> for Program`) across both `invoice_complete_core_wire_matches_frozen_32_node_program_and_reopens` and `reserve_complete_core_wire_matches_frozen_33_node_program_and_reopens`.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"initial\":{\"type\":\"UInt\",\"value\":\"77\"},\"name\":\"marker\",\"ty\":\"UInt\"}",
+        "lineOrJsonPointer": "/states/3",
+        "path": "financial-freeze/installment-invoice.program.expected.json"
+      },
+      "reasoning": "Verifies that `installment-invoice.program.expected.json` encodes the complete 32-expression (`0..=31`), 4-state (`paid`, `dueDay`, `installments`, `marker`), 1-asset (`CASH`, scale 2), 2-action (`register`, `collect`) Core/1 `InstallmentInvoice` program matching `financial-freeze/installment-invoice.mori`.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"kind\":\"Emit\",\"name\":\"allocated\",\"value\":32}",
+        "lineOrJsonPointer": "/actions/1/statements/14",
+        "path": "financial-freeze/conditional-reserve.program.expected.json"
+      },
+      "reasoning": "Verifies that `conditional-reserve.program.expected.json` encodes the complete 33-expression (`0..=32`), 3-state (`allocated`, `closed`, `marker`), 2-asset (`CASH`, `BOND`), 2-action (`register`, `allocate`) Core/1 `ConditionalReserve` program matching `financial-freeze/conditional-reserve.mori`.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    let program = stage::load(SOURCE).unwrap();\n    let program_text = json::export(program.program()).unwrap();\n    let plan_text = json::export(program.plan()).unwrap();\n    assert_eq!(json::parse(&program_text).unwrap(), expected_program);\n    assert_eq!(json::parse(&plan_text).unwrap(), expected_plan);\n\n    let StageOutcome::Waiting { continuation, .. } =\n        stage::start(&program, \"pay\", scenario, Some(UInt(23))).unwrap()\n    else {\n        panic!(\"invoice prefix must wait for its receipt\");\n    };\n    let continuation_text = json::export(&continuation).unwrap();\n    let reopened = stage::decode::continuation(&continuation_text).unwrap();\n    assert_eq!(\n        json::parse(&continuation_text).unwrap(),\n        expected_continuation\n    );\n    assert_eq!(reopened, continuation);\n    assert_eq!(\n        serde_json::to_value(&reopened).unwrap(),\n        expected_continuation\n    );",
+        "lineOrJsonPointer": "L126-L146",
+        "path": "changed/crates/mori-core/tests/program_plan_roundtrip.rs"
+      },
+      "reasoning": "Verifies that `program_plan_roundtrip.rs` loads the Core/2 `InvoiceReceipt` program, exports and parses complete `Program` and `StagePlan` JSON values, executes `stage::start` for `pay(quantity=14)` with `Some(UInt(23))` to the `receipt` await boundary, and checks complete `Continuation` JSON export and `stage::decode::continuation` reopening, while documenting that `expected_program_hash` and `expected_plan_hash` use the production canonical codec (`intent::canonical` / `intent::hash_bytes`) to test linkage rather than an independent canonical-byte oracle.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"state\":{\"principal\":{\"type\":\"UInt\",\"value\":\"14\"}},\"balances\":[{\"account\":\"alice\",\"asset\":{\"network\":\"local\",\"issuer\":\"receipt-issuer\",\"reference\":\"credit\",\"scale\":3},\"amount\":\"31\"},{\"account\":\"merchant\",\"asset\":{\"network\":\"local\",\"issuer\":\"receipt-issuer\",\"reference\":\"credit\",\"scale\":3},\"amount\":\"17\"},{\"account\":\"observer\",\"asset\":{\"network\":\"local\",\"issuer\":\"receipt-issuer\",\"reference\":\"credit\",\"scale\":3},\"amount\":\"4\"},{\"account\":\"treasury\",\"asset\":{\"network\":\"local\",\"issuer\":\"receipt-issuer\",\"reference\":\"credit\",\"scale\":3},\"amount\":\"2\"}],\"liabilities\":[{\"name\":\"paid-invoice\",\"asset\":{\"network\":\"local\",\"issuer\":\"receipt-issuer\",\"reference\":\"credit\",\"scale\":3},\"debtor\":\"alice\",\"creditor\":\"merchant\",\"amount\":\"0\"}]}",
+        "lineOrJsonPointer": "/closingAtAwait",
+        "path": "independent/program-plan-roundtrip-independent-oracle-20261018/EXPECTED-SEMANTICS.json"
+      },
+      "reasoning": "Verifies that the independent plan/continuation oracle derives the exact boundary snapshot at `await receipt` (`principal: 14`, balances `alice: 31`, `merchant: 17`, `observer: 4`, `treasury: 2` summing to `54`, retained zero-amount `paid-invoice` row, and absence of uninvoked `later-credit`), along with captures `quantity: 14, owed: 17` in `EXPECTED-CAPTURE-LAYOUT.json` and logical segment costs `[\"15\", \"8\"]` (`committed: \"15\"`, `cap: \"23\"`) in `EXPECTED-LOGICAL-WORK.json`.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    let actual_steps = actual[\"steps\"].as_array().expect(\"execution steps\");\n    let independent_prefixes = independent[\"prefixes\"]\n        .as_array()\n        .expect(\"independent complete prefixes\");\n    assert_eq!(actual_steps.len(), 11);\n    assert_eq!(independent_prefixes.len(), 11);\n    let mut cumulative_effects = Vec::new();\n    for (index, (step, prefix)) in actual_steps.iter().zip(independent_prefixes).enumerate() {\n        assert_eq!(\n            step[\"index\"], prefix[\"index\"],\n            \"independent prefix ordinal {index}\"\n        );\n        assert_eq!(\n            step[\"snapshot\"], prefix[\"snapshot\"],\n            \"independent full snapshot at prefix {index}\"\n        );\n        assert_eq!(\n            step[\"effects\"], prefix[\"stepEffects\"],\n            \"independent ordered delta effects at prefix {index}\"\n        );\n        cumulative_effects.extend(\n            step[\"effects\"]\n                .as_array()\n                .expect(\"ordered per-step effects\")\n                .iter()\n                .cloned(),\n        );\n        assert_eq!(\n            Value::Array(cumulative_effects.clone()),\n            prefix[\"cumulativeEffects\"],\n            \"independent ordered cumulative effects at prefix {index}\"\n        );\n    }",
+        "lineOrJsonPointer": "L64-L95",
+        "path": "changed/crates/mori-core/tests/utxo_pattern_exchange.rs"
+      },
+      "reasoning": "Verifies that `utxo_pattern_exchange.rs` checks input byte identity against `independent/inputs/*`, compares `pre`, `post`, all 11 prefix snapshots, per-step delta effects, and cumulative effects against `independent/COMPLETE-PREFIXES.expected.json`, and then separately checks `Statement` IR, `ExprId` references, and `Step.value` against `authored.expected.json` `/execution` as well as input scenario immutability.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"index\":8,\"sourceStatement\":\"next revision = revision + 1;\",\"snapshot\":{\"state\":{\"marker\":{\"type\":\"UInt\",\"value\":\"77\"},\"phase\":{\"type\":\"UInt\",\"value\":\"1\"},\"revision\":{\"type\":\"UInt\",\"value\":\"5\"}},\"balances\":[{\"account\":\"escrow-a\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"0\"},{\"account\":\"fee-payer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"4\"},{\"account\":\"observer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"9\"},{\"account\":\"trader\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"13\"},{\"account\":\"treasury\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"3\"},{\"account\":\"escrow-b\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"0\"},{\"account\":\"observer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"11\"},{\"account\":\"provider\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"29\"},{\"account\":\"trader\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"8\"}],\"liabilities\":[{\"name\":\"service-B\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"debtor\":\"provider\",\"creditor\":\"auditor\",\"amount\":\"2\"},{\"name\":\"warranty-A\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"debtor\":\"provider\",\"creditor\":\"trader\",\"amount\":\"7\"}]},\"stepEffects\":[{\"kind\":\"State\",\"name\":\"revision\",\"before\":{\"type\":\"UInt\",\"value\":\"4\"},\"after\":{\"type\":\"UInt\",\"value\":\"5\"}}],\"cumulativeEffects\":[{\"kind\":\"Transfer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"from\":\"escrow-a\",\"to\":\"trader\",\"amount\":\"10\"},{\"kind\":\"Transfer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"from\":\"escrow-b\",\"to\":\"provider\",\"amount\":\"25\"},{\"kind\":\"Fee\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"from\":\"fee-payer\",\"to\":\"treasury\",\"amount\":\"1\"},{\"kind\":\"State\",\"name\":\"phase\",\"before\":{\"type\":\"UInt\",\"value\":\"0\"},\"after\":{\"type\":\"UInt\",\"value\":\"1\"}},{\"kind\":\"State\",\"name\":\"revision\",\"before\":{\"type\":\"UInt\",\"value\":\"4\"},\"after\":{\"type\":\"UInt\",\"value\":\"5\"}}]}",
+        "lineOrJsonPointer": "/prefixes/8",
+        "path": "changed/crates/fixtures/utxo-pattern-exchange/independent/COMPLETE-PREFIXES.expected.json"
+      },
+      "reasoning": "Verifies across `COMPLETE-PREFIXES.expected.json` and `FINANCIAL-ACCOUNTING.expected.json` that all 9 balance rows (conserving Asset A = 29 and Asset B = 48 while retaining zeroed `escrow-a` and `escrow-b` rows), all 3 state fields (`marker: 77`, `phase: 0 -> 1`, and scenario-supplied `revision: 4 -> 5`), and both untouched liability rows (`service-B: 2`, `warranty-A: 7`) are preserved through all 11 prefixes and 6 ordered effects.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-excerpt",
+        "exactExcerptOrValue": "456: macro_rules! decode_via_v1 {\n457:     ($($ty:ident),*) => {$(\n458:         impl<'de> Deserialize<'de> for $ty {\n459:             fn deserialize<D: serde::Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {\n460:                 v1::$ty::deserialize(decoder).map(Self::from)\n461:             }\n462:         }\n463:     )*};\n464: }\n465: decode_via_v1!(Statement, Action, Program, Step, Execution);",
+        "lineOrJsonPointer": "L456-L465",
+        "path": "crates/mori-core/src/ir.rs"
+      },
+      "reasoning": "Confirms from the production consumer excerpts (`ir.rs`, `json.rs`, `stage/mod.rs`, `stage/decode.rs`) that public `Program` deserialization routes through `v1::Program`, `json::export` enforces 1 MiB limits and ASCII/UTF-16 escaping, `stage::load` computes canonical program/plan digests, and `stage::decode::continuation` enforces strict bounded deserialization with `#[serde(deny_unknown_fields)]`.",
+      "scope": "source"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "[{\"path\":\"/home/charl/moriarty-c2-opus55-restored-20261017/utxo-pattern-core-independent-oracle-20261018\",\"freezeSha256\":\"9f4ba8ddac07c4823eb2199e0ce2866e54b3c424221ce2cea3172a9660063d00\",\"membersVerified\":14},{\"path\":\"/home/charl/moriarty-c2-opus55-restored-20261017/program-plan-roundtrip-independent-oracle-20261018\",\"freezeSha256\":\"904f438ad11cdcee5698b62973cbdae3d977c53275f86427cdecc42b366589f4\",\"membersVerified\":18}]",
+        "lineOrJsonPointer": "/independentFreezesVerifiedBeforeRun",
+        "path": "actual-results/CHECK-PLAN.json"
+      },
+      "reasoning": "Verifies pre-run custody and execution parameters: `FREEZE.json` (`2026-10-18T13:07:05.179678+00:00`) preceded `CHECK-PLAN.json` (`2026-10-18T13:18:35.420663+00:00`), all 14 UTXO freeze members and 18 plan freeze members were verified before test execution, and Cargo ran offline (`CARGO_NET_OFFLINE=true`, `--frozen`, `-j1`, `--no-default-features`, `--test-threads=1`) on exact commit `bcdfd4b27a62e8e618153ef1961d60f889dc4d63` / tree `6ef1a779f5c87299bf340d684cea33082cb1bcb2`.",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"finishedAt\":\"2026-10-18T13:19:02.281669+00:00\",\"exitCode\":0,\"wallSeconds\":26.81582211600471,\"stdoutSha256\":\"8a14a44c39058e61d7a99ee09ea746d901f12c785c7230f49474d6fcb61aa0d6\",\"stderrSha256\":\"266ecbf592befa971d4060369fb5702aa6ab795df7f5099119d5de2d315e5362\",\"ownedSessionRemaining\":[],\"head\":\"bcdfd4b27a62e8e618153ef1961d60f889dc4d63\",\"tree\":\"6ef1a779f5c87299bf340d684cea33082cb1bcb2\",\"sourcePinsUnchanged\":true,\"workingTreeClean\":true}",
+        "lineOrJsonPointer": "/",
+        "path": "actual-results/RESULT.json"
+      },
+      "reasoning": "Verifies that the test run completed with `exitCode: 0` in `26.81582211600471` seconds, left no remaining processes (`ownedSessionRemaining: []`), preserved clean working tree and source pins, and cleaned up `/tmp/doctorwatson-core-roundtrips-rtsd00nt` (`CLEANUP.json` `/existsAfter` = `false`).",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "running 2 tests\ntest invoice_complete_core_wire_matches_frozen_32_node_program_and_reopens ... ok\ntest reserve_complete_core_wire_matches_frozen_33_node_program_and_reopens ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "lineOrJsonPointer": "L2-L6",
+        "path": "actual-results/STDOUT.log"
+      },
+      "reasoning": "Verifies the first two test results in `financial_program_wire_contract`: both `invoice_complete_core_wire_matches_frozen_32_node_program_and_reopens` (32-node `InstallmentInvoice`) and `reserve_complete_core_wire_matches_frozen_33_node_program_and_reopens` (33-node `ConditionalReserve`) passed with 0 failures and 0 filtered tests.",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "running 1 test\ntest invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "lineOrJsonPointer": "L9-L12",
+        "path": "actual-results/STDOUT.log"
+      },
+      "reasoning": "Verifies the third test result in `program_plan_roundtrip`: `invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values` passed with 0 failures and 0 filtered tests.",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "running 1 test\ntest prefunded_exchange_matches_complete_authored_normal_outcome ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "lineOrJsonPointer": "L15-L18",
+        "path": "actual-results/STDOUT.log"
+      },
+      "reasoning": "Verifies the fourth test result in `utxo_pattern_exchange`: `prefunded_exchange_matches_complete_authored_normal_outcome` passed with 0 failures and 0 filtered tests.",
+      "scope": "result"
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "{\"index\":10,\"statement\":{\"kind\":\"Emit\",\"name\":\"exchanged\",\"value\":22},\"value\":{\"type\":\"UInt\",\"value\":\"10\"},\"snapshot\":{\"state\":{\"marker\":{\"type\":\"UInt\",\"value\":\"77\"},\"phase\":{\"type\":\"UInt\",\"value\":\"1\"},\"revision\":{\"type\":\"UInt\",\"value\":\"5\"}},\"balances\":[{\"account\":\"escrow-a\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"0\"},{\"account\":\"fee-payer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"4\"},{\"account\":\"observer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"9\"},{\"account\":\"trader\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"13\"},{\"account\":\"treasury\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"amount\":\"3\"},{\"account\":\"escrow-b\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"0\"},{\"account\":\"observer\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"11\"},{\"account\":\"provider\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"29\"},{\"account\":\"trader\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"amount\":\"8\"}],\"liabilities\":[{\"name\":\"service-B\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"B\",\"scale\":0},\"debtor\":\"provider\",\"creditor\":\"auditor\",\"amount\":\"2\"},{\"name\":\"warranty-A\",\"asset\":{\"network\":\"local\",\"issuer\":\"example-bilateral\",\"reference\":\"A\",\"scale\":0},\"debtor\":\"provider\",\"creditor\":\"trader\",\"amount\":\"7\"}]},\"effects\":[{\"kind\":\"Emit\",\"name\":\"exchanged\",\"value\":{\"type\":\"UInt\",\"value\":\"10\"}}]}",
+        "lineOrJsonPointer": "/execution/steps/10",
+        "path": "changed/crates/fixtures/utxo-pattern-exchange/authored.expected.json"
+      },
+      "reasoning": "Inspects the lossless JSON Value alias for `actual-results/ACTUAL-UTXO-EXECUTION.json` at `authored.expected.json` `/execution` alongside `actual-results/ORACLE-COMPARISON.json` (`actualExecutionSha256: \"cd6e7eac012ab85e41885e39b75a5ffaeceb118d13082bee730aaeaac6c24cf3\"`, `completePrePostAndAllPrefixSnapshotsAndDeltaCumulativeEffectsEqual: true`), confirming that the captured UTXO `Execution` matches all 11 independent prefix snapshots and 6 ordered effects as well as all authored `Statement`/`ExprId`/`Step.value` fields.",
+      "scope": "result"
+    }
+  ],
+  "dissent": [],
+  "findings": [
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    // Hashes use the production canonical codec over independent literal\n    // values. This checks linkage, not an independent canonical-byte oracle.\n    let expected_program_hash = intent::hash_bytes(&intent::canonical(&expected_program).unwrap());",
+        "lineOrJsonPointer": "L77-L79",
+        "path": "changed/crates/mori-core/tests/program_plan_roundtrip.rs"
+      },
+      "factOrInference": "source-fact",
+      "finding": "In `program_plan_roundtrip.rs`, the expected `Program` expression node table (`0..=12`), statement `ExprId` references, and canonical linkage hashes (`expected_program_hash`, `expected_plan_hash`) are authored literals and production-codec digests (`intent::canonical` / `intent::hash_bytes`) rather than independently derived oracle values (`UNKNOWN.json` `/notIndependentlyEstablished`).",
+      "minimalCorrection": "None required for this ordinary Core roundtrip target; preserve the explicit distinction that `program_hash` and `plan_hash` verify internal stage-plan/continuation linkage while only the boundary state/balances/zero-duty row, capture values, and reference logical work schedule are backed by the independent oracle.",
+      "severity": "limitation",
+      "userVisibleConsequence": "Passing `invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values` establishes internal canonical-digest linkage and independently derived `await` boundary/capture/cost semantics, not an external canonical-byte or global `ExprId` oracle."
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    let StageOutcome::Waiting { continuation, .. } =\n        stage::start(&program, \"pay\", scenario, Some(UInt(23))).unwrap()\n    else {\n        panic!(\"invoice prefix must wait for its receipt\");\n    };",
+        "lineOrJsonPointer": "L132-L135",
+        "path": "changed/crates/mori-core/tests/program_plan_roundtrip.rs"
+      },
+      "factOrInference": "source-fact",
+      "finding": "`program_plan_roundtrip.rs` discards non-`continuation` fields on `StageOutcome::Waiting { continuation, .. }`, does not persist external output files during the test run (`DATA-ONLY-COMPARISONS.json` `/planActualFullOutcomeCaptured` = `false`), and stops at the `receipt` await boundary without calling `stage::resume` on the conditional suffix (`CONDITIONAL-RESUME.json`).",
+      "minimalCorrection": "None required for this finite target; if prefix step/effect assertions or conditional resumption coverage are desired in a future target, assert the remaining `StageOutcome::Waiting` fields against `EXPECTED-PREFIXES.json` and add a separate `stage::resume` test.",
+      "severity": "limitation",
+      "userVisibleConsequence": "This target verifies `Program`, `StagePlan`, and `Continuation` JSON export and `stage::decode::continuation` reopening at the `await` boundary, leaving conditional resume execution untested here."
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    // The financial oracle does not specify expression IDs, Statement IR or Step.value.\n    // Those complete wire fields remain checked against the distinct authored fixture.\n    let authored: Value = serde_json::from_str(fixture!(\"authored.expected.json\"))\n        .expect(\"authored complete expectation must decode\");",
+        "lineOrJsonPointer": "L102-L105",
+        "path": "changed/crates/mori-core/tests/utxo_pattern_exchange.rs"
+      },
+      "factOrInference": "source-fact",
+      "finding": "In `utxo_pattern_exchange.rs`, `Step.statement` (`ExprId` indices `2, 5, 8, 11, 12, 13, 14, 15, 18, 21, 22`) and `Step.value` are checked only against `authored.expected.json` (`/notAsserted` in `SEMANTIC-PREMISES-AND-LIMITS.json`), and the independent oracle's balance/liability array order uses a disclosed non-numeric sorting fact from `runtime.rs` (`SEMANTIC-PREMISES-AND-LIMITS.json` `/presentationPremise/sourceFactOnly`).",
+      "minimalCorrection": "None required for this ordinary Core target; keep `authored.expected.json` explicitly labeled `AUTHORED_EXPECTATION_NOT_INDEPENDENTLY_FROZEN` and distinct from `independent/COMPLETE-PREFIXES.expected.json`.",
+      "severity": "limitation",
+      "userVisibleConsequence": "Independent oracle correspondence covers `pre`, `post`, all 11 prefix snapshots, and all 6 ordered delta/cumulative effects, whereas `Statement` IR and `Step.value` fields are authored regression assertions."
+    },
+    {
+      "citation": {
+        "deliveryScope": "embedded-full",
+        "exactExcerptOrValue": "    // This is a codec/adapter check, separate from the independent equality above.\n    let frozen_v1: v1::Program = serde_json::from_str(frozen_program).unwrap();\n    let converted: Program = frozen_v1.into();\n    assert_eq!(converted, actual);",
+        "lineOrJsonPointer": "L34-L37",
+        "path": "changed/crates/mori-core/tests/financial_program_wire_contract.rs"
+      },
+      "factOrInference": "source-fact",
+      "finding": "`financial_program_wire_contract.rs` consumes only the 2 frozen `Program` JSON fixtures (`installment-invoice.program.expected.json` and `conditional-reserve.program.expected.json`) out of the 32 files in the prior financial freeze packet, and its public `Program` / `v1::Program` deserialization checks test shared-codec roundtrip consistency rather than additional independent oracles.",
+      "minimalCorrection": "None required for PR229; the remaining 28 unused files in the 32-payload financial freeze packet must not be counted as executed test evidence for this target.",
+      "severity": "limitation",
+      "userVisibleConsequence": "Only the two complete Core/1 `Program` wires (32-node `InstallmentInvoice` and 33-node `ConditionalReserve`) and their `v1::Program` decoding path are exercised by `financial_program_wire_contract`."
+    }
+  ],
+  "head": "bcdfd4b27a62e8e618153ef1961d60f889dc4d63",
+  "limitations": [
+    "Verdict applies strictly to the four ordinary Core integration tests in `financial_program_wire_contract`, `program_plan_roundtrip`, and `utxo_pattern_exchange` on commit `bcdfd4b27a62e8e618153ef1961d60f889dc4d63` (tree `6ef1a779f5c87299bf340d684cea33082cb1bcb2`).",
+    "No security, authentication, cryptographic, DUST, circuit, compiler-Artifact, Midnight SDK, native-proof, or ledger settlement judgment or admission is made.",
+    "All original parent gates (`U`, `M`, `MC`, `SP`, `G`, finance, composition, and all 20 UTXO pattern family exits) remain open and unwaived.",
+    "Only the embedded files and excerpts in the review packet were read; physical-only files and transitive unchanged production implementation bodies were not read."
+  ],
+  "resultVerdict": "approve",
+  "reviewToken": "core-consumer-roundtrips-review-30cc92bfe37e422f9e5bc58f38d23956",
+  "sourceVerdict": "approve",
+  "summary": "Independent non-author ordinary source and result review of PR229 candidate `bcdfd4b27a62e8e618153ef1961d60f889dc4d63` (tree `6ef1a779f5c87299bf340d684cea33082cb1bcb2`, parent `b2786e8123e8d9327265f0fbb373444a7cb30f16`): both `sourceVerdict` and `resultVerdict` are `approve` for the finite scope of the four ordinary Core tests across `financial_program_wire_contract`, `program_plan_roundtrip`, and `utxo_pattern_exchange`. All three complete test files, the `RUST_GUIDELINES.md` diff, the inlined independent and authored fixtures, and the four passing test results (`exitCode: 0`, 4 passed, 0 failed, 0 filtered in `26.81582211600471s` with `--no-default-features`) are verified and internally consistent, with honest separation between independent financial/prefix/boundary oracles, authored `ExprId`/`Statement`/`Step.value` wire expectations, and shared production codec/digest linkage.",
+  "tree": "6ef1a779f5c87299bf340d684cea33082cb1bcb2",
+  "unreadScope": [
+    "Full `RUST_GUIDELINES.md` outside `RUST-GUIDELINES.diff`",
+    "Physical-only members of `changed/crates/fixtures/utxo-pattern-exchange/independent/` not inlined as separate sections: `core1-normative-readme.md`, `core1-snapshot-effect-dto.rs.txt`, `inputs/INPUT-ONLY.json`, `inputs/normal.scenario.json` (verified equal to inlined `normal.scenario.json`), `inputs/program.mori` (verified equal to inlined `program.mori`), `product-contract.md`, and `MANIFEST.json`",
+    "Physical-only members of `independent/program-plan-roundtrip-independent-oracle-20261018/`: `CONDITIONAL-RESUME.json`, `EXPECTED-PREFIXES.json`, `MANIFEST.json`, unexcerpted fields of `PROVENANCE.json`, `README.md`, `STATIC-CHECKS.json`, `basis/CORE-CONTINUATIONS.normative.txt`, `basis/CORE-EXECUTION-REPORTS.financial.txt`, `basis/CORE-README.normative.txt`, `basis/CORE-STAGED-TESTS.normative.txt`, and `inputs/INPUT-ONLY.json`",
+    "The 28 unused files in `crates/fixtures/financial-report-contract/` from the 32-payload financial freeze packet (only `installment-invoice.mori`, `conditional-reserve.mori`, `installment-invoice.program.expected.json`, and `conditional-reserve.program.expected.json` are inlined and used)",
+    "Physical-only packet/receipt files and logs: `CHANGED-SOURCE-PINS.json`, `INPUT-SCOPE.json`, raw physical bytes of `actual-results/ACTUAL-UTXO-EXECUTION.json` (whose complete JSON Value is inspected via its lossless alias at `changed/crates/fixtures/utxo-pattern-exchange/authored.expected.json` `/execution`), and lines 1-82 of `actual-results/STDERR.log`",
+    "Unchanged production source files in `crates/mori-core/src/` outside the inlined excerpts of `ir.rs` (L179-L188, L418-L430, L456-L465), `json.rs` (L87-L89, L117-L140), `stage/mod.rs` (L75-L92, L110-L124), and `stage/decode.rs` (L34-L47), including `parser.rs`, `runtime.rs`, `intent.rs`, `v1.rs`, `stage/plan.rs`, `stage/cost.rs`, `stage/digest.rs`, `stage/validate.rs`, and `stage/profile.rs`"
+  ],
+  "unverifiedClaims": [
+    "Full public SDK/compiler Artifact and native proof/circuit/ledger candidates (`UNRUN` and absent from PR229)",
+    "Independent canonical-byte or global `ExprId` oracle correspondence for `Program`, `StagePlan`, `Continuation` hashes, or UTXO `Step.statement`/`Step.value` fields",
+    "Runtime execution of `stage::resume` on the `InvoiceReceipt` conditional suffix (`CONDITIONAL-RESUME.json`) or `open_credit` action",
+    "Actual runtime logical meter enforcement, cap refusal precedence, authenticated continuation admission, or lifetime budget security",
+    "Closure of any of the 20 UTXO pattern families or original parent `U`/`M`/`MC`/`SP`/`G`/finance/composition/UTXO gates",
+    "Actual backend model identity (`Requested AGY gemini-4-argon-high HIGH, actual backend identity unattested`)"
+  ]
+}

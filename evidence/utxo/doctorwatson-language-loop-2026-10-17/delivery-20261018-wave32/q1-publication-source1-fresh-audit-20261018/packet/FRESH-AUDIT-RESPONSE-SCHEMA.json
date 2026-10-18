@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "lineStart",
+        "lineEnd",
+        "exactQuote"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "lineStart": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lineEnd": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "exactQuote": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "judgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opinion",
+        "reason",
+        "citations",
+        "changeRequests"
+      ],
+      "properties": {
+        "opinion": {
+          "type": "string",
+          "enum": [
+            "MEETS_SCOPED_SOURCE_REQUIREMENT",
+            "CHANGES_REQUIRED",
+            "QUALIFIED",
+            "UNASSESSABLE"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/citation"
+          }
+        },
+        "changeRequests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sourceLocation",
+              "requestedChange",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sourceLocation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "requestedChange": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scope",
+    "candidatePins",
+    "sourceJudgment",
+    "testJudgment",
+    "executablePrerequisites",
+    "firstBlockedDependency",
+    "unreadScope",
+    "limits",
+    "executionPerformed",
+    "selfApproval",
+    "actualBackendIdentityAttested"
+  ],
+  "properties": {
+    "scope": {
+      "const": "FRESH_NONAUTHOR_DESIGNATED_SECURITY_OWNER_SOURCE_AUDIT_ONLY"
+    },
+    "candidatePins": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "beforeSha256",
+        "afterSha256",
+        "ownerTestSha256"
+      ],
+      "properties": {
+        "beforeSha256": {
+          "const": "572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680"
+        },
+        "afterSha256": {
+          "const": "8ceb7e7148ff39cc24f8386247298131d256292d291bf0670451bce83bc34f6c"
+        },
+        "ownerTestSha256": {
+          "const": "77038fc1fb7a166008536055b5696bd5a5090bc712de026d6073044baea319a4"
+        }
+      }
+    },
+    "sourceJudgment": {
+      "$ref": "#/$defs/judgment"
+    },
+    "testJudgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceOpinion",
+        "portableAsSupplied",
+        "executabilityOpinion",
+        "citations",
+        "changeRequests"
+      ],
+      "properties": {
+        "sourceOpinion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "portableAsSupplied": {
+          "enum": [
+            "YES_WITH_EXPLICIT_PREMISES",
+            "NO",
+            "UNASSESSABLE"
+          ]
+        },
+        "executabilityOpinion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/citation"
+          }
+        },
+        "changeRequests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sourceLocation",
+              "requestedChange",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sourceLocation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "requestedChange": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "executablePrerequisites": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "exactPathOrCapability",
+          "status",
+          "whyRequired",
+          "citation",
+          "minimumMissingEvidence"
+        ],
+        "properties": {
+          "exactPathOrCapability": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "PRESENT_IN_FROZEN_PACKET",
+              "ABSENT_FROM_FROZEN_PACKET",
+              "EXCLUDED_NOT_TRAVERSED",
+              "HOST_EXISTENCE_OR_VERSION_UNESTABLISHED",
+              "UNREAD_DEPENDENCY"
+            ]
+          },
+          "whyRequired": {
+            "type": "string",
+            "minLength": 1
+          },
+          "citation": {
+            "$ref": "#/$defs/citation"
+          },
+          "minimumMissingEvidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "firstBlockedDependency": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unreadScope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limits": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "executionPerformed": {
+      "const": false
+    },
+    "selfApproval": {
+      "const": false
+    },
+    "actualBackendIdentityAttested": {
+      "const": false
+    }
+  }
+}

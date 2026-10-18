@@ -1,0 +1,14 @@
+language "moriarty/1";
+agreement ThreeWayPayout {
+  asset PAY = { network: "local", issuer: "three-way-payout", reference: "PAY", scale: 0 };
+  state marker: UInt = 17;
+  action payout(first: UInt, second: UInt, third: UInt, serviceFee: UInt) {
+    transfer(PAY, "sender", "alice", first);
+    transfer(PAY, "sender", "bob", second);
+    transfer(PAY, "sender", "carol", third);
+    fee(PAY, "sender", "treasury", serviceFee);
+  }
+  action declare() {
+    liability("retainedDuty", PAY, "sender", "creditor", 0);
+  }
+}

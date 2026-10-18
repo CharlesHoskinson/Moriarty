@@ -1,0 +1,9 @@
+No complete positive PAM16 oracle was frozen. The exact blocker is the absent-fee state transition, plus the original empty `to` horizon convention; no new Core program or initial financial frame was supplied while those mappings remain unresolved.
+
+PAM16 is a retained original fixture distinct from UMP/STK/CSH. Its explicit PAM principal/rate/accrued-interest states and exact annual A365 intervals avoid the earlier nonapplicable-state-column problem. Dictionary event sequencing resolves IED before IP and IP before MD. These resolved facts do not repair the remaining financial dependency.
+
+The PAM initialization table explicitly sets Feac to0 when FER is undefined. The IP STF, however, selects a fee formula using FER and fee-schedule bounds without an undefined-fee guard. FER/FEB defaults are blank and the fee schedule is empty for undefinedFER. MD payoff includes Feac. The public fee-driver group defines conditional term requirements; it does not expressly define that missing transition. Therefore carrying initial0 or treating undefined fee arithmetic as0 would introduce a semantic rule.
+
+The formal lifetime rule refers to an optional tmax parameter. It does not specify how the original fixture JSON empty-string `to` selects that parameter. No horizon was silently replaced by maturity/infinity. Every original result-field key remains in FIELD-DISPOSITIONS.json; null complete-outcome fields mean unasserted, not zero or no effects. All277 membership and prior STK04/CSH/UMP freezes stay unchanged.
+
+No product patch/test is proposed because the first missing binding precedes faithful source construction. Root can verify artifact hashes offline with `python3 verify_packet.py` from this directory. A product runtime command is deliberately unspecified until authoritative fee/horizon rules and complete input-only source/scenario/calls are supplied. No product/model/build/provider/security execution or shared/Git mutation occurred.

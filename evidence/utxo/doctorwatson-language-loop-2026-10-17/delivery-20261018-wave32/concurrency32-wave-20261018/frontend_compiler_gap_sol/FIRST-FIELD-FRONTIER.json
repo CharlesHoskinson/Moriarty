@@ -1,0 +1,89 @@
+{
+  "status": "NO_JUSTIFIED_ORDINARY_PRODUCTION_PATCH",
+  "sourceBase": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+  "rows": [
+    {
+      "program": "PrintRun",
+      "action": "pay",
+      "scenario": "print-run-independent-oracle/inputs/print-run.scenario.json",
+      "sourceDeclaredRegistryNames": [],
+      "incomingDutyNames": [
+        "maintenance"
+      ],
+      "namesOutsideRegistry": [
+        "maintenance"
+      ],
+      "firstBlockedField": "/liabilities/0/name",
+      "classification": "Existing closed-profile refusal before financial slot reconstruction",
+      "observation": "Static source/input comparison only, not a runtime outcome"
+    },
+    {
+      "program": "InstallmentInvoice",
+      "action": "collect",
+      "scenario": "source/crates/fixtures/financial-report-contract/invoice-first.scenario.json",
+      "sourceDeclaredRegistryNames": [
+        "invoice",
+        "warranty"
+      ],
+      "incomingDutyNames": [
+        "invoice",
+        "warranty"
+      ],
+      "namesOutsideRegistry": [],
+      "firstBlockedField": null,
+      "classification": "No outside-registry name at this first boundary; other checks unexecuted",
+      "observation": "Static source/input comparison only, not a runtime outcome"
+    },
+    {
+      "program": "InstallmentInvoice",
+      "action": "collect",
+      "scenario": "source/crates/fixtures/financial-report-contract/invoice-final.scenario.json",
+      "sourceDeclaredRegistryNames": [
+        "invoice",
+        "warranty"
+      ],
+      "incomingDutyNames": [
+        "invoice",
+        "warranty"
+      ],
+      "namesOutsideRegistry": [],
+      "firstBlockedField": null,
+      "classification": "No outside-registry name at this first boundary; other checks unexecuted",
+      "observation": "Static source/input comparison only, not a runtime outcome"
+    },
+    {
+      "program": "ConditionalReserve",
+      "action": "allocate",
+      "scenario": "source/crates/fixtures/financial-report-contract/reserve-approved.scenario.json",
+      "sourceDeclaredRegistryNames": [
+        "allocation",
+        "bond",
+        "emergency"
+      ],
+      "incomingDutyNames": [
+        "bond",
+        "emergency"
+      ],
+      "namesOutsideRegistry": [],
+      "firstBlockedField": null,
+      "classification": "No outside-registry name at this first boundary; other checks unexecuted",
+      "observation": "Static source/input comparison only, not a runtime outcome"
+    }
+  ],
+  "firstCall": {
+    "path": "crates/mori-backend/src/signed_relation.rs",
+    "line": 687,
+    "gitBlob": "d0f3f62ca09fb0a9aeaca5e92d33103b549236cf",
+    "sha256": "8c78c341c4a7d1611486402d882e004529555d4eb9557d884575575c9d5611c1",
+    "source": "    proving::liability_slots(&registry, &scenario.liabilities)?;"
+  },
+  "refusal": {
+    "path": "crates/mori-backend/src/proving.rs",
+    "line": 647,
+    "gitBlob": "500be97d1b6b7c75ab2c87ccba733f381816fe26",
+    "sha256": "eaf44650f81d0570b79fd7e8746a9c7d49d7856b6b87e9cd6cc072e8ac7941d8",
+    "source": "            .ok_or_else(|| error(\"unsupported\", \"Duty name is outside the source registry.\"))?;"
+  },
+  "productionPatch": null,
+  "securityScope": "No security/lowering/native admission judgment supplied"
+}

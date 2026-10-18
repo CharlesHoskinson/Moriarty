@@ -1,0 +1,150 @@
+--- a/packages/moriarty-beta/GETTING-STARTED.md
++++ b/packages/moriarty-beta/GETTING-STARTED.md
+@@ -10,25 +10,57 @@
+ 
+ ## Install and run
+ 
+-Use Node 24 or later. From `packages/moriarty-beta` in a Moriarty checkout:
++Use Node 24 or later, npm, and bash or zsh. From `packages/moriarty-beta`
++in a Moriarty checkout, build and select the beta CLI explicitly:
+ 
+ ```sh
+ npm ci
+ npm run build
+-node dist/cli.js init /tmp/invoice
+-node dist/cli.js check /tmp/invoice/invoice.mori
+-node dist/cli.js test /tmp/invoice
+-node dist/cli.js simulate /tmp/invoice/invoice.mori --action pay --scenario /tmp/invoice/scenario.json
+-node dist/cli.js init /tmp/loan --template repay
+-node dist/cli.js test /tmp/loan
+-node dist/cli.js simulate /tmp/loan/repayment.mori --action repay_loan --scenario /tmp/loan/scenario.json
++MORI_BETA_PKG="$PWD"
++mori() { node "$MORI_BETA_PKG/dist/cli.js" "$@"; }
++MORI_BETA_DEMO=$(mktemp -d)
++mori init "$MORI_BETA_DEMO/invoice"
++mori check "$MORI_BETA_DEMO/invoice/invoice.mori" --json
++mori test "$MORI_BETA_DEMO/invoice"
++mori simulate "$MORI_BETA_DEMO/invoice/invoice.mori" --action pay --scenario "$MORI_BETA_DEMO/invoice/scenario.json"
++mori init "$MORI_BETA_DEMO/loan" --template repay
++mori test "$MORI_BETA_DEMO/loan"
++mori simulate "$MORI_BETA_DEMO/loan/repayment.mori" --action repay_loan --scenario "$MORI_BETA_DEMO/loan/scenario.json"
+ ```
+ 
+-`init` refuses an existing directory. `--template transfer` is the default;
++`mktemp -d` creates a fresh parent; `init` creates the new child directories and
++refuses existing targets. `--template transfer` is the default;
+ `--template repay` creates `repayment.mori` instead of `invoice.mori`.
+-For an installation outside the checkout, run `npm pack` here, then install that
+-local `.tgz` into your project with `npm install /absolute/path/to/archive.tgz`.
+-Run `npx mori` there. No npm registry publication is claimed.
++Both use `profile "moriarty-beta/1";` and `mori.tests.json`. The shell function
++selects this beta package rather than another executable named `mori` on PATH.
++
++For an installation outside the checkout, start in the same package directory
++and pack into a new local project. Packing runs the prepack build. The archive
++name below matches this package's `0.1.0-beta.1` version:
++
++```sh
++MORI_BETA_PROJECT=$(mktemp -d)
++npm pack --pack-destination "$MORI_BETA_PROJECT"
++cd "$MORI_BETA_PROJECT"
++npm install ./moriarty-lang-beta-0.1.0-beta.1.tgz
++MORI_BETA_PKG="$PWD/node_modules/@moriarty-lang/beta"
++mori() { node "$MORI_BETA_PKG/dist/cli.js" "$@"; }
++mori init invoice
++cd invoice
++mori check invoice.mori --json
++mori test .
++mori simulate invoice.mori --action pay --scenario scenario.json
++```
++
++Keep using the same terminal. The function retains the absolute installed-package
++path after changing directories, so the generated README's `mori` commands need
++no global install or repository metadata. In a new terminal, return to that local
++install project and define the function again. No npm registry publication is
++claimed. These are installation and local-example instructions, not a claim that
++a fresh installation has been observed. Local preparation stays
++**PreparedUnqualified**; building and running these examples does not prove,
++deploy or settle a transaction.
++
+ `mori COMMAND --help` shows the command's arguments. Exit 0 means the requested
+ local operation completed: a preparation remains unqualified. Exit 1 means
+ rejection, unsupported execution, test mismatch or a command/file error.
+--- a/docs/NATIVE-CORE.md
++++ b/docs/NATIVE-CORE.md
+@@ -5,15 +5,50 @@
+ reference interpreter and a direct ledger-9 ZKIRv3 lowerer. The beta/1
+ frontend and TypeScript package retain their existing behavior.
+ 
+-Run this guide's Cargo commands from the Moriarty repository root. The explicit
+-`cargo run -p mori --locked --` prefix selects the Rust workspace CLI; the Node
+-`@moriarty-lang/beta` package also installs a command named `mori`, but accepts a
+-separate beta source profile and supplies no Rust compiler. The Rust package
+-uses its default `native` feature here. A `--no-default-features` build supplies
+-local Core reference tooling only; Midnight compile/call/proof, targeted
+-inspection, trace/replay and JubJub profiles require `native`. This checkout
+-workflow does not establish a standalone Rust installation or completed external
+-proof/submission qualification.
++Run this guide's Cargo commands from the Moriarty repository root. The Rust
++package and binary are both named `mori`. The Node `@moriarty-lang/beta` package
++also installs a command named `mori`, but uses a separate beta source profile and
++supplies no Rust compiler.
++
++For source-only local Core examples, select the Rust binary and disable its
++default `native` feature explicitly. With Rust 1.99.0 and Cargo available, run
++these commands from the repository root:
++
++```sh
++MORI_CORE_DEMO=$(mktemp -d)
++cargo run -p mori --locked --no-default-features --bin mori -- init "$MORI_CORE_DEMO/transfer"
++cargo run -p mori --locked --no-default-features --bin mori -- check "$MORI_CORE_DEMO/transfer/source.mori" --json
++cargo run -p mori --locked --no-default-features --bin mori -- simulate "$MORI_CORE_DEMO/transfer/source.mori" --action pay --scenario "$MORI_CORE_DEMO/transfer/scenario.json"
++cargo run -p mori --locked --no-default-features --bin mori -- test "$MORI_CORE_DEMO/transfer"
++```
++
++The new parent comes from `mktemp -d`; the `transfer` child must not exist.
++For the repayment starter, initialize a separate child with:
++
++```sh
++cargo run -p mori --locked --no-default-features --bin mori -- init "$MORI_CORE_DEMO/repay" --template repay
++```
++
++Both starters use `language "moriarty/1";`, `source.mori`, `scenario.json` and
++`mori-tests.json`. Their actions are `pay` and `repay`. Each generated `README.md`
++already contains `check`, `simulate` and `test` commands using the POSIX-quoted
++absolute path of the Rust executable that created it. Run those README commands
++from the corresponding starter directory. If you move that executable, update
++its path in the README. The commands check complete expected post-state and
++ordered effects against local reference execution. The TEST asset and accounts
++are examples; an I/O failure can leave an incomplete project, so use a new child
++before retrying.
++
++This source-only selection does not establish dependency availability, a
++successful build or a fresh external installation. Local simulation is separate
++from native proving, deployment and settlement. The independent external
++proof/submission qualification remains open. The separate `source6-expansion`
++feature enables `expand --emit-source6-transfer`; it is not required for these
++Core starters and does not itself enable native support.
++
++The following examples select the default `native` feature. Midnight
++compile/call/proof, targeted inspection, trace/replay and JubJub profiles require
++that feature; they are separate from the source-only walkthrough above:
+ 
+ ```sh
+ cargo run -p mori --locked -- check examples/core/language/counter.mori --json
+@@ -23,15 +58,6 @@
+ cargo run -p mori --locked -- compile examples/core/batch-clear/batch.mori \
+   --target toolchains/ledger-9.json --out build-batch
+ ```
+-
+-`cargo run -p mori --locked -- init NEW_DIR` creates a Core transfer starter. `--template repay`
+-creates a repayment starter. Before running the generated README commands from
+-its project directory, replace their `mori` executable with an absolute path to
+-the Rust binary built from this checkout. Those commands check, simulate and
+-test the complete expected post-state and ordered effects.
+-The destination must not exist, and its parent must exist. An I/O failure
+-can leave an incomplete project. Choose a new destination before retrying.
+-These starters use local example assets and reference execution.
+ 
+ `check` reads at most 1 MiB plus one refusal byte through the shared bounded
+ reader; both Core and beta retain their 65,536-byte source grammar limit.

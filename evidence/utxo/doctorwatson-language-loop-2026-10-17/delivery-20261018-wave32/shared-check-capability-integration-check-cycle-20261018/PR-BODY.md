@@ -1,0 +1,5 @@
+Beta, Core/1 and Core/2 source checking previously kept dispatch and report construction inside the CLI command. This extracts that existing behavior behind a typed shared consumer, preserving checked-value lifetimes, lazy human reporting, Beta JSON field order/spans, Core/2 qualification labels and exit behavior. The public CLI consumes the helper; the future MCP server remains a separate unfinished delivery.
+
+Current-main integration: merged the reviewed capabilities command into this branch without conflicts. On exact64c6dedff1d99b33c23832330d7911a5fad9ed59, all10tests passed across check_source_dispatch and capabilities (53.872s cold wrapper,0filtered);8fresh direct complete stdout/exit comparisons equal the frozen actual baseline. Source/head stayed unchanged and temporary targets/processes were cleaned up. Historical823ce source/results remain preserved separately.
+
+Fresh independent source/result review of this exact integrated candidate is pending. No SDK/native/proof/ledger execution, dependency/lockfile change or full MCP acceptance is claimed.

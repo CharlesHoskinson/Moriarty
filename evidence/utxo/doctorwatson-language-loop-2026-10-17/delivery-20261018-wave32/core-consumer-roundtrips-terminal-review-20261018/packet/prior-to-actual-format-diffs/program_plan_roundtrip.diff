@@ -1,0 +1,28 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/program-plan-roundtrip-integration-ready-20261018/fullsource/crates/mori-core/tests/program_plan_roundtrip.rs
++++ actualHEAD/program_plan_roundtrip.rs
+@@ -81,8 +81,7 @@
+     });
+     // Hashes use the production canonical codec over independent literal
+     // values. This checks linkage, not an independent canonical-byte oracle.
+-    let expected_program_hash =
+-        intent::hash_bytes(&intent::canonical(&expected_program).unwrap());
++    let expected_program_hash = intent::hash_bytes(&intent::canonical(&expected_program).unwrap());
+     let expected_plan = json!({
+         "format": "moriarty-stage-plan/1",
+         "program_hash": expected_program_hash.clone(),
+@@ -152,7 +151,13 @@
+     };
+     let continuation_text = json::export(&continuation).unwrap();
+     let reopened = stage::decode::continuation(&continuation_text).unwrap();
+-    assert_eq!(json::parse(&continuation_text).unwrap(), expected_continuation);
++    assert_eq!(
++        json::parse(&continuation_text).unwrap(),
++        expected_continuation
++    );
+     assert_eq!(reopened, continuation);
+-    assert_eq!(serde_json::to_value(&reopened).unwrap(), expected_continuation);
++    assert_eq!(
++        serde_json::to_value(&reopened).unwrap(),
++        expected_continuation
++    );
+ }

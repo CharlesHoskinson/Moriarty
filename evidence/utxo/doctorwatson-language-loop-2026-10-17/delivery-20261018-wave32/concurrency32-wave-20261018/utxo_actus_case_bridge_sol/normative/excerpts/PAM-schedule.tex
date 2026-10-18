@@ -1,0 +1,67 @@
+
+
+% ---------------------- table: pam schedule ----------------------
+\begin{schedule}{PAM}
+	AD & $\vec{t}^{AD} = \left(t_0,t_1,...,t_n\right)$ & With $t_i,i=1,2,...$ a custom input \\
+	\hline
+	IED & $t^{IED} = \attr{IED}$ & \\
+	\hline
+	MD & $t^{MD} = \svar{Md}{t_0}$ & \\
+	\hline
+	PP & $\vec{t}^{PP} = \begin{cases} \undef & \text{if} \quad \attr{PPEF}=\text{'N'} \\
+					(\vec{u},\vec{v}) & \text{else} \end{cases}$
+		\par where \par
+		{$\begin{aligned} \vec{u} &= \sdl{s}{\attr{OPCL}}{T^{MD}} \\
+				\vec{v} &= \obs{ev}{\attr{CID},\attr{PP}}{t} \end{aligned}$}
+		 & with\par $s = \begin{cases} \undef & \text{if} \quad \attr{OPANX}=\undef \land \attr{OPCL}=\undef\\
+					   \attr{IED}+\attr{OPCL} & \text{else if} \quad \attr{OPANX} = \undef \\
+					   \attr{OPANX} & \text{else} \end{cases}$ \\
+	\hline
+	PY & $\vec{t}^{PY} = \begin{cases} \undef & \text{if} \quad \attr{PYTP}=\text{'O'} \\
+						\vec{t}^{PP} & \text{else} \end{cases}$ & \\
+	\hline
+	FP & $\vec{t}^{FP} = \begin{cases} \undef & \text{if} \quad \attr{FER}=\undef \lor \attr{FER}=0 \\
+					\sdl{s}{\attr{FECL}}{T^{MD}} & \text{else} \end{cases}$
+		& with\par $s = \begin{cases} \undef & \text{if} \quad \attr{FEANX}=\undef \land \attr{FECL}=\undef\\
+					   \attr{IED}+\attr{FECL} & \text{else if} \quad \attr{FEANX} = \undef \\
+					   \attr{FEANX} & \text{else} \end{cases}$ \\
+	\hline
+	PRD & $t^{PRD}= \attr{PRD}$  &  \\
+	\hline
+	TD & $t^{TD}= \attr{TD}$  &  \\
+	\hline
+	IP & $\vec{t}^{IP} = \begin{cases} \undef & \text{if} \quad \attr{IPNR}=\undef \\
+						\sdl{s}{\attr{IPCL}}{T^{MD}} & \text{else} \end{cases}$
+		& with\par $s = \begin{cases} \undef & \text{if} \quad \attr{IPANX}=\undef \land \attr{IPCL}=\undef\\
+					\attr{IPCED} & \text{else if}\quad \attr{IPCED}\neq\undef \\
+					   \attr{IED}+\attr{IPCL} & \text{else if} \quad \attr{IPANX} = \undef \\
+					   \attr{IPANX} & \text{else} \end{cases}$ \\
+	\hline
+	IPCI & $\vec{t}^{IPCI} = \begin{cases} \undef & \text{if} \quad \attr{IPCED}=\undef \\
+						\sdl{s}{\attr{IPCL}}{\attr{IPCED}} & \text{else} \end{cases}$
+		& with\par $s = \begin{cases} \undef & \text{if} \quad \attr{IPANX}=\undef \land \attr{IPCL}=\undef\\
+					   \attr{IED}+\attr{IPCL} & \text{else if} \quad \attr{IPANX} = \undef \\
+					   \attr{IPANX} & \text{else} \end{cases}$ \\
+	\hline
+	RR & $\vec{t}^{RR} = \begin{cases} \undef & \text{if} \quad \attr{RRANX}=\undef \land \attr{RRCL}=\undef \\
+					\vec{t} \setminus t^{RRY} & \text{else if} \attr{RRNXT} \neq \undef \\
+					\vec{t} & \text{else} \end{cases}$ \par
+		where $\vec{t}=\sdl{s}{\attr{RRCL}}{T^{MD}}$
+		& with\par {$\begin{aligned} s &= \begin{cases} \attr{IED}+\attr{RRCL} & \text{if} \quad \attr{RRANX} = \undef \\
+					   \attr{RRANX} & \text{else} \end{cases} \\
+					     t^{RRY} &= \inf t \in \vec{t}\mid t>\attr{SD} \end{aligned}$} \\
+	\hline
+	RRF & $t^{RRF} = \begin{cases} \undef & \text{if} \quad \attr{RRANX}=\undef \land \attr{RRCL}=\undef \\
+					\inf t \in \vec{t}\mid t>\attr{SD} & \text{else} \end{cases}$ \par
+		where $\vec{t}=\sdl{s}{\attr{RRCL}}{T^{MD}}$
+		& with\par $s = \begin{cases} \attr{IED}+\attr{RRCL} & \text{if} \quad \attr{RRANX} = \undef \\
+					   \attr{RRANX} & \text{else} \end{cases}$ \\
+  	\hline
+	SC & $\vec{t}^{SC} = \begin{cases} \undef & \text{if} \quad \attr{SCEF}=\text{'000'} \\
+					\sdl{s}{\attr{SCCL}}{T^{MD}} & \text{else} \end{cases}$
+		& with\par $s = \begin{cases} \undef & \text{if} \quad \attr{SCANX}=\undef \land \attr{SCCL}=\undef\\
+					   \attr{IED}+\attr{SCCL} & \text{else if} \quad \attr{SCANX} = \undef \\
+					   \attr{SCANX} & \text{else} \end{cases}$ \\
+	\hline
+	CE & $\vec{t}^{CE} = t(e^{k}) | \svar{Prf}{t^-} \neq \svar{Prf}{t^+}, \forall k$  & \\
+\end{schedule}

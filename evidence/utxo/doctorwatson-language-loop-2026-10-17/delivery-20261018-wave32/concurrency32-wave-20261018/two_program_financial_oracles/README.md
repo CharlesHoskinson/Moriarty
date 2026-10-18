@@ -1,0 +1,13 @@
+# Independent reserve/spend/refund financial oracle
+
+One ordinary Core/1 run reserves100, pays merchant37 plus fee3, and refunds20. Closing reserve cash, reserve duty and application remaining counter are40. Payer's gross debit remains100; refund20 is a separate credit and net debit80. Source grossReserved100 and grossSpent40 remain unchanged by refund. This is an application bookkeeping pattern, not a new allowance/authority primitive or staged recovery API.
+
+`financial-execution-projection.expected.json` retains exact semantics/action, full pre/post and all20 source steps' index/value/snapshot/new effects. Raw Statement/ExprId is deliberately excluded; it is not a whole Execution or Program golden. Every five-state/eight-balance/full-duty frame is present. `cumulative-prefix-effects.expected.json` freezes all20 cumulative ordered histories; `ordered-effects.expected.json` freezes all17 effects. The split pre/post files match the aggregate exactly. `source-statement-kinds.expected.json` separately fixes all20 literal statement kinds without supplying ExprId roots.
+
+`FINANCIAL-ACCOUNTING.json` and `SOURCE-PREFIX-ACCOUNTING.json` distinguish cumulative gross debit, credits, net outcomes, source counters and duty evolution. All BOND rows, marker77, observer CASH9 and observer-duty5 are preserved. Duties are not token supply. Separate source movement/discharge/bookkeeping prefixes remain separate; their intermediate amounts are not silently synchronized.
+
+`CONSUMER-SCOPE.json` defines strict read-only comparison. `WORK-SCOPE.json` supplies informational60 units under the existing public reference schedule only; this unmetered call adds no meter/cap/work-success policy. Whole Program/arena/raw statement identity, complete CLI byte compatibility and target/SDK/proof/ledger qualification remain outside this finite oracle.
+
+Input-only source/scenario/schedule bytes were independently checked against the author's immutable input freeze. Public normative sources were resolved read-only through Git commit64c6dedff1d99b33c23832330d7911a5fad9ed59 and include Git blob/SHA256 pins. No author test/expected/output or evaluator implementation was read. Prior related source/DTO/oracle exposures are disclosed. Product/model/build/provider/network/Git mutation remains UNRUN; only literal/static data and checksum verification occurred.
+
+Root custody check: `sha256sum --check --quiet FREEZE.sha256` from this directory. The source author supplies the separately inspected actual library/CLI test commands. All148 requirements/292 scenarios/20 families and original U/M/MC/SP/G/finance/composition/targets remain unchanged.

@@ -1,0 +1,182 @@
+[
+  {
+    "file": "invoice.mori",
+    "kind": "domain",
+    "name": "Preview",
+    "span": {
+      "start": 48,
+      "end": 123
+    },
+    "text": "domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "account",
+    "name": "Buyer",
+    "span": {
+      "start": 125,
+      "end": 174
+    },
+    "text": "account Buyer = { domain: Preview, id: \"Owner\" };"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "account",
+    "name": "Seller",
+    "span": {
+      "start": 176,
+      "end": 230
+    },
+    "text": "account Seller = { domain: Preview, id: \"Recipient\" };"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "account",
+    "name": "Treasury",
+    "span": {
+      "start": 232,
+      "end": 282
+    },
+    "text": "account Treasury = { domain: Preview, id: \"Fee\" };"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "asset",
+    "name": "USD",
+    "span": {
+      "start": 284,
+      "end": 379
+    },
+    "text": "asset USD = { domain: Preview, id: \"A\", scale: 2, representation: \"canonical\", symbol: \"USD\" };"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "const",
+    "name": "price",
+    "span": {
+      "start": 381,
+      "end": 415
+    },
+    "text": "const price: Qty<USD> = 10.00 USD;"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "const",
+    "name": "fee",
+    "span": {
+      "start": 417,
+      "end": 438
+    },
+    "text": "const fee = 0.10 USD;"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "intent",
+    "name": "Payment",
+    "span": {
+      "start": 440,
+      "end": 932
+    },
+    "text": "intent Payment = {\n  domain: Preview, asset: USD, signer: Buyer, key: \"key1\", nonce: \"n1\", pre_head: \"h0\",\n  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,\n  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),\n  source_hash: \"src1\", policy_digest: \"policy1\", failure: SuccessOnly,\n  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,\n };"
+  },
+  {
+    "file": "invoice.mori",
+    "kind": "action",
+    "name": "pay",
+    "span": {
+      "start": 934,
+      "end": 958
+    },
+    "text": "action pay uses Payment;"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "domain",
+    "name": "Preview",
+    "span": {
+      "start": 56,
+      "end": 131
+    },
+    "text": "domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "account",
+    "name": "Buyer",
+    "span": {
+      "start": 133,
+      "end": 182
+    },
+    "text": "account Buyer = { domain: Preview, id: \"Owner\" };"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "account",
+    "name": "Seller",
+    "span": {
+      "start": 184,
+      "end": 238
+    },
+    "text": "account Seller = { domain: Preview, id: \"Recipient\" };"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "account",
+    "name": "Treasury",
+    "span": {
+      "start": 240,
+      "end": 290
+    },
+    "text": "account Treasury = { domain: Preview, id: \"Fee\" };"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "asset",
+    "name": "USD",
+    "span": {
+      "start": 292,
+      "end": 387
+    },
+    "text": "asset USD = { domain: Preview, id: \"A\", scale: 2, representation: \"canonical\", symbol: \"USD\" };"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "const",
+    "name": "payout",
+    "span": {
+      "start": 389,
+      "end": 481
+    },
+    "text": "const payout: Qty<USD> = max(a: 2 * (4.50 USD - atoms(asset: USD, value: 50)), b: 7.00 USD);"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "const",
+    "name": "fee",
+    "span": {
+      "start": 483,
+      "end": 534
+    },
+    "text": "const fee: Qty<USD> = atoms(asset: USD, value: 25);"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "intent",
+    "name": "Rebate",
+    "span": {
+      "start": 536,
+      "end": 1059
+    },
+    "text": "intent Rebate = {\n  domain: Preview, asset: USD, signer: Buyer, key: \"rebate-key\", nonce: \"rebate-nonce\", pre_head: \"m0\",\n  valid: rounds(domain: Preview, from: 2, to: 12),\n  gross_cap: 8.50 USD, fee_cap: fee, net_floor: payout,\n  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: payout, fee: fee),\n  source_hash: \"rebate-source\", policy_digest: \"rebate-policy\", failure: SuccessOnly,\n  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,\n };"
+  },
+  {
+    "file": "max-rebate.mori",
+    "kind": "action",
+    "name": "pay_rebate",
+    "span": {
+      "start": 1061,
+      "end": 1091
+    },
+    "text": "action pay_rebate uses Rebate;"
+  }
+]

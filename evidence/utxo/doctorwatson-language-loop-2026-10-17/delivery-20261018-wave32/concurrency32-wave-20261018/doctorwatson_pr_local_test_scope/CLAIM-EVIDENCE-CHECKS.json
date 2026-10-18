@@ -1,0 +1,599 @@
+[
+  {
+    "review_claims": [
+      "/concreteChecks/2",
+      "/concreteChecks/3",
+      "/concreteChecks/11",
+      "/findings/3"
+    ],
+    "claim": "complete 32/33 financial Program nodes and 4/3 states,1/2 assets,2 actions",
+    "status": "MATCH",
+    "evidence": [
+      {
+        "path": "financial-freeze/installment-invoice.program.expected.json",
+        "expressions": 32,
+        "count_matches_review": true,
+        "state_names": [
+          "paid",
+          "dueDay",
+          "installments",
+          "marker"
+        ],
+        "assets": [
+          [
+            "CASH",
+            2
+          ]
+        ],
+        "actions": [
+          [
+            "register",
+            2
+          ],
+          [
+            "collect",
+            12
+          ]
+        ]
+      },
+      {
+        "path": "financial-freeze/conditional-reserve.program.expected.json",
+        "expressions": 33,
+        "count_matches_review": true,
+        "state_names": [
+          "allocated",
+          "closed",
+          "marker"
+        ],
+        "assets": [
+          [
+            "CASH",
+            2
+          ],
+          [
+            "BOND",
+            0
+          ]
+        ],
+        "actions": [
+          [
+            "register",
+            3
+          ],
+          [
+            "allocate",
+            15
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "review_claims": [
+      "/findings/0"
+    ],
+    "claim": "authored InvoiceReceipt expression table0..12",
+    "status": "MATCH",
+    "evidence": {
+      "file": "changed/crates/mori-core/tests/program_plan_roundtrip.rs",
+      "expression_count": 13,
+      "uses_production_canonical_helpers": true
+    }
+  },
+  {
+    "review_claims": [
+      "/concreteChecks/11",
+      "/concreteChecks/12",
+      "/concreteChecks/13",
+      "/summary"
+    ],
+    "claim": "exact 4 passing tests across3targets",
+    "status": "MATCH",
+    "evidence": {
+      "source_test_names": {
+        "financial_program_wire_contract": [
+          "invoice_complete_core_wire_matches_frozen_32_node_program_and_reopens",
+          "reserve_complete_core_wire_matches_frozen_33_node_program_and_reopens"
+        ],
+        "program_plan_roundtrip": [
+          "invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values"
+        ],
+        "utxo_pattern_exchange": [
+          "prefunded_exchange_matches_complete_authored_normal_outcome"
+        ]
+      },
+      "logged_test_names": [
+        "invoice_complete_core_wire_matches_frozen_32_node_program_and_reopens",
+        "reserve_complete_core_wire_matches_frozen_33_node_program_and_reopens",
+        "invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values",
+        "prefunded_exchange_matches_complete_authored_normal_outcome"
+      ],
+      "same_names": true,
+      "target_summaries_pass_failed_ignored_measured_filtered": [
+        [
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "totals": [
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stdout_hash_matches_result": true,
+      "stderr_hash_matches_result": true
+    }
+  },
+  {
+    "review_claims": [
+      "/concreteChecks/9",
+      "/findings/3",
+      "/unreadScope"
+    ],
+    "claim": "financial32 / plan18 / UTXO14 frozen payloads",
+    "status": "MATCH",
+    "evidence": [
+      {
+        "path": "financial-freeze/FREEZE.sha256",
+        "members": 32,
+        "sha256": "5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d",
+        "mismatches": []
+      },
+      {
+        "path": "independent/program-plan-roundtrip-independent-oracle-20261018/FREEZE.sha256",
+        "members": 18,
+        "sha256": "904f438ad11cdcee5698b62973cbdae3d977c53275f86427cdecc42b366589f4",
+        "mismatches": []
+      },
+      {
+        "path": "independent/utxo-pattern-core-independent-oracle-20261018/FREEZE.sha256",
+        "members": 14,
+        "sha256": "9f4ba8ddac07c4823eb2199e0ce2866e54b3c424221ce2cea3172a9660063d00",
+        "mismatches": []
+      }
+    ],
+    "financial_consumed_payload_count": 4,
+    "financial_other_payload_count": 28,
+    "note": "2 Program JSON inputs plus2 Mori sources;28unused is correct"
+  },
+  {
+    "review_claims": [
+      "/concreteChecks/7",
+      "/concreteChecks/14",
+      "/findings/2"
+    ],
+    "claim": "whole captured Execution alias;11prefixes;6effects;9balances/3state/2duty rows;A29/B48 preserved",
+    "status": "MATCH",
+    "evidence": {
+      "actual_equals_authored_execution": true,
+      "pre_equal": true,
+      "post_equal": true,
+      "step_count": 11,
+      "prefix_count": 11,
+      "effect_count": 6,
+      "prefix_comparison_mismatches": [],
+      "snapshot_checks": [
+        {
+          "prefix": 0,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 1,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 2,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 3,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 4,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 5,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 6,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 7,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 8,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "5"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 9,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "5"
+            }
+          },
+          "liabilities_equal_pre": true
+        },
+        {
+          "prefix": 10,
+          "balances": 9,
+          "state_fields": 3,
+          "liabilities": 2,
+          "asset_totals": {
+            "A": 29,
+            "B": 48
+          },
+          "state": {
+            "marker": {
+              "type": "UInt",
+              "value": "77"
+            },
+            "phase": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "revision": {
+              "type": "UInt",
+              "value": "5"
+            }
+          },
+          "liabilities_equal_pre": true
+        }
+      ],
+      "actual_sha256": "cd6e7eac012ab85e41885e39b75a5ffaeceb118d13082bee730aaeaac6c24cf3"
+    }
+  },
+  {
+    "review_claims": [
+      "/concreteChecks/9",
+      "/concreteChecks/10"
+    ],
+    "claim": "pre-run freeze custody, exact result metadata and offline selected command",
+    "status": "MATCH_AS_RECORDED",
+    "evidence": {
+      "freeze_time": "2026-10-18T13:07:05.179678+00:00",
+      "plan_time": "2026-10-18T13:18:35.420663+00:00",
+      "freeze_before_plan": true,
+      "result": {
+        "finishedAt": "2026-10-18T13:19:02.281669+00:00",
+        "exitCode": 0,
+        "wallSeconds": 26.81582211600471,
+        "stdoutSha256": "8a14a44c39058e61d7a99ee09ea746d901f12c785c7230f49474d6fcb61aa0d6",
+        "stderrSha256": "266ecbf592befa971d4060369fb5702aa6ab795df7f5099119d5de2d315e5362",
+        "ownedSessionRemaining": [],
+        "head": "bcdfd4b27a62e8e618153ef1961d60f889dc4d63",
+        "tree": "6ef1a779f5c87299bf340d684cea33082cb1bcb2",
+        "sourcePinsUnchanged": true,
+        "workingTreeClean": true
+      },
+      "cleanup": {
+        "recordedAt": "2026-10-18T13:19:02.367099+00:00",
+        "ownedRoot": "/tmp/doctorwatson-core-roundtrips-rtsd00nt",
+        "existsAfter": false,
+        "resultRecorded": true
+      },
+      "selected_argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=5s",
+        "90s",
+        "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--manifest-path",
+        "/home/charl/Moriarty/.worktrees/utxo-core2-complete-20261018/Cargo.toml",
+        "--frozen",
+        "-j1",
+        "-p",
+        "mori-core",
+        "--no-default-features",
+        "--test",
+        "program_plan_roundtrip",
+        "--test",
+        "utxo_pattern_exchange",
+        "--test",
+        "financial_program_wire_contract",
+        "--",
+        "--test-threads=1"
+      ],
+      "offline": "true",
+      "pre_run_member_records": [
+        {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/utxo-pattern-core-independent-oracle-20261018",
+          "freezeSha256": "9f4ba8ddac07c4823eb2199e0ce2866e54b3c424221ce2cea3172a9660063d00",
+          "membersVerified": 14
+        },
+        {
+          "path": "/home/charl/moriarty-c2-opus55-restored-20261017/program-plan-roundtrip-independent-oracle-20261018",
+          "freezeSha256": "904f438ad11cdcee5698b62973cbdae3d977c53275f86427cdecc42b366589f4",
+          "membersVerified": 18
+        }
+      ]
+    },
+    "limit": "mechanically checks public record consistency; does not recreate past host/process observations"
+  },
+  {
+    "review_claims": [
+      "/findings/1",
+      "/unverifiedClaims"
+    ],
+    "claim": "plan test stops at await, discards noncontinuation outcome fields, no separate full outcome capture",
+    "status": "MATCH",
+    "evidence": {
+      "waiting_pattern_present": true,
+      "resume_call_absent": true,
+      "actual_full_outcome_capture_record": false,
+      "independent_unknowns": [
+        "Whole Program exact expressions array and ExprIds",
+        "Exact serialized statement reference fields",
+        "Program or StagePlan canonical codec or hashes",
+        "Target/Artifact/compiled relation",
+        "Actual parser/load/start/roundtrip outputs and serialization",
+        "Actual process exit/stdout/stderr or library JSON bytes",
+        "Continuation admission/authentication/history/security conditions",
+        "Actual logical meter conformance or resource admission",
+        "Concrete resume event: none supplied",
+        "Any root tests or assertions not named in INPUT-ONLY.json"
+      ]
+    }
+  },
+  {
+    "review_claims": [
+      "/unreadScope/5"
+    ],
+    "claim": "unread standalone v1.rs implementation",
+    "status": "SCOPE_LABEL_CORRECTION",
+    "evidence": {
+      "standalone_packet_path_exists": false,
+      "inline_v1_module_in_ir": true
+    },
+    "minimal_correction": "Replace v1.rs with the unexcerpted inline v1 module in ir.rs; do not imply that a separate file was read or exists."
+  },
+  {
+    "review_claims": [
+      "/sourceVerdict",
+      "/resultVerdict",
+      "/limitations",
+      "/unverifiedClaims"
+    ],
+    "claim": "finite ordinary source/result opinion has no broader execution or product authority",
+    "status": "PRESERVED_NOT_APPROVED",
+    "evidence": {
+      "original_sourceVerdict": "approve",
+      "original_resultVerdict": "approve",
+      "scope": "four ordinary Core tests only",
+      "SDK_native_full_artifact_claim": "explicitly UNRUN/absent; not promoted",
+      "canonical_hash_scope": "shared production-codec linkage, not independent canonical bytes",
+      "authored_vs_independent": "wire statements/ExprIds/Step.value stay distinct from independent complete financial/prefix fields",
+      "provider_backend_identity": "explicitly unattested; no private captures read",
+      "parent_exits": "unchanged/open; no authority or security judgment supplied by this corroboration"
+    }
+  }
+]

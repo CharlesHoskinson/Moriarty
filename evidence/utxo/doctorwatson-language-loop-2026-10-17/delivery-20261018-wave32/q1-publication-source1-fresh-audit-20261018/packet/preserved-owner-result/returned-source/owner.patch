@@ -1,0 +1,20 @@
+--- a/experiments/moriarty-eutxo/src/compile-custody.mjs
++++ b/experiments/moriarty-eutxo/src/compile-custody.mjs
+@@ -343,7 +343,7 @@ export function compileCustody({ sourcePath, seedPath, casesPath, expectedReleas
+     const blueprintSrc = join(isolated, 'plutus.json');
+     const compiled = build.status === 0 && existsSync(blueprintSrc);
+     let applied = null;
+-    if (compiled) {
++    if (checkOk && compiled) {
+       cpSync(blueprintSrc, published);
+       const queried = production ? syntheticTime.queriedSeed : null;
+       applied = applyUnitParameters({
+@@ -398,7 +398,7 @@ export function compileCustody({ sourcePath, seedPath, casesPath, expectedReleas
+       missingTests: missing,
+       checkStatus,
+       buildStatus: build.status,
+-      blueprintPath: compiled ? published : null,
++      blueprintPath: checkOk && compiled ? published : null,
+       check: { status: checkStatus, stdout: check.stdout, stderr: check.stderr, tests: parsed.tests, missing },
+       build: { status: build.status, stdout: build.stdout, stderr: build.stderr },
+       oracleBound: bound.bound,
