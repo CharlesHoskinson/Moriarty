@@ -1,0 +1,3 @@
+The combined 240-byte Cargo integration entry preserves the earlier 157-byte entry and registers both unchanged support modules. One normal compile and one list check passed; dep-info names exactly ten source/fixture inputs and the binary lists exactly five tests. These operations executed zero test bodies and rebuilt no Core library. The earlier runtime results retain their original source and oracle qualifications.
+
+The reviewer’s predicted declaration-order listing was incorrect. The captured output is lexicographical; Root verified unique exact membership and the five-test summary. Source and exact-operation approval remain separate from this factual correction. Whole UIREQ035 and the retained refinements remain open.

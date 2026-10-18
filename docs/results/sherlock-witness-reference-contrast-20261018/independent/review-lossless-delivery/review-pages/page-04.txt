@@ -1,0 +1,160 @@
+REVIEW PAGE 4 OF 4
+PAYLOAD-CHUNK-SHA256 4e2c3f8339d1b8c5d69123c5d98355d2e697aea2afccc8baa6eb85f8b807a8b7
+BEGIN PAYLOAD CHUNK
+          [65,135,162,163,[],"k.machine.push.accept"],
+          [66,117,163,164,[],"k.machine.eval.binary"],
+          [67,135,164,165,[],"k.machine.push.accept"],
+          [68,108,165,169,{"$ref":"L04"},"k.machine.eval.variable.present"],
+          [69,149,169,170,[],"k.machine.return.left"],
+          [70,102,170,175,{"$ref":"L09"},"k.machine.eval.literal.valid"],
+          [71,153,175,180,["b.helper.Equal.entry","b.helper.Equal.pair","b.helper.Equal.empty","b.helper.Equal.exit"],"k.machine.return.right"],
+          [72,223,180,181,[],"k.machine.primitive.value"],
+          [73,161,181,185,{"$ref":"L03"},"k.machine.return.if.true"],
+          [74,102,185,190,{"$ref":"L09"},"k.machine.eval.literal.valid"],
+          [75,185,190,194,{"$ref":"L03"},"k.machine.return.call.valid"],
+          [76,153,194,199,{"$ref":"L08"},"k.machine.return.right"],
+          [77,223,199,200,[],"k.machine.primitive.value"],
+          [78,185,200,204,{"$ref":"L03"},"k.machine.return.call.valid"],
+          [79,153,204,209,{"$ref":"L08"},"k.machine.return.right"],
+          [80,223,209,210,[],"k.machine.primitive.value"],
+          [81,185,210,214,{"$ref":"L03"},"k.machine.return.call.valid"],
+          [82,80,214,215,[],"k.admin.publish.value"]
+        ]}},
+        "semanticErasureBinding": "Each helper prefix refers to the complete independent legacy pre-snapshot; a completion refers to its complete post-snapshot. This is the declared eraseHelpers target on these normal uncut intervals; it is not raw MachineImage equality. A virtual fuel remains the A oracle field, separately from remaining_work.",
+        "unbound": ["Raw physical data/env/frame/task row indices and complete helper payload/cursor snapshots","Current implementation transition validity and exact normative-row realization","Any cache/helper rewrite preserving occurrence/counter details outside this selected schedule","Allocation/physical capacity history and actual metrics; helper_visits remains a diagnostic distinct from charged helper_work"],
+        "execution": "No subject/model/compiler/provider or actual trace read; source A rows already independently frozen. This file is not a claim that actual runtime realizes these clocks."
+      }
+    }
+  ]
+}
+
+END COMPLETE FACTORED ORACLES
+
+BEGIN COMPLETE DATA-ONLY EXPANDER {"path":"/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/expand_and_prove.py","bytes":2971,"sha256":"ee92eae63bfe9a1177042420f6faede3cb18fd0af0fd5bcb1762fe9207aeea4d"}
+"""Data-only expansion and comparison, with no evaluator/model/source imports."""
+import hashlib
+import json
+from pathlib import Path
+
+D=Path(__file__).resolve().parent
+F=D/'FACTORED-ORACLES.json'
+def canonical(x):return json.dumps(x,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()
+def pin(p):
+    b=p.read_bytes();return {'path':str(p),'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()}
+factored=json.loads(F.read_text())
+assert factored['format']=='lossless-named-json-tables/1'
+constants=factored['constants']
+assert all(name[0] in factored['constantTypePrefixes'] and name[1:].isdigit() for name in constants)
+memo={}
+def expand(x,trail=()):
+    if isinstance(x,dict):
+        if '$ref'in x:
+            assert set(x)=={'$ref'} and isinstance(x['$ref'],str)
+            name=x['$ref'];assert name in constants and name not in trail
+            if name not in memo:memo[name]=expand(constants[name],trail+(name,))
+            return memo[name]
+        if '$table'in x:
+            assert set(x)=={'$table'} and set(x['$table'])=={'columns','rows'}
+            t=x['$table'];cols=t['columns'];assert len(set(cols))==len(cols) and all(isinstance(k,str) for k in cols)
+            out=[]
+            for row in t['rows']:
+                assert isinstance(row,list) and len(row)==len(cols)
+                out.append({k:expand(v,trail) for k,v in zip(cols,row)})
+            return out
+        return {k:expand(v,trail) for k,v in x.items()}
+    if isinstance(x,list):return [expand(v,trail) for v in x]
+    return x
+proof=[]
+for document in factored['documents']:
+    original=document['original'];p=Path(original['path']);before=pin(p);assert before==original
+    copy=document['reviewCopy'];assert pin(Path(copy['path']))==copy
+    assert Path(copy['path']).read_bytes()==p.read_bytes()
+    source=json.loads(p.read_text());expanded=expand(document['body'])
+    a=canonical(source);b=canonical(expanded)
+    assert source==expanded and a==b
+    assert pin(p)==before
+    proof.append({'original':original,'reviewCopy':copy,'originalCanonicalBytes':len(a),'expandedCanonicalBytes':len(b),'originalCanonicalSHA256':hashlib.sha256(a).hexdigest(),'expandedCanonicalSHA256':hashlib.sha256(b).hexdigest(),'allJSONFieldsAndArrayOrderEqual':True,'exactRawSourceAndReviewCopyPinsUnchanged':True,'snapshots':len(source.get('snapshots',[])),'records':len(source.get('records',[]))})
+for name in constants:expand({'$ref':name})
+result={'status':'PASS_LOSSLESS_DATA_ROUNDTRIP','factored':pin(F),'format':'lossless-named-json-tables/1','definitionCount':len(constants),'documents':proof,'scope':'JSON data expansion/comparison only; no semantic projection, evaluator, subject source, model, compiler, test or provider execution; original files unchanged.'}
+(D/'ROUNDTRIP-PROOF.json').write_text(json.dumps(result,indent=2)+'\n')
+print(json.dumps({'status':result['status'],'documents':len(proof),'definitions':len(constants),'factoredBytes':F.stat().st_size}))
+
+END COMPLETE DATA-ONLY EXPANDER
+
+BEGIN COMPLETE ROUNDTRIP PROOF {"path":"/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/ROUNDTRIP-PROOF.json","bytes":3945,"sha256":"bfe30fd70aaa4d2e5a3bdb6d5454b04fd1b1b5afb59df116b4b7e54ffd3efaa2"}
+{
+  "status": "PASS_LOSSLESS_DATA_ROUNDTRIP",
+  "factored": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/FACTORED-ORACLES.json",
+    "bytes": 46875,
+    "sha256": "bff71c775899dc34f5297291b501d7404721f708811f210d601d0f68736f60ff"
+  },
+  "format": "lossless-named-json-tables/1",
+  "definitionCount": 88,
+  "documents": [
+    {
+      "original": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-reference-prefix-oracle-20261018/expectations/factorial2-normal-program-contrast-A39-prefix.json",
+        "bytes": 322314,
+        "sha256": "11b11e9f36cb09f82eb2714a5653667b38f8fcedc05db35153a596e904024f6b"
+      },
+      "reviewCopy": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/originals/factorial2-normal-program-contrast-A39-prefix.json",
+        "bytes": 322314,
+        "sha256": "11b11e9f36cb09f82eb2714a5653667b38f8fcedc05db35153a596e904024f6b"
+      },
+      "originalCanonicalBytes": 93670,
+      "expandedCanonicalBytes": 93670,
+      "originalCanonicalSHA256": "de86a1218d9c0df2949f52f36beab45730ef299367328bc90aa286c8bfb95ffe",
+      "expandedCanonicalSHA256": "de86a1218d9c0df2949f52f36beab45730ef299367328bc90aa286c8bfb95ffe",
+      "allJSONFieldsAndArrayOrderEqual": true,
+      "exactRawSourceAndReviewCopyPinsUnchanged": true,
+      "snapshots": 84,
+      "records": 83
+    },
+    {
+      "original": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-normal-countercase-oracle-20261018/expectations/let-leaf-pattern-var-complete-A39-prefix.json",
+        "bytes": 34861,
+        "sha256": "ddd6e079760c358d6fd3bc5ca7ea6ebc87ca9756a23e1065e8dea11646fa7b58"
+      },
+      "reviewCopy": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/originals/let-leaf-pattern-var-complete-A39-prefix.json",
+        "bytes": 34861,
+        "sha256": "ddd6e079760c358d6fd3bc5ca7ea6ebc87ca9756a23e1065e8dea11646fa7b58"
+      },
+      "originalCanonicalBytes": 12903,
+      "expandedCanonicalBytes": 12903,
+      "originalCanonicalSHA256": "4299697820829767dad822da9e3331649fc9fc467af0a7530bbabcccd87f3edf",
+      "expandedCanonicalSHA256": "4299697820829767dad822da9e3331649fc9fc467af0a7530bbabcccd87f3edf",
+      "allJSONFieldsAndArrayOrderEqual": true,
+      "exactRawSourceAndReviewCopyPinsUnchanged": true,
+      "snapshots": 20,
+      "records": 19
+    },
+    {
+      "original": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-B0-work-oracle-20261018/factorial2-normal-program-contrast-A39-prefix-B0-clocks.json",
+        "bytes": 28581,
+        "sha256": "d384409dc97941fb7397c7a583ab2a322248ea3553219b8f526de5205c81d703"
+      },
+      "reviewCopy": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/originals/factorial2-normal-program-contrast-A39-prefix-B0-clocks.json",
+        "bytes": 28581,
+        "sha256": "d384409dc97941fb7397c7a583ab2a322248ea3553219b8f526de5205c81d703"
+      },
+      "originalCanonicalBytes": 28580,
+      "expandedCanonicalBytes": 28580,
+      "originalCanonicalSHA256": "5894f341c481a71254df9c0624d27d9a1544618ff7748fdf5715090cd76ab1eb",
+      "expandedCanonicalSHA256": "5894f341c481a71254df9c0624d27d9a1544618ff7748fdf5715090cd76ab1eb",
+      "allJSONFieldsAndArrayOrderEqual": true,
+      "exactRawSourceAndReviewCopyPinsUnchanged": true,
+      "snapshots": 0,
+      "records": 0
+    }
+  ],
+  "scope": "JSON data expansion/comparison only; no semantic projection, evaluator, subject source, model, compiler, test or provider execution; original files unchanged."
+}
+
+END COMPLETE ROUNDTRIP PROOF
+END PAYLOAD CHUNK

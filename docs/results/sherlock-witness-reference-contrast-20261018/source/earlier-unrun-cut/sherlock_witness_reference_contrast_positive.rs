@@ -1,0 +1,282 @@
+//! Explicit normal consumer of actual saved owner records, not Cargo autodiscovery.
+//! Expected prefix bodies are independent opaque includes, never producer inputs.
+//! New countercases advance one real B image each; old passing prefixes are not replayed.
+//! Cache contrast seeds only a valid fact3 startup capture, with zero source steps.
+use mori_core::sherlock as a;
+use a::helper_machine::{complete_observation as co, reference_projection as rp, witness_plan as wp, source_input_bridge as bridge};
+use a::helper_machine::shared::*;
+use a::helper_machine::shared::owner_host::host_owner_engine;
+use serde_json::{json, Value as J};
+use std::sync::Arc;
+
+
+fn tree(t: &a::Tree) -> J { match t {
+    a::Tree::Leaf(n) => json!({"Leaf":n}),
+    a::Tree::Branch(l,r) => json!({"Branch":[tree(l),tree(r)]}),
+} }
+fn value(v: &a::Value) -> J { match v {
+    a::Value::UInt(n)=>json!({"UInt":n}),a::Value::Bool(b)=>json!({"Bool":b}),
+    a::Value::List(xs)=>json!({"List":xs}),a::Value::Tree(t)=>json!({"Tree":tree(t)}),
+} }
+fn env(e: &a::Environment) -> J { J::Array(e.iter().map(|(n,v)|json!({"name":n,"value":value(v)})).collect()) }
+fn pattern(p:&a::Pattern)->J { match p {
+    a::Pattern::Var(n)=>json!({"Var":n}),a::Pattern::Nil=>json!({"Nil":null}),
+    a::Pattern::Cons(x,y)=>json!({"Cons":[x,y]}),a::Pattern::Leaf(n)=>json!({"Leaf":n}),
+    a::Pattern::Branch(x,y)=>json!({"Branch":[x,y]}),
+} }
+fn arm(x:&a::Arm)->J {json!({"pattern":pattern(&x.pattern),"body":expr(&x.body)})}
+fn arms(xs:&[a::Arm])->J {J::Array(xs.iter().map(arm).collect())}
+fn expr(x:&a::Expr)->J {match x {
+    a::Expr::Literal(v)=>json!({"Literal":value(v)}),a::Expr::Var(n)=>json!({"Var":n}),
+    a::Expr::Let(n,x,y)=>json!({"Let":{"name":n,"value":expr(x),"body":expr(y)}}),
+    a::Expr::Binary(op,x,y)=>json!({"Binary":{"op":format!("{op:?}"),"left":expr(x),"right":expr(y)}}),
+    a::Expr::Unary(op,x)=>json!({"Unary":{"op":format!("{op:?}"),"operand":expr(x)}}),
+    a::Expr::If(x,y,z)=>json!({"If":{"condition":expr(x),"yes":expr(y),"no":expr(z)}}),
+    a::Expr::Call(n,xs)=>json!({"Call":{"name":n,"args":xs.iter().map(|x|expr(x)).collect::<Vec<_>>()}}),
+    a::Expr::Match(x,xs)=>json!({"Match":{"value":expr(x),"arms":arms(xs)}}),
+} }
+fn function(f:&a::Function)->J {json!({"name":f.name,"parameters":f.parameters.iter().map(|p|json!({"name":p.name,"ty":format!("{:?}",p.ty)})).collect::<Vec<_>>(),"return_type":format!("{:?}",f.return_type),"body":expr(&f.body)})}
+fn program(p:&a::Program)->J {json!({"functions":p.functions.iter().map(function).collect::<Vec<_>>(),"entry":expr(&p.entry)})}
+fn frame(f:&a::Frame)->J {match f {
+    a::Frame::Let(n,b,e)=>json!({"Let":{"name":n,"body":expr(b),"saved_environment":env(e)}}),
+    a::Frame::Left(op,r,e)=>json!({"Left":{"op":format!("{op:?}"),"right":expr(r),"saved_environment":env(e)}}),
+    a::Frame::Right(op,l)=>json!({"Right":{"op":format!("{op:?}"),"left":value(l)}}),
+    a::Frame::Unary(op)=>json!({"Unary":{"op":format!("{op:?}")}}),
+    a::Frame::If(y,n,e)=>json!({"If":{"yes":expr(y),"no":expr(n),"saved_environment":env(e)}}),
+    a::Frame::Match(xs,e)=>json!({"Match":{"arms":arms(xs),"saved_environment":env(e)}}),
+    a::Frame::Args(n,vs,xs,e)=>json!({"Args":{"function_name":n,"completed_values":vs.iter().map(value).collect::<Vec<_>>(),"remaining_exprs":xs.iter().map(|x|expr(x)).collect::<Vec<_>>(),"saved_environment":env(e)}}),
+    a::Frame::Return(t,e)=>json!({"Return":{"expected_type":format!("{t:?}"),"saved_environment":env(e)}}),
+    a::Frame::Scope(e)=>json!({"Scope":{"saved_environment":env(e)}}),
+} }
+fn control(c:&a::Control)->J {match c {
+    a::Control::Eval(x)=>json!({"Eval":expr(x)}),a::Control::Return(v)=>json!({"Return":value(v)}),
+    a::Control::Push(f,c,e)=>json!({"Push":{"frame":frame(f),"next":control(c),"environment":env(e)}}),
+    a::Control::Invoke(n,vs)=>json!({"Invoke":{"name":n,"values":vs.iter().map(value).collect::<Vec<_>>()}}),
+    a::Control::Enter(f,vs)=>json!({"Enter":{"function":f.as_ref().map(function),"values":vs.iter().map(value).collect::<Vec<_>>()}}),
+    a::Control::Bound(e,t,b)=>json!({"Bound":{"bindings":e.as_ref().map(env),"type":format!("{t:?}"),"body":expr(b)}}),
+    a::Control::Cases(v,xs,e)=>json!({"Cases":{"value":value(v),"arms":arms(xs),"saved_environment":env(e)}}),
+    a::Control::CaseResult(b,v,x,xs,e)=>json!({"CaseResult":{"bindings":b.as_ref().map(env),"value":value(v),"body":expr(x),"remaining_arms":arms(xs),"saved_environment":env(e)}}),
+    a::Control::PrimitiveResult(Ok(v))=>json!({"PrimitiveResult":{"Ok":value(v)}}),
+    a::Control::PrimitiveResult(Err(c))=>json!({"PrimitiveResult":{"Err":c}}),
+    a::Control::Error(c)=>json!({"Error":c}),
+} }
+fn outcome(o:&a::Outcome)->J {match o {
+    a::Outcome::Pending=>json!("Pending"),a::Outcome::Done(v)=>json!({"Done":value(v)}),
+    a::Outcome::Rejected(c)=>json!({"Rejected":c}),a::Outcome::Exhausted=>json!("Exhausted"),
+} }
+fn snapshot(s:&a::Snapshot)->J {json!({"program":program(&s.program),"control":s.control.as_ref().map(control),"environment":env(&s.environment),"frames_top_first":s.frames.iter().map(frame).collect::<Vec<_>>(),"stack_limit":s.stack_limit,"remaining_fuel":s.remaining_fuel,"initial_fuel":s.initial_fuel,"outcome":outcome(&s.outcome)})}
+
+fn literal(v:a::Value)->a::ExprRef {Arc::new(a::Expr::Literal(v))}
+fn uint(n:u128)->a::ExprRef {literal(a::Value::UInt(n))}
+fn var(n:&str)->a::ExprRef {Arc::new(a::Expr::Var(n.into()))}
+fn binary(op:a::BinaryOp,x:a::ExprRef,y:a::ExprRef)->a::ExprRef {Arc::new(a::Expr::Binary(op,x,y))}
+fn call(n:&str,x:a::ExprRef)->a::ExprRef {Arc::new(a::Expr::Call(n.into(),vec![x]))}
+fn one_function(n:&str,p:&str,t:a::Type,b:a::ExprRef,arg:a::ExprRef)->Arc<a::Program> {Arc::new(a::Program{functions:vec![a::Function{name:n.into(),parameters:vec![a::Parameter{name:p.into(),ty:t}],return_type:a::Type::UInt,body:b}],entry:call(n,arg)})}
+fn factorial(entry_n:u128)->Arc<a::Program> {one_function("fact","n",a::Type::UInt,Arc::new(a::Expr::If(binary(a::BinaryOp::Eq,var("n"),uint(0)),uint(1),binary(a::BinaryOp::Mul,var("n"),call("fact",binary(a::BinaryOp::Sub,var("n"),uint(1)))))),uint(entry_n))}
+
+fn layout() -> (BoundsC, LayoutSchemaC) {
+    let bounds = BoundsC {
+        code_rows: 64, function_rows: 4, code_child_slots: 16, parameter_slots: 8,
+        pattern_rows: 8, match_plan_rows: 8, match_arm_rows: 8, type_rows: 8,
+        constructor_rows: 8, constructor_field_slots: 16, max_arity: 8,
+        constant_nodes: 16, constant_field_slots: 16, data_nodes: 64,
+        data_field_slots: 64, environment_cells: 64, frames: 64, helper_tasks: 64,
+        serialization_bytes: 65536, max_reference_work: 4096,
+        max_helper_work: 4096, step_cap: 4096,
+    };
+    let schema = LayoutSchemaC {
+        layout_version: ("moriarty".into(), "sherlock-helper-microstep-hostonly/1".into()),
+        field_id: None, widths: None, scalar_layout_id: None, bounds,
+        capacities: LayoutCapacitiesC {
+            name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 4096,
+        }, boundary_capacities_present: false,
+    };
+    (bounds, schema)
+}
+
+fn tooling<T>(r:Result<T,Tooling>)->T {match r {
+    Ok(x)=>x,
+    Err(Tooling::AdmissionRejected{reason,detail,locator})=>panic!("admission {reason:?} {detail} {locator:?}"),
+    Err(Tooling::CapacityNotAdmitted{kind,needed,limit,locator})=>panic!("capacity {kind:?} {needed:?}/{limit} {locator:?}"),
+    Err(Tooling::UnsupportedFeature{feature,locator})=>panic!("feature {feature:?} {locator:?}"),
+}}
+// Reconstruct the SAME saved observation. No owner/reference transition occurs.
+fn variants(s:&wp::StrategyMaterializedSnapshot)->Vec<wp::DecodedSnapshot> {
+    let baseline=wp::evaluate_uncached(&s.plan,&s.raw).expect("uncached actual witness");
+    assert_eq!(s.evaluation.witness.decoded,baseline.decoded);
+    let last=wp::evaluate_last_use(&s.plan,&s.raw).expect("last-use actual witness");
+    let mut cache=wp::WitnessCache::default();
+    let cold=wp::evaluate_memoized(&s.plan,&s.raw,&mut cache,wp::SlotStorage::RetainAll).expect("cold actual witness");
+    let warm=wp::evaluate_memoized(&s.plan,&s.raw,&mut cache,wp::SlotStorage::LastUse).expect("warm actual witness");
+    assert!(cold.scheduling.scope_reset); assert_eq!(cold.scheduling.cache_hits,0);
+    assert!(!warm.scheduling.scope_reset); assert_eq!(warm.scheduling.cache_misses,0);
+    assert_eq!(warm.scheduling.cache_hits,s.plan.nodes.len()-s.plan.inputs.len());
+    assert_eq!(warm.witness.diagnostics.input_reads,s.plan.inputs.len());
+    assert_eq!(warm.witness.diagnostics.value_constructions,0);
+    assert_eq!(warm.witness.diagnostics.environment_constructions,0);
+    assert_eq!(warm.witness.diagnostics.payload_constructions,0);
+    let live=s.plan.live_outs.iter().copied().collect::<std::collections::BTreeSet<_>>().len();
+    assert_eq!(last.scheduling.retained_slots_at_publication,live);
+    assert_eq!(last.scheduling.reclaimed_slots,s.plan.nodes.len()-live);
+    assert_eq!(warm.witness.diagnostics.measured_host_bytes,None);
+    assert_eq!(warm.witness.diagnostics.measured_host_time_ns,None);
+    let variants=vec![baseline.decoded,last.witness.decoded,cold.witness.decoded,warm.witness.decoded,s.evaluation.witness.decoded.clone()];
+    for decoded in &variants {assert_eq!(decoded,&variants[0]);}
+    variants
+}
+fn exercise(p:Arc<a::Program>,frozen:&str,ordinary_probes:bool) {
+    let budget=bridge::SourceCopyBudget{max_functions:4,max_parameters_per_function:8,max_total_parameters:8,max_expr_nodes:128,max_copy_depth:32,max_match_arms:16,max_name_bytes:512,max_list_elements:64,max_tree_nodes:64,max_tree_depth:32};
+    let core=bridge::from_program_bounded(&p,&budget).unwrap_or_else(|_|panic!("bounded original source copy"));
+    let (bounds,schema)=layout();let owner=host_owner_engine();
+    let admitted=tooling(owner.admit(&core,&bounds,&schema));
+    let mut image=tooling(owner.admit_run(&admitted,&RunIntC::Nat(4096),&RunIntC::Nat(64),&FinanceInput::Absent));
+    let initial=co::capture(&admitted,&image).unwrap_or_else(|_|panic!("actual initial snapshot"));
+    if ordinary_probes {
+        distinct_program_cache_contrast(&initial);
+        let gap=rp::ReferenceSource::new(factorial(3),&initial).err().expect("different valid source cannot associate");
+        match gap {
+            // Category is independently specified. Exact section/row is API
+            // diagnostic data, not an independently bound source-ID oracle.
+            rp::ProjectionGap::SourceAssociation{section,row}=>{
+                assert!(!section.is_empty());assert!(row<initial.admission.view.expressions.len());
+            },
+            other=>panic!("ordinary source mismatch category: {other:?}"),
+        }
+    }
+    let source=rp::ReferenceSource::new(p.clone(),&initial).expect("complete source association");
+    let mut projection=rp::ReferencePrefixProjection::new(p.clone(),&initial,4096).expect("initial reference projection");
+    let mut cache=wp::WitnessRecordCache::default();let mut previous=initial.clone();
+    let mut spans=Vec::new();let mut raw_count=0usize;let mut probed_incomplete=false;
+    let mut sink=|step:&wp::StrategyObservedStep| {
+        let mut stop_this=false;
+        assert_eq!(step.before.raw,previous);
+        let before_variants=variants(&step.before);let after_variants=variants(&step.after);
+        match &step.observed {
+            co::ObservedStep::Event(record)=>{
+                assert_eq!(record.before,step.before.raw);assert_eq!(record.after,step.after.raw);
+                raw_count+=1;
+                let prior_reference=projection.returned().clone();
+                match projection.push(record).expect("actual B to A boundary/interval translation") {
+                    rp::ProjectionProgress::Pending{raw}=>{
+                        assert_eq!(raw,*record);assert_eq!(projection.returned(),&prior_reference);
+                        if ordinary_probes && !probed_incomplete && record.event.event_kind==EventKind::HelperEnter {
+                            assert_eq!(projection.finish().unwrap_err(),rp::ProjectionGap::IncompleteInterval);
+                            assert!(!projection.pending_records().is_empty());
+                            assert_eq!(projection.pending_records().last(),Some(record));
+                            for pair in projection.pending_records().windows(2) {assert_eq!(pair[0].after,pair[1].before);}
+                            assert_eq!(projection.returned(),&prior_reference);
+                            probed_incomplete=true;stop_this=true;
+                        }
+                    },
+                    rp::ProjectionProgress::Complete(span)=>{
+                        assert_eq!(span.b_start,spans.last().map_or(0,|s:&rp::ReferenceSpan|s.b_end_exclusive));
+                        assert_eq!(span.b_end_exclusive,raw_count);
+                        assert_eq!(span.raw.len(),span.b_end_exclusive-span.b_start);
+                        assert!(span.source_event>=span.b_start&&span.source_event<span.b_end_exclusive);
+                        let origin=&span.raw[span.source_event-span.b_start].event;
+                        assert!(matches!(origin.event_kind,EventKind::LegacyComplete|EventKind::Publish));
+                        let occurrence=span.raw[0].before.admission.view.occurrences.get(origin.source_expr_id).expect("real source occurrence row");
+                        let path_end=occurrence.path.start.checked_add(occurrence.path.len).expect("actual occurrence span");
+                        let path=&span.raw[0].before.admission.view.occurrence_paths[occurrence.path.start..path_end];
+                        assert_eq!(origin.source_occurrence,LocatorC::Occurrence{owner_is_function:occurrence.owner_is_function,function:occurrence.function,ast_path:path.to_vec()});
+                        // No B ordinal/helper count is manufactured from A work.
+                        // All source events and counters remain in span.raw.
+                        for decoded in &after_variants {
+                            let actual=rp::project_reference_boundary(&source,&step.after.raw,decoded,4096,span.reference.after.remaining_fuel).expect("cached boundary projection");
+                            let rp::ReferenceBoundary::Complete{reference,..}=actual else {panic!("completed semantic boundary")};
+                            assert_eq!(reference,span.reference.after);
+                        }
+                        if span.raw.len()==1 {
+                            for decoded in &before_variants {
+                                let actual=rp::project_reference_boundary(&source,&step.before.raw,decoded,4096,span.reference.before.remaining_fuel).expect("before variant projection");
+                                let rp::ReferenceBoundary::Complete{reference,..}=actual else {panic!("complete source-before")};
+                                assert_eq!(reference,span.reference.before);
+                            }
+                        }
+                        spans.push(span);
+                    }
+                }
+            },
+            co::ObservedStep::Terminal{before,after}=>{
+                assert_eq!(before,after);assert_eq!(before,&step.before.raw);assert_eq!(after,&step.after.raw);
+                assert_eq!(before_variants,after_variants);
+            }
+        }
+        previous=step.after.raw.clone();
+        if stop_this {wp::StreamAction::Stop}else{wp::StreamAction::Continue}
+    };
+    let first=wp::stream_owner_steps(&admitted,&mut image,Some(&mut cache),&mut sink)
+        .unwrap_or_else(|_|panic!("single actual owner stream"));
+    if ordinary_probes {
+        assert_eq!(first,wp::StreamStop::Sink);
+        // Continue the SAME admitted image and record cache, without replay.
+        let resumed=wp::stream_owner_steps(&admitted,&mut image,Some(&mut cache),&mut sink)
+            .unwrap_or_else(|_|panic!("same-image pending helper continuation"));
+        assert_eq!(resumed,wp::StreamStop::Terminal);
+    }else{assert_eq!(first,wp::StreamStop::Terminal);}
+    drop(sink);
+    assert_eq!(probed_incomplete,ordinary_probes);
+    let returned=co::capture(&admitted,&image).unwrap_or_else(|_|panic!("actual returned boundary"));
+    assert_eq!(returned,previous);assert!(matches!(returned.image.outcome,OutcomeC::Halted{..}));
+    let final_reference=projection.finish().expect("no omitted trailing helper interval");
+    assert!(projection.pending_records().is_empty());
+    assert_eq!(spans.iter().map(|s|s.raw.len()).sum::<usize>(),raw_count);
+    assert_eq!(projection.records().len(),spans.len());
+    let mut states=vec![projection.initial().clone()];
+    for (i,r) in projection.records().iter().enumerate() {
+        assert_eq!(&r.before,&states[i]);states.push(r.after.clone());
+    }
+    assert_eq!(states.last(),Some(final_reference));
+    let snapshots=states.iter().map(snapshot).collect::<Vec<_>>();
+    let records=projection.records().iter().enumerate().map(|(i,r)|json!({"rule_start_line":r.rule_start_line,"charge":r.charge,"before_snapshot":i,"after_snapshot":i+1})).collect::<Vec<_>>();
+    let work=states.iter().map(|s|s.initial_fuel.checked_sub(s.remaining_fuel).expect("reference work invariant")).collect::<Vec<_>>();
+    let charged:u128=projection.records().iter().map(|r|r.charge as u128).sum();
+    assert_eq!(work.last().copied(),Some(charged));
+    let actual=json!({"complete_program":program(&p),"snapshots":snapshots,"records":records,"prefix_work_A":work,"charged_A_work":charged,"A_event_count":projection.records().len(),"terminal_outcome":outcome(&final_reference.outcome),"logical_depth_peak_A":states.iter().map(|s|s.frames.len()).max().unwrap()});
+    let expected:J=serde_json::from_str(frozen).expect("independently frozen full prefix fixture");
+    for key in ["complete_program","snapshots","records","prefix_work_A","charged_A_work","A_event_count","terminal_outcome","logical_depth_peak_A"] {
+        assert!(expected.get(key).is_some(),"missing independent field {key}");
+        assert_eq!(&actual[key],&expected[key],"complete independent reference field {key}");
+    }
+    // Raw B work is retained above; it is deliberately not compared to A fuel.
+    assert_eq!(spans.last().expect("publication span").raw.last().unwrap().after,returned);
+}
+
+// This existing independently frozen contrast predates the new consumer source.
+const FACT2: &str = include_str!("/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-reference-prefix-oracle-20261018/expectations/factorial2-normal-program-contrast-A39-prefix.json");
+
+// A valid distinct program is admitted/captured only; no old owner step is run.
+fn capture_initial(p:&a::Program)->co::HostSnapshot {
+    let budget=bridge::SourceCopyBudget{max_functions:4,max_parameters_per_function:8,max_total_parameters:8,max_expr_nodes:128,max_copy_depth:32,max_match_arms:16,max_name_bytes:512,max_list_elements:64,max_tree_nodes:64,max_tree_depth:32};
+    let core=bridge::from_program_bounded(p,&budget).unwrap_or_else(|_|panic!("bounded valid contrast source"));
+    let (bounds,schema)=layout();let owner=host_owner_engine();
+    let admitted=tooling(owner.admit(&core,&bounds,&schema));
+    let image=tooling(owner.admit_run(&admitted,&RunIntC::Nat(4096),&RunIntC::Nat(64),&FinanceInput::Absent));
+    co::capture(&admitted,&image).unwrap_or_else(|_|panic!("valid actual initial capture"))
+}
+fn distinct_program_cache_contrast(initial:&co::HostSnapshot) {
+    let seed=capture_initial(&factorial(3));
+    assert_ne!(seed.admission.view,initial.admission.view);
+    let seed_plan=wp::construct_plan(&seed).expect("valid seed plan");
+    let actual_plan=wp::construct_plan(initial).expect("valid contrast plan");
+    let mut cache=wp::WitnessCache::default();
+    let seed_cold=wp::evaluate_memoized(&seed_plan,&seed,&mut cache,wp::SlotStorage::RetainAll).expect("initial-only seed");
+    assert!(seed_cold.scheduling.scope_reset);
+    let changed=wp::evaluate_memoized(&actual_plan,initial,&mut cache,wp::SlotStorage::LastUse).expect("exact changed program scope");
+    assert!(changed.scheduling.scope_reset);assert_eq!(changed.scheduling.cache_hits,0);
+    let baseline=wp::evaluate_uncached(&actual_plan,initial).expect("actual contrast baseline");
+    assert_eq!(changed.witness.decoded,baseline.decoded);
+    let warm=wp::evaluate_memoized(&actual_plan,initial,&mut cache,wp::SlotStorage::LastUse).expect("same exact contrast scope");
+    assert!(!warm.scheduling.scope_reset);assert_eq!(warm.scheduling.cache_misses,0);
+    assert_eq!(warm.witness.decoded,baseline.decoded);
+}
+
+const LET_LEAF_VAR: &str = include_str!("/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-normal-countercase-oracle-20261018/expectations/let-leaf-pattern-var-complete-A39-prefix.json");
+fn let_leaf_pattern_var()->Arc<a::Program> {
+    let held=Arc::new(a::Expr::Let("x".into(),uint(3),Arc::new(a::Expr::Unary(a::UnaryOp::Leaf,var("x")))));
+    Arc::new(a::Program{functions:vec![],entry:Arc::new(a::Expr::Match(held,vec![a::Arm{pattern:a::Pattern::Var("whole".into()),body:var("whole")}]))})
+}
+#[test]
+fn factorial_two_complete_prefix_program_cache_and_incomplete_stream(){exercise(factorial(2),FACT2,true);}
+#[test]
+fn let_leaf_pattern_variable_complete_reference_prefix(){exercise(let_leaf_pattern_var(),LET_LEAF_VAR,false);}

@@ -1,0 +1,102 @@
+### Continuing Independent Non-Author Ordinary Source Review — Cargo Discovery Wrapper & Two-Operation Compile/List Proposal (`witness-reference-projection-cargo-discovery-20261018`)
+
+- **Reviewer Identity:** Continuing independent non-author Gemini 4 Argon (High) ordinary source reviewer (`CID: 21399dd6-faf2-479b-823a-9bfec7feeba7`; standing Opus outage route; same continuing review context as `provider-ready-01/REPORT.md` `sha256=7d687cab52802f1c6f76affd350a597cf08ead2315d7e5f6e835686a038412a7`, not an additional independent vote).
+- **Execution Discipline:** Zero tools, searches, commands, file reads/writes, provider invocations, or subject/model/native actions executed. All analysis is performed strictly over the complete inline bodies supplied in this turn.
+
+---
+
+### 1. Explicit Readable Coverage Declaration (All 8 Inline Bodies Read in Full)
+
+All **8 complete inline bodies** supplied in this turn were received and read in full without truncation:
+
+1. `afterimages/crates/mori-core/tests/sherlock_witness_reference_prefix.rs` (`157`B, `sha256=23be731fb53d7f7f60641399f49369a41c84e3e255a119f06c8468b0c2e2ca9a`)
+2. `afterimages/crates/mori-core/tests/support/sherlock_witness_reference_prefix_positive.rs` (`18,254`B, `sha256=7391f8f8302e5441a52742962836bdb291b46f832a35099f38caf8aa6c6551cc`)
+3. `basis/crates/mori-core/Cargo.toml` (`413`B, `sha256=71d7eeb2520b07edb18033e22a816b55d76ee80cc8ffd6d06bd5e0eca8cf5030`)
+4. `DISCOVERY-READBACK.json` (`2,860`B, `sha256=325e9db7977b61c1da3d4189f05774e8867ea56088bc55c16e8f2b91c61647f6`)
+5. `SOURCE-FLOW.json` (`5,474`B, `sha256=a36cdd87093be2d37df79f817f2e6c7f73b2758d7233df72dbda005deb877952`)
+6. `PROPOSED.json` (`11,784`B, `sha256=347d19bab3d660242f71ef3cd9044bee7186ded5a393ae8bd343f81090b2aec4`)
+7. `provider-ready-01/REPORT.md` (`8,653`B, `sha256=7d687cab52802f1c6f76affd350a597cf08ead2315d7e5f6e835686a038412a7`)
+8. `actual-portable-compile-01/RESULT.json` (`4,751`B, `sha256=fd13fef0a16b64db6af7f86a523a4ee71395b4889ae1d1b5cc28326eff4387c0`)
+9. `435-resolved-signature-execution-preparation/revision02/run_selected_13.py` (`15,371`B, `sha256=ce0482fdc12e4146500fa4421f7e4333b14321bdaa207c123a09ee6cb34c9932`)
+
+*(Note: All 9 inline blocks above—comprising the 2 source files, package manifest, 3 discovery/flow/proposal JSON descriptors, prior portable report, prior portable compile receipt, and the R435 revision02 capture helper script—were inspected end-to-end.)*
+
+---
+
+### 2. Separate Verdicts
+
+1. **`SOURCE` Verdict (Wrapper Path / Module / Privacy / `include_str!` Behavior & Normal Cargo Target Discovery):** **`APPROVE`**
+   - Scoped to the new 157-byte integration test root `afterimages/crates/mori-core/tests/sherlock_witness_reference_prefix.rs` (`sha256=23be731fb53d7f7f60641399f49369a41c84e3e255a119f06c8468b0c2e2ca9a`), preserving the unchanged portable support module `afterimages/crates/mori-core/tests/support/sherlock_witness_reference_prefix_positive.rs` (`18,254`B, `sha256=7391f8f8302e5441a52742962836bdb291b46f832a35099f38caf8aa6c6551cc`) and the four unchanged opaque fixture files (`48cb2d9d...`, `af15b0e5...`, `6feb5bb6...`, `c9238dee...`).
+2. **`TWO_OPERATIONS_ELIGIBLE` Verdict (`01-compileCargoDiscoveryWrapper` and `02-listCargoDiscoveryWrapperTests` in `PROPOSED.json`):** **`APPROVE`**
+   - Eligible for Root-selected single-attempt serial fail-stop execution under the declared `timeout`/`prlimit`/stream-cap/exact-env/pin-check envelope using the inspected pure capture helpers from `run_selected_13.py` (`sha256=ce0482fdc12e4146500fa4421f7e4333b14321bdaa207c123a09ee6cb34c9932`).
+
+---
+
+### 3. Detailed Source & Operation Audit Findings
+
+#### A. Wrapper Path, Child Module Resolution, Privacy, and `include_str!` Semantics
+- **Exact Wrapper Contents (`157` bytes, `sha256=23be731fb53d7f7f60641399f49369a41c84e3e255a119f06c8468b0c2e2ca9a`):**
+  ```rust
+  //! Cargo integration entry for the existing complete-prefix positive tests.
+  #[path = "support/sherlock_witness_reference_prefix_positive.rs"]
+  mod positive;
+  ```
+- **`#[path = ...]` Resolution:** When `crates/mori-core/tests/sherlock_witness_reference_prefix.rs` is compiled as the integration test crate root, `#[path = "support/sherlock_witness_reference_prefix_positive.rs"]` on `mod positive;` resolves relative to the crate root's directory (`.../crates/mori-core/tests/`), binding the child module `positive` to `.../crates/mori-core/tests/support/sherlock_witness_reference_prefix_positive.rs`.
+- **Child Module Imports & Internal References (`--edition=2024`):**
+  - Inside `mod positive`, `use mori_core::sherlock as a;`, `use serde_json::{json, Value as J};`, and `use std::sync::Arc;` (plus `std::collections::BTreeSet` in `variants`) resolve `mori_core`, `serde_json`, and `std` directly from the Edition 2024 extern prelude—none of them rely on being at the crate root.
+  - Subsequent `use a::helper_machine::{...};`, `use a::helper_machine::shared::*;`, and `use a::helper_machine::shared::owner_host::host_owner_engine;` resolve through the local module alias `a` in `mod positive`.
+  - No `crate::` or `super::` paths appear in `support/sherlock_witness_reference_prefix_positive.rs`, so moving its contents from the crate root into `mod positive` introduces zero path resolution mismatches.
+- **Privacy & `rustc --test` Harness Synthesis:**
+  - `rustc --test` traverses private submodules (`mod positive;`) when collecting `#[test]` descriptors for `libtest::test_main_static`. Neither `mod positive` nor the three `#[test]` functions require `pub` visibility.
+  - Every private helper function and `const` inside `mod positive` (`FACT`, `LIST`, `TREE`, `PENDING`, `tree`, `value`, `env`, `pattern`, `arm`, `arms`, `expr`, `function`, `program`, `frame`, `control`, `outcome`, `snapshot`, `literal`, `uint`, `var`, `binary`, `call`, `one_function`, `factorial`, `list_sum`, `tree_sum`, `layout`, `tooling`, `variants`, `exercise`) is transitively referenced by the three `#[test]` functions inside the same module, avoiding `dead_code` diagnostics.
+  - Because the three `#[test]` functions now reside under `mod positive`, their fully qualified `libtest` names become:
+    1. `positive::factorial_three_complete_reference_prefix_and_pending_caller`
+    2. `positive::list_two_five_complete_reference_prefix`
+    3. `positive::tree_four_one_three_complete_reference_prefix`
+- **`include_str!` Source-File Anchoring Preserved:**
+  - In Rust, `include_str!` resolves relative paths against the directory of the **source file containing the `include_str!` call** (`.../crates/mori-core/tests/support/sherlock_witness_reference_prefix_positive.rs`), regardless of whether that file is the crate root or a `#[path = ...]` child module.
+  - Consequently, all four `include_str!("../fixtures/witness-reference-prefix/<filename>")` calls in `support/sherlock_witness_reference_prefix_positive.rs` continue to resolve from `.../crates/mori-core/tests/support/` to `.../crates/mori-core/tests/fixtures/witness-reference-prefix/<filename>`.
+
+#### B. Normal Cargo Integration-Test Target Discovery Conventions
+- Inspecting `basis/crates/mori-core/Cargo.toml` (`413`B, `sha256=71d7eeb2520b07edb18033e22a816b55d76ee80cc8ffd6d06bd5e0eca8cf5030`) and `DISCOVERY-READBACK.json` (`2,860`B, `sha256=325e9db7977b61c1da3d4189f05774e8867ea56088bc55c16e8f2b91c61647f6`):
+  - `Cargo.toml` sets neither `autotests = false` nor explicit `[[test]]` entries.
+  - Under standard Cargo layout discovery, top-level files `crates/mori-core/tests/*.rs` are discovered as integration test targets, whereas `crates/mori-core/tests/support/sherlock_witness_reference_prefix_positive.rs` is not a root target and was not referenced by any of the 35 existing `tests/*.rs` files (`candidate_root_absent: true`, `existing_reference_hits: []`).
+  - Adding `crates/mori-core/tests/sherlock_witness_reference_prefix.rs` supplies the missing top-level `tests/*.rs` entry point under Cargo's conventional discovery rules.
+  - *Minor non-blocking observation on module doc comments:* Line 1 of `support/sherlock_witness_reference_prefix_positive.rs` retains its historical inner doc comment (`//! Explicit normal consumer of actual saved owner records, not Cargo autodiscovery.`). This is syntactically valid as the inner module doc comment of `mod positive` (and accurately describes the `tests/support/*.rs` file on its own), while the new outer root `tests/sherlock_witness_reference_prefix.rs` carries the crate-level doc comment (`//! Cargo integration entry for the existing complete-prefix positive tests.`).
+
+#### C. Eligibility Verification of the Two Proposed Ordinary Operations (`PROPOSED.json`)
+- **Operation `01-compileCargoDiscoveryWrapper`:**
+  - **Command & Toolchain:** Direct invocation of `/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc` (`--sysroot /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu --target x86_64-unknown-linux-gnu --edition=2024 --crate-name sherlock_witness_reference_prefix --test`) on `afterimages/crates/mori-core/tests/sherlock_witness_reference_prefix.rs`.
+  - **Normal Extern & Link Pins:** Links the unchanged retained `libmori_core.rlib` (`bytes=43779842`, `sha256=4afb66098943d7a3da24bcfd4e2930b30944f81d1b06268cf369ace9454fe873`) and `libserde_json-76dc87088753b61e.rlib` with the exact three `-L dependency=...` search paths and `-C debuginfo=0 -C opt-level=0 -C debug-assertions=yes -C linker=/usr/bin/x86_64-linux-gnu-gcc-15 -C link-arg=-fuse-ld=bfd`. No `mori_core` rebuild, Cargo invocation, dev-dependencies (`proptest`, `midnight-*`), build scripts, or SDKs are invoked.
+  - **Six Dep-Info Inputs (`depInfoInputCount: 6`):** Unlike the 5-input direct support compile in `actual-portable-compile-01/RESULT.json` (`sha256=fd13fef0...`), compiling via the wrapper root reads **6** source/fixture files in `build/witness-reference-prefix-cargo-discovery.d`:
+    1. `afterimages/crates/mori-core/tests/sherlock_witness_reference_prefix.rs` (`157`B, `sha256=23be731f...`)
+    2. `afterimages/crates/mori-core/tests/support/sherlock_witness_reference_prefix_positive.rs` (`18,254`B, `sha256=7391f8f8...`)
+    3. `afterimages/crates/mori-core/tests/fixtures/witness-reference-prefix/factorial-pending-caller3.json` (`14,726`B, `sha256=48cb2d9d...`)
+    4. `afterimages/crates/mori-core/tests/fixtures/witness-reference-prefix/factorial3-complete-A39-prefix.json` (`464,178`B, `sha256=af15b0e5...`)
+    5. `afterimages/crates/mori-core/tests/fixtures/witness-reference-prefix/list2-5-complete-A39-prefix.json` (`301,342`B, `sha256=6feb5bb6...`)
+    6. `afterimages/crates/mori-core/tests/fixtures/witness-reference-prefix/tree4-1-3-complete-A39-prefix.json` (`716,490`B, `sha256=c9238dee...`)
+    `dep_inputs(path, allowed)` in `run_selected_13.py` canonicalizes `.../tests/support/../fixtures/...` via `Path.resolve(strict=True)` and verifies all 6 files against the allowed static pin table (`FLAT-INPUT-PINS.json`, `bytes=141002`, `sha256=1c9dfe769b08c19c087fa2bd8916ec3479e0cfefe9381c2d65f40b0a67b412e1`) while asserting no `# env-dep:` lines exist.
+  - **Resource & Capture Envelope:** `timeout --signal=KILL 30s`, `prlimit --cpu=25:25 --as=2147483648:2147483648 --fsize=67108864:67108864 --core=0:0`, `keptBytesPerStream: 131072`, isolated `cwd` (`/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-cargo-discovery-20261018`), exact 3-var environment (`PATH`, `LANG`, `TMPDIR`), `serialFailStopNoRetry: true`.
+
+- **Operation `02-listCargoDiscoveryWrapperTests`:**
+  - **Command & Listing Behavior:** Direct invocation of the compiled binary `build/witness-reference-prefix-cargo-discovery --list` under `timeout --signal=KILL 10s` and `prlimit --cpu=8:8 --as=1073741824:1073741824 --fsize=16777216:16777216 --core=0:0`, `outputs: []`, `keptBytesPerStream: 131072`, same isolated `cwd` and exact 3-var environment.
+  - **No Test-Body Evaluation:** Passing `--list` to `libtest` prints the registered test descriptors and summary (`3 tests, 0 benchmarks`) and exits with `0` without calling `exercise()`, `host_owner_engine()`, or any test body (`runtimeTestBodiesInvoked: 0`).
+  - **Capture & Listing Verification Contract:** Reuses the inspected pure helpers (`pin`, `check`, `save`, `static_check`, `stop_group`, `capture`, `dep_inputs`) from `run_selected_13.py` (`sha256=ce0482fdc12e4146500fa4421f7e4333b14321bdaa207c123a09ee6cb34c9932`) without invoking `run_selected_13.py`'s `main` or `test_membership` (which is specific to `--exact` single-test runtime execution). Verification of `02` must check `actual_exit == 0`, `controller_failure is None`, `full_stream_retained == True`, pre/post static input pin invariance, and that `stdout.bin` lists **exclusively** the three lines:
+    - `positive::factorial_three_complete_reference_prefix_and_pending_caller: test`
+    - `positive::list_two_five_complete_reference_prefix: test`
+    - `positive::tree_four_one_three_complete_reference_prefix: test`
+    followed by the summary `3 tests, 0 benchmarks`, with no extra or missing test names.
+
+---
+
+### 4. Exact Qualifications & Preserved Open Scope Boundaries
+
+1. **Permissible Claim if Operations `01` and `02` Succeed:**
+   - Establishes **only** that:
+     - the conventional Cargo integration-test root `crates/mori-core/tests/sherlock_witness_reference_prefix.rs` (`sha256=23be731f...`) compiles and links cleanly under `rustc --test` against the retained `libmori_core.rlib` (`sha256=4afb6609...`) and `libserde_json` while pulling in `support/sherlock_witness_reference_prefix_positive.rs` (`sha256=7391f8f8...`) and the four staged relative-path JSON fixtures (6 total dep-info inputs); and
+     - the resulting test binary enumerates the exact three qualified test names (`positive::factorial_three_complete_reference_prefix_and_pending_caller`, `positive::list_two_five_complete_reference_prefix`, `positive::tree_four_one_three_complete_reference_prefix`) under `--list`.
+2. **Non-Inferred Claims & Open Gates:**
+   - **Not a runtime test execution:** `--list` executes zero test bodies (`runtimeTestBodiesInvoked: 0`) and does **not** constitute a fresh runtime `PASS` of the three test cases on `witness-reference-prefix-cargo-discovery`.
+   - **Not a full `cargo test` execution:** Because `mori-core`'s `[dev-dependencies]` in `Cargo.toml` include `proptest`, `midnight-base-crypto`, and `midnight-serialize`, compiling the wrapper via direct `rustc --test` with `--extern mori_core` and `--extern serde_json` verifies source-level Cargo target discovery layout and `rustc` compilation, not full `cargo` dependency graph resolution or execution.
+   - **Inherited provenance & open requirements:** The broader `mori-core` snapshot inventory (`FLAT-INPUT-PINS.json`, `sha256=1c9dfe76...`) is pinned source-available provenance, not freshly re-audited here; the four fixture bodies remain opaque; and B-clock/counter upper bounds (`work_ChargedTotal`), H1 physical performance/memory claims, canonical `ProjectRel`/`Link` projection, native/proof/target gates, and whole `UIREQ-035` / `SCON013` / `SCON024` acceptance remain **OPEN**.
+

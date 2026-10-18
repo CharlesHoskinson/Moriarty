@@ -1,0 +1,192 @@
+--- parent/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs
++++ b/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs
+@@ -227,6 +227,7 @@
+         assert_eq!(&r.before,&states[i]);states.push(r.after.clone());
+     }
+     assert_eq!(states.last(),Some(final_reference));
++    if ordinary_probes {compare_b0_schedule(&initial,&spans);}
+     let snapshots=states.iter().map(snapshot).collect::<Vec<_>>();
+     let records=projection.records().iter().enumerate().map(|(i,r)|json!({"rule_start_line":r.rule_start_line,"charge":r.charge,"before_snapshot":i,"after_snapshot":i+1})).collect::<Vec<_>>();
+     let work=states.iter().map(|s|s.initial_fuel.checked_sub(s.remaining_fuel).expect("reference work invariant")).collect::<Vec<_>>();
+@@ -280,3 +281,181 @@
+ fn factorial_two_complete_prefix_program_cache_and_incomplete_stream(){exercise(factorial(2),FACT2,true);}
+ #[test]
+ fn let_leaf_pattern_variable_complete_reference_prefix(){exercise(let_leaf_pattern_var(),LET_LEAF_VAR,false);}
++
++// Real B counters are read from the saved owner observations. None of these
++// counters is computed from A charges, expected rows or a reconstructed engine.
++fn verify_record_counters(record:&co::CompleteStepRecord) {
++    let before=&record.before.image;let after=&record.after.image;let event=&record.event;
++    assert_eq!(after.run_id,before.run_id);assert_eq!(after.initial_fuel,before.initial_fuel);
++    assert_eq!(after.consumed_work,before.consumed_work.checked_add(event.work_delta as u128).expect("B work addition"));
++    assert_eq!(after.helper_work,before.helper_work.checked_add(event.helper_work_delta as u128).expect("B helper work addition"));
++    assert_eq!(after.helper_visits,before.helper_visits.checked_add(event.helper_visits_delta as u128).expect("B helper visits addition"));
++    assert_eq!(after.reference_cursor,before.reference_cursor.checked_add(event.reference_cursor_delta as u128).expect("B reference cursor addition"));
++    assert_eq!(after.remaining_work.checked_add(event.work_delta as u128),Some(before.remaining_work));
++    assert_eq!(after.remaining_work.checked_add(after.consumed_work),Some(after.initial_fuel));
++    assert_eq!(event.outcome_payload,after.outcome);
++}
++
++// Entire public normative inventory formatting, not selected schedule metadata.
++fn b_rule_id(rule:RuleIdC)->&'static str {match rule {
++    RuleIdC::KMachineEvalLiteralValid=>"k.machine.eval.literal.valid",
++    RuleIdC::KMachineEvalLiteralInvalid=>"k.machine.eval.literal.invalid",
++    RuleIdC::KMachineEvalVariablePresent=>"k.machine.eval.variable.present",
++    RuleIdC::KMachineEvalVariableAbsent=>"k.machine.eval.variable.absent",
++    RuleIdC::KMachineEvalLet=>"k.machine.eval.let",
++    RuleIdC::KMachineEvalBinary=>"k.machine.eval.binary",
++    RuleIdC::KMachineEvalUnary=>"k.machine.eval.unary",
++    RuleIdC::KMachineEvalIf=>"k.machine.eval.if",
++    RuleIdC::KMachineEvalMatch=>"k.machine.eval.match",
++    RuleIdC::KMachineEvalCallEmpty=>"k.machine.eval.call.empty",
++    RuleIdC::KMachineEvalCallArguments=>"k.machine.eval.call.arguments",
++    RuleIdC::KMachinePushAccept=>"k.machine.push.accept",
++    RuleIdC::KMachinePushRefuse=>"k.machine.push.refuse",
++    RuleIdC::KMachineReturnLet=>"k.machine.return.let",
++    RuleIdC::KMachineReturnLeft=>"k.machine.return.left",
++    RuleIdC::KMachineReturnRight=>"k.machine.return.right",
++    RuleIdC::KMachineReturnUnary=>"k.machine.return.unary",
++    RuleIdC::KMachineReturnIfTrue=>"k.machine.return.if.true",
++    RuleIdC::KMachineReturnIfFalse=>"k.machine.return.if.false",
++    RuleIdC::KMachineReturnIfInvalid=>"k.machine.return.if.invalid",
++    RuleIdC::KMachineReturnMatch=>"k.machine.return.match",
++    RuleIdC::KMachineReturnArgumentsNext=>"k.machine.return.arguments.next",
++    RuleIdC::KMachineReturnArgumentsFinal=>"k.machine.return.arguments.final",
++    RuleIdC::KMachineReturnCallValid=>"k.machine.return.call.valid",
++    RuleIdC::KMachineReturnCallInvalid=>"k.machine.return.call.invalid",
++    RuleIdC::KMachineReturnScope=>"k.machine.return.scope",
++    RuleIdC::KMachineInvokeFind=>"k.machine.invoke.find",
++    RuleIdC::KMachineEnterMissing=>"k.machine.enter.missing",
++    RuleIdC::KMachineEnterBind=>"k.machine.enter.bind",
++    RuleIdC::KMachineBoundInvalid=>"k.machine.bound.invalid",
++    RuleIdC::KMachineBoundValid=>"k.machine.bound.valid",
++    RuleIdC::KMachineCasesEmpty=>"k.machine.cases.empty",
++    RuleIdC::KMachineCasesTry=>"k.machine.cases.try",
++    RuleIdC::KMachineCasesMiss=>"k.machine.cases.miss",
++    RuleIdC::KMachineCasesHit=>"k.machine.cases.hit",
++    RuleIdC::KMachinePrimitiveValue=>"k.machine.primitive.value",
++    RuleIdC::KMachinePrimitiveError=>"k.machine.primitive.error",
++    RuleIdC::BHelperScalarEntry=>"b.helper.Scalar.entry",
++    RuleIdC::BHelperScalarTag=>"b.helper.Scalar.tag",
++    RuleIdC::BHelperScalarArithmetic=>"b.helper.Scalar.arithmetic",
++    RuleIdC::BHelperScalarConstruct=>"b.helper.Scalar.construct",
++    RuleIdC::BHelperScalarExit=>"b.helper.Scalar.exit",
++    RuleIdC::BHelperScalarFailure=>"b.helper.Scalar.failure",
++    RuleIdC::BHelperEnvGetEntry=>"b.helper.EnvGet.entry",
++    RuleIdC::BHelperEnvGetCell=>"b.helper.EnvGet.cell",
++    RuleIdC::BHelperEnvGetEmpty=>"b.helper.EnvGet.empty",
++    RuleIdC::BHelperEnvGetExit=>"b.helper.EnvGet.exit",
++    RuleIdC::BHelperEnvGetFailure=>"b.helper.EnvGet.failure",
++    RuleIdC::BHelperEnvPutEntry=>"b.helper.EnvPut.entry",
++    RuleIdC::BHelperEnvPutCell=>"b.helper.EnvPut.cell",
++    RuleIdC::BHelperEnvPutInsert=>"b.helper.EnvPut.insert",
++    RuleIdC::BHelperEnvPutEmpty=>"b.helper.EnvPut.empty",
++    RuleIdC::BHelperEnvPutExit=>"b.helper.EnvPut.exit",
++    RuleIdC::BHelperEnvPutFailure=>"b.helper.EnvPut.failure",
++    RuleIdC::BHelperFindEntry=>"b.helper.Find.entry",
++    RuleIdC::BHelperFindRow=>"b.helper.Find.row",
++    RuleIdC::BHelperFindEmpty=>"b.helper.Find.empty",
++    RuleIdC::BHelperFindExit=>"b.helper.Find.exit",
++    RuleIdC::BHelperFindFailure=>"b.helper.Find.failure",
++    RuleIdC::BHelperBindEntry=>"b.helper.Bind.entry",
++    RuleIdC::BHelperBindPair=>"b.helper.Bind.pair",
++    RuleIdC::BHelperBindEmpty=>"b.helper.Bind.empty",
++    RuleIdC::BHelperBindArity=>"b.helper.Bind.arity",
++    RuleIdC::BHelperBindType=>"b.helper.Bind.type",
++    RuleIdC::BHelperBindDuplicate=>"b.helper.Bind.duplicate",
++    RuleIdC::BHelperBindInsert=>"b.helper.Bind.insert",
++    RuleIdC::BHelperBindPropagate=>"b.helper.Bind.propagate",
++    RuleIdC::BHelperBindExit=>"b.helper.Bind.exit",
++    RuleIdC::BHelperBindFailure=>"b.helper.Bind.failure",
++    RuleIdC::BHelperAppendEntry=>"b.helper.Append.entry",
++    RuleIdC::BHelperAppendCell=>"b.helper.Append.cell",
++    RuleIdC::BHelperAppendEmpty=>"b.helper.Append.empty",
++    RuleIdC::BHelperAppendTail=>"b.helper.Append.tail",
++    RuleIdC::BHelperAppendCopy=>"b.helper.Append.copy",
++    RuleIdC::BHelperAppendExit=>"b.helper.Append.exit",
++    RuleIdC::BHelperAppendFailure=>"b.helper.Append.failure",
++    RuleIdC::BHelperValidateEntry=>"b.helper.Validate.entry",
++    RuleIdC::BHelperValidateOccurrence=>"b.helper.Validate.occurrence",
++    RuleIdC::BHelperValidateField=>"b.helper.Validate.field",
++    RuleIdC::BHelperValidateDeclaration=>"b.helper.Validate.declaration",
++    RuleIdC::BHelperValidateEmpty=>"b.helper.Validate.empty",
++    RuleIdC::BHelperValidateInvalid=>"b.helper.Validate.invalid",
++    RuleIdC::BHelperValidateExit=>"b.helper.Validate.exit",
++    RuleIdC::BHelperValidateFailure=>"b.helper.Validate.failure",
++    RuleIdC::BHelperEqualEntry=>"b.helper.Equal.entry",
++    RuleIdC::BHelperEqualPair=>"b.helper.Equal.pair",
++    RuleIdC::BHelperEqualField=>"b.helper.Equal.field",
++    RuleIdC::BHelperEqualEmpty=>"b.helper.Equal.empty",
++    RuleIdC::BHelperEqualDifferent=>"b.helper.Equal.different",
++    RuleIdC::BHelperEqualExit=>"b.helper.Equal.exit",
++    RuleIdC::BHelperEqualFailure=>"b.helper.Equal.failure",
++    RuleIdC::BHelperMatchEntry=>"b.helper.Match.entry",
++    RuleIdC::BHelperMatchArm=>"b.helper.Match.arm",
++    RuleIdC::BHelperMatchOccurrence=>"b.helper.Match.occurrence",
++    RuleIdC::BHelperMatchField=>"b.helper.Match.field",
++    RuleIdC::BHelperMatchBinding=>"b.helper.Match.binding",
++    RuleIdC::BHelperMatchDistinct=>"b.helper.Match.distinct",
++    RuleIdC::BHelperMatchDiscard=>"b.helper.Match.discard",
++    RuleIdC::BHelperMatchNext=>"b.helper.Match.next",
++    RuleIdC::BHelperMatchSelected=>"b.helper.Match.selected",
++    RuleIdC::BHelperMatchEmpty=>"b.helper.Match.empty",
++    RuleIdC::BHelperMatchExit=>"b.helper.Match.exit",
++    RuleIdC::BHelperMatchFailure=>"b.helper.Match.failure",
++    RuleIdC::BBookkeepingTaskEnqueue=>"b.bookkeeping.task.enqueue",
++    RuleIdC::BBookkeepingTaskRelease=>"b.bookkeeping.task.release",
++    RuleIdC::BBookkeepingResumeStore=>"b.bookkeeping.resume.store",
++    RuleIdC::BBookkeepingResumeRestore=>"b.bookkeeping.resume.restore",
++    RuleIdC::KAdminStartupValid=>"k.admin.startup.valid",
++    RuleIdC::KAdminStartupInvalid=>"k.admin.startup.invalid",
++    RuleIdC::KAdminPublishValue=>"k.admin.publish.value",
++    RuleIdC::KAdminPublishError=>"k.admin.publish.error",
++    RuleIdC::KAdminPublishExhausted=>"k.admin.publish.exhausted",
++}}
++const FACT2_B0: &str = include_str!("/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-B0-work-oracle-20261018/factorial2-normal-program-contrast-A39-prefix-B0-clocks.json");
++fn b_clock_row(a_record:Option<usize>,preceding_rule:Option<&str>,raw:&co::HostSnapshot,semantic_index:usize)->J {
++    let image=&raw.image;
++    json!([a_record,preceding_rule,image.consumed_work,image.helper_work,image.helper_visits,image.reference_cursor,image.remaining_work,semantic_index])
++}
++fn compare_b0_schedule(initial:&co::HostSnapshot,spans:&[rp::ReferenceSpan]) {
++    // Construct the COMPLETE actual prefix first; no expected cell supplies any
++    // field, rule, counter, missing interval or semantic association.
++    let columns=json!(["A_record_index_or_null","preceding_B_rule_id_or_null","consumed_work","helper_work","helper_visits","reference_cursor","remaining_work","erased_semantic_A_snapshot_index"]);
++    let mut prefixes=vec![b_clock_row(None,None,initial,0)];let mut intervals=Vec::new();
++    let mut previous=initial.clone();let mut ordinal=0usize;
++    for (a_index,span) in spans.iter().enumerate() {
++        assert_eq!(span.b_start,ordinal);
++        assert_eq!(span.raw.len(),span.b_end_exclusive-span.b_start);
++        assert_eq!(span.source_event.checked_add(1),Some(span.b_end_exclusive),"normal B0 separate completion ends interval");
++        let mut helper_ids=Vec::new();let mut completion_id=None;
++        for (offset,record) in span.raw.iter().enumerate() {
++            assert_eq!(record.before,previous);verify_record_counters(record);
++            let id=b_rule_id(record.event.rule_id);let is_completion=span.b_start+offset==span.source_event;
++            if is_completion {
++                assert!(matches!(record.event.event_kind,EventKind::LegacyComplete|EventKind::Publish));
++                completion_id=Some(id);
++            }else{
++                assert!(!matches!(record.event.event_kind,EventKind::LegacyComplete|EventKind::Publish));
++                // Charged bookkeeping belongs here as well; event kind cannot
++                // hide any prefix row or charged preceding rule.
++                if record.event.work_delta!=0 {helper_ids.push(id);}
++            }
++            prefixes.push(b_clock_row(Some(a_index),Some(id),&record.after,if is_completion {a_index+1}else{a_index}));
++            previous=record.after.clone();ordinal+=1;
++        }
++        intervals.push(json!({"A_record_index":a_index,"A_rule_line":span.reference.rule_start_line,"first_B_record":span.b_start,"B_records_exclusive":span.b_end_exclusive,"helper_rule_ids":helper_ids,"legacy_rule_id":completion_id.expect("actual source completion")}));
++    }
++    assert_eq!(prefixes.len(),ordinal+1);
++    let actual=json!({"clockPrefixColumns":columns,"clockPrefixes":prefixes,"intervals":intervals});
++    // B0 describes this explicit DedicatedSorts run. No A/B work equality is
++    // asserted; the previous full A39 comparison remains independently bound.
++    let profile=match initial.admission.identity.profile_id {2=>"sherlock-helper-microstep/1",_=>panic!("selected B profile")};
++    let grammar=format!("{:?}",initial.admission.identity.grammar_domain);
++    let expected:J=serde_json::from_str(FACT2_B0).expect("opaque independent complete B0 schedule");
++    assert_eq!(expected.get("profile"),Some(&json!(profile)));
++    assert_eq!(expected.get("grammarDomain"),Some(&json!(grammar)));
++    assert_eq!(expected.get("initialFuel"),Some(&json!(initial.image.initial_fuel)));
++    for key in ["clockPrefixColumns","clockPrefixes","intervals"] {
++        assert!(expected.get(key).is_some(),"missing independent B0 field {key}");
++        assert_eq!(&actual[key],&expected[key],"complete independent B0 field {key}");
++    }
++}
