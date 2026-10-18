@@ -53,8 +53,9 @@ target evidence retain those obligations. A blocked row names its missing
 premise and the event that can make work actionable; independent rows continue.
 
 The factory repair is complete: the existing checker consumes current evidence,
-and its regression demonstrates that a source edit invalidates closure. Eleven
-original host/reporting clauses are now adopted and current. Select the remaining missing
+and its regression demonstrates that a source edit invalidates closure. Twelve
+original host/reporting clauses are now adopted and current, including the complete
+original indexed-provenance clause UIREQ-027. Select the remaining missing
 behavior from the [current checklist](requirements-status.md) and
 `NEXT-ACTIONS.json`: whole-owner closed-body/unique-function admission,
 remaining public compiler/refusal coverage and resource accounting/chunk observations,
@@ -153,3 +154,9 @@ The [selected compile handler archive](../results/sherlock-selected-compile-hand
 The [unchanged independent ProvenanceTwins consumer](../results/sherlock-provenance-twins-20261018/repair-20261018/README.md) now passes its public run against the corrected normal Core library: UInt2, all twelve static tables and260 complete event-origin joins. The five source-author regression methods initially could not compile because their result extraction required an absent Tooling Debug implementation. The test-local correction subsequently compiled and all five new methods passed; preserve both observations. The [Core1 generated-origin consumer](../results/sherlock-provenance-twins-20261018/core1-20261018/README.md) also passed with58 full events. Whole original027 source/result review remains required. No new EARS adoption follows from this finite case.
 
 [Native04](../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/fresh04-terminal-20261018/README.md) passed A0/A/B then failed C on the absent generated `.package-cache-mutate` entry. Its sole attempt is consumed, evidence retained and teardown complete. The next native change must address that observed mismatch using the existing source identity, membership, freeze, resource and cleanup requirements. Do not repeat04 unchanged. The full native/proof/Midnight stagenet and language requirements remain active.
+
+### October18 indexed-provenance acceptance and native05 boundary
+
+The [whole original027 adoption](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/ROOT-ORIGINAL027-ADOPTION.json) closes all original provenance sentences after complete source/result review; DoctorWatson reports12 adopted originals and23 open. All25 refinements remain open. Continue actual generic nominal/ConstructorFields implementation through the existing checked engine; no new interpreter or factory.
+
+The changed-input native05 attempt passed A0/A/B then stopped at strict source-home membership in C: four extra bookkeeping files and no missing entries. The complete [terminal archive](../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/native-attempt05-20261018/README.md) retains metadata difference, original failure and successful collection/teardown. No D/E/F, native compile, proof or target result is claimed. A source-owner diagnosis precedes another attempt; no unchanged retry.
