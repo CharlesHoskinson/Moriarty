@@ -1,0 +1,14 @@
+language "moriarty/2";
+agreement QuotedFee {
+  state total: UInt = 0;
+  state marker: UInt = 9;
+  asset UNIT = { network: "local", issuer: "independent-staged-test-oracle", reference: "UNIT", scale: 0 };
+  action charge(amount: UInt) {
+    let payable = amount + 1;
+    await quote(agreed: Bool) when agreed;
+    fee(UNIT, "payer", "treasury", payable);
+    next total = payable;
+    emit "fee"(payable);
+  }
+  action declare() { liability("duty", UNIT, "payer", "treasury", 0); }
+}
