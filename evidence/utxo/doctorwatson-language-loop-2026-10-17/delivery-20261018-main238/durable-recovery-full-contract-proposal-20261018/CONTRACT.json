@@ -1,0 +1,262 @@
+{
+  "status": "UNADOPTED_FULL_LANGUAGE_DESIGN",
+  "base": "79de664a3d16b5e0456043a530c8f33d723561a2",
+  "recommended": "A_EXPLICIT_COMPLETE_RECORD",
+  "alternative": "B_OWNED_PROCESS_SAME_WIRE_AND_PUBLIC_LIFECYCLE",
+  "not_a_substitute": [
+    "waiting JSON viewer",
+    "bare old Continuation",
+    "in-memory-only Process",
+    "test-only checkpoint writer",
+    "mock admission",
+    "application-specific recovery helper"
+  ],
+  "profiles": {
+    "source": "moriarty-recovery/1",
+    "semantics": "moriarty-core2-recovery/1",
+    "plan": "moriarty-recovery-plan/1",
+    "checkpoint": "moriarty-recovery-checkpoint/1",
+    "event": "moriarty-recovery-event/1",
+    "report": "moriarty-local-recovery-report/1",
+    "accounting": "moriarty-local-recovery-accounting/1",
+    "test_manifest": "moriarty-tests/recovery/1",
+    "test_report": "moriarty-local-recovery-test-report/1",
+    "inspect": "moriarty-recovery-program/1"
+  },
+  "existing_profiles_unchanged": [
+    "moriarty/2",
+    "moriarty-core/2",
+    "moriarty-continuation/1",
+    "moriarty-stage-event/1",
+    "moriarty-stage-plan/1",
+    "moriarty-reference-logical-cost/2"
+  ],
+  "symbolic_types": {
+    "UInt": "existing canonical decimal-string u128",
+    "Snapshot": "exact existing complete source/crates/mori-core/src/ir.rs Snapshot",
+    "Liability": "exact existing complete ir.rs Liability including exact AssetId",
+    "StageReport": "entire actual stage::outcome_report object, all original keys and nested data",
+    "Continuation": "entire existing stage/mod.rs Continuation, no new fields",
+    "StageEvent": "unchanged existing stage/mod.rs StageEvent",
+    "Statement": "exact admitted base Statement or separate handler-local Statement with original arena roots; no general shared Deserialize introduced",
+    "Error": "owner-selected complete failure result; old Error fields are not an adopted new recovery error policy"
+  },
+  "checkpoint": {
+    "exact_fields": {
+      "format": "checkpoint profile",
+      "base_semantics": "moriarty-core/2",
+      "recovery_semantics": "semantics profile",
+      "qualification": "local-reference-stage",
+      "authentication": "none",
+      "consumption": "untracked",
+      "bindings": {
+        "base_program": "OwnerIdentity",
+        "base_plan": "OwnerIdentity",
+        "recovery_module": "OwnerIdentity",
+        "recovery_plan": "OwnerIdentity"
+      },
+      "action": "String",
+      "control": "Control",
+      "accounting": {
+        "profile": "accounting profile",
+        "committed": "UInt",
+        "attempted_total": "UInt",
+        "committed_cap": "UInt|null, mandatory key",
+        "ordered_effects": "complete Effect[] in invocation/source order"
+      },
+      "residual": "all positive current-boundary Liability[]",
+      "history": "complete Invocation[] in actual invocation order"
+    }
+  },
+  "control": {
+    "pending": {
+      "kind": "pending",
+      "continuation": "Continuation"
+    },
+    "forward-complete": {
+      "kind": "forward-complete",
+      "boundary": "Snapshot"
+    },
+    "recovery-complete": {
+      "kind": "recovery-complete",
+      "site": "u16",
+      "await_label": "String",
+      "handler": "String",
+      "mode": "refund|compensate",
+      "boundary": "Snapshot"
+    },
+    "non_normal_result_or_control": "exact additional variants/prefixes and disposition must be supplied by O-FAIL/O-DURABLE/O-IO, not coerced into normal variants"
+  },
+  "invocation": {
+    "baseline": {
+      "operation": "start|resume",
+      "attempted": "UInt",
+      "committed_before": "UInt",
+      "committed_after": "UInt",
+      "baseline_report": "StageReport"
+    },
+    "recovery_normal": {
+      "operation": "recover",
+      "site": "u16",
+      "await_label": "String",
+      "handler": "String",
+      "mode": "refund|compensate",
+      "status": "recovered|not-taken",
+      "attempted": "UInt",
+      "committed_before": "UInt",
+      "committed_after": "UInt",
+      "segment": "RecoverySegment|null",
+      "error": "null on these ordinary paths",
+      "guard": {
+        "root": "handler ExprId",
+        "value": "typed Bool true for recovered, false for not-taken",
+        "snapshot": "full original pending Snapshot",
+        "effects": "[] for source expression guard"
+      }
+    }
+  },
+  "RecoverySegment": {
+    "action": "String",
+    "site": "u16",
+    "await_label": "String",
+    "handler": "String",
+    "mode": "refund|compensate",
+    "frame_pre": "complete original pending site/captures",
+    "execution": {
+      "semantics": "moriarty-core2-recovery/1",
+      "action": "String",
+      "handler": "String",
+      "pre": "Snapshot",
+      "post": "Snapshot",
+      "steps": "all body Steps with exact statement/value/index/snapshot/effects",
+      "effects": "ordered complete concatenation of body Step deltas"
+    }
+  },
+  "RecoveryEvent": {
+    "format": "event profile",
+    "action": "String",
+    "site": "u16",
+    "handler": "String",
+    "values": "ordered NamedValue[] matching selected normal source binders; actual admission owned"
+  },
+  "report": {
+    "exact_fields": {
+      "format": "report profile",
+      "qualification": "local-reference-stage",
+      "authentication": "none",
+      "consumption": "untracked",
+      "operation": "start|resume|recover|reopen",
+      "status": "waiting|forward-complete|recovery-complete",
+      "attempted": "UInt, this language invocation only",
+      "invocation": "Invocation|null for reopen",
+      "checkpoint": "complete RecoveryCheckpoint"
+    },
+    "reopen": {
+      "attempted": "0 language work; host/decoder resource qualification separate",
+      "invocation": null,
+      "checkpoint": "byte/value representation follows adopted serializer; entire state/C/T/history/control unchanged"
+    }
+  },
+  "ordinary_equations": {
+    "attempted": "T_after=T_before+actual_attempted_i",
+    "advancing_committed": "C_after=C_before+actual_committed_delta_i",
+    "non_taken": "C_after=C_before; old embedded Continuation, boundary, effects and residual unchanged; T/history retain actual observation",
+    "effects": "E_after=E_before followed by actual new committed effects, preserving order/duplicates",
+    "reopen": "checkpoint_after=checkpoint_before; no new history entry",
+    "successful_ceiling": "max(base forward_total, each admitted recovery committed_before+guard_cost+body_cost); metadata does not select admission policy"
+  },
+  "normal_cases": {
+    "refund": {
+      "prefix_C": "7",
+      "direct_recovery_C": "13",
+      "direct_recovery_T": "13",
+      "false_then_recovery_T": "15",
+      "forward_C": "13",
+      "direct_forward_T": "13",
+      "false_then_forward_T": "15",
+      "fee_retained": "4",
+      "refunded": "60",
+      "custody_duty": "present0",
+      "unrelated_audit": "4 BOND"
+    },
+    "compensation": {
+      "prefix_C": "7",
+      "direct_recovery_C": "13",
+      "direct_recovery_T": "13",
+      "false_then_recovery_T": "15",
+      "forward_C": "11",
+      "direct_forward_T": "11",
+      "false_then_forward_T": "13",
+      "paired_ceiling": "13",
+      "normal_forward_total": "11",
+      "fee_retained": "3",
+      "supplier_payment_retained": "40",
+      "remedy_paid": "12",
+      "residual_remedy": "8",
+      "unrelated_audit": "4 BOND"
+    }
+  },
+  "public_operation_contracts": {
+    "inspect": "whole actual source pair/program/module/plan",
+    "start": "actual pair+scenario -> real complete checkpoint output+report",
+    "reopen": "actual pair+actual saved checkpoint -> complete reopened actual state/report; no event",
+    "resume": "actual reopened pending checkpoint+unchanged StageEvent -> actual new complete checkpoint/report",
+    "recover": "actual reopened pending checkpoint+RecoveryEvent -> actual new complete checkpoint/report",
+    "test": "same actual public executable fresh process per fixed operation; isolated case files; actual checkpoint paths as next inputs, never expected values"
+  },
+  "owner_rule_dependencies": [
+    "O-ID",
+    "O-REG",
+    "O-ACCT",
+    "O-TRACE",
+    "O-CAP",
+    "O-PEND",
+    "O-EVIDENCE",
+    "O-CONTROL",
+    "O-DURABLE",
+    "O-LIVE",
+    "O-FAIL",
+    "O-IO"
+  ],
+  "delivery_gates": [
+    "two substantive agreeing ordinary design votes",
+    "designated owner exact dependent contracts/review",
+    "new independent complete expectations frozen before comparison",
+    "actual complete first public language lifecycle and failure families",
+    "separate required proofs/target/live consumption/private/financial/composition/release evidence"
+  ],
+  "product_predicate": "UNRUN",
+  "implementation": "not supplied",
+  "security_decisions": "not supplied",
+  "original_acceptance_closed": 0,
+  "inspect_report": {
+    "exact_fields": {
+      "format": "inspect profile",
+      "source_profile": "moriarty-recovery/1",
+      "semantics": "moriarty-core2-recovery/1",
+      "qualification": "local-reference-stage",
+      "authentication": "none",
+      "consumption": "untracked",
+      "bindings": "all four OwnerIdentity fields as in checkpoint",
+      "base": "complete unchanged base Program",
+      "module": "complete recovery module including all source handlers/captures/arenas/statements",
+      "plan": "complete recovery plan including whole filled base plan"
+    }
+  },
+  "api_alternative_B": {
+    "state_type": "owned RecoveryProcess",
+    "constructors": [
+      "start(program,action,scenario,cap) -> Process or owner failure",
+      "reopen(program,actual_checkpoint_bytes) -> Process or owner failure"
+    ],
+    "methods": [
+      "resume(event,cap) -> actual Invocation or owner failure",
+      "recover(event,cap) -> actual Invocation or owner failure",
+      "checkpoint() -> complete same RecoveryCheckpoint",
+      "report() -> complete same RecoveryReport"
+    ],
+    "wire_and_public_requirements": "exactly identical to A; every CLI/test operation is still a fresh actual process and actual file flow",
+    "failure_mutation_policy": "designated-owner unresolved; not supplied",
+    "recommendation": "B not selected as public contract; possible internal shape only after exact adoption"
+  }
+}

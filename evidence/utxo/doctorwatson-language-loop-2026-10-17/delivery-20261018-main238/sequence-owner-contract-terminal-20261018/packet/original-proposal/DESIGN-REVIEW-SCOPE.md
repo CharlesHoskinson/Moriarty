@@ -1,0 +1,13 @@
+# Minimal complete decision scope
+
+The ordinary voters decide the recommended general production interface and SC1–SC6. They compare A's stateless full-prefix carrier with B's owned Sequence, and assess whether B's complete frame/dataflow/DTO/public-consumer contract preserves ordinary predecessor succession, gross/fee/duty/work observations and original history for supported programs. They inspect the complete proposed ordinary EARS and the current API boundaries. They do not certify an implementation, every authored example amount, independent wire semantics, actual runtime behavior, resource adequacy or any designated-owner rule.
+
+Mandatory primary subjects are the complete DESIGN, API-AND-CALLER-TRACE, WIRE-CONTRACT, OWNER-DEPENDENCIES, RETAINED-LINEAGE, DESIGN-CHOICES and proposed EARS documents; all35 original required-behavior paragraphs verbatim; and exact actual Core/2/API/consumer source excerpts with complete originals available. This is substantive full ordinary design review, not a file-path-only request. Any material ordinary ambiguity or incompatible field/transition contract warrants revise/abstain rather than a rubber stamp.
+
+Complete original71-file basis remains physical. It contains the original35 MPLR notes, canonical consolidated/partial/kernel/MC06/PCD composition requirements, roadmap/product contract and actual public stage/consumer sources. Whole existing code is read when a judgment depends on it; the packet does not require re-auditing every unrelated baseline/theory line as a new implementation.
+
+EXAMPLES-AND-TESTS.md, thirteen source/input/example-plan files and AUTHOR-WORKED-PREFIXES.json remain complete physical corroboration. They demonstrate concrete intended uses and future test predicates, but they are not independent goldens. A reviewer using one in a material finding inspects that complete example; an ordinary A/B vote need not certify all optional arithmetic or inspect an unembedded69KB author prefix repetition. Exact independent expectations remain absent and required before execution.
+
+Applicable OD1–OD8 exact rules require the designated owner separately. Ordinary agreement is conditional on those explicit dependencies, not a substitute for them. Original requirement/parent/target/operator scope stays intact. No provider is dispatched by this packet.
+
+Source basis intentionally remains main79de664a. Root later reports main8269b5b7ceeec5169c706aa31ea33f390d49c969 (PR227 checker/fixture integration); the selected Core/2 source difference check is retained in CURRENTNESS-NOTE.json. No new whole-tree pass or rebase is implied. Root integrates the eventual adopted implementation against its actual current source.

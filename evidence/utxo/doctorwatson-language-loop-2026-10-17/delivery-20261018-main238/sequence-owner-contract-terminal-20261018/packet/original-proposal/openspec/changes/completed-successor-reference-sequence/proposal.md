@@ -1,0 +1,9 @@
+# Complete ordinary predecessor-to-successor composition
+
+UNADOPTED source-only proposal against main79de664a. The current ordinary public Core/2 composition consumer starts two independent disjoint members and has no completed-program successor operation. A caller copying a post Snapshot into another standalone Scenario does not supply the missing production history, cumulative accounting or public consumer.
+
+Add a production-owned finite Sequence over actual Core/2 stage calls. Each successor receives a projection of the real complete predecessor head; the production object retains the full outside frame and every original outcome/effect/work prefix. Expose it through one public compose command reused by the existing test consumer. The complete proposed fields/signatures and comparison of two approaches are in the packet's DESIGN.md, API-AND-CALLER-TRACE.md and WIRE-CONTRACT.md.
+
+This is general finite composition of currently supported actions, not an application whitelist or new source compiler. It keeps arbitrary third-frame state, balances and duties, supports shared exact assets along serial order and does not require identical program state schemas. All source/admission/identity/error/security/resource dependencies are enumerated for the designated owner; no ordinary author replaces those rules. No implementation or runtime/native/target result is supplied.
+
+The CSQ clauses are local proposed refinements under UNI-002/004/005/008/020/021/023/024, MPLR-001–035 as applicable, MC06/MC07 and SP10. They do not replace, renumber or close any original requirement. Sequential, disjoint parallel, shared-state interleaving, atomic synchronization and asynchronous messaging retain separate full completion obligations. Independent expectations, source review, owner decisions, actual public observations and native/private/ledger correspondence remain separate.

@@ -1,0 +1,2244 @@
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/FIXTURE-PINS.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/FIXTURE-PINS.json
+new file mode 100644
+index 00000000..969f1634
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/FIXTURE-PINS.json
+@@ -0,0 +1,31 @@
++{
++  "format": "source6-max-rebate-fixture-pins/1",
++  "custodianFreezeSha256": "28671c70406c61f32870c5f40e5470c7fe7ef11a720a0d3aa8df84de0b3a77b0",
++  "custodianManifestSha256": "4330ae4e3961df7bc69bfcc737e7428d07ce56599bd571662d8284c59a6bbde8",
++  "expectedSemanticsSha256": "6cf5d7d0dbc95ea5b4d15fbbf1c37f15d7ac46b0527c89cc0e754f3a91e446a6",
++  "files": {
++    "oracle/DERIVATION.md": "c115484c31f249053b82bf3761ad669d4633ba1bcbfd93b97704ef1e7c016a89",
++    "oracle/EXPECTED-SEMANTICS.json": "6cf5d7d0dbc95ea5b4d15fbbf1c37f15d7ac46b0527c89cc0e754f3a91e446a6",
++    "oracle/FREEZE.sha256": "28671c70406c61f32870c5f40e5470c7fe7ef11a720a0d3aa8df84de0b3a77b0",
++    "oracle/LOGICAL-WORK-ASSUMPTIONS.json": "f871ce9a1cb4ae4006f5920a1e9d68ec0edfe2180ea9c096cd66f63220b725df",
++    "oracle/MANIFEST.json": "4330ae4e3961df7bc69bfcc737e7428d07ce56599bd571662d8284c59a6bbde8",
++    "oracle/PROVENANCE.json": "1b8f09d4a8f977b3a30c631d7ffcf63c71462f940161bf44575dcc335217aee6",
++    "oracle/README.md": "abd609f1e05d5bf7530a90df864291a59d58efd93b271b5b1bd1417d911efc9e",
++    "oracle/STATIC-CHECKS.json": "5a830a0c6b8ce380debae51c7acd32835a7c8ffb6e4591eef30c4d8961a3f3ec",
++    "oracle/UNKNOWN.json": "9c0103fa47134b369fa13209727987fb0cb2ccec49fa0af0bef7e3b754e1dff7",
++    "oracle/basis/docs/BETA-SOURCE6-EXPANSION.md": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f",
++    "oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt": "6ffb712142eff9c36d8eb2f89b9e75a105f6b1e875cdc4f4f855b49adb9dcc9f",
++    "oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt": "3cb6485ca0014fe2f72cb4c8d2ff1dc2b4a0025bdc6f93c450cdb4d66c8d06e8",
++    "oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e",
++    "oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec",
++    "oracle/basis/experiments/moriarty-language/spec/successor/lexical.md": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639",
++    "oracle/basis/packages/moriarty-beta/GETTING-STARTED.md": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706",
++    "oracle/basis/packages/moriarty-beta/README.md": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d",
++    "oracle/inputs/max-rebate.mori": "f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712",
++    "oracle/inputs/max-rebate.scenario.json": "3f4686133024bc48a8b9f5499a7811b007682f89e27b91dd620f5e6da11973d8",
++    "oracle/pay_rebate.effect-prefix-financial-states.expected.json": "45471ab3be3b1ad9bde1c2584bd6c616ffcafb7d00a651dd197547729703f5f2",
++    "oracle/pay_rebate.independent-source6.txt": "4fd05327c2575ee4dc583b7d76061e2d8b0ec340cd476f66502d21970900ee6f",
++    "oracle/pay_rebate.ordered-target-lines.expected.json": "02ed4f6a1e83f47de5cf1713d91d127262e9dc7702b456f5b33e3eeff2d2dfbb",
++    "oracle/pay_rebate.source6.ast.expected.json": "778d2b32521b6ab76e4cfa0b3bcfdfc052ee5c71e55d2d08523993e9215d8015"
++  }
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md
+new file mode 100644
+index 00000000..80f9de52
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md
+@@ -0,0 +1,13 @@
++# Independent MaxRebatePayout derivation
++
++Only author-provided max-rebate.mori and max-rebate.scenario.json were read for this case. No author's new tests, expected outputs, numeric recipe, patch or actual result was read. Actual source route is beta/1 to explicit Source6, not mori-core/1 or a backendArtifact; the historical directory name supplies no qualification.
++
++USD aliases economicassetA at scale2 inMidnight. Buyer/Seller/Treasury aliasOwner/Recipient/Fee. 4.50USD=450atoms; atoms(USD,50)=50, so subtraction450-50=400Qty. Leftscalar2*400=800Qty. The other maxargument7.00USD=700, therefore max(a800,b700)=800 choosesa. Feeatoms25 is25, independent of decimal display. Gross800+25=825, grosscap8.50USD=850, feecap25, netfloor800, capheadroom25. The owner pays825; recipient's netincrease is800, fee recipient's increase25. No double fee subtraction, rounding, conversion or floatingpoint arithmetic.
++
++Openingbalances Owner2000/Recipient5/Fee7 become1175/805/32; allowance remaining2000/spent25 becomes1175/850. All provided balances total2012 before/after, and allowance remaining+spent totals2025. These are finite arithmetic cross-checks, not a conservation/security proof or observed acceptance. No obligation is supplied or permitted in this transfer input; no duty creation/discharge occurs and retainedduties is explicitlyempty, without claiming any global ledgerdebt inventory.
++
++Exact ordered effects: DebitOwner825, CreditRecipient800, CreditFee25, UseAllowanceOwner825, UseReplay, AdvanceHeadm0->m1. A positivefee retains itsCredit in position3. The seven conditional financial prefix frames cover initial state and every effect, retaining all provided cells. The replay effect is bare rebate-nonce in Source6; Core5semantic vector uses encoded[Midnight,Owner,rebate-nonce]. Authenticated.predecessor rebate-opening is distinct from AdvanceHead's predecessorm0. Round4 does not advance. These are mathematical effect prefixes, not evaluator traces or work charges.
++
++The full Source6Ast and every target statement/block are independently mapped from the pinned grammar/DTO definitions. selected.actionId is TransferLiteralFee, not pay_rebate. Work12/2 is merely transported inSource6. LOGICAL-WORK-ASSUMPTIONS.json selects no actual rate or postwork; UNKNOWN.json retains wholeProgram/Artifact/hashes/gates/qualification and actualbyte/meters/state boundaries.
++
++Prior implementation exposure is disclosed: this author prepared earlier Corefinancial/report and Source6 CLI/library/emitter/checker/source-owner packets and the separate capped-remittance oracle. This is not globalblindness. Current derivation used only these newinputfiles and normative/DTOdefinitions; no evaluator/compiler/provider/SDK/product execution, Git query/mutation, or shared write occurred. Kstartup skill/AGENTS/product/status was restored read-only. No Q1providerloop was restarted.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/EXPECTED-SEMANTICS.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/EXPECTED-SEMANTICS.json
+new file mode 100644
+index 00000000..4bac3c6c
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/EXPECTED-SEMANTICS.json
+@@ -0,0 +1,286 @@
++{
++  "format": "independent-max-transfer-semantic-oracle/1",
++  "status": "FROZEN_BEFORE_PRODUCT_EXECUTION",
++  "actualRoute": "Rust beta/1 check/explicitSource6 expansion -> Source6 semantic inputs; NOTmori-core/1 compiler",
++  "historicalDirectoryNameNotQualification": true,
++  "common": {
++    "agreement": "MaxRebatePayout",
++    "sourceProfile": "moriarty-beta/1",
++    "source6Profile": "moriarty-financial-agreement-source/6",
++    "aliases": {
++      "domain": {
++        "Preview": {
++          "id": "Midnight",
++          "chain": "midnight",
++          "network": "preview"
++        }
++      },
++      "accounts": {
++        "Buyer": "Owner",
++        "Seller": "Recipient",
++        "Treasury": "Fee"
++      },
++      "asset": {
++        "USD": {
++          "id": "A",
++          "scale": "2",
++          "representation": "canonical",
++          "symbol": "USD",
++          "domain": "Midnight"
++        }
++      }
++    },
++    "constants": [
++      {
++        "expression": "4.50 USD",
++        "type": "Qty<USD>",
++        "atoms": "450"
++      },
++      {
++        "expression": "atoms(asset: USD,value:50)",
++        "type": "Qty<USD>",
++        "atoms": "50"
++      },
++      {
++        "expression": "4.50 USD - atoms(asset:USD,value:50)",
++        "type": "Qty<USD>",
++        "atoms": "400"
++      },
++      {
++        "expression": "2 * (4.50 USD - atoms(asset:USD,value:50))",
++        "type": "Qty<USD>",
++        "atoms": "800"
++      },
++      {
++        "expression": "7.00 USD",
++        "type": "Qty<USD>",
++        "atoms": "700"
++      },
++      {
++        "name": "payout",
++        "expression": "max(a:left,b:700)",
++        "type": "Qty<USD>",
++        "atoms": "800",
++        "selectedArgument": "a"
++      },
++      {
++        "name": "fee",
++        "expression": "atoms(asset:USD,value:25)",
++        "type": "Qty<USD>",
++        "atoms": "25"
++      },
++      {
++        "expression": "8.50 USD",
++        "type": "Qty<USD>",
++        "atoms": "850"
++      }
++    ],
++    "selectedSource6ActionId": "TransferLiteralFee",
++    "literalClaims": {
++      "source_hash": "rebate-source",
++      "policy_digest": "rebate-policy",
++      "qualification": "Opaque source claims, not computed commitments."
++    },
++    "inputScenario": {
++      "profile": "moriarty-local-scenario/1",
++      "kind": "local-stipulation",
++      "domain": "Midnight",
++      "asset": "A",
++      "head": "m0",
++      "predecessor": "rebate-opening",
++      "round": "4",
++      "balances": [
++        {
++          "account": "Owner",
++          "amount": "2000"
++        },
++        {
++          "account": "Recipient",
++          "amount": "5"
++        },
++        {
++          "account": "Fee",
++          "amount": "7"
++        }
++      ],
++      "allowance": {
++        "owner": "Owner",
++        "remaining": "2000",
++        "spent": "25"
++      },
++      "replay": "unused",
++      "work_remaining": "12",
++      "work_spent": "2",
++      "post_head": "m1"
++    }
++  },
++  "cases": [
++    {
++      "action": "pay_rebate",
++      "selectedIntent": "Rebate",
++      "selectedMaxArgument": "a: left scalar2*(450-50)=800 exceeds b700",
++      "value": "800",
++      "fee": "25",
++      "gross": "825",
++      "grossCap": "850",
++      "feeCap": "25",
++      "netFloor": "800",
++      "grossCapHeadroom": "25",
++      "recipientNetIncrease": "800",
++      "ownerTotalDebit": "825",
++      "feeRecipientIncrease": "25",
++      "openingFinancialFrame": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "2000"
++          },
++          {
++            "account": "Recipient",
++            "amount": "5"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "2000",
++            "spent": "25"
++          }
++        ]
++      },
++      "conditionalClosingFinancialProjection": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "805"
++          },
++          {
++            "account": "Fee",
++            "amount": "32"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "1175",
++            "spent": "850"
++          }
++        ],
++        "head": "m1",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "consumed"
++        }
++      },
++      "source6OrderedEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        },
++        {
++          "kind": "Credit",
++          "account": "Fee",
++          "asset": "A",
++          "amount": "25"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "825"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "rebate-nonce"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "m0",
++          "successor": "m1"
++        }
++      ],
++      "core5SemanticOrderedEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        },
++        {
++          "kind": "Credit",
++          "account": "Fee",
++          "asset": "A",
++          "amount": "25"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "825"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "m0",
++          "successor": "m1"
++        }
++      ],
++      "effectCount": 6,
++      "feeCreditOmitted": false,
++      "feeOpeningRowRequiredAndRetained": {
++        "account": "Fee",
++        "before": "7",
++        "after": "32"
++      },
++      "source6InputWork": {
++        "remaining": "12",
++        "spent": "2"
++      },
++      "residualDuties": {
++        "providedObligationCell": "absent; transfer scenario forbids obligation",
++        "newDutyOrDischargeEffects": [],
++        "retainedDutiesForm": "empty",
++        "conditionalLocalS0RemainingDuty": [],
++        "scope": "No duty is declared or changed in this finite local transfer subset; no global debt/frame assertion."
++      },
++      "source6AstFile": "pay_rebate.source6.ast.expected.json",
++      "orderedTargetLinesFile": "pay_rebate.ordered-target-lines.expected.json",
++      "independentSource6File": "pay_rebate.independent-source6.txt",
++      "effectPrefixFile": "pay_rebate.effect-prefix-financial-states.expected.json",
++      "closingProjectionQualification": "Normative conditional financial projection, not a complete actual Core post/status/qualification; work fields absent."
++    }
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/FREEZE.sha256 b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/FREEZE.sha256
+new file mode 100644
+index 00000000..5ba491fc
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/FREEZE.sha256
+@@ -0,0 +1,22 @@
++c115484c31f249053b82bf3761ad669d4633ba1bcbfd93b97704ef1e7c016a89  DERIVATION.md
++6cf5d7d0dbc95ea5b4d15fbbf1c37f15d7ac46b0527c89cc0e754f3a91e446a6  EXPECTED-SEMANTICS.json
++f871ce9a1cb4ae4006f5920a1e9d68ec0edfe2180ea9c096cd66f63220b725df  LOGICAL-WORK-ASSUMPTIONS.json
++4330ae4e3961df7bc69bfcc737e7428d07ce56599bd571662d8284c59a6bbde8  MANIFEST.json
++1b8f09d4a8f977b3a30c631d7ffcf63c71462f940161bf44575dcc335217aee6  PROVENANCE.json
++abd609f1e05d5bf7530a90df864291a59d58efd93b271b5b1bd1417d911efc9e  README.md
++5a830a0c6b8ce380debae51c7acd32835a7c8ffb6e4591eef30c4d8961a3f3ec  STATIC-CHECKS.json
++9c0103fa47134b369fa13209727987fb0cb2ccec49fa0af0bef7e3b754e1dff7  UNKNOWN.json
++78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f  basis/docs/BETA-SOURCE6-EXPANSION.md
++6ffb712142eff9c36d8eb2f89b9e75a105f6b1e875cdc4f4f855b49adb9dcc9f  basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt
++3cb6485ca0014fe2f72cb4c8d2ff1dc2b4a0025bdc6f93c450cdb4d66c8d06e8  basis/dto/mil4-s0-core-v5.ts.declarations.txt
++5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e  basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf
++725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec  basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md
++88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639  basis/experiments/moriarty-language/spec/successor/lexical.md
++7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706  basis/packages/moriarty-beta/GETTING-STARTED.md
++a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d  basis/packages/moriarty-beta/README.md
++f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712  inputs/max-rebate.mori
++3f4686133024bc48a8b9f5499a7811b007682f89e27b91dd620f5e6da11973d8  inputs/max-rebate.scenario.json
++45471ab3be3b1ad9bde1c2584bd6c616ffcafb7d00a651dd197547729703f5f2  pay_rebate.effect-prefix-financial-states.expected.json
++4fd05327c2575ee4dc583b7d76061e2d8b0ec340cd476f66502d21970900ee6f  pay_rebate.independent-source6.txt
++02ed4f6a1e83f47de5cf1713d91d127262e9dc7702b456f5b33e3eeff2d2dfbb  pay_rebate.ordered-target-lines.expected.json
++778d2b32521b6ab76e4cfa0b3bcfdfc052ee5c71e55d2d08523993e9215d8015  pay_rebate.source6.ast.expected.json
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/LOGICAL-WORK-ASSUMPTIONS.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/LOGICAL-WORK-ASSUMPTIONS.json
+new file mode 100644
+index 00000000..0af8fbf6
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/LOGICAL-WORK-ASSUMPTIONS.json
+@@ -0,0 +1,16 @@
++{
++  "knownInputTransport": {
++    "workRemaining": "12",
++    "workSpent": "2"
++  },
++  "knownStructuralCount": {
++    "orderedFinancialEffects": 6,
++    "mathematicalFinancialPrefixFrames": 7
++  },
++  "actualLogicalWork": "UNKNOWN; effect count, scalar arithmetic count and declaration count are not a metering schedule.",
++  "symbolicBookkeepingOnly": "If a separately established profile charges c units, postRemaining=12-c and postSpent=2+c. This freeze chooses no c or charging point.",
++  "referenceExampleNotOracle": "The beta guide describes a unit-charge example; it is not used as this particular Rust/Node/runtime/compiler cost oracle.",
++  "postWorkCounts": "UNASSERTED",
++  "compilerOrSDKOrTargetResourceWork": "UNASSERTED",
++  "authorization": "No resource/execution admission supplied."
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/MANIFEST.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/MANIFEST.json
+new file mode 100644
+index 00000000..d0e1f962
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/MANIFEST.json
+@@ -0,0 +1,113 @@
++{
++  "format": "independent-preexecution-max-transfer-freeze/1",
++  "frozenAtUtc": "2026-10-18T13:08:02.096272+00:00",
++  "status": "FROZEN_BEFORE_PRODUCT_EXECUTION",
++  "actualRoute": "beta1->Source6; noCorebackendqualification",
++  "files": [
++    {
++      "path": "DERIVATION.md",
++      "bytes": 2879,
++      "sha256": "c115484c31f249053b82bf3761ad669d4633ba1bcbfd93b97704ef1e7c016a89"
++    },
++    {
++      "path": "EXPECTED-SEMANTICS.json",
++      "bytes": 7276,
++      "sha256": "6cf5d7d0dbc95ea5b4d15fbbf1c37f15d7ac46b0527c89cc0e754f3a91e446a6"
++    },
++    {
++      "path": "LOGICAL-WORK-ASSUMPTIONS.json",
++      "bytes": 791,
++      "sha256": "f871ce9a1cb4ae4006f5920a1e9d68ec0edfe2180ea9c096cd66f63220b725df"
++    },
++    {
++      "path": "PROVENANCE.json",
++      "bytes": 5618,
++      "sha256": "1b8f09d4a8f977b3a30c631d7ffcf63c71462f940161bf44575dcc335217aee6"
++    },
++    {
++      "path": "README.md",
++      "bytes": 966,
++      "sha256": "abd609f1e05d5bf7530a90df864291a59d58efd93b271b5b1bd1417d911efc9e"
++    },
++    {
++      "path": "STATIC-CHECKS.json",
++      "bytes": 441,
++      "sha256": "5a830a0c6b8ce380debae51c7acd32835a7c8ffb6e4591eef30c4d8961a3f3ec"
++    },
++    {
++      "path": "UNKNOWN.json",
++      "bytes": 1135,
++      "sha256": "9c0103fa47134b369fa13209727987fb0cb2ccec49fa0af0bef7e3b754e1dff7"
++    },
++    {
++      "path": "basis/docs/BETA-SOURCE6-EXPANSION.md",
++      "bytes": 4376,
++      "sha256": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f"
++    },
++    {
++      "path": "basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt",
++      "bytes": 1833,
++      "sha256": "6ffb712142eff9c36d8eb2f89b9e75a105f6b1e875cdc4f4f855b49adb9dcc9f"
++    },
++    {
++      "path": "basis/dto/mil4-s0-core-v5.ts.declarations.txt",
++      "bytes": 1918,
++      "sha256": "3cb6485ca0014fe2f72cb4c8d2ff1dc2b4a0025bdc6f93c450cdb4d66c8d06e8"
++    },
++    {
++      "path": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
++      "bytes": 3753,
++      "sha256": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e"
++    },
++    {
++      "path": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
++      "bytes": 11648,
++      "sha256": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec"
++    },
++    {
++      "path": "basis/experiments/moriarty-language/spec/successor/lexical.md",
++      "bytes": 5589,
++      "sha256": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639"
++    },
++    {
++      "path": "basis/packages/moriarty-beta/GETTING-STARTED.md",
++      "bytes": 11939,
++      "sha256": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706"
++    },
++    {
++      "path": "basis/packages/moriarty-beta/README.md",
++      "bytes": 4772,
++      "sha256": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d"
++    },
++    {
++      "path": "inputs/max-rebate.mori",
++      "bytes": 1094,
++      "sha256": "f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712"
++    },
++    {
++      "path": "inputs/max-rebate.scenario.json",
++      "bytes": 500,
++      "sha256": "3f4686133024bc48a8b9f5499a7811b007682f89e27b91dd620f5e6da11973d8"
++    },
++    {
++      "path": "pay_rebate.effect-prefix-financial-states.expected.json",
++      "bytes": 10672,
++      "sha256": "45471ab3be3b1ad9bde1c2584bd6c616ffcafb7d00a651dd197547729703f5f2"
++    },
++    {
++      "path": "pay_rebate.independent-source6.txt",
++      "bytes": 1136,
++      "sha256": "4fd05327c2575ee4dc583b7d76061e2d8b0ec340cd476f66502d21970900ee6f"
++    },
++    {
++      "path": "pay_rebate.ordered-target-lines.expected.json",
++      "bytes": 1512,
++      "sha256": "02ed4f6a1e83f47de5cf1713d91d127262e9dc7702b456f5b33e3eeff2d2dfbb"
++    },
++    {
++      "path": "pay_rebate.source6.ast.expected.json",
++      "bytes": 2250,
++      "sha256": "778d2b32521b6ab76e4cfa0b3bcfdfc052ee5c71e55d2d08523993e9215d8015"
++    }
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/PROVENANCE.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/PROVENANCE.json
+new file mode 100644
+index 00000000..7d792193
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/PROVENANCE.json
+@@ -0,0 +1,112 @@
++{
++  "frozenAtUtc": "2026-10-18T13:08:02.096272+00:00",
++  "author": "GPT-6.1SolHIGH ordinary independent arithmetic/financial oracle; nosecurityjudgment",
++  "startupCheckout": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018",
++  "sourceInputs": [
++    {
++      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-positive-max-transfer-source-20261018/inputs/max-rebate.mori",
++      "copy": "inputs/max-rebate.mori",
++      "bytes": 1094,
++      "sha256": "f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712"
++    },
++    {
++      "path": "/home/charl/moriarty-c2-opus55-restored-20261017/core-positive-max-transfer-source-20261018/inputs/max-rebate.scenario.json",
++      "copy": "inputs/max-rebate.scenario.json",
++      "bytes": 500,
++      "sha256": "3f4686133024bc48a8b9f5499a7811b007682f89e27b91dd620f5e6da11973d8"
++    }
++  ],
++  "basis": [
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/packages/moriarty-beta/README.md",
++      "copy": "basis/packages/moriarty-beta/README.md",
++      "bytes": 4772,
++      "sha256": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d",
++      "kind": "normative/reference document from restoredKcheckout; byte-pinned, noGitHEADquery"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/packages/moriarty-beta/GETTING-STARTED.md",
++      "copy": "basis/packages/moriarty-beta/GETTING-STARTED.md",
++      "bytes": 11939,
++      "sha256": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706",
++      "kind": "normative/reference document from restoredKcheckout; byte-pinned, noGitHEADquery"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/docs/BETA-SOURCE6-EXPANSION.md",
++      "copy": "basis/docs/BETA-SOURCE6-EXPANSION.md",
++      "bytes": 4376,
++      "sha256": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f",
++      "kind": "normative/reference document from restoredKcheckout; byte-pinned, noGitHEADquery"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
++      "copy": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
++      "bytes": 11648,
++      "sha256": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec",
++      "kind": "normative/reference document from restoredKcheckout; byte-pinned, noGitHEADquery"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
++      "copy": "basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
++      "bytes": 3753,
++      "sha256": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e",
++      "kind": "normative/reference document from restoredKcheckout; byte-pinned, noGitHEADquery"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/experiments/moriarty-language/spec/successor/lexical.md",
++      "copy": "basis/experiments/moriarty-language/spec/successor/lexical.md",
++      "bytes": 5589,
++      "sha256": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639",
++      "kind": "normative/reference document from restoredKcheckout; byte-pinned, noGitHEADquery"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts",
++      "ranges": [
++        [
++          112,
++          138
++        ],
++        [
++          318,
++          321
++        ]
++      ],
++      "copy": "basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt",
++      "bytes": 1833,
++      "sha256": "6ffb712142eff9c36d8eb2f89b9e75a105f6b1e875cdc4f4f855b49adb9dcc9f",
++      "kind": "publicDTOdeclarations only; product module not imported/executed"
++    },
++    {
++      "path": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts",
++      "ranges": [
++        [
++          10,
++          47
++        ]
++      ],
++      "copy": "basis/dto/mil4-s0-core-v5.ts.declarations.txt",
++      "bytes": 1918,
++      "sha256": "3cb6485ca0014fe2f72cb4c8d2ff1dc2b4a0025bdc6f93c450cdb4d66c8d06e8",
++      "kind": "publicDTOdeclarations only; product module not imported/executed"
++    }
++  ],
++  "sourceCurrency": "PhysicalKnormative/DTO bytes pinned bySHA256; noGitHEADquery or movingmainidentity inferred.",
++  "priorImplementationExposure": [
++    "Earlier Core1 financial report/IR/parser/evaluator source preparation.",
++    "Earlier RustSource6 CLI/library/emitter/lexer/checker ownerpacket exposure, oldinvoice/workshop cases.",
++    "Earlier separately frozen capped-remittance semantic oracle."
++  ],
++  "currentExcludedUnread": [
++    "Author newtests/expectedoutputs/numericrecipe/patch",
++    "Actual product/parser/lowerer/preparer/compiler/evaluator outputs"
++  ],
++  "currentMethod": "Independent exact integer arithmetic and normative grammar/DTO mapping, standardPython JSON/text only; no Moriarty module imported.",
++  "actualRoute": "beta/1 -> explicitSource6 transfer proposal; notCore1compile",
++  "calls": {
++    "productCompilerRuntimeSDK": "UNRUN",
++    "provider": "NOT_CALLED",
++    "Git": "NOT_CALLED"
++  },
++  "securityJudgment": false,
++  "scope": "Finite financial input/outcome projections, fullorderedSource6AST/effects and conditionalfinancialprefixes; notwholeCorestate/artifact/qualification."
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/README.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/README.md
+new file mode 100644
+index 00000000..b56516be
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/README.md
+@@ -0,0 +1,5 @@
++# Frozen independent beta max-transfer financial oracle
++
++EXPECTED-SEMANTICS.json uses common + cases[0], analogous to the capped-remittance freeze. Complete Source6Ast, statement sequence, source/Core5effect vectors, complete provided opening/conditionalclosing financial frames, gross/fee/net amounts and local residual-duty scope are included. The prefix file freezes7complete mathematical financial frames. These are not actualruntimeTrace or fullCorestate expectations. Work assumptions/unknowns are explicit and separately labeled. The historical directory name does not claim Corecompiler support.
++
++Only newauthorinputs and K normative/DTO definitions were read. Prior implementation exposure is disclosed inPROVENANCE.json. No newauthororacle/test/output or product/provider/SDK/Git call was used. Actualstdout byteformat, wholeProgram/Artifact, hashes, work/gates/qualification are not asserted. FREEZE.sha256 is immutable; keep execution results elsewhere.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/STATIC-CHECKS.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/STATIC-CHECKS.json
+new file mode 100644
+index 00000000..af82e30e
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/STATIC-CHECKS.json
+@@ -0,0 +1,17 @@
++{
++  "scope": "ordinary independent arithmetic/custody only",
++  "leftAtoms": 800,
++  "rightAtoms": 700,
++  "maxAtoms": 800,
++  "feeAtoms": 25,
++  "grossAtoms": 825,
++  "grossCapAtoms": 850,
++  "providedBalanceTotalBefore": 2012,
++  "providedBalanceTotalAfter": 2012,
++  "allowanceTotalBefore": 2025,
++  "allowanceTotalAfter": 2025,
++  "effectCount": 6,
++  "financialPrefixFrames": 7,
++  "productTests": "UNRUN",
++  "producerExpectedOrOutputRead": false
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/UNKNOWN.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/UNKNOWN.json
+new file mode 100644
+index 00000000..3a00fe15
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/UNKNOWN.json
+@@ -0,0 +1,10 @@
++{
++  "wholeProgram": "UNKNOWN; no Core1/Core2 Program/arena/ExprId/frontend normalization oracle.",
++  "artifact": "UNKNOWN; no backendArtifact/ZKIR/SDK/circuit/ABI/lowering target claim.",
++  "hashes": "Product source/scenario/program/plan/policy/proof/target identities UNKNOWN; input/FREEZE SHA256s are custody only; source_hash/policy_digest are opaque literal claims.",
++  "work": "Input12/2known; actuallogical/meters/cost/schedule/postworkUNKNOWN; symbolic assumptions separately labeled.",
++  "gatesAndQualification": "Actual check/formation/Corestatus/gates/code/qualification/exit/stderr UNKNOWN; no PreparedUnqualified acceptance assumed.",
++  "fullPostAndPrefixes": "Financial frames cover complete provided3balances/1allowance plus selectedhead/round/replay/localduties; completeCorestate/globalframe/postwork and actualruntimeprefixtrace UNKNOWN.",
++  "bytes": "Actualstdout/stderr/wrapper/originspans and byteformatUNKNOWN; independentSource6text fixes statements/order with arbitrary grammar-valid indentation.",
++  "security": "No authentication/signature/proof/native/ledger judgment or financialsoundness claim supplied."
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md
+new file mode 100644
+index 00000000..1851e6eb
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md
+@@ -0,0 +1,30 @@
++# Rust beta Source/6 transfer expansion
++
++Status: ordinary interface adopted by the [2026-10-18 root decision](../evidence/utxo/doctorwatson-language-loop-2026-10-17/source6-public-consumer-adoption-20261018/DESIGN-ADOPTION.json). Source integration/audit and actual runtime remain UNRUN or pending; no compile, real-lowerer, security, native or release qualification is established. The `source6-expansion` Cargo feature enables the explicit local transfer presentation path; it is separate from `native` and does not alter default features.
++
++Existing default command, unchanged:
++
++```sh
++mori expand core.mori --action noop --scenario core.json
++```
++
++This still validates a Core action against its Core scenario and prints its generic Core Program JSON. A Rust beta file supplied without the new option still reaches the existing Core parser and refuses; no default beta output is replaced. The separate Node beta package and its default JSON expansion output are unchanged.
++
++Adopted explicit command interface, in a build with `source6-expansion` enabled:
++
++```sh
++mori check invoice.mori --json
++mori --quiet expand invoice.mori --action pay --scenario scenario.json --emit-source6-transfer
++```
++
++The explicit command reads a typed local transfer scenario and first calls `mori-source6::select_transfer`, which uses the real Rust beta parser and checker, before reading the scenario file. The resulting `SelectedTransfer::expand` is the same emission path used by the `expand_transfer` convenience API. Stdout is the actual generated Source/6 text with its existing final newline; `--quiet` leaves stderr empty. Without `--quiet`, stderr reports `Expanded Source/6 transfer proposal (local-stipulation-only)`. It does not emit a Core success result. Without the build feature, the explicit option reports `mori::command::source6-unavailable`.
++
++Source/action checking and unsupported selection precede scenario I/O. After strict JSON parsing, profile/kind is checked before closed transfer decoding; `obligation` and `candidate_effects` produce `source6-scenario-unsupported`, a non-three balance array produces `source6-scenario-cells`, and other DTO-shape errors produce `source6-scenario-shape`. Foreign/missing profile/kind produces `source6-scenario-profile`. These are ordinary command diagnostic categories, not Core judgments.
++
++The adopted scenario JSON interface is the closed **transfer subset** of the existing `moriarty-local-scenario/1` / `local-stipulation` shape. It requires domain, asset, head, predecessor, round, exactly three ordered balances, allowance, replay, work_remaining, work_spent and post_head. Numeric values are canonical decimal strings parsed through the existing Core UInt decoder; no new decimal evaluator is introduced. Balance order is owner, recipient, fee recipient. Replay is `unused` or `consumed`. Obligation and candidate_effects overrides are outside this option. The current strict CLI reader and existing read/JSON bounds apply.
++
++The root decision adopts this profile-token reuse, transfer subset, option name, feature name, raw stdout/status output and public diagnostic classifications as the exact ordinary interface. The two original design reviews and their historical wording remain unchanged in the decision record. Adoption does not establish full Node beta wire or diagnostic parity. The typed borrowed local scenario passed to the library is an internal input, not proof or authentication.
++
++Evidence remains separate: the existing independent14 financial payload baseline predates this actual consumer. Same-author pre-code fixture/snapshot files remain author baselines; complete new wire/output/work expectations and the chosen WorkshopReceipt fixture freeze are still missing. Public binary checks, actual emitted Rust bytes through `parseAndLowerSource6`, ordinary source/result audits and the designated owner's filename/security judgment remain unrun or pending.
++
++Boundary: Rust beta/1 → local transfer proposal presentation → Source/6 text. The real experimental TypeScript `parseAndLowerSource6` must still consume actual emitted bytes; its Core/5 preparation remains separately unqualified. This option provides no Source/6/Core/5→Core/1/Core/2/Sherlock/native embedding, no handwritten target IR and no target/proof/post-state success. The default Core and separate Node consumers retain their own profiles.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt
+new file mode 100644
+index 00000000..3e1456cb
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt
+@@ -0,0 +1,35 @@
++// DTOdeclarations experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:112-138; no implementation body used.
++export type Source6Action =
++  | { kind: 'Transfer'; from: string; to: string; feeTo: string; value: string; fee: string }
++  | { kind: 'Repay'; obligation: string; payer: string; amount: string; conversion: 'identity' };
++export interface Source6Obligation {
++  id: string; debtor: string; creditor: string; asset: string;
++  principal: string; accrued: string; outstanding: string; status: 'Outstanding';
++}
++export interface Source6Ast {
++  profile: typeof MIL4_S0_SOURCE; programId: string; domain: string;
++  settlement: { asset: string; scale: string };
++  selected: { actionId: string; sourceHash: string; policyDigest: string };
++  intent: {
++    signer: string; keyRef: string; nonce: string; preHead: string;
++    notBefore: string; notAfter: string; grossCap: string; feeCap: string; netFloor: string;
++    signedAction: Source6Action; failure: 'success_only';
++    observations: 'empty'; disclosures: 'empty'; retainedEffects: 'empty'; retainedDuties: 'empty';
++    delegation: 'none'; recovery: 'none';
++  };
++  authenticated: {
++    head: string; predecessor: string; round: string;
++    balances: { account: string; amount: string }[];
++    allowance: { owner: string; remaining: string; spent: string };
++    obligation?: Source6Obligation; replay: 'unused' | 'consumed';
++    workRemaining: string; workSpent: string;
++  };
++  submitted: { action: Source6Action; effects: S0Effect[]; postHead: string };
++}
++
++// DTOdeclarations experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:318-321; no implementation body used.
++export interface Source6Lowered {
++  ast: Source6Ast; state: S0State; intent: S0Intent;
++  submittedEffects: S0Effect[]; proposedPostHead: string;
++}
++
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt
+new file mode 100644
+index 00000000..3e1d73fb
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt
+@@ -0,0 +1,40 @@
++// DTOdeclarations experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts:10-47; no implementation body used.
++export interface S0Balance { account: string; amount: string }
++export interface S0Allowance { owner: string; remaining: string; spent: string }
++export interface S0Obligation {
++  id: string; debtor: string; creditor: string; asset: string;
++  principal: string; accrued: string; outstanding: string;
++  status: 'Outstanding' | 'Settled';
++}
++export interface S0State {
++  core: typeof MIL4_S0_CORE; domain: string; asset: string;
++  head: string; round: string; workRemaining: string; workSpent: string;
++  balances: S0Balance[]; allowances: S0Allowance[];
++  obligations: S0Obligation[]; consumedReplay: string[];
++}
++interface S0IntentBase {
++  version: typeof MIL4_S0_INTENT; core: typeof MIL4_S0_CORE;
++  sourceProfile: typeof MIL4_S0_SOURCE; programId: string;
++  sourceHash: string; policyDigest: string; signedDigest?: string; keyRef: string;
++  domain: string; asset: string; signer: string; nonce: string;
++  preHead: string; notBefore: string; notAfter: string;
++  grossCap: string; feeCap: string; netFloor: string;
++}
++export interface S0TransferIntent extends S0IntentBase {
++  kind: 'Transfer'; recipient: string; feeRecipient: string;
++  amount: string; fee: string;
++}
++export interface S0RepayIntent extends S0IntentBase {
++  kind: 'Repay'; obligationId: string; amount: string;
++}
++export type S0Intent = S0TransferIntent | S0RepayIntent;
++
++export type S0Effect =
++  | { kind: 'Debit'; account: string; asset: string; amount: string }
++  | { kind: 'Credit'; account: string; asset: string; amount: string }
++  | { kind: 'SetObligation'; id: string; principal: string; accrued: string; outstanding: string; status: 'Outstanding' | 'Settled' }
++  | { kind: 'UseAllowance'; owner: string; amount: string }
++  | { kind: 'UseReplay'; key: string }
++  | { kind: 'AdvanceHead'; predecessor: string; successor: string };
++
++
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf
+new file mode 100644
+index 00000000..6fc1b588
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf
+@@ -0,0 +1,65 @@
++(* ISO 14977 EBNF; provisional Source/6 S0 presentation syntax only.
++   This is not the /3 signed-intent byte codec. The exact profile string is
++   moriarty-financial-agreement-source/6. Whitespace, comments, identifiers,
++   integers and strings use lexical.md. New words and the .. interval token
++   below are profile-local and do not extend Source/5.
++   All productions are closed; unknown fields and duplicate fields reject.
++   The companion contract defines nominal typing, caps and Core/5 mapping. *)
++
++source = header, agreement, ? end of file ? ;
++header = "profile", '"moriarty-financial-agreement-source/6"', ";" ;
++agreement = "agreement", identifier, "{", domain, settlement,
++            selected, intent, authenticated, submitted, "}" ;
++domain = "domain", identifier, ";" ;
++settlement = "settlement", identifier, "scale", integerToken, ";" ;
++selected = "selected", identifier, "source_hash", stringToken,
++           "digest", stringToken, ";" ;
++
++intent = "intent", "{", "signer", identifier, "key", stringToken, ";",
++         "nonce", stringToken, ";", "pre_head", stringToken, ";",
++         "valid", integerToken, "..", integerToken, ";",
++         "gross_cap", integerToken, ";", "fee_cap", integerToken, ";",
++         "net_floor", integerToken, ";", "failure", "success_only", ";",
++         "signed_action", ( transfer | repay ),
++         "observations", "empty", ";", "disclosures", "empty", ";",
++         "retained_effects", "empty", ";", "retained_duties", "empty", ";",
++         "delegation", "none", ";", "recovery", "none", ";", "}" ;
++
++authenticated = "authenticated", "{", "head", stringToken, ";",
++                "predecessor", stringToken, ";", "round", integerToken, ";",
++                "balance", identifier, integerToken, ";",
++                "balance", identifier, integerToken, ";",
++                [ "balance", identifier, integerToken, ";" ],
++                "allowance", identifier, "remaining", integerToken,
++                "spent", integerToken, ";",
++                [ obligation ], "replay", ( "unused" | "consumed" ), ";",
++                "work_remaining", integerToken, ";",
++                "work_spent", integerToken, ";", "}" ;
++obligation = "obligation", identifier, "{", "debtor", identifier, ";",
++             "creditor", identifier, ";", "asset", identifier, ";",
++             "principal", integerToken, ";", "accrued", integerToken, ";",
++             "outstanding", integerToken, ";", "status", "outstanding", ";",
++             "}" ;
++
++submitted = "submit", ( transfer | repay ), "effects", "{", effectVector, "}",
++            "post_head", stringToken, ";" ;
++transfer = "transfer", "from", identifier, "to", identifier,
++           "fee_to", identifier, "value", integerToken,
++           "fee", integerToken, ";" ;
++repay = "repay", "obligation", identifier, "payer", identifier,
++        "amount", integerToken, "conversion", "identity", ";" ;
++effectVector = transferEffects | repayEffects ;
++transferEffects = debit, credit, [ credit ], useAllowance, useReplay, advanceHead ;
++repayEffects = debit, credit, setObligation, useAllowance, useReplay, advanceHead ;
++debit = "debit", identifier, integerToken, ";" ;
++credit = "credit", identifier, integerToken, ";" ;
++setObligation = "set_obligation", identifier, "principal", integerToken,
++                "accrued", integerToken, "outstanding", integerToken,
++                "status", ( "outstanding" | "settled" ), ";" ;
++useAllowance = "use_allowance", identifier, integerToken, ";" ;
++useReplay = "use_replay", stringToken, ";" ;
++advanceHead = "advance_head", stringToken, stringToken, ";" ;
++
++identifier = ? ASCII identifier token in lexical.md ? ;
++integerToken = ? canonical unsigned decimal token in lexical.md ? ;
++stringToken = ? JSON string token in lexical.md ? ;
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md
+new file mode 100644
+index 00000000..dca76f9a
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md
+@@ -0,0 +1,48 @@
++# Financial agreement Source/6 and Core/5 S0 contract
++
++**Status:** provisional Sprint 0 specification, 2026-09-29. The grammar is a closed presentation syntax for one S0 stage proposal, and an isolated Source/6 parser and local Core/5 preparer implement this first slice. It is not a signed `/3` encoding or an adopted MIL/4 profile. W-D0–W-D4 remain open. See the [MIL/4 semantic contract](../../formal/mil4/semantics-contract.md) and [S0 implementation contract](../../formal/mil4/s0-implementation-contract.md).
++
++## Formation and version gate
++
++The [EBNF](financial-agreement-source-v6-grammar.ebnf) parses exactly one `profile`, one `agreement`, and one stage proposal. Its header must contain the raw token `"moriarty-financial-agreement-source/6"` before parsing the agreement body; a differently escaped spelling is outside this provisional presentation. The fixed declaration and field order is presentation syntax, not a claim about signed bytes. Unknown, repeated, omitted or out-of-order fields reject at Source/6 formation with `SOURCE6_SHAPE`; an unknown action or effect tag rejects with `SOURCE6_UNKNOWN_TAG`. A different header rejects with `SOURCE6_VERSION`. The closed source grammar also rejects a nonempty failure, observation, disclosure, retained-effect or duty form at formation with `SOURCE6_SHAPE`; `S0_FAILURE_UNSUPPORTED` applies only when a typed Core/5 stage reaches the failure judgment. These source rejections have no Core/5 term or K transition. A local Source/5 parser test confirms that a `/6` header rejects with `PROFILE_MISMATCH`; Core/4-to-Core/5 compatibility has not been implemented or verified here.
++
++The grammar borrows only the token definitions from `lexical.md`; all literal words in the Source/6 EBNF are profile-local reserved words and cannot be identifiers. This does not alter Source/5 keywords. Limits are simultaneous: source UTF-8 bytes ≤65536, tokens ≤8192, AST nodes ≤8192, nesting depth ≤64, identifiers ≤64 ASCII characters, decoded strings ≤1024 UTF-8 bytes, and one stage/effect vector per document. Opaque string fields in this S0 presentation must be nonempty. `scale` is 0..18; each nominal amount (`value`, `fee`, `amount`, caps and floor) is 0..`2^127−1`; each balance, allowance counter and work count is 0..`2^128−1`. S0 uses checked UInt128 intermediates, including `value+fee`, `principal+accrued`, credits and spent counters. The current source/kernel nominal bound does not by itself impose the same bound on every lifecycle state field. This S0 proposal additionally caps principal, accrued and outstanding at `2^127−1` and requires `outstanding=principal+accrued`. W-D4 must review that additional narrowing. Invalid bounds, including an inverted validity interval, reject before K admission with `SOURCE6_RANGE`.
++
++Source/6 formation applies an action-dependent shape check after the closed EBNF parses: transfer requires three balance rows in owner, recipient, fee-recipient order and no obligation; repay requires two rows in payer, bound-creditor order and exactly one obligation. All endpoint identifiers are pairwise distinct for transfer; payer and creditor differ for repay. Duplicate or missing authenticated cells reject `SOURCE6_CELL_SHAPE`; an absent receiver balance is not silently initialized. The allowance owner equals signer. The replay row states whether the selected signed key is unused or consumed; a consumed row rejects at history. The authenticated block is a *claim* until a snapshot-to-head premise establishes each cell and the current head. The strings used for key, nonce, digest and heads are opaque typed identifiers in this syntax, not hash byte definitions.
++
++## Source fields to Core/5
++
++One elaboration proposes `Core5Stage(pre, action, signedScope, submittedEffects, premises)`. The current direct parser preserves agreement ID, asset scale and authenticated predecessor on its AST, but the local Core preparer does not bind those three fields or an exact `/3` digest. It reports the candidate as `PreparedUnqualified`. The Core/5 tags below are proposed typed constructors. No caller Boolean can establish authentication or signature validity.
++
++The local intent object carries the proposed version label `moriarty-intent/3`. That label is a type discriminator only. Source/6 lowering does not encode canonical `/3` bytes or calculate their digest, and no verifier consumes this object as a signed authorization.
++
++| Source/6 field or form | Core/5 field or constructor | Rule |
++| --- | --- | --- |
++| `profile`, `agreement`, `domain`, `settlement` | Proposed `Version(Source6,Core5)`, `AgreementId`, `DomainId`, `AssetId(scale)` | The parser retains all four. The current local Core preparer does not bind `AgreementId` or scale; these remain named unverified bindings. |
++| `selected … source_hash … digest` | Proposed `SelectedProgram(actionId,sourceHash,policyDigest)` | The current Core field named `programId` contains the selected **action ID**, not the agreement ID. Binding all three to a signed statement remains unverified. S0 uses exact action IDs `TransferLiteralFee` and `RepayAccrualFirst`, matching the signed and submitted constructor. Any other action ID rejects `SOURCE6_PROFILE_UNSUPPORTED`. |
++| `signer … key`, `nonce`, `pre_head`, `valid` | `SignedScope(signer,keyRef,replayKey,preHead,roundLo,roundHi)` | `replayKey=(domain,signer,nonce)`; the exact digest and verifier are external typed premises. |
++| `signed_action` | `SignedAction(TransferLiteralFee | RepayAccrualFirst)` | Fix owner/payer, recipients, fee recipient, obligation ID and quantities under the signature. The submitted action must match this signed action exactly. |
++| `gross_cap`, `fee_cap`, `net_floor` | `Bounds(grossCap,feeCap,netFloor)` | Bind all three to the signed scope; authority uses gross debit. |
++| `failure success_only` and six explicit empty/none fields | `FailurePolicy(SuccessOnly)`, empty observation, disclosure, retained effect and duty, no delegation or recovery | The current parser rejects a nonempty source variant at formation with `SOURCE6_SHAPE`. A separately constructed typed Core/5 requested outcome reaches `S0_FAILURE_UNSUPPORTED` at Failure. The Source/6 parser cannot express that typed hostile input. No accepted fee-bearing failure exists. |
++| `authenticated head`, `predecessor`, `round` | `PreHead`, `Predecessor`, `CurrentRound` | Must be authenticated against the same snapshot; current head comparison is atomic with replay consumption. |
++| `balance`, `allowance`, `obligation`, `replay`, `work_remaining`, `work_spent` | `BalanceCell`, `AllowanceCell`, `ObligationCell`, `ReplayCell`, `WorkCell` | These are read cells. Obligation binds debtor, creditor, asset, principal, accrued, outstanding and status. Both work counters come from the authenticated snapshot; lowering never resets spent work. |
++| `transfer` | `TransferLiteralFee(owner,recipient,feeRecipient,value,fee)` | Owner=signer. Prepare debit gross, recipient credit value, and fee credit only when fee>0. |
++| `repay` | `RepayAccrualFirst(obligationId,payer,amount,IdentityConversion)` | Payer=debtor=signer. Read bound creditor and asset from obligation; do not accept caller supplied substitutes. |
++| `effects` | `PreparedEffects` comparison candidate | Order and values must equal the internally derived vector below. The supplied vector does not define the effect. In this provisional text profile, `use_replay` supplies the signed nonce; Core derives the domain/signer/nonce replay key. |
++| `post_head` | `PostHead` candidate | Must be a valid authenticated successor under the external head-extension premise. |
++
++For transfer, prepare `Debit(owner,v+f)`, `Credit(recipient,v)`, optional `Credit(feeRecipient,f)` when `f>0`, `UseAllowance(owner,v+f)`, `UseReplay(key)`, `AdvanceHead(pre,post)` in exactly that order. The optional line is present iff `f>0`; a zero-valued fee line rejects. Require `v>0`, `f≤feeCap`, `v+f≤grossCap`, `v≥netFloor`, sufficient owner balance and remaining allowance, and no overflow in any receiver or spent counter. Debit and credits conserve the same nominal asset. Preserve gross effects even though balance changes could be netted. The local wrapper checks Stage first, then requires the transfer in `submit` to equal `signed_action`; it withholds any candidate prepared during that local check when they differ.
++
++For repay, require one Outstanding obligation, `0<n≤outstanding`, matching asset, identity conversion `(mantissa=1,scale=0,rounding=none)`, `feeCap=0`, `netFloor=0`, sufficient payer balance and allowance, and no overflow in the creditor or spent counter. Let `da=min(n,accrued)` and `dp=n−da`. Prepare `Debit(payer,n)`, `Credit(boundCreditor,n)`, `SetObligation(p−dp,a−da,p+a−n,status')`, `UseAllowance(payer,n)`, `UseReplay(key)`, `AdvanceHead(pre,post)`. `status'` is Settled iff outstanding becomes zero. Every unlisted authenticated cell is unchanged. A debt reduction without the creditor credit rejects. The local wrapper checks Stage first, then requires the repayment in `submit` to equal `signed_action`; it withholds any candidate prepared during that local check when they differ.
++
++## Admission and observation
++
++Core/5 applies `stage → intent → effect → authority → history → failure`. `stage` checks version, selected program, typed cells and authentication premises. `intent` checks exact signed scope, validity, endpoints, alias policy and all signed nominal caps and floors. `effect` computes and compares the complete ordered vector and post cells. `authority` checks signer, allowance and work budget. `history` compares the current head and unused replay key and verifies successor binding. `failure` accepts only terminal success with empty retained effects and duties. The first failing judgment returns `(judgment,code,diagnosticWork)` without a published post-state or effects. Within-judgment code spelling and precedence remain W-D3 choices; provisional codes are in `s0-implementation-contract.md`.
++
++The result shape is `Core5Observation(pre,action,signedScope,preparedEffects,post,remainingDuty,remainingWork,replay,preHead,postHead,phase,judgment,code)`. Accepted S0 success contains complete effects, consumption, writes, one post-head and empty duty. Atomic rejection contains the first judgment/code and diagnostic work, with `post`, published effects and post-head absent. Snapshot authentication, exact signature verification, head extension and ledger compare-and-consume are typed external premises; failure or absence rejects. Source/6 grammar acceptance alone does not imply admission.
++
++## Boundary with earlier and later forms
++
++Source/5 `profile`, declarations, `action`, expression and `emit` forms have no automatic injection into this S0 stage. A future migration must map every legacy field, selected Core/4 program, authenticated state, signed digest and complete effect obligation, then prove the old and new observations equivalent on the stated domain. `Repay` in Core/4 consumes a separate Transfer; Core/5's `RepayAccrualFirst` is one funded stage. All old Source/5 and Core/4 behavior remains historical until such a mapping is demonstrated.
++
++The eight MIL/4 first families and all later profiles reject from this S0 grammar with `SOURCE6_PROFILE_UNSUPPORTED` or `SOURCE6_UNKNOWN_TAG` at formation. A later full Source/6 grammar must add typed productions and Core/5 constructors per family. General Φ₁, uncertified Ω, division, rounding, mint, reserve, foreign evidence, accepted failures and recovery are outside S0. This document does not turn those forms into generic records or strings.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md
+new file mode 100644
+index 00000000..2a57e608
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md
+@@ -0,0 +1,80 @@
++# Lexical rules for `moriarty-successor-syntax/0`
++
++These rules are the lexical layer for [grammar.ebnf](grammar.ebnf). They are not a second grammar dialect. Regular expressions below are JavaScript Unicode regular expressions and apply only to this note. The ISO EBNF file refers to the tokens named here through special sequences.
++
++## Encoding and spans
++
++Input is a sequence of Unicode scalar values encoded as UTF-8. Lone UTF-16 surrogates in a JavaScript string, malformed UTF-8 in CLI file bytes, and escaped lone surrogates in string literals all fail. The CLI decoder uses a fatal UTF-8 decode. It does not replace invalid bytes.
++
++Source locations are 0-based UTF-8 byte offsets on the half-open interval `[start, end)`. Comments and whitespace occupy bytes and count toward the 65536-byte source bound. They are not tokens and they are not AST nodes.
++
++The parser does not normalize Unicode, strip a BOM, or rewrite the caller string.
++
++## Whitespace
++
++ASCII space, tab, CR, and LF may separate tokens. No other code point is whitespace.
++
++## Comments
++
++Line comments start with `//` and run through the last character before a U+000A line feed, or through end of file if no line feed remains. A line comment at end of file is terminated.
++
++Block comments start with `/*` and end at the first `*/`. They do not nest. `/* /* */` ends at the first closer. An unclosed `/*` fails with `UNTERMINATED_COMMENT`.
++
++A `/` that does not start `//` or `/*` is not a token. There is no division operator.
++
++## Identifiers and keywords
++
++An identifier is `[A-Za-z][A-Za-z0-9_]*` and is at most 64 ASCII characters. Identifiers are case-sensitive. A non-ASCII letter, number, connector punctuation, nonspacing mark, or spacing combining mark (Unicode categories `L`, `N`, `Pc`, `Mn`, or `Mc`) at the start of a token or immediately after an ASCII identifier prefix fails with `NON_ASCII_IDENTIFIER`. For example, standalone U+0301 and `a` followed by U+0301 both fail with that code. Other non-ASCII code points outside strings and comments fail with `UNEXPECTED_CHAR`.
++
++A word that equals a keyword is a keyword token. Keywords cannot be identifiers.
++
++Keywords:
++
++```
++profile agreement unit party asset const state action
++requires let next emit ensures
++true false not and or
++```
++
++`pre` and `post` are identifiers. `next` is a keyword and begins a state update. `floor_div` and `ceil_div` are identifiers and parse as calls when followed by an argument list.
++
++## Integer tokens
++
++An integer token is `0` or `[1-9][0-9]*`. The lexer consumes `[0-9]+` and then checks that form. Leading zeros, signs, decimal points, exponent suffixes, and digit separators fail. The token is kept as decimal text. It is not converted to a IEEE number. More than 78 digits fails with `INTEGER_BOUND`.
++
++## String tokens
++
++A string token is a JSON string in RFC 8259 form, including the surrounding quotes. Allowed escapes are `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`, `\t`, and `\uXXXX` with four hexadecimal digits. Unescaped U+0000 through U+001F, unknown escapes, and an unclosed quote fail.
++
++After decoding, the value must be Unicode scalar values. A decoded lone surrogate, including one produced by `\uD800` without a trailing low surrogate, fails with `INVALID_SURROGATE`. A valid surrogate pair in escapes is one supplementary scalar. The decoded UTF-8 length must be at most 1024 bytes.
++
++The formatter emits the original string token text, so `\u0041` and `A` remain distinct literals.
++
++Unicode scalar values may appear in string and comment contents. Their byte spans follow UTF-8.
++
++## Punctuation and token priority
++
++The lexer uses longest match in this order:
++
++1. Whitespace (discarded)
++2. Line comment or block comment (discarded)
++3. Two-character operators `==`, `!=`, `<=`, `>=`
++4. One-character punctuation `{ } ( ) < > , : ; . = + - *`
++5. String
++6. Integer
++7. Keyword or identifier
++8. Failure
++
++There is no `>>` token. Nested generics `Map<Debt<USD>>` are two `>` tokens.
++
++`>=` is one token. A type that is immediately followed by `=` without whitespace therefore lexes as `>=`. The type parser splits a `>=` token into `>` and `=` when it is closing a type argument list, so `Debt<USD>= debt(1, USD)` is accepted. The split rewrites that token in place and does not emit a new lexer token. The extra `=` counts toward the 8192 token bound including the end-of-file token. The formatter always writes a space before `=`.
++
++`<` and `>` are type-argument delimiters only in type position. In expressions they are comparisons. This profile has no call-site type arguments, so `foo<bar>` in an expression is `foo < bar` plus a leftover `>`.
++
++## End of file
++
++The grammar's `? end of file ?` special sequence matches the lexer’s single EOF sentinel after all source characters, including trailing whitespace or a terminated comment, have been consumed. EOF has zero width: its start and end spans both equal the source UTF-8 byte length. It consumes no source character and cannot match before remaining non-ignored text. The sentinel counts as one token toward the token bound.
++
++## Token bound
++
++Whitespace and comments are not counted. The token bound is 8192 including the end-of-file token. The lexer reserves one slot for end of file, so 8191 non-EOF tokens plus EOF are accepted and a 8192nd non-EOF token is rejected. The type parser may rewrite a `>=` token in place into `>` and `=` when it closes a type argument list. That rewrite does not emit a lexer token. The extra `=` counts toward the 8192 bound including the end-of-file token. If the bound would be exceeded, the parser fails with `TOKEN_BOUND`.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md
+new file mode 100644
+index 00000000..458194f2
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md
+@@ -0,0 +1,195 @@
++# Get started with Moriarty beta
++
++This package checks `.mori` financial authoring and locally prepares two S0
++operations. **PreparedUnqualified means a candidate, not an authenticated,
++proved, signed or settled transaction.** The local scenario is a stipulation.
++The other eight-family examples check structure only (`SpecifiedOnly`).
++For external signatures checked by the actual Rust verifier before preparation,
++follow the [signed intent walkthrough](SIGNED-INTENT.md). Its public examples
++include BIP340/raw transfer, ECDSA/wallet-framed transfer and ECDSA/raw repayment.
++
++## Install and run
++
++Use Node 24 or later. From `packages/moriarty-beta` in a Moriarty checkout:
++
++```sh
++npm ci
++npm run build
++node dist/cli.js init /tmp/invoice
++node dist/cli.js check /tmp/invoice/invoice.mori
++node dist/cli.js test /tmp/invoice
++node dist/cli.js simulate /tmp/invoice/invoice.mori --action pay --scenario /tmp/invoice/scenario.json
++node dist/cli.js init /tmp/loan --template repay
++node dist/cli.js test /tmp/loan
++node dist/cli.js simulate /tmp/loan/repayment.mori --action repay_loan --scenario /tmp/loan/scenario.json
++```
++
++`init` refuses an existing directory. `--template transfer` is the default;
++`--template repay` creates `repayment.mori` instead of `invoice.mori`.
++For an installation outside the checkout, run `npm pack` here, then install that
++local `.tgz` into your project with `npm install /absolute/path/to/archive.tgz`.
++Run `npx mori` there. No npm registry publication is claimed.
++`mori COMMAND --help` shows the command's arguments. Exit 0 means the requested
++local operation completed: a preparation remains unqualified. Exit 1 means
++rejection, unsupported execution, test mismatch or a command/file error.
++
++## Read the program
++
++A program begins `profile "moriarty-beta/1"; agreement Name { ... }`.
++Declarations refer only to previous immutable declarations. Account and asset
++names are source names; their `id` fields are economic identity claims.
++`Buyer` may have `id: "Owner"`: the scenario and Core effects use `Owner`.
++Changing a source alias does not change that economic identity. A symbol such as
++`USD` is display metadata, not an asset identity or conversion permission.
++Different assets/domains never mix implicitly. Asset scale 2 means `10.00 USD`
++is 1000 atoms. JSON monetary amounts are canonical decimal **atom strings**.
++No floating point, division, rounding or implicit asset conversion exists.
++`Qty<USD>`, amount literals, `atoms(asset: USD,value: 1000)`, checked arithmetic,
++named calls, comments and trailing commas provide authoring convenience.
++
++An `intent` supplies explicit signer/key/nonce/head, inclusive round window,
++gross cap (including fees), fee cap, net floor and fixed operation. Empty
++observations/disclosures/retained effects/duties and `None` delegation/recovery
++are explicit signed terms. `action pay uses Payment;` selects that intent.
++There are no hidden financial defaults. A funded repayment requires zero fee cap and net floor, and uses accrued interest
++first, then principal; paying above outstanding rejects at Core's Effect judgment.
++
++## Understand the two local examples
++
++Transfer: price 1000 atoms, fee 10, debit 1010. Owner 10000 becomes 8990;
++Recipient receives 1000 and Fee receives 10. Allowance decreases by 1010;
++work decreases by 1; replay is consumed and head advances h0→h1.
++
++Repayment: principal 100000, accrued 1000, outstanding 101000. Payment 3000
++pays all 1000 accrued and 2000 principal. Principal/outstanding become 98000,
++accrued becomes 0, and status remains Outstanding. Payer 200000 becomes 197000;
++Creditor receives 3000. Allowance/work/replay/head change explicitly.
++The shipped [repayment fixture](examples/local/repay/repayment.mori) includes
++complete independently derived effect and post-state expectations.
++
++`TransferLiteralFee` and `RepayAccrualFirst` in expansion identify the selected
++Source/6 profile, not your action's name. Source/6 shows bare nonce `n1`; Core
++consumes the domain/signer/nonce tuple encoded as `["Midnight","Payer","n1"]`.
++A fixture's round is the observation round and is not automatically advanced.
++
++## Local scenario reference
++
++JSON profile `moriarty-local-scenario/1`, kind `local-stipulation`.
++Every top-level field below is required. Unknown fields and duplicate decoded
++keys reject, including escaped spellings of the same key. Files are bounded to
++65536 bytes and JSON to depth 32 / 4096 nodes; no comments in JSON.
++
++| Field | Meaning and shape |
++| --- | --- |
++| `profile`, `kind` | Exact strings above |
++| `domain`, `asset` | Economic IDs matching the selected source action |
++| `head`, `predecessor`, `post_head` | Explicit nonempty scalar text; source `pre_head` is a signed term |
++| `round` | Canonical unsigned decimal string; source window endpoints are inclusive |
++| `balances` | Exact ordered `{account,amount}` cells: transfer signer, recipient, fee recipient; repayment payer, creditor |
++| `allowance` | `{owner,remaining,spent}`; owner is signer; counters are atom strings |
++| `replay` | Exactly `unused` or `consumed` |
++| `work_remaining`, `work_spent` | Canonical unsigned decimal strings |
++| `obligation` | Required for repayment; forbidden for transfer; shape below |
++| `candidate_effects` | Optional hostile proposal override, at most 16 entries, checked through Source/6 and actual Core |
++
++Economic IDs passed into Source/6 use `[A-Za-z][A-Za-z0-9_]{0,63}`.
++UInt128 integers use `0` or a nonzero leading digit followed by digits, no sign,
++leading zeros, exponent or decimal point. S0 signed monetary fields fit 2^127−1.
++Balance/counter transport fields fit UInt128; allowance and work totals cannot
++overflow. Scenario shape/identity/accounting errors are `FormationRejected`.
++Caps, funds, authority, expiry, replay and complete financial effects are decided
++by existing Core, in Stage→Intent→Effect→Authority→History→Failure order.
++`check` can succeed while Core rejects a particular scenario; this is intentional.
++
++Repayment obligation fields: `id`, `debtor`, `creditor`, `asset`, `principal`,
++`accrued`, `outstanding`, `status`. IDs must match the source/payer/asset;
++creditor differs from payer; status is `Outstanding`; principal + accrued equals
++outstanding. Unused source constants named principal or accrued do not constrain
++scenario accounting; only operative intent fields bind the request. The required
++predecessor is echoed into Source/6 but remains unauthenticated, and is not a
++Core equality check. Amounts are atom strings. Partial/full/interest-only repayment uses
++the same operation, with different explicit source amount and fixture.
++
++The override's Source/6 effect variants are `Debit`, `Credit`, `SetObligation`,
++`UseAllowance`, `UseReplay`, `AdvanceHead`. Inspect `expand` for their closed field
++shapes. Override replay uses the bare nonce at this boundary; prepared Core
++outputs use the tuple key. Overrides are fault-injection proposals, never facts.
++
++## Test and diagnose
++
++`mori.tests.json` is a closed record `{profile:"moriarty-beta-tests/1",cases:[...]}`
++with 1–64 cases. A case has exactly `name`, `source`, `action`, `scenario`, `expect`.
++Names are unique nonempty strings; source/scenario are relative files contained
++in the project, including after resolving symlinks.
++`expect` requires `status`; optional `code`, `effects`, `post` are exact assertions.
++Statuses: `PreparedUnqualified`, `CoreRejected`, `SourceRejected`,
++`AuthoringRejected`, `FormationRejected`, `Unsupported`.
++`effects` checks the full ordered vector, and `post` the full exact record, with
++no omitted or extra fields. The starter tests include both. Passing only a status
++checks less; it does not establish financial completeness.
++
++A mismatch gives up to four first differences, one each for status/code/effects/
++post, with an RFC6901 pointer and bounded expected/actual summaries. For example
++`/post/balances/0/amount`, expected `8991`, actual `8990`. Containers are summarized
++instead of dumped. Test result `qualification` is `local-stipulation-only`.
++`inspect` resource refusal is `InspectionRejected` with the original
++`authoringStatus`; it is not a newly discovered source error.
++
++`check` defaults to a short readable report; use `--json` for machines.
++`simulate` retains the full local Core result, ordered effects and candidate post.
++`expand` exposes generated Source/6 and origins back to source/scenario fields.
++CLI files require valid UTF-8 without a BOM. Invalid encoding is refused before
++`fmt --write` can change bytes. API inputs are already decoded text.
++Formatting preserves comments/spelling and compact named calls, but changes
++bytes and therefore source commitments; it never updates or signs claimed hashes.
++
++## Editors, AI and the implementation boundary
++
++Follow [editor setup](editor/README.md) for VS Code highlighting/snippets/LSP or
++Neovim, and [AI setup](ai/README.md) for MCP and project-local provider adapters.
++MCP accepts bounded text only, with no filesystem paths, shell, signing or sending.
++AI completions are proposals subject to the same compiler/Core checks.
++
++`check` returns `status`, `sourceHash`, `agreement`, `diagnostics`, `actions`,
++`operationSchemas`, `declarations`, `agreementSpan`, `references`, `fieldUses`,
++`evidence`, `openGates`. References and field-use
++byte spans are additive JSON-safe authoring metadata; they do not authenticate IDs.
++Use named fields; the API does not promise a permanently closed result key set.
++`inspect` reports per-action support and actual signed terms without recursively
++expanding the declaration DAG. Empty S0 premise/binding arrays on SpecifiedOnly
++mean that S0's particular catalog does not apply: authentication and financial
++relations remain Open, not premise-free or qualified.
++
++Computed `sourceHash`/`scenarioHash` digest actual input text. Source
++`source_hash`/`policy_digest` remain unverified signed claims. Four local S0
++external premises are canonical intent signature, snapshot-to-head, head extension,
++and atomic ledger compare-and-consume. Four unverified bindings are agreement ID,
++selected program, asset scale and authenticated predecessor. Neither a hash nor
++a successful local test closes these obligations. Blockchain address codecs,
++authenticated key/address mapping, ZK proving, financial ledger settlement and general
++formal correspondence remain open. The signed intent flow checks native cryptographic
++signatures while preserving those separate obligations.
++
++
++### SpecifiedOnly authoring hints
++
++Provided domain/asset/signer headers must agree with the operation's local domain;
++bridge source/destination may be foreign, while owner and amount share the local
++domain. Caps use the declared asset, or bridge's local amount asset when absent;
++AMM swap net floor uses its output asset. These checks establish nominal types,
++not financial conservation or authority. Share-class IDs are unique per domain.
++Intent `retained_duties` hints accept text or arrays of text; stage
++`retained_duties` hints accept text only. Stage `signed_floor` accepts
++text or a Qty in that stage domain. Prose hints and partial policy records,
++including an empty policy, are stored authoring data. They do not establish duties,
++evidence, policy preservation, stage linkage or a valid financial floor.
++Unsupported expansion/simulation reports `scenarioValidation: NotAppliedUnsupported`:
++the scenario was not schema-checked or applied. An Unsupported expected test can
++pass with an invalid fixture because it tests the support refusal, not that
++fixture. For a real local financial test, assert the complete effects and post.
++
++Result shapes follow the command: expand/simulate/test/init carry a local scope
++label; authoring check/inspect and CLI formation refusals describe authoring or
++rejection directly. A missing `qualification` field never means qualification.
++Init repayment source and the shipped example differ by a terminal newline;
++`sourceHash` therefore differs. Always digest the actual source bytes you use.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/README.md b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/README.md
+new file mode 100644
+index 00000000..085320f5
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/README.md
+@@ -0,0 +1,93 @@
++# Moriarty beta
++
++A standalone `.mori` authoring language for explicit financial intent, requiring
++Node 24 or later. Local transfer and funded AccrualFirst repayment reuse Source/6
++and Core/5 and return **PreparedUnqualified**. The signed owner-intent flow adds native Rust signature checks before local
++preparation. Provider authentication, financial proof and ledger commit remain open.
++
++Read the [getting started guide](GETTING-STARTED.md) for both operations, complete
++scenario/test schemas and troubleshooting. Read the [signed intent walkthrough](SIGNED-INTENT.md)
++for external signing, native verification and three public ready-to-verify examples.
++
++## Start
++
++From this package:
++
++```sh
++npm ci
++npm run build
++node dist/cli.js init /tmp/my-mori-project
++node dist/cli.js check /tmp/my-mori-project/invoice.mori --json
++node dist/cli.js test /tmp/my-mori-project
++node dist/cli.js simulate /tmp/my-mori-project/invoice.mori --action pay --scenario /tmp/my-mori-project/scenario.json
++```
++
++For a packed installation, install the `.tgz` with npm and use `npx mori`.
++The bundle includes the strict S0 modules and needs no repository metadata or
++global TypeScript compiler. `init` refuses existing targets.
++
++## Exact amounts and names
++
++```mori
++const price: Qty<USD> = 10.00 USD;
++const fee = 0.10 USD;
++const cap = price + fee;
++const exact_atoms = atoms(asset: USD, value: 1000);
++```
++
++Declare USD's domain, economic ID, representation and scale first. Symbol is
++display metadata. Bare numbers are unsigned scalars. Addition/subtraction require
++the same nominal asset; scalar multiplication and named `min`/`max` are checked.
++Every intermediate fits UInt128. S0 operation/cap/liability fields additionally
++fit `2^127−1`. No floating point, rounding, division or implicit conversion occurs.
++
++Agreements contain prior-only immutable declarations, closed named calls and
++`action NAME uses INTENT;`. Comments and trailing commas are supported. The starter
++shows every signed bound and explicit empty/None field. A separate scenario supplies
++**untrusted local data** with no default balances or spent counters. Unknown fields
++and decoded duplicate JSON keys reject. It cannot override source intent.
++
++## Tools
++
++| Command | Result |
++| --- | --- |
++| `init DIR [--template transfer\|repay]` | Explicit transfer or repayment project, no overwrite |
++| `check FILE [--json]` | Syntax/name/nominal checks and action support |
++| `fmt FILE [--write]` | Comment/spelling-preserving format, stdout by default |
++| `inspect FILE` | Identity claims, operative bounds and open premises |
++| `expand FILE --action NAME --scenario FILE` | Source/6 and input origin map |
++| `intent ... [--review\|--json]` | Native owner signing bytes; possession unchecked |
++| `verify-intent ... [--review\|--json]` | Native signature check then unqualified local Core preparation |
++| `simulate ...` | Actual local Core result, effects and candidate post-state |
++| `test DIR` | Bounded cases, optionally exact effects/post expectations |
++| `lsp` | Full-sync stdio language server |
++| `mcp` | Read-only stdio check/inspect/expand/preview tools |
++
++Formatting changes source bytes and can invalidate commitments. It never signs or
++rewrites claimed hashes; invalid source receives no edit. Expansion is a proposal.
++Core decides the first economic failure and publishes no effects on rejection;
++Source/6-unrepresentable inputs are formation errors.
++
++[Editor instructions](editor/README.md) cover highlighting, snippets, VS Code
++packaging and Neovim. [AI instructions](ai/README.md) cover portable skills and
++project-scoped provider adapters. These files change no global client settings.
++
++## Financial horizon and API
++
++The closed catalog covers AMMs, lending, stablecoins, options, oracles, governance,
++bridges and staking. `check` publishes argument schemas and checked coverage.
++Those actions are `SpecifiedOnly`: structural support exists; financial relations,
++authentication and execution remain open. Expansion/simulation return
++`BETA_PROFILE_UNSUPPORTED` with no effect vector. The wiki's proposed typed lifecycle
++grammar is a separate full-language horizon, not accepted beta syntax.
++
++```js
++import { check, format, inspect, expand, simulate } from '@moriarty-lang/beta';
++const report = check(sourceText);
++const local = simulate(sourceText, 'pay', scenarioJsonText);
++```
++
++Public APIs accept bounded text and digest both local inputs. Origins use UTF8 byte
++ranges; editor positions use UTF16. Prepared results retain four external premises
++and four unverified bindings. A verified native signature is scoped evidence; account authority and the remaining
++state/ledger obligations stay open. Matching hashes and AI tools establish no authority. Native financial settlement and general K/Quint correspondence remain open.
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.mori b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.mori
+new file mode 100644
+index 00000000..e398f05a
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.mori
+@@ -0,0 +1,19 @@
++profile "moriarty-beta/1";
++agreement MaxRebatePayout {
++ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Preview, id: "Owner" };
++ account Seller = { domain: Preview, id: "Recipient" };
++ account Treasury = { domain: Preview, id: "Fee" };
++ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
++ const payout: Qty<USD> = max(a: 2 * (4.50 USD - atoms(asset: USD, value: 50)), b: 7.00 USD);
++ const fee: Qty<USD> = atoms(asset: USD, value: 25);
++ intent Rebate = {
++  domain: Preview, asset: USD, signer: Buyer, key: "rebate-key", nonce: "rebate-nonce", pre_head: "m0",
++  valid: rounds(domain: Preview, from: 2, to: 12),
++  gross_cap: 8.50 USD, fee_cap: fee, net_floor: payout,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: payout, fee: fee),
++  source_hash: "rebate-source", policy_digest: "rebate-policy", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay_rebate uses Rebate;
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.scenario.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.scenario.json
+new file mode 100644
+index 00000000..b1d7acf4
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "m0",
++  "predecessor": "rebate-opening",
++  "round": "4",
++  "balances": [
++    { "account": "Owner", "amount": "2000" },
++    { "account": "Recipient", "amount": "5" },
++    { "account": "Fee", "amount": "7" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "2000", "spent": "25" },
++  "replay": "unused",
++  "work_remaining": "12",
++  "work_spent": "2",
++  "post_head": "m1"
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.effect-prefix-financial-states.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.effect-prefix-financial-states.expected.json
+new file mode 100644
+index 00000000..970e42d2
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.effect-prefix-financial-states.expected.json
+@@ -0,0 +1,423 @@
++{
++  "scope": "Conditional mathematical application of the six normative effects; all provided financial cells retained at every prefix, no runtime trace/meters asserted.",
++  "prefixes": [
++    {
++      "prefixLength": 0,
++      "appliedCore5SemanticEffects": [],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "2000"
++          },
++          {
++            "account": "Recipient",
++            "amount": "5"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "2000",
++            "spent": "25"
++          }
++        ],
++        "head": "m0",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "unused"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    },
++    {
++      "prefixLength": 1,
++      "appliedCore5SemanticEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        }
++      ],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "5"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "2000",
++            "spent": "25"
++          }
++        ],
++        "head": "m0",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "unused"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    },
++    {
++      "prefixLength": 2,
++      "appliedCore5SemanticEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        }
++      ],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "805"
++          },
++          {
++            "account": "Fee",
++            "amount": "7"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "2000",
++            "spent": "25"
++          }
++        ],
++        "head": "m0",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "unused"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    },
++    {
++      "prefixLength": 3,
++      "appliedCore5SemanticEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        },
++        {
++          "kind": "Credit",
++          "account": "Fee",
++          "asset": "A",
++          "amount": "25"
++        }
++      ],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "805"
++          },
++          {
++            "account": "Fee",
++            "amount": "32"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "2000",
++            "spent": "25"
++          }
++        ],
++        "head": "m0",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "unused"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    },
++    {
++      "prefixLength": 4,
++      "appliedCore5SemanticEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        },
++        {
++          "kind": "Credit",
++          "account": "Fee",
++          "asset": "A",
++          "amount": "25"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "825"
++        }
++      ],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "805"
++          },
++          {
++            "account": "Fee",
++            "amount": "32"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "1175",
++            "spent": "850"
++          }
++        ],
++        "head": "m0",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "unused"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    },
++    {
++      "prefixLength": 5,
++      "appliedCore5SemanticEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        },
++        {
++          "kind": "Credit",
++          "account": "Fee",
++          "asset": "A",
++          "amount": "25"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "825"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]"
++        }
++      ],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "805"
++          },
++          {
++            "account": "Fee",
++            "amount": "32"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "1175",
++            "spent": "850"
++          }
++        ],
++        "head": "m0",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "consumed"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    },
++    {
++      "prefixLength": 6,
++      "appliedCore5SemanticEffects": [
++        {
++          "kind": "Debit",
++          "account": "Owner",
++          "asset": "A",
++          "amount": "825"
++        },
++        {
++          "kind": "Credit",
++          "account": "Recipient",
++          "asset": "A",
++          "amount": "800"
++        },
++        {
++          "kind": "Credit",
++          "account": "Fee",
++          "asset": "A",
++          "amount": "25"
++        },
++        {
++          "kind": "UseAllowance",
++          "owner": "Owner",
++          "amount": "825"
++        },
++        {
++          "kind": "UseReplay",
++          "key": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]"
++        },
++        {
++          "kind": "AdvanceHead",
++          "predecessor": "m0",
++          "successor": "m1"
++        }
++      ],
++      "financialState": {
++        "domain": "Midnight",
++        "asset": "A",
++        "balances": [
++          {
++            "account": "Owner",
++            "amount": "1175"
++          },
++          {
++            "account": "Recipient",
++            "amount": "805"
++          },
++          {
++            "account": "Fee",
++            "amount": "32"
++          }
++        ],
++        "allowances": [
++          {
++            "owner": "Owner",
++            "remaining": "1175",
++            "spent": "850"
++          }
++        ],
++        "head": "m1",
++        "round": "4",
++        "selectedReplay": {
++          "tuple": [
++            "Midnight",
++            "Owner",
++            "rebate-nonce"
++          ],
++          "encodedKey": "[\"Midnight\",\"Owner\",\"rebate-nonce\"]",
++          "state": "consumed"
++        },
++        "localTransferDuties": []
++      },
++      "scope": "Complete provided financial frame and selected replay/head only; mathematical effect prefix, not an observed evaluator trace or complete Core state. Work is separately unasserted."
++    }
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.independent-source6.txt b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.independent-source6.txt
+new file mode 100644
+index 00000000..edc71f6c
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.independent-source6.txt
+@@ -0,0 +1,45 @@
++profile "moriarty-financial-agreement-source/6";
++agreement MaxRebatePayout {
++  domain Midnight;
++  settlement A scale 2;
++  selected TransferLiteralFee source_hash "rebate-source" digest "rebate-policy";
++  intent {
++    signer Owner key "rebate-key";
++    nonce "rebate-nonce";
++    pre_head "m0";
++    valid 2 .. 12;
++    gross_cap 850;
++    fee_cap 25;
++    net_floor 800;
++    failure success_only;
++    signed_action transfer from Owner to Recipient fee_to Fee value 800 fee 25;
++    observations empty;
++    disclosures empty;
++    retained_effects empty;
++    retained_duties empty;
++    delegation none;
++    recovery none;
++  }
++  authenticated {
++    head "m0";
++    predecessor "rebate-opening";
++    round 4;
++    balance Owner 2000;
++    balance Recipient 5;
++    balance Fee 7;
++    allowance Owner remaining 2000 spent 25;
++    replay unused;
++    work_remaining 12;
++    work_spent 2;
++  }
++  submit transfer from Owner to Recipient fee_to Fee value 800 fee 25;
++  effects {
++    debit Owner 825;
++    credit Recipient 800;
++    credit Fee 25;
++    use_allowance Owner 825;
++    use_replay "rebate-nonce";
++    advance_head "m0" "m1";
++  }
++  post_head "m1";
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.ordered-target-lines.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.ordered-target-lines.expected.json
+new file mode 100644
+index 00000000..8ba560d2
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.ordered-target-lines.expected.json
+@@ -0,0 +1,51 @@
++{
++  "scope": "Complete grammar-order statement/block sequence with independently chosen indentation; not a stdout-byte oracle.",
++  "byteForByteStdoutOracle": false,
++  "lines": [
++    "profile \"moriarty-financial-agreement-source/6\";",
++    "agreement MaxRebatePayout {",
++    "domain Midnight;",
++    "settlement A scale 2;",
++    "selected TransferLiteralFee source_hash \"rebate-source\" digest \"rebate-policy\";",
++    "intent {",
++    "signer Owner key \"rebate-key\";",
++    "nonce \"rebate-nonce\";",
++    "pre_head \"m0\";",
++    "valid 2 .. 12;",
++    "gross_cap 850;",
++    "fee_cap 25;",
++    "net_floor 800;",
++    "failure success_only;",
++    "signed_action transfer from Owner to Recipient fee_to Fee value 800 fee 25;",
++    "observations empty;",
++    "disclosures empty;",
++    "retained_effects empty;",
++    "retained_duties empty;",
++    "delegation none;",
++    "recovery none;",
++    "}",
++    "authenticated {",
++    "head \"m0\";",
++    "predecessor \"rebate-opening\";",
++    "round 4;",
++    "balance Owner 2000;",
++    "balance Recipient 5;",
++    "balance Fee 7;",
++    "allowance Owner remaining 2000 spent 25;",
++    "replay unused;",
++    "work_remaining 12;",
++    "work_spent 2;",
++    "}",
++    "submit transfer from Owner to Recipient fee_to Fee value 800 fee 25;",
++    "effects {",
++    "debit Owner 825;",
++    "credit Recipient 800;",
++    "credit Fee 25;",
++    "use_allowance Owner 825;",
++    "use_replay \"rebate-nonce\";",
++    "advance_head \"m0\" \"m1\";",
++    "}",
++    "post_head \"m1\";",
++    "}"
++  ]
++}
+diff --git a/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.source6.ast.expected.json b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.source6.ast.expected.json
+new file mode 100644
+index 00000000..976ce21e
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.source6.ast.expected.json
+@@ -0,0 +1,112 @@
++{
++  "profile": "moriarty-financial-agreement-source/6",
++  "programId": "MaxRebatePayout",
++  "domain": "Midnight",
++  "settlement": {
++    "asset": "A",
++    "scale": "2"
++  },
++  "selected": {
++    "actionId": "TransferLiteralFee",
++    "sourceHash": "rebate-source",
++    "policyDigest": "rebate-policy"
++  },
++  "intent": {
++    "signer": "Owner",
++    "keyRef": "rebate-key",
++    "nonce": "rebate-nonce",
++    "preHead": "m0",
++    "notBefore": "2",
++    "notAfter": "12",
++    "grossCap": "850",
++    "feeCap": "25",
++    "netFloor": "800",
++    "signedAction": {
++      "kind": "Transfer",
++      "from": "Owner",
++      "to": "Recipient",
++      "feeTo": "Fee",
++      "value": "800",
++      "fee": "25"
++    },
++    "failure": "success_only",
++    "observations": "empty",
++    "disclosures": "empty",
++    "retainedEffects": "empty",
++    "retainedDuties": "empty",
++    "delegation": "none",
++    "recovery": "none"
++  },
++  "authenticated": {
++    "head": "m0",
++    "predecessor": "rebate-opening",
++    "round": "4",
++    "balances": [
++      {
++        "account": "Owner",
++        "amount": "2000"
++      },
++      {
++        "account": "Recipient",
++        "amount": "5"
++      },
++      {
++        "account": "Fee",
++        "amount": "7"
++      }
++    ],
++    "allowance": {
++      "owner": "Owner",
++      "remaining": "2000",
++      "spent": "25"
++    },
++    "replay": "unused",
++    "workRemaining": "12",
++    "workSpent": "2"
++  },
++  "submitted": {
++    "action": {
++      "kind": "Transfer",
++      "from": "Owner",
++      "to": "Recipient",
++      "feeTo": "Fee",
++      "value": "800",
++      "fee": "25"
++    },
++    "effects": [
++      {
++        "kind": "Debit",
++        "account": "Owner",
++        "asset": "A",
++        "amount": "825"
++      },
++      {
++        "kind": "Credit",
++        "account": "Recipient",
++        "asset": "A",
++        "amount": "800"
++      },
++      {
++        "kind": "Credit",
++        "account": "Fee",
++        "asset": "A",
++        "amount": "25"
++      },
++      {
++        "kind": "UseAllowance",
++        "owner": "Owner",
++        "amount": "825"
++      },
++      {
++        "kind": "UseReplay",
++        "key": "rebate-nonce"
++      },
++      {
++        "kind": "AdvanceHead",
++        "predecessor": "m0",
++        "successor": "m1"
++      }
++    ],
++    "postHead": "m1"
++  }
++}
+diff --git a/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs b/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs
+new file mode 100644
+index 00000000..71b2e284
+--- /dev/null
++++ b/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs
+@@ -0,0 +1,214 @@
++// Opt-in public Rust CLI -> actual provisional Source/6/Core/5 consumers.
++// Independent max-rebate oracle custody; earlier transfer freezes are untouched.
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { spawnSync } from 'node:child_process';
++import { createHash } from 'node:crypto';
++import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
++import { isAbsolute, join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { parseAndLowerSource6 } from '../src/successor/financial-agreement-source-v6-frontend.ts';
++import { prepareSource6S0Unqualified } from '../src/successor/mil4-s0-source-v6.ts';
++
++const fixtures = fileURLToPath(new URL('./fixtures/source6-max-rebate/', import.meta.url));
++const binary = process.env.MORI_RUST_BIN;
++const observations = process.env.MORI_SOURCE6_OBSERVATIONS;
++assert.ok(binary && isAbsolute(binary), 'MORI_RUST_BIN must name the absolute reviewed Rust binary');
++assert.ok(observations && isAbsolute(observations), 'MORI_SOURCE6_OBSERVATIONS must name a fresh absolute directory');
++mkdirSync(observations);
++const json = (name) => JSON.parse(readFileSync(join(fixtures, name), 'utf8'));
++const pins = json('FIXTURE-PINS.json');
++for (const [name, expected] of Object.entries(pins.files)) {
++  const bytes = readFileSync(join(fixtures, name));
++  assert.equal(createHash('sha256').update(bytes).digest('hex'), expected,
++    `custodian fixture bytes changed: ${name}`);
++}
++const facts = json('oracle/EXPECTED-SEMANTICS.json');
++assert.equal(facts.format, 'independent-max-transfer-semantic-oracle/1');
++assert.equal(facts.cases.length, 1);
++
++// These helpers only serialize observations and select named financial fields.
++// They never calculate amounts, simulate a transfer or construct product ASTs.
++function captureJson(path, value) {
++  const encoded = JSON.stringify(value, null, 2) + '\n';
++  writeFileSync(path, encoded);
++  return JSON.parse(encoded);
++}
++function errorRecord(error) {
++  return {
++    name: error?.name ?? typeof error,
++    message: error?.message ?? String(error),
++    code: error?.code ?? null,
++    offset: error?.offset ?? null,
++    stack: error?.stack ?? null,
++  };
++}
++function financialFrame(state) {
++  return {
++    domain: state.domain, asset: state.asset,
++    balances: state.balances, allowances: state.allowances,
++  };
++}
++
++captureJson(join(observations, 'run.json'), {
++  node: process.version, binary,
++  binarySha256: createHash('sha256').update(readFileSync(binary)).digest('hex'),
++  oracleFreezeSha256: pins.custodianFreezeSha256,
++  oracleManifestSha256: pins.custodianManifestSha256,
++  expectedSemanticsSha256: pins.expectedSemanticsSha256,
++  unasserted: ['whole emitted wire bytes/whitespace', 'Core status/qualification/gates',
++    'measured work/cost and post-work counters', 'complete Core post/global replay inventory',
++    'whole Program/Target/Artifact', 'authentication', 'native/proof/ledger', 'parent acceptance'],
++});
++// Preserve exact run inputs and the oracle manifest alongside the observations.
++for (const name of ['max-rebate.mori', 'max-rebate.scenario.json']) {
++  writeFileSync(join(observations, name), readFileSync(join(fixtures, 'oracle/inputs', name)));
++}
++writeFileSync(join(observations, 'oracle-MANIFEST.json'), readFileSync(join(fixtures, 'oracle/MANIFEST.json')));
++writeFileSync(join(observations, 'oracle-FREEZE.sha256'), readFileSync(join(fixtures, 'oracle/FREEZE.sha256')));
++
++for (const expected of facts.cases) {
++  test(`${expected.action}: actual public Source/6 bytes against independent semantic observations`, () => {
++    const expectedAst = json(`oracle/${expected.source6AstFile}`);
++    const post = expected.conditionalClosingFinancialProjection;
++    const args = ['--quiet', '--color', 'never', 'expand',
++      join(fixtures, 'oracle/inputs/max-rebate.mori'), '--action', expected.action,
++      '--scenario', join(fixtures, 'oracle/inputs/max-rebate.scenario.json'),
++      '--emit-source6-transfer'];
++    const source = join(fixtures, 'oracle/inputs/max-rebate.mori');
++    const checkArgs = ['--quiet', '--color', 'never', 'check', source, '--json'];
++    const check = spawnSync(binary, checkArgs, {
++      cwd: fixtures, stdio: ['ignore', 'pipe', 'pipe'], shell: false,
++      timeout: 30_000, maxBuffer: 1024 * 1024,
++    });
++    const output = spawnSync(binary, args, {
++      cwd: fixtures, stdio: ['ignore', 'pipe', 'pipe'], shell: false,
++      timeout: 30_000, maxBuffer: 1024 * 1024,
++    });
++    const destination = join(observations, expected.action);
++    mkdirSync(destination);
++    const checkStdout = check.stdout ?? Buffer.alloc(0);
++    const checkStderr = check.stderr ?? Buffer.alloc(0);
++    writeFileSync(join(destination, 'check.stdout.json'), checkStdout);
++    writeFileSync(join(destination, 'check.stderr.txt'), checkStderr);
++    captureJson(join(destination, 'check.process.json'), {
++      executable: binary, args: checkArgs, cwd: fixtures, status: check.status, signal: check.signal,
++      error: check.error ? errorRecord(check.error) : null,
++      stdoutSha256: createHash('sha256').update(checkStdout).digest('hex'),
++      stderrSha256: createHash('sha256').update(checkStderr).digest('hex'),
++    });
++    const stdout = output.stdout ?? Buffer.alloc(0);
++    const stderr = output.stderr ?? Buffer.alloc(0);
++    // Every actual process byte is saved before any product result assertion.
++    writeFileSync(join(destination, 'stdout.source6'), stdout);
++    writeFileSync(join(destination, 'stderr.txt'), stderr);
++    captureJson(join(destination, 'process.json'), {
++      executable: binary, args, cwd: fixtures, status: output.status, signal: output.signal,
++      error: output.error ? errorRecord(output.error) : null,
++      stdoutSha256: createHash('sha256').update(stdout).digest('hex'),
++      stderrSha256: createHash('sha256').update(stderr).digest('hex'),
++    });
++
++    const actual = {
++      decodeError: null, loweringAttempted: false, loweringError: null, lowered: null,
++      preparationAttempted: false, preparationError: null, outcome: null,
++    };
++    let source6;
++    try { source6 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(stdout); }
++    catch (error) { actual.decodeError = errorRecord(error); }
++    if (source6 !== undefined) {
++      // Untouched decoded stdout goes directly to both actual APIs. No trim,
++      // fixture Source/6 substitution, JSON unwrap, AST construction or replay.
++      actual.loweringAttempted = true;
++      try { actual.lowered = parseAndLowerSource6(source6); }
++      catch (error) { actual.loweringError = errorRecord(error); }
++      actual.preparationAttempted = true;
++      try { actual.outcome = prepareSource6S0Unqualified(source6); }
++      catch (error) { actual.preparationError = errorRecord(error); }
++    }
++    // Capture complete returned objects or thrown errors before checking them.
++    // JSON is the observation representation: undefined optional members are
++    // omitted by JSON serialization; no product field value is recalculated.
++    const observed = captureJson(join(destination, 'actual-consumer.json'), actual);
++
++    assert.ifError(check.error);
++    assert.equal(check.signal, null);
++    assert.equal(check.status, 0, checkStderr.toString('utf8'));
++    assert.equal(checkStderr.length, 0);
++    const checked = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(checkStdout));
++    assert.equal(checked.status, 'accepted');
++    assert.equal(checked.agreement.name, expectedAst.programId);
++    assert.equal(checked.source_hash, pins.files['oracle/inputs/max-rebate.mori']);
++    assert.deepEqual(checked.actions.map(({ name, support }) => ({ name, support })),
++      [{ name: expected.action, support: 'local_s0' }]);
++    assert.deepEqual(checked.diagnostics, []);
++    assert.ifError(output.error);
++    assert.equal(output.signal, null);
++    assert.equal(output.status, 0, stderr.toString('utf8'));
++    assert.equal(stderr.length, 0, '--quiet must suppress the adopted public status line');
++    assert.ok(stdout.length > 0);
++    assert.equal(stdout.at(-1), 10, 'adopted public output includes its final LF');
++    assert.notEqual(stdout.at(-2), 10, 'adopted public output has a single final LF');
++    assert.equal(observed.decodeError, null);
++    assert.equal(observed.loweringError, null);
++    assert.equal(observed.preparationError, null);
++    assert.ok(observed.loweringAttempted && observed.preparationAttempted);
++    const { ast, state, intent } = observed.lowered;
++    // Full independent Source/6 AST, including every ordered effect and all
++    // source/intent/claim/input fields. This is not a Core Program oracle.
++    assert.deepEqual(ast, expectedAst);
++    assert.deepEqual(ast.submitted.effects, expected.source6OrderedEffects);
++    assert.equal(ast.submitted.effects.length, expected.effectCount);
++    assert.deepEqual(observed.outcome.ast, expectedAst);
++
++    assert.deepEqual(financialFrame(state), expected.openingFinancialFrame);
++    assert.equal(state.head, expectedAst.authenticated.head);
++    assert.equal(state.round, expectedAst.authenticated.round);
++    assert.equal(state.workRemaining, expected.source6InputWork.remaining);
++    assert.equal(state.workSpent, expected.source6InputWork.spent);
++    assert.equal(state.consumedReplay.includes(post.selectedReplay.encodedKey), false);
++    assert.deepEqual({
++      sourceProfile: intent.sourceProfile, programId: intent.programId,
++      sourceHash: intent.sourceHash, policyDigest: intent.policyDigest, keyRef: intent.keyRef,
++      domain: intent.domain, asset: intent.asset, signer: intent.signer, nonce: intent.nonce,
++      preHead: intent.preHead, notBefore: intent.notBefore, notAfter: intent.notAfter,
++      grossCap: intent.grossCap, feeCap: intent.feeCap, netFloor: intent.netFloor,
++      kind: intent.kind, recipient: intent.recipient, feeRecipient: intent.feeRecipient,
++      amount: intent.amount, fee: intent.fee,
++    }, {
++      sourceProfile: expectedAst.profile, programId: expectedAst.selected.actionId,
++      sourceHash: expectedAst.selected.sourceHash, policyDigest: expectedAst.selected.policyDigest,
++      keyRef: expectedAst.intent.keyRef, domain: expectedAst.domain, asset: expectedAst.settlement.asset,
++      signer: expectedAst.intent.signer, nonce: expectedAst.intent.nonce,
++      preHead: expectedAst.intent.preHead, notBefore: expectedAst.intent.notBefore,
++      notAfter: expectedAst.intent.notAfter, grossCap: expected.grossCap,
++      feeCap: expected.feeCap, netFloor: expected.netFloor,
++      kind: expectedAst.intent.signedAction.kind, recipient: expectedAst.intent.signedAction.to,
++      feeRecipient: expectedAst.intent.signedAction.feeTo, amount: expected.value, fee: expected.fee,
++    });
++    assert.deepEqual(observed.lowered.submittedEffects, expected.core5SemanticOrderedEffects);
++    assert.equal(observed.lowered.proposedPostHead, post.head);
++
++    // Require the actual financial projection for the positive comparison;
++    // status, qualification, required-premise and work-cost strings are only
++    // observed in actual-consumer.json, never asserted as an oracle verdict.
++    const candidate = observed.outcome.candidate;
++    assert.ok(candidate && candidate.candidatePost, 'actual consumer must expose the compared financial candidate');
++    assert.equal(candidate.preHead, expectedAst.authenticated.head);
++    assert.deepEqual(candidate.effects, expected.core5SemanticOrderedEffects);
++    assert.equal(candidate.effects.length, expected.effectCount);
++    assert.deepEqual(financialFrame(candidate.candidatePost), {
++      domain: post.domain, asset: post.asset, balances: post.balances, allowances: post.allowances,
++    });
++    assert.equal(candidate.candidatePost.head, post.head);
++    assert.equal(candidate.candidatePost.round, post.round);
++    // The independent oracle fixes the selected key, not a global replay
++    // inventory or a security/history judgment about consuming that key.
++    const selectedKey = candidate.candidatePost.consumedReplay
++      .find((key) => key === post.selectedReplay.encodedKey);
++    assert.equal(selectedKey, post.selectedReplay.encodedKey);
++    assert.deepEqual(JSON.parse(selectedKey), post.selectedReplay.tuple);
++    // No complete Core post, residual-duty DTO, post-work or qualification
++    // oracle is invented. Their actual fields remain in the captured result.
++  });
++}

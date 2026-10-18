@@ -1,0 +1,77 @@
+{
+  "recordedAt": "2026-10-18T14:21:13.192497+00:00",
+  "disposition": "ADOPT_SCOPED_ORDINARY_SOURCE_AND_RESULT_REVIEW",
+  "head": "b988764129e8828e3bc5b4d4b7660df61c3a184f",
+  "tree": "32a27d88760401c65be4606527274a15410792ea",
+  "base": "049395532c43b17c54bdbc5a529535b521dc56df",
+  "reviewSha256": "57c636e1a762a4eef7b2c5ebca9ae7db5dbbc007c2170e50f6a666404356a748",
+  "requestedModel": "AGY gemini-4-argon-high HIGH",
+  "actualBackendIdentityAttested": false,
+  "scope": "Three exactchangedfiles; CLIoraclepathargumenthandoffandfiveprobe-basedordinaryNodechecks only.",
+  "rootChecks": [
+    {
+      "entry": 0,
+      "exactQuoteUnique": true,
+      "actualLine": 314,
+      "suppliedCitation": "L314 (L307-L317, L332; PRIMARY.md L410)"
+    },
+    {
+      "entry": 1,
+      "exactQuoteUnique": true,
+      "actualLine": 52,
+      "suppliedCitation": "L52 (L48-L63; PRIMARY.md L148)"
+    },
+    {
+      "entry": 2,
+      "exactQuoteUnique": true,
+      "actualLine": 202,
+      "suppliedCitation": "L202, L312 (PRIMARY.md L76, L83)"
+    },
+    {
+      "entry": 3,
+      "exactQuoteUnique": true,
+      "actualLine": 32,
+      "suppliedCitation": "L8-L39 (L31-L36; PRIMARY.md L578-L609)"
+    },
+    {
+      "entry": 4,
+      "exactQuoteUnique": true,
+      "actualLine": 56,
+      "suppliedCitation": "L41-L58, L64-L80 (PRIMARY.md L524-L541, L547-L563)"
+    },
+    {
+      "entry": 5,
+      "exactSelectedValueMatches": true,
+      "kind": "complete/environment"
+    },
+    {
+      "entry": 6,
+      "exactSelectedValueMatches": true,
+      "kind": "explicit four-field selected subset, not whole RESULT"
+    },
+    {
+      "entry": 7,
+      "exactSelectedValueMatches": true,
+      "kind": "complete root JSONvalue"
+    }
+  ],
+  "sourceFidelity": "Allfiveexactquotedsourcepassages exist uniquely in cited immutableGitfiles;3quotedJSONselections match actualreceipts. Allthreecandidatefiles match actualcheck-plan pins andGit. Rootreadfulltest/hookandchangedCLIbranch/arg/help/API; reviewwholeobjectpreserved.",
+  "sourceAndResultDispositions": {
+    "source": "approve-qualified",
+    "result": "approve-qualified"
+  },
+  "limits": [
+    "The existing arg(flag, fallback) helper in src/cli.mjs (L15-L19) only returns process.argv[i + 1] when it is truthy and does not start with '--'; if --oracle-results is passed as the final argv token without a value, followed immediately by another '--' flag, given an empty string, given a path starting with '--', or passed in '--oracle-results=FILE' form, arg() silently falls back to undefined rather than raising a CLI usage error. Also, process.argv.indexOf(flag) selects the first match if the flag is repeated.",
+    "src/cli.mjs performs pure string forwarding for --oracle-results without path normalization or existence checks; relative paths are resolved later by readFileSync(oracleResultsPath, 'utf8') in compile-custody.mjs (L312) relative to the process current working directory at call time.",
+    "compile-custody-cli-args.test.mjs supplies explicit CLI flags for all eight non-oracle inputs (--source, --seed, --cases, --expected-release, --expected-refund, --residual, --manifest, --out), so the hardcoded fallback paths in src/cli.mjs (L300-L313) and the usage() output text (L52) are verified by static inspection rather than runtime assertions in this test file.",
+    "This source change is strictly limited to CLI argument handoff for --oracle-results; it does not modify or establish compiler correctness, oracle content/trust validation, Q1 security properties, EUC-012/EUC-013 publication or generated-spend requirements, or native/ledger execution.",
+    "The five-test execution is a scoped unit/regression run for CLI argument transport using module-resolution capture probes; compileCustody itself, Aiken, UPLC compilation, oracle file reading/parsing, bindOracleSpends, and native/SDK/ledger consumers did not execute.",
+    "Because ./native-runtime.mjs was also replaced by a pass-through probe (resolveOutputPath returning { ok: true, path: path ?? fallback }), output-path policy validation (such as refusing historical campaign check directories) was not exercised in these test runs.",
+    "When --oracle-results is omitted, the test verifies that options.oracleResultsPath is of type 'undefined' at the compileCustody call boundary; actual binding to DEFAULT_ORACLE and reading of that path depend on the unchanged compile-custody.mjs parameter default (L202) and read site (L312), which were not executed during the probed run.",
+    "The usage() help string update in src/cli.mjs (L52) is verified by static source inspection of the embedded file rather than a runtime test case triggering the usage() stderr exit path.",
+    "Cleanup receipts (ownedSessionRemaining: [] and existsAfter: false) attest only to the owned session (800143) and ownedRoot (/tmp/doctorwatson-custody-cli-args-cqi6sgh2); they do not prove system-wide unrelated-process or syscall exclusion, and no EUC-012/EUC-013, Q1 security, oracle-trust, or financial/native admission gate is satisfied or altered by this result."
+  ],
+  "originalAcceptanceChanged": false,
+  "nativeOrSecurityAdmission": false,
+  "mergePredicate": "Onlyexactb988headintounchanged0493955;verifymergedtreeequalstested/reviewed32a27d8."
+}

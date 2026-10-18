@@ -1,0 +1,79 @@
+--- a/crates/mori/src/cli.rs
++++ b/crates/mori/src/cli.rs
+@@ -264,7 +264,7 @@
+         )
+     )]
+     VerifyIntent(verify_intent::Args),
+-    /// Run the language server over stdio
++    /// Run the local diagnostics language server over stdio
+     Lsp(lsp::Args),
+     /// Run the read-only MCP server over stdio
+     Mcp(mcp::Args),
+--- a/crates/mori/src/commands/capabilities.rs
++++ b/crates/mori/src/commands/capabilities.rs
+@@ -15,7 +15,7 @@
+ 
+ // Inspection basis for the curated consumer notes, not a binary/build identity.
+ // Update this catalogue when public routing or editor implementations change.
+-const SOURCE_REVISION: &str = "e4d7a2b5709caa18a94f5256d03a0302364b8235";
++const SOURCE_REVISION: &str = "adff55f33942310123dc32f272cd6291e5b5c4da";
+ 
+ fn profile(
+     id: &str,
+@@ -115,7 +115,12 @@
+             consumer("core2-compile", "compile FILE --target FILE --out DIR", (Some(LANGUAGE_2), Some(SEMANTICS_2), Some("moriarty-zkir-artifact/4")), Some(("native", native)),
+                 ("source-present", "staged-compiler-source-present"), &["Distinct staged artifact/4, ABI/4 and relation/4; unsigned target only.", "Legacy /3 proving consumers do not accept the distinct /4 type; no proof or ledger result is inferred."], &["crates/mori/src/commands/compile.rs", "crates/mori-backend/src/stage/mod.rs"]),
+             consumer("rust-lsp", "lsp", (None, None, None), None,
+-                ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/lsp.rs"]),
++                ("source-present", "local-check-only"), &[
++                    "Local diagnostics for moriarty-beta/1, moriarty/1 and moriarty/2; no action execution.",
++                    "Requests: initialize and shutdown. Notifications: initialized, textDocument/didOpen, textDocument/didChange, textDocument/didClose and exit.",
++                    "UTF-16 positions; full-document synchronization and textDocument/publishDiagnostics only.",
++                    "Once running, other requests return MethodNotFound; incremental edits are not supported."
++                ], &["crates/mori/src/commands/lsp.rs", "crates/mori/src/commands/lsp/diagnostics.rs"]),
+             consumer("rust-mcp", "mcp", (None, None, None), None,
+                 ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/mcp.rs"])
+         ],
+--- a/crates/mori/tests/capabilities.rs
++++ b/crates/mori/tests/capabilities.rs
+@@ -164,11 +164,35 @@
+     let targeted = row(&report, "consumers", "core2-target-inspect");
+     assert_eq!(targeted["implementation"], "unsupported");
+     assert_eq!(targeted["availableInBuild"], false);
+-    for id in ["rust-lsp", "rust-mcp"] {
+-        let editor = row(&report, "consumers", id);
+-        assert_eq!(editor["implementation"], "stub");
+-        assert_eq!(editor["availableInBuild"], false);
+-    }
++    let lsp = row(&report, "consumers", "rust-lsp");
++    assert_eq!(lsp["implementation"], "source-present");
++    assert_eq!(lsp["availableInBuild"], true);
++    assert_eq!(lsp["qualification"], "local-check-only");
++    assert_eq!(lsp["entrypoint"], "lsp");
++    assert_eq!(lsp["requiresBuildFeatures"], serde_json::json!([]));
++    assert_eq!(
++        lsp["sourceRefs"],
++        serde_json::json!([
++            "crates/mori/src/commands/lsp.rs",
++            "crates/mori/src/commands/lsp/diagnostics.rs"
++        ])
++    );
++    let limitations = lsp["limitations"].as_array().unwrap();
++    for description in [
++        "Local diagnostics for moriarty-beta/1, moriarty/1 and moriarty/2; no action execution.",
++        "Requests: initialize and shutdown. Notifications: initialized, textDocument/didOpen, textDocument/didChange, textDocument/didClose and exit.",
++        "UTF-16 positions; full-document synchronization and textDocument/publishDiagnostics only.",
++        "Once running, other requests return MethodNotFound; incremental edits are not supported.",
++    ] {
++        assert!(
++            limitations
++                .iter()
++                .any(|value| value.as_str() == Some(description))
++        );
++    }
++    let mcp = row(&report, "consumers", "rust-mcp");
++    assert_eq!(mcp["implementation"], "stub");
++    assert_eq!(mcp["availableInBuild"], false);
+     for target in report["targets"].as_array().unwrap() {
+         assert!(target["configuredTarget"].is_null());
+         assert_eq!(target["qualification"], "not-checked");

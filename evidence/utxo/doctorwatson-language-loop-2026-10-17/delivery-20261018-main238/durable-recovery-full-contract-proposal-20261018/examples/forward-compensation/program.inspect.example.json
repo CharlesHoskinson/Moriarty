@@ -1,0 +1,357 @@
+{
+  "format": "moriarty-recovery-program/1",
+  "source_profile": "moriarty-recovery/1",
+  "semantics": "moriarty-core2-recovery/1",
+  "base": {
+    "language": "moriarty/2",
+    "semantics": "moriarty-core/2",
+    "name": "ProposedForwardCompensation",
+    "states": [
+      {
+        "name": "marker",
+        "ty": "UInt",
+        "initial": {
+          "type": "UInt",
+          "value": "91"
+        }
+      }
+    ],
+    "assets": [
+      {
+        "name": "PAY",
+        "identity": {
+          "issuer": "independent-recovery-forward-compensation",
+          "network": "local",
+          "reference": "PAY",
+          "scale": 0
+        }
+      },
+      {
+        "name": "BOND",
+        "identity": {
+          "issuer": "independent-recovery-forward-compensation",
+          "network": "local",
+          "reference": "BOND",
+          "scale": 0
+        }
+      }
+    ],
+    "expressions": [
+      {
+        "kind": "Name",
+        "name": "auditAmount"
+      },
+      {
+        "kind": "Name",
+        "name": "retainedFee"
+      },
+      {
+        "kind": "Name",
+        "name": "price"
+      },
+      {
+        "kind": "Name",
+        "name": "remedy"
+      },
+      {
+        "kind": "Name",
+        "name": "accepted"
+      },
+      {
+        "kind": "Name",
+        "name": "remedy"
+      },
+      {
+        "kind": "Name",
+        "name": "compensation"
+      },
+      {
+        "kind": "Name",
+        "name": "compensation"
+      }
+    ],
+    "actions": [
+      {
+        "name": "recordAudit",
+        "inputs": [
+          {
+            "name": "auditAmount",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Liability",
+            "name": "audit",
+            "asset": "BOND",
+            "debtor": "observer",
+            "creditor": "auditor",
+            "amount": 0
+          }
+        ]
+      },
+      {
+        "name": "purchase",
+        "inputs": [
+          {
+            "name": "price",
+            "ty": "UInt"
+          },
+          {
+            "name": "retainedFee",
+            "ty": "UInt"
+          },
+          {
+            "name": "remedy",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Fee",
+            "asset": "PAY",
+            "from": "buyer",
+            "to": "treasury",
+            "amount": 1
+          },
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "buyer",
+            "to": "supplier",
+            "amount": 2
+          },
+          {
+            "kind": "Liability",
+            "name": "remedy",
+            "asset": "PAY",
+            "debtor": "reserve",
+            "creditor": "buyer",
+            "amount": 3
+          },
+          {
+            "kind": "Await",
+            "label": "fulfilment",
+            "binders": [
+              {
+                "name": "accepted",
+                "ty": "Bool"
+              }
+            ],
+            "guard": 4
+          },
+          {
+            "kind": "Discharge",
+            "name": "remedy",
+            "amount": 5
+          }
+        ]
+      },
+      {
+        "name": "compensate",
+        "inputs": [
+          {
+            "name": "compensation",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "reserve",
+            "to": "buyer",
+            "amount": 6
+          },
+          {
+            "kind": "Discharge",
+            "name": "remedy",
+            "amount": 7
+          }
+        ]
+      }
+    ]
+  },
+  "module": {
+    "agreement": "ProposedForwardCompensation",
+    "sites": [
+      {
+        "action": "purchase",
+        "await_label": "fulfilment",
+        "site": 1,
+        "await_ordinal": 3,
+        "handlers": [
+          {
+            "name": "pay_part",
+            "kind": "compensate",
+            "binders": [
+              {
+                "name": "outcome_known",
+                "ty": "Bool"
+              },
+              {
+                "name": "compensation",
+                "ty": "UInt"
+              }
+            ],
+            "captures": [
+              {
+                "name": "price",
+                "ty": "UInt",
+                "origin": "Input",
+                "ordinal": 0
+              },
+              {
+                "name": "retainedFee",
+                "ty": "UInt",
+                "origin": "Input",
+                "ordinal": 1
+              },
+              {
+                "name": "remedy",
+                "ty": "UInt",
+                "origin": "Input",
+                "ordinal": 2
+              }
+            ],
+            "expressions": [
+              {
+                "kind": "Name",
+                "name": "outcome_known"
+              },
+              {
+                "kind": "Name",
+                "name": "compensation"
+              },
+              {
+                "kind": "Name",
+                "name": "compensation"
+              }
+            ],
+            "guard": 0,
+            "statements": [
+              {
+                "kind": "Transfer",
+                "asset": "PAY",
+                "from": "reserve",
+                "to": "buyer",
+                "amount": 1
+              },
+              {
+                "kind": "Discharge",
+                "name": "remedy",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "format": "moriarty-recovery-plan/1",
+    "base_plan": {
+      "format": "moriarty-stage-plan/1",
+      "program_hash": "{{OWNER_BASE_PROGRAM_ID}}",
+      "actions": [
+        {
+          "action": "recordAudit",
+          "statement_count": 1,
+          "sites": [],
+          "segment_cost": [
+            "2"
+          ],
+          "committed_before": [
+            "0"
+          ],
+          "plan_total": "2"
+        },
+        {
+          "action": "purchase",
+          "statement_count": 5,
+          "sites": [
+            {
+              "site": 1,
+              "ordinal": 3,
+              "label": "fulfilment",
+              "binders": [
+                {
+                  "name": "accepted",
+                  "ty": "Bool"
+                }
+              ],
+              "captures": [
+                {
+                  "name": "price",
+                  "ty": "UInt",
+                  "origin": "Input",
+                  "ordinal": 0
+                },
+                {
+                  "name": "retainedFee",
+                  "ty": "UInt",
+                  "origin": "Input",
+                  "ordinal": 1
+                },
+                {
+                  "name": "remedy",
+                  "ty": "UInt",
+                  "origin": "Input",
+                  "ordinal": 2
+                }
+              ]
+            }
+          ],
+          "segment_cost": [
+            "7",
+            "4"
+          ],
+          "committed_before": [
+            "0",
+            "7"
+          ],
+          "plan_total": "11"
+        },
+        {
+          "action": "compensate",
+          "statement_count": 2,
+          "sites": [],
+          "segment_cost": [
+            "4"
+          ],
+          "committed_before": [
+            "0"
+          ],
+          "plan_total": "4"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "action": "purchase",
+        "forward_total": "11",
+        "successful_path_ceiling": "13",
+        "arms": [
+          {
+            "site": 1,
+            "handler": "pay_part",
+            "guard_cost": "2",
+            "body_cost": "4",
+            "recovery_cost": "6",
+            "committed_before": "7",
+            "successful_path_total": "13"
+          }
+        ]
+      }
+    ]
+  },
+  "qualification": "local-reference-stage",
+  "authentication": "none",
+  "consumption": "untracked",
+  "bindings": {
+    "base_program": "{{OWNER_BASE_PROGRAM_ID}}",
+    "base_plan": "{{OWNER_BASE_PLAN_ID}}",
+    "recovery_module": "{{OWNER_RECOVERY_MODULE_ID}}",
+    "recovery_plan": "{{OWNER_RECOVERY_PLAN_ID}}"
+  }
+}

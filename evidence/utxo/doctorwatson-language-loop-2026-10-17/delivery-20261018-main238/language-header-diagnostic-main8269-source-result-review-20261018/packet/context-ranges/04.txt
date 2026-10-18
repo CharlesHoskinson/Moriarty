@@ -1,0 +1,110 @@
+#[cfg(feature = "native")]
+use std::collections::BTreeSet;
+use std::{path::PathBuf, process::ExitCode};
+
+#[cfg(feature = "native")]
+use mori_backend::{Artifact, CircuitArtifact, PublicBinding};
+#[cfg(feature = "native")]
+use mori_core::{Action, BinaryOp, Expr, ExprId, Program, Statement, Type};
+use serde_json::{Value, json};
+
+use crate::shell::Shell;
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    /// Source file
+    pub file: PathBuf,
+    /// Compile a public enforcement map against this exact target descriptor
+    #[arg(long, value_name = "FILE")]
+    pub target: Option<PathBuf>,
+}
+
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    #[cfg(not(feature = "native"))]
+    if args.target.is_some() {
+        return super::native_unavailable();
+    }
+    let source = super::core_io::read_source(&args.file)?;
+    if args.target.is_none()
+        && mori_core::language(&source).is_ok_and(|language| language == "moriarty/2")
+    {
+        let staged = match mori_core::stage::load(&source) {
+            Ok(staged) => staged,
+            Err(error) => {
+                super::simulate::print_stage_report(json!({"status":"rejected", "error":error}))?;
+                return Ok(ExitCode::FAILURE);
+            }
+        };
+        let program = staged.program();
+        super::simulate::print_stage_report(json!({
+            "status": "accepted", "language": program.language, "semantics": program.semantics,
+            "agreement": program.name, "states": program.states, "assets": program.assets,
+            "actions": program.actions, "expressions": program.expressions,
+            "stage_plan": staged.plan(), "enforcement_report": null
+        }))?;
+        return Ok(ExitCode::SUCCESS);
+    }
+    #[cfg(feature = "native")]
+    if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
+        // The enforcement map reports the /3 relation. A Core2 --target refuses
+        // with Core's typed profile error before reading the target, backend
+        // layout or any output; source-only Core2 inspect is handled above.
+        let staged = mori_core::stage::load(&source).map_err(super::core_io::operation)?;
+        let refusal = match mori_core::stage::require_core1(staged.program()) {
+            Err(error) => error,
+            Ok(()) => core1_refusal(),
+        };
+        return Err(super::core_io::operation(refusal));
+    }
+    let program = mori_core::parse(&source).map_err(super::core_io::operation)?;
+    let enforcement = match args.target {
+        #[cfg(feature = "native")]
+        Some(path) => {
+            let target: mori_backend::Target = super::core_io::read_json(&path)?;
+            // Use the same whole-program admission and explicit mode as compile.
+            // No scenario, key, signature, proof or native execution is consumed.
+            let artifact = if target.signed_policy.is_some() {
+                mori_backend::compile_signed(&program, &target)
+            } else {
+                mori_backend::compile(&program, &target)
+            }
+            .map_err(super::core_io::operation)?;
+            enforcement_report(&source, &program, &artifact)?
+        }
+        #[cfg(not(feature = "native"))]
+        Some(_) => return super::native_unavailable(),
+        None => Value::Null,
+    };
+    let qualification = if enforcement.is_null() {
+        "source-only-unqualified"
+    } else {
+        "local-compiled-unqualified"
+    };
+    // Export validates depth/work/byte bounds and escapes public labels before
+    // printing anything. A compiler or report-size refusal leaves stdout empty.
+    super::core_io::print(&json!({
+        "format": "moriarty-enforcement-report/1",
+        "qualification": qualification,
+        "language": program.language, "semantics": program.semantics,
+        "agreement": program.name, "states": program.states,
+        "assets": program.assets, "actions": program.actions,
+        "expressions": program.expressions,
+        "enforcement_report": enforcement,
+        "open_premises": [
+            "a supplied exact target is required for the compiled enforcement map",
+            "ledger authentication and acceptance",
+            "native proof soundness and compiler correspondence",
+            "account and sponsor authority"
+        ]
+    }))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+#[cfg(feature = "native")]
+fn encoded(predicates: &[&str]) -> Value {
+    json!({"status": "encoded-not-verified", "predicates": predicates})
+}
+#[cfg(feature = "native")]
+fn reference(predicates: &[&str]) -> Value {
+    json!({"status": "available-not-executed", "predicates": predicates})
+}

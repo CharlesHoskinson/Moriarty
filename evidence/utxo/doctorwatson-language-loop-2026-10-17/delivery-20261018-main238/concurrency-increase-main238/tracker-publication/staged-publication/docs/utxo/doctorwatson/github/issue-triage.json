@@ -1,0 +1,3235 @@
+{
+  "schemaVersion": 1,
+  "kind": "github-issue-operational-adoption",
+  "repository": "CharlesHoskinson/Moriarty",
+  "retrievedAt": "2026-10-18T03:44:52.204025+00:00",
+  "sourceTree": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+  "displayName": "doctormoriarty<utxo>",
+  "stableRunner": "doctorwatson-utxo",
+  "authority": {
+    "native": 0,
+    "broadPreprodGoal": "paused; not resumed",
+    "remoteMutation": false,
+    "framework": "none; no Foreman",
+    "networkUsed": "structured GitHub gh issue/pr only",
+    "historicalAbsolutePathsFollowed": false
+  },
+  "counts": {
+    "openIssuesCaptured": 15,
+    "trackerChildren": 13,
+    "originalEarsRequirements": 119,
+    "retainedCardanoFirstClauses": 11,
+    "retainedMidnightPcdHeadings": 18,
+    "operationalItemsAreNotNewNormativeRequirements": true
+  },
+  "evidenceLimits": [
+    "Captured API fields are exact gh structured public issue snapshots; no comments or private data captured.",
+    "Full original issue bodies and PR context retained; stale claims remain quotations of dated source, not rewritten history.",
+    "Source inspection only: no product build, tests, interpreter/compiler SDK, VM, proof, key, wallet, node, deployment or provider operation.",
+    "Triage maps requirements but supplies no new security judgment; Opus ownership retained.",
+    "No issue is verified implemented or remotely closed by this triage."
+  ],
+  "retainedExits": {
+    "U": [
+      "U0",
+      "U1",
+      "U2",
+      "U3",
+      "U4",
+      "U5",
+      "U6",
+      "U7"
+    ],
+    "M": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "M6",
+      "M7",
+      "M8",
+      "M9",
+      "M10",
+      "M11",
+      "M12",
+      "M13",
+      "M14",
+      "M15",
+      "M16",
+      "M17"
+    ],
+    "MC": [
+      "MC01",
+      "MC02",
+      "MC03",
+      "MC04",
+      "MC05",
+      "MC06",
+      "MC07",
+      "MC08"
+    ],
+    "SP": [
+      "SP01",
+      "SP02",
+      "SP03",
+      "SP04",
+      "SP05",
+      "SP06",
+      "SP07",
+      "SP08",
+      "SP09",
+      "SP10",
+      "SP11",
+      "SP12"
+    ],
+    "G": [
+      "G01",
+      "G02",
+      "G03",
+      "G04",
+      "G05",
+      "G06",
+      "G07",
+      "G08",
+      "G09",
+      "G10",
+      "G11",
+      "G12",
+      "G13",
+      "G14",
+      "G15",
+      "G16",
+      "G17",
+      "G18",
+      "G19",
+      "G20",
+      "G21",
+      "G22",
+      "G23",
+      "G24"
+    ],
+    "status": "all original exits preserved; no parent acceptance inferred"
+  },
+  "roadmapReferences": [
+    "ROADMAP.md#one-implementation-sequence",
+    "openspec/changes/consolidated-language-kernel/traceability.md",
+    "openspec/changes/consolidated-language-kernel/reconciliation-2026-10-14.md",
+    "openspec/sprints/legacy-release-gates.json",
+    "openspec/sprints/sp12-developer-release-and-reproducible-evidence.md"
+  ],
+  "prContext": [
+    {
+      "baseRefName": "main",
+      "body": "On `main`, `cargo test --workspace` had 19 failing tests, `cargo clippy` stopped on an error after about 350 warnings, and `cargo fmt --check` reported about 620 unformatted regions. No CI job ran the Rust crates. This PR makes all three pass and adds a `rust` workflow that runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace`. It also fixes several departures from `RUST_GUIDELINES.md`.\n\n## Errors and dependencies\n- **`anyhow` removed from `mori-ledger`.** The SDK's `ProvingProvider` trait returns `anyhow::Error`, but the SDK exports it as `ProvingError`, so the impl names that alias instead. Previously `prove_prepared_call` threw the prover's error away (`.map_err(|_| refusal(\"sdk-intent-proving\"))`). It now finds the refusal again inside the SDK's `TransactionProvingError::Proving` wrapping, so `snapshot-key-location`, `binding-changed-activity` and `proving-activity-mismatch` reach the caller. A unit test covers this.\n- `midnight-curves` and `midnight-proofs` are declared once in `[workspace.dependencies]`, which is now grouped.\n- The optional diagnostics on `mori-ledger`'s `Error` are boxed, which clears 266 `result_large_err` warnings. The large `SegmentRun` and `LoadedAuthorization` variants are boxed too. Where boxing would change a public error or outcome type used in dozens of places, the warning is allowed with a comment saying why.\n\n## Duplication\n- `mori-ledger` now depends on `mori-backend`. It reuses the backend's FENS Schnorr verifier through a thin adapter that keeps the ledger's `strict-fens-refusal` codes, its pinned SRS hashes and byte cap, and `mori-core`'s `hex`. The ledger's jubjub notice now points at the shared verifier and still covers `signed/constraints.rs`.\n- `mori-ledger`'s test support and Sherlock's `extra_oracle_programs.rs` are each loaded as a module once instead of four times.\n\n## The 19 failing tests\n- **3 `source_closure_coverage`.** The 35 Sherlock sources were never added to the ledger's source closure. They are now an appended list, and the backend files the ledger now uses are a second one. The frozen baseline and Core-stage lists are unchanged. The exclusion check matched `foo_tests.rs` as `tests.rs`; it now matches only whole path components.\n- **5 `check_compile_io`.** #71 made `compile` write `source-projection.json` before the circuits. It is now written after the circuits and before `artifact.json`, which stays the completion marker. That keeps the write-fault test checking circuit writes. The tests now expect the extra file.\n- **4 static-ABI tests (`check_static_compile_io` and `fee_pool_component`).** `templates_hash()` is a SHA-256 of the text of `ops.rs`. When e9a2b80b added one line to `ops.rs`, the example bindings' `templates_hash` and `abi_hash` went stale, so they are regenerated here. Any edit to `ops.rs`, including reformatting it, will make them stale again.\n- **1 `signed_installed_call`.** The signed-version check from a91e76b2 runs before any other input is read, so a legacy deployment profile is now refused as `signed-version`. The test still checks that the refusal happens before any key or attachment file is read.\n- **1 backend `proving`.** The reference liability registry from 7cb60de8 now refuses the wrong-party scenario. The hidden-name scenario is still accepted by the reference simulator.\n- **5 `call_artifacts`.** The fake 8 KiB prover key is now smaller than the signed public keyset, so it was enlarged to 128 KiB.\n\n## Hygiene\n- Hard-coded `/home/charl/...` paths are now repository-relative or based on `$HOME`.\n- Removed comments that are no longer true (\"not yet run\", `SOURCE_ONLY / UNRUN`) and authorship labels.\n- The workspace is formatted with rustfmt. Most of the diff is formatting; the generated Sherlock oracle files are unchanged.\n\n## Agent guidance\nBefore this PR, neither `AGENTS.md` nor the `moriarty-dev` plugin mentioned `RUST_GUIDELINES.md`.\n- `RUST_GUIDELINES.md` now states rules that the recent changes broke but that weren't written down:\n  - every Rust file builds and tests through Cargo, with no direct-`rustc` harness and no `#[path]` remounts;\n  - no test-only prototypes in `src/`;\n  - no identities hashed from source text;\n  - no absolute paths and no `anyhow` in library crates;\n  - the fmt, clippy and test gates;\n  - every `#[allow]` comes with a reason;\n  - comments explain the code, not the review process.\n- The develop skill sends Rust changes to the guidelines and a new `references/rust.md` checklist. Deviations need the maintainer's agreement first, the three cargo checks must pass before handoff, and reviewers check conformance to the guidelines.\n- `AGENTS.md` has a new Rust toolchain section saying the same, so agents that skip the plugin still see it.\n- The plugin version is now 0.1.2, and `test_guidance.py` checks the new checklist. Installed copies pick it up only after the plugin is re-synced and reinstalled through the README's upgrade procedure.\n\n## Verification (macOS, Rust 1.99.0)\n- `cargo fmt --all --check` passes.\n- `cargo clippy --workspace --all-targets --locked -- -D warnings` passes.\n- `cargo test --workspace --locked`: 890 passed, 0 failed, 5 ignored. On `main` it was 870 passed and 19 failed.\n- `models/sherlock/reference/check-reference.py` still passes (86 tests, 8 programs, 216 prefixes).\n- `test_guidance.py` (10 tests), `test_registration_pin.py` and `test_upgrade.py` pass. `test_compatibility.py` has one failure, `/var` vs `/private/var`, which fails the same way on `main`.\n- The new workflow has not run on Linux yet; this PR is its first run.\n\n## Notes for review\n- Formatting and the comment edits change the bytes of files that the audit records under `docs/audits/` pin by hash. They also change `mori-ledger`'s `source_closure()`, so locally saved deployment and key manifests need to be generated again.\n- No independent model reviews were run for this PR.\n\n## Follow-ups\nTiers 2–4 of the cleanup are filed as issues #76–#88 and tracked in #89. Each issue gives a suggested fix and says what still needs maintainer input.\n",
+      "headRefName": "chore/rust-tier1-cleanup",
+      "labels": [],
+      "number": 74,
+      "state": "OPEN",
+      "title": "Clean up the Rust workspace, add Rust CI and point agents at the guidelines",
+      "updatedAt": "2026-10-16T03:41:44Z",
+      "url": "https://github.com/CharlesHoskinson/Moriarty/pull/74"
+    },
+    {
+      "baseRefName": "main",
+      "body": "Public `mori test` can now read `moriarty-tests/2` manifests and drive local Core/2 load, start and resume. It compares complete reports and preserves the existing manifest profile. Source fixtures cover two deliveries, a condition that does not advance, and a captured fee calculation.\n\nThe final audit found missing incoming-liability identities in the earlier fixtures. This candidate registers them and binds six fresh, blinded reports plus whole-program and plan preimages. The blocked inputs, expectations and original review dispositions remain preserved as invalidated historical evidence. A follow-up corrects the test-header provenance.\n\nValidation: fresh Muse Wonder1.0 high and Opus5.5 high approve the exact source and draft updates only. All CLI builds, tests and runtime comparisons remain UNRUN. Before ready-for-review or merge, update the guide/provenance links to the current binding, resolve the historical-fixture discovery question, obtain fresh reviews for changed bytes and obtain separate execution admission. No native, circuit, financial, stagenet or roadmap acceptance is claimed.\n",
+      "headRefName": "feat/mori-test-stages-r3-20261016",
+      "labels": [],
+      "number": 75,
+      "state": "OPEN",
+      "title": "Add staged Core test manifests with frozen expectations",
+      "updatedAt": "2026-10-16T02:59:24Z",
+      "url": "https://github.com/CharlesHoskinson/Moriarty/pull/75"
+    }
+  ],
+  "issues": [
+    {
+      "workItemId": "GH-I23",
+      "issue": {
+        "assignees": [],
+        "body": "## In one paragraph\n\nThe core should stay as strict as it is, and the September 19 product contract now says so: 'natural-language wishes require explicit formalization and an inspectable signing display'. Since September 30 the repository ships the engineer-facing half of a usable toolchain: an authoring beta with a readable checker, decimal unit literals, scenario and test files, starter templates, a signing display, a language server and a tutorial site, plus a Rust `mori` toolchain whose diagnostics name the mistake, point at it and suggest the fix. What is missing is the finance-facing half, and no file in the repository considers a finance professional or a non-engineer as a user. This issue names six gaps with evidence and a way to close each. None of it touches the U1/U2 implementation slice or weakens a gate. Backing analysis: [docs/research/2026-10-08-moriarty-for-finance-professionals.md](https://github.com/rober-m/Moriarty/blob/research/finance-professionals-2026-10-08/docs/research/2026-10-08-moriarty-for-finance-professionals.md).\n\n## Where we stand (October 8, 2026)\n\n- Product and roadmap: Moriarty is 'a programming language for all DeFi developers on Midnight', compiled to ZKIRv3, with developer tooling inside the product. The roadmap is one U0 to U7 sequence; MC08 and SP12 map to U7. The focus is 'one implementation slice on U1/U2'. The beta and the Rust toolchain were delivered as precursors.\n- Authoring beta (`moriarty-beta/1`): `init`, `check`, `fmt`, `inspect`, `expand`, `simulate`, `test`, `intent`, `verify-intent`, `lsp`, `mcp`. Only transfer and interest-first repayment prepare locally, as `PreparedUnqualified`. The eight DeFi family examples are structure-only.\n- Rust toolchain: `check` and `format` implemented with miette diagnostics; nine subcommands are stubs; `RUST_GUIDELINES.md` says 'the surface syntax is not frozen'.\n- Midnight Preview: the September 17 loan run finalized four stages, paid 533,972,602 test-asset units, exited zero, with both independent approvals. The September 10 swap stands.\n- Native proof: on October 2 a fixed fixture produced a finalized proof that applied with real verification and was independently verified, on a hand-specialized kernel with a trusted development genesis. No public transaction.\n- Tests: TypeScript language experiment 938 tests, 934 pass (four need the Compact compiler). Rust workspace 146 tests, all pass. Beta package: 193 tests, 115 pass, 12 skipped; all 66 failures need the native signature verifier binary, which is not built on this machine.\n- Usability evidence: six model-run trials (three Sonnet 5.5, three Grok 4.7). The result file says 'these are artificial-user trials, not a human usability study' and 'a measured human onboarding study remains unperformed'.\n\n## What is already solved\n\nA one-character typo, `Treasry` for `Treasury`, through the Rust binary:\n\n```\nmori::check::unknown_name\n  × I cannot find a declaration named `Treasry`.\n    ╭─[typo.mori:13:56]\n 13 │   operation: transfer(from: Buyer, to: Seller, fee_to: Treasry, value: price, fee: fee),\n    ·                                                        ───┬───\n    ·                                                           ╰── not declared above\n  help: Did you mean `Treasury`?\n```\n\nA plain `10` where `0.10 USD` was meant gives 'I cannot add a `USD` amount and a plain number' with both operands labeled. The TypeScript beta reports `BETA_REFERENCE at 13:56: Unknown or forward reference Treasry`. Both read the profile from the file. A wrong test expectation reports `/post/balances/0/amount`, expected 8991, actual 8990. These close the diagnostics and front-door problems from the October 7 draft for the beta surface.\n\n## Gaps and how to close them\n\n### 1. The vocabulary stops at amounts\n\nThe beta has `10.00 USD` literals with a declared scale, named parties and named obligations. It has 'no floating point, division, rounding or implicit asset conversion'. Accrued interest is a scenario input, not something the language computes. A cash price and a repayment amount share one type, `Qty<USD>`, so the owed-versus-paid distinction Source/5 keeps through two types is not visible. Three of the starter's 17 lines are signed plumbing (key, nonce, pre-head, hashes, six explicit empties), by design.\n\n**How to close it.** Finance vocabulary on the beta surface, through the review the Rust guidelines already describe: 'rate 10% per period, rounded down in the lender's favor', 'period 30 days from March 10, 2026', '100 USD paid' versus '100 USD owed'. Each form elaborates to exact atoms and to accrual terms a kernel already enforces (the Source/5 lifecycle kernel has numerator, denominator, rounding and period); the beta's own full-language horizon already proposes a rounding enum with a named beneficiary. Two spellings for owed and paid become mandatory. No new profile number: `/6` is used by the MIL/4 Source/6 stage syntax and reserved by the U0 proposal for the Aeon grammar.\n\n### 2. One action, one snapshot, JSON in and out\n\nA scenario is a closed JSON record with amounts as atom strings (`\"200000\"` is 2,000.00 USD at scale 2). A test binds one source, one action, one scenario and one exact expectation. `simulate` prints about 4.9 KB of JSON. There is no sequence of events and no table.\n\n**How to close it.** Multi-step scenarios that chain each post-state into the next call, a dated cash-flow and balance table in decimals with CSV export, and `mori init --template loan` that asks term-sheet questions and writes the signed plumbing as placeholders marked unverified, as the starter already marks its own. Tooling only. Output stays labeled local stipulation.\n\n### 3. Invariants are enforced but invisible\n\nThe kernel's fixed effects carry the invariants (conservation, caps, interest before principal), and the roadmap already says 'obligation and trust reports accompany U0–U2'. Nothing shows a finance professional which invariants held.\n\n**How to close it.** Invariants chosen by name, reported as held, not checked, or unsupported. Unknown or timeout never renders as success. For Source/5 the mechanism is relational postconditions; replacing the seven hard-coded postconditions in the loan's `repay` with two relational ones passes the checker, reproduces all six lifecycle outcomes and accepts a payment of 50 that the original rejects.\n\n### 4. There is a signing display, but no agreement to approve\n\nThe beta has a labeled, escape-safe display of every signed statement field with decimal amounts. It covers one signed intent, as rows.\n\n**How to close it.** Extend it to the whole agreement and render prose: 'Buyer pays Seller 10.00 USD with a 0.10 USD fee to Treasury. The most that can leave Buyer's account is 10.10 USD. Seller receives at least 10.00 USD.' Every bound and duty rendered, tests pin the wording of every construct, labeled non-normative, never produced by a language model.\n\n### 5. Templates have no finance math\n\nTwo starters exist (transfer, repay). The eight family files are structure-only and reject as `SpecifiedOnly`.\n\n**How to close it.** Pool, collateralized loan, vault, then ACTUS PAM, LAM and ANN, built as the first consumer of the U6 libraries so the generated `.mori` is checked by the same pipeline as any program. Templates never choose the profile and are never admitted directly.\n\n### 6. Nobody has watched a human use it\n\nThe only usability evidence is six model-run trials. They found unclear units and IDs, failed tests that hid the differing field, and misleading formatting, and the fixes shipped. A human will find the next class, and a finance professional will find a different one.\n\n**How to close it.** Once the layers above exist, a study with three to five finance professionals who do not write software. Three tasks: read the agreement rendering of a loan and find a deliberately wrong rounding rule; write a scenario from a term sheet and read the cash-flow table without help; fix a typo from the error message alone. Record time, stalls and what they think the words mean. This is the validation step for everything above, so it comes last. A short dry run on the beta as it ships today would calibrate the tasks, but it is not the deliverable. Label every result as observation of a beta with `PreparedUnqualified` output; it is not an SP12 pilot.\n\n## What we will not do\n\n- Start a new source profile number.\n- Hide signed terms; templates fill placeholders and mark them unverified.\n- Let a language model write approval text or touch admission. The beta's AI tools are read-only, and that is the right boundary.\n- Claim anything beyond `PreparedUnqualified` for local results.\n- Touch the U1/U2 slice, or report any of this as progress on a U milestone.\n\n## Dependencies\n\nNot a sequence; only what each item needs before it can start.\n\n- Multi-step scenarios, the cash-flow table, trust reports and the agreement rendering need no language change and read public output only. Any of them can start on the beta as it is.\n- Finance vocabulary needs the beta's own grammar and checker review. The surface is not frozen.\n- The loan template needs the vocabulary, or it can only fill what the beta can already say.\n- Templates with finance math wait for the U6 libraries.\n- The usability study runs on whatever has been assembled, and last, because it measures the rest.\n\nAll of these sit under the roadmap's 'authoring tools and libraries' heading as precursors, the same status the beta has.\n\n## Decisions needed\n\n1. Finance vocabulary into `moriarty-beta/1` as an extension (recommended, the surface is not frozen) or into a `moriarty-beta/2`.\n2. Template order: DeFi first (recommended, Preview evidence exists) or ACTUS first.\n3. Who owns the English wording. It should be a finance reviewer.\n4. Who recruits the finance users for the study once the layers exist.\n\n## Evidence\n\n- Analysis and reproduction record: [docs/research/2026-10-08-moriarty-for-finance-professionals.md](https://github.com/rober-m/Moriarty/blob/research/finance-professionals-2026-10-08/docs/research/2026-10-08-moriarty-for-finance-professionals.md) (fork branch)\n- Source/5 assumption analysis: [docs/research/2026-09-28-language-developer-experience-review.md](https://github.com/rober-m/Moriarty/blob/research/finance-professionals-2026-10-08/docs/research/2026-09-28-language-developer-experience-review.md) (fork branch)\n- Beta: [packages/moriarty-beta/GETTING-STARTED.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/packages/moriarty-beta/GETTING-STARTED.md), [examples/README.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/packages/moriarty-beta/examples/README.md); Rust: [RUST_GUIDELINES.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/RUST_GUIDELINES.md), [crates/mori/src/commands/](https://github.com/CharlesHoskinson/Moriarty/tree/main/crates/mori/src/commands)\n- Product contract and roadmap: [docs/MORIARTY-PRODUCT-CONTRACT.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/docs/MORIARTY-PRODUCT-CONTRACT.md), [ROADMAP.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/ROADMAP.md), [openspec/changes/consolidated-language-kernel/traceability.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/openspec/changes/consolidated-language-kernel/traceability.md)\n- Preview loan: [deliverables/preview-loan-2026-09-17/recovery-run01/RESULT.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/preview-loan-2026-09-17/recovery-run01/RESULT.md); native proof: [wiki-llm/native-financial-kernel-2026-10-01/R4-R5-REVIEWED-SUCCESS.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/wiki-llm/native-financial-kernel-2026-10-01/R4-R5-REVIEWED-SUCCESS.md)\n- Model-run trials: [wiki-llm/beta-language-2026-09-30/DEVEX-RESULT.md](https://github.com/CharlesHoskinson/Moriarty/blob/main/wiki-llm/beta-language-2026-09-30/DEVEX-RESULT.md)\n",
+        "labels": [],
+        "number": 23,
+        "state": "OPEN",
+        "title": "Make Moriarty usable by finance professionals building DeFi protocols on Midnight",
+        "updatedAt": "2026-10-08T11:53:13Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/23"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/23.json",
+        "sha256": "bcb7eb23825fb8e892a9e622b18879be54aa32591712aebf0be5677bcf2d6fe9"
+      },
+      "scope": "shared authoring/finance DevEx; Midnight product and release goals retained; Cardano adaptation is additional scope",
+      "owner": "Nonsecurity language/DevEx author; independent finance wording owner and human-study recruiter remain to be assigned",
+      "requirementLinks": {
+        "ears": [
+          "UNI-001",
+          "UNI-004",
+          "UNI-005",
+          "UNI-014",
+          "UNI-016",
+          "UNI-018",
+          "UNI-020",
+          "UNI-023",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U3",
+          "U6",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M10",
+          "M11",
+          "M15"
+        ],
+        "MC": [
+          "MC01",
+          "MC07",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP07",
+          "SP08",
+          "SP11",
+          "SP12"
+        ],
+        "G": [
+          "G01",
+          "G14",
+          "G17",
+          "G18",
+          "G19",
+          "G20",
+          "G21",
+          "G22",
+          "G23",
+          "G24"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-003",
+          "EUC-004",
+          "EU-FIN-001",
+          "EU-FIN-019",
+          "EU-CON-005"
+        ]
+      },
+      "missingPredicate": "Preserve and implement all six finance-facing gaps: paid/owed and exact rate/date/rounding vocabulary; chained scenarios with dated decimal cash-flow/balance tables and CSV; invariant/trust status; complete deterministic agreement rendering; real checked finance templates; observed study with 3–5 nonprogrammer finance professionals. Each retains its own validation; no source-profile collision or shortcut around U1/U2.",
+      "realConsumer": "packages/moriarty-beta frontend, CLI simulation/test/intent display and starter templates; Rust mori check/test/inspect; eventual same public compiler and U6 libraries",
+      "sourceObservation": "Issue is an October 8 snapshot, not a current executable inventory. Current Rust test/inspect source exists; roadmap retains local command delivery and open native/release qualification. Six gaps are independent precursors, not a claim that all CLI commands are stubs.",
+      "sourceReferences": [
+        {
+          "path": "packages/moriarty-beta/src/frontend.ts",
+          "sha256": "6c45599ee9efcc479bbe5a1dcb17c3c42f72630f04f8a55a78ecef6ee5e92db3",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "packages/moriarty-beta/GETTING-STARTED.md",
+          "sha256": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/test.rs",
+          "sha256": "4d8bc18746dab1ce89247c7a6e30b9eb376e912c5afe26ce6f367516b7409dc7",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/inspect.rs",
+          "sha256": "5cef6e03dcb29a3fdeb97a5f2462b74b0ce7d7d23b93407f400a4156c2adebef",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "ROADMAP.md",
+          "sha256": "a28cc6383047e4ee4c850534a1077fc0444aebc6556de357922ee14a578b0054",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Independently derive exact atoms/rounding, owed/paid distinctions, ordered stage state/effects, gross debit/fees/net receipts and residual duties; compare each public report and CSV to those frozen values.",
+        "Finance reviewer checks every bound and duty in deterministic non-normative agreement text; templates emit source accepted by the ordinary declared pipeline.",
+        "Observe all three original human tasks, time/stalls/understanding; distinguish model trials and beta observations from SP12 pilots."
+      ],
+      "refusalOrRegressionChecks": [
+        "Original requirement: unsupported, timeout and unchecked invariants must never render as held; SpecifiedOnly family templates remain explicitly unqualified.",
+        "Original display requirement: signed terms/placeholders remain visible and unverified until checked; no generated approval prose or silent profile replacement."
+      ],
+      "consequentialProposalsNeeded": [
+        "Concrete vocabulary extension/version proposal with grammar, compatibility and reserved profile inventory.",
+        "Template-order proposal, named finance wording owner and study recruiter."
+      ],
+      "dependencies": {
+        "source": [
+          "Existing beta public-output schema permits scenario tables, reports and agreement rendering preparation now.",
+          "Finance-math templates require relevant U6 library semantics; vocabulary requires grammar/checker review."
+        ],
+        "checks": [
+          "Use independent finance expectations; human study follows assembled tooling.",
+          "No compile/prove/target commands executed by triage."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Public Midnight journey and full U6/U7, MC07/MC08, SP12 and all G exits remain independent; finance study is not an SP12 pilot."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Adopt as six retained subitems; eligible public-output/wording preparation plus specific grammar/library/study dependencies.",
+      "safeCleanupAction": "Keep issue open; prepare a dated progress crosswalk after reviewed implementation, retaining every original gap and restriction. Do not narrow Midnight vision to Cardano or a fixed loan/swap product.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-001",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 3,
+          "heading": "UNI-001 Permissionless public pipeline",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 6
+            },
+            {
+              "name": "Hostile witness",
+              "line": 10
+            }
+          ]
+        },
+        {
+          "id": "UNI-004",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 36,
+          "heading": "UNI-004 Intent and solver completion",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 39
+            },
+            {
+              "name": "Hostile witness",
+              "line": 43
+            }
+          ]
+        },
+        {
+          "id": "UNI-005",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 47,
+          "heading": "UNI-005 Complete financial state",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 50
+            },
+            {
+              "name": "Hostile witness",
+              "line": 54
+            }
+          ]
+        },
+        {
+          "id": "UNI-014",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 146,
+          "heading": "UNI-014 Certified libraries",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 149
+            },
+            {
+              "name": "Hostile witness",
+              "line": 153
+            }
+          ]
+        },
+        {
+          "id": "UNI-016",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 168,
+          "heading": "UNI-016 Assurance and release",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 171
+            },
+            {
+              "name": "Hostile witness",
+              "line": 175
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-023",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 245,
+          "heading": "UNI-023 Complete retained membership",
+          "scenarios": [
+            {
+              "name": "Full family accounting",
+              "line": 248
+            },
+            {
+              "name": "Finite library sample",
+              "line": 252
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I76",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 4 — decision needed before related cleanup.**\n\n## Problem\n`crates/mori-core` holds a second language frontend for Core (`language \"moriarty/1\";` and the staged `\"moriarty/2\"`): its own parser (`src/parser.rs`), IR (`src/ir.rs`), checker (`runtime::validate`, `stage/validate.rs`) and evaluator. It reuses only `mori-lexer`, not `mori-ast`, `mori-parser`, `mori-checker` or `mori-diagnostics`. `RUST_GUIDELINES.md` only covers `moriarty-beta/1`, so none of its frontend rules were applied:\n- Tokens are copied into `Vec<Tok { text: String, .. }>` and the parser matches token text, not tags.\n- The IR stores owned `String`s in array-of-structs nodes; `ExprId` is a bare `u16` alias, not a newtype.\n- Two-token operators aren't checked for adjacency: `a = = b` parses as `a == b` and `a < = b` as `a <= b`. `not =` means \"not equal\".\n- Errors are `mori_core::Error { code: String, message, offset, step }` with no spans, labels or help.\n\n`mori check` also accepts `moriarty/1` and `moriarty/2` files (`crates/mori/src/commands/check.rs`), and `mori init` scaffolds `moriarty/1`. Neither is listed under *Intentional differences*. Sherlock's draft frontend (`moriarty-sherlock-draft/1`, `crates/mori-core/src/sherlock/draft_source.rs`) is a third grammar.\n\n## Suggested fix\n- **Option A (recommended):** parse Core with `mori-parser` into the struct-of-arrays `mori-ast` as a profile, check it with `mori-checker`, and lower the checked tables to the existing `mori_core::Program` IR, so `mori-backend` and `mori-ledger` don't change at first.\n- **Option B:** keep Core separate, but give it its own crates that follow the same rules (lexer reuse, SoA AST with `u16` handles, a separate check phase, `MoriDiagnostic`), and add a Core section to `RUST_GUIDELINES.md`.\n\nEither way, record the outcome in `RUST_GUIDELINES.md` and open issues for the chosen path.\n\n## Needs input\nThis is a maintainer decision:\n1. Is Core a profile of the beta pipeline or a separate language with its own crates?\n2. Should `mori check` and `mori init` handle Core? If so, record it under *Intentional differences*.\n3. Should `= =`, `< =` and `not =` stay accepted? Rejecting them breaks programs that parse today.\n4. Should the Sherlock draft grammar converge with Core or beta, or stay separate?\n\n## Done when\nThe decision and its reasons are in `RUST_GUIDELINES.md` and follow-up issues exist. #82 and #83 depend on it.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojNA",
+            "name": "question",
+            "description": "Further information is requested",
+            "color": "d876e3"
+          }
+        ],
+        "number": 76,
+        "state": "OPEN",
+        "title": "Rust: decide how the Core language relates to the beta frontend",
+        "updatedAt": "2026-10-16T03:40:54Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/76"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/76.json",
+        "sha256": "d684faf8505f4904885907edeb6e981ac2a13012fe2a87e188f7019bc5c0db32"
+      },
+      "scope": "shared compiler/frontend and DevEx; separate Core/beta/Sherlock profiles",
+      "owner": "Language frontend/IR integrator",
+      "requirementLinks": {
+        "ears": [
+          "UNI-002",
+          "UNI-018",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M6",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP03",
+          "SP12"
+        ],
+        "G": [
+          "G01",
+          "G03",
+          "G14"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-001",
+          "EUC-002",
+          "EUC-016"
+        ]
+      },
+      "missingPredicate": "Publish a concrete profile/consumer compatibility decision with reasons: shared beta frontend profile vs separate Core crates, Core check/init support, current spaced-operator acceptance and Sherlock draft scope. Record follow-up work without implying implementation.",
+      "realConsumer": "crates/mori/src/commands/check.rs and init.rs; mori-core parser/IR/validate; backend and ledger Program consumers; Sherlock draft/source adapters",
+      "sourceObservation": "Core ExprId is still a bare u16 alias; separate parse and validate APIs and draft mounts remain. The current contract already requires explicit profile/consumer reporting; choosing Option A is not authorized merely by the issue recommendation.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2199d7b49173816c527436eef3cf30c2cb51d1b039603b1046e7bd508762faf7",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "RUST_GUIDELINES.md",
+          "sha256": "7faaf005fc60012a4e380a2c5b2f68c48c956f6d53964dc45fd7709ad9b70ed3",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Independently enumerate existing accepted/rejected Core/1, Core/2 and beta forms and actual check/init/compiler consumers before selecting the compatibility proposal.",
+        "Decision text names semantics preserved or changed, migration and follow-up ownership; downstream #82/#83 can cite it."
+      ],
+      "refusalOrRegressionChecks": [
+        "UNI-018 Different authoring profile: beta checking never supplies a Rust compile pass.",
+        "Original operator acceptance cannot change incidentally during cleanup; conflicting profile strings and unsupported consumer constructs remain explicit."
+      ],
+      "consequentialProposalsNeeded": [
+        "Option A vs B with concrete grammar/IR adapter, migration cost and compatibility matrix.",
+        "Explicit proposals for check/init routing, spaced operators and Sherlock draft convergence."
+      ],
+      "dependencies": {
+        "source": [
+          "#74 is context, not merged prerequisite; inspect active files directly."
+        ],
+        "checks": [
+          "Source-only inventory and compatibility proposal are eligible now."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Decision completes this planning issue only; actual frontend migration, general grammar correspondence and U0/U2/U7 remain open."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Concrete decision proposal needed; source inventory and compatibility examples eligible now. #82/#83 dependent portions await outcome.",
+      "safeCleanupAction": "Keep open until documented decision and explicit follow-ups exist; no blanket maintainer permission for public developers.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-002",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 14,
+          "heading": "UNI-002 One semantic relation",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 17
+            },
+            {
+              "name": "Hostile witness",
+              "line": 21
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I77",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\nTwo identities are SHA-256 hashes of Rust source text, so any edit or reformat changes them:\n- `mori_ledger::proving::source_closure()` `include_str!`s about 110 files: the CLI's own sources (`crates/mori/src/...`), the root `Cargo.toml` and `Cargo.lock`, `mori-core`, `mori-lexer`, all Sherlock files and (since #74) the backend files the ledger reuses. It becomes the `build` field of local deployment and static-compile manifests (`local_deployment.rs`, `static_compile.rs`, `signed/deployment.rs`). A library depends on the bytes of its consumer, and a `cargo fmt` or lockfile bump invalidates saved manifests. `tests/source_closure_coverage.rs` pins the member list.\n- `mori_ledger::layout::templates_hash()` hashes the text of `ops.rs` and is part of every static `abi_hash`. A one-line change in e9a2b80b left `examples/core/static-compile/*.bindings.json` and `examples/core/fee-pool/*static-bindings.json` stale and broke 4 tests until #74 regenerated them.\n\n## Suggested fix\n1. `templates_hash`: hash a canonical serialization of the templates `ops.rs` produces, or a declared template-set version that is bumped when templates change. Add a test that a whitespace-only change to `ops.rs` leaves it unchanged.\n2. `source_closure`: replace it with a declared toolchain identity (crate versions, the `rust-toolchain.toml` channel, the Midnight entries of `Cargo.lock`) or with hashes of the artifacts the manifest describes (ZKIR, keys). Stop `include_str!`-ing CLI sources.\n3. Remove `source_closure_coverage.rs`, or reduce it to what the new identity needs.\n4. Regenerate the example bindings and say in the PR which saved manifests become invalid.\n\n## Needs input\n- What `build` is meant to prove. If it's \"built from the reviewed source\", a reviewed commit or tree hash recorded at release may be enough. The security owner should agree, because these manifests cross a trust boundary.\n- How to migrate: regenerate everything at once, or accept old and new identities for a while.\n\n## Done when\nFormatting or editing an unrelated source file changes no identity, and the example bindings and tests are regenerated.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 77,
+        "state": "OPEN",
+        "title": "Rust: derive build and ABI identities from artifacts, not source text",
+        "updatedAt": "2026-10-16T03:40:36Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/77"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/77.json",
+        "sha256": "14737d7f0732c71d9b52ed102d1b46c5b0ebad89a4428aa97a9e0fac4a65b6d6"
+      },
+      "scope": "shared identity/ABI infrastructure with native Midnight trust-boundary implications",
+      "owner": "Artifact/ABI integrator; Opus owns identity/trust and migration security judgment",
+      "requirementLinks": {
+        "ears": [
+          "UNI-003",
+          "UNI-015",
+          "UNI-018",
+          "UNI-021"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M2",
+          "M6"
+        ],
+        "MC": [
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP05",
+          "SP09",
+          "SP12"
+        ],
+        "G": [
+          "G03",
+          "G06",
+          "G12",
+          "G16"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-005",
+          "EUC-006",
+          "EUC-008",
+          "EUC-011",
+          "EUC-012",
+          "EU-LDG-011"
+        ]
+      },
+      "missingPredicate": "Replace source-text identities with a reviewed, defined artifact/template/toolchain identity contract and explicit saved-manifest migration; unrelated formatting changes leave semantic identities stable while material bound artifacts remain identified.",
+      "realConsumer": "mori-ledger layout/static_compile/local_deployment/signed deployment/context/preparation manifest consumers",
+      "sourceObservation": "layout::templates_hash still hashes include_str!(\"ops.rs\"); proving::source_closure still includes source text, and signed consumers use it. This is a live source gap; replacing a hash without defining its claim is insufficient.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-ledger/src/layout.rs",
+          "sha256": "54174ce945761540d7d5c08a24cdad7cf2ca2b0932b1bbf8453a8b9bf0030ba4",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/proving.rs",
+          "sha256": "c636795ddc2b28245533320c5f5b8d574d739116824b8137dba63ed7565c38cb",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/signed/deployment.rs",
+          "sha256": "c809bb0f6a6a57a5aadeaecace36fb332bbb6966cd696707fd938c855cd6a246",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/signed/context.rs",
+          "sha256": "cd81950e29300e5d357a2a8780cc23e27ceb63694af9944126a0b95e8f2018c0",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/signed/preparation.rs",
+          "sha256": "03051ea0b2c2c782d1f1db1f31240fc44a7c8fce459f84f834c563f26f344a75",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze independently specified template/artifact canonical preimages and expected identity vectors; show unrelated source whitespace does not change semantic identity.",
+        "Enumerate every saved manifest and example binding affected, and two-builder artifact reproducibility obligations separately."
+      ],
+      "refusalOrRegressionChecks": [
+        "Preserve existing stale/different binding refusal semantics; identity-change controls and compatibility acceptance belong to the Opus-reviewed proposal, not a triage security approval."
+      ],
+      "consequentialProposalsNeeded": [
+        "Define what build attests and exact canonical bytes/version; select explicit reject/regenerate vs transitional migration with security-owner review."
+      ],
+      "dependencies": {
+        "source": [
+          "Inventory all source_closure/templates_hash consumers and historical hash-bound audit records."
+        ],
+        "checks": [
+          "Native/key/artifact regeneration and SDK operations not authorized here; source/static vectors can be prepared."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Fresh identity/migration security review; all runtime/native/target evidence stays open until separately authorized and observed."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible source inventory/proposal; identity contract and migration require concrete reviewed design, native result blocked by current authority.",
+      "safeCleanupAction": "Keep open; do not delete source-closure tests or regenerate evidence blindly. Retain old receipts and enumerate invalidated manifests.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-003",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 25,
+          "heading": "UNI-003 Native target and correspondence",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 28
+            },
+            {
+              "name": "Hostile witness",
+              "line": 32
+            }
+          ]
+        },
+        {
+          "id": "UNI-015",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 157,
+          "heading": "UNI-015 Semantic evolution",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 160
+            },
+            {
+              "name": "Hostile witness",
+              "line": 164
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I78",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\nBoth crates lower `mori_core::Program` to ZKIR independently:\n- `mori-backend`: `Builder` and `lower_action` in `src/lib.rs`, plus `stage/` for `moriarty/2`.\n- `mori-ledger`: `relation/compiler.rs`, `relation/arithmetic.rs`, `ops.rs`, `layout.rs`.\n\nEach has its own range, equality and 64-bit-limb multiplication helpers. #74 made `mori-ledger` depend on `mori-backend` and share the Schnorr verifier, the pinned SRS hashes and `hex`. The two lowerings and the two SRS loaders (`OfflineParameters` in the backend, `PinnedCallParameters` in the ledger) are still separate.\n\n## Suggested fix\n1. Inventory what each lowering emits (local relation constraints vs native ledger transcript ops) and where the differences are deliberate.\n2. Move the shared gadgets (range checks, equality, limb multiplication, field encoding) into one module in `mori-backend`, or a small `mori-zkir` crate, used by both.\n3. Merge the SRS loaders into one that takes a byte cap.\n4. Keep the outputs byte-identical. The existing compile and relation tests, plus the pinned example artifacts, are the oracle.\n\n## Needs input\n- Are the backend's local proofs and the ledger's native calls meant to stay separate products? If yes, share only the gadgets; if no, pick the lowering that survives.\n- A new `mori-zkir` crate, or grow `mori-backend`?\n\n## Done when\nOne implementation of each gadget and one SRS loader, with every existing artifact test passing unchanged.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 78,
+        "state": "OPEN",
+        "title": "Rust: one Program-to-ZKIR lowering path for mori-backend and mori-ledger",
+        "updatedAt": "2026-10-16T03:40:38Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/78"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/78.json",
+        "sha256": "1d530fbdc74b0a925990603b654d4ca74aa048989ccb5d6610bafb5465839c38"
+      },
+      "scope": "shared source IR comparison; existing backend and ledger outputs are distinct Midnight statements, not a Cardano lowering",
+      "owner": "Compiler/ABI integrator; Opus owns cryptographic gadget/SRS judgments",
+      "requirementLinks": {
+        "ears": [
+          "UNI-003",
+          "UNI-018",
+          "UNI-019",
+          "UNI-020",
+          "UNI-017"
+        ],
+        "U": [
+          "U0",
+          "U1",
+          "U2",
+          "U4"
+        ],
+        "M": [
+          "M1",
+          "M2",
+          "M6",
+          "M8"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC05"
+        ],
+        "SP": [
+          "SP03",
+          "SP04",
+          "SP05",
+          "SP09"
+        ],
+        "G": [
+          "G05",
+          "G09",
+          "G16"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-002",
+          "EUC-013",
+          "EU-CON-002"
+        ]
+      },
+      "missingPredicate": "Inventory exact statements, admission subsets and numeric/field representations; share only justified common gadgets/parameter-loader mechanics while preserving each consumer contract. A proposal is required before merging lowerings or loaders.",
+      "realConsumer": "mori-backend compile/compile_signed and stage lowering; mori-ledger relation/compiler, arithmetic, layout and ops; OfflineParameters/PinnedCallParameters",
+      "sourceObservation": "Both source paths remain. Current UNI-019 explicitly requires common-domain comparison and intentional refusal recording; the issue title does not establish global equivalence or identical cross-consumer bytes.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-backend/src/lib.rs",
+          "sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/src/stage/mod.rs",
+          "sha256": "69fdceb125c3ef29a29f80b45b54f09eb601311d3ed181a2579f85049b796693",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/src/parameters.rs",
+          "sha256": "12db590a334ea76bee475ade3e0daf9058d4903d2224787d3ca58c6c3457b53d",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/relation/compiler.rs",
+          "sha256": "5bc377dbddedd88a4144c1a47a54f71a32e8d051e935f5ba588c45c658a7dd06",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/relation/arithmetic.rs",
+          "sha256": "dea48a884062407cd745c9dc02a56b055f472aee50e8f8ed6e5f7c290725e47a",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/proving.rs",
+          "sha256": "c636795ddc2b28245533320c5f5b8d574d739116824b8137dba63ed7565c38cb",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "openspec/changes/consolidated-language-kernel/reconciliation-2026-10-14.md",
+          "sha256": "0fe0d8d033217c95de3b4a64d0355a415d4963d81fc531bf187b7759846f82ae",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze complete expected observations independently on an explicitly mapped common subset; retain each existing artifact unchanged within its own statement/profile.",
+        "Inventory unique gadget consumers and loader caps/pins before a shared-module/crate proposal."
+      ],
+      "refusalOrRegressionChecks": [
+        "UNI-019 Different admitted statements: preserve intentional refusal and reason; refuse an unproved global-equivalence claim.",
+        "SRS/cap/pin refusal requirements retain original scope and Opus review; no parameter loading performed."
+      ],
+      "consequentialProposalsNeeded": [
+        "Separate products vs shared subset, module/crate ownership and loader contract with per-consumer cap/pin behavior."
+      ],
+      "dependencies": {
+        "source": [
+          "Actual consumer inspection and explicit admission/representation map precede refactor."
+        ],
+        "checks": [
+          "Existing artifact tests are regressions, not an independent semantic oracle; broad compile/SDK/native suites remain unauthorized."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Source sharing alone closes no native correspondence, U1/U2/U4 or SRS security claim."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible comparative inventory and bounded proposal; merging semantically different statements is not presumed safe.",
+      "safeCleanupAction": "Keep open; retain title/body and add a future clarification that within-consumer artifact preservation differs from cross-consumer byte equality.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-003",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 25,
+          "heading": "UNI-003 Native target and correspondence",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 28
+            },
+            {
+              "name": "Hostile witness",
+              "line": 32
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-019",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 201,
+          "heading": "UNI-019 Scoped lowering comparison",
+          "scenarios": [
+            {
+              "name": "Common construct domain",
+              "line": 204
+            },
+            {
+              "name": "Different admitted statements",
+              "line": 208
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-017",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 179,
+          "heading": "UNI-017 Next native backend contract",
+          "scenarios": [
+            {
+              "name": "Complete native recursive path",
+              "line": 182
+            },
+            {
+              "name": "Incomplete cryptographic or release evidence",
+              "line": 186
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I79",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\nSherlock lives in `crates/mori-core/src/sherlock/` (35 files):\n- About 2.8k lines of unadopted prototypes are compiled only under `#[cfg(test)]` in `src/`: `program_image`, `image_reference`, `machine_image`, `helper_schedule`, `helper_call_adapter`, `reference_slice`, and the draft frontend.\n- `lib.rs` mounts `sherlock/draft_*.rs` and `sherlock/source_adapter.rs` at the crate root with `#[path]` under other names (`sherlock_draft`, `sherlock_source`), so that `sherlock/mod.rs` has no crate dependencies. That's because `models/sherlock/reference/check-reference.py` compiles `sherlock/mod.rs` directly with `rustc --test`, outside Cargo, which also rules out insta and proptest.\n- `image_reference.rs` re-implements `reference.rs`'s transition, evaluate, bind and matching. Its own comment says it mirrors the rule decomposition.\n- The call stack pushes and pops at the front of a `Vec` (`frames.insert(0, ..)`, `remove(0)`), which is O(n) per step.\n- Every `mori-core` source file must be in the ledger's `source_closure`, so each new Sherlock file changes ledger identities (#77).\n\n## Suggested fix\n1. Create `crates/mori-sherlock` with `reference`, `reference_types`, `compare` and `reference_display` as its library and no dependencies. `mori-lexer` is optional, for the draft frontend behind a feature.\n2. Move the draft frontend and `source_adapter` into it and delete the `#[path]` mounts. `mori-backend::source_projection` depends on `mori-sherlock`.\n3. Move unadopted prototypes to `experiments/sherlock/` or behind a `prototype` feature.\n4. Replace `check-reference.py`'s direct `rustc` build with `cargo test -p mori-sherlock`, keeping its JSON transcription check (see #86).\n5. Make `image_reference` reuse `reference.rs`'s rule helpers, or drop it if the flat-image interpreter isn't adopted.\n6. Keep the top of the frame stack at the end of the `Vec`.\n\n## Needs input\n- Which prototypes are still wanted (behind a feature) and which go to `experiments/`.\n- Whether the hash-pinned audit records under `docs/audits/2026-10-15/sherlock*` need new records or stay as history.\n\n## Done when\n`mori-core` has no Sherlock code, no `#[path]` mounts remain for it, and Sherlock builds and tests only through Cargo.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 79,
+        "state": "OPEN",
+        "title": "Rust: move Sherlock into its own crate and build it only through Cargo",
+        "updatedAt": "2026-10-16T03:40:57Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/79"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/79.json",
+        "sha256": "02de9d57719c78f3dd3f441efca66a5f74a78fefa8135c4055260544c2528d12"
+      },
+      "scope": "shared Sherlock interpreter/frontend packaging; not native qualification",
+      "owner": "Sherlock crate and source-projection integrator",
+      "requirementLinks": {
+        "ears": [
+          "UNI-002",
+          "UNI-018",
+          "UNI-020",
+          "UNI-021",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M6",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP03",
+          "SP12"
+        ],
+        "G": [
+          "G04",
+          "G05",
+          "G12"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-002",
+          "EU-CON-005",
+          "EU-CON-006"
+        ]
+      },
+      "missingPredicate": "Choose retained prototype ownership, move adopted Sherlock library/frontend to Cargo crate, remove direct-rustc and path remounts, preserve exact interpreter/prefix results and source-projection consumption, and retain historical source pins.",
+      "realConsumer": "crates/mori-core/src/lib.rs Sherlock exports; mori-backend source_projection; models/sherlock/reference/check-reference.py and independent JSON oracles",
+      "sourceObservation": "Core lib retains draft/source #[path] mounts; check-reference.py requires --rustc and directly invokes rustc --test. New Sherlock layout files exist, so the issue count of 35 files is historical, not a current inventory.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-core/src/lib.rs",
+          "sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/mod.rs",
+          "sha256": "562f563d6f679d188bdb283d1dc191b34f19459a98d9c8a260911f16e7e367de",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/src/source_projection.rs",
+          "sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "models/sherlock/reference/check-reference.py",
+          "sha256": "1b22a0c4dc14ac0dabd5fe4e8c5ca5ff85485e9b22dd2673a4645f5145cfa94b",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze current adopted module/public-export and consumer inventory, independent whole-state and prefix oracle membership before moving files.",
+        "Cargo-owned equivalent checks must retain JSON transcription, state/effect ordering and stack semantics; stack push/pop change preserves observed order."
+      ],
+      "refusalOrRegressionChecks": [
+        "Missing prototype/module/prefix coverage cannot count as preserved behavior; generated or shared evaluator output alone is not an independent oracle."
+      ],
+      "consequentialProposalsNeeded": [
+        "Concrete module retention/experiments/feature split; new audit records for changed tree while historical records remain immutable."
+      ],
+      "dependencies": {
+        "source": [
+          "Coordinate #77 source identity consumers and #86 oracle location; current module inventory precedes migration."
+        ],
+        "checks": [
+          "Inspect chosen Cargo targets for native side effects before any future ordinary check; no Cargo suite run here."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Packaging/test delivery is a child result, not interpreter formal correspondence or U/M/MC/SP/G closure."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible crate/prototype/consumer inventory; packaging proposal needed for adoption split.",
+      "safeCleanupAction": "Keep open; retain historical 35-file claim as dated description, attach updated manifest after reviewed migration.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-002",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 14,
+          "heading": "UNI-002 One semantic relation",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 17
+            },
+            {
+              "name": "Hostile witness",
+              "line": 21
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I80",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\n`RUST_GUIDELINES.md` says to keep the CLI a thin layer over the library crates. `crates/mori/src/commands/` has grown by about 19k lines, much of it logic that belongs in libraries:\n- `inspect.rs`: the enforcement report walks Core `Expr`/`Statement` values and holds rule-text tables.\n- `test.rs`: the whole Core test runner, including manifest rules and hand-built JSON.\n- `init.rs`: project templates and their expected outcomes.\n- `call_io.rs`: checks that request inputs match the source action.\n- `verify_call.rs`, `prove_call.rs` and the `*_signed_call.rs` files: the CLI sequences the multi-step ledger protocol (`admit_context` → `admit_inspection` → `verify` → `admit_readback`) itself, with `futures::executor::block_on` and `StdRng::from_entropy`.\n- `core_io.rs`: formats structured ledger errors into strings.\n\nProblems with the command surface:\n- 13 flat call subcommands (`compile-call`, `keygen-call`, `keygen-signed-call`, `prepare-call`, `prepare-signed-call`, `prove-call`, `prove-signed-call`, `verify-call`, `verify-signed-call`, …).\n- `SigningOutputArgs.json` (`--json` on `intent` and `verify-intent`) is never read.\n- `--review` prints prose and then JSON to the same stdout (`intent.rs`, `verify_intent.rs`).\n- Flag combinations are checked by hand (`compile_call.rs`, `intent.rs`) instead of with clap groups. `--authorization` is a `String`, not a `ValueEnum`. Many arguments have no doc comment, so `--help` shows nothing for them.\n- `prove`, `verify`, `simulate` and `replay` print no status line, and no new command adds anything under `--verbose`.\n\n## Suggested fix\n1. Move the enforcement report into `mori-backend` or `mori-core`, and the test runner and init templates into `mori-core`. Make the call protocol `mori-ledger` functions that take parsed inputs and return typed results. Each command then reads files, calls one function and prints.\n2. Nest the call commands: `mori call {compile,keygen,prepare,prove,verify} [--signed]`.\n3. Make `--json` work (status lines off, only JSON on stdout) or remove it. Send `--review` prose to stderr, or make it exclusive with JSON.\n4. Use clap `ArgGroup`, `conflicts_with` and `ValueEnum`, and document every argument.\n5. Add cargo-style status lines and `--verbose` timings to the commands that lack them.\n\n## Needs input\n- Command names and nesting. Scripts, `deliverables/` and other agents may already call the current names; decide whether old names stay as aliases.\n- Which crate owns the call protocol.\n\n## Done when\nCommand modules only parse arguments, read inputs, call a library and print. #85 depends on this.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 80,
+        "state": "OPEN",
+        "title": "Rust: move business logic out of the mori CLI",
+        "updatedAt": "2026-10-16T03:40:58Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/80"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/80.json",
+        "sha256": "5845e2a34deba0131914939102dcd0f784b9214d74a06ebbcedde43dd3217b9e"
+      },
+      "scope": "shared public CLI and library architecture; native call protocol remains separate controlled consumer",
+      "owner": "CLI/library interface integrator; native protocol interpretation to Opus",
+      "requirementLinks": {
+        "ears": [
+          "UNI-001",
+          "UNI-018",
+          "UNI-021",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP05",
+          "SP12"
+        ],
+        "G": [
+          "G01",
+          "G14"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-001",
+          "EUC-012",
+          "EU-CON-003"
+        ]
+      },
+      "missingPredicate": "Extract inspect/test/init and typed call-protocol logic into consumed libraries; keep CLI as parse/read/call/print; specify public command aliases and JSON/review/stdout/stderr compatibility before changing surface.",
+      "realConsumer": "crates/mori/src/commands/{inspect,test,init,call_io,core_io,verify_call,prove_call}; public mori CLI and scripts",
+      "sourceObservation": "inspect.rs still walks Program/Expr and implements enforcement_report; test.rs still owns manifest and runner. PR75 changes this runner but is open/source-only, so do not overwrite or infer it is integrated.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori/src/commands/inspect.rs",
+          "sha256": "5cef6e03dcb29a3fdeb97a5f2462b74b0ce7d7d23b93407f400a4156c2adebef",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/test.rs",
+          "sha256": "4d8bc18746dab1ce89247c7a6e30b9eb376e912c5afe26ce6f367516b7409dc7",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/init.rs",
+          "sha256": "17d8fb1b7ab93a497892605d6d9db6a62a09e120157d39df4d372b5f48775274",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/call_io.rs",
+          "sha256": "e3f037bb95bc61667951f579b2aaff1a5edfea23db136c31151caee131c1fdf7",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/core_io.rs",
+          "sha256": "391fd3015649cac5f3089a2e6b424be9fdbb8ba76258c2dbd57ec2e97c013006",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/cli.rs",
+          "sha256": "64b2dac5e7e8de6ec7ae4a839ad2c55f7648c325342651bbb0d895ebafb64e13",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze existing public report shapes, ordered complete cases, exit results and file-publishing behavior independently; demonstrate production commands consume extracted functions.",
+        "Concrete command/alias plan preserves existing script callers; JSON output has only its declared JSON payload and review/status output follows documented channels."
+      ],
+      "refusalOrRegressionChecks": [
+        "UNI-024 Complete aggregate CLI test report: mismatches keep complete actual reports and exit 1; successful smaller report bytes/newline remain preserved.",
+        "No library error may be silently flattened or unsupported native path relabeled successful during extraction."
+      ],
+      "consequentialProposalsNeeded": [
+        "Command nesting/aliases and owning crate for call protocol; exact stdout/stderr/flag compatibility."
+      ],
+      "dependencies": {
+        "source": [
+          "Coordinate PR75 runner candidate; identify public callers before command rename."
+        ],
+        "checks": [
+          "Source-only report extraction can be prepared now; native protocol execution remains outside current authority."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "#85 migration depends only on functions not yet extracted, not all #80 acceptance. U7 journey remains open."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible library-boundary extraction proposal and caller/report inventory; native protocol design and command changes need concrete compatibility proposal.",
+      "safeCleanupAction": "Keep open; split independent report/test extraction from native protocol execution in local work records, preserving original issue scope.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-001",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 3,
+          "heading": "UNI-001 Permissionless public pipeline",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 6
+            },
+            {
+              "name": "Hostile witness",
+              "line": 10
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I81",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\n`RUST_GUIDELINES.md` says Git-pinned Midnight dependencies stay behind a feature. Today `mori` depends on `mori-backend` and `mori-ledger` unconditionally. Together they pull ten Git crates from midnight-ledger plus `midnight-curves` and `midnight-proofs`, and `Cargo.lock` grew from 136 to about 450 packages. Building only the beta `check` and `format` compiles all of it. The root `[patch.crates-io]` also pulls a second midnight-ledger revision (`a01a1ea`) as `midnight-transient-crypto-old`.\n\n## Suggested fix\n1. Add a `native` feature to `mori` that enables `mori-backend`, `mori-ledger` and the commands that need them, and gate those command modules with `#[cfg(feature = \"native\")]`.\n2. Check whether `mori-core` needs `k256` outside native use, and gate it if not.\n3. CI: keep `cargo test --workspace` (all features) and add `cargo check -p mori --no-default-features`.\n\n## Needs input\nShould the default `mori` build include the native commands (feature on by default) or not?\n\n## Done when\n`cargo build -p mori --no-default-features` builds the beta toolchain without any Midnight crate, and CI checks both configurations.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 81,
+        "state": "OPEN",
+        "title": "Rust: put the Midnight ledger dependencies behind a feature",
+        "updatedAt": "2026-10-16T03:40:42Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/81"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/81.json",
+        "sha256": "6bd9b3dcbefb5745e3552f384953b7ae67362ebd204cffe0a2ac2c51058e24fb"
+      },
+      "scope": "shared frontend installation/build DevEx; separates Midnight native dependencies without changing validity",
+      "owner": "Workspace/package integrator",
+      "requirementLinks": {
+        "ears": [
+          "UNI-001",
+          "UNI-018",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP12"
+        ],
+        "G": [
+          "G12",
+          "G14",
+          "G16"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-001",
+          "EUC-016"
+        ]
+      },
+      "missingPredicate": "Define default feature policy and gate actual native consumers so no-default-features beta build excludes Midnight crates; preserve native feature behavior and document unavailable commands accurately.",
+      "realConsumer": "crates/mori Cargo dependency graph, command modules and public beta check/format installation",
+      "sourceObservation": "crates/mori/Cargo.toml unconditionally depends on mori-backend and mori-ledger and has Midnight dev-dependencies; no feature table exists there. Issue says cargo test --workspace means all features, which Cargo does not guarantee; exact feature configurations need explicit definition.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori/Cargo.toml",
+          "sha256": "0bcaf62e3524de56b83bf7a26930201119af1e1ab42b4a6911a7c04a532db116",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "Cargo.toml",
+          "sha256": "dea75cec40896a7aab9f561b9bd26ee5457ff9c46c6dd7522a6a5bccac048e2a",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/mod.rs",
+          "sha256": "34ceaabb846836fad4b0df7ddc788dff37c786bfbed9397b8358330a87e3c081",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/Cargo.toml",
+          "sha256": "71d7eeb2520b07edb18033e22a816b55d76ee80cc8ffd6d06bd5e0eca8cf5030",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "AGENTS.md",
+          "sha256": "ddfd5e6cbb27e6c4ae1758d13e64fb944488156675a779801b34fe7277f46385",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Inspect the resolved feature/dependency graph for explicit default, no-default and native configurations; later build evidence must show frontend commands without Midnight dependency compilation.",
+        "Retain distinct local checks for supported configurations; use local CI under current user rule."
+      ],
+      "refusalOrRegressionChecks": [
+        "Native-disabled commands must report absence/unsupported honestly; no stub or native symbol may leak into claimed frontend build.",
+        "Do not translate issue CI suggestion into hosted CI; --workspace alone is not an all-features assertion."
+      ],
+      "consequentialProposalsNeeded": [
+        "Concrete default native-on/off proposal with command availability and compatibility; inspect whether Core k256 is required independently."
+      ],
+      "dependencies": {
+        "source": [
+          "Inventory all native imports and tests/dev-dependencies; feature-gate actual consumers."
+        ],
+        "checks": [
+          "Build/network/dependency execution not performed; future commands require side-effect inspection and current authorization."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Build packaging does not discharge target/native security requirements or independent release."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible dependency/source graph inventory; default behavior proposal needed, local configuration checks then required.",
+      "safeCleanupAction": "Keep open; preserve original CI request as captured evidence and reconcile planned verification to local-only CI.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-001",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 3,
+          "heading": "UNI-001 Permissionless public pipeline",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 6
+            },
+            {
+              "name": "Hostile witness",
+              "line": 10
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I82",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\n`RUST_GUIDELINES.md`: errors that point at source are one open `MoriDiagnostic` built in each crate's `diagnostics.rs`, with `mori::<phase>::<kind>` codes, spans and teaching messages. None of the new crates do this:\n- `mori-core`: `Error { code: String, message, offset: Option<u32>, step }` (`ir.rs`). Parse errors use a few broad codes (`syntax`, `bound`, `type`, `unsupported`), validation errors have no location, and the lexer's `MoriDiagnostic` is flattened to a string.\n- `mori-backend`: `Error { code, message }` with broad codes such as `mori::backend::target`.\n- `mori-ledger`: `Error { layer, code }` rendered as `mori::ledger::{layer}: {code}` with no message, and underlying I/O errors are dropped.\n- CLI: `CliError::Operation { code, message }` puts the code into the message, and every new error uses `mori::command`. Core parse errors lose their spans.\n- Sherlock draft frontend: `DraftError` with `String` payloads, `DraftTypeErrorKind` (nine variants, one per error), and `ProjectionDiagnostic { code: String }`.\n\n## Suggested fix\n1. Add `crates/mori-core/src/diagnostics.rs` with builder functions that return `MoriDiagnostic`s with spans from token offsets, specific `mori::core::<kind>` codes, and help showing corrected code. Keep `mori_core::Error` only as a thin wrapper while the backend and ledger migrate.\n2. Backend and ledger errors that point at source become `MoriDiagnostic`s. The rest stay `thiserror` types with specific codes and keep their cause with `#[source]`.\n3. The CLI renders `MoriDiagnostic`s through miette, as `check` does for beta, and never wraps them in `mori::command`.\n4. Snapshot each diagnostic with insta, showing the source (#87).\n\n## Needs input\n- This depends on #76: if Core moves onto `mori-parser`/`mori-checker`, its diagnostics come from there.\n- Tests match ledger refusal codes such as `mori::ledger::signed-call: signed-version`, and scripts or agents may too. Agree whether codes can be renamed.\n\n## Done when\nNo `String` error codes remain in the Core frontend, every source error has a span, and the CLI never reports `mori::command` for a library error.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 82,
+        "state": "OPEN",
+        "title": "Rust: route Core, backend, ledger and CLI errors through MoriDiagnostic",
+        "updatedAt": "2026-10-16T03:41:00Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/82"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/82.json",
+        "sha256": "ec4469322e9c01ac17676f8b1228259b5ae60b73fdab18156a5c6084626d9414"
+      },
+      "scope": "shared diagnostic/DevEx API; retain existing ledger refusal semantics",
+      "owner": "Frontend/diagnostic API integrator; Opus for security refusal-code implications",
+      "requirementLinks": {
+        "ears": [
+          "UNI-018",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP12"
+        ],
+        "G": [
+          "G01",
+          "G14"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-016",
+          "EU-CON-003"
+        ]
+      },
+      "missingPredicate": "Route source errors through real MoriDiagnostic spans/labels/help, preserve non-source cause chains and typed code contracts, and prevent CLI mori::command wrapping from erasing library diagnostics.",
+      "realConsumer": "Core parser/checker, backend/ledger errors, core_io operation renderer and public check/compile/test output",
+      "sourceObservation": "Core ir.rs still defines string-coded Error; CLI core_io still owns library-error conversion. The frontend migration outcome changes where diagnostics should originate.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/core_io.rs",
+          "sha256": "391fd3015649cac5f3089a2e6b424be9fdbb8ba76258c2dbd57ec2e97c013006",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-diagnostics/src/lib.rs",
+          "sha256": "f0f50241dc901df6d66b3bc25c9c32c085b2de2b4dd7b8f04b89603b4ef5117c",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-ledger/src/lib.rs",
+          "evidence": "source-inspected",
+          "sha256": "3631afbc1b219a8da68717259d0c471ec5d6aed2db263f80ed4662ad85152855"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze independent source/span examples including UTF-8 offsets, stable library code/cause expectations, and render snapshots against source after selected frontend ownership."
+      ],
+      "refusalOrRegressionChecks": [
+        "Unsupported profile and malformed source retain rejection with meaningful location; no renamed ledger refusal may bypass existing consumer matching."
+      ],
+      "consequentialProposalsNeeded": [
+        "Diagnostic compatibility map for externally consumed refusal codes; #76 frontend decision selects owner."
+      ],
+      "dependencies": {
+        "source": [
+          "#76 for Core frontend migration; #87 for final error snapshots."
+        ],
+        "checks": [
+          "Current error-path inventory can proceed; final source snapshots follow diagnostic API."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Diagnostic improvement is not semantic, proof or ledger acceptance."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Partially dependent on #76; code/span/caller inventory eligible now.",
+      "safeCleanupAction": "Keep open; retain original refusal spellings until compatibility proposal and applicable review exist.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I83",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 3 — structural.**\n\n## Problem\n- `stage/validate.rs` repeats `runtime::validate` almost line for line.\n- The liability identity registry is implemented three times: twice in `runtime.rs` and once in `stage/decode.rs`. `stage/decode.rs` also re-implements `validate_asset`.\n- `language()` in `parser.rs` repeats the token-copy code from `parse_profile`, and its error message ignores `moriarty/2`.\n- `stage/plan.rs` hard-codes `\"moriarty-stage-plan/1\"` instead of using `STAGE_PLAN_FORMAT`.\n- The reserved-word list in `runtime.rs` is kept separately from the lexer's keywords.\n- `runtime.rs` (about 1k lines) holds the checker, evaluator, scenario normalization, segment runner and replay.\n- Error codes are compared as strings (`stage/admit.rs`).\n- `FederationPolicy`, `Role`, `RoleGrant` and `CostPlane::{Dust, Service, External}` are public, but only `tests/authority.rs` uses them.\n\n## Suggested fix\nThese are refactors that keep behavior unchanged, with the existing tests as the oracle:\n1. One `validate`, parameterized by profile, shared by `/1` and `/2`.\n2. One liability registry type used by the runtime and by stage decoding, and one `validate_asset`.\n3. One token-copy helper, and a `language()` error message that names both profiles.\n4. Use `STAGE_PLAN_FORMAT`, and derive the reserved words from `mori_lexer`'s keywords.\n5. Split `runtime.rs` into `check.rs`, `eval.rs`, `scenario.rs`, `segment.rs` and `replay.rs`.\n6. Replace string comparisons of error codes with an error-kind enum or constants.\n\n## Needs input\n- Whether the unused authority types are planned public API (keep them and wire them up) or can be removed.\n- Items 1–6 need no decision, but #76 may supersede them. Read its outcome first.\n\n## Done when\nEach item above exists once, `runtime.rs` is split, and all tests pass unchanged.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 83,
+        "state": "OPEN",
+        "title": "Rust: remove duplicated logic inside mori-core",
+        "updatedAt": "2026-10-16T03:41:02Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/83"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/83.json",
+        "sha256": "b46a26210722c9fc93491ec6bbe963d25b258f326ddf67ea544483c3766b00ed"
+      },
+      "scope": "shared Core semantics and public API cleanup",
+      "owner": "Core semantics integrator",
+      "requirementLinks": {
+        "ears": [
+          "UNI-002",
+          "UNI-005",
+          "UNI-018",
+          "UNI-020"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U3"
+        ],
+        "M": [
+          "M1",
+          "M6",
+          "M13"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC05"
+        ],
+        "SP": [
+          "SP03",
+          "SP08"
+        ],
+        "G": [
+          "G01",
+          "G03",
+          "G05",
+          "G14"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-003",
+          "EUC-004",
+          "EU-FIN-003",
+          "EU-FIN-005"
+        ]
+      },
+      "missingPredicate": "Deduplicate profile-aware validation and liability/asset identity logic, token-copy/constants/keywords and error-kind comparisons; split runtime responsibilities without changing complete behavior; explicitly decide planned authority API disposition.",
+      "realConsumer": "Core/1 runtime validate/simulate/replay and Core/2 stage validate/decode/plan/admit consumers",
+      "sourceObservation": "Stage validation already imports runtime validate_asset/validate_liability_reads, so duplication is partial rather than total. stage/decode still has registry/asset_identity; stage/plan still hard-codes moriarty-stage-plan/1. Preserve deliberate Core/2 Await/profile differences.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-core/src/runtime.rs",
+          "sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/stage/validate.rs",
+          "sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/stage/decode.rs",
+          "sha256": "48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/stage/plan.rs",
+          "sha256": "e29954e5c5f028e75f4f4f74ccf86c4eeda8f59c0be6dbbe5714bf30a200d3d3",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/stage/admit.rs",
+          "sha256": "7d98472ec2d4bd151cb42682ed32deaff257d4b9746615a6453aad41b3f2ec10",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/parser.rs",
+          "sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze independently expected whole snapshots, ordered effects, liability identity, absent-vs-zero duties and profile-specific refusals before sharing functions.",
+        "Public API/export and keyword inventory must show one intended definition and every existing consumer updated."
+      ],
+      "refusalOrRegressionChecks": [
+        "Core/1 must continue refusing Core/2-only constructs; profile-aware sharing must retain Await, bounds and reserved-word differences.",
+        "Original liability identity mismatch and wrong asset refusals remain; same-evaluator comparison alone cannot prove semantics."
+      ],
+      "consequentialProposalsNeeded": [
+        "#76 outcome before frontend rewrite; concrete keep/wire/deprecate proposal only for unused public authority types."
+      ],
+      "dependencies": {
+        "source": [
+          "#76 may supersede parser/validation ownership; independently safe constants/consumer inventory eligible."
+        ],
+        "checks": [
+          "Behavioral expectations precede refactor; no runtime or native check executed here."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Source deduplication does not close complete semantic/correspondence or lifecycle parents."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible focused inventory/constants preparation; frontend rewrite depends on #76, public API removal needs concrete proposal.",
+      "safeCleanupAction": "Keep open; update future progress per duplicated item rather than closing on a module split alone.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-002",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 14,
+          "heading": "UNI-002 One semantic relation",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 17
+            },
+            {
+              "name": "Hostile witness",
+              "line": 21
+            }
+          ]
+        },
+        {
+          "id": "UNI-005",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 47,
+          "heading": "UNI-005 Complete financial state",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 50
+            },
+            {
+              "name": "Hostile witness",
+              "line": 54
+            }
+          ]
+        },
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I84",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 2 — test cleanup.**\n\n## Problem\n`RUST_GUIDELINES.md`: \"Nothing under `crates/` reads files outside it; copy anything needed in.\" Shared programs live in `crates/fixtures/`. Instead:\n- 21 files under `crates/` `include_str!` from `examples/core/...` or `deliverables/native-owner-intent-2026-10-11/...`.\n- Crates read each other's test files. `mori-core/tests/metered_intents.rs` reads `crates/mori/tests/fixtures/metered-intents/public-vectors.json` (7k lines), and `mori-backend/tests/replay.rs` reads `crates/mori-core/tests/fixtures/`.\n- `crates/mori/tests/{installed_call,prepare_call,signed_installed_call}.rs` mount `crates/mori-ledger/tests/support/mod.rs` with `#[path]`.\n- `examples/core/continuations/normal-oracle.json` and `crates/mori-core/tests/fixtures/continuations/normal-oracle.json` are identical copies.\n\n## Suggested fix\n1. Copy every file a test reads (programs, targets, scenarios, oracles, vectors) into `crates/fixtures/<area>/...`, and point the tests there using `env!(\"CARGO_MANIFEST_DIR\")`. Leave `examples/` for users.\n2. Replace the cross-crate `#[path]` mounts of `mori-ledger/tests/support` with fixture data in `crates/fixtures` plus small per-crate helpers, or a dev-only helper crate.\n3. Add a test or CI step that fails if any file under `crates/*/src` or `crates/*/tests` reaches outside `crates/` with a relative path.\n\n## Needs input\nNone for the copying. Decide whether a check must keep `examples/` and `crates/fixtures/` in sync, or whether one is generated from the other.\n\n## Done when\nNo file under `crates/` reads outside `crates/`, and the new check enforces it.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 84,
+        "state": "OPEN",
+        "title": "Rust: move test fixtures into crates/fixtures",
+        "updatedAt": "2026-10-16T03:40:46Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/84"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/84.json",
+        "sha256": "218f9e52003ef6e0bd5fc7220e6d9cbcc913e29d089824f97f43868230b0ad27"
+      },
+      "scope": "shared deterministic fixtures and source-test portability",
+      "owner": "Test fixture owner and per-crate consumers",
+      "requirementLinks": {
+        "ears": [
+          "UNI-020",
+          "UNI-021",
+          "UNI-023"
+        ],
+        "U": [
+          "U2",
+          "U6",
+          "U7"
+        ],
+        "M": [
+          "M6",
+          "M10",
+          "M15"
+        ],
+        "MC": [
+          "MC04",
+          "MC07",
+          "MC08"
+        ],
+        "SP": [
+          "SP03",
+          "SP11",
+          "SP12"
+        ],
+        "G": [
+          "G04",
+          "G05",
+          "G12"
+        ],
+        "cardanoCandidateRelevance": [
+          "EU-CON-001",
+          "EU-CON-005",
+          "EU-CON-006"
+        ]
+      },
+      "missingPredicate": "Move every cross-boundary test dependency to crates/fixtures or explicit dev helper, retain original bytes/provenance and enforce no relative read beyond crates; define example/fixture synchronization ownership.",
+      "realConsumer": "Core/backend/ledger/CLI test include_str and cross-crate support mounts, independent oracle/vector fixtures",
+      "sourceObservation": "Cross-boundary examples/deliverables includes and #[path] mounts to ledger test support remain in current tests. Do not treat copied evaluator-derived output as a new independent expectation.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori/tests/core_continuations.rs",
+          "sha256": "7a93fd084b5df5412a80531cf78d9b1c9ea7f1c9031f46e2e7df1328f277c6d9",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/tests/check_compile_io.rs",
+          "sha256": "3583233c3d1a472af4ea037474cd7393a8f716bf09fde37851050cbc3d5b83d3",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/tests/prepare_call.rs",
+          "sha256": "dafad33c87b4f71868353868a3dabd0bde9f6e0663e7bf8a31118c153825ec93",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/tests/continuations.rs",
+          "sha256": "6c0e103f0f45e7d1a432d802af0cd124350aa0e82a3322d04643ef095621df9b",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "RUST_GUIDELINES.md",
+          "sha256": "7faaf005fc60012a4e380a2c5b2f68c48c956f6d53964dc45fd7709ad9b70ed3",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze source and destination byte digests plus independent fixture membership; compare copied data exactly and show every old test consumer points to owned fixture data.",
+        "A source/path enforcement check rejects an intentionally out-of-crates relative read while valid crate fixtures remain accessible."
+      ],
+      "refusalOrRegressionChecks": [
+        "Omitted fixture, changed expected result or stale generated copy must fail drift/membership checks; no weakened frozen denominator."
+      ],
+      "consequentialProposalsNeeded": [
+        "Source-of-truth and synchronization/generation direction for examples vs fixture copies, without blocking byte-preserving copying."
+      ],
+      "dependencies": {
+        "source": [
+          "Copying and provenance inventory need no frontend/API decision; coordinate #86 canonical oracle ownership."
+        ],
+        "checks": [
+          "Any future test target inspected for native operations; no broad Cargo test authorized by this task."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Fixture relocation closes only its concrete portability predicate; conformance and release remain open."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible immediate source/fixture preparation with exact byte preservation.",
+      "safeCleanupAction": "Keep open until consumers and enforcement check are implemented/reviewed; no need to await all structural issues.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        },
+        {
+          "id": "UNI-023",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 245,
+          "heading": "UNI-023 Complete retained membership",
+          "scenarios": [
+            {
+              "name": "Full family accounting",
+              "line": 248
+            },
+            {
+              "name": "Finite library sample",
+              "line": 252
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I85",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 2 — test cleanup.**\n\n## Problem\n`RUST_GUIDELINES.md`: \"Never write tests that invoke the CLI binary, and never snapshot `--help`. Test the library crates; keep the CLI a thin layer over them.\" Yet:\n- All 19 files in `crates/mori/tests/` run `CARGO_BIN_EXE_mori` (about 126 tests).\n- `src/commands/core_io.rs` re-runs its own test binary to capture stderr.\n- `installed_call.rs`, `prepare_call.rs` and `signed_installed_call.rs` assert on `--help` output.\n- Some tests shell out to `python3`. For example, `check_compile_io.rs` uses it to set `RLIMIT_FSIZE`.\n\n## Suggested fix\n1. For each test, find the library behavior it checks and move the test to that crate (`mori-core`, `mori-backend` or `mori-ledger`), calling the function the command calls.\n2. Remove the `--help` assertions.\n3. Where a test checks a command's file I/O (atomic publishing, never clobbering, write faults), test the publishing helpers directly, as the unit tests in `commands/compile.rs` already do.\n4. Delete each `crates/mori/tests/` file once its coverage has moved.\n\n## Needs input\nMostly blocked on #80: tests for logic that still lives in the CLI have no library function to call. Start now with tests whose logic is already in a library, such as the compile paths in `check_compile_io.rs`, `replay.rs` and `metered_intents.rs`.\n\n## Done when\nNo test runs the `mori` binary or `python3`, and coverage is kept or improved.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 85,
+        "state": "OPEN",
+        "title": "Rust: replace mori binary tests with library tests",
+        "updatedAt": "2026-10-16T03:41:04Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/85"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/85.json",
+        "sha256": "160b8bc0b387a61b46d8e10a80114beed32189559b952bf5a31f7ca855310397"
+      },
+      "scope": "shared library tests and public consumer coverage",
+      "owner": "CLI/library test integrator",
+      "requirementLinks": {
+        "ears": [
+          "UNI-020",
+          "UNI-021",
+          "UNI-024"
+        ],
+        "U": [
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M6",
+          "M10"
+        ],
+        "MC": [
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP03",
+          "SP12"
+        ],
+        "G": [
+          "G05",
+          "G12",
+          "G14"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-012",
+          "EU-CON-005"
+        ]
+      },
+      "missingPredicate": "Migrate each CLI subprocess/Python test to the actual consumed library behavior or publishing helper without losing report/exit/I/O coverage; remove help assertions after equivalent relevant contract coverage exists.",
+      "realConsumer": "crates/mori/tests and core_io capture tests; library compile/replay/metered-intent and publishing helpers",
+      "sourceObservation": "CARGO_BIN_EXE_mori invocations remain across current tests; #80 extraction is required only for logic still inside commands. Some existing library-backed coverage can move independently.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori/tests/check_compile_io.rs",
+          "sha256": "3583233c3d1a472af4ea037474cd7393a8f716bf09fde37851050cbc3d5b83d3",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/tests/replay.rs",
+          "sha256": "90328988be9464310fd3729c9469a8a8176e7f6181e7a9a0c464409ec3d64406",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/tests/metered_intents.rs",
+          "sha256": "9b6777cb8108229034bdee2669eb44e59208f036c340909247b7a78656c4b3e8",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/tests/installed_call.rs",
+          "sha256": "3b97a0af4c76cec1c89d171610864ef81439d0fcbdb5772bcfc2dce2fbf7b421",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/core_io.rs",
+          "sha256": "391fd3015649cac5f3089a2e6b424be9fdbb8ba76258c2dbd57ec2e97c013006",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori/src/commands/compile.rs",
+          "sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze test-by-test behavior-to-production-function mapping and independent expected report/file outputs before removing each old test.",
+        "Retain atomic publishing, no clobber and write-fault expectations through direct helper tests; prove public command still calls the tested helper by source inspection."
+      ],
+      "refusalOrRegressionChecks": [
+        "A replacement testing a sibling helper unused by CLI is insufficient; deleting subprocess assertions without retained behavior coverage cannot count as completion."
+      ],
+      "consequentialProposalsNeeded": [],
+      "dependencies": {
+        "source": [
+          "#80 only for tests of unextracted business logic; already-library-backed paths eligible now; #84 shared fixtures."
+        ],
+        "checks": [
+          "Inspect each moved target for prohibited SDK/native execution before future test selection."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Library tests do not demonstrate cold-install public journey or actual ledger submission."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Partly eligible now; specific test migrations wait on corresponding #80 extraction.",
+      "safeCleanupAction": "Keep open; inventory retained coverage before deleting test files. Treat overlap with #80 as dependency, not duplicate issue.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I86",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 2 — test cleanup.**\n\n## Problem\n`crates/mori-core/src/sherlock/normal_oracles.rs` (about 1.5k lines) and `extra_normal_oracles.rs` (about 2k lines) are unformatted Rust literals. `models/sherlock/reference/check-reference.py` (`serialize_oracles`) generates them from `models/sherlock/oracles/*.json`, and the tests pull them in with `include!`. The check that keeps them equal to the JSON runs only in Python, never in `cargo test`.\n\n## Suggested fix\nCopy the oracle JSON into `crates/fixtures/sherlock/` (or the `mori-sherlock` crate after #79), deserialize it with serde into the snapshot types, and delete the generated `.rs` files. Keep the oracles as data: they are independent expectations, so insta snapshots would be the wrong tool. Add a test that the fixture copies match `models/sherlock/oracles/*.json` byte for byte, or generate one from the other.\n\n## Needs input\nWhich copy is the source of truth: `models/sherlock/oracles/` or the crate fixtures.\n\n## Done when\nNo generated Rust oracle files remain, and `cargo test` alone catches drift between the oracles and the JSON.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 86,
+        "state": "OPEN",
+        "title": "Rust: load Sherlock oracles from JSON instead of generated Rust",
+        "updatedAt": "2026-10-16T03:41:06Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/86"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/86.json",
+        "sha256": "ef4ae9fcf61fa265f8f5d604bebe952c12f785616b50e352d946db4594a11dbe"
+      },
+      "scope": "shared Sherlock independent oracle data and reproducibility",
+      "owner": "Sherlock reference/oracle fixture owner",
+      "requirementLinks": {
+        "ears": [
+          "UNI-002",
+          "UNI-020",
+          "UNI-023"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M6",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP03",
+          "SP11",
+          "SP12"
+        ],
+        "G": [
+          "G04",
+          "G05",
+          "G12"
+        ],
+        "cardanoCandidateRelevance": [
+          "EU-CON-001",
+          "EU-CON-005",
+          "EU-CON-006"
+        ]
+      },
+      "missingPredicate": "Choose canonical oracle location, deserialize exact independent JSON into snapshot types, remove generated Rust literals and make Cargo-owned validation detect drift without replacing expected data with snapshots.",
+      "realConsumer": "models/sherlock/reference/check-reference.py serialize_oracles; Sherlock normal_oracles/extra_normal_oracles and compare/reference tests",
+      "sourceObservation": "Generated Rust oracle files and Python serialize_oracles remain; Cargo-only canonical-data drift enforcement is not established by source presence.",
+      "sourceReferences": [
+        {
+          "path": "models/sherlock/reference/check-reference.py",
+          "sha256": "1b22a0c4dc14ac0dabd5fe4e8c5ca5ff85485e9b22dd2673a4645f5145cfa94b",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "models/sherlock/oracles",
+          "evidence": "directory inventory only; no blanket content review"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/normal_oracles.rs",
+          "sha256": "3421828bada394a5f1aa7b9ccc2fa52182db88adf7f2bfd58bf1d871e9d6bbe5",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/extra_normal_oracles.rs",
+          "sha256": "ce0e83e6fc09507f88c2bd2a523514ed087f14c15d75d1ed58ab84427b5a7b00",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
+          "sha256": "56f0fe0ff8211bc8f580346ad09911dc8ec2f9051a7a3dc66c71a10729a1e9f9",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze canonical oracle byte digests, case/program/prefix membership and independently authored expectations before deserialization migration.",
+        "Cargo-owned fixture/transcription validation must compare complete snapshots against unchanged independent JSON; coordinate #79 crate location."
+      ],
+      "refusalOrRegressionChecks": [
+        "A changed/omitted oracle field or stale copy must fail drift checks; regenerated evaluator output and insta snapshots cannot replace independent expected values."
+      ],
+      "consequentialProposalsNeeded": [
+        "Canonical models-vs-crate source-of-truth and synchronization direction; resolve the tension with #84 no-outside-crates reads via owned fixtures/build preparation."
+      ],
+      "dependencies": {
+        "source": [
+          "#84 fixture contract; #79 eventual crate location is coordinateable, not a blanket implementation blocker."
+        ],
+        "checks": [
+          "No direct rustc/Cargo or interpreter execution in this triage; future ordinary target inspected first."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "JSON migration alone proves no interpreter correspondence or native qualification."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible oracle/schema/digest inventory; canonical-location proposal required before establishing ownership.",
+      "safeCleanupAction": "Keep open; preserve generated historical evidence and canonical JSON provenance when replacing maintained source literals.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-002",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 14,
+          "heading": "UNI-002 One semantic relation",
+          "scenarios": [
+            {
+              "name": "Positive witness",
+              "line": 17
+            },
+            {
+              "name": "Hostile witness",
+              "line": 21
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-023",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 245,
+          "heading": "UNI-023 Complete retained membership",
+          "scenarios": [
+            {
+              "name": "Full family accounting",
+              "line": 248
+            },
+            {
+              "name": "Finite library sample",
+              "line": 252
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I87",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 2 — test cleanup.**\n\n## Problem\n`RUST_GUIDELINES.md` requires insta snapshots that show the `.mori` source, separate success and error macros that render diagnostics through miette, and a proptest never-panic property for every phase that consumes source. The new crates have:\n- Two insta snapshots in total (`mori-backend/tests/compile.rs`), both of `Debug` tuples.\n- One proptest (`mori-core/tests/language.rs`, random strings into `parse`). There is none for `stage::load`, `json::parse`, continuation decoding or the Sherlock draft parser and typechecker, and none in `mori-ledger`.\n- Draft-frontend and source-adapter tests that compare against hand-written Rust ASTs.\n\n## Suggested fix\n1. Add success and error snapshot macros for Core like `mori-parser`'s (source in `description`, `omit_expression`). Render errors through `GraphicalReportHandler` once #82 lands.\n2. Add never-panic proptests for `mori_core::parse`, `stage::load`, `json::parse`, continuation decoding and the Sherlock draft parser. Feed them random strings, tricky fragments and damaged real programs, reusing `mori-lexer`'s strategies.\n3. Change the draft-source and source-adapter tests to snapshot a tree printer.\n\n## Needs input\nNone for the proptests. Error snapshots are best written after #82, so they don't need rewriting.\n\n## Done when\nEvery phase that consumes source has a never-panic property, and the Core and Sherlock frontend tests are insta snapshots that show their source.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 87,
+        "state": "OPEN",
+        "title": "Rust: snapshot and fuzz the Core and Sherlock frontends",
+        "updatedAt": "2026-10-16T03:41:07Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/87"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/87.json",
+        "sha256": "33d2131a34dd77791dcae1dd82b715697bab630129d2ad334f5f7ad797d27e95"
+      },
+      "scope": "shared frontend diagnostics/property-test coverage; no native execution implied",
+      "owner": "Frontend/property-test owner; Opus owns any new security hostile-test design",
+      "requirementLinks": {
+        "ears": [
+          "UNI-018",
+          "UNI-020",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U2",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M6",
+          "M10"
+        ],
+        "MC": [
+          "MC01",
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP03",
+          "SP12"
+        ],
+        "G": [
+          "G01",
+          "G05",
+          "G14"
+        ],
+        "cardanoCandidateRelevance": [
+          "EUC-002",
+          "EU-CON-007"
+        ]
+      },
+      "missingPredicate": "Provide source-bearing tree/diagnostic snapshots and never-panic properties for every original listed source consumer, including stage load, JSON and continuation decoding and Sherlock parser/typechecker, with independent success/refusal expectations.",
+      "realConsumer": "Core parse/stage::load/json::parse/continuation decoding and Sherlock draft source/typecheck; human diagnostic renderer",
+      "sourceObservation": "Core language.rs has a parse proptest; remaining listed consumers need reconciled coverage rather than an assertion that no properties exist anywhere. Draft/source adapter Rust-tree comparisons remain.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-core/tests/language.rs",
+          "sha256": "50a5ee441a4f71c1c86ad5c5ce18e5dfe06d056bb2d82d2d6bd3e17dd359a8ad",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/stage/decode.rs",
+          "sha256": "48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/json.rs",
+          "sha256": "faef7db8115320cc483dce30d7b5d22bd01a780facae1c761a8c9203fbb66183",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/draft_source_tests.rs",
+          "sha256": "c128eebbddc0056f963f858ea13feba2faef608a20b53e0c85bb76d92129ad99",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/draft_typecheck_tests.rs",
+          "sha256": "80688b1771281e592b82518f14fbdfe8ba1f609eee0b9dafac1eaa3bff373179",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-core/src/sherlock/source_adapter_tests.rs",
+          "sha256": "22feec2f21465492e8763114f6f03868c2938b33c116cd71c24acdff6376b83f",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze per-phase consumer list, bounded random/tricky/damaged-program inputs and source-bearing snapshot expectations; every phase has explicit coverage.",
+        "Render final error snapshots after #82 through source spans/miette, with exact candidate and retained source."
+      ],
+      "refusalOrRegressionChecks": [
+        "Never-panic is only a robustness predicate; it cannot establish correct acceptance or semantic soundness.",
+        "Unsupported/damaged inputs retain documented errors; no diagnostic snapshot may hide the source or expected refusal."
+      ],
+      "consequentialProposalsNeeded": [],
+      "dependencies": {
+        "source": [
+          "Ordinary robustness inventory/property scaffolding can start now; final error snapshots depend on #82; #76 may alter frontend ownership."
+        ],
+        "checks": [
+          "New security test judgments remain Opus-owned; source robustness preparations run no native operation."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Snapshot/property coverage is not U2 correspondence or native/security acceptance."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible frontend coverage preparation now; diagnostic snapshots specifically await #82.",
+      "safeCleanupAction": "Keep open; record existing parser property as partial coverage and preserve all original additional phase obligations.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I88",
+      "issue": {
+        "assignees": [],
+        "body": "**Tier 2 — test cleanup.**\n\n## Problem\n- `crates/mori-backend/src/task4_native_driver.rs` (about 1.1k lines) is a measurement harness named after a past task:\n  - `proving.rs` mounts it with `#[path]`.\n  - It keeps a global `static BUDGET: Mutex`.\n  - It puts `#[cfg(test)] task4_native_driver::charge(..)` hooks inside library proving and parameter-loading code (`proving.rs`, `parameters.rs`, `signed_relation.rs::task4_reconstruct_before_caps`).\n  - It reads local runtime captures under `.moriarty-dev/runtime/`.\n- `mori-backend/tests/support/task4-native-driver.py` runs `cargo test` and `git` through `subprocess`.\n- Tests change their behavior or write files based on environment variables: `MORIARTY_TASK4_*`, `MORIARTY_TEST_PARAMS(_DIR)`, `MORIARTY_STAGE_V1_BASELINE`, `MORIARTY_SIGNED_MEASUREMENT_DIR`, `MORIARTY_LIABILITY_MEASUREMENT_DIR`, `MORI_IO_CAPTURE_DIR`, `MORI_STATIC_IO_CAPTURE_DIR`, `MORI_STATIC_CAPTURE_DIR`, `MORI_FEE_POOL_CAPTURE_DIR`, `MORI_INIT_CAPTURE_DIR`, `MORI_LEDGER_PUBLIC_CAPTURE`, `MORI_PROVENANCE_BASELINE_BINARY` and `MORI_METERED_INTENT_EVIDENCE`.\n\n## Suggested fix\n1. Move the task4 harness out of `src/` into `experiments/` or a separate example or bench target, and remove the `charge` hooks from library code. If tests need call counts, use a counting implementation of the provider traits instead of global hooks.\n2. Remove the Python driver from the crate. If a measurement run is still needed, make it an explicit script under `scripts/` that isn't part of `cargo test`.\n3. Replace the capture variables with explicit tools (an `examples/` binary or a script that writes the captures), so `cargo test` never writes outside its temporary directories. Expensive native tests stay `#[ignore]`d and document their inputs.\n\n## Needs input\nWhich of these captures and measurements the review and evidence workflow (`docs/audits/`) still needs, so the replacement keeps producing the same artifacts.\n\n## Done when\nNo test hooks remain in library code, and `cargo test` behaves the same whatever the environment variables are.\n\n---\n**Working on this:** builds on #74. Read `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md` first; a deviation from the guidelines needs agreement before it's made. Before handing off, all of these pass:\n\n```\ncargo fmt --all --check\ncargo clippy --workspace --all-targets -- -D warnings\ncargo test --workspace\n```\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 88,
+        "state": "OPEN",
+        "title": "Rust: remove env-var-driven test behavior and the task4 driver from proving paths",
+        "updatedAt": "2026-10-16T03:40:52Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/88"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/88.json",
+        "sha256": "7cb78d118e29c6fda70f88d8432381ec2c76b14c99c08f7bd760145f67611386"
+      },
+      "scope": "shared evidence/test harness cleanup with native proving/resource boundaries retained",
+      "owner": "Evidence harness integrator; Opus owns native/resource/security controls",
+      "requirementLinks": {
+        "ears": [
+          "UNI-017",
+          "UNI-020",
+          "UNI-021",
+          "UNI-024"
+        ],
+        "U": [
+          "U1",
+          "U2",
+          "U4",
+          "U7"
+        ],
+        "M": [
+          "M5",
+          "M6",
+          "M10"
+        ],
+        "MC": [
+          "MC03",
+          "MC04",
+          "MC08"
+        ],
+        "SP": [
+          "SP04",
+          "SP06",
+          "SP12"
+        ],
+        "G": [
+          "G09",
+          "G10",
+          "G12",
+          "G16"
+        ],
+        "cardanoCandidateRelevance": [
+          "EU-NAT-001",
+          "EU-NAT-002",
+          "EU-NAT-027",
+          "EU-CON-001"
+        ]
+      },
+      "missingPredicate": "Inventory every env-controlled capture consumer and required audit artifact; relocate task4 measurement harness and replace implicit/global test hooks with explicit owned tools/providers while preserving resource limits, failures and authenticated evidence contract.",
+      "realConsumer": "mori-backend proving/parameters/signed_relation task4 hooks, Python driver and named capture variables consumed by docs/audits and local evidence tooling",
+      "sourceObservation": "proving.rs still #[path]-mounts task4_native_driver; parameters/proving call cfg(test) charge hooks. Their presence is observed, not authority to execute or remove resource accounting.",
+      "sourceReferences": [
+        {
+          "path": "crates/mori-backend/src/task4_native_driver.rs",
+          "sha256": "6e279fe905fb29c1f9cb91992fb76383e2f9463799494b941203d369074890ba",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/src/proving.rs",
+          "sha256": "b1c26193104ad52ef561ec53646911603dcda87ee39f40e1062d7929658822e4",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/src/parameters.rs",
+          "sha256": "12db590a334ea76bee475ade3e0daf9058d4903d2224787d3ca58c6c3457b53d",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/src/signed_relation.rs",
+          "sha256": "7a810ed1b06e5fe73b11478e910d2d2baf987a6114a96aed993f4ffa12192b03",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "crates/mori-backend/tests/support/task4-native-driver.py",
+          "sha256": "4b6c8931bf73bb75e22181ad32804504ca27587e1f4946bce5c3d025170ba366",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "docs/audits/2026-10-14/SECURITY-ROUTING.md",
+          "sha256": "04699b07f04d58a2f4afd41bd217b9b907ab20fbd52b3b88b84639a4d858435c",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Freeze env-variable-to-artifact-to-audit-consumer map, output schemas/digests and historical counters before replacement proposal.",
+        "Future ordinary tests use owned temp directories with explicit inputs; every required measurement artifact has a reviewed explicit replacement consumer."
+      ],
+      "refusalOrRegressionChecks": [
+        "Do not delete native charge hooks/caps as cosmetic cleanup or reset failures/debits; existing native authority zero still applies.",
+        "Environment-invariant behavior requires specified configurations and retained ignored/native inputs; no evidence capture may be silently dropped."
+      ],
+      "consequentialProposalsNeeded": [
+        "Concrete replacement for each still-required capture/measurement and review of resource-accounting preservation by designated Opus owner."
+      ],
+      "dependencies": {
+        "source": [
+          "Audit consumer inventory and current resource records are prerequisites to removal, not to independent source inspection."
+        ],
+        "checks": [
+          "No native proving, SDK, parameter, runtime or broad Cargo checks authorized; no replacement harness executed here."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "Native/proof/resource result and security acceptance need separately authorized execution and applicable reviews."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Eligible source/audit-consumer inventory; hook removal awaits concrete evidence/resource-preservation proposal; execution blocked only at native boundary.",
+      "safeCleanupAction": "Keep open; preserve immutable historical captures, audits, failures and counters. Never close because harness moved without equivalent evidence delivery.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-017",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 179,
+          "heading": "UNI-017 Next native backend contract",
+          "scenarios": [
+            {
+              "name": "Complete native recursive path",
+              "line": 182
+            },
+            {
+              "name": "Incomplete cryptographic or release evidence",
+              "line": 186
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts."
+    },
+    {
+      "workItemId": "GH-I89",
+      "issue": {
+        "assignees": [],
+        "body": "Follow-up cleanup from the review of the Rust crates added since the beta toolchain. #74 did tier 1: CI with fmt, clippy `-D warnings` and tests; removing `anyhow`; deduplicating Schnorr, the SRS pins and `hex`; fixing the 19 failing tests; and pointing agents at `RUST_GUIDELINES.md`.\n\nEach issue lists its problem, a suggested fix, what still **needs input**, and when it's done. Issues whose *Needs input* section names a decision need maintainer agreement before an agent starts on them.\n\n## Tier 4: decision first\n- [ ] #76 Decide how the Core language relates to the beta frontend (blocks #82 and #83)\n\n## Tier 3: structural (agree the approach first)\n- [ ] #77 Derive build and ABI identities from artifacts, not source text\n- [ ] #78 One Program-to-ZKIR lowering path for mori-backend and mori-ledger\n- [ ] #79 Move Sherlock into its own crate and build it only through Cargo\n- [ ] #80 Move business logic out of the mori CLI (blocks most of #85)\n- [ ] #81 Put the Midnight ledger dependencies behind a feature\n- [ ] #82 Route Core, backend, ledger and CLI errors through MoriDiagnostic\n- [ ] #83 Remove duplicated logic inside mori-core\n\n## Tier 2: test cleanup (mostly no decisions needed)\n- [ ] #84 Move test fixtures into crates/fixtures\n- [ ] #85 Replace mori binary tests with library tests\n- [ ] #86 Load Sherlock oracles from JSON instead of generated Rust\n- [ ] #87 Snapshot and fuzz the Core and Sherlock frontends\n- [ ] #88 Remove env-var-driven test behavior and the task4 driver from proving paths\n\n## Suggested order\n1. Tier 2 issues that need no input: #84, #86 (proptests in #87), #88.\n2. Decide #76, then #77 and #80.\n3. The rest of tier 3, then #85 and the error snapshots in #87.\n\nEvery change follows `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md`. Before handoff, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` pass.\n",
+        "labels": [
+          {
+            "id": "LA_kwDOURdbAs8AAAAC0QojEg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          }
+        ],
+        "number": 89,
+        "state": "OPEN",
+        "title": "Rust cleanup after #74 (tracking)",
+        "updatedAt": "2026-10-16T03:41:08Z",
+        "url": "https://github.com/CharlesHoskinson/Moriarty/issues/89"
+      },
+      "originalCapture": {
+        "path": "docs/utxo/doctorwatson/github/issues/89.json",
+        "sha256": "986aee503c81b4766e022448d2715f939374c0c5553ba1e79df08850850a09d7"
+      },
+      "scope": "shared Rust cleanup tracker; all 13 children retained and target-separated",
+      "owner": "DoctorMoriarty UTXO reporting integrator plus named child owners",
+      "requirementLinks": {
+        "ears": [
+          "UNI-018",
+          "UNI-019",
+          "UNI-020",
+          "UNI-021",
+          "UNI-023",
+          "UNI-024"
+        ],
+        "U": [
+          "U0",
+          "U1",
+          "U2",
+          "U3",
+          "U4",
+          "U6",
+          "U7"
+        ],
+        "M": [
+          "M1",
+          "M2",
+          "M5",
+          "M6",
+          "M8",
+          "M10",
+          "M13",
+          "M15"
+        ],
+        "MC": [
+          "MC01",
+          "MC03",
+          "MC04",
+          "MC05",
+          "MC07",
+          "MC08"
+        ],
+        "SP": [
+          "SP02",
+          "SP03",
+          "SP04",
+          "SP05",
+          "SP06",
+          "SP08",
+          "SP09",
+          "SP11",
+          "SP12"
+        ],
+        "G": [
+          "G01",
+          "G03",
+          "G04",
+          "G05",
+          "G06",
+          "G09",
+          "G10",
+          "G12",
+          "G14",
+          "G16"
+        ],
+        "cardanoCandidateRelevance": []
+      },
+      "missingPredicate": "Track all 13 original child predicates #76–88 with exact issue/PR/source/check/review/acceptance state; mark tracker complete only when each child satisfies its original scope. Do not promote operational work items into original product requirement counts.",
+      "realConsumer": "doctormoriarty<utxo> report display; stable doctorwatson-utxo runner/report namespace; existing EARS/scenario and roadmap inventories",
+      "sourceObservation": "GitHub shows #74 OPEN despite tracker wording that it did tier 1. #89 is a parent tracker, not a duplicate of its 13 children. Suggested broad Cargo checks and hosted CI claims do not override active native authority/local-CI constraints.",
+      "sourceReferences": [
+        {
+          "path": "docs/utxo/doctorwatson/EARS-BASELINE.json",
+          "sha256": "0ff36f7761bec151c00c4f7948b90c3eb3d3e635f3d71c1f4f3969c13fc0e5cb",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "docs/utxo/doctorwatson/ASSESSMENT.json",
+          "sha256": "637d59ca2e9481f772e3b7f9ba32e3fbd72696f9835a2ee840565159f5f6e090",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "scripts/doctorwatson-utxo.sh",
+          "sha256": "ee87b09259a2cf2ef090ce1284b965369cf46fdab1b24656c33df2867b02b9d7",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "AGENTS.md",
+          "sha256": "ddfd5e6cbb27e6c4ae1758d13e64fb944488156675a779801b34fe7277f46385",
+          "evidence": "source-inspected"
+        },
+        {
+          "path": "ROADMAP.md",
+          "sha256": "a28cc6383047e4ee4c850534a1077fc0444aebc6556de357922ee14a578b0054",
+          "evidence": "source-inspected"
+        }
+      ],
+      "independentAcceptanceChecks": [
+        "Exact child membership is set(range(76,89)), no omission/duplicate; each has original body capture and independent missing predicate, consumer, dependencies and cleanup action.",
+        "Report implementation/evidence/acceptance separately and keep PR status, source review and actual results distinct."
+      ],
+      "refusalOrRegressionChecks": [
+        "A merged PR, green source inventory, duplicate pointer or child test result cannot close a parent product exit.",
+        "Never drop #23 finance goals or any #76–88 child; do not call all items blocked or all decisions maintainer gates on public use."
+      ],
+      "consequentialProposalsNeeded": [
+        "Only child-specific consequential proposals; tracker itself authorizes no new design, native execution or public developer permission."
+      ],
+      "dependencies": {
+        "source": [
+          "#74 and #75 are open context; exact GitHub states and active worktree sources are separately captured."
+        ],
+        "checks": [
+          "Existing ordinary report/check integration belongs to integrator; no new framework or native/provider invocation."
+        ],
+        "review": [
+          "Fresh independent nonsecurity exact-candidate/result review under current AGENTS routing; security interpretation/design/results remain with Opus 5.5 or 4.8 high where applicable."
+        ],
+        "acceptance": [
+          "All U0–U7, M1–M17, MC01–08, SP01–12 and G01–24 retained at original scope; tracker closure would not close them."
+        ]
+      },
+      "implementation": "not implemented by this triage; source-inspected gaps remain",
+      "evidence": "public GitHub body capture and local source inspection only",
+      "acceptance": "open",
+      "disposition": "Active parent tracker; independent source tasks eligible and exact dependent boundaries named.",
+      "safeCleanupAction": "Keep open, preserve all 13 unchecked children, correct dated PR74 premise only in a separately reviewed future remote edit. No remote edit performed.",
+      "remoteActionTaken": false,
+      "earsScenarios": [
+        {
+          "id": "UNI-018",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 190,
+          "heading": "UNI-018 Profile and consumer admission",
+          "scenarios": [
+            {
+              "name": "Supported Rust Core program",
+              "line": 193
+            },
+            {
+              "name": "Different authoring profile",
+              "line": 197
+            }
+          ]
+        },
+        {
+          "id": "UNI-019",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 201,
+          "heading": "UNI-019 Scoped lowering comparison",
+          "scenarios": [
+            {
+              "name": "Common construct domain",
+              "line": 204
+            },
+            {
+              "name": "Different admitted statements",
+              "line": 208
+            }
+          ]
+        },
+        {
+          "id": "UNI-020",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 212,
+          "heading": "UNI-020 Independent financial and work expectations",
+          "scenarios": [
+            {
+              "name": "Complete finite observation",
+              "line": 215
+            },
+            {
+              "name": "Shared evaluator oracle",
+              "line": 219
+            }
+          ]
+        },
+        {
+          "id": "UNI-021",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 223,
+          "heading": "UNI-021 Capability evidence and parent acceptance",
+          "scenarios": [
+            {
+              "name": "Delivered finite library child",
+              "line": 226
+            },
+            {
+              "name": "Incomplete predicate denominator",
+              "line": 230
+            }
+          ]
+        },
+        {
+          "id": "UNI-023",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 245,
+          "heading": "UNI-023 Complete retained membership",
+          "scenarios": [
+            {
+              "name": "Full family accounting",
+              "line": 248
+            },
+            {
+              "name": "Finite library sample",
+              "line": 252
+            }
+          ]
+        },
+        {
+          "id": "UNI-024",
+          "path": "openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+          "line": 256,
+          "heading": "UNI-024 Developer journey and current maintainer routing",
+          "scenarios": [
+            {
+              "name": "Current nonsecurity task",
+              "line": 259
+            },
+            {
+              "name": "Incomplete public journey",
+              "line": 263
+            },
+            {
+              "name": "Complete aggregate CLI test report",
+              "line": 267
+            }
+          ]
+        }
+      ],
+      "scopeApplication": "Operational adopted work item only; Cardano references are applicability candidates requiring explicit profile/target reconciliation, not evidence that shared or Midnight work satisfies them.",
+      "approvalBoundary": "Current maintainer design/result review applies to this repository work; permissionless public developers need objective validity and participant authorization, never project reviewer receipts.",
+      "children": [
+        "GH-I76",
+        "GH-I77",
+        "GH-I78",
+        "GH-I79",
+        "GH-I80",
+        "GH-I81",
+        "GH-I82",
+        "GH-I83",
+        "GH-I84",
+        "GH-I85",
+        "GH-I86",
+        "GH-I87",
+        "GH-I88"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "kind": "stale-premise",
+      "references": [
+        "GH-I89",
+        "https://github.com/CharlesHoskinson/Moriarty/pull/74"
+      ],
+      "fact": "Tracker describes #74 as completed tier 1; actual captured PR state is OPEN. Current local source inspection must establish each adopted child, not assume base changes."
+    },
+    {
+      "kind": "policy-conflict",
+      "references": [
+        "https://github.com/CharlesHoskinson/Moriarty/pull/74",
+        "AGENTS.md"
+      ],
+      "fact": "PR74 proposes hosted Rust CI and broad workspace checks. Current user rule requires local CI; native authority zero prevents treating arbitrary broad Cargo tests as ordinary. PR74 says independent model reviews were not run."
+    },
+    {
+      "kind": "source-only-pr",
+      "references": [
+        "https://github.com/CharlesHoskinson/Moriarty/pull/75"
+      ],
+      "fact": "PR75 says exact source/draft reviews approve source scope only; builds/tests/runtime UNRUN; binding/provenance/discovery questions and fresh changed-byte review remain before readiness/merge."
+    },
+    {
+      "kind": "scope-conflict",
+      "references": [
+        "GH-I78",
+        "UNI-019"
+      ],
+      "fact": "One-lowering title and byte-identical suggestion must be reconciled with different admitted statements/subsets; within-consumer byte regression is separate from cross-consumer semantic correspondence."
+    },
+    {
+      "kind": "historical-counts",
+      "references": [
+        "GH-I23",
+        "GH-I79",
+        "ROADMAP.md"
+      ],
+      "fact": "October 8 tooling/test counts and 35 Sherlock files are dated issue descriptions. Current source has additional Sherlock files and local Rust commands; do not erase the originals or reuse their counts as current verification."
+    },
+    {
+      "kind": "no-duplicate-closure",
+      "references": [
+        "GH-I89",
+        "GH-I76",
+        "GH-I80",
+        "GH-I82",
+        "GH-I83",
+        "GH-I84",
+        "GH-I85",
+        "GH-I86",
+        "GH-I87"
+      ],
+      "fact": "Tracker/child and extraction/diagnostic/fixture/oracle/property overlaps are dependencies, not proven duplicate completed work. No duplicate issue closure is justified."
+    },
+    {
+      "kind": "specific-boundaries",
+      "references": [
+        "GH-I23",
+        "GH-I76",
+        "GH-I77",
+        "GH-I78",
+        "GH-I80",
+        "GH-I81",
+        "GH-I82",
+        "GH-I88"
+      ],
+      "fact": "Vocabulary/profile, frontend semantics, identity migration, lowering contract, CLI aliases, feature defaults, refusal-code compatibility and evidence/resource-hook replacement need concrete proposals in their own scope. Independent inventory, copying, reporting preparation and existing-library test migration remain eligible."
+    },
+    {
+      "kind": "cargo-feature-clarification",
+      "references": [
+        "GH-I81",
+        "crates/mori/Cargo.toml"
+      ],
+      "fact": "The body parenthesis equating cargo test --workspace with all features is not a reliable feature matrix; explicit default/no-default/native configurations must be specified. No Cargo command was run to infer results."
+    }
+  ]
+}

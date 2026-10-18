@@ -1,0 +1,8 @@
+recovery "moriarty-recovery/1";
+for agreement ProposedCustodyRefund;
+on action fund at await acceptance {
+  refund return_principal(outcome_known: Bool) when outcome_known {
+    transfer(PAY, "escrow", "buyer", principal);
+    discharge("custody-refund", principal);
+  }
+}

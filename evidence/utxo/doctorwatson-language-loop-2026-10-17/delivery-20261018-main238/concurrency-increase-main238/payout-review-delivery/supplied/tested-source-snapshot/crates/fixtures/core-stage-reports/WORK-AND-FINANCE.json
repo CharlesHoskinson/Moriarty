@@ -1,0 +1,75 @@
+{
+  "format":"moriarty-stage-report-independent-accounting-projection/1",
+  "status":"literal explanatory projection from prior independent R3 accounting; not regenerated goldens; actual product comparisons UNRUN",
+  "basis":"models/core-stage-tests/independent-oracle-r3/normal-accounting-and-work.json",
+  "basis_sha256":"6cb16f8d1c4c4cc5cdea30a6de205383ba170715ad242e2aee1d8583e96cb9e0",
+  "logical_profile":"moriarty-reference-logical-cost/2",
+  "asset":{"network":"local","issuer":"independent-staged-test-oracle","reference":"UNIT","scale":0},
+  "units":"integral atomic UNIT amounts and primitive logical work; distinct quantities",
+  "call_premises":{
+    "profile":"moriarty-tests/2",
+    "two-deliveries":{"action":"deliver","start_cap":"16","events_in_order":["approval-false.json","approval-true.json","receipt-true.json"]},
+    "quoted-fee":{"action":"charge","start_cap":null,"events_in_order":["quote-true.json"]},
+    "resume_optional_action":"Some(case.action)",
+    "resume_cli_cap":null,
+    "runtime_continuation":"Immediately preceding actual waiting outcome only. These expected files never provide executable continuation state."
+  },
+  "invocations":[
+    {
+      "case":"two-deliveries","ordinal":0,"operation":"start","expected_report":"two-deliveries-start.json",
+      "event":null,"attempted":"5","committed_before":"0","committed":"5","cumulative_attempted_including_false_observations":"5",
+      "status":"waiting","advanced":true,"pending_site":1,
+      "complete_boundary":{"balances":{"alice":"13","bob":"7","observer":"11","treasury":"0"},"state":{"phase":"1"},"duty":{"name":"duty","debtor":"alice","creditor":"bob","amount":"5","present":true}},
+      "finance":{"invocation_gross_debit_alice":"7","cumulative_gross_debit_alice":"7","invocation_net_credit_bob":"7","cumulative_net_credit_bob":"7","invocation_fee":"0","cumulative_fees":"0","complete_balance_sum":"31","liability_opening":"5","liability_created":"0","liability_accrued":"0","liability_discharged":"0","liability_closing":"5"},
+      "ordered_effect_summary":["Transfer UNIT alice->bob7","State phase0->1"]
+    },
+    {
+      "case":"two-deliveries","ordinal":1,"operation":"resume","expected_report":"two-deliveries-observed.json",
+      "event":"approval-false.json","attempted":"2","committed_before":"5","committed":"5","cumulative_attempted_including_false_observations":"7",
+      "status":"waiting","advanced":false,"pending_site":1,"segment":null,
+      "complete_boundary":{"balances":{"alice":"13","bob":"7","observer":"11","treasury":"0"},"state":{"phase":"1"},"duty":{"name":"duty","debtor":"alice","creditor":"bob","amount":"5","present":true}},
+      "finance":{"invocation_gross_debit_alice":"0","cumulative_gross_debit_alice":"7","invocation_net_credit_bob":"0","cumulative_net_credit_bob":"7","invocation_fee":"0","cumulative_fees":"0","complete_balance_sum":"31","liability_opening":"5","liability_created":"0","liability_accrued":"0","liability_discharged":"0","liability_closing":"5"},
+      "ordered_effect_summary":[],
+      "continuation_obligation":"Exactly the prior pending continuation; false approval creates no new segment or financial effect and does not reduce attempted work."
+    },
+    {
+      "case":"two-deliveries","ordinal":2,"operation":"resume","expected_report":"two-deliveries-approved.json",
+      "event":"approval-true.json","attempted":"5","committed_before":"5","committed":"10","cumulative_attempted_including_false_observations":"12",
+      "status":"waiting","advanced":true,"pending_site":2,
+      "complete_boundary":{"balances":{"alice":"10","bob":"10","observer":"11","treasury":"0"},"state":{"phase":"1"},"duty":{"name":"duty","debtor":"alice","creditor":"bob","amount":"5","present":true}},
+      "finance":{"invocation_gross_debit_alice":"3","cumulative_gross_debit_alice":"10","invocation_net_credit_bob":"3","cumulative_net_credit_bob":"10","invocation_fee":"0","cumulative_fees":"0","complete_balance_sum":"31","liability_opening":"5","liability_created":"0","liability_accrued":"0","liability_discharged":"0","liability_closing":"5"},
+      "ordered_effect_summary":["Transfer UNIT alice->bob3"]
+    },
+    {
+      "case":"two-deliveries","ordinal":3,"operation":"resume","expected_report":"two-deliveries-complete.json",
+      "event":"receipt-true.json","attempted":"6","committed_before":"10","committed":"16","cumulative_attempted_including_false_observations":"18",
+      "status":"complete","pending_site":0,
+      "complete_boundary":{"balances":{"alice":"10","bob":"10","observer":"11","treasury":"0"},"state":{"phase":"2"},"duty":{"name":"duty","debtor":"alice","creditor":"bob","amount":"5","present":true}},
+      "finance":{"invocation_gross_debit_alice":"0","cumulative_gross_debit_alice":"10","invocation_net_credit_bob":"0","cumulative_net_credit_bob":"10","invocation_fee":"0","cumulative_fees":"0","complete_balance_sum":"31","liability_opening":"5","liability_created":"0","liability_accrued":"0","liability_discharged":"0","liability_closing":"5"},
+      "ordered_effect_summary":["State phase1->2","Emit done UInt2"],
+      "completion_obligation":"No continuation; completed source action retains positive residual duty5."
+    },
+    {
+      "case":"quoted-fee","ordinal":0,"operation":"start","expected_report":"quoted-fee-start.json",
+      "event":null,"attempted":"5","committed_before":"0","committed":"5","cumulative_attempted_including_false_observations":"5",
+      "status":"waiting","advanced":true,"pending_site":1,
+      "complete_boundary":{"balances":{"observer":"11","payer":"20","treasury":"0"},"state":{"marker":"9","total":"0"},"duty":{"name":"duty","debtor":"payer","creditor":"treasury","amount":"3","present":true}},
+      "finance":{"invocation_gross_debit_payer":"0","cumulative_gross_debit_payer":"0","invocation_net_credit_treasury":"0","cumulative_net_credit_treasury":"0","invocation_fee":"0","cumulative_fees":"0","complete_balance_sum":"31","liability_opening":"3","liability_created":"0","liability_accrued":"0","liability_discharged":"0","liability_closing":"3"},
+      "ordered_effect_summary":[],
+      "captures":[{"name":"amount","type":"UInt","value":"4"},{"name":"payable","type":"UInt","value":"5"}]
+    },
+    {
+      "case":"quoted-fee","ordinal":1,"operation":"resume","expected_report":"quoted-fee-complete.json",
+      "event":"quote-true.json","attempted":"8","committed_before":"5","committed":"13","cumulative_attempted_including_false_observations":"13",
+      "status":"complete","pending_site":0,
+      "complete_boundary":{"balances":{"observer":"11","payer":"15","treasury":"5"},"state":{"marker":"9","total":"5"},"duty":{"name":"duty","debtor":"payer","creditor":"treasury","amount":"3","present":true}},
+      "finance":{"invocation_gross_debit_payer":"5","cumulative_gross_debit_payer":"5","invocation_net_credit_treasury":"5","cumulative_net_credit_treasury":"5","invocation_fee":"5","cumulative_fees":"5","complete_balance_sum":"31","liability_opening":"3","liability_created":"0","liability_accrued":"0","liability_discharged":"0","liability_closing":"3"},
+      "ordered_effect_summary":["Fee UNIT payer->treasury5","State total0->5","Emit fee UInt5"],
+      "completion_obligation":"No continuation; payment does not discharge incoming duty3."
+    }
+  ],
+  "common_financial_limits":{"mint":"0","burn":"0","rounding_dust":"0","refunds":"0","reserve_effects":[],"pledged_reserve":"not specified; none inferred","recovery_funding":"not specified; none inferred"},
+  "unused_declare_actions":{"selected":false,"logical_segment_cost":"2","effect_on_selected_trajectory":"none; source-wide duty identity registration is an admission premise, not executed creation, accrual, discharge or zeroing"},
+  "unmeasured":["circuit cost","DUST","service fees","proof cost","recovery reservation","wall-clock","allocations","native ledger fees and settlement"],
+  "authority":"No semantic/security/financial validity approval, execution admission, existing ownership migration or roadmap closure is supplied by this copy. All 14 original draft gaps remain open."
+}

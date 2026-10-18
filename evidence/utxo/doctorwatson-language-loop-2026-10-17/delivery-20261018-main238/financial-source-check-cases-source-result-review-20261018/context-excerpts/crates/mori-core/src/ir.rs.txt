@@ -1,0 +1,97 @@
+Original lines92–187:
+#[serde(deny_unknown_fields)]
+pub struct StateDecl {
+    pub name: String,
+    pub ty: Type,
+    pub initial: Value,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct InputDecl {
+    pub name: String,
+    pub ty: Type,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(deny_unknown_fields)]
+pub struct AssetId {
+    pub network: String,
+    pub issuer: String,
+    pub reference: String,
+    pub scale: u8,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AssetDecl {
+    pub name: String,
+    pub identity: AssetId,
+}
+/// Serialize-only on the shared type: decoding always goes through the frozen
+/// `v1` wire, so JSON can never yield `Await`.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Statement {
+    Await {
+        label: String,
+        binders: Vec<InputDecl>,
+        guard: ExprId,
+    },
+    Let {
+        name: String,
+        value: ExprId,
+    },
+    Requires {
+        predicate: ExprId,
+    },
+    Ensures {
+        predicate: ExprId,
+    },
+    Next {
+        state: String,
+        value: ExprId,
+    },
+    Emit {
+        name: String,
+        value: ExprId,
+    },
+    Transfer {
+        asset: String,
+        from: String,
+        to: String,
+        amount: ExprId,
+    },
+    Fee {
+        asset: String,
+        from: String,
+        to: String,
+        amount: ExprId,
+    },
+    Liability {
+        name: String,
+        asset: String,
+        debtor: String,
+        creditor: String,
+        amount: ExprId,
+    },
+    Discharge {
+        name: String,
+        amount: ExprId,
+    },
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Action {
+    pub name: String,
+    pub inputs: Vec<InputDecl>,
+    pub statements: Vec<Statement>,
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Program {
+    pub language: String,
+    pub semantics: String,
+    pub name: String,
+    pub states: Vec<StateDecl>,
+    pub assets: Vec<AssetDecl>,
+    pub expressions: Vec<Expr>,
+    pub actions: Vec<Action>,
+}

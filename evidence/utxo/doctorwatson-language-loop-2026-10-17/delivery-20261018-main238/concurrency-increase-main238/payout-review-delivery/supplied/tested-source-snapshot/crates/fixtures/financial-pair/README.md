@@ -1,0 +1,5 @@
+# Independent financial-pair fixtures
+
+These seven payloads copy the independently frozen proposals in `docs/utxo/doctorwatson/oracles/financial-pair-v2/` on branch `utxo`. Their original inventory SHA-256 is `7e5b09d844861f71ebaf04f56f011ec520d9defb2f0ae87b1ee6e626cea77f5e`; the complete original packet also contains derivation, proposed refusal descriptions and the explicit wire-order revision. Every copied payload is byte-identical. Expectations were authored before test implementation, without parser/evaluator/compiler execution or implementation outputs.
+
+`crates/mori-core/tests/financial_pair.rs` consumes these literals through the existing public Core/1 APIs. It compares complete financial snapshots/effects and all39 statement prefixes, invoice successor linkage, and aggregate logical work. Step values, raw expression IDs and per-prefix actual metering remain unresolved. These test inputs are authored financial examples, not Cardano ledger captures. Compilation and tests are UNRUN at source integration. No native/proof/target or full U2 acceptance follows from this fixture packet.

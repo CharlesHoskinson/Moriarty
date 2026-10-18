@@ -1,0 +1,97 @@
+"""Ordinary public reader path regression; no compiler or product execution."""
+
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+CHECKER = Path(__file__).resolve().with_name("check.py")
+BASELINE = "docs/utxo/doctorwatson/EARS-BASELINE.json"
+EVIDENCE = "openspec/changes/utxo-doctorwatson/current-evidence.json"
+
+
+class RequirementSourceLocations(unittest.TestCase):
+    def test_original_clause_location_resolves_from_another_directory(self):
+        # Expectations describe a file/line a reader can actually open. The
+        # stable requirement key deliberately remains a separate identity.
+        with tempfile.TemporaryDirectory(prefix="doctorwatson location ") as workspace:
+            repo = Path(workspace) / "selected repository"
+            elsewhere = Path(workspace) / "elsewhere"
+            elsewhere.mkdir()
+            heading = "PATH-001: Original clause and unknown outcome"
+            names = ["Positive original source location", "Negative unknown outcome remains unknown"]
+            clause = "WHEN a clause is inspected, its original source SHALL remain inspectable.\n\nTrace: original named scenarios.\n\nAcceptance: unknown until observed."
+            source_text = (
+                f"# Synthetic original clauses\n\n### Requirement: {heading}\n\n{clause}\n\n"
+                f"#### Scenario: {names[0]}\n\nOpen the original file at its requirement line.\n\n"
+                f"#### Scenario: {names[1]}\n\nNo observation is available.\n"
+            )
+            relative_source = "original specs/clauses.md"
+            original_file = repo / relative_source
+            original_file.parent.mkdir(parents=True)
+            original_file.write_text(source_text, encoding="utf-8")
+            source = {"path": relative_source,
+                      "sha256": hashlib.sha256(source_text.encode()).hexdigest(),
+                      "startLine": 3, "endLine": len(source_text.splitlines())}
+            key = relative_source + "#" + heading
+            scenarios = [{"name": names[0], "text": "Open the original file at its requirement line."},
+                         {"name": names[1], "text": "No observation is available."}]
+            row = {
+                "key": key, "id": "PATH-001", "group": "synthetic", "source": source,
+                "heading": heading, "scenarioNames": names,
+                "applicability": {"status": "unknown", "profile": "synthetic/1",
+                                  "target": "unqualified-local", "reason": "Actual target is unknown."},
+                "implementation": {"status": "unassessed", "detail": "No implementation claimed."},
+                "validation": {"status": "unrun", "evidenceRefs": []},
+                "acceptance": {"status": "open", "scope": "Synthetic path reporting only.",
+                               "reason": "No observation is available.", "reviewRefs": []},
+                "scenarioRecords": [{"name": name, "status": "unrun", "expectation": scenario["text"],
+                                     "evidenceRefs": [], "gap": "No observation is available."}
+                                    for name, scenario in zip(names, scenarios)],
+                "sourcePins": [source], "dependsOn": [],
+                "nextAction": {"consumer": "original clause reader", "expected": "Open original source.",
+                               "owner": "ordinary-reporting", "blockedBy": ["No observation is available."],
+                               "readiness": "blocked_acceptance"},
+            }
+            families = [{"id": f"F{i:02}", "name": f"Original synthetic family {i}"} for i in range(20)]
+            baseline = {"format": "doctorwatson-utxo-design-baseline/1",
+                        "groups": [{"group": "synthetic", "requirements": [
+                            {"id": row["id"], "heading": heading, "source": source,
+                             "clause": clause, "scenarios": scenarios}]}], "families": families}
+            evidence = {"format": "doctorwatson-utxo.evidence/1", "rows": [row],
+                        "families": [dict(family, source="unassessed", admission="unassessed",
+                                          compiled="unrun", native="unrun", private="unrun")
+                                     for family in families]}
+            for name, value in ((BASELINE, baseline), (EVIDENCE, evidence)):
+                target = repo / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(json.dumps(value), encoding="utf-8")
+
+            result = subprocess.run([sys.executable, "-B", str(CHECKER), "--repo", str(repo),
+                                     "--requirement", row["id"]], cwd=elsewhere,
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            source_line = next(line.strip() for line in result.stdout.splitlines() if line.strip().startswith("Source:"))
+            location = source_line.removeprefix("Source: ")
+            self.assertEqual(str(original_file) + ":3", location,
+                             "Source output must open the original clause from a different working directory")
+            displayed_path, displayed_line = location.rsplit(":", 1)
+            self.assertEqual(f"### Requirement: {heading}",
+                             Path(displayed_path).read_text().splitlines()[int(displayed_line) - 1])
+            self.assertIn(heading, result.stdout)
+            self.assertIn(clause, result.stdout)
+            for scenario in scenarios:
+                self.assertIn(scenario["name"], result.stdout)
+                self.assertIn(scenario["text"], result.stdout)
+            self.assertIn("declared open; current; gate open", result.stdout)
+            self.assertIn("Applicability: unknown; synthetic/1; unqualified-local", result.stdout)
+            self.assertIn("No observation is available.", result.stdout)
+            self.assertNotIn("#" + heading, source_line)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,7 @@
+Clarify which source profile each public CLI command accepts. Compile/simulate help names Core/1 and Core/2; explicit Source/6 expansion identifies its local beta proposal output. NATIVE-CORE.md walks through existing Core/1, staged Core/2, Source/6 and Node beta consumers, retaining their distinct qualifications.
+
+Integrated main8269b5b7 at f2975f1fbfbaf060207a9d26331ad52745ce5247, tree3db626c5806d44d7f0a2bf49936d146d66549196. The full three-file candidate diff is byte-identical to its prior main79 version.
+
+Actual local checks on the combined tree: one Clap help-contract test passed in56.055s (7 other unit tests filtered), and five shell syntax checks passed with empty streams. Source pins remained unchanged; owned session and temporary root cleaned up. No documented product examples were executed. A fresh full-candidate non-author ordinary source/result review is running; no verdict is claimed yet.
+
+These are help and documentation changes. Full workspace checks, standalone installation, native compilation, financial execution, proofs and ledger/target acceptance remain unestablished.

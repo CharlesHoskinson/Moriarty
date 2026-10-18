@@ -1,0 +1,166 @@
+{
+  "createdUTC": "2026-10-18T15:34:33.023377+00:00",
+  "role": "Ordinary full-opinion fidelity check A only, not a new design/security vote",
+  "opinionOriginal": "/home/charl/moriarty-c2-opus55-restored-20261017/completed-successor-inline-design-reviews-20261018/job-a/TERMINAL-REVIEW.json",
+  "opinionSHA256": "68294c0dff5daa351038fdfc7cb5bca8a3f3336106c54200200760f48deedf48",
+  "opinionBytes": 22137,
+  "wholePreservedByteIdentically": true,
+  "exportReceiptSHA256": "4495b2d898f3e84817c4d8438143259b87102b7367c4c8073944da5446d107f8",
+  "terminal": {
+    "status": "SUCCESS",
+    "exitCode": 0,
+    "decision": "EXPORT",
+    "resultEvents": 1,
+    "sourceReviewCorrectnessEstablished": false,
+    "requestedModel": "gemini-4-argon-high",
+    "publicCLIInitLabels": [
+      "gemini-4-argon-high"
+    ],
+    "actualBackendIdentityAttested": false,
+    "reviewerSelfReport": {
+      "actualBackendIdentityAttested": false,
+      "effort": "HIGH",
+      "independent": true,
+      "requestedModel": "gemini-4-argon-high",
+      "returnedModel": "gemini-4-argon-high"
+    },
+    "rootSuppliedSession": 75137,
+    "sessionLimitation": "75137 supplied by root; session number not independently attested by these two public exported files."
+  },
+  "reviewToken": "completed-successor-inline-design-a-20261018-v2",
+  "verdictVerbatim": "recommend-B-conditional",
+  "allSC": {
+    "SC1": {
+      "vote": "agree",
+      "reason": "Agree with Approach B (`mori_core::stage::sequence::Sequence`) over Approach A (`start_successor` with an externally supplied `CompletePrefix`). In the current stage API, `StageOutcome::Complete` retains only the final `StageSegment`, so a bare `Complete` loses earlier `Waiting` segments, prior attempted work, and unselected global frame state. Approach A would immediately require inventing and validating an external full-prefix carrier across calls (forcing premature resolution of persistent reopen/identity rules under OD2/OD7) while still needing the same internal projection, lifting, and accounting logic. Approach B directly closes the boundary gap in-process by owning the global `Snapshot` head, active continuation, and complete call/effect prefixes, ensuring `Sequence::next` transitions strictly from the actual completed predecessor head without accepting caller-supplied successor state or prior accounting.",
+      "evidenceCount": 2
+    },
+    "SC2": {
+      "vote": "agree",
+      "reason": "Agree with explicit whole-frame projection and lossless outside-frame lifting over a complete global `Snapshot`. Constructing the successor `Scenario` inside `Sequence` by projecting mapped states, all balance rows for declared exact `AssetId`s (including observer accounts), and mapped present duties\u2014while holding the complement `outside` frame `F` invariant across the call and lifting every `Step.snapshot` and post-boundary via the inverse binding map\u2014cleanly supports heterogeneous program schemas and shared serial assets without mutating `stage::start`, `stage::resume`, or `runtime::scenario_snapshot`. Admission of alias topologies and incoming discharge-only or awaiting duty boundaries (including R7 `decode::canonical_boundary` constraints) remains properly gated on OD1.",
+      "evidenceCount": 2
+    },
+    "SC3": {
+      "vote": "agree",
+      "reason": "Agree with retaining every original `OutcomeReport` once in `root.calls` and linking global observations and effects via run-local prefix lengths (`call_prefix_len`, `effect_prefix_len`). Preserving `whole_pre`, `whole_post`, `projected_pre`, `projected_post`, `outside`, `framed_steps`, and exact `EffectLink` indices guarantees that both local stage semantics (including multi-await progressions and `Waiting(advanced: false)` false-guard observations) and their lifted global images remain inspectable without rewriting nested stage labels or truncating zero/self/repeated effects.",
+      "evidenceCount": 2
+    },
+    "SC4": {
+      "vote": "agree",
+      "reason": "Agree with exposing one production composition path (`mori_core::stage::sequence::Sequence` and `mori compose`) and reusing the same plan loader and driver in `commands/test/sequence_test.rs` under profile `moriarty-tests/sequential-proposed/1`. This prevents test-only evaluators or expected-output fixtures from supplying successor state, continuations, or prior accounting, and preserves the preloaded-expectation discipline established in `disjoint_test.rs`.",
+      "evidenceCount": 2
+    },
+    "SC5": {
+      "vote": "agree",
+      "reason": "Agree with the complete ordinary financial and logical accounting specification. Tracking per-`(AssetId, account)` opening/closing balances, transfer/fee volumes, gross debits/credits, and signed-direction net changes alongside statement-distinguished liability additions, discharges, presence (preserving present-zero rows), and full global residuals captures the exact local scalar evolution without cross-asset aggregation or silent netting. Likewise, summing `attempted` per call while summing only the latest `committed` prefix per started action instance avoids double-counting cumulative continuation prefixes across awaits, and keeping `remaining_closure_reserve` distinct from `available_ordinary` on normal traces is sound while deferring global enforcement, failure charges, and reserve authority to OD4.",
+      "evidenceCount": 2
+    },
+    "SC6": {
+      "vote": "agree",
+      "reason": "Agree with retaining full scope separation across all 35 MPLR behavioral clauses (`MPLR-001` through `MPLR-035`), the five composition operators (sequential, disjoint parallel `Pair`, shared-state interleaving `SI1\u2013SI4`, atomic `Join`, and asynchronous messaging), existing Core/1 and Core/2 behavior, and all designated-owner contracts (`OD1`\u2013`OD8`). Local in-process `Sequence` completion is strictly local control progress (`Qualification: local-reference-stage`, `Authentication: none`, `Consumption: untracked`) and does not substitute for native ZKIRv3 correspondence, authenticated continuations, obligation consent, or external settlement finality.",
+      "evidenceCount": 2
+    }
+  },
+  "summaryVerbatim": "Recommend Approach B (`recommend-B-conditional`) with `agree` on SC1\u2013SC6, strictly conditioned on designated-owner contracts OD1\u2013OD8 and independent expectation derivation (`CSQ-015`) prior to implementation integration. Owning the global `Snapshot` head, outside frame, active continuation, and complete call/effect prefixes inside `mori_core::stage::sequence::Sequence` cleanly supports completed-predecessor-to-successor execution (`P -> Q`) over existing `stage::load`, `stage::start`, `stage::resume`, and `stage::outcome_report` without trusting caller-supplied successor state or prematurely inventing an unauthenticated external `CompletePrefix` reopen carrier (Approach A). Minor design refinements are noted for per-invocation binding injectivity, R7 (`canonical_boundary`) interactions with incoming duties on awaiting actions under OD1, and explicit wire definitions for expanded `PrefixObservation` test fixtures.",
+  "allFindingsVerbatim": [
+    {
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "quote": "Lift every original local Step.snapshot and the final boundary by applying the inverse state/duty name map and joining it to F.",
+          "supports": "Well-defined inverse lifting requires per-invocation state and duty binding maps to be injective and complete over touched local keys."
+        },
+        {
+          "path": "OWNER-DEPENDENCIES.md",
+          "quote": "What exact valid binding/domain/alias/schema judgments apply? Which local duty registry identities may be projected, including discharge-only incoming duties and await/R7 boundaries?",
+          "supports": "Binding alias admission is routed to OD1, but normal-path inverse lifting itself depends on per-invocation injectivity."
+        }
+      ],
+      "issue": "Normal-path inverse lifting in `DESIGN.md` (Rule 5) and `WIRE-CONTRACT.md` (`FramedStep.whole_snapshot` and `EffectLink.whole_effect`) requires `FrameBindings.states` and `FrameBindings.duties` to be injective within each single invocation (no two local state keys or local duty names of the same invocation mapping to the same global key) and requires `FrameBindings.duties` to cover every local liability name created by `Statement::Liability` in that invocation. While cross-invocation aliasing is intended and alias admission is routed to OD1, per-invocation injectivity is a mathematical prerequisite for the normal-path inverse map itself.",
+      "nextStep": "State per-invocation injectivity of `state_bindings` and `duty_bindings` (and complete coverage of local source liabilities) explicitly as a baseline normal-path precondition in `DESIGN.md` and `OD1`.",
+      "severity": "minor"
+    },
+    {
+      "evidence": [
+        {
+          "path": "basis/crates/mori-core/src/runtime.rs",
+          "quote": "if let Some(identity) = identities.get(l.name.as_str()) && *identity != (&l.asset, l.debtor.as_str(), l.creditor.as_str())",
+          "supports": "`runtime::scenario_snapshot` only checks identity equality when the local program itself declares a `Statement::Liability` for that name."
+        },
+        {
+          "path": "basis/crates/mori-core/src/stage/decode.rs",
+          "quote": "if registry.get(l.name.as_str()) != Some(&(&l.asset, l.debtor.as_str(), l.creditor.as_str()))",
+          "supports": "`decode::canonical_boundary` (invoked by `stage::start` when `!plan.sites.is_empty()` and by `stage::resume` at R7) rejects any incoming liability absent from the local program's liability registry."
+        }
+      ],
+      "issue": "Because `stage::start` invokes `decode::canonical_boundary` whenever `!plan.sites.is_empty()` (H25) and `stage::resume` invokes it at R7, an awaiting successor action cannot accept a projected incoming liability unless that liability is registered in `decode::registry(p)`, whereas a non-awaiting action only passes through `runtime::scenario_snapshot`. Under unchanged stage admission, discharge-only incoming duties on awaiting actions will be refused by `canonical_boundary` unless `OD1` defines how duty registry identities are admitted or restricted.",
+      "nextStep": "Ensure the `OD1` owner contract explicitly specifies the supported domain for incoming projected duties across non-awaiting versus awaiting actions under R7/`canonical_boundary`.",
+      "severity": "minor"
+    },
+    {
+      "evidence": [
+        {
+          "path": "API-AND-CALLER-TRACE.md",
+          "quote": "`expected_observations` is an ordered list of paths, one complete expanded PrefixObservation for opening and each requested operation. `expected_report` names the whole independently expected run report.",
+          "supports": "`sequence_test.rs` compares per-step expanded `PrefixObservation` files and produces an aggregate test report."
+        },
+        {
+          "path": "WIRE-CONTRACT.md",
+          "quote": "PrefixObservation has exactly `{index,cause,call_prefix_len,effect_prefix_len,head,progress,frames,latest,financial,logical,residual}`... Expanding a prefix means taking all calls/effects at positions below the corresponding length.",
+          "supports": "`WIRE-CONTRACT.md` defines `PrefixObservation` with prefix lengths rather than inline expanded `calls`/`effects` fields and omits the outer `mori test` case-report DTO schema."
+        }
+      ],
+      "issue": "`WIRE-CONTRACT.md` defines `SequenceRunReport` and `PrefixObservation` (using `call_prefix_len` and `effect_prefix_len`), while `API-AND-CALLER-TRACE.md` states that `expected_observations` files contain \"one complete expanded PrefixObservation\" and that `sequence_test.rs` emits an aggregate comparison report (analogous to `moriarty-disjoint-case-observations-draft/1` in `disjoint_test.rs`). The exact field-level JSON schema for an expanded `PrefixObservation` fixture and for the `mori test` sequential case-report output is not specified inside `WIRE-CONTRACT.md`.",
+      "nextStep": "Include exact field-by-field DTO schemas for `expected_observations` files and the `mori test` sequential case-report output in `WIRE-CONTRACT.md` before implementation and independent oracle generation.",
+      "severity": "minor"
+    },
+    {
+      "evidence": [
+        {
+          "path": "DESIGN-REVIEW-SCOPE.md",
+          "quote": "EXAMPLES-AND-TESTS.md, thirteen source/input/example-plan files and AUTHOR-WORKED-PREFIXES.json remain complete physical corroboration. They demonstrate concrete intended uses and future test predicates, but they are not independent goldens.",
+          "supports": "Optional worked examples and physical baseline files outside the 105,698-byte inline primary are uncertified in this inline design vote."
+        }
+      ],
+      "issue": "Under the inline-primary delivery rules for this design vote, only the 16 inline-embedded documents and source excerpts were read; physical baseline originals outside the inline primary and optional author-worked example files (`EXAMPLES-AND-TESTS.md`, `AUTHOR-WORKED-PREFIXES.json`, and the 13 example fixture files) were not inspected or arithmetically certified.",
+      "nextStep": "Keep independent oracle derivation (`CSQ-015`) and full physical source/example verification as mandatory gates prior to implementation acceptance.",
+      "severity": "note"
+    }
+  ],
+  "oracleLimitationsVerbatim": [
+    "This ordinary design review evaluates only the 105,698-byte inline primary and does not inspect or certify `EXAMPLES-AND-TESTS.md`, `AUTHOR-WORKED-PREFIXES.json`, the 13 physical example files, or the unembedded physical baseline files.",
+    "No independent sequential expected observations, `SequenceRunReport` JSON fixtures, or public wire byte goldens exist yet; per `CSQ-015` and `WIRE-CONTRACT.md`, authored arithmetic and producer round-trips cannot serve as independent compiler/wire oracles.",
+    "No Rust code was compiled or executed, and no runtime, security, resource-adequacy, native ZKIRv3 correspondence, or parent requirement closure is certified by this vote."
+  ],
+  "qualifications": [
+    "Conditional B recommendation only; not adoption or pair-agreement finding",
+    "All6 votes agree, with3 minor findings and1 note retained; no revise/abstain vote reported",
+    "All35 original behavioral clauses retained verbatim and individually covered by lineage; none closed",
+    "AllOD1-OD8 remain mandatory prerequisite owner contracts, not supplied/adopted by this ordinary opinion",
+    "Only16 embedded subjects read by reviewer; optional examples/author arithmetic and other physical context unread in that vote",
+    "No independent sequence financial/work/wire goldens supplied or certified",
+    "No runtime/security/resource/native/proof/ledger/parent approval"
+  ],
+  "checks": {
+    "primaryHashMatch": true,
+    "primaryInlineMatch": true,
+    "embeddedHeaderHashesVerified": 16,
+    "fullOrdinaryDocumentsByteIdentical": 8,
+    "physicalBasisHashesAndGitBlobPinsVerified": 71,
+    "MPLRRequiredParagraphsVerified": 35,
+    "quotesVerified": 19,
+    "quoteModes": {
+      "literal": 13,
+      "whitespace-normalized": 3,
+      "whitespace-compacted-Rust-formatting": 1,
+      "marked-ellipsis": 2
+    }
+  },
+  "limits": [
+    "No new substantive design/security vote; root determines adoption and comparison with B",
+    "Did not inspect private captures, attest actual backend identity, contact provider or rerun review",
+    "No product/runtime/build/Git/SDK/network execution or shared mutation",
+    "Physical basis hashes verified mechanically; this is not a new full source correctness or security audit",
+    "The primary section hash for ORIGINAL-MPLR is its verbatim behavior rendering, and source excerpt hashes hash excerpts. Whole physical identities remain separately pinned; do not relabel these as equal full-file hashes."
+  ]
+}

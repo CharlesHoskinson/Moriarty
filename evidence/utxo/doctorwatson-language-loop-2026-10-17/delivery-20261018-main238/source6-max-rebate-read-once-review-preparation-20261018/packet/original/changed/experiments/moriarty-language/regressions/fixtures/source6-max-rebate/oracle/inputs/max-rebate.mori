@@ -1,0 +1,19 @@
+profile "moriarty-beta/1";
+agreement MaxRebatePayout {
+ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Buyer = { domain: Preview, id: "Owner" };
+ account Seller = { domain: Preview, id: "Recipient" };
+ account Treasury = { domain: Preview, id: "Fee" };
+ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
+ const payout: Qty<USD> = max(a: 2 * (4.50 USD - atoms(asset: USD, value: 50)), b: 7.00 USD);
+ const fee: Qty<USD> = atoms(asset: USD, value: 25);
+ intent Rebate = {
+  domain: Preview, asset: USD, signer: Buyer, key: "rebate-key", nonce: "rebate-nonce", pre_head: "m0",
+  valid: rounds(domain: Preview, from: 2, to: 12),
+  gross_cap: 8.50 USD, fee_cap: fee, net_floor: payout,
+  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: payout, fee: fee),
+  source_hash: "rebate-source", policy_digest: "rebate-policy", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ action pay_rebate uses Rebate;
+}

@@ -1,0 +1,9 @@
+# PR234 read-once delivery
+
+Root can use READ-ONCE.md with one fresh nonauthor context. PRIMARY.md is the complete required input; INDEX.json supplies exact whole-file/alias offsets, hashes and optional-path classification. OPINION.schema.json preserves a full, unbounded source-and-result opinion. No provider, product or security action was dispatched here.
+
+All38candidate bodies, both original financial freezes, all5actual results/current captures/first failure, exact adapter-only fix and actual direct semantic consumers remain intact. Whole-file deduplication uses only direct byte equality plus SHA, with every alias reconstructible from PRIMARY; no source, expected or actual content is shortened or normalized. The879source snapshot is supplied in full, but only70paths are mandatory through their PRIMARY aliases;809are optional. The large prior prompt bundles are not prerequisites. No previous opinion is included or reused as approval.
+
+Descriptor and complete schema together fit8KiB. PRIMARY is deliberately larger and must be delivered/read in full with sufficient context; this is not a125KB truncation or a promise that every provider can fit it. A truncated or incomplete read must return blocked/abstain rather than a partial approval. Source and result decisions remain separate in one whole opinion. Root alone dispatches the reviewer, checks returned identity/whole output, and owns eventual integration assessment.
+
+Exact candidate98db9d3cf7a7e1227fdbbd9e6d5d3c2d848a6453/tree6f78f49dc3cc643c423a5c0c4f9d85fa9a0aa09b and testedbase049395532c43b17c54bdbc5a529535b521dc56df remain unchanged. Payout's two representation premises remain conditional; reserve's unobserved raw statement/IR/work/byte fields remain open. All original148/292/20and U/M/MC/SP/G/finance/composition/target exits remain required/open. No actual review verdict or new execution is claimed.

@@ -1,0 +1,602 @@
+{
+  "base": "79de664a3d16b5e0456043a530c8f33d723561a2",
+  "coverage": {
+    "crates/fixtures/check-source/cases.json": {
+      "assessment": "Defines the eight public mori check regression test cases covering Beta, Core1, and Core2 JSON and quiet human invocations.",
+      "readScope": "full",
+      "sha256": "fc4306dd34f3bb76763b5d45afe5bb91496069e02b3102237bb1dff3a3edd2f8"
+    },
+    "crates/fixtures/check-source/cases/accepted.mori": {
+      "assessment": "Provides a valid moriarty-beta/1 Oracle agreement fixture with domain, observation, intent, and specified_only action declarations.",
+      "readScope": "full",
+      "sha256": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b"
+    },
+    "crates/fixtures/check-source/cases/core1-accepted.mori": {
+      "assessment": "Provides a minimal valid moriarty/1 Core agreement fixture with one advance action and a true requirement.",
+      "readScope": "full",
+      "sha256": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526"
+    },
+    "crates/fixtures/check-source/cases/core1-rejected.mori": {
+      "assessment": "Provides an empty moriarty/1 Core agreement fixture that triggers the missing-action rejection diagnostic.",
+      "readScope": "full",
+      "sha256": "eb7a9e96829f3ef9aae077f18adee18f334c4b6ab3b34db8463a9153af99d9e8"
+    },
+    "crates/fixtures/check-source/cases/core2-accepted.mori": {
+      "assessment": "Provides a minimal valid moriarty/2 staged Core agreement fixture admitted through mori_core::stage::load.",
+      "readScope": "full",
+      "sha256": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc"
+    },
+    "crates/fixtures/check-source/cases/core2-rejected.mori": {
+      "assessment": "Provides an empty moriarty/2 staged Core agreement fixture that fails stage loading with a program diagnostic.",
+      "readScope": "full",
+      "sha256": "37d660cea5a09c6d85d9a8121a634320754cf833eee733efc208728ca5c24d19"
+    },
+    "crates/fixtures/check-source/cases/rejected.mori": {
+      "assessment": "Provides a syntactically valid moriarty-beta/1 agreement that fails checking with duplicate_name and unknown_name diagnostics.",
+      "readScope": "full",
+      "sha256": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b"
+    },
+    "crates/fixtures/check-source/cases/unicode-byte-offsets.mori": {
+      "assessment": "Prefixes the rejected Beta fixture with a multi-byte UTF-8 comment to verify byte-offset span reporting.",
+      "readScope": "full",
+      "sha256": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f"
+    },
+    "crates/fixtures/check-source/cases/unparsable.mori": {
+      "assessment": "Provides a truncated moriarty-beta/1 declaration fixture that fails parsing with mori::syntax::missing_semicolon.",
+      "readScope": "full",
+      "sha256": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123"
+    },
+    "crates/fixtures/check-source/expected/accepted.stdout": {
+      "assessment": "Pins the exact 1120-byte accepted Beta JSON report compatibility baseline including agreement, declarations, actions, and empty diagnostics.",
+      "readScope": "full",
+      "sha256": "e0443b69cbbbcd432f4ed097d06e7a368b398331a7c579210ef2a8382c926d85"
+    },
+    "crates/fixtures/check-source/expected/core1-accepted.stdout": {
+      "assessment": "Pins the exact 395-byte accepted Core1 JSON report compatibility baseline without stage qualification labels.",
+      "readScope": "full",
+      "sha256": "dc3bdde91774cdb2e92dcfdf962c91560044f5b3a19d99612b4cc7be648cc442"
+    },
+    "crates/fixtures/check-source/expected/core1-rejected.stdout": {
+      "assessment": "Pins the exact 220-byte rejected Core1 JSON report compatibility baseline with the mori::core::program diagnostic.",
+      "readScope": "full",
+      "sha256": "984922ce39818964f928d341ed8155a4438e6fce8a2fde0794c1f9bd9f8c988a"
+    },
+    "crates/fixtures/check-source/expected/core2-accepted.stdout": {
+      "assessment": "Pins the exact 497-byte accepted Core2 JSON report compatibility baseline including all three STAGE_LABELS fields.",
+      "readScope": "full",
+      "sha256": "98fbc87d6c2515a856b571b43f4a89f53fd117160582495e327e1c4b2cf76484"
+    },
+    "crates/fixtures/check-source/expected/core2-rejected.stdout": {
+      "assessment": "Pins the exact 322-byte rejected Core2 JSON report compatibility baseline preserving all three STAGE_LABELS fields on error.",
+      "readScope": "full",
+      "sha256": "6e603241ee81db4aa11b2b466b1745b76f2c534dfe6b3fa380e3033195bd9ff5"
+    },
+    "crates/fixtures/check-source/expected/rejected.stdout": {
+      "assessment": "Pins the exact 1661-byte rejected Beta JSON report compatibility baseline with partial declarations and two checker diagnostics.",
+      "readScope": "full",
+      "sha256": "674b78dd4cb550144971bb16fbf08b476413956573481e0ae6cce47ed15da83e"
+    },
+    "crates/fixtures/check-source/expected/unicode-byte-offsets.stdout": {
+      "assessment": "Pins the exact 1661-byte rejected Beta JSON report compatibility baseline with 9-byte-shifted UTF-8 spans after the header comment.",
+      "readScope": "full",
+      "sha256": "37475ec91dd4978b7c9ac5d5d9d426b1b0c19b8cf4a1a0f912a45dbecf248320"
+    },
+    "crates/fixtures/check-source/expected/unparsable.stdout": {
+      "assessment": "Pins the exact 722-byte unparsable Beta JSON report compatibility baseline with null agreement and syntax diagnostic.",
+      "readScope": "full",
+      "sha256": "295ad8827179e74236cc6dd4392afc76b143062f370d9095bc49cbcada90faf6"
+    },
+    "crates/mori/src/commands/check.rs": {
+      "assessment": "Implements the CLI check subcommand via check_source::dispatch and CliConsumer while preserving status, diagnostics, JSON printing, and exit codes.",
+      "readScope": "full",
+      "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb"
+    },
+    "crates/mori/src/commands/check_source.rs": {
+      "assessment": "Extracts SourceCheckConsumer, dispatch, beta_report, and core_report to share Beta, Core1, and staged Core2 check routing.",
+      "readScope": "full",
+      "sha256": "b41456e7b975b1b68f499652765f8bc807f13cf1e811dd73ed77787a3a3320b6"
+    },
+    "crates/mori/src/commands/mod.rs": {
+      "assessment": "Registers private module check_source alongside existing subcommand modules and preserves Command::Check and Command::Capabilities routing.",
+      "readScope": "full",
+      "sha256": "4e39c2dd984c1dcd0687da30eddd4e630f3d9480aef0b5df25e48828001abc47"
+    },
+    "crates/mori/tests/check_source_dispatch.rs": {
+      "assessment": "Executes all eight fixture cases against the public mori binary in isolated temp directories for both JSON and quiet human modes.",
+      "readScope": "full",
+      "sha256": "cbc4529bd03751163e28bb8089ae6d451e120bd95f5023733845402b3185a91a"
+    }
+  },
+  "findings": [
+    {
+      "axis": "coverage",
+      "expected": "Public regression tests for mori check cover exit codes and JSON byte output, with any unpinned human-mode verbosity/stderr formatting explicitly bounded.",
+      "fixOrNextCheck": "Retain as a documented test-scope boundary or add optional non-quiet/verbose stderr assertions if human CLI formatting becomes a normative contract.",
+      "id": "F1-human-verbose-and-unquiet-output-unpinned",
+      "observed": "check_source_dispatch.rs runs human mode exclusively with --quiet and checks only stderr emptiness (expected_exit == 0), leaving normal Checking/Finished status lines, --verbose Parsed token/node counts, and exact rendered diagnostic text unpinned by byte assertions.",
+      "predicate": "human-laziness-and-order",
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    let human = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .current_dir(&directory.0)\n        .args(&case.human_argv)\n        .output()\n        .expect(\"run public human check\");\n    assert_eq!(\n        human.status.code(),\n        Some(case.expected_exit),\n        \"{description}\"\n    );\n    assert!(human.stdout.is_empty(), \"{description}\");\n    assert_eq!(\n        human.stderr.is_empty(),\n        case.expected_exit == 0,\n        \"{description}\"\n    );",
+          "lineEnd": 90,
+          "lineStart": 75,
+          "path": "crates/mori/tests/check_source_dispatch.rs",
+          "sha256": "cbc4529bd03751163e28bb8089ae6d451e120bd95f5023733845402b3185a91a",
+          "supports": "Human test execution uses --quiet human_argv and checks only exit code, empty stdout, and boolean stderr emptiness."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    fn parsed(&mut self, tokens: usize, nodes: usize) {\n        if !self.json {\n            self.shell\n                .verbose_status(\"Parsed\", format!(\"{tokens} tokens, {nodes} nodes\"));\n        }\n    }",
+          "lineEnd": 78,
+          "lineStart": 73,
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+          "supports": "CliConsumer::parsed emits verbose_status only when not in JSON mode and verbosity is Verbose."
+        }
+      ],
+      "severity": "note"
+    },
+    {
+      "axis": "scope",
+      "expected": "Baseline compatibility bytes and internal canonical hash/authored IR checks must be distinguished from independent semantic or financial oracle qualification.",
+      "fixOrNextCheck": "Preserve open semantic, financial, and canonical-byte oracle gates until independent oracle fixtures are evaluated.",
+      "id": "F2-compatibility-baseline-oracle-and-core-test-boundaries",
+      "observed": "The eight expected/*.stdout files pin compatibility with baseline commit 97c9b1565d71404413aa35e9f95fe7661b8a09b1 rather than independent semantic specifications, and inherited PR229 Core tests still compute expected_program_hash/expected_plan_hash via production intent::canonical and check Statement/ExprId/Step.value against authored.expected.json.",
+      "predicate": "public-regression-and-oracle",
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "Ten selected normal CLI tests,four Core tests and8actualbaseline compatibility comparisons on new-main combined tree; no independent semantic/MCP/native/proof/ledger/target qualification.",
+          "jsonPointer": "/scope",
+          "path": "current-receipts/FINAL-RESULT.json",
+          "sha256": "e8a6ec2b5bc8c04c38f67ea0500d5e81d944357ab5f001657f89467400a6b338",
+          "supports": "FINAL-RESULT.json explicitly bounds the 8 direct comparisons as baseline compatibility checks without independent semantic or target qualification."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    // Hashes use the production canonical codec over independent literal\n    // values. This checks linkage, not an independent canonical-byte oracle.\n    let expected_program_hash = intent::hash_bytes(&intent::canonical(&expected_program).unwrap());",
+          "lineEnd": 75,
+          "lineStart": 73,
+          "path": "context/crates/mori-core/tests/program_plan_roundtrip.rs",
+          "sha256": "b76b3cffd095cb27a70f50243d2d9515804418a59a01162d7020ae693d0b02fc",
+          "supports": "Inherited Core2 roundtrip test uses production intent::canonical for linkage hashes rather than an external canonical-byte oracle."
+        }
+      ],
+      "severity": "note"
+    },
+    {
+      "axis": "guideline",
+      "expected": "Curated capability sourceRefs and local verification commands should have explicit scope boundaries relative to check_source.rs extraction and RUST_GUIDELINES.md workspace checks.",
+      "fixOrNextCheck": "Update capabilities.rs SOURCE_REVISION and sourceRefs when public routing or editor consumers change, and run full workspace fmt/clippy/test gates in full-workspace qualification runs.",
+      "id": "F3-capabilities-source-ref-and-scoped-workspace-checks",
+      "observed": "capabilities.rs retains SOURCE_REVISION e4d7a2b5709caa18a94f5256d03a0302364b8235 and lists crates/mori/src/commands/check.rs in sourceRefs for check consumers without naming private helper module check_source.rs, and current receipts execute targeted --no-default-features test binaries rather than full workspace fmt/clippy/test commands.",
+      "predicate": "approved-capability-integration",
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "            consumer(\"core1-check\", \"check FILE --json\", (Some(LANGUAGE), Some(SEMANTICS), None), None,\n                (\"source-present\", \"source-check\"), &[\"No compilation or target qualification.\"], &[\"crates/mori/src/commands/check.rs\"]),\n            consumer(\"core2-check\", \"check FILE --json\", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), None,\n                (\"source-present\", \"source-check\"), &[\"Uses staged admission and planning.\"], &[\"crates/mori/src/commands/check.rs\"]),\n            consumer(\"beta-check\", \"check FILE --json\", (Some(mori_parser::PROFILE), None, None), None,\n                (\"source-present\", \"frontend-check-only\"), &[\"Named-action admission is determined by the checker; no Core semantics are inferred.\"], &[\"crates/mori/src/commands/check.rs\"]),",
+          "lineEnd": 99,
+          "lineStart": 94,
+          "path": "context/crates/mori/src/commands/capabilities.rs",
+          "sha256": "800fe8007fe12c719128ee51b40273ea89dbc2457eebf8d28c4d9903d9a99380",
+          "supports": "Capabilities catalogue points check consumers to the public subcommand module crates/mori/src/commands/check.rs under the curated E4D inspection basis."
+        },
+        {
+          "deliveryScope": "excerpt",
+          "exactQuote": "  cargo fmt --all --check\n  cargo clippy --workspace --all-targets --locked -- -D warnings\n  cargo test --workspace --locked",
+          "lineEnd": 87,
+          "lineStart": 85,
+          "path": "context/RUST_GUIDELINES.md",
+          "sha256": "7ac417984778c52387d49295364b1e2f85bde14d04d2130dc2c09b4f3bf9d404",
+          "supports": "RUST_GUIDELINES.md defines workspace-wide fmt, clippy, and test checks within inspected scope and execution authority."
+        }
+      ],
+      "severity": "note"
+    }
+  ],
+  "format": "mori-shared-check-main79-source-review/1",
+  "head": "09a442faa60192cde8f51f60986957ea5e4ff8da",
+  "retainedOpenRequirements": [
+    "Whole-Artifact, native compiler (mori-backend), Midnight SDK, ZKIRv3/v4 circuit, native proof, and mori-ledger settlement qualification remain open and unverified.",
+    "All original parent gates (U, M, MC, SP, G, finance, composition, and all 20 UTXO pattern family exits) and consolidated requirements UNI-001 through UNI-024, MOR-001 through MOR-012, AEO-001 through AEO-004, and MPLR-001 through MPLR-035 remain open.",
+    "Independent semantic and financial oracle correspondence for mori check baseline compatibility bytes, intent::canonical program/plan/continuation hashes, and authored Statement/ExprId/Step.value wire fields remains open.",
+    "Editor/protocol consumers (mori lsp and mori mcp stubs), refreshes of capabilities.rs SOURCE_REVISION upon future routing/editor changes, and prior SDK allocation obligations remain open.",
+    "Runtime execution of stage::resume on the InvoiceReceipt conditional suffix and open_credit action, logical meter enforcement, cap refusal precedence, and authenticated continuation admission remain open.",
+    "Actual backend model identity attestation remains unestablished (gemini-4-argon-high is the requested/advertised CLI label only; actualBackendIdentityAttested is false).",
+    "Independent RESULT-role review and root adoption remain separate; this opinion covers the SOURCE role only and supplies neither resultChecks nor resultDisposition."
+  ],
+  "reviewToken": "shared-check-main79-source-20261018-fresh-nonauthor-v1",
+  "reviewedCommonPrimarySha256": "5d10e0f43ecd714263010e2672a010b392f2eb699236d3a100a3f493fc30a5f9",
+  "reviewer": {
+    "actualBackendIdentityAttested": false,
+    "authorOfCandidate": false,
+    "effort": "high",
+    "independent": true,
+    "requestedModel": "gemini-4-argon-high",
+    "returnedModel": "gemini-4-argon-high",
+    "terminalStatus": "completed"
+  },
+  "role": "source",
+  "sourceChecks": {
+    "approved-capability-integration": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/mod.rs",
+        "context/crates/mori/src/commands/capabilities.rs",
+        "context/crates/mori/tests/capabilities.rs",
+        "current-receipts/public-tests/STDOUT.log",
+        "approved224/ROOT-DISPOSITION.json"
+      ],
+      "limitations": [
+        "Curated SOURCE_REVISION remains pinned to e4d7a2b5709caa18a94f5256d03a0302364b8235 with binarySourceRevision null.",
+        "Only non-native build features were exercised in the capability test run."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "// Inspection basis for the curated consumer notes, not a binary/build identity.\n// Update this catalogue when public routing or editor implementations change.\nconst SOURCE_REVISION: &str = \"e4d7a2b5709caa18a94f5256d03a0302364b8235\";",
+          "lineEnd": 17,
+          "lineStart": 15,
+          "path": "context/crates/mori/src/commands/capabilities.rs",
+          "sha256": "800fe8007fe12c719128ee51b40273ea89dbc2457eebf8d28c4d9903d9a99380",
+          "supports": "Preserves the curated E4D inspection-basis constant and distinction from binary build identity."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "        let checked = json(&f.run(&[\"check\", \"source.mori\", \"--json\"]));\n        assert_eq!(checked[\"status\"], \"accepted\");\n        assert_eq!(checked[\"language\"], language);",
+          "lineEnd": 193,
+          "lineStart": 191,
+          "path": "context/crates/mori/tests/capabilities.rs",
+          "sha256": "7743a40ccf758ac71af613f2957a1cfcee6ea05473578478a130a3d050b388a3",
+          "supports": "The capability consumer test invokes public mori check --json for both reported Core profiles through the shared dispatcher."
+        }
+      ],
+      "reason": "commands/mod.rs preserves Command::Capabilities routing, capabilities.rs retains the E4D inspection basis and source-only qualifications, and both capabilities tests pass on 09a442fa while exercising mori check --json through check_source::dispatch."
+    },
+    "approved-core-integration": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "context/crates/mori-core/tests/financial_program_wire_contract.rs",
+        "context/crates/mori-core/tests/program_plan_roundtrip.rs",
+        "context/crates/mori-core/tests/utxo_pattern_exchange.rs",
+        "current-receipts/core-tests/STDOUT.log",
+        "merged229/ROOT-DISPOSITION.json"
+      ],
+      "limitations": [
+        "ProgramPlan and Continuation hashes in program_plan_roundtrip.rs use production intent::canonical rather than an external byte oracle, and conditional resume remains unrun.",
+        "Statement IR, ExprId, and Step.value in utxo_pattern_exchange.rs are checked against authored.expected.json rather than the independent prefix oracle, and PR233 JS files remain unread optional context."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    let actual = parse(source).expect(\"exact source must parse through the real Core consumer\");\n    let bytes = serde_json::to_vec(&actual).expect(\"complete Program must serialize\");\n    let actual_wire: Value = serde_json::from_slice(&bytes).expect(\"complete wire must be JSON\");\n    assert_eq!(\n        actual_wire, expected,\n        \"every Program field and nested cell must match\"\n    );",
+          "lineEnd": 23,
+          "lineStart": 17,
+          "path": "context/crates/mori-core/tests/financial_program_wire_contract.rs",
+          "sha256": "078a1b6f72c683763bf6f0791ed17a57539f64c37eea5b43dac2909855db379c",
+          "supports": "Retains exact PR229 Core1 frozen wire comparison and roundtrip assertions."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    // The financial oracle does not specify expression IDs, Statement IR or Step.value.\n    // Those complete wire fields remain checked against the distinct authored fixture.\n    let authored: Value = serde_json::from_str(fixture!(\"authored.expected.json\"))\n        .expect(\"authored complete expectation must decode\");",
+          "lineEnd": 120,
+          "lineStart": 116,
+          "path": "context/crates/mori-core/tests/utxo_pattern_exchange.rs",
+          "sha256": "aa6d89df8f2b47e4bf26f8800e2431a3bd7f02d011f000cd378f4b56859f4240",
+          "supports": "Retains explicit separation between independent prefix/effect expectations and authored IR/value fields."
+        }
+      ],
+      "reason": "All three inherited PR229 Core test files are preserved verbatim on 09a442fa with their explicit canonical-hash and authored-IR boundaries intact, and all four Core tests pass in current-receipts/core-tests/STDOUT.log without implying parent gate closure."
+    },
+    "beta-json-bytes": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/check_source.rs",
+        "crates/mori/src/commands/check.rs",
+        "context/crates/mori/src/json.rs",
+        "crates/fixtures/check-source/expected/accepted.stdout",
+        "crates/fixtures/check-source/expected/rejected.stdout",
+        "crates/fixtures/check-source/expected/unicode-byte-offsets.stdout",
+        "crates/fixtures/check-source/expected/unparsable.stdout"
+      ],
+      "limitations": [
+        "CheckReport format is Moriarty's Rust CLI JSON schema rather than the external TypeScript beta format."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "pub(super) fn beta_report(\n    file: String,\n    source: &str,\n    checked: Option<&mori_checker::Checked<'_>>,\n    diagnostics: &[MoriDiagnostic],\n) -> CheckReport {\n    CheckReport::new(file, source, checked, diagnostics)\n}",
+          "lineEnd": 60,
+          "lineStart": 53,
+          "path": "crates/mori/src/commands/check_source.rs",
+          "sha256": "b41456e7b975b1b68f499652765f8bc807f13cf1e811dd73ed77787a3a3320b6",
+          "supports": "beta_report constructs the typed CheckReport struct directly via CheckReport::new."
+        },
+        {
+          "deliveryScope": "excerpt",
+          "exactQuote": "#[derive(Serialize)]\npub struct CheckReport {\n    /// `accepted` when there are no diagnostics, otherwise `rejected`.\n    pub status: &'static str,\n    pub file: String,\n    /// SHA-256 of the file's bytes, in lowercase hex.\n    pub source_hash: String,\n    /// Absent when the file did not parse.\n    pub agreement: Option<Named>,\n    pub declarations: Vec<DeclarationReport>,\n    pub actions: Vec<ActionReport>,\n    pub diagnostics: Vec<DiagnosticReport>,\n}",
+          "lineEnd": 27,
+          "lineStart": 14,
+          "path": "context/crates/mori/src/json.rs",
+          "sha256": "6f68940fe32eced929b8af229336eb07e9af745a78b32f45966858c7c382a3aa",
+          "supports": "CheckReport struct field order, SHA-256 source_hash, partial declarations/actions, and UTF-8 byte spans remain unchanged."
+        }
+      ],
+      "reason": "check_source::beta_report returns the typed CheckReport::new struct directly and check::run prints it via core_io::print, preserving exact struct field order, SHA-256 hex digest, partial checked items, diagnostics, and UTF-8 byte spans."
+    },
+    "core-report-and-qualification": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/check_source.rs",
+        "base/crates/mori/src/commands/check.rs",
+        "context/crates/mori/src/commands/simulate.rs",
+        "context/crates/mori-core/src/stage/mod.rs",
+        "crates/fixtures/check-source/expected/core1-accepted.stdout",
+        "crates/fixtures/check-source/expected/core1-rejected.stdout",
+        "crates/fixtures/check-source/expected/core2-accepted.stdout",
+        "crates/fixtures/check-source/expected/core2-rejected.stdout"
+      ],
+      "limitations": [
+        "Core2 stage labels qualify local reference staging only, with authentication set to none and consumption set to untracked."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    let mut report = match result {\n        Ok(program) => {\n            serde_json::json!({\"status\":\"accepted\", \"file\":file,\"source_hash\":mori_core::intent::hash_bytes(source.as_bytes()),\"language\":program.language,\"agreement\":program.name,\"actions\":program.actions,\"diagnostics\":[]})\n        }\n        Err(error) => {\n            serde_json::json!({\"status\":\"rejected\",\"file\":file,\"diagnostics\":[error]})\n        }\n    };\n    if staged {\n        let object = report\n            .as_object_mut()\n            .expect(\"stage reports are JSON objects\");\n        for (name, value) in mori_core::stage::STAGE_LABELS {\n            object.insert(name.into(), serde_json::Value::String(value.into()));\n        }\n    }",
+          "lineEnd": 84,
+          "lineStart": 69,
+          "path": "crates/mori/src/commands/check_source.rs",
+          "sha256": "b41456e7b975b1b68f499652765f8bc807f13cf1e811dd73ed77787a3a3320b6",
+          "supports": "core_report builds the exact accepted and rejected Core JSON objects and inserts all three STAGE_LABELS when staged is true."
+        },
+        {
+          "deliveryScope": "excerpt",
+          "exactQuote": "pub const STAGE_LABELS: [(&str, &str); 3] = [\n    (\"qualification\", \"local-reference-stage\"),\n    (\"authentication\", \"none\"),\n    (\"consumption\", \"untracked\"),\n];",
+          "lineEnd": 42,
+          "lineStart": 38,
+          "path": "context/crates/mori-core/src/stage/mod.rs",
+          "sha256": "e3c4a463319056d0a32ac192c57b3f587584976e08974f4dec04c9e881f80f23",
+          "supports": "Defines the three stage qualification labels inserted into staged Core2 reports."
+        }
+      ],
+      "reason": "check_source::core_report constructs the exact accepted and rejected JSON fields for Core1 and Core2 and inserts all three STAGE_LABELS entries (qualification, authentication, consumption) on both Ok and Err branches when staged is true."
+    },
+    "evidence-boundaries": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "baseline-receipts/BASELINE-PARENT-DELTA.json",
+        "approved224/ROOT-DISPOSITION.json",
+        "approved224/GITHUB-MERGE-READBACK.json",
+        "merged229/ROOT-DISPOSITION.json",
+        "merged229/MERGE-READBACK.json",
+        "current-receipts/FINAL-RESULT.json",
+        "current-receipts/CLEANUP.json"
+      ],
+      "limitations": [
+        "Prior combined review failure (timeout 124 / NO_EXPORT) is preserved without inferring a timeout cause or inheriting any approval.",
+        "ownedSessionRemaining and CLEANUP.json cover only the owned test session and temporary directory, not a host-wide process census."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "Exclude exact15 known test-only parentdelta paths, retain fullbaselinepins andverifyallothercurrentpaths. No sourcepatch/testexpectation changes, coldtarget retained.",
+          "jsonPointer": "/correction",
+          "path": "baseline-receipts/BASELINE-PARENT-DELTA.json",
+          "sha256": "193b7367ddffc171ced3965145b815e29ae829f44864401365b3071819c16fc5",
+          "supports": "Separates original 97c9 baseline from E4D parent by accounting for the 15 dropped test-only UMP paths with zero production delta."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "Only exact bcdf head into unchanged b278 main; verify actual merged tree matches tested/reviewed6ef1tree.",
+          "jsonPointer": "/mergePredicate",
+          "path": "merged229/ROOT-DISPOSITION.json",
+          "sha256": "1088cf023b40a08996c0367588328622a2fb668d7ca4116216ae918873a5b53f",
+          "supports": "Distinguishes historical PR229 merge disposition on bcdfd4b2 from current PR227 integration head 09a442fa on main 79de664a."
+        }
+      ],
+      "reason": "Evidence boundaries cleanly separate baseline 97c9b156 (and its 15 test-only-path delta from E4D), historical adopted PR224 (ff4f718d) and PR229 (bcdfd4b2), prior non-approving 124/NO_EXPORT timeout, and fresh 09a442fa/main 79de664a integration receipts."
+    },
+    "exit-and-diagnostics": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/check.rs",
+        "context/crates/mori/src/commands/core_io.rs",
+        "context/crates/mori/src/shell.rs",
+        "crates/mori/tests/check_source_dispatch.rs"
+      ],
+      "limitations": [
+        "Exact human diagnostic rendering formatting on stderr is not byte-compared in check_source_dispatch.rs."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    if !json {\n        let count = diagnostics.len();\n        for diagnostic in diagnostics {\n            shell.report(&diagnostic.with_source_code(NamedSource::new(\n                crate::display::text(name),\n                source.to_owned(),\n            )));\n        }\n        let plural = if count == 1 { \"\" } else { \"s\" };\n        shell.error(format!(\n            \"could not check `{name}` due to {count} previous error{plural}\"\n        ));\n    }",
+          "lineEnd": 141,
+          "lineStart": 129,
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+          "supports": "finish renders all diagnostics with NamedSource and prints the pluralized summary error when not in JSON mode."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    Ok(if outcome.accepted {\n        ExitCode::SUCCESS\n    } else {\n        ExitCode::FAILURE\n    })",
+          "lineEnd": 54,
+          "lineStart": 50,
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+          "supports": "Maps outcome.accepted directly to ExitCode::SUCCESS (0) or ExitCode::FAILURE (1) after propagating any I/O or print error."
+        }
+      ],
+      "reason": "check::run propagates read_source and core_io::print errors via ?, maps outcome.accepted to ExitCode::SUCCESS or FAILURE, suppresses status messages under --quiet, and still emits shell.report/shell.error diagnostics on failure."
+    },
+    "human-laziness-and-order": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/check.rs",
+        "crates/mori/src/commands/check_source.rs",
+        "base/crates/mori/src/commands/check.rs"
+      ],
+      "limitations": [
+        "Heap allocation savings and verbose human status outputs are verified by source inspection rather than runtime allocation profiling or verbose-mode test assertions."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "        let report = self.json.then(|| {\n            check_source::beta_report(self.name.to_owned(), self.source, checked, &diagnostics)\n        });\n        let accepted = finish(self.shell, self.name, self.source, diagnostics, self.json);",
+          "lineEnd": 88,
+          "lineStart": 85,
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+          "supports": "CliConsumer::beta constructs CheckReport only when self.json is true, avoiding report allocation in human mode."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    if outcome.beta {\n        if let Some(report) = outcome.report {\n            super::core_io::print(&report)?;\n        } else if outcome.accepted {\n            shell.status(\n                \"Finished\",\n                format!(\"check in {:.2}s\", started.elapsed().as_secs_f64()),\n            );\n        }\n    }",
+          "lineEnd": 49,
+          "lineStart": 40,
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+          "supports": "Final Beta JSON printing or Finished status runs in check::run after check_source::dispatch has returned and dropped Ast and Checked."
+        }
+      ],
+      "reason": "In human mode, self.json guards prevent beta_report and core_report allocation; consumer.parsed runs before mori_checker::check(&ast), and both Ast and Checked drop when dispatch returns prior to final Beta printing or Finished status output."
+    },
+    "profiles-and-checkers": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/check_source.rs",
+        "base/crates/mori/src/commands/check.rs",
+        "context/crates/mori-parser/src/lib.rs",
+        "context/crates/mori-checker/src/checker.rs",
+        "context/crates/mori-core/src/stage/mod.rs"
+      ],
+      "limitations": [
+        "Profile dispatch checks only source syntax/checker and local Core/1 or staged Core/2 admission without compiler or target verification."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "pub(super) fn dispatch<C: SourceCheckConsumer>(source: &str, mut consumer: C) -> C::Output {\n    if mori_lexer::first_token_text(source).is_ok_and(|token| token == \"language\") {\n        let staged = mori_core::language(source).is_ok_and(|language| language == \"moriarty/2\");\n        let result = if staged {\n            mori_core::stage::load(source).map(|program| program.program().clone())\n        } else {\n            mori_core::parse(source)\n        };\n        return consumer.core(result, staged);\n    }\n    match mori_parser::parse(source) {\n        Err(error) => consumer.beta(None, vec![error]),\n        Ok(ast) => {\n            consumer.parsed(ast.tokens.len(), ast.nodes.len());\n            let mori_checker::CheckResult {\n                checked,\n                diagnostics,\n            } = mori_checker::check(&ast);\n            consumer.beta(Some(&checked), diagnostics)\n        }\n    }\n}",
+          "lineEnd": 50,
+          "lineStart": 29,
+          "path": "crates/mori/src/commands/check_source.rs",
+          "sha256": "b41456e7b975b1b68f499652765f8bc807f13cf1e811dd73ed77787a3a3320b6",
+          "supports": "Preserves exact lexer first-token check, Core2 stage::load vs Core1 parse routing, and Beta parse/check with partial Checked values."
+        }
+      ],
+      "reason": "check_source::dispatch preserves the exact base check.rs routing: first_token_text == \"language\" selects mori_core::stage::load for \"moriarty/2\" or mori_core::parse otherwise, while non-Core inputs run mori_parser::parse followed by mori_checker::check(&ast) with partial Checked data."
+    },
+    "public-consumer": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/check.rs",
+        "crates/mori/src/commands/check_source.rs",
+        "crates/mori/src/commands/mod.rs",
+        "context/crates/mori/src/commands/mcp.rs"
+      ],
+      "limitations": [
+        "check_source is private to crates/mori/src/commands (mod check_source) and is not exposed as a public library API or MCP runtime consumer."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    let outcome = check_source::dispatch(\n        &source,\n        CliConsumer {\n            name: &name,\n            source: &source,\n            json: args.json,\n            shell,\n        },\n    )?;",
+          "lineEnd": 39,
+          "lineStart": 31,
+          "path": "crates/mori/src/commands/check.rs",
+          "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+          "supports": "Public mori check subcommand directly invokes check_source::dispatch with CliConsumer."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "pub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {\n    todo!(\"mori mcp\")\n}",
+          "lineEnd": 10,
+          "lineStart": 8,
+          "path": "context/crates/mori/src/commands/mcp.rs",
+          "sha256": "778c04c0168fd45efc8823a4f329f6b332f8808045b58d4fbccb58f279119756",
+          "supports": "Confirms mcp.rs remains a stub and makes no MCP runtime claim."
+        }
+      ],
+      "reason": "The public mori check entrypoint in crates/mori/src/commands/check.rs directly calls check_source::dispatch with CliConsumer, wired through crates/mori/src/commands/mod.rs, leaving no dead standalone helper or false MCP runtime claim."
+    },
+    "public-regression-and-oracle": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/tests/check_source_dispatch.rs",
+        "crates/fixtures/check-source/cases.json",
+        "current-receipts/public-tests/STDOUT.log",
+        "current-receipts/FINAL-RESULT.json"
+      ],
+      "limitations": [
+        "Committed expected/*.stdout files are compatibility oracles captured from baseline commit 97c9b1565d71404413aa35e9f95fe7661b8a09b1, not independent semantic or financial oracles."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    assert_eq!(\n        output.status.code(),\n        Some(case.expected_exit),\n        \"{description}\"\n    );\n    assert_eq!(output.stdout, expected, \"{description}\");\n    assert!(\n        output.stderr.is_empty(),\n        \"{description}: {:?}\",\n        output.stderr\n    );",
+          "lineEnd": 73,
+          "lineStart": 63,
+          "path": "crates/mori/tests/check_source_dispatch.rs",
+          "sha256": "cbc4529bd03751163e28bb8089ae6d451e120bd95f5023733845402b3185a91a",
+          "supports": "Asserts exact exit code, full stdout byte equality against expected/*.stdout, and empty stderr for all eight public JSON check cases."
+        },
+        {
+          "deliveryScope": "full",
+          "exactQuote": "[{\"id\":\"accepted\",\"source\":\"cases/accepted.mori\",\"fileLabel\":\"test.mori\",\"argv\":[\"--color\",\"never\",\"check\",\"test.mori\",\"--json\"],\"expectedExit\":0,\"expectedStdout\":\"expected/accepted.stdout\",\"humanArgv\":[\"--color\",\"never\",\"--quiet\",\"check\",\"test.mori\"]}",
+          "jsonPointer": "/0",
+          "path": "crates/fixtures/check-source/cases.json",
+          "sha256": "fc4306dd34f3bb76763b5d45afe5bb91496069e02b3102237bb1dff3a3edd2f8",
+          "supports": "Defines the public CLI arguments, expected exit, byte-oracle path, and quiet human arguments for each test case."
+        }
+      ],
+      "reason": "check_source_dispatch.rs and cases.json test all eight Beta, Core1, and Core2 cases through CARGO_BIN_EXE_mori for both JSON byte/exit/stderr identity and --quiet human exits/streams, using 97c9 baseline compatibility snapshots rather than claiming an independent semantic oracle."
+    },
+    "scope-and-guidelines": {
+      "disposition": "supported",
+      "evidenceRefs": [
+        "crates/mori/src/commands/mod.rs",
+        "crates/mori/tests/check_source_dispatch.rs",
+        "context/crates/mori/Cargo.toml",
+        "context/Cargo.toml",
+        "context/RUST_GUIDELINES.md",
+        "context/docs/MORIARTY-PRODUCT-CONTRACT.md",
+        "current-receipts/public-tests/START.json"
+      ],
+      "limitations": [
+        "Only targeted non-default-feature cargo test commands were executed in current-receipts rather than full workspace cargo fmt, cargo clippy, and cargo test --workspace --locked."
+      ],
+      "quotes": [
+        {
+          "deliveryScope": "full",
+          "exactQuote": "    let fixtures = Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(\"../fixtures/check-source\");",
+          "lineEnd": 47,
+          "lineStart": 47,
+          "path": "crates/mori/tests/check_source_dispatch.rs",
+          "sha256": "cbc4529bd03751163e28bb8089ae6d451e120bd95f5023733845402b3185a91a",
+          "supports": "Locates fixtures under crates/fixtures/check-source relative to env!(\"CARGO_MANIFEST_DIR\") without hardcoded absolute paths."
+        },
+        {
+          "deliveryScope": "excerpt",
+          "exactQuote": "- No absolute paths. Locate files from `env!(\"CARGO_MANIFEST_DIR\")`.",
+          "lineEnd": 78,
+          "lineStart": 78,
+          "path": "context/RUST_GUIDELINES.md",
+          "sha256": "7ac417984778c52387d49295364b1e2f85bde14d04d2130dc2c09b4f3bf9d404",
+          "supports": "Matches the RUST_GUIDELINES.md rule requiring CARGO_MANIFEST_DIR-relative fixture discovery inside crates/."
+        }
+      ],
+      "reason": "The 21-file diff is strictly confined to check_source extraction and crates/fixtures/check-source fixtures using env!(\"CARGO_MANIFEST_DIR\"), introducing no dependency, manifest, feature, editor, profile, or permissionless policy changes while explicitly bounding the scoped cargo test runs."
+    }
+  },
+  "sourceDisposition": "accept-scoped-source",
+  "tree": "4b792e710bed78aa6a506f592dd283a52012b280",
+  "unrunOrUnread": [
+    "Unexcerpted ranges of context files: crates/mori/src/json.rs lines >199, crates/mori/src/commands/core_io.rs lines 23-246, crates/mori/src/commands/simulate.rs lines 1-149 and >159, crates/mori/src/shell.rs lines outside 41-52 and 68-79, crates/mori/src/cli.rs lines outside 1-11, 37-64, and 115-126, crates/mori-checker/src/lib.rs lines outside 34-40 and 83-92, crates/mori-checker/src/checker.rs lines >44, crates/mori-core/src/json.rs lines 1-116 and >140, and crates/mori-core/src/stage/mod.rs lines outside 38-42, 48-60, and 73-93.",
+    "Unexcerpted lines of crates/mori/Cargo.toml, workspace Cargo.toml, RUST_GUIDELINES.md, docs/MORIARTY-PRODUCT-CONTRACT.md, openspec/changes/consolidated-language-kernel/requirements.md, and transitive unchanged workspace crates.",
+    "Main PR233's three inherited JavaScript files (optional physical context, unchanged between main 79de664a and head 09a442fa, not mandatory Rust consumer bodies).",
+    "Physical-only Cargo stderr logs, full per-case START.json/RESULT.json receipts beyond inline metadata, and inherited PR229 fixture blobs (installment-invoice.*, conditional-reserve.*, utxo-pattern-exchange/*) not re-embedded in COMMON-PRIMARY.md.",
+    "Workspace-wide cargo fmt --all --check, cargo clippy --workspace --all-targets --locked -- -D warnings, cargo test --workspace --locked, and builds/tests with native, source6-expansion, or core2-disjoint-draft features enabled.",
+    "Non-quiet and --verbose human mori check stdout/stderr output assertions and runtime execution of stage::resume on the InvoiceReceipt conditional suffix or open_credit action."
+  ]
+}
