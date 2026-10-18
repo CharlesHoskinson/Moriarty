@@ -4,6 +4,15 @@ Requested by the user on2026-10-17 after final design/spec integration. This use
 
 ## Entry and next actual implementation
 
+### October18 beta automation
+
+The latest user override removes human-only setup and approval requirements.
+Use the existing pinned operator/request and available noninteractive privileges
+for beta provisioning and applicable cleanup; no human window or tier grant is
+needed. Keep source/resource/cleanup and correctness checks. Prior human-only
+requests remain historical. Actual setup/build/proof/target observations must
+still be captured separately. See the [override](../../raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md).
+
 ### October 17 priority: close the retained EARS through DoctorWatson
 
 The user's current instruction is to update DoctorWatson, use it to close all
