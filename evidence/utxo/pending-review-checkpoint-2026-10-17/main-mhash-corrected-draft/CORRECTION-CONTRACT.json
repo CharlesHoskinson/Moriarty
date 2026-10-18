@@ -1,0 +1,115 @@
+{
+  "format": "mhash-hex-input-test-correction-contract/1",
+  "status": "DIAGNOSIS + MINIMAL TEST CORRECTION; not executed, not reviewed, not adopted; author is not a vote",
+  "actingIdentity": {
+    "requested": "claude-opus-4-8",
+    "effort": "high",
+    "authorizedFallback": "claude-opus-5-5 high",
+    "bothUserAuthorized": true,
+    "actual": "claude-opus-4-8",
+    "honestlyRecorded": true
+  },
+  "sourceAttempts": {"count": 1, "budgetSeconds": 1200, "execution": false, "retry": false, "nativeAuthority": 0},
+  "subject": {
+    "method": "T01ScriptHash.test_hex_and_type_inputs",
+    "id": "T01.8",
+    "subtest": "case='mixed-case'",
+    "frozenTestBytes": 28091,
+    "frozenTestSha256": "a1c00918e8988bf94fef03fee17b164852a6f95c6af5b20bdfc5e85d36ff1fcf",
+    "implementationUnderTest": {"bytes": 9070, "sha256": "4f6af8908890cb758e7af66bf7ad7e1b65996bf55cee6e57dfe8b0e46ed7157f"}
+  },
+  "actualResult": {
+    "runKind": "ordinary GREEN, attempt 1 of 1, exit 1",
+    "ran": 19, "ok": 18, "fail": 1, "errors": 0,
+    "failingMethod": "test_hex_and_type_inputs",
+    "failingSubtest": "case='mixed-case'",
+    "failureSite": "assertInputError (test:402) -> assertRaises(ScriptHashInputError) (test:184)",
+    "message": "AssertionError: ScriptHashInputError not raised",
+    "pinsModesListingsUnchanged": true,
+    "interpreterUnchanged": true,
+    "artifacts": ["ACTUAL-stderr.txt", "ACTUAL-RESULT.json", "ACTUAL-LAUNCH.json", "ACTUAL-stdout.txt (empty)"]
+  },
+  "diagnosis": {
+    "classification": "malformed negative fixture; implementation and contract behaviour correct",
+    "frozenLiteralTrace": {
+      "literal": "CIP57_CODE (CIP-0057 hello_world compiledCode; re-verified by T00.2/T00.3 in-run)",
+      "slice_10_20": "3232322225 (decimal digits only; no a-f)",
+      "upperIsNoOp": true,
+      "constructedVariantEqualsCIP57_CODE": true,
+      "throughImplementation": "script_hash('v2', CIP57_CODE): tag 0x02 (Lang:545); _admit_compiled_code admits str/even/lowercase, header 0x58, len 0xad=173, total 175; _digest -> CIP57_HASH 5e1e8fa8...0a02; no exception",
+      "contradicts": "test_cip57_primary_vector (T01.3), which asserts the same bytes are accepted and equal CIP57_HASH"
+    },
+    "rootCause": "The mixed-case fixture upper-cases CIP57_CODE[10:20], a digit-only slice, so .upper() is a no-op and the 'mixed-case' input is byte-identical to the admitted canonical input; script_hash correctly returns the valid hash and raises nothing, so assertInputError fails.",
+    "notInferred": "No primitive, tag, framing, bound, vector, CBOR-byte or implementation defect; sibling 'uppercase', 'code-uppercase' and 'hash-uppercase' fixtures are well formed and passed."
+  },
+  "whyPriorReviewsMissed": [
+    "Both audits treated the 19-method test as frozen and out of scope (MHASH-CONTRACT.md:3; MHASH-API.json pairedUnchangedTest; MHASH-IMPLEMENTATION-ADDENDUM.md:20); they audited contract source-grounding and implementation semantics, not the literal value of each negative fixture.",
+    "The defect is structurally invisible at RED: with the implementation absent, assertInputError calls _impl() which raises AssertionError(RED) before the mixed-case variant is built or hashed; frozen predictedRED (ran 19, pass 5, fail 14) cannot reach it.",
+    "The defect surfaces only at GREEN, which frozen predictedGREEN asserted as 19/19 without anyone computing CIP57_CODE[10:20].upper(); addendum D7 lists future additions but never re-examines existing negative literals."
+  ],
+  "normativeBehaviourUnchanged": {
+    "contract": "MHASH-CONTRACT.md C1-C8 unchanged and correct as observed",
+    "api": "MHASH-API.json algorithm/tags/framing/bounds/scope unchanged",
+    "addendum": "MHASH-IMPLEMENTATION-ADDENDUM.md D1-D8 untouched",
+    "implementation": "independent_script_hash.py not modified; no checker patch",
+    "oracleConstants": "CIP57_CODE, CIP57_HASH, 7 receipts, 18 pins, bounds all byte-preserved",
+    "genuineOriginals": "CIP and B9 originals untouched"
+  },
+  "minimalCorrectionBasis": {
+    "sourceProvesMalformedNegativeFixture": true,
+    "revisedTestWritten": true,
+    "revisedTestPath": "test_independent_script_hash.py (this output directory; new artifact, new bytes/sha256, not the frozen a1c00918 test)",
+    "scopeOfChange": "confined to test_hex_and_type_inputs only",
+    "preserved": "all 19 method names, coverage, labels, every fixture except the broken mixed-case construction, all oracle constants, byte-for-byte for every other line",
+    "methodCountUnchanged": 19,
+    "positiveControlAdded": false,
+    "positiveControlReason": "exact-original acceptance already unambiguously controlled by test_cip57_primary_vector (T01.3); no new impl call needed",
+    "d7OrMcFolded": false
+  },
+  "changedAssertions": [
+    {
+      "location": "test_hex_and_type_inputs",
+      "was": "mixed-case variant = CIP57_CODE[:10] + CIP57_CODE[10:20].upper() + CIP57_CODE[20:] (== CIP57_CODE)",
+      "now": "mixed_case = CIP57_CODE[:40] + CIP57_CODE[40:50].upper() + CIP57_CODE[50:] (slice 2e646e6400 -> 2E646E6400; genuine mixed-case of the same 175 bytes)",
+      "mixedCaseExpectationKept": "assertInputError(m.script_hash, 'v2', mixed_case) retained, not weakened"
+    },
+    {
+      "location": "test_hex_and_type_inputs (added, implementation-free fixture-integrity asserts)",
+      "added": [
+        "assertNotEqual(mixed_case, CIP57_CODE)  # genuinely altered, not a digit-only no-op",
+        "assertTrue(any(c in 'ABCDEF' for c in mixed_case))  # contains uppercase hex A-F",
+        "assertEqual(mixed_case.lower(), CIP57_CODE)  # same bytes; only letter case differs"
+      ]
+    }
+  ],
+  "beforeAfterPredictions": {
+    "before": {
+      "scope": "frozen test under reviewed implementation (recorded actual, retained forever, not falsified)",
+      "green": {"ran": 19, "ok": 18, "fail": 1, "errors": 0, "exit": 1, "failing": "test_hex_and_type_inputs case='mixed-case'"}
+    },
+    "after": {
+      "scope": "revised test (prediction only; a fresh authorized run and audit are required)",
+      "red": {"ran": 19, "pass": 5, "failures": 14, "errors": 0, "exit": 1, "note": "added asserts sit after m=_impl(); unreached while implementation absent; unchanged from frozen predictedRED"},
+      "green": {"ran": 19, "pass": 19, "failures": 0, "errors": 0, "exit": 0, "note": "mixed_case now rejected with ScriptHashInputError; three added literal asserts hold"}
+    }
+  },
+  "limits": [
+    "Diagnosis and correction only; no execution, import, AST, compile, hash, lint or probe performed.",
+    "Revised test is a new artifact (new bytes/sha256); it is not and does not claim to be the frozen a1c00918 test.",
+    "No semantic waiver, no new retry of the original run, no native authority granted; native authority 0.",
+    "Prior failed 19-method run is retained permanently and is not re-labelled all-pass.",
+    "Shared-primitive, source-connection and dependency-correspondence limits of MHASH-CONTRACT/API are unchanged.",
+    "M-HASH remains OPEN."
+  ],
+  "futureGates": [
+    "Fresh full source/effects Opus review of the whole changed test file.",
+    "Explicit new-RED decision and explicit new-GREEN decision.",
+    "Actual-result audit under the reviewed envelope (one attempt, no retry); result adoption is a separate decision.",
+    "No D7/MC additions in this revision; those remain a separate, separately reviewed test revision."
+  ],
+  "openWork": {
+    "allTwentyUtxoFamilies": "OPEN", "fullFinanceActusDefi": "OPEN", "recursionPcd": "OPEN",
+    "privateHandoff": "OPEN", "multiParentComposition": "OPEN", "realPreprod": "OPEN",
+    "nativeAuthority": 0
+  }
+}
