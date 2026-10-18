@@ -1,0 +1,40 @@
+// DECLARATIONS ONLY: immutable API v1; SOURCE_ONLY / UNRUN.
+// All public data types derive Clone, Copy, Debug, PartialEq, Eq.
+pub struct CarryBit(pub bool);
+pub struct BorrowBit(pub bool);
+pub struct MulCarry32(pub u32);
+pub struct AddCarry32 { pub low: u32, pub carry_out: CarryBit }
+pub struct SubBorrow32 { pub low: u32, pub borrow_out: BorrowBit }
+pub struct MulWide32 { pub low: u32, pub high: u32 }
+pub struct MulAccumulate32 { pub low: u32, pub carry_out: MulCarry32 }
+pub struct FullAdd32 { pub low: [u32; 4], pub carry_out: CarryBit }
+pub struct FullSub32 { pub low: [u32; 4], pub borrow_out: BorrowBit }
+pub struct FullProduct32 { pub low: [u32; 4], pub high: [u32; 4] }
+pub struct CheckedUInt128Add32 { pub full: FullAdd32, pub checked: Result<u128, u8> }
+pub struct CheckedUInt128Sub32 { pub full: FullSub32, pub checked: Result<u128, u8> }
+pub struct CheckedUInt128Mul32 { pub full: FullProduct32, pub checked: Result<u128, u8> }
+pub fn add_carry_32(a: u32, bv: u32, carry_in: CarryBit) -> AddCarry32;
+pub fn sub_borrow_32(a: u32, bv: u32, borrow_in: BorrowBit) -> SubBorrow32;
+pub fn mul_wide_32(a: u32, bv: u32) -> MulWide32;
+pub fn mul_accumulate_32(a: u32, bv: u32, addend: u32, carry_in: MulCarry32) -> MulAccumulate32;
+pub fn checked_u128_add_32(a: u128, bv: u128) -> CheckedUInt128Add32;
+pub fn checked_u128_sub_32(a: u128, bv: u128) -> CheckedUInt128Sub32;
+pub fn checked_u128_mul_32(a: u128, bv: u128) -> CheckedUInt128Mul32;
+pub struct MulCarry64(pub u64);
+pub struct AddCarry64 { pub low: u64, pub carry_out: CarryBit }
+pub struct SubBorrow64 { pub low: u64, pub borrow_out: BorrowBit }
+pub struct MulWide64 { pub low: u64, pub high: u64 }
+pub struct MulAccumulate64 { pub low: u64, pub carry_out: MulCarry64 }
+pub struct FullAdd64 { pub low: [u64; 2], pub carry_out: CarryBit }
+pub struct FullSub64 { pub low: [u64; 2], pub borrow_out: BorrowBit }
+pub struct FullProduct64 { pub low: [u64; 2], pub high: [u64; 2] }
+pub struct CheckedUInt128Add64 { pub full: FullAdd64, pub checked: Result<u128, u8> }
+pub struct CheckedUInt128Sub64 { pub full: FullSub64, pub checked: Result<u128, u8> }
+pub struct CheckedUInt128Mul64 { pub full: FullProduct64, pub checked: Result<u128, u8> }
+pub fn add_carry_64(a: u64, bv: u64, carry_in: CarryBit) -> AddCarry64;
+pub fn sub_borrow_64(a: u64, bv: u64, borrow_in: BorrowBit) -> SubBorrow64;
+pub fn mul_wide_64(a: u64, bv: u64) -> MulWide64;
+pub fn mul_accumulate_64(a: u64, bv: u64, addend: u64, carry_in: MulCarry64) -> MulAccumulate64;
+pub fn checked_u128_add_64(a: u128, bv: u128) -> CheckedUInt128Add64;
+pub fn checked_u128_sub_64(a: u128, bv: u128) -> CheckedUInt128Sub64;
+pub fn checked_u128_mul_64(a: u128, bv: u128) -> CheckedUInt128Mul64;

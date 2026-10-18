@@ -1,0 +1,5 @@
+Fresh non-author ordinary Argon HIGH review: source ACCEPT; no required functional corrections. Exact standalone host source/tests/docs are ready for Root consideration with retained caveats. Reviewer accepts actual R2013phases/17tests (12independent+5author),24public structs and14functions.
+
+Original030 is assessed PARTIAL_HOST_API_ONLY: observed external-harness functions do not supply canonical registration or production lowering integration. The reviewer also lists negative coverage/native-circuit gaps; preserve its caveats without adding native requirements to the host clause. Whole-UInt128 Err(10) remains unexecuted. Standalone component tests exercise truecarry/borrow and nonzero wordhighs, so the all17Ok statement is overbroad.
+
+One fresh call, exit0,89.669s local, no tools/retries; all161reviewpins unchanged. Full4870B opinion is preserved despite3000B request. See factual qualifications for exact API-family, consumer-scope and capture limits. No W/Git/source-author oracle disclosure/subjectrerun/securityjudgment/native action.
