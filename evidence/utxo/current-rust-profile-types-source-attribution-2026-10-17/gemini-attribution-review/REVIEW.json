@@ -1,0 +1,77 @@
+{
+  "coverage": [
+    {
+      "checked": "FULL_READ lines 1-74 of 74 (3420 bytes); verified 11-file Part 1 v2 review packet manifest and scope restriction to the 18 claims (G01, P01-P10, T01-T07) with 7 changed claims and direct inclusion of PATTERN-INVENTORY.json and FINDING-DISPOSITIONS.json.",
+      "read": true,
+      "sourceId": "MANIFEST.json"
+    },
+    {
+      "checked": "FULL_READ lines 1-823 of 823 (65838 bytes, read across two bounded slices lines 1-365 and 350-823 with no unread truncation); verified v2 header metadata, all 18 claims (G01, P01-P10, T01-T07) including the 7 changed claims (P02, P04, P09, P10, T03, T06, T07), all 20 UNLOCATED familyInventory entries, reviewScope/revision/laterSourceNotes/reviewPart metadata, and explicit distinction between the 33-file parent packet, 9-file historical v1 Part 1 workspace, and current 11-file v2 Part 1 packet.",
+      "read": true,
+      "sourceId": "CANDIDATE-PART.json"
+    },
+    {
+      "checked": "FULL_READ lines 1-484 of 484 (12823 bytes); independently verified citations, line spans, leading derive attributes, and enclosing definitions for P01 (lines 4-9), T01 (lines 11-43), T02 (lines 52-90), T03 (lines 91-117), T04 (lines 118-187), T05 (lines 274-360 and 454-465), T06 (lines 188-211), and T07 (lines 212-270).",
+      "read": true,
+      "sourceId": "CORE-ir.rs"
+    },
+    {
+      "checked": "FULL_READ lines 1-42 of 42 (1277 bytes); independently verified module declarations and re-exports for P09 and P10 (lines 8-31 and 1-42).",
+      "read": true,
+      "sourceId": "CORE-lib.rs"
+    },
+    {
+      "checked": "FULL_READ lines 1-378 of 378 (14920 bytes); independently verified citations and full parser/routing context for P03 (lines 351-377), P07 (lines 5-12 and 148-161), and P10 (lines 351-377).",
+      "read": true,
+      "sourceId": "CORE-parser.rs"
+    },
+    {
+      "checked": "FULL_READ lines 1-188 of 188 (6169 bytes); independently verified citations and enclosing stage module context for P02 (lines 23-32, alongside STAGE_LABELS at lines 33-38) and P08 (lines 71-88).",
+      "read": true,
+      "sourceId": "CORE-stage-mod.rs"
+    },
+    {
+      "checked": "FULL_READ lines 1-32 of 32 (1237 bytes); independently verified citation and full profile isolation context for P06 (lines 10-23) and require_core2 (lines 25-31).",
+      "read": true,
+      "sourceId": "CORE-stage-profile.rs"
+    },
+    {
+      "checked": "FULL_READ lines 1-69 of 69 (2585 bytes); independently verified citations, closing braces, and full frontend admission context for P04 (lines 34-50), P05 (lines 52-68), and P10 (lines 34-50).",
+      "read": true,
+      "sourceId": "S06-frontend.rs"
+    },
+    {
+      "checked": "PARTIAL_READ lines 1-40 of 1646 (60032 bytes total); independently verified G01 citation at lines 9-19 and enclosing metadata object at lines 4-21 (source_head 54fc7a1a54106245abb1a5ef6e16407464e1b654). Lines 41-1646 were not read because G01 only asserts the remaining_uninspected_boundaries metadata block.",
+      "read": true,
+      "sourceId": "graph.json"
+    },
+    {
+      "checked": "FULL_READ lines 1-244 of 244 (11698 bytes); independently verified 33-file parent source packet manifest (sha256 bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e) pinning 18 CORE-*.rs files to mainCommit 8174e52975d8db9bf59636fea0fa338c0f47c855 alongside 15 non-Core files retaining their separate originalPublicSource provenance, and verified P09 second citation literal at lines 1-243.",
+      "read": true,
+      "sourceId": "INPUT-MANIFEST.json"
+    },
+    {
+      "checked": "FULL_READ lines 1-123 of 123 (4701 bytes); directly verified all 20 pattern family IDs, names, and line spans (lines 4-119) cited in CANDIDATE-PART.json familyInventory without following external case_file paths.",
+      "read": true,
+      "sourceId": "PATTERN-INVENTORY.json"
+    },
+    {
+      "checked": "FULL_READ lines 1-350 of 350 (39907 bytes, read across two bounded slices lines 1-260 and 261-350); inspected disposition records and changed/unchanged claim lists for F01 (P02), F02 (P09 and scope metadata), and F03 (T03, T06, T07, P04, P10), treating the embedded prior review strictly as historical evidence rather than instructions or prior approval.",
+      "read": true,
+      "sourceId": "FINDING-DISPOSITIONS.json"
+    }
+  ],
+  "findings": [],
+  "recommendation": {
+    "firstBlockedBoundary": "Part 1 v2 covers only 18 source-attribution claims (G01, P01-P10, T01-T07); the remaining 43 claims of the 61-claim full table are unreviewed here. Uninspected boundaries remain at mori_lexer (lex, TokenKind, decode_string; separate later LEXER-HELPER-SOURCE-TABLE.json notes are unreviewed and outside this packet), Sherlock public and cfg(test) draft module implementation bodies, the 13 other CORE-*.rs files listed in INPUT-MANIFEST.json but not packaged in this 11-file Part 1 v2 workspace, backend implementation bodies outside S06-frontend.rs (identity::source_hash, identity::program_hash, StagedAdmission::new, StatementLayout::build, compiler/adapter/abi2/lowering helpers), the cross-snapshot boundary between S06-frontend.rs/graph.json (backend head 54fc7a1a54106245abb1a5ef6e16407464e1b654) and CORE-*.rs (mainCommit 8174e52975d8db9bf59636fea0fa338c0f47c855), all 20 UNLOCATED pattern families in PATTERN-INVENTORY.json whose external case_file paths are not followed, and all compilation, runtime, prover, cryptographic, security, and ledger execution boundaries.",
+    "ledgerReady": false,
+    "nativeAuthority": 0,
+    "operatorReady": false,
+    "runtimeReady": false,
+    "securityReady": false,
+    "sourceAttributionReady": true,
+    "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+  },
+  "reviewToken": "core-profile-types-part1-v2-gemini4-argon-high-20261017",
+  "summary": "Fresh non-author source-attribution review of CANDIDATE-PART.json v2 (Part 1, 18 claims: G01, P01-P10, T01-T07) conducted as Gemini 4 Argon (High) through Antigravity (requested gemini-4-argon-high HIGH; runtime model identity self-report is stated honestly and is not an independent provider cryptographic attestation). This is a fresh one-attempt audit of the v2 Sol-corrected candidate artifact after the earlier full 61-claim job ended without a completed object; no prior job was retried or resumed, and the prior Part 1 review embedded in FINDING-DISPOSITIONS.json was treated strictly as historical context rather than approval for changed bytes. Using read-only view tools only, all 11 files listed in MANIFEST.json (plus MANIFEST.json itself) were inspected with zero unread truncation on full reads: MANIFEST.json (lines 1-74), CANDIDATE-PART.json (lines 1-823, read in two bounded ranges 1-365 and 350-823), CORE-ir.rs (lines 1-484), CORE-lib.rs (lines 1-42), CORE-parser.rs (lines 1-378), CORE-stage-mod.rs (lines 1-188), CORE-stage-profile.rs (lines 1-32), S06-frontend.rs (lines 1-69), INPUT-MANIFEST.json (lines 1-244), PATTERN-INVENTORY.json (lines 1-123), FINDING-DISPOSITIONS.json (lines 1-350, read in two ranges 1-260 and 261-350), and a bounded partial read of graph.json (lines 1-40 of 1646) covering G01 and its enclosing metadata block. Every literal excerpt, SHA-256 digest, line span, classification (SOURCE_DECLARATION, CALL_EDGE, INFERENCE), and bounded statement across all 18 claims (G01, P01-P10, T01-T07) was independently verified against the supplied source files. In particular, all three prior precision findings are confirmed resolved in v2 across the 7 changed claims (P02, P04, P09, P10, T03, T06, T07): (1) F01 is resolved in P02, which now states the full format string literals moriarty-stage-plan/1, moriarty-continuation/1, and moriarty-stage-event/1 and restricts its citation span to CORE-stage-mod.rs lines 23-32 (excluding STAGE_LABELS on lines 33-38); (2) F02 is resolved in P09 and reviewScope/reviewPart metadata, which explicitly distinguish the 33-file parent source packet (core-frontend-source-input/MANIFEST.json, supplied here as INPUT-MANIFEST.json with sha256 bdebc38482bcedc067aebe7cc2bc80d5cacc46b516ec3195f24dcf512d11596e, cited in P09 citation 2 at lines 1-243 under its parent filename MANIFEST.json), the historical 9-file Part 1 v1 review workspace, and the current 11-file Part 1 v2 review workspace; and (3) F03 is resolved in P04, P10, T03, T06, and T07, where T03 (CORE-ir.rs lines 91-117), T06 (CORE-ir.rs lines 188-211), and T07 (CORE-ir.rs lines 212-270) now start on their leading derive attribute lines, P04 and P10 (S06-frontend.rs lines 34-50) include the closing brace of admit_source on line 50, and T07 explicitly states that Step.effects and Execution.effects are Vec<Effect> sequences without implying PartialOrd or Ord for Effect. With PATTERN-INVENTORY.json (sha256 8fde592bfc941b1743da9427a88223a1689df2fa3bb33772adfddfbbfcd23997) now directly supplied in the 11-file packet, all 20 familyInventory entries (S01-S04, escrow-time, interval-boundary, joint-role, oracle-observation, the four swap/batch entries, F01-origination through F04-fee-gross-net-policy, and AP01-AP04) were directly checked against PATTERN-INVENTORY.json lines 4-119 and verified to preserve exact IDs, names, line spans, literals, and UNINSPECTED_BOUNDARY / UNLOCATED_IN_THIS_PACKET status without following any case_file paths. Snapshot provenance separation is strictly maintained between the 5 supplied CORE-*.rs files pinned to mainCommit 8174e52975d8db9bf59636fea0fa338c0f47c855 and S06-frontend.rs / graph.json from backend source_head 54fc7a1a54106245abb1a5ef6e16407464e1b654, with no semantic or runtime equivalence inferred. Core1, Staged2, and Sherlock/draft profiles are kept distinct; language() is solely a profile routing check; stage::load call ordering (separated by U+2192 rightwards arrows in P08) constructs stage plan/cost metadata rather than compiled circuit lowering; Core IR and v1 serde wire declarations do not prove dependency or runtime behavior; and laterSourceNotes referencing LEXER-HELPER-SOURCE-TABLE.json remain explicitly unreviewed source-only observations outside this packet. Source attribution is ready for Part 1's 18 claims only (not the other 43 claims of the 61-claim table), with operatorReady, securityReady, runtimeReady, and ledgerReady all false and nativeAuthority 0."
+}

@@ -1,0 +1,159 @@
+{
+  "reviewToken": "c2-r2-actual-green-result-opus55-20261017",
+  "report": "FRESH NON-AUTHOR REVIEW OF THE ACTUAL CAPTURED C2r2 ORDINARY GREEN (claude-opus-5-5, high effort, Read tool only).\n\n**Method.** I ran, imported, compiled and hashed nothing, and I did not touch the network. Every byte count and SHA-256 below is a root pin from MANIFEST.json or SEGMENT-INDEX.json; I did not recompute any of them. Author, prior auditor and I share a provider, so this review has a fresh context but no provider diversity. This review judges a captured result; it does not predict a rerun.\n\n**Route.**\n- MANIFEST.json, then SEGMENT-INDEX.json.\n- All six added files, opened directly:\n  - ACTUAL-GREEN-DECISION.json, read in full.\n  - ACTUAL-GREEN-RESULT.json, read in full.\n  - ACTUAL-GREEN-stdout.txt: the Read tool reported the file exists and is empty, matching the 0-byte pin.\n  - ACTUAL-GREEN-stderr.txt, all 25 lines.\n  - PRECEDING-SOURCE-AUDIT.json, the whole prior audit.\n  - PRECEDING-SOURCE-AUDIT-PROCESS.json, read in full.\n- PROPOSED-ORDINARY-GREEN-ENVELOPE.json, ROOT-RED-RESULT.json and ROOT-RED-DECISION.json, opened directly.\n- READ-SEGMENT-01 to -10 in order. Through them I read every line of every original exactly once:\n  - candidate lines 1-508;\n  - NOTES 1-118;\n  - test 1-1102;\n  - S33 1-213 and S34 1-36;\n  - S11 1-357, S22 1-656 and S23 1-420;\n  - S15 1-44, S16 1-64 and S51 1-9;\n  - PREVIOUS-TEST-SOURCE-REVIEW 1-109;\n  - ROOT-RED-DECISION 1-100, ROOT-RED-RESULT 1-56 and ROOT-RED-stderr 1-206;\n  - PROPOSED-ORDINARY-GREEN-ENVELOPE 1-108;\n  - DOWNSTREAM-R4-CONTRACT 1-177 and DOWNSTREAM-R4-CONDITIONAL-ADOPTION 1-211.\n- I did not follow any provenance, private or research-root path.\n\n**Actual stderr, observed directly (25 lines).**\n- Lines 1-19 hold 18 verbose unittest method reports, T00 through T17, each ending \"... ok\".\n- The T01 report is split across lines 2-3. Line 2 is \"test_T01_sole_function_imports_and_seven_host_apis (__main__.C2IssueArtifactR2Tests.test_T01_sole_function_imports_and_seven_host_apis) ... c2_issue_artifacts_r2.py sha256 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98\", and line 3 is \"ok\".\n- Line 20 is blank. Line 21 is the 70-dash separator. Line 22 is \"Ran 18 tests in 0.110s\". Line 23 is blank. Line 24 is \"OK\".\n- There is no FAIL, ERROR, skipped, expected-failure or traceback text.\n- The string \"c2_issue_artifacts_r2.py sha256\" occurs exactly once, and the hex that follows it equals the pinned candidate SHA 67fb3b3e\u202635fb98.\n\n**Stderr discrepancy disposition: normal frozen-suite output.**\n- The frozen test ends with `unittest.main(verbosity=2)` (test:1101-1102). That runner writes each method description followed by \" ... \" to sys.stderr without a newline, runs the method, then writes \"ok\", and finishes with the separator, \"Ran N tests\" and \"OK\".\n- `_prepare` (test:173-180) prints `R2_FILE + ' sha256 ' + _sha(data)` to sys.stderr once, on the first load. T00 never calls `_prepare` (test:703-757). T01 is therefore the first caller (test:760), which places the SHA after \"T01 ... \" and before \"ok\".\n- Later calls hit the FIX['prepare'] cache. The T01 re-exec (test:800) and the T15 re-exec (test:963) use `_module` (test:115-120), which prints nothing.\n- The frozen sources document exactly this effect:\n  - test docstring lines 7-13: \"unittest output and one stderr line naming the r2 SHA-256\";\n  - S33:166: \"unittest output, and one stderr line with the r2 SHA\";\n  - the earlier test review: \"unittest output plus at most one r2 SHA line\".\n- The ROOT RED stderr that the prior auditor read (ROOT-RED-stderr:1-206) already showed the same verbosity-2 format.\n- The prior audit's \"exactly one stderr line\" (its GREEN prediction and finding F04) was therefore a reviewer wording error. It conflated \"exactly one SHA line\" with \"the only stderr line\".\n- This is not unexpected behaviour of the frozen bytes, and it needs no source, test, fixture or expectation fix.\n- Root was right to STOP on the literal mismatch, and right not to rerun. That STOP is now cleared by this explicit prediction correction, with no retry.\n\n**Proved by the transcript versus asserted by root.**\n- The transcript itself proves:\n  - 18 methods each reported ok, with \"Ran 18 tests\" and \"OK\";\n  - no failure or error summary;\n  - the in-process SHA-256 of the bytes `_prepare` read equals 67fb3b3e\u2026, emitted once.\n- The transcript implies, given the root-pinned test bytes b9c19211\u2026, that T00 passed its in-process pin checks of host, v1, K6 and K2 (test:705-714). T00 passing shows those pins held at run time.\n- The following are root records only, and I did not observe them:\n  - exit code 0;\n  - the exact argv and the actual application of timeout, prlimit and bwrap --unshare-all;\n  - the clean environment;\n  - directory mode 0555, the exact six-entry listing, and per-file bytes, SHA and mode 0444 before and after;\n  - stdoutBytes 0 and stderrBytes 2474;\n  - the single attempt with no retry;\n  - the timestamps.\n- Those records are internally consistent. Before equals after for all six entries, which satisfies the prior F05, and the run time of 0.110 s is plausible.\n\n**Is the GREEN result acceptable?** Yes, for the ordinary GREEN scope only.\n- It meets every substantive requirement in S33 \u00a77 and the proposed envelope: 18 passes, exit 0 (root record), pins unchanged (root record), stdout empty, and the pinned SHA emitted once.\n- The stderr shape is the documented verbosity-2 output.\n- The earlier F02 runtime dependency resolved favourably: the unmodified K2 was admitted at PROFILE in T01, T02, T15 and T17. So, under hashlib, BLAKE2b-256 of abi2ShapeBytesHex equals abi2ShapeDigest. That is hashlib consistency only, not correspondence with Rust blake2b256.\n\n**Is the RED result acceptable?** It stays acceptable, judged separately. I re-read the transcript: T00 ok; T01-T17 each FAIL with the reserved phrase from `_prepare` line 177; \"Ran 18 tests\"; \"FAILED (failures=17)\".\n\n**CP01-CP08.** All eight remain AGREE for the unchanged 21648-byte candidate 67fb3b3e\u2026. AGREE assesses the clauses; it is not adoption.\n- GREEN adds runtime samples: T01 (imports, signature, sole public callable, 7 APIs counted), T03-T14 (stage expectations), T15 (detachment), T16 (65 strictness cases) and T02/T17 (byte equality with v1).\n- These remain source-only and are not established by any test outcome:\n  - no host aliasing (L01) and no host patching (L02);\n  - no hidden or non-container state (L03, I06);\n  - the CP04 rules: no `.encode`, no input-proportional copy, length before scan (I02);\n  - Rust acceptance, native behaviour and ledger verification.\n- Agreement between labels, v1 and the shared host is internal consistency, not verification.\n- Evidence limits:\n  - K6 is a public captured proof. No test verifies the Groth16 pairing or that the context is authentic; the context is caller-declared.\n  - T17 is SYNTHETIC_NOT_PROOF_NOT_ORACLE, so its admitted context is unverified and untrusted.\n  - Circuit/VK/key correspondence is not closed.\n- The later R4 contract is only a conditional basis for R4 test authoring, resting on actual historical claude-opus-4-8 votes. Its 4.8 identity is preserved and must not be relabelled 5.5, and its R00 still needs a root-adopted r2.\n- Nothing here permits implementation or runtime reliance.\n\n**Next boundary.**\n1. Root records this stderr disposition and its own GREEN acceptance decision as new append-only records, preserving the original prediction, decision and result bytes.\n2. A separately reviewed meaningfulness-mutant envelope (S33:182-188) and its root decision.\n3. A separate CP08 r2 reliance decision.\n\nNothing is granted automatically. ordinarySelftestReady is false because no rerun or new test is authorised. builderReliancePermitted is false and native authority is 0. All 20 UTxO families, the financial work, recursion, private handoff, multiparent and Preprod remain open.",
+  "findings": [
+    {
+      "id": "G01-prior-stderr-prediction-wording-error",
+      "severity": "low",
+      "evidence": "PRECEDING-SOURCE-AUDIT.json, GREEN prediction and finding F04 (lines 3 and 24-27): 'exactly one stderr line `c2_issue_artifacts_r2.py sha256 67fb3b3e\u2026`' and 'confirm that stderr contains exactly one line \u2026 Any deviation is a STOP'. The frozen test calls unittest.main(verbosity=2) (test:1101-1102), and its docstring (test:7-13) and S33:166 both say 'unittest output and one stderr line naming the r2 SHA-256'. ROOT-RED-stderr:1-206, which the prior auditor read, already showed the verbosity-2 format. The actual stderr matches the frozen source's documented effects. ACTUAL-GREEN-RESULT records literalReviewerStderrPredictionMet=false and status STOP_STDERR_PREDICTION_DISCREPANCY_PENDING_OPUS_REVIEW_NO_RETRY.",
+      "requiredFix": "Record an explicit reviewer-prediction correction as a new record. Leave the PRECEDING-SOURCE-AUDIT, DECISION and RESULT bytes unedited. The corrected expectation for this exact frozen suite is: stderr contains 18 verbose method reports T00-T17 each ending 'ok', the standard separator, 'Ran 18 tests in <t>s' and 'OK'; the exact substring 'c2_issue_artifacts_r2.py sha256 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98' occurs exactly once (inline after the T01 description); there is no FAIL, ERROR or skip text; stdout is empty. No source, test, fixture or expectation change, and no rerun or retry."
+    },
+    {
+      "id": "G02-sha-emitted-inline-not-own-line",
+      "severity": "info",
+      "evidence": "ACTUAL-GREEN-stderr.txt:2-3. The verbose runner writes 'test_T01\u2026 ... ' without a newline before running T01. _prepare (test:179) then prints the SHA with a newline, and the runner writes 'ok' on line 3. So the SHA shares a physical line with the T01 description. This follows mechanically from verbosity=2 and both writers using sys.stderr. T00 does not call _prepare (test:703-757), so T01 (test:760) is the first loader. The FIX['prepare'] cache (test:173) and the non-printing _module re-execs (test:800, 963) prevent any second emission.",
+      "requiredFix": "None to the source. Root's 'singlePinnedShaLine' check, and any future check, should be specified as exactly one occurrence of the exact SHA substring, not as a standalone stderr line."
+    },
+    {
+      "id": "G03-transcript-versus-root-assertion-boundary",
+      "severity": "info",
+      "evidence": "The transcript proves 18 ok reports, 'Ran 18 tests', 'OK', no failure or error text, and the in-process SHA-256 of the r2 bytes read equal to the pin. Given the root-pinned test bytes, T00 passing also attests that the host, v1, K6 and K2 pins held in-process (test:705-714). These are root records only: exitCode 0, argv and sandbox application, clearenv, before/after directory mode, listing and per-file pins (ACTUAL-GREEN-RESULT:17-116), stdoutBytes and stderrBytes, maximumAttempts 1, and the timestamps.",
+      "requiredFix": "None. Keep this distinction in the root GREEN acceptance record. Do not describe the root-recorded sandbox and pin facts as reviewer-observed."
+    },
+    {
+      "id": "G04-initial-label-supersession-provenance",
+      "severity": "low",
+      "evidence": "ACTUAL-GREEN-RESULT.json:120 says 'Root initial OBSERVED_EXPECTED_GREEN label superseded here; output has not been rerun.' The packet contains only the corrected RESULT bytes (35ae6dd2\u2026). Whether the initial label existed as separate pinned bytes cannot be seen from this packet.",
+      "requiredFix": "Root keeps all further records append-only. Record this Opus disposition and the root GREEN acceptance as new files, and do not rewrite RESULT.json or DECISION.json again. If an earlier RESULT version exists, preserve it unmodified with its pin. No rerun."
+    },
+    {
+      "id": "G05-shape-digest-runtime-dependency-resolved-hashlib-only",
+      "severity": "info",
+      "evidence": "The prior F02 left one dependency open: BLAKE2b-256(abi2ShapeBytesHex) = abi2ShapeDigest (c2_issue_artifacts_r2.py:382-385; S15:23-24), which had no recorded runtime check. In GREEN, T01, T02, T15 and T17 admitted the unmodified K2 at PROFILE, and T05b's one-byte flip was refused (test:476-477).",
+      "requiredFix": "None. Record it only as hashlib consistency for these fixture bytes. It establishes no correspondence with Rust blake2b256 and no circuit or VK correspondence."
+    },
+    {
+      "id": "G06-source-only-residues-unchanged",
+      "severity": "info",
+      "evidence": "Test comments (test:1019-1022) and the prior I02 note that no outcome discriminates the CP04 rules (no str.encode, no input-proportional copy, length before scan) or caching in non-container state. T01 checks names but not aliases (prior L01). The prior audit discharged L01, L02, L03, I01, I02, I03 and I06 by source inspection of exactly 21648 B / 67fb3b3e\u2026 only.",
+      "requiredFix": "Keep these as source-only discharges tied to these exact bytes. Any byte change voids them and needs a fresh audit. Do not cite GREEN as evidence of no-alias, no hidden state, CP04, no-encode, Rust acceptance, native behaviour or ledger verification."
+    },
+    {
+      "id": "G07-k6-and-t17-evidence-scope",
+      "severity": "info",
+      "evidence": "K6 (S16) is a public captured proof export with caller-declared context (claimant 55x28, txid 22x32). No test verifies the Groth16 pairing, the VK or curve validity, or that the context is authentic; the labels say NOT_VERIFIED, NOT_CHECKED and CALLER_DECLARED_UNAUTHENTICATED. T17 (test:1038-1098) is SYNTHETIC_NOT_PROOF_NOT_ORACLE: proofHex is unchanged and proves nothing for the edited statement. Its hashlib digest and x1/x2 are NON-ORACLE.",
+      "requiredFix": "None. In every downstream record, describe T17-admitted contexts as unverified and untrusted, and K6 as captured public bytes whose pairing and context authenticity this test does not establish. circuitVkCorrespondence stays OPEN."
+    },
+    {
+      "id": "G08-meaningfulness-and-cp08-not-yet-satisfied",
+      "severity": "low",
+      "evidence": "S33:182-188 requires a separate reviewed scratch envelope with root-pinned, never-adopted mutants: v1 under the r2 name, r2 without the CP04 scan, r2 without the shape-digest comparison, and int() without the ASCII check. Each must fail through the named methods or subTests. CP08 (S33:39) further requires a reviewed downstream /2 consumer and a separate root decision. GREEN alone does not show that the tests are meaningful.",
+      "requiredFix": "First blocked boundary after root's GREEN disposition: author and separately review the meaningfulness-mutant envelope (not designed here), then a root decision. Only after that, a separate CP08 reliance decision. No automatic grant. builderReliancePermitted stays false."
+    },
+    {
+      "id": "G09-r4-conditional-and-historical-identity",
+      "severity": "info",
+      "evidence": "DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json:28-39 and 118-128 show actual claude-opus-4-8 votes (CB401-CB412 AGREE). Its decision (line 195) is a conditional basis for R4 test authoring only (implementationAdopted false, builderReliancePermitted false, native 0). R00 (DOWNSTREAM-R4-CONTRACT:125) requires an exact reviewed, root-adopted r2. The R4 contract self-labels claude-opus-5-5 (line 3), while R4-F05 records the returned model as 4.8. NOTES:114, S33:119 and S34:31 still carry the historical 'R4 incompatible' wording (prior F01).",
+      "requiredFix": "Preserve the 4.8 identities without relabelling them, and qualify the stale R4 wording in root records. This GREEN does not adopt r2 for R4, and R4 RED stays blocked until a separate root r2 adoption."
+    },
+    {
+      "id": "G10-author-time-self-status-history",
+      "severity": "info",
+      "evidence": "c2_issue_artifacts_r2.py:3-4 says 'not reviewed, adopted or executed'. IMPLEMENTATION-NOTES.md:3 says it was never executed. The test docstring (test:4-5) says 'RED and GREEN are unobserved'. These are now historical (prior F06).",
+      "requiredFix": "Do not edit the bytes. Root records qualify these phrases as author-time history."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "RESULT REVIEW ONLY. No rerun, retry or new test execution is recommended or authorised. Scope covers the already-captured single GREEN in /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-green-envelope: the unchanged test (58800 B, b9c19211\u2026) with the candidate (21648 B, 67fb3b3e\u2026), run under the root-recorded argv. I accept that result for the ordinary GREEN scope once root records the stderr-prediction correction (G01) as a new record and preserves the original bytes. sourceReady reflects only the unchanged, previously audited source bytes; it is not adoption or reliance. Excluded: mutants, CP08, builder reliance, R4 execution, and any native, VM, prover, key or network action.",
+    "firstBlockedBoundary": "(1) Root records this Opus stderr disposition and its own GREEN acceptance decision as new append-only records, with no rerun and the original bytes preserved. (2) A separately authored and separately reviewed meaningfulness-mutant envelope per S33:182-188 (not designed here), then a root decision on it. (3) Only after that, a separate CP08 r2 reliance decision, which also needs a reviewed downstream /2 consumer. R4 RED stays blocked until root separately adopts r2. Nothing is granted automatically. builderReliancePermitted stays false and native authority 0.",
+    "operatorReady": false,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/SEGMENT-INDEX.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/ACTUAL-GREEN-DECISION.json (lines 1-123, direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/ACTUAL-GREEN-RESULT.json (lines 1-121, direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/ACTUAL-GREEN-stdout.txt (direct; the tool reported the file exists and is empty)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/ACTUAL-GREEN-stderr.txt (lines 1-25, direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/PRECEDING-SOURCE-AUDIT.json (lines 1-135, whole, direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/PRECEDING-SOURCE-AUDIT-PROCESS.json (lines 1-89, direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/PROPOSED-ORDINARY-GREEN-ENVELOPE.json (direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/ROOT-RED-RESULT.json (direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/ROOT-RED-DECISION.json (direct)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-01.txt (candidate 1-508; NOTES 1-72)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-02.txt (NOTES 73-118; test 1-469)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-03.txt (test 470-957)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-04.txt (test 958-1102; S33 1-169)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-05.txt (S33 170-213; S34 1-36; S11 1-357; S22 1-49)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-06.txt (S22 50-656; S23 1-121)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-07.txt (S23 122-420; S15 1-44; S16 1-64; S51 1-9; PREVIOUS-TEST-SOURCE-REVIEW 1-2)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-08.txt (PREVIOUS-TEST-SOURCE-REVIEW 3-109; ROOT-RED-DECISION 1-100; ROOT-RED-RESULT 1-56; ROOT-RED-stderr 1-129)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-09.txt (ROOT-RED-stderr 130-206; PROPOSED-ORDINARY-GREEN-ENVELOPE 1-108; DOWNSTREAM-R4-CONTRACT 1-163)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r2-green-result-review-packet/READ-SEGMENT-10.txt (DOWNSTREAM-R4-CONTRACT 164-177; DOWNSTREAM-R4-CONDITIONAL-ADOPTION 1-211)"
+    ],
+    "unreadPaths": [
+      "These raw originals in the packet were not opened directly. Their full decoded contents were read only through the root-derived segments, which root declares complete, with each of the 4494 lines exactly once and raw bytes separately pinned: c2_issue_artifacts_r2.py, IMPLEMENTATION-NOTES.md, test_c2_issue_artifacts_r2.py, S33-C2-PROFILE-R2-CONTRACT.md, S34-C2-PROFILE-R2-API.json, S11-c2_issue_artifacts.py, S22-host_codec.py, S23-test_c2_issue_artifacts.py, S15-K2-PUBLIC-SETUP-RECORD.json, S16-K6-PUBLIC-PROOF.json, S51-USER-OPUS55-RESTORED.md, PREVIOUS-TEST-SOURCE-REVIEW.json, ROOT-RED-stderr.txt, DOWNSTREAM-R4-CONTRACT.md and DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json. I did not compare raw bytes.",
+      "ROOT-RED-stdout.txt was not opened. It is pinned at 0 bytes with the empty-string SHA-256.",
+      "Every originalPublicSource path in MANIFEST and SEGMENT-INDEX, and every provenance or research-root path named inside the sources (RUST, HOST, VAL, PRE, K6-ACTUAL-ADOPTION, the ordinary-green-envelope and ordinary-red-envelope directories, the job REVIEW/PROCESS originals, the opus48 R4 packets, S35/S42/S44/S45). These are data labels only and were not followed. No private material, provider captures or home keys were accessed."
+    ],
+    "limitations": [
+      "Read-only text review. Nothing was executed, imported, compiled or hashed, and there was no web or network access. All byte counts and SHA-256 values are root pins and were not recomputed. That the SHA in stderr equals the candidate pin was checked by string comparison only.",
+      "Exit code, sandbox and argv application, the before/after directory mode, listing and per-file pins, stdout and stderr byte counts, the single attempt, and the timestamps are root records, not my observations.",
+      "My account of how the unittest verbosity-2 runner places output relies on CPython language knowledge. It matches the frozen source lines and the format of both captured transcripts, but I did not re-run anything to confirm it.",
+      "The hashlib results seen at GREEN (VK digest, shape digest, statement digest, HIST_TOKEN) are consistency checks only. Agreement between hashlib and Rust blake2b256, Groth16 validity, and VK or curve validity are not established.",
+      "Same provider as the author and the prior auditor: a fresh context, not provider diversity. This review is not adoption, not a Sherlock or upstream qualification, and grants no native, operator, builder, R4 or ledger authority. Root alone decides.",
+      "Plan mode was active in the harness, but no plan-file write tool was available and the task was read-only review. No file was written or edited."
+    ]
+  },
+  "clauseAssessment": [
+    {
+      "id": "CP01",
+      "stance": "AGREE",
+      "reason": "The unchanged source has only `import hashlib` and `import host_codec` (lines 22-23), the exact signature with no defaults (line 355), ARG byte-equivalent to v1 (lines 363-368 vs S11:241-246), and all 7 APIs called in place as host_codec attributes. GREEN's T01 pass observed the import-line scan, the signature, no API names in the namespace, the sole public callable, and all 7 APIs reached through the counting proxy. No-alias and no-patch remain source-only discharges for 67fb3b3e\u2026; T01 does not establish them. This stance assesses the clause and is not adoption."
+    },
+    {
+      "id": "CP02",
+      "stance": "AGREE",
+      "reason": "There is a closed 12-key SETUP schema with fixed literals, a fixed driver, provingKeyBytes in 1..2**64-1, VK length checked before the scan, and BLAKE2b(VK) compared with vkDigestBlake2b256 (lines 117-130, 372-378). T04 (31 cases) passed, and the unmodified K2 was admitted. That no VK point is decoded is a source and label non-claim (vkCurveValidity and vkProfile NOT_CHECKED) that GREEN does not test. The hashlib digest agreement is consistency, not verification."
+    },
+    {
+      "id": "CP03",
+      "stance": "AGREE",
+      "reason": "There is a closed 29-key PROFILE with the S34 kinds, length-first _is_decimal and _is_shape_hex, and the shape-digest comparison (lines 134-164, 272-289, 381-385). T05 (34/57/1 subTests) passed. The unmodified K2 was admitted, which resolves the prior F02 under hashlib only. Descriptor fields are checked, not recompiled (relationProfile DESCRIPTOR_PROFILE_CHECKED_NOT_RECOMPILED). Correspondence with Rust blake2b256 is not established."
+    },
+    {
+      "id": "CP04",
+      "stance": "AGREE",
+      "reason": "In the source, key checks run before values, ints must be exact (never bool), _is_text uses the isascii fast path then a per-character ord scan, `.encode` appears nowhere, and length checks precede scans (lines 254-269, 309-352). T06 passed with the expected stage ownership. No-encode, no input-proportional copy and length-before-scan are not discriminated by any test outcome (test:1019-1022) and remain source-only discharges for these exact bytes."
+    },
+    {
+      "id": "CP05",
+      "stance": "AGREE",
+      "reason": "EXPORT through CARDANO follow v1 order and strength, narrowed only by CP04 (lines 388-469). T07-T13 passed. The docstring (lines 10-20) lists every non-check, says Rust acceptance is not established, and asserts no subset or equivalence. GREEN establishes no Rust acceptance, pairing, re-encode or parse_json limit."
+    },
+    {
+      "id": "CP06",
+      "stance": "AGREE",
+      "reason": "The result is a fresh 12-key dict with format /2 and labels = dict(_LABELS) holding the 16 entries (lines 83-100, 495-508). T02 (12 expiry and policy combinations) and T17 sampled byte equality with v1, and T16 (65 strictness cases) passed. The subset property holds by source construction and was only sampled. Equality with v1 through the shared host is internal consistency, not an oracle. K6 is a captured public proof whose pairing and context authenticity are unverified, and T17 is a synthetic, untrusted context."
+    },
+    {
+      "id": "CP07",
+      "stance": "AGREE",
+      "reason": "Refusals are an exact ValueError carrying the first-stage prefix, host ValueErrors are rewrapped `from None`, and other errors propagate. Inputs are not mutated and the module holds only immutable constants (lines 234-242, 403-494). T03, T14 and T15 passed: deep-copy equality, no input container reachable, disjoint results, unchanged module and host namespaces. Absence of hidden or non-container state and caching is a source-only discharge, not shown by T15. The shared immutable policy_id bytes leaf (prior F07) is acceptable."
+    },
+    {
+      "id": "CP08",
+      "stance": "AGREE",
+      "reason": "The source has no flag, bridge or routing and disclaims CB r1 and builder reliance. builderReliancePermitted stays false in every record, and this review grants nothing. GREEN is now captured and acceptable in scope, but meaningfulness (S33:182-188), a reviewed downstream /2 consumer and a separate root reliance decision are all still pending. None follows automatically, and the conditional R4 basis on 4.8 votes adopts no r2."
+    }
+  ],
+  "redResultAcceptable": true,
+  "actualGreenResultAcceptable": true,
+  "stderrDiscrepancyDisposition": "NORMAL FROZEN-SUITE OUTPUT. The reviewer's prediction needs an explicit correction; no source fix and no retry.\n\nSource lines:\n- test_c2_issue_artifacts_r2.py:1101-1102 runs `unittest.main(verbosity=2)`, so the runner prints a \"<description> ... ok\" report per method plus the separator, \"Ran N tests\" and \"OK\", all to sys.stderr.\n- test:173-180: on its first load, `_prepare` prints `R2_FILE + ' sha256 ' + _sha(data)` to sys.stderr. The cached FIX['prepare'] skips the print on later calls.\n- test:703-757: T00 never calls `_prepare`, so T01 (test:760) is the first loader.\n- test:800 and test:963: the T01 and T15 re-execs use `_module` (test:115-120), which prints nothing.\n- The test docstring (test:7-13) documents \"unittest output and one stderr line naming the r2 SHA-256\", and S33:166 documents \"unittest output, and one stderr line with the r2 SHA\".\n- ROOT-RED-stderr:1-206 had already shown the same verbosity-2 format.\n\nExact observations in ACTUAL-GREEN-stderr.txt (25 lines):\n- Lines 1-19 hold 18 method reports, T00-T17, each ending \"ok\". T01 spans lines 2-3: line 2 ends \"... c2_issue_artifacts_r2.py sha256 67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98\", and line 3 is \"ok\".\n- Line 20 is blank, line 21 is the 70-dash separator, line 22 is \"Ran 18 tests in 0.110s\", line 23 is blank and line 24 is \"OK\".\n- No FAIL, ERROR, skip, expected-failure or traceback text appears.\n- The SHA substring occurs exactly once and equals the pin.\n- ACTUAL-GREEN-stdout.txt is empty.\n\nConclusion:\n- The prior audit's GREEN prediction and its F04 said \"exactly one stderr line\", which mis-stated the documented \"unittest output plus exactly one SHA line\" as \"the only stderr line\". The frozen bytes did not behave unexpectedly.\n- Root was right to STOP and right not to rerun.\n- This disposition clears that STOP for the ordinary GREEN scope.\n- The original prediction, decision and result bytes stay unedited. Root records this correction and its own GREEN acceptance as new append-only records.\n- No test, fixture, expectation or source edit is needed or permitted, and no retry or rerun is granted.\n- Future checks should count occurrences of the exact SHA substring, not standalone stderr lines."
+}

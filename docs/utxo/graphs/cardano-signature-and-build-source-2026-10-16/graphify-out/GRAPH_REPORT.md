@@ -1,0 +1,9 @@
+# K11 signature and build-source navigation fragment
+
+This source-attributed fragment appends 20 nodes and 24 links to the pinned 1,508-node / 3,782-link Preprod-and-binding graph. It preserves every inherited node and ordered link as an exact prefix; inherited metadata is unchanged and one fragment_updates record is appended.
+
+The graph traces the R1/R2 source-candidate history, the R2 author's described Core parse and signing-message path, the separate k256 message interfaces, the source VI withdrawal declaration, and the stdlib ScriptContext/ScriptPurpose and Transaction field declarations. It keeps source descriptions distinct from compilation, actual signing, compiled raw-Data decoding, native evaluation, and target acceptance.
+
+The R2 candidate is source-only and the author recommends a fresh full non-author review. Its source packet reports AST/JSON syntax checks only; no signer build, parse execution, key operation, signature, or VI evaluation is represented here. The author identifies a not-yet-materialized signer build closure and a remaining compiled-encoding audit boundary. The Preprod parameter/era capture consists of two unauthenticated provider observations: cost-model list lengths are recorded, but their semantics and complete EraHistory remain unqualified.
+
+The output selects only exact allowlisted public source packets, the two exact K11 candidate manifests and six files each, and the named author records. No broad corpus scan was performed. Token accounting is UNKNOWN because no platform counter was supplied. Graphify 0.9.91 rendered the HTML export; that renderer may retain its documented CDN dependency. The output does not certify security or implementation, nor claim project-wide completion. All 20 UTxO families, ACTUS, DeFi, general financial obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates, and real Preprod acceptance remain open.

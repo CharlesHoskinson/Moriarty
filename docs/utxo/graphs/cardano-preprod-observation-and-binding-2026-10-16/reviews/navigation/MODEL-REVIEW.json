@@ -1,0 +1,222 @@
+{
+  "coverage": {
+    "limitations": "No shell, hash recomputation, execution, network, browser, proof, signing, key, wallet or ledger operation was performed. Hash and prefix statements rely on the R2 root checker's recorded recomputation plus textual pin agreement inspected in the listed mirrors; this reviewer did not independently recompute digests.",
+    "readPaths": [
+      "INPUT-INDEX.json:1-203 (31 listed files, mapping rule)",
+      "R2 fragment GRAPH_REPORT.md:1-13",
+      "R2 fragment SOURCE-MANIFEST.json:1-255 (23 source records: 8 used=true among capsule/supplement sources plus raw pins and tool receipt used=false)",
+      "R2 fragment READ-COVERAGE.json:1-53",
+      "R2 fragment EXACT-GRAPH-ADDITIONS.json:1-653 (all 19 nodes, all 26 links)",
+      "R2 fragment OWN-OUTPUT-ALLOWLIST.json:1-45 (7 allowed files; 6 hashed, self-hash note at L45)",
+      "R2 graph.json windows: new nodes at 22588-22852, fragment_updates tail at 85349-85817 (appended entry L85743-85816), base-node wallet_public_address in base mirror at 22224-22236",
+      "R2 graph.html:1-101 (CDN script L6-8, stats L97 '1508 nodes \u00b7 3782 edges')",
+      "Root checks: R1 GRAPH-AND-POINTER-CHECK.json:419-425 (the one false flag) and R2 GRAPH-AND-POINTER-CHECK.json:1-12,285-430 (all true)",
+      "Capsule README.md:1-60, PUBLIC-OBSERVATION-ACTUAL-ADOPTION.json:1-38, PUBLICATION.json:1-233, reviews/actual/REPORT.md:1-24, reviews/publication/REPORT.md:1-20",
+      "Preview RESULT.json:1-151, FX1 SOURCE-DESIGN-ADOPTION.json:1-72, DESIGN-POSITION-TALLY.json:1-104, REVIEW-QUALIFICATIONS.json:1-103, FIRST-PREPROD-DESIGN.md:1-29, DESIGN-POSITIONS.json:1-21, Graphify RECEIPT.json:1-13"
+    ],
+    "unreadPaths": [
+      "Five raw response bodies (01-genesis.bin, 02-tip_before.bin, 03-address_utxos.bin, 04-epoch_params.bin, 05-tip_after.bin) \u2014 deliberately not opened; pins only, consistent with SOURCE-MANIFEST.json:167,176,185,194,203 and READ-COVERAGE.json:21",
+      "Full bodies of base graph.json and R2 graph.json/graph.html beyond the windows cited (large files; counts/prefix taken from root checker, spot-verified at node/link/fragment_updates boundaries)",
+      "COPY-MANIFEST.json and PUBLICATION-COMPLETED.json beyond head windows (sourceMap structure sampled at PUBLICATION-COMPLETED.json:12-18 and COPY-MANIFEST.json:1-25)",
+      "FX1 CLAIM-BINDING-MATRIX.json, EXPERIMENT-OBLIGATIONS.json, REVIEW-3.json (full Gemini review) and REVIEW-2.json (corrective addendum) \u2014 not opened in this review; clause agreement assessed via DESIGN-POSITION-TALLY.json and REVIEW-QUALIFICATIONS.json"
+    ]
+  },
+  "crosschecks": [
+    {
+      "evidence": "R2 checker GRAPH-AND-POINTER-CHECK.json (r2-root-records):12 newCitationsResolved=45; READ-COVERAGE.json:26 added_source_locations_validated=45; EXACT-GRAPH-ADDITIONS has 19 nodes + 26 links = 45 citation-bearing entries, each with source_file/source_location/evidence_sha256 matching its manifest pin (e.g. README 80fca777\u2026 at EXACT-GRAPH-ADDITIONS.json:30,44,58).",
+      "id": "X1",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "All 45 new citations (19 nodes + 26 edges) resolve and SHA pins match manifest/index pins."
+    },
+    {
+      "evidence": "EXACT-GRAPH-ADDITIONS.json:12-18 preservation flags all true; READ-COVERAGE.json:30-34 same; R2 root check:8-11 prefixPayloadsEqual=true, preexistingMetadataEqualExceptFragmentUpdatesAppend=true, wholeMetadataEqual=false (expected, due solely to the append), fragmentUpdatesAppended=1; graph.json:85812-85815 appended entry asserts the same and graph.json tail 85349-85817 shows prior fragment_updates entries intact before it.",
+      "id": "X2",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "Base preservation: 1489/3756 exact prefix to 1508/3782 (+19/+26), only fragment_updates appended, original metadata unchanged."
+    },
+    {
+      "evidence": "R2 root check:285-425 lists all 23 manifest sources with declaredUsed==actuallyUsed, sourceMetadataAllUsedFlagsMatched=true at :425; R1 root check:419-425 shows the single mismatch (graphify RECEIPT declaredUsed=true/actuallyUsed=false, allMatched=false) that R2 repaired \u2014 SOURCE-MANIFEST.json:205-212 now records graphify_version_receipt used_by_new_claims=false. No graph content change was needed and none is claimed.",
+      "id": "X3",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "All 23 source-use flags deterministically matched from actual new nodes/edges; R1 wrong-receipt-flag-true is fixed in R2 (false)."
+    },
+    {
+      "evidence": "README.md:9-19 five steps in fixed order with bytes/SHA matching SOURCE-MANIFEST raw pins :214-249 and PUBLICATION.json:32-58; adoption PUBLIC-OBSERVATION-ACTUAL-ADOPTION.json:18 scope 'One completed five-HTTP200 Scrapling read-only batch at14:50UTC', :32-37 attemptSpent=true, attempts=1, retries=0, newAuthority=false, ledgerAuthenticated=false; PUBLICATION.json:3-8 still STAGED_PENDING_FRESH_MUSE_PUBLICATION_AUDIT/published=false (source-time status preserved) while PUBLICATION-COMPLETED.json:4-6 records actual publication path \u2014 the pending-vs-completed split is preserved next to root, not rewritten.",
+      "id": "X4",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "Navigation facts faithfully qualified: 14:50 UTC five-call observation, 119 files/60a7cbeb adoption, pending source-time PUBLICATION preserved beside actual PUBLICATION-COMPLETED."
+    },
+    {
+      "evidence": "README.md:5 '[] with Content-Range: */* \u2026 proves neither an unfunded wallet, zero ADA nor absence'; adoption:27 fundingAtCapture NOT_OBSERVED; node preprod_obs_empty_address_response claim (EXACT-GRAPH-ADDITIONS.json:80) repeats this verbatim in substance; GRAPH_REPORT.md:5 same. Same-provider tip: README:21 'not an atomic or authenticated snapshot'; adoption:35 ledgerAuthenticated=false. Economics: README:23 cost-model ordering/units unestablished, no fee/min-ADA/fit derived; nodes :94,:108 and edges preprod_edge_008/:24 preserve this.",
+      "id": "X5",
+      "requiredFix": "None for navigation publication. Publication note (not a graph fix): citations '#' (whole-document root) used at EXACT-GRAPH-ADDITIONS.json:126,154,168,196 and '#/files' at :439 resolve as whole-JSON locations but pin the claim to the entire document rather than a field; navigators should treat those four/five citations as document-level, not field-level, evidence.",
+      "severity": "minor-note",
+      "summary": "Qualifications preserved: [] */* is not zero/unfunded/current-absence; same-provider stable tip is not atomic/authenticated; cost-model ordering/units, EraHistory, fee/min-ADA/ExUnits/size-fit unqualified."
+    },
+    {
+      "evidence": "RESULT.json:4 txHash 9ea68a9b325857d67f152ae9a26c99b302df5fb299a231f380860f3103938493, :5 address addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc (identical to base wallet_public_address claim, base graph.json:22227), :114 networkWithProviderReportedInclusion='preview', :115-130 matchingOutputs[0] value '10000000000' tx_index 0, :131-148 matchingUnspentOutputs[0] is_spent=false; steps :7-31 show the Preprod lookup ran first. Node preview_faucet_output (EXACT:164) keeps '10000000000' as a raw string with 'no currency-unit conversion claim'; GRAPH_REPORT.md:5-7 and README:5 keep Preview separate from Preprod funding. The graph makes no 6-confirmation or ADA-conversion claim (none appears in RESULT.json fields either).",
+      "id": "X6",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "Preview faucet follow-up faithful: tx 9ea68a9b on Preview, output 0 unspent, raw value 10000000000, exact wallet, no Preprod seed, no ADA conversion invented."
+    },
+    {
+      "evidence": "DESIGN-POSITION-TALLY.json:3 scope 'author FOR plus fresh non-author full review and focused exact-clause corrective addendum. This is not two fresh full audits.', :102 adopted=12; SOURCE-DESIGN-ADOPTION.json:67 qualification adopts 'exact unedited R2 design and 12 literal authorFOR+reviewerAGREE positions only', excludes the full review's invented wallet address/digests/CBOR-signing descriptions/paraphrases, and states 'Addendum is focused correction, not second full audit'; REVIEW-QUALIFICATIONS.json:96-99 preserves the wrong review address vs correct wallet and 'do not claim 12 literal agreements' for the paraphrasing full review alone \u2014 superseded for exactness only by the focused addendum, with the history retained (TALLY:103). Node fx1_r2_position_scope (EXACT:206) says exactly this.",
+      "id": "X7",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "FX1 R2 tally correctly described as DesignAdoption-only: 12 literal author-FOR + fresh-reviewer AGREE via one full Gemini review plus focused correction \u2014 not two full audits; full-review wrong wallet/CBOR/signing-data/digests/paraphrases preserved as excluded history, not current truth."
+    },
+    {
+      "evidence": "FIRST-PREPROD-DESIGN.md:11 'seed is a real funded wallet UTxO spent by T1 \u2026 this outref, not the wallet seed, is env.settle_outref'; node fx1_t1_thread_outref (EXACT:220) faithful. T3: DESIGN.md:13 one atomic transaction, Burn -1, claimant VKH extra_signatories, withdraw-zero from VI and VS1\u2013VS4, 'no T4 follows success'; node :234 faithful including S2p (the design text says 'withdraws zero from ALL FIVE of VI, VS1, VS2, VS3 and VS4' and spends S2p thread input \u2014 the prompt's '+all5VI/VS+S2p' is satisfied). DESIGN.md:1-4 'PROPOSED, no execution authorized', intent payload is canonical JSON per SOURCE-DESIGN-ADOPTION.json:67 ('intent.ak signing_message and canonicalJSON control implementation') \u2014 not CBOR; genuine VI/fresh-context proof/actual Preprod still owed per adoption:70 nextCapability and node fx1_next_capability_sequence (EXACT:248).",
+      "id": "X8",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "Design nodes faithful: T1 thread outref distinct from wallet seed; atomic T3 = thread+claim spend, Burn -1, all five VI/VS withdraw-zero plus S2p; no T4 success burn; source intent payload is canonical JSON not CBOR."
+    },
+    {
+      "evidence": "GRAPH_REPORT.md:7 'source implementation, private-key authority, native authority, network or ledger authority, target acceptance, and the genuine-context proof path remain open'; GRAPH_REPORT.md:11 'not code execution, a ledger transaction, security certification'; SOURCE-DESIGN-ADOPTION.json:4-9 sourceDesignSpecificationReady=true with sourceImplementationReady/nativeAuthority/privateKeyAuthority/networkOrLedgerAuthority/targetAcceptance all false. No node or edge asserts a security interpretation; version claim limited to RECEIPT.json:9-11 latestVersionAtRetrieval 0.9.91 at 2026-10-16T13:32:52Z (GRAPH_REPORT.md:13 'latest at' that receipt, token accounting UNKNOWN, HTML CDN dependency disclosed at graph.html:6-8 and GRAPH_REPORT.md:13).",
+      "id": "X9",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "No security interpretation drawn by Luna/Graphify; Graphify 0.9.91 is 'latest-at-13:32 receipt' only, token accounting unknown, browser CDN qualified."
+    },
+    {
+      "evidence": "PUBLICATION-COMPLETED.json:12-18 sourceMap entries map originalSourceFile\u2192publicationRepositoryPath with bytes/SHA; COPY-MANIFEST.json:13 copyRule mirrors under payload/inputs/<original absolute path>; INPUT-INDEX.json:5-203 applies the same convention to this review. Graph citations themselves (EXACT-GRAPH-ADDITIONS source_file values) still use capsule-relative and fragment-relative '../' paths \u2014 publication must copy the named local public supplementals (Preview RESULT, FX1 adoption/tally/design) as exact named observations with a sourceMap to their original paths; the graph must not be silently rewritten to new citation paths.",
+      "id": "X10",
+      "requiredFix": "Root publication step (outside the fragment): copy each local public supplemental byte-exact under its exact name and add/extend a sourceMap from the graph's relative citations to the original absolute paths listed in INPUT-INDEX.json; do not edit graph.json/graph.html citation strings.",
+      "severity": "minor-note",
+      "summary": "SourceMap proposal sound provided root copies local public supplementals as exact named observations with sourceMap to original paths, without silently rewriting graph citations."
+    },
+    {
+      "evidence": "SOURCE-MANIFEST.json:12 source_mapping_policy 'Raw response body pins are recorded only from COPY-MANIFEST; raw bodies were not opened'; :161-204 raw_84..raw_88 used=false with '#/files/84..88' notes; READ-COVERAGE.json:12-13 raw_response_body_pins_recorded=5, raw_response_bodies_opened=0; GRAPH_REPORT.md:11 same disclosure. This review also did not open them.",
+      "id": "X11",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "Raw five pins are listed through the manifest but Luna did not open raw bodies; no raw-reading is claimed anywhere in the fragment."
+    }
+  ],
+  "findings": [
+    {
+      "evidence": "GRAPH_REPORT.md:3; READ-COVERAGE.json:36-42 (1489+19=1508, 3756+26=3782); R2 GRAPH-AND-POINTER-CHECK.json:4-12; graph.html:97 stats line; graph.json:85743-85816 appended fragment_updates entry with base_node_payloads_preserved/base_ordered_link_prefix_preserved/inherited_metadata_unchanged all true.",
+      "id": "F1",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "Exact 7-file R2 fragment is internally consistent and navigation-ready: pinned base 1489 nodes / 3756 ordered links preserved as exact prefix to 1508/3782 (+19/+26), only one fragment_updates entry appended, original metadata unchanged."
+    },
+    {
+      "evidence": "EXACT-GRAPH-ADDITIONS.json:19-285 (19 nodes) and :287-652 (26 links preprod_edge_001\u2013026), all EXTRACTED, none dangling per R2 check:426 noDanglingLinks=true; the two edges into pre-existing base nodes (preprod_edge_014\u2192wallet_public_address, preprod_edge_025/026\u2192k10_open_next_and_product_scope) resolve to base nodes present at base graph.json:22224 and :22560; wallet address in RESULT.json:5 equals base claim at base graph.json:22227.",
+      "id": "F2",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "All 45 new node/edge citations resolve, are faithful to the actual cited sources at the cited locations, have no duplicate IDs and no dangling links (including the three edges into base nodes)."
+    },
+    {
+      "evidence": "EXACT-GRAPH-ADDITIONS.json:126 (preprod_obs_adoption_scope '#'), :154/:168 (preview nodes '#'), :196 (fx1_r2_source_design '#'), edge preprod_edge_011 :439 '#/files'. These resolve (R2 check marks them resolved:true) but a navigator cannot tell which field carries the claim without reading the whole document.",
+      "id": "F3",
+      "requiredFix": "No graph change required for navigation publication. Recommended (optional, non-blocking): when root publishes, add a companion note listing these five document-level citations so readers do not mistake them for field-level pointers; do not rewrite the graph to invent finer pointers.",
+      "severity": "minor-note",
+      "summary": "Granularity limit (non-blocking): five citations use whole-document '#' or whole-array '#/files' locations."
+    },
+    {
+      "evidence": "This reviewer's independence is stated in the report; authority flags in SOURCE-DESIGN-ADOPTION.json:5-9 and adoption :35-36 are false; R2 root check:427-429 scope is ordinary navigation integrity only, nativeExecution=false, newAuthority=false.",
+      "id": "F4",
+      "requiredFix": "",
+      "severity": "none",
+      "summary": "No authority, security, proof or target-acceptance claim is made or implied by the fragment; readiness is navigation-publication only."
+    }
+  ],
+  "positions": [
+    {
+      "clause": "The first live flow is the bounded invoice-partial subset executed as T0 reference scripts, T1 genesis, T2 C2 claim mint (+1), and T3 one atomic transaction that spends the S2p thread input and the C2 claim input, executes c2.mint Burn (-1) with no C2 token in any output, carries the Ed25519 claimant VKH in transaction extra_signatories, and withdraws zero from VI, VS1, VS2, VS3 and VS4; there is no post-success claim-burn transaction, and a separate claimant-signed claim burn exists only as the alternative post-expiry refund (validity lower bound after env.expiry) when T3 never settles, because claim.release checks settle_outref against the current transaction inputs and not chain history; claim mint alone is never described as end-to-end.",
+      "clauseId": "R2-01",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "DESIGN-POSITION-TALLY.json:7-11 literalTextEqual=true, verified against FIRST-PREPROD-DESIGN.md:9-14; graph node fx1_t3_atomic_settlement_design faithful (EXACT-GRAPH-ADDITIONS.json:234). One full Gemini review plus focused correction, not two audits (TALLY:3)."
+    },
+    {
+      "clause": "The funded wallet UTxO spent by T1 Genesis as seed (from which thread_id is derived) and the T1 thread output outref locked at Script(s2p_hash) are distinct values: env.settle_outref in the fresh T2 statement and envelope is the actual confirmed T1 thread outref, consumed by T3, and never the already-spent wallet seed.",
+      "clauseId": "R2-02",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:15-19; FIRST-PREPROD-DESIGN.md:11; node fx1_t1_thread_outref (EXACT:220) preserves the seed/thread distinction exactly."
+    },
+    {
+      "clause": "The actual Aiken invocation includes withdraw-zero for all five of VI, VS1, VS2, VS3 and VS4 in T3; registration, certificate, witness-rule and deposit requirements for each of the five stake credentials must be pinned from normative Conway DELEG/UTXOW primary sources and a target experiment before T3 is buildable, and until then that registration behaviour is an obligation, not an established legal fact derived from the Aiken calls.",
+      "clauseId": "R2-03",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:23-27; registration behaviour remains an obligation pending primary-source pinning and target experiment \u2014 graph carries it as design obligation only (EXACT:234,248)."
+    },
+    {
+      "clause": "Class-0 single-party setup forgeability, the unproved VK-to-matrix link and unproved constraint soundness are carried as an explicit test trusted basis in every document, fixture and interface touching the current proof, and are never presented as production readiness or as a full circuit theorem; the missing 8 compiler and 64 Core/driver dependencies are retained explicitly.",
+      "clauseId": "R2-04",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:31-35; no production/security claim is made in the graph (GRAPH_REPORT.md:7,11)."
+    },
+    {
+      "clause": "Authorisation is per-contract and objective: the S2p c2_hash parameter plus the genesis-frozen catalogue ActionEntry (predicate, vk and shape digests) is the verifier identity; no protocol registry, Moriarty-language compile/prove/deploy admission, maintainer admission or root approval is introduced, and claim.issue alone (which accepts any self-consistent VK/proof pair) is never described as authorised-relation binding.",
+      "clauseId": "R2-05",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:39-43; consistent with adoption flags all false (SOURCE-DESIGN-ADOPTION.json:5-9)."
+    },
+    {
+      "clause": "A fresh secp256k1 intent account keypair must be generated and privately custodied and its public key frozen in catalogue.accounts at T1 as a prerequisite; the Ed25519 Preprod wallet key signs only Cardano transaction fields (T3 claimant extra_signatory, fee and collateral) and is never an intent or proving key; existing wallet keygen AUTH is spent, no existing key use is granted here, and any future proving-key read requires fresh exact-scope private-custody authorisation after descriptor and source-pin comparison, native key reuse for a changed context being UNPERFORMED.",
+      "clauseId": "R2-06",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:47-51; FIRST-PREPROD-DESIGN.md:16-17; no key material is present in the public mirror and none is claimed."
+    },
+    {
+      "clause": "The Rust statement is a 343-byte header (tag, family, predicate and shape as constants) plus a program-dependent body whose length and order derive from the selected program and action; the full statement is BLAKE2b-256 hashed into two public-input halves; the context segment is hashed free witness bytes over caller-supplied values that are not ledger authentication; ContextInput networkId is the ABI u8 byte and is not a conversion of Preprod magic 1; admission is exactly Core1/SettlementHashV2/NotBound/GrossDebitAndFees/TouchedOnly with /2 refused as staged-not-lowered and no invoice filename allowlist; compile_selected takes no context, changing source asset identities can change program, shape and descriptor, and no fixed universal body length is claimed.",
+      "clauseId": "R2-07",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:55-59, correcting the full review's universal-721-byte assumption; intent payload is canonical JSON per SOURCE-DESIGN-ADOPTION.json:67, not CBOR \u2014 preserved as qualification, not current graph truth beyond the design node."
+    },
+    {
+      "clause": "The next callable capability after K10 is, in order, an actual genuine secp256k1 intent through the already-compiled VI wrapper, then a current-Rust fresh-context proof, then the atomic C2 spend/Burn + VI + VS1..VS4 + S2p settle; the next source task is a source-only five-part specification (public host codec building the actual Rust request and Aiken Plutus Data, real-context acquisition, secp256k1 intent-signing boundary, symbolic transaction assembly, independent expectations with positive and negative cases) consumed by a real builder, with no implementation in this study, no handwritten application IR replacing the compiler, no extra campaign or platform, and local synthetic fixtures labelled explicitly local and never used as Preprod substitutes.",
+      "clauseId": "R2-08",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:63-67; FIRST-PREPROD-DESIGN.md:25-26; node fx1_next_capability_sequence (EXACT:248) keeps genuine VI, fresh-context proof and T3 as future work."
+    },
+    {
+      "clause": "Financial expectations are stated completely and symbolically: escrow 109 -> 72, seller 0 -> 35, fee 2, gross debit 37, invoice liability 90 -> 55, reserve duty 14 unchanged, marker 7 / opened true over 29 slots; the claim token is +1 at T2 and -1 inside T3 (or in the alternative post-expiry refund), its carrier lovelace is disposed by T3 change/payout accounting, and per-stage physical assets, fees, min-ADA, collateral, credential deposits and reclaim, and current wallet balance remain symbolic or UNKNOWN with no invented balance or denomination; phase-1 versus phase-2 failure cost treatment is a conditional normative obligation, not proof that every rejected or off-chain transaction costs money; residual liabilities, duties and the cancellation nonce survive failure and Revoke.",
+      "clauseId": "R2-09",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:71-75; graph asserts no fee/min-ADA/ExUnit figure (EXACT:262, GRAPH_REPORT.md:5)."
+    },
+    {
+      "clause": "T3 references all seven scripts (67028 B combined applied size); protocol reference-script size limits, tiered reference-script fees, ExUnits and transaction fit are UNKNOWN until measured with live parameters and a built transaction; provider observation must use _extended = true for address UTxOs, name the chosen epoch explicitly for epoch parameters, and treat value units and cost-model format as UNKNOWN until inspected; slot-to-POSIX conversion must be established from Preprod EraHistory including the Byron transition and never as systemStart + slot * slotLength; wallet funding is UNKNOWN and any unfunded assertion without a query is unsupported.",
+      "clauseId": "R2-10",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:79-83, cross-referencing the adopted 14:50 UTC observation and the Preview-only faucet result; graph nodes preprod_obs_economics_unknown/fx1_parameter_and_acceptance_open preserve every UNKNOWN."
+    },
+    {
+      "clause": "The seven Aiken validators remain unchanged with compiled B9 hashes stable, and K10 (root adoption 6421ba8478218c633c4604a9d25b82010afe4c1a9ffb359275d7cf16be6cfc18, fresh report 92307d73b99140baed69be125160c106a947f86d5fd88ef555b0987f75f9466a) is cited only for its finite seven compiled-wrapper cases, with source-time pending flags preserved as history, no K10 rerun and no ledger claim.",
+      "clauseId": "R2-11",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:87-91; edges preprod_edge_025/026 link into the base K10 boundary node without closing acceptance (EXACT:626-650)."
+    },
+    {
+      "clause": "All 20 UTxO families, ACTUS 277 fixtures / 18 types / 32 dispositions / DS01-DS07, DeFi 72 rows / DA01-DA24, general financial obligations, real recursion, private witness handoff, bounded multi-parent PCD, universal certificates and real Preprod acceptance remain required and open; source recursion_mode 0 and parent_count 0 are current limitations and not scope waivers; no compatibility percentage is stated and no execution authority follows from this source design.",
+      "clauseId": "R2-12",
+      "position": "FOR (author) / AGREE (reviewer)",
+      "rationale": "TALLY:95-99; node fx1_broader_requirements_open (EXACT:276) and GRAPH_REPORT.md:7 retain all of these as open; this review states no compatibility percentage."
+    }
+  ],
+  "recommendation": {
+    "authorityProposalReady": false,
+    "firstBlockedBoundary": "Funding plus real wallet/thread context on Preprod (fundingAtCapture NOT_OBSERVED), then genuine secp256k1 intent through compiled VI, fresh-context Rust proof for the actual T1 thread context, atomic C2 spend/Burn-1 + VI/VS1-VS4 + S2p T3, and actual signed Preprod ledger acceptance.",
+    "nativeRoundtripPrerequisiteClosed": false,
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": false,
+    "ordinarySelftestScope": "Ordinary public navigation integrity only: JSON structure, SHA/byte pins as recorded by the root checker, JSON-pointer/Markdown-line resolution, base-prefix preservation, duplicate/dangling checks, and source-use-flag determinism. No runtime, native, cryptographic or ledger selftest is asserted by this review.",
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false,
+    "scope": "Navigation-only publication of the exact 7-file R2 fragment (graphify-out/graph.json, graphify-out/graph.html, GRAPH_REPORT.md, SOURCE-MANIFEST.json, READ-COVERAGE.json, EXACT-GRAPH-ADDITIONS.json, OWN-OUTPUT-ALLOWLIST.json). Source readiness is NAV (navigation) only. Root may publish only these exact artifacts after this fresh NAV review and its own ordinary pin checks, copying local public supplementals byte-exact as named observations with a sourceMap to original paths and without rewriting graph citations.",
+    "sourceReady": true,
+    "verdict": "READY_NAVIGATION_PUBLICATION_ONLY"
+  },
+  "report": "## Verdict\n\n**READY_NAVIGATION_PUBLICATION_ONLY.** The top finding is that the exact 7-file Luna/Graphify R2 fragment is correct for navigation-only publication: the pinned base (1489 nodes / 3756 ordered links, SHA 248949c5\u2026) is preserved as an exact prefix to 1508/3782 (+19 nodes / +26 ordered links), only one `fragment_updates` entry is appended, original metadata is unchanged, and all 45 new node/edge citations resolve and are faithful to the actual cited sources. Source readiness is NAV only.\n\n## Evidence\n\nBase preservation is asserted identically in [GRAPH_REPORT.md](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-observation-and-binding-luna-graph-fragment-r2-20261016/GRAPH_REPORT.md:3), [READ-COVERAGE.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-observation-and-binding-luna-graph-fragment-r2-20261016/READ-COVERAGE.json:36) and the appended entry in [graph.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-observation-and-binding-luna-graph-fragment-r2-20261016/graphify-out/graph.json:85743), and independently recorded by the R2 root checker at [GRAPH-AND-POINTER-CHECK.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-observation-and-binding-graph-r2-root-records-20261016/GRAPH-AND-POINTER-CHECK.json:8) (`prefixPayloadsEqual=true`, `newCitationsResolved=45`, `noDanglingLinks=true`, `sourceMetadataAllUsedFlagsMatched=true`). The R1 checker's single failure \u2014 the Graphify receipt declared `used=true` while actually unused \u2014 is repaired in R2 with no graph change, correctly not blamed on Luna: compare [R1 check](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-observation-and-binding-graph-root-records-20261016/GRAPH-AND-POINTER-CHECK.json:419) with [SOURCE-MANIFEST.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-preprod-observation-and-binding-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:205).\n\nNavigation facts are faithfully qualified. The 14:50 UTC five-call observation, its adoption (60a7cbeb, 119 files) and the pending source-time `PUBLICATION.json` preserved beside the actual `root/PUBLICATION-COMPLETED.json` match [README.md](/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/cardano-preprod-public-observation-2026-10-16/README.md:3) and the adoption record. `[]` with `Content-Range: */*` is never upgraded to zero/unfunded/current absence; the same-provider stable tip is not atomic or authenticated; cost-model ordering/units, EraHistory, fee/min-ADA/ExUnits and size-fit stay unqualified. The Preview faucet result (tx 9ea68a9b\u2026, output 0 unspent, raw value `10000000000`, exact wallet, no Preprod seed, no ADA conversion) matches [RESULT.json](/home/charl/moriarty-eutxo-validation-2026-10-12/cardano-preprod-wallet-funding-9ea68a9b-followup-public-20261016/RESULT.json:114). The FX1 R2 tally is DesignAdoption-only: 12 literal author-FOR + reviewer-AGREE via one full Gemini review and a focused correction, not two full audits, with the full review's wrong wallet/CBOR/signing-data/digests/paraphrases preserved as excluded history ([DESIGN-POSITION-TALLY.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-fx1-real-preprod-binding-r2-root-adoption-20261016/DESIGN-POSITION-TALLY.json:3), [REVIEW-QUALIFICATIONS.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-fx1-real-preprod-binding-r2-root-qualifications-20261016/REVIEW-QUALIFICATIONS.json:99)). T1 thread outref vs wallet seed, atomic T3 (thread+claim spend, Burn \u22121, all five VI/VS withdraw-zero plus S2p, no T4 success burn), canonical-JSON (not CBOR) intent payload, and still-owed genuine VI/fresh-context proof/actual Preprod are all preserved.\n\n## Limitations and first blocked boundary\n\nFive citations use whole-document `#` or `#/files` locations; they resolve but are document-level, not field-level, evidence \u2014 a publication note, not a graph defect. Luna did not open the five raw response bodies (pins only), and this review did not either. Graphify 0.9.91 is 'latest' only at the 13:32 receipt; token accounting is unknown and the HTML retains its CDN dependency. No security interpretation is drawn. The first blocked boundary remains Preprod funding/real thread context, then genuine intent, fresh-context proof, atomic T3 and actual signed Preprod acceptance. All 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates and real Preprod remain open; no compatibility percentage is stated.\n\n## Independence\n\nI am a fresh independent muse-wonder-1.0 HIGH reviewer in a new context. I did not author the candidate, operator materialization, source review or executed results, and I invent no provider identity, authority or approval. I applied the explicit user Gemini/Muse fallback while preserving historical assignments. I performed no shell, hash recomputation, execution, network, proof, key, wallet, signing or ledger operation; root publishes only the exact artifacts after this review and its own ordinary pin checks.",
+  "reviewToken": "current-cardano-preprod-observation-and-binding-graph-r2-independent-muse-navigation-review-20261016"
+}

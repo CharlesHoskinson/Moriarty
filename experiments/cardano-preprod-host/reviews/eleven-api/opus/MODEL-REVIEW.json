@@ -1,0 +1,435 @@
+{
+  "reviewToken": "current-cardano-eleven-api-fresh-opus-compatible-schema-audit-20261016",
+  "report": "DISCLOSURE. I am claude-opus-5-5 HIGH in a fresh context. I did not write any of the 37 SH/DF clauses, the statement append (Opus), the Data factory suffix (Sol) or the original four-API prefix. The clause authors and earlier reviewers are also claude-opus-5-5, so independence comes only from the separate context. Tools were off. I imported, executed, hashed and diffed nothing, and did not recompute any SHA, BLAKE2b, byte count or run result; all of these are copied from the root records supplied. This review does not replace the required Muse implementation audit. All native authority remains ZERO.\n\nSCOPE. I read every line of the actual combined host_codec.py (23252 B, 3c18539e...). It has four parts:\n- the encoder prefix;\n- the DTO wire validators;\n- the statement append: a module-level `import hashlib`, five private constants, `_admit_statement`, `_statement_digest` and the three statement APIs;\n- the Data factory suffix: `_data_bytes`, `_data_integer` and the four factories.\n\nI checked these against the 37 literal canonical clauses, the frozen tests, the RED and GREEN result records, and the primary sources:\n- Rust: claim.rs, abi2.rs, export.rs, hexutil.rs, input.rs, ir.rs, json.rs and blake2b.rs;\n- Aiken: both types.ak copies (same pin), core.ak, claim.ak, groth16.ak, transaction.ak, assets.ak and dict.ak, plus aiken.lock and aiken.toml;\n- data: the K6 fixture and GOLD.\n\nSTATEMENT (crypto and framing).\n- Admission order is type, then bounds (343..262144), then tag, then family, then 343+bodyLen. The type check is `type() is bytes` and runs before any len, slice or comparison.\n- The host admission set equals the claim.rs parse_statement set. ContextV2::bytes rebuilds 112..339 contiguously, and statement_bytes checks body length only, so the re-encode can refuse nothing further.\n- The digest is `hashlib.blake2b(statement, digest_size=32)`, with no key, salt or person, over the whole statement. The newly read blake2b.rs host function uses the same parameter block 0x01010020 (all other parameter words zero) and the RFC 7693 IV and SIGMA. It runs 12 rounds with rotations 32/24/16/63, a byte counter t, the last-block flag f0 only (no last-node flag), and little-endian output of words 0..3. That is the hashlib default for unkeyed BLAKE2b-256.\n- Public inputs are `str(int.from_bytes(d[0:16]/d[16:32], 'big'))`, with no field reduction.\n- The root run matched the K6 digest, x1 and x2 literals. No proof, VK or signature was verified.\n\nDATA FACTORIES.\n- Every argument gets an exact type check before any len or range test. Checks run in parameter order, and each token row is checked completely before the next.\n- Token order is strict ascending, which is unsigned lexicographic tuple order and matches dict.ak less_than_bytearray. Rows are never sorted, merged or dropped.\n- Every container is a fresh literal, and refusal messages are fixed path-prefixed text.\n- The suffix makes no call to the encoder, hashing or the statement helpers, and adds no import, global or dunder access.\n- DF-12 bounds hold: depth 3; at most 1029 nodes (1+4+512+512); Issue output about 135 KB.\n\nPRIMARY-SOURCE QUALIFICATIONS.\n- assets.ak and dict.ak support the map-of-maps shape, ada under \"\"/\"\", 28-byte policies, 0..32-byte names, nonzero quantities and ascending keys.\n- They also show that `lovelace=0` produces Data that is not a canonical stdlib Value (F-01).\n- groth16.ak requires a 488-byte VK and a 192-byte proof. The factories do not enforce these sizes, by design (F-02).\n- Root's byte comparison shows the two types.ak copies are equal.\n\nCOMBINED NAMESPACE AND IMPORTS.\n- No top-level name is defined twice. The only import is unaliased `import hashlib`. There are exactly 11 public callables, and `hashlib` is a non-callable public attribute.\n- The encoder test's phase gate changed only to admit that exact import. The historical phase-1 absence method stays excluded under I1-SCOPE-R2, and the source gate I checked replaces it.\n\nRESULTS.\n- RED: Data factories 13 run, 1 prefix pass and 12 missing-implementation failures. Statement 19 run, 2 passes and 17 missing-implementation failures. Zero errors in both.\n- GREEN: 82/82 (13+19+31+19) under timeout and prlimit with python3 -I -B. Isolated files and the source were unchanged afterwards.\n\nPOSITIONS. I AGREE with all 37 clauses. The AGREE positions on SH-01, SH-11, SH-17, DF-03, DF-07, DF-13 and DF-14 carry the qualifications explained in their rationales. I found no blocking defect, no invented source binding, ABI, descriptor, authentication or caller-context guarantee, and no financial evaluator. The build_inputs.py consumer wiring is NOT established. sourceReady is limited to this narrow host source and actual-result scope, and every native, ledger, proof and publication flag stays false.",
+  "findings": [
+    {
+      "id": "F-01",
+      "severity": "LOW (non-blocking)",
+      "summary": "build_value_data(0, ...) produces a zero-quantity ada entry. That Data is not a canonical stdlib Value.",
+      "evidence": "assets.ak says a Value never contains a zero quantity, and from_lovelace(0) returns zero (an empty dict, serialised as a0). build_value_data(0, []) returns ('map', [(('bytes', b''), ('map', [(('bytes', b''), ('int', 0))]))]), which encodes as a140a14000. DF-07 labels the None/0 convention as DESIGN, so the clause is not false. But a consumer that compares this output with an Aiken-built Value, or with a Value carried as Data in assets.match or a datum, would see a mismatch.",
+      "requiredFix": "No code change is needed for this increment. Record in the API notes that lovelace=None, not 0, is the stdlib-canonical form for 'no ada'. Any future consumer, or any native or compiled roundtrip, must decide its convention explicitly. No Aiken or ledger correspondence may be claimed."
+    },
+    {
+      "id": "F-02",
+      "severity": "INFO",
+      "summary": "The Issue VK and proof bounds (1..65536 bytes) are wider than the on-chain verifier's fixed sizes.",
+      "evidence": "groth16.ak expects vk_len 488, proof_len 192 and vk_ic_count at offset 336. claim.ak issue also requires env.vk_digest == blake2b_256(vk). The factory admits any opaque bytes in range, as DF-10 and DF-11 state.",
+      "requiredFix": "None for this increment. Consumers must not treat factory admission as size, encoding or digest validity. Treat payloads of other sizes as negative fixtures only."
+    },
+    {
+      "id": "F-03",
+      "severity": "INFO",
+      "summary": "The statement test pins host bytes with an O_NOFOLLOW read, but loads the module with a separate importlib path load.",
+      "evidence": "_require_host_path uses lstat, and test_host_prefix_preserved_byte_for_byte reads through _read_regular with O_NOFOLLOW. _host then uses spec_from_file_location and exec_module. That load follows paths, may consult __pycache__, and is not proven within the test to execute the pinned bytes. The Data factory test, by contrast, compiles and execs the exact bytes it read.",
+      "requiredFix": "Mitigated by root: a dedicated read-only directory holding only the stated files, with isolatedFilesUnchanged and sourceUnchangedAfter both true. Keep this run envelope mandatory. Optional future hardening: execute the pinned bytes."
+    },
+    {
+      "id": "F-04",
+      "severity": "INFO",
+      "summary": "SH-11's rationale ('blake2b.rs is unread') is superseded at author time. The parameter equivalence now rests on source inspection plus the K6 literal.",
+      "evidence": "blake2b.rs uses PARAM 0x01010020, the standard IV and SIGMA, 12 rounds, t equal to bytes so far, f0 only on the last block, and little-endian output of h[0..3]. That matches hashlib.blake2b(digest_size=32). The file's header says 'never compiled or run', which is in tension with the Rust-emitted K6. The file read comes from tracked worktree W source and is not proven to be the build that emitted K6.",
+      "requiredFix": "None. Keep this a source-inspected parity claim with no compiled correspondence."
+    },
+    {
+      "id": "F-05",
+      "severity": "INFO",
+      "summary": "`import hashlib` exposes a non-underscore module attribute `host_codec.hashlib`, and the module docstring now describes only the encoder.",
+      "evidence": "The combined namespace holds 11 public callables plus the module object `hashlib`. The first-line docstring 'Provisional pure PlutusData encoder...' is stale, as C-N04 already noted. Aliasing the import would break the encoder test's exact-import phase gate.",
+      "requiredFix": "None now. Any future docstring or alias change requires a fresh audit, because the 16134 and 19096 prefix pins forbid editing them in place."
+    },
+    {
+      "id": "F-06",
+      "severity": "INFO",
+      "summary": "Carried non-claims now extend to the factories and statement APIs.",
+      "evidence": "C-N01: concurrent mutation of a tokens list by another thread is outside every clause. R2-N01: encoder peak memory is about 2*B4. Importing hashlib may initialise OpenSSL, which can read a system configuration file; blake2b itself comes from builtin _blake2 in standard CPython. Root RESULT records do not list the run environment variables.",
+      "requiredFix": "Keep the minimal secret-free environment and single-threaded use as stated preconditions."
+    }
+  ],
+  "crosschecks": [
+    {
+      "id": "XC-ENC-I2-R2",
+      "severity": "INFO",
+      "summary": "Prior clause I2-R2 (ValueError-only rejections, iterative traversal) still holds in the combined source. Unchanged; no new vote.",
+      "evidence": "The _encode, _append, _head, _write_bytes and encode_data text in the 23252 B file is identical in substance to the reviewed encoder, and the 16134 B prefix pin passed. Raise sites are ValueError only, traversal uses an explicit stack, and no handler exists. No appended code rebinds any encoder name. The encoder ran 19/19.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-ENC-B-ORDER-R2",
+      "severity": "INFO",
+      "summary": "Prior clause B-ORDER-R2 (bounds checked incrementally) is preserved.",
+      "evidence": "B1 and B2 are checked at each node visit, B3 before to_bytes or copying, and B4 inside _append. TestBounds and the alias-bomb rows passed on the combined bytes.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-ENC-I1-SCOPE-R2",
+      "severity": "INFO",
+      "summary": "The phase gate was replaced as I1-SCOPE-R2 allows. This review is the fresh audit of the actual combined candidate.",
+      "evidence": "The only change to the test loader admits a single unaliased `import hashlib`; __future__ admission, FORBIDDEN_NAMES and all vectors are unchanged (ENCODER-PHASE-REPLACEMENTS). The phase-1 absence method stays excluded. My replacement source gate found: public callables are exactly the 11 named APIs; no stub or mirrored module; exactly one import; no eval, exec, compile, open, __import__, breakpoint, input, getattr, globals, vars or __builtins__; no dunder attribute access, I/O, global mutation or RNG.",
+      "requiredFix": "Any later API or import change needs another fresh combined audit."
+    },
+    {
+      "id": "XC-ENC-I3-MAG-MSG-HANDLER",
+      "severity": "INFO",
+      "summary": "Prior clauses I3-R2-MAGNITUDE, I3-R2-MESSAGES and IMPL-I2-HANDLER are preserved.",
+      "evidence": "bit_length is checked before any data-dependent to_bytes; the MemoryError comment is present and no handler exists. The statement and DF messages are also fixed literals with no formatting of inputs.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-ENC-E1-AUDIT-R2",
+      "severity": "INFO",
+      "summary": "E1-AUDIT-R2 still applies: in-test AST audits are best-effort and are not a sandbox.",
+      "evidence": "The encoder and statement tests load through importlib (a re-read). The DF test execs the bytes it pinned. Root reports human inspection before the runs. My model reading does not replace that inspection.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-WIRE-A1-A9",
+      "severity": "INFO",
+      "summary": "The nine prior wire clauses A1-A9 hold unchanged in the combined source. No new votes.",
+      "evidence": "All _wire_* helpers and the three DTO APIs are inside the pinned 16134 prefix. The appended names (_STMT_TAG, _FAMILY_V2, _HEADER_LEN, _MAX_STATEMENT_BYTES, _STATEMENT_FIELDS, _admit_statement, _statement_digest, _data_bytes, _data_integer, the 7 new public functions and hashlib) do not collide with any prefix name, so the DTO functions resolve the same globals. The request suite ran 31/31 on the combined bytes.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-NAMESPACE-IMPORT",
+      "severity": "INFO",
+      "summary": "Global namespace and import-time effects of the combined module.",
+      "evidence": "At import time the module defines constants and functions and imports hashlib (stdlib; it may load the _hashlib and _blake2 extensions). It does no file, network, environment or RNG operation of its own. The import sits mid-file, and nothing defined before it uses hashlib.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-NO-INVENTED-GUARANTEES",
+      "severity": "INFO",
+      "summary": "No source binding, ABI, descriptor, VK, authentication or caller-context guarantee is invented.",
+      "evidence": "parse_statement_header reports fields as found. The DTO context label stays CALLER_SUPPLIED_UNAUTHENTICATED. build_env_data does not tie statement_digest or settle_outref to any statement. export.rs maps settle_outref from consumedTxid/consumedIx, but nothing in the host enforces that link. No digest of a VK is computed and no envelope name is derived.",
+      "requiredFix": "Future composition, such as building the Env from a parsed statement, needs its own contract and review."
+    },
+    {
+      "id": "XC-NO-FINANCIAL-EVALUATOR",
+      "severity": "INFO",
+      "summary": "No financial evaluator, Core simulation or fallback exists anywhere in the module.",
+      "evidence": "The DTO checks literal strings only. The Value factory checks only structure, bounds and order and never aggregates quantities. Statement bodies stay opaque.",
+      "requiredFix": "None"
+    },
+    {
+      "id": "XC-BUILD-INPUTS-CONSUMER",
+      "severity": "INFO",
+      "summary": "The generic VI build_inputs.py consumer was not read, and its wiring to these factories is not established or approved.",
+      "evidence": "build_inputs.py (35091 B) was omitted from this packet by instruction. DF-07 cites it as consumer evidence only.",
+      "requiredFix": "A separate review is needed before any consumer replaces its tuples with these factories."
+    },
+    {
+      "id": "XC-RESULTS",
+      "severity": "INFO",
+      "summary": "The actual results match the predictions and are pinned to the exact code.",
+      "evidence": "Data factory RED 13 = 1+12, 0 errors, host 8f59b28f. Statement RED 19 = 2+17, 0 errors, host 8e15bc78. GREEN 82 at codeSha256 3c18539e, with every run's exitCode 0, timeout 10 s and prlimit (cpu 10, as 512 MiB, fsize 2 MiB, core 0). isolatedFilesUnchanged and sourceUnchangedAfter are both true. Logs show OK.",
+      "requiredFix": "None"
+    }
+  ],
+  "recommendation": {
+    "verdict": "ELEVEN_API_COMBINED_NARROW_SECURITY_SOURCE_AND_ACTUAL_RESULT_QUALIFIED: AGREE on all 37 literal SH-01..SH-22 and DF-01..DF-15 clauses; SH-01, SH-11, SH-17, DF-03, DF-07, DF-13 and DF-14 carry qualifications. No blocking defect. Prior encoder (7) and wire (9) clauses preserved. The actual 82/82 ordinary passes are consistent with the source. Only non-blocking LOW/INFO items: F-01 zero-lovelace non-canonical Value, F-02 Groth16 sizes not enforced, F-03 importlib load.",
+    "sourceReady": true,
+    "scope": "Only the actual combined host_codec.py (23252 B, 3c18539e...) as a pure stdlib module, with its 11 APIs and its recorded ordinary runs (13 Data factory, 19 statement, 31 request and 19 encoder methods). This is not product adoption and not the Muse implementation audit. It grants no native, SDK, VM, key, proof, signing, ledger, wallet or publication authority. It does not cover: Rust parse, compile or prove acceptance; compiled-Aiken or VM serialise_data and envelope_name roundtrip; Groth16 verification; VK or compiler-matrix correspondence; build_inputs.py consumer wiring; transaction, fee or minADA fit; Preview or Preprod; financial conformance.",
+    "firstBlockedBoundary": "The required fresh Muse implementation audit of the Sol Data factory suffix (and of the combined candidate) is still pending and cannot be replaced by this review. After it, the next separately authorised steps are: consumer-wiring review of build_inputs.py; compiled Aiken/VM roundtrip of factory Data (serialise_data, envelope_name, well_formed, the C2Mint decode); and native Rust parse/export checks.",
+    "operatorSourceReady": false,
+    "ordinarySelftestReady": true,
+    "ordinarySelftestScope": "Only the four existing bounded pure stdlib suites against this exact host_codec.py, run with python3 -I -B. Each runs in a dedicated read-only directory holding only its files: test_data_factories.py; test_statement_host.py with K6-PUBLIC-PROOF.json; test_core_request_wire.py with K4H-GOLD.json; test_plutus_data_serialisation.py restricted to its 19 behaviour methods, excluding the phase-1 absence method. Limits: timeout 10 s; prlimit cpu 10 s, address space 512 MiB, fsize 2 MiB, core 0; minimal secret-free environment; no network; post-run file check. All four have already been observed (82/82). There is no native, SDK, VM, key, proof, network or ledger budget.",
+    "authorityProposalReady": false,
+    "nativeRoundtripPrerequisiteClosed": false,
+    "publicRecordExportPrerequisiteClosed": false,
+    "publicVerificationInputsPublishable": false
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-data-factories-sol-candidate-20261016/host_codec.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-data-factories-sol-candidate-20261016/HOST-DATA-APPEND.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-data-factories-sol-candidate-20261016/FOREMAN_REPORT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-data-factories-sol-candidate-20261016/FOREMAN_REPORT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-data-factories-sol-candidate-20261016/OWN-OUTPUT-ALLOWLIST.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factories-compact-source-candidate-20261016/DATA-FACTORY-CONTRACT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factories-compact-source-candidate-20261016/DATA-FACTORY-API.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factories-compact-source-candidate-20261016/test_data_factories.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-statement-host-source-candidate-20261016/STATEMENT-HOST-CONTRACT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-statement-host-source-candidate-20261016/test_statement_host.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-statement-host-candidate-root-20261016/test_plutus_data_serialisation.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-statement-host-candidate-root-20261016/ENCODER-PHASE-REPLACEMENTS.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-statement-host-candidate-root-20261016/SOURCE-MANIFEST.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/CORE-REQUEST-WIRE-CONTRACT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/WIRE-CONTRACT-ADDENDUM.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-core-request-r2-source-candidate-20261016/test_core_request_wire.py",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-source-candidate-20261016/PLUTUS-DATA-SOURCE-CONTRACT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-independent-opus-review-20261016/REPORT.md",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-independent-opus-review-20261016/ADOPTION-RECOMMENDATION.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-combined-encoder-dto-independent-opus-review-20261016/DESIGN-POSITIONS.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-serialise-data-r2-opus-compatible-transport-review-20261016/DESIGN-POSITIONS.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-first-ordinary-results-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-first-ordinary-results-20261016/data-factories.txt",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-first-ordinary-results-20261016/statement.txt",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-first-ordinary-results-20261016/request.txt",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-first-ordinary-results-20261016/encoder.txt",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factories-first-ordinary-red-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-statement-host-first-ordinary-red-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/assets.ak",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/dict.ak",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/worktree-types.ak",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/groth16.ak",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/aiken.lock",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/aiken.toml",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-data-factory-additional-primary-source-pins-root-20261016/ROOT-QUALIFICATION.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/input.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/claim.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/export.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/k2/src/hexutil.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/abi2.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/ir.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-real-preprod-proof-binding-source-data-sol-20261016/source/experiments/moriarty-cardano-rust/moriarty/crates/mori-core/src/json.rs",
+      "/home/charl/Moriarty/.worktrees/utxo/experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/blake2b.rs",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-vi-abi-and-core-program-source-data-sol-20261016/source/stdlib/lib/cardano/transaction.ak",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-vi-abi-and-core-program-source-data-sol-20261016/source/consumers/lib/pvc2/types.ak",
+      "/home/charl/Moriarty/.worktrees/utxo/experiments/cardano-four-piece-settlement/lib/pvc2/core.ak",
+      "/home/charl/Moriarty/.worktrees/utxo/experiments/cardano-four-piece-settlement/lib/pvc2/claim.ak",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/run/receipts/invoice-partial.proof.json",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/gold/K4H-GOLD.json",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/fixtures/installment-invoice.mori",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/fixtures/invoice-partial.request.json",
+      "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-proof-2026-10-16/fixtures/conditional-reserve.mori",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-host-consumer-source-facts-root-checks-20261016/RESULT.json",
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-eleven-api-combined-audit-inputs-root-20261016/NEW-CANONICAL-CLAUSES.json"
+    ],
+    "unreadPaths": [
+      "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k11-r4a-semantic-source-candidate-20261016/runner/build_inputs.py (35091 B consumer; omitted by instruction; wiring not established)",
+      "current-cardano-combined-statement-host-candidate-root-20261016/HOST-APPEND.py, IMPLEMENTATION-NOTES.md and DESIGN-POSITIONS.json (17081 B). The append text is covered by the full combined file, and the SH clauses by NEW-CANONICAL-CLAUSES.json.",
+      "Base test_plutus_data_serialisation.py (sha 33326559...); only the replacement record and the resulting file were read",
+      "Base test_core_request_wire.py (36315 B), TEST-REPLACEMENTS.json, and the historical 24-run RESULT and RESULT-QUALIFIED",
+      "The old standalone 33 KB whole-encoder review and the separate 19096 B prefix body (the latter is covered by the combined file)",
+      "Rust relation.rs, statement.rs, adapter.rs, plan.rs, witness.rs, intent.rs, lib.rs, encoding.rs and mori-core runtime.rs",
+      "Aiken pvc2/bytes.ak, catalogue.ak and diag; stdlib aiken/crypto, builtin and the stdlib SOURCE-MANIFEST.json (e44ed447...); stdlib provenance of assets.ak against the v2.2.0 manifest (only the dict.ak row was root-checked)",
+      "Serializer call-chain sources (uplc lib.rs, pallas, minicbor, Data.hs), relied on only through the prior encoder review",
+      "Any Muse audit (none exists yet)"
+    ],
+    "limitations": "Tools were off. I executed, imported, hashed and diffed nothing; every SHA, size, digest and run outcome is taken from root records and run logs. Same-provider (Anthropic) review: independence is context-only and this is not a Muse audit. The check that blake2b.rs equals hashlib is by source reading plus the K6 literal match observed by root; the worktree blake2b.rs is not proven to be the build that emitted K6, and its header says 'never compiled or run'. The Aiken findings (assets, dict, groth16, types) are source reading only. They establish no compiled-validator, VM, ledger or ScriptContext-builder correspondence, and they are not attributed to the DF contract author, who did not read them. aiken.lock pins stdlib v2.2.0 by tag with no recorded etag. Concurrency, memory exhaustion and the run environment variables are not claimed. I make no claim about full language or backend dependencies. The Preview/Preprod acceptance work and all broader scope remain open: 20 UTxO families, ACTUS 277/18/32, DS01-07, DeFi 72, DA01-24, held-outs, intents, regressions, KQuint, recursion, private handoff, multi-parent, universal, PCD, and the missing original catalogue-42 provenance gap. No transaction was submitted and no fee or minADA fit is inferred."
+  },
+  "positions": [
+    {
+      "clauseId": "SH-01-SCOPE-APPEND",
+      "clause": "Increment scope: append exactly three public functions, parse_statement_header(statement) -> dict, statement_digest_hex(statement) -> str and statement_public_inputs(statement) -> tuple[str, str], plus private helpers and one appended module-level import hashlib, after the last byte of the existing host_codec.py. The existing 16134-byte prefix (SHA-256 8e15bc783afc7c8c96268ea1ade0f881e631d9397a59d9642d4b2a1bbc62a838) and its four APIs stay byte-for-byte unchanged. No other module, API, statement body generator, compiler substitute, application IR, proof, signature, key, network or ledger action is introduced.",
+      "position": "AGREE",
+      "rationale": "The bytes 16134..19096 (16134 + 2962 = 19096) contain exactly: `import hashlib`, five private constants, `_admit_statement`, `_statement_digest` and the three public functions. Root pins both the 16134 and 19096 prefixes, and test_host_prefix_preserved_byte_for_byte passed. Qualification: the clause scopes only the SH increment. The four additional public APIs in the combined module come from the separate DF increment, which SH-18 anticipates."
+    },
+    {
+      "clauseId": "SH-02-TAG-FAMILY",
+      "clause": "Source profile constants: bytes [0,16) must equal the 16 ASCII bytes MRG16-PVC-STMT-2 (hex 4d524731362d5056432d53544d542d32) and bytes [16,48) must equal the 32 ASCII bytes MRG16-PVC-FAM2-G16-BLS-ARK04-HL2 (hex 4d524731362d5056432d46414d322d4731362d424c532d41524b30342d484c32). Neither constant is padded, NUL-terminated, trimmed or case-folded; comparison is exact byte equality.",
+      "position": "AGREE",
+      "rationale": "_STMT_TAG and _FAMILY_V2 are 16- and 32-byte literals identical to abi2.rs STMT_TAG and FAMILY_V2 and to core.ak stmt_tag and family_v2. _admit_statement compares statement[0:16] and statement[16:48] with !=, which is exact bytes equality. The tag and family refusal tests passed."
+    },
+    {
+      "clauseId": "SH-03-HEADER-OFFSETS",
+      "clause": "Source profile fixed header (zero-based offset/width): predicateDigest 48/32, shapeDigest 80/32, vkDigest 112/32, claimantVkh 144/28, networkId 172/1 unsigned, settleHash 173/28, threadId 201/32, consumedTxid 233/32, consumedIx 265/2 unsigned big-endian, seq 267/8 unsigned big-endian, catalogueDigest 275/32, intentsDigest 307/32, bodyLen 339/4 unsigned big-endian. The header is exactly 343 bytes and the body starts at offset 343.",
+      "position": "AGREE",
+      "rationale": "_STATEMENT_FIELDS matches the claim.rs offsets module and the abi2.rs ContextV2::bytes and statement_bytes order, and it is contiguous from 48 to 343. Integers are decoded with int.from_bytes(..., 'big'), as in Rust from_be_bytes and core.ak bytes.u8/u16/u64/u32. The K6 field, reconstruction and endianness tests passed."
+    },
+    {
+      "clauseId": "SH-04-LENGTH-FRAMING",
+      "clause": "Length admission: a statement is admitted only if 343 <= len(statement) <= 262144 and len(statement) == 343 + bodyLen. A 343-byte statement with bodyLen 0 is structurally admitted; a 262144-byte statement with consistent bodyLen is admitted; a 262145-byte statement is refused even with consistent bodyLen. Under SH-02 to SH-04 the host admission set over exact bytes equals the claim.rs parse_statement admission set by source inspection.",
+      "position": "AGREE",
+      "rationale": "The code checks bounds, then tag, then family, then int.from_bytes(statement[339:343]) + 343 == size. In claim.rs, after the same checks, statement_bytes receives a body of exactly body_len bytes and rebuilds 0..343 from the fields just read (ContextV2::bytes covers 112..339 contiguously). It therefore always equals s and refuses nothing further, so the two admission sets are equal. The 343, 262144 and 262145 boundary tests passed."
+    },
+    {
+      "clauseId": "SH-05-EXACT-BYTES-DESIGN",
+      "clause": "DESIGN (host restriction beyond source): each of the three functions first checks type(statement) is bytes and otherwise raises ValueError, before calling len, indexing, slicing, comparing, copying, converting or hashing. bytearray, memoryview, str including hex text, bytes subclasses, None, bool, int, list and tuple are refused. No copy or buffer conversion is made and no caller-defined method or hook of the argument is invoked.",
+      "position": "AGREE",
+      "rationale": "The first statement of _admit_statement is `if type(statement) is not bytes: raise ValueError`, and all three APIs reach it before any other operation. type() invokes no hook. The HookedBytes test recorded no hook calls, and the non-bytes rows passed."
+    },
+    {
+      "clauseId": "SH-06-ORDER-ERRORS-DESIGN",
+      "clause": "DESIGN: after the type check the order is length bounds, tag, family, then bodyLen equality, and the length bounds precede any slicing, copying or hashing. Every ordinary refusal raises exactly ValueError, not a subclass and not TypeError, IndexError, AttributeError, OverflowError or UnicodeError. Environmental failures such as MemoryError or KeyboardInterrupt propagate unconverted and no behaviour under them is claimed. Error message text is not frozen.",
+      "position": "AGREE",
+      "rationale": "The source order is exactly type, then the bounds on len(), then the [0:16], [16:48] and [339:343] slices. All five raises are plain ValueError with fixed text, and there is no exception handler. Once the argument is exact bytes with length at least 343, slicing, comparison and int.from_bytes cannot raise any other ordinary exception. refuse_all asserts type(exc) is ValueError."
+    },
+    {
+      "clauseId": "SH-07-RETURN-DICT",
+      "clause": "parse_statement_header returns a fresh exact dict with exactly 14 keys: predicateDigest, shapeDigest, vkDigest, threadId, consumedTxid, catalogueDigest and intentsDigest as exact str of 64 lowercase hex characters; claimantVkh and settleHash as exact str of 56 lowercase hex characters; networkId, consumedIx, seq and bodyLen as exact int (never bool) in their unsigned width ranges; and body as exact bytes equal to statement[343:]. Tag and family are validated but not returned, and no label or derived value is added.",
+      "position": "AGREE",
+      "rationale": "The function builds a new {} with 13 table fields plus body. bytes.hex() is lowercase, with lengths 2 x 32 = 64 and 2 x 28 = 56. int.from_bytes returns an exact int within its width. Slicing exact bytes yields exact bytes. No tag, family or authentication key is added. assert_header_shape passed."
+    },
+    {
+      "clauseId": "SH-08-OPAQUE-BODY",
+      "clause": "The body is opaque. The host checks only that its length equals bodyLen. It decodes no slot, UInt, Bool or Wide width, layout, accounting row or Bool byte value, and checks no program, descriptor, predicate, shape, VK or body_len pin. A header-valid statement is not thereby a valid statement of any compiled relation, and no host name or document says otherwise.",
+      "position": "AGREE",
+      "rationale": "Only the bodyLen equality touches the body. No check_statement_against analogue exists, and the docstrings say 'authenticate and judge none' and 'The body is opaque'. The all-0x00 and all-0xff body tests passed. The stale encoder-only module docstring makes no validity claim."
+    },
+    {
+      "clauseId": "SH-09-HEADER-RECONSTRUCTION",
+      "clause": "Fixed-header parity obligation: concatenating the literal tag, the literal family and the returned fields at the SH-03 widths with big-endian integers reproduces statement[0:343] exactly, and appending body reproduces the whole statement. This is not the Rust compiler re-encoding check and establishes no compiled or native correspondence.",
+      "position": "AGREE",
+      "rationale": "The returned fields are lossless slices (hex) or big-endian decodings of fixed-width slices covering 48..343, so reconstruction is exact by construction. test_parsed_fields_reconstruct_exact_fixed_header passed on the genuine K6 bytes. No native claim is made."
+    },
+    {
+      "clauseId": "SH-10-CONTEXT-UNAUTHENTICATED",
+      "clause": "Parsed context fields vkDigest through intentsDigest are caller-declared premises. The host authenticates none of them and compares none of them, or predicateDigest and shapeDigest, with any ledger state, ScriptContext, catalogue, descriptor, setup record or VK. Statements with edited context or relation bytes parse with the edited values reported.",
+      "position": "AGREE",
+      "rationale": "The parser contains no comparison against external values. This matches export.rs PREMISES[1]. The edited-context test passed with the edited values reported."
+    },
+    {
+      "clauseId": "SH-11-DIGEST",
+      "clause": "statement_digest_hex returns an exact str of 64 lowercase hex characters equal to unkeyed BLAKE2b with a 32-byte digest (hashlib.blake2b with digest_size=32 and no key, salt or person) over the entire admitted statement, header and body.",
+      "position": "AGREE",
+      "rationale": "The code is `hashlib.blake2b(statement, digest_size=32).digest().hex()` over the whole admitted bytes, after admission. The newly read blake2b.rs host function uses a parameter word of 0x01010020 (nn=32, kk=0, fanout 1, depth 1) with zero salt and person, 12 rounds, f0 only on the last block and little-endian output of h[0..3]. That matches the hashlib defaults. The root run matched the published K6 digest c9ef8ea0... Qualification: the clause rationale's 'blake2b.rs is unread' is superseded (F-04). Equivalence is source-inspected plus one literal, with no compiled correspondence."
+    },
+    {
+      "clauseId": "SH-12-VALIDATE-BEFORE-HASH-DESIGN",
+      "clause": "DESIGN: statement_digest_hex and statement_public_inputs apply exactly the parse_statement_header admission of SH-04 to SH-06 before any hashing and refuse exactly the inputs it refuses. Neither function hashes arbitrary bytes.",
+      "position": "AGREE",
+      "rationale": "Both go through _statement_digest, which calls the same _admit_statement before hashlib.blake2b. Hash work is therefore bounded to 262144 bytes. The refusal tests cover all three APIs."
+    },
+    {
+      "clauseId": "SH-13-PUBLIC-INPUTS",
+      "clause": "statement_public_inputs returns an exact tuple of exactly two exact str values (x1, x2): canonical ASCII decimal, no sign and no leading zero except for 0, of the unsigned big-endian integers of digest bytes [0,16) and [16,32). Each is below 2**128. There is no field reduction, curve arithmetic or scalar encoding.",
+      "position": "AGREE",
+      "rationale": "The function returns a tuple literal of str(int.from_bytes(digest[0:16], 'big')) and the same for [16:32]. str() of a non-negative int is canonical decimal with at most 39 digits, well under the max-str-digits limit. This matches claim.rs digest_halves, groth16.ak scalars_of_digest and export.rs PublicInputsExport. The K6 x1 and x2 literals matched, and the swapped and little-endian alternatives were refused."
+    },
+    {
+      "clauseId": "SH-14-PURE-DETACHED",
+      "clause": "All three functions are pure and deterministic: no I/O, environment, clock, randomness, global mutable state, logging or caching. Each parse call returns a new dict; mutating a returned dict does not affect later calls; the input is never mutated.",
+      "position": "AGREE",
+      "rationale": "Only immutable module constants are read, and the input is immutable exact bytes. Each call builds a new result, and there is no cache. The determinism and detachment test passed. The import-time hashlib load is a module effect, not a call effect (F-06)."
+    },
+    {
+      "clauseId": "SH-15-K6-FIXTURE",
+      "clause": "The retained public K6 invoice-partial.proof.json (5800 bytes, SHA-256 930198631617f1f931aa93e836b32ffa8acadedadafe3b3d90081ff629e9ba5b), staged as sibling K6-PUBLIC-PROOF.json, is only a public parser and digest test vector: its 721-byte statementHex, statementDigestBlake2b256 c9ef8ea00a7f7b71fc1e049bd956dc8a068e635e31306aca88210711282384cc, x1, x2 and context literals. Its context is caller-declared, not Preprod ledger state; its setup is a single-party test setup forgeable by the setup owner; compiler-to-matrix and VK correspondence is not proved. Parsing or hashing it verifies no proof, signature or ledger truth, and proofHex is never parsed.",
+      "position": "AGREE",
+      "rationale": "The fixture premises state the single-party-test-setup trust profile and caller-declared context. The test reads only statementHex and the literals and never touches proofHex. Root pinned the fixture (930198631...). The Groth16 setup is a local OsRng single-party test setup, forgeable and not production trust."
+    },
+    {
+      "clauseId": "SH-16-STRUCTURAL-DATA",
+      "clause": "Edited copies of the genuine statement (tag, family, context, relation fields, lengths, bodyLen, all-0x00 and all-0xff bodies, header-only, and 262144-byte and 262145-byte framings built from the genuine header and repeated genuine body bytes) are structural boundary test data only. They are not programs, ledger statements or proof experiments and carry no financial interpretation.",
+      "position": "AGREE",
+      "rationale": "The test helpers _edit, _flip, _framed and boundary_statement only produce byte variants, and they are commented as structural test data. No proof or ledger operation uses them."
+    },
+    {
+      "clauseId": "SH-17-TEST-HARNESS",
+      "clause": "test_statement_host.py is stdlib only (hashlib, importlib.util, json, os, stat, sys, types, unittest). It reads only sibling K6-PUBLIC-PROOF.json and sibling host_codec.py, each checked as a regular non-symlink file and read with O_NOFOLLOW, loads host_codec.py by importlib file-location loading with bytecode writing disabled, uses SHA-256 only for provenance pins, never computes BLAKE2b, and has no network, subprocess, writes, string eval or exec, RNG, SDK or VM. A missing host file or API fails with an ordinary assertion containing 'missing implementation' before any API call; there are no skips, xfails or fallbacks. Expected values are literals from the fixture and source, never derived by the host under test.",
+      "position": "AGREE",
+      "rationale": "The import list, file reads, SHA-256 use and absence of BLAKE2b, skips and fallbacks match the source, and the observed RED was 2+17 with 0 errors. Qualification (F-03): the O_NOFOLLOW reads cover the fixture and the prefix pin, but the importlib load is a separate path load that could consult __pycache__. It is not proven within the test to execute the pinned bytes. Root's dedicated read-only directory and before/after pins close this for the observed run."
+    },
+    {
+      "clauseId": "SH-18-PREFIX-PIN",
+      "clause": "test_host_prefix_preserved_byte_for_byte requires host_codec.py to be at least 16134 bytes with SHA-256 of its first 16134 bytes equal to 8e15bc783afc7c8c96268ea1ade0f881e631d9397a59d9642d4b2a1bbc62a838. Other appended increments, such as the separate four Data factory functions, remain compatible.",
+      "position": "AGREE",
+      "rationale": "The test passed on the 23252 B combined file, and root RESULT records prefix16134Sha256 8e15bc78... The DF suffix coexists, as anticipated."
+    },
+    {
+      "clauseId": "SH-19-RED-EXPECTATION",
+      "clause": "Expected and unobserved: against the existing 16134-byte host the 19 test methods give 2 passes (fixture pin and literal consistency; prefix pin) and 17 failures whose assertion contains 'missing implementation'. The author ran neither RED nor GREEN; any other RED observation stops the step for review.",
+      "position": "AGREE",
+      "rationale": "The later root RED against 8e15bc78... observed 19 run, 17 missing-implementation failures, 0 errors and the 2 predicted passes, exactly as predicted. The author-time 'unobserved' wording is historical and accurate for the author."
+    },
+    {
+      "clauseId": "SH-20-PARITY-SCOPE",
+      "clause": "Source-inspected parity only: the contract and tests compare host behaviour with inspected Rust and Aiken source and one public fixture. They establish no compiled Rust, native, VM, compiled Aiken or ledger correspondence, no VK identity, no raw-source binding and no regression coverage.",
+      "position": "AGREE",
+      "rationale": "Nothing compiled or native was run. The only cross-implementation evidence is one Rust-emitted K6 literal set, which supports no generic correspondence claim."
+    },
+    {
+      "clauseId": "SH-21-FUTURE-ROUTING",
+      "clause": "Because digest and public-input derivation is cryptographic, the implementation goes to Opus under current routing, followed by one fresh non-author Opus actual combined audit, with same-provider independence disclosed, covering these SH clauses and the separate four Data factory clauses in a single review without duplicated full auditors. The Sol Data factory portion separately requires the Muse audit; a missing Muse audit is neither approval nor replaceable by the Opus review.",
+      "position": "AGREE",
+      "rationale": "Per the supplied context, Opus authored the statement code. This single combined review covers the SH and DF clauses and discloses same-provider independence. The Muse audit is still pending and is named as the first blocked boundary; this review does not substitute for it."
+    },
+    {
+      "clauseId": "SH-22-AUTHORITY-OPEN",
+      "clause": "All native, operator, signing, proving, key, ledger and publication authority stays zero. Still open: all 20 UTxO families, current Rust acceptance, compiler and VK matrix correspondence, authenticated ledger context, the catalogue 42 provenance gap, ACTUS 277/18/32 and DS01-07, DeFi 72 with DA01-24, held-out intent regressions, KQuint, recursion, private handoff, multi-parent, universal and Preprod.",
+      "position": "AGREE",
+      "rationale": "A pure parser and digest helper closes none of these items. Every authority flag in my recommendation is false, and the open list is preserved."
+    },
+    {
+      "clauseId": "DF-01",
+      "clause": "host_codec.py keeps its current 19096 bytes (SHA-256 8f59b28f8307c789dc1f4abe7251b0de661156af130650e9b358bceb668df377) as an exact byte prefix, and the existing first-16134-byte preservation pin stays authoritative. build_value_data, build_output_reference, build_env_data and build_c2_mint_data are added only in an appended suffix, giving eleven public APIs. The suffix must not rebind, wrap, shadow or alter any top-level name of the prefix; the seven existing APIs keep their code and behaviour.",
+      "position": "AGREE",
+      "rationale": "Root pins both prefixes, and test_00 passed. The suffix defines only _data_bytes, _data_integer and the four factories, with no overlap with any prefix name, so the prefix functions resolve the same globals. The seven earlier APIs passed 19+31+19 behaviour methods on the combined bytes."
+    },
+    {
+      "clauseId": "DF-02",
+      "clause": "Each factory is pure and deterministic: no I/O, environment, clock, randomness, global or cached mutable state, argument mutation, subprocess, network, SDK or native call, and no call to encode_data, hashing or the statement helpers. In this increment the suffix adds no import and uses no eval, exec, compile, open, __import__, breakpoint, input, globals, locals, vars, getattr, setattr, delattr, __builtins__, global, nonlocal or dunder attribute access. A later increment may replace this phase gate only through a fresh audit of the actual combined candidate.",
+      "position": "AGREE",
+      "rationale": "The full suffix calls only type, len, ValueError, _data_bytes, _data_integer and list.append, and reads no global except those helpers. Tuple unpacking and comparison of exact tuples and bytes run no caller hooks. The suffix has no import and none of the forbidden names. test_00's AST check and test_12 passed."
+    },
+    {
+      "clauseId": "DF-03",
+      "clause": "Each factory returns a Data node in the lowercase tagged-tuple algebra admitted by encode_data: ('int', int), ('bytes', bytes), ('list', list), ('map', list of 2-tuples), ('constr', index, list). Every node and map pair is an exact tuple; every container is an exact list created by that call and shared with no argument and no other call; every integer is an exact int; every bytes leaf is exact bytes equal to the caller's value. The build_inputs.py uppercase tuples ('I', 'B', 'Constr', 'List', 'Map') and UPLC text are not outputs.",
+      "position": "AGREE",
+      "rationale": "All outputs are lowercase tuple literals. Every list (entries, names, constr field lists, ada inner list) is a list display evaluated per call. Integers are checked exact ints or literals, and caller bytes are passed through by identity (immutable). test_12 passed. Qualification: the constant leaves (ada b'' key and name, family id) are not caller values. They are specified separately by DF-07 and DF-09, so 'every bytes leaf' should be read as every caller-derived leaf."
+    },
+    {
+      "clauseId": "DF-04",
+      "clause": "Exact type means type(x) is T. An int parameter refuses bool and int subclasses; a bytes parameter refuses bytearray, memoryview, str (including hex text) and bytes subclasses; list, tuple and str parameters refuse subclasses. None is accepted only where a clause names it. Nothing is coerced, sorted, truncated, padded or defaulted.",
+      "position": "AGREE",
+      "rationale": "_data_bytes and _data_integer use `type(value) is not bytes/int` before any len or comparison. tokens is checked with `type(tokens) is not list`, rows with `type(token) is not tuple`, and kind with `type(kind) is not str`. None is accepted only for lovelace and for Burn vk/proof, through identity tests. There is no sorting or conversion. The subclass rows in tests 02, 06, 08 and 11 passed."
+    },
+    {
+      "clauseId": "DF-05",
+      "clause": "Every refusal raises ValueError (a private subclass is allowed) and returns nothing. The message is fixed text beginning with the refusal prefix of the failing check (a parameter or element path followed by a colon) and never contains or formats an argument value. Checks run in parameter order and, within a parameter, in the listed order; the first failing check decides the error. No argument value may cause TypeError, OverflowError, RecursionError or any other exception class; Python call-protocol errors (missing or unknown parameters) are outside this clause.",
+      "position": "AGREE",
+      "rationale": "Each message is a path literal plus fixed text, with no formatting. The traced order matches lovelace, then tokens type and count, then per row tuple, policy, name, quantity range and nonzero, then order. Env and Mint check in parameter order. `policy != current_policy` against None and `pair <= previous` on exact bytes tuples cannot raise, and there is no recursion. The order and no-echo tests passed. Concurrent mutation and environmental failures remain non-claims (F-06)."
+    },
+    {
+      "clauseId": "DF-06",
+      "clause": "build_output_reference(transaction_id, output_index) returns ('constr', 0, [('bytes', transaction_id), ('int', output_index)]). transaction_id is exact bytes of length 32, else transaction_id:; output_index is an exact int in 0..65535, else output_index:. SOURCE: transaction.ak OutputReference single constructor and field order; claim.ak well_formed 32-byte id and 0 <= index < 65536 for settle_outref. DESIGN: applying the 16-bit bound to every reference this factory builds.",
+      "position": "AGREE",
+      "rationale": "The code matches exactly. transaction.ak declares the single-constructor OutputReference { transaction_id, output_index }, and claim.ak well_formed requires 32 bytes and 0 <= index < 65536. Literal CBOR d8799f5820..ff matched for indices 0 through 65535."
+    },
+    {
+      "clauseId": "DF-07",
+      "clause": "build_value_data(lovelace, tokens) returns ('map', entries). If lovelace is an int, the first entry is (('bytes', b''), ('map', [(('bytes', b''), ('int', lovelace))])), also when lovelace is 0; if lovelace is None there is no ada entry. Each maximal run of consecutive tokens with the same policy then yields one entry (('bytes', policy), ('map', [(('bytes', name), ('int', quantity)), ...])) in input order. None with [] yields ('map', []). SOURCE (consumer only): the map-of-maps shape, ada under the empty policy and empty name, and the empty mint map follow build_inputs.py value(), thread_value and value([]). DESIGN: the None/0 lovelace convention.",
+      "position": "AGREE",
+      "rationale": "The code emits the ada entry when lovelace is not None, then opens a new policy entry whenever policy != current_policy. With strict ordering this yields exactly the maximal runs. Tests 01 and 04 matched. The newly read assets.ak corroborates Dict<PolicyId, Dict<AssetName, Int>> and ada under ''/''. Required qualification (F-01): assets.ak says a Value never holds a zero quantity and from_lovelace(0) == zero, so the lovelace=0 output is not canonical stdlib Value Data. The clause correctly labels this case DESIGN."
+    },
+    {
+      "clauseId": "DF-08",
+      "clause": "lovelace is None or an exact int in 0..2^64-1, else lovelace:. tokens is an exact list of at most 256 elements, else tokens:. Elements are then checked one at a time in index order, each completely before the next: an exact tuple of length 3, else tokens[]:; policy exact bytes of length 28, else tokens[].policy:; name exact bytes of length 0..32, else tokens[].name:; quantity an exact nonzero int in -(2^64-1)..2^64-1, else tokens[].quantity:; and, after the first element, (policy, name) strictly greater than the previous pair under bytewise unsigned lexicographic order, else tokens.order:. The factory never sorts, merges or drops entries. These bounds and the ordering rule are DESIGN, not ledger or Aiken law.",
+      "position": "AGREE",
+      "rationale": "The code implements every check in this order. Python tuple comparison of exact bytes is unsigned lexicographic with prefix-shorter-first, matching dict.ak less_than_bytearray. The signed-byte and prefix-order rows passed. Newly read assets.ak (28-byte PolicyId, 0..32-byte AssetName, nonzero quantities) and dict.ak (strictly ascending keys) corroborate the choices. Calling them DESIGN is conservative and not false."
+    },
+    {
+      "clauseId": "DF-09",
+      "clause": "build_env_data(predicate_digest, vk_digest, claimant_vkh, settle_transaction_id, settle_output_index, statement_digest, expiry) returns ('constr', 0, [('int', 2), ('int', 0), ('bytes', b'MRG16-PVC-FAM2-G16-BLS-ARK04-HL2'), ('bytes', predicate_digest), ('bytes', vk_digest), ('bytes', claimant_vkh), ('constr', 0, [('bytes', settle_transaction_id), ('int', settle_output_index)]), ('bytes', statement_digest), ('int', expiry)]). predicate_digest, vk_digest, settle_transaction_id and statement_digest are exact bytes of length 32; claimant_vkh is exact bytes of length 28; settle_output_index is an exact int in 0..65535; expiry is an exact int in 0..2^64-1. Each refusal prefix is the parameter name followed by a colon. SOURCE: types.ak EnvV2 field order; claim.ak well_formed version 2, claim_kind 0, family_id core.family_v2, lengths and index bounds; core.ak family_v2. DESIGN: fixing the three constants and the expiry range.",
+      "position": "AGREE",
+      "rationale": "The template and checks match. The field order equals EnvV2 in both types.ak copies, which root shows are byte-equal (84284d30...). The constants satisfy claim.ak well_formed and core.ak family_v2. Literal CBOR matched in tests 07 and 09. Binding settle_outref to the statement's consumedTxid/consumedIx (as export.rs does) is not enforced, which is consistent with DF-11."
+    },
+    {
+      "clauseId": "DF-10",
+      "clause": "build_c2_mint_data(kind, vk=None, proof=None): kind is the exact str 'Issue' or 'Burn', else kind:. For 'Issue', vk and then proof must each be exact bytes of length 1..65536, else vk: or proof:, and the result is ('constr', 0, [('bytes', vk), ('bytes', proof)]). For 'Burn', vk and then proof must each be None, else vk: or proof:, and the result is ('constr', 1, []). SOURCE: types.ak C2Mint { Issue { vk, proof }, Burn } declaration and field order. DESIGN: the selector strings, the length bounds and refusing payloads for Burn.",
+      "position": "AGREE",
+      "rationale": "The code matches. Burn encodes as d87a80 and Issue as d8799f..ff, with chunking for 488 and 65536 bytes verified. The order is kind, vk, proof. groth16.ak fixes 488 and 192 bytes on-chain; the factory's wider DESIGN bounds are disclosed (F-02)."
+    },
+    {
+      "clauseId": "DF-11",
+      "clause": "Factories check structure only. They do not check that vk_digest equals blake2b_256(vk), that statement_digest matches any statement, that a VK or proof is a valid Groth16 or curve encoding, or that any key hash, policy, transaction id, index or expiry exists, is authentic or is current. They compute no envelope token name, build no transaction and evaluate no validator. All arguments are caller-supplied and unauthenticated; outputs are local Data fixtures, not ledger evidence.",
+      "position": "AGREE",
+      "rationale": "The suffix contains no hashing, encoding or statement call (`hashlib` is never referenced in it). test_12 accepts 0xff VK and proof bytes and all-zero digests. No envelope_name or ScriptContext logic exists anywhere in the module."
+    },
+    {
+      "clauseId": "DF-12",
+      "clause": "Every factory output is admitted by the prefix encode_data: depth at most 3, at most 1029 expanded nodes, bytes leaves of at most 65536 bytes and integers within CBOR major types 0 and 1, so no bignum or tag-102 form arises; constructor indices are only 0 and 1 (tags 121 and 122).",
+      "position": "AGREE",
+      "rationale": "Maximum Value size: 1 (outer map) + 4 (ada entry) + 256 x 2 (name and int leaves) + 256 x 2 (policy key and inner map) = 1029 nodes, at depth 3. Env has depth 3 and 12 nodes. Issue leaves are at most 65536 bytes, about 135 KB encoded, under B4. Integers lie in \u00b1(2^64-1), which is major type 0 or 1. Only constructors 0 and 1 are used. The encode checks in the tests passed."
+    },
+    {
+      "clauseId": "DF-13",
+      "clause": "UNVERIFIED and not claimed: stdlib cardano/assets.ak and aiken/collection/dict.ak (Value representation, key order, zero-quantity and ada-entry conventions), pvc2/groth16.ak (VK and proof sizes), the ledger ScriptContext builder, and equality of the Sol-capture types.ak with the utxo-worktree types.ak used by core.ak and claim.ak. The Value shape rests only on the build_inputs.py consumer; DF-07 and DF-08 choices are API conventions. No compiled-validator, VM, ledger or Preprod correspondence is claimed.",
+      "position": "AGREE",
+      "rationale": "As a statement of what the contract does not claim, this stays accurate; the contract author did not read these sources. Required qualification of the current state:\n- Root byte comparison establishes captured types.ak == worktree types.ak (same sha 84284d30...).\n- Root checked dict.ak against the stdlib v2.2.0 manifest; assets.ak's manifest row was not shown.\n- My reading of assets.ak and dict.ak corroborates the map-of-maps shape, the ''/'' ada key, policy and name sizes, nonzero quantities and ascending keys, but contradicts canonical zero-lovelace (F-01).\n- groth16.ak fixes 488 and 192 bytes.\n- The ScriptContext builder and all compiled, VM, ledger and Preprod correspondence remain unverified."
+    },
+    {
+      "clauseId": "DF-14",
+      "clause": "test_data_factories.py has 13 test methods: test_00 pins the 19096-byte prefix and its SHA-256 and inspects the suffix best-effort; test_01..test_12 compare factory outputs with literal Data and literal CBOR bytes and check refusals. Before the factories exist test_00 passes and each of test_01..test_12 fails with an AssertionError containing 'missing implementation', with no error, skip or expected failure. The test reads only the regular non-symlink sibling host_codec.py (lstat, O_NOFOLLOW, 2 MiB cap), executes exactly the pinned bytes it inspected, writes nothing and uses no network, subprocess, RNG, VM, proof, SDK or private material. Root runs it only after full human source and effect inspection of both files, as python3 -I -B /abs/dir/test_data_factories.py in a dedicated directory holding only the two files, with wall 10 s, CPU 10 s, address space 512 MiB, file size 2 MiB, core 0 and a minimal secret-free environment.",
+      "position": "AGREE",
+      "rationale": "The test source matches: 13 methods, lstat/fstat identity, O_NOFOLLOW, a 2 MiB cap, and compile/exec of the bytes it read. Observed RED was 1 pass plus 12 missing-implementation failures with 0 errors, and GREEN 13/13. The RESULT argv shows timeout 10 s and prlimit cpu 10, as 512 MiB, fsize 2 MiB, core 0, with python3 -I -B and only the two files. Qualification: 'minimal secret-free environment' and 'full human inspection' rest on root's assertion; the environment variables were not recorded."
+    },
+    {
+      "clauseId": "DF-15",
+      "clause": "This is an author proposal by claude-opus-5-5 with tools off and nothing executed. Sol HIGH implements; a fresh Muse audits that implementation; a fresh non-author Opus later audits the actual combined host plus statement increment, preserving these literal clauses (same provider; independence is context only). Passing tests are narrow local host Data checks, not Rust, VM, ledger, security, financial or Preprod acceptance, and every operational and native authority stays closed.",
+      "position": "AGREE",
+      "rationale": "The routing was followed: Sol implemented, and this is the fresh non-author Opus combined audit with literal clauses preserved and same-provider independence disclosed. The Muse audit is still pending and is not replaced. The 82 passes are treated as narrow local checks, and every authority flag is false."
+    }
+  ]
+}

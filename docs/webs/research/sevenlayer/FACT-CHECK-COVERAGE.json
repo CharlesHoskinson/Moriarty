@@ -1,0 +1,163 @@
+{
+  "scope": "Combined attribution record: seven-layer section technical review and separate Groth16 facts. Not certification of all14chapters or an implemented Cardano system. Fresh finalpageaudit pending.",
+  "sevenLayer": {
+    "authorProcess": {
+      "reviewToken": "webs-v2-sevenlayer-bounded-opus",
+      "requestedModel": "claude-opus-5-5",
+      "requestedEffort": "high",
+      "scope": "Reduced educationalcrypto sectioncopy after oversizedtaskwalltimeout; no partialsalvage/authority",
+      "maximumAttempts": 1,
+      "retries": 0,
+      "wallSeconds": 600,
+      "status": "terminal",
+      "startedAt": "2026-10-17T01:02:26.336281+00:00",
+      "verifiedInputsBefore": 3,
+      "promptBytes": 146130,
+      "actualEffort": "not independently observed",
+      "pid": 3596215,
+      "exitCode": 0,
+      "endedAt": "2026-10-17T01:05:02.376005+00:00",
+      "schemaValid": true,
+      "identityVerified": true,
+      "inputFilesChangedAfter": [],
+      "observedCanonicalModel": "claude-opus-5-5",
+      "observedUsageModelKeys": [
+        "claude-opus-5-5"
+      ],
+      "structuredResultSource": "structured_output",
+      "reportSha256": "558681c6f2fc4959453910a07f20800d623b240ae6266ccab9bee08f439253bc",
+      "structuredReviewExported": true
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "medium",
+        "summary": "On Cardano, zero-knowledge hides only the witness. Amounts in settlement outputs and in statements the validator rebuilds are public.",
+        "evidence": "V2-COPY proofRoleExplanation and lifecycle 'settle': the validator rebuilds each statement from the transaction and reads back the actual outputs. G05 \u00a72.2: zero-knowledge covers the witness, not the statement.",
+        "requiredFix": "Copy must not say that transaction amounts are private. This is applied in Layer 3."
+      },
+      {
+        "id": "F2",
+        "severity": "low",
+        "summary": "The book and the Groth paper describe Groth16 verification differently.",
+        "evidence": "Book lines 609\u2013621 say 'two pairing checks\u2026 three distinct pairing computations'. G05 \u00a73.2 says verification checks a single pairing product equation using 3 pairings.",
+        "requiredFix": "Copy follows the paper ('one pairing equation') and gives no pairing counts or proof sizes. The book passage could be fixed separately."
+      },
+      {
+        "id": "F3",
+        "severity": "low",
+        "summary": "Groth16 knowledge soundness is proven in the generic bilinear group model, not from discrete-log hardness alone. Claimant bytes are not an authenticated prover identity.",
+        "evidence": "G05 Theorem 3. V2-COPY binding-chain assumptions.",
+        "requiredFix": "Layer 6 names the generic bilinear group model. It says signatures authenticate claimant releases and does not call them prover identities."
+      }
+    ],
+    "recommendation": {
+      "verdict": "CONCEPT_COPY_READY",
+      "sourceReady": true,
+      "scope": "Educational seven-layer section copy only. It does not change implementation status or the technical section.",
+      "firstBlockedBoundary": "Native Groth16 setup and setup count: the total count is unknown, the class-0 test setup can be forged by its operator, T3 (compiled circuit/VK correspondence) is OPEN, and no production ceremony exists.",
+      "operatorSourceReady": false,
+      "ordinarySelftestReady": false,
+      "ordinarySelftestScope": "None. No tools, proofs, VM, ledger or setup were run.",
+      "authorityProposalReady": false,
+      "nativeRoundtripPrerequisiteClosed": false,
+      "publicRecordExportPrerequisiteClosed": false,
+      "publicVerificationInputsPublishable": false
+    }
+  },
+  "groth16": {
+    "authorProcess": {
+      "reviewToken": "webs-v2-groth16-bounded-opus",
+      "requestedModel": "claude-opus-5-5",
+      "requestedEffort": "high",
+      "scope": "Reduced educationalcrypto sectioncopy after oversizedtaskwalltimeout; no partialsalvage/authority",
+      "maximumAttempts": 1,
+      "retries": 0,
+      "wallSeconds": 600,
+      "status": "terminal",
+      "startedAt": "2026-10-17T01:02:26.340733+00:00",
+      "verifiedInputsBefore": 5,
+      "promptBytes": 165250,
+      "actualEffort": "not independently observed",
+      "pid": 3596217,
+      "exitCode": 0,
+      "endedAt": "2026-10-17T01:03:50.641151+00:00",
+      "schemaValid": true,
+      "identityVerified": true,
+      "inputFilesChangedAfter": [],
+      "observedCanonicalModel": "claude-opus-5-5",
+      "observedUsageModelKeys": [
+        "claude-opus-5-5"
+      ],
+      "structuredResultSource": "structured_output",
+      "reportSha256": "fccf1cec9239c67bb715629bb6d378d3d88433238d43651fc3328a3dd536c3ad",
+      "structuredReviewExported": true
+    },
+    "facts": [
+      {
+        "id": "FC-1",
+        "claim": "The names of the seven layers, and the claim that the layers are not linear.",
+        "verdict": "NOT_CHECKED",
+        "source": "B05 names only Layer 1, Building the Stage.",
+        "websiteTreatment": "Not listed in this section."
+      },
+      {
+        "id": "FC-2",
+        "claim": "Groth16 needs one setup per circuit, and phase 1 is shared.",
+        "verdict": "SUPPORTED",
+        "source": "G02 step 15; G04 Phase1/Phase2",
+        "websiteTreatment": "Setup stages"
+      },
+      {
+        "id": "FC-3",
+        "claim": "Setup is an algorithm over a relation and does not prescribe a ceremony.",
+        "verdict": "SUPPORTED",
+        "source": "G05 \u00a72.2",
+        "websiteTreatment": "setupIntro"
+      },
+      {
+        "id": "FC-4",
+        "claim": "Changing input values reuses the setup.",
+        "verdict": "SUPPORTED",
+        "source": "G05 \u00a72.2: Setup takes R; Prove and Vfy take the statement",
+        "websiteTreatment": "Reuse"
+      },
+      {
+        "id": "FC-5",
+        "claim": "Public inputs are not secret and are not authenticated by a proof.",
+        "verdict": "SUPPORTED",
+        "source": "G05 \u00a72.3; V2 proofRoleExplanation",
+        "websiteTreatment": "Statement concept"
+      },
+      {
+        "id": "FC-6",
+        "claim": "Anyone holding the trapdoor can forge proofs.",
+        "verdict": "SUPPORTED",
+        "source": "G05 Sim(R,\u03c4,\u03c6)",
+        "websiteTreatment": "Trust"
+      },
+      {
+        "id": "FC-7",
+        "claim": "The actual Cardano-wide setup total is unknown.",
+        "verdict": "SUPPORTED",
+        "source": "V2 trustNotes setup-keys; retainedScope.catalogue",
+        "websiteTreatment": "cardanoCount"
+      },
+      {
+        "id": "FC-8",
+        "claim": "The current Moriarty setup is a single-party test setup that its operator can forge.",
+        "verdict": "SUPPORTED",
+        "source": "V2 technical.summary",
+        "websiteTreatment": "Technical link only"
+      },
+      {
+        "id": "FC-9",
+        "claim": "Book statistics: 192 bytes, two pairing checks, $2-5M per ceremony, KZG powers, Sudoku counts.",
+        "verdict": "NOT_CHECKED",
+        "source": "B05",
+        "websiteTreatment": "Not used"
+      }
+    ]
+  },
+  "bookLiteralSourceChecks": "/home/charl/moriarty-eutxo-validation-2026-10-12/proving-nothing-website-20261017/ROOT-BOOK-SOURCE-INTAKE.json"
+}

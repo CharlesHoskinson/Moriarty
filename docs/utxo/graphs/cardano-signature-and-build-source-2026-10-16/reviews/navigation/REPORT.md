@@ -1,0 +1,15 @@
+## NAV verdict
+
+**The top finding is that the seven-file Luna/Graphify graph is navigation-accurate and ready for graph publication only.** The new graph is 1528 nodes / 3806 links: the pinned base (sha256 fa6dbe39a32e621b5916f48213d788cd2344e9a6eb4d58527371c0aed25d1507, 1508 nodes / 3782 links) plus exactly 20 nodes and 24 links in [EXACT-ADDITIONS.json](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k11-signature-and-build-source-luna-graph-fragment-20261016/EXACT-ADDITIONS.json). `sourceReady=true` in the recommendation means publication of that navigation artifact. It is not adoption, authorization, execution, proof, or target acceptance for any underlying source candidate, and the operator, native-roundtrip, and public-proof-verification flags are all FALSE.
+
+## What was checked
+
+All 44 new node/link citations resolve in [GRAPH-AND-POINTER-CHECK.json](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k11-signature-graph-root-records-20261016/GRAPH-AND-POINTER-CHECK.json), and the 46 `used_by_new_claims` flags in the Luna [SOURCE-MANIFEST.json](inputs/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k11-signature-and-build-source-luna-graph-fragment-20261016/SOURCE-MANIFEST.json) match exact new node/edge `source_file` membership. Spot reads corroborate the qualified claims: R1 builds an empty Program, R2 source describes an actual Core parse and escrow-plus-seller proposal with the gold fee 2 / gross 37 / residual 55+14 relation, the Sol ABI packet aligns Withdrawing/Withdraw at index 2 and the 16 Transaction fields while leaving compiled raw-Data decoding open, and the two Preprod GET captures at 16:14 UTC on 2026-10-16 remain unauthenticated provider data with cost-model lengths 332/332/350 and 12 era rows that are not EraHistory.
+
+## Limitations that must travel with the graph
+
+I did not independently read the entire 1508-node base; exact-prefix and metadata-except-`fragment_updates`-append integrity rest on the root checker, whose initial files-vs-pins KeyError was corrected without any graph change and is disclosed rather than treated as a Luna defect. Whole-JSON `#` citations authenticate a whole document, not a single field. The HTML retains the vis-network CDN dependence, with Graphify 0.9.91 and token count UNKNOWN stated honestly. Historical Class 0, VK/compiler correspondence, fresh proof, real Preprod, all 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, and universal certificates remain open with no compatibility percentage.
+
+## Independence and first blocked boundary
+
+This is a fresh Muse NAV review of a Luna-authored graph under the user-confirmed Gemini/Muse fallback. Because some underlying source work is Muse-authored, this review is not independent cryptographic or security evidence for those candidates. The first remaining boundary is a fresh non-author full source/effect audit of R2 plus materialized toolchain, dependency, and signer-lock pins and any new authority; until then no native roundtrip, public proof verification, or ledger acceptance exists.

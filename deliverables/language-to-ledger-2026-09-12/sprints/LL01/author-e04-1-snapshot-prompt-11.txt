@@ -1,0 +1,1134 @@
+Implement the reviewed E04-1 private snapshot envelope in the EXISTING canonical diagnostic shim only. Current canonical source has your patches06/07/08/09/10 applied, E04-2 seven independent tests pass and old18suite passes under strong namespace. Worktree is still historical; supplied canonical source is authoritative. No tools, filesystem mutations, native calls, permission requests or new runner/collector. Return compact exact replacement JSON {status:"patch",changes:[{path,old,new}],notes:[]} <=230 added implementation lines. Root applies only your exact patches and independently tests them. Same retained Grok author.
+The exact proposal03 and independent adopted design constraints follow. Implement required behavior completely; if >230 lines indispensable, return staged first exact functions but explicitly incomplete and never claim admission. Favor existing helpers and standard library, with dependency injection only at final exec already present. No final native K/Java/strace execution. Original diagnosticArgv/recordedArgv equality unchanged. Root will generate seventh snapshot manifest from FACTUAL draft schema below, add bwrap + OS identity files as selected entries with real SHA/symlink/target/host observation, add pins.manifests snapshot name/hash, then bind all in final source audit.
+Concrete schema: pins.manifests.snapshot and snapshotSHA256 select same-directory k-macro05-trace106-snapshot.json. Required snapshot fields in draft below. osIdentityFiles each actual absolute selected item; sha/resolved and host ownership covered by selectedExecutables as well. Verify NSS getpwuid(uid).pw_dir/name/uid/gid and fixed home/cwd against manifest observed identity and required constants. Do not invoke getent shell, Java or canary. Require user-home files path validated before seal; reject SYMLINK ancestors within retainedRoot through HOME. Outside protected HOME ancestors are trusted OS metadata; HOME original user-writable intentionally replaces with private view, don't demand hostroot ownership for retained inputs.
+Inventory exact union binding.sources+artifacts+retained, hashes agree and exact noextra files under compiledRoot. Current union506 with max512; treat fixed count/total as binding, ensure integer types exact and hard limits constants never caller arbitrary; each read size+1 bounded. Verify frozen mode incl file type, file size/hash of bytes actually sealed, reject path traversal/duplicate/emptypath/regular-file drift. Source symlink components reject. Use memfd with checked complete write (file.write all bytes or explicit loop), seals and seek, no host tempfile outputs. Parent count proc/self/fd to determine available againstRLIMIT_NOFILE; preserve0..2 and only sealed inputFDs on bwrap exec, close all on injection/failure. Added nestedmount size is not overall RSScap. Bwrap readonlydata perms preserveexec, clearwritebits. External runner owns cleanup/lifetime; bwrapargs fixed and do not include new child semanticparser.
+Keep run_shim existing injection API but injected target becomes bwrap with originaldiagnosticArgv suffix. Stats should disclose snapshot files/bytes safely. Tests current target assertion needs honest update; return precise related test replacements only if needed and small. Independent root test packet will exercise actual harmless child through constructed bwrap with native argv injected only in test, not exposed production feature.
+Known broader review points: Original compiled configVars.sh has only PGM=ERequest, so STDIN awk branch is unreachable for frozen files/argv. K paths both enclosed including checkJava Java --version; don't bypass loader or change LD/PATH/output. Native diagnosis still separately gated C7/D1/G60 no reset. No new source approval claimed.
+
+PROPOSAL
+# E04-1: preserve the K path in an immutable private HOME
+
+Decision requested: replace the unadopted direct-Java/output-mode proposals01/02 with this concrete namespace design. This is a source-design vote only. No native diagnostic is admitted by a vote. Both fresh Opus5 medium and Astra medium must assess this exact document and its evidence. Original D03-I1..I5, E04-2..4 and actual-result review remain mandatory.
+
+The original retained parser, toolchain lock, compiled interpreter, input, krun argv, JSON output and K shell loaders remain byte-for-byte selected as recorded. The only new runtime envelope is the installed `/usr/bin/bwrap`, called by the existing preflight shim with a fixed mount argument array. The existing canonical runner still owns timeout, process containment, capture, receipt and debit. No collector, parser replacement, K distribution copy, service shutdown or host HOME edit is proposed.
+
+## Concrete setup
+
+1. Run existing selected-tool, K package, Nix trust, binding and limits checks before any bwrap/K dispatch. Require HOME `/home/charl`, effective UID/GID1000 and original runner cwd `/home/charl/Moriarty`. Bind bwrap bytes, resolved target, ownership and all protected ancestors as selected tools. Retain exact original child environment; no inherited startup variables. Preflight Nix queries retain the existing clean query environment.
+2. Build one exact snapshot inventory from the frozen binding's488 compiled artifacts,14 source files and10 retained entries, deduplicated by absolute path with identical hashes. The current union is506 regular files and34,262,979 bytes. Reject conflicts, symlinks, nonregular files, paths outside the fixed retained tree, relative/parent traversal components, unexpected compiled file sets and changed bytes. Include the original parser's adjacent expression-toolchain.lock.json. Derive directory inventory solely from these exact paths plus original cwd. Require exact frozen modes; retain read/execute bits and remove write bits in the private view. Snapshot identity and write permissions intentionally differ from host files; executable bytes and paths do not.
+3. For each file, read at most its frozen size plus one, verify exact size/hash, write to a new memfd, rewind, and apply WRITE/GROW/SHRINK/SEAL seals. Only the verified bytes go to bwrap. All snapshot FDs are explicitly bounded, made inheritable only for that exec and closed on failure. Reject more than512 files, more than64MiB total snapshot bytes, more than32MiB per file or fewer than1024 available file descriptors. These are proposed setup limits, not new native retries. Bind the final inventory and exact mount ordering in source/pins/candidate.
+4. Exec bwrap with required `--unshare-user --uid 1000 --gid 1000 --unshare-pid --unshare-net --die-with-parent --disable-userns --cap-drop ALL`. Never use a `-try` option or network fallback. Start with `--ro-bind / /`, then private `--proc /proc --dev /dev`, then `--size 67108864 --tmpfs /home/charl`. Create the exact snapshot directories in parent-first order. For each sorted entry, use `--perms <mode-without-write> --ro-bind-data <sealed-fd> <original-absolute-path>`. Finish `--remount-ro /home/charl --size 268435456 --tmpfs /tmp --chdir /home/charl/Moriarty -- <original diagnosticArgv>`. All copied files are separate read-only mounts; the ancestor tmpfs is also read-only. A normal read-only bind of host retained files is prohibited because it shares mutable host inodes.
+5. Preserve stdin/stdout/stderr semantics from the existing runner. Bwrap must consume/close setup FDs before strace/K; no original host directory FD reaches the workload. Mount setup occurs before original strace, so process/signal capture still addresses the original K command and descendants. Existing runner containment must cover the extra bwrap lifetime and timeout. A setup failure is a failed diagnostic attempt under its existing full charge, never a native result or free retry.
+
+## Suppression and experiment meaning
+
+The private HOME has only the selected retained paths. `.local/lib/kframework/java`, `.kserver/socket` and other HOME startup data are absent, and neither the child nor ordinary external writes to host HOME can populate that private read-only view. Java retains UID1000 and the existing host passwd identity; its user.home path must resolve to the same hidden HOME. Both original input parser and output kore-print/kast therefore see this same view. The K classpath string is unchanged, but its HOME extension component has no files. The absolute ng client can still execute; its local endpoint is absent and its default TCP endpoint cannot reach any host listener in the new network namespace. No server shutdown or mere host port-absence check establishes this property.
+
+Original setenv PATH spellings and LD_LIBRARY_PATH, including the empty CWD component, remain unchanged. Cwd has its original absolute spelling but a private read-only directory with no host-provided native library. System/Nix files remain visible through the root read-only bind and retain their existing trust checks; this proposal does not claim a complete adversarial OS sandbox. Original JVM options, original checkJava version call, original K parser, native interpreter and JSON postprocessor remain selected. Preserve outer/interpreter8MiB soft stack and core0; original K Java child can still raise its soft stack to inherited hard, as before. No host semantic evaluation, type erasure or language narrowing.
+
+The result still must distinguish original wrapper113 from an observed interpreter signal/exit. Snapshot inodes/modes, namespace/PID ancestry, absent HOME extensions and network availability intentionally differ and must be disclosed in result review. Identical initial K term is not already observed; parser and input byte identity supports a structural argument only. Accepted depth5947/Core65536 and rejected depth5948/Core65547 remain unchanged. Inconclusive or setup-only results do not pass language/ledger gates.
+
+## Actual harmless evidence and limits
+
+`bwrap-data-snapshot-probe-01.json` shows that one private ro-bind-data file remains `before` after the host source changes to `after`; child writes fail EROFS. This is a single-file primitive check, not full production coverage.
+
+`bwrap-full-snapshot-probe-02.json` runs the full506-file snapshot under the existing actual strong Foreman user/PID launcher, with the proposed mount options and harmless Python instead of strace/K. All506 byte hashes match. Child writes to a snapshot file and creation of `.local`/`.kserver` fail EROFS. A host loopback listener is first verified reachable outside; the child cannot reach it, and its network namespace identity differs. Nested user namespace creation fails, effective capabilities are zero, HOME/cwd/UID/8MiB stack are preserved, and only5 FDs are observed. Private `/tmp` writes succeed. Setup+check took0.522s on this run; this is not a bound or prediction for Java/native execution. The probe source is `bwrap_full_snapshot_probe.py`. No K, Java, strace, compiler or financial action ran.
+
+Before source freeze, the selected Grok author implements this envelope in the existing shim, without copying this experiment as a production runner. Independent controls must reject every inventory/byte/path/mode/limit/FD/bwrap drift before K, test original argv/env/stack construction, temporal snapshot independence, required network isolation, FD closure and immutable HOME. Use actual existing-runner113/timeout/overflow/invalid-UTF8/detached-descendant controls required by D03; mocks do not establish those predicates. Full source receives fresh exact-candidate Opus/Astra audits.
+
+The candidate/debit/runner binding changes only through the existing canonical route after source approval. Prospective C7/D1/G60 is unchanged: one diagnostic, timeout20 including preflight/setup, grace5, charge60, compile0, retry0, no refund or slack. The proposed fixed memory/temp/FD limits require review with this setup; they do not reset any expired or exhausted budget. A design approval cannot substitute for live admission or exact raw result review. If these limits or isolation invalidate the intended experiment, reject or revise now; do not silently change the sole diagnostic.
+
+Requested verdict: ACCEPT, REVISE or REJECT with concrete indispensable corrections. Explicitly assess whether this covers both Java paths and prior C4/C10 without adding file-read tracing or changing output mode. Keep any source implementation and actual result conditions separate from approval of this design.
+
+FACTUAL INVENTORY SHAPE
+{
+  "kind": "macro05-trace106-private-snapshot/1",
+  "scope": "Factual inventory draft for proposal03; no adoption or dispatch",
+  "root": "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k",
+  "home": "/home/charl",
+  "cwd": "/home/charl/Moriarty",
+  "uid": 1000,
+  "gid": 1000,
+  "files": [
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/binding.json",
+      "sha256": "4c663a141042a0fd4ea2be1b00e95c0ea4c5b9e744cd940e0d5352feaafbbb27",
+      "sizeBytes": 65193,
+      "mode": 436
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/expression-v1-kompiled/README.md",
+      "sha256": "7202c455a322f60276c475075cc7f76c08065b6ef12b4312181038a9f8cb2120",
+      "sizeBytes": 2886,
+      "mode": 436
+    }
+  ],
+  "fileCount": 506,
+  "totalBytes": 34262979,
+  "maxFiles": 512,
+  "maxTotalBytes": 67108864,
+  "maxFileBytes": 33554432,
+  "minimumAvailableFds": 1024,
+  "homeTmpfsBytes": 67108864,
+  "tmpTmpfsBytes": 268435456,
+  "passwdObservation": {
+    "name": "charl",
+    "uid": 1000,
+    "gid": 1000,
+    "home": "/home/charl"
+  },
+  "osIdentityFiles": [
+    {
+      "path": "/etc/passwd",
+      "sha256": "9674627d165eb705f618d71cdf84dcdce14effe1720414d3d033e1d835c87755",
+      "resolvedTarget": "/etc/passwd"
+    },
+    {
+      "path": "/etc/nsswitch.conf",
+      "sha256": "b953df1d0016f515fc052ca6bb0ccd092b8d13c8789c51c4eaef2b0461574e57",
+      "resolvedTarget": "/etc/nsswitch.conf"
+    }
+  ],
+  "NOTE": "files truncated here to two examples; actual draft506 entries same shape, exact total stated. Root writes full genuine inventory from existing pinned bytes."
+}
+CURRENT CANONICAL SOURCE
+#!/usr/bin/env python3
+"""Preflight then os.execve for the one retained macro05 trace106 diagnostic.
+
+No child collector, process-tree parser, signal heuristic, invocation counter,
+cleanup claim, or observation-file producer. Existing runner owns capture.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import resource
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+DEFAULT_PINS = HERE / "k-macro05-trace106-pins.json"
+PREFLIGHT_EXIT = 2
+STACK_SOFT = 8388608
+WRAPPER_PATH_RE = re.compile(r"PATH='(/nix/store/[^']+/bin)'\$PATH")
+
+
+class PreflightError(RuntimeError):
+    def __init__(self, code: str, detail: str = ""):
+        super().__init__(code)
+        self.code = code
+        self.detail = detail
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_pins(path: Path | None = None) -> dict:
+    pins_path = Path(path) if path is not None else DEFAULT_PINS
+    data = json.loads(pins_path.read_text())
+    if type(data) is not dict or data.get("kind") != "macro05-trace106-exec-shim-pins/1":
+        raise PreflightError("PINS_SCHEMA")
+    required = [
+        "stackSoftBytes", "coreSoftBytes", "compileCalls", "retries",
+        "recordedArgv", "diagnosticArgv", "childEnv", "queryEnv", "runnerBounds",
+        "wrapperPathDirs", "parserShebang", "selectedExecutables", "retained",
+        "binding", "manifests", "commandSelections", "setenvNativeDir",
+    ]
+    if any(key not in data for key in required):
+        raise PreflightError("PINS_SCHEMA")
+    if data["stackSoftBytes"] != STACK_SOFT or data["coreSoftBytes"] != 0:
+        raise PreflightError("PINS_BOUNDS")
+    if data["compileCalls"] != 0 or data["retries"] != 0:
+        raise PreflightError("PINS_BOUNDS")
+    bounds = data["runnerBounds"]
+    if (
+        bounds.get("timeoutSeconds") != 20
+        or bounds.get("graceSeconds") != 5
+        or bounds.get("startupCleanupSeconds") != 30
+        or bounds.get("chargedSeconds") != 60
+    ):
+        raise PreflightError("PINS_BOUNDS", "runnerBounds")
+    if data["diagnosticArgv"][8:] != data["recordedArgv"]:
+        raise PreflightError("ARGV_MISMATCH")
+    if data["diagnosticArgv"][0] != "/usr/bin/strace":
+        raise PreflightError("ARGV_MISMATCH", "strace")
+    query_env = data["queryEnv"]
+    if query_env.get("NIX_USER_CONF_FILES") != "/dev/null" or query_env.get("NIX_CONFIG") != "":
+        raise PreflightError("PINS_BOUNDS", "queryEnv")
+    return data
+
+
+def _check_file(path_text: str, expected: str, role: str) -> None:
+    path = Path(path_text)
+    if not path.is_file() and not path.is_symlink():
+        raise PreflightError("PIN_MISSING", role)
+    if not path.exists():
+        raise PreflightError("PIN_MISSING", role)
+    digest = sha256_file(path)
+    if digest != expected:
+        raise PreflightError("PIN_MISMATCH", role)
+
+
+def _check_symlink(path_text: str, expected_target: str | None) -> None:
+    path = Path(path_text)
+    is_link = path.is_symlink()
+    if expected_target is None:
+        if is_link:
+            raise PreflightError("SYMLINK_DRIFT", path_text)
+        return
+    if not is_link or os.readlink(path) != expected_target:
+        raise PreflightError("SYMLINK_DRIFT", path_text)
+
+
+def child_env(pins: dict, home: str | None = None) -> dict[str, str]:
+    spec = pins["childEnv"]
+    value = home if home is not None else os.environ.get("HOME")
+    if type(value) is not str or not value:
+        raise PreflightError("HOME_MISSING")
+    env = {
+        "PATH": spec["PATH"],
+        "HOME": value,
+        "LANG": spec["LANG"],
+        "LC_ALL": spec["LC_ALL"],
+        "PYTHONDONTWRITEBYTECODE": spec["PYTHONDONTWRITEBYTECODE"],
+        "PYTHONNOUSERSITE": spec["PYTHONNOUSERSITE"],
+        "PYTHONSAFEPATH": spec["PYTHONSAFEPATH"],
+    }
+    for name in spec["forbidden"]:
+        if name in env:
+            raise PreflightError("ENV_FORBIDDEN", name)
+    return env
+
+
+def query_env(pins: dict, home: str | None = None) -> dict[str, str]:
+    env = child_env(pins, home=home)
+    extra = pins["queryEnv"]
+    env["NIX_USER_CONF_FILES"] = extra["NIX_USER_CONF_FILES"]
+    env["NIX_CONFIG"] = extra["NIX_CONFIG"]
+    for name in pins["childEnv"]["forbidden"]:
+        if name in env:
+            raise PreflightError("ENV_FORBIDDEN", name)
+    return env
+
+
+def namespace_uid_for_host(uid_map_text: str, host_uid: int, overflow_uid: int) -> int:
+    for line in uid_map_text.splitlines():
+        parts = line.split()
+        if len(parts) != 3:
+            raise PreflightError("UID_MAP")
+        ns_id, host_id, count = (int(part) for part in parts)
+        if count < 0:
+            raise PreflightError("UID_MAP")
+        if host_id <= host_uid < host_id + count:
+            return ns_id + (host_uid - host_id)
+    return overflow_uid
+
+
+def read_namespace_mapping(ownership: dict) -> tuple[str, int]:
+    text = Path(ownership["uidMapPath"]).read_text()
+    overflow = int(Path(ownership["overflowUidPath"]).read_text().strip())
+    if overflow != ownership["overflowUid"]:
+        raise PreflightError("OVERFLOW_UID")
+    expected = namespace_uid_for_host(text, ownership["hostRootUid"], overflow)
+    if expected not in (ownership["hostRootUid"], ownership["namespaceMappedUid"]):
+        raise PreflightError("UID_MAP")
+    return text, expected
+
+
+REQUIRED_HELPERS = (
+    "dirname", "basename", "mktemp", "date", "rm", "cat", "cp", "fold",
+    "uname", "grep", "head", "cut", "sed",
+)
+STAGE_COMMANDS = {
+    "krun": REQUIRED_HELPERS + ("java",),
+    "kast": ("dirname", "uname", "grep", "head", "cut", "sed", "java"),
+    "setenv": ("uname", "dirname"),
+    "checkJava": ("java", "dirname", "grep", "head", "cut", "sed"),
+}
+
+
+def prepend_path_dir(path_dirs: list[str], directory: str) -> list[str]:
+    out = []
+    removed = False
+    for item in path_dirs:
+        if not removed and item == directory:
+            removed = True
+            continue
+        out.append(item)
+    return [directory] + out
+
+
+def resolve_command(name: str, directories: list[str]) -> Path | None:
+    for directory in directories:
+        candidate = Path(directory) / name
+        if candidate.is_dir() or not os.access(candidate, os.X_OK):
+            continue
+        return candidate
+    return None
+
+
+def verify_selected(pins: dict) -> int:
+    count = 0
+    for item in pins["selectedExecutables"] + pins["retained"]:
+        _check_file(item["path"], item["sha256"], item.get("role", item["path"]))
+        _check_symlink(item["path"], item.get("symlinkTarget"))
+        expected_resolved = item.get("resolvedTarget")
+        if expected_resolved is not None and str(Path(item["path"]).resolve()) != expected_resolved:
+            raise PreflightError("SYMLINK_DRIFT", item["path"])
+        if item.get("symlinkTarget") is not None and expected_resolved is None:
+            raise PreflightError("SYMLINK_DRIFT", item["path"])
+        count += 1
+    return count
+
+
+def verify_binding_artifacts(pins: dict) -> int:
+    meta = pins["binding"]
+    _check_file(meta["path"], meta["sha256"], "binding")
+    binding = json.loads(Path(meta["path"]).read_text())
+    if binding.get("krunInvocations") != 106:
+        raise PreflightError("PIN_MISMATCH", "krunInvocations")
+    k_root = Path(meta["kRoot"])
+    kompiled = Path(meta["kompiled"])
+    for name, expected in binding["sources"].items():
+        _check_file(str(k_root / name), expected, "source:" + name)
+    count = 0
+    for name, expected in binding["artifacts"].items():
+        _check_file(str(kompiled / name), expected, "artifact:" + name)
+        count += 1
+    if count != meta["artifactCount"]:
+        raise PreflightError("PIN_MISMATCH", "artifactCount")
+    command = json.loads(Path(next(item["path"] for item in pins["retained"] if item["role"] == "command")).read_text())
+    if command.get("argv") != pins["recordedArgv"]:
+        raise PreflightError("ARGV_MISMATCH", "recordedArgv")
+    return count
+
+
+def verify_wrapper_and_parser(pins: dict) -> None:
+    krun = next(item for item in pins["selectedExecutables"] if item["role"] == "krun")
+    dirs = WRAPPER_PATH_RE.findall(Path(krun["path"]).read_text())
+    if dirs != pins["wrapperPathDirs"]:
+        raise PreflightError("WRAPPER_PATH_DRIFT")
+    missing = set(pins.get("wrapperPathDirsMissing") or [])
+    for directory in dirs:
+        present = Path(directory).is_dir()
+        if directory in missing:
+            if present:
+                raise PreflightError("WRAPPER_PATH_UNEXPECTED", directory)
+        elif not present:
+            raise PreflightError("WRAPPER_PATH_MISSING", directory)
+    by_role = {}
+    for item in pins["selectedExecutables"]:
+        role = item.get("role")
+        if role in by_role:
+            raise PreflightError("PINS_SCHEMA", role)
+        by_role[role] = item
+    by_path = {}
+    for item in pins["selectedExecutables"]:
+        path_text = item["path"]
+        if path_text in by_path:
+            raise PreflightError("PINS_SCHEMA", path_text)
+        by_path[path_text] = item
+    for role in REQUIRED_HELPERS + ("java", "llvm", "kore"):
+        if role not in by_role:
+            raise PreflightError("PINS_SCHEMA", role)
+    kast_item = by_role["kast"]
+    kast_dirs = WRAPPER_PATH_RE.findall(Path(kast_item["path"]).read_text())
+    if kast_dirs != pins["wrapperPathDirs"]:
+        raise PreflightError("WRAPPER_PATH_DRIFT", "kast")
+    wrapped = pins["childEnv"]["PATH"].split(":")
+    for directory in pins["wrapperPathDirs"]:
+        wrapped = prepend_path_dir(wrapped, directory)
+    unwrapped_dir = str(Path(by_role["krun-unwrapped"]["path"]).parent)
+    krun_stage = [unwrapped_dir] + wrapped
+    kast_stage = list(krun_stage)
+    for directory in kast_dirs:
+        kast_stage = prepend_path_dir(kast_stage, directory)
+    k_lib_dir = str(Path(krun["path"]).parent.parent / "lib" / "kframework")
+    setenv_bin = k_lib_dir + "/../../bin"
+    native = k_lib_dir + "/native/linux64"
+    if pins["setenvNativeDir"] != native:
+        raise PreflightError("PINS_BOUNDS", "setenvNativeDir")
+    if "setenvNativeDirMissing" not in pins or type(pins["setenvNativeDirMissing"]) is not bool or pins["setenvNativeDirMissing"] is not True:
+        raise PreflightError("PINS_SCHEMA", "setenvNativeDirMissing")
+    native_path = Path(native)
+    if native_path.is_symlink() or native_path.is_file():
+        raise PreflightError("SETENV_NATIVE", native)
+    if native_path.is_dir() == pins["setenvNativeDirMissing"]:
+        raise PreflightError("SETENV_NATIVE", native)
+    checkjava_stage = [setenv_bin] + kast_stage
+    stages = {"krun": krun_stage, "kast": kast_stage, "setenv": kast_stage, "checkJava": checkjava_stage}
+    selections = pins["commandSelections"]
+    if type(selections) is not dict or set(selections) != set(STAGE_COMMANDS):
+        raise PreflightError("PINS_SCHEMA", "commandSelections")
+    for stage, names in STAGE_COMMANDS.items():
+        pinned_stage = selections.get(stage)
+        if type(pinned_stage) is not dict or set(pinned_stage) != set(names):
+            raise PreflightError("PINS_SCHEMA", stage)
+        for name in names:
+            resolved = resolve_command(name, stages[stage])
+            expected = pinned_stage[name]
+            if resolved is None or str(resolved) != expected:
+                raise PreflightError("COMMAND_SELECTION", stage + ":" + name)
+            item = by_path.get(expected)
+            if item is None:
+                raise PreflightError("COMMAND_SELECTION", stage + ":" + name)
+            if sha256_file(resolved) != item["sha256"]:
+                raise PreflightError("PIN_MISMATCH", stage + ":" + name)
+            _check_symlink(item["path"], item.get("symlinkTarget"))
+            expected_resolved = item.get("resolvedTarget")
+            if expected_resolved is not None and str(Path(item["path"]).resolve()) != expected_resolved:
+                raise PreflightError("SYMLINK_DRIFT", item["path"])
+            if item.get("symlinkTarget") is not None and expected_resolved is None:
+                raise PreflightError("SYMLINK_DRIFT", item["path"])
+    for role, default in (("llvm", "llvm-krun"), ("kore", "kore-print")):
+        item = by_role[role]
+        resolved = resolve_command(item.get("command", default), stages["krun"])
+        if resolved is None or str(resolved) != item["path"] or sha256_file(resolved) != item["sha256"]:
+            raise PreflightError("COMMAND_SELECTION", role)
+    parser = next(item for item in pins["retained"] if item["role"] == "parser")
+    shebang = pins["parserShebang"]
+    if Path(parser["path"]).read_text().splitlines()[0] != shebang["line"]:
+        raise PreflightError("PARSER_SHEBANG")
+    resolved = resolve_command(shebang["argument"], stages["krun"])
+    if resolved is None or str(resolved) != shebang["resolvedOnWrapperPath"]:
+        raise PreflightError("PARSER_PYTHON", str(resolved))
+    if str(resolved.resolve()) != shebang["resolvedTarget"]:
+        raise PreflightError("PARSER_PYTHON_TARGET")
+    if sha256_file(resolved) != shebang["sha256"]:
+        raise PreflightError("PIN_MISMATCH", "parser-python")
+
+
+def _check_manifest(here: Path, name: str, expected: str | None) -> None:
+    if expected:
+        _check_file(str(here / name), expected, name)
+
+
+def verify_k_package(pins: dict, here: Path) -> int:
+    _check_manifest(here, pins["manifests"]["kPackage"], pins["manifests"].get("kPackageSHA256"))
+    manifest = json.loads((here / pins["manifests"]["kPackage"]).read_text())
+    if manifest.get("kind") != "macro05-trace106-k-package-map/1" or manifest.get("count") != 255:
+        raise PreflightError("K_PACKAGE_COUNT")
+    if len(manifest["files"]) != 255:
+        raise PreflightError("K_PACKAGE_COUNT")
+    for item in manifest["files"]:
+        path = Path(item["path"])
+        if item.get("symlink"):
+            if not path.is_symlink() or os.readlink(path) != item["target"]:
+                raise PreflightError("SYMLINK_DRIFT", item["relative"])
+        _check_file(item["path"], item["sha256"], "k:" + item["relative"])
+    return 255
+
+
+def load_host_evidence(ownership: dict) -> dict[str, dict]:
+    path = Path(ownership["hostEvidencePath"])
+    if sha256_file(path) != ownership["hostEvidenceSHA256"]:
+        raise PreflightError("PIN_MISMATCH", "host-evidence")
+    observation = json.loads(path.read_text())
+    if observation.get("kind") != ownership.get("hostEvidenceKind"):
+        raise PreflightError("HOST_EVIDENCE_SCHEMA")
+    if observation.get("observerUidMap") != ownership.get("hostEvidenceUidMap"):
+        raise PreflightError("HOST_EVIDENCE_UID_MAP")
+    if len(observation.get("entries") or []) != ownership.get("hostEvidenceCount"):
+        raise PreflightError("HOST_EVIDENCE_COUNT")
+    mapping = {}
+    for entry in observation["entries"]:
+        if "hostUid" not in entry or "lstatInode" not in entry or "lstatDevice" not in entry:
+            raise PreflightError("HOST_EVIDENCE_SCHEMA", "hostUid")
+        mapping[entry["path"]] = entry
+    if len(mapping) != ownership["hostEvidenceCount"]:
+        raise PreflightError("HOST_EVIDENCE_COUNT")
+    return mapping
+
+
+def _host_evidence_paths(ownership: dict) -> dict[str, dict]:
+    return load_host_evidence(ownership)
+
+
+def bind_path_for_ownership(path_text: str, host_entries: dict[str, dict]) -> str | None:
+    if path_text in host_entries:
+        return path_text
+    path = Path(path_text)
+    if path.is_symlink():
+        resolved = str(path.resolve())
+        if resolved in host_entries:
+            return resolved
+    parts = Path(path_text).parts
+    if len(parts) >= 4 and parts[1] == "nix" and parts[2] == "store":
+        root = "/" + "/".join(parts[1:4])
+        if root in host_entries:
+            return root
+    return None
+
+
+def verify_nonwritable(path_text: str, expected_ns_uid: int) -> None:
+    path = Path(path_text)
+    if not path.exists():
+        raise PreflightError("PIN_MISSING", path_text)
+    if os.access(path, os.W_OK):
+        raise PreflightError("WRITABLE", path_text)
+    if path.lstat().st_uid != expected_ns_uid:
+        raise PreflightError("NAMESPACE_UID", path_text)
+
+
+def verify_ownership(
+    path_text: str,
+    host_entries: dict[str, dict],
+    expected_ns_uid: int,
+    host_root_uid: int,
+) -> None:
+    path = Path(path_text)
+    if not path.exists():
+        raise PreflightError("PIN_MISSING", path_text)
+    if os.access(path, os.W_OK):
+        raise PreflightError("WRITABLE", path_text)
+    if path_text not in host_entries:
+        raise PreflightError("ARBITRARY_OVERFLOW", path_text)
+    host = host_entries[path_text]
+    required = (
+        "hostUid", "mode", "device", "inode",
+        "lstatUid", "lstatMode", "lstatDevice", "lstatInode",
+    )
+    missing = [key for key in required if key not in host]
+    if missing:
+        raise PreflightError("HOST_EVIDENCE_SCHEMA", ",".join(missing))
+    if host["hostUid"] != host_root_uid or host["lstatUid"] != host_root_uid:
+        raise PreflightError("HOST_OWNERSHIP", path_text)
+    if host.get("writableByHostUser"):
+        raise PreflightError("HOST_WRITABLE", path_text)
+    link = path.lstat()
+    target = path.stat()
+    if link.st_ino != host["lstatInode"] or link.st_dev != host["lstatDevice"]:
+        raise PreflightError("HOST_STAT_DRIFT", path_text + ":lstat")
+    if (link.st_mode & 0o7777) != host["lstatMode"]:
+        raise PreflightError("HOST_STAT_DRIFT", path_text + ":lstatMode")
+    if link.st_uid != expected_ns_uid:
+        raise PreflightError("NAMESPACE_UID", path_text + ":lstat")
+    if target.st_ino != host["inode"] or target.st_dev != host["device"]:
+        raise PreflightError("HOST_STAT_DRIFT", path_text + ":stat")
+    if (target.st_mode & 0o7777) != host["mode"]:
+        raise PreflightError("HOST_STAT_DRIFT", path_text + ":mode")
+    if target.st_uid != expected_ns_uid:
+        raise PreflightError("NAMESPACE_UID", path_text + ":stat")
+
+
+NIX_TRUST_PATHS = (
+    "/nix",
+    "/nix/var",
+    "/nix/var/nix",
+    "/nix/var/nix/db",
+    "/nix/var/nix/db/db.sqlite",
+)
+NIX_TRUST_SIDECARS = (
+    "/nix/var/nix/db/db.sqlite-journal",
+    "/nix/var/nix/db/db.sqlite-wal",
+    "/nix/var/nix/db/db.sqlite-shm",
+)
+
+
+def _symlink_hops(path_text: str, limit: int = 32) -> list[str]:
+    hops = []
+    seen = set()
+    current = Path(path_text)
+    for _ in range(limit):
+        text = str(current)
+        if text in seen:
+            raise PreflightError("SYMLINK_CYCLE", text)
+        seen.add(text)
+        hops.append(text)
+        if not current.is_symlink():
+            if not current.exists():
+                raise PreflightError("PIN_MISSING", text)
+            break
+        target = os.readlink(current)
+        current = Path(target) if target.startswith("/") else (current.parent / target)
+    else:
+        raise PreflightError("SYMLINK_CYCLE", path_text)
+    resolved = str(Path(path_text).resolve())
+    if resolved not in seen:
+        hops.append(resolved)
+    return hops
+
+
+def _parent_paths(path_text: str, limit: int = 64) -> list[str]:
+    out = []
+    current = Path(path_text)
+    for _ in range(limit):
+        parent = current.parent
+        if parent == current or str(parent) == "/":
+            break
+        out.append(str(parent))
+        current = parent
+    else:
+        raise PreflightError("SYMLINK_CYCLE", path_text)
+    return out
+
+
+def collect_protected_paths(path_text: str) -> list[str]:
+    ordered = []
+    seen = set()
+
+    def add_chain(start: str) -> None:
+        for hop in _symlink_hops(start):
+            if hop not in seen:
+                seen.add(hop)
+                ordered.append(hop)
+
+    add_chain(path_text)
+    for hop in list(ordered):
+        for parent in _parent_paths(hop):
+            add_chain(parent)
+    return ordered
+
+
+def verify_protected_path(
+    path_text: str,
+    host_entries: dict[str, dict],
+    expected_ns_uid: int,
+    host_root_uid: int,
+) -> None:
+    for item in collect_protected_paths(path_text):
+        verify_ownership(item, host_entries, expected_ns_uid, host_root_uid)
+
+
+def _nix_store_query(query_tool: str, argv: list[str], env: dict[str, str], nix_run=None):
+    runner = nix_run if nix_run is not None else subprocess.run
+    return runner(
+        argv,
+        executable=query_tool,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+
+def verify_requisites(pins: dict, here: Path, home: str | None = None, nix_run=None) -> int:
+    _check_manifest(here, pins["manifests"]["ownership"], pins["manifests"].get("ownershipSHA256"))
+    _check_manifest(here, pins["manifests"]["requisites"], pins["manifests"].get("requisitesSHA256"))
+    ownership = json.loads((here / pins["manifests"]["ownership"]).read_text())
+    requisites = json.loads((here / pins["manifests"]["requisites"]).read_text())
+    if requisites.get("count") != 159 or len(requisites["entries"]) != 159:
+        raise PreflightError("REQUISITE_COUNT")
+    if ownership.get("kind") != "macro05-trace106-ownership/1":
+        raise PreflightError("OWNERSHIP_SCHEMA")
+    pointer = here / ownership["hostEvidencePointer"]
+    if sha256_file(pointer) != ownership["hostEvidencePointerSHA256"]:
+        raise PreflightError("PIN_MISMATCH", "host-evidence-pointer")
+    if pointer.read_text().splitlines()[0] != ownership["hostEvidencePath"]:
+        raise PreflightError("HOST_EVIDENCE_POINTER")
+    if sha256_file(Path(ownership["nixMetadataObservationPath"])) != ownership["nixMetadataObservationSHA256"]:
+        raise PreflightError("PIN_MISMATCH", "nix-metadata-observation")
+    if sha256_file(Path(requisites["observationPath"])) != requisites["observationSHA256"]:
+        raise PreflightError("PIN_MISMATCH", "observation")
+    if sha256_file(Path(requisites["batchOrderControlPath"])) != requisites["batchOrderControlSHA256"]:
+        raise PreflightError("PIN_MISMATCH", "batch-order")
+    host_entries = load_host_evidence(ownership)
+    _uid_map_text, expected_ns_uid = read_namespace_mapping(ownership)
+    query_tool = next(item for item in pins["selectedExecutables"] if item["role"] == "nix-query")
+    _check_file(query_tool["path"], query_tool["sha256"], "nix-query")
+    if sha256_file(Path(requisites["queryTool"])) != requisites["queryToolSHA256"]:
+        raise PreflightError("PIN_MISMATCH", "queryTool")
+    paths = [entry["path"] for entry in requisites["entries"]]
+    host_root = ownership["hostRootUid"]
+    protected = ownership.get("protectedPaths")
+    if type(protected) is not list:
+        raise PreflightError("OWNERSHIP_SCHEMA", "protectedPaths")
+    required = [ownership["storeRoot"], *NIX_TRUST_PATHS]
+    for path_text in required:
+        if path_text not in protected:
+            raise PreflightError("OWNERSHIP_SCHEMA", path_text)
+    for side in NIX_TRUST_SIDECARS:
+        if Path(side).exists() or side in host_entries:
+            if side not in protected:
+                raise PreflightError("OWNERSHIP_SCHEMA", side)
+    for path_text in paths:
+        verify_ownership(path_text, host_entries, expected_ns_uid, host_root)
+    for path_text in protected:
+        if type(path_text) is not str:
+            raise PreflightError("OWNERSHIP_SCHEMA", "protectedPaths")
+        verify_protected_path(path_text, host_entries, expected_ns_uid, host_root)
+    qparts = Path(query_tool["path"]).parts
+    if len(qparts) < 4 or qparts[1] != "nix" or qparts[2] != "store":
+        raise PreflightError("ARBITRARY_OVERFLOW", query_tool["path"])
+    verify_protected_path("/" + "/".join(qparts[1:4]), host_entries, expected_ns_uid, host_root)
+    verify_protected_path(query_tool["path"], host_entries, expected_ns_uid, host_root)
+    for item in pins["selectedExecutables"]:
+        verify_protected_path(item["path"], host_entries, expected_ns_uid, host_root)
+    env = query_env(pins, home=home)
+    set_result = _nix_store_query(
+        query_tool["path"],
+        [requisites["queryArgv0"], "--query", "--requisites", requisites["kRoot"]],
+        env,
+        nix_run=nix_run,
+    )
+    if set_result.returncode != 0:
+        raise PreflightError("NAR_QUERY", (set_result.stderr or "")[-200:])
+    actual_set = set(line for line in set_result.stdout.splitlines() if line)
+    if actual_set != set(paths) or len(actual_set) != 159:
+        raise PreflightError("REQUISITE_SET")
+    result = _nix_store_query(
+        query_tool["path"],
+        [requisites["queryArgv0"], "--query", "--hash", *paths],
+        env,
+        nix_run=nix_run,
+    )
+    if result.returncode != 0:
+        raise PreflightError("NAR_QUERY", (result.stderr or "")[-200:])
+    hashes = result.stdout.splitlines()
+    if len(hashes) != 159:
+        raise PreflightError("NAR_QUERY_COUNT")
+    for entry, nar in zip(requisites["entries"], hashes):
+        if nar != entry["narHash"]:
+            raise PreflightError("NAR_DRIFT", entry["path"])
+    return 159
+
+
+def apply_limits(pins: dict, getrlimit=resource.getrlimit, setrlimit=resource.setrlimit) -> None:
+    stack_soft, stack_hard = getrlimit(resource.RLIMIT_STACK)
+    if stack_soft != pins["stackSoftBytes"]:
+        raise PreflightError("STACK_LIMIT")
+    setrlimit(resource.RLIMIT_CORE, (pins["coreSoftBytes"], pins["coreSoftBytes"]))
+    setrlimit(resource.RLIMIT_STACK, (pins["stackSoftBytes"], stack_hard if stack_hard == -1 or stack_hard >= pins["stackSoftBytes"] else stack_hard))
+
+
+def preflight(pins: dict, here: Path | None = None, home: str | None = None, nix_run=None) -> dict:
+    here = here or HERE
+    selected = verify_selected(pins)
+    artifacts = verify_binding_artifacts(pins)
+    verify_wrapper_and_parser(pins)
+    k_files = verify_k_package(pins, here)
+    requisites = verify_requisites(pins, here, home=home, nix_run=nix_run)
+    return {
+        "selected": selected,
+        "artifacts": artifacts,
+        "kFiles": k_files,
+        "requisites": requisites,
+    }
+
+
+def run_shim(
+    pins: dict | None = None,
+    pins_path: Path | None = None,
+    execve=None,
+    getrlimit=resource.getrlimit,
+    setrlimit=resource.setrlimit,
+    home: str | None = None,
+    here: Path | None = None,
+) -> dict:
+    pins = pins if pins is not None else load_pins(pins_path)
+    stats = preflight(pins, here=here or HERE, home=home)
+    apply_limits(pins, getrlimit=getrlimit, setrlimit=setrlimit)
+    argv = list(pins["diagnosticArgv"])
+    env = child_env(pins, home=home)
+    target = argv[0]
+    if execve is None:
+        os.execve(target, argv, env)
+        raise PreflightError("EXEC_RETURNED")
+    execve(target, argv, env)
+    return {"status": "exec-injected", "argv": argv, "env": env, "preflight": stats}
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args:
+        sys.stderr.write(json.dumps({"status": "PreflightFailed", "code": "UNEXPECTED_ARGV"}) + "\n")
+        return PREFLIGHT_EXIT
+    try:
+        run_shim()
+    except PreflightError as exc:
+        sys.stderr.write(json.dumps({"status": "PreflightFailed", "code": exc.code, "detail": exc.detail}) + "\n")
+        return PREFLIGHT_EXIT
+    return PREFLIGHT_EXIT
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+CURRENT TEST SOURCE
+"""Exec-shim tests: preflight, argv/env, ownership, fail-closed. No K/strace."""
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ADAPTER_PATH = HERE / "k-macro05-trace106-diagnostic.py"
+PINS_PATH = HERE / "k-macro05-trace106-pins.json"
+STACK_SOFT = 8388608
+KROOT = "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406"
+FORBIDDEN = (
+    "PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "LD_PRELOAD",
+    "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "PERL5LIB", "BASH_ENV",
+)
+
+
+def load_adapter():
+    spec = importlib.util.spec_from_file_location("k_macro05_trace106_diagnostic", ADAPTER_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class ShimContractTests(unittest.TestCase):
+    def test_collector_heuristics_are_gone(self):
+        adapter = load_adapter()
+        for name in (
+            "parse_process_evidence", "_native_spawn", "claim_output_dir",
+            "retain_observation", "default_output_dir", "communicate",
+        ):
+            self.assertFalse(hasattr(adapter, name), name)
+        text = ADAPTER_PATH.read_text()
+        self.assertNotIn("selectors", text)
+        self.assertNotIn("SIGSEGV", text)
+        self.assertNotIn("krunCalls", text)
+        self.assertIn("os.execve", text)
+
+    def test_child_env_preserves_home_and_drops_injection(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        env = adapter.child_env(pins, home="/home/charl")
+        self.assertEqual(env["HOME"], "/home/charl")
+        self.assertEqual(env["PATH"], "/usr/bin:/bin")
+        self.assertEqual(env["LANG"], "C.UTF-8")
+        self.assertEqual(env["PYTHONNOUSERSITE"], "1")
+        self.assertNotIn("NIX_USER_CONF_FILES", env)
+        self.assertNotIn("NIX_PROFILES", env)
+        for name in FORBIDDEN:
+            self.assertNotIn(name, env)
+
+    def test_query_env_suppresses_nix_user_config(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        env = adapter.query_env(pins, home="/home/charl")
+        self.assertEqual(env["HOME"], "/home/charl")
+        self.assertEqual(env["PATH"], "/usr/bin:/bin")
+        self.assertEqual(env["NIX_USER_CONF_FILES"], "/dev/null")
+        self.assertEqual(env["NIX_CONFIG"], "")
+        self.assertNotIn("NIX_PROFILES", env)
+        for name in FORBIDDEN:
+            self.assertNotIn(name, env)
+
+    def test_missing_home_fails_closed(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        with self.assertRaisesRegex(adapter.PreflightError, "HOME_MISSING"):
+            adapter.child_env(pins, home="")
+
+    def test_selected_hash_drift_fails_before_exec(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        pins["selectedExecutables"][0]["sha256"] = "0" * 64
+        executed = []
+        with self.assertRaisesRegex(adapter.PreflightError, "PIN_MISMATCH"):
+            adapter.run_shim(pins=pins, execve=lambda *a, **k: executed.append(1), here=HERE)
+        self.assertEqual(executed, [])
+
+    def test_arbitrary_overflow_path_is_rejected(self):
+        adapter = load_adapter()
+        ownership = json.loads((HERE / "k-macro05-trace106-ownership.json").read_text())
+        host = adapter.load_host_evidence(ownership)
+        with tempfile.TemporaryDirectory() as raw:
+            path = str(Path(raw) / "not-in-observation")
+            Path(path).write_text("x")
+            os.chmod(path, 0o555)
+            with self.assertRaisesRegex(adapter.PreflightError, "ARBITRARY_OVERFLOW"):
+                adapter.verify_ownership(path, host, 65534, 0)
+
+    def test_mapped_host_root_nix_path_is_not_writable(self):
+        adapter = load_adapter()
+        ownership = json.loads((HERE / "k-macro05-trace106-ownership.json").read_text())
+        host = adapter.load_host_evidence(ownership)
+        uid_map = Path("/proc/self/uid_map").read_text()
+        expected = adapter.namespace_uid_for_host(uid_map, ownership["hostRootUid"], ownership["overflowUid"])
+        st = Path(KROOT).stat()
+        self.assertIn(st.st_uid, (0, 65534))
+        self.assertFalse(os.access(KROOT, os.W_OK))
+        adapter.verify_ownership(KROOT, host, expected, ownership["hostRootUid"])
+        self.assertEqual(host[KROOT]["hostUid"], 0)
+        self.assertEqual(host[KROOT]["lstatInode"], Path(KROOT).lstat().st_ino)
+        if st.st_uid == 65534:
+            self.assertEqual(ownership["hostRootUid"], 0)
+            self.assertNotEqual(st.st_uid, 0)
+            self.assertEqual(expected, 65534)
+
+    def test_uid_map_identity_and_map_current_user(self):
+        adapter = load_adapter()
+        self.assertEqual(
+            adapter.namespace_uid_for_host("         0          0 4294967295\n", 0, 65534),
+            0,
+        )
+        self.assertEqual(
+            adapter.namespace_uid_for_host("      1000       1000          1\n", 0, 65534),
+            65534,
+        )
+        live = Path("/proc/self/uid_map").read_text()
+        expected = adapter.namespace_uid_for_host(live, 0, 65534)
+        self.assertEqual(Path(KROOT).stat().st_uid, expected)
+
+    def test_host_stat_drift_fails_closed(self):
+        adapter = load_adapter()
+        ownership = json.loads((HERE / "k-macro05-trace106-ownership.json").read_text())
+        host = adapter.load_host_evidence(ownership)
+        mutated = dict(host[KROOT])
+        mutated["lstatInode"] = 1
+        host = dict(host)
+        host[KROOT] = mutated
+        with self.assertRaisesRegex(adapter.PreflightError, "HOST_STAT_DRIFT"):
+            adapter.verify_ownership(KROOT, host, 65534, 0)
+
+    def test_old_rootuid_observation_is_rejected(self):
+        adapter = load_adapter()
+        ownership = json.loads((HERE / "k-macro05-trace106-ownership.json").read_text())
+        ownership = dict(ownership)
+        ownership["hostEvidencePath"] = ownership["nixMetadataObservationPath"]
+        ownership["hostEvidenceSHA256"] = ownership["nixMetadataObservationSHA256"]
+        with self.assertRaisesRegex(adapter.PreflightError, "HOST_EVIDENCE_SCHEMA"):
+            adapter.load_host_evidence(ownership)
+
+    def test_env_is_bound_and_missing_host_evidence_fails(self):
+        adapter = load_adapter()
+        ownership = json.loads((HERE / "k-macro05-trace106-ownership.json").read_text())
+        host = adapter.load_host_evidence(ownership)
+        env_path = "/usr/bin/env"
+        self.assertIn(env_path, host)
+        expected = adapter.namespace_uid_for_host(
+            Path("/proc/self/uid_map").read_text(),
+            ownership["hostRootUid"],
+            ownership["overflowUid"],
+        )
+        adapter.verify_protected_path(env_path, host, expected, ownership["hostRootUid"])
+        host = dict(host)
+        del host[env_path]
+        with self.assertRaisesRegex(adapter.PreflightError, "ARBITRARY_OVERFLOW"):
+            adapter.verify_protected_path(env_path, host, expected, ownership["hostRootUid"])
+
+    def test_wrapper_path_and_parser_python_are_pinned(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        path = pins["childEnv"]["PATH"].split(":")
+        for directory in pins["wrapperPathDirs"]:
+            path = adapter.prepend_path_dir(path, directory)
+        self.assertEqual(path[0], pins["wrapperPathDirs"][-1])
+        self.assertEqual(path[len(pins["wrapperPathDirs"]) - 1], pins["wrapperPathDirs"][0])
+        unwrapped = str(Path(next(i["path"] for i in pins["selectedExecutables"] if i["role"] == "krun")).parent.parent / "bin-unwrapped")
+        krun_path = adapter.prepend_path_dir(path, unwrapped)
+        self.assertEqual(krun_path[0], unwrapped)
+        adapter.verify_wrapper_and_parser(pins)
+        shebang = pins["parserShebang"]
+        self.assertEqual(shebang["argument"], "python3")
+        self.assertEqual(str(adapter.resolve_command(shebang["argument"], krun_path)), shebang["resolvedOnWrapperPath"])
+        self.assertEqual(
+            hashlib.sha256(Path(shebang["resolvedOnWrapperPath"]).read_bytes()).hexdigest(),
+            shebang["sha256"],
+        )
+
+    def test_real_preflight_then_injected_exec_does_not_invoke_k(self):
+        adapter = load_adapter()
+        pins = adapter.load_pins(PINS_PATH)
+        recorded = []
+
+        def stub(path, argv, env):
+            recorded.append((path, list(argv), dict(env)))
+
+        adapter.run_shim(
+            pins=pins,
+            execve=stub,
+            getrlimit=lambda *_: (STACK_SOFT, -1),
+            setrlimit=lambda *a: None,
+            here=HERE,
+            home=os.environ.get("HOME", "/home/charl"),
+        )
+        self.assertEqual(len(recorded), 1)
+        path, argv, env = recorded[0]
+        self.assertEqual(path, "/usr/bin/strace")
+        self.assertEqual(argv, pins["diagnosticArgv"])
+        self.assertEqual(env["PATH"], "/usr/bin:/bin")
+        self.assertEqual(env["HOME"], os.environ.get("HOME", "/home/charl"))
+        self.assertNotIn("NIX_USER_CONF_FILES", env)
+        for name in FORBIDDEN:
+            self.assertNotIn(name, env)
+        self.assertNotIn("krun", path)
+
+    def test_query_uses_controlled_env_and_requisite_set(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        seen = []
+
+        def fake_run(argv, executable=None, env=None, **_k):
+            seen.append((list(argv), executable, dict(env)))
+            class Result:
+                returncode = 1
+                stderr = "injected-stop"
+                stdout = ""
+            return Result()
+
+        with self.assertRaisesRegex(adapter.PreflightError, "NAR_QUERY"):
+            adapter.verify_requisites(
+                pins, HERE, home="/home/charl", nix_run=fake_run,
+            )
+        self.assertGreaterEqual(len(seen), 1)
+        argv, executable, env = seen[0]
+        self.assertEqual(argv[0], "nix-store")
+        self.assertEqual(argv[1:3], ["--query", "--requisites"])
+        self.assertTrue(executable.endswith("/bin/nix"))
+        self.assertEqual(env["NIX_USER_CONF_FILES"], "/dev/null")
+        self.assertEqual(env["NIX_CONFIG"], "")
+        self.assertEqual(env["HOME"], "/home/charl")
+        self.assertNotIn("NIX_PROFILES", env)
+
+    def test_requisite_set_mismatch_fails_closed(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        calls = {"n": 0}
+
+        def fake_run(argv, executable=None, env=None, **_k):
+            calls["n"] += 1
+            class Result:
+                returncode = 0
+                stderr = ""
+                stdout = "/nix/store/not-the-pinned-set\n"
+            return Result()
+
+        with self.assertRaisesRegex(adapter.PreflightError, "REQUISITE_SET"):
+            adapter.verify_requisites(pins, HERE, home="/home/charl", nix_run=fake_run)
+
+    def test_cli_rejects_unexpected_args(self):
+        adapter = load_adapter()
+        self.assertEqual(adapter.main(["--verify-only"]), 2)
+        self.assertEqual(adapter.main(["--exec-stub"]), 2)
+
+    def test_stack_mismatch_fails_closed(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        with self.assertRaisesRegex(adapter.PreflightError, "STACK_LIMIT"):
+            adapter.apply_limits(pins, getrlimit=lambda *_: (16777216, -1), setrlimit=lambda *a: None)
+
+    def test_nar_drift_fails_closed(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        requisites = json.loads((HERE / pins["manifests"]["requisites"]).read_text())
+        requisites["entries"][0]["narHash"] = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            (tmp / "k-macro05-trace106-requisites.json").write_text(json.dumps(requisites))
+            (tmp / "k-macro05-trace106-ownership.json").write_bytes((HERE / "k-macro05-trace106-ownership.json").read_bytes())
+            with self.assertRaisesRegex(adapter.PreflightError, "PIN_MISMATCH"):
+                adapter.verify_requisites(pins, tmp)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+DESIGN ADOPTION (source implementation only)
+{
+  "observed_at": "2026-09-12T19:14:37.532859+00:00",
+  "decision": "Adopt proposal03 for source implementation only; retain all later reviewer conditions unresolved",
+  "proposal_sha256": "357274c1d9c8429e760db2336c35d9382b1f921fd09cbd5d4d3e9e8ea644b116",
+  "supersedes": "Unadopted directJava/outputkore proposals01/02 only; original history preserved",
+  "votes": [
+    {
+      "path": "loader-amendment-astra-03.json",
+      "sha256": "6d7458179d2e6b4797fcff4632444e2e7e88f390f084284f1369427318685ef7",
+      "verdict": "ACCEPT",
+      "identity": {
+        "agent": "/root/ll01_snapshot_design_audit",
+        "requestedModel": "gpt-6-astra",
+        "requestedEffort": "medium",
+        "identityDisclosure": "Fresh independent non-author Codex agent; parent requests Astra medium. No separate provider-returned model/effort attestation is exposed. No revision03 other-auditor verdict inspected; historical requirements inspected."
+      }
+    },
+    {
+      "path": "loader-amendment-opus-03b.json",
+      "sha256": "43373888a6039965fac0b387cf402af8d63561c112785c0d2738a8fcf7058c5a",
+      "verdict": "ACCEPT",
+      "requested": "claude-opus-5 medium",
+      "returned_modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 16567,
+          "outputTokens": 17,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.016652,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-haiku-4-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-5": {
+          "inputTokens": 2,
+          "outputTokens": 553,
+          "cacheReadInputTokens": 1360,
+          "cacheCreationInputTokens": 23407,
+          "webSearchRequests": 0,
+          "costUSD": 0.248585,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 161,
+          "canonicalModel": "claude-opus-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        },
+        "claude-opus-4-8": {
+          "inputTokens": 2,
+          "outputTokens": 9109,
+          "cacheReadInputTokens": 1360,
+          "cacheCreationInputTokens": 23406,
+          "webSearchRequests": 0,
+          "costUSD": 0.462475,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "thinkingTokens": 7341,
+          "canonicalModel": "claude-opus-4-8",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "identity_limitation": "CLI reports canonical Opus5 plus substantive Opus4.8 and auxiliaryHaiku usage; this is a mixed-model CLI receipt, not sole-Opus5 attestation. Preserve all reported identities; no silent model substitution claim."
+    }
+  ],
+  "sourceImplementationApproved": true,
+  "sourceFreezeApproved": false,
+  "dispatchApproved": false,
+  "resourceApproved": false,
+  "actualResultApproved": false,
+  "openConditions": [
+    "Implement exact inventory/FD/mode/namespace/env/OS-identity checks and actual harmless tests. Full current candidate gets fresh selected-provider audits.",
+    "Run existing runner controls through FINAL bwrap envelope; current six controls establish existing runner baseline only.",
+    "Opus requests setup headroom, accepted-depth completion and Java user.home/directJava canary. These additional native checks are NOT admitted by C7/D1/G60. Reconcile crash-experiment purpose and obtain separately bounded source/resource decision before executing any canary; do not waive or use sole diagnostic for them.",
+    "Confirm same-uid ptrace and actual K cwd/temp behavior at separately authorized scope before any required gate. Preserve no financial or language acceptance claim.",
+    "Clarify/report mixed Opus5/4.8 CLI identity before treating final source review as sole requested model. Missing source reviewers still cannot approve."
+  ],
+  "authorScope": "Only existing diagnostic shim and required factual snapshot/pin manifest; no runner/collector/accounting/framework changes"
+}
+ASTRA CONDITIONS
+[
+  "Implement all stated inventory checks against a frozen size/hash/mode manifest; reject duplicate conflicts, symlink components, unexpected file sets and bounded-read/FD failures before K. Read/hash the exact bytes later sealed and supplied, not an earlier pathname check. Ensure output write failures and partial memfd writes cannot admit unchecked data.",
+  "Bind bwrap executable/target/ancestors and fixed mount array. Preserve original isolated shim startup and exact child environment. Verify host passwd/NSS UID1000 home resolution under retained OS trust and reject drift that could make Java user.home another path; no Java canary is authorized by this review.",
+  "Harmless controls on final implementation must inspect FD identities, not just count5: no snapshot/setup/original-directory FD reaches workload, while stdin/out/err match existing runner. Check cleanup on partial setup failure and actual namespace/network/read-only behavior under the canonical strong launcher.",
+  "Exercise required original runner controls and final source approval/admission route. Keep native stack soft8MiB, inherited hard and core0 behavior, including original Java-child soft raise. Native actual-result review must distinguish setup/parser/interpreter/output failures and cannot infer equivalent generated terms from unchanged source alone."
+]
+OPUS CONDITIONS (native checks are separate, do not execute or invent authority)
+[
+  "Bind final inventory (506/34262979), exact mount ordering, per-file sealed-fd modes-without-write, and all fixed limits (<=512 files, <=64MiB total source bytes, <=32MiB/file, >=1024 fds) in source/pins/candidate; runner._check_files must still accept only executable+Foreman as external inputs (D03-I5).",
+  "Preserve D03-I1..I5, E04-2..4 and actual-result review; wrapper113 vs interpreter signal/exit must remain distinguishable and disclosed.",
+  "Independent controls must reject every inventory/byte/path/mode/limit/FD/bwrap-hash/argv/env/stack drift, temporal snapshot dependence, missing net isolation, and FD leakage before any K dispatch; mocks do not establish these.",
+  "Measure and record real bwrap setup wall-time under the strong launcher; demonstrate accepted depth5947 completes with margin under the envelope, else REVISE (do not silently change the diagnostic).",
+  "Live admission must run a Java user.home canary confirming empty classpath extension and direct-java selection for BOTH parser and kore-print/kast before any financial/language-ledger gate.",
+  "Charge/timeout/candidate binding changes only via the existing canonical route; fixed memory/temp/FD limits reset no expired budget; design approval does not substitute for admission or raw result review."
+]

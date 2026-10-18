@@ -1,0 +1,70 @@
+{
+  "layer": 1,
+  "layerName": "Setup",
+  "proposals": [
+    {
+      "id": "setup-strand-provenance",
+      "title": "Show setup provenance on the Strand that depends on it",
+      "bookReference": "B08, lines 272–298 (Layer 1 overview); lines 396–420 (SRS and shared infrastructure); lines 609–621 (circuit-specific versus universal setup).",
+      "sourceSupport": "BOOK_FACT: the book explains setup parameters and trust, distinguishes the SRS from a proof, and describes Groth16 setup as circuit-specific. PRIMARY_SOURCE_SUPPORT: G02, headings 'Setup', 'Verify the latest zkey', and 'Export the verification key', demonstrates an R1CS plus powers-of-tau input, a circuit-checked zkey, and a separately exported verification key. These are explanatory sources, not evidence of Moriarty's pipeline.",
+      "websiteMapping": "Candidate Moriarty/Webs mapping (INFERENCE): attach a provenance panel to each relevant Strand, connecting its circuit or compiled artifact to parameter-set, proving-key, verification-key, and source/transcript identifiers. Label absent fields unknown until the Strand inventory and primary artifacts support them.",
+      "readerCopy": "Setup produces public mathematical parameters that a proof system needs. Follow a Strand's link to see which computation its parameters support, which keys are associated with them, and what records document their origin.",
+      "interaction": "Select a Strand to expand a compact lineage: computation artifact → setup parameter set → proving and verification keys → available source and verification records. Hide unsupported links as 'not documented here' rather than filling them in.",
+      "diagram": "A Strand node linked to a circuit/compiled-artifact node, parameter-set node, proving-key and verification-key nodes, and provenance-record nodes. Use arrows labeled 'derived for', 'associated key', and 'evidence for'; render unknown edges as absent, not implied.",
+      "questions": [
+        "Which concrete Cardano proof relation and Strand should anchor the first real lineage?",
+        "Which parameter and key identifiers, artifact digests, and provenance records are public and reviewed?",
+        "What exact predicate does the site's verification badge represent? Route the security wording to Opus 5.5."
+      ],
+      "limits": "No inspected input identifies a current Moriarty Strand schema, setup artifact, or verified key lineage. This proposal does not claim one exists."
+    },
+    {
+      "id": "setup-groth16-lineage-example",
+      "title": "Make Groth16 setup concrete with a sourced lineage example",
+      "bookReference": "B08, lines 609–621: Groth16 circuit-specific setup and the contrast with universal setup; lines 396–420: shared SRS as infrastructure, not a proof.",
+      "sourceSupport": "PRIMARY_SOURCE_SUPPORT: G02, 'Setup' and 'Verify the latest zkey', shows Groth16 setup taking circuit.r1cs and pot14_final.ptau, creating an initial zkey, accepting phase-two contributions, and checking the result against the circuit and powers-of-tau file. G04, 'Phase2 Ceremonies' and 'Phase2 Validation', describes Filecoin's circuit-specific phase two and published records. The Filecoin example is not Cardano evidence.",
+      "websiteMapping": "Offer a clearly labeled tutorial path beside, but distinct from, any Moriarty Strand data. Use the example to teach artifact relationships, then show the actual Strand lineage only when project-specific sources substantiate it.",
+      "readerCopy": "In this Groth16 example, a circuit and shared phase-one parameters feed setup. The circuit-specific key artifact can be checked against those inputs, and the verification key can be exported for checking proofs.",
+      "interaction": "Step through the example artifacts. Selecting the circuit shows which setup command consumes it; selecting the resulting key shows the documented circuit-match check and verification-key export.",
+      "diagram": "powers-of-tau material + circuit description → circuit-specific Groth16 parameter/key artifact → circuit-match check → exported verification key. Label the diagram 'snarkjs example'; keep Filecoin's published contribution records in an optional provenance branch.",
+      "questions": [
+        "Should the website show the snarkjs tutorial as a general example, or use only an independently sourced Cardano example?",
+        "Which version/date of the external example should be pinned in the UI?",
+        "Does the planned lineage distinguish the parameter artifact from proving and verification keys clearly enough?"
+      ],
+      "limits": "G02 and G04 describe snarkjs and Filecoin, respectively. Do not present their filenames, process, keys, or contribution records as Moriarty/Cardano facts."
+    },
+    {
+      "id": "setup-visible-groth16-and-count",
+      "title": "Give setup and Groth16 a visible explainer with a scoped count",
+      "bookReference": "B08, lines 272–298 (purpose and trust); lines 609–621 (Groth16 circuit-specific setup).",
+      "sourceSupport": "BOOK_FACT: the book makes setup one of seven named explanatory layers and says Groth16 setup is circuit-specific. PRIMARY_SOURCE_SUPPORT: G02, 'Setup', explicitly distinguishes its Groth16 circuit-specific ceremony from its PLONK/FFLONK universal powers-of-tau example; G04, 'Phase2 Ceremonies', explains Filecoin's per-circuit phase two. Neither source counts Moriarty/Cardano setups.",
+      "websiteMapping": "Reserve a visible Webs section for setup concepts and the Groth16 relationship to concrete Strands. A deployed-system count is a separate factual field and must remain unpublished until a source-backed inventory defines what is counted.",
+      "readerCopy": "Groth16 setup is tied to a particular circuit. If the circuit changes, its setup parameters need to be addressed again. The project inventory below names each documented Strand and its parameter source.",
+      "interaction": "Provide a circuit-specific versus universal setup toggle with a short example. If a future inventory supports a count, let readers open the exact listed Strands behind it.",
+      "diagram": "Two columns: 'Circuit-specific example: each circuit has its own setup output' and 'Universal example: shared setup material is reused within its supported scope'. Add no numeric total unless the linked inventory itself establishes scope and date.",
+      "questions": [
+        "Does the Cardano/Moriarty inventory establish any Groth16 use, and what is the exact unit to count: circuits, parameter sets, ceremonies, or keys?",
+        "Which date and source commit define a public count?",
+        "What change conditions require new parameters in the actual project? Opus 5.5 to review the technical wording."
+      ],
+      "limits": "No exact Cardano or Moriarty setup count is supported by the inspected inputs. Do not use Ethereum KZG ceremony participant counts as Groth16 setup evidence."
+    },
+    {
+      "id": "setup-trust-model-comparison",
+      "title": "Explain setup models without implying that shared means setup-free",
+      "bookReference": "B08, lines 396–420 (SRS and setup trust); lines 609–621 (universal versus circuit-specific setups).",
+      "sourceSupport": "BOOK_FACT: the book distinguishes circuit-specific Groth16 from a universal SRS example. PRIMARY_SOURCE_SUPPORT: G02, 'Setup', says its Groth16 path requires a circuit-specific trusted ceremony while its PLONK and FFLONK paths use universal powers-of-tau material. G04 distinguishes Filecoin's shared phase one from per-circuit phase two. These are protocol-specific examples.",
+      "websiteMapping": "Use a comparison to teach the choice behind the relevant Strand's proof system, but populate the deployed-model label only from a primary source for that Strand. Treat setup choice as related to other layer choices, not as an independent checkbox.",
+      "readerCopy": "Some systems reuse setup material across supported circuits; others require parameters for each circuit. Reuse changes how setup work is scoped. It does not, by itself, describe every trust assumption or identify Moriarty's system.",
+      "interaction": "Let readers compare scope (one circuit or many), what inputs are reused, what new artifacts are produced, and which evidence is available. Selecting a concrete Strand opens only source-backed project details.",
+      "diagram": "A small scope comparison: one circuit → circuit-specific setup output; shared material → several supported circuits. Add a note that the examples use different proof systems and cannot be treated as interchangeable deployments.",
+      "questions": [
+        "Which proof system is attached to each concrete Strand, and what setup category does its primary documentation specify?",
+        "Which claims about trust assumptions should appear only after Opus 5.5 review?",
+        "How should the comparison show co-design and dependencies with Layers 4–6?"
+      ],
+      "limits": "Do not infer Cardano or Moriarty setup design from Midnight, Filecoin, Ethereum KZG, or the snarkjs tutorial."
+    }
+  ]
+}

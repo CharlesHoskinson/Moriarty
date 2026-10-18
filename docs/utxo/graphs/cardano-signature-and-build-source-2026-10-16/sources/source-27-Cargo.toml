@@ -1,0 +1,35 @@
+[package]
+name = "moriarty-vi-signer"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+# Fresh ephemeral test-key producer for the genuine compiled-VI experiment.
+# SOURCE ONLY: this manifest grants no build or execution authority.
+# Materialization contract (see EXPERIMENT-PROPOSAL.json): root places this
+# crate so that ../mori-core-materialized resolves to the exact current
+# Moriarty workspace crates/mori-core tree (intent.rs SHA-256
+# a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c) WITH its
+# workspace parent intact, because mori-core inherits edition, rust-version,
+# license and dependencies from that workspace. Until a fresh audit seals
+# the exact Cargo.lock, toolchain and vendor/cache pins, runner/operator.py
+# refuses every PENDING_UNMATERIALIZED pin and this crate must not build.
+
+[dependencies]
+# Exact path dependency is materialized by root; it is never a crates.io
+# substitute and never re-implements canonicalization.
+mori-core = { path = "../mori-core-materialized" }
+# Locked by the K2 experiment lock to k256 0.13.4 / ecdsa 0.16.9 /
+# signature 2.2.0 / sha2 0.10.9 for k256 (distinct from Core-side sha2
+# 0.11.x; the two SHA-2 lines are never silently identified).
+k256 = { version = "=0.13.4", features = ["schnorr", "ecdsa"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.151" }
+
+[profile.release]
+# A panic must never unwind through secret-bearing frames or print a
+# backtrace. The operator also exports RUST_BACKTRACE=0; neither fact is
+# claimed as a memory-erasure theorem.
+panic = "abort"
+debug = false
+debug-assertions = false
+overflow-checks = true

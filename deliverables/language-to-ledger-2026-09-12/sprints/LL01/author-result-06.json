@@ -1,0 +1,27 @@
+{
+  "text": "{\"status\":\"patch\",\"changes\":[{\"path\":\".moriarty-dev/k-macro05-trace106-diagnostic.py\",\"old\":\"def verify_ownership(\\n    path_text: str,\\n    host_entries: dict[str, dict],\\n    expected_ns_uid: int,\\n    host_root_uid: int,\\n) -> None:\\n    path = Path(path_text)\\n    if not path.exists():\\n        raise PreflightError(\\\"PIN_MISSING\\\", path_text)\\n    if os.access(path, os.W_OK):\\n        raise PreflightError(\\\"WRITABLE\\\", path_text)\\n    if path_text not in host_entries:\\n        raise PreflightError(\\\"ARBITRARY_OVERFLOW\\\", path_text)\\n    host = host_entries[path_text]\\n    if host[\\\"hostUid\\\"] != host_root_uid:\\n        raise PreflightError(\\\"HOST_OWNERSHIP\\\", path_text)\\n    if host.get(\\\"writableByHostUser\\\"):\\n        raise PreflightError(\\\"HOST_WRITABLE\\\", path_text)\\n    st = path.lstat()\\n    if st.st_ino != host[\\\"lstatInode\\\"] or st.st_dev != host[\\\"lstatDevice\\\"]:\\n        raise PreflightError(\\\"HOST_STAT_DRIFT\\\", path_text)\\n    if (st.st_mode & 0o7777) != host[\\\"mode\\\"]:\\n        raise PreflightError(\\\"HOST_STAT_DRIFT\\\", path_text + \\\":mode\\\")\\n    if st.st_uid != expected_ns_uid:\\n        raise PreflightError(\\\"NAMESPACE_UID\\\", path_text)\",\"new\":\"def verify_ownership(\\n    path_text: str,\\n    host_entries: dict[str, dict],\\n    expected_ns_uid: int,\\n    host_root_uid: int,\\n) -> None:\\n    path = Path(path_text)\\n    if not path.exists():\\n        raise PreflightError(\\\"PIN_MISSING\\\", path_text)\\n    if os.access(path, os.W_OK):\\n        raise PreflightError(\\\"WRITABLE\\\", path_text)\\n    if path_text not in host_entries:\\n        raise PreflightError(\\\"ARBITRARY_OVERFLOW\\\", path_text)\\n    host = host_entries[path_text]\\n    required = (\\n        \\\"hostUid\\\", \\\"mode\\\", \\\"device\\\", \\\"inode\\\",\\n        \\\"lstatUid\\\", \\\"lstatMode\\\", \\\"lstatDevice\\\", \\\"lstatInode\\\",\\n    )\\n    missing = [key for key in required if key not in host]\\n    if missing:\\n        raise PreflightError(\\\"HOST_EVIDENCE_SCHEMA\\\", \\\",\\\".join(missing))\\n    if host[\\\"hostUid\\\"] != host_root_uid or host[\\\"lstatUid\\\"] != host_root_uid:\\n        raise PreflightError(\\\"HOST_OWNERSHIP\\\", path_text)\\n    if host.get(\\\"writableByHostUser\\\"):\\n        raise PreflightError(\\\"HOST_WRITABLE\\\", path_text)\\n    link = path.lstat()\\n    target = path.stat()\\n    if link.st_ino != host[\\\"lstatInode\\\"] or link.st_dev != host[\\\"lstatDevice\\\"]:\\n        raise PreflightError(\\\"HOST_STAT_DRIFT\\\", path_text + \\\":lstat\\\")\\n    if (link.st_mode & 0o7777) != host[\\\"lstatMode\\\"]:\\n        raise PreflightError(\\\"HOST_STAT_DRIFT\\\", path_text + \\\":lstatMode\\\")\\n    if link.st_uid != expected_ns_uid:\\n        raise PreflightError(\\\"NAMESPACE_UID\\\", path_text + \\\":lstat\\\")\\n    if target.st_ino != host[\\\"inode\\\"] or target.st_dev != host[\\\"device\\\"]:\\n        raise PreflightError(\\\"HOST_STAT_DRIFT\\\", path_text + \\\":stat\\\")\\n    if (target.st_mode & 0o7777) != host[\\\"mode\\\"]:\\n        raise PreflightError(\\\"HOST_STAT_DRIFT\\\", path_text + \\\":mode\\\")\\n    if target.st_uid != expected_ns_uid:\\n        raise PreflightError(\\\"NAMESPACE_UID\\\", path_text + \\\":stat\\\")\"}],\"requiredHostFields\":[\"hostUid\",\"mode\",\"device\",\"inode\",\"lstatUid\",\"lstatMode\",\"lstatDevice\",\"lstatInode\"]}",
+  "stopReason": "end_turn",
+  "sessionId": "27f1f3c5-957b-469a-b36b-8f5fe36dd1b2",
+  "requestId": "61bdca7c-da4a-4775-90c4-94eefbf836f3",
+  "usage": {
+    "input_tokens": 137057,
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 5161,
+    "reasoning_tokens": 4135,
+    "total_tokens": 142218
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.1037272,
+  "total_cost_usd_ticks": 1037272000,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 137057,
+      "outputTokens": 5161,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.1037272
+    }
+  }
+}

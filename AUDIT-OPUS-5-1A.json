@@ -1,0 +1,335 @@
+{
+  "schemaVersion": "moriarty-independent-audit/1",
+  "auditId": "AUDIT-OPUS-5-1A",
+  "task": "openspec/changes/language-to-ledger-lifecycle/tasks.md 5.1a",
+  "auditedOn": "2026-09-12",
+  "auditor": {
+    "model": "Claude Opus 5 (1M context)",
+    "vendor": "Anthropic",
+    "implementer": "GPT-6 Astra via OpenAI Codex CLI",
+    "crossVendor": true,
+    "mode": "read-only"
+  },
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-authority-fee-binding",
+  "branch": "foreman/moriarty-ll-loop-20260912/implement/authority-fee-binding",
+  "baseCommit": "056e662254c38936758af9c6f72c019705a1ff09",
+  "freeze": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-plan-preview-constraint-freeze/deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json",
+
+  "verdict": "WARNING",
+  "verdictBasis": "No divergence exists between the JavaScript net-goal rule and the generated circuit, and no dishonest test was found. The lender capability assertion is real and matches the frozen preimage exactly. Every freeze-pinned byte is intact. The warning rests on one high-severity substantive gap that the lane itself disclosed (neither unshielded leg binds its payer, so the modelled per-actor debits have no on-ledger payer counterpart), one high-severity compilation risk with no precedent anywhere in the repository (a conditional assert), and a 98 percent versioned fork that departs from the re-export-shim convention used by Core /2, /3 and /4 in the same directory.",
+
+  "loadBearingTestCount": 26,
+  "totalNewTestCount": 28,
+  "testCountsVerified": {
+    "experiments/moriarty-language/tests/authority-fee-binding.test.mjs": { "tests": 17, "pass": 17, "fail": 0 },
+    "experiments/moriarty-midnight-financial/tests/lifecycle-binding.test.mjs": { "tests": 11, "pass": 11, "fail": 0 }
+  },
+  "notLoadBearing": [
+    {
+      "file": "experiments/moriarty-midnight-financial/tests/lifecycle-binding.test.mjs",
+      "line": 8,
+      "reason": "Regex-matches the generator's own template string. Detects deletion of an assert; proves nothing about semantics."
+    },
+    {
+      "file": "experiments/moriarty-midnight-financial/tests/lifecycle-binding.test.mjs",
+      "line": 26,
+      "reason": "Same class: asserts that the emitted text contains substrings that the emitter literally contains."
+    }
+  ],
+  "dishonestTests": [],
+
+  "jsCircuitDivergence": [],
+  "jsCircuitComparison": {
+    "conclusion": "No divergence. Under the effect shape the binding pins, the circuit's two guarded asserts are exact algebraic mirrors of checkOutcomeIntent, including the refusal codes.",
+    "jsRule": {
+      "file": "experiments/moriarty-language/src/successor/financial-outcome-intent.ts",
+      "lines": "40-62",
+      "credits": "credits[to,asset] += amount for every Transfer and Fee",
+      "debits": "debits[from,asset] += amount for every Transfer and Fee",
+      "goal": "credits[actor,asset] >= debits[actor,asset] + minimumLedgerAmount, else INTENT_NET_GOAL",
+      "caps": "a cap row must exist for every debiting pair, else INTENT_DEBIT_UNCAPPED; debit > cap, else INTENT_DEBIT_CAP"
+    },
+    "pinnedEffectShape": {
+      "source": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle-fee.mori",
+      "enforcedBy": "experiments/moriarty-midnight-financial/ledger/lifecycle-source-binding.mjs:16-24",
+      "effects": [
+        "Transfer from=Lender to=Borrower asset=Cash amount=100 (literal, checked LIFECYCLE_AMOUNT_LITERAL)",
+        "Origination (skipped by the intent check)",
+        "Fee from=Borrower to=Lender asset=Cash amount=feeAmount (checked ReadArg feeAmount)"
+      ]
+    },
+    "casesChecked": [
+      {
+        "case": "borrower net goal",
+        "js": "credits[Borrower]=100 >= debits[Borrower]=fee + minB",
+        "circuit": "loan-lifecycle.compact:84  disbursement >= checkedAdd(feeAmount, borrowerMinimumNetCredit)",
+        "agree": true
+      },
+      {
+        "case": "lender net goal",
+        "js": "credits[Lender]=fee >= debits[Lender]=100 + minL",
+        "circuit": "loan-lifecycle.compact:87  feeAmount >= checkedAdd(disbursement, lenderMinimumNetCredit)",
+        "agree": true,
+        "note": "Faithful, though economically near-unsatisfiable: a lender net goal requires fee >= 100 + minL. The same is true of the JavaScript rule, so this is a modelling consequence of paying the fee to the lender in the settlement asset, not a divergence."
+      },
+      {
+        "case": "gross cap, lender leg",
+        "js": "debits[Lender]=100 <= cap(Lender,Cash), else INTENT_DEBIT_CAP",
+        "circuit": "loan-lifecycle.compact:81  disbursement <= lenderGrossCap, \"INTENT_DEBIT_CAP\"",
+        "agree": true
+      },
+      {
+        "case": "gross cap, borrower leg",
+        "js": "debits[Borrower]=fee <= cap(Borrower,Cash), else INTENT_DEBIT_CAP",
+        "circuit": "loan-lifecycle.compact:82  feeAmount <= borrowerGrossCap, \"INTENT_DEBIT_CAP\"",
+        "agree": true
+      },
+      {
+        "case": "zero-value debit",
+        "js": "a zero Fee still requires a cap row (INTENT_DEBIT_UNCAPPED) and is exempt from ZERO_AMOUNT in the kernel (financial-lifecycle-v2.ts:1453)",
+        "circuit": "feeAmount 0 satisfies both asserts; the borrower goal becomes 100 >= 0 + minB, matching the JavaScript",
+        "agree": true,
+        "residualRisk": "The ledger behaviour of receiveUnshielded/sendUnshielded with amount 0 is untested and has no precedent in the tree. See finding F4."
+      },
+      {
+        "case": "missing sums",
+        "js": "credits.get(key) ?? 0n and debits.get(key) ?? 0n; a goal for an actor with no effects passes only at minimum 0",
+        "circuit": "both legs are unconditional, so an absent sum can only arise as feeAmount 0, which yields the same inequality",
+        "agree": true
+      },
+      {
+        "case": "self-effects counted on both sides",
+        "js": "a self Fee adds to debits and credits for the same key, so it consumes gross cap and satisfies a goal only at minimum 0 (financial-lifecycle-v2.ts:1505 restores the balance)",
+        "circuit": "not representable; the two legs are cross-party",
+        "agree": true,
+        "gatedBy": "lifecycle-sdk-caller.mjs:76 requires fee.from Borrower and fee.to Lender; lifecycle-sdk-caller.mjs:53 requires distinct payout addresses, so no self-effect can reach the circuit"
+      },
+      {
+        "case": "refunds",
+        "js": "a refund modelled as a reverse Transfer adds to both parties' gross sums and never subtracts; a literal kind 'Refund' is refused INTENT_EFFECT_SCHEMA",
+        "circuit": "no refund leg exists",
+        "agree": true,
+        "matchesFreeze": "fees.netGoalRule.grossRule: refunds never reduce these gross sums"
+      },
+      {
+        "case": "unsigned bounds",
+        "js": "accumulation over MAX128 and debits+minimum over MAX128 both reject INTENT_ARITHMETIC_OVERFLOW",
+        "circuit": "pure circuit checkedAdd asserts sum <= 340282366920938463463374607431768211455 with the same code",
+        "agree": true
+      },
+      {
+        "case": "goal or cap on a non-settlement asset",
+        "js": "sums are per asset, so a foreign-asset goal is checked independently",
+        "circuit": "single settlement colour only",
+        "agree": true,
+        "gatedBy": "lifecycle-sdk-caller.mjs:62 refuses any cap or goal whose asset is not Cash (LIFECYCLE_INTENT_ASSET_UNSUPPORTED), so no promised constraint is silently dropped"
+      },
+      {
+        "case": "goal presence flag",
+        "js": "goals are iterated, so absence means unchecked",
+        "circuit": "borrowerHasNetGoal / lenderHasNetGoal booleans",
+        "agree": true,
+        "gatedBy": "lifecycle-sdk-caller.mjs:68 requires the ledger flag to equal goal presence exactly, and line 69 requires the minimum to match"
+      }
+    ],
+    "empiricalCorroboration": "tests/lifecycle-binding.test.mjs:65 drives the real source evaluator with feeAmount 2 against borrowerMinimumNetCredit 99 and gets INTENT_NET_GOAL, while feeAmount 1 prepares. The circuit evaluates 100 >= 2+99 false and 100 >= 1+99 true. Same boundary, same side."
+  },
+
+  "questionResults": [
+    {
+      "question": 1,
+      "topic": "Is the lender capability assertion real?",
+      "result": "PASS",
+      "detail": "loan-lifecycle.compact:74 asserts capabilityHash(pad(32,\"moriarty:sp05:loan:lender\"), networkTag, programDigest, lenderSecret) == lenderCapability with code LENDER_CAPABILITY. The preimage is persistentHash<Vector<4,Bytes<32>>>([domain,network,program,secret]), byte-for-byte the freeze pin authority.mechanism.capabilityHash. pad(32,\"moriarty:sp05:loan:lender\") computes to 6d6f7269617274793a737030353a6c6f616e3a6c656e64657200000000000000, exactly the freeze pin authority.lender.domain.hex. lenderSecret is an undisclosed circuit parameter used only inside the hash, so the assertion is unsatisfiable without a preimage of the stored commitment. originate is the only circuit in the file, so exactly one circuit asserts it. The borrower assertion at line 75 is retained. Actor mapping is present at lines 76-77 (lender 5, borrower 2), matching the freeze pins authority.lender.textId and authority.debtor.actorMapping, but see finding F7 on its strength.",
+      "crossChecked": "lifecycle-sdk-caller.mjs:27-33 recomputes the same hash with the real @midnight-ntwrk/compact-runtime persistentHash over CompactTypeVector(4, CompactTypeBytes(32)) under a pinned package and entry digest, and tests/lifecycle-binding.test.mjs:47,55 exercise both the accepting and the substituted-secret path."
+    },
+    {
+      "question": 2,
+      "topic": "Do the JavaScript enforcement and the circuit agree?",
+      "result": "PASS",
+      "detail": "See jsCircuitComparison. Eleven cases checked line by line including every edge case named in the brief. No divergence. The expressiveness asymmetries that do exist (self-effects, foreign assets, absent caps) are each closed by an explicit refusal in the SDK caller rather than silently dropped, which is the property that matters."
+    },
+    {
+      "question": 3,
+      "topic": "Is the net-goal rule the frozen one?",
+      "result": "PASS",
+      "detail": "financial-outcome-intent.ts:57-60 computes required = debits + minimumLedgerAmount and refuses when credits < required, which is the frozen checked(credits) >= checked(debits + minimumLedgerAmount). Only Transfer and Fee accumulate (line 48). Originate, Accrue, Repay and their effect spellings Origination, Accrual, Repayment, plus DueCreated and DueSettled, are skipped at line 47; any other kind is refused INTENT_EFFECT_SCHEMA rather than ignored. Every freeze summation clause holds: self-effects count on both sides, missing sums are zero, gross caps are mandatory even at zero amount, refunds never reduce gross, and all arithmetic is bounded at UInt128. tests/authority-fee-binding.test.mjs:69 proves DueSettled with asset Cash credits nobody and that a DUST transfer does not enter a Cash goal."
+    },
+    {
+      "question": 4,
+      "topic": "Is the versioning genuinely additive?",
+      "result": "PASS",
+      "detail": "Verified by execution, not by reading. /5 still checks its own source (SourceChecked) and still evaluates originate to FundedExpressionPrepared. /5 refuses a /6 source with PROFILE_MISMATCH and /6 refuses a /5 source with PROFILE_MISMATCH at both the factory and the parser, so the separation is bidirectional. The staging guard at financial-agreement-source-compiler.ts:177 throws PROFILE_MISMATCH when invoked with the /6 profile. No exported name was removed from either modified file (compiler still exports COMPONENT_BYTES, TRANSPORT_BYTES, compileAgreementSource, evaluateCompiledAction, rejection, requireActionName, selectCompiledAction, snapshots, sourceTransport; financial-expression-source-v1.ts still exports createFinancialExpressionSourceV1, lowerAndCheckFinancialAction, validateFinancialActionParameters). Both diffs are pure additive routing: a union-type member, three profile disjunctions and three ternary branches. Lifecycle state /1 is still admitted by the untouched legacy entry, asserted at tests/authority-fee-binding.test.mjs:27. The /5 operation binding still demands exactly four operations and the /6 binding exactly five including Fee with a record type identical to Transfer's, so neither profile can accept the other's operation set.",
+      "caveat": "See finding F12 on the reachability of the staging guard."
+    },
+    {
+      "question": 5,
+      "topic": "Are the 28 new tests load-bearing?",
+      "result": "PASS",
+      "detail": "28 tests, 28 pass, run directly. 26 are load-bearing. None assert only that something does not throw. None would pass against a stub. The strongest are the boundary flips: authority-fee-binding.test.mjs:54 (minimum 10 refuses, 9 accepts, at credits 110 and debits 101) and lifecycle-binding.test.mjs:65 (fee 2 refuses, fee 1 accepts, at minimum 99), both of which pin an exact inequality rather than a direction. lifecycle-binding.test.mjs:78 is a genuine time-of-check guard: it mutates the caller's head and zero-fills the secret buffer during the await and proves the prepared values are unaffected. authority-fee-binding.test.mjs:41 is sharp in a non-obvious way, proving that a Fee cannot fund an Originate because only Transfer enters the step map. Two midnight tests are template restatements, listed under notLoadBearing. Three assertions check only that a rejection happened without pinning its code, listed as finding F10."
+    },
+    {
+      "question": 6,
+      "topic": "Retained bytes",
+      "result": "PASS",
+      "detail": "loan.compact, swap.compact, loan-lifecycle.mori and custody/generate.mjs are each byte-identical to HEAD. loan.compact matches the freeze pin c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e and loan-lifecycle.mori matches a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa. I then checked every distinct path the freeze pins with a sha256: 38 paths, zero drift, including tasks.md, design.md, semantics.md, typed-schemas.md, evaluate.ts, financial-lifecycle.ts, frontend.ts, bindings.json, differential.mjs, providers.mjs and the six sp05 actual-run records. The reverted generate.mjs attempt is corroborated: generate.mjs is listed in build-proven.mjs REQUIRED_SOURCES, so editing it would in fact have invalidated the retained full-build receipt. The lane's deviation from the requested generate.mjs edit was well-founded rather than evasive."
+    },
+    {
+      "question": 7,
+      "topic": "The self-reported duplication risk",
+      "result": "CONFIRMED, worse than described",
+      "detail": "Three forks, not one. financial-lifecycle-v2.ts is 1994 lines of which 1959 are byte-identical to financial-lifecycle.ts (98.2 percent). funded-expression-source-v2.ts is 619 lines of which 609 are identical to funded-expression-source-v1.ts (98.4 percent). financial-expression-v5.ts is 687 lines of which 668 are identical to financial-expression-v1.ts (97.2 percent). Roughly 3236 of about 3300 new runtime lines are duplicated. The aggravating context the report omits is that the same directory already had a cheaper idiom for exactly this: financial-expression-v2.ts, -v3.ts and -v4.ts are 5, 5 and 10 line re-export shims over financial-expression-v1.ts. Core /5 abandoned that convention for a whole-file copy. A defect fixed in financial-lifecycle.ts, funded-expression-source-v1.ts or financial-expression-v1.ts would silently persist in the /2 and /5 copies, and nothing in the tree compares the shared regions."
+    },
+    {
+      "question": 8,
+      "topic": "Is the uncompiled circuit plausible?",
+      "result": "MOSTLY, with one unprecedented construct",
+      "detail": "Most of the file is proven-compiling by construction: capabilityHash and constrainNow are byte-identical to loan.compact:26-39, which compiled; the bare statement call constrainNow(now) discarding a Uint<128> matches loan.compact:63; assert on a negated ledger Boolean matches loan.compact:62; and the undisclosed witness-to-ledger comparison inside assert matches loan.compact:58. The pure circuit helper the lane flagged as a risk is not one: arithmetic.compact:17-36 already has three pure circuits containing asserts and they compile. The genuine risk is the conditional assert at lines 83-88, which is the only if statement in any .compact file in the repository. Secondary risks: the constructor at line 50 compares expectedProgram to the pinned literal without disclose where loan.compact:43-44 disclosed first; zero-amount unshielded receive and send at lines 92-93 have no precedent; no unshieldedBalance or unshieldedBalanceGte guard precedes the value movement where loan.compact:125-127 and swap.compact:102,135-136 both inserted one; and cashColor is a constructor input that is never minted, validated or shown to exist, unlike usdColor which loan.compact:67 mints."
+    },
+    {
+      "question": 9,
+      "topic": "Overreach",
+      "result": "PASS",
+      "detail": "Nothing touches accounting, budgets, charges, wallets, Docker, the network or a retained build artifact. Only two tracked files are modified and both diffs are additive routing. Every other change is a new untracked file. No existing test, fixture or expectation was modified: the new tests reuse loan-lifecycle.state.json and loan-lifecycle.snapshots.json by spreading them and overriding schemaVersion in the test, leaving the fixtures untouched. No tasks.md or roadmap checkbox changed, confirmed both by git status and by tasks.md matching its freeze pin. The SDK caller invokes createUnprovenCallTx only, never submitCallTx or submitTx, and the tests supply a fake. No fetch, http, child_process, process.env or deploy call appears in any new file. The only environment reads are the two retained-artifact variables the existing suites already require."
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "dimension": "authority-binding",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "90-93",
+      "summary": "Neither unshielded leg binds its payer. Both receiveUnshielded calls draw from the submitting transaction's offer, and no constraint ties the 100 disbursement to the lender or the fee to the borrower.",
+      "whyItMatters": "The lender capability assertion proves possession of the lender's role secret; it does not make the lender the funder. On the ledger the transaction's signer pays 100 + feeAmount, the borrower's address receives 100 and the lender's address receives feeAmount. The JavaScript model debits the Borrower by feeAmount and the Lender by 100, and the circuit checks the net-goal inequality over exactly those quantities, so the arithmetic the ledger enforces is correct while the attribution of the money to the parties is unproved. Gap 1 asked for lender authority on a lender-to-debtor disbursement; the capability half is now genuinely closed, the disbursement half is not. The lane discloses this as OPEN failure.deferredLedgerObligations, 'Native debit payer attribution and full consumed-input ownership remain unproved', which is why this is a warning and not a block, and it must be closed before 5.2a claims correspondence."
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "dimension": "compilation-risk",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "83-88",
+      "summary": "if (ledgerBoolean) { assert(...) } is the only conditional control flow in any .compact file in the repository. No compiled precedent exists for a conditional constraint.",
+      "whyItMatters": "Every other Compact source in the tree, including the two that compiled under 0.23 and the two generated kernels, is straight-line. A constraint system has no branches, so a conditional assert must be flattened into an implication by the compiler, and whether Compact 0.23 accepts that shape, and whether it accepts an if whose condition is a ledger read rather than a constant, is untested here. This is the single most likely reason 5.2a fails to compile. The behaviour is also expressible without a branch, as assert(!hasGoal || credits >= debits + minimum), which would remove the risk entirely and keep the semantics identical."
+    },
+    {
+      "id": "F3",
+      "severity": "medium",
+      "dimension": "duplication",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle-v2.ts",
+      "line": "1",
+      "summary": "Three whole-file forks totalling about 3236 duplicated lines, in a directory whose own Core /2, /3 and /4 versions are 5 to 10 line re-export shims.",
+      "whyItMatters": "financial-lifecycle-v2.ts shares 1959 lines with financial-lifecycle.ts, funded-expression-source-v2.ts shares 609 with its /1, and financial-expression-v5.ts shares 668 with financial-expression-v1.ts. The behavioural delta is small and well isolated in each case, so the deltas could have been expressed as parameters or as a shim over the existing file, which is precisely the idiom financial-expression-v2/3/4.ts already establish three files away. As written, a defect fixed in any /1 file silently persists in its fork, no test compares the shared regions, and every future change to the lifecycle kernel must be made twice. The lane discloses this and names it correctly; the point of recording it is that the remedy exists in the same directory and was not taken."
+    },
+    {
+      "id": "F4",
+      "severity": "medium",
+      "dimension": "ledger-semantics",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "92-93",
+      "summary": "A zero fee is a reachable state that emits receiveUnshielded(cashColor, 0) and sendUnshielded(cashColor, 0, ...), with no precedent in the tree.",
+      "whyItMatters": "The kernel deliberately exempts Fee from the ZERO_AMOUNT refusal (financial-lifecycle-v2.ts:1453) and a test drives feeAmount '0' through the /6 evaluator, so zero is not hypothetical. Both compiled contracts only ever move amounts asserted to be non-zero constants. Whether a zero-value unshielded send is accepted, rejected, or silently produces a degenerate output at the ledger is unknown, and it determines whether the zero-fee path can ever be submitted. Either constrain feeAmount > 0 in the circuit, or establish the zero case at 5.2a before relying on it."
+    },
+    {
+      "id": "F5",
+      "severity": "medium",
+      "dimension": "provenance",
+      "file": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "line": "15",
+      "summary": "loan-lifecycle.compact and generate-lifecycle.mjs sit outside REQUIRED_SOURCES and outside build.mjs's staleness comparison. Their only staleness guard is one new test.",
+      "whyItMatters": "REQUIRED_SOURCES is an explicit list, not a directory sweep, which is exactly why the additive emitter did not invalidate the retained receipt and is the correct trade for this round. The consequence is that the new artifact is outside the proven-build provenance chain that guards loan.compact and swap.compact: build.mjs:67-73 and runtime.test.mjs:871 compare generated against owned bytes for those two and not for this one. lifecycle-binding.test.mjs:17 currently carries the whole burden. Before 5.2a compiles this file, it needs the same manifest-level pin, or a compiled artifact will be reachable without receipt coverage."
+    },
+    {
+      "id": "F6",
+      "severity": "medium",
+      "dimension": "authority-binding",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "57-58",
+      "summary": "Payout addresses and capabilities are unlinked planes. No constraint proves borrowerAddress or lenderAddress belongs to the holder of the corresponding secret, and the constructor does not require them distinct.",
+      "whyItMatters": "A contract deployed with borrowerPayout equal to lenderPayout would make the two legs a self-transfer, which the JavaScript model cannot represent since validLifecycleAuthority requires distinct parties. Only lifecycle-sdk-caller.mjs:53 refuses that, so the on-ledger object admits a state its own source model forbids, and any other caller could reach it. The same structure exists in loan.compact, where integrate-preview.mjs enforced distinctness at the caller under DISTINCT_PARTICIPANTS_REQUIRED, so this is an inherited weakness rather than a new one; recording it matters because the lifecycle contract is the first to move value to both parties in one transition, which is where the two unlinked planes first cost something."
+    },
+    {
+      "id": "F7",
+      "severity": "low",
+      "dimension": "authority-binding",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "76-77",
+      "summary": "assert(expectedActor == 5) and assert(expectedDebtor == 2) compare caller-supplied arguments against constants, so they canonicalise the public transcript but authenticate nothing.",
+      "whyItMatters": "The prover chooses expectedActor, so satisfying the assert requires only passing 5. These asserts pin the declared actor and debtor in the public inputs, which has value for transcript comparison, but the brief asked whether the actor mapping is real and the honest answer is that all authentication rests on the two capability asserts at lines 74-75. The pattern is inherited verbatim from loan.compact:61,77,104 and the freeze pins it as authority.debtor.actorMapping, so it is not a regression; it should simply not be read as a second authority check."
+    },
+    {
+      "id": "F8",
+      "severity": "low",
+      "dimension": "compilation-risk",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "50",
+      "summary": "The constructor compares expectedProgram to the pinned literal without disclose, where loan.compact's compiled constructor disclosed first.",
+      "whyItMatters": "loan.compact:43-44 binds const publicProgram = disclose(expectedProgram) and then asserts on it; the new constructor asserts on the raw parameter. The circuit-body form without disclose is proven to compile (loan.compact:58), but the constructor's disclosure rules were evidently treated differently by the generator that produced the file which did compile. Cheap to align before 5.2a, and cheaper than a failed compile."
+    },
+    {
+      "id": "F9",
+      "severity": "low",
+      "dimension": "fragile-invariant",
+      "file": "experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts",
+      "line": "17",
+      "summary": "The in-place profile-token rewrite depends on the /5 and /6 tokens having identical byte width, with no assertion of that fact.",
+      "whyItMatters": "input.set(replacement, error.start) preserves every downstream span only because both quoted profile strings are 38 bytes. A future profile identifier of a different width would overrun the typed array and throw, or fall short and leave a corrupted token, and the failure would surface as an unrelated syntax error at a shifted offset. One equality assertion on the two lengths removes the hazard. The mechanism is otherwise well tested: authority-fee-binding.test.mjs:103 deliberately prepends a non-ASCII comment containing the literal /5 profile string and proves the spans and the profile survive."
+    },
+    {
+      "id": "F10",
+      "severity": "low",
+      "dimension": "test-strength",
+      "file": "experiments/moriarty-language/tests/authority-fee-binding.test.mjs",
+      "line": "96",
+      "summary": "Three assertions check only that status is Rejected without pinning the refusal code (lines 101, 109 and 111).",
+      "whyItMatters": "The role-substitution test and the /1-state-downgrade test would still pass if the rejection arrived for an unrelated reason, such as a snapshot schema error introduced later. Both are discriminating enough to fail a stub that prepares everything, so they count as load-bearing, but they do not pin the property they are named for. The neighbouring tests in the same file do assert codes, so the fix is mechanical."
+    },
+    {
+      "id": "F11",
+      "severity": "low",
+      "dimension": "test-strength",
+      "file": "experiments/moriarty-midnight-financial/tests/lifecycle-binding.test.mjs",
+      "line": "8",
+      "summary": "Two tests regex-match the generator's own template text rather than any behaviour (also line 26).",
+      "whyItMatters": "generate-lifecycle.mjs holds those exact substrings as a literal, so these assertions restate the implementation. They do guard against a future edit deleting the lender assertion, and for an uncompiled emitter the emitted text is the only observable, so they are not worthless; they should simply not be counted as evidence that the circuit enforces anything. The ordering assertions at lines 14-15, that the capability asserts precede the value movement, are the only part of these two tests that carries semantic content."
+    },
+    {
+      "id": "F12",
+      "severity": "low",
+      "dimension": "versioning",
+      "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
+      "line": "177",
+      "summary": "The /6 staging guard is unreachable from the shipped factories; the real separation is the profile routing at lines 247 and 539.",
+      "whyItMatters": "Each of financial-agreement-source-v1 through -v5 passes its own profile constant to evaluateCompiledAction, so nothing can reach the /6 branch except a direct call. The guard does hold when invoked directly, verified by execution, and defensive depth here is cheap and appropriate. It is recorded only so that the guard is not mistaken for the load-bearing separation: what actually keeps a /6 source out of the /5 staging path is that createFinancialAgreementSourceV6 calls createFinancialExpressionContractV5 directly and that /5 refuses the /6 profile token at the parser."
+    },
+    {
+      "id": "F13",
+      "severity": "low",
+      "dimension": "scope",
+      "file": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "line": "9-26",
+      "summary": "The contract carries no obligation, allowance, replay-register or time-cursor state; replay defence rests on revision plus a one-shot originated flag.",
+      "whyItMatters": "This is gap 4, declined explicitly and recorded as OPEN state.allowances.ledgerRepresentation and state.replayHistory.ledgerRepresentation. The comment at line 20 correctly warns that borrowerGrossCap and lenderGrossCap are transaction intent caps and not lifecycle allowances, which is the distinction most likely to be misread by a later reader. Recorded for completeness: the decline is honest and the scope label authority-fee-disbursement-only is carried in the binding, the generated header and the public envelope, so nothing downstream can mistake this artifact for full correspondence."
+    }
+  ],
+
+  "honestyAssessment": {
+    "verdict": "accurate, and under-claiming",
+    "notes": [
+      "The report self-labels PARTIAL and reports 852/906 language pass with 54 failures and 523/524 ledger. The orchestrator's re-run outside the implementer's sandbox gives 904/906 and zero ledger failures. The extra failures were sandbox spawnSync EPERM, as the report says, so the lane reported a worse result than the one that reproduces.",
+      "The claim 'All 37 freeze source digests match' is correct; I count 38 distinct pinned paths and find zero drift on all of them.",
+      "The reverted generate.mjs attempt is independently corroborated: generate.mjs is in build-proven.mjs REQUIRED_SOURCES, so the stated reason for the deviation is true.",
+      "The report discloses the duplication, the uncompiled circuit, the declined gap 4, the asset-mixing and dust-cap open items, and, notably, the payer-attribution gap that is this audit's most serious finding. No claim was found that the code does not support."
+    ]
+  },
+
+  "scopeExclusions": [
+    "Read-only. No product file was edited, created or deleted. The only files written are AUDIT-OPUS-5-1A.md and AUDIT-OPUS-5-1A.json at the worktree root.",
+    "Nothing was compiled, deployed or submitted. No Docker start, no network access, no funds movement.",
+    "No accounting, budget, charge or resource record was created, reset or read.",
+    "No checkbox in any tasks.md or roadmap file was ticked.",
+    "The two pre-existing tests/lifecycle-k-corpus.test.mjs failures were treated as established and out of this lane, per the orchestrator.",
+    "Temporary verification scripts were written to the session scratchpad, never into the repository."
+  ]
+}

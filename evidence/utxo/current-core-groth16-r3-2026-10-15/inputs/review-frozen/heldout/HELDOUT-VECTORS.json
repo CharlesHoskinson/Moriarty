@@ -1,0 +1,6607 @@
+{
+  "author": "claude-opus-5-5 (independent non-author reviewer)",
+  "derivation": "tools/core_oracle.py: reviewer reimplementation of Core /1 parser/validate/simulate/meter rules from source reading; inline hand-arithmetic asserts in tools/make_vectors.py",
+  "format": "reviewer-heldout-vectors/1",
+  "frozen_before_reading": [
+    "candidate tests/*.rs",
+    "candidate EXPECTED-PACKET/*",
+    "candidate fixtures/*",
+    "candidate REPORT.md",
+    "candidate source/*"
+  ],
+  "hostile_witness_proposals": [
+    {
+      "base_vector": "H6-S2",
+      "id": "HW-01",
+      "mutation": "assign acc_after = p-1 (field negation of 1) with all limb/range witnesses chosen adversarially",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H6-M1",
+      "id": "HW-02",
+      "mutation": "assign product = 0 (2^128 mod 2^128) with high limb hidden",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H6-A2",
+      "id": "HW-03",
+      "mutation": "assign sum = 0 with carry bit = 0 or carry bit = 2",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H6-C2",
+      "id": "HW-04",
+      "mutation": "flip comparison flag for x<y to 1 while x==y; or supply non-boolean flag value 2",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H6-*",
+      "id": "HW-05",
+      "mutation": "input x = true_x + r (scalar field modulus) or x >= 2^128 encoded in one field element",
+      "required": "unsatisfiable (public/private input range checks)"
+    },
+    {
+      "base_vector": "H5-R1",
+      "id": "HW-06",
+      "mutation": "witness that skips evaluation of the right operand of 'or' (rhs wires unconstrained/garbage)",
+      "required": "unsatisfiable: rhs Sub must be constrained non-negative regardless of lhs"
+    },
+    {
+      "base_vector": "H5-R2",
+      "id": "HW-07",
+      "mutation": "witness that skips evaluation of the right operand of 'and'",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H1-R3",
+      "id": "HW-08",
+      "mutation": "self-transfer with balance 4, amount 5: witness claiming success since net delta is zero",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-09",
+      "mutation": "modify untouched frame row auditor USDX 7->8 or legacy duty 9->0 in post",
+      "required": "unsatisfiable (frame preservation)"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-10",
+      "mutation": "omit the warranty present-zero row in post (treat 0 as absent)",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H1-P3",
+      "id": "HW-11",
+      "mutation": "after full discharge set present flag false",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-12",
+      "mutation": "swap order of Transfer and Fee effects in the public effect list",
+      "required": "unsatisfiable / different public input"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-13",
+      "mutation": "change fee recipient operator->seller with identical amounts",
+      "required": "unsatisfiable under the same compiled program"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-14",
+      "mutation": "prove with program H1' that differs only in asset reference 'usdx'->'usdy' under H1 key/VK or program-identity public input",
+      "required": "reject"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-15",
+      "mutation": "select action 'close' witness under the 'settle' circuit / action id",
+      "required": "reject"
+    },
+    {
+      "base_vector": "H3-R1",
+      "id": "HW-16",
+      "mutation": "reuse a single wire for node 4 across statements",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H3-P1",
+      "id": "HW-17",
+      "mutation": "use single wire for node 0 (s) across both Next statements so s_after=5",
+      "required": "unsatisfiable (Next visible to later statements)"
+    },
+    {
+      "base_vector": "W-2",
+      "id": "HW-18",
+      "mutation": "claim work_used 35 / omit charge of one statement or one DAG node",
+      "required": "unsatisfiable if work is a constrained output; otherwise state work is unconstrained"
+    },
+    {
+      "base_vector": "H1-R5",
+      "id": "HW-19",
+      "mutation": "success witness when ensures false after effects",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "any",
+      "id": "HW-20",
+      "mutation": "set any host-computed 'ok'/'accepted' Boolean wire to 1 with failing constraints",
+      "required": "no such success flag may gate constraints"
+    },
+    {
+      "base_vector": "H1-R6",
+      "id": "HW-21",
+      "mutation": "scenario duty with mismatched debtor accepted by circuit",
+      "required": "unsatisfiable or refused before proving"
+    },
+    {
+      "base_vector": "H2-P3",
+      "id": "HW-22",
+      "mutation": "post duty amount 0 but present flag 0 (deleted) to pass absent-checks",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H6-B*",
+      "id": "HW-23",
+      "mutation": "Bool wire value 2 or p-1 used as true",
+      "required": "unsatisfiable (booleanity)"
+    },
+    {
+      "base_vector": "H3-P4",
+      "id": "HW-24",
+      "mutation": "in poly_b, treat v as UInt with value 2 (non-Bool) to satisfy Eq(v,v)",
+      "required": "unsatisfiable"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-25",
+      "mutation": "duplicate balance key (two buyer/USDX rows) in pre-state layout to split a debit",
+      "required": "unsatisfiable / refused"
+    },
+    {
+      "base_vector": "H1-P1",
+      "id": "HW-26",
+      "mutation": "unsorted or padding row with nonzero amount in layout slots",
+      "required": "unsatisfiable"
+    }
+  ],
+  "limitations": [
+    "Not executed against Core or the candidate (SOURCEONLY).",
+    "Reviewer oracle is a second implementation of the same written rules, not a formal proof; disagreement with Core must be resolved against actual Core execution in an authorized run.",
+    "Accounting fields (gross_debit, fees_paid, net_delta, duties) are reviewer-defined projections of Core effects."
+  ],
+  "logical_cost_profile": "moriarty-reference-logical-cost/1",
+  "semantics": "moriarty-core/1",
+  "static_refusals": [
+    {
+      "expected": "refuse: moriarty/2 source (profile) before any constraint emission; no /1 lowering of an Await program; staged /2 obligations remain open",
+      "id": "S-1",
+      "input": "H7-staged.mori"
+    },
+    {
+      "expected": "refuse with mori::core::profile (require_core1) \u2014 never strip the Await",
+      "id": "S-2",
+      "input": "in-memory Program labelled moriarty/1 + moriarty-core/1 carrying Statement::Await"
+    },
+    {
+      "expected": "refuse profile",
+      "id": "S-3",
+      "input": "H3 JSON with semantics 'moriarty-core/2' but language 'moriarty/1'"
+    },
+    {
+      "expected": "either complete ordered Emit lowering or whole-program refusal naming Emit; partial lowering that omits Emit effects is a defect",
+      "id": "S-4",
+      "input": "H4-emit.mori"
+    },
+    {
+      "expected": "refuse (Core bound) \u2014 compiler must not accept deeper IR than Core validate",
+      "id": "S-5",
+      "input": "H3 JSON with an expression chain of depth 65"
+    },
+    {
+      "expected": "refuse (Core expression ordering)",
+      "id": "S-6",
+      "input": "H3 JSON where node 2 references node 2 (self/forward ref)"
+    },
+    {
+      "expected": "ADMIT (Core validate accepts); dead nodes produce no constraints that could make valid executions unsatisfiable",
+      "id": "S-7",
+      "input": "H3 JSON (dead node 7 underflow, dead node 8 unknown name)"
+    },
+    {
+      "expected": "refuse (Core asset rule)",
+      "id": "S-8",
+      "input": "H1 with asset USDX scale 39"
+    },
+    {
+      "expected": "explicit refusal naming the cap; never truncate rows from the frame",
+      "id": "S-9",
+      "input": "Program whose layout capacity (balances/duties/states) exceeds compiler caps"
+    }
+  ],
+  "vectors": [
+    {
+      "action": "settle",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "5",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "5",
+              "pre": "5"
+            },
+            {
+              "account": "auditor",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "7",
+              "pre": "7"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "1250",
+              "gross_debit": "250000",
+              "gross_debit_excluding_self": "250000",
+              "net_delta": "-250000",
+              "post": "750000",
+              "pre": "1000000"
+            },
+            {
+              "account": "operator",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "1250",
+              "post": "1253",
+              "pre": "3"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "248750",
+              "post": "248750",
+              "pre": "0"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "9",
+              "discharged": "0",
+              "name": "legacy",
+              "opening": "9",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            },
+            {
+              "accrued": "0",
+              "closing": "0",
+              "discharged": "0",
+              "name": "warranty",
+              "opening": "0",
+              "present_after": true,
+              "present_before": false,
+              "present_zero_after": true
+            }
+          ],
+          "residual_positive": [
+            "legacy"
+          ]
+        },
+        "effects": [
+          {
+            "amount": "248750",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "buyer",
+            "kind": "Transfer",
+            "to": "seller"
+          },
+          {
+            "amount": "1250",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "buyer",
+            "kind": "Fee",
+            "to": "operator"
+          },
+          {
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            },
+            "from": "seller",
+            "kind": "Transfer",
+            "to": "seller"
+          },
+          {
+            "after": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "before": "0",
+            "creditor": "buyer",
+            "debtor": "seller",
+            "kind": "Liability",
+            "name": "warranty"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "248750"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "released"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "rounds"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": true
+            },
+            "before": {
+              "type": "Bool",
+              "value": true
+            },
+            "kind": "State",
+            "name": "open"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "seller",
+              "amount": "5",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              }
+            },
+            {
+              "account": "auditor",
+              "amount": "7",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "buyer",
+              "amount": "750000",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "operator",
+              "amount": "1253",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "248750",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "9",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "creditor": "else",
+              "debtor": "someone",
+              "name": "legacy"
+            },
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "248750"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "1"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "seller",
+              "amount": "5",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              }
+            },
+            {
+              "account": "auditor",
+              "amount": "7",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "buyer",
+              "amount": "1000000",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "operator",
+              "amount": "3",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "9",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "creditor": "else",
+              "debtor": "someone",
+              "name": "legacy"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 36
+      },
+      "id": "H1-P1",
+      "logical_cap": null,
+      "note": "positive: net transfer, fee, self-transfer, present-zero duty creation, untouched frame rows (auditor, legacy)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1250"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "250000"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "9",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            },
+            "creditor": "else",
+            "debtor": "someone",
+            "name": "legacy"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "5",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "5",
+              "pre": "5"
+            },
+            {
+              "account": "auditor",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "7",
+              "pre": "7"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "1000000",
+              "gross_debit_excluding_self": "1000000",
+              "net_delta": "-1000000",
+              "post": "0",
+              "pre": "1000000"
+            },
+            {
+              "account": "operator",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "3",
+              "pre": "3"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "1000000",
+              "post": "1000000",
+              "pre": "0"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "40",
+              "closing": "42",
+              "discharged": "0",
+              "name": "warranty",
+              "opening": "2",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "warranty"
+          ]
+        },
+        "effects": [
+          {
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "buyer",
+            "kind": "Transfer",
+            "to": "seller"
+          },
+          {
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "buyer",
+            "kind": "Fee",
+            "to": "operator"
+          },
+          {
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            },
+            "from": "seller",
+            "kind": "Transfer",
+            "to": "seller"
+          },
+          {
+            "after": "42",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "before": "2",
+            "creditor": "buyer",
+            "debtor": "seller",
+            "kind": "Liability",
+            "name": "warranty"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1000000"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "released"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "8"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "7"
+            },
+            "kind": "State",
+            "name": "rounds"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": true
+            },
+            "kind": "State",
+            "name": "open"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "seller",
+              "amount": "5",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              }
+            },
+            {
+              "account": "auditor",
+              "amount": "7",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "buyer",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "operator",
+              "amount": "3",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "1000000",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "42",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": false
+            },
+            "released": {
+              "type": "UInt",
+              "value": "1000000"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "8"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "seller",
+              "amount": "5",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              }
+            },
+            {
+              "account": "auditor",
+              "amount": "7",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "buyer",
+              "amount": "1000000",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "operator",
+              "amount": "3",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "2",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "7"
+            }
+          }
+        },
+        "work_used": 36
+      },
+      "id": "H1-P2",
+      "logical_cap": null,
+      "note": "positive boundary: released==1000000 with last=true passes <= ; zero fee effect still emitted; accrual onto existing duty 2+40; open becomes false",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "1000000"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "40"
+          },
+          "last": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "2",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {
+          "open": {
+            "type": "Bool",
+            "value": true
+          },
+          "released": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "rounds": {
+            "type": "UInt",
+            "value": "7"
+          }
+        }
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 6
+      },
+      "id": "H1-R1",
+      "logical_cap": null,
+      "note": "reject: requires gross > cut false at step 0 (strict predicate)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "10"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "10"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::balance",
+        "phase": "execution",
+        "step": 2,
+        "work_attempted": 12
+      },
+      "id": "H1-R2",
+      "logical_cap": null,
+      "note": "reject: buyer USDX insufficient for net at transfer step 2 (no field wrap)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "1000002"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::balance",
+        "phase": "execution",
+        "step": 4,
+        "work_attempted": 16
+      },
+      "id": "H1-R3",
+      "logical_cap": null,
+      "note": "reject: SELF-transfer of 5 PTS with balance 4 is still debit-checked (step 4)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "4",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "100"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 2,
+        "work_attempted": 12
+      },
+      "id": "H1-R4",
+      "logical_cap": null,
+      "note": "reject: recipient credit overflow past u128 at step 2",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "340282366920938463463374607431768211405",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "100"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::ensures",
+        "phase": "execution",
+        "step": 8,
+        "work_attempted": 33
+      },
+      "id": "H1-R5",
+      "logical_cap": null,
+      "note": "reject: ensures reads UPDATED released (1000001) after Next; fails at step 8 after effects (atomic: no partial effects)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [],
+        "state": {
+          "open": {
+            "type": "Bool",
+            "value": true
+          },
+          "released": {
+            "type": "UInt",
+            "value": "1000000"
+          },
+          "rounds": {
+            "type": "UInt",
+            "value": "0"
+          }
+        }
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::liability",
+        "phase": "admission",
+        "step": null,
+        "work_attempted": 0
+      },
+      "id": "H1-R6",
+      "logical_cap": null,
+      "note": "reject at admission: scenario duty identity differs from source-declared identity",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "mallory",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::balance",
+        "phase": "admission",
+        "step": null,
+        "work_attempted": 0
+      },
+      "id": "H1-R7",
+      "logical_cap": null,
+      "note": "reject at admission: missing explicit operator USDX balance row (even though amounts are tiny)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 6
+      },
+      "id": "H1-R8",
+      "logical_cap": null,
+      "note": "reject: open=false fails step 0",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {
+          "open": {
+            "type": "Bool",
+            "value": false
+          },
+          "released": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "rounds": {
+            "type": "UInt",
+            "value": "0"
+          }
+        }
+      }
+    },
+    {
+      "action": "settle",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 5,
+        "work_attempted": 18
+      },
+      "id": "H1-R9",
+      "logical_cap": null,
+      "note": "reject: liability accrual 1 + (2^128-1) overflows at step 5",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "1",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "close",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "30",
+              "post": "30",
+              "pre": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "30",
+              "gross_debit_excluding_self": "30",
+              "net_delta": "-30",
+              "post": "470",
+              "pre": "500"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "0",
+              "discharged": "30",
+              "name": "warranty",
+              "opening": "30",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": true
+            }
+          ],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "amount": "30",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "seller",
+            "kind": "Transfer",
+            "to": "buyer"
+          },
+          {
+            "after": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "before": "30",
+            "creditor": "buyer",
+            "debtor": "seller",
+            "kind": "Liability",
+            "name": "warranty"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": true
+            },
+            "kind": "State",
+            "name": "open"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "buyer",
+              "amount": "30",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "470",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": false
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "buyer",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "500",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "30",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 14
+      },
+      "id": "H1-P3",
+      "logical_cap": null,
+      "note": "positive present-zero: full discharge leaves row present with amount 0; liability_present stays true",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "500",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "left": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "30"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "30",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "close",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "0",
+              "pre": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "500",
+              "pre": "500"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "0",
+              "discharged": "0",
+              "name": "warranty",
+              "opening": "0",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": true
+            }
+          ],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "seller",
+            "kind": "Transfer",
+            "to": "buyer"
+          },
+          {
+            "after": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "before": "0",
+            "creditor": "buyer",
+            "debtor": "seller",
+            "kind": "Liability",
+            "name": "warranty"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": true
+            },
+            "kind": "State",
+            "name": "open"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "buyer",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "500",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": false
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "buyer",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "500",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 14
+      },
+      "id": "H1-P4",
+      "logical_cap": null,
+      "note": "positive: zero transfer + zero discharge on a present-zero row",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "500",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "left": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "0"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "close",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "12",
+              "post": "12",
+              "pre": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "12",
+              "gross_debit_excluding_self": "12",
+              "net_delta": "-12",
+              "post": "488",
+              "pre": "500"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "18",
+              "discharged": "12",
+              "name": "warranty",
+              "opening": "30",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "warranty"
+          ]
+        },
+        "effects": [
+          {
+            "amount": "12",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "seller",
+            "kind": "Transfer",
+            "to": "buyer"
+          },
+          {
+            "after": "18",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "before": "30",
+            "creditor": "buyer",
+            "debtor": "seller",
+            "kind": "Liability",
+            "name": "warranty"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": true
+            },
+            "kind": "State",
+            "name": "open"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "buyer",
+              "amount": "12",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "488",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "18",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": false
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "buyer",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "500",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "30",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 14
+      },
+      "id": "H1-P5",
+      "logical_cap": null,
+      "note": "positive partial discharge: residual 18 remains a duty",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "500",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "left": {
+            "type": "UInt",
+            "value": "18"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "12"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "30",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "close",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::liability",
+        "phase": "execution",
+        "step": 2,
+        "work_attempted": 6
+      },
+      "id": "H1-R10",
+      "logical_cap": null,
+      "note": "reject: discharge exceeds residual at step 2 (after a successful transfer: atomic)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "500",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "left": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "31"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "30",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "close",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 2
+      },
+      "id": "H1-R11",
+      "logical_cap": null,
+      "note": "reject: absent duty => liability_present false at step 0 (absent != present-zero)",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "500",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "left": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "0"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "close",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 3,
+        "work_attempted": 10
+      },
+      "id": "H1-R12",
+      "logical_cap": null,
+      "note": "reject: claimed residual mismatch at step 3",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "500",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "left": {
+            "type": "UInt",
+            "value": "17"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "12"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "30",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "creditor": "buyer",
+            "debtor": "seller",
+            "name": "warranty"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "accrue",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [
+            {
+              "accrued": "50000",
+              "closing": "50000",
+              "discharged": "0",
+              "name": "loan",
+              "opening": "0",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "loan"
+          ]
+        },
+        "effects": [
+          {
+            "after": "50000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "before": "0",
+            "creditor": "lender",
+            "debtor": "borrower",
+            "kind": "Liability",
+            "name": "loan"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "periods"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [
+            {
+              "amount": "50000",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "1"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 17
+      },
+      "id": "H2-P1",
+      "logical_cap": null,
+      "note": "positive: Mul, accrual onto present-zero row to exactly 50000 (boundary <=)",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "rate": {
+            "type": "UInt",
+            "value": "125"
+          },
+          "units": {
+            "type": "UInt",
+            "value": "400"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "creditor": "lender",
+            "debtor": "borrower",
+            "name": "loan"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "accrue",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [
+            {
+              "accrued": "21",
+              "closing": "21",
+              "discharged": "0",
+              "name": "loan",
+              "opening": "0",
+              "present_after": true,
+              "present_before": false,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "loan"
+          ]
+        },
+        "effects": [
+          {
+            "after": "21",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "before": "0",
+            "creditor": "lender",
+            "debtor": "borrower",
+            "kind": "Liability",
+            "name": "loan"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "periods"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [
+            {
+              "amount": "21",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "1"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 17
+      },
+      "id": "H2-P2",
+      "logical_cap": null,
+      "note": "positive: duty created from absent; no balances required (no transfer statements)",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "rate": {
+            "type": "UInt",
+            "value": "3"
+          },
+          "units": {
+            "type": "UInt",
+            "value": "7"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "accrue",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 3,
+        "work_attempted": 13
+      },
+      "id": "H2-R1",
+      "logical_cap": null,
+      "note": "reject: liability_amount 50125 > 50000 at step 3 after duty effect",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "rate": {
+            "type": "UInt",
+            "value": "125"
+          },
+          "units": {
+            "type": "UInt",
+            "value": "401"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "accrue",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 1,
+        "work_attempted": 7
+      },
+      "id": "H2-R2",
+      "logical_cap": null,
+      "note": "reject: 2^64*2^64 = 2^128 overflows at step 1 (no 256-bit truncation)",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "rate": {
+            "type": "UInt",
+            "value": "18446744073709551616"
+          },
+          "units": {
+            "type": "UInt",
+            "value": "18446744073709551616"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "accrue",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 3
+      },
+      "id": "H2-R3",
+      "logical_cap": null,
+      "note": "reject: frozen",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "rate": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "units": {
+            "type": "UInt",
+            "value": "1"
+          }
+        },
+        "liabilities": [],
+        "state": {
+          "frozen": {
+            "type": "Bool",
+            "value": true
+          },
+          "periods": {
+            "type": "UInt",
+            "value": "0"
+          }
+        }
+      }
+    },
+    {
+      "action": "repay",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "borrower",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "fees_paid": "1",
+              "gross_debit": "601",
+              "gross_debit_excluding_self": "600",
+              "net_delta": "-600",
+              "post": "400",
+              "pre": "1000"
+            },
+            {
+              "account": "lender",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "600",
+              "post": "600",
+              "pre": "0"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "0",
+              "discharged": "600",
+              "name": "loan",
+              "opening": "600",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": true
+            }
+          ],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "amount": "600",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "from": "borrower",
+            "kind": "Transfer",
+            "to": "lender"
+          },
+          {
+            "after": "0",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "before": "600",
+            "creditor": "lender",
+            "debtor": "borrower",
+            "kind": "Liability",
+            "name": "loan"
+          },
+          {
+            "amount": "1",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "from": "borrower",
+            "kind": "Fee",
+            "to": "borrower"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": true
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "frozen"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "borrower",
+              "amount": "400",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            },
+            {
+              "account": "lender",
+              "amount": "600",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": true
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "borrower",
+              "amount": "1000",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            },
+            {
+              "account": "lender",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "600",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 16
+      },
+      "id": "H2-P3",
+      "logical_cap": null,
+      "note": "positive: full repayment, ensures passes ONLY via present-zero (amount 0, present true); self-fee 1 debit-checked, net zero",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [
+          {
+            "account": "borrower",
+            "amount": "1000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          },
+          {
+            "account": "lender",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          }
+        ],
+        "inputs": {
+          "pay": {
+            "type": "UInt",
+            "value": "600"
+          },
+          "stop": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "600",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "creditor": "lender",
+            "debtor": "borrower",
+            "name": "loan"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "repay",
+      "category": "financial",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "borrower",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "fees_paid": "1",
+              "gross_debit": "1000",
+              "gross_debit_excluding_self": "999",
+              "net_delta": "-999",
+              "post": "1",
+              "pre": "1000"
+            },
+            {
+              "account": "lender",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "999",
+              "post": "999",
+              "pre": "0"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "4001",
+              "discharged": "999",
+              "name": "loan",
+              "opening": "5000",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "loan"
+          ]
+        },
+        "effects": [
+          {
+            "amount": "999",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "from": "borrower",
+            "kind": "Transfer",
+            "to": "lender"
+          },
+          {
+            "after": "4001",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "before": "5000",
+            "creditor": "lender",
+            "debtor": "borrower",
+            "kind": "Liability",
+            "name": "loan"
+          },
+          {
+            "amount": "1",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "from": "borrower",
+            "kind": "Fee",
+            "to": "borrower"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "frozen"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "borrower",
+              "amount": "1",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            },
+            {
+              "account": "lender",
+              "amount": "999",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "4001",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "borrower",
+              "amount": "1000",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            },
+            {
+              "account": "lender",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "5000",
+              "asset": {
+                "issuer": "holdout-bank",
+                "network": "holdout-net",
+                "reference": "credit",
+                "scale": 2
+              },
+              "creditor": "lender",
+              "debtor": "borrower",
+              "name": "loan"
+            }
+          ],
+          "state": {
+            "frozen": {
+              "type": "Bool",
+              "value": false
+            },
+            "periods": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 16
+      },
+      "id": "H2-P4",
+      "logical_cap": null,
+      "note": "positive boundary: after paying 999 borrower has exactly 1 for the self-fee",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [
+          {
+            "account": "borrower",
+            "amount": "1000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          },
+          {
+            "account": "lender",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          }
+        ],
+        "inputs": {
+          "pay": {
+            "type": "UInt",
+            "value": "999"
+          },
+          "stop": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "5000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "creditor": "lender",
+            "debtor": "borrower",
+            "name": "loan"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "repay",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::balance",
+        "phase": "execution",
+        "step": 4,
+        "work_attempted": 14
+      },
+      "id": "H2-R4",
+      "logical_cap": null,
+      "note": "reject: self-fee of 1 with balance 0 at step 4 (self move still debit-checked)",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [
+          {
+            "account": "borrower",
+            "amount": "1000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          },
+          {
+            "account": "lender",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          }
+        ],
+        "inputs": {
+          "pay": {
+            "type": "UInt",
+            "value": "1000"
+          },
+          "stop": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "5000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            },
+            "creditor": "lender",
+            "debtor": "borrower",
+            "name": "loan"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "repay",
+      "category": "rejection",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 2
+      },
+      "id": "H2-R5",
+      "logical_cap": null,
+      "note": "reject: absent loan",
+      "program": "H2-accrual",
+      "scenario": {
+        "balances": [
+          {
+            "account": "borrower",
+            "amount": "1000",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          },
+          {
+            "account": "lender",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-bank",
+              "network": "holdout-net",
+              "reference": "credit",
+              "scale": 2
+            }
+          }
+        ],
+        "inputs": {
+          "pay": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "stop": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "probeOr",
+      "category": "strictness",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::underflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 7
+      },
+      "id": "H5-R1",
+      "logical_cap": null,
+      "note": "HOSTILE strictness: lhs of 'or' is true but rhs a-b underflows => Core REJECTS (underflow, step 0). A short-circuit lowering would accept: unsound",
+      "program": "H5-strict",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "a": {
+            "type": "UInt",
+            "value": "1"
+          },
+          "b": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "skip": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "probeOr",
+      "category": "strictness",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "hits"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "hits": {
+              "type": "UInt",
+              "value": "1"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "hits": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 12
+      },
+      "id": "H5-P1",
+      "logical_cap": null,
+      "note": "positive: a-b=0 >= 0",
+      "program": "H5-strict",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "a": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "b": {
+            "type": "UInt",
+            "value": "2"
+          },
+          "skip": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "probeAnd",
+      "category": "strictness",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 9
+      },
+      "id": "H5-R2",
+      "logical_cap": null,
+      "note": "HOSTILE strictness: lhs of 'and' false but a*b overflows => Core REJECTS (overflow, step 0)",
+      "program": "H5-strict",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "a": {
+            "type": "UInt",
+            "value": "18446744073709551616"
+          },
+          "b": {
+            "type": "UInt",
+            "value": "18446744073709551616"
+          },
+          "run": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "probeAnd",
+      "category": "strictness",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "hits"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "hits": {
+              "type": "UInt",
+              "value": "1"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "hits": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 15
+      },
+      "id": "H5-P2",
+      "logical_cap": null,
+      "note": "positive: (2^64-1)(2^64+1) = 2^128-1 fits; predicate true via not(false and ..)",
+      "program": "H5-strict",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "a": {
+            "type": "UInt",
+            "value": "18446744073709551615"
+          },
+          "b": {
+            "type": "UInt",
+            "value": "18446744073709551617"
+          },
+          "run": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "add",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "340282366920938463463374607431768211455"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "acc"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "340282366920938463463374607431768211455"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 4
+      },
+      "id": "H6-A1",
+      "logical_cap": null,
+      "note": "max sum 2^128-1 accepted",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211454"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "1"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "add",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-A2",
+      "logical_cap": null,
+      "note": "overflow by one rejected",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "1"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "add",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-A3",
+      "logical_cap": null,
+      "note": "double max rejected (no mod 2^128 or field wrap)",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "sub",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "acc"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 4
+      },
+      "id": "H6-S1",
+      "logical_cap": null,
+      "note": "zero result accepted",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "5"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "5"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "sub",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::underflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-S2",
+      "logical_cap": null,
+      "note": "underflow rejected (no wrap to p-1 or 2^128-1)",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "1"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "sub",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "340282366920938463463374607431768211455"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "acc"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "340282366920938463463374607431768211455"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 4
+      },
+      "id": "H6-S3",
+      "logical_cap": null,
+      "note": "max - 0 accepted",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "0"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "mul",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-M1",
+      "logical_cap": null,
+      "note": "2^128 rejected",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "18446744073709551616"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "18446744073709551616"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "mul",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "340282366920938463463374607431768211455"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "acc"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "340282366920938463463374607431768211455"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 4
+      },
+      "id": "H6-M2",
+      "logical_cap": null,
+      "note": "2^128-1 accepted",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "18446744073709551615"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "18446744073709551617"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "mul",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "acc"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 4
+      },
+      "id": "H6-M3",
+      "logical_cap": null,
+      "note": "0 * max accepted",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "mul",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-M4",
+      "logical_cap": null,
+      "note": "2^128 rejected",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "170141183460469231731687303715884105728"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "2"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "mul",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::overflow",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-M5",
+      "logical_cap": null,
+      "note": "(2^128-1)^2 rejected; 256-bit product high limb nonzero",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "mul",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "170141183460469231731687303715884105729"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "acc"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "170141183460469231731687303715884105729"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 4
+      },
+      "id": "H6-M6",
+      "logical_cap": null,
+      "note": "high-bit operand accepted",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "170141183460469231731687303715884105729"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "1"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "cmp",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "Bool",
+              "value": true
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "flag"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": true
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 31
+      },
+      "id": "H6-C1",
+      "logical_cap": null,
+      "note": "adjacent max accepted; flag true",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211454"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "cmp",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-C2",
+      "logical_cap": null,
+      "note": "equal max rejected at step 0",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "cmp",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "flag"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 31
+      },
+      "id": "H6-C3",
+      "logical_cap": null,
+      "note": "accepted; flag false",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "170141183460469231731687303715884105728"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "cmp",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-C4",
+      "logical_cap": null,
+      "note": "reversed rejected at step 0",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211455"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "0"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "cmp",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 0,
+        "work_attempted": 4
+      },
+      "id": "H6-C5",
+      "logical_cap": null,
+      "note": "equal rejected",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "x": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211454"
+          },
+          "y": {
+            "type": "UInt",
+            "value": "340282366920938463463374607431768211454"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "beq",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "Bool",
+              "value": true
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "flag"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": true
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 10
+      },
+      "id": "H6-B1",
+      "logical_cap": null,
+      "note": "Bool Eq/Ne on Bool operands; next updates flag then requires reads updated flag",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "p": {
+            "type": "Bool",
+            "value": true
+          },
+          "q": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "beq",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "flag"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 10
+      },
+      "id": "H6-B2",
+      "logical_cap": null,
+      "note": "Bool Eq/Ne on Bool operands; next updates flag then requires reads updated flag",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "p": {
+            "type": "Bool",
+            "value": true
+          },
+          "q": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "beq",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "Bool",
+              "value": true
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "flag"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": true
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 10
+      },
+      "id": "H6-B3",
+      "logical_cap": null,
+      "note": "Bool Eq/Ne on Bool operands; next updates flag then requires reads updated flag",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "p": {
+            "type": "Bool",
+            "value": false
+          },
+          "q": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "beq",
+      "category": "arithmetic",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "Bool",
+              "value": false
+            },
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "kind": "State",
+            "name": "flag"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "acc": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "flag": {
+              "type": "Bool",
+              "value": false
+            }
+          }
+        },
+        "work_used": 10
+      },
+      "id": "H6-B4",
+      "logical_cap": null,
+      "note": "Bool Eq/Ne on Bool operands; next updates flag then requires reads updated flag",
+      "program": "H6-bounds",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "p": {
+            "type": "Bool",
+            "value": false
+          },
+          "q": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "bump",
+      "category": "dag",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "after": {
+              "type": "UInt",
+              "value": "5"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "4"
+            },
+            "kind": "State",
+            "name": "s"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "6"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "5"
+            },
+            "kind": "State",
+            "name": "s"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "6"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "4"
+            }
+          }
+        },
+        "work_used": 18
+      },
+      "id": "H3-P1",
+      "logical_cap": null,
+      "note": "shared node 2 in two Next statements: s 4->5->6 (re-evaluated per statement); node 3=(s+1)^2 with child shared; sq = 2*49 = 98; work = 4 stmts + 3 + 3 + (19,3,2,0,1 =5) + (18,17,6 =3) = 18; dead nodes 7,8 never evaluated",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [],
+        "inputs": {},
+        "liabilities": [],
+        "state": {
+          "s": {
+            "type": "UInt",
+            "value": "4"
+          }
+        }
+      }
+    },
+    {
+      "action": "pay",
+      "category": "dag",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "x",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "4",
+              "gross_debit_excluding_self": "4",
+              "net_delta": "-4",
+              "post": "0",
+              "pre": "4"
+            },
+            {
+              "account": "y",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "4",
+              "post": "4",
+              "pre": "0"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "6",
+              "discharged": "4",
+              "name": "d",
+              "opening": "10",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "d"
+          ]
+        },
+        "effects": [
+          {
+            "amount": "4",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            },
+            "from": "x",
+            "kind": "Transfer",
+            "to": "y"
+          },
+          {
+            "after": "6",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            },
+            "before": "10",
+            "creditor": "y",
+            "debtor": "x",
+            "kind": "Liability",
+            "name": "d"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "x",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            },
+            {
+              "account": "y",
+              "amount": "4",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "6",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "creditor": "y",
+              "debtor": "x",
+              "name": "d"
+            }
+          ],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "x",
+              "amount": "4",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            },
+            {
+              "account": "y",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "10",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "creditor": "y",
+              "debtor": "x",
+              "name": "d"
+            }
+          ],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 16
+      },
+      "id": "H3-P2",
+      "logical_cap": null,
+      "note": "same LiabilityAmount node 4 read before (10) and after (6) discharge within one action",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [
+          {
+            "account": "x",
+            "amount": "4",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            }
+          },
+          {
+            "account": "y",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            }
+          }
+        ],
+        "inputs": {
+          "after": {
+            "type": "UInt",
+            "value": "6"
+          },
+          "before": {
+            "type": "UInt",
+            "value": "10"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "4"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "10",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            },
+            "creditor": "y",
+            "debtor": "x",
+            "name": "d"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "pay",
+      "category": "dag",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 4,
+        "work_attempted": 14
+      },
+      "id": "H3-R1",
+      "logical_cap": null,
+      "note": "HOSTILE: witness reusing the first evaluation of shared node 4 after discharge must be rejected (step 4)",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [
+          {
+            "account": "x",
+            "amount": "4",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            }
+          },
+          {
+            "account": "y",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            }
+          }
+        ],
+        "inputs": {
+          "after": {
+            "type": "UInt",
+            "value": "10"
+          },
+          "before": {
+            "type": "UInt",
+            "value": "10"
+          },
+          "pay": {
+            "type": "UInt",
+            "value": "4"
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "10",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            },
+            "creditor": "y",
+            "debtor": "x",
+            "name": "d"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "poly_u",
+      "category": "dag",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "x",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "3",
+              "gross_debit_excluding_self": "3",
+              "net_delta": "-3",
+              "post": "0",
+              "pre": "3"
+            },
+            {
+              "account": "y",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "3",
+              "post": "3",
+              "pre": "0"
+            }
+          ],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            },
+            "from": "x",
+            "kind": "Transfer",
+            "to": "y"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "x",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            },
+            {
+              "account": "y",
+              "amount": "3",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            }
+          ],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "x",
+              "amount": "3",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            },
+            {
+              "account": "y",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              }
+            }
+          ],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 5
+      },
+      "id": "H3-P3",
+      "logical_cap": null,
+      "note": "node 9/10 typed UInt in this action",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [
+          {
+            "account": "x",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            }
+          },
+          {
+            "account": "y",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            }
+          }
+        ],
+        "inputs": {
+          "v": {
+            "type": "UInt",
+            "value": "3"
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "poly_b",
+      "category": "dag",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 5
+      },
+      "id": "H3-P4",
+      "logical_cap": null,
+      "note": "same nodes 9/10 typed Bool in this action",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "v": {
+            "type": "Bool",
+            "value": true
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "poly_b",
+      "category": "dag",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::requires",
+        "phase": "execution",
+        "step": 1,
+        "work_attempted": 5
+      },
+      "id": "H3-R2",
+      "logical_cap": null,
+      "note": "reject at step 1 (v false)",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "v": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "open",
+      "category": "dag",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [
+            {
+              "accrued": "10",
+              "closing": "10",
+              "discharged": "0",
+              "name": "d",
+              "opening": "0",
+              "present_after": true,
+              "present_before": false,
+              "present_zero_after": false
+            }
+          ],
+          "residual_positive": [
+            "d"
+          ]
+        },
+        "effects": [
+          {
+            "after": "10",
+            "asset": {
+              "issuer": "holdout-dag",
+              "network": "holdout-net",
+              "reference": "tok",
+              "scale": 0
+            },
+            "before": "0",
+            "creditor": "y",
+            "debtor": "x",
+            "kind": "Liability",
+            "name": "d"
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [
+            {
+              "amount": "10",
+              "asset": {
+                "issuer": "holdout-dag",
+                "network": "holdout-net",
+                "reference": "tok",
+                "scale": 0
+              },
+              "creditor": "y",
+              "debtor": "x",
+              "name": "d"
+            }
+          ],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "s": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 2
+      },
+      "id": "H3-P5",
+      "logical_cap": null,
+      "note": "create d=10 from absent",
+      "program": "H3-dag",
+      "scenario": {
+        "balances": [],
+        "inputs": {},
+        "liabilities": [],
+        "state": {}
+      }
+    },
+    {
+      "action": "tick",
+      "category": "emit",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [],
+          "duties": [],
+          "residual_positive": []
+        },
+        "effects": [
+          {
+            "kind": "Emit",
+            "name": "before",
+            "value": {
+              "type": "UInt",
+              "value": "0"
+            }
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "11"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "n"
+          },
+          {
+            "kind": "Emit",
+            "name": "after",
+            "value": {
+              "type": "UInt",
+              "value": "11"
+            }
+          },
+          {
+            "kind": "Emit",
+            "name": "flag",
+            "value": {
+              "type": "Bool",
+              "value": true
+            }
+          }
+        ],
+        "post": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "n": {
+              "type": "UInt",
+              "value": "11"
+            }
+          }
+        },
+        "pre": {
+          "balances": [],
+          "liabilities": [],
+          "state": {
+            "n": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 12
+      },
+      "id": "H4-P1",
+      "logical_cap": null,
+      "note": "Core outcome with ordered Emit effects (before=0, State, after=11, flag=true). Compiler: either constrains all three Emit effects in order or refuses the WHOLE program (adopted TargetEmit policy); never silently drops Emit",
+      "program": "H4-emit",
+      "scenario": {
+        "balances": [],
+        "inputs": {
+          "k": {
+            "type": "UInt",
+            "value": "11"
+          }
+        },
+        "liabilities": [],
+        "state": {
+          "n": {
+            "type": "UInt",
+            "value": "0"
+          }
+        }
+      }
+    },
+    {
+      "action": "settle",
+      "category": "work",
+      "expected": {
+        "accepted": true,
+        "accounting": {
+          "balances": [
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "fees_paid": "0",
+              "gross_debit": "5",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "5",
+              "pre": "5"
+            },
+            {
+              "account": "auditor",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "0",
+              "post": "7",
+              "pre": "7"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "1250",
+              "gross_debit": "250000",
+              "gross_debit_excluding_self": "250000",
+              "net_delta": "-250000",
+              "post": "750000",
+              "pre": "1000000"
+            },
+            {
+              "account": "operator",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "1250",
+              "post": "1253",
+              "pre": "3"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "fees_paid": "0",
+              "gross_debit": "0",
+              "gross_debit_excluding_self": "0",
+              "net_delta": "248750",
+              "post": "248750",
+              "pre": "0"
+            }
+          ],
+          "duties": [
+            {
+              "accrued": "0",
+              "closing": "9",
+              "discharged": "0",
+              "name": "legacy",
+              "opening": "9",
+              "present_after": true,
+              "present_before": true,
+              "present_zero_after": false
+            },
+            {
+              "accrued": "0",
+              "closing": "0",
+              "discharged": "0",
+              "name": "warranty",
+              "opening": "0",
+              "present_after": true,
+              "present_before": false,
+              "present_zero_after": true
+            }
+          ],
+          "residual_positive": [
+            "legacy"
+          ]
+        },
+        "effects": [
+          {
+            "amount": "248750",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "buyer",
+            "kind": "Transfer",
+            "to": "seller"
+          },
+          {
+            "amount": "1250",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "from": "buyer",
+            "kind": "Fee",
+            "to": "operator"
+          },
+          {
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            },
+            "from": "seller",
+            "kind": "Transfer",
+            "to": "seller"
+          },
+          {
+            "after": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            },
+            "before": "0",
+            "creditor": "buyer",
+            "debtor": "seller",
+            "kind": "Liability",
+            "name": "warranty"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "248750"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "released"
+          },
+          {
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "kind": "State",
+            "name": "rounds"
+          },
+          {
+            "after": {
+              "type": "Bool",
+              "value": true
+            },
+            "before": {
+              "type": "Bool",
+              "value": true
+            },
+            "kind": "State",
+            "name": "open"
+          }
+        ],
+        "post": {
+          "balances": [
+            {
+              "account": "seller",
+              "amount": "5",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              }
+            },
+            {
+              "account": "auditor",
+              "amount": "7",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "buyer",
+              "amount": "750000",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "operator",
+              "amount": "1253",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "248750",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "9",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "creditor": "else",
+              "debtor": "someone",
+              "name": "legacy"
+            },
+            {
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              },
+              "creditor": "buyer",
+              "debtor": "seller",
+              "name": "warranty"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "248750"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "1"
+            }
+          }
+        },
+        "pre": {
+          "balances": [
+            {
+              "account": "seller",
+              "amount": "5",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              }
+            },
+            {
+              "account": "auditor",
+              "amount": "7",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "buyer",
+              "amount": "1000000",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "operator",
+              "amount": "3",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            },
+            {
+              "account": "seller",
+              "amount": "0",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "usdx",
+                "scale": 6
+              }
+            }
+          ],
+          "liabilities": [
+            {
+              "amount": "9",
+              "asset": {
+                "issuer": "holdout-issuer",
+                "network": "holdout-net",
+                "reference": "pts",
+                "scale": 0
+              },
+              "creditor": "else",
+              "debtor": "someone",
+              "name": "legacy"
+            }
+          ],
+          "state": {
+            "open": {
+              "type": "Bool",
+              "value": true
+            },
+            "released": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "rounds": {
+              "type": "UInt",
+              "value": "0"
+            }
+          }
+        },
+        "work_used": 36
+      },
+      "id": "W-1",
+      "logical_cap": "36",
+      "note": "work cap exactly 36 accepted",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1250"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "250000"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "9",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            },
+            "creditor": "else",
+            "debtor": "someone",
+            "name": "legacy"
+          }
+        ],
+        "state": {}
+      }
+    },
+    {
+      "action": "settle",
+      "category": "work",
+      "expected": {
+        "accepted": false,
+        "error": "mori::core::meter",
+        "phase": "execution",
+        "step": 9,
+        "work_attempted": 35
+      },
+      "id": "W-2",
+      "logical_cap": "35",
+      "note": "work cap 35 rejected (meter) at last statement",
+      "program": "H1-settle",
+      "scenario": {
+        "balances": [
+          {
+            "account": "buyer",
+            "amount": "1000000",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "0",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "operator",
+            "amount": "3",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          },
+          {
+            "account": "seller",
+            "amount": "5",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            }
+          },
+          {
+            "account": "auditor",
+            "amount": "7",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "usdx",
+              "scale": 6
+            }
+          }
+        ],
+        "inputs": {
+          "cut": {
+            "type": "UInt",
+            "value": "1250"
+          },
+          "gross": {
+            "type": "UInt",
+            "value": "250000"
+          },
+          "hold": {
+            "type": "UInt",
+            "value": "0"
+          },
+          "last": {
+            "type": "Bool",
+            "value": false
+          }
+        },
+        "liabilities": [
+          {
+            "amount": "9",
+            "asset": {
+              "issuer": "holdout-issuer",
+              "network": "holdout-net",
+              "reference": "pts",
+              "scale": 0
+            },
+            "creditor": "else",
+            "debtor": "someone",
+            "name": "legacy"
+          }
+        ],
+        "state": {}
+      }
+    }
+  ]
+}

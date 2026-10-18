@@ -1,0 +1,76 @@
+{
+  "reviewer": "Claude Opus (fresh, non-author, independent specification reviewer)",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "candidateSha256": "cb0324a0904953e7b753b63b2fa6ed6485ecc4c1e7b88268bcc61023a5a492ac",
+  "verdict": "CHANGES_REQUIRED (partial approval: task 1.1 only)",
+  "approvedItems": [
+    "1.1"
+  ],
+  "approvedScope": "OpenSpec specification approval for task 1.1 only, as written in the candidate bytes. Permitted: (a) read-only inspection of live repository bytes, records and ledgers; (b) the retained pure-policy reproducer; (c) new reproducers of the store-identity, lineage, history-anchoring (finding N1), approval-ingestion and primary-occupancy defects. Reproducers run only against isolated copies, with explicit isolated SQLite store, budget lock, master/projection and record destinations. Reproducer and test files may be added in isolated or test locations. No plugin production module (policy/records/store/runner/cli) is modified. No live store, lock, master, projection, action registry or campaign record is written. Guarded `status`/`review` against the live checkout are included only if the resulting live admin_intervals/events writes are recorded before and after (N5); otherwise run them on a copy. Excluded: tasks 1.2, 1.3, 1.4 and 1.5; any source repair; live amendment, debit, grant, counter, history reconciliation or dispatch; SP01 diff disposition; the conditional successor-grant option; items 2\u20136.",
+  "findings": [
+    {
+      "id": "N1",
+      "severity": "blocking",
+      "class": "isolated-source-repair adequacy (blocks 1.2/1.4)",
+      "path": "spec.md#Item 1 \u2014 Operational history is evidence; #accounting paragraphs on store identity and isolation; store.py::get_db_path/get_history/init_db",
+      "requirement": "R1's kind and lineage closure is now correct. The same history-laundering class stays open through store selection. get_history returns None (unavailable) only when the store has zero events for the repository. Any store with one unrelated event, for example a report action's action_start, returns verified zero failures and primaryActive=false for the loan lineage. Item 1 must also add 'explicitly isolated runtime destinations' for the store and lock. Under the current text, the master debit binds 'the exact plugin store identity', meaning whichever store is used at debit time. Nothing requires that store to be the canonical store holding retained loan-executor history. Nothing forbids live-profile admission from using the new isolation override. A debit bound to a fresh or seeded store therefore satisfies store-identity and history gates while shedding every recorded failure. The spec also does not identify which lineage keys and records constitute 'retained loan-executor defect history'. The existing actions use SP01.6/loan-swap-subset and SP05.1/fixed-financial-driver, and the reproducer used SP05/loan-executor. Some of those failures may exist only as deliverable receipts, not store events.",
+      "correction": "Add: 'Live admission of a finalized-financial-settlement action SHALL read operational history only from the canonical plugin store of the authorized repository. That store's persisted identity SHALL be recorded in existing block records before item 1 source changes, and it SHALL be the identity bound by the master debit. Test isolation destinations SHALL be refused for live-profile admission and debit binding. A store lacking that identity, or lacking recorded events for the retained loan-executor lineage identified in 1.1, SHALL yield operational-history unavailable, never zero failures. Task 1.1 SHALL record the exact lineage keys and any retained failures that exist only outside the store. Reconciling them into live history is not isolated item 1 work.' Add scenario: 'A live-profile action is evaluated against a fresh, seeded, isolation-override, restored or other-clone store. It is denied as history unavailable, and no debit may bind that store.'"
+    },
+    {
+      "id": "N2",
+      "severity": "minor",
+      "class": "isolated-source-repair adequacy",
+      "path": "spec.md#Operational history requirement ('primary-reservation gates regardless of registered kind'); store.py::reserve, get_history primaryActive; cli.py has_other_primary (not supplied)",
+      "requirement": "The text makes a live verify/review/reproduce action obey the primary gate. It does not say the action occupies the slot. reserve's transactional conflict check and get_history's primaryActive both count only implement/repair. An implement reservation could therefore start while a live verify invocation is active. Patching policy alone would satisfy one reading of the spec.",
+      "correction": "Add: 'A live-profile action SHALL both be denied by and occupy the primary slot in reserve's transactional check, get_history primaryActive and the post-reservation recheck.' Cover both orderings in 1.4."
+    },
+    {
+      "id": "N3",
+      "severity": "minor",
+      "class": "isolated-source-repair adequacy",
+      "path": "spec.md#store identity paragraph; #Replay through another or recreated store; store.py::runner_claims",
+      "requirement": "Store identity plus the SQLite claim does not cover a restored pre-claim copy of the same store. That copy has the same identity and no claim row. It also does not cover a crash after the SQLite claim but before any master-side ownership record. A SQLite file has no inherent identity, so the identity token must persist inside the store.",
+      "correction": "Specify a persisted in-store identity token. Specify a master-side one-shot claim transition under budget.lock that launch requires and that no retry can repeat. Add fault cases for a restored same-identity backup, and for a crash between the SQLite claim and the master claim record."
+    },
+    {
+      "id": "N4",
+      "severity": "minor",
+      "class": "isolated-source-repair adequacy",
+      "path": "spec.md#Item 1 current binding identity; records.py::_evidence_applicable (status.startswith('admitted-')), _verify_candidate ('SHA256' in algo)",
+      "requirement": "The live binding status, source-review scope and source-acceptance status are described but not fixed. Existing consumers use prefix and substring matches. Live/design discrimination tests are only independently checkable against exact closed values.",
+      "correction": "Require 1.2 to record exact live label strings before tests. Live discrimination SHALL use exact equality against closed sets, with no prefix or substring matching. Include near-miss labels such as design labels with added suffixes as rejection cases."
+    },
+    {
+      "id": "N5",
+      "severity": "minor",
+      "class": "isolated-source-repair adequacy",
+      "path": "tasks.md#1.1, 1.4 ('live ... operational history untouched'); cli.py::cmd_status/cmd_review record_admin_interval",
+      "requirement": "Task 1.1 runs guarded status. On the live checkout that call writes admin_intervals, which feed adminSeconds and the admin gate. cmd_review writes events. The 1.4 'untouched' verification is then unsatisfiable, or will be applied loosely.",
+      "correction": "Enumerate the permitted observational live writes and record store digests and row counts before and after, or run these commands on copies."
+    },
+    {
+      "id": "N6",
+      "severity": "scope-note",
+      "class": "distinguishes producer/resource work",
+      "path": "tasks.md#1.4 (debit/store replay, race/prepaid/crash, attempt/submission reconciliation)",
+      "requirement": "Several 1.4 checks exercise the accounting producer: debit commit under budget.lock, crashes between master and projection writes, and attempt derivation from retained run records. That producer belongs to 1.3, which is not approved. Fixture ledgers are explicitly not the producer.",
+      "correction": "When 1.2/1.4 are re-approved, limit their approval to consumer, store, runner, policy and CLI checks against fixture ledgers: claim, store identity, replay, prepaid boundary, projection-correspondence rejection, and kind/lineage/approval/primary gates. Producer race, crash and attempt checks follow 1.3 approval."
+    },
+    {
+      "id": "N7",
+      "severity": "non-blocking judgment",
+      "class": "resource producer / later live-instance evidence",
+      "path": "tasks.md#1.3; proposal.md accounting paragraphs; resource-suffix-analysis.md; records.py::_remaining_from_current/_verify_resource",
+      "requirement": "Judgment: resource producer specification may proceed as drafting and read-only reconciliation. It is not ready for approval or implementation. Missing concrete requirements: (1) the producer's tracked location and actual caller; retained run.py is text-only. (2) How historical closure is expressed within the closed ACCOUNTING_KEYS and the hard-coded authority_sha256, for example an explicit closure reservation row, without new fields. (3) Disposition of the two direct delegated amendments that claim no majority, and of the unestablished 197630/71 baseline. (4) Explicit extension of the aggregate 83/83 and package 52/52 dispatch ceilings, which the reader does not enforce. (5) Single counting across resourceAmendment, successorAmendments and binding allocationSeconds. (6) An identified non-mutating wallet funding source; none is identified, check-balance is excluded, and the indexer tip is not a balance. (7) DUST/SPECK versus tNight fee-unit treatment. (8) When live history reconciliation (N1) and attempt-count derivation occur. (9) The concrete per-invocation submission bound. Items 6\u20139 are later live-instance evidence, not defects of the isolated source repairs.",
+      "correction": "Refine 1.3 with these items before requesting resource-specification approval. Missing evidence keeps live admission unavailable."
+    }
+  ],
+  "limitations": [
+    "Prior R1\u2013R7 are substantively addressed in the text: kind/lineage/approval gates, master-bound store identity, single-path digest-referenced bridge, full isolation including store and lock, attempt-3 derivation and the charged-but-unlaunched rule, observations outside hashed inputs, and the item 3 runner bounds. The findings above are residual.",
+    "No tools were used against repository bytes. I did not recompute the candidate SHA256 or any file digest, and relied on the supplied inline bytes.",
+    "policy.py and runner.py were supplied as complete files; records.py, store.py and cli.py were selected excerpts. Not inspected: load_snapshot, read_actions, has_other_primary, record_admin_interval, bootstrap_store, notifications.py, the historical SP01 binding and candidate manifest, the campaign store, the program and sprints JSON, the loan executor candidate, retained run.py, and resource-suffix-observations.json (cited but not supplied).",
+    "The conditional closed-historical-credit successor-grant option is neither approved nor counted. I record no dissent against its bounded form. Reservation: closure must be expressed in existing closed records, the new grant must be bounded, the disputed non-majority amendments must be dispositioned, and unknown costs must never be treated as zero. It requires separate concrete resource votes and verified enforcement.",
+    "No SP01 exact-diff disposition is given. No live amendment, debit, grant, counter change, history reconciliation or dispatch is approved. Tasks 1.2 and 1.4 need fresh Opus and Astra approval of revised bytes addressing N1; N2\u2013N5 should be folded into the same revision. Only scope approved identically by both reviewers may proceed."
+  ]
+}

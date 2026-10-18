@@ -1,0 +1,45 @@
+--- parent-a6e17efd/source/mori-r1cs/src/coverage.rs
++++ resume-candidate/source/mori-r1cs/src/coverage.rs
+@@ -162,21 +162,38 @@
+     row("Source sponsorship / DUST / service cost planes", Support::TargetObligation, "not in moriarty-reference-logical-cost/1; unmeasured", "source_sponsor.rs; policy.rs"),
+ ];
+ 
+-/// Each Core refusal on the `/1` success path and how the success relation excludes it.
++/// Each Core refusal on the `/1` success path and how the success relation excludes it,
++/// relative to the represented snapshot (the cells and registry duties in the layout).
+ /// A `TargetPremise` row is a refusal the relation does NOT exclude; it names the
+-/// premise a target must establish instead.
++/// premise a target must establish instead (see `adapter::TARGET_OBLIGATIONS`).
+ pub const REFUSALS: &[Row] = &[
+     row("mori::core::profile / name / program / duplicate / type / expression / asset / account / liability (validate)", Support::AdmissionFact, "program not admitted; no relation", "runtime.rs:120-322"),
+     row("mori::core::action (unknown action)", Support::RefusedAtCompile, "CompileError::UnknownAction", "runtime.rs:875-879"),
+-    row("mori::core::bound (scenario sizes, trace product)", Support::Constant, "conservative compile-time bound over the represented snapshot; extra rows are a target obligation", "runtime.rs:529-547"),
++    row(
++        "mori::core::bound (scenario sizes, trace product)",
++        Support::TargetPremise,
++        "NOT excluded by the relation for scenario rows it does not carry: plan.rs refuses at compile (CompileError::Bound) only when the represented snapshot alone exceeds Core's bounds, counting every registry duty as present. Core's bound counts every scenario row, so a scenario whose unrepresented rows push it over the bound is excluded only under the target obligations of pre-state authenticity and frame completeness",
++        "runtime.rs:529-547; plan.rs bound",
++    ),
+     row("mori::core::state / input (scenario typing)", Support::Lowered, "slot types fix the shape; encode refuses mistyped claims", "runtime.rs:548-585"),
++    row(
++        "mori::core::asset / balance / liability (scenario rows: undeclared asset identity, invalid or duplicate balance or liability row)",
++        Support::TargetPremise,
++        "NOT excluded by the relation: the layout has exactly one slot per represented (asset, account) cell and per registry duty, so rows outside it and the validity or uniqueness of the ledger rows behind each slot are not in the statement. Excluded only under the target obligations of pre-state authenticity and frame completeness",
++        "runtime.rs:586-608, 632-651",
++    ),
+     row(
+         "mori::core::balance (missing explicit balance)",
+         Support::TargetPremise,
+         "NOT excluded by the relation: every touched cell is represented, but the layout has no balance presence bit, so a claim of pre-balance 0 for a row absent from the Core scenario satisfies the relation (review F-04, M-14 expected SATISFIABLE). A target must authenticate row existence, or a reviewed presence bit must be added",
+         "runtime.rs:609-627",
+     ),
+-    row("mori::core::liability (scenario identity differs)", Support::Constant, "duty identities are registry constants", "runtime.rs:652-659"),
++    row(
++        "mori::core::liability (scenario identity differs)",
++        Support::TargetPremise,
++        "NOT excluded by the relation: a registry duty's identity is a relation constant and its cell carries only (present, amount), so the statement cannot say which ledger row stands behind the cell. The encoder refuses a mismatching record (MappingError), but a claimant need not use it. Excluded only under the target obligations of pre-state authenticity and frame completeness",
++        "runtime.rs:652-659; witness.rs body",
++    ),
+     row("mori::core::liability (conflicting source identity)", Support::RefusedAtCompile, "StaticFailure: every simulate refuses", "runtime.rs:500-527"),
+     row("mori::core::overflow (Add, Mul, credit, accrual)", Support::Lowered, "range-proven result; unsatisfiable", "runtime.rs:455-469, 691-695, 809-814"),
+     row("mori::core::underflow (Sub)", Support::Lowered, "range-proven difference; unsatisfiable", "runtime.rs:460-464"),

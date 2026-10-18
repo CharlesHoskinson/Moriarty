@@ -1,0 +1,1296 @@
+"""K10 builder R4: PREFIX (imports, constants, shared private helpers, four gates).
+
+AUTHOR-PROPOSED implementation source by claude-opus-5-5 for C2-BUILDER-R4-CONTRACT.md
+CB401-CB412 and R4-API c2-builder-r4-api/2. Not imported, compiled, executed, reviewed
+or adopted; authority 0. This prefix holds the nine permitted imports, the frozen API
+constants, private helpers shared with the tail, and the public gates parse_expiry
+(ARGV), read_public_file (READ), parse_public_json (JSON) and check_setup_link (LINK).
+It ends at the single R4 append seam. legacy_env_from_host, plan_outputs, main, the
+private writer and cleanup, and the verbatim Sol renderer _render_prepared_outputs are
+appended below the seam by a later, separately reviewed tail; nothing here is edited.
+
+Every refusal is ValueError('C2B-<STAGE>: <reason>') with exactly one exact str
+argument on one line. The reason is a fixed literal that may carry a module constant or
+an errno name and number; no path, argv text or other caller text is echoed. Only exact
+builtin arguments are given behaviour, and type checks come first so that no caller
+hook (subclass, PathLike, __fspath__, __index__, __eq__, __hash__) runs before a
+refusal. Missing POSIX open flags, missing dir_fd support or a non-Linux platform stops
+the import (AttributeError or RuntimeError): that is STOP, never a refusal.
+
+Non-claims. Nothing here checks or claims Groth16, VK or proof curve validity, VK
+profile, statement re-encode, circuit/VK correspondence, the ledger or a provider,
+fees, min-ADA, collateral, ExUnits, fit, Preview, Preprod or operator compatibility.
+The JSON gate is this builder's own (depth 16, integer literals of at most 20
+characters, no node bound). It is not Rust parse_json or parse_limited, and the r2
+label jsonParseLimits stays NOT_CHECKED. rustAcceptance stays NOT_ESTABLISHED: no
+relation of any kind is stated between these gates, r2 admission and Rust acceptance.
+The LINK digest is exact-file-byte SHA-256 identity for one run only. The setup is
+single-party, TEST ONLY and forgeable. The v1 consumer module is never imported or
+bound, and format /2 is never bridged to /1.
+"""
+import hashlib
+import json
+import os
+import re
+import stat
+import sys
+import build_k10_inputs as legacy
+import c2_issue_artifacts_r2
+import host_codec
+
+# ---- frozen API constants (R4-API constants, regexAsciiFullmatch, openFlags) ----------
+_B9_CAP = 16777216
+_EXPORT_CAP = 1048576
+_SETUP_CAP = 65536
+_READ_CHUNK = 65536
+_READ_CAPS = (_B9_CAP, _EXPORT_CAP, _SETUP_CAP)
+_JSON_CAPS = (_EXPORT_CAP, _SETUP_CAP)
+_JSON_DEPTH = 16
+_JSON_INT_CHARS = 20
+_CONSUMER_MESSAGE_CHARS = 1024
+_U64_MAX = 2 ** 64 - 1
+
+# ASCII full-match patterns; every use is .fullmatch() on an exact str.
+_EXPIRY_RE = re.compile(r"(?:0|[1-9][0-9]{0,19})", re.ASCII)
+_JSON_INT_RE = re.compile(r"(?:0|-?[1-9][0-9]*)", re.ASCII)
+_HEX64_RE = re.compile(r"[0-9a-f]{64}", re.ASCII)
+_BASENAME_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,99}", re.ASCII)
+
+# Open flags and modes. A missing os.O_* attribute raises AttributeError at import: STOP.
+_READ_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY
+_PARENT_DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC
+_PINNED_DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+_WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NOCTTY
+_WRITE_MODE = 0o644
+_MKDIR_MODE = 0o755
+
+# Refusal stages (API refusal.stages) and errno classes (API errno). The errno module is
+# not a permitted import, so names map to the Linux asm-generic numbers; the five names
+# that have a PEP 3151 OSError subclass are cross-checked at import below.
+_REFUSAL_STAGES = ("ARGV", "OUTDIR", "READ", "JSON", "LINK", "POLICY", "CONSUMER", "BRIDGE",
+                   "WRITE", "REREAD")
+_ERRNO_NUMBERS = {"EPERM": 1, "ENOENT": 2, "ENXIO": 6, "EACCES": 13, "ENODEV": 19,
+                  "ENOTDIR": 20, "EISDIR": 21, "ENAMETOOLONG": 36, "ELOOP": 40,
+                  "EOVERFLOW": 75}
+_READ_REFUSAL_ERRNOS = ("ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM", "EISDIR",
+                        "ENAMETOOLONG", "ENXIO", "ENODEV", "EOVERFLOW")
+_OUTDIR_REFUSAL_ERRNOS = ("ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM", "ENAMETOOLONG")
+
+# r2 dependency literals (API dependency). The label map is kept as ordered pairs so
+# that no shared mutable dict exists; the tail builds a fresh dict per comparison.
+_R2_FORMAT = "moriarty-c2-issue-artifacts/2"
+_RESULT_KEYS = ("format", "envData", "envCborHex", "envelopeTokenNameHex", "issueData",
+                "issueCborHex", "mintValueData", "mintValueCborHex", "policyIdHex", "expiry",
+                "setupRecordSha256Declared", "labels")
+_C2I_STAGES = ("ARG", "SETUP", "PROFILE", "EXPORT", "RELATION", "STATEMENT", "CONTEXT",
+               "DIGEST", "PROOF", "CARDANO", "BUILD")
+_R2_LABELS = (
+    ("expiry", "CALLER_SUPPLIED_NOT_PROOF_BOUND"),
+    ("context", "CALLER_DECLARED_UNAUTHENTICATED"),
+    ("policyId", "CALLER_SUPPLIED_UNAUTHENTICATED"),
+    ("trustProfile", "single-party-test-setup/1"),
+    ("setupRecordLink", "DECLARED_NOT_BYTE_CHECKED"),
+    ("groth16", "NOT_VERIFIED"),
+    ("vkCurveValidity", "NOT_CHECKED"),
+    ("vkProfile", "NOT_CHECKED"),
+    ("proofCurveValidity", "NOT_CHECKED"),
+    ("statementReencode", "NOT_CHECKED"),
+    ("jsonParseLimits", "NOT_CHECKED"),
+    ("relationProfile", "DESCRIPTOR_PROFILE_CHECKED_NOT_RECOMPILED"),
+    ("driverId", "DECLARED_NAME_NOT_PROVENANCE"),
+    ("rustAcceptance", "NOT_ESTABLISHED"),
+    ("circuitVkCorrespondence", "OPEN"),
+    ("ledger", "NO_CLAIM"),
+)
+_NONCONFORMING_CONSUMER = "nonconforming consumer refusal"
+_VK_BYTES = 488
+_PROOF_BYTES = 192
+_POLICY_BYTES = 28
+
+# Output roster and rows (API outputs, cases). T2-T4 are coverage gaps only.
+_SCRIPT_HEX_FILE = "script.hex"
+_CONTEXTS_DIR = "contexts"
+_MANIFEST_FILE = "manifest.json"
+_MANIFEST_TMP_FILE = "manifest.json.tmp"
+_CASE_IDS = ("K10-T1-positive-genuine-issue", "K10-T5-quantity-two-reject",
+             "K10-T6-token-name-bitflip-reject", "K10-T7-vk-digest-bitflip-reject")
+_OUTPUT_FILES = (_SCRIPT_HEX_FILE,
+                 "contexts/K10-T1-positive-genuine-issue.uplc.txt",
+                 "contexts/K10-T5-quantity-two-reject.uplc.txt",
+                 "contexts/K10-T6-token-name-bitflip-reject.uplc.txt",
+                 "contexts/K10-T7-vk-digest-bitflip-reject.uplc.txt",
+                 _MANIFEST_FILE)
+_GAP_IDS = ("K10-T2-n1-body-digest-pairing-reject", "K10-T3-n2-context-digest-pairing-reject",
+            "K10-T4-n3-proof-ac-swap-pairing-reject")
+_GAP_STATUS = "NOT_GENERATED_HISTORICAL_FIXTURE_ONLY"
+_INPUT_ROLES = ("b9-applied", "proof-export", "setup-record")
+
+# Manifest literals (API manifest). Pairs and tuples only; the tail builds fresh dicts
+# and lists for every manifest so that no constant is shared or mutated.
+_MANIFEST_FORMAT = "cardano-k2-k10-public-inputs/3"
+_BUILDER_REVISION = "build_k10_inputs_r4"
+_MANIFEST_KEYS = (
+    "auditSourcePins", "builderLabels", "builderRevision", "cases", "claimantVkhHex",
+    "compiledValidatorTitle", "consumerFormat", "consumerLabels", "coverageGaps", "expiry",
+    "flags", "format", "inputs", "issueCborHex", "limitations", "mintValueCborHex",
+    "policyIdHex", "positiveEnvelopeCborHex", "positiveTokenNameHex", "proofBytes",
+    "scriptCompiledBytes", "scriptHashAlgorithm", "scriptHashClaimedHex",
+    "scriptHashClassification", "scriptHashIndependentlyRecomputedHex", "scriptHashPreimage",
+    "scriptHexFile", "scriptInnerFlatBytes", "settleOutref", "setupRecordSha256",
+    "statementDigestHex", "vkBytes", "vkDigestHex")
+_CASE_KEYS = ("contextFile", "envStatementDigestHex", "envVkDigestHex", "envelopeCborHex", "id",
+              "proofHexSha256", "quantity", "tokenNameHex")
+_BUILDER_LABELS = (
+    ("contextProvenance", "FABRICATED_LOCAL_VM_TEST_NOT_A_CARDANO_TRANSACTION"),
+    ("setupRecordLink", "FILE_BYTES_SHA256_EQUALS_EXPORT_DECLARATION"),
+    ("policyId", "RECOMPUTED_FROM_PINNED_HISTORICAL_B9_WRAPPER"),
+    ("uplcBridge", "LEGACY_RENDERER_UNCHANGED_PER_CALL_CBOR_EQUALITY"),
+    ("issueEncoding", "HOST_ONLY_LEGACY_CANNOT_ENCODE_OVER_64_BYTES"),
+    ("negativeCases", "BYTE_MUTATIONS_OF_ONE_GENUINE_PAYLOAD_NO_NEW_PROOFS"),
+    ("consumerProfile", "CP_R2_REV4_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED"),
+    ("transaction", "NO_FEE_MINADA_COLLATERAL_EXUNITS_FIT_OR_AUTHENTICITY_CLAIM"),
+    ("operatorCompatibility", "NOT_CLAIMED"),
+)
+_LIMITATIONS = (
+    "Fabricated local VM test context (zero fee, empty inputs, zero txid, everything interval); not a Cardano transaction.",
+    "Expiry is caller supplied and not proof bound; context is caller declared and unauthenticated.",
+    "Single-party TEST ONLY setup; Groth16, curve validity, fees, min-ADA, ExUnits and ledger acceptance are not checked or claimed.",
+    "Consumer profile r2 is a reviewed revision 4 candidate adopted as policy for test authoring only and not adopted for builder reliance, performing selected descriptor checks only; Rust acceptance is not established; VK profile and Rust JSON parse limits are not checked; circuit/VK correspondence is OPEN.",
+)
+_FLAG_NAMES = ("native", "operator", "wallet", "prover", "vm", "deploy", "previewTested",
+               "preprodTested", "groth16Verified", "builderReliancePermitted")
+# keptFromR2: copied verbatim from build_k10_inputs.py AUDIT_SOURCE_PINS and main().
+_COMPILED_VALIDATOR_TITLE = "c2.c2.mint"
+_AUDIT_SOURCE_PINS = (
+    ("pallas-traverse hashes.rs ComputeHash<28> PlutusScript",
+     "eecfb1f4bf763673087e7a2764ab1aa25fafe918d5e0442ecd94933a6b26c6ab"),
+    ("pallas-crypto hasher.rs Hasher<224> hash_tagged",
+     "80fb90446b39458957aa47be290d674a8edcee86c9a5ab4b5efdbd916d30c37e"),
+    ("pallas-primitives lib.rs PlutusScript transparent Bytes",
+     "a7c70f2594c8b9335d48c4bb38a7683662ce1a844f486546afa272a9cc90b601"),
+    ("pallas-primitives plutus_data.rs PlutusData encoding",
+     "adfebe4d9b53be5656bed1fce51e627fac0e3e1f14ee990dfe0af66bd26c924b"),
+    ("pallas-codec utils.rs Bytes transparent ByteVec",
+     "7019c76d3ba34edf028e7276a251248bd3bde2b5e759bd4f7847c394c6df798f"),
+    ("aiken uplc ast.rs compiled_code_and_hash/Serialize",
+     "d3d9009b93d71514017385b7b37fd3592c2c1d49585cd64d36db27bd7456dd7c"),
+    ("aiken uplc eval.rs uplc eval --cbor interface",
+     "2d63c16dd509842660c01d2f8ed3a712220d2dcd74d79bee51534055f33e2725"),
+)
+_SCRIPT_HASH_CLASSIFICATION = (
+    "independently recomputed by this adapter from the pinned "
+    "compiledCode via Pallas ComputeHash<28> for PlutusScript<3>; "
+    "the tool-declared hash was used only as a cross-check and "
+    "generation would have failed had it disagreed")
+_SCRIPT_HASH_PREIMAGE = (
+    "0x03 || compiledCode CBOR bytes (2770 bytes); strict "
+    "single-CBOR-byte-string guard validated 2767 inner flat "
+    "bytes; inner flat is not hashed and no double-CBOR "
+    "re-wrap is hashed")
+_SCRIPT_HASH_ALGORITHM = (
+    "blake2b digest_size=28 (Pallas Hasher<224>::hash_tagged, "
+    "pallas-traverse hashes.rs PlutusScript<VERSION>, "
+    "VERSION=3)")
+
+# JSON lexical pre-scan tokens. The string pattern is the unrolled form (a run of plain
+# characters, then escape-plus-run groups), so a failed match backtracks linearly.
+_UTF8_BOM = b"\xef\xbb\xbf"
+_JSON_WS_RE = re.compile(r"[ \t\n\r]*")
+_JSON_STRING_RE = re.compile(
+    r'"[^"\\\x00-\x1f]*(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})[^"\\\x00-\x1f]*)*"')
+_JSON_NUMBER_RE = re.compile(r"[-+.0-9eE]+")
+_JSON_LITERALS = ("true", "false", "null")
+
+# ---- platform STOP guards (contract section 0; never a refusal) -----------------------
+if sys.platform != "linux":
+    raise RuntimeError("STOP: build_k10_inputs_r4 supports the Linux envelope only")
+if not (all(function in os.supports_dir_fd
+            for function in (os.open, os.mkdir, os.stat, os.unlink, os.rmdir, os.rename))
+        and os.stat in os.supports_follow_symlinks):
+    raise RuntimeError("STOP: dir_fd or no-follow stat support is missing")
+if not all(type(OSError(_ERRNO_NUMBERS[name], name)) is kind
+           for name, kind in (("ENOENT", FileNotFoundError), ("ENOTDIR", NotADirectoryError),
+                              ("EISDIR", IsADirectoryError), ("EACCES", PermissionError),
+                              ("EPERM", PermissionError))):
+    raise RuntimeError("STOP: errno numbers differ from the Linux asm-generic table")
+
+
+# ---- shared private helpers (prefix and tail) -----------------------------------------
+def _refusal(stage, reason):
+    """Return ValueError('C2B-<stage>: <reason>') for the caller to raise.
+
+    stage is one of _REFUSAL_STAGES. reason is a non-empty one-line str built only from
+    fixed literals, module constants, errno names and numbers or, for CONSUMER only, a
+    message the caller has already proven conforming. A malformed call is an internal
+    error (RuntimeError), never a refusal.
+    """
+    if (type(stage) is not str or stage not in _REFUSAL_STAGES or type(reason) is not str
+            or not reason or "\n" in reason or "\r" in reason):
+        raise RuntimeError("internal: malformed C2B refusal")
+    return ValueError("C2B-" + stage + ": " + reason)
+
+
+def _is_refusal(error, stage=None):
+    """True for a ValueError whose only argument is an exact str starting 'C2B-'.
+
+    This is main's catch rule (contract section 3). With stage, the argument must
+    start 'C2B-<stage>: '.
+    """
+    if not isinstance(error, ValueError):
+        return False
+    args = error.args
+    if type(args) is not tuple or len(args) != 1 or type(args[0]) is not str:
+        return False
+    return args[0].startswith("C2B-" if stage is None else "C2B-" + stage + ": ")
+
+
+def _errno_refusal(stage, operation, error, allowed):
+    """Return the refusal for an OSError whose errno is named in allowed, else None.
+
+    The caller re-raises the original OSError when None is returned, so unlisted
+    errno values propagate unconverted. operation is a fixed literal.
+    """
+    number = error.errno
+    if type(number) is int:
+        for name in allowed:
+            if _ERRNO_NUMBERS[name] == number:
+                return _refusal(stage, "%s failed %s %d" % (operation, name, number))
+    return None
+
+
+def _encode_path(path, stage):
+    """Return os.fsencode(path) for an exact non-empty NUL-free str, else refuse stage.
+
+    Shared by ARGV (argv[1], argv[2], argv[3], argv[5]) and READ. The type check comes
+    first, so no __fspath__ or subclass hook runs; UnicodeEncodeError is refused
+    without echo.
+    """
+    if type(path) is not str:
+        raise _refusal(stage, "path is not an exact str")
+    if not path:
+        raise _refusal(stage, "path is empty")
+    if "\x00" in path:
+        raise _refusal(stage, "path contains NUL")
+    try:
+        return os.fsencode(path)
+    except UnicodeEncodeError:
+        raise _refusal(stage, "path is not encodable by os.fsencode") from None
+
+
+def _admit_expiry_int(value):
+    """Refuse C2B-ARGV unless value is an exact int (never bool) in 0..2**64-1.
+
+    Shared by parse_expiry and the plan_outputs ARGV gate.
+    """
+    if type(value) is not int or not 0 <= value <= _U64_MAX:
+        raise _refusal("ARGV", "expiry is not an exact int in 0..2**64-1")
+    return value
+
+
+def _has_surrogate(text):
+    """True if the exact str text holds a code point in U+D800..U+DFFF."""
+    if str.isascii(text):
+        return False
+    try:
+        str.encode(text, "utf-8")
+    except UnicodeEncodeError:
+        return True
+    return False
+
+
+def _json_string_end(text, pos):
+    match = _JSON_STRING_RE.match(text, pos)
+    if match is None:
+        raise _refusal("JSON", "malformed string, bad escape or raw control character")
+    return match.end()
+
+
+def _json_key_end(text, pos):
+    # pos is at the first non-whitespace character where an object key must start;
+    # returns the position just after the colon that follows the key.
+    if text[pos:pos + 1] != '"':
+        raise _refusal("JSON", "object key is not a string")
+    pos = _JSON_WS_RE.match(text, _json_string_end(text, pos)).end()
+    if text[pos:pos + 1] != ":":
+        raise _refusal("JSON", "object key is not followed by a colon")
+    return pos + 1
+
+
+def _json_prescan(text):
+    """Lexical pre-scan run before JSON decoding; iterative, linear, no recursion.
+
+    Admits exactly one top-level object with only space, tab, LF or CR around it;
+    strings without raw control characters and with only JSON escapes; integer
+    literals fully matching _JSON_INT_RE in at most _JSON_INT_CHARS characters (so
+    -0, leading zeros, fractions and exponents are refused); true, false and null;
+    and at most _JSON_DEPTH nested objects or arrays, the top-level object being 1.
+    NaN, Infinity, trailing commas and trailing data are refused.
+    """
+    end = len(text)
+    pos = _JSON_WS_RE.match(text).end()
+    if text[pos:pos + 1] != "{":
+        raise _refusal("JSON", "top level is not exactly one object")
+    closers = []
+    while True:
+        # A value starts here.
+        pos = _JSON_WS_RE.match(text, pos).end()
+        lead = text[pos:pos + 1]
+        if lead == "{" or lead == "[":
+            if len(closers) == _JSON_DEPTH:
+                raise _refusal("JSON", "nesting deeper than 16 levels")
+            closers.append("}" if lead == "{" else "]")
+            pos = _JSON_WS_RE.match(text, pos + 1).end()
+            if text[pos:pos + 1] != closers[-1]:
+                if lead == "{":
+                    pos = _json_key_end(text, pos)
+                continue
+            closers.pop()
+            pos += 1
+        elif lead == '"':
+            pos = _json_string_end(text, pos)
+        elif lead and lead in "-0123456789":
+            token = _JSON_NUMBER_RE.match(text, pos).group()
+            if len(token) > _JSON_INT_CHARS or _JSON_INT_RE.fullmatch(token) is None:
+                raise _refusal("JSON", "number is not an integer literal of at most 20 characters")
+            pos += len(token)
+        elif text.startswith(_JSON_LITERALS[0], pos):
+            pos += len(_JSON_LITERALS[0])
+        elif text.startswith(_JSON_LITERALS[1], pos):
+            pos += len(_JSON_LITERALS[1])
+        elif text.startswith(_JSON_LITERALS[2], pos):
+            pos += len(_JSON_LITERALS[2])
+        else:
+            raise _refusal("JSON", "unexpected token")
+        # A value is complete: consume closers until a comma or the end of the top level.
+        while True:
+            if not closers:
+                if _JSON_WS_RE.match(text, pos).end() != end:
+                    raise _refusal("JSON", "data after the top-level object")
+                return
+            pos = _JSON_WS_RE.match(text, pos).end()
+            separator = text[pos:pos + 1]
+            if separator == closers[-1]:
+                closers.pop()
+                pos += 1
+                continue
+            if separator != ",":
+                raise _refusal("JSON", "expected a comma or a closing bracket")
+            pos += 1
+            if closers[-1] == "}":
+                pos = _json_key_end(text, _JSON_WS_RE.match(text, pos).end())
+            break
+
+
+def _json_object_pairs(pairs):
+    # object_pairs_hook: keys arrive unescaped as exact str, so duplicates are detected
+    # after unescaping at every depth and the membership test runs no caller hook.
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise _refusal("JSON", "duplicate object key")
+        result[key] = value
+    return result
+
+
+def _json_int(token):
+    # parse_int hook: the decoder-level repeat of the pre-scan integer rule.
+    if len(token) > _JSON_INT_CHARS or _JSON_INT_RE.fullmatch(token) is None:
+        raise _refusal("JSON", "number is not an integer literal of at most 20 characters")
+    return int(token)
+
+
+def _json_no_float(token):
+    raise _refusal("JSON", "fraction or exponent")
+
+
+def _json_no_constant(token):
+    raise _refusal("JSON", "NaN or Infinity")
+
+
+def _json_post_walk(value):
+    """Iterative walk of the decoded value: exact dict top level, exact builtin node
+    types, exact str keys, no lone surrogate in any key or string, depth <= 16."""
+    if type(value) is not dict:
+        raise _refusal("JSON", "top level is not exactly one object")
+    pending = [(value, 1)]
+    while pending:
+        node, depth = pending.pop()
+        kind = type(node)
+        if kind is dict:
+            if depth > _JSON_DEPTH:
+                raise _refusal("JSON", "nesting deeper than 16 levels")
+            for key, child in node.items():
+                if type(key) is not str or _has_surrogate(key):
+                    raise _refusal("JSON", "object key is not a surrogate-free str")
+                pending.append((child, depth + 1))
+        elif kind is list:
+            if depth > _JSON_DEPTH:
+                raise _refusal("JSON", "nesting deeper than 16 levels")
+            for child in node:
+                pending.append((child, depth + 1))
+        elif kind is str:
+            if _has_surrogate(node):
+                raise _refusal("JSON", "string holds a lone surrogate")
+        elif not (node is None or kind is bool or kind is int):
+            raise _refusal("JSON", "decoded value has an unexpected type")
+
+
+# ---- public prefix gates (CB403, CB405, CB406, CB407) ---------------------------------
+def parse_expiry(text):
+    """ARGV: return the expiry for an exact str fully matching ASCII
+    (?:0|[1-9][0-9]{0,19}) with value <= 2**64-1; otherwise refuse C2B-ARGV.
+
+    No default, clock, environment or TEST_EXPIRY fallback exists.
+    """
+    if type(text) is not str or _EXPIRY_RE.fullmatch(text) is None:
+        raise _refusal("ARGV", "expiry is not a canonical ASCII decimal")
+    return _admit_expiry_int(int(text))
+
+
+def read_public_file(path, cap):
+    """READ: return at most cap bytes of one regular file, or refuse C2B-READ.
+
+    path is an exact non-empty NUL-free fsencode-encodable str and cap one of
+    _READ_CAPS. A no-follow lstat must report S_ISREG (advisory; it keeps FIFOs and
+    devices from being opened unless raced), then the fsencoded path is opened with
+    _READ_FLAGS and fstat on the fd must report S_ISREG (authoritative). os.read asks
+    for at most _READ_CHUNK bytes until EOF or cap+1 total bytes; more than cap bytes
+    is refused. Only the _READ_REFUSAL_ERRNOS classes from lstat or open become
+    C2B-READ. Every other OSError (including any from fstat, read or close),
+    MemoryError, OverflowError and KeyboardInterrupt propagates unconverted. The fd
+    is closed on every path: strictly on success (a close OSError propagates), best
+    effort before any refusal or exception after open propagates.
+    """
+    encoded = _encode_path(path, "READ")
+    if type(cap) is not int or cap not in _READ_CAPS:
+        raise _refusal("READ", "cap is not a frozen read cap")
+    try:
+        info = os.lstat(encoded)
+    except OSError as error:
+        refusal = _errno_refusal("READ", "lstat", error, _READ_REFUSAL_ERRNOS)
+        if refusal is None:
+            raise
+        raise refusal from None
+    if not stat.S_ISREG(info.st_mode):
+        raise _refusal("READ", "path is not a regular file")
+    try:
+        fd = os.open(encoded, _READ_FLAGS)
+    except OSError as error:
+        refusal = _errno_refusal("READ", "open", error, _READ_REFUSAL_ERRNOS)
+        if refusal is None:
+            raise
+        raise refusal from None
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise _refusal("READ", "opened file is not a regular file")
+        chunks = []
+        total = 0
+        while total <= cap:
+            chunk = os.read(fd, min(_READ_CHUNK, cap + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        if total > cap:
+            raise _refusal("READ", "file exceeds the read cap")
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+    os.close(fd)
+    return b"".join(chunks)
+
+
+def parse_public_json(raw, cap):
+    """JSON: return the decoded top-level object of strict bounded JSON bytes, or
+    refuse C2B-JSON.
+
+    cap is one of _JSON_CAPS and raw exact bytes of at most cap bytes, without a
+    UTF-8 BOM, decoding as strict UTF-8. _json_prescan then admits the text before
+    json.loads decodes it with private hooks (duplicate keys after unescaping, the
+    integer rule, no float, no NaN or Infinity), and _json_post_walk re-checks the
+    decoded tree. RecursionError and decode errors become C2B-JSON. No JSON
+    canonicality is claimed beyond exact-byte SHA-256 identity, and this gate is
+    not Rust parse_json or parse_limited (jsonParseLimits stays NOT_CHECKED).
+    """
+    if type(cap) is not int or cap not in _JSON_CAPS:
+        raise _refusal("JSON", "cap is not a frozen JSON cap")
+    if type(raw) is not bytes:
+        raise _refusal("JSON", "input is not exact bytes")
+    if len(raw) > cap:
+        raise _refusal("JSON", "input exceeds the JSON cap")
+    if raw.startswith(_UTF8_BOM):
+        raise _refusal("JSON", "input starts with a UTF-8 BOM")
+    try:
+        text = raw.decode("utf-8", "strict")
+    except UnicodeDecodeError:
+        raise _refusal("JSON", "input is not strict UTF-8") from None
+    _json_prescan(text)
+    try:
+        value = json.loads(text, object_pairs_hook=_json_object_pairs, parse_int=_json_int,
+                           parse_float=_json_no_float, parse_constant=_json_no_constant)
+    except RecursionError:
+        raise _refusal("JSON", "nesting exhausted the decoder") from None
+    except ValueError as error:
+        if _is_refusal(error, "JSON"):
+            raise
+        raise _refusal("JSON", "input is not strict JSON") from None
+    _json_post_walk(value)
+    return value
+
+
+def check_setup_link(export, setup_raw):
+    """LINK: return hashlib.sha256(setup_raw).hexdigest() when the export declares it,
+    or refuse C2B-LINK.
+
+    export is an exact dict whose every top-level key is first proven to be an exact
+    str by iteration alone (no key is hashed or compared before that), and setup_raw
+    is exact bytes. export setupRecordSha256 must then be an exact str fully matching
+    ASCII [0-9a-f]{64} and equal the digest. The link is exact file-byte identity for
+    this run only; it establishes no Rust acceptance.
+    """
+    if type(export) is not dict:
+        raise _refusal("LINK", "export is not an exact dict")
+    for key in export:
+        if type(key) is not str:
+            raise _refusal("LINK", "export key is not an exact str")
+    if type(setup_raw) is not bytes:
+        raise _refusal("LINK", "setup bytes are not exact bytes")
+    declared = export.get("setupRecordSha256")
+    if type(declared) is not str or _HEX64_RE.fullmatch(declared) is None:
+        raise _refusal("LINK", "setupRecordSha256 is not 64 lowercase hex")
+    digest = hashlib.sha256(setup_raw).hexdigest()
+    if declared != digest:
+        raise _refusal("LINK", "setupRecordSha256 differs from the setup file SHA-256")
+    return digest
+
+
+# === C2B-R4-APPEND-SEAM: append tail below; prefix above is immutable ===
+
+
+# ---- tail (CB403-CB412): BRIDGE, plan, writer, cleanup, CLI ---------------------------
+# AUTHOR-PROPOSED tail source by claude-opus-5-5 for C2-BUILDER-R4-CONTRACT.md CB401-CB412
+# and R4-API c2-builder-r4-api/2, appended byte-for-byte after the frozen prefix. Not
+# imported, compiled, executed, reviewed or adopted; authority 0. It adds no import,
+# repeats no prefix line and rebinds no prefix name. Its only public names are
+# legacy_env_from_host, plan_outputs and main. c2_issue_artifacts_r2, host_codec and
+# legacy are reached by module attribute at call time. The Sol renderer below is copied
+# verbatim and is called only after POLICY, CONSUMER, BRIDGE and all row and manifest
+# preparation. Non-claims are those of the prefix docstring and CB412: no Groth16,
+# curve, VK profile, statement re-encode, Rust parse_json limit, circuit/VK
+# correspondence, Rust acceptance, ledger, fee, min-ADA, collateral, ExUnits, fit,
+# Preview, Preprod or operator claim.
+
+# (argv index, frozen cap) for b9-applied, proof-export and setup-record, in READ order.
+_INPUT_READS = ((1, _B9_CAP), (2, _EXPORT_CAP), (3, _SETUP_CAP))
+# Lowercase hex run; callers check exact str and length (even, or exact) separately.
+_LOWER_HEX_RE = re.compile(r"[0-9a-f]*", re.ASCII)
+# Node bound for the exact-type walk of consumer Data trees (finite, cycle-safe).
+_DATA_VISIT_BOUND = 4096
+
+
+# ---- BRIDGE helpers (CB409, contract section 5) ---------------------------------------
+def _is_lower_hex(value, chars=None):
+    """True for an exact str of lowercase hex: exactly chars characters, or any even
+    length when chars is None. The length is checked before the scan."""
+    if type(value) is not str:
+        return False
+    if chars is None:
+        if len(value) % 2:
+            return False
+    elif len(value) != chars:
+        return False
+    return _LOWER_HEX_RE.fullmatch(value) is not None
+
+
+def _bridge_hex(value, size, what):
+    """Return the size bytes of an exact lowercase hex str, else refuse C2B-BRIDGE.
+
+    what is a fixed field literal; the value itself is never echoed.
+    """
+    if not _is_lower_hex(value, 2 * size):
+        raise _refusal("BRIDGE", what + " is not lowercase hex of the expected length")
+    return bytes.fromhex(value)
+
+
+def _bridge_call(function, *args):
+    """Call a host_codec or legacy function; its ValueError becomes C2B-BRIDGE.
+
+    The caller evaluates the module attribute at call time. Every other exception
+    (MemoryError, KeyboardInterrupt, TypeError, ...) propagates unconverted.
+    """
+    try:
+        return function(*args)
+    except ValueError:
+        raise _refusal("BRIDGE", "a host_codec or legacy encoder refused a checked value") from None
+
+
+def _is_exact_data(value):
+    """True if value is a finite tree of exact tuple, list, str, bytes and int nodes
+    (bool, bytearray, subclasses and every other type refused), visiting at most
+    _DATA_VISIT_BOUND nodes; a cyclic or oversized tree is refused. After this walk an
+    == comparison of the tree runs no caller-defined hook."""
+    pending = [value]
+    visits = 0
+    while pending:
+        node = pending.pop()
+        visits += 1
+        if visits > _DATA_VISIT_BOUND:
+            return False
+        kind = type(node)
+        if kind is tuple or kind is list:
+            if len(node) > _DATA_VISIT_BOUND:
+                return False
+            pending.extend(node)
+        elif not (kind is str or kind is bytes or kind is int):
+            return False
+    return True
+
+
+def _env_int(node, low, high):
+    # ('int', n): exact 2-tuple, exact str tag, exact int (never bool) in low..high.
+    if (type(node) is not tuple or len(node) != 2 or type(node[0]) is not str
+            or node[0] != "int" or type(node[1]) is not int or not low <= node[1] <= high):
+        raise _refusal("BRIDGE", "envData integer node is outside its exact shape or range")
+    return node[1]
+
+
+def _env_bytes(node, size):
+    # ('bytes', b): exact 2-tuple, exact str tag, exact bytes of exactly size bytes.
+    if (type(node) is not tuple or len(node) != 2 or type(node[0]) is not str
+            or node[0] != "bytes" or type(node[1]) is not bytes or len(node[1]) != size):
+        raise _refusal("BRIDGE", "envData bytes node is outside its exact shape or length")
+    return node[1]
+
+
+def _is_constr0(node, fields):
+    # ('constr', 0, [fields nodes]): exact tuple, exact str tag, exact int 0, exact list.
+    return (type(node) is tuple and len(node) == 3 and type(node[0]) is str
+            and node[0] == "constr" and type(node[1]) is int and node[1] == 0
+            and type(node[2]) is list and len(node[2]) == fields)
+
+
+def legacy_env_from_host(env_data):
+    """BRIDGE: return a fresh legacy.Constr/I/B EnvV2 tree for host envData, or refuse
+    C2B-BRIDGE (contract section 5).
+
+    Admits only an exact tuple ('constr', 0, list) whose list holds exactly 9 nodes:
+    ('int', 2), ('int', 0), ('bytes', legacy.FAMILY_V2), ('bytes', 32-byte predicate
+    digest), ('bytes', 32-byte vk digest), ('bytes', 28-byte claimant), ('constr', 0,
+    [('bytes', 32-byte txid), ('int', 0..65535)]), ('bytes', 32-byte statement
+    digest), ('int', 0..2**64-1). Every node is type-checked as an exact tuple, list,
+    str, bytes or int before any comparison (bool refused), so no caller hook runs.
+    The input is never mutated; the result shares only immutable bytes leaves with it.
+    """
+    if not _is_constr0(env_data, 9):
+        raise _refusal("BRIDGE", "envData is not an exact constructor 0 of exactly 9 nodes")
+    nodes = tuple(env_data[2])
+    _env_int(nodes[0], 2, 2)
+    _env_int(nodes[1], 0, 0)
+    family = legacy.FAMILY_V2
+    if type(family) is not bytes or _env_bytes(nodes[2], len(family)) != family:
+        raise _refusal("BRIDGE", "envData family is not legacy.FAMILY_V2")
+    predicate = _env_bytes(nodes[3], 32)
+    vk_digest = _env_bytes(nodes[4], 32)
+    claimant = _env_bytes(nodes[5], 28)
+    if not _is_constr0(nodes[6], 2):
+        raise _refusal("BRIDGE", "envData settle outref is not an exact constructor 0 of 2 nodes")
+    outref = tuple(nodes[6][2])
+    txid = _env_bytes(outref[0], 32)
+    index = _env_int(outref[1], 0, 65535)
+    statement = _env_bytes(nodes[7], 32)
+    expiry = _env_int(nodes[8], 0, _U64_MAX)
+    try:
+        return legacy.Constr(0, [
+            legacy.I(2), legacy.I(0), legacy.B(family), legacy.B(predicate),
+            legacy.B(vk_digest), legacy.B(claimant),
+            legacy.Constr(0, [legacy.B(txid), legacy.I(index)]),
+            legacy.B(statement), legacy.I(expiry)])
+    except ValueError:
+        raise _refusal("BRIDGE", "legacy refused the translated envelope") from None
+
+
+def _translated_env(host_env, host_cbor):
+    """Translate host envData once more and require per-call CBOR equality:
+    legacy.cbor_encode of this translation must equal the host CBOR bytes."""
+    tree = legacy_env_from_host(host_env)
+    if _bridge_call(legacy.cbor_encode, tree) != host_cbor:
+        raise _refusal("BRIDGE", "legacy CBOR of the translated envelope differs from the host CBOR")
+    return tree
+
+
+# ---- POLICY and CONSUMER (CB407, CB408) -----------------------------------------------
+def _policy_gate(b9_raw):
+    """POLICY: pin, extract and recompute the historical B9 wrapper policy, or refuse.
+
+    The pin is checked before legacy.extract_compiled is called; it is wrapper
+    integrity, not program admission. Returns a fresh dict of checked values.
+    """
+    if type(b9_raw) is not bytes:
+        raise _refusal("POLICY", "b9 input is not exact bytes")
+    if len(b9_raw) > _B9_CAP:
+        raise _refusal("POLICY", "b9 input exceeds the b9 cap")
+    pin = legacy.PIN_B9_APPLIED
+    if type(pin) is not str or hashlib.sha256(b9_raw).hexdigest() != pin:
+        raise _refusal("POLICY", "b9 input SHA-256 differs from legacy.PIN_B9_APPLIED")
+    try:
+        extracted = legacy.extract_compiled(b9_raw)
+    except ValueError:
+        raise _refusal("POLICY", "legacy.extract_compiled refused the pinned wrapper") from None
+    if type(extracted) is not tuple or len(extracted) != 2:
+        raise _refusal("POLICY", "legacy.extract_compiled did not return a (code_hex, policy_hex) pair")
+    code_hex, policy_hex = extracted
+    if not _is_lower_hex(policy_hex, 2 * _POLICY_BYTES):
+        raise _refusal("POLICY", "policy hex is not 56 lowercase hex")
+    if not _is_lower_hex(code_hex):
+        raise _refusal("POLICY", "compiled code hex is not even-length lowercase hex")
+    code = bytes.fromhex(code_hex)
+    compiled_bytes = legacy.COMPILED_BYTES_LEN
+    if type(compiled_bytes) is not int or len(code) != compiled_bytes:
+        raise _refusal("POLICY", "compiled code length differs from legacy.COMPILED_BYTES_LEN")
+    if hashlib.blake2b(bytes([3]) + code, digest_size=_POLICY_BYTES).hexdigest() != policy_hex:
+        raise _refusal("POLICY", "blake2b-224 of 0x03 and the compiled code differs from the policy")
+    claimed = legacy.TOOL_DECLARED_C2_HASH
+    if type(claimed) is not str or claimed != policy_hex:
+        raise _refusal("POLICY", "policy differs from legacy.TOOL_DECLARED_C2_HASH")
+    inner_bytes = legacy.INNER_FLAT_LEN
+    if type(inner_bytes) is not int:
+        raise _refusal("POLICY", "legacy.INNER_FLAT_LEN is not an exact int")
+    return {"code_hex": code_hex, "policy_hex": policy_hex, "policy": bytes.fromhex(policy_hex),
+            "compiled_bytes": compiled_bytes, "inner_bytes": inner_bytes, "claimed_hex": claimed}
+
+
+def _consumer_refusal(error):
+    """Return the C2B-CONSUMER refusal for a consumer ValueError.
+
+    Conforming means an exact ValueError (r2 CP07 never raises a subclass) whose args
+    are one exact str of at most _CONSUMER_MESSAGE_CHARS characters, without CR or LF,
+    beginning 'C2I-<STAGE>: ' for a STAGE in _C2I_STAGES; it is kept verbatim.
+    Anything else becomes the fixed nonconforming literal without echo.
+    """
+    if type(error) is ValueError:
+        args = error.args
+        if len(args) == 1 and type(args[0]) is str:
+            message = args[0]
+            if (len(message) <= _CONSUMER_MESSAGE_CHARS and "\n" not in message
+                    and "\r" not in message):
+                for stage in _C2I_STAGES:
+                    if message.startswith("C2I-" + stage + ": "):
+                        return _refusal("CONSUMER", message)
+    return _refusal("CONSUMER", _NONCONFORMING_CONSUMER)
+
+
+def _consume(export, setup, expiry, policy):
+    # Exactly one call, by attribute at call time; non-ValueError exceptions propagate.
+    try:
+        return c2_issue_artifacts_r2.prepare_c2_issue(export, setup, expiry, policy_id=policy)
+    except ValueError as error:
+        raise _consumer_refusal(error) from None
+
+
+# ---- BRIDGE gate (CB409) --------------------------------------------------------------
+def _bridge_gate(result, export, setup, expiry, policy, link):
+    """BRIDGE: check the consumer result against the frozen /2 literals and recompute
+    every byte field through host_codec and legacy; return a fresh dict of checked
+    values, or refuse C2B-BRIDGE. No consumer container is returned or kept."""
+    if type(result) is not dict:
+        raise _refusal("BRIDGE", "consumer result is not an exact dict")
+    for key in result:
+        if type(key) is not str:
+            raise _refusal("BRIDGE", "consumer result key is not an exact str")
+    if len(result) != len(_RESULT_KEYS) or not all(key in result for key in _RESULT_KEYS):
+        raise _refusal("BRIDGE", "consumer result keys differ from the 12 r2 result keys")
+    if type(result["format"]) is not str or result["format"] != _R2_FORMAT:
+        raise _refusal("BRIDGE", "consumer format is not " + _R2_FORMAT)
+    labels = result["labels"]
+    if type(labels) is not dict:
+        raise _refusal("BRIDGE", "consumer labels are not an exact dict")
+    for key, value in labels.items():
+        if type(key) is not str or type(value) is not str:
+            raise _refusal("BRIDGE", "consumer label entry is not an exact str pair")
+    if labels != dict(_R2_LABELS):
+        raise _refusal("BRIDGE", "consumer labels differ from the frozen 16-entry r2 label map")
+    for key in _RESULT_KEYS:
+        if key.endswith("Hex") and not _is_lower_hex(result[key]):
+            raise _refusal("BRIDGE", "consumer " + key + " is not even-length lowercase hex")
+    if result["policyIdHex"] != policy.hex():
+        raise _refusal("BRIDGE", "consumer policyIdHex differs from the recomputed policy")
+    if type(result["expiry"]) is not int or result["expiry"] != expiry:
+        raise _refusal("BRIDGE", "consumer expiry differs from the expiry argument")
+    declared = result["setupRecordSha256Declared"]
+    if type(declared) is not str or declared != link:
+        raise _refusal("BRIDGE", "consumer setupRecordSha256Declared differs from the LINK digest")
+
+    # Fields of the admitted export and setup; parse_public_json keys are exact str.
+    context = export.get("context")
+    if type(context) is not dict:
+        raise _refusal("BRIDGE", "admitted export context is not an exact dict")
+    predicate = _bridge_hex(export.get("predicateDigest"), 32, "export predicateDigest")
+    vk_digest = _bridge_hex(export.get("vkDigestBlake2b256"), 32, "export vkDigestBlake2b256")
+    claimant = _bridge_hex(context.get("claimantVkh"), 28, "export context claimantVkh")
+    txid = _bridge_hex(context.get("consumedTxid"), 32, "export context consumedTxid")
+    index = context.get("consumedIx")
+    if type(index) is not int or not 0 <= index <= 65535:
+        raise _refusal("BRIDGE", "export context consumedIx is not an exact int in 0..65535")
+    statement = _bridge_hex(export.get("statementDigestBlake2b256"), 32,
+                            "export statementDigestBlake2b256")
+    vk = _bridge_hex(setup.get("verifyingKeyHex"), _VK_BYTES, "setup verifyingKeyHex")
+    proof = _bridge_hex(export.get("proofHex"), _PROOF_BYTES, "export proofHex")
+
+    # envData: exact-shape admission first, then host equality, then three-way CBOR.
+    env_data = result["envData"]
+    env_tree = legacy_env_from_host(env_data)
+    expected_env = _bridge_call(host_codec.build_env_data, predicate, vk_digest, claimant,
+                                txid, index, statement, expiry)
+    if env_data != expected_env:
+        raise _refusal("BRIDGE", "envData differs from host_codec.build_env_data of the admitted export")
+    env_cbor = _bridge_call(host_codec.encode_data, env_data)
+    if (_bridge_call(legacy.cbor_encode, env_tree) != env_cbor
+            or bytes.fromhex(result["envCborHex"]) != env_cbor):
+        raise _refusal("BRIDGE", "legacy, host and consumer envelope CBOR differ")
+    token = hashlib.blake2b(env_cbor, digest_size=32).digest()
+    if bytes.fromhex(result["envelopeTokenNameHex"]) != token:
+        raise _refusal("BRIDGE", "envelopeTokenNameHex differs from BLAKE2b-256 of the envelope CBOR")
+
+    # mintValueData: canonical no-ada Value of one token, host and legacy CBOR equal.
+    mint_data = result["mintValueData"]
+    if not _is_exact_data(mint_data):
+        raise _refusal("BRIDGE", "mintValueData is not an exact builtin Data tree")
+    if mint_data != _bridge_call(host_codec.build_value_data, None, [(policy, token, 1)]):
+        raise _refusal("BRIDGE", "mintValueData differs from host_codec.build_value_data")
+    mint_cbor = _bridge_call(host_codec.encode_data, mint_data)
+    legacy_mint = _bridge_call(legacy.cbor_encode, _bridge_call(legacy.value_map, policy, token, 1))
+    if legacy_mint != mint_cbor or bytes.fromhex(result["mintValueCborHex"]) != mint_cbor:
+        raise _refusal("BRIDGE", "legacy, host and consumer mint value CBOR differ")
+
+    # issueData: exact Issue of the 488-byte VK and 192-byte proof; host-only CBOR.
+    issue_data = result["issueData"]
+    if (not _is_exact_data(issue_data)
+            or issue_data != ("constr", 0, [("bytes", vk), ("bytes", proof)])):
+        raise _refusal("BRIDGE", "issueData is not the exact Issue of the setup VK and export proof")
+    if _bridge_call(host_codec.build_c2_mint_data, "Issue", vk, proof) != issue_data:
+        raise _refusal("BRIDGE", "issueData differs from host_codec.build_c2_mint_data")
+    issue_cbor = _bridge_call(host_codec.encode_data, issue_data)
+    if bytes.fromhex(result["issueCborHex"]) != issue_cbor:
+        raise _refusal("BRIDGE", "issueCborHex differs from the host Issue CBOR")
+
+    # T7: envelope with legacy.flip_first_bit of the VK digest, legacy and host CBOR equal.
+    bad_vk_digest = _bridge_call(legacy.flip_first_bit, vk_digest)
+    t7_env = _bridge_call(host_codec.build_env_data, predicate, bad_vk_digest, claimant,
+                          txid, index, statement, expiry)
+    t7_cbor = _bridge_call(host_codec.encode_data, t7_env)
+    t7_tree = _translated_env(t7_env, t7_cbor)
+    return {"predicate": predicate, "vk_digest": vk_digest, "claimant": claimant, "txid": txid,
+            "index": index, "statement": statement, "vk": vk, "proof": proof,
+            "env_data": env_data, "env_tree": env_tree, "env_cbor": env_cbor, "token": token,
+            "mint_cbor": mint_cbor, "issue_cbor": issue_cbor, "bad_vk_digest": bad_vk_digest,
+            "t7_tree": t7_tree, "t7_cbor": t7_cbor,
+            "t7_token": hashlib.blake2b(t7_cbor, digest_size=32).digest()}
+
+
+# ---- rows and manifest (CB410, CB412) -------------------------------------------------
+def _case_row(env, token, quantity, cbor, vk_digest, checked, proof_sha):
+    # One Sol renderer row; the six metadata fields are computed here, never by Sol.
+    return {"env": env, "token": token, "quantity": quantity, "vk": checked["vk"],
+            "proof": checked["proof"],
+            "manifest": {"envelopeCborHex": cbor.hex(), "tokenNameHex": token.hex(),
+                         "quantity": quantity, "envVkDigestHex": vk_digest.hex(),
+                         "envStatementDigestHex": checked["statement"].hex(),
+                         "proofHexSha256": proof_sha}}
+
+
+def _prepare_rows(checked):
+    """T1 (consumer env and token, quantity 1), T5 (quantity 2), T6 (legacy.flip_first_bit
+    of the token) and T7 (flipped VK digest, recomputed token), all with the genuine VK
+    and proof, as an exact 4-tuple in _CASE_IDS order. Each row env is its own
+    translation with per-call CBOR equality."""
+    token, env_cbor = checked["token"], checked["env_cbor"]
+    proof_sha = hashlib.sha256(checked["proof"]).hexdigest()
+    flipped = _bridge_call(legacy.flip_first_bit, token)
+    return (
+        _case_row(checked["env_tree"], token, 1, env_cbor, checked["vk_digest"], checked,
+                  proof_sha),
+        _case_row(_translated_env(checked["env_data"], env_cbor), token, 2, env_cbor,
+                  checked["vk_digest"], checked, proof_sha),
+        _case_row(_translated_env(checked["env_data"], env_cbor), flipped, 1, env_cbor,
+                  checked["vk_digest"], checked, proof_sha),
+        _case_row(checked["t7_tree"], checked["t7_token"], 1, checked["t7_cbor"],
+                  checked["bad_vk_digest"], checked, proof_sha),
+    )
+
+
+def _manifest_fields(checked, facts, link, expiry, raws):
+    """Every manifest field except cases, as fresh dicts and lists built from prefix
+    constants, pinned legacy constants checked at POLICY, and BRIDGE-checked values.
+    inputs records the SHA-256 and byte length of the three raw inputs of this call."""
+    fields = {
+        "auditSourcePins": [{"role": role, "sha256": digest} for role, digest in _AUDIT_SOURCE_PINS],
+        "builderLabels": dict(_BUILDER_LABELS),
+        "builderRevision": _BUILDER_REVISION,
+        "claimantVkhHex": checked["claimant"].hex(),
+        "compiledValidatorTitle": _COMPILED_VALIDATOR_TITLE,
+        "consumerFormat": _R2_FORMAT,
+        "consumerLabels": dict(_R2_LABELS),
+        "coverageGaps": [{"id": gap, "status": _GAP_STATUS} for gap in _GAP_IDS],
+        "expiry": expiry,
+        "flags": dict.fromkeys(_FLAG_NAMES, False),
+        "format": _MANIFEST_FORMAT,
+        "inputs": [{"role": role, "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+                   for role, raw in zip(_INPUT_ROLES, raws)],
+        "issueCborHex": checked["issue_cbor"].hex(),
+        "limitations": list(_LIMITATIONS),
+        "mintValueCborHex": checked["mint_cbor"].hex(),
+        "policyIdHex": facts["policy"].hex(),
+        "positiveEnvelopeCborHex": checked["env_cbor"].hex(),
+        "positiveTokenNameHex": checked["token"].hex(),
+        "proofBytes": len(checked["proof"]),
+        "scriptCompiledBytes": facts["compiled_bytes"],
+        "scriptHashAlgorithm": _SCRIPT_HASH_ALGORITHM,
+        "scriptHashClaimedHex": facts["claimed_hex"],
+        "scriptHashClassification": _SCRIPT_HASH_CLASSIFICATION,
+        "scriptHashIndependentlyRecomputedHex": facts["policy_hex"],
+        "scriptHashPreimage": _SCRIPT_HASH_PREIMAGE,
+        "scriptHexFile": _SCRIPT_HEX_FILE,
+        "scriptInnerFlatBytes": facts["inner_bytes"],
+        "settleOutref": {"transactionIdHex": checked["txid"].hex(), "outputIndex": checked["index"]},
+        "setupRecordSha256": link,
+        "statementDigestHex": checked["statement"].hex(),
+        "vkBytes": len(checked["vk"]),
+        "vkDigestHex": checked["vk_digest"].hex(),
+    }
+    if set(fields) | {"cases"} != set(_MANIFEST_KEYS):
+        raise RuntimeError("internal: manifest fields differ from the 33 frozen keys")
+    return fields
+
+
+# ---- Sol renderer: verbatim from SOL-RENDERER.py.txt lines 9-35; do not edit ----------
+def _render_prepared_outputs(code_hex, policy, case_rows, manifest_fields):
+    """Render four prepared rows without modifying their metadata or nested values."""
+    t1, t5, t6, t7 = case_rows
+    render_rows = (
+        ("K10-T1-positive-genuine-issue", t1),
+        ("K10-T5-quantity-two-reject", t5),
+        ("K10-T6-token-name-bitflip-reject", t6),
+        ("K10-T7-vk-digest-bitflip-reject", t7),
+    )
+    files = {"script.hex": (code_hex + "\n").encode("utf-8")}
+    manifest_cases = []
+    for case_id, row in render_rows:
+        context = legacy.script_context(
+            policy, row["env"], row["token"], row["quantity"],
+            row["vk"], row["proof"])
+        relative = "contexts/%s.uplc.txt" % case_id
+        files[relative] = ("(con data (%s))\n" %
+                           legacy.uplc_term(context)).encode("utf-8")
+        case_manifest = dict(row["manifest"])
+        case_manifest["id"] = case_id
+        case_manifest["contextFile"] = relative
+        manifest_cases.append(case_manifest)
+    manifest = dict(manifest_fields)
+    manifest["cases"] = manifest_cases
+    files["manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) +
+                              "\n").encode("utf-8")
+    return files
+
+
+# ---- plan_outputs (CB406-CB410) -------------------------------------------------------
+def plan_outputs(b9_raw, export_raw, setup_raw, expiry):
+    """Return a fresh dict of the 6 API relpaths to bytes, or refuse C2B-<STAGE>.
+
+    Order: ARGV (exact int expiry in 0..2**64-1), JSON (export, cap 1048576), JSON
+    (setup, cap 65536), LINK, POLICY, CONSUMER, BRIDGE, then rows, manifest and the
+    verbatim Sol renderer (RENDER has no refusal; its exceptions propagate). Pure: no
+    I/O, clock, randomness or environment access. T2-T4 appear only as coverageGaps.
+    """
+    _admit_expiry_int(expiry)
+    export = parse_public_json(export_raw, _EXPORT_CAP)
+    setup = parse_public_json(setup_raw, _SETUP_CAP)
+    link = check_setup_link(export, setup_raw)
+    facts = _policy_gate(b9_raw)
+    result = _consume(export, setup, expiry, facts["policy"])
+    checked = _bridge_gate(result, export, setup, expiry, facts["policy"], link)
+    rows = _prepare_rows(checked)
+    fields = _manifest_fields(checked, facts, link, expiry, (b9_raw, export_raw, setup_raw))
+    # Every Sol integration precondition is discharged above: exact 4-tuple of exact
+    # dicts in T1, T5, T6, T7 order; translated, CBOR-checked legacy env trees;
+    # Opus-computed row metadata; exact builtin, finite, acyclic manifest data.
+    files = _render_prepared_outputs(facts["code_hex"], facts["policy"], rows, fields)
+    if (type(files) is not dict or len(files) != len(_OUTPUT_FILES)
+            or not all(type(files.get(name)) is bytes for name in _OUTPUT_FILES)):
+        raise RuntimeError("internal: renderer output is not the 6-file roster")
+    return files
+
+
+# ---- main: ARGV, OUTDIR, READ (CB403-CB405) -------------------------------------------
+def _admit_argv(argv):
+    """ARGV, before any filesystem access: exact list of exactly 6 exact str, paths
+    argv[1], argv[2], argv[3], argv[5] admitted by _encode_path, expiry by parse_expiry.
+    Returns (a tuple snapshot of argv, expiry)."""
+    if type(argv) is not list:
+        raise _refusal("ARGV", "argv is not an exact list")
+    args = tuple(argv)
+    if len(args) != 6:
+        raise _refusal("ARGV", "argv does not hold exactly 6 elements")
+    for item in args:
+        if type(item) is not str:
+            raise _refusal("ARGV", "argv element is not an exact str")
+    for index in (1, 2, 3, 5):
+        _encode_path(args[index], "ARGV")
+    return args, parse_expiry(args[4])
+
+
+def _open_outdir(output, state):
+    """OUTDIR: pin the parent read-only and require the basename to be absent.
+
+    Only the final component is treated as no-follow; parent-path symlinks are the
+    caller's trust. The parent fd is stored in state before the stat, so main closes
+    it on every path. Creates nothing.
+    """
+    head, basename = os.path.split(output)
+    if _BASENAME_RE.fullmatch(basename) is None:
+        raise _refusal("OUTDIR", "output basename is not an admitted lowercase name")
+    parent_path = _encode_path(head or ".", "OUTDIR")
+    try:
+        state["parent"] = os.open(parent_path, _PARENT_DIR_FLAGS)
+    except OSError as error:
+        refusal = _errno_refusal("OUTDIR", "parent open", error, _OUTDIR_REFUSAL_ERRNOS)
+        if refusal is None:
+            raise
+        raise refusal from None
+    try:
+        os.stat(basename, dir_fd=state["parent"], follow_symlinks=False)
+    except OSError as error:
+        if type(error.errno) is int and error.errno == _ERRNO_NUMBERS["ENOENT"]:
+            state["basename"] = basename
+            return
+        refusal = _errno_refusal("OUTDIR", "output stat", error, _OUTDIR_REFUSAL_ERRNOS)
+        if refusal is None:
+            raise
+        raise refusal from None
+    raise _refusal("OUTDIR", "output path already exists")
+
+
+def _read_inputs(args):
+    # READ b9-applied, proof-export, setup-record in that order with the frozen caps.
+    raws = []
+    for index, cap in _INPUT_READS:
+        raws.append(read_public_file(args[index], cap))
+    return tuple(raws)
+
+
+# ---- private writer, REREAD and cleanup (CB411) ---------------------------------------
+def _new_state():
+    # Pinned fds, the created-entry log in creation order, and directory identities.
+    return {"parent": None, "basename": None, "out": None, "out_id": None, "contexts": None,
+            "contexts_id": None, "made_out": False, "made_contexts": False, "created": []}
+
+
+def _write_refusal(operation, error):
+    # Every OSError in WRITE is C2B-WRITE: fixed operation literal plus the errno number.
+    number = error.errno
+    if type(number) is int:
+        return _refusal("WRITE", "%s failed errno %d" % (operation, number))
+    return _refusal("WRITE", operation + " failed")
+
+
+def _close_quietly(fd):
+    try:
+        os.close(fd)
+    except OSError:
+        pass
+
+
+def _pin_dir(state, key, name, dir_fd):
+    # Pin a directory this call just created; record (st_dev, st_ino) for cleanup.
+    try:
+        state[key] = os.open(name, _PINNED_DIR_FLAGS, dir_fd=dir_fd)
+        info = os.fstat(state[key])
+    except OSError as error:
+        raise _write_refusal("pin directory", error) from None
+    state[key + "_id"] = (info.st_dev, info.st_ino)
+
+
+def _write_file(state, key, name, data):
+    """Exclusively create name in the pinned directory state[key], log it as created,
+    write all of data with a complete os.write loop and close; any OSError is WRITE."""
+    try:
+        fd = os.open(name, _WRITE_FLAGS, _WRITE_MODE, dir_fd=state[key])
+    except OSError as error:
+        raise _write_refusal("create file", error) from None
+    state["created"].append((key, name))
+    try:
+        view = memoryview(data)
+        while view:
+            written = os.write(fd, view)
+            if written <= 0:
+                raise _refusal("WRITE", "write made no progress")
+            view = view[written:]
+    except OSError as error:
+        _close_quietly(fd)
+        raise _write_refusal("write file", error) from None
+    except BaseException:
+        _close_quietly(fd)
+        raise
+    try:
+        os.close(fd)
+    except OSError as error:
+        raise _write_refusal("close file", error) from None
+
+
+def _reread(args, raws):
+    """REREAD: read the three inputs again with the same caps; a READ refusal or a byte
+    difference is C2B-REREAD; every other exception propagates (main cleans up)."""
+    for (index, cap), before in zip(_INPUT_READS, raws):
+        try:
+            after = read_public_file(args[index], cap)
+        except ValueError as error:
+            if _is_refusal(error, "READ"):
+                raise _refusal("REREAD", "input is no longer readable as a public file") from None
+            raise
+        if after != before:
+            raise _refusal("REREAD", "input bytes changed during the run")
+
+
+def _close_pinned(state, key):
+    # Stage 8 strict close; the fd is dropped from state first, since a failed close
+    # releases it on Linux. A close OSError is C2B-WRITE and main then cleans up.
+    fd = state[key]
+    state[key] = None
+    try:
+        os.close(fd)
+    except OSError as error:
+        raise _write_refusal("close directory", error) from None
+
+
+def _write_outputs(files, args, raws, state):
+    """Stages 5-8: mkdir out, mkdir contexts, script.hex, T1, T5, T6, T7, REREAD,
+    manifest.json.tmp, rename to manifest.json, then close contexts, out and parent."""
+    try:
+        os.mkdir(state["basename"], _MKDIR_MODE, dir_fd=state["parent"])
+    except OSError as error:
+        raise _write_refusal("mkdir output", error) from None
+    state["made_out"] = True
+    _pin_dir(state, "out", state["basename"], state["parent"])
+    try:
+        os.mkdir(_CONTEXTS_DIR, _MKDIR_MODE, dir_fd=state["out"])
+    except OSError as error:
+        raise _write_refusal("mkdir contexts", error) from None
+    state["made_contexts"] = True
+    _pin_dir(state, "contexts", _CONTEXTS_DIR, state["out"])
+    _write_file(state, "out", _SCRIPT_HEX_FILE, files[_SCRIPT_HEX_FILE])
+    for relative in _OUTPUT_FILES[1:5]:
+        _write_file(state, "contexts", relative[len(_CONTEXTS_DIR) + 1:], files[relative])
+    _reread(args, raws)
+    _write_file(state, "out", _MANIFEST_TMP_FILE, files[_MANIFEST_FILE])
+    try:
+        os.rename(_MANIFEST_TMP_FILE, _MANIFEST_FILE, src_dir_fd=state["out"],
+                  dst_dir_fd=state["out"])
+    except OSError as error:
+        raise _write_refusal("rename manifest", error) from None
+    state["created"][-1] = ("out", _MANIFEST_FILE)
+    for key in ("contexts", "out", "parent"):
+        _close_pinned(state, key)
+
+
+def _reopen_created(dir_fd, name, identity, reopened):
+    """Cleanup only: no-follow reopen of a directory this call created whose pinned fd
+    was lost to a failed close; the recorded (st_dev, st_ino) must match, else None.
+    Every fd opened here is appended to reopened so that cleanup closes it."""
+    if dir_fd is None or identity is None:
+        return None
+    try:
+        fd = os.open(name, _PINNED_DIR_FLAGS, dir_fd=dir_fd)
+    except OSError:
+        return None
+    reopened.append(fd)
+    try:
+        info = os.fstat(fd)
+    except OSError:
+        return None
+    if (info.st_dev, info.st_ino) != identity:
+        return None
+    return fd
+
+
+def _cleanup(state):
+    """Remove exactly the entries this call created, newest first (so manifest.json
+    goes first), then rmdir contexts and the output, all through pinned dir fds;
+    OSError is ignored. Nothing happens before the first mkdir succeeded."""
+    if not state["made_out"]:
+        return
+    reopened = []
+    try:
+        out = state["out"]
+        if out is None:
+            out = _reopen_created(state["parent"], state["basename"], state["out_id"], reopened)
+        contexts = state["contexts"]
+        if contexts is None and state["made_contexts"]:
+            contexts = _reopen_created(out, _CONTEXTS_DIR, state["contexts_id"], reopened)
+        for key, name in reversed(state["created"]):
+            dir_fd = contexts if key == "contexts" else out
+            if dir_fd is not None:
+                try:
+                    os.unlink(name, dir_fd=dir_fd)
+                except OSError:
+                    pass
+        if state["made_contexts"] and out is not None:
+            try:
+                os.rmdir(_CONTEXTS_DIR, dir_fd=out)
+            except OSError:
+                pass
+        if state["parent"] is not None:
+            try:
+                os.rmdir(state["basename"], dir_fd=state["parent"])
+            except OSError:
+                pass
+    finally:
+        for fd in reopened:
+            _close_quietly(fd)
+
+
+def _close_remaining(state):
+    # Best-effort close of every fd still held, on every path out of main.
+    for key in ("contexts", "out", "parent"):
+        fd = state[key]
+        if fd is not None:
+            state[key] = None
+            _close_quietly(fd)
+
+
+def main(argv):
+    """Run ARGV, OUTDIR, READ, plan, WRITE, REREAD and the manifest publication.
+
+    Success prints exactly one JSON line {"output": argv[5], "cases": 4} and returns 0;
+    a print error propagates and the output stays complete. A refusal (only a
+    ValueError whose single exact str argument starts 'C2B-') prints exactly that one
+    stderr line, no stdout, and returns 2. Any exception after the first mkdir first
+    triggers cleanup of exactly the entries this call created; non-refusal exceptions
+    then propagate. Every directory fd, including the pinned parent, is closed on
+    every path.
+    """
+    state = _new_state()
+    try:
+        try:
+            args, expiry = _admit_argv(argv)
+            _open_outdir(args[5], state)
+            raws = _read_inputs(args)
+            files = plan_outputs(raws[0], raws[1], raws[2], expiry)
+            _write_outputs(files, args, raws, state)
+        except BaseException:
+            _cleanup(state)
+            raise
+    except ValueError as error:
+        if not _is_refusal(error):
+            raise
+        print(error.args[0], file=sys.stderr)
+        return 2
+    finally:
+        _close_remaining(state)
+    print(json.dumps({"output": args[5], "cases": len(_CASE_IDS)}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

@@ -1,0 +1,28 @@
+{
+ "format": "p3s1r1-wide-carry-expectations/1",
+ "label": "AUTH: R1-author specimen and hand derivation (not an independent oracle; unexecuted). Program: wide-carry.mori.",
+ "derivation": [
+  "Core move_funds (runtime.rs:668-700): a self-transfer requires balance >= amount and changes nothing; a transfer debits and credits.",
+  "first = 2^128 - 1 from w to w: w = 2^128 - 1 >= first, no change.",
+  "second = 1 from w to z: w = 2^128 - 2, z = 1.",
+  "Gross debit of cell (X, w) = first + second = 2^128 (relation accounting counts self-transfers, accounting.rs G7): Wide { top: 1, lo: 0 }; fees 0.",
+  "Body accounting tail = wide144(2^128) || wide144(0) = 0001 + 16 zero bytes, then 18 zero bytes.",
+  "Cross-layer note: Core intent::check_effects would refuse an owner intent for w here (gross accounting overflow above u128), and so would the Cardano S2 port (add128 expect). The relation itself represents the sum exactly."
+ ],
+ "scenario": {
+  "state": {},
+  "inputs": {
+   "first": {"type": "UInt", "value": "340282366920938463463374607431768211455"},
+   "second": {"type": "UInt", "value": "1"}
+  },
+  "balances": [
+   {"account": "w", "asset": {"network": "r1-unit", "issuer": "wide-carry", "reference": "x", "scale": 0}, "amount": "340282366920938463463374607431768211455"},
+   {"account": "z", "asset": {"network": "r1-unit", "issuer": "wide-carry", "reference": "x", "scale": 0}, "amount": "0"}
+  ],
+  "liabilities": []
+ },
+ "post": {"w": "340282366920938463463374607431768211454", "z": "1"},
+ "gross": {"top": 1, "lo": "0"},
+ "fees": "0",
+ "accountingTailHex": "000100000000000000000000000000000000000000000000000000000000000000000000"
+}

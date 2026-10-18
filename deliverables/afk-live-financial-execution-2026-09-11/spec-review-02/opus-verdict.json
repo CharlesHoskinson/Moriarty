@@ -1,0 +1,68 @@
+{
+  "reviewer": "Claude Opus (fresh, non-author, independent specification reviewer)",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "candidateSha256": "db68589e01ef6cb9d18dc9c03a7ef8d745c3bf1a1779bbd45e8201a07b740abb",
+  "scope": "OpenSpec specification approval only. Not source correctness, resource grant, live admission, SP01 diff disposition or actual-result acceptance.",
+  "verdict": "CHANGES_REQUIRED",
+  "approvedItems": [],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "blocking",
+      "path": "spec.md#Requirement: Item 1 \u2014 Operational history is evidence; spec.md#Scenario: Live action kind cannot bypass ceilings; evidence policy.py::assess (HISTORY_EXEMPT_KINDS, RETRY_BLOCKED_KINDS, PRIMARY_BLOCKED_KINDS), store.py::get_history/record_review, cli.py::cmd_review",
+      "requirement": "The spec makes operational history an admission input, and its all-kind scenario explicitly anticipates a live action registered as verify, review or reproduce. That scenario closes only resource ceilings. In the actual policy, verify, review and reproduce are exempt from HISTORY_UNRESOLVED. Only implement and admin receive REPRODUCE_BEFORE_RETRY, and only implement, repair and admin occupy the primary slot. A public loan registered as `verify` therefore passes policy with unresolved history and two or more unresolved same-defect failures. Two further paths shed history. First, get_history counts failures per requirement/capability lineage, so a fresh capability string starts at zero. Second, an APPROVED receipt ingested through `cli review` without `resolvedFindings` calls `unresolved_findings.clear()`, so a specification or source approval with matching scope erases all lineage findings. The item 1 history requirement would be satisfied on paper and never enforced for the one public spend. This is the same laundering class the F1 correction closed for binding labels.",
+      "correction": "Add the following text. 'A live I2 action (finalized-financial-settlement profile) SHALL be subject to the operational-history, repeated-failure/reproduction and primary-reservation gates regardless of registered kind. Item 1 SHALL either register it under a kind the existing policy gates, or minimally repair the existing policy so that the live profile removes kind exemptions. Its requirement/capability lineage SHALL truthfully continue the retained loan-executor history; a new lineage string SHALL NOT discard recorded failures. Specification, source or resource approvals SHALL NOT be ingested as result reviews that clear findings they do not explicitly resolve.' Add these rejection scenarios. (a) A live action registered as verify, review or reproduce with unresolved history or two or more unresolved same-defect failures is denied. (b) A renamed capability or requirement does not reset same-defect counts for the retained loan defect class. (c) Ingesting a specification or source approval receipt leaves prior unresolved findings unresolved."
+    },
+    {
+      "id": "R2",
+      "severity": "major",
+      "path": "spec.md#Item 1 accounting requirement (store.reserve integration paragraph) and Scenario: Reservation ownership or replay failure; evidence store.py::get_db_path/init_db/reserve (runner_claims), runner.py::load_runner",
+      "requirement": "The existing replay guard is real. `reserve` inserts `runner_claims(charge_id PRIMARY KEY, reservation_id UNIQUE)` inside BEGIN IMMEDIATE and never deletes it, so one charge ID cannot be claimed twice in one store. Its scope, however, is one SQLite file, while the debit lives in the global master. That file is under the git common dir (shared by worktrees), falls back to `.moriarty-dev/state.sqlite3` outside git, and `init_db` silently creates a fresh file if it is absent. A separate clone, the non-git fallback, or a deleted or recreated store presents the same master debit and a matching copied projection with no claim row. Admission under `budget.lock` then passes and the debit launches again. The claim also does not record runner digest, although the spec requires budget/reservation agreement on it. The normative sentence 'one debit SHALL authorize at most one launch' covers this, but the spec describes the existing guard as the control, and no scenario makes the store-scope limit falsifiable.",
+      "correction": "Add the following text. 'The debit SHALL bind the identity of the plugin store that will hold its claim, or the claim SHALL be recorded in the master under budget.lock before launch. Admission SHALL deny launch when that store is absent, recreated or different, or when the claim does not record the debit's action, candidate and runner digest.' Add this rejection scenario: 'A second clone with a different git common dir, the non-git fallback store, or a deleted and recreated state.sqlite3 presents an already-committed debit; launch is denied and the charge remains consumed.' Keep this within the existing store/runner modules; no new ledger service."
+    },
+    {
+      "id": "R3",
+      "severity": "minor",
+      "path": "spec.md#Requirement: Item 1 \u2014 Authenticate the SP01 prerequisite without rewriting history; evidence records.py::_prerequisite_campaign/_verify_binding/_verify_candidate, CAMPAIGN_RECORD_KEYS; proposal.md fixture provenance",
+      "requirement": "The bridge is well bounded semantically. The spec does not say where the consumer discovers the bridge and its reviewed disposition, or how that pointer is authenticated. The historical campaign record, binding and receipts must not change, and a free-standing disposition file would self-authorize. The spec also does not state that the substitution applies only to the single SP01 document path, in both binding inputs and candidate-manifest inputs, while every other input still verifies against current bytes. The retained original is a mutable test fixture, so authenticity must rest solely on hash equality with the historical commitments.",
+      "correction": "Add the following text. 'The bridge record SHALL be referenced by digest from a current non-historical record (for example the new I2 campaign or its admission evidence) and SHALL pin the original path/hash, current path/hash, diff digest and both disposition receipts. The bridge SHALL substitute original bytes only for that one path in the prerequisite binding and candidate input checks; all other inputs SHALL verify unchanged. A changed fixture, current document, diff or disposition invalidates the bridge. Registered SP01 design actions remain stale.' Add a rejection scenario: 'A bridge covering an additional path, or an unreferenced or digest-mismatched disposition, is rejected.'"
+    },
+    {
+      "id": "R4",
+      "severity": "minor",
+      "path": "spec.md#Item 1 accounting requirement (isolated-copies paragraph); tasks.md#1.2, 1.4; evidence store.py::get_db_path/reserve/get_history, cli.py::cmd_run/cmd_status",
+      "requirement": "Isolation names ledgers and records. `reserve`, `finish`, `record_event` and `get_history` default to the repository's shared SQLite store, and that store feeds live operational history, `primaryActive` and `runner_claims`. Tests through the real CLI on the checkout could leave active primary reservations, `runner_unresolved` or `defect_failure` events, or permanently claimed test charge IDs, and could contend for the live `budget.lock`. Task 1.2 also 'establish[es] the new bounded I2 action/binding' before the item 2 freeze. The spec does not say whether that registration is live or isolated, and `cmd_status` reports `actions[0]`.",
+      "correction": "Add the following text. 'Isolation SHALL include the plugin SQLite store (reservations, runner_claims, events) and the budget lock. No item 1 check SHALL write the live store or acquire the live lock. Any item 1 action/binding registered in live records SHALL be non-dispatchable pre-freeze material, superseded in item 3 without inheriting admission.' Extend the 1.4 verification to show that the live store, operational history and claims are unchanged."
+    },
+    {
+      "id": "R5",
+      "severity": "minor",
+      "path": "spec.md#Item 1 accounting requirement (attempt-3 paragraph); spec.md#Requirement: Item 3 final sequence; evidence accounting-diagnosis.md (Preview counters zero; 15 reserved submissions)",
+      "requirement": "The spec fixes the new invocation as attempt 3, but the diagnosis records master `preview_submissions` at zero despite later run records, and 15 reserved submissions for preview-loan-01. The consumed-attempt count must be derived from records, not assumed, and attempts are not submissions. The spec does not define how many public transactions one loan invocation may submit under the attempt bound. It also does not classify a charged, counter-incremented invocation that is denied after claim, for example on a post-claim observation-age recheck, which the item 3 sequence permits.",
+      "correction": "Add the following text. 'The amendment SHALL derive consumed loan-case attempts from retained run records (the zero master counter and reservation totals are not attempt counts), and SHALL fail if they do not establish exactly two. It SHALL bound the public transaction submissions within the attempt. It SHALL state whether a charged but unlaunched invocation consumes cumulative attempt 3, recording that outcome without authorizing attempt 4.'"
+    },
+    {
+      "id": "R6",
+      "severity": "minor",
+      "path": "spec.md#Item 1 accounting requirement (observation and projection-correspondence paragraphs); evidence runner.py::load_runner digest, records.py::_verify_binding",
+      "requirement": "The spec keeps mutable accounting outside candidate/binding input hashes. It does not say the same for wallet/resource observations or projection correspondence evidence. Observations must refresh within 120 seconds of launch, after the debit. If observations sit in binding inputs or the runner plan, refreshing them rewrites bindingSha256 or the runner digest after the debit is bound. That forces either a rehash of admitted material or a mismatch that consumes the debit.",
+      "correction": "Add the following text. 'Observation and correspondence records SHALL be mutable evidence outside candidate inputs, binding inputs and the runner plan, bound by digest in admission evidence. Refreshing an observation before launch SHALL NOT change the runner digest, bindingSha256 or debit.'"
+    },
+    {
+      "id": "R7",
+      "severity": "minor",
+      "path": "spec.md#Requirement: Item 3 \u2014 Exact live admission and one bounded invocation; evidence runner.py::load_runner bounds and execute SIGKILL path",
+      "requirement": "This concerns the item 3 refinement only and does not block item 1. `load_runner` caps timeoutSeconds at 1800 and requires chargedSeconds of at least timeout + grace + 30. `execute` SIGKILLs the process group past that bound and marks completion ambiguous. Item 2 requires raw main exit retained before any deliberate stop, and item 3 requires fit before T0 + 6.5 hours. Item 3 does not state the loan invocation's maximum duration against these runner bounds.",
+      "correction": "In the item 3 refinement, fix the admitted maximum run duration within the existing runner bounds, or specify a reviewed repair. State that an outer runner kill is a non-success, ambiguous outcome with retained charge. Show that the charge, containment and both result reviews fit the deadline."
+    }
+  ],
+  "limitations": [
+    "No tools were used against repository bytes. I did not recompute the manifest SHA256 or any file digest, and relied on the supplied inline bytes being the reviewed bytes.",
+    "Prior F1\u2013F8 are substantively addressed in the current text. F1: truthful live labels, reproduced rejection, historical semantics retained, verify-loan-design.py excluded. F2: bridge or unmet prerequisite with scenarios. F3: locked projection/master correspondence, store.reserve integration, race/crash/replay scenarios. F4: 120-second non-mutating observations, check-balance excluded, no weakening of SECRET_PARTS or containment. F5: isolated copies, live debit only in item 3. F6: cumulative attempt 3. F7: all-kind ceilings. F8: routing supersession recorded for MC02 5.3. The prepaid counter boundary is correctly specified as requiring a repair, because the current reader rejects `dispatches >= limit` without a prepaid exception.",
+    "The following were not supplied: the historical SP01 binding and candidate manifest (so I could not confirm that fixture SHA fdb586\u2026 equals the committed input hash), the campaign store, program JSON, sprints.json entry gates (so other prerequisites such as atomic-accept were not checked for currentness), notifications.py, the retained producer run.py and the routing assignment file.",
+    "I give no disposition of the SP01 exact diff. The spec assigns that decision to both reviewers during item 1 execution, outside specification approval.",
+    "The operational-history eligibility path may be absent after R1 is corrected. That outcome is correct fail-closed behavior, not a specification defect.",
+    "Items 2\u20136 were not evaluated for approval; their task .S refinements are pending. No item is approved. After R1 is corrected and R2\u2013R6 are addressed, item 1 needs fresh Opus and Astra medium approval of the changed bytes."
+  ]
+}

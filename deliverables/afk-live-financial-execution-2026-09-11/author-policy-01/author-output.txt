@@ -1,0 +1,521 @@
+The tests below pin the reproduced live-profile loophole and the review-history wipe without touching production modules. Expected first-run failures and the later repair surface are listed after the patch.
+
+Interface choice: live `finalized-financial-settlement` `reproduce` stays allowed on the retry gate so the required reproduction path still exists; history and primary still deny it. Live `verify`/`review` are denied on all three gates.
+
+```text
+*** Begin Patch
+*** Add File: plugins/moriarty-dev/tests/test_live_policy_history.py
++"""Isolated live-profile policy and review-history regression tests.
++
++Exercises public ``assess`` / store APIs against tempdir SQLite only.
++Does not write a live git common store, budget.lock, manifests, wallets,
++or grant live admission. ``assess`` never grants admission.
++"""
++from __future__ import annotations
++
++import sys
++import tempfile
++import unittest
++from pathlib import Path
++
++SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
++if str(SCRIPTS_DIR) not in sys.path:
++    sys.path.insert(0, str(SCRIPTS_DIR))
++
++from moriarty_dev.policy import assess
++from moriarty_dev.store import (
++    ReservationConflictError,
++    get_db_path,
++    get_history,
++    has_other_primary,
++    init_db,
++    record_event,
++    record_review,
++    reserve,
++    finish,
++)
++
++LIVE_PROFILE = "finalized-financial-settlement"
++NONFINANCIAL_PROFILE = "local-runtime"
++LIVE_HISTORY_KINDS = ("verify", "review", "reproduce", "implement", "repair", "admin")
++LIVE_PRIMARY_KINDS = ("verify", "review", "reproduce", "implement", "repair", "admin")
++LIVE_RETRY_DENIED_KINDS = ("verify", "review", "implement", "admin")
++REQ = "SP05"
++CAP = "loan-executor"
++CANDIDATE_HASH = "a" * 64
++
++
++def live_action(kind, *, profile=LIVE_PROFILE, **overrides):
++    body = {
++        "id": "live-loan-" + kind,
++        "requirement": REQ,
++        "capability": CAP,
++        "kind": kind,
++        "candidate": "diagnosis-only",
++        "admissionRef": "campaign:diagnosis-only",
++        "commandRef": "diagnosis-only#no-command",
++        "evidenceProfile": profile,
++    }
++    body.update(overrides)
++    return body
++
++
++def snapshot(**overrides):
++    body = {
++        "authorityCurrent": True,
++        "entryEligible": True,
++        "candidateCurrent": True,
++        "resourceAdmitted": True,
++        "sameDefectFailures": 0,
++        "adminCycles": 0,
++        "adminSeconds": 0,
++        "primaryActive": False,
++        "reproducerVerified": False,
++        "approachChanged": False,
++        "nextActionId": None,
++        "missingEvidence": [],
++    }
++    body.update(overrides)
++    return body
++
++
++def reproducer_snapshot():
++    """Exact pure-assess loophole inputs from the retained live-kind reproducer."""
++    return snapshot(
++        sameDefectFailures=2,
++        primaryActive=True,
++        reproducerVerified=False,
++        approachChanged=False,
++        nextActionId=None,
++        missingEvidence=["operational-history"],
++    )
++
++
++def assert_allowed(test, result, *, context=""):
++    test.assertTrue(result["allow"], context or result)
++    test.assertEqual(result["reasonCode"], "ALLOWED", context or result)
++
++
++def assert_denied(test, result, reason, *, context=""):
++    test.assertFalse(result["allow"], context or result)
++    test.assertEqual(result["reasonCode"], reason, context or result)
++
++
++class LiveFinancialAssessGates(unittest.TestCase):
++    def test_fresh_live_actions_remain_permitted_when_gates_are_clear(self):
++        s = snapshot()
++        for kind in (
++            "verify",
++            "review",
++            "reproduce",
++            "implement",
++            "repair",
++            "admin",
++            "report",
++        ):
++            assert_allowed(self, assess(s, live_action(kind)), context=kind)
++
++    def test_report_stays_allowed_under_live_history_retry_and_primary(self):
++        s = reproducer_snapshot()
++        result = assess(s, live_action("report"))
++        assert_allowed(self, result)
++        self.assertEqual(result["missingEvidence"], ["operational-history"])
++
++    def test_history_gate_denies_each_live_dispatch_kind_independently(self):
++        s = snapshot(missingEvidence=["operational-history"])
++        for kind in LIVE_HISTORY_KINDS:
++            result = assess(s, live_action(kind))
++            assert_denied(self, result, "HISTORY_UNRESOLVED", context=kind)
++            self.assertEqual(result["missingEvidence"], ["operational-history"])
++
++    def test_history_prefix_marker_is_also_a_live_history_gap(self):
++        s = snapshot(missingEvidence=["operational-history:unverified"])
++        result = assess(s, live_action("verify"))
++        assert_denied(self, result, "HISTORY_UNRESOLVED")
++
++    def test_primary_gate_denies_each_live_dispatch_kind_independently(self):
++        s = snapshot(primaryActive=True)
++        for kind in LIVE_PRIMARY_KINDS:
++            assert_denied(
++                self,
++                assess(s, live_action(kind)),
++                "PRIMARY_ACTIVE",
++                context=kind,
++            )
++
++    def test_retry_gate_denies_live_verify_and_review_like_implement(self):
++        s = snapshot(sameDefectFailures=2, nextActionId="live-loan-reproduce")
++        for kind in LIVE_RETRY_DENIED_KINDS:
++            result = assess(s, live_action(kind))
++            assert_denied(self, result, "REPRODUCE_BEFORE_RETRY", context=kind)
++            self.assertEqual(result["nextActionId"], "live-loan-reproduce")
++
++    def test_live_reproduce_remains_the_retry_path(self):
++        # Interface choice: live reproduce is still how a changed approach is
++        # established. History and primary continue to deny live reproduce.
++        s = snapshot(sameDefectFailures=2, nextActionId="live-loan-reproduce")
++        assert_allowed(self, assess(s, live_action("reproduce")))
++
++    def test_live_repair_still_requires_reproducer_and_changed_approach(self):
++        s = snapshot(sameDefectFailures=2)
++        assert_denied(self, assess(s, live_action("repair")), "REPAIR_UNREADY")
++        s["reproducerVerified"] = True
++        s["approachChanged"] = True
++        assert_allowed(self, assess(s, live_action("repair")))
++        assert_denied(
++            self, assess(s, live_action("implement")), "REPRODUCE_BEFORE_RETRY"
++        )
++        assert_denied(
++            self, assess(s, live_action("verify")), "REPRODUCE_BEFORE_RETRY"
++        )
++
++    def test_combined_reproducer_snapshot_denies_live_kinds_like_implement(self):
++        s = reproducer_snapshot()
++        implement = assess(s, live_action("implement"))
++        assert_denied(self, implement, "HISTORY_UNRESOLVED")
++        for kind in ("verify", "review", "reproduce"):
++            result = assess(s, live_action(kind))
++            assert_denied(self, result, "HISTORY_UNRESOLVED", context=kind)
++
++    def test_profile_discriminates_history_exemption(self):
++        s = snapshot(missingEvidence=["operational-history"])
++        assert_allowed(
++            self, assess(s, live_action("verify", profile=NONFINANCIAL_PROFILE))
++        )
++        assert_denied(
++            self, assess(s, live_action("verify")), "HISTORY_UNRESOLVED"
++        )
++
++    def test_profile_discriminates_primary_exemption(self):
++        s = snapshot(primaryActive=True)
++        assert_allowed(
++            self, assess(s, live_action("review", profile=NONFINANCIAL_PROFILE))
++        )
++        assert_denied(self, assess(s, live_action("review")), "PRIMARY_ACTIVE")
++
++    def test_profile_discriminates_retry_exemption_for_verify(self):
++        s = snapshot(sameDefectFailures=2)
++        assert_allowed(
++            self, assess(s, live_action("verify", profile=NONFINANCIAL_PROFILE))
++        )
++        assert_denied(
++            self, assess(s, live_action("verify")), "REPRODUCE_BEFORE_RETRY"
++        )
++
++    def test_live_verify_still_fail_closed_on_earlier_gates(self):
++        resource = snapshot(
++            resourceAdmitted=False, missingEvidence=["operational-history"]
++        )
++        assert_denied(
++            self,
++            assess(resource, live_action("verify")),
++            "RESOURCE_EXHAUSTED",
++        )
++        admission = snapshot(
++            missingEvidence=["admissionRef-unresolved:campaign:missing"]
++        )
++        assert_denied(
++            self,
++            assess(admission, live_action("reproduce")),
++            "ADMISSION_UNRESOLVED",
++        )
++        stale = snapshot(candidateCurrent=False, primaryActive=True)
++        assert_denied(
++            self, assess(stale, live_action("review")), "EVIDENCE_STALE"
++        )
++
++
++class NonfinancialAssessControls(unittest.TestCase):
++    def test_nonfinancial_verify_review_reproduce_keep_historical_exemptions(self):
++        blocked = snapshot(
++            sameDefectFailures=2,
++            primaryActive=True,
++            missingEvidence=["operational-history"],
++        )
++        for kind in ("verify", "review", "reproduce"):
++            assert_allowed(
++                self,
++                assess(
++                    blocked, live_action(kind, profile=NONFINANCIAL_PROFILE)
++                ),
++                context=kind,
++            )
++
++    def test_nonfinancial_implement_still_hits_history_first(self):
++        s = snapshot(missingEvidence=["operational-history"])
++        assert_denied(
++            self,
++            assess(s, live_action("implement", profile=NONFINANCIAL_PROFILE)),
++            "HISTORY_UNRESOLVED",
++        )
++
++    def test_syntax_profile_verify_keeps_nonfinancial_history_exemption(self):
++        s = snapshot(missingEvidence=["operational-history"], primaryActive=True)
++        assert_allowed(
++            self, assess(s, live_action("verify", profile="syntax"))
++        )
++
++
++class IsolatedTempStore(unittest.TestCase):
++    def setUp(self):
++        self.temp = tempfile.TemporaryDirectory()
++        self.root = Path(self.temp.name) / "isolated-repo"
++        self.root.mkdir()
++        # No git metadata: get_db_path must use the in-repo fallback, never a
++        # live worktree common directory.
++        self.db_path = get_db_path(self.root)
++        self.assertEqual(
++            self.db_path, self.root / ".moriarty-dev" / "state.sqlite3"
++        )
++        self.assertFalse((self.root / ".git").exists())
++        init_db(self.db_path).close()
++
++    def tearDown(self):
++        self.temp.cleanup()
++
++    def history(self):
++        return get_history(self.db_path, str(self.root), REQ, CAP)
++
++    def seed_findings(self, *finding_ids):
++        for index, finding_id in enumerate(finding_ids):
++            record_event(
++                self.db_path,
++                str(self.root),
++                REQ,
++                CAP,
++                CANDIDATE_HASH,
++                "seed-" + str(index),
++                "defect_failure",
++                {
++                    "findingId": finding_id,
++                    "defectClass": "retained-loan-executor-defect",
++                },
++            )
++
++    def approved(self, scope, resolved=None):
++        receipt = {
++            "author": "grok-4.6",
++            "reviewer": "claude-opus-5",
++            "candidateHash": CANDIDATE_HASH,
++            "scope": scope,
++            "verdict": "APPROVED",
++            "requirement": REQ,
++            "capability": CAP,
++        }
++        if resolved is not None:
++            receipt["resolvedFindings"] = list(resolved)
++        return receipt
++
++    def reserve_kind(self, kind, *, profile=LIVE_PROFILE, action_id=None):
++        action = live_action(kind, profile=profile)
++        if action_id is not None:
++            action["id"] = action_id
++        return reserve(self.db_path, str(self.root), action, snapshot())
++
++
++class LivePrimaryReservation(IsolatedTempStore):
++    def test_store_path_is_isolated_and_creates_no_budget_lock_or_claims(self):
++        self.assertTrue(str(self.db_path).startswith(str(self.root)))
++        self.assertFalse(any(self.root.rglob("budget.lock")))
++        conn = init_db(self.db_path)
++        try:
++            claims = conn.execute("SELECT count(*) FROM runner_claims").fetchone()[0]
++        finally:
++            conn.close()
++        self.assertEqual(claims, 0)
++
++    def test_active_live_verify_occupies_primary_for_readers(self):
++        res_id = self.reserve_kind("verify")
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "not-" + res_id))
++        self.assertFalse(has_other_primary(self.db_path, res_id))
++        finish(self.db_path, res_id, {"exitCode": 0})
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertFalse(history["primaryActive"])
++
++    def test_live_verify_conflicts_with_active_implement(self):
++        impl_id = self.reserve_kind("implement")
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("verify")
++        finish(self.db_path, impl_id, {"exitCode": 0})
++
++    def test_implement_conflicts_with_active_live_verify(self):
++        verify_id = self.reserve_kind("verify")
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("implement")
++        finish(self.db_path, verify_id, {"exitCode": 0})
++
++    def test_live_review_and_reproduce_conflict_with_primary_like_verify(self):
++        for kind in ("review", "reproduce"):
++            with self.subTest(kind=kind):
++                impl_id = self.reserve_kind(
++                    "implement", action_id="live-loan-implement-" + kind
++                )
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind(kind)
++                finish(self.db_path, impl_id, {"exitCode": 0})
++
++    def test_second_live_verify_conflicts_like_primary(self):
++        first = self.reserve_kind("verify")
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("verify", action_id="live-loan-verify-other")
++        finish(self.db_path, first, {"exitCode": 0})
++
++    def test_live_verify_conflicts_with_active_repair(self):
++        repair_id = self.reserve_kind("repair")
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("verify")
++        finish(self.db_path, repair_id, {"exitCode": 0})
++
++    def test_nonfinancial_verify_does_not_occupy_or_conflict_with_primary(self):
++        verify_id = self.reserve_kind("verify", profile=NONFINANCIAL_PROFILE)
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertFalse(history["primaryActive"])
++        self.assertFalse(has_other_primary(self.db_path, "unrelated"))
++        impl_id = self.reserve_kind(
++            "implement",
++            profile=NONFINANCIAL_PROFILE,
++            action_id="local-implement",
++        )
++        history = self.history()
++        self.assertTrue(history["primaryActive"])
++        finish(self.db_path, impl_id, {"exitCode": 0})
++        finish(self.db_path, verify_id, {"exitCode": 0})
++
++    def test_report_reservation_does_not_occupy_primary(self):
++        report_id = self.reserve_kind("report")
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertFalse(history["primaryActive"])
++        impl_id = self.reserve_kind("implement")
++        finish(self.db_path, impl_id, {"exitCode": 0})
++        finish(self.db_path, report_id, {"exitCode": 0})
++
++    def test_reserve_without_charge_id_does_not_write_runner_claims(self):
++        res_id = self.reserve_kind("verify")
++        conn = init_db(self.db_path)
++        try:
++            claims = conn.execute("SELECT count(*) FROM runner_claims").fetchone()[0]
++        finally:
++            conn.close()
++        self.assertEqual(claims, 0)
++        finish(self.db_path, res_id, {"exitCode": 0})
++
++
++class ScopedReviewHistory(IsolatedTempStore):
++    def test_source_specification_resource_approvals_leave_finding_ids(self):
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        self.assertEqual(self.history()["sameDefectFailures"], 2)
++        for scope in ("source", "specification", "resource"):
++            record_review(self.db_path, str(self.root), self.approved(scope))
++            history = self.history()
++            self.assertIsNotNone(history)
++            self.assertEqual(history["sameDefectFailures"], 2, scope)
++
++    def test_actual_result_explicit_resolution_removes_only_named_findings(self):
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        record_review(
++            self.db_path,
++            str(self.root),
++            self.approved("actual-result", resolved=["LIVE-FINDING-A"]),
++        )
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertEqual(history["sameDefectFailures"], 1)
++        record_review(
++            self.db_path,
++            str(self.root),
++            self.approved("actual-result", resolved=["LIVE-FINDING-B"]),
++        )
++        history = self.history()
++        self.assertEqual(history["sameDefectFailures"], 0)
++
++    def test_explicit_resolution_does_not_invent_missing_ids(self):
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        record_review(
++            self.db_path,
++            str(self.root),
++            self.approved("actual-result", resolved=["LIVE-FINDING-MISSING"]),
++        )
++        history = self.history()
++        self.assertEqual(history["sameDefectFailures"], 2)
++
++    def test_author_defect_resolved_event_cannot_erase_findings(self):
++        self.seed_findings("LIVE-FINDING-A")
++        record_event(
++            self.db_path,
++            str(self.root),
++            REQ,
++            CAP,
++            CANDIDATE_HASH,
++            "author-claim",
++            "defect_resolved",
++            {"findingId": "LIVE-FINDING-A"},
++        )
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertEqual(history["sameDefectFailures"], 1)
++
++    def test_lineage_keeps_findings_after_candidate_rename_events(self):
++        self.seed_findings("LIVE-FINDING-STABLE")
++        record_event(
++            self.db_path,
++            str(self.root),
++            REQ,
++            CAP,
++            "b" * 64,
++            "renamed-packet",
++            "defect_failure",
++            {
++                "findingId": "LIVE-FINDING-STABLE",
++                "defectClass": "retained-loan-executor-defect",
++            },
++        )
++        history = self.history()
++        self.assertEqual(history["sameDefectFailures"], 1)
++
++
++class IsolationControls(IsolatedTempStore):
++    def test_no_git_dir_and_no_lock_after_policy_and_store_use(self):
++        self.seed_findings("LIVE-FINDING-A")
++        record_review(
++            self.db_path, str(self.root), self.approved("source")
++        )
++        res_id = self.reserve_kind("report")
++        finish(self.db_path, res_id, {"exitCode": 0})
++        self.assertFalse((self.root / ".git").exists())
++        self.assertFalse((self.root / "budget.lock").exists())
++        self.assertFalse(any(self.root.rglob("budget.lock")))
++        self.assertEqual(
++            self.db_path.resolve().parent, (self.root / ".moriarty-dev").resolve()
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()
+*** End Patch
+```
+
+Expected RED on current bytes (failures expose the loophole, not fixtures):
+
+| Assertion | Current behavior |
+| --- | --- |
+| Live `verify`/`review`/`reproduce` + `operational-history` → `HISTORY_UNRESOLVED` | `ALLOWED` (`HISTORY_EXEMPT_KINDS`) |
+| Same kinds + `primaryActive` → `PRIMARY_ACTIVE` | `ALLOWED` (not in `PRIMARY_BLOCKED_KINDS`) |
+| Live `verify`/`review` + 2 failures → `REPRODUCE_BEFORE_RETRY` | `ALLOWED` (not in `RETRY_BLOCKED_KINDS`) |
+| Combined reproducer snapshot for those kinds → `HISTORY_UNRESOLVED` | `ALLOWED` |
+| `reserve` live financial `verify`/`review`/`reproduce` vs active implement/repair | succeeds |
+| `get_history()["primaryActive"]` / `has_other_primary` for active live verify | `False` (kind filter is only implement/repair) |
+| source/specification/resource `APPROVED` without `resolvedFindings` leaves count 2 | `get_history` `clear()`s all findings |
+
+Expected GREEN (compatibility): fresh live actions with clear gates; report always allowed; implement/repair/admin already denied; `local-runtime`/`syntax` exemptions; live `reproduce` still allowed on retry-only; explicit `actual-result` `resolvedFindings` removes only named IDs; `defect_resolved` cannot erase; no `runner_claims`/`budget.lock`/git common dir.
+
+Minimal next implementation (do not apply in this step):
+
+1. `policy.assess`: when `evidenceProfile == "finalized-financial-settlement"`, drop history exemptions for `verify`/`review`/`reproduce`; treat those kinds as primary-blocked; treat `verify`/`review` as retry-blocked. Leave `report` and non-live profiles unchanged.
+2. `store.get_history`: do not `clear()` on `APPROVED` source/specification/resource scopes; discard only named `resolvedFindings` from a correctly scoped actual-result review. Keep existing design-scope clear-all unless those older tests are revised together.
+3. `reserve` / `has_other_primary` / primary query: count active live-financial `verify`/`review`/`reproduce` in the one primary slot (read `evidenceProfile` from the reserved action payload or an added column). Do not treat nonfinancial verify as primary. Post-reserve `has_other_primary(own_id)` must stay false so the holder is not blocked by itself.

@@ -1,0 +1,11 @@
+# Persona 09 — Security-diligence reader
+
+Reviewed the frozen local page at `/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/index.html` (SHA-256 `f5aa9fceb5a0ff4c174617aa7bbd7bbf73a51866e6829bee5f4dde83637eab9d`) in a fresh isolated Chromium context. I inspected the supplied desktop and mobile top screenshots plus the explorer and worksheet section screenshots, then used the Evidence navigation and expanded disclosures for setup, Strand binding, correspondence, proof-check location and recorded evidence. I captured and viewed `reached-evidence.png` and `reached-ledger-boundary.png`.
+
+The answers are present. The page says the test setup can be forged by its operator, key-to-relation correspondence is open, and no production ceremony is recorded. It distinguishes conditional T1 from absent T2/T3 and says the V2 consumer descriptions are unadopted, uncompiled readings that are not pinned to the recorded runs. It describes proof checking at issuance only as a source reading, marks T3 open, and states that no on-chain transaction is recorded.
+
+My main usability request is a short three-row map near the beginning of Evidence for setup, source/compiler correspondence and ledger acceptance, linked to the existing detail. The current explanation requires expanding and joining several technical disclosures. This is a discoverability finding, not a security or cryptographic correctness judgment. Please route the unresolved interpretation of those trust boundaries and any security wording to Opus.
+
+Teach-back: A Web is a proposed set of required proof roles for one financial action; a Strand is an individual proof with its claim, statement and binding metadata. The page reports scoped local evidence and source readings, while explicitly withholding claims of production setup, exact compiled-source correspondence and ledger settlement.
+
+This is a model persona review, not human user research or a security audit. I made no external requests and did not inspect implementation source or private material. See `FEEDBACK.json` for the full schema and question records, `navigation.json` for the interaction log, and `REPORT.json` for artifact metadata.

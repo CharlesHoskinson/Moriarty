@@ -1,0 +1,11 @@
+Use case: stylized-concept.
+Asset type: final website hero illustration replacing a human portrait on Moriarty's Cardano Webs page. Square master, refined editorial artwork, high detail.
+
+Primary request: Make a Moriarty Web and its Strands the subject. On a matte charcoal ground (#14130f), show a single coherent, suspended woven web made from individually traceable warm-ivory silk and muted antique-gold filaments. At the edges a few long distinct strands curve into the same open weave. Their over-under crossings must be physically intelligible; preserve dark gaps so the paths remain readable when reduced to a small website image. The whole should read immediately as a Web made of Strands, with a strong irregular oval silhouette rather than a knot, a spherical network or a flower.
+
+Style: a Victorian mathematical specimen engraving given tactile depth. Silk fiber, delicately etched brass wire, controlled warm raking light and quiet black shadows. Precision and patient intelligence, with the mysterious atmosphere of Moriarty's established artwork. Limited charcoal, warm ivory (#f0ede4), aged gold and a little smoky pewter. No bright glow. A faint slender crescent-like construction arc behind one side of the weave can echo the brand, with one tiny four-point intersection, secondary to the Web. The crescent is not the main subject.
+
+Composition: square, centered but subtly asymmetrical. The woven body occupies about two-thirds of the frame; keep essential crossings inside the central 70 percent so portrait and mobile landscape presentation retain the subject. Sparse, deliberate structure with several more substantial threads and finer supporting filaments. Faded outer thread ends and generous quiet charcoal margins. No empty central coin, disc, clasp or central node. No heavy machinery or literal loom. The graphic represents collected proof-bearing Strands; do not imply a fixed proof count or a sequence of steps.
+
+Text: none. No letters, numbers, labels or watermark.
+Avoid: people, faces, human silhouettes, spider mascot, city, gears, security shields, locks, coins, crypto logos, generic blockchain node maps, glowing dots, neural networks, globes, neon blue, starscapes, floating particles, gold fractals, dense ornamental mandalas, incoherent thread tangles, arrows or UI panels.

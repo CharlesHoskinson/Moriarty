@@ -1,0 +1,1084 @@
+{
+  "format": "koios-primary-selected-contract-extract/1",
+  "source": "captures/koiosapi-preprod.yaml",
+  "upstreamCommit": "2e2eb57933e1e2528de5ca36ee961759841cf389",
+  "extraction": "JSON projection of four exact path objects and referenced schemas; local JSON Pointer refs resolved mechanically; examples omitted. Not an executable operator or a stricter schema.",
+  "openapi": "3.1.0",
+  "version": "v1.4.2",
+  "servers": [
+    {
+      "url": "https://api.koios.rest/api/v1",
+      "description": "Mainnet"
+    },
+    {
+      "url": "https://preview.koios.rest/api/v1",
+      "description": "Preview Network"
+    },
+    {
+      "url": "https://preprod.koios.rest/api/v1",
+      "description": "Preprod Network"
+    }
+  ],
+  "security": [
+    {},
+    {
+      "bearerAuth": []
+    }
+  ],
+  "securitySchemes": {
+    "bearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "JWT Bearer Auth token generated via https://koios.rest Profile page. Using this token value allows consumers to use higher limits than public unauthenticated requests."
+    }
+  },
+  "paths": {
+    "/tip": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success!!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Current tip of the chain",
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "hash": {
+                        "type": "string",
+                        "description": "Hash of the block"
+                      },
+                      "era": {
+                        "type": "string",
+                        "description": "Cardano Era"
+                      },
+                      "epoch_no": {
+                        "type": "number",
+                        "description": "Epoch number of the block"
+                      },
+                      "abs_slot": {
+                        "type": "number",
+                        "description": "Absolute slot number of the block"
+                      },
+                      "epoch_slot": {
+                        "type": "number",
+                        "description": "Slot number of the block in epoch"
+                      },
+                      "block_no": {
+                        "deprecated": true,
+                        "type": "number",
+                        "description": "DEPRECATED!! Use Block height instead"
+                      },
+                      "block_time": {
+                        "type": "number",
+                        "description": "UNIX timestamp of the block"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server cannot process the request due to invalid input"
+          },
+          "401": {
+            "description": "Access token is missing or invalid"
+          },
+          "404": {
+            "description": "The server does not recognise the combination of endpoint and parameters provided"
+          },
+          "429": {
+            "description": "Too many requests were sent in a short period, the tier-based cap can be referred to at https://koios.rest/tiers.html"
+          },
+          "413": {
+            "description": "The payload attached to your request is too large, please ensure your request packet is less than 5kb."
+          }
+        },
+        "summary": "Query Chain Tip",
+        "description": "Get the tip info about the latest block seen by chain",
+        "operationId": "tip"
+      }
+    },
+    "/address_utxos": {
+      "post": {
+        "tags": [
+          "Address"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": [
+                  "_addresses"
+                ],
+                "type": "object",
+                "properties": {
+                  "_addresses": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of Cardano payment address(es) in bech32 format"
+                  },
+                  "_extended": {
+                    "format": "boolean",
+                    "type": "boolean",
+                    "description": "Controls whether or not certain optional fields supported by a given endpoint are populated as a part of the call"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Array of Cardano payment address(es) with extended flag to toggle additional fields"
+        },
+        "responses": {
+          "200": {
+            "description": "Success!!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Array of complete UTxO information",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "tx_hash": {
+                        "type": "string",
+                        "description": "Hash identifier of the transaction"
+                      },
+                      "tx_index": {
+                        "type": "number",
+                        "description": "Index of UTxO in the transaction"
+                      },
+                      "address": {
+                        "type": "string",
+                        "description": "A Cardano payment/base address (bech32 encoded)"
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "Total sum of ADA on the UTxO"
+                      },
+                      "stake_address": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Cardano staking address (reward account) in bech32 format"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "payment_cred": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Payment credential"
+                      },
+                      "epoch_no": {
+                        "type": "number",
+                        "description": "Epoch number of the block"
+                      },
+                      "block_height": {
+                        "type": "number",
+                        "description": "Block height"
+                      },
+                      "block_time": {
+                        "type": "number",
+                        "description": "UNIX timestamp of the block"
+                      },
+                      "datum_hash": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The Hash of the Plutus Data"
+                      },
+                      "inline_datum": {
+                        "anyOf": [
+                          {
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Allows datums to be attached to UTxO (CIP-32)",
+                        "properties": {
+                          "bytes": {
+                            "type": "string",
+                            "description": "Datum bytes (hex)"
+                          },
+                          "value": {
+                            "type": "object",
+                            "description": "Value (json)"
+                          }
+                        }
+                      },
+                      "reference_script": {
+                        "anyOf": [
+                          {
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Allow reference scripts to be used to satisfy script requirements during validation, rather than requiring the spending transaction to do so. (CIP-33)",
+                        "properties": {
+                          "hash": {
+                            "type": "string",
+                            "description": "Hash of referenced script"
+                          },
+                          "size": {
+                            "type": "number",
+                            "description": "Size in bytes"
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "Type of script"
+                          },
+                          "bytes": {
+                            "type": "string",
+                            "description": "Script bytes (hex)"
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "object"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Value (json)"
+                          }
+                        }
+                      },
+                      "asset_list": {
+                        "anyOf": [
+                          {
+                            "type": "array"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "An array of assets on the UTxO",
+                        "items": {
+                          "properties": {
+                            "policy_id": {
+                              "type": "string",
+                              "description": "Asset Policy ID (hex)"
+                            },
+                            "asset_name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Asset Name (hex)"
+                            },
+                            "fingerprint": {
+                              "type": "string",
+                              "description": "The CIP14 fingerprint of the asset"
+                            },
+                            "decimals": {
+                              "type": "number"
+                            },
+                            "quantity": {
+                              "type": "string",
+                              "description": "Quantity of assets on the UTxO"
+                            }
+                          }
+                        }
+                      },
+                      "is_spent": {
+                        "type": "boolean",
+                        "description": "True if the UTxO has been spent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server cannot process the request due to invalid input"
+          },
+          "401": {
+            "description": "Access token is missing or invalid"
+          },
+          "404": {
+            "description": "The server does not recognise the combination of endpoint and parameters provided"
+          },
+          "429": {
+            "description": "Too many requests were sent in a short period, the tier-based cap can be referred to at https://koios.rest/tiers.html"
+          },
+          "413": {
+            "description": "The payload attached to your request is too large, please ensure your request packet is less than 5kb."
+          }
+        },
+        "summary": "Address UTxOs",
+        "description": "Get UTxO set for given addresses",
+        "operationId": "address_utxos"
+      }
+    },
+    "/epoch_params": {
+      "get": {
+        "tags": [
+          "Epoch"
+        ],
+        "parameters": [
+          {
+            "deprecated": false,
+            "name": "_epoch_no",
+            "description": "Epoch Number to fetch details for",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success!!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Epoch parameters (all fields nullable for pre-Shelley/Gougen epochs except first block hash)",
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "epoch_no": {
+                        "type": "number",
+                        "description": "Epoch number"
+                      },
+                      "era": {
+                        "type": "string",
+                        "description": "Cardano Era"
+                      },
+                      "min_fee_a": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The 'a' parameter to calculate the minimum transaction fee"
+                      },
+                      "min_fee_b": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The 'b' parameter to calculate the minimum transaction fee"
+                      },
+                      "max_block_size": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum block size (in bytes)"
+                      },
+                      "max_tx_size": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum transaction size (in bytes)"
+                      },
+                      "max_bh_size": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum block header size (in bytes)"
+                      },
+                      "key_deposit": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The amount (in number) required for a deposit to register a stake address"
+                      },
+                      "pool_deposit": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The amount (in number) required for a deposit to register a stake pool"
+                      },
+                      "max_epoch": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum number of epochs in the future that a pool retirement is allowed to be scheduled for"
+                      },
+                      "optimal_pool_count": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The optimal number of stake pools"
+                      },
+                      "influence": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "format": "double",
+                        "description": "The pledge influence on pool rewards"
+                      },
+                      "monetary_expand_rate": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "format": "double",
+                        "description": "The monetary expansion rate"
+                      },
+                      "treasury_growth_rate": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "format": "double",
+                        "description": "The treasury growth rate"
+                      },
+                      "decentralisation": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "format": "double",
+                        "description": "The decentralisation parameter (1 fully centralised, 0 fully decentralised)"
+                      },
+                      "extra_entropy": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The hash of 32-byte string of extra random-ness added into the protocol's entropy pool"
+                      },
+                      "protocol_major": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The protocol major version"
+                      },
+                      "protocol_minor": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The protocol minor version"
+                      },
+                      "min_utxo_value": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The minimum value of a UTxO entry"
+                      },
+                      "min_pool_cost": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The minimum pool cost"
+                      },
+                      "nonce": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The nonce value for this epoch"
+                      },
+                      "block_hash": {
+                        "type": "string",
+                        "description": "The hash of the first block where these parameters are valid"
+                      },
+                      "cost_models": {
+                        "anyOf": [
+                          {
+                            "type": "object"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The per language cost model in JSON"
+                      },
+                      "price_mem": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "format": "double",
+                        "description": "The per word cost of script memory usage"
+                      },
+                      "price_step": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "format": "double",
+                        "description": "The cost of script execution step usage"
+                      },
+                      "max_tx_ex_mem": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum number of execution memory allowed to be used in a single transaction"
+                      },
+                      "max_tx_ex_steps": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum number of execution steps allowed to be used in a single transaction"
+                      },
+                      "max_block_ex_mem": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum number of execution memory allowed to be used in a single block"
+                      },
+                      "max_block_ex_steps": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum number of execution steps allowed to be used in a single block"
+                      },
+                      "max_val_size": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum Val size"
+                      },
+                      "collateral_percent": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The percentage of the tx fee which must be provided as collateral when including non-native scripts"
+                      },
+                      "max_collateral_inputs": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The maximum number of collateral inputs allowed in a transaction"
+                      },
+                      "coins_per_utxo_size": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The cost per UTxO size"
+                      },
+                      "pvt_motion_no_confidence": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Pool Voting threshold for motion of no-confidence."
+                      },
+                      "pvt_committee_normal": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Pool Voting threshold for new committee/threshold (normal state)."
+                      },
+                      "pvt_committee_no_confidence": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Pool Voting threshold for new committee/threshold (state of no-confidence)."
+                      },
+                      "pvt_hard_fork_initiation": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Pool Voting threshold for hard-fork initiation."
+                      },
+                      "dvt_motion_no_confidence": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for motion of no-confidence."
+                      },
+                      "dvt_committee_normal": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for new committee/threshold (normal state)."
+                      },
+                      "dvt_committee_no_confidence": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for new committee/threshold (state of no-confidence)."
+                      },
+                      "dvt_update_to_constitution": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for update to the Constitution."
+                      },
+                      "dvt_hard_fork_initiation": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for hard-fork initiation."
+                      },
+                      "dvt_p_p_network_group": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for protocol parameter changes, network group."
+                      },
+                      "dvt_p_p_economic_group": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for protocol parameter changes, economic group."
+                      },
+                      "dvt_p_p_technical_group": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for protocol parameter changes, technical group."
+                      },
+                      "dvt_p_p_gov_group": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for protocol parameter changes, governance group."
+                      },
+                      "dvt_treasury_withdrawal": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep Vote threshold for treasury withdrawal."
+                      },
+                      "committee_min_size": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Minimal constitutional committee size."
+                      },
+                      "committee_max_term_length": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Constitutional committee term limits."
+                      },
+                      "gov_action_lifetime": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Governance action expiration."
+                      },
+                      "gov_action_deposit": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Governance action deposit."
+                      },
+                      "drep_deposit": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep deposit amount."
+                      },
+                      "drep_activity": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DRep activity period."
+                      },
+                      "pvtpp_security_group": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Pool Voting threshold for protocol parameter changes, security group."
+                      },
+                      "min_fee_ref_script_cost_per_byte": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Minimum Fee for Reference Script cost pre byte"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server cannot process the request due to invalid input"
+          },
+          "401": {
+            "description": "Access token is missing or invalid"
+          },
+          "404": {
+            "description": "The server does not recognise the combination of endpoint and parameters provided"
+          },
+          "429": {
+            "description": "Too many requests were sent in a short period, the tier-based cap can be referred to at https://koios.rest/tiers.html"
+          },
+          "413": {
+            "description": "The payload attached to your request is too large, please ensure your request packet is less than 5kb."
+          }
+        },
+        "summary": "Epoch's Protocol Parameters",
+        "description": "Get the protocol parameters for specific epoch, returns information about all epochs if no epoch specified",
+        "operationId": "epoch_params"
+      }
+    },
+    "/genesis": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success!!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Array of genesis parameters used to start each era on chain",
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "networkmagic": {
+                        "type": "string",
+                        "description": "Unique network identifier for chain"
+                      },
+                      "networkid": {
+                        "type": "string",
+                        "description": "Network ID used at various CLI identification to distinguish between Mainnet and other networks"
+                      },
+                      "epochlength": {
+                        "type": "string",
+                        "description": "Number of slots in an epoch"
+                      },
+                      "slotlength": {
+                        "type": "string",
+                        "description": "Duration of a single slot (in seconds)"
+                      },
+                      "maxlovelacesupply": {
+                        "type": "string",
+                        "description": "Maximum smallest units (lovelaces) supply for the blockchain"
+                      },
+                      "systemstart": {
+                        "type": "number",
+                        "description": "UNIX timestamp of the first block (genesis) on chain"
+                      },
+                      "activeslotcoeff": {
+                        "type": "string",
+                        "description": "Active Slot Co-Efficient (f) - determines the _probability_ of number of slots in epoch that are expected to have blocks (so mainnet, this would be: 432000 * 0.05 = 21600 estimated blocks)"
+                      },
+                      "slotsperkesperiod": {
+                        "type": "string",
+                        "description": "Number of slots that represent a single KES period (a unit used for validation of KES key evolutions)"
+                      },
+                      "maxkesrevolutions": {
+                        "type": "string",
+                        "description": "Number of KES key evolutions that will automatically occur before a KES (hot) key is expired. This parameter is for security of a pool, in case an operator had access to his hot(online) machine compromised"
+                      },
+                      "securityparam": {
+                        "type": "string",
+                        "description": "A unit (k) used to divide epochs to determine stability window (used in security checks like ensuring atleast 1 block was created in 3*k/f period, or to finalize next epoch's nonce at 4*k/f slots before end of epoch)"
+                      },
+                      "updatequorum": {
+                        "type": "string",
+                        "description": "Number of BFT members that need to approve (via vote) a Protocol Update Proposal"
+                      },
+                      "alonzogenesis": {
+                        "type": "string",
+                        "description": "A JSON dump of Alonzo Genesis"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server cannot process the request due to invalid input"
+          },
+          "401": {
+            "description": "Access token is missing or invalid"
+          },
+          "404": {
+            "description": "The server does not recognise the combination of endpoint and parameters provided"
+          },
+          "429": {
+            "description": "Too many requests were sent in a short period, the tier-based cap can be referred to at https://koios.rest/tiers.html"
+          },
+          "413": {
+            "description": "The payload attached to your request is too large, please ensure your request packet is less than 5kb."
+          }
+        },
+        "summary": "Get Genesis info",
+        "description": "Get the Genesis parameters used to start specific era on chain",
+        "operationId": "genesis"
+      }
+    }
+  },
+  "requestBodyRequiredNote": "payment_addresses_with_extended.schema.required lists _addresses; requestBody.required itself is not present in the source.",
+  "limitsSourcePointer": "#/info/description (Limits, Pagination, Authentication)",
+  "notLiveData": true
+}

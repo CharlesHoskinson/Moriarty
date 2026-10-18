@@ -1,0 +1,24 @@
+{
+ "format": "evidence-repair-independent-review-failures/1",
+ "denied_commands": [
+  {"id": "D-1", "command": "cd /tmp && python3 -I -B -c '<list named directory entries>'", "reason": "harness denied cd outside the allowed working directories; nothing executed", "handling": "re-issued without cd (python3 -I -B -c, names only via os.listdir, no stat)"},
+  {"id": "D-2", "command": "mkdir -p work && python3 -I -B - <<'EOF' ... EOF (allowlist writer)", "reason": "harness denied: brace with quote character; nothing executed (the mkdir did not run either)", "handling": "wrote the script with the Write tool as work/allowlist_phase1.py and ran it with python3 -I -B"}
+ ],
+ "scope_notes": [
+  "Before the phase-1 allowlist existed I had read only the startup governance files and AUTHOR/OUTPUT-MANIFEST.json (a named manifest), and listed entry names (no stat) of nine named directories. The listings showed wrapper/private file names; none was opened, stat'ed or hashed.",
+  "Later allowlist phases (2-4) were written before the files they add were read. Phase 2 names the parent candidate's files by its SOURCE-MANIFEST; work/verify.py hashed them in the same run that compared that manifest with its pin (the pin matched).",
+  "I ran the guarded CLI: no. The root refreshed status; SP01.6 history grants nothing here.",
+  "I executed only my own scripts in work/ with python3 -I -B. They import no candidate, helper, harness, operator or reviewer code and run no Rust/Cargo/model/crypto/network/Git."
+ ],
+ "own_tool_defects": [
+  "work/frozen_data.py inventory key 'frame_rows_zero_gross' is misnamed: it lists every frozen balance row with zero gross and zero fees (credit-only touched rows included), not frame rows. Not used for any verdict.",
+  "work/frozen_data.py key 'unregistered_or_extra_duty_rows' was never populated (always empty). Unregistered duties (H1 'legacy') were checked by reading instead."
+ ],
+ "partial_reads": "see READ-COVERAGE.json",
+ "uncertainties": [
+  "ark-relations 0.4.0 which_is_unsatisfied return format not read (UNVERIFIED-LIB).",
+  "All compile-ability statements about the r3 harness are predictions; I checked API names statically against Core ir.rs/lib.rs/logical_cost.rs and candidate src, not with rustc.",
+  "Freeze timestamps are author-attested; ordering cannot be independently verified.",
+  "My actual effort level is not observable to me."
+ ]
+}

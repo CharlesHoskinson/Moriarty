@@ -1,0 +1,25 @@
+{
+  "format": "cardano-k2-k10-compiled-c2-execution-proposal/1",
+  "status": "SOURCE-ONLY PROPOSAL. This file grants no authority. A later fresh full source/effect audit, ordinary data generation from the reviewed adapter, a fresh actual-input review, and a separate new exact bounded native AUTH are all required before any command below is run.",
+  "objective": "Execute the already compiled APPLIED B9 c2.c2.mint UPLC program (not a rebuilt predicate) with the genuine public Rust proof/VK payload, the tool-declared actual C2 policy, and raw PlutusV3 ScriptContexts, including coherent tampered contexts.",
+  "prerequisites": [
+    "Fresh full source/effect audit of the five K10 source files as materialized.",
+    "Ordinary DATA generation: python3 tools/build_k10_inputs.py <b9-applied.json> <k8_fixture.ak> BASE/current-cardano-k2-k10-public-inputs-generated-20261016 (fresh directory; all-public; no /w access).",
+    "Fresh actual-input review of the generated manifest.json, script.hex and seven context terms against EXPECTATIONS.json, including input before/after pin equality.",
+    "Separate new exact bounded native AUTH naming the Aiken binary, the seven invocations, one attempt each, zero retries, and the isolated tool/data mounts. Wallet, signing, ledger submission and Preprod are out of scope."
+  ],
+  "commandTemplate": {
+    "argv": ["<AIKEN-BINARY>", "uplc", "eval", "--cbor", "<GENERATED>/script.hex", "<CONTEXT-TERM-FILE-CONTENT-AS-SINGLE-ARGV>"],
+    "sourceBasis": "uplc eval.rs (Aiken 1.1.24): script is a positional path; --cbor reads hex text and Program::from_cbor; each positional arg is parsed with parser::term and applied; no --debug, so stdout is a single JSON {result,cpu,mem} on success and process exit 1 with stderr Error/Costs on failure. No --script or --datafile flags exist and none may be invented.",
+    "invocations": "Exactly 7: one per EXPECTATIONS.json test id, in id order, one attempt each, 0 retries. Preserve every stdout, stderr and exit code verbatim, including failures; never re-run a failed case under this proposal.",
+    "budgets": "Per-invocation wall-clock and output-size caps must be fixed numerically in the future AUTH before launch; this proposal deliberately sets no ledger ExUnits, maxTxSize or fee figures, which are unknown from the supplied inputs. Local VM cpu/mem are recorded as local VM costs only."
+  },
+  "isolation": "Tool tree mounted read-only; the fresh generated public-data directory is the only writable mount; no network; no /w, signing key, PK/SRS/prover cache or provider-raw access; no wallet. Source and input files are hashed before and after and must be immutable.",
+  "acceptance": "T1 accepts only on exit 0 with result \"(con unit ())\". T2-T7 accept only on exit 1 through the eval error path. Any parse error, pin mismatch, unexpected stdout shape, or guard-path ambiguity is a failed run to be preserved and audited, not retried or relabeled.",
+  "explicitNonClaims": [
+    "No independently recomputed script hash (Pallas source gap; policy identity is tool-declared).",
+    "No actual ledger transaction, mint on chain, fee/conservation/admission or Preprod claim; the context is locally fabricated in K9 placeholder style.",
+    "No live mint may ever use the fabricated claimant key/outref; a real Preprod attempt requires a newly reviewed context/proof/identity pipeline.",
+    "Class-0 single-party setup forgeability and the VK-matrix link remain open; all 20 UTxO families, ACTUS, DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD and universal certificates remain open."
+  ]
+}

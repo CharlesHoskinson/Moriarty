@@ -1,0 +1,107 @@
+foreman-launch: capability=posix_pidns_userns_strong unshare=/usr/bin/unshare flags=--user --map-current-user --pid --mount-proc --fork --kill-child host_pid=2682320
+foreman-launch: capability=posix_pidns_userns_strong already_inner host_pid=2682320
+CONTEXT {"self": {"pid": 8, "comm": "python3", "state": "R", "ppid": 1, "startTicks": "8566724", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t8"]}, "parent": {"pid": 1, "comm": "MainThread", "state": "S", "ppid": 0, "startTicks": "8566718", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1"]}, "init": {"pid": 1, "comm": "MainThread", "state": "S", "ppid": 0, "startTicks": "8566718", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1"]}, "procSelf": "8"}
+PID_FAILURE {"observed": {"pid": 20, "comm": "child", "state": "Z", "ppid": 1, "startTicks": "8566785", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t20"]}, "parent": {"pid": 1, "comm": "MainThread", "state": "S", "ppid": 0, "startTicks": "8566718", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1"]}, "self": {"pid": 8, "comm": "python3", "state": "R", "ppid": 1, "startTicks": "8566724", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t8"]}}
+FPID_FAILURE {"observed": {"pid": 23, "comm": "child", "state": "Z", "ppid": 1, "startTicks": "8567033", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t23"]}, "parent": {"pid": 1, "comm": "MainThread", "state": "S", "ppid": 0, "startTicks": "8566718", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1"]}, "self": {"pid": 8, "comm": "python3", "state": "R", "ppid": 1, "startTicks": "8566724", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t8"]}}
+F
+=================================== FAILURES ===================================
+_________ test_control_deadline_kills_hanging_child_and_is_independent _________
+
+binaries = (PosixPath('/tmp/pytest-of-charl/pytest-32/prover-lifetime-build0/prover_lifetime'), PosixPath('/tmp/pytest-of-charl/pytest-32/prover-lifetime-build0/child'))
+tmp_path = PosixPath('/tmp/pytest-of-charl/pytest-32/test_control_deadline_kills_ha0')
+
+    def test_control_deadline_kills_hanging_child_and_is_independent(binaries, tmp_path):
+        wrapper, child = binaries
+        pidfile = tmp_path / "hang.pid"
+        control = control_file(tmp_path, deadline=time.monotonic_ns() + 450_000_000)
+        started = time.monotonic()
+        proc = subprocess.Popen(
+            [str(wrapper), str(control), "--", str(child), "hang", str(pidfile)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        wait_for_file(pidfile, proc)
+        time.sleep(0.25)  # no signals and no polling: the external supervisor is absent
+        stdout, stderr = proc.communicate(timeout=3)
+        assert proc.returncode == 124, stdout + stderr
+        assert 0.25 <= time.monotonic() - started < 2.0
+>       assert_pid_gone(int(pidfile.read_text()))
+
+tests/test_prover_lifetime_wrapper.py:309: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tmp/moriarty-wrapper-context-probe.py:22: in checked
+    try: _original(pid,timeout)
+         ^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pid = 20, timeout = 2
+
+    def assert_pid_gone(pid, timeout=2):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end and Path(f"/proc/{pid}").exists():
+            time.sleep(0.01)
+>       assert not Path(f"/proc/{pid}").exists(), f"pid {pid} remains"
+E       AssertionError: pid 20 remains
+E       assert not True
+E        +  where True = exists()
+E        +    where exists = PosixPath('/proc/20').exists
+E        +      where PosixPath('/proc/20') = Path('/proc/20')
+
+tests/test_prover_lifetime_wrapper.py:266: AssertionError
+_________ test_dead_external_launcher_cannot_disable_wrapper_deadline __________
+
+binaries = (PosixPath('/tmp/pytest-of-charl/pytest-32/prover-lifetime-build0/prover_lifetime'), PosixPath('/tmp/pytest-of-charl/pytest-32/prover-lifetime-build0/child'))
+tmp_path = PosixPath('/tmp/pytest-of-charl/pytest-32/test_dead_external_launcher_ca0')
+
+    def test_dead_external_launcher_cannot_disable_wrapper_deadline(binaries, tmp_path):
+        wrapper, child = binaries
+        pidfile = tmp_path / "orphan-child.pid"
+        wrapper_pid_file = tmp_path / "orphan-wrapper.pid"
+        control = control_file(tmp_path, deadline=time.monotonic_ns() + 650_000_000)
+        launcher = os.fork()
+        if launcher == 0:
+            proc = subprocess.Popen(
+                [str(wrapper), str(control), "--", str(child), "hang", str(pidfile)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            wrapper_pid_file.write_text(str(proc.pid))
+            os._exit(0)
+        _, launcher_status = os.waitpid(launcher, 0)
+        assert os.waitstatus_to_exitcode(launcher_status) == 0
+        end = time.monotonic() + 2
+        while not pidfile.exists() and time.monotonic() < end:
+            time.sleep(0.01)
+        assert pidfile.exists()
+        wrapper_pid = int(wrapper_pid_file.read_text())
+        child_pid = int(pidfile.read_text())
+        assert Path(f"/proc/{wrapper_pid}").exists()
+>       assert_pid_gone(child_pid, timeout=3)
+
+tests/test_prover_lifetime_wrapper.py:336: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tmp/moriarty-wrapper-context-probe.py:22: in checked
+    try: _original(pid,timeout)
+         ^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pid = 23, timeout = 3
+
+    def assert_pid_gone(pid, timeout=2):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end and Path(f"/proc/{pid}").exists():
+            time.sleep(0.01)
+>       assert not Path(f"/proc/{pid}").exists(), f"pid {pid} remains"
+E       AssertionError: pid 23 remains
+E       assert not True
+E        +  where True = exists()
+E        +    where exists = PosixPath('/proc/23').exists
+E        +      where PosixPath('/proc/23') = Path('/proc/23')
+
+tests/test_prover_lifetime_wrapper.py:266: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_prover_lifetime_wrapper.py::test_control_deadline_kills_hanging_child_and_is_independent
+FAILED tests/test_prover_lifetime_wrapper.py::test_dead_external_launcher_cannot_disable_wrapper_deadline
+2 failed in 5.91s

@@ -1,0 +1,142 @@
+[
+  {
+    "coverage": [
+      {
+        "checked": "Read full 50-line packet manifest (2472 bytes). Verified scope declaration and inventory of 7 packet files without following external provenance paths.",
+        "read": true,
+        "sourceId": "MANIFEST.json"
+      },
+      {
+        "checked": "Read full 36-line fragment (1544 bytes). Verified lines 1-8 are the standalone 6-line module docstring plus 2 blank lines (298 bytes total) and lines 9-35 are the 27-line def _render_prepared_outputs function block (1246 bytes total).",
+        "read": true,
+        "sourceId": "SOL-RENDERER.py.txt"
+      },
+      {
+        "checked": "Read full 120-line integration contract (7196 bytes). Checked required arguments, 4 case IDs, 6-file output roster, UTF-8/newline/canonical JSON formatting, shallow dict copy/non-mutation obligations, and opaque consumerFormat/consumerLabels handoff.",
+        "read": true,
+        "sourceId": "SOL-INTEGRATION-CONTRACT.md"
+      },
+      {
+        "checked": "Read full 36-line literal assembly record (1467 bytes). Checked prefix (27068 B) + tail (34843 B) = combined build_k10_inputs_r4.py (61911 B, 1296 lines, sha256 5e187245...), rendererOriginalFile (1544 B) vs rendererFunctionBlock (1246 B), and sourceReady/executed/adopted all false with nativeAuthority 0.",
+        "read": true,
+        "sourceId": "ROOT-FULL-IMPLEMENTATION-ASSEMBLY.json"
+      },
+      {
+        "checked": "Read full 55-line failed tail intake record (1913 bytes). Checked terminalExitCode 1, noCompleteStructuredObject true, authorCompletionNotQualified true, 51 recognized Opus 5.5 frames of 52 assistant events, 3 written public tail files, and sourceOnly/unexecuted status.",
+        "read": true,
+        "sourceId": "ROOT-TAIL-SOURCE-INTAKE.json"
+      },
+      {
+        "checked": "Read full 94-line API descriptor (13080 bytes). Checked module imports/public functions/seam/forbidden list, plan_outputs and main stage order, 6 output files and writeOrder, 33-key manifest schema, 8-key case schema, 16-entry r2 consumerLabels, 9-entry builderLabels, 4 limitations, 10 false flags, and call-time attribute access requirements.",
+        "read": true,
+        "sourceId": "R4-API.json"
+      },
+      {
+        "checked": "Read full 222-line untrusted author tail contract (26268 bytes). Cross-checked author claims for _case_row, _prepare_rows, _manifest_fields, _render_prepared_outputs, plan_outputs, main, API ambiguities (OD1/OD2), and unresolved gaps (G01-G06) against actual source code in build_k10_inputs_r4.py.",
+        "read": true,
+        "sourceId": "TAIL-AUTHOR-CONTRACT.json"
+      },
+      {
+        "checked": "Viewed all 1296 lines (1297 view rows, 61911 bytes) in two read-only slices (1-650 and 651-1297), but review certification is strictly scoped to non-security mechanical Sol glue only (no global 1296-line security/crypto/JSON/bridge/writer audit claim). Audited prefix imports/constants (lines 31-194), seam (line 570), _case_row (lines 894-901), _prepare_rows (lines 904-921), _manifest_fields (lines 924-965), _render_prepared_outputs (lines 969-995), plan_outputs (lines 999-1023), main call wiring (lines 1262\u2026",
+        "read": true,
+        "sourceId": "build_k10_inputs_r4.py"
+      }
+    ],
+    "findings": [
+      {
+        "evidence": "In build_k10_inputs_r4.py lines 1007-1019, plan_outputs calls _admit_expiry_int, parse_public_json (export and setup), check_setup_link, _policy_gate, _consume, and _bridge_gate before calling _prepare_rows, _manifest_fields, and _render_prepared_outputs. Inside _render_prepared_outputs (lines 981-986), legacy.script_context and legacy.uplc_term are invoked on each row. Additionally, TAIL-AUTHOR-CONTRACT.json lines 184-187 note two open API ambiguities (F1 OD1: compiledValidatorTitle, scriptHexFile, scriptC\u2026",
+        "id": "QUESTION_FOR_OPUS-01",
+        "requiredFix": "Route to fresh non-author Opus whole-source security review: (1) certify whether _policy_gate, _consume, _bridge_gate, legacy_env_from_host, and _translated_env fully discharge all security, cryptographic, schema, and type preconditions required before _render_prepared_outputs runs; (2) verify runtime non-mutation inside legacy.script_context and legacy.uplc_term; and (3) adjudicate F1 OD1 and F1 OD2 against C2-BUILDER-R4-CONTRACT.md and test_c2_builder_r4.py.",
+        "severity": "info"
+      },
+      {
+        "evidence": "ROOT-TAIL-SOURCE-INTAKE.json lines 5-28 record that the tail authoring job (R4-IMPLEMENTATION-TAIL-SOURCE-OPUS55) terminated with terminalExitCode 1, is_error true, structured_output_present false, and authorCompletionNotQualified true (51 recognized claude-opus-5-5 frames out of 52 assistant events, 1 rate event rejected) after writing R4-IMPLEMENTATION-TAIL.py.part (34843 B, 726 lines). ROOT-FULL-IMPLEMENTATION-ASSEMBLY.json lines 4-20 record root literal concatenation of the 27068-byte prefix and 34843-b\u2026",
+        "id": "QUESTION_FOR_OPUS-02",
+        "requiredFix": "Maintain authorCompletionNotQualified true and sourceReady false until fresh non-author Opus completes the full 1296-line security/semantics audit (covering JSON pre-scan/post-walk, LINK, POLICY, CONSUMER, BRIDGE, WRITE, REREAD, cleanup, and G01-G06 residuals including G03 Unicode line separators U+000B, U+000C, U+001C..U+001E, U+0085, U+2028, U+2029) and root executes the isolated RED-then-GREEN gate. This mechanical Sol glue review does not repair or qualify the failed author job.",
+        "severity": "info"
+      }
+    ],
+    "recommendation": {
+      "firstBlockedBoundary": "Fresh non-author Opus whole-source security/precondition/bridge/writer audit of build_k10_inputs_r4.py and root-gated isolated RED-then-GREEN execution (plus separate CP08 r2 reliance and R4 adoption gates)",
+      "ledgerReady": false,
+      "nativeAuthority": 0,
+      "operatorReady": false,
+      "runtimeReady": false,
+      "securityReady": false,
+      "sourceAttributionReady": true,
+      "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+    },
+    "reviewToken": "r4-sol-glue-actual-integration-gemini4-argon-high-20261017",
+    "summary": "Independent non-author mechanical Sol glue review by Gemini 4 Argon (High) via AGY (self-reported harness model identity, not an independent attestation; one read-only attempt using view_file only; no shell, hashing, AST, import, compilation, or execution). Scope is strictly limited to the non-security mechanical Sol renderer copy, call wiring, and metadata serialization/copying in build_k10_inputs_r4.py (61911 bytes, 1296 lines, sha256 5e18724529aaa9ab8c00786fdce6951cc9f83c5c05a4f329b020a7f4aa8da7d6 as rec\u2026"
+  },
+  {
+    "coverage": [
+      {
+        "checked": "Read full 50-line packet manifest (2472 bytes). Verified scope declaration and inventory of 7 packet files without following external provenance paths.",
+        "read": true,
+        "sourceId": "MANIFEST.json"
+      },
+      {
+        "checked": "Read full 36-line fragment (1544 bytes). Verified lines 1-8 are the standalone 6-line module docstring plus 2 blank lines (298 bytes total) and lines 9-35 are the 27-line def _render_prepared_outputs function block (1246 bytes total).",
+        "read": true,
+        "sourceId": "SOL-RENDERER.py.txt"
+      },
+      {
+        "checked": "Read full 120-line integration contract (7196 bytes). Checked required arguments, 4 case IDs, 6-file output roster, UTF-8/newline/canonical JSON formatting, shallow dict copy/non-mutation obligations, and opaque consumerFormat/consumerLabels handoff.",
+        "read": true,
+        "sourceId": "SOL-INTEGRATION-CONTRACT.md"
+      },
+      {
+        "checked": "Read full 36-line literal assembly record (1467 bytes). Checked prefix (27068 B) + tail (34843 B) = combined build_k10_inputs_r4.py (61911 B, 1296 lines, sha256 5e187245...), rendererOriginalFile (1544 B) vs rendererFunctionBlock (1246 B), and sourceReady/executed/adopted all false with nativeAuthority 0.",
+        "read": true,
+        "sourceId": "ROOT-FULL-IMPLEMENTATION-ASSEMBLY.json"
+      },
+      {
+        "checked": "Read full 55-line failed tail intake record (1913 bytes). Checked terminalExitCode 1, noCompleteStructuredObject true, authorCompletionNotQualified true, 51 recognized Opus 5.5 frames of 52 assistant events, 3 written public tail files, and sourceOnly/unexecuted status.",
+        "read": true,
+        "sourceId": "ROOT-TAIL-SOURCE-INTAKE.json"
+      },
+      {
+        "checked": "Read full 94-line API descriptor (13080 bytes). Checked module imports/public functions/seam/forbidden list, plan_outputs and main stage order, 6 output files and writeOrder, 33-key manifest schema, 8-key case schema, 16-entry r2 consumerLabels, 9-entry builderLabels, 4 limitations, 10 false flags, and call-time attribute access requirements.",
+        "read": true,
+        "sourceId": "R4-API.json"
+      },
+      {
+        "checked": "Read full 222-line untrusted author tail contract (26268 bytes). Cross-checked author claims for _case_row, _prepare_rows, _manifest_fields, _render_prepared_outputs, plan_outputs, main, API ambiguities (OD1/OD2), and unresolved gaps (G01-G06) against actual source code in build_k10_inputs_r4.py.",
+        "read": true,
+        "sourceId": "TAIL-AUTHOR-CONTRACT.json"
+      },
+      {
+        "checked": "Viewed all 1296 lines (1297 view rows, 61911 bytes) in two read-only slices (1-650 and 651-1297), but review certification is strictly scoped to non-security mechanical Sol glue only (no global 1296-line security/crypto/JSON/bridge/writer audit claim). Audited prefix imports/constants (lines 31-194), seam (line 570), _case_row (lines 894-901), _prepare_rows (lines 904-921), _manifest_fields (lines 924-965), _render_prepared_outputs (lines 969-995), plan_outputs (lines 999-1023), main call wiring (lines 1262-1296), and module-wide absence of shadowing/rebinding of legacy, json, or _render_prepared_outputs.",
+        "read": true,
+        "sourceId": "build_k10_inputs_r4.py"
+      }
+    ],
+    "findings": [
+      {
+        "evidence": "In build_k10_inputs_r4.py lines 1007-1019, plan_outputs calls _admit_expiry_int, parse_public_json (export and setup), check_setup_link, _policy_gate, _consume, and _bridge_gate before calling _prepare_rows, _manifest_fields, and _render_prepared_outputs. Inside _render_prepared_outputs (lines 981-986), legacy.script_context and legacy.uplc_term are invoked on each row. Additionally, TAIL-AUTHOR-CONTRACT.json lines 184-187 note two open API ambiguities (F1 OD1: compiledValidatorTitle, scriptHexFile, scriptCompiledBytes, scriptInnerFlatBytes sourced from pinned legacy main() literals not restated in R4-API.json; F1 OD2: inputs[] recording actual call input SHA-256 and byte length vs pinned fixture values).",
+        "id": "QUESTION_FOR_OPUS-01",
+        "requiredFix": "Route to fresh non-author Opus whole-source security review: (1) certify whether _policy_gate, _consume, _bridge_gate, legacy_env_from_host, and _translated_env fully discharge all security, cryptographic, schema, and type preconditions required before _render_prepared_outputs runs; (2) verify runtime non-mutation inside legacy.script_context and legacy.uplc_term; and (3) adjudicate F1 OD1 and F1 OD2 against C2-BUILDER-R4-CONTRACT.md and test_c2_builder_r4.py.",
+        "severity": "info"
+      },
+      {
+        "evidence": "ROOT-TAIL-SOURCE-INTAKE.json lines 5-28 record that the tail authoring job (R4-IMPLEMENTATION-TAIL-SOURCE-OPUS55) terminated with terminalExitCode 1, is_error true, structured_output_present false, and authorCompletionNotQualified true (51 recognized claude-opus-5-5 frames out of 52 assistant events, 1 rate event rejected) after writing R4-IMPLEMENTATION-TAIL.py.part (34843 B, 726 lines). ROOT-FULL-IMPLEMENTATION-ASSEMBLY.json lines 4-20 record root literal concatenation of the 27068-byte prefix and 34843-byte tail into the 61911-byte, 1296-line build_k10_inputs_r4.py without import, compilation, or execution.",
+        "id": "QUESTION_FOR_OPUS-02",
+        "requiredFix": "Maintain authorCompletionNotQualified true and sourceReady false until fresh non-author Opus completes the full 1296-line security/semantics audit (covering JSON pre-scan/post-walk, LINK, POLICY, CONSUMER, BRIDGE, WRITE, REREAD, cleanup, and G01-G06 residuals including G03 Unicode line separators U+000B, U+000C, U+001C..U+001E, U+0085, U+2028, U+2029) and root executes the isolated RED-then-GREEN gate. This mechanical Sol glue review does not repair or qualify the failed author job.",
+        "severity": "info"
+      }
+    ],
+    "recommendation": {
+      "firstBlockedBoundary": "Fresh non-author Opus whole-source security/precondition/bridge/writer audit of build_k10_inputs_r4.py and root-gated isolated RED-then-GREEN execution (plus separate CP08 r2 reliance and R4 adoption gates)",
+      "ledgerReady": false,
+      "nativeAuthority": 0,
+      "operatorReady": false,
+      "runtimeReady": false,
+      "securityReady": false,
+      "sourceAttributionReady": true,
+      "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+    },
+    "reviewToken": "r4-sol-glue-actual-integration-gemini4-argon-high-20261017",
+    "summary": "Independent non-author mechanical Sol glue review by Gemini 4 Argon (High) via AGY (self-reported harness model identity, not an independent attestation; one read-only attempt using view_file only; no shell, hashing, AST, import, compilation, or execution). Scope is strictly limited to the non-security mechanical Sol renderer copy, call wiring, and metadata serialization/copying in build_k10_inputs_r4.py (61911 bytes, 1296 lines, sha256 5e18724529aaa9ab8c00786fdce6951cc9f83c5c05a4f329b020a7f4aa8da7d6 as recorded by root). Although all 1296 lines of build_k10_inputs_r4.py were viewed across two read-only file views to verify module-wide bindings and call paths, no global 1296-line security, cryptographic, JSON, bridge, or filesystem writer audit is claimed; Opus owns all security and precondition acceptance judgments.\n\n1. Literal Function Copy Comparison (by Direct Source View):\n- SOL-RENDERER.py.txt is 36 lines (1544 bytes). Lines 1-6 are the standalone fragment module docstring and lines 7-8 are two blank lines (298 bytes total: 68+1+77+82+64+4+1+1 bytes), which are not part of the function definition and are appropriately omitted in build_k10_inputs_r4.py so as not to introduce a stray mid-module string expression.\n- Lines 9-35 of SOL-RENDERER.py.txt (27 lines, 1246 bytes including trailing LF) define def _render_prepared_outputs(code_hex, policy, case_rows, manifest_fields). Direct line-by-line and character-by-character comparison against build_k10_inputs_r4.py lines 969-995 confirms an exact byte-for-byte match across all 27 lines.\n- _render_prepared_outputs appears as exactly one effective copy in build_k10_inputs_r4.py (defined once at lines 969-995, called once at line 1019 in plan_outputs, never rebound or shadowed).\n\n2. Module Bindings, Imports, and Non-Shadowing:\n- The prefix imports json (line 32) and build_k10_inputs as legacy (line 37) among the 9 permitted imports (lines 31-39).\n- The tail is appended below the single seam (# === C2B-R4-APPEND-SEAM: append tail below; prefix above is immutable === at line 570), adds no imports, and never rebinds, patches, or shadows legacy, json, c2_issue_artifacts_r2, host_codec, or any prefix gate/constant at module or local scope.\n- c2_issue_artifacts (v1) is never imported or referenced, no /2-to-/1 format or label conversion exists, and no eager execution of builder gates or rendering occurs at import time.\n\n3. Mechanical Call Order and Prepared Row/Manifest Dataflow (Actual Source Path):\n- In main(argv) (lines 1262-1292), actual call order is _admit_argv(argv) (line 1276) -> _open_outdir(args[5], state) (line 1277) -> _read_inputs(args) (line 1278) -> plan_outputs(raws[0], raws[1], raws[2], expiry) (line 1279) -> _write_outputs(files, args, raws, state) (line 1280).\n- In plan_outputs (lines 999-1023), actual call order before the renderer is: (1) _admit_expiry_int(expiry) (line 1007); (2) parse_public_json(export_raw, _EXPORT_CAP) (line 1008); (3) parse_public_json(setup_raw, _SETUP_CAP) (line 1009); (4) check_setup_link(export, setup_raw) (line 1010); (5) _policy_gate(b9_raw) (line 1011); (6) _consume(export, setup, expiry, facts['policy']) calling c2_issue_artifacts_r2.prepare_c2_issue once by attribute at call time (line 1012 / line 788); (7) _bridge_gate(result, export, setup, expiry, facts['policy'], link) (line 1013); (8) rows = _prepare_rows(checked) (line 1014); (9) fields = _manifest_fields(checked, facts, link, expiry, (b9_raw, export_raw, setup_raw)) (line 1015); and (10) files = _render_prepared_outputs(facts['code_hex'], facts['policy'], rows, fields) (line 1019), followed by the 6-file roster postcondition check (lines 1020-1022). Upstream gate preconditions are cited here as source declarations and mechanical call order only, not certified.\n- _prepare_rows(checked) (lines 904-921) builds an exact 4-tuple of row dicts via _case_row (lines 894-901) in (T1, T5, T6, T7) order: T1 (checked['env_tree'], checked['token'], qty 1), T5 (_translated_env(checked['env_data'], env_cbor), checked['token'], qty 2), T6 (_translated_env(checked['env_data'], env_cbor), legacy.flip_first_bit(token), qty 1), and T7 (checked['t7_tree'], checked['t7_token'], qty 1, checked['t7_cbor'], checked['bad_vk_digest']). Each row dict has exact keys {'env', 'token', 'quantity', 'vk', 'proof', 'manifest'}, and row['manifest'] is a fresh dict with the 6 Opus-computed metadata keys (envelopeCborHex, tokenNameHex, quantity, envVkDigestHex, envStatementDigestHex, proofHexSha256).\n\n4. Serialization, Non-Mutation in Renderer Source, and Non-Claims:\n- _render_prepared_outputs unpacks t1, t5, t6, t7 = case_rows, pairs them with the 4 fixed historical case IDs (K10-T1-positive-genuine-issue, K10-T5-quantity-two-reject, K10-T6-token-name-bitflip-reject, K10-T7-vk-digest-bitflip-reject), writes 'script.hex' as (code_hex + '\\n').encode('utf-8'), calls legacy.script_context and legacy.uplc_term once per row to format 'contexts/<case_id>.uplc.txt' as ('(con data (%s))\\n' % legacy.uplc_term(context)).encode('utf-8'), copies each row['manifest'] via dict(row['manifest']) before adding only 'id' and 'contextFile' (producing all 8 _CASE_KEYS), copies manifest_fields via dict(manifest_fields) before setting manifest['cases'] = manifest_cases (producing all 33 _MANIFEST_KEYS), and formats 'manifest.json' via (json.dumps(manifest, indent=2, sort_keys=True) + '\\n').encode('utf-8').\n- _manifest_fields constructs fresh container copies for nested dicts and lists (auditSourcePins, builderLabels, consumerLabels, coverageGaps for T2-T4 with NOT_GENERATED_HISTORICAL_FIXTURE_ONLY, flags with all 10 flags False, inputs, limitations, settleOutref).\n- Static inspection confirms the renderer body only serializes and copies prepared metadata without mutating input dicts/lists or creating/claiming security outcomes. No runtime execution success, runtime non-mutation proof of external functions, or Opus precondition validation is claimed. Author job failure (exit 1) remains unqualified; all 20 UTxO families, full finance, ACTUS, DeFi, recursion, private handoff, multiparent PCD, and Preview/Preprod tracks remain OPEN."
+  }
+]

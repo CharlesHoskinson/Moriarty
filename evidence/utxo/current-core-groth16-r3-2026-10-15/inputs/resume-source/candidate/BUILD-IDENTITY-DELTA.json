@@ -1,0 +1,55 @@
+{
+  "format": "repair-build-identity-delta/1",
+  "author": "claude-opus-5-5, review-repair source author (SOURCEONLY; nothing compiled or run)",
+  "build_manifest": {
+    "origin_r2_sha256": "2c943b511bb6cb912889728ed2c5de90d4257939ded53b1d626b998edd3beb21",
+    "successor_sha256": "4e3ba2e2796b425598b9b2abc022c4d6782bf032044aa53e124af4946c543b47",
+    "origin_bytes_kept_at": "history/origin-r2/BUILD-MANIFEST.json",
+    "changed_files": {
+      "source/mori-r1cs/src/adapter.rs": "documentation constants and doc comments only: TARGET_OBLIGATIONS gains the F-04 balance-row premise, the F-05 duty-frame gap and a neutral P3-7 debit-authority wording; initial_ledger_target_admits doc states it is not wired (F-10). No function body changed.",
+      "source/mori-r1cs/src/circuit.rs": "F-12: CompiledRelation::circuit calls a new length check before constructing TransitionCircuit; import of BodyValues. compile, compile_source, probe, synthesize and every helper used by synthesis are byte-identical (REPAIR-STATIC-CHECKS C6).",
+      "source/mori-r1cs/src/coverage.rs": "F-04/F-05 data: new Support::TargetPremise variant; the REFUSALS row for a missing explicit balance moves from Constant to TargetPremise with corrected text; Scenario.balances and Scenario.liabilities lowering texts name the premise and the duty-frame gap.",
+      "source/mori-r1cs/src/error.rs": "F-12: new CompileError::AssignmentShape(String) and its Display arm."
+    },
+    "unchanged_files": "Cargo.toml, frontend.rs, gadgets.rs, groth16.rs, identity.rs, lib.rs, lower.rs, plan.rs, r1cs.rs, staged.rs, statement.rs, witness.rs (byte-identical; REPAIR-STATIC-CHECKS C5)"
+  },
+  "why_build_manifest_changed": "The review's PC-1 assumed a test-only F-01 repair with BUILD-MANIFEST unchanged at 2c943b51. The user's mandatory F-04 correction lives in src/coverage.rs (REFUSALS) and src/adapter.rs (TARGET_OBLIGATIONS), and F-12 asks for source-level validation in circuit(). Both are under src/, which BUILD-MANIFEST covers, so its digest necessarily changes. This repair therefore does NOT satisfy PC-1's literal invariant; see REPAIR-VOTES.md (PC-1 amended).",
+  "what_is_bound_in_circuit_today": {
+    "header_constants": "relation version, canonical Program hash, profile digest, action index, shape digest, compiler build digest, W (and the cap slot when PublicCap)",
+    "compiler_build_digest": "SHA-256 of mori_core::intent::canonical(CompilerBuild { compiler_source_manifest_sha256, core_closure_sha256 }) (identity.rs). Both inputs are CALLER-SUPPLIED; compile() only rejects all-zero digests (review F-08). The compiler does not hash its own bytes.",
+    "effect_of_this_repair": "A caller that supplies the successor BUILD-MANIFEST digest 4e3ba2e2... gets a different compiler_build_digest header constant than one supplying 2c943b51.... Header constants enter the binding constraints as Variable::One coefficients, so the R1CS matrices and ProbeReport::r1cs_sha256 of EVERY relation change with the supplied build digest even though no constraint-generating code changed. The exact new digests are computed by Core's canonical encoder at run time and are not computed or claimed here."
+  },
+  "not_bound_anywhere_today": [
+    "Cargo.lock digest (no lock exists; E1 would create one)",
+    "toolchain identity (cargo/rustc/librustc_driver bytes, host triple)",
+    "the registry crate closure actually compiled",
+    "the R1CS digest to VK link (no setup transcript; setup is never-listed)"
+  ],
+  "proposed_metadata_not_implemented": "CORRECTED-EXECUTION-REQUEST.json section identity_binding: the run harness recomputes BUILD-MANIFEST and Core-closure digests from copied bytes and passes only recomputed values; the future catalogue/admission row binds lock digest, registry-subset digest, toolchain binary hashes and the observed r1cs_sha256. These are proposed catalogue/admission METADATA, not in-circuit constants. Moving any of them into CompilerBuild (and therefore into the circuit) would change the relation-identity format and needs its own design vote and review.",
+  "reviewer_harness_consequence": {
+    "file": "current-core-groth16-compiler-independent-source-review-20261015/proposals/heldout-harness/tests/heldout.rs (sha256 4851a1a1d2a823cf5b933e95c6ee909983a97a9b9ca16a50877dc2ec3195f600; not edited)",
+    "fact": "It hard-codes BUILD_MANIFEST_SHA256 = 2c943b51... as its caller-supplied CompilerBuild input.",
+    "effect": "Against the successor bytes that constant is stale. It cannot change any satisfiable / unsatisfiable / not-encodable / refused outcome in the harness, because both the claimant encoding (StatementLayout::encode) and the circuit read the same supplied header constant. It does make every relation identity and r1cs digest produced by E5 name the origin build, so E5 output is not build-identity evidence for the successor. This is the F-08 gap observed concretely; only the reviewer may revise the harness."
+  },
+  "r04_disclosure": {
+    "added_by": "claude-opus-5-5, evidence-repair source author, 2026-10-15 (result review R-04 / FIX-PROPOSALS P-2, disclosure option; SOURCEONLY)",
+    "fact": "compiler_source_manifest_sha256 is the SHA-256 of the whole BUILD-MANIFEST.json file. That file carries annotation bytes besides the 16 {path, sha256, bytes} entries: format, rule, origin_build_manifest_sha256 and a per-entry vs_origin_r2 label. compiler_build_digest = SHA-256(intent::canonical(CompilerBuild { compiler_source_manifest_sha256, core_closure_sha256 })), so a change to any annotation byte (for example re-pointing origin_build_manifest_sha256 or relabelling vs_origin_r2) changes compiler_build_digest, its header constant, the constant (Variable::One) coefficients of the header binding constraints of every relation and therefore every r1cs_sha256, with no compiled-code change.",
+    "format_unchanged": "mori-r1cs-build-manifest/1 is kept exactly (same keys, same rule text, same annotation meaning: origin_build_manifest_sha256 = origin-r2 2c943b51..., vs_origin_r2 compared with the origin-r2 SOURCE-MANIFEST pins). Defining mori-r1cs-build-manifest/2 with {path, sha256, bytes} entries only is the other P-2 option; it is NOT done in this repair.",
+    "what_byte_identity_establishes": "Which exact bytes were named. It establishes no source provenance, no build provenance (F-08: both CompilerBuild inputs remain caller-supplied), no semantic equivalence between builds and no security or funds-safety property. Equal digests are not acceptance; different digests are not a semantic change."
+  },
+  "evidence_repair_successor": {
+    "parent_build_manifest_sha256": "4e3ba2e2796b425598b9b2abc022c4d6782bf032044aa53e124af4946c543b47",
+    "parent_bytes_kept_at": "current-core-groth16-compiler-review-repair-source-20261015/BUILD-MANIFEST.json (immutable parent; not copied over)",
+    "successor_build_manifest_sha256": "edbe3193c8eabc51a1d5595757c69c0bbe2caeb89e53cc3dc25564cead44b41a",
+    "changed_files_vs_parent": {
+      "source/mori-r1cs/src/coverage.rs": "R-01 data only: REFUSALS rows mori::core::bound and mori::core::liability (scenario identity differs) move from Support::Constant to Support::TargetPremise with represented-snapshot / target-premise wording naming pre-state authenticity and frame completeness; one new TargetPremise row for scenario-level asset/balance/liability row refusals; the REFUSALS doc comment names the represented snapshot. No function body, no constraint-generating code and no other src file changed."
+    },
+    "core_closure_sha256": "f47318a26a4df0477e89962a9de0e9b48f12d01d0e9b4a8f5e74603beaa235ed (unchanged, 70 files at 6c7b1fda)",
+    "compiler_build_digest": {
+      "parent_observed_in_actual_run": "a6911ddd6b3883dedfa4c155e4924d98fc645d41d72806d4d6bcd0c398366d44 (E5-r2 identity line; result review recomputation equal)",
+      "successor_predicted_by_stdlib_arithmetic": "0b896adbe183b79d82455fde7b2c5e988b166a63a5fde972d3621eb7ad98bf19",
+      "status": "Prediction of an arithmetic identity only, by tools/candidate_manifests.py digest (method reproduces the parent's observed value). Evidence only when an authorized run of the reviewed harness prints it from the copied bytes."
+    },
+    "consequence": "Every relation identity, compiler_build_digest and r1cs_sha256 of the successor differs from those of the parent although no constraint-generating code changed. The parent's actual run (BUILD 4e3ba2e2, compiler_build_digest a6911ddd) remains evidence for the parent bytes only and is not relabelled; this successor has no actual result."
+  }
+}

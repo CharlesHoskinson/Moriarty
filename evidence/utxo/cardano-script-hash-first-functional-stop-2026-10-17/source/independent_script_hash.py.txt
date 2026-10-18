@@ -1,0 +1,203 @@
+"""M-HASH independent ordinary script-hash recomputation: implementation SOURCE. NOT RUN BY ITS AUTHOR.
+
+Contract: MHASH-CONTRACT.md (C1-C8); API: MHASH-API.json; paired unchanged test:
+test_independent_script_hash.py (28091 B, a1c00918...). Choices the contract leaves open are listed
+as PROPOSED, not accepted, clarifications in MHASH-IMPLEMENTATION-ADDENDUM.md (error precedence,
+strict UTF-8/JSON details, exact builtin types).
+
+script_hash recomputes a Plutus v2/v3 script identifier as unkeyed BLAKE2b-224 over
+tag || compiledCode bytes as given, with tag v2 = 0x02 and v3 = 0x03 (Lang:205,545,565). The bytes
+are never stripped, re-wrapped, flat-decoded or evaluated. The C4 framing checks are local tool
+admission rules: an input outside them is refused, never hashed differently.
+
+check_blueprint validates every validator entry of a CIP-57 blueprint subset (C5) before it compares
+any declared hash. A malformed entry therefore raises ScriptHashInputError whatever its position,
+and ScriptHashMismatchError is raised only when every entry is well formed.
+
+Pure and deterministic: no file, network, subprocess, environment, clock or randomness. No module
+state changes after import; every result is a fresh object.
+"""
+import hashlib
+import json
+
+# C4/C5 local tool bounds (not Cardano protocol limits) and C2 tool scope.
+MAX_COMPILED_CODE_BYTES = 32768
+MAX_BLUEPRINT_BYTES = 1048576
+MAX_VALIDATORS = 64
+ADMITTED_PLUTUS_VERSIONS = ("v2", "v3")
+
+_DIGEST_SIZE = 28  # ADDRHASH = Blake2b_224 (Keys:132), HashSize 28 (B2b:57,59)
+_HEX_DIGITS = frozenset("0123456789abcdef")
+_UTF8_BOM = b"\xef\xbb\xbf"
+
+
+class ScriptHashInputError(ValueError):
+    """Malformed or out-of-domain input: type, hex, framing, bound, JSON, schema, declared-hash format."""
+
+
+class ScriptHashMismatchError(ValueError):
+    """A well-formed declared hash differs from the recomputed hash."""
+
+
+def _language_tag(plutus_version, where):
+    """C2 ScriptHash prefix tag. It is not the CBOR encodeEnum index (Lang:273-278,329-330)."""
+    if type(plutus_version) is not str:
+        raise ScriptHashInputError("%s: plutus version must be a str" % where)
+    if plutus_version == "v2":
+        return b"\x02"  # Lang:545
+    if plutus_version == "v3":
+        return b"\x03"  # Lang:565
+    raise ScriptHashInputError("%s: plutus version must be exactly 'v2' or 'v3'" % where)
+
+
+def _is_lower_hex(text):
+    return _HEX_DIGITS.issuperset(text)
+
+
+def _admit_compiled_code(compiled_code_hex, where):
+    """C4: return the bytes of exactly one minimal definite-length CBOR major-2 byte string.
+
+    The str checks run length-first, before any decoding. The 2 * MAX_COMPILED_CODE_BYTES character
+    bound is exactly the byte bound because the hex is even-length lowercase ASCII. The payload is
+    opaque.
+    """
+    if type(compiled_code_hex) is not str:
+        raise ScriptHashInputError("%s: compiled code must be a str" % where)
+    if len(compiled_code_hex) > 2 * MAX_COMPILED_CODE_BYTES:
+        raise ScriptHashInputError("%s: more than %d bytes" % (where, MAX_COMPILED_CODE_BYTES))
+    if len(compiled_code_hex) % 2:
+        raise ScriptHashInputError("%s: odd hex length" % where)
+    if not _is_lower_hex(compiled_code_hex):
+        raise ScriptHashInputError("%s: not lowercase ASCII hex" % where)
+    code = bytes.fromhex(compiled_code_hex)
+    if len(code) >= 2 and code[0] == 0x58:
+        header, length, minimum = 2, code[1], 24
+    elif len(code) >= 3 and code[0] == 0x59:
+        header, length, minimum = 3, (code[1] << 8) | code[2], 256
+    else:
+        raise ScriptHashInputError("%s: missing or unadmitted CBOR byte-string header" % where)
+    if length < minimum:
+        raise ScriptHashInputError("%s: non-minimal CBOR byte-string header" % where)
+    if len(code) != header + length:
+        raise ScriptHashInputError("%s: CBOR length disagrees with byte count (truncated or trailing)" % where)
+    return code
+
+
+def _digest(tag, code):
+    """C1/C2: unkeyed BLAKE2b-224 of tag || code (Lang:205); 56 lowercase hex characters."""
+    return hashlib.blake2b(tag + code, digest_size=_DIGEST_SIZE).hexdigest()
+
+
+def script_hash(plutus_version: str, compiled_code_hex: str) -> str:
+    """Recompute the script hash of one compiledCode; ScriptHashInputError outside the C2/C4 domain."""
+    tag = _language_tag(plutus_version, "plutus_version")
+    code = _admit_compiled_code(compiled_code_hex, "compiled_code_hex")
+    return _digest(tag, code)
+
+
+def _reject_duplicate_keys(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ScriptHashInputError("blueprint: duplicate JSON object key")
+        obj[key] = value
+    return obj
+
+
+def _reject_constant(name):
+    raise ScriptHashInputError("blueprint: %s is not a JSON value" % name)
+
+
+def _parse_blueprint(raw):
+    """Strict UTF-8 JSON, decoded explicitly (json.loads never sees bytes, so no encoding detection).
+
+    Library errors are mapped after their handler exits, so a raised ScriptHashInputError does not
+    chain to an exception that holds the input.
+    """
+    if type(raw) is not bytes:
+        raise ScriptHashInputError("blueprint: raw must be bytes")
+    if len(raw) > MAX_BLUEPRINT_BYTES:
+        raise ScriptHashInputError("blueprint: more than %d bytes" % MAX_BLUEPRINT_BYTES)
+    if raw.startswith(_UTF8_BOM):
+        raise ScriptHashInputError("blueprint: byte-order mark is not admitted")
+    decoded = False
+    try:
+        text = raw.decode("utf-8", "strict")
+        decoded = True
+    except UnicodeDecodeError:
+        pass
+    if not decoded:
+        raise ScriptHashInputError("blueprint: not strict UTF-8")
+    parsed = False
+    try:
+        doc = json.loads(text, object_pairs_hook=_reject_duplicate_keys, parse_constant=_reject_constant)
+        parsed = True
+    except ScriptHashInputError:
+        raise
+    except (ValueError, RecursionError):
+        pass
+    if not parsed:
+        raise ScriptHashInputError("blueprint: not strict JSON")
+    return doc
+
+
+def _field(obj, key, where):
+    if key not in obj:
+        raise ScriptHashInputError("%s: missing %s" % (where, key))
+    return obj[key]
+
+
+def check_blueprint(raw: bytes) -> dict[str, str]:
+    """C5: recompute every validator hash of a blueprint and compare it with the declared hash.
+
+    Returns a fresh {title: recomputed_hash}. A consistent swap of code and hash between titles
+    passes here; only comparison with pinned expected values detects it (C5, C6).
+    """
+    doc = _parse_blueprint(raw)
+    if type(doc) is not dict:
+        raise ScriptHashInputError("blueprint: top level must be an object")
+    preamble = _field(doc, "preamble", "blueprint")
+    if type(preamble) is not dict:
+        raise ScriptHashInputError("blueprint: preamble must be an object")
+    tag = _language_tag(_field(preamble, "plutusVersion", "preamble"), "preamble.plutusVersion")
+    validators = _field(doc, "validators", "blueprint")
+    if type(validators) is not list:
+        raise ScriptHashInputError("blueprint: validators must be a list")
+    if not 1 <= len(validators) <= MAX_VALIDATORS:
+        raise ScriptHashInputError("blueprint: validators must hold 1..%d entries" % MAX_VALIDATORS)
+
+    # Phase 1: validate every entry before any declared hash is compared.
+    admitted = []
+    titles = set()
+    for index, entry in enumerate(validators):
+        where = "validators[%d]" % index
+        if type(entry) is not dict:
+            raise ScriptHashInputError("%s: must be an object" % where)
+        title = _field(entry, "title", where)
+        if type(title) is not str or not title:
+            raise ScriptHashInputError("%s.title: must be a non-empty str" % where)
+        if title in titles:
+            raise ScriptHashInputError("%s.title: duplicates an earlier title" % where)
+        titles.add(title)
+        code = _admit_compiled_code(_field(entry, "compiledCode", where), where + ".compiledCode")
+        declared = _field(entry, "hash", where)
+        if type(declared) is not str or len(declared) != 2 * _DIGEST_SIZE or not _is_lower_hex(declared):
+            raise ScriptHashInputError("%s.hash: must be %d lowercase hex characters" % (where, 2 * _DIGEST_SIZE))
+        if "parameters" in entry and not (type(entry["parameters"]) is list and not entry["parameters"]):
+            raise ScriptHashInputError("%s.parameters: must be absent or [] (unapplied template)" % where)
+        admitted.append((title, code, declared))
+
+    # Phase 2: recompute every entry (no per-group shortcut), then compare.
+    result = {}
+    mismatched = []
+    for index, (title, code, declared) in enumerate(admitted):
+        recomputed = _digest(tag, code)
+        result[title] = recomputed
+        if recomputed != declared:
+            mismatched.append(index)
+    if mismatched:
+        first = mismatched[0]
+        raise ScriptHashMismatchError(
+            "validators[%d]: declared hash %s differs from recomputed %s (%d of %d entries differ)"
+            % (first, admitted[first][2], result[admitted[first][0]], len(mismatched), len(admitted)))
+    return result

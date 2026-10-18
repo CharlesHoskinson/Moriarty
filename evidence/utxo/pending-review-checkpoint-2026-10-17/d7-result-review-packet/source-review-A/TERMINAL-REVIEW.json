@@ -1,0 +1,196 @@
+{
+  "reviewToken": "mhash-d7-test-review-a-opus55-20261017",
+  "report": "SEAT A. Fresh, nonauthor, claude-opus-5-5, HIGH security review of the independent D7 test source. Read tool only. I executed, imported, compiled, parsed, hashed and wrote nothing. This is one substantive vote. It grants nothing, and my actual effort is not independently attested (fresh context, same provider).\n\nREAD ROUTE\nI read MANIFEST.json, SEGMENT-INDEX.json and READ-SEGMENT-01..20 in order, each once. No read was truncated, and every segment continues the previous one by file:line. Segment 20 ends at ROOT-EXPORTER-IDENTITY-REJECTION:14. That covers 17 bodies:\n- contract, API, addendum;\n- the frozen 19-method reference (566 lines);\n- CIP-0057 (527 lines), SOURCES;\n- design reviews A and B;\n- implementation review A, and both whole objects of implementation review B;\n- the D7 test (lines 1-634), D7-TEST-CONTRACT (1-207), D7-TEST-NOTES (1-165);\n- the checker (lines 1-203);\n- ROOT-SOURCE-INTAKE (1-1182), ROOT-B-WHOLE-OBJECT-DIFFERENCE, ROOT-EXPORTER-IDENTITY-REJECTION.\nI followed no originalPublicSource path.\n\nEVIDENCE CLASSES\n- Source facts: what the segment text shows.\n- Root records: the intake pins test 27956 B d314bd72\u2026, contract 23930 B 9846cbaf\u2026, notes 11249 B 9149f392\u2026, CIP 34778 B 76f41657\u2026, SOURCES 4206 B 10a4107a\u2026, all equal to MANIFEST. The B difference record shows exactly one leaf, findings[5].evidence: '0-style' vs '0-style'. The exporter rejection record shows 4.8 returned and no retry.\n- Historical captured results: only the baseline RED of 19 ran / 5 ok / 14 FAIL / exit 1. I know it only through the implementation reviews' accounts, not from a raw record I read.\n- Predictions: everything below about runtime. Original M-HASH GREEN has never run and stays blocked. The baseline is unchanged and must not be rerun.\n\nDISCOVERY AND RED (derived by me, not from the author's counts)\n- unittest.main loads TestCase classes in dir() order: Base, T00, T10, T11, T12, T13, T14, T15, T16.\n- Base defines only api, assertInputError, assertMismatch, assertResult and assertHello. None starts with 'test', so it adds no tests. Total is 14: T00 \u00d71, T10 \u00d72, T11 \u00d71, T12 \u00d73, T13 \u00d72, T14 \u00d71, T15 \u00d72, T16 \u00d72.\n- Each of the 13 implementation methods starts with self.api() (test:454, 466, 486, 512, 518, 526, 538, 547, 555, 568, 589, 617, 626). api() calls _impl().\n- In _impl (test:294-312), islink is checked first, then a missing regular file raises AssertionError(RED). That counts as a failure, never an error, and _impl is not cached on that path.\n- T00 never calls _impl.\n- Module import reads nothing. Its only imports are ast, hashlib, itertools, json, os, types and unittest.\n- Result: 14 ran, 1 ok, 13 FAIL, 0 errors, exit 1, empty stdout.\n\nT00 PASS, CHECKED LINE BY LINE\n1. Pins: the two (size, sha) pairs equal the baseline PINS, MANIFEST and the intake records. SOURCES has unique keys, cipsCommit befcdb75, and a CIP entry of (200, 34778, 76f4\u2026).\n2. Anchors: I compared CIP57_CODE with CIP:425 chunk by chunk, all 5\u00d770 characters. They are identical, and the hash equals CIP:426.\n3. Slice: it runs from CIP:366 to CIP:429. It is ASCII and starts with '{\\n'. Anchor counts are preamble 1 (CIP:378), index 2 (CIP:396, 414) and description 1 (CIP:380). It contains no NaN, Infinity, BOM, 'parameters' or 'x-d7-unread'.\n4. The json.dumps round trip of the parsed document equals the original.\n5. flip_nibble turns '5' into '1'. FLIP_INDEX 100 lies inside the 175-byte payload, so the 58ad header is kept.\n6. There are 33 controls (6+5+4+4+6+5+2+1). All are exact bytes, and the largest is deep-object at about 602 KB, under 1 MiB.\n7. Codec checks:\n   - utf-8-sig and utf-16/utf-32 BOM detection both round-trip to the slice text.\n   - FF, FE and 00 00 FE FF fail strict UTF-8.\n   - The no-BOM UTF-16/32 controls are valid UTF-8 containing NUL, because the slice is ASCII.\n   - C0AF, EDA080, E282 and F4908080 all raise UnicodeDecodeError, and each still parses to hello_world under errors='replace'.\n8. parse_constant is called for NaN, Infinity and -Infinity but not for 1e999.\n9. The parameter values keep their exact types (NoneType, bool, int, str, dict).\n10. The tripwire and impostor constructions consult no hook. str.__new__ and bytes.__new__ only consult the plain argument, and isinstance resolves through the __class__ property.\n\nCHECKER (whole file, effects only)\n- Imports are hashlib and json only.\n- Module level holds constants, two sibling ValueError classes and ten functions.\n- Attribute accesses are frozenset.issuperset, bytes.fromhex, hashlib.blake2b().hexdigest, bytes.startswith, bytes.decode, json.loads, set.add and list.append.\n- It has no I/O, no environment access, no dunder or getattr use, no dynamic code and no module-state writes.\n- Exception messages contain only the location string and validated 56-hex hashes.\n\nTracing the checker against each D7 method, all 14 would pass. That is conditional on the CPython/Aiken BLAKE2b-224 premise and on P1/P2. It is a prediction only. GREEN is not authorised and not recommended here.\n\nDISCRIMINATION\n- First-error-in-document-order: in 4 of the 8 orders per malformation, the mismatch comes first, so 20 subtests fail.\n- Recompute only the first or last entry: T10.2 positions 1 and 2, and 0 and 1.\n- Cached or shared result dict: T11 assertIsNot and the mutation and pop checks.\n- json.loads(bytes): it auto-detects UTF-16/32 and strips a UTF-8 BOM through utf-8-sig, so T12.1 and T12.2 fail.\n- Decoding with replace, ignore or surrogatepass: T12.3.\n- Default constants: T13.1.\n- Treating falsy as absent, or null as absent: T14.\n- isinstance instead of exact type: the plain subclasses carry valid content, so an isinstance checker would return the real hash. Tripwire and impostor objects raise TripwireError, which is not a ValueError.\n- Leaked RecursionError or ValueError: T16 asserts the exact exception class.\n- Refuse everything: every implementation method has a positive control on the same CIP base.\n- Relying on json's own BOM JSONDecodeError is behaviourally equivalent (it still gives InputError), so it is not a gap.\n\nVERDICT\nSource is ready for exactly one D7 missing-implementation RED. No byte change is needed. This depends on these conditions:\n- a second fresh agreeing nonauthor vote;\n- root full-effects inspection and decision;\n- root freezing an exact envelope with: interpreter identity pinned; capture bounded independently of fsize; listings and pins recorded before and after; a byte check of test line 410; one attempt.\n\nAll findings are low, medium-process or info. ordinaryGreenReady is false. D7 GREEN and original M-HASH GREEN remain blocked, and D1-D8 are not adopted. M-HASH remains OPEN, as do the 20 UTxO families, finance, ACTUS, DeFi, PCD/recursion, private handoff, bounded multi-parent composition and real Preprod. Native authority is 0. Source checks do not verify Groth16, circuit, VK, UPLC or ledger behaviour.",
+  "findings": [
+    {
+      "id": "A-F1",
+      "severity": "medium (process; RED precondition)",
+      "evidence": "T00 now depends on interpreter behaviour. test:435-439 probe P1 (100000-deep arrays and objects must raise exactly RecursionError without crashing) and P2 (a 50000-digit int must raise exactly ValueError, which needs the >=3.11 int_max_str_digits default) as RED pass conditions. D7-TEST-CONTRACT:37-53 says 'under the reviewed sandbox interpreter' but no interpreter is pinned. The envelope only names python3. P1 is also exposed to C-stack exhaustion on the 3.12/3.13 C-recursion limits.",
+      "requiredFix": "No source change. Before RED, root records without executing it the realpath and sha256 of the sandbox python3, plus the version-identifying stdlib directory and the _json extension it will load. The frozen envelope binds these, and they are re-checked afterwards. An unmet P1/P2 (T00 'M-HASH-D7-PREMISE \u2026 BLOCKED'), a crash (SIGSEGV), a timeout or a kill is STOP with no retry. Do not tune DEEP or INT_DIGITS, add a skip, or change the interpreter and retry without fresh review."
+    },
+    {
+      "id": "A-F2",
+      "severity": "low",
+      "evidence": "test:296-299. islink catches symlinks, including dangling ones, with a distinct message. However, os.path.isfile is False for a directory, FIFO, socket or device at /input/independent_script_hash.py. Such an entry would produce the exact absent RED phrase, so the loader alone can fake absence for non-regular entries. Read errors, SyntaxError, UnicodeDecodeError and lint refusal all give distinct errors or messages, so they cannot fake the RED.",
+      "requiredFix": "No change for RED. The root before/after listing must prove /input contains exactly one regular non-symlink 0444 file (the test) and no other entry. That listing, not the loader, establishes absence. A future, separately reviewed revision may refuse any os.path.lexists non-regular entry with a distinct message."
+    },
+    {
+      "id": "A-F3",
+      "severity": "low",
+      "evidence": "test:410 compares ctl[name].decode('utf-8') with '\"<invisible>\" + text'. The segment rendering shows a non-empty zero-width character between the quotes (U+FEFF). Read cannot attest bytes. If the literal were empty, T00 would fail and the RED would be invalid (fail-closed, never a false pass).",
+      "requiredFix": "Root does a mechanical byte check, without executing, that line 410 of the pinned d314bd72\u2026 file contains 22 EF BB BF 22. If it does not, STOP before RED. A future revision should use the '\ufeff' escape. Do not edit now."
+    },
+    {
+      "id": "A-F4",
+      "severity": "low",
+      "evidence": "Nine controls add the unknown member 'x-d7-unread' (test:173-182, 201-203, 218-221, 229-230). Its positives require acceptance: 0.5 in T13.1, 1e999 in T13.2 and 16-deep nesting in T16.1. T13.2 also asserts acceptance of the overflowing literal from proposed D3.3. Both choices are permissive sides of an open D8 and a proposed, unapproved D3.3. Pairing the positives with negatives in the same method prevents masking, and the reliance is disclosed (CONTRACT:185).",
+      "requiredFix": "No change for RED. A D7 GREEN, if ever authorised, must not be cited as a decision on D8 (unknown fields, schema closure, titles, surrogates) or as approval of D3.3's 1e999 choice. If D8 is closed or D3.3 tightened, T13.1, T13.2 and T16.1 need fresh review rather than reinterpretation."
+    },
+    {
+      "id": "A-F5",
+      "severity": "low (envelope freeze)",
+      "evidence": "futureEffectsProposal (CONTRACT:186-200) is a prose class, not an exact argv. Gaps: (1) RLIMIT_FSIZE 2 MiB bounds regular-file writes only, not pipe or terminal output. (2) Without --remount-ro, bwrap's tmpfs root is writable but ephemeral, so the accurate claim is 'no persistent host writes', not a read-only root. The contract correctly makes no read-only-root claim. (3) Without -S, system site .pth files under /usr execute. (4) /etc is absent (OpenSSL config probe, locale).",
+      "requiredFix": "Root freezes an exact argv:\n- timeout --kill-after=2s 10s; prlimit cpu 10, as 536870912, fsize 2097152, core 0;\n- bwrap --unshare-all --die-with-parent --new-session;\n- ro /usr plus the lib symlinks, /proc, minimal /dev;\n- ro /input holding exactly the test (27956 B, d314bd72\u2026), 0444 in a 0555 directory;\n- ro /packet holding exactly CIP-0057.md and SOURCES.json, 0444 in a 0555 directory;\n- --clearenv with PATH, LANG and MHASH_PACKET_DIR=/packet;\n- python3 -I -B /input/test_script_hash_addendum.py -v.\nRoot bounds the capture itself (expected stdout 0 B, stderr about 10-20 KB), records exact listings, pins and modes before and after, and treats a bwrap or interpreter start failure as STOP. -S or --remount-ro may be added only after fresh review."
+    },
+    {
+      "id": "A-F6",
+      "severity": "info",
+      "evidence": "effectsOfTest (CONTRACT:196) lists only /packet/CIP-0057.md, /packet/SOURCES.json and, in GREEN, the implementation. The real effect set also includes benign read-only interpreter reads: stdlib modules and .pyc files under /usr, site .pth processing, linecache reads of /input/test_script_hash_addendum.py when formatting the 13 tracebacks (and of the implementation in GREEN), the hashlib/_hashlib/OpenSSL and _json native extension loads, and os.environ['MHASH_PACKET_DIR']. There are no writes, network or subprocesses.",
+      "requiredFix": "Disclose these in the frozen envelope record. No source change."
+    },
+    {
+      "id": "A-F7",
+      "severity": "info",
+      "evidence": "Oracle and coverage limits:\n- Single positive vector: CIP v2 hello_world, Aiken-produced. Every positive needs CPython BLAKE2b-224 to equal that literal. There is no v3 path in D7 and no ledger or chain oracle.\n- Equivalent mutant: relying on json.loads(str)'s BOM JSONDecodeError is behaviourally identical.\n- The JSON 'true' cases in T15.2 do not separate isinstance from exact type, because bool is not a str subclass.\n- Parsed-container exact types are unobservable.\n- Not asserted: D3.5 non-chaining, message content, recompute-all-before-raise ordering.\n- Not covered: MC10 on B9, the u0030 escape (pending), portable depth and int limits (BLOCKED), D8 titles and surrogates.",
+      "requiredFix": "Keep as source-only residues. Any claim about these behaviours rests on source review, not on a D7 result."
+    }
+  ],
+  "assessments": [
+    {
+      "id": "D7R01",
+      "stance": "AGREE",
+      "evidence": "The expectations come independently from primary sources:\n- CIP57_CODE matches CIP:425 chunk by chunk (5\u00d770) and CIP57_HASH matches CIP:426.\n- WANT is the only expected digest. Multi-entry documents reuse the same compiledCode and v2 tag, so H stays correct.\n- No BLAKE2b is computed. sha256 is used only for the 2 pins, which equal the baseline PINS, MANIFEST and the intake packetPinChecks.\n- The slice (test:139-145) uses the same markers as baseline T00.3 and covers CIP:366-429.\n- Anchors are pinned by counts (test:376-377): preamble 1, index 2, description 1.\n- T00 verifies the construction of every control (test:393-447).\n- SOURCES gives cipsCommit and (200, 34778, 76f4\u2026).\n- The implementation is never used to obtain an expected value.\nAuthor blinding to the checker is a reported claim (intake checkerBodyRead false only covers the intake itself). The expectations stand regardless, because they derive from CIP, C4/C5 and D2-D4 text that I checked myself."
+    },
+    {
+      "id": "D7R02",
+      "stance": "AGREE",
+      "evidence": "There are exactly 14 tests in dir() order, and Base has no test_ methods. The 13 implementation methods each start with self.api() (test:454\u2026626), which calls _impl.\n- Absent file: AssertionError(RED) (test:298-299). This is a unittest failure, never ImportError or an error, and it is not cached.\n- T00 never loads the implementation.\nSo RED is 1 pass, 13 fail, 0 errors, exit 1.\n- Symlink, including a dangling one: a distinct 'loader refused \u2026 symlink' failure (test:296-297), which means invalid RED and STOP.\n- Present but invalid: open/read OSError, UnicodeDecodeError and SyntaxError are errors; lint refusal and the size cap give distinct messages. None of these can produce the RED phrase.\n- Residual A-F2: a non-regular, non-symlink entry gives the absent phrase. Root's exact one-regular-file listing closes this."
+    },
+    {
+      "id": "D7R03",
+      "stance": "AGREE",
+      "evidence": "T10.1 builds 5 malformations \u00d7 (6 permutations of ok/mismatch/bad + 2 of mismatch/bad) = 40 documents, each expecting exactly ScriptHashInputError.\nEach malformation is malformed in isolation:\n- +'00' gives total 176 against header 58ad;\n- uppercase hash;\n- non-empty parameters;\n- parameters null;\n- empty title.\nAcross the permutations the mismatch takes every position (0-2 in triples, 0-1 in pairs). The first-error-in-document-order mutant fails the 4 orders per malformation where the mismatch comes first.\nT10.2 covers mismatch-only cases: nibble flip \u00d73 positions, code byte 100 (still admitted by C4) \u00d73 positions, and both pair orders, all exactly Mismatch. This kills first-only and last-only recompute shortcuts. Positive controls: base, plus the three-entry document giving {first, second, third: H}. Disclosed: message content and recompute-before-raise ordering are not observable."
+    },
+    {
+      "id": "D7R04",
+      "stance": "AGREE",
+      "evidence": "T11 (test:485-505):\n- r1 is mutated (value replaced, key injected).\n- r2 must equal WANT and not be r1, and r1 must keep its mutation. This kills a cached or shared dict.\n- r3 (pair document) must be neither r1 nor r2.\n- After r2.clear() and r3.pop('first'), fresh calls still return WANT and want_pair, and r2 and r3 keep their caller-side state. This kills later calls writing into earlier results.\nassertResult also checks a dict with exact str keys and values. The checker builds a new result dict on each call (impl:191)."
+    },
+    {
+      "id": "D7R05",
+      "stance": "AGREE",
+      "evidence": "Positive control: the base slice, in each of T12.1-3. Negatives:\n- T12.1: EF BB BF + slice. This kills BOM stripping, utf-8-sig, and json.loads(bytes), whose detect_encoding strips the BOM.\n- T12.2: 4 BOM + 4 no-BOM UTF-16/32 controls. T00 proves each decodes with its codec to the slice text, the BOM variants are invalid UTF-8, and the no-BOM variants are valid UTF-8 containing NUL. This kills json.loads(bytes) auto-detection.\n- T12.3: overlong, encoded surrogate, truncated sequence and above-max code point, inside the unread description. T00 proves each fails strict decoding but parses under replace. This kills replace, ignore and surrogatepass.\nThe checker's explicit BOM check plus strict decode refuses all 13 negatives. Relying on json's own BOM error is an equivalent mutant."
+    },
+    {
+      "id": "D7R06",
+      "stance": "AGREE",
+      "evidence": "T13.1 has 6 negatives: NaN, Infinity and -Infinity in a top extra member; NaN in a preamble extra member; NaN and -Infinity in the datum-schema index slot. T00 proves each is refused by parse_constant but parses with default json (test:423-427). The paired positive 0.5 is in the same top-extra slot. This kills the default-constants mutant. The checker's parse_constant raises InputError, which is passed through by the 'except ScriptHashInputError: raise' clause.\nT13.2's positive 1e999 asserts proposed D3.3's permissive choice: parse_float gives inf and parse_constant is never called. This is an explicit residual (A-F4). It forbids a stricter refusal of overflow and is not an approved policy. No refusal is invented."
+    },
+    {
+      "id": "D7R07",
+      "stance": "AGREE",
+      "evidence": "T14 positives: parameters absent (base) and [].\nNegatives: null, false, 0, '' and {}. T00 confirms these JSON values keep their exact types. Each must raise exactly InputError. This kills 'falsy means absent', 'null means absent' and type-coercion mutants.\nT10.1 also uses parameters null as a D2 malformation. The checker's test at impl:186 is 'type is list and empty'."
+    },
+    {
+      "id": "D7R08",
+      "stance": "AGREE",
+      "evidence": "T15.1 (script_hash) positive: H.\nNegatives:\n- _Str subclasses with valid content. An isinstance checker would return the real hash, so it fails.\n- Tripwire str subclasses. Hooks __eq__, __ne__, __hash__, __iter__, __getitem__, __contains__, __bytes__, encode, startswith, lower, strip, find, count and isascii raise TripwireError, which is not a ValueError, and are logged.\n- __class__-property impostors. isinstance is True through the __class__ lookup, but type() is not str.\n- bool for version and for code; memoryview.\nT15.2 (check_blueprint) negatives: bytearray, memoryview, a bytes subclass, a tripwire bytes object (also decode and hex), an impostor (__len__ is not tripped), None, and JSON true in plutusVersion, title, compiledCode and hash. Each case asserts log == [].\nT00 proves construction and isinstance consult no hook. The checker's type-is checks come first (impl:44, 64, 117, 177, 184).\nLimit: the JSON-true cases cannot separate isinstance from exact type (bool is not a str subclass), and parsed-container exact types are unobservable. Both are honestly disclosed."
+    },
+    {
+      "id": "D7R09",
+      "stance": "AGREE",
+      "evidence": "DEEP=100000 and INT_DIGITS=50000 are module constants (test:55-56). There is no sys import, no skip and no autotuning.\n_premise (test:236-247) requires type(e) is exactly RecursionError or ValueError, and otherwise raises AssertionError '\u2026 BLOCKED, do not adapt'. That is a T00 failure, so the RED is invalid and must STOP. The probes run in T00 (test:435-439) and again in T16 before each negative.\nThe controls stay under 1 MiB, so the checker's size bound cannot mask the depth or int path. A crash, kill or timeout is a STOP under the CONTRACT. These premises are valid only with interpreter pinning (A-F1)."
+    },
+    {
+      "id": "D7R10",
+      "stance": "AGREE",
+      "evidence": "No title-length, normalisation or surrogate-escape assertion exists. Titles are plain ASCII. T12.3 uses raw invalid bytes only, which is D3.1, and not \\uD800 escapes. The u0030 escape is untested while pending.\nExtra-field positives (0.5, 1e999, shallow nesting under x-d7-unread) do assert acceptance of an unknown member, so they encode the permissive side of open D8 and proposed D3.3 (A-F4). Paired positives in the same method prevent a closed-schema checker from passing negatives for the wrong reason. The int and datum-index NaN/-Infinity controls use the existing CIP index slot.\nThe reliance is disclosed and fails visibly. No closure is asserted, but no D7 result may be cited for D8."
+    },
+    {
+      "id": "D7R11",
+      "stance": "AGREE",
+      "evidence": "Checker read in full (impl:1-203):\n- imports hashlib and json only;\n- seven constants, two sibling ValueError classes, ten functions;\n- attribute set: issuperset, fromhex, blake2b().hexdigest, startswith, decode, json.loads, add, append;\n- no I/O, environment, clock, random, subprocess, dunder, getattr, eval/exec or module-state write;\n- messages carry only where-strings and validated hashes;\n- library errors are mapped after their handlers exit.\nTest loader (test:294-312): it reads at most 1 MiB+1 once, decodes strictly, and parses with ast.parse. The same allowlist and banned-name lint as the baseline (test:281-291) runs on that tree. It then execs compile(tree, \u2026, dont_inherit=True) of the exact same linted AST object into a fresh types.ModuleType. There is no second read, SourceFileLoader, .pyc read or sys.path/sys.modules change. Traceback linecache reads are display-only.\nIt is lint, not a sandbox: exec inserts full builtins. The source-only residues are listed separately."
+    },
+    {
+      "id": "D7R12",
+      "stance": "AGREE",
+      "evidence": "The proposal (CONTRACT:186-200, NOTES:110-137) matches the reviewed class:\n- timeout 10s with kill-after 2s; prlimit cpu 10, as 536870912, fsize 2097152, core 0;\n- bwrap --unshare-all --die-with-parent --new-session;\n- ro /usr, /proc, minimal /dev;\n- ro /input holding exactly the test; ro /packet holding exactly CIP-0057.md and SOURCES.json, the only files the test reads (_read is called with those two names only);\n- modes 0444/0555 with no cache, symlink or extra entry;\n- --clearenv with PATH, LANG and MHASH_PACKET_DIR;\n- python3 -I -B /input/test_script_hash_addendum.py -v;\n- before/after listings and pins, STOP on any difference, one attempt.\nThere are no writes, network, subprocess or out-of-scope imports. Native stdlib extensions (_hashlib, _blake2, _json) load as before. It correctly makes no read-only-root claim and discloses the tmpfs root and the -S/.pth residual.\nThe items A-F1 and A-F5 must be added when root freezes the exact argv: interpreter pin, capture bounding because fsize does not bound pipes, and treating start failures as STOP. These are freeze conditions, not source defects."
+    }
+  ],
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-d7-test-review-packet/MANIFEST.json (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-d7-test-review-packet/SEGMENT-INDEX.json (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-d7-test-review-packet/READ-SEGMENT-01.txt through READ-SEGMENT-20.txt (all 20 read in order, once each, none truncated; every boundary continues the previous file:line; they carry all 17 bodies, including test 1-634, checker 1-203, D7 contract 1-207, notes 1-165, the frozen 19-method reference 1-566, CIP-0057 1-527, both B whole objects and the root intake 1-1182)"
+    ],
+    "unreadPaths": [
+      "Standalone raw copies of the 17 packet files (content read through segments only; not opened or hashed separately)",
+      "Every originalPublicSource and provenance path, including mhash-d7-test-candidate, mhash-implementation-candidate, mhash-d7-test-author-packet, jobs/*/PROCESS.json, REVIEW.json, OUTPUT-SCHEMA.json, CONTINUATION.json and AMBIGUOUS-COMPLETE-REVIEWS.json",
+      "B9-APPLIED-BLUEPRINT.json, ledger sources, supplements, earlier RED/GREEN envelopes and baseline RED raw stdout/stderr (not in this packet)",
+      "/home/charl/Moriarty/.worktrees/utxo and anything private, provider-log, auth, config, key, wallet, PK/SRS, cache, home or research-root"
+    ],
+    "limitations": [
+      "Read-only source review. No execution, import, compile, AST parse, lint, hashing, test run, network or write. All runtime statements are predictions.",
+      "Pins, sizes and sha256 values are root records (MANIFEST, intake), not my computations. Segment-to-byte fidelity is taken from root's index.",
+      "I cannot attest the invisible U+FEFF literal at test:410 or the LF line endings at byte level (A-F3). Both are fail-closed through T00.",
+      "CPython internals were not inspected: the _json scanner recursion guard, int_max_str_digits, the codecs, isinstance and __class__ resolution, bytes/str __new__, hashlib/_blake2/OpenSSL, unittest and linecache. P1/P2 and the tripwire behaviour rest on my knowledge of CPython 3.11-3.14 semantics.",
+      "The sandbox interpreter version and the bwrap/kernel behaviour are unknown to me.",
+      "Shared primitive: the only positive vector is the Aiken-produced CIP literal. There is no ledger or chain oracle, and no check of Groth16, circuit, VK, UPLC or ledger behaviour.",
+      "The author's checker blinding and model identity are root and author records, not independently attested. My own effort is not independently attested, and I give same-provider context independence only.",
+      "The plan-file and ExitPlanMode workflow was not used, per the user's Read-only and no-plan-file instruction. Output is this single structured object."
+    ]
+  },
+  "recommendation": {
+    "sourceReady": true,
+    "ordinaryRedReady": true,
+    "ordinaryGreenReady": false,
+    "firstBlockedBoundary": "Execution of the single D7 missing-implementation RED. It stays blocked until all of the following hold:\n- a second fresh agreeing nonauthor Opus 5.5 security vote;\n- root full-effects inspection and a root decision;\n- a root-frozen exact envelope with: /input holding exactly the test (27956 B, d314bd72\u2026, 0444, directory 0555); /packet holding exactly CIP-0057.md and SOURCES.json (0444, directory 0555); no implementation, cache, symlink or extra entry; python3 -I -B /input/test_script_hash_addendum.py -v; the interpreter realpath and sha256 pinned (A-F1); capture bounded by root (A-F5); the test:410 byte check (A-F3); before/after listings, pins and modes; one attempt.\nAny deviation means STOP with no retry. After that, D7 GREEN remains blocked: original M-HASH GREEN has never run; B is two whole objects with one retained label difference (no choosing, splicing or admitting); the narrow-disposition and reader patches were rejected. D1-D8 are not adopted and nothing follows automatically."
+  },
+  "redPrediction": {
+    "methods": 14,
+    "passes": 1,
+    "failures": 13,
+    "errors": 0,
+    "exitCode": 1,
+    "exactFailureMethods": [
+      "__main__.T10Precedence.test_d2_malformed_entry_wins_in_every_order",
+      "__main__.T10Precedence.test_d2_mismatch_at_every_position_and_order",
+      "__main__.T11FreshResult.test_fresh_detached_result_across_calls",
+      "__main__.T12StrictDecode.test_d3_invalid_utf8_in_unread_string_refused",
+      "__main__.T12StrictDecode.test_d3_utf16_utf32_with_and_without_bom_refused",
+      "__main__.T12StrictDecode.test_d3_utf8_bom_refused",
+      "__main__.T13Constants.test_d3_nan_and_infinity_refused_anywhere",
+      "__main__.T13Constants.test_d3_overflowing_finite_literal_left_as_is",
+      "__main__.T14Parameters.test_parameters_null_and_non_list_refused",
+      "__main__.T15ExactTypes.test_d4_check_blueprint_exact_bytes_only",
+      "__main__.T15ExactTypes.test_d4_script_hash_exact_str_only",
+      "__main__.T16ParserLimits.test_d3_deep_nesting_maps_to_input_error",
+      "__main__.T16ParserLimits.test_d3_int_digit_limit_maps_to_input_error"
+    ],
+    "message": "AssertionError: M-HASH-D7-RED: independent_script_hash.py is absent; no implementation is present",
+    "conditions": [
+      "PREDICTION ONLY; not run. The only passing test is __main__.T00AddendumProvenance.test_t00_provenance_controls_and_premises ('ok').",
+      "Each of the 13 tracebacks runs from the test method to self.api() (test:317), then _impl (test:299), and ends with the exact message. Expected summary lines are 'Ran 14 tests' and 'FAILED (failures=13)', with no 'errors='. stdout is 0 B and exit is 1.",
+      "/input holds exactly test_script_hash_addendum.py (27956 B, d314bd7261fe\u2026, 0444) in a 0555 directory. There is no independent_script_hash.py of any type, no __pycache__, no symlink and no extra entry, proven by root's before/after listing.",
+      "/packet holds exactly CIP-0057.md (34778 B, 76f41657\u2026) and SOURCES.json (4206 B, 10a4107a\u2026), both 0444, directory 0555. MHASH_PACKET_DIR=/packet.",
+      "T00 prerequisites: pins match; the CIP body has LF line endings so the slice and anchor counts hold; test:410 contains the U+FEFF literal (root byte check).",
+      "P1: on the pinned sandbox interpreter, stdlib json.loads on both 100000-deep controls raises exactly RecursionError without crashing.",
+      "P2: json.loads on the 50000-digit control raises exactly ValueError (int_max_str_digits default, CPython >=3.11 or a backport). -I ignores PYTHONINTMAXSTRDIGITS.",
+      "If a premise is unmet, T00 fails with 'M-HASH-D7-PREMISE P1|P2 not met \u2026 BLOCKED'. That means invalid RED: STOP, with no tuning, skip or retry.",
+      "The run happens inside the envelope: timeout 10s with kill-after 2s; cpu 10; as 512 MiB; fsize 2 MiB (regular files only; root bounds pipe capture); core 0; bwrap --unshare-all; --clearenv; python3 -I -B \u2026 -v.",
+      "Any of the following is STOP with no retry: a different count; any error; the symlink or other refusal message; an ImportError; an interpreter or bwrap start failure; a crash, timeout or kill; pin, mode or listing drift; new entries.",
+      "The RED shows only that the implementation is absent and that T00 provenance, control construction and premises hold. It is not validation of D2-D4 and not adoption. The baseline 19-method test is not rerun, and GREEN is not authorised."
+    ]
+  },
+  "requiredSourceOnlyResidues": [
+    "Shared primitive: every D7 positive needs CPython BLAKE2b-224 over 0x02||CIP code to equal the Aiken-produced CIP literal. There is a single v2 vector, no v3 path in D7, and no ledger or chain oracle.",
+    "Interpreter-dependent premises P1/P2. Portable depth and int-size refusal is BLOCKED (no approved tool limit).",
+    "D3.5 non-chaining to input-holding library exceptions is not covered.",
+    "D2 mismatch message content and the 'all entries recomputed before raising' ordering are not asserted (unobservable).",
+    "D4 exact types of parsed JSON containers are unobservable through the public API. The JSON-true cases do not separate isinstance from exact type.",
+    "MC10 on B9 (first versus non-first handler of c2/vs4) is not covered. T10.2 is the CIP-derived substitute.",
+    "The JSON escape u0030 example is untested while the Seat B label ambiguity is pending.",
+    "D8 stays open: titles, normalisation, lone-surrogate escapes and unknown fields are not decided. The x-d7-unread positives and the T13.2 1e999 acceptance encode the permissive, unapproved side (A-F4).",
+    "Relying on json's own BOM JSONDecodeError is an equivalent mutant, so it is not discriminated (equivalent behaviour).",
+    "A non-regular, non-symlink entry at IMPL_PATH yields the absent phrase. Absence rests on root's exact listing (A-F2).",
+    "The lint is not a sandbox. exec gets full builtins, so containment is the envelope plus the line-by-line checker review.",
+    "Unread stdlib and interpreter internals: _json, codecs, int-digit limit, hashlib/_blake2/OpenSSL, unittest, linecache, site/.pth, bwrap and kernel.",
+    "Kept open: M-HASH, the 20 UTxO families, finance, ACTUS, DeFi, PCD/recursion, private handoff, bounded multi-parent composition and real Preprod. Native authority is 0, with no authority claim."
+  ],
+  "authority": {
+    "executed": false,
+    "nativeAuthority": 0,
+    "adopted": false,
+    "builderReliancePermitted": false
+  }
+}

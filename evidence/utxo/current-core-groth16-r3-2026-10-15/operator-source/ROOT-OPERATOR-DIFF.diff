@@ -1,0 +1,138 @@
+--- seed-d2ddbc3c/run_r3.py
++++ repaired/run_r3.py
+@@ -10,7 +10,9 @@
+ Invocation (root, once): cd <task> && /usr/bin/python3 -I tools/run_r3.py
+ 
+ Effects (complete list):
++- refuses with exit 2 and writes nothing unless started with -I as <task>/tools/run_r3.py;
+ - creates <task>/run/ once (fails if present); writes its logs, journal and RESULT.json;
++  any unexpected exception after that becomes a STOP and finish() still runs once;
+ - creates <task>/controls/ and the empty directory controls/collide-dest;
+ - spawns the task copy of copy_verify_r3.py four times outside env -i: three controls
+   (dry run, wrong r3 pin, existing destination) and E0r3, which creates <root>. The
+@@ -298,7 +300,11 @@
+     stops, files = [], []
+ 
+     def put(src, dst, want):
+-        b = pathlib.Path(src).read_bytes()
++        try:
++            b = pathlib.Path(src).read_bytes()
++        except OSError as e:  # a missing or unreadable source is an identity STOP, not a crash
++            stops.append(f'source unreadable: {src}: {e!r}')
++            return
+         if pathlib.Path(src).is_symlink() or sha_b(b) != want:
+             stops.append(f'source identity differs: {src}')
+             return
+@@ -542,33 +548,49 @@
+ 
+ 
+ def main():
++    # Interpreter mode and placement are checked before the once-only marker, so a wrong
++    # invocation writes nothing. prestart() repeats both checks for the record.
++    if not sys.flags.isolated or T.name != TASK_NAME or SELF != OPERATOR:
++        print(json.dumps({'event': 'refused_before_marker', 'isolated': bool(sys.flags.isolated), 'operator': str(SELF)},
++                         sort_keys=True), flush=True)
++        return 2
+     RUN.mkdir()  # once-only marker: fails if a prior attempt exists
+-    journal('start', operator_sha256=sha_or_none(SELF), root=str(ROOT), task=str(T))
+     result = {'format': 'r3-reviewed-operator-run/1', 'controls': {}, 'steps': {}, 'skipped': {}, 'stops': []}
++    try:
++        journal('start', operator_sha256=sha_or_none(SELF), root=str(ROOT), task=str(T))
++        attempt(result)
++    except Exception as e:  # an unexpected error stops every later step; postchecks still run (R-C.7)
++        result['operator_exception'] = repr(e)
++        result['stops'].append(f'operator exception {e!r}: no later step')
++    return finish(result)
++
++
++def attempt(result):
++    """Everything between the marker and finish(). Each early return is a recorded STOP."""
+     plan_b = prestart(result)
+     if result['stops']:
+         journal('stop', stops=result['stops'])
+-        return finish(result)
++        return
+ 
+     # Copy-tool controls C-1..C-3 (amendment A-3): separately recorded, bounded, never retries,
+     # never on the real scratch.
+     if not control(result, 'E0r3.dry', e0_argv('--dry-run', None, EXPECT), check_dry):
+-        return finish(result)
++        return
+     CTL.mkdir()
+     pin_dest = CTL / 'neg-pin-dest'
+     if not control(result, 'E0r3.neg-pin', e0_argv('--copy', pin_dest, dict(EXPECT, r3_manifest=WRONG_PIN)),
+                    lambda j, r: check_neg_pin(j, r, pin_dest)):
+-        return finish(result)
++        return
+     collide = CTL / 'collide-dest'
+     collide.mkdir()
+     if not control(result, 'E0r3.neg-collide', e0_argv('--copy', collide, EXPECT),
+                    lambda j, r: check_collide(j, r, collide)):
+-        return finish(result)
++        return
+ 
+     # E0r3 (python3 -I, run from this task directory, outside <root>).
+     if os.path.lexists(ROOT):
+         result['stops'].append('scratch exists before E0r3')
+-        return finish(result)
++        return
+     r = e0_step('E0r3', e0_argv('--copy', ROOT, EXPECT))
+     result['steps']['E0r3'] = r
+     journal('step', **{k: r.get(k) for k in ('id', 'status', 'exit', 'wall_s')})
+@@ -584,12 +606,12 @@
+     r['expect_met'] = ok
+     if not ok:
+         result['stops'].append('E0r3 not PASS with the exact expected counts/identities: no later step')
+-        return finish(result)
++        return
+ 
+     # Task-local HOME/TMPDIR and Option A CARGO_HOME (created after E0r3, which refuses an existing dest).
+     if reverify(['OPTION-A-PLAN.json']):
+         result['stops'].append('OPTION-A-PLAN.json differs from FREEZE.json before materialization: no later step')
+-        return finish(result)
++        return
+     (ROOT / 'empty-home').mkdir()
+     (ROOT / 'tmp').mkdir()
+     CH.mkdir()
+@@ -600,7 +622,7 @@
+     journal('option_a', files=len(files), stops=stops)
+     if stops:
+         result['stops'].append('Option A materialization identity STOP: no later step')
+-        return finish(result)
++        return
+ 
+     # Immediately before E1: four pins, listings, settings, config discovery.
+     tc = toolchain()
+@@ -609,10 +631,10 @@
+     journal('before_E1', toolchain_equal=all(v['equal'] for v in tc.values()), snapshot=result['snapshot_before'])
+     if not all(v['equal'] for v in tc.values()):
+         result['stops'].append('toolchain pin differs before E1: no later step')
+-        return finish(result)
++        return
+     if result['snapshot_before']['cargo_config_on_discovery_path']:
+         result['stops'].append('cargo config on discovery path: no later step')
+-        return finish(result)
++        return
+ 
+     status = {}
+     for sid, cpu, argv in STEPS:
+@@ -628,7 +650,6 @@
+         if r['status'] in ('BLOCKED(environment)',) or (r['status'] == 'BLOCKED(resource)' and 'disk' in r.get('reason', '')):
+             result['stops'].append(f'{sid}: {r["status"]} {r.get("reason")}: no later step')
+             break
+-    return finish(result)
+ 
+ 
+ def finish(result):
+@@ -713,8 +734,9 @@
+     POST.mkdir()  # fails if present
+     post = {'format': 'r3-reviewed-operator-post/1', 'started': now(), 'result_json_sha256': sha(RUN / 'RESULT.json'),
+             'hw_witness_mode_qualification_sha256': PINNED.get(QUAL),
+-            'hw_rule': (f'Apply {QUAL} to the analysis hw block. ALL-REFS-OK is row status only. On a RELATION-PARTIAL '
+-                        'entry (HW-06, HW-07 and HW-23 included) it is never adversarial-internal-witness evidence.')}
++            'hw_rule': (f'Apply {QUAL} to the analysis hw block. ALL-REFS-OK is row status only and never implies that '
++                        'adversarial internal witnesses were executed for any HW entry. On a RELATION-PARTIAL entry '
++                        '(HW-06, HW-07 and HW-23 included) it is never adversarial-internal-witness evidence.')}
+     trace = ROOT / 'review' / HW_TRACE_REL
+     reasons = []
+     if not result.get('prestart_ok'):

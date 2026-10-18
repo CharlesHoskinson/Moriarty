@@ -1,0 +1,47 @@
+{
+ "format": "evidence-repair-hw-traceability/2",
+ "author": "claude-opus-5-5, evidence-repair RESUME source author (AUTH: author-derived, NOT independent)",
+ "supersedes_for_r3": "heldout-addendum-3/HW-TRACEABILITY.json (251a898c..., unchanged bytes, kept as history)",
+ "origin_of_mapping": "Extends the result reviewer's HW mapping (current-core-groth16-independent-result-review-20261015/REPORT.md section 6, 06e316bc...). A mapping is traceability, never a claim that the HW requirement is met. The post-run parser (operator-proposals/libtest_rows.py) resolves every ref against the rows the r3 harness actually printed; a missing or failing ref is reported, never inferred.",
+ "ref_forms": {
+  "{table, row}": "an r3 harness row: '<table> <OK|FAIL|OPEN> <row>: [CLASS] ...' (table names: heldout, hostile, mutations, addendum2, static, addendum3, addendum4, accounting, grossfees, rejected, hw25, hwtrace, probe)",
+  "e4": "an E4 author test name (internal agreement, AUTHOR expectations; never independent)"
+ },
+ "classes": {
+  "RELATION-EXECUTED": "the frozen mutation, or the frozen row it names, runs through the constraint system with its expected outcome",
+  "RELATION-PARTIAL": "part runs through the constraint system; the rest is honest-completion only, author-test only, refused before synthesis, a recorded contradiction or open",
+  "ENCODER-ONLY": "refused by the encoder (MappingError) before the constraint system; no relation evidence",
+  "CORE-AND-PREMISE": "actual Core refuses; the relation cannot express the condition (TargetPremise)",
+  "STRUCTURAL-SOURCE": "established by source reading only; no executable row",
+  "TARGET-GAP": "not representable in any relation option; target obligation stays open",
+  "NOT-APPLICABLE": "names a layout feature DirectFieldV0 does not have"
+ },
+ "entries": [
+  {"id": "HW-01", "class": "RELATION-PARTIAL", "refs": [{"table": "hostile", "row": "H6-S2"}, {"table": "heldout", "row": "H6-S2"}], "e4": ["checked_subtraction_boundaries"], "reason": "honest completion only (Tamper::none); adversarial limb/range internal witnesses are not executed anywhere (result review section 6 source argument)"},
+  {"id": "HW-02", "class": "RELATION-PARTIAL", "refs": [{"table": "hostile", "row": "H6-M1"}, {"table": "heldout", "row": "H6-M1"}], "e4": ["field_wrapped_product_is_refused_for_the_honest_and_the_hostile_witness", "checked_multiplication_keeps_the_256_bit_intermediate_exact"], "reason": "the adversarial product-bit witness runs only in the E4 author test on an author program"},
+  {"id": "HW-03", "class": "RELATION-PARTIAL", "refs": [{"table": "hostile", "row": "H6-A2"}, {"table": "heldout", "row": "H6-A2"}], "e4": ["checked_addition_boundaries"], "reason": "the add gadget has no carry-bit witness (c is range-proven); an adversarial output-bit witness is not executed"},
+  {"id": "HW-04", "class": "RELATION-PARTIAL", "refs": [{"table": "hostile", "row": "H6-C2"}, {"table": "heldout", "row": "H6-C2"}], "e4": ["comparisons_and_their_complements", "comparison_flag_and_strict_less_than_cannot_be_forged"], "reason": "flag forgery with Tamper only in E4 author tests"},
+  {"id": "HW-05", "class": "RELATION-PARTIAL", "refs": [{"table": "mutations", "row": "M-11-honest"}, {"table": "mutations", "row": "M-11a"}, {"table": "mutations", "row": "M-11b"}], "e4": ["limbs_and_bools_are_canonical"], "reason": "limb alias (lo + 2^64, hi - 1) executed; x + r is the same field element as x (M-11b CONTRADICTION, OPEN)"},
+  {"id": "HW-06", "class": "RELATION-EXECUTED", "refs": [{"table": "hostile", "row": "H5-R1"}, {"table": "heldout", "row": "H5-R1"}], "e4": ["or_evaluates_both_operands"], "reason": ""},
+  {"id": "HW-07", "class": "RELATION-EXECUTED", "refs": [{"table": "hostile", "row": "H5-R2"}, {"table": "heldout", "row": "H5-R2"}], "e4": [], "reason": ""},
+  {"id": "HW-08", "class": "RELATION-EXECUTED", "refs": [{"table": "hostile", "row": "H1-R3"}, {"table": "heldout", "row": "H1-R3"}], "e4": ["self_transfer_keeps_the_debit_check"], "reason": ""},
+  {"id": "HW-09", "class": "RELATION-PARTIAL", "refs": [{"table": "mutations", "row": "M-05-honest"}, {"table": "mutations", "row": "M-05"}, {"table": "mutations", "row": "M-06/encoder"}, {"table": "mutations", "row": "M-06/relation"}, {"table": "mutations", "row": "M-07"}], "e4": ["extra_frame_cells_are_preserved"], "reason": "balance half executed under FrameCells::Include; TouchedOnly is encoder-only; the legacy-duty half is F-05 (TARGET-GAP, OPEN)"},
+  {"id": "HW-10", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-01"}], "e4": ["present_zero_is_not_absence"], "reason": ""},
+  {"id": "HW-11", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-02"}], "e4": [], "reason": ""},
+  {"id": "HW-12", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-03"}], "e4": [], "reason": "effect kinds and order are shape constants, so a reordered public list is the amount swap of M-03"},
+  {"id": "HW-13", "class": "ENCODER-ONLY", "refs": [{"table": "mutations", "row": "M-04"}], "e4": [], "reason": "the recipient is a relation constant; a claimant bypassing the encoder faces the shape digest, which no row here mutates"},
+  {"id": "HW-14", "class": "RELATION-EXECUTED", "refs": [{"table": "addendum4", "row": "HW-14-r3/control"}, {"table": "addendum4", "row": "HW-14-r3/identity"}, {"table": "addendum4", "row": "HW-14-r3"}, {"table": "mutations", "row": "M-13/program_hash"}], "e4": ["every_header_field_is_a_bound_constant"], "reason": "no VK exists (no setup); the program-identity public input is the bound header"},
+  {"id": "HW-15", "class": "RELATION-PARTIAL", "refs": [{"table": "addendum4", "row": "HW-15-r3"}, {"table": "mutations", "row": "M-13/action_index"}], "e4": ["malformed_assignment_lengths_are_refused_before_synthesis"], "reason": "the close-shaped witness is refused by the length check before synthesis (ASSIGNMENT-SHAPE, not relation evidence); the relation-level counterpart is the action-index constant"},
+  {"id": "HW-16", "class": "RELATION-EXECUTED", "refs": [{"table": "hostile", "row": "H3-R1"}, {"table": "heldout", "row": "H3-R1"}], "e4": ["shared_dag_nodes_are_reevaluated_per_statement"], "reason": ""},
+  {"id": "HW-17", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-09"}], "e4": [], "reason": ""},
+  {"id": "HW-18", "class": "RELATION-EXECUTED", "refs": [{"table": "addendum4", "row": "HW-18-r3"}, {"table": "mutations", "row": "M-12"}, {"table": "heldout", "row": "W-2"}, {"table": "rejected", "row": "W-2/work_attempted"}], "e4": ["public_cap_is_a_claimed_upper_bound_on_w"], "reason": "W is a header constant bound in-circuit; there is no separate claimed work output"},
+  {"id": "HW-19", "class": "RELATION-EXECUTED", "refs": [{"table": "hostile", "row": "H1-R5"}, {"table": "heldout", "row": "H1-R5"}], "e4": [], "reason": ""},
+  {"id": "HW-20", "class": "STRUCTURAL-SOURCE", "refs": [], "e4": [], "reason": "no success flag gates constraints (circuit.rs synthesize; result review section 6); no executable row"},
+  {"id": "HW-21", "class": "CORE-AND-PREMISE", "refs": [{"table": "heldout", "row": "H1-R6"}, {"table": "hostile", "row": "H1-R6"}], "e4": [], "reason": "duty identity is a relation constant; coverage REFUSALS liability-identity TargetPremise row (P1)"},
+  {"id": "HW-22", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-08"}, {"table": "addendum2", "row": "H8-R1"}], "e4": ["absent_duty_with_a_hidden_amount_is_refused_in_isolation"], "reason": ""},
+  {"id": "HW-23", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-10"}, {"table": "mutations", "row": "HW-23-r3"}, {"table": "addendum4", "row": "HW-23-r3/H6-B1/control"}, {"table": "addendum4", "row": "HW-23-r3/H6-B1/two"}, {"table": "addendum4", "row": "HW-23-r3/H6-B1/minus-one"}, {"table": "addendum4", "row": "HW-23-r3/H6-B1/wire-two"}], "e4": ["limbs_and_bools_are_canonical"], "reason": "public-slot edits are refused by the binding equality; wire-two (Tamper on entry/input0#0 plus the public field) isolates booleanity at constraint 0; internal Bool wires (Eq flag) only via E4 or source"},
+  {"id": "HW-24", "class": "RELATION-EXECUTED", "refs": [{"table": "mutations", "row": "M-10"}, {"table": "mutations", "row": "M-10/wire"}], "e4": [], "reason": "M-10/wire sets the Bool entry wire and its public field to 2, the only way Eq(v, v) could hold without booleanity"},
+  {"id": "HW-25", "class": "CORE-AND-PREMISE", "refs": [{"table": "hw25", "row": "HW-25-r3/core"}, {"table": "hw25", "row": "HW-25-r3/layout"}, {"table": "hw25", "row": "HW-25-r3/premise"}, {"table": "hw25", "row": "HW-25-r3/encoder"}], "e4": [], "reason": "a duplicate key cannot be expressed in the one-slot-per-cell layout; exclusion is pre-state authenticity"},
+  {"id": "HW-26", "class": "RELATION-PARTIAL", "refs": [{"table": "addendum4", "row": "HW-26-r3/unsorted"}, {"table": "addendum4", "row": "HW-26-r3/padding"}], "e4": [], "reason": "unsorted half executed (pre-cell slots exchanged); padding NOT-APPLICABLE to DirectFieldV0 (OPEN for any padded ABI mapping)"}
+ ]
+}

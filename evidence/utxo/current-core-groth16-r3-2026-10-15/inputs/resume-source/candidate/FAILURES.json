@@ -1,0 +1,62 @@
+{
+  "format": "mori-r1cs-failure-record/1",
+  "rule": "Append-only record of every failure, refusal, deviation and correction known to this lane. Nothing below was fixed by rerunning anything; no candidate code was executed.",
+  "executed": {
+    "cargo_rustc_tests_sdk_vm_keys_proofs_network_ledger": "none",
+    "stdlib_python_runs": [
+      "manifest/hash verification of ROOT-PARTIAL-SOURCE-COPY.json, EXPECTED-PACKET/FREEZE.json, REUSED-FIXTURES.json and PRIOR-SOURCE-PINS.json (all matched)",
+      "integer re-check of AUTHOR-EXPECTATIONS constants (r, u128 bounds, wrap probe: all matched)",
+      "canonical-JSON SHA-256 of oracle expected programs/plans (method validated against the staged oracle's recorded hashes)",
+      "byte copy of six staged oracle files to fixtures/staged with pins",
+      "tools/static_checks.py passes (lexical only)",
+      "tools/pin_core_closure.py (hashing)",
+      "tools/manifest.py (hashing)"
+    ]
+  },
+  "inherited": [
+    {
+      "id": "F-PRIOR-QUOTA",
+      "what": "Previous lane current-core-groth16-compiler-source-20261015 ended on provider quota with a partial source tree and no REPORT, manifest, compile, proof, key or measurement.",
+      "disposition": "Its public source, expected packet and fixtures were byte-copied by the root (ROOT-PARTIAL-SOURCE-COPY.json, 26 files, all hashes verified here). Its private provider body and reasoning were not opened."
+    },
+    {
+      "id": "F-PRIOR-ARK05",
+      "what": "The prior partial Cargo.toml named arkworks 0.5 (ark-ff/ark-relations/ark-bls12-381/ark-groth16/ark-snark/ark-std '0.5').",
+      "disposition": "Root correction: the prototype line is 0.4. The r2 Cargo.toml uses the prototype's exact pins (=0.4.2 / =0.4.0) and drops ark-std. The prior bytes stay in the root copy record."
+    },
+    {
+      "id": "F-PRIOR-MISSING-MODULES",
+      "what": "The prior lib.rs declared adapter, circuit, coverage, groth16, staged, statement and witness, but none of those files existed, so the prior tree could not have compiled.",
+      "disposition": "Authored in r2. error.rs, gadgets.rs, identity.rs, lib.rs, plan.rs and r1cs.rs were extended. lower.rs and frontend.rs are byte-identical to the prior copy."
+    }
+  ],
+  "found_in_r2": [
+    {
+      "id": "E-T1",
+      "what": "Frozen AUTHOR-EXPECTATIONS T1 claimed every single body-slot change is unsatisfiable. Flipping pre duty `reserve` presence in invoice-open gives a valid present-zero pre-state that Core accepts.",
+      "disposition": "Erratum in EXPECTED-PACKET/ADDENDUM-1.json, frozen 2026-10-15T12:17:30Z before any r2 assertion was written. The original packet is unchanged."
+    },
+    {
+      "id": "E-T4",
+      "what": "Frozen T4 used invoice-open for a limb mutation needing hi >= 1; no such slot exists there.",
+      "disposition": "Erratum in ADDENDUM-1: the base moved to A1, and the Bool part stays on invoice-open."
+    },
+    {
+      "id": "TOOL-DENIAL-1",
+      "what": "An inline `python3 -I -c` static scan was refused by the permission guard (quoted argument containing a newline followed by '#').",
+      "disposition": "Not retried in that form, and no workaround outside the allowed scope. The same checks were written as tools/static_checks.py and run as `python3 -I <script> <args>`."
+    },
+    {
+      "id": "R2-STATIC-ONLY",
+      "what": "All Rust source is uncompiled. Library API facts for ark-relations 0.4.0 / ark-ff 0.4.2 / ark-groth16 0.4.0 are recalled, not inspected (MATH-AND-SPEC-ATTRIBUTION.md §5).",
+      "disposition": "Open risk. The first authorized E3 build is the falsifier. Compile errors are findings, not reasons to edit during that run."
+    }
+  ],
+  "not_failures_but_open": [
+    "No relation for moriarty/2 (StagedNotLowered); every staged obligation is in staged::STAGED_REMAINING",
+    "ABI v1 mapping not defined (ClaimantBoundAbiV1Pending refuses)",
+    "No rejection relation",
+    "FREEZE-4 r2 PROP2-m3 expectation defect (EXPECTED_RED_NOT_OBSERVED) belongs to that lane's independent adjudication; not adopted or changed here",
+    "Sherlock incoming typed host, K/finite Quint, Candidate B and helper microstep: no compiler or target support claimed; 35 UIREQ mandatory clauses and 6 unregistered source-closure members stay open per sol-currentness-analysis/REPORT.md"
+  ]
+}

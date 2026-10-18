@@ -1,0 +1,81 @@
+{
+  "format": "cardano-k2-k9-native-consumer-execution-proposal/1",
+  "proposalOnly": true,
+  "executionAuthorized": false,
+  "authorIsReviewer": false,
+  "authorApproval": false,
+  "status": "SOURCE_ONLY_UNEXECUTED_NATIVE_AUTHORITY_ZERO_FIRST_EVER_K9_SCOPE",
+  "date": "2026-10-16",
+  "purpose": "First-ever K9 native scope (not old K8 authority carried over): exercise the UNCHANGED production function pvc2/claim.issue locally, through actual Aiken BLS12-381 builtins, on the genuine public VK/proof in the adopted k8_fixture and a typed Transaction from pvc2/k9_consumer_builder. Exactly 7 Aiken unit cases with no fail annotations: 1 genuine positive True, N1/N2/N3 False through the pairing equation, and 3 structural Bool False guards (quantity 2, mismatched envelope name, wrong VK digest). No proof is generated and no proving key is used. The predicate is a local actual function consumer only; compiled wrapper, genuine hash, ledger ExUnits and Preprod are separate.",
+  "predicate": "claim.issue(chosen_policy_id, vk, proof, tx) == True for the genuine envelope, and == False (observed via explicit !claim.issue(...) Bool assertions, never a fail-annotation shortcut) for N1 body-rederived digest, N2 context-rederived digest, N3 A/C-swapped proof, minted quantity 2, zero32 envelope token name, and zero32 vk_digest.",
+  "roots": {
+    "base": "/home/charl/moriarty-eutxo-validation-2026-10-12",
+    "freshLocalRoot": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k9-native-consumer-local-20261016",
+    "freshLocalRootNote": "Entirely public data. There is NO /w subtree. The operator refuses to start if this root already exists, never overwrites it and never writes into a pre-existing root or any existing root.",
+    "materializedOperatorDir": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k9-native-consumer-operator-materialized-20261016",
+    "rootRecordsDir": "/home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k9-native-consumer-root-records-20261016"
+  },
+  "rootSequenceBeforeAnyRun": [
+    "1. Root materialises this fresh candidate into materializedOperatorDir by AST/JSON inspection only (Python ast parse of runner/operator.py; strict JSON parse of AUTH-CANDIDATE.json, EXECUTION-PROPOSAL.json, DESIGN-POSITIONS.json). No execution during materialisation. Source-only materialisation happens only after the exact source audit in step 2 records readiness; materialisation is not itself a run.",
+    "2. A fresh non-author performs a FULL fresh source/effect audit of the materialised bytes and records it in rootRecordsDir. This author is not that auditor and supplies no independent approval. Two agreeing runtime choices (the fresh non-author AGREE plus this author's FOR in DESIGN-POSITIONS.json) must exist before any AUTH.",
+    "3. Separately, the pending fresh K8 actual audit must be completed and recorded by root before any runtime AUTH is materialised. That future record does not exist yet: this source names the requirement but the operator contains no predicate guard over it and no hash for it is guessed. The spent K8 run itself is never restarted, its native-passed prefix is never rerun, and its counters are never reset.",
+    "4. For review custody, root fills exactly the one operatorSha256 placeholder in AUTH-CANDIDATE.json by LITERAL string replacement of OPERATOR_SHA256_TO_BE_FILLED_BY_ROOT_AFTER_MATERIALIZATION with the sha256 of the materialised runner/operator.py, preserving all other bytes; status remains CANDIDATE_NOT_AUTHORIZED.",
+    "5. Only after fresh AGREE on the new K9 runtime clauses does root materialise a real AUTH.json by exactly two typed fills and no other change: operatorSha256 placeholder -> actual materialised hash, and status CANDIDATE_NOT_AUTHORIZED -> AUTHORIZED_EXACT_ONE_RUN. No runtime AUTH currently exists; none is created by this source.",
+    "6. Only after that exact new AUTH does root run the single launch command below, once, with zero retries. Every failure is preserved, followed by a mandatory fresh post-run actual audit before any part is called an actual result."
+  ],
+  "launchCommand": "/usr/bin/timeout --signal=TERM --kill-after=10s 1400s /usr/bin/prlimit --core=0 -- /usr/bin/python3 -I /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k9-native-consumer-operator-materialized-20261016/runner/operator.py /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-k2-k9-native-consumer-root-records-20261016/AUTH.json < /dev/null",
+  "budgetAccounting": {
+    "perAikenStep": {"innerWallSeconds": 600, "innerKillAfterSeconds": 10, "parentWaitSeconds": 620, "cleanupWaitSeconds": 20, "cpuSeconds": "300:310 via prlimit", "addressSpaceBytes": 8589934592, "coreSize": 0, "logBytesMaxEach": 16777216},
+    "plannedAggregateSeconds": 1280,
+    "plannedAggregateMeaning": "2 * (620s parent wait + 20s bounded cleanup) = 1280s for the two sequential steps.",
+    "prepFinalReserveSeconds": 120,
+    "wholeOperatorWallSeconds": 1400,
+    "wholeOperatorMeaning": "1280s planned step charge plus a declared 120s preparation/final reserve = 1400s outer wall with 10s kill-after. The 1400s figure is NOT reduced because the spent K8 run took about 6 seconds wall: K9 actual cost is unknown, source caps are not exaggerated or shrunk from an unrelated run, and a breach is a terminal failure, never a retry or ceiling reset (including never a reset to 0).",
+    "counterSemantics": "First-ever K9 attempt: attempts=1, retries=0, maxAikenCalls=2, strictly single fresh attempt. No K8 counter is carried, reused or reset."
+  },
+  "projectScope": {
+    "derivation": "Derived exactly from actual imports: claim.ak imports pvc2/bytes, pvc2/core, pvc2/groth16, pvc2/types; core.ak imports pvc2/bytes, pvc2/catalogue, pvc2/types; catalogue.ak imports pvc2/bytes, pvc2/types; k9_consumer_builder imports pvc2/claim, pvc2/core, pvc2/k8_fixture, pvc2/types; the test imports pvc2/claim, pvc2/k8_fixture, pvc2/k9_consumer_builder. No production change, no correct-logic change, and no access/admission registry or Moriarty language feature is required for this public function consumer.",
+    "akFiles": ["lib/pvc2/claim.ak", "lib/pvc2/core.ak", "lib/pvc2/catalogue.ak", "lib/pvc2/types.ak", "lib/pvc2/bytes.ak", "lib/pvc2/groth16.ak", "lib/pvc2/k8_fixture.ak", "lib/pvc2/k9_consumer_builder.ak", "lib/pvc2/k9_genuine_c2_consumer_test.ak"],
+    "projectFiles": "9 AK + verbatim aiken.toml + verbatim aiken.lock = 11 project files",
+    "explicitlyExcluded": ["lib/pvc2/k8_genuine_proof_test.ak (the K8 test module)", "validators/c2.ak (the compiled-wrapper surface)", "all other parent test modules", "blueprint, native build and prover commands"],
+    "cannotQualify": "This local function-consumer scope cannot qualify the whole parent package, any compiled C2 wrapper, a genuine applied script hash, ledger ExUnits or Preprod.",
+    "stdlib": "aiken-lang/stdlib v2.2.0: the 38 manifest files copied per-file by hash to <work>/build/packages/aiken-lang-stdlib/ plus the exact 77-byte packages.toml (sha256 42ca23893e5c0f43598c15a1c699fa2bcbb451999c054351f67dae174d49ffb6) at <work>/build/packages/packages.toml, the same offline-cache placement as the reviewed operator. No compiler recompilation occurs."
+  },
+  "binaryStaging": {
+    "source": "/home/charl/moriarty-eutxo-validation-2026-10-12/aiken-fixed-compiler-release-discovery-20261015/v1.1.24-data-only/compiler-data/aiken-x86_64-unknown-linux-musl/aiken",
+    "bytes": 38299808,
+    "sha256": "4257cc8be37cbde5bf7b5dd111e43a1277f45352fb2433ad7a7e647209aa7677",
+    "sourceMode": "644 data only; never executed in place (SOURCE 644, copy 555)",
+    "releaseIdentity": "Parsed from the actual DATA-ONLY-MANIFEST.json binary entry (release v1.1.24, releaseTarget bacbeb35fbc9f1db93cd2e1e93fb1d93053acb4a), not from the Aiken source text. Manifest-declared only: same-origin digests are not an independent signature, the binary was not shown rebuilt from indexed source, and no --version is run."
+  },
+  "aikenCalls": [
+    {"step": 1, "argvInsideSandbox": ["/tool/aiken", "check", "--skip-tests", "--trace-filter", "all", "--trace-level", "silent"], "cwd": "/work"},
+    {"step": 2, "argvInsideSandbox": ["/tool/aiken", "check", "--trace-filter", "all", "--trace-level", "silent", "--match-tests", "pvc2/k9_genuine_c2_consumer_test"], "cwd": "/work"}
+  ],
+  "aikenCallLimits": "Exactly 2 Aiken calls, sequential, step 2 only after step 1 exits 0. No K8 native extra, no 147/472 whole-parent suites, no cost benches, no --version/--help/probe, no recompile of the compiler.",
+  "sandbox": "bwrap --unshare-all --die-with-parent --new-session --clearenv with a minimal environment, binding only the staged static tool read-only at /tool/aiken and the fresh work read-write at /work, plus tmpfs /tmp and minimal /dev and /proc. No home, /usr, BASE, wallet mount, probe, retry or fallback. Capability is UNPROBED; failure is terminal.",
+  "expectedTests": [
+    {"name": "k9_positive_claim_issue_returns_true", "fail": false, "expectation": "claim.issue returns Bool True; every conjunct including the pairing passes"},
+    {"name": "k9_n1_body_rederived_digest_claim_issue_rejected", "fail": false, "expectation": "!claim.issue(...) is True; token name/mint/output rebuilt from the tampered envelope, so the pairing equation is the first possible refusal. A normal test: its pass supports a Bool-False rejection, not a panic or evaluation error."},
+    {"name": "k9_n2_context_rederived_digest_claim_issue_rejected", "fail": false, "expectation": "same pairing-first construction with the context-rederived digest"},
+    {"name": "k9_n3_proof_ac_swapped_claim_issue_rejected", "fail": false, "expectation": "same pairing-first reasoning; both swapped G1 points uncompress"},
+    {"name": "k9_wrong_minted_quantity_claim_issue_rejected", "fail": false, "expectation": "structural Bool False at qty == 1; known source guard, no expect-guard counterpart is invented"},
+    {"name": "k9_mismatched_envelope_name_claim_issue_rejected", "fail": false, "expectation": "structural Bool False at name == envelope_name(raw) with a zero32 token name"},
+    {"name": "k9_wrong_vk_digest_claim_issue_rejected", "fail": false, "expectation": "structural Bool False at env.vk_digest == blake2b_256(vk) with a zero32 vk_digest"}
+  ],
+  "outputValidation": "Schema-exact and fail-closed, parameterised from len(EXPECTED_TESTS)=7: whole step-2 stdout must parse as one aiken-1.1.24 FinishedTests JSON document with top keys exactly {seed, summary, modules}, seed a u32 non-boolean integer, both summaries exactly total=7/passed=7/failed=0 with kind exactly unit=7/property=0 as non-boolean integers, exactly one module named pvc2/k9_genuine_c2_consumer_test, exactly 7 rows with the frozen titles in source order (no duplicates, missing or extra rows, no extra row fields beyond optional traces), every status exactly pass, every on_failure exactly fail_immediately (all 7 tests are normal; the corrected literal map is normal->fail_immediately, fail once->succeed_immediately, plain fail->succeed_eventually), and execution_units exactly {mem, cpu} as non-negative non-boolean integers. The original 7 expectations are frozen in the operator and source-guarded against the pinned test bytes (each name and fail flag, all False) before any execution. Whole JSON is preserved on failure; a nonzero step exit, missing/truncated/polluted/non-JSON output, or any bare-string PASS claim fails closed with a nonzero result. No substring search is used.",
+  "typedBuilderHonesty": {
+    "expiry": "1893456000000 (2030-01-01 POSIX ms) is builder-chosen and cryptographically unbound: the Rust export omits expiry, core.statement binds no expiry, and claim.issue never inspects it. It is not a ledger assertion.",
+    "policy": "chosen_policy_id a2a2..a2 is the locally chosen 28-byte public export settle hash for calling the library function. It is NOT a real compiled C2 hash.",
+    "context": "All 2222../555../a2.. values are existing local fixtures from the genuine public export, caller-fabricated, not real Preprod data, chain balances or claim-ledger truth. No new proof and no proving-key use occurs in this slice."
+  },
+  "k8StatusPreserved": "The existing K8 AUTH is SPENT: its actual run made 2 Aiken calls, both exit 0, with 10/10 raw passes, but the outer wrapper FAILED solely on the tenth test's telemetry mode (operator expected succeed_immediately; actual succeed_eventually for a plain fail annotation). That failure is preserved exactly; the old R2 operator and its result are untouched, the native-passed K8 prefix is never restarted or rerun, and no counter is reset. A fresh K8 actual audit is pending separately; there is no current unqualified adoption, but its 4 genuine pairing-test rows were actually observed in the run log under that preserved failure.",
+  "authority": {
+    "thisProposalGrants": "nothing",
+    "nativeAuthority": "zero until the exact source audit, the K8-actual-audit root precondition, a fresh non-author AGREE on the new K9 runtime clauses and the exact new AUTH above all exist",
+    "authorRuntimePosition": "The author is FOR the new runtime clauses in DESIGN-POSITIONS.json as a source position for this first-ever K9 scope only. It is not old K8 authority carried over, not a non-author AGREE, not an approval and not an AUTH. The historical K8 NC-C11 ABSTAIN is metadata history only and does not gate this new source contract; no missing-vote claim is made from it."
+  },
+  "scopeRetainedOpen": ["all 20 UTxO families", "ACTUS 277 fixtures / 18 types / 32 taxonomy / DS01-07", "DeFi 72 rows / DA01-24", "general financial duties and obligations", "real recursion, private handoff, bounded multi-parent PCD", "universal certificates", "compiled applied C2 wrapper with genuine hash, FX1, inclusion and qualified transaction ExUnits", "real Preprod"],
+  "limitationsRetained": ["K6 Class 0 single-party controller can forge", "caller/ledger context is fabricated", "VK-to-matrix link is unproved", "transitive CPU is unmeasured"],
+  "noCompatibilityPercentage": true
+}

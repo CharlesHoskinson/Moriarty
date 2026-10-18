@@ -1,0 +1,114 @@
+{
+  "persona": {
+    "id": "07",
+    "role": "Keyboard/screenreader-oriented visitor (emulation)",
+    "goals": [
+      "Navigate with the keyboard",
+      "Inspect focus, accessible control names and order",
+      "Complete one useful task and discover scenarios, roles, worksheet and explanations"
+    ]
+  },
+  "artifact": {
+    "path": "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/index.html",
+    "sha256": "f5aa9fceb5a0ff4c174617aa7bbd7bbf73a51866e6829bee5f4dde83637eab9d"
+  },
+  "screenshotsInspected": [
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/desktop-top.png",
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/mobile-top.png",
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/site/screenshots/explorer.png",
+    "/home/charl/moriarty-eutxo-validation-2026-10-12/moriarty-webs-react-draft-20261016/persona-round1/reviews/07-keyboard/screenshots/worksheet-keyboard.png"
+  ],
+  "viewport": {
+    "width": 1280,
+    "height": 900,
+    "browser": "Chromium headless via Python Playwright; fresh context; local file URL"
+  },
+  "actions": [
+    {
+      "action": "Focused the hero link ‘Inspect the invoice worksheet’ and pressed Enter.",
+      "observed": "The URL changed to #worksheet and the view landed at the combined Web explorer / invoice area. The first view showed the illustrative proof-role board and inspector; the ‘Pay part. Keep the remainder visible.’ heading was lower in the page.",
+      "taskOutcome": "Partial: navigation worked, but the link did not put the payment worksheet controls in the first view.",
+      "evidence": "navigation.json action 1; screenshots/worksheet-keyboard.png shows the reached role-board state."
+    },
+    {
+      "action": "Focused the ‘Seller payment’ range input and pressed ArrowRight once.",
+      "observed": "The range value changed from 35 to 36 CASH. The input has the associated label ‘Seller payment’. The nearby Payment arithmetic inspector still stated payment 35 CASH and escrow debit 37 CASH.",
+      "taskOutcome": "The worksheet amount changed. The related inspector did not follow it, so I could not tell whether it is intentionally a fixed example or should reflect the selected amount.",
+      "evidence": "navigation.json action 2; screenshot captures inspector still at 35; DOM showed slider value 36 after ArrowRight."
+    },
+    {
+      "action": "Focused ‘Omit this illustrated proof’ and pressed Space.",
+      "observed": "The checkbox checked. The page changed the status to ‘1 of 3 listed future roles omitted; this illustrated set is incomplete’ and ‘Incomplete required set (illustration). 2 of 3 roles shown.’ Focus remained visible on the checkbox; the next Tab reached the ‘What this case still needs’ disclosure.",
+      "taskOutcome": "Helped me see that the control changes the illustration’s completeness status and is an explanation control, not a transaction action.",
+      "evidence": "screenshots/worksheet-keyboard.png; navigation.json action 3."
+    },
+    {
+      "action": "Focused ‘04 / PROPOSED Loan servicing’ and pressed Enter.",
+      "observed": "Loan servicing became the active case. The page showed the heading ‘SEPARATE REPAYMENT FROM ITS FEE’ and three future roles: Accrual arithmetic, Payment accounting, and Debt continuation.",
+      "taskOutcome": "Helped me find how case selection changes the illustrative role set.",
+      "evidence": "navigation.json action 4."
+    },
+    {
+      "action": "Focused the ‘Can I use these as SDK instructions?’ disclosure and pressed Enter.",
+      "observed": "The disclosure opened and answered that the page has proposed learning stages, not shipping SDK methods or runnable commands, and directs readers to a target-specific capability guide.",
+      "taskOutcome": "Answered whether I could treat the page as implementation instructions.",
+      "evidence": "navigation.json action 5."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What does the page mean by a Web, a Strand, and a claim specification?",
+      "whereItArose": "The hero says ‘Bring the required proofs’; I needed to understand the named pieces before exploring a case.",
+      "answeredOnPage": true,
+      "answerLocation": "The three nearby sections titled ‘A Web’, ‘A Strand’, and ‘A claim specification’ after the hero: a Web is the proposed script-bound collection required for a transition; a Strand is an individual proof with claim, statement, and binding metadata; a claim specification is a reusable assertion definition.",
+      "remainingClarification": "The page defines the concepts, but the illustrated roles are explicitly not concrete Strands."
+    },
+    {
+      "question": "Does assembling the three roles mean proofs have been produced or verified?",
+      "whereItArose": "The explorer labels the diagram ‘ILLUSTRATIVE WEB’ and lets me omit a role.",
+      "answeredOnPage": true,
+      "answerLocation": "The note below the role diagram says the roles are future role specifications, not concrete Strands, proof instances, a verified set, or settlement; the status panel also says ‘Not proof verification, not acceptance, not settlement.’",
+      "remainingClarification": "None for this prototype walkthrough; no proof or settlement action is provided."
+    },
+    {
+      "question": "Does changing Seller payment from 35 to 36 update the Payment arithmetic statement?",
+      "whereItArose": "After I used ArrowRight on the worksheet slider, its value showed 36 while the inspector remained at payment 35 and escrow debit 37.",
+      "answeredOnPage": false,
+      "answerLocation": "The inspector’s ‘Context & authentication’ paragraph says the worksheet supplies an illustrative opening state, but it does not explain whether its displayed statement is intentionally fixed while the slider changes.",
+      "remainingClarification": "Please clarify whether the inspector should track the slider or whether the two figures are separate examples; if separate, label that relationship near the controls."
+    },
+    {
+      "question": "Can I use this page as SDK instructions or run commands from it?",
+      "whereItArose": "The page includes a proposed developer journey and an FAQ asking this directly.",
+      "answeredOnPage": true,
+      "answerLocation": "The keyboard-opened ‘Can I use these as SDK instructions?’ disclosure says these are proposed learning stages, not shipping SDK methods or runnable commands.",
+      "remainingClarification": "The page points to a target-specific capability guide, but does not link a specific guide in this answer."
+    }
+  ],
+  "findings": [
+    {
+      "id": "K07-01",
+      "type": "CONFUSION",
+      "impact": "A keyboard visitor following the hero’s direct worksheet link first sees the proof-role illustration; reaching the amount control requires more scrolling and focus movement.",
+      "observation": "Activating ‘Inspect the invoice worksheet’ changed the fragment to #worksheet but the captured first view was the role diagram and inspector. The payment worksheet heading appeared below that view. The link works, but its destination is broader than its label suggests.",
+      "evidence": "navigation.json action 1; screenshots/worksheet-keyboard.png; after navigation the page showed #worksheet and the role board before the amount controls.",
+      "suggestedChange": "Point this link at the payment worksheet heading/control, or adjust its label to say it opens the combined explorer and worksheet area."
+    },
+    {
+      "id": "K07-02",
+      "type": "CONFUSION",
+      "impact": "The amount the visitor just changed differs from the payment value shown in the adjacent role inspector, which can make the worksheet feel disconnected from its proof-role explanation.",
+      "observation": "ArrowRight changed the labeled Seller payment slider from 35 to 36 CASH, while the Payment arithmetic inspector continued to say payment 35 CASH and escrow debit 37 CASH. The page identifies the role as illustrative, but does not explain this mismatch at the interaction point.",
+      "evidence": "navigation.json action 2; screenshots/worksheet-keyboard.png shows the inspector’s 35 CASH and 37 CASH values; keyboard interaction log records slider value 36.",
+      "suggestedChange": "Update the inspector statement when the slider changes, or state beside the slider/inspector that the role statement is a fixed 35 CASH illustration."
+    }
+  ],
+  "teachBack": "I understand a Web as a proposed collection of Strands required by a consuming script for one transition. A Strand is an individual proof with a claim, statement and binding metadata; a claim specification describes a reusable assertion. This page lets me inspect proposed cases and future proof roles, adjust an invoice worksheet, and read scoped explanations. It does not create concrete proof instances, run validators, authorize signatures or execute transactions. The page itself says general Web integration and onchain settlement remain unestablished. The provided records describe limited local evidence, not onchain acceptance.",
+  "limits": [
+    "This was a keyboard-only emulation in headless Chromium. I did not run or claim VoiceOver, NVDA, a screen reader, or an accessibility-tree audit.",
+    "Accessible names were inspected from live DOM labels/ARIA attributes and visible text; no external accessibility testing was performed.",
+    "The review used the frozen HTML only and did not inspect React source or navigate externally.",
+    "Findings describe this one agent’s observations, not disabled-user research or population evidence."
+  ],
+  "completed": true
+}

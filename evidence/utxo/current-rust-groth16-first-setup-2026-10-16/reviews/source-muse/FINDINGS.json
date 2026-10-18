@@ -1,0 +1,39 @@
+[
+  {
+    "blocking": false,
+    "description": "AUTHORIZATION/PRE-LAUNCH exactness gap: ROOT-PLACEMENT-INSTRUCTIONS rules state any extra or missing required value refuses, but k5_preconditions.authorization() checks only that each AUTH_VALUES key is present and equal and pre_launch() checks only its four listed keys; neither enforces an exact key set, so an extra root-record field (e.g. a second-setup flag) would not itself refuse. Effect is bounded because every step hardcodes steps/relation/one setup and ignores extra fields, and P1/P0 still refuse missing/mismatched required values. Root should either tighten the gate in a successor or record this as an accepted root-trust residual before authorization; it does not change any operative clause text.",
+    "evidence": [
+      "ROOT-PLACEMENT-INSTRUCTIONS.json schemas.RR5/K5-AUTHORIZATION.json rules; k5_preconditions.py authorization() lines 320-334 and pre_launch() lines 336-341 contrasted with exact_keys() use for PRE_KEYS/REVIEW_KEYS/tally clauses at lines 263,267,285,287."
+    ],
+    "file": "operator/request/data/k5_preconditions.py",
+    "id": "F-K5M-01",
+    "line": 320,
+    "recommendation": "Non-blocking for source readiness; root must not claim exact-schema enforcement for these two records until fixed or explicitly accepted.",
+    "severity": "LOW"
+  },
+  {
+    "blocking": false,
+    "description": "Z51 hygiene does not apply tree_clean to w/keys and does not itself fail on an unrelated extra entry in w/keys; it records ls -la and guards only invoice-partial.pk. The gap is covered in the success path by k5g_gate keys_listing requiring exactly [invoice-partial.pk], and no step after K5g writes keys, but after an abnormal K5M (K5g skipped) an extra keys entry would be evidence-recorded rather than Z51-classified. The fresh actual-result reviewer must classify any such leftover from the full Z51 listing under K5-5/K5-7 and must never reuse it.",
+    "evidence": [
+      "Z51.sh lines 59-72: tree_clean covers $W/bin $W/in $W/out only; keys handled by the single-file guard at lines 69-72.",
+      "k5g_gate.py keys_listing lines 219-239 requires exactly [KEY_NAME]."
+    ],
+    "file": "operator/request/steps/Z51.sh",
+    "id": "F-K5M-02",
+    "line": 61,
+    "recommendation": "Non-blocking; preserve the listing evidence and treat any extra keys entry as BLOCKED(hygiene) at actual-result review.",
+    "severity": "LOW"
+  },
+  {
+    "blocking": false,
+    "description": "freeze.py opens frozen files with plain open() (link-following, no O_NOFOLLOW/inode recheck) and Z52.sh adds no link guard of its own. Frozen scope is only host-written logs/receipts after Z51 hygiene, and freeze.py never reads w, binaries, keys, caches, or host files, so custody scope holds; a planted link inside logs/receipts would however be followed into the freeze receipt hash. Actual-result reviewer should confirm the frozen path set contains only logs/receipts regular files.",
+    "evidence": [
+      "freeze.py lines 25-28 open(os.path.join(root,rel),'rb') after os.walk expansion; Z52.sh line 26 invokes it on logs receipts only."
+    ],
+    "file": "claim-utxo-abi-v1-aiken-placement-candidate-20261015/tools/freeze.py (invoked by Z52.sh)",
+    "id": "F-K5M-03",
+    "line": 26,
+    "recommendation": "Non-blocking INFO for this run's host-written trees; do not widen freeze scope.",
+    "severity": "INFO"
+  }
+]

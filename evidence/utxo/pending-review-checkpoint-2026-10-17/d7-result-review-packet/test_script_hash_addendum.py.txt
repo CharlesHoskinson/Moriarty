@@ -1,0 +1,634 @@
+#!/usr/bin/env python3
+"""M-HASH D7 addendum: standalone unittest SOURCE for the D7 coverage gaps. NOT RUN BY ITS AUTHOR.
+
+Normative basis: MHASH-CONTRACT.md C4/C5 and MHASH-API.json, plus the PROPOSED, NOT ACCEPTED
+clarifications D2, D3 and D4 of MHASH-IMPLEMENTATION-ADDENDUM.md. D8 stays open: nothing here asserts a
+closed CIP-57 schema, a title limit or a surrogate policy. Methods, premises and every expected outcome
+are recorded in D7-TEST-CONTRACT.json.
+Root-only invocation after independent review:  python3 -I -B test_script_hash_addendum.py -v
+
+This file neither imports nor executes the frozen 19-method test. Positive inputs are derived from the
+CIP-0057 'Aiken's Hello World' example sliced verbatim from the pinned CIP-0057.md, and the only expected
+digest is the frozen CIP literal. No BLAKE2b is computed and the implementation is never used to obtain
+an expected value; sha256 is used only for packet pins. Every altered document is a security negative
+control, not ledger data.
+
+T00 needs no implementation. Every other test loads independent_script_hash.py lazily and fails with an
+explicit M-HASH-D7-RED AssertionError while it is absent.
+"""
+import ast
+import hashlib
+import itertools
+import json
+import os
+import types
+import unittest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PACKET = os.environ.get("MHASH_PACKET_DIR", "/packet")
+IMPL_PATH = os.path.join(HERE, "independent_script_hash.py")
+RED = "M-HASH-D7-RED: independent_script_hash.py is absent; no implementation is present"
+
+# path -> (bytes, sha256); the same public bodies as the frozen baseline PINS (cipsCommit befcdb75...).
+PINS = {
+    "CIP-0057.md": (34778, "76f416579ef10ccf8e05b20bc5f3f85cc8e8547d497105bedfa4566a8160959f"),
+    "SOURCES.json": (4206, "10a4107af188070cf256c82f68822eb2149515306f09a97dda42600e3ba01254"),
+}
+CIPS_COMMIT = "befcdb75289cb6571ffba6dbece3249ad2bfd491"
+
+# Primary vector: CIP-0057.md:382,425-426, plutusVersion "v2".
+CIP57_CODE = (
+    "58ad0100003232322225333004323253330063372e646e64004dd71980098010022400"
+    "09210d48656c6c6f2c20576f726c642100132333001001375866004600666004600600"
+    "89000240206eb8cc008c00c019200022253335573e004294054ccc024cdc79bae300a0"
+    "0200114a226660060066016004002294088c8ccc0040052000003222333300a3370e00"
+    "8004016466600800866e0000d2002300d001001235573c6ea8004526165734ae855d11"
+)
+CIP57_HASH = "5e1e8fa84f2b557ddc362329413caa3fd89a1be26bfd24be05ce0a02"
+WANT = {"hello_world": CIP57_HASH}
+
+# MHASH-CONTRACT C5 local tool bound; every control stays strictly below it.
+MAX_BLUEPRINT_BYTES = 1048576
+MAX_IMPL_BYTES = 1048576
+
+# Fixed control parameters, never tuned at run time. DEEP and INT_DIGITS carry premises P1/P2.
+DEEP = 100000
+INT_DIGITS = 50000
+SHALLOW = 16
+FLIP_INDEX = 100
+
+ALLOWED_IMPORTS = {"hashlib", "json", "re", "typing", "__future__"}
+BANNED_NAMES = {"open", "eval", "exec", "compile", "__import__", "input", "breakpoint",
+                "globals", "locals", "vars"}
+
+# Byte anchors in the verbatim CIP example; T00 pins their occurrence counts.
+TOP_ANCHOR = b"{\n"
+PREAMBLE_ANCHOR = b'"preamble": {\n'
+INDEX_ANCHOR = b'"index": 0,'
+DESC_ANCHOR = b"Aiken contracts for project"
+ANCHOR_COUNTS = {PREAMBLE_ANCHOR: 1, INDEX_ANCHOR: 2, DESC_ANCHOR: 1}
+
+POSITIVE = ("base", "parameters-empty", "extra-finite-number", "extra-overflow-1e999",
+            "extra-shallow-nesting", "datum-index-five-digits")
+BOM_CODECS = {"utf8-bom": "utf-8-sig", "utf16le-bom": "utf-16", "utf16be-bom": "utf-16",
+              "utf32le-bom": "utf-32", "utf32be-bom": "utf-32"}
+NO_BOM_CODECS = {"utf16le-no-bom": "utf-16-le", "utf16be-no-bom": "utf-16-be",
+                 "utf32le-no-bom": "utf-32-le", "utf32be-no-bom": "utf-32-be"}
+UTF16_UTF32 = ("utf16le-bom", "utf16be-bom", "utf32le-bom", "utf32be-bom",
+               "utf16le-no-bom", "utf16be-no-bom", "utf32le-no-bom", "utf32be-no-bom")
+INVALID_UTF8 = ("utf8-overlong", "utf8-encoded-surrogate", "utf8-truncated-sequence", "utf8-above-max-code-point")
+CONSTANTS = ("nan-top", "infinity-top", "neg-infinity-top", "nan-preamble", "nan-datum-index",
+             "neg-infinity-datum-index")
+PARAMETER_VALUES = {"parameters-null": None, "parameters-false": False, "parameters-zero": 0,
+                    "parameters-empty-string": "", "parameters-empty-object": {}}
+DEEP_NESTING = ("deep-array-nesting", "deep-object-nesting")
+INT_CONTROL = "int-digits-datum-index"
+
+# D2 malformed entries: each is malformed under C4/C5 on its own, independent of any other entry.
+MALFORMED = (
+    ("code-trailing-byte", {"compiledCode": CIP57_CODE + "00"}),
+    ("hash-uppercase", {"hash": CIP57_HASH.upper()}),
+    ("parameters-remaining", {"parameters": [{"title": "p", "schema": {}}]}),
+    ("parameters-null", {"parameters": None}),
+    ("empty-title", {"title": ""}),
+)
+
+TRIP_HOOKS = ("__eq__", "__ne__", "__hash__", "__iter__", "__getitem__", "__contains__", "__bytes__",
+              "decode", "encode", "startswith", "lower", "strip", "find", "count", "isascii", "hex")
+
+_cache = {}
+
+
+class ControlError(Exception):
+    """A test-side control failed its own construction check; never raised by the implementation."""
+
+
+class TripwireError(Exception):
+    """Raised by a hook tripwire; deliberately not a ValueError, so a consulted hook cannot pass as refusal."""
+
+
+class _Str(str):
+    """Plain str subclass with no overridden behaviour."""
+
+
+class _Bytes(bytes):
+    """Plain bytes subclass with no overridden behaviour."""
+
+
+def _read(name):
+    with open(os.path.join(PACKET, name), "rb") as f:
+        return f.read()
+
+
+def _strict_json_text(text):
+    def pairs(items):
+        keys = [k for k, _ in items]
+        if len(keys) != len(set(keys)):
+            raise ControlError("duplicate JSON key in control")
+        return dict(items)
+
+    def constant(name):
+        raise ControlError("non-JSON constant %s in control" % name)
+    return json.loads(text, object_pairs_hook=pairs, parse_constant=constant)
+
+
+def _strict_json(raw):
+    return _strict_json_text(raw.decode("utf-8"))
+
+
+def _cip57_doc_bytes():
+    """The CIP-0057 'Aiken's Hello World' JSON example, sliced verbatim from the pinned document."""
+    if "base" not in _cache:
+        text = _read("CIP-0057.md").decode("utf-8")
+        start = text.index("```json\n", text.index("<summary>Aiken's Hello World</summary>")) + len("```json\n")
+        _cache["base"] = text[start:text.index("\n```", start)].encode("utf-8")
+    return _cache["base"]
+
+
+def _cip57_doc():
+    return _strict_json(_cip57_doc_bytes())
+
+
+def _entry(**fields):
+    """A fresh copy of the CIP hello_world validator entry with the given fields replaced."""
+    e = _cip57_doc()["validators"][0]
+    e.update(fields)
+    return e
+
+
+def _doc(entries, **preamble):
+    d = _cip57_doc()
+    d["preamble"].update(preamble)
+    d["validators"] = list(entries)
+    return json.dumps(d).encode("utf-8")
+
+
+def _splice(anchor, replacement):
+    base = _cip57_doc_bytes()
+    if base.count(anchor) != ANCHOR_COUNTS[anchor]:
+        raise ControlError("anchor %r occurrence count changed" % anchor)
+    return base.replace(anchor, replacement, 1)
+
+
+def _top(value):
+    """Base document with one extra unread top-level member (D8 leaves extra fields open)."""
+    base = _cip57_doc_bytes()
+    if not base.startswith(TOP_ANCHOR):
+        raise ControlError("CIP example no longer starts with an object")
+    return TOP_ANCHOR + b'  "x-d7-unread": ' + value + b",\n" + base[len(TOP_ANCHOR):]
+
+
+def _preamble_extra(value):
+    return _splice(PREAMBLE_ANCHOR, PREAMBLE_ANCHOR + b'    "x-d7-unread": ' + value + b",\n")
+
+
+def _datum_index(value):
+    """Replace the value of the first (datum schema) "index" member, which the tool never reads."""
+    return _splice(INDEX_ANCHOR, b'"index": ' + value + b",")
+
+
+def _description(bad):
+    return _splice(DESC_ANCHOR, b"Aiken" + bad + b" contracts for project")
+
+
+def _controls():
+    if "controls" not in _cache:
+        base = _cip57_doc_bytes()
+        text = base.decode("utf-8")
+        _cache["controls"] = {
+            "base": base,
+            "parameters-empty": _doc([_entry(parameters=[])]),
+            "extra-finite-number": _top(b"0.5"),
+            "extra-overflow-1e999": _top(b"1e999"),
+            "extra-shallow-nesting": _top(b"[" * SHALLOW + b"]" * SHALLOW),
+            "datum-index-five-digits": _datum_index(b"12345"),
+            "utf8-bom": b"\xef\xbb\xbf" + base,
+            "utf16le-bom": b"\xff\xfe" + text.encode("utf-16-le"),
+            "utf16be-bom": b"\xfe\xff" + text.encode("utf-16-be"),
+            "utf32le-bom": b"\xff\xfe\x00\x00" + text.encode("utf-32-le"),
+            "utf32be-bom": b"\x00\x00\xfe\xff" + text.encode("utf-32-be"),
+            "utf16le-no-bom": text.encode("utf-16-le"),
+            "utf16be-no-bom": text.encode("utf-16-be"),
+            "utf32le-no-bom": text.encode("utf-32-le"),
+            "utf32be-no-bom": text.encode("utf-32-be"),
+            "utf8-overlong": _description(b"\xc0\xaf"),
+            "utf8-encoded-surrogate": _description(b"\xed\xa0\x80"),
+            "utf8-truncated-sequence": _description(b"\xe2\x82"),
+            "utf8-above-max-code-point": _description(b"\xf4\x90\x80\x80"),
+            "nan-top": _top(b"NaN"),
+            "infinity-top": _top(b"Infinity"),
+            "neg-infinity-top": _top(b"-Infinity"),
+            "nan-preamble": _preamble_extra(b"NaN"),
+            "nan-datum-index": _datum_index(b"NaN"),
+            "neg-infinity-datum-index": _datum_index(b"-Infinity"),
+            "parameters-null": _doc([_entry(parameters=None)]),
+            "parameters-false": _doc([_entry(parameters=False)]),
+            "parameters-zero": _doc([_entry(parameters=0)]),
+            "parameters-empty-string": _doc([_entry(parameters="")]),
+            "parameters-empty-object": _doc([_entry(parameters={})]),
+            "deep-array-nesting": _top(b"[" * DEEP + b"]" * DEEP),
+            "deep-object-nesting": _top(b'{"a":' * DEEP + b"0" + b"}" * DEEP),
+            INT_CONTROL: _datum_index(b"1" * INT_DIGITS),
+        }
+    return _cache["controls"]
+
+
+def _premise(label, raw, exc_type):
+    """Interpreter premise: stdlib json.loads raises exactly exc_type on this control. Fails, never skips."""
+    try:
+        json.loads(raw.decode("utf-8"))
+    except Exception as e:
+        if type(e) is exc_type:
+            return
+        got = type(e).__name__
+    else:
+        got = "no exception"
+    raise AssertionError("M-HASH-D7-PREMISE %s not met: stdlib json.loads gave %s, expected exactly %s; "
+                         "BLOCKED, do not adapt the control or the expectation" % (label, got, exc_type.__name__))
+
+
+def _flip_byte(code_hex, index):
+    """Replace one payload byte (hex pair at byte index) keeping CBOR framing intact."""
+    i = 2 * index
+    return code_hex[:i] + "%02x" % (int(code_hex[i:i + 2], 16) ^ 0x01) + code_hex[i + 2:]
+
+
+def _flip_nibble(h):
+    return ("1" if h[0] != "1" else "2") + h[1:]
+
+
+def _trip(name, log):
+    def hook(self, *args, **kwargs):
+        log.append(name)
+        raise TripwireError(name)
+    return hook
+
+
+def _tripwires(target, value, log):
+    """A target subclass instance whose content-consuming hooks record any use and raise."""
+    ns = {n: _trip(n, log) for n in TRIP_HOOKS if n == "__bytes__" or hasattr(target, n)}
+    return type("Trip" + target.__name__.title(), (target,), ns)(value)
+
+
+def _impostor(target, value, log):
+    """Not a target subclass, but reports target via __class__: isinstance() accepts it, type() does not."""
+    ns = {n: _trip(n, log) for n in TRIP_HOOKS}
+    ns["__class__"] = property(lambda self: target)
+    ns["__len__"] = lambda self: len(value)
+    return type("Impostor", (object,), ns)()
+
+
+def _static_problems(tree):
+    problems = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            problems += ["import " + a.name for a in node.names if a.name.split(".")[0] not in ALLOWED_IMPORTS]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level != 0 or (node.module or "").split(".")[0] not in ALLOWED_IMPORTS:
+                problems.append("from-import %r level %d" % (node.module, node.level))
+        elif isinstance(node, ast.Name) and node.id in BANNED_NAMES:
+            problems.append("name " + node.id)
+    return problems
+
+
+def _impl():
+    if "impl" not in _cache:
+        if os.path.islink(IMPL_PATH):
+            raise AssertionError("M-HASH-D7 loader refused: independent_script_hash.py is a symlink")
+        if not os.path.isfile(IMPL_PATH):
+            raise AssertionError(RED)
+        with open(IMPL_PATH, "rb") as f:
+            raw = f.read(MAX_IMPL_BYTES + 1)
+        if len(raw) > MAX_IMPL_BYTES:
+            raise AssertionError("M-HASH-D7 loader refused: implementation exceeds %d bytes" % MAX_IMPL_BYTES)
+        tree = ast.parse(raw.decode("utf-8"), IMPL_PATH)
+        problems = _static_problems(tree)
+        if problems:
+            raise AssertionError("M-HASH-D7 static lint refused to execute implementation: %s" % problems)
+        # Execute exactly the linted tree: no second read, no bytecode cache. Lint only, not a sandbox.
+        mod = types.ModuleType("independent_script_hash")
+        exec(compile(tree, IMPL_PATH, "exec", dont_inherit=True), mod.__dict__)
+        _cache["impl"] = mod
+    return _cache["impl"]
+
+
+class Base(unittest.TestCase):
+    def api(self):
+        m = _impl()
+        self.assertTrue(issubclass(m.ScriptHashInputError, ValueError))
+        self.assertTrue(issubclass(m.ScriptHashMismatchError, ValueError))
+        self.assertFalse(issubclass(m.ScriptHashInputError, m.ScriptHashMismatchError))
+        self.assertFalse(issubclass(m.ScriptHashMismatchError, m.ScriptHashInputError))
+        self.m = m
+        return m
+
+    def assertInputError(self, fn, *args):
+        with self.assertRaises(self.m.ScriptHashInputError) as cm:
+            fn(*args)
+        self.assertIs(type(cm.exception), self.m.ScriptHashInputError)
+
+    def assertMismatch(self, raw):
+        with self.assertRaises(self.m.ScriptHashMismatchError) as cm:
+            self.m.check_blueprint(raw)
+        self.assertIs(type(cm.exception), self.m.ScriptHashMismatchError)
+
+    def assertResult(self, raw, want):
+        got = self.m.check_blueprint(raw)
+        self.assertIsInstance(got, dict)
+        self.assertEqual(got, want)
+        for title, h in got.items():
+            self.assertIs(type(title), str)
+            self.assertIs(type(h), str)
+        return got
+
+    def assertHello(self, doc):
+        self.assertEqual(doc["preamble"]["plutusVersion"], "v2")
+        self.assertEqual([(v["title"], v["compiledCode"], v["hash"]) for v in doc["validators"]],
+                         [("hello_world", CIP57_CODE, CIP57_HASH)])
+
+
+class T00AddendumProvenance(Base):
+    """Passes without any implementation: pins, the CIP-57 positive base, control construction, premises."""
+
+    def test_t00_provenance_controls_and_premises(self):
+        for name, (size, sha) in PINS.items():
+            with self.subTest(pin=name):
+                raw = _read(name)
+                self.assertEqual(len(raw), size)
+                self.assertEqual(hashlib.sha256(raw).hexdigest(), sha)
+        src = _strict_json(_read("SOURCES.json"))
+        self.assertEqual(src["cipsCommit"], CIPS_COMMIT)
+        status = {e["path"]: (e["status"], e["bytes"], e["sha256"]) for e in src["files"]}
+        self.assertEqual(status["CIP-0057.md"], (200,) + PINS["CIP-0057.md"])
+        cip = _read("CIP-0057.md").decode("utf-8")
+        for anchor in ("The full compiled and cbor-encoded serialized flat script",
+                       "A blake2b-224 hash digest of the validator script, as found in addresses",
+                       '"plutusVersion": "v2"',
+                       '"compiledCode": "%s"' % CIP57_CODE,
+                       '"hash": "%s"' % CIP57_HASH):
+            self.assertIn(anchor, cip)
+        code = bytes.fromhex(CIP57_CODE)
+        self.assertEqual((code[0], code[1], len(code)), (0x58, 0xAD, 2 + 0xAD))
+
+        base = _cip57_doc_bytes()
+        self.assertTrue(base.isascii())
+        self.assertTrue(base.startswith(TOP_ANCHOR))
+        for anchor, n in ANCHOR_COUNTS.items():
+            self.assertEqual(base.count(anchor), n)
+        for token in (b"NaN", b"Infinity", b"\xef\xbb\xbf", b"parameters", b"x-d7-unread"):
+            self.assertNotIn(token, base)
+        doc = _strict_json(base)
+        self.assertHello(doc)
+        self.assertNotIn("parameters", doc["validators"][0])
+        self.assertEqual(_strict_json(_doc([_entry()])), doc)
+
+        flipped_hash = _flip_nibble(CIP57_HASH)
+        self.assertNotEqual(flipped_hash, CIP57_HASH)
+        self.assertEqual(len(flipped_hash), 56)
+        self.assertTrue(all(c in "0123456789abcdef" for c in flipped_hash))
+        flipped_code = _flip_byte(CIP57_CODE, FLIP_INDEX)
+        self.assertEqual((len(flipped_code), flipped_code[:4]), (len(CIP57_CODE), "58ad"))
+        self.assertNotEqual(flipped_code, CIP57_CODE)
+
+        ctl = _controls()
+        self.assertEqual(set(ctl), set(POSITIVE) | set(BOM_CODECS) | set(NO_BOM_CODECS) | set(INVALID_UTF8)
+                         | set(CONSTANTS) | set(PARAMETER_VALUES) | set(DEEP_NESTING) | {INT_CONTROL})
+        for name, raw in ctl.items():
+            with self.subTest(bound=name):
+                self.assertIs(type(raw), bytes)
+                self.assertLess(len(raw), MAX_BLUEPRINT_BYTES)
+        for name in POSITIVE:
+            with self.subTest(positive=name):
+                d = _strict_json(ctl[name])
+                self.assertHello(d)
+                self.assertIn(d["validators"][0].get("parameters", "absent"), ("absent", []))
+        text = base.decode("utf-8")
+        for name, codec in BOM_CODECS.items():
+            with self.subTest(encoding=name):
+                self.assertEqual(ctl[name].decode(codec), text)
+                if name == "utf8-bom":
+                    self.assertEqual(ctl[name].decode("utf-8"), "﻿" + text)
+                else:
+                    with self.assertRaises(UnicodeDecodeError):
+                        ctl[name].decode("utf-8")
+        for name, codec in NO_BOM_CODECS.items():
+            with self.subTest(encoding=name):
+                self.assertEqual(ctl[name].decode(codec), text)
+                self.assertIn("\x00", ctl[name].decode("utf-8"))
+        for name in INVALID_UTF8:
+            with self.subTest(invalid_utf8=name):
+                with self.assertRaises(UnicodeDecodeError):
+                    ctl[name].decode("utf-8")
+                self.assertHello(_strict_json_text(ctl[name].decode("utf-8", "replace")))
+        for name in CONSTANTS:
+            with self.subTest(constant=name):
+                with self.assertRaises(ControlError):
+                    _strict_json(ctl[name])
+                self.assertHello(json.loads(ctl[name].decode("utf-8")))
+        for name, want in PARAMETER_VALUES.items():
+            with self.subTest(parameters=name):
+                d = _strict_json(ctl[name])
+                self.assertHello(d)
+                got = d["validators"][0]["parameters"]
+                self.assertIs(type(got), type(want))
+                self.assertEqual(got, want)
+        for name in DEEP_NESTING:
+            with self.subTest(premise="P1", control=name):
+                _premise("P1", ctl[name], RecursionError)
+        with self.subTest(premise="P2", control=INT_CONTROL):
+            _premise("P2", ctl[INT_CONTROL], ValueError)
+
+        log = []
+        for target, value in ((str, CIP57_CODE), (bytes, base)):
+            for obj in (_tripwires(target, value, log), _impostor(target, value, log)):
+                with self.subTest(hook_control=type(obj).__name__, target=target.__name__):
+                    self.assertIsInstance(obj, target)
+                    self.assertIsNot(type(obj), target)
+        self.assertEqual(log, [])
+
+
+class T10Precedence(Base):
+    """D2: every entry is validated before any comparison, so entry order never changes the class."""
+
+    def test_d2_malformed_entry_wins_in_every_order(self):
+        m = self.api()
+        self.assertResult(_cip57_doc_bytes(), WANT)
+        ok = ("ok", _entry(title="ok"))
+        mismatch = ("mismatch", _entry(title="mismatch", hash=_flip_nibble(CIP57_HASH)))
+        for label, fields in MALFORMED:
+            bad = ("malformed", _entry(**dict({"title": "malformed"}, **fields)))
+            orders = list(itertools.permutations((ok, mismatch, bad))) + list(itertools.permutations((mismatch, bad)))
+            for order in orders:
+                with self.subTest(malformed=label, order="/".join(n for n, _ in order)):
+                    self.assertInputError(m.check_blueprint, _doc([e for _, e in order]))
+
+    def test_d2_mismatch_at_every_position_and_order(self):
+        self.api()
+        titles = ("first", "second", "third")
+        self.assertResult(_doc([_entry(title=t) for t in titles]), {t: CIP57_HASH for t in titles})
+        for label, fields in (("hash-nibble", {"hash": _flip_nibble(CIP57_HASH)}),
+                              ("code-byte", {"compiledCode": _flip_byte(CIP57_CODE, FLIP_INDEX)})):
+            for pos in range(len(titles)):
+                entries = [_entry(title=t, **(fields if i == pos else {})) for i, t in enumerate(titles)]
+                with self.subTest(case=label, position=pos):
+                    self.assertMismatch(_doc(entries))
+        ok = _entry(title="ok")
+        mismatch = _entry(title="mismatch", hash=_flip_nibble(CIP57_HASH))
+        for order in ((ok, mismatch), (mismatch, ok)):
+            with self.subTest(case="pair", first=order[0]["title"]):
+                self.assertMismatch(_doc(order))
+
+
+class T11FreshResult(Base):
+    """Each call returns a fresh dict; mutating one result never leaks into another call."""
+
+    def test_fresh_detached_result_across_calls(self):
+        self.api()
+        base = _cip57_doc_bytes()
+        titles = ("first", "second")
+        pair = _doc([_entry(title=t) for t in titles])
+        want_pair = {t: CIP57_HASH for t in titles}
+        r1 = self.assertResult(base, WANT)
+        r1["hello_world"] = _flip_nibble(CIP57_HASH)
+        r1["injected"] = CIP57_HASH
+        r2 = self.assertResult(base, WANT)
+        self.assertIsNot(r2, r1)
+        self.assertEqual(r1, {"hello_world": _flip_nibble(CIP57_HASH), "injected": CIP57_HASH})
+        r3 = self.assertResult(pair, want_pair)
+        self.assertIsNot(r3, r1)
+        self.assertIsNot(r3, r2)
+        self.assertEqual(r2, WANT)
+        r2.clear()
+        r3.pop("first")
+        self.assertResult(base, WANT)
+        self.assertResult(pair, want_pair)
+        self.assertEqual((r2, r3), ({}, {"second": CIP57_HASH}))
+
+
+class T12StrictDecode(Base):
+    """D3.1/D3.2: explicit strict UTF-8 decoding; a UTF-8 BOM is refused, not stripped."""
+
+    def test_d3_utf8_bom_refused(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["base"], WANT)
+        self.assertInputError(m.check_blueprint, ctl["utf8-bom"])
+
+    def test_d3_utf16_utf32_with_and_without_bom_refused(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["base"], WANT)
+        for name in UTF16_UTF32:
+            with self.subTest(case=name):
+                self.assertInputError(m.check_blueprint, ctl[name])
+
+    def test_d3_invalid_utf8_in_unread_string_refused(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["base"], WANT)
+        for name in INVALID_UTF8:
+            with self.subTest(case=name):
+                self.assertInputError(m.check_blueprint, ctl[name])
+
+
+class T13Constants(Base):
+    """D3.3: NaN/Infinity/-Infinity are not JSON values; a finite literal that overflows is left as is."""
+
+    def test_d3_nan_and_infinity_refused_anywhere(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["base"], WANT)
+        self.assertResult(ctl["extra-finite-number"], WANT)
+        for name in CONSTANTS:
+            with self.subTest(case=name):
+                self.assertInputError(m.check_blueprint, ctl[name])
+
+    def test_d3_overflowing_finite_literal_left_as_is(self):
+        self.api()
+        self.assertResult(_controls()["extra-overflow-1e999"], WANT)
+
+
+class T14Parameters(Base):
+    """C5: parameters absent or exactly []; null and every other non-list value is malformed."""
+
+    def test_parameters_null_and_non_list_refused(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["base"], WANT)
+        self.assertResult(ctl["parameters-empty"], WANT)
+        for name in PARAMETER_VALUES:
+            with self.subTest(case=name):
+                self.assertInputError(m.check_blueprint, ctl[name])
+
+
+class T15ExactTypes(Base):
+    """D4: exact builtin types; subclasses, impostors and buffers are refused before any hook is consulted."""
+
+    def test_d4_script_hash_exact_str_only(self):
+        m = self.api()
+        self.assertEqual(m.script_hash("v2", CIP57_CODE), CIP57_HASH)
+        cases = (
+            ("str-subclass-version", lambda log: (_Str("v2"), CIP57_CODE)),
+            ("str-subclass-code", lambda log: ("v2", _Str(CIP57_CODE))),
+            ("tripwire-version", lambda log: (_tripwires(str, "v2", log), CIP57_CODE)),
+            ("tripwire-code", lambda log: ("v2", _tripwires(str, CIP57_CODE, log))),
+            ("impostor-version", lambda log: (_impostor(str, "v2", log), CIP57_CODE)),
+            ("impostor-code", lambda log: ("v2", _impostor(str, CIP57_CODE, log))),
+            ("bool-version", lambda log: (True, CIP57_CODE)),
+            ("bool-code", lambda log: ("v2", True)),
+            ("memoryview-code", lambda log: ("v2", memoryview(CIP57_CODE.encode("ascii")))),
+        )
+        for label, make in cases:
+            log = []
+            args = make(log)
+            with self.subTest(case=label):
+                self.assertInputError(m.script_hash, *args)
+                self.assertEqual(log, [])
+
+    def test_d4_check_blueprint_exact_bytes_only(self):
+        m = self.api()
+        base = _cip57_doc_bytes()
+        self.assertResult(bytes(base), WANT)
+        self.assertResult(_doc([_entry()]), WANT)
+        cases = (
+            ("bytearray", lambda log: bytearray(base)),
+            ("memoryview", lambda log: memoryview(base)),
+            ("bytes-subclass", lambda log: _Bytes(base)),
+            ("tripwire-bytes", lambda log: _tripwires(bytes, base, log)),
+            ("impostor-bytes", lambda log: _impostor(bytes, base, log)),
+            ("none", lambda log: None),
+            ("json-plutusVersion-true", lambda log: _doc([_entry()], plutusVersion=True)),
+            ("json-title-true", lambda log: _doc([_entry(title=True)])),
+            ("json-compiledCode-true", lambda log: _doc([_entry(compiledCode=True)])),
+            ("json-hash-true", lambda log: _doc([_entry(hash=True)])),
+        )
+        for label, make in cases:
+            log = []
+            raw = make(log)
+            with self.subTest(case=label):
+                self.assertInputError(m.check_blueprint, raw)
+                self.assertEqual(log, [])
+
+
+class T16ParserLimits(Base):
+    """D3.4: library nesting-depth and integer-digit failures map to ScriptHashInputError, under P1/P2."""
+
+    def test_d3_deep_nesting_maps_to_input_error(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["extra-shallow-nesting"], WANT)
+        for name in DEEP_NESTING:
+            with self.subTest(case=name):
+                _premise("P1", ctl[name], RecursionError)
+                self.assertInputError(m.check_blueprint, ctl[name])
+
+    def test_d3_int_digit_limit_maps_to_input_error(self):
+        m = self.api()
+        ctl = _controls()
+        self.assertResult(ctl["datum-index-five-digits"], WANT)
+        _premise("P2", ctl[INT_CONTROL], ValueError)
+        self.assertInputError(m.check_blueprint, ctl[INT_CONTROL])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,241 @@
+{
+  "reviewToken": "r4-f1-full-tests-source-effects-b-opus48-20261017",
+  "report": "IDENTITY. Requested claude-opus-4-8 HIGH; both 4.8 and 5.5 were user-authorized. My actual model is claude-opus-4-8 (Opus 4.8); the HIGH effort is harness-configured and not self-verified. This is a fresh, non-author, source-only SEAT B review of the F1 revised whole test candidate (test sha f6514a47...). Same provider (Anthropic) as the prefix/R00/part authors; NO provider or model diversity is claimed. One attempt, read-only tools only. Nothing was executed, imported, compiled, AST-parsed, hashed, linted or subprocessed. No R4 implementation exists, was supplied or inspected. nativeAuthority 0; this review is not an adoption/reliance vote.\n\nSCOPE AND METHOD. I read the whole 1192-line test, R4-CONTRACT.md (CB401-CB412 and the section-7 R00-R17 obligation table), R4-API.json, R4-MANIFEST-F1-CONTRACT.json, the three dependency bodies (build_k10_inputs.py, host_codec.py, c2_issue_artifacts_r2.py) in full, ROOT-CP08-SOURCE-ADOPTION.json, ROOT-MEANINGFULNESS-ACCEPTANCE.json, ROOT-PUBLIC-FIXTURE-PINS.json, ROOT-LITERAL-ASSEMBLY.json, PROPOSED-RED-ENVELOPE.json, F1-AUTHOR-REVIEW.json, ROOT-OLD-RED-ACCEPTANCE.json and DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json. I independently derived every expectation below from source, not from author claims. The B9 opaque body, the SOL files, the CP r2 contract/API, R4-TEST-INTERFACE.json, R4-PREFIX-NOTES.md, USER-BOTH-OPUS-RULE.md, the three per-part CONTRACT/NOTES JSONs and R4-MANIFEST-F1-NOTES.md were not opened (see coverage); the decisive facts were all verifiable from the files I read, and the CP dependency literals were verified against the actual r2 source rather than its contract.\n\nORDINARY RED (independently derived, not observed). load_r4 (lines 244-258) checks os.path.lexists(HERE/'build_k10_inputs_r4.py') and, when absent, calls case.fail('missing implementation: build_k10_inputs_r4.py') BEFORE setting _R4_LOAD_STARTED or touching importlib; TestCase.fail raises AssertionError. Every one of R01-R17 begins with self.r4()/r4=self.r4() (lines 569,603,619,674,708,727,771,813,869,883,915,954,981,1066,1094,1119,1154), so at RED their sole outcome is that AssertionError and no later assertion, wrapper, filesystem effect, mkfifo, umask toggle, 0555-parent WRITE or counter runs. TestR00Prerequisites.test_r00_prerequisites never references R4 and is substantive and R4-independent (it checks the 7 envelope PINS incl. the adopted r2 pin == ADOPTED_R2_PIN at line 497, module __file__ samefile, v1 absence, scratch 700/empty, open-flag/dir_fd capability, r2 on K6 returning /2 + 12 keys + exactly the 16 ordered labels, HIST-09 == the independent formatter == the legacy render, and the B9 policy recomputation). Predicted result therefore matches R4-CONTRACT.md section 8 and R4-API.json 'red': 18 methods, 1 pass (R00), 17 AssertionError failures all carrying the identical MISSING message, 0 errors, exit 1, empty stdout, scratch unchanged 0700/empty, isolated/ and its files byte/mode/listing unchanged. Any import/pin/malformed-fixture/setUpModule/R00 failure or any unittest error is STOP, not RED, with no retry.\n\nSTUB MEANINGFULNESS (source prediction). A CB401-conformant stub (the 9 imports hashlib/json/os/re/stat/sys/build_k10_inputs as legacy/c2_issue_artifacts_r2/host_codec, exactly one APPEND-SEAM line, and the 7 public functions parse_expiry/read_public_file/parse_public_json/check_setup_link/legacy_env_from_host/plan_outputs/main each raising NotImplementedError) PASSES R00 and R01 only: R01 is purely structural (AST import set, seam count 1, 7 non-underscore FunctionDefs, callability, no sys.modules/path attr, no c2_issue_artifacts/importlib binding) and a NotImplementedError body is still callable. Every one of R02-R17 reaches a stubbed function (plan_outputs via self.plan, parse_expiry, read_public_file, parse_public_json, check_setup_link, legacy_env_from_host, or main via run_main) which raises NotImplementedError before any assertion can pass, so each ERRORS rather than passing. The stub thus passes NONE of R02-R17, satisfying the review-time meaningfulness predicate and R4-CONTRACT.md section 8.\n\nF1 CHANGES. Only R03 (Part A) and R13 (Part B) bodies plus attribution comments changed; R00, R01, R02, R04-R12 and all of Part C (R14-R17) are byte-identical, 18 method names/count/classes and the first-self.r4() in every method are preserved, no imports/helpers/wrappers/globals added. R13 now assembles an independent 33-key expected manifest with five R4-independent anchors (legacy constants; VK 488/proof 192 lengths; blake2b-256(K2 VK)==K6 vkDigest; host statement digest of the K6 statement; inline issue-CBOR == host encode of build_c2_mint_data('Issue',vk,proof)), then asserts set(expected)==MANIFEST_KEYS, a per-field subTest equality over all 33 keys, exact int types, every flag is identity-False, and outputs['manifest.json']==canonical_json(expected). I verified these anchors against build_k10_inputs.py (lines 61-87, 308-319, 397-430), host_codec.py (lines 536-656) and the inline CBOR math: the test's env_cbor and the host build_env_data+encode_data produce identical bytes, and the inline issue CBOR equals host_codec.encode_data(build_c2_mint_data('Issue',vk,proof)). This genuinely closes ROOT-OLD-RED-ACCEPTANCE RR-F01 (the 15 presence-only values). R03 edits the K6 statement at the host offsets claimantVkh[144:172], consumedTxid[233:265], consumedIx[265:267], recomputes the digest/public-inputs/cardano via the pinned host (independent of R4), and I confirmed the edited export is still admitted by r2 at every stage (SETUP..BUILD) so the GREEN assertions are reachable and not over-constrained; its stale-literal negative proof (K6 claimant 0x55*28, txid 0x22*32, expiry 1893456000000, K6 token, K6 statement digest absent from all non-script output) is a real explicit-invalidity proof, not a synthetic one.\n\nGOVERNANCE/R00 OBLIGATION. The six GOVERNANCE_PINS (lines 49-56) literals exactly match the packet MANIFEST and CP08 pins (R4-CONTRACT.md b0aa395e, R4-API.json 2cfefb33, CP contract 6e2c3989, CP API 0f592eea, DOWNSTREAM cc729d8d, CP08 c322b2c2). These documents are deliberately NOT in the runtime envelope (isolated/ holds only the 8 staged files), so R00 structurally cannot and does not read them; it is disclosed (prefix lines 47-48) that root checks them as out-of-envelope pre/post assembly prerequisites. I DECIDE that R00's in-envelope obligation (adopted r2 bytes+pin+behaviour, fixture pins, v1 absence, scratch, HIST-09 cross-check) is fully and correctly discharged by test_r00_prerequisites, and that the governance-document portion of the contract's R00 text is acceptably delegated to root's mechanical six-pin pre/post verification which the proposed envelope beforeAfter requires. This is recorded as a condition, not silently waived: if root does not actually verify those six pins before/after launch, the R00 obligation is only partially met.\n\nEFFECTS/ISOLATION (proposal only; actual effects not observed). The PROPOSED-RED-ENVELOPE argv is internally consistent and matches the contract: timeout 20s (TERM, kill-after 2s), prlimit cpu 10:10 / as 536870912 / fsize 2097152 / core 0, bwrap --unshare-all --die-with-parent --new-session, ro-bind /usr with usr symlinks, proc, dev, --dir /case, ro-bind isolated->/case/isolated (0555, files 0444), bind scratch->/case/scratch (0700 empty), chdir /case/isolated, clearenv + PATH/LANG/PYTHONDONTWRITEBYTECODE only, python3 (realpath python3.14, sha 52e0a13e) -I -B. HERE resolves to /case/isolated and SCRATCH to /case/scratch, matching the binds; all test writes go only under scratch via case_scratch()/copy_inputs. stdout/stderr are to be exclusive regular files outside the child sandbox bounded by inherited RLIMIT_FSIZE (not pipes) \u2014 correct, since RLIMIT_FSIZE bounds regular files but not pipes. rlimits alone are not network isolation; bwrap --unshare-all is the proposed isolation and its actual effect is unobserved. This envelope is NOT execution permission: testExecutionApproved false, rootDecisionPending true, maximumAttempts 1, prerequisite failure is STOP with no retry. Host launch is root-only AFTER two fresh substantive agreeing audits and a root decision; this is one such audit.\n\nADOPTION/NON-CLAIMS/ROUTING. CP08 adopts the exact r2 bytes for ordinary artifact preparation and R4 TEST AUTHORING ONLY; implementationAdopted true but builderReliancePermitted false, R4ImplementationPermitted/Execution false, nativeAuthority 0. r2 (not v1) is imported; v1 c2_issue_artifacts is prohibited, absent from the envelope, and asserted absent at R00 (lines 506-508) and R01 (line 600); no /2-to-/1 or CB-r1 routing; the old superseded profile is not relabeled. The old ordinary RED (test sha c9375097) is explicitly bound to the old bytes and does NOT transfer; a fresh RED decision for these bytes is required. All open tracks remain OPEN (20 UTxO families, full finance, ACTUS, DeFi, PCD recursion, private handoff, bounded multiparent, real Preprod; no Groth16/curve/VK-profile/Rust-acceptance/ledger inference).\n\nDISPOSITION. The source is complete, self-consistent, literally assembled from the recorded parts, closes RR-F01 with R4-independent oracles verified against the actual dependency source, preserves the meaningful RED shape unchanged, and introduces no reachable or future-GREEN test-side bug I could find. The remaining items (OD1 four API-unrestated fields, OD2 varied-export inputs[] omission, hardcoded-genuine indistinguishability for vk/proof/issue/proofSha, anchors-derived-by-reading, stale historical docstring text, same-provider non-diversity, and the governance-pin delegation condition) are disclosed and non-blocking for source readiness and for one ordinary RED, but each is a GREEN/owner obligation that must not be waived on the strength of a passing RED. I find sourceReady true (bounded strictly to the ordinary R4 test-authoring basis and one ordinary RED consideration) and ordinaryRedReady true; implementationReady and builderReliancePermitted are false and remain so.",
+  "findings": [
+    {
+      "id": "RRF01-CLOSURE-CONFIRMED",
+      "severity": "info",
+      "evidence": "R13 (lines 975-1055) adds set(expected)==MANIFEST_KEYS (line 1046), a per-field subTest equality over sorted(MANIFEST_KEYS) (lines 1047-1049), exact int types (1051-1052), identity-False flags (1053-1054) and outputs['manifest.json']==canonical_json(expected) (1055). All 15 formerly presence-only values (auditSourcePins, three scriptHash* strings, scriptHashClaimedHex, scriptHashIndependentlyRecomputedHex, vkBytes, proofBytes, vkDigestHex, statementDigestHex, issueCborHex, compiledValidatorTitle, scriptHexFile, scriptCompiledBytes, scriptInnerFlatBytes) are now value-asserted against prefix literals and legacy/host facts verified in build_k10_inputs.py 61-87 and host_codec.py 536-656.",
+      "requiredFix": "None; ROOT-OLD-RED-ACCEPTANCE RR-F01 is genuinely closed for GREEN."
+    },
+    {
+      "id": "OD1-API-UNRESTATED-FIELDS",
+      "severity": "low",
+      "evidence": "R13 expected pins compiledValidatorTitle='c2.c2.mint', scriptHexFile='script.hex', scriptCompiledBytes=2770, scriptInnerFlatBytes=2767 (lines 1043-1044) to the pinned legacy main() values (build_k10_inputs.py 505-508,62-64). R4-API.json manifest.keys calls these 'exactly the 33-key MANIFEST_KEYS set of R3 test_c2_builder.py, copied as literals' but the enumerated manifest.other/keptFromR2 sections do not restate these four field values.",
+      "requiredFix": "Owner must confirm before GREEN that these four are the normative R4 manifest values (from pinned build_k10_inputs.py main()) or amend R4-API.json; if other values are chosen, R13 expected entries need a reviewed revision. Not a source defect and not a RED blocker."
+    },
+    {
+      "id": "OD2-VARIED-EXPORT-INPUTS-OMISSION",
+      "severity": "low",
+      "evidence": "R03 (lines 618-671) asserts the consumer-variable manifest values (statementDigestHex, vkDigestHex, mintValueCborHex, cases) on the edited export but does not assert manifest['inputs'] for a non-K6 export; expected_inputs() (lines 346-347) binds proof-export sha to the K6 PINS value, which would not equal sha256 of edited bytes.",
+      "requiredFix": "Owner must decide whether manifest.inputs[proof-export] must carry the sha256/byte length of the supplied (varied) export; if adopted, R03 can add it later without touching prefix or Part C. Correctly left unasserted now; not a RED blocker."
+    },
+    {
+      "id": "GREEN-ONLY-GENUINE-VALUE-INDISTINGUISHABILITY",
+      "severity": "low",
+      "evidence": "F1-AUTHOR-REVIEW and R4-MANIFEST-F1-CONTRACT disclose, and I confirm from source, that vkDigestHex, vkBytes, proofBytes, issueCborHex and every row proofHexSha256 are only checked against the genuine K6/K2 values (no fixture varies the VK or proof), so a builder hardcoding those genuine constants is indistinguishable without new VK/proof data, which is out of scope.",
+      "requiredFix": "Record as a known GREEN kill-power limitation; mutation testing or new VK/proof data would be needed to close it. Non-blocking for source/RED."
+    },
+    {
+      "id": "ANCHORS-DERIVED-BY-READING",
+      "severity": "info",
+      "evidence": "The R13 BLAKE2b-256, host statement-digest, inline issue-CBOR and byte-exact manifest equalities were derived by source reading only (no execution/hashing permitted). An anchor defect would surface as an R13 failure at GREEN that does not involve R4 output.",
+      "requiredFix": "None now; the future actual-GREEN result audit must confirm these anchors compute as predicted."
+    },
+    {
+      "id": "GOVERNANCE-PIN-DELEGATION-CONDITION",
+      "severity": "info",
+      "evidence": "The six GOVERNANCE_PINS (test lines 49-56) match the packet MANIFEST/CP08 pins exactly, but are out-of-envelope and never read by R00 (prefix lines 47-48). PROPOSED-RED-ENVELOPE.beforeAfter requires them rechecked before and after launch.",
+      "requiredFix": "Root must mechanically verify all six GOVERNANCE_PINS pre/post launch; recorded as a condition, not waived. R00's in-envelope obligation is otherwise fully discharged."
+    },
+    {
+      "id": "STALE-HISTORICAL-DOCSTRING-TEXT",
+      "severity": "info",
+      "evidence": "Frozen docstrings at lines 1-13, 554-566 and 849-857 say the fragments were 'never run, imported, compiled or reviewed'; after these reviews that is historical. There is also no blank line between line 1055 and the TestR14ToR17 class at line 1056 (cosmetic, valid Python). Matches ROOT-OLD-RED-ACCEPTANCE RR-F05.",
+      "requiredFix": "Do not edit frozen bytes; treat as historical and fix only in a separately reviewed amended revision. Non-blocking."
+    },
+    {
+      "id": "SAME-PROVIDER-NONDIVERSITY",
+      "severity": "info",
+      "evidence": "This reviewer is claude-opus-4-8, the same model family that authored the A/B/C parts; the prefix/R00 and the R03/R13 revision were claude-opus-5-5. Same provider (Anthropic) throughout.",
+      "requiredFix": "Record identities honestly; claim no provider/model diversity; keep the requirement of two substantive agreeing fresh non-author votes before any execution/consequential decision."
+    }
+  ],
+  "assessments": [
+    {
+      "id": "R00",
+      "stance": "AGREE",
+      "evidence": "test_r00_prerequisites (lines 496-551) is R4-independent and substantive: PINS[R2]==ADOPTED_R2_PIN (497); count literals 12/16/11/7/8/14 and 33/9/4/10 (498-501); all 7 envelope pins (502-503); module __file__ samefile (504-505); v1 absent (506-508); scratch 700/empty (509-511); open-flag/dir_fd capability (512-515); r2 K6 returns /2 + 12 keys + 16 ordered labels (538-551) verified against c2_issue_artifacts_r2.py 355-508; HIST-09==formatter==legacy render (522-532); B9 policy recomputation (534-537). Passes at RED."
+    },
+    {
+      "id": "R01",
+      "stance": "AGREE",
+      "evidence": "Lines 568-600: first r4=self.r4(); AST oracle checks exactly R4_IMPORTS (9), from_imports empty, no c2_issue_artifacts/importlib binding, no sys.modules/path attr, exactly 7 public functions==R4_PUBLIC, callability, one seam. Matches CB401/R4-API module. Structural; at RED fails MISSING; a conformant NotImplementedError stub would pass it (allowed)."
+    },
+    {
+      "id": "R02",
+      "stance": "AGREE",
+      "evidence": "Lines 602-616: first r4=self.r4(); K6 roster==ROSTER, bytes-typed, T1==HIST, script.hex==legacy.extract_compiled(B9)[0]+newline, canonical manifest, positive envelope/token/policy/mint literals, determinism. Expectations from prefix formatters/legacy, not R4 output. At RED fails MISSING."
+    },
+    {
+      "id": "R03",
+      "stance": "AGREE",
+      "evidence": "Lines 618-671 (F1): first r4=self.r4(); edits K6 statement at host offsets 144/233/265, recomputes digest/public-inputs/cardano via host_codec (independent of R4). I confirmed the edited export is admitted by r2 at every stage so GREEN assertions are reachable; asserts consumer-derived fields and a 5-entry stale-literal absence proof. Not over-constrained. At RED fails MISSING."
+    },
+    {
+      "id": "R04",
+      "stance": "AGREE",
+      "evidence": "Lines 673-705: first r4=self.r4(); parse_expiry valid/invalid vectors incl. empty, '01', U+0661, 21 nines, bytes/int/None; plan expiry gate True/-1/2**64/'1'/1.0; CLI non-list/arity5/arity7/non-str/embedded U+0000/lone surrogate U+D800 not echoed; no filesystem effect. At RED fails MISSING."
+    },
+    {
+      "id": "R05",
+      "stance": "AGREE",
+      "evidence": "Lines 707-723: first r4=self.r4(); OUTDIR refusals for existing/pre-existing/final-symlink/bad-name/absent-parent/trailing-slash/'.'; tree(scratch) unchanged. At RED fails MISSING."
+    },
+    {
+      "id": "R06",
+      "stance": "AGREE",
+      "evidence": "Lines 725-768: first r4=self.r4(); cap+1 refused and exact cap admitted; symlink/absent/dir/FIFO (no-follow lstat refuses before open); caps 0/7/True/2**63; bytes/_NoFspath PathLike/_StrSub/lone surrogate; no path echoed. At RED fails MISSING."
+    },
+    {
+      "id": "R07",
+      "stance": "AGREE",
+      "evidence": "Lines 770-810: first r4=self.r4(); duplicate-key/array-wrap/trailing/escaped-surrogate/NaN/Infinity/fraction/exponent/21-char int, BOM, raw byte 0xFF, 100000 '[' depth, over-cap; whitespace admitted; raw control/-0/-01; 20-char signed passes JSON then refused at CONSUMER with C2I-EXPORT; depth 16 pass / 17 refuse. Matches CB406. At RED fails MISSING."
+    },
+    {
+      "id": "R08",
+      "stance": "AGREE",
+      "evidence": "Lines 812-846: first r4=self.r4(); check_setup_link digest vector, altered setup bytes, bad/upper/short/None/int sha, missing key, non-str key, and a _HostileKey proving zero __eq__/__hash__ calls. Matches CB407/CB402. At RED fails MISSING."
+    },
+    {
+      "id": "R09",
+      "stance": "AGREE",
+      "evidence": "Lines 864-877: first self.r4(); counted(legacy,'extract_compiled') proves the B9 pin guards extract_compiled (b9+space, bytearray, over-cap all refuse C2B-POLICY with zero calls) and a genuine plan calls it once. Matches CB407. At RED fails MISSING."
+    },
+    {
+      "id": "R10",
+      "stance": "AGREE",
+      "evidence": "Lines 879-907: first self.r4(); faulted r2 raises C2I-EXPORT/SETUP/PROFILE kept verbatim as 'C2B-CONSUMER: '+msg; 7 nonconforming shapes collapse to the fixed literal; LINK precedes CONSUMER (bad link refuses with r2 never called). Matches CB408. At RED fails MISSING."
+    },
+    {
+      "id": "R11",
+      "stance": "AGREE",
+      "evidence": "Lines 909-948: first self.r4(); 22 BRIDGE disagreements via consumer_wrapper incl. format /1, v1 8-entry and superseded 14-entry maps, stale DECLARED_SUBSET rustAcceptance, vkProfile/jsonParseLimits removal, 17th label, changed setupRecordSha256Declared, and envData for another expiry; each must fail closed C2B-BRIDGE. Matches CB409. At RED fails MISSING."
+    },
+    {
+      "id": "R12",
+      "stance": "AGREE",
+      "evidence": "Lines 950-973: first r4=self.r4(); legacy_env_from_host(good envData)==legacy.env_data without mutating input, plus 7 shape/type mutations refuse C2B-BRIDGE. Matches contract section 5. At RED fails MISSING."
+    },
+    {
+      "id": "R13",
+      "stance": "AGREE",
+      "evidence": "Lines 975-1055 (F1): first self.r4(); T5/T6/T7 contexts==formatter; 33-key set; 16 consumerLabels/9 builderLabels/10 false flags/4 limitations literals; no 'subset'; five R4-independent anchors (legacy constants build_k10_inputs.py 61-87; VK488/proof192; blake2b256(K2 VK)==K6 vkDigest; host digest of K6 statement; inline issue CBOR==host encode) verified; set(expected)==MANIFEST_KEYS, 33 per-field subTests, exact int types, identity-False flags, byte-exact canonical_json. Independent of R4. At RED fails MISSING."
+    },
+    {
+      "id": "R14",
+      "stance": "AGREE",
+      "evidence": "Lines 1065-1091: first self.r4(); umask read-and-restore, run_main success, exact tree==ROSTER+contexts/, no .tmp, file 0o644&~umask, dirs 0o755&~umask, inputs byte-unchanged. Matches CB411/R4-API outputs. At RED fails MISSING."
+    },
+    {
+      "id": "R15",
+      "stance": "AGREE",
+      "evidence": "Lines 1093-1116: first self.r4(); arity5/non-canonical-expiry/existing-outdir/bad-name/absent-input refusals; precedence ARGV>OUTDIR>READ; tree(scratch)==baseline. Matches section 3 stage order. At RED fails MISSING."
+    },
+    {
+      "id": "R16",
+      "stance": "AGREE",
+      "evidence": "Lines 1118-1151: first self.r4(), then require_unprivileged() (uid0 STOP never reached at RED); 0555 parent -> C2B-WRITE with nothing created; consumer_wrapper edits a scratch input copy between READ and REREAD -> C2B-REREAD with output removed, leaving only input copies and empty ro dir. Matches CB411 cleanup. At RED fails MISSING."
+    },
+    {
+      "id": "R17",
+      "stance": "AGREE",
+      "evidence": "Lines 1153-1187: first self.r4(); consumer baseline reaches all 7 host APIs on deep copies without mutation (independent of R4), then a full CLI run shows builder's extra host calls equal exactly the 4 BUILDER_HOST_APIS, inputs unchanged, output tree exact. Matches CB409/CB410 host usage. At RED fails MISSING."
+    },
+    {
+      "id": "FX01",
+      "stance": "AGREE",
+      "evidence": "Whole 1192-line test read; ROOT-LITERAL-ASSEMBLY parts 27341+16865+13480+8083=65769 bytes, combined sha f6514a47... matches MANIFEST, PROPOSED-RED-ENVELOPE and F1 contract. Prefix+newA(R01-R08)+newB(R09-R13)+unchangedC(R14-R17); oldRedEvidenceTransfers false. Literal concatenation, no source edits."
+    },
+    {
+      "id": "FX02",
+      "stance": "AGREE",
+      "evidence": "Six GOVERNANCE_PINS (lines 49-56) match packet MANIFEST/CP08 exactly; R00 reads only the 7 in-envelope PINS and the adopted r2 pin, not the out-of-envelope docs (prefix 47-48), consistent with CP08 literalCompatibility.requiredNext and the envelope governancePinsRuntimeLayoutNote. Decision: exact root in-envelope checks + source audit satisfy R00's current obligation, CONDITIONAL on root performing the six-pin pre/post verification (recorded, not waived)."
+    },
+    {
+      "id": "FX03",
+      "stance": "AGREE",
+      "evidence": "Derived RED (1 pass R00, 17 identical MISSING AssertionError failures, 0 errors, exit1, empty stdout, scratch 0700 empty, 8-file/pins/modes/listings unchanged) matches R4-CONTRACT.md section 8, R4-API.json 'red' and PROPOSED-RED-ENVELOPE.expected; absence-only is RED, present-but-unloadable is ERROR/STOP via load_r4 251-256."
+    },
+    {
+      "id": "FX04",
+      "stance": "AGREE",
+      "evidence": "CB401 NotImplementedError stub passes R00 and R01 only (structural), and errors on all of R02-R17 because each invokes a stubbed seam function before any assertion; passes NONE of R02-R17, matching the review-time meaningfulness predicate and R4-CONTRACT.md section 8. No stub created, imported or run."
+    },
+    {
+      "id": "FX05",
+      "stance": "AGREE",
+      "evidence": "PROPOSED-RED-ENVELOPE argv internally consistent with the contract: python3.14 pinned path+sha, isolated 0555/files 0444, scratch 0700 empty, uid-unprivileged, python -I -B, PATH/LANG/PYTHONDONTWRITEBYTECODE only, cpu10/wall20/as512MiB/fsize2MiB/core0, ro /usr + isolated and only scratch writable, bwrap --unshare-all; stdout/stderr to exclusive regular files bounded by RLIMIT_FSIZE (not pipes). This is a proposal, not execution permission; actual effects and bwrap isolation are unobserved; rlimits alone are not network isolation; prerequisite failure is STOP, one attempt."
+    },
+    {
+      "id": "FX06",
+      "stance": "AGREE",
+      "evidence": "Expectations come from prefix literals/formatters and pinned r2/host_codec/legacy (independent of R4), never R4 output; wrappers (counted/faulted/consumer_wrapper) delegate or inject one labelled fault restored in finally and touch only r2/host_codec/legacy (lines 427-468); no os/builtins/json/R4 patch. RR-F01 future-GREEN coverage now closed (all 33 values); consumer baseline independent of R4 (R17); negatives are explicit invalidity, not synthetic. Disclosed GREEN limitations (OD1/OD2, genuine-value indistinguishability, anchors-by-reading) recorded, non-blocking."
+    },
+    {
+      "id": "FX07",
+      "stance": "AGREE",
+      "evidence": "CP08 adopts r2 for test authoring only; builderReliancePermitted/native false; r2 (not v1) imported; v1 prohibited/absent and asserted absent (R00 506-508, R01 600); no /2-to-/1 or CB-r1 routing; old superseded profile not relabeled; old RED c9375097 does not transfer (ROOT-LITERAL-ASSEMBLY.oldRedEvidenceTransfers false, ROOT-OLD-RED-ACCEPTANCE bound to old bytes); all 20 families/full finance/ACTUS/DeFi/PCD recursion/private handoff/multiparent/real Preprod OPEN; no curve/Groth16/Rust-acceptance/ledger inference."
+    }
+  ],
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/MANIFEST.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/test_c2_builder_r4.py",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-CONTRACT.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-API.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-MANIFEST-F1-CONTRACT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/build_k10_inputs.py",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/host_codec.py",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/c2_issue_artifacts_r2.py",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/ROOT-CP08-SOURCE-ADOPTION.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/ROOT-MEANINGFULNESS-ACCEPTANCE.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/ROOT-PUBLIC-FIXTURE-PINS.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/ROOT-LITERAL-ASSEMBLY.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/PROPOSED-RED-ENVELOPE.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/F1-AUTHOR-REVIEW.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/ROOT-OLD-RED-ACCEPTANCE.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json"
+    ],
+    "unreadPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/B9-APPLIED-BLUEPRINT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/SOL-RENDERER.py.txt",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/SOL-INTEGRATION-CONTRACT.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/C2-PROFILE-R2-CONTRACT.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/C2-PROFILE-R2-API.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-TEST-INTERFACE.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-PREFIX-NOTES.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/USER-BOTH-OPUS-RULE.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-R01-R08-CONTRACT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-R01-R08-NOTES.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-R09-R13-CONTRACT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-R09-R13-NOTES.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-R14-R17-CONTRACT.json",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-R14-R17-NOTES.md",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/r4-f1-full-tests-review-packet/R4-MANIFEST-F1-NOTES.md"
+    ],
+    "limitations": [
+      "Source-only, read-only: nothing executed, imported, compiled, AST-parsed, hashed, linted or subprocessed; all byte/sha pins taken as root-mechanically verified and not recomputed; runtime behaviour is prediction, not observation.",
+      "B9-APPLIED-BLUEPRINT.json (opaque, 308672 B) body not read: per the packet it is optional for source authoring; the pinned legacy.extract_compiled semantics and R00's independent policy recomputation (test 534-537) were reasoned from build_k10_inputs.py 397-430 rather than from the blueprint body.",
+      "CP r2 contract/API (C2-PROFILE-R2-CONTRACT.md, C2-PROFILE-R2-API.json) not opened; the 16 labels / 12 keys / 11 stages / 7 host APIs were verified directly against the actual c2_issue_artifacts_r2.py source and R4-API.json frozen dependency, which is stronger than the contract text.",
+      "SOL-RENDERER.py.txt and SOL-INTEGRATION-CONTRACT.md not read; the test asserts final output bytes via legacy.uplc_term and canonical_json independently of the renderer, so renderer internals do not affect this test-source review (they are a future implementation/Muse concern).",
+      "The three per-part CONTRACT/NOTES JSONs, R4-MANIFEST-F1-NOTES.md, R4-TEST-INTERFACE.json, R4-PREFIX-NOTES.md and USER-BOTH-OPUS-RULE.md not opened; their obligations are captured by R4-CONTRACT.md section 7 (read in full) and R4-MANIFEST-F1-CONTRACT.json (read in full), so the R00-R17 and F1 dispositions were derived without them.",
+      "No R4 implementation or stub was provided, created, imported or run; stub meaningfulness is a source prediction only. Same-provider; no provider/model diversity. This single audit is one of the two agreeing audits required before any root execution decision."
+    ]
+  },
+  "recommendation": {
+    "sourceReady": true,
+    "ordinaryRedReady": true,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "firstBlockedBoundary": "Host launch of the proposed ordinary RED is root-only and gated on a root decision plus a second fresh substantive agreeing non-author audit (this is one such audit) and root's mechanical pre/post verification of the six out-of-envelope GOVERNANCE_PINS; beyond RED, the R4 implementation does not exist and GREEN, the CP08 r2 reliance decision, R4 adoption and builderReliancePermitted all remain blocked. sourceReady here authorizes only ordinary R4 test authoring and one ordinary RED consideration, never builder implementation adoption, native/VM/prover/ledger authority."
+  },
+  "authority": {
+    "executed": false,
+    "nativeAuthority": 0,
+    "adopted": false,
+    "providerDispatched": false
+  },
+  "predictedRedResult": "Against the proposed isolated envelope (python3 -I -B isolated/test_c2_builder_r4.py, build_k10_inputs_r4.py ABSENT), I independently predict: setUpModule succeeds (all 7 PINS present and matching, scratch is an empty 0700 directory, no v1 and no __pycache__, legacy/host_codec/c2_issue_artifacts_r2 import cleanly, v1 not pulled into sys.modules). unittest discovers exactly 18 test methods across four R4TestBase subclasses (TestR00Prerequisites 1, TestR01ToR08 8, TestR09ToR13 5, TestR14ToR17 4); R4TestBase itself defines no test_ method and contributes none; no extra/inherited test. TestR00Prerequisites.test_r00_prerequisites PASSES (it never references R4 and all its pin/module/fixture/r2/HIST/B9 cross-checks hold on the pinned bytes). Each of the 17 methods test_r01..test_r17 FAILS with the single identical AssertionError message 'missing implementation: build_k10_inputs_r4.py' raised by load_r4 via case.fail at the first self.r4() call, before any other assertion, wrapper, filesystem write, mkfifo, umask toggle, 0555-parent WRITE, REREAD, counter or require_unprivileged executes. Totals: 18 run, 1 pass, 17 failures, 0 errors, process exit code 1, stdout empty, stderr the unittest summary only. Side effects: scratch remains empty and 0700; the eight isolated/ files and the six governance pins remain byte/length/mode/listing-identical before and after; no file outside scratch is created or mutated. Any deviation (a prerequisite/pin/malformed-fixture/setUpModule error, an ImportError/SyntaxError from a present R4 file, an R00 failure, or any unittest error) is STOP, not RED, with no retry and no tuning. The earlier RED for test sha c9375097 does not transfer to these bytes.",
+  "stubMeaningfulnessPrediction": "For a CB401-conformant stub R4 (exactly the 9 imports hashlib/json/os/re/stat/sys/build_k10_inputs as legacy/c2_issue_artifacts_r2/host_codec, exactly one '# === C2B-R4-APPEND-SEAM ...' line, and the 7 public functions parse_expiry/read_public_file/parse_public_json/check_setup_link/legacy_env_from_host/plan_outputs/main each raising NotImplementedError, with no sys.modules/sys.path/importlib/c2_issue_artifacts usage): R00 PASSES (R4-independent) and R01 PASSES (purely structural AST/callability oracle that a NotImplementedError body still satisfies). All of R02-R17 ERROR rather than pass, because each reaches a stubbed seam function before any assertion can succeed - R02/R03/R07/R09/R10/R11/R13 via self.plan()->plan_outputs; R04 via parse_expiry; R06 via read_public_file; R07 also via parse_public_json; R08/R12 via check_setup_link/legacy_env_from_host; R05/R14/R15/R16/R17 via main through run_main (R17 first completes the real r2 baseline, then errors on main). Therefore the stub passes NONE of R02-R17, satisfying the review-time meaningfulness predicate and R4-CONTRACT.md section 8. Prediction only; no stub was created, imported, compiled or executed."
+}

@@ -1,0 +1,21 @@
+language "moriarty/1";
+agreement HoldoutBounds {
+  state acc: UInt = 0;
+  state flag: Bool = false;
+  action add(x: UInt, y: UInt) { next acc = x + y; }
+  action sub(x: UInt, y: UInt) { next acc = x - y; }
+  action mul(x: UInt, y: UInt) { next acc = x * y; }
+  action cmp(x: UInt, y: UInt) {
+    requires x < y;
+    requires y >= x;
+    requires x <= y;
+    requires y > x;
+    requires x not= y;
+    requires not (x == y);
+    next flag = x + 1 == y;
+  }
+  action beq(p: Bool, q: Bool) {
+    next flag = p == q;
+    requires flag not= (p not= q);
+  }
+}

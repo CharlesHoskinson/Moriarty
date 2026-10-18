@@ -1,0 +1,96 @@
+{
+  "coverage": {
+    "limits": "No shell, code execution, computation of hashes, structural graph diff, network, RNG, proof, key, wallet, signing, or ledger operation was performed. Hash identity was cross-checked only against INPUT-INDEX.json and in-file pins, not recomputed.",
+    "readPaths": [
+      "INPUT-INDEX.json (complete)",
+      "R2 README.md, CHANGELOG.md, SOURCE-MANIFEST.json, OWN-OUTPUT-ALLOWLIST (complete)",
+      "R2 graphify-out/GRAPH_REPORT.md (complete)",
+      "R2 observations/first-setup-git-source-record.json (complete)",
+      "R2 graphify-out/graph.json: targeted windows at k5e_commit (lines 20727-20742), k5e_edge_001 (lines 81161-81177), and fragment_updates/correction (lines 81699-81800); not a full byte-by-byte read",
+      "ROOT EXACT-GRAPH-ADDITIONS-R2.json (complete)",
+      "R1 independent review REPORT.md, FINDINGS.json, PROCESS.json (complete)",
+      "R1 SOURCE-MANIFEST.json and GRAPH_REPORT.md (complete, for retained-observation and count comparison)",
+      "Capsule PUBLICATION.json lines 1-20 plus targeted search for 82c20ad4"
+    ],
+    "skippedPaths": [
+      "R2 graph.json outside the targeted windows listed above (remainder of base 1356 nodes/3620 links and R1 additions 002-030 in situ; checked instead via ROOT EXACT-GRAPH-ADDITIONS-R2.json and R1 FINDINGS F-02)",
+      "R1 graph.json (4d9419a4) and base R3 graph payloads in full",
+      "Most capsule payloads (INVENTORY.md, SOURCE-PUBLICATION-SELECTION.json, K5-RESULT-MANIFEST.json, K5-RAW-OBSERVATION.json, K5-ACTUAL-ADOPTION.json, logs/receipts/reviews) beyond the PUBLICATION.json spot-check, in reliance on the already-completed R1 review as instructed",
+      "All original absolute paths (never opened; mirror paths only)"
+    ]
+  },
+  "crosschecks": [
+    {
+      "evidence": [
+        "k5e_commit node in R2 graph.json:20727-20742",
+        "k5e_edge_001 in R2 graph.json:81161-81177",
+        "fragment_updates correction block graph.json:81786-81797 and root EXACT-GRAPH-ADDITIONS-R2.json:1005-1016, retainedObservationSha256 line 1019"
+      ],
+      "id": "X-01",
+      "limits": "I did not recompute the diff between R1 graph 4d9419a4 and R2 graph c808a2f6 byte-by-byte; the 'only two items changed' claim rests on the root structural statement plus the targeted windows, which match the root extract exactly.",
+      "status": "observed-match (spot-verified, not full-diffed)"
+    },
+    {
+      "evidence": [
+        "SOURCE-MANIFEST.json:100-113 (30/30; nodes 29/1; links 26/4)",
+        "OWN-OUTPUT-ALLOWLIST fragmentCounts:36-64",
+        "graph.json fragment_updates:81709-81718",
+        "GRAPH_REPORT.md:14-17 (1386/3650, 18 components, full node 1385/1, full effective links 3427/220/3 with GRAPH_REPORT.md:16 evidence_type-else-type basis)"
+      ],
+      "id": "X-02",
+      "limits": "Component count 18 and full-graph classifications were not recomputed (no execution); they are consistent across GRAPH_REPORT.md and allowlist fragmentCounts.",
+      "status": "descriptive agreement observed; GRAPH_REPORT.md:15 mislabel noted in F-R2-02"
+    },
+    {
+      "evidence": [
+        "INPUT-INDEX.json entries: R2 graph c808a2f6 (3516078 bytes), GRAPH_REPORT 42a3118a, SOURCE-MANIFEST 97ae540b, README a7e04fb8, CHANGELOG d841dd33, observation b3b6b083, allowlist f9d1e366",
+        "R2 OWN-OUTPUT-ALLOWLIST:4-34 lists exactly the six payloads (graph, report, manifest, README, changelog, observation) with matching hashes; allowlist itself self-excluded",
+        "R2 SOURCE-MANIFEST.json:117-127, GRAPH_REPORT.md:10, OWN-OUTPUT-ALLOWLIST limitations:71-77"
+      ],
+      "id": "X-03",
+      "limits": "Hashes were compared as recorded pins; no hashing was executed in this read-only review.",
+      "status": "present and pin-consistent"
+    }
+  ],
+  "findings": [
+    {
+      "blocking": false,
+      "description": "F-01 is genuinely resolved in the R2 graph payload. Node k5e_commit and edge k5e_edge_001 are now INFERRED at confidence_score 0.8, citing observations/first-setup-git-source-record.json at /published_git/head with evidence_sha256 b3b6b0830101ee5bc6db0cd4dc82c021ca4a59cadde3e6a1089b7ec4afd52fb4, and an explicit observation_note that PUBLICATION.json /branch contains only 'utxo' and does not state this commit. That retained record contains head 82c20ad4084b02745898cb3696689e876ff4fbec at /published_git/head, is byte-identical to the R1 SOURCE-MANIFEST (both pinned b3b6b083 in INPUT-INDEX.json), is not PUBLICATION.json/branch, is not a newer Git observation, and creates no hash self-reference (the new R2 SOURCE-MANIFEST pins it as an input at :94-98 and in citation_correction :117-127). Updated descriptive counts agree in SOURCE-MANIFEST new_layer (nodes 29 EXTRACTED/1 INFERRED, links 26/4), allowlist addedNodeClassifications/addedLinkClassifications, graph.json fragment_updates, and root EXACT-GRAPH-ADDITIONS-R2.json; full effective links 3427/220/3 on the evidence_type-else-type basis and totals 1386/3650 with 18 components are stated consistently in GRAPH_REPORT.md:14-17 and the allowlist.",
+      "evidence": [
+        "R2 graph.json:20727-20742 (k5e_commit INFERRED 0.8, source observations/first-setup-git-source-record.json /published_git/head, sha b3b6b083)",
+        "R2 graph.json:81161-81177 (k5e_edge_001 capsule -published_at-> commit, same INFERRED 0.8 citation)",
+        "R2 observations/first-setup-git-source-record.json:11-16 (published_git head 82c20ad4084b02745898cb3696689e876ff4fbec, branch utxo); its content matches R1 SOURCE-MANIFEST.json:1-110 and INPUT-INDEX.json pins both files to b3b6b083",
+        "Capsule PUBLICATION.json:4-5 (branch 'utxo', priorCommit dd449bc9); targeted search found no 82c20ad4 in that file, corroborating that /branch cannot support an EXTRACTED claim",
+        "R2 SOURCE-MANIFEST.json:100-113 and 117-127; R2 README.md:3-5; CHANGELOG.md:5-8; GRAPH_REPORT.md:8-10 and 17"
+      ],
+      "file": "graphify-out/graph.json, SOURCE-MANIFEST.json",
+      "id": "F-R2-01",
+      "line": 20727,
+      "recommendation": "No change to the two corrected items. Root verifies the exact committed R2 bytes (graph c808a2f6, allowlist f9d1e366) before push, as with R1.",
+      "severity": "info"
+    },
+    {
+      "blocking": false,
+      "description": "One descriptive mislabel remains in GRAPH_REPORT.md:15, which reads 'Added node classes: {EXTRACTED: 1385, INFERRED: 1, AMBIGUOUS: 0}'. 1385/1 is the full-graph node classification, not the added-layer classification (29/1). The added link classes on the same line (26/4) are correct, the immediately following bullet (line 16) correctly labels 1385/1 as 'Full node classes' with full effective links 3427/220/3, line 17 correctly states the remaining 29 nodes and 29 links retain R1 values, and SOURCE-MANIFEST.json:103-107, the allowlist addedNodeClassifications, graph.json fragment_updates, and the root extract all give the correct added counts of 29/1 and 26/4. This is a wording/label inconsistency in one report line, not a graph-payload, citation, or provenance defect, and it does not reopen F-01.",
+      "evidence": [
+        "R2 graphify-out/GRAPH_REPORT.md:15 (mislabelled 'Added node classes' 1385/1; added link classes 26/4 correct)",
+        "R2 graphify-out/GRAPH_REPORT.md:16-17 (correct full node classes 1385/1 and 29 remaining nodes/links)",
+        "R2 SOURCE-MANIFEST.json:103-112 and OWN-OUTPUT-ALLOWLIST:43-62 and graph.json:81709-81718 (added 29/1 nodes, 26/4 links)"
+      ],
+      "file": "graphify-out/GRAPH_REPORT.md",
+      "id": "F-R2-02",
+      "line": 15,
+      "recommendation": "Non-blocking: root may correct the single word/label on line 15 opportunistically; do not run a cosmetic correction loop that would churn graph/report/allowlist hashes. The correct added counts are unambiguously recorded in the manifest, allowlist, fragment_updates, and root extract.",
+      "severity": "minor"
+    }
+  ],
+  "positions": [],
+  "recommendation": {
+    "firstBlockedBoundary": "A new exact K6 operator plus separate crypto authorization before any serialized-PK load/deserialization, proving, or verification; retention of the PK/setup record IN PLACE grants no operation. This boundary is unchanged by R2.",
+    "prerequisiteClosed": true,
+    "scope": "source-navigation-publication-only",
+    "verdict": "READY (exact navigation/publication only)"
+  },
+  "report": "## Verdict\n\n**READY \u2014 exact navigation/publication only.** F-01, the sole blocking finding of R1 review `465b3236` (NOT READY, F-01 only), is genuinely resolved in the current 7-file R2 fragment (graph `c808a2f6`, allowlist `f9d1e366`). This verdict grants no source approval, installation, proof, key, ledger, or target acceptance, and root must verify the exact committed bytes before push.\n\n## What was verified\n\nBoth corrected items are INFERRED at 0.8 citing the retained Git observation, not `PUBLICATION.json /branch`: node `k5e_commit` ([graph.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-first-setup-luna-graph-fragment-r2-20261016/graphify-out/graph.json:20727)) and edge `k5e_edge_001` ([graph.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-first-setup-luna-graph-fragment-r2-20261016/graphify-out/graph.json:81161)) cite `observations/first-setup-git-source-record.json` at `/published_git/head` with SHA `b3b6b083`. That file's `/published_git/head` is `82c20ad4084b02745898cb3696689e876ff4fbec`; it is byte-identical to the retained R1 `SOURCE-MANIFEST.json` (both pinned `b3b6b083` in `INPUT-INDEX.json`), is not `PUBLICATION.json /branch` (which contains only `utxo`, [PUBLICATION.json](/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/current-rust-groth16-first-setup-2026-10-16/PUBLICATION.json:4)), is not a newer Git observation, and creates no hash self-reference; the R2 [SOURCE-MANIFEST.json](/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-first-setup-luna-graph-fragment-r2-20261016/SOURCE-MANIFEST.json:117) pins it and qualifies the inference. Descriptive counts agree (new nodes 29 EXTRACTED/1 INFERRED, new links 26/4, full effective links 3427/220/3 via `evidence_type` else `type`, totals 1386/3650, 18 components) across the manifest, allowlist, `fragment_updates`, and root `EXACT-GRAPH-ADDITIONS-R2.json`, matching the root statement that only `k5e_commit` and `k5e_edge_001` changed semantically over the preserved 1356/3620 base and otherwise-unchanged R1 additions. All 7 current files are present (6 payloads plus the self-excluded allowlist); `--no-viz`/no HTML and runtime token accounting UNKNOWN are stated consistently. One non-blocking mislabel is recorded as F-R2-02: [GRAPH_REPORT.md](/home/charl/moriarty-eutxo-validation-2026-10-12/current-rust-cardano-first-setup-luna-graph-fragment-r2-20261016/graphify-out/GRAPH_REPORT.md:15) calls the full node totals (1385/1) 'Added node classes'; the correct added counts appear in the same report and every other record, so no cosmetic loop is warranted. The R1 wrong citation is preserved historically and R2 corrects only F-01.\n\n## Scope, limitations, and blocked boundary\n\nAll remaining claims keep their already-reviewed published K5 capsule scope: first single-party test setup only; only the K6 SOURCE-preparation prerequisite is closed. VK roundtrip parse was performed, but serialized-PK decode/subgroup checks, embedded-VK/PK-VK matching, proof generation, keyed verification, and any ledger work were not performed. `consumerCanCheckVkToMatrixLink` is false, the controller can forge under this test profile, the synthetic context is unauthenticated, F03 external installation/build is unobserved, the K4H binary was reused, and fresh-PK retention IN PLACE grants no operation. No repaired four-way status is claimed in this K5 fragment. All 20 UTxO families, ACTUS/DeFi/general obligations, recursion, private handoff, bounded multi-parent PCD, universal certificates, real Cardano Preprod, and the distinct Midnight target remain open, with no percentage of full compatibility. First blocked boundary: a new exact K6 operator plus separate crypto authorization before any PK load, prove, or verify.\n\n## Independence\n\nFresh independent muse-wonder-1.0 HIGH context in ordinary non-security graph-audit routing; I did not author the candidate, operator, or source review, and I executed nothing (no shell, code, tests, RNG, keys, proofs, wallet, signing, ledger, network, or nested agents). I invented no provider identity, authority, approval, or votes: `positions` is empty. Maintainer reviews are not public developer permissions, and source/proof/security/installation/target acceptance never follows from this graph.",
+  "reviewToken": "current-rust-cardano-first-setup-graph-independent-muse-r2-completion-20261016"
+}

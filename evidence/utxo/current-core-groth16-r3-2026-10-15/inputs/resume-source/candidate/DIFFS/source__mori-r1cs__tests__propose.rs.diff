@@ -1,0 +1,29 @@
+--- origin-r2/source/mori-r1cs/tests/propose.rs
++++ successor/source/mori-r1cs/tests/propose.rs
+@@ -17,7 +17,7 @@
+         (RESERVE, "reserve-rebate4", "rebate"),
+         (RESERVE, "reserve-rebate2", "rebate"),
+     ] {
+-        let rel = compile(source, options(action, CapBinding::PublicCap));
++        let rel = compile_ok(source, options(action, CapBinding::PublicCap));
+         let oracle = oracle_case(case);
+         let proposed = witness::propose(&rel, &oracle.scenario, Some(oracle.cap)).expect("reference succeeds");
+         assert_eq!(proposed, oracle_values(&rel, &oracle, Some(oracle.cap)), "{case}: reference vs oracle");
+@@ -28,7 +28,7 @@
+ #[test]
+ fn a_reference_refusal_proposes_nothing() {
+     // P4 [AUTHOR]: 21 <= 20 is false and bonus is false: `requires` refuses at step 2.
+-    let pay = compile(PAYROLL, options("pay", CapBinding::PublicCap));
++    let pay = compile_ok(PAYROLL, options("pay", CapBinding::PublicCap));
+     let mut scenario: mori_core::Scenario = serde_json::from_value(vector("P1")["scenario"].clone()).unwrap();
+     scenario.inputs.insert("bonus".into(), b(false));
+     scenario.inputs.insert("ceiling".into(), u(20));
+@@ -51,7 +51,7 @@
+ fn a_reference_success_is_not_trusted() {
+     // Take the honest proposal and corrupt one claimed effect: the relation refuses,
+     // although the corrupted claim came out of the same proposal path.
+-    let rel = compile(INVOICE, options("open", CapBinding::PublicCap));
++    let rel = compile_ok(INVOICE, options("open", CapBinding::PublicCap));
+     let oracle = oracle_case("invoice-open");
+     let mut proposed = witness::propose(&rel, &oracle.scenario, Some(oracle.cap)).unwrap();
+     proposed.effects[0] = EffectValues::Amount(UInt(103));

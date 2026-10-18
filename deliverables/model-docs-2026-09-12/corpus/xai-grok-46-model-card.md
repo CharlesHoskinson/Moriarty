@@ -1,0 +1,77 @@
+---
+source_url: "https://docs.x.ai/developers/models/grok-4.6"
+captured_at: "2026-09-12T17:29:46+00:00"
+source_text_sha256: "6b56a2e67e5ec5c2ce66f2784b62df78ce781cc78f870dbed302d331d9434808"
+---
+
+Models
+/
+Grok 4.6
+grok-4.6
+SpaceXAI's frontier model for coding, agentic tasks, and knowledge work.
+Copy for LLM
+View as Markdown
+Read announcement
+Try in playground
+At a glance
+Modalities
+Text, Image
+Text
+Context window
+500,000
+Pricing
+$2.00
+$6.00
+Capabilities
+Function calling
+Connect the xAI model to external tools and systems.
+Structured outputs
+Return responses in specific, organized formats.
+Reasoning
+The model can think before responding.
+Pricing
+Input
+Tokens
+$2.00
+/ 1M tokens
+Cached tokens
+$0.50
+/ 1M tokens
+Output
+Tokens
+$6.00
+/ 1M tokens
+You are charged for each token used when making calls to our API.
+Using cached input tokens can significantly reduce your costs.
+This model is available on multiple clusters, you can find full regional based pricing below.
+How does pricing work
+Tool pricing
+Request increased rate limits
+Higher context pricing
+We charge different rates for requests which exceed the 200K context window
+Details
+Model name
+grok-4.6
+Region
+us-east-1
+Batch API
+Not supported
+Reasoning efforts
+Supported
+low, medium, high, xhigh
+Default
+high
+Rate limits
+Requests per second
+150
+Tokens per minute
+50,000,000
+Learn more
+Quickstart
+Create an API Key and make your first request.
+Learn more
+Tool use
+Let Grok perform actions and look up information.
+Learn more
+Structured outputs
+Let Grok generate structured outputs.

@@ -1,0 +1,54 @@
+[package]
+name = "moriarty-vi-signer"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.99.0"
+license = "Apache-2.0 OR MIT"
+# Fresh ephemeral test-key producer for the genuine compiled-VI experiment.
+# SOURCE ONLY: this manifest grants no build or execution authority.
+#
+# Staging/materialization contract (typed; see EXPERIMENT-PROPOSAL.json):
+# runner/operator.py stages this file as
+#   capture/work/signer/Cargo.toml        (staged copy; hash verified)
+#   capture/work/signer/src/main.rs       (staged copy; hash verified)
+#   capture/work/signer/Cargo.lock        (staged copy; hash verified)
+# and stages the frozen Moriarty workspace snapshot as the sibling tree
+#   capture/work/moriarty/{Cargo.toml, rust-toolchain.toml, crates/...}
+# so that the path dependency below resolves to
+#   capture/work/moriarty/crates/mori-core
+# WITH its workspace parent intact. mori-core inherits edition,
+# rust-version, license and every workspace dependency from that parent
+# manifest; this is why the helper is NOT placed inside that workspace
+# tree (the frozen workspace would otherwise absorb or exclude it) and
+# why no registry substitute is ever acceptable: the intent APIs must be
+# the exact pinned Core source (intent.rs SHA-256
+# a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c).
+# The Cargo.lock staged beside this manifest MUST list the package
+# moriarty-vi-signer itself plus mori-core and its transitive closure;
+# the K2 experiment lock cannot serve unchanged because it predates this
+# package. That lock, the toolchain/sysroot/linker bodies and the Aiken
+# binary pin are PENDING_UNMATERIALIZED at authoring time: the operator
+# refuses every pending pin, so this crate cannot build as shipped.
+# Lock generation is a separately counted future resolver step in the
+# proposal; it is never described as ordinary and is not performed here.
+
+[dependencies]
+# Exact path dependency on the staged, hash-verified Core tree. This
+# crate never re-implements Core canonicalization, parsing or intent
+# preparation; it calls mori_core::parse and mori_core::intent.
+mori-core = { path = "../moriarty/crates/mori-core" }
+# Locked by the future signer lock to k256 0.13.4 / ecdsa 0.16.9 (the
+# same curve sources Core itself uses; no second curve implementation
+# and no auxiliary entropy is drawn for signing).
+k256 = { version = "=0.13.4", features = ["schnorr", "ecdsa"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.151" }
+
+[profile.release]
+# A panic must never unwind through secret-bearing frames or print a
+# backtrace. The operator also exports RUST_BACKTRACE=0. Neither fact is
+# a memory-erasure theorem; erasure here is best effort only.
+panic = "abort"
+debug = false
+debug-assertions = false
+overflow-checks = true

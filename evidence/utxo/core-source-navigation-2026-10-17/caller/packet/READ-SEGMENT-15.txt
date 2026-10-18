@@ -1,0 +1,103 @@
+SOURCE-CHECKS.json:127:     "graph.html": "cc6198b546c26d82a42e2e237a95adecf5d27dd175f3ea099e85258a1914ff98"
+SOURCE-CHECKS.json:128:   }
+SOURCE-CHECKS.json:129: }
+INCLUDED-SPECIMEN-CROSSCHECK.json:1: {
+INCLUDED-SPECIMEN-CROSSCHECK.json:2:   "format": "included-specimen-byte-crosscheck/1",
+INCLUDED-SPECIMEN-CROSSCHECK.json:3:   "at": "2026-10-17T08:38:52.042397+00:00",
+INCLUDED-SPECIMEN-CROSSCHECK.json:4:   "files": [
+INCLUDED-SPECIMEN-CROSSCHECK.json:5:     {
+INCLUDED-SPECIMEN-CROSSCHECK.json:6:       "includeTarget": "crates/mori-core/src/sherlock/specimens/factorial.mori",
+INCLUDED-SPECIMEN-CROSSCHECK.json:7:       "capture": "/home/charl/moriarty-c2-opus55-restored-20261017/current-core-comparison/current-main/crates/mori-core/src/sherlock/specimens/factorial.mori",
+INCLUDED-SPECIMEN-CROSSCHECK.json:8:       "priorPacket": "/home/charl/moriarty-c2-opus55-restored-20261017/current-core-comparison/analysis-packet/N12-factorial.mori",
+INCLUDED-SPECIMEN-CROSSCHECK.json:9:       "bytes": 147,
+INCLUDED-SPECIMEN-CROSSCHECK.json:10:       "sha256": "f44d7642fe88d85c44473f0389b3a9b477bb99d0fdf072d05220d4d613b1ef73",
+INCLUDED-SPECIMEN-CROSSCHECK.json:11:       "priorSha256": "f44d7642fe88d85c44473f0389b3a9b477bb99d0fdf072d05220d4d613b1ef73",
+INCLUDED-SPECIMEN-CROSSCHECK.json:12:       "byteIdentical": true,
+INCLUDED-SPECIMEN-CROSSCHECK.json:13:       "sourceCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+INCLUDED-SPECIMEN-CROSSCHECK.json:14:       "scope": "Byteidentity ofpreviouslyinspectedpublicspecimen andexactincludeTarget only; no parser/machine/test/proof execution."
+INCLUDED-SPECIMEN-CROSSCHECK.json:15:     },
+INCLUDED-SPECIMEN-CROSSCHECK.json:16:     {
+INCLUDED-SPECIMEN-CROSSCHECK.json:17:       "includeTarget": "crates/mori-core/src/sherlock/specimens/treefold.mori",
+INCLUDED-SPECIMEN-CROSSCHECK.json:18:       "capture": "/home/charl/moriarty-c2-opus55-restored-20261017/current-core-comparison/current-main/crates/mori-core/src/sherlock/specimens/treefold.mori",
+INCLUDED-SPECIMEN-CROSSCHECK.json:19:       "priorPacket": "/home/charl/moriarty-c2-opus55-restored-20261017/current-core-comparison/analysis-packet/N13-treefold.mori",
+INCLUDED-SPECIMEN-CROSSCHECK.json:20:       "bytes": 188,
+INCLUDED-SPECIMEN-CROSSCHECK.json:21:       "sha256": "f99bd46afdb47a2f1e83564106fa35e26fa737d7ccb103a91a9b89a94bc9b9d4",
+INCLUDED-SPECIMEN-CROSSCHECK.json:22:       "priorSha256": "f99bd46afdb47a2f1e83564106fa35e26fa737d7ccb103a91a9b89a94bc9b9d4",
+INCLUDED-SPECIMEN-CROSSCHECK.json:23:       "byteIdentical": true,
+INCLUDED-SPECIMEN-CROSSCHECK.json:24:       "sourceCommit": "8174e52975d8db9bf59636fea0fa338c0f47c855",
+INCLUDED-SPECIMEN-CROSSCHECK.json:25:       "scope": "Byteidentity ofpreviouslyinspectedpublicspecimen andexactincludeTarget only; no parser/machine/test/proof execution."
+INCLUDED-SPECIMEN-CROSSCHECK.json:26:     }
+INCLUDED-SPECIMEN-CROSSCHECK.json:27:   ],
+INCLUDED-SPECIMEN-CROSSCHECK.json:28:   "allByteIdentical": true,
+INCLUDED-SPECIMEN-CROSSCHECK.json:29:   "nativeAuthority": 0
+INCLUDED-SPECIMEN-CROSSCHECK.json:30: }
+N12-factorial.mori:1: language "moriarty-sherlock-draft/1";
+N12-factorial.mori:2: program Factorial {
+N12-factorial.mori:3:   fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }
+N12-factorial.mori:4:   entry fact(4);
+N12-factorial.mori:5: }
+N13-treefold.mori:1: language "moriarty-sherlock-draft/1";
+N13-treefold.mori:2: program TreeFold {
+N13-treefold.mori:3:   fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }
+N13-treefold.mori:4:   entry fold(branch(leaf(3), leaf(4)));
+N13-treefold.mori:5: }
+DIFF-JUSTIFICATION.md:1: # Citation repair justification
+DIFF-JUSTIFICATION.md:2: 
+DIFF-JUSTIFICATION.md:3: This new candidate applies four source-attribution repairs to the preserved prior graph. It does not alter the prior output directory.
+DIFF-JUSTIFICATION.md:4: 
+DIFF-JUSTIFICATION.md:5: | Finding | Prior graph issue | Repair in v2 | Packet evidence |
+DIFF-JUSTIFICATION.md:6: |---|---|---|---|
+DIFF-JUSTIFICATION.md:7: | F1 | `source:N01-lib.rs -> draft-bridge-module` cited lines 12/13, which declare `sherlock_draft`, not the image bridge. | Module node cites declaration line 23; edge aggregates cfg/path/module lines 21–23. Neighboring test-module declarations use their own correct lines. | N01 lines 21–23: `#[cfg(test)]`, `#[path = "sherlock/draft_image_bridge.rs"]`, `mod sherlock_draft_image;`. |
+DIFF-JUSTIFICATION.md:8: | F2 | `call-context-new -> helper-profile` cited N07 line 157, which is outside `CallContext::new`. | Added `CallContext::proposed_profile` node and moved the helper-profile edge to that method. | N07 line 157: `pub(super) fn proposed_profile(&self) -> &'static str { helper::PROPOSED_PROFILE }`. |
+DIFF-JUSTIFICATION.md:9: | F3 | `core-reference-profile` visibility was incorrectly marked cfg(test). | Corrected it to public through the public Sherlock module and unconditional `reference_types` glob re-export; added module/re-export nodes and citations. | N01 line 8 `pub mod sherlock;`; N02 line 12 `mod reference_types;` and line 16 `pub use reference_types::*;`; N09 line 4 `pub const PROFILE`. |
+DIFF-JUSTIFICATION.md:10: | F4 | Helper-adapter and draft-source-test module path edges repeated the cfg/path line as the module declaration. | Aggregated distinct cfg, path, and declaration citations. | N02 lines 60/61; N01 lines 19/20 (and all adjacent test modules similarly corrected). |
+DIFF-JUSTIFICATION.md:11: 
+DIFF-JUSTIFICATION.md:12: The existing `TYPE_COMPATIBLE` relation remains separate from test caller edges. Actual test invocations added in the caller graph remain marked `test_calls`. No runtime behavior or security conclusion is inferred.
+ROOT-VALIDATION.md:1: # Root mechanical validation
+ROOT-VALIDATION.md:2: 
+ROOT-VALIDATION.md:3: Run from this output directory. The frozen packet is `../bridge-caller-graph-packet/`.
+ROOT-VALIDATION.md:4: 
+ROOT-VALIDATION.md:5: 1. Run `graphify diagnose multigraph --graph graph.json --json`; expect zero dangling endpoints, zero directed endpoint collapses, and zero unverified nodes.
+ROOT-VALIDATION.md:6: 2. Use the standard-library-only Python check below to verify packet hashes, every citation excerpt and every edge endpoint.
+ROOT-VALIDATION.md:7: 3. Compare `SOURCE-CHECKS.json.old_output_sha256` with the prior output files if confirming immutability.
+ROOT-VALIDATION.md:8: 
+ROOT-VALIDATION.md:9: ```python
+ROOT-VALIDATION.md:10: from pathlib import Path
+ROOT-VALIDATION.md:11: import hashlib, json
+ROOT-VALIDATION.md:12: packet = Path('../bridge-caller-graph-packet')
+ROOT-VALIDATION.md:13: manifest = json.loads((packet/'MANIFEST.json').read_text())
+ROOT-VALIDATION.md:14: files = {f['path']: f for f in manifest['files']}
+ROOT-VALIDATION.md:15: graph = json.loads(Path('graph.json').read_text())
+ROOT-VALIDATION.md:16: for f in files.values():
+ROOT-VALIDATION.md:17:     body = (packet/f['path']).read_bytes()
+ROOT-VALIDATION.md:18:     assert len(body) == f['bytes']
+ROOT-VALIDATION.md:19:     assert hashlib.sha256(body).hexdigest() == f['sha256']
+ROOT-VALIDATION.md:20: for obj in graph['nodes'] + graph['edges']:
+ROOT-VALIDATION.md:21:     citations = obj.get('source_citations') or [obj]
+ROOT-VALIDATION.md:22:     for c in citations:
+ROOT-VALIDATION.md:23:         f = files[c['packet_file']]
+ROOT-VALIDATION.md:24:         assert c['source_file'] == f['source'] and c['source_sha256'] == f['sha256']
+ROOT-VALIDATION.md:25:         assert (packet/c['packet_file']).read_text().splitlines()[c['line']-1].strip() == c['excerpt']
+ROOT-VALIDATION.md:26: ids = {n['id'] for n in graph['nodes']}
+ROOT-VALIDATION.md:27: assert len(ids) == len(graph['nodes'])
+ROOT-VALIDATION.md:28: assert all(e['source'] in ids and e['target'] in ids for e in graph['edges'])
+ROOT-VALIDATION.md:29: cfg_calls = [e for e in graph['edges'] if e.get('scope') == 'cfg(test) source only' and e.get('relation') == 'calls']
+ROOT-VALIDATION.md:30: assert {(e['source'], e['target'], e['line']) for e in cfg_calls} == {
+ROOT-VALIDATION.md:31:     ('factorial-source-test', 'factorial-expected', 155),
+ROOT-VALIDATION.md:32:     ('factorial-source-test', 'factorial-provenance', 155),
+ROOT-VALIDATION.md:33:     ('treefold-source-test', 'treefold-expected', 161),
+ROOT-VALIDATION.md:34:     ('treefold-source-test', 'treefold-provenance', 161),
+ROOT-VALIDATION.md:35: }
+ROOT-VALIDATION.md:36: ```
+ROOT-VALIDATION.md:37: 
+ROOT-VALIDATION.md:38: The four `calls` edges above are intentional: each source line contains nested calls to the expected-AST and provenance helper functions as arguments to `check_parse`. The graph separately labels the outer test-to-`check_parse` relationship `test_calls`. Both relations describe source syntax in `cfg(test)`; neither says a test was executed. Do not apply a blanket rule that forbids `calls` edges in test-only source.
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:1: {
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:2:   "at": "2026-10-17T17:19:11.158509+00:00",
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:3:   "sourceFiles": 12,
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:4:   "nodes": 72,
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:5:   "edges": 78,
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:6:   "literalCitations": 165,
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:7:   "graphSha256": "d07d1e31a1fca92dea942727f8f04ad7277b9d52196646f4a51c9fd1a3ff07ee",
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:8:   "rootValidationDocumentationFailure": "Blanket cfgtest=>relation!=calls assertion fails for4 literalAST/provenancehelpercall edges; authornotified; docqualificationpending, no semanticreview inferred",
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:9:   "qualification": "Mechanical excerpt/hash/endpoints only; relationship review pending; no native/security/ledger grant"
+ROOT-CALLER-V2-MECHANICAL-CHECK.json:10: }

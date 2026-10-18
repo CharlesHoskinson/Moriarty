@@ -1,0 +1,1302 @@
+diff --git a/experiments/moriarty-language/README.md b/experiments/moriarty-language/README.md
+index fcbbcba..a30f2fd 100644
+--- a/experiments/moriarty-language/README.md
++++ b/experiments/moriarty-language/README.md
+@@ -110,3 +110,18 @@ to use acceptance without a deployment-owned proof backend returns PROOF_INVALID
+ The example does not sign an authority or move assets. `src/lower-compact.ts` and
+ [compact/MAPPING.md](compact/MAPPING.md) describe the restricted generated numeric
+ kernels; their generated ledger snapshots do not implement financial settlement.
++
++## Run a computed funded repayment
++
++From `experiments/moriarty-language/`, the financial expression CLI can evaluate a computed
++payment and, with `--repayment-state`, prepare the retained Transfer/Repay kernel
++in one local step. See
++[spec/successor/funded-expression-source.md](spec/successor/funded-expression-source.md).
++
++```sh
++node src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema spec/successor/examples/expression-funded-payment.schema.json --snapshots spec/successor/examples/expression-funded-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/expression-funded-payment.mori
++```
++
++The example adds two Quantity arguments, guards a nonnegative sum, updates ordinary
++`paid`, and emits the computed cash and nominal. Default 10+20 pays 30 against due
++100. Success is local preparation only.
+diff --git a/experiments/moriarty-language/spec/successor/README.md b/experiments/moriarty-language/spec/successor/README.md
+index 764d2e9..bf666e3 100644
+--- a/experiments/moriarty-language/spec/successor/README.md
++++ b/experiments/moriarty-language/spec/successor/README.md
+@@ -56,3 +56,8 @@ Its exact implementation audits are pending. The included demo checks and
+ updates ordinary state while retaining financial state; emissions are typed
+ descriptors with no financial execution. Original syntax-only and funded entry
+ points keep their exact profiles. Full agreement declarations and SP02 remain open.
++
++The [funded financial expression adapter](funded-expression-source.md) is a later
++local slice. It keeps the financial expression profile and, with an explicit
++CLI `--repayment-state` file, prepares Transfer/Repay through the retained
++kernel after expression evaluation succeeds.
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.mori b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.mori
+new file mode 100644
+index 0000000..b7a4dc2
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.mori
+@@ -0,0 +1,27 @@
++profile "moriarty-financial-expression-source/1";
++agreement FundedPayment {
++  action pay(first: Quantity<Units<Cash,1>,0>, second: Quantity<Units<Cash,1>,0>,
++             transferId: Text, allocationId: Text) {
++    requires pre.due > 0;
++    let nominal = first + second;
++    requires is_negative(nominal) == false;
++    let payment = magnitude(nominal);
++    requires payment > 0;
++    next.paid = pre.paid + payment;
++    emit Transfer {
++      id: transferId,
++      from: "Payer",
++      to: "Lender",
++      settlementAsset: "Cash",
++      transferAmount: amount<Cash>(payment)
++    };
++    emit Repay {
++      allocationId: allocationId,
++      transferId: transferId,
++      obligationId: "Due100",
++      payer: "Payer",
++      nominalAmount: nominal
++    };
++    ensures post.paid == pre.paid + payment;
++  }
++}
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.schema.json b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.schema.json
+new file mode 100644
+index 0000000..5eadcb8
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.schema.json
+@@ -0,0 +1 @@
++{"args":{"allocationId":["Text"],"first":["Quantity",[["Cash","1"]],"0"],"second":["Quantity",[["Cash","1"]],"0"],"transferId":["Text"]},"assets":["Cash"],"enumTypes":{},"fields":{"due":{"type":["UInt128"],"writeClass":"ordinary"},"paid":{"type":["UInt128"],"writeClass":"ordinary"}},"observations":{},"operations":{"Repay":"RepayFields","Transfer":"TransferFields"},"parties":[],"recordTypes":{"RepayFields":{"allocationId":["Text"],"nominalAmount":["Quantity",[["Cash","1"]],"0"],"obligationId":["Text"],"payer":["Text"],"transferId":["Text"]},"TransferFields":{"from":["Text"],"id":["Text"],"settlementAsset":["Text"],"to":["Text"],"transferAmount":["Amount","Cash"]}},"units":["Cash"],"variantTypes":{},"vaults":[]}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.snapshots.json b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.snapshots.json
+new file mode 100644
+index 0000000..72e2eef
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.snapshots.json
+@@ -0,0 +1 @@
++{"Args":{"allocationId":"Alloc1","first":"10","second":"20","transferId":"T1"},"Obs":{},"Pre":{"due":"100","paid":"0"},"workInitial":"100"}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.state.json b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.state.json
+new file mode 100644
+index 0000000..4ef54be
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-funded-payment.state.json
+@@ -0,0 +1 @@
++{"balances":[{"party":"Payer","asset":"Cash","amount":"100"},{"party":"Lender","asset":"Cash","amount":"0"}],"allowances":[{"party":"Payer","asset":"Cash","remaining":"100","spent":"0"}],"obligations":[{"id":"Due100","debtor":"Payer","creditor":"Lender","denomination":"Cash","settlementAsset":"Cash","principal":"100","accrued":"0","outstanding":"100","allocationRule":"AccrualFirst","conversion":{"mantissa":"1","scale":"0","rounding":"none"},"status":"Outstanding"}],"usedTransferIds":[],"usedAllocationIds":[],"work":{"remaining":"100","spent":"0","closureReserve":"16"}}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/expression-cli.md b/experiments/moriarty-language/spec/successor/expression-cli.md
+index 13c0679..dc7b433 100644
+--- a/experiments/moriarty-language/spec/successor/expression-cli.md
++++ b/experiments/moriarty-language/spec/successor/expression-cli.md
+@@ -15,6 +15,7 @@ node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial
+ node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 SOURCE.mori
+ node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori
+ node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori
++node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
+ ```
+ 
+ Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
+@@ -27,12 +28,19 @@ source header. Flags appear in the shown order, once each. Unknown commands,
+ missing/duplicate/extra/reordered flags and empty arguments reject CLI_USAGE.
+ Unknown --profile values reject CLI_PROFILE before opening files. Formatting
+ accepts no schema; checking requires one. There is no stdin, output-file or
+-in-place mode, profile inference, callback, or financial execution.
++in-place mode, profile inference, or callback. Without `--repayment-state` the
++CLI does not execute financial operations. With that option it still does not
++contact a ledger.
+ Use a path such as ./--example.mori for a filename beginning with --.
+ 
+ Simulation takes the exact ordered form `simulate --profile PROFILE --schema
+-SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori`. It is a local-only adapter
+-for the selected source API's `evaluate(source, snapshotCanonicalJSON)` method.
++SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori`. The financial profile may
++place `--repayment-state STATE_JSON` immediately before SOURCE. That option is
++illegal for check, format, and `moriarty-expression-source/1`. Without the
++option, simulation remains a local-only adapter for the selected source API's
++`evaluate(source, snapshotCanonicalJSON)` method. With the option it calls
++`createFundedFinancialExpressionSourceV1(schema).evaluate(source, snapshots, state)`
++as specified in [funded-expression-source.md](funded-expression-source.md).
+ It accepts neither caller-supplied Core nor a check-only shortcut. The source
+ profile and trusted schema select the same factories as checking. Snapshots are
+ canonical JSON with exactly `Pre`, `Args`, `Obs`, and `workInitial`, as defined
+@@ -48,21 +56,23 @@ stderr, and exits0:
+ 
+ `PROFILE`, `SNAPSHOT_PRE`, `SNAPSHOT_WORK_INITIAL`, and `API_SUCCESS_RESULT`
+ stand for their JSON values. `result` is the exact successful result returned by
+-the selected API. The wrapper does not add a success `workUsed` field; consumers
+-can derive consumed work from `initialWork` and the exact result's
+-`workRemaining` where present. The CLI parses the snapshots for `pre` and
+-`initialWork` only after evaluation succeeds. An API record with
++the selected API. A funded success record also includes `financialPre`, the
++parsed initial repayment state. The wrapper does not add a success `workUsed`
++field; consumers can derive consumed work from `initialWork` and the exact
++result's `workRemaining` where present. The CLI parses the snapshots for `pre`
++and `initialWork` only after evaluation succeeds. An API record with
+ `status: "Rejected"` is written unchanged to stderr, stdout stays empty, and
+ the command exits1. In particular, successful `status: "ExpressionPrepared"`
+-is not a rejection. Rejected output contains no CLI-created tentative post-state
+-or descriptor fields.
++or `status: "FundedExpressionPrepared"` is not a rejection. Rejected output
++contains no CLI-created tentative post-state or descriptor fields.
+ 
+ Checking writes the exact successful SourceChecked API record as one JSON line
+ to stdout, followed by LF. It writes no stderr and exits0. A language rejection
+ writes the exact API Rejected record, without added/removed fields, as one JSON
+ line to stderr and exits1; stdout is empty. This includes its code, span, nodePath
+ and workUsed. Check and format accept no AST, Core, or snapshot. Simulation
+-accepts only its snapshots file; no command accepts caller-supplied AST or Core.
++accepts only its snapshots file and, for the financial profile, the optional
++repayment-state file; no command accepts caller-supplied AST or Core.
+ 
+ Formatting writes exactly the selected profile formatter's result to stdout and exits0,
+ with no stderr. It uses the same parser and formatter as the API, so it does not
+@@ -74,17 +84,19 @@ CLI transport failure instead. Formatting never writes the source file.
+ 
+ CLI admission/read failures write exactly
+ `{"status":"CliRejected","code":CODE,"input":INPUT}` as one JSON stderr line,
+-with empty stdout. INPUT is arguments, schema, source or snapshots. Codes/exits are:
++with empty stdout. INPUT is arguments, schema, source, snapshots or
++repayment-state. Codes/exits are:
+ 
+ | Code | Input | Exit | Meaning |
+ | --- | --- | --- | --- |
+ | CLI_USAGE | arguments | 2 | Invocation differs from the forms above |
+ | CLI_PROFILE | arguments | 2 | Explicit profile identifier is unsupported |
+-| CLI_IO | schema, source or snapshots | 2 | File cannot be opened/read or is not regular |
++| CLI_IO | schema, source, snapshots or repayment-state | 2 | File cannot be opened/read or is not regular |
+ | INPUT_BOUND | schema | 1 | Schema exceeds65536 bytes |
+ | SOURCE_BOUND | source | 1 | Source exceeds65536 bytes |
+ | INPUT_BOUND | snapshots | 1 | Snapshots exceed2,000,000 bytes |
+-| INVALID_UTF8 | schema, source or snapshots | 1 | File bytes are not valid UTF-8 |
++| INPUT_BOUND | repayment-state | 1 | Repayment state exceeds65536 bytes |
++| INVALID_UTF8 | schema, source, snapshots or repayment-state | 1 | File bytes are not valid UTF-8 |
+ | CLI_INTERNAL | arguments | 2 | Unexpected internal failure; no host error detail exposed |
+ 
+ All failures have empty stdout; no partial formatted output is emitted. No
+@@ -93,8 +105,8 @@ Unexpected internal errors cannot be reported as a successful source check.
+ 
+ Admission order: validate complete CLI shape, validate --profile; for check read
+ and decode schema then source, for format read and decode source, and for
+-simulation read and decode schema then source then snapshots; call the selected
+-API.
++simulation read and decode schema then source then snapshots, then repayment-state
++when that option is present; call the selected API.
+ Transport admission necessarily precedes language phases. After valid transport,
+ check results equal the API exactly. A schema file with a trailing newline is not
+ canonical and the existing API determines its rejection. A BOM is retained by
+diff --git a/experiments/moriarty-language/spec/successor/funded-expression-source.md b/experiments/moriarty-language/spec/successor/funded-expression-source.md
+new file mode 100644
+index 0000000..3f496b8
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/funded-expression-source.md
+@@ -0,0 +1,113 @@
++# Funded financial expression source
++
++Local adapter. It evaluates `moriarty-financial-expression-source/1` and, when
++every step succeeds, runs the retained funded-repayment kernel once. It produces
++a prepared local candidate. It does not sign, prove, authenticate, or settle on
++Preview. Full SP02/SP03, K correspondence, and ledger acceptance remain open.
++
++```javascript
++import { createFundedFinancialExpressionSourceV1 } from '../../src/successor/funded-expression-source-v1.ts';
++const language = createFundedFinancialExpressionSourceV1(schemaCanonicalJSON);
++language.evaluate(source, snapshotCanonicalJSON, repaymentStateJSON);
++```
++
++From the repository root:
++
++```sh
++node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema experiments/moriarty-language/spec/successor/examples/expression-funded-payment.schema.json --snapshots experiments/moriarty-language/spec/successor/examples/expression-funded-payment.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/expression-funded-payment.state.json experiments/moriarty-language/spec/successor/examples/expression-funded-payment.mori
++```
++
++`--repayment-state` is legal only for this profile and `simulate`. The flag sits
++immediately before SOURCE. Other commands and the original expression profile
++reject the option. Pure simulate, check, and format keep their previous forms.
++
++## Schema and operations
++
++The trusted schema is the current financial expression schema. This adapter
++rejects any field with `writeClass` `financial`. Pre and post are ordinary
++application fields. Financial state is the separate complete repayment
++projection. Source `ensures` clauses see ordinary staged post, not final
++financial postconditions.
++
++The schema must bind exactly two operations, `Transfer` and `Repay`:
++
++| Operation | Fields |
++| --- | --- |
++| Transfer | `id`, `from`, `to`, `settlementAsset`: Text; `transferAmount`: Amount\<asset\> |
++| Repay | `allocationId`, `transferId`, `obligationId`, `payer`: Text; `nominalAmount`: Quantity\<Units\<denomination,1\>,0\> |
++
++The financial source reserves the identifier `amount` as a generic constructor,
++so the Transfer Amount field cannot be named `amount`. The adapter maps
++`transferAmount` to the kernel Transfer `amount`. `settlementAsset` maps to the
++kernel `asset`. Each emitted `settlementAsset` value must equal the Amount type
++index. Each Repay quantity unit must equal the selected obligation denomination.
++
++Nominal Quantity values must be nonnegative and inside the signed-128 range.
++Text identifiers still face kernel identifier and relationship checks. Unknown
++operations, missing or malformed bindings, and empty descriptor batches reject
++before the kernel runs.
++
++## API result
++
++`evaluate` accepts source text and owned parsed JSON only. It reuses
++`createFinancialExpressionSourceV1` and `prepareRepayment`. It does not add a
++second transition engine.
++
++Success:
++
++```json
++{"status":"FundedExpressionPrepared","post":{},"financialPost":{},"effects":[],"workRemaining":"0"}
++```
++
++`post` is the ordinary staged result. `financialPost` is the complete kernel
++projection. `effects` are the ordered kernel effects. `workRemaining` equals
++`financialPost.work.remaining`.
++
++Rejection contains diagnostics only. It never contains candidate `post`,
++`financialPost`, `descriptors`, or `effects`. Expression rejections keep their
++source records. Kernel rejections keep `code` and `actionIndex`. Adapter
++rejections are `{ "status": "Rejected", "code": "..." }`.
++
++CLI success exits 0 and writes one JSON line with `judgmentResult`
++`SourceSimulated`, `sourceProfile`, initial ordinary `pre`, initial
++`financialPre`, `initialWork`, and the combined `result`. Semantic rejection
++exits 1 with JSON on stderr and empty stdout. CLI misuse or I/O failure exits 2.
++The repayment-state file is a bounded UTF-8 regular-file JSON object, the bare
++`RepaymentState`. The read cap is 65,536 UTF-8 bytes.
++
++## Work
++
++Snapshot `workInitial` must equal financial `work.remaining`. The expression
++evaluator uses that remaining value and keeps its 65,536 ceiling. The kernel
++`closureReserve` is separate from remaining; this adapter does not subtract or
++spend it.
++
++For actual expression reductions `E` and `N` emitted kernel actions:
++
++```
++remainingAfter = remainingBefore - E - N
++spentAfter = spentBefore + E + N
++closureReserveAfter = closureReserveBefore
++```
++
++The adapter passes a fresh state with expression work already debited into one
++complete kernel call. The kernel then charges `N` and validates the full
++projection before publication. Empty batches do not call the kernel. The static
++expression bound is not charged. Neither stage is debited twice. Carried spent
++and residual duties stay in the supplied projection.
++
++## Bounds and scope
++
++Source, schema, and repayment-state each stay within 65,536 UTF-8 bytes.
++Snapshots stay within 2,000,000 bytes. Descriptor count and kernel collections
++keep the existing 128 cap. Quantity does not broaden the kernel UInt128 type.
++
++The [example](examples/expression-funded-payment.mori) adds two Quantity arguments,
++rejects a negative sum, takes `magnitude` as cash, updates ordinary `paid`, and
++emits that same nominal to Repay. Default arguments 10+20 pay 30 against due 100:
++payer cash 70, lender cash 30, principal 70, allowance remaining 70 / spent 30.
++A second CLI call with the same source, arguments 10+10, and the first
++`financialPost` as state pays another 20 without editing the `.mori` file.
++
++This slice does not add a profile, compiler, or financial schema language. It
++does not execute K, construct a proof, or submit a public transaction.
+diff --git a/experiments/moriarty-language/src/cli.ts b/experiments/moriarty-language/src/cli.ts
+index be48906..c558be8 100644
+--- a/experiments/moriarty-language/src/cli.ts
++++ b/experiments/moriarty-language/src/cli.ts
+@@ -6,10 +6,11 @@ import { createExpressionSourceV1 } from './successor/expression-source-v1.ts';
+ import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/expression-source-frontend.ts';
+ import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
+ import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
++import { createFundedFinancialExpressionSourceV1 } from './successor/funded-expression-source-v1.ts';
+ import { SuccessorSyntaxError } from './successor/frontend.ts';
+ import { parseCanonical } from './successor/expression-wire-v1.ts';
+ 
+-type Input = 'arguments' | 'schema' | 'source' | 'snapshots';
++type Input = 'arguments' | 'schema' | 'source' | 'snapshots' | 'repayment-state';
+ type ProcessIo = { argv: string[]; exitCode: number;
+   stdout: { write(value: string): unknown }; stderr: { write(value: string): unknown } };
+ class CliFailure extends Error {
+@@ -26,7 +27,10 @@ class CliFailure extends Error {
+ const LIMIT = 65536;
+ const SNAPSHOT_LIMIT = 2_000_000;
+ 
+-function argumentsFor(argv: string[]): { command: 'check' | 'format' | 'simulate'; profile: string; source: string; schema?: string; snapshots?: string } {
++function argumentsFor(argv: string[]): {
++  command: 'check' | 'format' | 'simulate'; profile: string; source: string;
++  schema?: string; snapshots?: string; repaymentState?: string;
++} {
+   const [command, flag, profile, ...rest] = argv;
+   const fileName = (value: string | undefined): value is string =>
+     typeof value === 'string' && value.length > 0 && !value.startsWith('--');
+@@ -35,16 +39,21 @@ function argumentsFor(argv: string[]): { command: 'check' | 'format' | 'simulate
+   const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
+   const simulating = command === 'simulate' && rest.length === 5 && rest[0] === '--schema'
+     && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3]) && fileName(rest[4]);
+-  if (flag !== '--profile' || !profile || (!checking && !formatting && !simulating))
++  const funded = command === 'simulate' && rest.length === 7 && rest[0] === '--schema'
++    && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3])
++    && rest[4] === '--repayment-state' && fileName(rest[5]) && fileName(rest[6]);
++  if (flag !== '--profile' || !profile || (!checking && !formatting && !simulating && !funded))
+     throw new CliFailure('CLI_USAGE', 'arguments');
+   if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
++  if (funded && profile !== FINANCIAL_EXPRESSION_SOURCE_PROFILE) throw new CliFailure('CLI_USAGE', 'arguments');
+   return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
++    : funded ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], repaymentState: rest[5], source: rest[6] }
+     : simulating ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], source: rest[4] }
+     : { command: 'format', profile, source: rest[0] };
+ }
+ 
+ /** Same bounded descriptor/type check as syntax-cli.ts; never reads a FIFO. */
+-function readText(file: string, input: 'schema' | 'source' | 'snapshots', limit = LIMIT): string {
++function readText(file: string, input: 'schema' | 'source' | 'snapshots' | 'repayment-state', limit = LIMIT): string {
+   let fd: number | undefined;
+   try {
+     fd = fs.openSync(path.resolve(file), fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
+@@ -86,6 +95,22 @@ function run(io: ProcessIo): void {
+       ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
+     if (args.command === 'simulate') {
+       const snapshots = readText(args.snapshots!, 'snapshots', SNAPSHOT_LIMIT);
++      if (args.repaymentState !== undefined) {
++        const repaymentState = readText(args.repaymentState, 'repayment-state');
++        const result = createFundedFinancialExpressionSourceV1(schema!).evaluate(source, snapshots, repaymentState);
++        if ('status' in result && result.status === 'Rejected') {
++          io.stderr.write(JSON.stringify(result) + '\n');
++          io.exitCode = 1;
++          return;
++        }
++        const snapshot = parseCanonical(snapshots, SNAPSHOT_LIMIT) as { Pre: unknown; workInitial: string };
++        io.stdout.write(JSON.stringify({
++          judgmentResult: 'SourceSimulated', sourceProfile: args.profile, pre: snapshot.Pre,
++          financialPre: JSON.parse(repaymentState), initialWork: snapshot.workInitial, result,
++        }) + '\n');
++        io.exitCode = 0;
++        return;
++      }
+       const result = language.evaluate(source, snapshots);
+       if ('status' in result && result.status === 'Rejected') {
+         io.stderr.write(JSON.stringify(result) + '\n');
+diff --git a/experiments/moriarty-language/src/successor/funded-expression-source-v1.ts b/experiments/moriarty-language/src/successor/funded-expression-source-v1.ts
+new file mode 100644
+index 0000000..fb4b5f8
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/funded-expression-source-v1.ts
+@@ -0,0 +1,278 @@
++/** Local funded adapter over financial expression source and the repayment kernel.
++ * Ordinary writes publish only after descriptor binding and one kernel call succeed. */
++import { createFinancialExpressionSourceV1 } from './financial-expression-source-v1.ts';
++import type { ExpressionResult } from './financial-expression-v1.ts';
++import { ExpressionFailure, bytes, parseCanonical } from './expression-wire-v1.ts';
++import { same } from './financial-expression-types-v1.ts';
++import type { Schema, ValueType } from './financial-expression-types-v1.ts';
++import { prepareRepayment, REPAYMENT_BOUNDS, REPAYMENT_VERSION } from './repayment.ts';
++import type { Action, Effect, RejectedRepayment, RepaymentState } from './repayment.ts';
++
++const STATE_BYTES = 65536;
++const SNAPSHOT_BYTES = 2_000_000;
++const SIGNED128_MAX = (1n << 127n) - 1n;
++const UINT128_MAX = BigInt(REPAYMENT_BOUNDS.uint128Max);
++
++export interface FundedExpressionPrepared {
++  status: 'FundedExpressionPrepared';
++  post: Record<string, unknown>;
++  financialPost: RepaymentState;
++  effects: Effect[];
++  workRemaining: string;
++}
++
++export type FundedExpressionRejected =
++  | { status: 'Rejected'; code: string }
++  | SourceRejected
++  | RejectedRepayment;
++export type FundedExpressionResult = FundedExpressionPrepared | FundedExpressionRejected;
++
++type SourceRejected = Extract<ExpressionResult, { status: 'Rejected' }>;
++type Binding = { transferAsset: string; repayDenomination: string };
++
++function reject(code: string): FundedExpressionRejected {
++  return { status: 'Rejected', code };
++}
++
++function isRecord(value: unknown): value is Record<string, unknown> {
++  return value !== null && typeof value === 'object' && !Array.isArray(value);
++}
++
++function recordFields(value: unknown, expected: Record<string, unknown>): boolean {
++  if (!isRecord(value)) return false;
++  const keys = Object.keys(expected);
++  if (Object.keys(value).length !== keys.length) return false;
++  return keys.every((key) => Object.hasOwn(value, key) && same(value[key] as ValueType, expected[key] as ValueType));
++}
++
++function parseOwnedState(text: unknown): { ok: true; value: Record<string, unknown> } | { ok: false; result: FundedExpressionRejected } {
++  if (typeof text !== 'string') return { ok: false, result: reject('INPUT_SCHEMA') };
++  if (text.length > STATE_BYTES || bytes(text) > STATE_BYTES) return { ok: false, result: reject('INPUT_BOUND') };
++  let parsed: unknown;
++  try { parsed = JSON.parse(text); } catch { return { ok: false, result: reject('INPUT_SCHEMA') }; }
++  let owned: unknown;
++  try { owned = JSON.parse(JSON.stringify(parsed)); } catch { return { ok: false, result: reject('INPUT_SCHEMA') }; }
++  if (!isRecord(owned) || !isRecord(owned.work) || typeof owned.work.remaining !== 'string') {
++    return { ok: false, result: reject('INPUT_SCHEMA') };
++  }
++  return { ok: true, value: owned };
++}
++
++function snapshotWorkInitial(text: string): string | undefined {
++  try {
++    const snapshot = parseCanonical(text, SNAPSHOT_BYTES);
++    if (isRecord(snapshot) && typeof snapshot.workInitial === 'string') return snapshot.workInitial;
++  } catch (error) {
++    if (!(error instanceof ExpressionFailure)) throw error;
++  }
++  return undefined;
++}
++
++function unsignedDecimal(value: unknown): bigint | undefined {
++  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value)) return undefined;
++  try {
++    const n = BigInt(value);
++    if (n.toString(10) !== value) return undefined;
++    return n;
++  } catch {
++    return undefined;
++  }
++}
++
++function signedDecimal(value: unknown): bigint | undefined {
++  if (typeof value !== 'string' || !/^(0|-?[1-9][0-9]*)$/.test(value)) return undefined;
++  try {
++    const n = BigInt(value);
++    if (n.toString(10) !== value) return undefined;
++    return n;
++  } catch {
++    return undefined;
++  }
++}
++
++function operationBinding(schema: Schema): Binding | FundedExpressionRejected {
++  const operations = schema.operations;
++  if (!isRecord(operations) || Object.keys(operations).length !== 2
++    || typeof operations.Transfer !== 'string' || typeof operations.Repay !== 'string') {
++    return reject('OPERATION_BINDING');
++  }
++  const transferRecord = schema.recordTypes[operations.Transfer];
++  const repayRecord = schema.recordTypes[operations.Repay];
++  if (!isRecord(transferRecord) || !isRecord(repayRecord)) return reject('OPERATION_BINDING');
++  // Source schema cannot name a field `amount`: that spelling is reserved as a
++  // financial generic. transferAmount is the Amount<asset> operand; the kernel
++  // Transfer still uses amount.
++  const amount = transferRecord.transferAmount;
++  if (!Array.isArray(amount) || amount.length !== 2 || amount[0] !== 'Amount' || typeof amount[1] !== 'string') {
++    return reject('OPERATION_BINDING');
++  }
++  const transferExpected = {
++    from: ['Text'],
++    id: ['Text'],
++    settlementAsset: ['Text'],
++    to: ['Text'],
++    transferAmount: amount,
++  };
++  if (!recordFields(transferRecord, transferExpected)) return reject('OPERATION_BINDING');
++  const nominal = repayRecord.nominalAmount;
++  if (!Array.isArray(nominal) || nominal.length !== 3 || nominal[0] !== 'Quantity' || nominal[2] !== '0') {
++    return reject('OPERATION_BINDING');
++  }
++  const units = nominal[1];
++  if (!Array.isArray(units) || units.length !== 1 || !Array.isArray(units[0]) || units[0].length !== 2
++    || typeof units[0][0] !== 'string' || units[0][1] !== '1') {
++    return reject('OPERATION_BINDING');
++  }
++  const repayExpected = {
++    allocationId: ['Text'],
++    nominalAmount: nominal,
++    obligationId: ['Text'],
++    payer: ['Text'],
++    transferId: ['Text'],
++  };
++  if (!recordFields(repayRecord, repayExpected)) return reject('OPERATION_BINDING');
++  return { transferAsset: amount[1], repayDenomination: units[0][0] };
++}
++
++function textField(fields: Record<string, unknown>, name: string): string | undefined {
++  const value = fields[name];
++  return typeof value === 'string' ? value : undefined;
++}
++
++function mapDescriptors(
++  descriptors: unknown[],
++  binding: Binding,
++): { ok: true; actions: Action[] } | { ok: false; result: FundedExpressionRejected } {
++  if (descriptors.length === 0) return { ok: false, result: reject('EMPTY_BATCH') };
++  const actions: Action[] = [];
++  for (const descriptor of descriptors) {
++    if (!isRecord(descriptor) || typeof descriptor.operation !== 'string' || !isRecord(descriptor.fields)) {
++      return { ok: false, result: reject('OPERATION_BINDING') };
++    }
++    const fields = descriptor.fields;
++    if (descriptor.operation === 'Transfer') {
++      const id = textField(fields, 'id');
++      const from = textField(fields, 'from');
++      const to = textField(fields, 'to');
++      const settlementAsset = textField(fields, 'settlementAsset');
++      const amount = unsignedDecimal(fields.transferAmount);
++      if (id === undefined || from === undefined || to === undefined || settlementAsset === undefined
++        || amount === undefined || Object.keys(fields).length !== 5) {
++        return { ok: false, result: reject('OPERATION_BINDING') };
++      }
++      if (settlementAsset !== binding.transferAsset) return { ok: false, result: reject('SETTLEMENT_UNIT') };
++      actions.push({
++        kind: 'Transfer',
++        id,
++        from,
++        to,
++        asset: settlementAsset,
++        amount: fields.transferAmount as string,
++      });
++    } else if (descriptor.operation === 'Repay') {
++      const allocationId = textField(fields, 'allocationId');
++      const transferId = textField(fields, 'transferId');
++      const obligationId = textField(fields, 'obligationId');
++      const payer = textField(fields, 'payer');
++      const nominal = signedDecimal(fields.nominalAmount);
++      if (allocationId === undefined || transferId === undefined || obligationId === undefined
++        || payer === undefined || nominal === undefined || Object.keys(fields).length !== 5) {
++        return { ok: false, result: reject('OPERATION_BINDING') };
++      }
++      if (nominal < 0n || nominal > SIGNED128_MAX) return { ok: false, result: reject('NOMINAL_RANGE') };
++      actions.push({
++        kind: 'Repay',
++        allocationId,
++        transferId,
++        obligationId,
++        payer,
++        nominalAmount: fields.nominalAmount as string,
++      });
++    } else {
++      return { ok: false, result: reject('UNSUPPORTED_OPERATION') };
++    }
++  }
++  return { ok: true, actions };
++}
++
++function debitExpressionWork(
++  state: Record<string, unknown>,
++  expressionUsed: bigint,
++): { ok: true; state: Record<string, unknown> } | { ok: false; result: FundedExpressionRejected } {
++  if (!isRecord(state.work)) return { ok: false, result: reject('INPUT_SCHEMA') };
++  const remaining = unsignedDecimal(state.work.remaining);
++  const spent = unsignedDecimal(state.work.spent);
++  if (remaining === undefined || spent === undefined) return { ok: false, result: reject('INPUT_SCHEMA') };
++  const nextRemaining = remaining - expressionUsed;
++  const nextSpent = spent + expressionUsed;
++  if (nextRemaining < 0n || nextSpent > UINT128_MAX) return { ok: false, result: reject('OVERFLOW') };
++  const next = JSON.parse(JSON.stringify(state)) as Record<string, unknown>;
++  const work = next.work as Record<string, unknown>;
++  work.remaining = nextRemaining.toString(10);
++  work.spent = nextSpent.toString(10);
++  return { ok: true, state: next };
++}
++
++function nominalUnitsMatch(post: RepaymentState, actions: Action[], denomination: string): boolean {
++  for (const action of actions) {
++    if (action.kind !== 'Repay') continue;
++    const obligation = post.obligations.find((item) => item.id === action.obligationId);
++    if (obligation === undefined || obligation.denomination !== denomination) return false;
++  }
++  return true;
++}
++
++/** Trusted Σ is immutable text. evaluate owns source, snapshot and repayment JSON. */
++export function createFundedFinancialExpressionSourceV1(schemaCanonicalJSON: string) {
++  const inner = createFinancialExpressionSourceV1(schemaCanonicalJSON);
++  return Object.freeze({
++    evaluate(
++      source: string,
++      snapshotCanonicalJSON: string,
++      repaymentStateJSON: string,
++    ): FundedExpressionResult {
++      const parsedState = parseOwnedState(repaymentStateJSON);
++      if (!parsedState.ok) return parsedState.result;
++      const remainingText = (parsedState.value.work as Record<string, unknown>).remaining as string;
++      const workInitial = typeof snapshotCanonicalJSON === 'string'
++        ? snapshotWorkInitial(snapshotCanonicalJSON) : undefined;
++      if (workInitial !== undefined && workInitial !== remainingText) return reject('WORK_MISMATCH');
++      const evaluated = inner.evaluate(source, snapshotCanonicalJSON);
++      if ('status' in evaluated && evaluated.status === 'Rejected') return evaluated as SourceRejected;
++      if (!('status' in evaluated) || evaluated.status !== 'ExpressionPrepared') return reject('INPUT_SCHEMA');
++      let schema: Schema;
++      try { schema = parseCanonical(schemaCanonicalJSON, STATE_BYTES); }
++      catch { return reject('INPUT_SCHEMA'); }
++      for (const field of Object.values(schema.fields)) {
++        if (isRecord(field) && field.writeClass === 'financial') return reject('TYPE_FINANCIAL_WRITE');
++      }
++      const binding = operationBinding(schema);
++      if ('status' in binding) return binding;
++      const mapped = mapDescriptors(evaluated.descriptors, binding);
++      if (!mapped.ok) return mapped.result;
++      const used = unsignedDecimal(workInitial ?? remainingText);
++      const remainingAfterExpression = unsignedDecimal(evaluated.workRemaining);
++      if (used === undefined || remainingAfterExpression === undefined) return reject('INPUT_SCHEMA');
++      const expressionUsed = used - remainingAfterExpression;
++      if (expressionUsed < 0n) return reject('INPUT_SCHEMA');
++      const debited = debitExpressionWork(parsedState.value, expressionUsed);
++      if (!debited.ok) return debited.result;
++      const prepared = prepareRepayment(JSON.stringify({
++        schemaVersion: REPAYMENT_VERSION,
++        state: debited.state,
++        actions: mapped.actions,
++      }));
++      if (prepared.status === 'Rejected') return prepared;
++      if (!nominalUnitsMatch(prepared.post, mapped.actions, binding.repayDenomination)) {
++        return reject('NOMINAL_UNIT');
++      }
++      return {
++        status: 'FundedExpressionPrepared',
++        post: evaluated.post,
++        financialPost: prepared.post,
++        effects: prepared.effects,
++        workRemaining: prepared.post.work.remaining,
++      };
++    },
++  });
++}
+diff --git a/experiments/moriarty-language/tests/funded-expression-cli.test.mjs b/experiments/moriarty-language/tests/funded-expression-cli.test.mjs
+new file mode 100644
+index 0000000..7c1e9ed
+--- /dev/null
++++ b/experiments/moriarty-language/tests/funded-expression-cli.test.mjs
+@@ -0,0 +1,247 @@
++import test, { after } from 'node:test';
++import assert from 'node:assert/strict';
++import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { spawnSync } from 'node:child_process';
++import { createFundedFinancialExpressionSourceV1 } from '../src/successor/funded-expression-source-v1.ts';
++import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
++import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++
++const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
++const directory = mkdtempSync(join(tmpdir(), 'moriarty-funded-expression-cli-'));
++after(() => rmSync(directory, { recursive: true, force: true }));
++let serial = 0;
++const file = (content) => {
++  const name = join(directory, `input ${serial++}`);
++  writeFileSync(name, content);
++  return name;
++};
++const invoke = (args) => {
++  const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', timeout: 5000 });
++  assert.equal(result.error, undefined);
++  assert.equal(result.signal, null);
++  return result;
++};
++const financial = 'moriarty-financial-expression-source/1';
++const original = 'moriarty-expression-source/1';
++const example = (stem) => fileURLToPath(new URL(`../spec/successor/examples/${stem}`, import.meta.url));
++const fundedArgs = (schemaPath, snapshotsPath, statePath, sourcePath) => [
++  'simulate', '--profile', financial, '--schema', schemaPath,
++  '--snapshots', snapshotsPath, '--repayment-state', statePath, sourcePath,
++];
++const simulateArgs = (profile, schemaPath, snapshotsPath, sourcePath) => [
++  'simulate', '--profile', profile, '--schema', schemaPath, '--snapshots', snapshotsPath, sourcePath,
++];
++const failure = (args, expected, exit = 1) => {
++  const result = invoke(args);
++  assert.equal(result.status, exit, result.stderr);
++  assert.equal(result.stdout, '');
++  assert.equal(result.stderr, JSON.stringify(expected) + '\n');
++};
++const cliFailure = (args, code, input, exit = 2) => failure(args, { status: 'CliRejected', code, input }, exit);
++
++const transferFields = {
++  from: ['Text'],
++  id: ['Text'],
++  settlementAsset: ['Text'],
++  to: ['Text'],
++  transferAmount: ['Amount', 'Cash'],
++};
++const repayFields = {
++  allocationId: ['Text'],
++  nominalAmount: ['Quantity', [['Cash', '1']], '0'],
++  obligationId: ['Text'],
++  payer: ['Text'],
++  transferId: ['Text'],
++};
++const schemaText = canonical({
++  args: {},
++  assets: ['Cash'],
++  enumTypes: {},
++  fields: {
++    due: { type: ['UInt128'], writeClass: 'ordinary' },
++    paid: { type: ['UInt128'], writeClass: 'ordinary' },
++  },
++  observations: {},
++  operations: { Repay: 'RepayFields', Transfer: 'TransferFields' },
++  parties: [],
++  recordTypes: { RepayFields: repayFields, TransferFields: transferFields },
++  units: ['Cash'],
++  variantTypes: {},
++  vaults: [],
++});
++const sourceText = `profile "${financial}"; agreement Loan { action pay() {
++  requires pre.due > 0;
++  let payment = floor_div(pre.due * 3, 10);
++  requires payment == 30;
++  next.paid = pre.paid + payment;
++  emit Transfer { id: "T1", from: "Payer", to: "Lender", settlementAsset: "Cash", transferAmount: amount<Cash>(payment) };
++  emit Repay { allocationId: "Alloc1", transferId: "T1", obligationId: "Due100", payer: "Payer", nominalAmount: quantity<Units<Cash,1>,0>(30) };
++  ensures post.paid == pre.paid + payment;
++} }`;
++const snapshotsText = canonical({ Args: {}, Obs: {}, Pre: { due: '100', paid: '0' }, workInitial: '100' });
++const stateObject = {
++  balances: [
++    { party: 'Payer', asset: 'Cash', amount: '100' },
++    { party: 'Lender', asset: 'Cash', amount: '0' },
++  ],
++  allowances: [{ party: 'Payer', asset: 'Cash', remaining: '100', spent: '0' }],
++  obligations: [{
++    id: 'Due100',
++    debtor: 'Payer',
++    creditor: 'Lender',
++    denomination: 'Cash',
++    settlementAsset: 'Cash',
++    principal: '100',
++    accrued: '0',
++    outstanding: '100',
++    allocationRule: 'AccrualFirst',
++    conversion: { mantissa: '1', scale: '0', rounding: 'none' },
++    status: 'Outstanding',
++  }],
++  usedTransferIds: [],
++  usedAllocationIds: [],
++  work: { remaining: '100', spent: '0', closureReserve: '16' },
++};
++const stateText = JSON.stringify(stateObject);
++
++test('funded simulate CLI equals the adapter and includes initial ordinary and financial state', () => {
++  const schemaPath = file(schemaText);
++  const snapshotsPath = file(snapshotsText);
++  const statePath = file(stateText);
++  const sourcePath = file(sourceText);
++  const expected = createFundedFinancialExpressionSourceV1(schemaText).evaluate(sourceText, snapshotsText, stateText);
++  assert.equal(expected.status, 'FundedExpressionPrepared', JSON.stringify(expected));
++  const result = invoke(fundedArgs(schemaPath, snapshotsPath, statePath, sourcePath));
++  assert.equal(result.status, 0, result.stderr);
++  assert.equal(result.stderr, '');
++  assert.deepEqual(JSON.parse(result.stdout), {
++    judgmentResult: 'SourceSimulated',
++    sourceProfile: financial,
++    pre: { due: '100', paid: '0' },
++    financialPre: JSON.parse(stateText),
++    initialWork: '100',
++    result: expected,
++  });
++});
++
++test('funded simulate CLI writes semantic rejection to stderr with empty stdout', () => {
++  const schemaPath = file(schemaText);
++  const snapshotsPath = file(snapshotsText);
++  const statePath = file(stateText);
++  const failing = sourceText.replace('requires payment == 30;', 'requires payment == 1;');
++  const expected = createFundedFinancialExpressionSourceV1(schemaText).evaluate(failing, snapshotsText, stateText);
++  assert.equal(expected.status, 'Rejected');
++  assert.equal('post' in expected, false);
++  assert.equal('financialPost' in expected, false);
++  assert.equal('effects' in expected, false);
++  failure(fundedArgs(schemaPath, snapshotsPath, statePath, file(failing)), expected);
++});
++
++test('repayment-state is rejected for the original profile, check, format and reordered flags', () => {
++  const schemaPath = file(schemaText);
++  const snapshotsPath = file(snapshotsText);
++  const statePath = file(stateText);
++  const sourcePath = file(sourceText);
++  cliFailure(fundedArgs(schemaPath, snapshotsPath, statePath, sourcePath).map((part) => part === financial ? original : part),
++    'CLI_USAGE', 'arguments');
++  cliFailure(['check', '--profile', financial, '--schema', schemaPath, '--repayment-state', statePath, sourcePath],
++    'CLI_USAGE', 'arguments');
++  cliFailure(['format', '--profile', financial, '--repayment-state', statePath, sourcePath],
++    'CLI_USAGE', 'arguments');
++  cliFailure(['simulate', '--profile', financial, '--schema', schemaPath, '--repayment-state', statePath,
++    '--snapshots', snapshotsPath, sourcePath], 'CLI_USAGE', 'arguments');
++  cliFailure(['simulate', '--profile', 'unknown', '--schema', 'missing', '--snapshots', 'missing',
++    '--repayment-state', 'missing', 'missing'], 'CLI_PROFILE', 'arguments');
++});
++
++test('funded simulate CLI retains repayment-state transport limits and malformed JSON', () => {
++  const schemaPath = file(schemaText);
++  const snapshotsPath = file(snapshotsText);
++  const sourcePath = file(sourceText);
++  const expected = createFundedFinancialExpressionSourceV1(schemaText).evaluate(sourceText, snapshotsText, '{');
++  assert.equal(expected.status, 'Rejected');
++  failure(fundedArgs(schemaPath, snapshotsPath, file('{'), sourcePath), expected);
++  cliFailure(fundedArgs(schemaPath, snapshotsPath, file(' '.repeat(65537)), sourcePath), 'INPUT_BOUND', 'repayment-state', 1);
++  cliFailure(fundedArgs(schemaPath, snapshotsPath, file(new Uint8Array([0xff])), sourcePath), 'INVALID_UTF8', 'repayment-state', 1);
++  cliFailure(fundedArgs(schemaPath, snapshotsPath, directory, sourcePath), 'CLI_IO', 'repayment-state');
++});
++
++test('pure simulate, check and format stay unchanged without repayment-state', () => {
++  const financialSource = example('financial-vault-quote.mori');
++  const financialSchema = example('financial-vault-quote.schema.json');
++  const financialSnapshots = example('financial-vault-quote.snapshots.json');
++  const financialResult = invoke(simulateArgs(financial, financialSchema, financialSnapshots, financialSource));
++  assert.equal(financialResult.status, 0, financialResult.stderr);
++  assert.equal(financialResult.stderr, '');
++  const financialApi = createFinancialExpressionSourceV1(readFileSync(financialSchema, 'utf8'))
++    .evaluate(readFileSync(financialSource, 'utf8'), readFileSync(financialSnapshots, 'utf8'));
++  assert.deepEqual(JSON.parse(financialResult.stdout), {
++    judgmentResult: 'SourceSimulated', sourceProfile: financial, pre: { last: '0' }, initialWork: '1000',
++    result: financialApi,
++  });
++
++  const originalSource = example('expression-counter.mori');
++  const originalSchema = example('expression-counter.schema.json');
++  const originalSnapshots = example('expression-counter.snapshots.json');
++  const originalResult = invoke(simulateArgs(original, originalSchema, originalSnapshots, originalSource));
++  assert.equal(originalResult.status, 0, originalResult.stderr);
++  const originalApi = createExpressionSourceV1(readFileSync(originalSchema, 'utf8'))
++    .evaluate(readFileSync(originalSource, 'utf8'), readFileSync(originalSnapshots, 'utf8'));
++  assert.deepEqual(JSON.parse(originalResult.stdout), {
++    judgmentResult: 'SourceSimulated', sourceProfile: original,
++    pre: { counter: '10', funds: '100' }, initialWork: '1000', result: originalApi,
++  });
++
++  const checked = invoke(['check', '--profile', financial, '--schema', financialSchema, financialSource]);
++  assert.equal(checked.status, 0, checked.stderr);
++  assert.equal(checked.stdout, JSON.stringify(createFinancialExpressionSourceV1(readFileSync(financialSchema, 'utf8'))
++    .check(readFileSync(financialSource, 'utf8'))) + '\n');
++});
++
++test('published expression-funded-payment example runs through the normal CLI', () => {
++  const sourcePath = example('expression-funded-payment.mori');
++  const schemaPath = example('expression-funded-payment.schema.json');
++  const snapshotsPath = example('expression-funded-payment.snapshots.json');
++  const statePath = example('expression-funded-payment.state.json');
++  const sourceText = readFileSync(sourcePath, 'utf8');
++  const schemaText = readFileSync(schemaPath, 'utf8');
++  const snapshotsText = readFileSync(snapshotsPath, 'utf8');
++  const stateText = readFileSync(statePath, 'utf8');
++  const expected = createFundedFinancialExpressionSourceV1(schemaText).evaluate(sourceText, snapshotsText, stateText);
++  assert.equal(expected.status, 'FundedExpressionPrepared', JSON.stringify(expected));
++  const result = invoke(fundedArgs(schemaPath, snapshotsPath, statePath, sourcePath));
++  assert.equal(result.status, 0, result.stderr);
++  assert.equal(result.stderr, '');
++  const body = JSON.parse(result.stdout);
++  assert.equal(body.judgmentResult, 'SourceSimulated');
++  assert.equal(body.sourceProfile, financial);
++  assert.deepEqual(body.result, expected);
++  assert.equal(body.result.post.paid, '30');
++  assert.equal(body.result.financialPost.balances[0].amount, '70');
++  assert.equal(body.result.financialPost.obligations[0].principal, '70');
++  assert.equal(body.result.effects[1].nominalAmount, '30');
++
++  const secondSnapshots = canonical({
++    Args: { allocationId: 'Alloc2', first: '10', second: '10', transferId: 'T2' },
++    Obs: {},
++    Pre: { due: '100', paid: '30' },
++    workInitial: expected.workRemaining,
++  });
++  const secondState = JSON.stringify(expected.financialPost);
++  const secondExpected = createFundedFinancialExpressionSourceV1(schemaText)
++    .evaluate(sourceText, secondSnapshots, secondState);
++  assert.equal(secondExpected.status, 'FundedExpressionPrepared', JSON.stringify(secondExpected));
++  const second = invoke(fundedArgs(schemaPath, file(secondSnapshots), file(secondState), sourcePath));
++  assert.equal(second.status, 0, second.stderr);
++  const secondBody = JSON.parse(second.stdout);
++  assert.deepEqual(secondBody.result, secondExpected);
++  assert.equal(secondBody.result.post.paid, '50');
++  assert.equal(secondBody.result.financialPost.balances[0].amount, '50');
++  assert.equal(secondBody.result.financialPost.obligations[0].principal, '50');
++  assert.equal(secondBody.result.financialPost.work.closureReserve, '16');
++  assert.deepEqual(secondBody.result.financialPost.usedTransferIds, ['T1', 'T2']);
++});
+diff --git a/experiments/moriarty-language/tests/funded-expression-source.test.mjs b/experiments/moriarty-language/tests/funded-expression-source.test.mjs
+new file mode 100644
+index 0000000..87ea0d6
+--- /dev/null
++++ b/experiments/moriarty-language/tests/funded-expression-source.test.mjs
+@@ -0,0 +1,371 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
++import { createFundedFinancialExpressionSourceV1 } from '../src/successor/funded-expression-source-v1.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++
++const P = 'moriarty-financial-expression-source/1';
++const UINT128_MAX = '340282366920938463463374607431768211455';
++const SIGNED128_MAX_PLUS_ONE = (1n << 127n).toString();
++
++const transferFields = {
++  from: ['Text'],
++  id: ['Text'],
++  settlementAsset: ['Text'],
++  to: ['Text'],
++  transferAmount: ['Amount', 'Cash'],
++};
++const repayFields = {
++  allocationId: ['Text'],
++  nominalAmount: ['Quantity', [['Cash', '1']], '0'],
++  obligationId: ['Text'],
++  payer: ['Text'],
++  transferId: ['Text'],
++};
++
++function schema(patch = {}) {
++  return canonical({
++    args: {},
++    assets: ['Cash'],
++    enumTypes: {},
++    fields: {
++      due: { type: ['UInt128'], writeClass: 'ordinary' },
++      paid: { type: ['UInt128'], writeClass: 'ordinary' },
++    },
++    observations: {},
++    operations: { Repay: 'RepayFields', Transfer: 'TransferFields' },
++    parties: [],
++    recordTypes: { RepayFields: repayFields, TransferFields: transferFields },
++    units: ['Cash'],
++    variantTypes: {},
++    vaults: [],
++    ...patch,
++  });
++}
++
++function source(body) {
++  return `profile "${P}"; agreement Loan { action pay() { ${body} } }`;
++}
++
++function transferEmit(id, amountExpr, settlement = 'Cash') {
++  return `emit Transfer { id: "${id}", from: "Payer", to: "Lender", settlementAsset: "${settlement}", transferAmount: ${amountExpr} };`;
++}
++
++function repayEmit(allocationId, transferId, obligationId, nominal) {
++  return `emit Repay { allocationId: "${allocationId}", transferId: "${transferId}", obligationId: "${obligationId}", payer: "Payer", nominalAmount: quantity<Units<Cash,1>,0>(${nominal}) };`;
++}
++
++function computedPay(numerator, denominator, literal, transferId = 'T1', allocationId = 'Alloc1') {
++  return [
++    'requires pre.due > 0;',
++    `let payment = floor_div(pre.due * ${numerator}, ${denominator});`,
++    `requires payment == ${literal};`,
++    'next.paid = pre.paid + payment;',
++    transferEmit(transferId, 'amount<Cash>(payment)'),
++    repayEmit(allocationId, transferId, 'Due100', literal),
++    'ensures post.paid == pre.paid + payment;',
++  ].join('');
++}
++
++function snapshot(workInitial, Pre = { due: '100', paid: '0' }) {
++  return canonical({ Args: {}, Obs: {}, Pre, workInitial });
++}
++
++function obligation(id, extra = {}) {
++  return {
++    id,
++    debtor: 'Payer',
++    creditor: 'Lender',
++    denomination: 'Cash',
++    settlementAsset: 'Cash',
++    principal: '100',
++    accrued: '0',
++    outstanding: '100',
++    allocationRule: 'AccrualFirst',
++    conversion: { mantissa: '1', scale: '0', rounding: 'none' },
++    status: 'Outstanding',
++    ...extra,
++  };
++}
++
++function state(extra = {}) {
++  const work = { remaining: '100', spent: '0', closureReserve: '16', ...(extra.work ?? {}) };
++  const { work: _ignored, ...rest } = extra;
++  return {
++    balances: [
++      { party: 'Payer', asset: 'Cash', amount: '100' },
++      { party: 'Lender', asset: 'Cash', amount: '0' },
++      { party: 'Unrelated', asset: 'Cash', amount: '5' },
++    ],
++    allowances: [{ party: 'Payer', asset: 'Cash', remaining: '100', spent: '0' }],
++    obligations: [
++      obligation('Due100'),
++      obligation('Other', { principal: '40', accrued: '0', outstanding: '40' }),
++    ],
++    usedTransferIds: ['Earlier'],
++    usedAllocationIds: ['Prior'],
++    work,
++    ...rest,
++  };
++}
++
++function stateJSON(extra = {}) {
++  return JSON.stringify(state(extra));
++}
++
++function language(sch = schema()) {
++  return createFundedFinancialExpressionSourceV1(sch);
++}
++
++function evaluate(s, snap, st, sch = schema()) {
++  return language(sch).evaluate(s, snap, st);
++}
++
++function expressionUsed(s, workInitial, sch = schema()) {
++  const result = createFinancialExpressionSourceV1(sch).evaluate(s, snapshot(workInitial));
++  assert.equal(result.status, 'ExpressionPrepared', JSON.stringify(result));
++  return BigInt(workInitial) - BigInt(result.workRemaining);
++}
++
++function assertRejected(result) {
++  assert.equal(result.status, 'Rejected', JSON.stringify(result));
++  assert.equal('post' in result, false, JSON.stringify(result));
++  assert.equal('financialPost' in result, false, JSON.stringify(result));
++  assert.equal('descriptors' in result, false, JSON.stringify(result));
++  assert.equal('effects' in result, false, JSON.stringify(result));
++  return result;
++}
++
++function assertWork(result, remainingBefore, spentBefore, reserveBefore, E, N) {
++  const remainingAfter = remainingBefore - E - N;
++  const spentAfter = spentBefore + E + N;
++  assert.equal(result.workRemaining, remainingAfter.toString());
++  assert.equal(result.financialPost.work.remaining, remainingAfter.toString());
++  assert.equal(result.financialPost.work.spent, spentAfter.toString());
++  assert.equal(result.financialPost.work.closureReserve, reserveBefore);
++}
++
++test('computed due100/pay30 publishes ordinary post, cash, principal and allowance together', () => {
++  const s = source(computedPay(3, 10, 30));
++  const remaining = 100n, spent = 0n, reserve = '16', N = 2n;
++  const E = expressionUsed(s, remaining.toString());
++  const result = evaluate(s, snapshot(remaining.toString()), stateJSON());
++  assert.equal(result.status, 'FundedExpressionPrepared', JSON.stringify(result));
++  assert.deepEqual(result.post, { due: '100', paid: '30' });
++  assert.equal(result.financialPost.balances[0].amount, '70');
++  assert.equal(result.financialPost.balances[1].amount, '30');
++  assert.equal(result.financialPost.balances[2].amount, '5');
++  assert.equal(result.financialPost.obligations[0].principal, '70');
++  assert.equal(result.financialPost.obligations[0].outstanding, '70');
++  assert.equal(result.financialPost.allowances[0].remaining, '70');
++  assert.equal(result.financialPost.allowances[0].spent, '30');
++  assertWork(result, remaining, spent, reserve, E, N);
++  assert.equal(result.effects[0].kind, 'Transfer');
++  assert.equal(result.effects[0].amount, '30');
++  assert.equal(result.effects[1].kind, 'Repayment');
++  assert.equal(result.effects[1].principalDischarged, '30');
++});
++
++test('AccrualFirst P100/I10/pay7 discharges accrued first and leaves residual duty', () => {
++  const s = source(computedPay(7, 100, 7));
++  const remaining = 100n, spent = 0n, reserve = '16', N = 2n;
++  const E = expressionUsed(s, remaining.toString());
++  const st = stateJSON({
++    obligations: [
++      obligation('Due100', { principal: '100', accrued: '10', outstanding: '110' }),
++      obligation('Other', { principal: '40', accrued: '0', outstanding: '40' }),
++    ],
++  });
++  const result = evaluate(s, snapshot(remaining.toString()), st);
++  assert.equal(result.status, 'FundedExpressionPrepared', JSON.stringify(result));
++  assert.equal(result.financialPost.obligations[0].principal, '100');
++  assert.equal(result.financialPost.obligations[0].accrued, '3');
++  assert.equal(result.financialPost.obligations[0].outstanding, '103');
++  assert.equal(result.financialPost.balances[0].amount, '93');
++  assert.equal(result.financialPost.balances[1].amount, '7');
++  assert.equal(result.effects[1].principalDischarged, '0');
++  assert.equal(result.effects[1].accruedDischarged, '7');
++  assertWork(result, remaining, spent, reserve, E, N);
++});
++
++test('arithmetic changes the Transfer amount and a failing equality guard rejects Repay', () => {
++  const half = source([
++    'requires pre.due > 0;',
++    'let payment = floor_div(pre.due, 2);',
++    'next.paid = pre.paid + payment;',
++    transferEmit('T1', 'amount<Cash>(payment)'),
++    repayEmit('Alloc1', 'T1', 'Due100', 30),
++    'ensures post.paid == payment;',
++  ].join(''));
++  const halfResult = evaluate(half, snapshot('100'), stateJSON());
++  assert.equal(halfResult.status, 'FundedExpressionPrepared', JSON.stringify(halfResult));
++  assert.equal(halfResult.effects[0].amount, '50');
++  assert.equal(halfResult.effects[1].nominalAmount, '30');
++  assert.equal(halfResult.financialPost.balances[0].amount, '50');
++  assert.equal(halfResult.financialPost.obligations[0].principal, '70');
++
++  const guarded = source(computedPay(1, 2, 30));
++  const rejected = assertRejected(evaluate(guarded, snapshot('100'), stateJSON()));
++  assert.equal(rejected.code, 'GUARD_FAILED');
++});
++
++test('failed guard or ensure after staged write or emission returns rejection only', () => {
++  const afterWrite = source('next.paid = 1; requires false;');
++  const guard = assertRejected(evaluate(afterWrite, snapshot('100'), stateJSON()));
++  assert.equal(guard.code, 'GUARD_FAILED');
++
++  const afterEmit = source([
++    'next.paid = 1;',
++    transferEmit('T1', 'amount<Cash>(30)'),
++    repayEmit('Alloc1', 'T1', 'Due100', 30),
++    'ensures false;',
++  ].join(''));
++  const ensure = assertRejected(evaluate(afterEmit, snapshot('100'), stateJSON()));
++  assert.equal(ensure.code, 'ENSURES_FAILED');
++});
++
++test('overflow, negative nominal, wrong units, unsupported operations, missing and repeated funding reject atomically', () => {
++  const negative = source(transferEmit('T1', 'amount<Cash>(30)') + repayEmit('Alloc1', 'T1', 'Due100', '-1'));
++  const negativeResult = assertRejected(evaluate(negative, snapshot('100'), stateJSON()));
++  assert.equal(negativeResult.code, 'NOMINAL_RANGE');
++
++  const overflowSource = source(`let x = quantity<Units<Cash,1>,0>(${SIGNED128_MAX_PLUS_ONE});`);
++  const overflow = assertRejected(evaluate(overflowSource, snapshot('100'), stateJSON()));
++  assert.ok(['VALUE_BOUND', 'TYPE_LITERAL', 'INPUT_VALUE', 'ARITH_RANGE'].includes(overflow.code), overflow.code);
++
++  const wrongSettlement = source(
++    transferEmit('T1', 'amount<Cash>(30)', 'USD') + repayEmit('Alloc1', 'T1', 'Due100', 30),
++  );
++  const settlement = assertRejected(evaluate(wrongSettlement, snapshot('100'), stateJSON()));
++  assert.equal(settlement.code, 'SETTLEMENT_UNIT');
++
++  const wrongUnit = stateJSON({
++    obligations: [
++      obligation('Due100', { denomination: 'USD' }),
++      obligation('Other', { principal: '40', accrued: '0', outstanding: '40' }),
++    ],
++  });
++  const unit = assertRejected(evaluate(source(computedPay(3, 10, 30)), snapshot('100'), wrongUnit));
++  assert.equal(unit.code, 'NOMINAL_UNIT');
++
++  const noticeSchema = schema({
++    operations: { Notice: 'NoticeFields', Repay: 'RepayFields', Transfer: 'TransferFields' },
++    recordTypes: {
++      NoticeFields: { n: ['UInt128'] },
++      RepayFields: repayFields,
++      TransferFields: transferFields,
++    },
++  });
++  const unsupported = assertRejected(evaluate(source('emit Notice { n: 1 };'), snapshot('100'), stateJSON(), noticeSchema));
++  assert.equal(unsupported.code, 'OPERATION_BINDING');
++
++  const missing = source(transferEmit('T1', 'amount<Cash>(20)') + repayEmit('Alloc1', 'T1', 'Due100', 30));
++  const unfunded = assertRejected(evaluate(missing, snapshot('100'), stateJSON()));
++  assert.equal(unfunded.code, 'INSUFFICIENT_UNALLOCATED');
++
++  const reused = assertRejected(evaluate(source(computedPay(3, 10, 30)), snapshot('100'), stateJSON({
++    usedTransferIds: ['Earlier', 'T1'],
++  })));
++  assert.equal(reused.code, 'DUPLICATE');
++});
++
++test('work is exact at E+N, one unit short rejects, prior spent is kept and reserve is unchanged', () => {
++  const s = source(computedPay(3, 10, 30));
++  const E = expressionUsed(s, '100');
++  const N = 2n;
++  const exactRemaining = (E + N).toString();
++  const exact = evaluate(s, snapshot(exactRemaining), stateJSON({
++    work: { remaining: exactRemaining, spent: '7', closureReserve: '16' },
++  }));
++  assert.equal(exact.status, 'FundedExpressionPrepared', JSON.stringify(exact));
++  assertWork(exact, E + N, 7n, '16', E, N);
++
++  const shortRemaining = (E + N - 1n).toString();
++  const short = assertRejected(evaluate(s, snapshot(shortRemaining), stateJSON({
++    work: { remaining: shortRemaining, spent: '7', closureReserve: '16' },
++  })));
++  assert.equal(short.code, 'INSUFFICIENT_WORK');
++
++  const carried = evaluate(s, snapshot('100'), stateJSON({
++    work: { remaining: '100', spent: '11', closureReserve: '16' },
++  }));
++  assert.equal(carried.status, 'FundedExpressionPrepared', JSON.stringify(carried));
++  assertWork(carried, 100n, 11n, '16', E, N);
++});
++
++test('multiple allocations share one transfer decreasing funding', () => {
++  const s = source([
++    'let payment = floor_div(pre.due, 2);',
++    'requires payment == 50;',
++    'next.paid = payment;',
++    transferEmit('T1', 'amount<Cash>(payment)'),
++    repayEmit('Alloc1', 'T1', 'Due100', 20),
++    repayEmit('Alloc2', 'T1', 'Due100', 30),
++    'ensures post.paid == 50;',
++  ].join(''));
++  const E = expressionUsed(s, '100');
++  const result = evaluate(s, snapshot('100'), stateJSON());
++  assert.equal(result.status, 'FundedExpressionPrepared', JSON.stringify(result));
++  assert.equal(result.financialPost.balances[0].amount, '50');
++  assert.equal(result.financialPost.obligations[0].principal, '50');
++  assert.equal(result.effects.length, 3);
++  assert.equal(result.effects[1].nominalAmount, '20');
++  assert.equal(result.effects[2].nominalAmount, '30');
++  assertWork(result, 100n, 0n, '16', E, 3n);
++});
++
++test('second invocation preserves prior spent, IDs, unrelated state and residual duties', () => {
++  const firstSource = source(computedPay(3, 10, 30));
++  const first = evaluate(firstSource, snapshot('100'), stateJSON({
++    work: { remaining: '100', spent: '4', closureReserve: '16' },
++  }));
++  assert.equal(first.status, 'FundedExpressionPrepared', JSON.stringify(first));
++  const E1 = expressionUsed(firstSource, '100');
++  assertWork(first, 100n, 4n, '16', E1, 2n);
++  assert.deepEqual(first.financialPost.obligations[1], obligation('Other', { principal: '40', accrued: '0', outstanding: '40' }));
++  assert.deepEqual(first.financialPost.usedTransferIds, ['Earlier', 'T1']);
++  assert.deepEqual(first.financialPost.usedAllocationIds, ['Prior', 'Alloc1']);
++
++  const secondSource = source(computedPay(1, 5, 20, 'T2', 'Alloc2'));
++  const remaining = first.financialPost.work.remaining;
++  const secondSnap = snapshot(remaining, { due: '100', paid: '30' });
++  const second = evaluate(secondSource, secondSnap, JSON.stringify(first.financialPost));
++  assert.equal(second.status, 'FundedExpressionPrepared', JSON.stringify(second));
++  const E2 = expressionUsed(secondSource, remaining);
++  assert.equal(second.post.paid, '50');
++  assert.equal(second.financialPost.obligations[0].principal, '50');
++  assert.deepEqual(second.financialPost.obligations[1], obligation('Other', { principal: '40', accrued: '0', outstanding: '40' }));
++  assert.deepEqual(second.financialPost.usedTransferIds, ['Earlier', 'T1', 'T2']);
++  assert.deepEqual(second.financialPost.usedAllocationIds, ['Prior', 'Alloc1', 'Alloc2']);
++  assertWork(second, BigInt(remaining), BigInt(first.financialPost.work.spent), '16', E2, 2n);
++});
++
++test('workInitial must equal remaining, financial schema fields are rejected, and empty batches never reach the kernel', () => {
++  const s = source(computedPay(3, 10, 30));
++  const mismatch = assertRejected(evaluate(s, snapshot('1000'), stateJSON()));
++  assert.equal(mismatch.code, 'WORK_MISMATCH');
++
++  const financialSchema = schema({
++    fields: {
++      due: { type: ['UInt128'], writeClass: 'ordinary' },
++      paid: { type: ['UInt128'], writeClass: 'ordinary' },
++      funds: { type: ['UInt128'], writeClass: 'financial' },
++    },
++  });
++  const financial = assertRejected(evaluate(source('next.paid = 1;'), snapshot('100', { due: '100', paid: '0', funds: '8' }), stateJSON(), financialSchema));
++  assert.equal(financial.code, 'TYPE_FINANCIAL_WRITE');
++
++  const empty = assertRejected(evaluate(source('next.paid = 1;'), snapshot('100'), stateJSON()));
++  assert.equal(empty.code, 'EMPTY_BATCH');
++});
++
++test('adapter owns parsed JSON only and does not publish on malformed state or hostile accessors', () => {
++  const s = source(computedPay(3, 10, 30));
++  assertRejected(evaluate(s, snapshot('100'), '{'));
++  let touched = false;
++  const hostile = { get remaining() { touched = true; throw new Error('read'); } };
++  const result = language().evaluate(s, snapshot('100'), hostile);
++  assertRejected(result);
++  assert.equal(touched, false);
++  assert.equal(result.code, 'INPUT_SCHEMA');
++});

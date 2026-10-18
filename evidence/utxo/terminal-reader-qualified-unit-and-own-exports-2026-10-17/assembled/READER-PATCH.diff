@@ -1,0 +1,148 @@
+--- a/run_source_task.py
++++ b/run_source_task.py
+@@ -1,9 +1,145 @@
+ from pathlib import Path
+ import sys,json,subprocess,os,hashlib,datetime,re,jsonschema
++def select_terminal_structured_review(events,review_token,schema,requested_model,exit_code,provider,input_pins_unchanged,retained_whole_candidates=None,allowed_models=('claude-opus-5-5',),require_retained_membership=True,capture_parse_errors=0):
++ """Pure, side-effect-free selection for the opt-in --export-terminal-review path.
++
++ Export EXACTLY the typed structured_output dict carried on the single
++ successful provider `result` event, and nothing else. There is deliberately
++ NO fallback to assistant text, partial output, nested tool arguments or
++ quoted/embedded JSON: the recursive whole-stream walk is never used here, so
++ a draft/quoted/nested duplicate (even a schema-valid one) can never override
++ the final typed object. Any ambiguity, identity drift, schema/token mismatch
++ or missing canonical object is a STOP.
++
++ Model gate (reconciled with USER-BOTH-OPUS-RULE.md): `allowed_models` is an
++ explicit, caller-supplied set of authorized requested/actual model identities.
++ The default is the single historical actual-5.5 export scope ('claude-opus-5-5')
++ that the current B/A subjects were produced under and that mirrors the preserved
++ WRONG-MODEL-REJECTION precedent. The wrapper may widen it to the two authorized
++ Opus models for a future 4.8-authored subject, but the receipt ALWAYS records the
++ real exclusive actual assistant identity (`exclusiveActualAssistantModel`) and
++ never relabels 4.8 as 5.5. Requested model must be in the allowed set; the actual
++ assistant-envelope model must be exactly one model AND a member of the allowed
++ set; any mix or out-of-set identity STOPs.
++
++ Liveness/parse handling: a still-live or missing original process is surfaced by
++ the wrapper as `exit_code` None (NON_ZERO_OR_MISSING_TERMINAL_EXIT), and any
++ malformed capture line is surfaced as `capture_parse_errors > 0`
++ (CAPTURE_PARSE_ERRORS). Both fail closed here: a corrupted capture can only cause
++ a STOP, never a wrong EXPORT, because a dropped line can never add a result event
++ or a structured_output.
++
++ Identity cross-check is canonical-sorted-key-JSON value identity (json.dumps with
++ sort_keys=True), NOT raw-byte identity; JSON-escape-equivalent encodings of the
++ same value compare equal, but the two public B whole objects parse to distinct
++ values at findings[5].evidence and are therefore NOT conflated.
++
++ events: provider-envelope dicts in stream order (non-dicts are ignored).
++ Returns {'decision':'EXPORT'|'STOP','reason':str,'review':dict|None,
++ 'receipt':dict}. No exception is raised for policy STOPs, so this function is
++ fully self-contained and unit-extractable. It references only json and
++ jsonschema; it mutates nothing and reads no files.
++ """
++ allowed=tuple(allowed_models)
++ def stop(reason,**extra):
++  receipt={'policy':'terminal-structured-output-only','decision':'STOP','reason':reason,'allowedModels':sorted(allowed),'noTextOrPartialFallback':True}
++  receipt.update(extra)
++  return {'decision':'STOP','reason':reason,'review':None,'receipt':receipt}
++ # 1. provider must be the first-party Claude CLI; no gemini/muse canonicalisation here.
++ if provider!='claude':return stop('NON_CLAUDE_PROVIDER')
++ # 2. requested model must be in the explicit allowed set (default: historical 5.5-only scope).
++ if requested_model not in allowed:return stop('REQUESTED_MODEL_NOT_ALLOWED',requestedModel=requested_model)
++ # 3. original process must have terminated with exit 0 (not None, not non-zero).
++ if exit_code!=0:return stop('NON_ZERO_OR_MISSING_TERMINAL_EXIT')
++ # 4. packet pins must be unchanged.
++ if not input_pins_unchanged:return stop('INPUT_PINS_CHANGED')
++ # 5. a corrupted capture (any malformed line) fails closed before any selection.
++ if capture_parse_errors:return stop('CAPTURE_PARSE_ERRORS',captureParseErrors=capture_parse_errors)
++ # 6. exclusive actual assistant-envelope model identity must be a single allowed model.
++ assistant_models={}
++ for e in events:
++  if isinstance(e,dict) and e.get('type')=='assistant' and isinstance(e.get('message'),dict):
++   name=e['message'].get('model')
++   if isinstance(name,str) and name.startswith(('claude-','gemini-','muse-')):assistant_models[name]=assistant_models.get(name,0)+1
++ if not assistant_models:return stop('NO_ACTUAL_ASSISTANT_MODEL_FRAMES',assistantEnvelopeModelCounts=assistant_models)
++ if len(assistant_models)!=1 or not set(assistant_models)<=set(allowed):return stop('MIXED_OR_WRONG_ACTUAL_ASSISTANT_MODEL',assistantEnvelopeModelCounts=assistant_models)
++ actual_model=next(iter(assistant_models))
++ # 7. exactly one terminal provider `result` event.
++ results=[e for e in events if isinstance(e,dict) and e.get('type')=='result']
++ if len(results)==0:return stop('NO_TERMINAL_RESULT_EVENT',assistantEnvelopeModelCounts=assistant_models)
++ if len(results)>1:return stop('MULTIPLE_TERMINAL_RESULT_EVENTS',terminalResultEvents=len(results),assistantEnvelopeModelCounts=assistant_models)
++ result=results[0]
++ # 8. the terminal result must be a success, not a failed/limit/error result.
++ if result.get('is_error') or result.get('subtype')!='success':return stop('FAILED_OR_NON_SUCCESS_TERMINAL_RESULT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ # 9. the canonical object is result.structured_output, which must be a dict (not a string).
++ if 'structured_output' not in result:return stop('STRUCTURED_OUTPUT_ABSENT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ obj=result['structured_output']
++ if not isinstance(obj,dict):return stop('STRUCTURED_OUTPUT_NOT_DICT',terminalResultEvents=1,structuredOutputKind=type(obj).__name__,assistantEnvelopeModelCounts=assistant_models)
++ # 10. review token must match exactly.
++ if obj.get('reviewToken')!=review_token:return stop('REVIEW_TOKEN_MISMATCH',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ # 11. the object must validate against the frozen output schema.
++ try:jsonschema.validate(obj,schema)
++ except jsonschema.ValidationError as exc:return stop('SCHEMA_INVALID',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models,schemaValidator=str(exc.validator))
++ # 12. canonical membership: the typed object must be canonical-JSON-value-identical to one
++ #     already-retained public whole candidate. An absent retained set fails closed by default;
++ #     no vote selection, no splicing; this neither falsifies nor resolves the old multiplicity.
++ canonical=json.dumps(obj,sort_keys=True)
++ matched=None
++ if require_retained_membership and not retained_whole_candidates:return stop('RETAINED_SET_ABSENT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++ if retained_whole_candidates is not None:
++  keys=[json.dumps(c,sort_keys=True) for c in retained_whole_candidates if isinstance(c,dict)]
++  if canonical not in keys:return stop('CANONICAL_OBJECT_NOT_IN_RETAINED',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
++  matched=True
++ receipt={'policy':'terminal-structured-output-only','decision':'EXPORT','reason':'SINGLE_CANONICAL_STRUCTURED_OUTPUT','reviewToken':review_token,'requestedModel':requested_model,'exclusiveActualAssistantModel':actual_model,'allowedModels':sorted(allowed),'assistantEnvelopeModelCounts':assistant_models,'terminalResultEvents':1,'structuredOutputKind':'dict','terminalExitCode':exit_code,'inputPinsUnchanged':True,'captureParseErrors':capture_parse_errors,'provider':provider,'identityMatchedRetainedCandidate':bool(matched),'identityMatchRule':'canonical-sorted-key-JSON-value-identity','retainedMembershipRequired':bool(require_retained_membership),'noTextOrPartialFallback':True,'selection':'result.structured_output on the single success result event only'}
++ return {'decision':'EXPORT','reason':'SINGLE_CANONICAL_STRUCTURED_OUTPUT','review':obj,'receipt':receipt}
+ R=Path(__file__).resolve().parent;D=R/'jobs'/sys.argv[1];T=json.loads((D/'TASK.json').read_text());W=Path(T['packet']);M=json.loads((W/'MANIFEST.json').read_text());schema=json.loads((D/'OUTPUT-SCHEMA.json').read_text());now=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat();sha=lambda b:hashlib.sha256(b).hexdigest()
+ def changed():return [p['path'] for p in M['files'] if sha((W/p['path']).read_bytes())!=p['sha256']]
+ assert not changed();prompt=(D/'PROMPT.md').read_text();assert len(prompt.encode())<125000
+ export_only='--export-only' in sys.argv
++terminal_review_export='--export-terminal-review' in sys.argv
++if terminal_review_export:export_only=True  # new flag implies export-only; a provider is never dispatched in this mode
++if terminal_review_export:
++ # EXPORT-ONLY terminal structured_output selection. Reads the already-captured
++ # provider stream read-only; launches no provider; mutates no existing record
++ # (PROCESS.json / REVIEW.json / AMBIGUOUS-COMPLETE-REVIEWS.json /
++ # WHOLE-SCHEMA-VALID-CANDIDATES.json are preserved). Appends only the two new
++ # files below, via exclusive create, so nothing is ever overwritten. On EXPORT
++ # the whole-object file is written BEFORE the receipt, so a receipt claiming
++ # EXPORT can never exist without its review.
++ if (D/'TERMINAL-EXPORT.json').exists() or (D/'TERMINAL-REVIEW.json').exists():raise SystemExit('terminal export artifacts already present; refusing to overwrite')
++ rec=json.loads((D/'PROCESS.json').read_text())
++ # Mirror the ordinary --export-only liveness recheck WITHOUT mutating PROCESS.json:
++ # a still-live original process refuses re-export; a missing one degrades to exit None.
++ pid=rec.get('pid')
++ if rec.get('status')!='terminal' and pid:
++  try:os.kill(pid,0)
++  except ProcessLookupError:pass
++  else:raise SystemExit('Provider process still live; no terminal-review export yet')
++ effective_exit=rec.get('exitCode') if rec.get('status')=='terminal' else None
++ events=[];capture_parse_errors=0
++ for line in (D/'provider.private.jsonl').read_text().splitlines():
++  s=line.strip()
++  if not s:continue
++  try:events.append(json.loads(s))
++  except ValueError:capture_parse_errors+=1
++ retained=None
++ for name in ['AMBIGUOUS-COMPLETE-REVIEWS.json','WHOLE-SCHEMA-VALID-CANDIDATES.json','REVIEW.json']:
++  fp=D/name
++  if fp.exists():
++   loaded=json.loads(fp.read_text());retained=loaded if isinstance(loaded,list) else [loaded];break
++ # In-artifact before-pins of the preserved records (verification by root before AND after).
++ preserved_before={}
++ for name in ['PROCESS.json','REVIEW.json','AMBIGUOUS-COMPLETE-REVIEWS.json','WHOLE-SCHEMA-VALID-CANDIDATES.json']:
++  fp=D/name
++  if fp.exists():preserved_before[name]=sha(fp.read_bytes())
++ allowed=tuple(T.get('terminalReviewAllowedModels',['claude-opus-5-5']))
++ outcome=select_terminal_structured_review(events,T['reviewToken'],schema,T['model'],effective_exit,T['provider'],not changed(),retained,allowed_models=allowed,require_retained_membership=True,capture_parse_errors=capture_parse_errors)
++ receipt=dict(outcome['receipt']);receipt.update(id=T['id'],exportMode='terminal-structured-output-only',decidedAt=now(),captureParseErrors=capture_parse_errors,legacyRecursiveWholeObjectCount=rec.get('completeTerminalReviews'),legacyReaderRecordPreserved=True,preservedRecordSha256Before=preserved_before,nativeAuthority=0,sourceGreenExecuted=False)
++ if outcome['decision']=='EXPORT':
++  with (D/'TERMINAL-REVIEW.json').open('x') as f:f.write(json.dumps(outcome['review'],indent=2)+'\n')
++ with (D/'TERMINAL-EXPORT.json').open('x') as f:f.write(json.dumps(receipt,indent=2)+'\n')
++ print(json.dumps(receipt),flush=True)
++ raise SystemExit(0 if outcome['decision']=='EXPORT' else 2)
+ if export_only:
+  rec=json.loads((D/'PROCESS.json').read_text());p=None
+  pid=rec.get('pid')

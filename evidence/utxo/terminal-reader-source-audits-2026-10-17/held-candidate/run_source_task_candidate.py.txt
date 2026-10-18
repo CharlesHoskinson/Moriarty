@@ -1,0 +1,243 @@
+from pathlib import Path
+import sys,json,subprocess,os,hashlib,datetime,re,jsonschema
+def select_terminal_structured_review(events,review_token,schema,requested_model,exit_code,provider,input_pins_unchanged,retained_whole_candidates=None):
+ """Pure, side-effect-free selection for the opt-in --export-terminal-review path.
+
+ Export EXACTLY the typed structured_output dict carried on the single
+ successful provider `result` event, and nothing else. There is deliberately
+ NO fallback to assistant text, partial output, nested tool arguments or
+ quoted/embedded JSON: the recursive whole-stream walk is never used here, so
+ a draft/quoted/nested duplicate (even a schema-valid one) can never override
+ the final typed object. Any ambiguity, identity drift, schema/token mismatch
+ or missing canonical object is a STOP.
+
+ events: provider-envelope dicts in stream order (non-dicts are ignored).
+ Returns {'decision':'EXPORT'|'STOP','reason':str,'review':dict|None,
+ 'receipt':dict}. No exception is raised for policy STOPs, so this function is
+ fully self-contained and unit-extractable. It references only json and
+ jsonschema; it mutates nothing and reads no files.
+ """
+ def stop(reason,**extra):
+  receipt={'policy':'terminal-structured-output-only','decision':'STOP','reason':reason,'noTextOrPartialFallback':True}
+  receipt.update(extra)
+  return {'decision':'STOP','reason':reason,'review':None,'receipt':receipt}
+ # 1. provider must be the first-party Claude CLI; no gemini/muse canonicalisation here.
+ if provider!='claude':return stop('NON_CLAUDE_PROVIDER')
+ # 2. requested model must be Opus 5.5 exactly; no 4.8, no fallback identity.
+ if requested_model!='claude-opus-5-5':return stop('REQUESTED_MODEL_NOT_OPUS55')
+ # 3. original process must have terminated with exit 0 (not None, not non-zero).
+ if exit_code!=0:return stop('NON_ZERO_OR_MISSING_TERMINAL_EXIT')
+ # 4. packet pins must be unchanged.
+ if not input_pins_unchanged:return stop('INPUT_PINS_CHANGED')
+ # 5. exclusive actual assistant-envelope model identity must be Opus 5.5 (see WRONG-MODEL-REJECTION precedent).
+ assistant_models={}
+ for e in events:
+  if isinstance(e,dict) and e.get('type')=='assistant' and isinstance(e.get('message'),dict):
+   name=e['message'].get('model')
+   if isinstance(name,str) and name.startswith(('claude-','gemini-','muse-')):assistant_models[name]=assistant_models.get(name,0)+1
+ if not assistant_models:return stop('NO_ACTUAL_ASSISTANT_MODEL_FRAMES',assistantEnvelopeModelCounts=assistant_models)
+ if set(assistant_models)!={'claude-opus-5-5'}:return stop('MIXED_OR_WRONG_ACTUAL_ASSISTANT_MODEL',assistantEnvelopeModelCounts=assistant_models)
+ # 6. exactly one terminal provider `result` event.
+ results=[e for e in events if isinstance(e,dict) and e.get('type')=='result']
+ if len(results)==0:return stop('NO_TERMINAL_RESULT_EVENT',assistantEnvelopeModelCounts=assistant_models)
+ if len(results)>1:return stop('MULTIPLE_TERMINAL_RESULT_EVENTS',terminalResultEvents=len(results),assistantEnvelopeModelCounts=assistant_models)
+ result=results[0]
+ # 7. the terminal result must be a success, not a failed/limit/error result.
+ if result.get('is_error') or result.get('subtype')!='success':return stop('FAILED_OR_NON_SUCCESS_TERMINAL_RESULT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
+ # 8. the canonical object is result.structured_output, which must be a dict (not a string).
+ if 'structured_output' not in result:return stop('STRUCTURED_OUTPUT_ABSENT',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
+ obj=result['structured_output']
+ if not isinstance(obj,dict):return stop('STRUCTURED_OUTPUT_NOT_DICT',terminalResultEvents=1,structuredOutputKind=type(obj).__name__,assistantEnvelopeModelCounts=assistant_models)
+ # 9. review token must match exactly.
+ if obj.get('reviewToken')!=review_token:return stop('REVIEW_TOKEN_MISMATCH',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
+ # 10. the object must validate against the frozen output schema.
+ try:jsonschema.validate(obj,schema)
+ except jsonschema.ValidationError as exc:return stop('SCHEMA_INVALID',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models,schemaValidator=str(exc.validator))
+ # 11. identity cross-check: the canonical object must be byte-identical to one
+ #     already-retained public whole candidate. No vote selection, no splicing;
+ #     this neither falsifies nor resolves the old multiplicity record.
+ canonical=json.dumps(obj,sort_keys=True)
+ matched=None
+ if retained_whole_candidates is not None:
+  keys=[json.dumps(c,sort_keys=True) for c in retained_whole_candidates if isinstance(c,dict)]
+  if canonical not in keys:return stop('CANONICAL_OBJECT_NOT_IN_RETAINED',terminalResultEvents=1,assistantEnvelopeModelCounts=assistant_models)
+  matched=True
+ receipt={'policy':'terminal-structured-output-only','decision':'EXPORT','reason':'SINGLE_CANONICAL_STRUCTURED_OUTPUT','reviewToken':review_token,'requestedModel':requested_model,'exclusiveActualAssistantModel':'claude-opus-5-5','assistantEnvelopeModelCounts':assistant_models,'terminalResultEvents':1,'structuredOutputKind':'dict','terminalExitCode':exit_code,'inputPinsUnchanged':True,'provider':provider,'identityMatchedRetainedCandidate':bool(matched),'noTextOrPartialFallback':True,'selection':'result.structured_output on the single success result event only'}
+ return {'decision':'EXPORT','reason':'SINGLE_CANONICAL_STRUCTURED_OUTPUT','review':obj,'receipt':receipt}
+R=Path(__file__).resolve().parent;D=R/'jobs'/sys.argv[1];T=json.loads((D/'TASK.json').read_text());W=Path(T['packet']);M=json.loads((W/'MANIFEST.json').read_text());schema=json.loads((D/'OUTPUT-SCHEMA.json').read_text());now=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat();sha=lambda b:hashlib.sha256(b).hexdigest()
+def changed():return [p['path'] for p in M['files'] if sha((W/p['path']).read_bytes())!=p['sha256']]
+assert not changed();prompt=(D/'PROMPT.md').read_text();assert len(prompt.encode())<125000
+export_only='--export-only' in sys.argv
+terminal_review_export='--export-terminal-review' in sys.argv
+if terminal_review_export:export_only=True  # new flag implies export-only; a provider is never dispatched in this mode
+if terminal_review_export:
+ # EXPORT-ONLY terminal structured_output selection. Reads the already-captured
+ # provider stream read-only; launches no provider; mutates no existing record
+ # (PROCESS.json / REVIEW.json / AMBIGUOUS-COMPLETE-REVIEWS.json /
+ # WHOLE-SCHEMA-VALID-CANDIDATES.json are preserved). Appends only the two new
+ # files below, via exclusive create, so nothing is ever overwritten.
+ if (D/'TERMINAL-EXPORT.json').exists() or (D/'TERMINAL-REVIEW.json').exists():raise SystemExit('terminal export artifacts already present; refusing to overwrite')
+ rec=json.loads((D/'PROCESS.json').read_text())
+ events=[]
+ for line in (D/'provider.private.jsonl').read_text().splitlines():
+  s=line.strip()
+  if not s:continue
+  try:events.append(json.loads(s))
+  except ValueError:pass
+ retained=None
+ for name in ['AMBIGUOUS-COMPLETE-REVIEWS.json','WHOLE-SCHEMA-VALID-CANDIDATES.json','REVIEW.json']:
+  fp=D/name
+  if fp.exists():
+   loaded=json.loads(fp.read_text());retained=loaded if isinstance(loaded,list) else [loaded];break
+ outcome=select_terminal_structured_review(events,T['reviewToken'],schema,T['model'],rec.get('exitCode'),T['provider'],not changed(),retained)
+ receipt=dict(outcome['receipt']);receipt.update(id=T['id'],exportMode='terminal-structured-output-only',decidedAt=now(),legacyRecursiveWholeObjectCount=rec.get('completeTerminalReviews'),legacyReaderRecordPreserved=True,nativeAuthority=0,sourceGreenExecuted=False)
+ with (D/'TERMINAL-EXPORT.json').open('x') as f:f.write(json.dumps(receipt,indent=2)+'\n')
+ if outcome['decision']=='EXPORT':
+  with (D/'TERMINAL-REVIEW.json').open('x') as f:f.write(json.dumps(outcome['review'],indent=2)+'\n')
+ print(json.dumps(receipt),flush=True)
+ raise SystemExit(0 if outcome['decision']=='EXPORT' else 2)
+if export_only:
+ rec=json.loads((D/'PROCESS.json').read_text());p=None
+ pid=rec.get('pid')
+ if rec.get('status')!='terminal' and pid:
+  try:os.kill(pid,0)
+  except ProcessLookupError:pass
+  else:raise SystemExit('Provider process still live; no re-export yet')
+ if rec.get('status')!='terminal':rec.update(status='terminal-process-missing',exitCode=None,recoveredAt=now())
+else:
+ if T['provider']=='gemini':
+  args=['/home/charl/.local/bin/agy','--model',T['model'],'--effort','high','--mode','plan','--sandbox','--disable-slash-commands','--add-dir',str(W),'--output-format','stream-json','--json-schema',str(D/'OUTPUT-SCHEMA.json'),'--print-timeout','600s','--log-file',str(D/'agy.private.log'),'--print',prompt]
+ elif T['provider']=='muse':
+  args=['/home/charl/.local/bin/muse','exec','--provider','meta','--model',T['model'],'--contributor-mode',T.get('contributorMode','off'),'--reasoning-effort','high','--preset','native-basic','--workspace',str(W),'--disable-write','--disable-shell','--disable-web-tools','--disable-request-user-input','--no-foreign-personal-context','--no-session-log','--approval-mode','never','--max-model-steps','16','--max-tool-output-bytes','500000','--output-schema',str(D/'OUTPUT-SCHEMA.json'),'--prompt-file',str(D/'PROMPT.md'),'--json']
+ else:
+  args=['/home/charl/.local/bin/claude','--model',T['model'],'--effort','high','--safe-mode','--restricted','--permission-mode',T.get('permissionMode','plan'),'--tools',','.join(T.get('toolAllowlist',['Read'])),'--allowedTools',','.join(T.get('toolAllowlist',['Read'])),'--disable-slash-commands','--strict-mcp-config','--mcp-config','{"mcpServers":{}}','--no-session-persistence','--output-format','stream-json','--verbose','--json-schema',json.dumps(schema),'--print',prompt]
+ if T['provider']=='claude' and T.get('sourceOutputDirectory'):
+  args[1:1]=['--add-dir',T['sourceOutputDirectory']]
+ if T['provider']=='claude' and T.get('fallbackModel'):
+  args[1:1]=['--fallback-model',T['fallbackModel']]
+ args=['/usr/bin/timeout','--signal=TERM','--kill-after=5s',str(T.get('wallSeconds',600))+'s']+args
+ rec={'id':T['id'],'requestedModel':T['model'],'persona':T['persona'],'artifactSha256':T['artifactSha256'],'startedAt':now(),'status':'starting','promptSha256':sha(prompt.encode()),'inputFilesVerified':len(M['files']),'scope':T.get('scope','Source-only C2 policy/test work; no execution or native authority.')}
+ with (D/'provider.private.jsonl').open('xb') as out,(D/'stderr.private').open('xb') as err:
+  p=subprocess.Popen(args,cwd=W,stdin=subprocess.DEVNULL,stdout=out,stderr=err,env=dict(os.environ));rec.update(status='running',pid=p.pid);(D/'PROCESS.json').write_text(json.dumps(rec,indent=2)+'\n');print(json.dumps(rec),flush=True);p.wait()
+if p is not None:rec.update(status='terminal',exitCode=p.returncode,endedAt=now())
+rec['reexportedAt']=now();reviews={};all_reviews={};models=[];tools=set();errors=0;signals=set();events=set();top_metadata=[];provider_event_counts={};rate_status_counts={};schema_rejections=[];terminal_shapes=[];terminal_classes=set();assistant_models={}
+def walk(x,collect=False):
+ if isinstance(x,dict):
+  if x.get('reviewToken')==T['reviewToken']:
+   try:jsonschema.validate(x,schema)
+   except jsonschema.ValidationError as exc:
+    diagnostic={'validator':str(exc.validator),'path':[z for z in exc.absolute_path if isinstance(z,(str,int))],'matchingReviewToken':True,'knownFieldsPresent':sorted(set(x)&set(schema.get('properties',{}))),'stringLengths':{k:len(v) for k,v in x.items() if k in schema.get('properties',{}) and isinstance(v,str)}}
+    if diagnostic not in schema_rejections:schema_rejections.append(diagnostic)
+   else:
+    key=json.dumps(x,sort_keys=True);all_reviews[key]=x
+    def preview_suffixes(value):
+     if isinstance(value,str):return int(value.endswith('…'))
+     if isinstance(value,list):return sum(preview_suffixes(v) for v in value)
+     if isinstance(value,dict):return sum(preview_suffixes(v) for v in value.values())
+     return 0
+    # Public whole-candidate reproduction: CLI previews truncate the summary
+    # and multiple other fields with U+2026; a full review does not. Preserve
+    # every candidate below, including excluded previews, without splicing.
+    bounded_preview=isinstance(x.get('summary'),str) and x['summary'].endswith('…') and preview_suffixes(x)>1
+    if not bounded_preview:reviews[key]=x
+  for k in ['model','model_id','modelId','provider']:
+   if isinstance(x.get(k),str) and {k:x[k]} not in models:models.append({k:x[k]})
+  if isinstance(x.get('modelUsage'),dict):
+   for k in x['modelUsage']:
+    if k.startswith(('claude-','gemini-')) and {'modelUsage':k} not in models:models.append({'modelUsage':k})
+  if x.get('type')=='tool_use' and isinstance(x.get('name'),str):tools.add(x['name'])
+  if x.get('type') in ['result','error']:
+   msg=' '.join(str(x.get(k,'')) for k in ['error','errors','message','result'])
+   if re.search(r'(?i)(?:model[^\n]{0,180}(?:does not exist|not exist|not have access|not found|unavailable|invalid model))',msg):signals.add('REQUESTED_MODEL_UNAVAILABLE_OR_ACCESS_DENIED')
+   if re.search(r'(?i)(?:authentication failed|HTTP.?401|not logged in)',msg):signals.add('AUTHENTICATION_REQUIRED')
+   if re.search(r'(?i)(?:rate limit|HTTP.?429)',msg):signals.add('RATE_LIMIT_SIGNAL')
+  for v in x.values():walk(v,collect)
+ elif isinstance(x,list):
+  for v in x:walk(v,collect)
+ elif isinstance(x,str):
+  z=x.strip()
+  if z.startswith('```'):z=z.removeprefix('```json').removeprefix('```').removesuffix('```').strip()
+  if z.startswith('{') and z.endswith('}'):
+   try:walk(json.loads(z),collect)
+   except (ValueError,RecursionError):pass
+for line in (D/'provider.private.jsonl').read_text().splitlines():
+ if not line.strip():continue
+ try:
+  x=json.loads(line);kind=x.get('type') if isinstance(x,dict) else None
+  if kind:
+   events.add(kind)
+   provider_event_counts[kind]=provider_event_counts.get(kind,0)+1
+  if kind=='assistant' and isinstance(x.get('message'),dict):
+   model_name=x['message'].get('model')
+   if isinstance(model_name,str) and model_name.startswith(('claude-','gemini-','muse-')):assistant_models[model_name]=assistant_models.get(model_name,0)+1
+  if kind=='result':
+   terminal_text=x.get('result','') if isinstance(x.get('result'),str) else ''
+   categories={'OUTPUT_DELIVERY_LIMIT':r'(?i)(?:output|token|context|response)[^\n]{0,90}(?:limit|exceed|too (?:long|large)|truncat)', 'TOOL_OR_SCHEMA_UNAVAILABLE':r'(?i)(?:StructuredOutput|schema|write tool|writing tool)[^\n]{0,120}(?:unavailable|not available|not (?:allowed|enabled|exposed)|cannot|can.t)', 'PERMISSION_OR_APPROVAL_REFUSAL':r'(?i)(?:permission|approval|read access)[^\n]{0,100}(?:denied|rejected|needed|required|not allowed)', 'NEEDS_INPUT_OR_SCOPE':r'(?i)(?:need|require|please|await)[^\n]{0,80}(?:clarif|confirm|input|authoriz|approval)', 'JSON_OBJECT_TEXT':r'\{[\s\S]*reviewToken', 'NO_SOURCE_DELIVERED':r'(?i)(?:not (?:produce|deliver|author|write)|no (?:prefix|source|file)|cannot (?:produce|deliver|author|write))'}
+   terminal_classes.update(k for k,pattern in categories.items() if re.search(pattern,terminal_text))
+   terminal_shapes.append({'subtype':x.get('subtype') if x.get('subtype') in ['success','error_max_turns','error_max_budget_usd','error_during_execution','error_max_structured_output_retries'] else 'OTHER','is_error':bool(x.get('is_error',False)),'structured_output_present':'structured_output' in x,'structured_output_kind':type(x.get('structured_output')).__name__,'result_kind':type(x.get('result')).__name__,'result_chars':len(x.get('result','')) if isinstance(x.get('result'),str) else None})
+  if kind=='rate_limit_event':
+   info=x.get('rate_limit_info',{})
+   status=info.get('status','UNRECOGNIZED_SCHEMA') if isinstance(info,dict) else 'UNRECOGNIZED_SCHEMA'
+   if status not in ['allowed','allowed_warning','rejected']:status='UNRECOGNIZED_STATUS'
+   rate_status_counts[status]=rate_status_counts.get(status,0)+1
+  if isinstance(x,dict) and kind in ['system','init','result']:
+   for field in ['model','model_id','modelId','provider']:
+    if isinstance(x.get(field),str):
+     item={'eventType':kind,'subtype':x.get('subtype'),'field':field,'value':x[field]}
+     if item not in top_metadata:top_metadata.append(item)
+   if isinstance(x.get('modelUsage'),dict):
+    for model_name in x['modelUsage']:
+     item={'eventType':kind,'subtype':x.get('subtype'),'field':'modelUsage','value':model_name}
+     if item not in top_metadata:top_metadata.append(item)
+  walk(x,kind=='result')
+ except ValueError:errors+=1
+if rec.get('exitCode') not in [0,None] and not signals:
+ msg=(D/'stderr.private').read_text(errors='replace')
+ if re.search(r'(?i)model[^\n]{0,180}(?:not exist|not have access|not found|invalid)',msg):signals.add('REQUESTED_MODEL_UNAVAILABLE_OR_ACCESS_DENIED')
+ if re.search(r'(?i)(?:not logged in|authentication failed|HTTP.?401)',msg):signals.add('AUTHENTICATION_REQUIRED')
+ if re.search(r'(?i)(?:rate limit|HTTP.?429)',msg):signals.add('RATE_LIMIT_SIGNAL')
+# Public G22 reproduction: a bounded preview may truncate only summary.
+# Exclude it only when another whole candidate contains the exact continuation.
+for key,obj in list(reviews.items()):
+ summary=obj.get('summary','')
+ if isinstance(summary,str) and summary.endswith('…') and any(other.get('summary','').startswith(summary[:-1]) and len(other.get('summary',''))>len(summary) for otherkey,other in all_reviews.items() if otherkey!=key):
+  del reviews[key]
+if T['provider']=='muse' and rec.get('exitCode') not in [0,None]:
+ diagnostic=(D/'stderr.private').read_text(errors='replace')+'\n'+(D/'provider.private.jsonl').read_text(errors='replace')
+ categories={
+  'CLI_ARGUMENT_REJECTION':r'(?i)(?:unrecognized|unexpected|unknown|invalid) (?:argument|option|flag)',
+  'PRESET_OR_PROFILE_REJECTION':r'(?i)(?:preset|permission.profile)[^\n]{0,100}(?:unknown|invalid|not found|not supported)',
+  'MODEL_UNAVAILABLE':r'(?i)(?:model[^\n]{0,100}(?:not found|not supported|unavailable|not exist)|unknown model)',
+  'PROVIDER_AUTHENTICATION':r'(?i)(?:unauthorized|HTTP.?401|authentication|not logged in)',
+  'RATE_LIMIT':r'(?i)(?:HTTP.?429|rate limit)',
+  'APPROVAL_REJECTED':r'(?i)(?:approval|auto.?review)[^\n]{0,100}(?:rejected|denied)',
+  'PROVIDER_TRANSPORT':r'(?i)(?:connection (?:refused|reset)|timed? out|network error|fetch failed)',
+  'PROVIDER_INTERNAL_ERROR':r'(?i)(?:internal server error|HTTP.?50[0234]|status.?50[0234])',
+  'PROVIDER_CLIENT_ERROR':r'(?i)(?:HTTP.?4[0-9]{2}|status.?4[0-9]{2}|bad.?request|invalid_request|invalid request)',
+  'SCHEMA_UNSUPPORTED_OR_INVALID':r'(?i)(?:schema|structured.?output)[^\n]{0,140}(?:invalid|unsupported|not support|reject|not permitted|expected|not allowed)',
+  'PROVIDER_ACCOUNT_OR_CAPACITY':r'(?i)(?:quota|credits|billing|capacity|overloaded|payment required)',
+  'MODEL_STEP_OR_OUTPUT_LIMIT':r'(?i)(?:maximum|max_model_steps|step limit|too many (?:steps|tokens)|output limit)',
+  'POLICY_CAPABILITY_REFUSAL':r'(?i)(?:policy|capability|permission)[^\n]{0,140}(?:refus|denied|reject|disabled|not permitted)',
+  'PUBLIC_FILE_READ_FAILURE':r'(?i)(?:file|workspace|path)[^\n]{0,140}(?:not found|no such|permission denied|outside)',
+ }
+ rec['diagnosticClasses']=[name for name,pattern in categories.items() if re.search(pattern,diagnostic)]
+ rec['diagnosticPolicy']='Canonical failure classes only, no raw or partial provider content exported.'
+rec['assistantEnvelopeModelCounts']=assistant_models
+rec['schemaRejectionDiagnostics']=schema_rejections
+rec['terminalResultShapes']=terminal_shapes
+rec['terminalResultDiagnosticClasses']=sorted(terminal_classes)
+rec['providerEnvelopeEventCounts']=provider_event_counts
+rec['rateLimitEventStatusCounts']=rate_status_counts
+rec['rateLimitDiagnosticScope']='Only top-level event counts and allowlisted rate_limit_info.status enum values; no provider text, partial output or private details.'
+rec['topLevelProviderMetadata']=top_metadata
+rec['providerMetadataQualification']='topLevelProviderMetadata contains only provider-envelope system/init/result fields. Recursive actualProviderMetadata may include names in quoted source/tool results and is not sufficient by itself for identity qualification.'
+rec['wholeSchemaValidCandidates']=len(all_reviews)
+rec['boundedCliPreviewCandidatesExcluded']=len(all_reviews)-len(reviews)
+rec.pop('literalCliPreviewCandidatesExcluded',None)
+rec['exportPolicy']='Only whole schema-valid objects; bounded U+2026 previews are excluded by multiple truncated fields or an exact summary-prefix continuation in another whole candidate. Every whole candidate is preserved; no partial content exported.'
+if all_reviews:(D/'WHOLE-SCHEMA-VALID-CANDIDATES.json').write_text(json.dumps(list(all_reviews.values()),indent=2)+'\n')
+rec.update(actualProviderMetadata=models,toolNamesObserved=sorted(tools),eventTypes=sorted(events),parseErrors=errors,completeTerminalReviews=len(reviews),inputFilesChangedAfter=changed(),failureSignals=sorted(signals))
+if len(reviews)==1:
+ review=next(iter(reviews.values()));(D/'REVIEW.json').write_text(json.dumps(review,indent=2)+'\n');rec['reviewSha256']=sha((D/'REVIEW.json').read_bytes())
+elif len(reviews)>1:(D/'AMBIGUOUS-COMPLETE-REVIEWS.json').write_text(json.dumps(list(reviews.values()),indent=2)+'\n')
+(D/'PROCESS.json').write_text(json.dumps(rec,indent=2)+'\n');print(json.dumps(rec),flush=True)

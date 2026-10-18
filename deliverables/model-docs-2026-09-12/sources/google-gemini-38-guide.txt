@@ -1,0 +1,747 @@
+Gemini 3.8 Flash is now available.
+Try it out
+.
+Home
+Gemini API
+Docs
+Send feedback
+What's new in Gemini 3.8 Flash
+See all models
+Gemini 3.8 Flash (
+gemini-3.8-flash
+) is generally available (GA) and ready for production use. It is our most intelligent Flash model, engineered for long-horizon software engineering, autonomous agents, and complex enterprise workflows.
+This guide explains what's new in Gemini 3.8 Flash, API changes, code examples, and migration guidance.
+New model
+Model
+Model ID
+Default thinking level
+Pricing
+Description
+Gemini 3.8 Flash
+gemini-3.8-flash
+medium
+3.8 Flash is available through the end of year at an introductory price of $0.75/1M input tokens and $3.75/1M output tokens; see
+pricing
+for more details.
+Our most intelligent Flash model, engineered for long-horizon software engineering, autonomous agents, and complex enterprise workflows.
+Gemini 3.8 Flash supports a 1M token context window, 64k max output tokens, tunable thinking levels (
+low
+,
+medium
+,
+high
+), and the same comprehensive suite of built-in tools.
+For complete specs, see the
+Gemini 3.8 Flash model page
+. For introductory pricing details, see the
+pricing section
+below or the
+pricing page
+.
+Quickstart
+Python
+from
+google
+import
+genai
+client
+=
+genai
+.
+Client
+()
+interaction
+=
+client
+.
+interactions
+.
+create
+(
+model
+=
+"gemini-3.8-flash"
+,
+input
+=
+"Write a three.js script that renders a realistic 3D black hole."
+)
+print
+(
+interaction
+.
+output_text
+)
+JavaScript
+import
+{
+GoogleGenAI
+}
+from
+"@google/genai"
+;
+const
+client
+=
+new
+GoogleGenAI
+({});
+const
+interaction
+=
+await
+client
+.
+interactions
+.
+create
+({
+model
+:
+"gemini-3.8-flash"
+,
+input
+:
+"Write a three.js script that renders a realistic 3D black hole."
+,
+});
+console
+.
+log
+(
+interaction
+.
+output_text
+);
+Java
+import
+com.google.genai.Client
+;
+import
+com.google.genai.gaos.models.interactions.CreateModelInteraction
+;
+import
+com.google.genai.gaos.models.interactions.Interaction
+;
+import
+com.google.genai.gaos.models.interactions.InteractionsInput
+;
+import
+com.google.genai.gaos.models.interactions.Model
+;
+import
+com.google.genai.gaos.models.operations.CreateInteractionRequestBody
+;
+Client
+client
+=
+new
+Client
+();
+CreateModelInteraction
+req
+=
+CreateModelInteraction
+.
+builder
+()
+.
+model
+(
+Model
+.
+of
+(
+"gemini-3.8-flash"
+))
+.
+input
+(
+InteractionsInput
+.
+of
+(
+"Hello world"
+))
+.
+build
+();
+Interaction
+interaction
+=
+client
+.
+interactions
+.
+create
+(
+CreateInteractionRequestBody
+.
+of
+(
+req
+)).
+interaction
+().
+get
+();
+System
+.
+out
+.
+println
+(
+interaction
+.
+outputText
+().
+orElse
+(
+""
+));
+REST
+curl
+"https://generativelanguage.googleapis.com/v1beta/interactions"
+\
+-H
+"x-goog-api-key:
+$GEMINI_API_KEY
+"
+\
+-H
+'Content-Type: application/json'
+\
+-X
+POST
+\
+-d
+'{
+"model": "gemini-3.8-flash",
+"input": "Write a three.js script that renders a realistic 3D black hole."
+}'
+What's new in Gemini 3.8 Flash
+Long-horizon software engineering:
+Delivers strong results on real-world coding benchmarks, complex multi-file refactoring, and deterministic tool execution. See the
+evaluation methodology
+for details.
+Autonomous agents:
+Lets you build resilient multi-step planning and tool orchestration workflows, substantially reducing failed loops and errors.
+Complex enterprise workflows:
+Delivers superior accuracy, deep reasoning, and high factual rigor across demanding domain tasks and large-scale data pipelines.
+Default model for Managed Agents:
+The default agent for managed agents: the
+Antigravity agent
+, now uses Gemini 3.8 Flash. The
+Antigravity SDK
+also uses Gemini 3.8 Flash by default.
+Introductory pricing:
+Gemini 3.8 Flash is available at an introductory rate of $0.75/1M input tokens and $3.75/1M output tokens through December 31, 2026. Standard pricing of $1.50/1M input tokens and $7.50/1M output tokens takes effect January 1, 2027.
+Gemini 3.8 Flash can use more tokens on longer running and complex tasks, by design. To deliver higher-quality results on difficult, multi-step goals, the model takes smaller reasoning steps, calls tools iteratively, and verifies its work along the way. Not every workflow needs this level of verification. For everyday tasks, you can lower the
+reasoning
+effort to reduce token consumption. Alternatively, Gemini 3.7 Flash remains fully supported.
+Understanding reasoning levels
+Gemini 3.8 Flash gives you flexible control over latency and intelligence by adjusting the model's thinking level:
+Low thinking effort
+: Reduces time-to-answer for latency-critical tasks like incident response pipelines, real-time chat, writing drafts, and fast data analysis.
+Medium (default):
+Best quality for most tasks. Recommended for complex code and agentic use cases, providing higher first-pass accuracy.
+High thinking effort
+: Maximizes the model's reasoning and tool orchestration capabilities. Best for deep reasoning, mathematics, and difficult multi-step tasks.
+Note:
+minimal
+thinking level is not supported for Gemini 3.8 Flash and will return an error.
+The following example sets
+thinking_level
+to
+medium
+for a complex code analysis request:
+Python
+from
+google
+import
+genai
+client
+=
+genai
+.
+Client
+()
+interaction
+=
+client
+.
+interactions
+.
+create
+(
+model
+=
+"gemini-3.8-flash"
+,
+input
+=
+"Analyze this payment processing pipeline for race conditions during retry attempts and rewrite the transaction locks safely."
+,
+generation_config
+=
+{
+"thinking_level"
+:
+"medium"
+# Balanced reasoning effort for complex tasks
+}
+)
+print
+(
+interaction
+.
+output_text
+)
+JavaScript
+import
+{
+GoogleGenAI
+}
+from
+"@google/genai"
+;
+const
+client
+=
+new
+GoogleGenAI
+({});
+const
+interaction
+=
+await
+client
+.
+interactions
+.
+create
+({
+model
+:
+"gemini-3.8-flash"
+,
+input
+:
+"Analyze this payment processing pipeline for race conditions during retry attempts and rewrite the transaction locks safely."
+,
+generation_config
+:
+{
+thinking_level
+:
+"medium"
+}
+});
+console
+.
+log
+(
+interaction
+.
+output_text
+);
+Java
+import
+com.google.genai.Client
+;
+import
+com.google.genai.gaos.models.interactions.CreateModelInteraction
+;
+import
+com.google.genai.gaos.models.interactions.Interaction
+;
+import
+com.google.genai.gaos.models.interactions.InteractionsInput
+;
+import
+com.google.genai.gaos.models.interactions.Model
+;
+import
+com.google.genai.gaos.models.operations.CreateInteractionRequestBody
+;
+Client
+client
+=
+new
+Client
+();
+CreateModelInteraction
+req
+=
+CreateModelInteraction
+.
+builder
+()
+.
+model
+(
+Model
+.
+of
+(
+"gemini-3.8-flash"
+))
+.
+input
+(
+InteractionsInput
+.
+of
+(
+"Hello world"
+))
+.
+build
+();
+Interaction
+interaction
+=
+client
+.
+interactions
+.
+create
+(
+CreateInteractionRequestBody
+.
+of
+(
+req
+)).
+interaction
+().
+get
+();
+System
+.
+out
+.
+println
+(
+interaction
+.
+outputText
+().
+orElse
+(
+""
+));
+REST
+curl
+"https://generativelanguage.googleapis.com/v1beta/interactions"
+\
+-H
+"x-goog-api-key:
+$GEMINI_API_KEY
+"
+\
+-H
+'Content-Type: application/json'
+\
+-X
+POST
+\
+-d
+'{
+"model": "gemini-3.8-flash",
+"input": "Analyze this payment processing pipeline for race conditions during retry attempts and rewrite the transaction locks safely.",
+"generation_config": {
+"thinking_level": "medium"
+}
+}'
+Updated Antigravity agent
+Due to its improved performance and reasoning, the
+Antigravity agent
+in Gemini Managed Agents is now built with Gemini 3.8 Flash by default.
+Python
+from
+google
+import
+genai
+client
+=
+genai
+.
+Client
+()
+interaction
+=
+client
+.
+interactions
+.
+create
+(
+agent
+=
+"antigravity-preview-05-2026"
+,
+input
+=
+(
+"Audit https://web.dev for performance, Core Web Vitals, and SEO. "
+"Query Google's PageSpeed Insights API for both Mobile and Desktop strategies. "
+"Check search indexing with Google Search for site:web.dev. "
+"Format the output as a side-by-side scorecard table with prioritized fixes."
+),
+environment
+=
+"remote"
+,
+)
+print
+(
+interaction
+.
+output_text
+)
+JavaScript
+import
+{
+GoogleGenAI
+}
+from
+"@google/genai"
+;
+const
+client
+=
+new
+GoogleGenAI
+({});
+const
+interaction
+=
+await
+client
+.
+interactions
+.
+create
+({
+agent
+:
+"antigravity-preview-05-2026"
+,
+input
+:
+"Audit https://web.dev for performance, Core Web Vitals, and SEO. Query Google's PageSpeed Insights API for both Mobile and Desktop strategies. Check search indexing with Google Search for site:web.dev. Format the output as a side-by-side scorecard table with prioritized fixes."
+,
+environment
+:
+"remote"
+,
+},
+{
+timeout
+:
+300000
+});
+console
+.
+log
+(
+interaction
+.
+output_text
+);
+Java
+import
+com.google.genai.Client
+;
+import
+com.google.genai.gaos.models.interactions.CreateModelInteraction
+;
+import
+com.google.genai.gaos.models.interactions.Interaction
+;
+import
+com.google.genai.gaos.models.interactions.InteractionsInput
+;
+import
+com.google.genai.gaos.models.interactions.Model
+;
+import
+com.google.genai.gaos.models.operations.CreateInteractionRequestBody
+;
+Client
+client
+=
+new
+Client
+();
+CreateModelInteraction
+req
+=
+CreateModelInteraction
+.
+builder
+()
+.
+model
+(
+Model
+.
+of
+(
+"gemini-3.8-flash"
+))
+.
+input
+(
+InteractionsInput
+.
+of
+(
+"Hello world"
+))
+.
+build
+();
+Interaction
+interaction
+=
+client
+.
+interactions
+.
+create
+(
+CreateInteractionRequestBody
+.
+of
+(
+req
+)).
+interaction
+().
+get
+();
+System
+.
+out
+.
+println
+(
+interaction
+.
+outputText
+().
+orElse
+(
+""
+));
+REST
+curl
+-X
+POST
+"https://generativelanguage.googleapis.com/v1beta/interactions"
+\
+-H
+"Content-Type: application/json"
+\
+-H
+"x-goog-api-key:
+$GEMINI_API_KEY
+"
+\
+-d
+'{
+"agent": "antigravity-preview-05-2026",
+"input": "Audit https://web.dev for performance, Core Web Vitals, and SEO. Query Google'
+\'
+'s PageSpeed Insights API for both Mobile and Desktop strategies. Check search indexing with Google Search for site:web.dev. Format the output as a side-by-side scorecard table with prioritized fixes.",
+"environment": "remote"
+}'
+The underlying Gemini model
+can be configured
+using
+agent_config
+.
+Migration checklist
+Note:
+Automate this migration with a coding agent.
+If you use a coding agent that supports skills (like Antigravity),
+      install the
+gemini-api-dev skill
+and run:
+`/gemini-api-dev migrate my app to Gemini 3.8 Flash`
+Migrate to gemini-3.8-flash
+Update Model ID:
+Change your target model string to
+gemini-3.8-flash
+.
+Remove deprecated sampling parameters:
+Strip
+temperature
+,
+top_p
+, and
+top_k
+from generation configs.
+Replace
+thinking_budget
+with the string enum
+thinking_level
+. Note that
+minimal
+is not supported on 3.8 Flash.
+Remove
+candidate_count
+(unsupported in Gemini 3 and later).
+Enforce turn validation rules:
+Standardize multi-turn conversations on server-side
+previous_interaction_id
+.
+Remove prefilled model turns.
+Audit function calling:
+Place multimodal assets inside the response payload.
+Format inline instructions using
+\n\n
+.
+If you see
+Malformed_Function_Call
+errors tied to pre-tool text, see
+Workarounds for pre-tool text requirements
+.
+Only if using generateContent API: Ensure all
+FunctionResponse
+objects include
+call_id
+and
+name
+.
+Baseline Gemini 3 requirements:
+For SDK updates and thought signature preservation, see the
+Gemini 3.5 Migration Checklist
+.
+Pricing
+Take advantage of introductory pricing across Google AI Studio and Gemini Enterprise Agent Platform through December 31, 2026 for Gemini 3.8 Flash, Gemini 3.7 Flash, and Gemini 3.6 Flash. Standard pricing takes effect January 1, 2027. For complete pricing tiers, see the
+pricing page
+.
+Next steps
+Review API specs on the
+Models Overview
+.
+Explore multi-agent orchestration in the
+Interactions API Overview
+.
+Test and refine prompts in
+Google AI Studio
+.
+Send feedback
+Except as otherwise noted, the content of this page is licensed under the
+Creative Commons Attribution 4.0 License
+, and code samples are licensed under the
+Apache 2.0 License
+. For details, see the
+Google Developers Site Policies
+. Java is a registered trademark of Oracle and/or its affiliates.
+Last updated 2026-09-03 UTC.
+Need to tell us more?
+[[["Easy to understand","easyToUnderstand","thumb-up"],["Solved my problem","solvedMyProblem","thumb-up"],["Other","otherUp","thumb-up"]],[["Missing the information I need","missingTheInformationINeed","thumb-down"],["Too complicated / too many steps","tooComplicatedTooManySteps","thumb-down"],["Out of date","outOfDate","thumb-down"],["Samples / code issue","samplesCodeIssue","thumb-down"],["Other","otherDown","thumb-down"]],["Last updated 2026-09-03 UTC."],[],[]]

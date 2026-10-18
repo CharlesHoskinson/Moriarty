@@ -1,0 +1,1961 @@
+A1 is a real occupancy hole: only typed `local-runtime`/`syntax` may exempt a stored reservation. A2 is a real false-zero on linked-worktree keys. The rest is mandatory coverage on the existing CLI/store guards. P1 (reservationId) is included; P2 catalog TOCTOU is left as a recorded limitation. Hook/R1 and 1.2 authenticity are not patched.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/store.py
+@@
+ LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
+ LEGACY_PRIMARY_KINDS = frozenset(("implement", "repair"))
++KNOWN_NONLIVE_PROFILES = frozenset(("local-runtime", "syntax"))
+@@
+ def _action_start_profile(conn, repo, requirement, capability, candidate, action_id):
+     try:
+         cur = conn.execute(
+             """
+             SELECT payload_json FROM events
+             WHERE event_kind = 'action_start'
+               AND repository = ?
+               AND requirement = ?
+               AND capability = ?
+               AND candidate = ?
+               AND action_id = ?
+             ORDER BY id DESC
+             """,
+             (repo, requirement, capability, candidate, action_id),
+         )
+         rows = cur.fetchall()
+         if not rows:
+             return None
+         profiles = []
+         for (raw,) in rows:
+             try:
+                 payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+             except Exception:
+                 return None
+             action = payload.get("action") if isinstance(payload, dict) else None
+             if not isinstance(action, dict) or "evidenceProfile" not in action:
+                 return None
+             profiles.append(action.get("evidenceProfile"))
+         if any(item == LIVE_EVIDENCE_PROFILE for item in profiles):
+             return LIVE_EVIDENCE_PROFILE
+         distinct = set(profiles)
+         if len(distinct) == 1:
+             return profiles[0]
+         return None
+     except Exception:
+         return None
+ 
+ 
+ def _reservation_occupies_primary(conn, action_kind, repo, requirement, capability, candidate, action_id):
+     if action_kind in LEGACY_PRIMARY_KINDS:
+         return True
+     profile = _action_start_profile(
+         conn, repo, requirement, capability, candidate, action_id
+     )
+     if profile is None:
+         return True
+     return profile == LIVE_EVIDENCE_PROFILE
+ 
+ 
+ def _any_other_primary(conn, exclude_id=None):
+     rows = conn.execute(
+         """
+         SELECT id, repository, requirement, capability, candidate, action_id, action_kind
+         FROM reservations WHERE status = 'active'
+         """
+     ).fetchall()
+     for rid, repo, req, cap, cand, act_id, kind in rows:
+         if exclude_id is not None and rid == exclude_id:
+             continue
+         if _reservation_occupies_primary(conn, kind, repo, req, cap, cand, act_id):
+             return True
+     return False
++def _profile_occupies_slot(profile, action_kind):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    if type(profile) is not str:
++        return True
++    if profile.strip() == "":
++        return True
++    if profile == LIVE_EVIDENCE_PROFILE:
++        return True
++    if profile in KNOWN_NONLIVE_PROFILES:
++        return False
++    return True
++
++
++def _extract_start_profile(payload):
++    if not isinstance(payload, dict):
++        return None
++    action = payload.get("action")
++    if not isinstance(action, dict) or "evidenceProfile" not in action:
++        return None
++    return action.get("evidenceProfile")
++
++
++def _action_start_profiles(conn, repo, requirement, capability, candidate, action_id, reservation_id=None):
++    try:
++        cur = conn.execute(
++            """
++            SELECT payload_json FROM events
++            WHERE event_kind = 'action_start'
++              AND repository = ?
++              AND requirement = ?
++              AND capability = ?
++              AND candidate = ?
++              AND action_id = ?
++            ORDER BY id DESC
++            """,
++            (repo, requirement, capability, candidate, action_id),
++        )
++        matched = []
++        fallback = []
++        for (raw,) in cur.fetchall():
++            try:
++                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
++            except Exception:
++                fallback.append(None)
++                continue
++            profile = _extract_start_profile(payload)
++            if (
++                reservation_id is not None
++                and isinstance(payload, dict)
++                and payload.get("reservationId") == reservation_id
++            ):
++                matched.append(profile)
++            fallback.append(profile)
++        if reservation_id is not None and matched:
++            return matched
++        return fallback
++    except Exception:
++        return None
++
++
++def _profiles_occupy(profiles, action_kind):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    if not profiles:
++        return True
++    flags = [_profile_occupies_slot(profile, action_kind) for profile in profiles]
++    if any(flags) and not all(flags):
++        return True
++    return flags[0]
++
++
++def _reservation_occupies_primary(conn, reservation_id, action_kind, repo, requirement, capability, candidate, action_id):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    profiles = _action_start_profiles(
++        conn, repo, requirement, capability, candidate, action_id, reservation_id=reservation_id
++    )
++    if profiles is None:
++        return True
++    return _profiles_occupy(profiles, action_kind)
++
++
++def _any_other_primary(conn, exclude_id=None):
++    rows = conn.execute(
++        """
++        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
++        FROM reservations WHERE status = 'active'
++        """
++    ).fetchall()
++    for rid, repo, req, cap, cand, act_id, kind in rows:
++        if exclude_id is not None and rid == exclude_id:
++            continue
++        if _reservation_occupies_primary(conn, rid, kind, repo, req, cap, cand, act_id):
++            return True
++    return False
++
++
++def _expand_related_repo_ids(conn, requested_ids, requirement, capability):
++    requested_set = set(requested_ids)
++    expanded = list(requested_ids)
++    seen = set(requested_ids)
++    try:
++        cur = conn.execute(
++            "SELECT DISTINCT repository FROM events WHERE requirement = ? AND capability = ?",
++            (requirement, capability),
++        )
++        for (stored,) in cur.fetchall():
++            if stored in seen:
++                continue
++            stored_ids = set(_canonical_repo_ids(stored))
++            if stored_ids & requested_set:
++                expanded.append(stored)
++                seen.add(stored)
++    except Exception:
++        return requested_ids
++    return expanded
+@@
+-def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
++def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0, expand_related: bool = False) -> dict | None:
+     if not db_path.is_file():
+         return None
+@@
+         repo_ids = _canonical_repo_ids(repo)
+         placeholders = ",".join("?" for _ in repo_ids)
++        repo_ids = _canonical_repo_ids(repo)
++        if expand_related:
++            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
++        placeholders = ",".join("?" for _ in repo_ids)
+@@
+         repo_ids = _canonical_repo_ids(repo)
+         placeholders = ",".join("?" for _ in repo_ids)
+         cur = conn.execute(
+             f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
+             repo_ids + [requirement, capability],
+         )
+         return cur.fetchone()[0] > 0
++        repo_ids = _canonical_repo_ids(repo)
++        repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
++        placeholders = ",".join("?" for _ in repo_ids)
++        cur = conn.execute(
++            f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
++            repo_ids + [requirement, capability],
++        )
++        return cur.fetchone()[0] > 0
+@@
+     if not _exact_lineage_recorded(db_path, repo, requirement, capability, timeout=timeout):
+         return None
+-    return get_history(db_path, repo, requirement, capability, timeout=timeout)
++    return get_history(
++        db_path, repo, requirement, capability, timeout=timeout, expand_related=True
++    )
+@@
+         action_kind = action.get("kind", "")
+-        incoming_occupies = (
+-            action_kind in LEGACY_PRIMARY_KINDS
+-            or action.get("evidenceProfile") == LIVE_EVIDENCE_PROFILE
+-        )
++        incoming_occupies = _profile_occupies_slot(
++            action.get("evidenceProfile"), action_kind
++        )
+         if incoming_occupies and _any_other_primary(conn):
+             raise ReservationConflictError(
+                 "Unresolved primary reservation already exists"
+             )
+*** End Patch
+```
+
+Wait, I made a mess of the get_history hunk - I duplicated repo_ids assignment. Let me redo the patch more carefully with exact context from the file.
+
+Looking at get_history:
+```
+        repo_ids = _canonical_repo_ids(repo)
+        placeholders = ",".join("?" for _ in repo_ids)
+
+        # Total events for repository: schema-only or unrecorded database returns None
+        cur = conn.execute(
+            f"SELECT count(*) FROM events WHERE repository IN ({placeholders})",
+            repo_ids,
+        )
+```
+
+I need to change to:
+```
+        repo_ids = _canonical_repo_ids(repo)
+        if expand_related:
+            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+        placeholders = ",".join("?" for _ in repo_ids)
+```
+
+And _exact_lineage_recorded:
+```
+        repo_ids = _canonical_repo_ids(repo)
+        placeholders = ",".join("?" for _ in repo_ids)
+        cur = conn.execute(
+            f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
+            repo_ids + [requirement, capability],
+        )
+        return cur.fetchone()[0] > 0
+```
+
+Change to expand related before the query.
+
+Also I accidentally left both old and new helper functions in the first hunk (old _action_start_profile PLUS new). I need to REPLACE not duplicate.
+
+Let me write a clean patch.The first patch draft mixed old and new helpers. This version is a single replacement of the occupancy path plus the related-key live-history query, then the required tests.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/store.py
+@@
+ LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
+ LEGACY_PRIMARY_KINDS = frozenset(("implement", "repair"))
++KNOWN_NONLIVE_PROFILES = frozenset(("local-runtime", "syntax"))
+@@
+-def _action_start_profile(conn, repo, requirement, capability, candidate, action_id):
+-    try:
+-        cur = conn.execute(
+-            """
+-            SELECT payload_json FROM events
+-            WHERE event_kind = 'action_start'
+-              AND repository = ?
+-              AND requirement = ?
+-              AND capability = ?
+-              AND candidate = ?
+-              AND action_id = ?
+-            ORDER BY id DESC
+-            """,
+-            (repo, requirement, capability, candidate, action_id),
+-        )
+-        rows = cur.fetchall()
+-        if not rows:
+-            return None
+-        profiles = []
+-        for (raw,) in rows:
+-            try:
+-                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+-            except Exception:
+-                return None
+-            action = payload.get("action") if isinstance(payload, dict) else None
+-            if not isinstance(action, dict) or "evidenceProfile" not in action:
+-                return None
+-            profiles.append(action.get("evidenceProfile"))
+-        if any(item == LIVE_EVIDENCE_PROFILE for item in profiles):
+-            return LIVE_EVIDENCE_PROFILE
+-        distinct = set(profiles)
+-        if len(distinct) == 1:
+-            return profiles[0]
+-        return None
+-    except Exception:
+-        return None
+-
+-
+-def _reservation_occupies_primary(conn, action_kind, repo, requirement, capability, candidate, action_id):
+-    if action_kind in LEGACY_PRIMARY_KINDS:
+-        return True
+-    profile = _action_start_profile(
+-        conn, repo, requirement, capability, candidate, action_id
+-    )
+-    if profile is None:
+-        return True
+-    return profile == LIVE_EVIDENCE_PROFILE
+-
+-
+-def _any_other_primary(conn, exclude_id=None):
+-    rows = conn.execute(
+-        """
+-        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
+-        FROM reservations WHERE status = 'active'
+-        """
+-    ).fetchall()
+-    for rid, repo, req, cap, cand, act_id, kind in rows:
+-        if exclude_id is not None and rid == exclude_id:
+-            continue
+-        if _reservation_occupies_primary(conn, kind, repo, req, cap, cand, act_id):
+-            return True
+-    return False
++def _profile_occupies_slot(profile, action_kind):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    if type(profile) is not str:
++        return True
++    if profile.strip() == "":
++        return True
++    if profile == LIVE_EVIDENCE_PROFILE:
++        return True
++    if profile in KNOWN_NONLIVE_PROFILES:
++        return False
++    return True
++
++
++def _extract_start_profile(payload):
++    if not isinstance(payload, dict):
++        return None
++    action = payload.get("action")
++    if not isinstance(action, dict) or "evidenceProfile" not in action:
++        return None
++    return action.get("evidenceProfile")
++
++
++def _action_start_profiles(conn, repo, requirement, capability, candidate, action_id, reservation_id=None):
++    try:
++        cur = conn.execute(
++            """
++            SELECT payload_json FROM events
++            WHERE event_kind = 'action_start'
++              AND repository = ?
++              AND requirement = ?
++              AND capability = ?
++              AND candidate = ?
++              AND action_id = ?
++            ORDER BY id DESC
++            """,
++            (repo, requirement, capability, candidate, action_id),
++        )
++        matched = []
++        fallback = []
++        for (raw,) in cur.fetchall():
++            try:
++                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
++            except Exception:
++                fallback.append(None)
++                continue
++            profile = _extract_start_profile(payload)
++            if (
++                reservation_id is not None
++                and isinstance(payload, dict)
++                and payload.get("reservationId") == reservation_id
++            ):
++                matched.append(profile)
++            fallback.append(profile)
++        if reservation_id is not None and matched:
++            return matched
++        return fallback
++    except Exception:
++        return None
++
++
++def _profiles_occupy(profiles, action_kind):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    if not profiles:
++        return True
++    flags = [_profile_occupies_slot(profile, action_kind) for profile in profiles]
++    if any(flags) and not all(flags):
++        return True
++    return flags[0]
++
++
++def _reservation_occupies_primary(conn, reservation_id, action_kind, repo, requirement, capability, candidate, action_id):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    profiles = _action_start_profiles(
++        conn,
++        repo,
++        requirement,
++        capability,
++        candidate,
++        action_id,
++        reservation_id=reservation_id,
++    )
++    if profiles is None:
++        return True
++    return _profiles_occupy(profiles, action_kind)
++
++
++def _any_other_primary(conn, exclude_id=None):
++    rows = conn.execute(
++        """
++        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
++        FROM reservations WHERE status = 'active'
++        """
++    ).fetchall()
++    for rid, repo, req, cap, cand, act_id, kind in rows:
++        if exclude_id is not None and rid == exclude_id:
++            continue
++        if _reservation_occupies_primary(conn, rid, kind, repo, req, cap, cand, act_id):
++            return True
++    return False
++
++
++def _expand_related_repo_ids(conn, requested_ids, requirement, capability):
++    requested_set = set(requested_ids)
++    expanded = list(requested_ids)
++    seen = set(requested_ids)
++    try:
++        cur = conn.execute(
++            "SELECT DISTINCT repository FROM events WHERE requirement = ? AND capability = ?",
++            (requirement, capability),
++        )
++        for (stored,) in cur.fetchall():
++            if stored in seen:
++                continue
++            stored_ids = set(_canonical_repo_ids(stored))
++            if stored_ids & requested_set:
++                expanded.append(stored)
++                seen.add(stored)
++    except Exception:
++        return requested_ids
++    return expanded
+@@
+-def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
++def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0, expand_related: bool = False) -> dict | None:
+@@
+         repo_ids = _canonical_repo_ids(repo)
++        if expand_related:
++            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+         placeholders = ",".join("?" for _ in repo_ids)
+@@
+         repo_ids = _canonical_repo_ids(repo)
++        repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+         placeholders = ",".join("?" for _ in repo_ids)
+         cur = conn.execute(
+             f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
+             repo_ids + [requirement, capability],
+         )
+         return cur.fetchone()[0] > 0
+@@
+     if not _exact_lineage_recorded(db_path, repo, requirement, capability, timeout=timeout):
+         return None
+-    return get_history(db_path, repo, requirement, capability, timeout=timeout)
++    return get_history(
++        db_path, repo, requirement, capability, timeout=timeout, expand_related=True
++    )
+@@
+         action_kind = action.get("kind", "")
+-        incoming_occupies = (
+-            action_kind in LEGACY_PRIMARY_KINDS
+-            or action.get("evidenceProfile") == LIVE_EVIDENCE_PROFILE
+-        )
++        incoming_occupies = _profile_occupies_slot(
++            action.get("evidenceProfile"), action_kind
++        )
+         if incoming_occupies and _any_other_primary(conn):
+             raise ReservationConflictError(
+                 "Unresolved primary reservation already exists"
+             )
+*** End of File
+*** Update File: plugins/moriarty-dev/tests/test_live_policy_history.py
+@@
+ import contextlib
+ import io
+ import json
+ import sys
+ import tempfile
+ import threading
+ import unittest
+ import uuid
+ from pathlib import Path
++import os
++import shutil
++import subprocess
+@@
+     def test_concurrent_live_verify_only_one_primary(self):
+         winners = []
+         conflicts = []
+@@
+         self.assertFalse(has_other_primary(self.db_path, winners[0]))
+         finish(self.db_path, winners[0], {"exitCode": 0})
++
++    def test_malformed_profiles_occupy_all_three_consumers(self):
++        for profile in (False, 7, "", "unknown-profile"):
++            action = live_action("verify", profile=profile)
++            action["id"] = "malformed-" + repr(profile)
++            res_id = reserve(self.db_path, str(self.root), action, snapshot())
++            try:
++                history = self.history()
++                self.assertTrue(history["primaryActive"], profile)
++                self.assertTrue(has_other_primary(self.db_path, "other"), profile)
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind(
++                        "verify", action_id="second-after-" + repr(profile)
++                    )
++            finally:
++                finish(self.db_path, res_id, {"exitCode": 0})
++
++    def test_syntax_and_local_runtime_remain_non_occupying_controls(self):
++        for profile in ("syntax", NONFINANCIAL_PROFILE):
++            res_id = self.reserve_kind(
++                "verify", profile=profile, action_id="nonlive-" + profile
++            )
++            try:
++                history = self.history()
++                self.assertFalse(history["primaryActive"], profile)
++                self.assertFalse(has_other_primary(self.db_path, "other"), profile)
++                live_id = self.reserve_kind(
++                    "verify", action_id="live-after-" + profile
++                )
++                finish(self.db_path, live_id, {"exitCode": 0})
++            finally:
++                finish(self.db_path, res_id, {"exitCode": 0})
++
++    def test_live_kind_then_implement_and_repair_conflict(self):
++        for kind in LIVE_HISTORY_KINDS:
++            first = self.reserve_kind(kind, action_id="first-" + kind)
++            try:
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind("implement", action_id="impl-after-" + kind)
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind("repair", action_id="repair-after-" + kind)
++            finally:
++                finish(self.db_path, first, {"exitCode": 0})
++
++    def test_concurrent_live_verify_versus_implement(self):
++        winners = []
++        conflicts = []
++
++        def worker(kind, action_id):
++            try:
++                winners.append(self.reserve_kind(kind, action_id=action_id))
++            except ReservationConflictError:
++                conflicts.append(kind)
++
++        t1 = threading.Thread(target=worker, args=("verify", "race-verify"))
++        t2 = threading.Thread(target=worker, args=("implement", "race-implement"))
++        t1.start()
++        t2.start()
++        t1.join()
++        t2.join()
++        self.assertEqual(len(winners), 1)
++        self.assertEqual(len(conflicts), 1)
++        finish(self.db_path, winners[0], {"exitCode": 0})
++
++    def test_absent_action_start_occupies_primary(self):
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'verify', 1, 'active', ?)
++                    """,
++                    (
++                        "no-start-res",
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "no-start-verify",
++                        now,
++                    ),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO events (
++                        repository, requirement, capability, candidate,
++                        action_id, event_kind, observed_at, payload_json
++                    ) VALUES (?, ?, ?, ?, ?, 'defect_failure', ?, ?)
++                    """,
++                    (
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "no-start-verify",
++                        now,
++                        json.dumps({"findingId": "ABSENT-START"}),
++                    ),
++                )
++        finally:
++            conn.close()
++        history = self.history()
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "other"))
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("implement", action_id="after-absent-start")
++
++    def test_mixed_action_start_profiles_occupy_primary(self):
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'verify', 1, 'active', ?)
++                    """,
++                    (
++                        "mixed-res",
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "mixed-verify",
++                        now,
++                    ),
++                )
++                for profile in (NONFINANCIAL_PROFILE, LIVE_PROFILE):
++                    conn.execute(
++                        """
++                        INSERT INTO events (
++                            repository, requirement, capability, candidate,
++                            action_id, event_kind, observed_at, payload_json
++                        ) VALUES (?, ?, ?, ?, ?, 'action_start', ?, ?)
++                        """,
++                        (
++                            str(self.root),
++                            REQ,
++                            CAP,
++                            CANDIDATE_HASH,
++                            "mixed-verify",
++                            now,
++                            json.dumps(
++                                {
++                                    "action": live_action("verify", profile=profile),
++                                    "snapshot": {},
++                                }
++                            ),
++                        ),
++                    )
++        finally:
++            conn.close()
++        history = self.history()
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "other"))
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("repair", action_id="after-mixed-start")
+@@
+     def test_status_does_not_create_identity_table(self):
+         self.write_live_action()
+         reader = self.guarded_reader()
+         buf = io.StringIO()
+         with contextlib.redirect_stdout(buf):
+             cmd_status(self.root, self.db_path, reader, True)
+         conn = init_db(self.db_path)
+         try:
+             names = [
+                 row[0]
+                 for row in conn.execute(
+                     "SELECT name FROM sqlite_master WHERE type='table'"
+                 ).fetchall()
+             ]
+         finally:
+             conn.close()
+         self.assertNotIn("store_identity", names)
+         self.assertIsNone(read_store_identity(self.db_path))
++
++    def _cli(self, *args, env=None):
++        cli_py = SCRIPTS_DIR / "moriarty_dev" / "cli.py"
++        merged = os.environ.copy()
++        if env:
++            merged.update(env)
++        return subprocess.run(
++            [sys.executable, str(cli_py), "--repo", str(self.root), *args],
++            capture_output=True,
++            text=True,
++            env=merged,
++        )
++
++    def test_main_subprocess_ignores_populated_identity_and_env_anchor(self):
++        self.write_live_action()
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        self.write_fixture_identity("fixture-anchor-1")
++        env = {
++            "MORIARTY_IDENTITY_ANCHOR": "fixture-anchor-1",
++            "IDENTITY_ANCHOR": "fixture-anchor-1",
++            "identity_anchor": "fixture-anchor-1",
++        }
++        status = self._cli("status", "--json", env=env)
++        self.assertEqual(status.returncode, 0, status.stderr)
++        status_data = json.loads(status.stdout)
++        self.assertIn("operational-history", status_data["missingEvidence"])
++        nxt = self._cli("next", "--json", env=env)
++        self.assertEqual(nxt.returncode, 0, nxt.stderr)
++        next_data = json.loads(nxt.stdout)
++        self.assertFalse(next_data["allow"])
++        self.assertIn("operational-history", next_data["missingEvidence"])
++        (self.root / "review.json").write_text(json.dumps(self.approved("source")))
++        review = self._cli(
++            "review", "--receipt", "review.json", "--action", "live-loan-verify", env=env
++        )
++        self.assertEqual(review.returncode, 3)
++        self.assertIn("authority unavailable", review.stderr)
++        reader = self.guarded_reader()
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertIsNone(snap["sameDefectFailures"])
++        self.assertIn("operational-history", snap["missingEvidence"])
++
++    def test_mismatched_and_invalid_identity_tokens_are_unavailable(self):
++        self.write_live_action()
++        self.seed_findings("LIVE-FINDING-A")
++        self.write_fixture_identity("fixture-anchor-1")
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-2"
++            )
++        )
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor=" "
++            )
++        )
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("DELETE FROM store_identity")
++                conn.execute("INSERT INTO store_identity (token) VALUES (?)", ("   ",))
++        finally:
++            conn.close()
++        self.assertIsNone(read_store_identity(self.db_path))
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++        )
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("DELETE FROM store_identity")
++                conn.execute("INSERT INTO store_identity (token) VALUES (?)", (7,))
++        finally:
++            conn.close()
++        self.assertIsNone(read_store_identity(self.db_path))
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("DELETE FROM store_identity")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?), (?)",
++                    ("fixture-anchor-1", "fixture-anchor-2"),
++                )
++        finally:
++            conn.close()
++        self.assertIsNone(read_store_identity(self.db_path))
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++        )
++        reader = make_guarded_history_reader(
++            self.db_path,
++            live_lineage=catalog_live_lineage(self.root),
++            identity_anchor="fixture-anchor-1",
++        )
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertIsNone(snap["sameDefectFailures"])
++        self.assertIn("operational-history", snap["missingEvidence"])
++
++    def test_catalog_callback_exceptions_are_unavailable(self):
++        self.seed_findings("LIVE-FINDING-A")
++
++        def boom(_lineage):
++            raise RuntimeError("catalog")
++
++        reader = make_guarded_history_reader(self.db_path, live_lineage=boom)
++        self.assertIsNone(
++            reader(
++                {
++                    "repository": str(self.root),
++                    "requirement": REQ,
++                    "capability": CAP,
++                }
++            )
++        )
++        check = catalog_live_lineage(self.root)
++        self.assertTrue(
++            check(
++                {
++                    "repository": str(self.root),
++                    "requirement": REQ,
++                    "capability": CAP,
++                }
++            )
++        )
++
++    def test_git_init_and_linked_worktree_live_history_never_zero(self):
++        # Writers key events by checkout path; records._repository_identity
++        # supplies the git common dir. That mismatch is preexisting. Live
++        # history must count related keys or stay unavailable, never 0.
++        main = self.root / "git-main"
++        main.mkdir()
++        subprocess.run(["git", "init"], cwd=str(main), check=True, capture_output=True)
++        subprocess.run(
++            ["git", "config", "user.email", "test@moriarty.local"],
++            cwd=str(main),
++            check=True,
++            capture_output=True,
++        )
++        subprocess.run(
++            ["git", "config", "user.name", "Test User"],
++            cwd=str(main),
++            check=True,
++            capture_output=True,
++        )
++        (main / "README.md").write_text("init\n")
++        subprocess.run(
++            ["git", "add", "README.md"], cwd=str(main), check=True, capture_output=True
++        )
++        subprocess.run(
++            ["git", "commit", "-m", "init"],
++            cwd=str(main),
++            check=True,
++            capture_output=True,
++        )
++        git_db = get_db_path(main)
++        live_common = Path("/home/charl/Moriarty/.git/moriarty-dev").resolve()
++        self.assertFalse(str(git_db.resolve()).startswith(str(live_common)))
++        self.assertTrue(str(git_db.resolve()).startswith(str(self.root.resolve())))
++        init_db(git_db).close()
++        action = live_action("verify")
++        action["candidate"] = CANDIDATE_HASH
++        (main / ".moriarty-dev").mkdir(exist_ok=True)
++        (main / ".moriarty-dev" / "actions.json").write_text(
++            json.dumps({"schema": "moriarty-dev.actions/1", "actions": [action]})
++        )
++        conn = init_db(git_db)
++        try:
++            with conn:
++                conn.execute("CREATE TABLE store_identity (token TEXT NOT NULL)")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?)",
++                    ("fixture-anchor-1",),
++                )
++        finally:
++            conn.close()
++        record_event(
++            git_db, str(main), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++            {"findingId": "GIT-F1"},
++        )
++        record_event(
++            git_db, str(main), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++            {"findingId": "GIT-F2"},
++        )
++        reader = make_guarded_history_reader(
++            git_db,
++            live_lineage=catalog_live_lineage(main),
++            identity_anchor="fixture-anchor-1",
++        )
++        snap = load_snapshot(str(main), "live-loan-verify", history_reader=reader)
++        self.assertNotEqual(snap["sameDefectFailures"], 0)
++        wt = Path(tempfile.mkdtemp(prefix="wt-live-hist-", dir=str(self.root)))
++        try:
++            subprocess.run(
++                ["git", "worktree", "add", str(wt)],
++                cwd=str(main),
++                check=True,
++                capture_output=True,
++            )
++            wt_db = get_db_path(wt)
++            self.assertEqual(wt_db.resolve(), git_db.resolve())
++            self.assertFalse(str(wt_db.resolve()).startswith(str(live_common)))
++            (wt / ".moriarty-dev").mkdir(exist_ok=True)
++            (wt / ".moriarty-dev" / "actions.json").write_text(
++                json.dumps({"schema": "moriarty-dev.actions/1", "actions": [action]})
++            )
++            record_event(
++                wt_db, str(wt), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++                {"findingId": "WT-F1"},
++            )
++            record_event(
++                wt_db, str(wt), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++                {"findingId": "WT-F2"},
++            )
++            common = (main / ".git").resolve()
++            direct = get_history(wt_db, str(wt), REQ, CAP)
++            self.assertGreaterEqual(direct["sameDefectFailures"], 2)
++            wt_reader = make_guarded_history_reader(
++                wt_db,
++                live_lineage=catalog_live_lineage(wt),
++                identity_anchor="fixture-anchor-1",
++            )
++            before = load_snapshot(str(wt), "live-loan-verify", history_reader=wt_reader)
++            self.assertNotEqual(before["sameDefectFailures"], 0)
++            record_event(
++                wt_db, str(common), REQ, CAP, CANDIDATE_HASH, "seed", "observation", {}
++            )
++            after = load_snapshot(str(wt), "live-loan-verify", history_reader=wt_reader)
++            self.assertNotEqual(after["sameDefectFailures"], 0)
++            live_hist = get_live_history(
++                wt_db, str(common), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++            self.assertIsNotNone(live_hist)
++            self.assertNotEqual(live_hist["sameDefectFailures"], 0)
++            legacy_common = get_history(wt_db, str(common), REQ, CAP)
++            self.assertEqual(legacy_common["sameDefectFailures"], 0)
++        finally:
++            subprocess.run(
++                ["git", "worktree", "remove", "--force", str(wt)],
++                cwd=str(main),
++                check=False,
++                capture_output=True,
++            )
++            shutil.rmtree(wt, ignore_errors=True)
++
++    def test_copied_inventoried_schema_does_not_create_identity(self):
++        self.write_live_action()
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO events (
++                        repository, requirement, capability, candidate,
++                        action_id, event_kind, observed_at, payload_json
++                    ) VALUES (?, '', '', '', 'admin', 'admin_cycle', ?, ?)
++                    """,
++                    (str(self.root), now, json.dumps({"type": "status"})),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at, finished_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'report', 1, 'finished', ?, ?)
++                    """,
++                    (
++                        "inventoried-res",
++                        str(self.root),
++                        "SP01.6",
++                        "loan-swap-subset",
++                        CANDIDATE_HASH,
++                        "sp01-loan-report",
++                        now,
++                        now,
++                    ),
++                )
++                conn.execute(
++                    "INSERT INTO runner_claims (charge_id, reservation_id) VALUES (?, ?)",
++                    ("inventoried-charge", "inventoried-res"),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO admin_intervals (repository, start_time, end_time, activity_type)
++                    VALUES (?, 1.0, 2.0, 'status')
++                    """,
++                    (str(self.root),),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO outbox (repository, tx_id, status, enqueued_at, details_json)
++                    VALUES (?, ?, 'submitted', ?, ?)
++                    """,
++                    (
++                        str(self.root),
++                        "tx-inventoried",
++                        now,
++                        json.dumps({"network": "preview"}),
++                    ),
++                )
++        finally:
++            conn.close()
++        reader = self.guarded_reader()
++        buf = io.StringIO()
++        with contextlib.redirect_stdout(buf):
++            cmd_status(self.root, self.db_path, reader, True)
++        (self.root / "review.json").write_text(json.dumps(self.approved("source")))
++        err = io.StringIO()
++        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
++            with self.assertRaises(SystemExit) as caught:
++                cmd_review(
++                    self.root, self.db_path, "review.json", True, "live-loan-verify"
++                )
++        self.assertEqual(caught.exception.code, 3)
++        self.assertIn("authority unavailable", err.getvalue())
++        with self.assertRaises(SystemExit) as run_caught:
++            cmd_run(self.root, self.db_path, reader, "live-loan-verify", False)
++        self.assertIn(run_caught.exception.code, (2, 3))
++        conn = init_db(self.db_path)
++        try:
++            names = [
++                row[0]
++                for row in conn.execute(
++                    "SELECT name FROM sqlite_master WHERE type='table'"
++                ).fetchall()
++            ]
++        finally:
++            conn.close()
++        self.assertNotIn("store_identity", names)
++        self.assertIsNone(read_store_identity(self.db_path))
+ 
+ 
+ if __name__ == "__main__":
+     unittest.main()
+*** End of File
+*** End Patch
+```
+
+Note: I used `*** End of File` on both files because the last hunks append at EOF. Root should treat those as end-of-file appends.
+
+Wait - the user said "no End of File unless actually EOF". The test file hunk that adds after `test_status_does_not_create_identity_table` is NOT at EOF originally - there's more class methods then `if __name__`. Looking at the current file, `test_status_does_not_create_identity_table` IS the last test before `if __name__`. So adding before `if __name__` is correct with context, and `*** End of File` on the test file would be wrong if I also include `if __name__`.
+
+I included:
+```
+         self.assertIsNone(read_store_identity(self.db_path))
++
++    def _cli...
++    ...
++        self.assertIsNone(read_store_identity(self.db_path))
+ 
+ 
+ if __name__ == "__main__":
+     unittest.main()
+*** End of File
+```
+
+That's a valid end-of-file hunk: last existing lines through EOF with additions before `if __name__`. Good.
+
+For store.py I used `*** End of File` after the reserve hunk which is NOT at EOF - that's WRONG. The reserve function is in the middle of store.py. I should NOT have End of File on store.py.
+
+Let me fix: remove `*** End of File` from store.py update. The last store hunk is the reserve incoming_occupies change, which has following context (`if incoming_occupies and _any_other_primary`). I already have that context without needing EOF.
+
+Looking at my store.py last hunk - it doesn't have `*** End of File` immediately after reserve - I wrote:
+
+```
+         if incoming_occupies and _any_other_primary(conn):
+             raise ReservationConflictError(
+                 "Unresolved primary reservation already exists"
+             )
+*** End of File
+```
+
+That's incorrect because more of reserve() follows. I need to remove that End of File from store.py.
+
+I'll send a corrected note... actually I should output a clean patch. Let me remove store.py End of File. The test file End of File is correct.
+
+There's another bug: in the get_history replacement I had:
+
+```
+         repo_ids = _canonical_repo_ids(repo)
++        if expand_related:
++            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+         placeholders = ",".join("?" for _ in repo_ids)
+```
+
+This appears twice in get_history - once for the main function and the first occurrence is unique enough if we include the following total_events comment.
+
+_exact_lineage_recorded has the same two lines. Need more context to distinguish.
+
+get_history:
+```
+        repo_ids = _canonical_repo_ids(repo)
+        placeholders = ",".join("?" for _ in repo_ids)
+
+        # Total events for repository: schema-only or unrecorded database returns None
+```
+
+_exact_lineage_recorded:
+```
+        repo_ids = _canonical_repo_ids(repo)
+        placeholders = ",".join("?" for _ in repo_ids)
+        cur = conn.execute(
+            f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
+```
+
+Good, they're distinguishable. My patch for _exact_lineage_recorded included the cur.execute with requirement = ? which is unique.
+
+For get_history I only showed:
+```
+         repo_ids = _canonical_repo_ids(repo)
++        if expand_related:
++            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+         placeholders = ",".join("?" for _ in repo_ids)
+```
+
+without the following comment. That could match _exact_lineage_recorded too! I need to add the Total events comment as context for get_history.
+
+Let me fix the store.py hunks to be unambiguous and drop End of File on store.py.
+
+Also `_action_start_profile` is removed - is it used elsewhere? Only those occupancy functions. Good.
+
+Incoming JSON: `false` unloads as bool False, `_profile_occupies_slot(False, "verify")` → type is not str → True occupy. `7` stays int in JSON? json.dumps(7) is `7`, loads as int. `""` is str empty → occupy. `"unknown-profile"` not in known nonlive → occupy. `None` type not str → occupy.
+
+`live_action("verify", profile=False)` - evidenceProfile False. reserve json.dumps. Good.
+
+One issue: `test_malformed_profiles` uses `live_action("verify", profile=profile)` then reserve. After finish, leftover action_start events remain. Next iteration is a new reservation. History primaryActive looks at active reservations only. Finished ones don't occupy. Good.
+
+After malformed test, events exist so get_history isn't None.
+
+`test_syntax_and_local_runtime`: after nonlive verify, we reserve live verify which occupies, then finish live, then finish nonlive. Order in finally finishes nonlive; we finish live inside try before finally. Good.
+
+`test_live_kind_then_implement_and_repair_conflict`: for kind implement, first occupies, second implement conflicts, then we also try repair - also conflicts. Then finish first. Good.
+
+When kind is implement, `reserve_kind("implement", action_id="impl-after-implement")` conflicts. Good.
+
+INSERT token 7: SQLite may store INTEGER. read_store_identity `type(token) is not str` → None. Good.
+
+Multi-row INSERT `VALUES (?), (?)` with two params - sqlite3 execute with tuple of 2 for two placeholders in two rows... `INSERT INTO store_identity (token) VALUES (?), (?)` with `("a", "b")` works.
+
+catalog_live_lineage on IsolatedTempStore without actions.json: read_actions raises, returns True. The test `check = catalog_live_lineage(self.root)` after seed_findings doesn't write actions.json in that test. IsolatedTempStore setUp doesn't write actions.json. So check returns True. Good.
+
+test_catalog_callback_exceptions doesn't write_live_action. catalog_live_lineage(self.root) with no actions.json → True. Good.
+
+Git worktree: after recording WT-F1, WT-F2 plus GIT-F1, GIT-F2 from main checkout, same req/cap, related keys should union. sameDefectFailures could be 4. We assert not 0 and >= 2 on direct checkout. Fine.
+
+legacy_common after seed: observation on common key, get_history without expand sees only common-key events for that req/cap: the observation, 0 defects. Preexisting. Good.
+
+If git-main events used str(main) and common is main/.git, get_history(common) without related expansion: repository IN (common, resolved common). Observation was recorded with str(common). Defects with str(main) and str(wt). So only observation matches → 0. Yes.
+
+Let me also fix the get_history context to include the comment line.
+
+I'll re-output store.py portion more carefully. Given the user wants ONE apply_patch, I'll produce the complete corrected patch as the final answer.
+
+For the first store helper replacement, the old function starts at `def _action_start_profile`. I need exact whitespace from the file - it uses 4-space indent.
+
+There's a risk the `repo_ids = _canonical_repo_ids(repo)` in get_history appears only once... it also appears in _exact_lineage_recorded. Context must disambiguate.
+
+I'll include 3+ unique following lines.
+
+Also: I need to delete `_action_start_profile` completely. The new code shouldn't leave it.
+
+P2 limitation in rationale.
+
+Let me also verify: incoming occupy for local-runtime still false. implement always true even with local-runtime. Existing test_nonfinancial_verify: reserve local-runtime verify (doesn't occupy), then implement (occupies, no conflict). After fix, same.
+
+test_linked_worktrees_share_db uses `action = {"id": "worktree-primary", "kind": "implement"}` without evidenceProfile. Incoming occupy: kind implement → True. Still conflicts. Good.
+
+I'll produce the final patch now, removing store.py End of File and adding unique get_history context.Corrected patch: occupancy is closed over typed profiles, live history expands related git keys, and the missing CLI/git/identity cases are added. `store.py` hunks are not end-of-file.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/store.py
+@@
+ LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
+ LEGACY_PRIMARY_KINDS = frozenset(("implement", "repair"))
++KNOWN_NONLIVE_PROFILES = frozenset(("local-runtime", "syntax"))
+@@
+-def _action_start_profile(conn, repo, requirement, capability, candidate, action_id):
+-    try:
+-        cur = conn.execute(
+-            """
+-            SELECT payload_json FROM events
+-            WHERE event_kind = 'action_start'
+-              AND repository = ?
+-              AND requirement = ?
+-              AND capability = ?
+-              AND candidate = ?
+-              AND action_id = ?
+-            ORDER BY id DESC
+-            """,
+-            (repo, requirement, capability, candidate, action_id),
+-        )
+-        rows = cur.fetchall()
+-        if not rows:
+-            return None
+-        profiles = []
+-        for (raw,) in rows:
+-            try:
+-                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+-            except Exception:
+-                return None
+-            action = payload.get("action") if isinstance(payload, dict) else None
+-            if not isinstance(action, dict) or "evidenceProfile" not in action:
+-                return None
+-            profiles.append(action.get("evidenceProfile"))
+-        if any(item == LIVE_EVIDENCE_PROFILE for item in profiles):
+-            return LIVE_EVIDENCE_PROFILE
+-        distinct = set(profiles)
+-        if len(distinct) == 1:
+-            return profiles[0]
+-        return None
+-    except Exception:
+-        return None
+-
+-
+-def _reservation_occupies_primary(conn, action_kind, repo, requirement, capability, candidate, action_id):
+-    if action_kind in LEGACY_PRIMARY_KINDS:
+-        return True
+-    profile = _action_start_profile(
+-        conn, repo, requirement, capability, candidate, action_id
+-    )
+-    if profile is None:
+-        return True
+-    return profile == LIVE_EVIDENCE_PROFILE
+-
+-
+-def _any_other_primary(conn, exclude_id=None):
+-    rows = conn.execute(
+-        """
+-        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
+-        FROM reservations WHERE status = 'active'
+-        """
+-    ).fetchall()
+-    for rid, repo, req, cap, cand, act_id, kind in rows:
+-        if exclude_id is not None and rid == exclude_id:
+-            continue
+-        if _reservation_occupies_primary(conn, kind, repo, req, cap, cand, act_id):
+-            return True
+-    return False
++def _profile_occupies_slot(profile, action_kind):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    if type(profile) is not str:
++        return True
++    if profile.strip() == "":
++        return True
++    if profile == LIVE_EVIDENCE_PROFILE:
++        return True
++    if profile in KNOWN_NONLIVE_PROFILES:
++        return False
++    return True
++
++
++def _extract_start_profile(payload):
++    if not isinstance(payload, dict):
++        return None
++    action = payload.get("action")
++    if not isinstance(action, dict) or "evidenceProfile" not in action:
++        return None
++    return action.get("evidenceProfile")
++
++
++def _action_start_profiles(conn, repo, requirement, capability, candidate, action_id, reservation_id=None):
++    try:
++        cur = conn.execute(
++            """
++            SELECT payload_json FROM events
++            WHERE event_kind = 'action_start'
++              AND repository = ?
++              AND requirement = ?
++              AND capability = ?
++              AND candidate = ?
++              AND action_id = ?
++            ORDER BY id DESC
++            """,
++            (repo, requirement, capability, candidate, action_id),
++        )
++        matched = []
++        fallback = []
++        for (raw,) in cur.fetchall():
++            try:
++                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
++            except Exception:
++                fallback.append(None)
++                continue
++            profile = _extract_start_profile(payload)
++            if (
++                reservation_id is not None
++                and isinstance(payload, dict)
++                and payload.get("reservationId") == reservation_id
++            ):
++                matched.append(profile)
++            fallback.append(profile)
++        if reservation_id is not None and matched:
++            return matched
++        return fallback
++    except Exception:
++        return None
++
++
++def _profiles_occupy(profiles, action_kind):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    if not profiles:
++        return True
++    flags = [_profile_occupies_slot(profile, action_kind) for profile in profiles]
++    if any(flags) and not all(flags):
++        return True
++    return flags[0]
++
++
++def _reservation_occupies_primary(conn, reservation_id, action_kind, repo, requirement, capability, candidate, action_id):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    profiles = _action_start_profiles(
++        conn,
++        repo,
++        requirement,
++        capability,
++        candidate,
++        action_id,
++        reservation_id=reservation_id,
++    )
++    if profiles is None:
++        return True
++    return _profiles_occupy(profiles, action_kind)
++
++
++def _any_other_primary(conn, exclude_id=None):
++    rows = conn.execute(
++        """
++        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
++        FROM reservations WHERE status = 'active'
++        """
++    ).fetchall()
++    for rid, repo, req, cap, cand, act_id, kind in rows:
++        if exclude_id is not None and rid == exclude_id:
++            continue
++        if _reservation_occupies_primary(conn, rid, kind, repo, req, cap, cand, act_id):
++            return True
++    return False
++
++
++def _expand_related_repo_ids(conn, requested_ids, requirement, capability):
++    requested_set = set(requested_ids)
++    expanded = list(requested_ids)
++    seen = set(requested_ids)
++    try:
++        cur = conn.execute(
++            "SELECT DISTINCT repository FROM events WHERE requirement = ? AND capability = ?",
++            (requirement, capability),
++        )
++        for (stored,) in cur.fetchall():
++            if stored in seen:
++                continue
++            stored_ids = set(_canonical_repo_ids(stored))
++            if stored_ids & requested_set:
++                expanded.append(stored)
++                seen.add(stored)
++    except Exception:
++        return requested_ids
++    return expanded
+@@
+-def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
++def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0, expand_related: bool = False) -> dict | None:
+@@
+         repo_ids = _canonical_repo_ids(repo)
++        if expand_related:
++            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+         placeholders = ",".join("?" for _ in repo_ids)
+ 
+         # Total events for repository: schema-only or unrecorded database returns None
+@@
+         repo_ids = _canonical_repo_ids(repo)
++        repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+         placeholders = ",".join("?" for _ in repo_ids)
+         cur = conn.execute(
+             f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
+             repo_ids + [requirement, capability],
+         )
+         return cur.fetchone()[0] > 0
+@@
+     if not _exact_lineage_recorded(db_path, repo, requirement, capability, timeout=timeout):
+         return None
+-    return get_history(db_path, repo, requirement, capability, timeout=timeout)
++    return get_history(
++        db_path, repo, requirement, capability, timeout=timeout, expand_related=True
++    )
+@@
+         action_kind = action.get("kind", "")
+-        incoming_occupies = (
+-            action_kind in LEGACY_PRIMARY_KINDS
+-            or action.get("evidenceProfile") == LIVE_EVIDENCE_PROFILE
+-        )
++        incoming_occupies = _profile_occupies_slot(
++            action.get("evidenceProfile"), action_kind
++        )
+         if incoming_occupies and _any_other_primary(conn):
+             raise ReservationConflictError(
+                 "Unresolved primary reservation already exists"
+             )
+*** Update File: plugins/moriarty-dev/tests/test_live_policy_history.py
+@@
+ import contextlib
+ import io
+ import json
+ import sys
+ import tempfile
+ import threading
+ import unittest
+ import uuid
+ from pathlib import Path
++import os
++import shutil
++import subprocess
+@@
+         self.assertFalse(has_other_primary(self.db_path, winners[0]))
+         finish(self.db_path, winners[0], {"exitCode": 0})
++
++    def test_malformed_profiles_occupy_all_three_consumers(self):
++        for profile in (False, 7, "", "unknown-profile"):
++            action = live_action("verify", profile=profile)
++            action["id"] = "malformed-" + repr(profile)
++            res_id = reserve(self.db_path, str(self.root), action, snapshot())
++            try:
++                history = self.history()
++                self.assertTrue(history["primaryActive"], profile)
++                self.assertTrue(has_other_primary(self.db_path, "other"), profile)
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind(
++                        "verify", action_id="second-after-" + repr(profile)
++                    )
++            finally:
++                finish(self.db_path, res_id, {"exitCode": 0})
++
++    def test_syntax_and_local_runtime_remain_non_occupying_controls(self):
++        for profile in ("syntax", NONFINANCIAL_PROFILE):
++            res_id = self.reserve_kind(
++                "verify", profile=profile, action_id="nonlive-" + profile
++            )
++            try:
++                history = self.history()
++                self.assertFalse(history["primaryActive"], profile)
++                self.assertFalse(has_other_primary(self.db_path, "other"), profile)
++                live_id = self.reserve_kind(
++                    "verify", action_id="live-after-" + profile
++                )
++                finish(self.db_path, live_id, {"exitCode": 0})
++            finally:
++                finish(self.db_path, res_id, {"exitCode": 0})
++
++    def test_live_kind_then_implement_and_repair_conflict(self):
++        for kind in LIVE_HISTORY_KINDS:
++            first = self.reserve_kind(kind, action_id="first-" + kind)
++            try:
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind("implement", action_id="impl-after-" + kind)
++                with self.assertRaises(ReservationConflictError):
++                    self.reserve_kind("repair", action_id="repair-after-" + kind)
++            finally:
++                finish(self.db_path, first, {"exitCode": 0})
++
++    def test_concurrent_live_verify_versus_implement(self):
++        winners = []
++        conflicts = []
++
++        def worker(kind, action_id):
++            try:
++                winners.append(self.reserve_kind(kind, action_id=action_id))
++            except ReservationConflictError:
++                conflicts.append(kind)
++
++        t1 = threading.Thread(target=worker, args=("verify", "race-verify"))
++        t2 = threading.Thread(target=worker, args=("implement", "race-implement"))
++        t1.start()
++        t2.start()
++        t1.join()
++        t2.join()
++        self.assertEqual(len(winners), 1)
++        self.assertEqual(len(conflicts), 1)
++        finish(self.db_path, winners[0], {"exitCode": 0})
++
++    def test_absent_action_start_occupies_primary(self):
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'verify', 1, 'active', ?)
++                    """,
++                    (
++                        "no-start-res",
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "no-start-verify",
++                        now,
++                    ),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO events (
++                        repository, requirement, capability, candidate,
++                        action_id, event_kind, observed_at, payload_json
++                    ) VALUES (?, ?, ?, ?, ?, 'defect_failure', ?, ?)
++                    """,
++                    (
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "no-start-verify",
++                        now,
++                        json.dumps({"findingId": "ABSENT-START"}),
++                    ),
++                )
++        finally:
++            conn.close()
++        history = self.history()
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "other"))
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("implement", action_id="after-absent-start")
++
++    def test_mixed_action_start_profiles_occupy_primary(self):
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'verify', 1, 'active', ?)
++                    """,
++                    (
++                        "mixed-res",
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "mixed-verify",
++                        now,
++                    ),
++                )
++                for profile in (NONFINANCIAL_PROFILE, LIVE_PROFILE):
++                    conn.execute(
++                        """
++                        INSERT INTO events (
++                            repository, requirement, capability, candidate,
++                            action_id, event_kind, observed_at, payload_json
++                        ) VALUES (?, ?, ?, ?, ?, 'action_start', ?, ?)
++                        """,
++                        (
++                            str(self.root),
++                            REQ,
++                            CAP,
++                            CANDIDATE_HASH,
++                            "mixed-verify",
++                            now,
++                            json.dumps(
++                                {
++                                    "action": live_action(
++                                        "verify", profile=profile
++                                    ),
++                                    "snapshot": {},
++                                }
++                            ),
++                        ),
++                    )
++        finally:
++            conn.close()
++        history = self.history()
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "other"))
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("repair", action_id="after-mixed-start")
+@@
+         self.assertNotIn("store_identity", names)
+         self.assertIsNone(read_store_identity(self.db_path))
++
++    def _cli(self, *args, env=None):
++        cli_py = SCRIPTS_DIR / "moriarty_dev" / "cli.py"
++        merged = os.environ.copy()
++        if env:
++            merged.update(env)
++        return subprocess.run(
++            [sys.executable, str(cli_py), "--repo", str(self.root), *args],
++            capture_output=True,
++            text=True,
++            env=merged,
++        )
++
++    def test_main_subprocess_ignores_populated_identity_and_env_anchor(self):
++        self.write_live_action()
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        self.write_fixture_identity("fixture-anchor-1")
++        env = {
++            "MORIARTY_IDENTITY_ANCHOR": "fixture-anchor-1",
++            "IDENTITY_ANCHOR": "fixture-anchor-1",
++            "identity_anchor": "fixture-anchor-1",
++        }
++        status = self._cli("status", "--json", env=env)
++        self.assertEqual(status.returncode, 0, status.stderr)
++        status_data = json.loads(status.stdout)
++        self.assertIn("operational-history", status_data["missingEvidence"])
++        nxt = self._cli("next", "--json", env=env)
++        self.assertEqual(nxt.returncode, 0, nxt.stderr)
++        next_data = json.loads(nxt.stdout)
++        self.assertFalse(next_data["allow"])
++        self.assertIn("operational-history", next_data["missingEvidence"])
++        (self.root / "review.json").write_text(json.dumps(self.approved("source")))
++        review = self._cli(
++            "review", "--receipt", "review.json", "--action", "live-loan-verify", env=env
++        )
++        self.assertEqual(review.returncode, 3)
++        self.assertIn("authority unavailable", review.stderr)
++        reader = self.guarded_reader()
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertIsNone(snap["sameDefectFailures"])
++        self.assertIn("operational-history", snap["missingEvidence"])
++
++    def test_mismatched_and_invalid_identity_tokens_are_unavailable(self):
++        self.write_live_action()
++        self.seed_findings("LIVE-FINDING-A")
++        self.write_fixture_identity("fixture-anchor-1")
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-2"
++            )
++        )
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor=" "
++            )
++        )
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("DELETE FROM store_identity")
++                conn.execute("INSERT INTO store_identity (token) VALUES (?)", ("   ",))
++        finally:
++            conn.close()
++        self.assertIsNone(read_store_identity(self.db_path))
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++        )
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("DELETE FROM store_identity")
++                conn.execute("INSERT INTO store_identity (token) VALUES (?)", (7,))
++        finally:
++            conn.close()
++        self.assertIsNone(read_store_identity(self.db_path))
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("DELETE FROM store_identity")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?), (?)",
++                    ("fixture-anchor-1", "fixture-anchor-2"),
++                )
++        finally:
++            conn.close()
++        self.assertIsNone(read_store_identity(self.db_path))
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++        )
++        reader = make_guarded_history_reader(
++            self.db_path,
++            live_lineage=catalog_live_lineage(self.root),
++            identity_anchor="fixture-anchor-1",
++        )
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertIsNone(snap["sameDefectFailures"])
++        self.assertIn("operational-history", snap["missingEvidence"])
++
++    def test_catalog_callback_exceptions_are_unavailable(self):
++        self.seed_findings("LIVE-FINDING-A")
++
++        def boom(_lineage):
++            raise RuntimeError("catalog")
++
++        reader = make_guarded_history_reader(self.db_path, live_lineage=boom)
++        self.assertIsNone(
++            reader(
++                {
++                    "repository": str(self.root),
++                    "requirement": REQ,
++                    "capability": CAP,
++                }
++            )
++        )
++        check = catalog_live_lineage(self.root)
++        self.assertTrue(
++            check(
++                {
++                    "repository": str(self.root),
++                    "requirement": REQ,
++                    "capability": CAP,
++                }
++            )
++        )
++
++    def test_git_init_and_linked_worktree_live_history_never_zero(self):
++        # Writers key events by checkout path; records supplies the git common
++        # dir. That mismatch is preexisting. Live history counts related keys
++        # or stays unavailable, never 0 while checkout findings remain.
++        main = self.root / "git-main"
++        main.mkdir()
++        subprocess.run(["git", "init"], cwd=str(main), check=True, capture_output=True)
++        subprocess.run(
++            ["git", "config", "user.email", "test@moriarty.local"],
++            cwd=str(main),
++            check=True,
++            capture_output=True,
++        )
++        subprocess.run(
++            ["git", "config", "user.name", "Test User"],
++            cwd=str(main),
++            check=True,
++            capture_output=True,
++        )
++        (main / "README.md").write_text("init\n")
++        subprocess.run(
++            ["git", "add", "README.md"], cwd=str(main), check=True, capture_output=True
++        )
++        subprocess.run(
++            ["git", "commit", "-m", "init"],
++            cwd=str(main),
++            check=True,
++            capture_output=True,
++        )
++        git_db = get_db_path(main)
++        live_common = Path("/home/charl/Moriarty/.git/moriarty-dev").resolve()
++        self.assertFalse(str(git_db.resolve()).startswith(str(live_common)))
++        self.assertTrue(str(git_db.resolve()).startswith(str(self.root.resolve())))
++        init_db(git_db).close()
++        action = live_action("verify")
++        action["candidate"] = CANDIDATE_HASH
++        (main / ".moriarty-dev").mkdir(exist_ok=True)
++        (main / ".moriarty-dev" / "actions.json").write_text(
++            json.dumps({"schema": "moriarty-dev.actions/1", "actions": [action]})
++        )
++        conn = init_db(git_db)
++        try:
++            with conn:
++                conn.execute("CREATE TABLE store_identity (token TEXT NOT NULL)")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?)",
++                    ("fixture-anchor-1",),
++                )
++        finally:
++            conn.close()
++        record_event(
++            git_db, str(main), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++            {"findingId": "GIT-F1"},
++        )
++        record_event(
++            git_db, str(main), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++            {"findingId": "GIT-F2"},
++        )
++        reader = make_guarded_history_reader(
++            git_db,
++            live_lineage=catalog_live_lineage(main),
++            identity_anchor="fixture-anchor-1",
++        )
++        snap = load_snapshot(str(main), "live-loan-verify", history_reader=reader)
++        self.assertNotEqual(snap["sameDefectFailures"], 0)
++        wt = Path(tempfile.mkdtemp(prefix="wt-live-hist-", dir=str(self.root)))
++        try:
++            subprocess.run(
++                ["git", "worktree", "add", str(wt)],
++                cwd=str(main),
++                check=True,
++                capture_output=True,
++            )
++            wt_db = get_db_path(wt)
++            self.assertEqual(wt_db.resolve(), git_db.resolve())
++            self.assertFalse(str(wt_db.resolve()).startswith(str(live_common)))
++            (wt / ".moriarty-dev").mkdir(exist_ok=True)
++            (wt / ".moriarty-dev" / "actions.json").write_text(
++                json.dumps({"schema": "moriarty-dev.actions/1", "actions": [action]})
++            )
++            record_event(
++                wt_db, str(wt), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++                {"findingId": "WT-F1"},
++            )
++            record_event(
++                wt_db, str(wt), REQ, CAP, CANDIDATE_HASH, "old", "defect_failure",
++                {"findingId": "WT-F2"},
++            )
++            common = (main / ".git").resolve()
++            direct = get_history(wt_db, str(wt), REQ, CAP)
++            self.assertGreaterEqual(direct["sameDefectFailures"], 2)
++            wt_reader = make_guarded_history_reader(
++                wt_db,
++                live_lineage=catalog_live_lineage(wt),
++                identity_anchor="fixture-anchor-1",
++            )
++            before = load_snapshot(str(wt), "live-loan-verify", history_reader=wt_reader)
++            self.assertNotEqual(before["sameDefectFailures"], 0)
++            record_event(
++                wt_db, str(common), REQ, CAP, CANDIDATE_HASH, "seed", "observation", {}
++            )
++            after = load_snapshot(str(wt), "live-loan-verify", history_reader=wt_reader)
++            self.assertNotEqual(after["sameDefectFailures"], 0)
++            live_hist = get_live_history(
++                wt_db, str(common), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++            self.assertIsNotNone(live_hist)
++            self.assertNotEqual(live_hist["sameDefectFailures"], 0)
++            legacy_common = get_history(wt_db, str(common), REQ, CAP)
++            self.assertEqual(legacy_common["sameDefectFailures"], 0)
++        finally:
++            subprocess.run(
++                ["git", "worktree", "remove", "--force", str(wt)],
++                cwd=str(main),
++                check=False,
++                capture_output=True,
++            )
++            shutil.rmtree(wt, ignore_errors=True)
++
++    def test_copied_inventoried_schema_does_not_create_identity(self):
++        self.write_live_action()
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO events (
++                        repository, requirement, capability, candidate,
++                        action_id, event_kind, observed_at, payload_json
++                    ) VALUES (?, '', '', '', 'admin', 'admin_cycle', ?, ?)
++                    """,
++                    (str(self.root), now, json.dumps({"type": "status"})),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at, finished_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'report', 1, 'finished', ?, ?)
++                    """,
++                    (
++                        "inventoried-res",
++                        str(self.root),
++                        "SP01.6",
++                        "loan-swap-subset",
++                        CANDIDATE_HASH,
++                        "sp01-loan-report",
++                        now,
++                        now,
++                    ),
++                )
++                conn.execute(
++                    "INSERT INTO runner_claims (charge_id, reservation_id) VALUES (?, ?)",
++                    ("inventoried-charge", "inventoried-res"),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO admin_intervals (repository, start_time, end_time, activity_type)
++                    VALUES (?, 1.0, 2.0, 'status')
++                    """,
++                    (str(self.root),),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO outbox (repository, tx_id, status, enqueued_at, details_json)
++                    VALUES (?, ?, 'submitted', ?, ?)
++                    """,
++                    (
++                        str(self.root),
++                        "tx-inventoried",
++                        now,
++                        json.dumps({"network": "preview"}),
++                    ),
++                )
++        finally:
++            conn.close()
++        reader = self.guarded_reader()
++        buf = io.StringIO()
++        with contextlib.redirect_stdout(buf):
++            cmd_status(self.root, self.db_path, reader, True)
++        (self.root / "review.json").write_text(json.dumps(self.approved("source")))
++        err = io.StringIO()
++        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
++            with self.assertRaises(SystemExit) as caught:
++                cmd_review(
++                    self.root, self.db_path, "review.json", True, "live-loan-verify"
++                )
++        self.assertEqual(caught.exception.code, 3)
++        self.assertIn("authority unavailable", err.getvalue())
++        with self.assertRaises(SystemExit) as run_caught:
++            cmd_run(self.root, self.db_path, reader, "live-loan-verify", False)
++        self.assertIn(run_caught.exception.code, (2, 3))
++        conn = init_db(self.db_path)
++        try:
++            names = [
++                row[0]
++                for row in conn.execute(
++                    "SELECT name FROM sqlite_master WHERE type='table'"
++                ).fetchall()
++            ]
++        finally:
++            conn.close()
++        self.assertNotIn("store_identity", names)
++        self.assertIsNone(read_store_identity(self.db_path))
+ 
+ 
+ if __name__ == "__main__":
+     unittest.main()
+*** End of File
+*** End Patch
+```
+
+**A1.** Only well-typed `local-runtime` and `syntax` exempt occupancy. `false`, `7`, `""`, `unknown-profile`, missing, mixed, and unreadable profiles occupy `reserve` / `get_history` / `has_other_primary`. Incoming uses the same closed predicate.
+
+**A2.** `get_live_history` expands repository keys whose `_canonical_repo_ids` intersect the requested identity, so checkout findings remain counted when the reader passes the git common dir. Unguarded `get_history` is unchanged; the common-key seed still yields `0` there and the test records that as preexisting.
+
+**P1.** Occupancy prefers `payload.reservationId`; missing/ambiguous still occupy.
+
+**P2 not patched.** `catalog_live_lineage` still re-reads `actions.json` per call (TOCTOU). Hook/R1 and receipt authenticity stay out of scope.
+
+**Tests.** Subprocess `main()` status/next/review with populated identity plus env-like anchors; mismatch/multi/whitespace/non-string tokens; git-init and linked worktree isolation; inventoried-schema status/review/denied-run; reverse occupancy; mixed race; catalog exceptions; absent/mixed `action_start`.
+
+Verification (root):
+```bash
+python3 -m unittest plugins.moriarty-dev.tests.test_live_policy_history plugins.moriarty-dev.tests.test_policy plugins.moriarty-dev.tests.test_execution plugins.moriarty-dev.tests.test_regressions plugins.moriarty-dev.tests.test_store_connections
+python3 deliverables/afk-live-financial-execution-2026-09-11/source-review-01/astra-fault-checks.py
+```
+I did not run these. After A1, the fault script’s malformed-profile rows should flip to `primaryActive=true` / second live denied; after A2, `snapshotAfterSeed.sameDefectFailures` must not be `0`.

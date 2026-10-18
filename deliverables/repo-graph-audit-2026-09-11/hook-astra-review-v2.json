@@ -1,0 +1,55 @@
+{
+  "verdict": "APPROVE",
+  "reviewerModel": "gpt-6-astra",
+  "reviewerRole": "fresh independent source reviewer",
+  "reviewedAt": "2026-09-11T18:14:21.307206+00:00",
+  "scope": "Full exact v2 hook adapter and both test files; Stop common output and PreToolUse permitted decision omission.",
+  "manifest": "deliverables/repo-graph-audit-2026-09-11/hook-candidate-v2.json",
+  "manifestSha256": "3f129b028117c376c0e7c22714f9210111a5cec139e2aa31b45827dff44a975b",
+  "candidateHashes": {
+    "plugins/moriarty-dev/scripts/moriarty_dev/hook.py": "07d0076f16647dffa41d816e451c5e1469ef7d072f3e59737ea2da558c73119a",
+    "plugins/moriarty-dev/tests/test_host_adapter.py": "736b261c2d4042dbc12ad4e9bc42a7bf2a758000c3ce0445ca999af2b6f33b6b",
+    "plugins/moriarty-dev/tests/test_hooks.py": "93c5402a29e1d195645722eb144cf14cc272fe4a270ef6982157279e9e1b5398"
+  },
+  "allHashesMatch": true,
+  "fullFilesRead": [
+    "plugins/moriarty-dev/scripts/moriarty_dev/hook.py",
+    "plugins/moriarty-dev/tests/test_host_adapter.py",
+    "plugins/moriarty-dev/tests/test_hooks.py"
+  ],
+  "findings": [],
+  "observations": [
+    {
+      "source": "plugins/moriarty-dev/scripts/moriarty_dev/hook.py:28",
+      "text": "Stop returns an empty common output object. Diagnostic Stop adds only top-level systemMessage at line 36. Neither normal nor diagnostic paths introduce a blocking decision or continuation."
+    },
+    {
+      "source": "plugins/moriarty-dev/scripts/moriarty_dev/hook.py:94",
+      "text": "Unrelated repositories omit permissionDecision. Unknown tools at line 141 and permitted shell handling at line 164 also omit it. Explicit deny paths at lines 156 and 160 and bounded denial fallback at line 56 remain intact."
+    },
+    {
+      "source": "plugins/moriarty-dev/tests/test_host_adapter.py:97",
+      "text": "Normal and malformed-cwd Stop outputs and all three permitted PreToolUse branches are covered. The subprocess child path named unrelated actually resolves to its registered parent; genuine unrelated Stop coverage is supplied by test_hooks registered-command test using a separate git repository."
+    },
+    {
+      "source": "plugins/moriarty-dev/tests/test_hooks.py:35",
+      "text": "Registered commands execute for Codex and Claude plugin root environment variants including spaced paths. Stop output must equal {}; other event envelopes remain unchanged."
+    }
+  ],
+  "tests": [
+    {
+      "command": "python3 -m unittest discover -s plugins/moriarty-dev/tests -p 'test_host_adapter.py' -v",
+      "exitCode": 0,
+      "testsPassed": 12
+    },
+    {
+      "command": "python3 -m unittest discover -s plugins/moriarty-dev/tests -p 'test_hooks.py' -v",
+      "exitCode": 0,
+      "testsPassed": 6
+    }
+  ],
+  "limitations": [
+    "This is source approval with 18 passing local tests, not post-fix live host verification. The inspected host-hook-events.json establishes the pre-fix Stop rejection only. PreToolUse allow rejection was supplied as the exact user error through the parent handoff. Installed-cache synchronization and live host acceptance remain separate checks."
+  ],
+  "priorCandidate": "Original candidate review paused without verdict when scope expanded; no prior approval superseded."
+}

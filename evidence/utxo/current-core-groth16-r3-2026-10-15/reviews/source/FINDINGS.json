@@ -1,0 +1,130 @@
+{
+ "format": "evidence-repair-independent-source-review-findings/1",
+ "reviewer": "claude-opus-5-5 (requested high; context-only independence; fresh non-author)",
+ "candidate": {
+  "author_dir": "current-core-groth16-evidence-repair-resume-source-20261015",
+  "author_report_sha256": "e72f1aa3de7805a68c8eecfb9897f4ba02c2e3270d6956f79e88c227b43a1fda",
+  "author_output_manifest_sha256": "99589a043fca136e5fd630e463441845b2872dbdf1816ad1bc1e2b115355c1c9",
+  "source_manifest_sha256": "d3bdd5009e42e13110559142a7d62ba2823f0723690ae1094033e7684b09005c",
+  "build_manifest_sha256": "edbe3193c8eabc51a1d5595757c69c0bbe2caeb89e53cc3dc25564cead44b41a",
+  "r3_manifest_sha256": "640678296f54ec9eca5dedcdcf2f931546e4608131f14bb6d6b60d4c7b5576aa",
+  "execution_proposal_sha256": "2d803e50585c6d8f0d5065e90f6c8a0260357fc40a2cbcdb2e4af52dfafa51d6",
+  "core_closure_sha256": "f47318a26a4df0477e89962a9de0e9b48f12d01d0e9b4a8f5e74603beaa235ed",
+  "compiler_build_digest_predicted_not_observed": "0b896adbe183b79d82455fde7b2c5e988b166a63a5fde972d3621eb7ad98bf19"
+ },
+ "evidence_axes": {
+  "source_inspected": "this review (all 15 production src files, Cargo.toml, r3 heldout.rs/Cargo.toml/lib.rs, copy_verify_r3.py, lock_gate.py, libtest_rows.py, OPERATOR-RESULT-PARSER.diff, run_pathb.py, addenda 3-4, HW traces)",
+  "own_mechanical_checks": "work/VERIFY-RESULT.json, work/diffs/SUMMARY.json, work/FROZEN-DATA-CHECK.json (stdlib only; no candidate/helper/operator code imported or executed)",
+  "actual_rust_results_r3": "NONE",
+  "actual_parser_results": "author's 13 synthetic cases (records/PARSER-CHECK-RESULT.json); not rerun by me",
+  "old_actual_run": "18afb040... accepted-qualified for BUILD 4e3ba2e2 / compiler_build_digest a6911ddd only; NOT ADOPTED"
+ },
+ "findings": [
+  {
+   "id": "IR-01",
+   "severity": "Medium (evidence-class labelling)",
+   "area": "HW-TRACEABILITY-2 (AUTH, frozen in ADDENDUM-4-FREEZE)",
+   "finding": "HW-06 and HW-07 require refusal of a witness whose rhs wires are garbage (adversarial INTERNAL witness). Their refs (hostile/H5-R1, H5-R2 and heldout rows) run with Tamper::none, i.e. honest completion of a permissive claim; that is the same evidence mode HW-01..04 are labelled RELATION-PARTIAL for. HW-23 requires 'Bool wire value 2 or p-1 used as true'; r3 executes value 2 on two ENTRY Bool wires (M-10/wire, HW-23-r3/H6-B1/wire-two) and p-1 only as a public-field edit (binding refusal); computed internal Bool wires (Eq flag, products) are not exercised. The class RELATION-EXECUTED on HW-06, HW-07 and HW-23 therefore overstates the executed witness mode.",
+   "effect": "No relation or outcome change. Risk: an ALL-REFS-OK parser result for HW-06/07/23 read as adversarial-internal-witness evidence.",
+   "minimum_repair": "Record (dated, outside the frozen addendum-4 bytes) that HW-06, HW-07 and HW-23 are RELATION-PARTIAL, or add a per-ref witness_mode {honest-completion | tampered-entry-wire | public-field-only}. See proposals/MINIMUM-REPAIRS.md R-A."
+  },
+  {
+   "id": "IR-02",
+   "severity": "Low (assertion strength)",
+   "area": "static_refusals S-9/cells and S-9/duties",
+   "finding": "plan.rs emits one shared message for both caps ('represented cells exceed Core's 4,096 balances or 1,024 liabilities'), so the substring check '4,096' or '1,024' cannot show which cap fired. My own arithmetic (below) shows each construction reaches its designated cap and no other: cells = 4,097 frame cells with 1 registry duty and trace 4,099 x 3 = 12,297; duties = 1,026 registry duties with 0 cells and trace 1,028 x 3 = 3,084. The trace rows are discriminated by message ('65536'). No at-cap admission control (4,096 cells, 1,024 duties, trace exactly 65,536) exists; the frozen S-9 requires only refusal.",
+   "effect": "Outcome determined by construction; check is weaker than its label.",
+   "minimum_repair": "Optional AUTH addendum row printing plan-side counts or an at-cap admission control; not required for S-9 as frozen."
+  },
+  {
+   "id": "IR-03",
+   "severity": "Low (evidence class)",
+   "area": "public-field mutation rows",
+   "finding": "M-10 (frozen), M-11a, M-13 x3, HW-18-r3, HW-23-r3/H6-B1/{two,minus-one}, HW-26-r3/unsorted and every grossfees tamper-+1 row edit only the public vector while TransitionValues stay honest. Each is refused by the adapter binding equality (or a header constant). They show the public statement is bound, not gadget soundness. HW-26-r3/unsorted in particular has no row order to violate under DirectFieldV0 (fixed slot order), so its 'unsorted half executed' wording should read 'pre-cell public slots are bound'.",
+   "effect": "Wording only.",
+   "minimum_repair": "Carry this qualification into any result review; see R-A."
+  },
+  {
+   "id": "IR-04",
+   "severity": "Low (library assumption; fail-closed)",
+   "area": "M-10/wire, HW-23-r3/H6-B1/wire-two",
+   "finding": "The rows assert ConstraintSystemRef::which_is_unsatisfied() == Some(\"0\"). I did not read ark-relations 0.4.0 (cache access is outside this task), so the decimal-index format is UNVERIFIED-LIB for this review; the frozen source review section 5 did not list which_is_unsatisfied among verified APIs. Index 0 being input 0's booleanity follows from circuit.rs (entry region first, inputs first) and gadgets::alloc_bool (b*b=b), and from the label entry/input0#0 matching the only/first Bool input (H3 poly_b input v; H6 beq input p). The assertion depends on synthesis order, consistent with the source reviewer's dissent that constraint indices are not refusal codes.",
+   "effect": "If the library returns a trace string instead, the rows FAIL (harness-defect class), never pass.",
+   "minimum_repair": "None required; record as an AUTH structural assertion."
+  },
+  {
+   "id": "IR-05",
+   "severity": "Low (coverage looseness, inherited from r2)",
+   "area": "static_refusals S-1..S-8",
+   "finding": "S-2, S-3, S-5, S-6 and S-8 accept any CompileError::Core(_) and print fixed text; the frozen S-2 names 'mori::core::profile (require_core1)'. A refusal with a different Core code would still be OK.",
+   "effect": "Weaker than the frozen row text; unchanged from the executed r2.",
+   "minimum_repair": "Print the Core code in the detail (no assertion change needed for evidence)."
+  },
+  {
+   "id": "IR-06",
+   "severity": "Low (reporting boundary)",
+   "area": "rejected_phase_and_work_attempted",
+   "finding": "'phase' is Core-local (admission = no step, execution = step present), matching the frozen packet's vocabulary. It is not Midnight ledger guaranteed/fallible phase semantics (product contract).",
+   "effect": "Must not be quoted as ledger-phase or charged-failure evidence.",
+   "minimum_repair": "Wording in any result review."
+  },
+  {
+   "id": "IR-07",
+   "severity": "Medium (effect; eligibility boundary, declared by author)",
+   "area": "OPERATOR-RESULT-PARSER.diff / EXECUTION-PROPOSAL",
+   "finding": "The diff is parser-only on the r2 operator: it keeps ROOT current-core-groth16-offline-check-1, EXPECT (a6e17efd/4e3ba2e2, no r3_manifest), the E0r2 argv and its count check (review 55), LOCK_H r2, the r2 STEPS/DEPS and ('E4','E5-r2') in finish(). No r3 operator exists. The EXECUTION-PROPOSAL step list therefore has no executable implementation.",
+   "effect": "No r3 run is possible until an r3 operator is written and its exact bytes are effect-reviewed.",
+   "minimum_repair": "proposals/MINIMUM-REPAIRS.md R-C lists what the operator must implement."
+  },
+  {
+   "id": "IR-08",
+   "severity": "Low (effect hygiene)",
+   "area": "E0r3 argv; executed-run precedent",
+   "finding": "E0r3 executes review-overlay/r3-tools/copy_verify_r3.py directly from the author lane directory. Its hash is in pins_sha256 and R3-MANIFEST, but R3-MANIFEST is verified by the tool itself after it starts. The executed run had the same pattern: FREEZE.json pinned copy_verify_r2.py as an input, but run_pathb.py re-verified only itself and OPTION-A-PLAN before spawning E0r2.",
+   "effect": "A freeze-to-exec TOCTOU window on the E0 tool and on libtest_rows.py if loaded from a mutable path.",
+   "minimum_repair": "Operator copies copy_verify_r3.py and libtest_rows.py into its task tools/ with O_EXCL, pins both in FREEZE, and re-hashes each immediately before spawn/exec (the diff already does this for libtest_rows.py)."
+  },
+  {
+   "id": "IR-09",
+   "severity": "Low (robustness)",
+   "area": "libtest_rows.py analyze CLI; run_pathb finish()",
+   "finding": "(a) analyze requires --out-dir to exist; if it does not, both the analysis and the error artifact fail to write and the process ends with an uncaught exception and no index line. (b) ANALYSIS-INDEX.jsonl is opened O_APPEND without O_NOFOLLOW. (c) In the diff, result_tests() runs inside finish()'s single broad try; a parser exception would skip the later lock and scratch_toplevel postchecks.",
+   "effect": "Loss of a postcheck record or of an analysis artifact on an unusual path; raw logs unaffected.",
+   "minimum_repair": "Operator creates <task>/analysis with mkdir (fail if present); isolate the parser call in its own try recording parse_error. See R-B."
+  },
+  {
+   "id": "IR-10",
+   "severity": "Info (effect description)",
+   "area": "copy_verify_r3.py (inherited r2 code)",
+   "finding": "Docstring says it 'reads only the named directories', but git_head() follows the worktree .git file into the main repository's gitdir/commondir (read-only, informational). No write occurs there. The tool has never run, not even --dry-run; r2 had dry-run and negative-control records (COPY-VERIFY-R2-DRYRUN-CONTROLS.json).",
+   "effect": "Read scope wider than stated; no control evidence for the r3 delta.",
+   "minimum_repair": "Correct the read-scope statement in the operator's effect list; run --dry-run and negative controls (wrong r3 pin, colliding path) under authorization before --copy."
+  },
+  {
+   "id": "IR-11",
+   "severity": "Info (record provenance)",
+   "area": "PRE-EDIT-FREEZE, ADDENDUM-4-FREEZE, ADDENDUM-3-FREEZE",
+   "finding": "All freezes are author-written with self-reported timestamps. Their hashes and contents are internally consistent and every pinned frozen-packet byte is still equal now (my verify). Ordering 'freeze before assertion edit' cannot be independently verified.",
+   "effect": "Addenda 3-4 stay AUTH, never independent, as labelled.",
+   "minimum_repair": "None."
+  },
+  {
+   "id": "IR-12",
+   "severity": "Info (currentness)",
+   "area": "Core closure",
+   "finding": "Frozen closure f47318a2 = 70 files at 6c7b1fda. Public main 4d969554 (PR68) matches 69 of the 70 paths; crates/mori-core/src/lib.rs differs (adds the Sherlock module). sherlock/mod.rs at both a19b0 and 4d969 exports non-test modules (compare, reference, reference_display, reference_types) and keeps the helper/image proposals behind #[cfg(test)]. A path-dependency build of mori-core at main therefore compiles non-test Sherlock files that are outside the 70-file closure, and compiler_build_digest would change. E0r3 copies from the currentness worktree and STOPs on any byte difference against the pins (fail-closed).",
+   "effect": "Any r3 result would describe the 6c7 closure only. It says nothing about main, Sherlock helpers or staged /2.",
+   "minimum_repair": "None for this candidate; a main-closure lane needs its own closure pin, review and run."
+  },
+  {
+   "id": "IR-13",
+   "severity": "Info (M-11b)",
+   "area": "addendum 3 m11b_contradiction / proposed_v2_not_adopted",
+   "finding": "Frozen M-11b edit (lo + r, hi) is the identical field vector as the honest claim, so as a DirectFieldV0 public vector it is SAT by construction; the frozen 'UNSATISFIABLE' cannot be tested at this layer. Its intent ('no modular alias') belongs to a byte-image ABI mapping (ABI_V1_MAPPING_REQUIREMENTS: 16-byte big-endian UInt images range-checked). The proposed v2 (lo + 2^64, hi unchanged) is a different limb-range case, not M-11b.",
+   "effect": "Keep frozen M-11b text and OPEN CONTRADICTION row; do not rename v2 as M-11b.",
+   "minimum_repair": "See VOTES.md M-11b position and R-A."
+  }
+ ],
+ "carried_open": ["R-01 and R-04 implemented in source only (review here: AGREE), adoption pending", "F-02", "F-03", "F-04 (M-14 SAT)", "F-05 (M-06 relation half, M-07)", "F-08 / P-5", "F-10", "F-14", "N-05 (root side)", "N-07 matrix identities (future observation)", "HW-01..04 adversarial internal witnesses on held-out programs", "HW-20 source-only", "HW-26 padding", "which_is_unsatisfied index format (UNVERIFIED-LIB)"],
+ "no_new_constraint_defect": "No constraint-level defect found by source reading. This is not a soundness proof."
+}

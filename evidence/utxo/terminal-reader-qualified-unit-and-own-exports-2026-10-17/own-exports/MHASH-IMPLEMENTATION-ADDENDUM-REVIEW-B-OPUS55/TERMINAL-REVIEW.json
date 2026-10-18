@@ -1,0 +1,178 @@
+{
+  "reviewToken": "mhash-checker-addendum-fresh-b-opus55-20261017",
+  "report": "SEAT B. Fresh, independent, non-author security review (claude-opus-5-5, high). I saw no current seat-A vote and no author vote; the author's notes and addendum are treated as premises only. Nothing was executed, imported, compiled, hashed, written or fetched. Every runtime statement below is a source-level prediction. This is one vote. Clarifications need two fresh agreeing votes and a root decision. Same-provider fresh contexts are not provider diversity.\n\nREAD ROUTE. I read MANIFEST.json, SEGMENT-INDEX.json and READ-SEGMENT-01 to 19, in order and in full. Every segment boundary continues exactly from the previous one (for example API:80\u219281, test:138\u2192139, NOTES:59\u219260, ADDENDUM:53\u219254), so no reread was needed. The per-file line ranges I saw add up to the index's 6236 lines; that total is root's figure, which I observed rather than verified. I did not read B9-APPLIED-BLUEPRINT.json at all. My B9 basis is only FIXTURE-STRUCTURE, SIZES, the test transcriptions, the historical seat-B partial-read account and the root RED T00.4 pass.\n\nLINE-BY-LINE EFFECTS REVIEW of independent_script_hash.py (203 lines, the D1-mandated review).\n- Lines 1-19: docstring.\n- Lines 20-21: `import hashlib`, `import json` and nothing else. Both are already in sys.modules from test:17,19, so no new module or file load occurs.\n- Lines 24-31: seven immutable constants (ints, a tuple, a frozenset, bytes).\n- Lines 34-39: two sibling ValueError subclasses.\n- Ten functions follow. The only attribute accesses are `_HEX_DIGITS.issuperset`, `bytes.fromhex`, `hashlib.blake2b(...).hexdigest`, `raw.startswith`, `raw.decode`, `json.loads`, `titles.add` and `.append`. That matches NOTES:109 exactly.\n- There is no open, os, sys, environment, clock, random, network, subprocess, eval, exec, compile, __import__, getattr, dunder, alias or `from`-import.\n- No global is ever rebound, there is no cache, inputs are never mutated, and no input is retained after return.\n- No ast.Name is in BANNED_NAMES, and annotations use only str, bytes and dict. T01.2 lint passes, but it is lint only.\n\nThe NOTES top-level count (7 constants, 2 classes, 10 functions) and builtin list are accurate.\n\nResiduals:\n- A caller that holds a raised exception keeps its traceback frames, which hold the input. This is disclosed.\n- The MismatchError message carries public hashes.\n- Library exceptions are mapped outside their except blocks (lines 123-140), so there is no __context__ chain to UnicodeDecodeError.object or JSONDecodeError.doc.\n- `except ScriptHashInputError: raise` comes before the ValueError clause, so hook errors pass through unchanged.\n\nALGORITHM (C1-C4).\n- `_digest` is `hashlib.blake2b(tag+code, digest_size=28).hexdigest()`. This is native BLAKE2b-224: digest length is in the parameter block, it is not truncated, and there is no key, salt or person. It matches B2b:57,59,148-162 at cardano-base HEAD; libsodium/CPython equivalence remains [I].\n- Tags are the exact str values \"v2\"\u21920x02 (Lang:545) and \"v3\"\u21920x03 (Lang:565), after a `type is str` check. This is not encodeEnum (Lang:273-278,329-330).\n- Code is hashed as given, with no strip, wrap or envelope (Lang:205,227-229).\n- `_admit_compiled_code` runs in this order: type is str; length > 65536 rejected first (equal to the 32768 B bound because the hex is even-length ASCII); odd length rejected; frozenset lowercase hex; fromhex; header 0x58 with L\u226524 or 0x59 with L16\u2265256; exact `len == header+L`.\n- I traced every T01.6-T01.9 vector by hand. Each refusal takes the intended branch: stripped 0x01, 82, 78/79, 5f, 5a, 5900ad, 5817, 5900ff, 40, short form, \"58\", \"5900\", \u00b11 length, trailing byte, concatenation, \"00\"*500000 (length-first), and 65538 characters. The exact 65536-character / 32768 B input is admitted. Double wraps `58af` and `590ad2` are admitted and hash differently.\n- The MC6/MC8/MC9 mutants act on live code.\n\nBLUEPRINT (C5, D2-D4).\n- `_parse_blueprint` runs in this order: type is bytes; \u22641 MiB before decoding; UTF-8 BOM refused; strict `decode('utf-8')`, so json never sees bytes and never auto-detects UTF-16/32; `json.loads(str)` with a duplicate-key `object_pairs_hook` at every depth and a `parse_constant` that refuses NaN/\u00b1Infinity; ValueError (JSONDecodeError, int-digit limit) and RecursionError mapped to InputError.\n- Schema: top-level dict; preamble dict; required plutusVersion through `_language_tag`; validators a list of 1..64.\n- Phase 1 validates every entry before any comparison: dict, then title (non-empty, unique, exact type str), then C4 code, then a 56-character lowercase hex hash, then parameters absent or exactly [] (null, non-empty and non-list values refused).\n- Phase 2 recomputes all entries with no group shortcut, builds a fresh dict in document order, and raises MismatchError only after the loop, naming the first mismatching index and the count.\n- So any malformation wins whatever the entry order (D2). The error classes are disjoint.\n- There are no fixture, CIP or receipt literals and no oracle in the source. Unknown fields are ignored (D8).\n\nNOTES CLAIMS CHECKED.\n- 58ad: L=173, total 175.\n- Double wraps 58af and 590ad2.\n- Seven 59 L16 framings.\n- The T02.4 count of 32. I enumerated them; each maps to InputError.\n- The MC table.\n- The B9 residuals: lowercase hex and NaN absence are not proven by T00 (the test's own _strict_json accepts NaN).\n- Section 1 RED facts.\n\nI also textually compared ORIGINAL-AUTHOR-MANIFEST with test PINS: all 18 entries match, the extra routing entry is unused, and there is no Ledger-Core-Script.hs entry. This was a comparison, not hashing.\n\nACTUAL ROOT RED (independent judgment). This is an acceptable missing-implementation RED. It is not functional hash validation.\n- The stderr transcript has 19 verbose lines, 5 T00 ok and 14 FAIL.\n- Each FAIL traceback ends with the exact `AssertionError: M-HASH-RED: ...` phrase: 13 via _impl\u2192_impl_source, and test_static_purity via _impl_source.\n- The run ends `Ran 19 tests` and `FAILED (failures=14)`, with no errors.\n- RESULT shows exit 1, stdout 0 B, and before/after listings with identical sha256 and modes for 1 input file and 20 packet files. The implementation was absent.\n- The precheck was strict-JSON over 18 PINS, the argv equals the reviewed envelope, and there was one attempt. The RED must not be rerun.\n\nGREEN PREDICTION, from my reading of the full unchanged test.\n- T00.1-T00.5 behave as in RED.\n- T01.1 constants and subclasses.\n- T01.2 lint is clean.\n- T01.3, T01.4 and T02.1 depend on one premise: CPython BLAKE2b-224 over tag||bytes equals the Aiken-produced CIP and receipt literals.\n- T01.5 13 bad versions refused; v2/v3 produce different hashes.\n- T01.6-T01.10 as traced above.\n- T02.2: the CIP slice gives {hello_world}; parameters [] accepted; exactly 1 MiB of trailing whitespace accepted; 64 validators accepted.\n- T02.3: the five B9 mutations plus CIP-as-v3 all raise only MismatchError, and the consistent swap returns the vi receipt.\n- T02.4: 32 InputErrors.\n\nExpected outcome: 19 ok, exit 0, stdout empty, stderr containing only the 19 verbose lines, `Ran 19 tests` and `OK`. I identified no source of warnings or ResourceWarnings. If T01.3 fails, the stop rule applies: STOP, with no refit of tag, boundary, width or fixture. Any other deviation also means STOP with no retry.\n\nGREEN EFFECT CHAIN.\n- Wrappers: `timeout --kill-after=2s 10s`; `prlimit` cpu 10, as 512 MiB, fsize 2 MiB, core 0; `bwrap --unshare-all --die-with-parent --new-session`.\n- Mounts: read-only /usr with the /bin, /lib and /lib64 symlinks; /proc; /dev.\n- /input is read-only and holds exactly the two 0444 files in a 0555 directory, with no __pycache__.\n- /packet is read-only and holds the same 20 files as RED, including the original MANIFEST.\n- Environment: `--clearenv`, then 4 variables inside (including MHASH_PACKET_DIR=/packet) and 3 outside.\n- Command: `python3 -I -B test -v`.\n\nUnder -I the script directory is not on sys.path, under -B nothing is written, and the read-only bind plus the absent cache leave nothing to substitute. That closes the A-F5 TOCTOU/pyc concern. The total is 22 pinned files.\n\nResiduals:\n- bwrap's tmpfs root is ephemeral and writable without `--remount-ro /`. The checker never writes.\n- Without -S, system .pth files still run. They ran harmlessly in RED.\n\nCost: well under 1 s and a few MiB. This review authorizes no execution.\n\nUNINSPECTED STDLIB DEPENDENCIES:\n- hashlib/_blake2 (the BLAKE2b implementation, HACL* or reference) and _hashlib/OpenSSL configuration loaded at test import;\n- the json.decoder/_json C scanner, including hook propagation, RecursionError depth behaviour and the int-digit limit (inferred CPython 3.11+ from the traceback carets; dict[str,str] needs 3.9+);\n- the UTF-8 strict codec and bytes.fromhex;\n- the importlib SourceFileLoader and unittest;\n- bwrap and the kernel.\n\nLIMITS.\n- Every positive vector is Aiken-produced, and the receipts are same-run comparison values.\n- Independent tool recomputation is not an independent primitive or chain oracle, and there is no ledger or chain vector.\n- These remain uninspected: Hash.Class and its re-export, Libsodium.C, SerialiseViaFlat/cborg, PlutusLedgerApi.V2/V3, Common.Hash, Aiken source and lockfile, and the ledger dependency pins. HEAD supplements are not dependency correspondence.\n- I make no claim of whole-CIP-57 or ledger validation.\n- The 15 meaningfulness mutants need a separately reviewed envelope and a root decision; MC14 is lint-only.\n- M-HASH remains OPEN. All 20 families, financial/ACTUS/DeFi, PCD/recursion, private handoff, multi-parent composition and real Preprod remain open. Native authority is 0.\n\nVERDICT. C1-C8 AGREE and D1-D8 AGREE. sourceReady and ordinarySelftestReady are recommended for exactly one root GREEN only.",
+  "findings": [
+    {
+      "id": "B-I1",
+      "severity": "medium",
+      "evidence": "ADDENDUM D7 (lines 125-147), whose list I checked against the source, and NOTES:180. The unchanged 19-method test does not exercise any of the following: D2 precedence (validate everything, then compare), strict-UTF-8/BOM/UTF-16/32 refusal (D3.1-2), NaN/Infinity refusal (D3.3), parameters:null, exact builtin types (D4), RecursionError or int-limit mapping, or fresh detached results. Mutants of each would survive GREEN. I verified them by source inspection only (impl:111-141, 117, 133, 169-203, 44/64/117/157-186).",
+      "requiredFix": "Do not waive these tests for GREEN, and do not cite GREEN as evidence for these behaviours. Any adoption record must scope M-HASH evidence to the 19 tested behaviours plus this source inspection. Before any reliance on the D2-D4 behaviours, or any claim that they are tested, a separately reviewed test revision with the D7 additions, its own RED/GREEN and root decision is required. That revision is not needed for the exact single GREEN."
+    },
+    {
+      "id": "B-I2",
+      "severity": "low",
+      "evidence": "PROPOSED-ORDINARY-GREEN-ENVELOPE argv 155-195 has no `--remount-ro /`. bwrap's synthesized tmpfs root is therefore writable but ephemeral; only /usr, /input and /packet are read-only binds. Host persistence is still impossible and fsize is capped at 2 MiB. The implementation performs no writes (line-by-line review). RED used the same argv.",
+      "requiredFix": "No change for this GREEN. Record the property accurately: no persistent host writes, rather than no writable mount. A future envelope may add `--remount-ro /`, and optionally -S, only after fresh review."
+    },
+    {
+      "id": "B-I3",
+      "severity": "low",
+      "evidence": "Four stdlib and interpreter dependencies are uninspected. (1) The hashlib/_blake2 primitive. (2) json/_json hook propagation and nesting behaviour. (3) The CPython int-digit limit, which bounds adversarial huge-integer cost. (4) The interpreter version: it is inferred as 3.11+ from the RED traceback carets, and `dict[str, str]` needs 3.9+. Point (3) affects only adversarial inputs, not GREEN.",
+      "requiredFix": "Root may read the interpreter identity from the filesystem, without executing it. Any import error, interpreter start failure or non-unittest exit is STOP with no retry. Do not edit the source to work around a version difference without fresh review."
+    },
+    {
+      "id": "B-I4",
+      "severity": "low",
+      "evidence": "I did not read the B9 body. T00.4 does not establish that all 16 compiledCode strings are lowercase hex (it checks prefix and length only), that B9 contains no NaN tokens (the test's _strict_json accepts NaN), or the vs4 handler order (MC10, D6.1).",
+      "requiredFix": "If T01.4, T02.1 or T02.3 fails on these grounds, STOP and treat it as an honest refusal. Do not refit the fixture, tolerance or checker. Root checks the B9 pin before and after the run."
+    },
+    {
+      "id": "B-I5",
+      "severity": "info",
+      "evidence": "Shared primitive. Every positive vector is Aiken-produced, the 7 receipts come from the same run, and the checker uses CPython blake2b(digest_size=28). A pass shows CPython/Aiken agreement under the C2/C3 framing only. There is no ledger or chain vector, and HEAD supplements are not dependency-matched.",
+      "requiredFix": "Carry this limit verbatim into any GREEN adoption. If T01.3 fails, apply the stop rule and request the first missingPrimarySymbols item."
+    },
+    {
+      "id": "B-I6",
+      "severity": "info",
+      "evidence": "ADDENDUM:67 reads 'for example \"0\" is \"0\"'. As rendered, this escape example is degenerate; it probably lost a 0-style escape.",
+      "requiredFix": "Label-only. Correct it in any future addendum revision. There is no behaviour impact."
+    },
+    {
+      "id": "B-I7",
+      "severity": "info",
+      "evidence": "Raised exceptions keep traceback frames that reference the input (NOTES:114). The MismatchError text includes declared and recomputed hashes (impl:200-202). All of this is public data.",
+      "requiredFix": "None. This is a disclosed residual."
+    },
+    {
+      "id": "B-I8",
+      "severity": "info",
+      "evidence": "GREEN expectedResult requires stderr to contain only the 19 method lines, `Ran 19 tests` and `OK`. unittest enables 'default' warnings. I found no DeprecationWarning or ResourceWarning source in the test (files are read with `with`) or in the implementation.",
+      "requiredFix": "Any extra stderr line counts as an unexpected result: STOP with no retry, then re-review. Do not loosen the expectation after the run."
+    },
+    {
+      "id": "B-I9",
+      "severity": "info",
+      "evidence": "MC14 is lint-only (D1). MC10 depends on handler order: c2.c2.spend is non-first according to historical seat B, and the vs4 order is unverified. The candidate has no per-group logic, so MC10 must be inserted deliberately.",
+      "requiredFix": "MC1-MC15 need their own reviewed envelope with exact mutant pins and a root decision. Nothing is granted automatically by this review or by GREEN."
+    }
+  ],
+  "recommendation": {
+    "sourceReady": true,
+    "ordinarySelftestReady": true,
+    "ordinarySelftestScope": "Exactly one root-executed ordinary GREEN using the exact PROPOSED-ORDINARY-GREEN-ENVELOPE argv (eb3fa6d9\u2026), unchanged.\n\nInputs:\n- /input is read-only and holds exactly 2 regular 0444 files in a 0555 directory: the unchanged test (28091 B, a1c00918\u2026) and the checker (9070 B, 4f6af890\u2026). There must be no __pycache__, symlinks or other entries.\n- /packet holds the same 20 0444 files as RED, including the original MANIFEST.json (2f91b6fc\u2026).\n\nPreconditions:\n- a second fresh agreeing independent Opus 5.5 vote on C1-C8 and D1-D8;\n- a root decision;\n- root checks pins, modes and exact listings of all 22 files before the run.\n\nExpected result:\n- Ran 19, all 19 pass, 0 failures, 0 errors, exit 0;\n- stdout empty;\n- stderr holds only the 19 verbose 'ok' lines plus 'Ran 19 tests' and 'OK';\n- the same 22 pins, modes and listings afterwards, with no new entries.\n\nOne attempt, no retry. Any deviation, including a timeout, a start failure or extra stderr, means STOP. If T01.3 fails, apply the stop rule with no tag, boundary, width or fixture refit.\n\nA GREEN validates only the 19 tested behaviours under the shared Aiken/CPython primitive. It does not validate D2-D4. It does not cover mutants, adoption, operator, builder or native work.",
+    "firstBlockedBoundary": "Execution of the single ordinary GREEN. It stays blocked until a second fresh agreeing independent Opus 5.5 vote on the whole implementation and D1-D8, and a root decision. After that:\n1. MC1-MC15 meaningfulness controls (separate reviewed envelope with mutant pins, plus a root decision);\n2. a separate adoption decision scoped to the tested behaviours;\n3. a separately reviewed test revision for D2-D4.\n\nA ledger- or chain-produced vector and the ledger dependency-pin and primitive correspondence remain open.",
+    "operatorReady": false,
+    "implementationReady": false,
+    "builderReliancePermitted": false,
+    "nativeAuthority": 0
+  },
+  "coverage": {
+    "readPaths": [
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-implementation-review-packet/MANIFEST.json (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-implementation-review-packet/SEGMENT-INDEX.json (full)",
+      "/home/charl/moriarty-c2-opus55-restored-20261017/mhash-implementation-review-packet/READ-SEGMENT-01.txt through READ-SEGMENT-19.txt (all 19 read in order, each complete; every boundary continues the previous segment, so no reread was needed). Together they carry the bodies of all 38 non-opaque originals: contract, API, test, Ledger Lang/Hashes/Keys, CIP-0057, SOURCES, README, adoption, tool, SIZES, routing, 7 receipts, FIXTURE, 3 supplements, SUPPLEMENT-SOURCES, RED envelope, DESIGN-REVIEW-A/B, ROOT-RED decision/result/precheck/stderr (stdout is 0 B), ORIGINAL-AUTHOR-MANIFEST, independent_script_hash.py, IMPLEMENTATION-NOTES, ADDENDUM and GREEN envelope"
+    ],
+    "unreadPaths": [
+      "B9-APPLIED-BLUEPRINT.json (opaque, 308672 B): not read at all. The basis is FIXTURE-STRUCTURE/SIZES metadata, test transcriptions, the historical seat-B partial-read account and the root RED T00.4 pass",
+      "Standalone raw copies of the 38 originals: segment text was used instead, without byte or sha verification",
+      "DESIGN-REVIEW-A/B PROCESS records cited by the author (not in this packet)",
+      "Anything outside the packet: provenance paths, private files, provider logs, auth, keys, PK/SRS, caches, home or the research root"
+    ],
+    "limitations": [
+      "No execution, import, compilation, hashing, test run, network, SDK, VM, native or Git action. GREEN outcomes are predictions.",
+      "Segment fidelity to the pinned raw originals is taken from root's index and pins. Hash and line counts are root's figures, not my computation.",
+      "The CPython version and the internals of hashlib/_blake2, json/_json, the codecs, importlib, unittest, bwrap and the kernel were not inspected.",
+      "The positive premise is that CPython BLAKE2b-224 equals the Aiken-produced literals. This is unprovable from source; the shared-primitive limitation stands, and there is no ledger or chain oracle.",
+      "Supplements are repository-HEAD bodies; correspondence to ledger d6eec237 dependencies, Aiken v1.1.24 or the installed binaries is unproven.",
+      "The B9 body was unread, so B9 lowercase hex, NaN absence and vs4 order are unverified by me.",
+      "Same-provider fresh contexts give context independence only, not provider diversity. This is one vote.",
+      "Plan-file writing and ExitPlanMode were not available. Output is delivered only through this structured object, and no files were written."
+    ]
+  },
+  "clauseAssessment": [
+    {
+      "id": "C1",
+      "stance": "AGREE",
+      "reason": "impl:29,88 compute hashlib.blake2b(tag+code, digest_size=28).hexdigest(): native BLAKE2b-224, not truncated BLAKE2b-256, unkeyed, giving 56 lowercase hex characters. Source grounding: Hashes:181-182,105; Keys:132; B2b:53,56-59,148-162; CIP:102. The re-export, libsodium native-224 and CPython-equivalence links remain honestly labelled [I]."
+    },
+    {
+      "id": "C2",
+      "stance": "AGREE",
+      "reason": "impl:42-50 require exact type str and exact 'v2'\u21920x02 (Lang:545) or 'v3'\u21920x03 (Lang:565), with everything else an InputError. The CBOR encodeEnum index (Lang:273-278,329-330) is never used. v1/v4 are refused as a stated tool scope. Native scripts are out of scope."
+    },
+    {
+      "id": "C3",
+      "stance": "AGREE",
+      "reason": "tag || bytes.fromhex(compiledCode) is hashed exactly as given, with no strip, re-wrap or [enum,bytes] envelope (impl:83,88; Lang:205,227-229,546-547,566-567). The ledger byte identity is [S]. The CBOR-Flat characterisation is [S at plutus HEAD] plus the PV2/PV3 and dependency [I] (D5). No missing symbol is needed for the rule itself. The vector is a cross-check under the no-refit stop rule."
+    },
+    {
+      "id": "C4",
+      "stance": "AGREE",
+      "reason": "impl:57-83 check, in order: type is str; length-first >65536 characters (exactly the 32768 B bound); even length; lowercase ASCII via frozenset; then fromhex; header 0x58 with L\u226524 or 0x59 with L16\u2265256; exact header+L. Every T01.6-T01.9 vector, traced by hand, takes the intended branch. These are local tool refusals, never different hashes, and not protocol limits."
+    },
+    {
+      "id": "C5",
+      "stance": "AGREE",
+      "reason": "impl:111-203 implement: bytes \u22641 MiB; strict UTF-8 with duplicate keys refused at any depth; required preamble.plutusVersion; 1..64 validators; unique non-empty str titles; C4 code; 56-character lowercase hex hash; parameters absent or []. Every entry is recomputed, with no shortcut. The two error classes are disjoint siblings. The result is a fresh {title: recomputed}. The consistent-swap limit is stated. Precedence is the D2 clarification."
+    },
+    {
+      "id": "C6",
+      "stance": "AGREE",
+      "reason": "The source contains no CIP, receipt or fixture literal and no oracle; expected values exist only in the frozen test. The positive vectors (CIP hello_world and 7 same-run receipts) are all Aiken-produced comparison values. The CPython/Aiken shared primitive and the absence of any ledger vector are stated honestly. Tool recomputation is not an independent oracle."
+    },
+    {
+      "id": "C7",
+      "stance": "AGREE",
+      "reason": "Imports are only hashlib and json, a subset of the allowlist, and both are already loaded by the test. My line-by-line review found no I/O, environment, clock, randomness, network, subprocess, dynamic execution, dunder, getattr, alias, mutable module state or retained input. The AST guard and MC14 are lint only; the envelope is the containment (D1). Stdlib internals are disclosed as uninspected."
+    },
+    {
+      "id": "C8",
+      "stance": "AGREE",
+      "reason": "The non-claims hold. The checker recomputes identifiers only: no UPLC/Flat validity, parameter application, VM, pairing, proof, deployability, ExUnits, ledger acceptance or dependency correspondence, and no whole-CIP-57 validation. M-HASH, all 20 families, financial/ACTUS/DeFi, PCD, private handoff, multi-parent composition and Preprod remain open. Native authority is 0. Votes, root decision and adoption remain separate."
+    }
+  ],
+  "redResultAcceptable": true,
+  "addendumAssessment": [
+    {
+      "id": "D1",
+      "stance": "AGREE",
+      "reason": "Option (b) is sound. The AST guard and MC14 are lint only (bypassable via attribute chains, getattr, dunder), so purity rests on the mandatory fresh line-by-line review, which I performed: clean. The exact two-file read-only input directory (0444 files, 0555 directory, no __pycache__ or symlinks), -I -B and before/after pins of all 22 files close the pyc/TOCTOU concern, and the envelope is the containment. No test revision and no RED retry."
+    },
+    {
+      "id": "D2",
+      "stance": "AGREE",
+      "reason": "impl:169-203 validate the whole document and every entry (Phase 1) before any comparison. Any malformation therefore raises InputError regardless of entry order. Phase 2 recomputes all entries before raising MismatchError, which names the first index and the count. This is a reasonable new clarification. It is untested by the frozen test (D7) and established by source inspection only."
+    },
+    {
+      "id": "D3",
+      "stance": "AGREE",
+      "reason": "impl:117-141: explicit strict UTF-8 decode (json never sees bytes, so UTF-16/32 are rejected), BOM refused rather than stripped, NaN/\u00b1Infinity refused via parse_constant, and JSONDecodeError, int-digit ValueError and RecursionError mapped to InputError with no chaining to input-holding exceptions. The 1e999 note is accurate. Not discriminated by the test. The ADDENDUM:67 escape example is degenerate as rendered (label nit)."
+    },
+    {
+      "id": "D4",
+      "stance": "AGREE",
+      "reason": "Exact `type(x) is` checks for str, bytes, dict and list refuse bytearray, memoryview, subclasses and bool. This also blocks str-subclass __eq__/__iter__ tricks against the tag and hex checks. It is consistent with the contract and API types. Only some cases are tested (bytes, bytearray, None, int, list, str raw); the rest is source-inspected."
+    },
+    {
+      "id": "D5",
+      "stance": "AGREE",
+      "reason": "Label-only. The ledger [S] byte identity (Lang:205,261-262,546-547,566-567) is correctly separated from the CBOR-Flat decode, which is [S at plutus HEAD] (SS:155-160,263,265-269), plus [I] PV2/PV3=Common and the dependency [I]. Citations checked: Lang:117 is PlutusLedgerLanguage, 118 ScriptDecodeError(..), 158 CBORDeserialiseError, 163 RemainderError. All C4 refusals are local; SS:259-261 is cited correctly. The old documents are preserved."
+    },
+    {
+      "id": "D6",
+      "stance": "AGREE",
+      "reason": "Accurate label. MC10 depends on order: the c2.c2.spend and vs4.vs4.else perturbations, and the vs4 order is unverified (I did not read B9). The positive oracle is Aiken-produced with same-run receipts, and the CPython/Aiken primitive is shared. The HEAD-vs-dependency, Aiken, installed-binary and Hash.Class/Libsodium/SerialiseViaFlat/V2-V3/Common.Hash gaps remain explicit, and there is no ledger oracle."
+    },
+    {
+      "id": "D7",
+      "stance": "AGREE",
+      "reason": "Correct process. These behaviours stay source-inspected only, and GREEN must not be cited for D2-D4, fresh results, parameters:null or nesting mapping. No required test is waived for GREEN. Additional tests are not needed now for the single scoped GREEN. They are required, via a separately reviewed test revision with its own RED/GREEN, before any reliance on or tested-claim for these behaviours (finding B-I1)."
+    },
+    {
+      "id": "D8",
+      "stance": "AGREE",
+      "reason": "I agree to leave it open. Titles use exact code-point equality, with lone surrogates from JSON escapes accepted and no added limits. Unknown fields are not validated, and there is no invented closed CIP-57 schema. AGREE is not a closure decision; any limit would be a new semantic requiring two votes."
+    }
+  ]
+}

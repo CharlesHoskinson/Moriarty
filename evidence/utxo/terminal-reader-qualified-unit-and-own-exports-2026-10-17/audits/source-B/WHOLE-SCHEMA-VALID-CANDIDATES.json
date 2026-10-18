@@ -1,0 +1,170 @@
+[
+  {
+    "reviewToken": "terminal-reader-corrected-source-review-b-opus55-20261017",
+    "report": "SEAT B. Fresh, independent, non-author, read-only source review. Actual runtime model: claude-opus-5-5 (Opus 5.5, as requested; no fallback was used and no identity is relabelled). This is one vote. Same-provider fresh contexts give context independence only, not provider diversity. I executed, imported, AST-parsed, compiled, hashed, linted and ran nothing. I dispatched no provider and wrote no file. I read no private capture, stderr, log, auth, config, env, key, wallet, SRS, cache or home path, and opened no provenance path. Every runtime statement below is a source-level prediction. Author metadata (CORRECTION-AUTHOR-REVIEW/PROCESS) is treated as claims to check, not as a vote.\n\nWHAT WAS AUDITED. The audited artifact is root's literal mechanical assembly (74048a17..., 287 lines, 24902 B as pinned by root). It is not the raw author file (7e487049..., 24896 B). The byte delta of +6 matches the root record: two legacy U+2026 literals are spelled as 6-byte ASCII escapes in the trusted tail instead of the author's 3-byte UTF-8 ellipsis. I read the whole assembled candidate, ASSEMBLED-test_terminal_review_selection.py (378 lines), ASSEMBLED-EXPORT-POLICY.md (294 lines), ASSEMBLED-READER-PATCH.diff and CURRENT-READER.py, all in full.\n\nStructure of the assembled candidate:\n- Lines 1-2: the original imports.\n- Lines 3-94: the new pure selector.\n- Lines 95-98: the original lines 3-6.\n- Lines 99-142: the new branch.\n- Lines 143-287: these match CURRENT-READER.py 7-151 line by line on visual comparison (not hashed). That includes the ASCII escape spelling at candidate lines 178 and 185, matching current 42 and 49, and the literal ellipsis at candidate 247, matching current 111.\n\nThe diff has one hunk (header -1,9 +1,145): 92 added selector lines, 4 context lines, 44 added branch lines and 3 trailing context lines. These counts agree with the assembled source.\n\nAUTHOR CLAIMS CHECKED.\n- The claim that lines 7-152 are byte-for-byte unchanged is false for the raw author file, as root's rawTailDelta shows. It holds only for root's assembly. The current reader also has 151 lines, not 152.\n- The claim of 'two additive hunks' does not match the mechanical diff, which has one combined hunk.\n- The expected RED claim (selector absent, so every method errors) is FALSE for the actual test bodies. Four methods never call _load_selector: test_derived_fixture_has_prefix_stream_multiplicity (test:210-212), test_real_b_objects_validate_against_real_schema (334-338), test_real_b_objects_differ_only_at_b_i6_binding (340-346) and test_real_a_is_single_object_distinct_token (368-374).\n  - With the packet present, RED would therefore be 4 ok and 25 errors.\n  - With the packet absent, it would be 1 ok, 23 errors and 5 skipped.\n  - This is a label error only. The GREEN prediction does not depend on it.\n- The policy and the unit docstring say the 5 real-fixture methods are 'OK-or-skipped'. ROOT-UNIT-PROPOSAL supersedes this: any skip is a STOP.\n- The time/memory claim ('well under 1 s, a few MiB') is plausible for time: about 27 ast.parse calls over a 25 KB file, plus the jsonschema checks. 'A few MiB' is probably an understatement once jsonschema and its dependencies are imported. Either way, the binding limit is the root envelope's 512 MiB address space.\n- The naive-walk 'bounded re-parsing' claim holds only in the sense that the fixtures are fixed and small and the helper catches RecursionError.\n\nPRIOR FINDINGS, re-verified against the new code:\n- A F-ER08 and B F1/F2 are FIXED. _stream emits carrier frames only when assistant_models is non-empty (test:129-136), so the empty case reaches selector line 64.\n- A F-ER04 and B F3 are FIXED. The allowed_models parameter is at line 3, the requested gate at 51, the actual gate at 65, honest exclusiveActualAssistantModel at 93, and the wrapper reads TASK terminalReviewAllowedModels at line 135.\n- A F-ER05 and B F6 are FIXED. identityMatchRule is set at line 93 and the docstring at 32-35 is corrected.\n- A F-ER06 is FIXED. The review is written before the receipt (lines 138-140).\n- A F-ER03 and B F4 are FIXED. The liveness probe is at lines 113-118 and does not mutate PROCESS.json.\n- B F5 is FIXED. Malformed lines are counted at lines 119-124 and the selector STOPs on any count at line 57.\n- A F-RETAINED-NONE is FIXED. The selector STOPs at line 88 and the wrapper passes True at line 136.\n- B F7 is reconciled. preservedRecordSha256Before is recorded at lines 131-134 and 137; root pre/post pins are still required.\n- B F8 is preserved. The author process records actual claude-opus-4-8 (62 frames) and is not a vote.\n- B F9 is ADDRESSED by real-fixture methods 25-29.\n\nINDEPENDENT UNIT PREDICTION. Walking all 29 methods against the actual code, I predict ALL 29 PASS. I traced each one:\n- Methods 1-4: CANON/DRAFT multiplicity is exactly 2, and CANON is exported.\n- Methods 5-21: each STOP reason is reached at the intended selector line.\n- Method 22: actual 4.8 with both models allowed exports, and the receipt records 4.8 honestly.\n- Method 23: the receipt keys are a subset of the 19-key allowlist.\n- Method 24: the reordered dict has different raw bytes but the same canonical value.\n- Methods 25-28: these hold against the B-WHOLE-OBJECTS copy in this packet. It is a 2-element list, findings[5] is B-I6, and the two evidence strings differ only by the U+0030 digit versus the six-character escape token. Both objects satisfy B-OUTPUT-SCHEMA: severity values are in the enum, clauseAssessment and addendumAssessment have exactly 8 items each, and the recommendation constants match. The schema has no maxLength, so the third variant stays valid and STOPs on CANONICAL_OBJECT_NOT_IN_RETAINED.\n- Method 29: SINGLE-REVIEW-A is a single dict whose reviewToken is the seat-A token, which is distinct from the B token.\n\nI found no invalid string escapes that would make ast.parse emit a SyntaxWarning: the candidate regexes are raw strings and the docstrings contain no backslashes. Nothing writes to stdout.\n\nThis prediction is conditional on three uninspected preconditions, any of which would be a STOP:\n- jsonschema and its dependencies must import from /usr for python3.14 under -I, with no user site and no home mount.\n- No DeprecationWarning may come from the installed jsonschema stack.\n- The pinned packet at the hardcoded absolute path must equal the copies I read. I took the shas from the manifest; I did not hash anything.\n\nWRAPPER-ONLY, SOURCE-ONLY (not observed by the unit):\n- If os.kill raises PermissionError (line 115), the exception is uncaught. A UnicodeDecodeError from read_text (line 120) or a RecursionError from json.loads (line 123; only ValueError is caught) is also uncaught. Each produces a traceback before any write, so no artifact is created: fail-closed.\n- PID reuse causes a false-live refusal, which is also fail-closed.\n- If writing TERMINAL-REVIEW.json fails partway, a partial review is left with no receipt, and reruns are refused at line 109. This is fail-closed, but the receipt does not bind the review bytes (no sha).\n- Assistant frames whose model lacks a claude-/gemini-/muse- prefix are silently ignored (line 63). For B and A the provider assistant event counts equal assistantEnvelopeModelCounts (29/29 and 28/28), so this has no impact on the current subjects.\n\nVERDICT. ER01-ER10 AGREE, with explicit qualifications on ER03, ER04, ER06, ER08 and ER09.\n- sourceReady is true for the exact scope: the default 5.5-only allowed set for the current actual-5.5 B/A subjects.\n- ordinaryUnitReady is true only for exactly one root-launched unit under ROOT-UNIT-PROPOSAL, and only after a second agreeing full audit and a root decision.\n- realExportReady is false.\n\nM-HASH, all 20 UTxO families, finance/ACTUS/DeFi, PCD/recursion, private handoff, multi-parent composition and Preprod remain OPEN. The canonical identity of the old B object remains UNKNOWN. Native authority is 0.",
+    "findings": [
+      {
+        "id": "SB-F1-RED-CLAIM-FALSE",
+        "severity": "low",
+        "evidence": "The test docstring (test:34-35), EXPORT-POLICY.md:206-207 and the author review all claim that with the selector absent every method errors. In the actual bodies, four methods never call _load_selector: test_derived_fixture_has_prefix_stream_multiplicity (test:210-212, naive walk only), test_real_b_objects_validate_against_real_schema (334-338), test_real_b_objects_differ_only_at_b_i6_binding (340-346) and test_real_a_is_single_object_distinct_token (368-374). Predicted RED with the packet present is Ran 29, 4 ok, errors=25. With the packet absent it is 1 ok, 23 errors, 5 skipped. Both prior audits accepted the 'every method errors' wording for the old unit; I dissent for the assembled unit.",
+        "requiredFix": "Record an errata in the root decision record stating the correct RED expectation. Do not edit the pinned test/policy source to fix the wording, since that would change the pins and require re-review. No RED run is needed or authorized. The GREEN prediction is unaffected."
+      },
+      {
+        "id": "SB-F2-SKIP-VS-ROOT-PREDICATE",
+        "severity": "low",
+        "evidence": "test:61-62 and 334-369 make the five real-fixture methods skipUnless the packet is present. EXPORT-POLICY.md:195-197 and 241-243 call 'OK-or-skipped' acceptable. ROOT-UNIT-PROPOSAL preconditions and expected say a missing fixture is a STOP and require zero skips. A misconfigured mount would therefore degrade silently to an 'OK (skipped=5)' summary unless root checks for it.",
+        "requiredFix": "Root's predicate governs. Before launch, confirm all three fixtures exist at the hardcoded absolute packet path. Treat any 'skipped' token or any summary line other than exactly OK as a STOP with no retry. Treat the policy's OK-or-skipped wording as superseded."
+      },
+      {
+        "id": "SB-F3-STALE-AUTHOR-ASSERTIONS",
+        "severity": "info",
+        "evidence": "EXPORT-POLICY.md:35-37 and the author review claim that current-reader lines 7-152 reappear byte-for-byte; CURRENT-READER.py has 151 lines. The raw author file re-encoded the two U+2026 escape spellings, as ROOT-MECHANICAL-ASSEMBLY rawTailDelta and the +6 byte difference (24896 to 24902) show. EXPORT-POLICY.md:45 claims two hunks, but ASSEMBLED-READER-PATCH.diff has one hunk (-1,9 +1,145). The assembled tail (candidate 143-287) matches current 7-151 on my visual line-by-line comparison, including the escape spellings at 178/185 and the literal ellipsis at 247.",
+        "requiredFix": "Keep root's assembly record as the authoritative description. Never describe the assembly as unaltered raw author bytes. Carry the author claim as false-for-raw and true-only-for-assembly. Root's before/after sha pins remain the byte-identity evidence; my comparison was visual, not hashed."
+      },
+      {
+        "id": "SB-F4-UNRECOGNIZED-ASSISTANT-MODEL-IGNORED",
+        "severity": "low",
+        "evidence": "Selector line 63 counts only assistant frames whose message.model starts with claude-, gemini- or muse-. Frames with a missing or other model name, for example synthetic frames, are dropped silently and do not appear in assistantEnvelopeModelCounts. So 'exclusive actual identity' means exclusive among recognized-prefix names. This mirrors legacy line 216. For the current subjects, B-PROCESS shows 29 assistant envelope events equal to 29 counted, and SINGLE-PROCESS-A shows 28 equal to 28, so nothing is affected now.",
+        "requiredFix": "No change is required for the current B/A scope. Before any broader or 4.8 reuse, a separately reviewed revision should count assistant frames with an unrecognized or missing model, and either STOP or record them in the receipt. Until then, root should compare receipt assistantEnvelopeModelCounts totals with the legacy providerEnvelopeEventCounts.assistant for the same job."
+      },
+      {
+        "id": "SB-F5-RECEIPT-DOES-NOT-BIND-REVIEW-BYTES",
+        "severity": "low",
+        "evidence": "Lines 138-140 write TERMINAL-REVIEW.json and then TERMINAL-EXPORT.json, both with open('x'). The receipt has no sha256 of the review file. If the review write fails partway (fsize or ENOSPC), a partial TERMINAL-REVIEW.json is left with no receipt, and line 109 refuses every rerun. This is fail-closed, but the state needs manual handling and a review file could be mistaken for valid without its receipt. This is wrapper-only and not unit-observed.",
+        "requiredFix": "Root post-check duty for any future real export: accept TERMINAL-REVIEW.json only if TERMINAL-EXPORT.json exists with decision EXPORT, and only if the review parses and is canonical-sorted-key-JSON equal to exactly one retained candidate; compute and record its sha256 externally. Treat review-without-receipt as STOP. A future revision may add the review sha to the receipt, which needs fresh review."
+      },
+      {
+        "id": "SB-F6-WRAPPER-EXCEPTION-PATHS",
+        "severity": "info",
+        "evidence": "Several conditions raise uncaught exceptions before any write, so no artifact is created and the process exits non-zero (fail-closed): os.kill PermissionError (line 115), UnicodeDecodeError on read_text (line 120), RecursionError on deeply nested lines (line 123 catches only ValueError), and a missing PROCESS.json or packet file. Non-dict JSON lines are kept as events but ignored by the selector, and are not counted as parse errors. A reused PID causes a false-live refusal (fail-closed). The probe-to-read liveness race is named in policy section 7.",
+        "requiredFix": "None in source. These stay source-only, wrapper-only gaps that the unit does not observe. Any traceback during a future real export is a STOP with no retry."
+      },
+      {
+        "id": "SB-F7-UNTESTED-BRANCH-VARIANTS",
+        "severity": "low",
+        "evidence": "The 29 methods leave these selector paths unobserved, though each is source-correct on inspection:\n- a single out-of-set actual model under the default set (the WRONG half of line 65);\n- is_error true with subtype success, and subtype non-success with is_error false (line 73, tested only jointly);\n- an empty-list retained set (line 88; only None is tested);\n- non-dict events;\n- require_retained_membership False with retained None (line 89 skipped, matched False). The wrapper never takes this path because line 136 passes True;\n- requested 5.5 with actual 4.8 under both-allowed, which exports and records both honestly.",
+        "requiredFix": "Do not cite the unit as evidence for these variants. They are source-inspected only. Add tests only in a separately reviewed revision with its own RED/GREEN and root decision. Not required for the single scoped unit."
+      },
+      {
+        "id": "SB-F8-UNIT-ENVIRONMENT-PRECONDITIONS",
+        "severity": "low",
+        "evidence": "ROOT-UNIT-PROPOSAL runs /usr/bin/python3 (realpath python3.14) with -I -B under bwrap, with only /usr, /input and the packet mounted and no home. The test imports jsonschema at test:50, and the installed jsonschema stack (attrs, referencing, rpds, jsonschema-specifications) was not inspected. If it lives only in a user site, or emits DeprecationWarnings under 3.14, the predicted clean stderr fails. bwrap has no --remount-ro /, so its tmpfs root is writable but ephemeral, the same as prior B-I2. The unit itself writes nothing.",
+        "requiredFix": "Before launch, root confirms by read-only filesystem inspection, without executing anything, that jsonschema and its dependencies resolve under /usr for python3.14. Any ImportError, warning, extra stderr line or start failure is a STOP with no retry and no source edit. Record the no-persistent-host-writes property accurately."
+      },
+      {
+        "id": "SB-F9-MEMBERSHIP-IS-CONSISTENCY-NOT-INDEPENDENT-AUTHORITY",
+        "severity": "info",
+        "evidence": "Lines 125-129 take the retained set from the first file that exists, in the order AMBIGUOUS-COMPLETE-REVIEWS, WHOLE-SCHEMA-VALID-CANDIDATES, REVIEW. All three were produced by the legacy recursive walk over the same capture, and that walk also visits result.structured_output. Membership is therefore a consistency cross-check with the preserved legacy record, not an independent oracle. For B the AMBIGUOUS record holds 2 objects that are distinct canonical values, so the two values are never conflated. Retained candidates that are not dicts are dropped at line 90.",
+        "requiredFix": "Label any future export as provider-artifact identity plus legacy-record consistency only. It is not a vote, not a choice between B's two objects made outside the typed result, and not a closure of B's multiplicity STOP."
+      }
+    ],
+    "assessments": [
+      {
+        "id": "ER01",
+        "stance": "AGREE",
+        "evidence": "The change is additive only:\n- the selector is at candidate:3-94;\n- the new flag test is at 99, and 100 sets export_only;\n- the terminal block is at 101-142 and always ends in a SystemExit at 142, or an uncaught exception, before the 'if export_only' block at 143 and the dispatch else at 151-165. No new runner and no provider launch on this path.\n\nThe normal no-flag path and the ordinary --export-only path (143-287) match CURRENT-READER.py 7-151 line by line on visual comparison. The trusted reader 56183f15... is unmodified. The diff is one mechanical hunk, -1,9 +1,145. Top-level names used only in the terminal block (events as a list, allowed, retained, outcome) cannot leak into the legacy tail because the block always exits."
+      },
+      {
+        "id": "ER02",
+        "stance": "AGREE",
+        "evidence": "The selector exports only result['structured_output'], and only when it is a dict (lines 75-77), from exactly one type=='result' event (68-71) that is a success (73). The recursive walk at lines 168-206 is never called on this path, and there is no text, partial, nested or quoted fallback.\n\nThis is grounded in OFFICIAL-STRUCTURED-OUTPUTS.md:\n- line 57: validated data is on the result message's structured_output;\n- line 390: success without structured_output is a failure;\n- lines 381 and 388: a fallback retraction ends as error_max_structured_output_retries, which line 73 STOPs on.\n\nThe doc does not state that structured_output is emitted at most once. That gap is named in policy section 7 and is not assumed. No historical canonical B identity is assumed: test:349-357 enumerates both objects."
+      },
+      {
+        "id": "ER03",
+        "stance": "AGREE",
+        "evidence": "From the actual source, not the narrative:\n- Line 118: effective_exit is the recorded exitCode only when status is 'terminal', otherwise None. The selector at line 53 STOPs on anything other than 0.\n- Lines 114-117: when status is not 'terminal' and a PID is recorded, os.kill(pid,0) refuses if the process is live; ProcessLookupError falls through to exit None. PROCESS.json is not mutated.\n- Lines 119-124: blank lines are skipped; ValueError, including JSONDecodeError, is counted, and line 57 STOPs on any count.\n- PermissionError, UnicodeDecodeError and RecursionError propagate before any write (fail-closed).\n\nQualifications: SB-F6; the liveness race is a named gap; all of these paths are wrapper-only and must remain source-only claims."
+      },
+      {
+        "id": "ER04",
+        "stance": "AGREE",
+        "evidence": "allowed_models defaults to the single historical actual-5.5 scope (line 3). The wrapper reads TASK terminalReviewAllowedModels with that same default (line 135). Requested must be in the set (line 51). Actual must be exactly one recognized name and in the set (lines 59-65). The receipt records requestedModel and exclusiveActualAssistantModel separately (line 93) and never relabels.\n\nThis is consistent with USER-BOTH-OPUS-RULE.md:5-10: a 4.8 response is allowed when configured, and both identities are recorded. Test 22 confirms honest 4.8 recording under both-allowed. Widening the set is a TASK config change that requires the fresh review policy states (policy:68-71); code does not enforce that review. The current B-TASK has no such key, so the default 5.5-only set applies to the current B/D7 subjects. A string-valued config would become a character tuple and STOP (fail-closed). Qualification: SB-F4."
+      },
+      {
+        "id": "ER05",
+        "stance": "AGREE",
+        "evidence": "These checks are mandatory and fail-closed, in order:\n- exact token (line 79);\n- real-schema validation (lines 81-82);\n- canonical value membership via json.dumps with sort_keys (lines 86-92). The retained set is mandatory by default (line 88), and the wrapper passes True (line 136).\n\nNo splice, no edit of judgment fields, no quoted-text fallback. The B2 values differ at findings[5].evidence (PUBLIC-DIFFERENCE.json; B-WHOLE-OBJECTS lines 39 and 217): the single U+0030 digit versus the six-character escape token. These parse to different values and are never conflated. Test 26 binds this, test 27 enumerates both objects without a vote, and test 28 confirms that a third variant STOPs. Qualification: SB-F9."
+      },
+      {
+        "id": "ER06",
+        "stance": "AGREE",
+        "evidence": "Line 109 refuses if either new file exists. Exclusive create is used (lines 139-140), and TERMINAL-REVIEW is written before TERMINAL-EXPORT, so a receipt claiming EXPORT never lacks its review. On STOP only the receipt is written. PROCESS, REVIEW, AMBIGUOUS and WHOLE are only read (lines 110, 129, 134), never written, because the block exits at 142. preservedRecordSha256Before is recorded (lines 131-134 and 137). Root pre/post pins of all preserved records, the schema and the source remain a required root duty. Qualification: SB-F5 (partial review write, no review sha in the receipt). Not unit-observed."
+      },
+      {
+        "id": "ER07",
+        "stance": "AGREE",
+        "evidence": "test:99-108 parses the candidate text, which does not execute it. It selects only the top-level FunctionDef named select_terminal_structured_review, compiles an ast.Module containing just that node, and execs it in a namespace holding only json and jsonschema (builtins are implicit). Module-level code at candidate:95-287, including the job paths, PROCESS reads, os.kill and the private capture reads, is never executed.\n\nThe function body uses only json, jsonschema and builtins. Its default arguments are literals and it has no decorators. It mutates no inputs and does no I/O. The test reads only the candidate and three public packet JSON files."
+      },
+      {
+        "id": "ER08",
+        "stance": "AGREE",
+        "evidence": "I count exactly 29 methods: TerminalReviewSelection has 28 (test:210-365) and SeatAGrounding has 1 (370). My independent GREEN prediction is that all 29 pass against the actual code; the trace is in the report. The fixtures are DERIVED UNIT frames and are labelled as such (test:16-28, 147-149). The real B schema and both alternatives are public original objects.\n\nQualifications:\n- the RED claim is false (SB-F1): actual RED would be 4 ok and 25 errors;\n- skip semantics are superseded by root (SB-F2);\n- branch variants are unobserved (SB-F7);\n- wrapper behaviour is not unit-observed (SB-F6);\n- the time claim is plausible, but the 'few MiB' memory claim is likely understated and the AS cap is what binds.\n\nNone of these changes the predicted 29-pass outcome."
+      },
+      {
+        "id": "ER09",
+        "stance": "AGREE",
+        "evidence": "ROOT-UNIT-PROPOSAL:\n- argv: timeout 20s with kill-after 2s; prlimit cpu 10, as 536870912, fsize 2097152, core 0; bwrap --unshare-all --die-with-parent --new-session;\n- mounts: read-only /usr with lib symlinks; read-only /input holding the two files; the read-only 17-file packet at the exact absolute path hardcoded at test:55-57; --clearenv with PATH, LANG and PYTHONDONTWRITEBYTECODE only; python3 -I -B test -v; CANDIDATE resolves to /input/run_source_task_candidate.py (test:52);\n- process: 1 attempt; unitExecutionApproved false; status UNREVIEWED_NOT_EXECUTED; stdout and stderr go to exclusive regular files, not pipes; all three fixtures are required before launch; a skip is a STOP.\n\nThe bounds and effects are consistent with the test source.\n\nQualifications:\n- jsonschema must resolve under /usr (SB-F8);\n- the bwrap tmpfs root is writable but ephemeral;\n- root must check the 2 source and 17 packet pins, modes and listings before and after the run."
+      },
+      {
+        "id": "ER10",
+        "stance": "AGREE",
+        "evidence": "The selector receipt (line 93) and the wrapper additions (line 137) set nativeAuthority 0 and sourceGreenExecuted False and claim provider-artifact identity only. Policy:150-161 and 281-294 are consistent with this: no vote, no adoption, no security or materiality claim, B's multiplicity STOP stays open, and realExportReady stays false regardless of the unit outcome. ROOT-UNIT-PROPOSAL sets realExportPermitted false and fullGoalOpen true. Nothing in the source triggers an automatic export, ledger action or native action."
+      }
+    ],
+    "coverage": {
+      "readPaths": [
+        "/home/charl/moriarty-c2-opus55-restored-20261017/terminal-reader-corrected-review-packet/MANIFEST.json (full)",
+        "ASSEMBLED-run_source_task_candidate.py (full, lines 1-287)",
+        "ASSEMBLED-test_terminal_review_selection.py (full, lines 1-378)",
+        "ASSEMBLED-EXPORT-POLICY.md (full, lines 1-294)",
+        "ASSEMBLED-READER-PATCH.diff (full, lines 1-148)",
+        "CURRENT-READER.py (full, lines 1-151)",
+        "ROOT-MECHANICAL-ASSEMBLY.json (full)",
+        "ROOT-CORRECTED-INTAKE.json (full)",
+        "ROOT-UNIT-PROPOSAL.json (full)",
+        "FRESH-SOURCE-AUDIT-A.json (full)",
+        "FRESH-SOURCE-AUDIT-B.json (full)",
+        "USER-BOTH-OPUS-RULE.md (full)",
+        "B-WHOLE-OBJECTS.json (full, lines 1-358)",
+        "B-OUTPUT-SCHEMA.json (full)",
+        "B-PROCESS.json (full)",
+        "B-TASK.json (full)",
+        "SINGLE-PROCESS-A.json (full)",
+        "PUBLIC-DIFFERENCE.json (full)",
+        "STRUCTURED-OUTPUTS-SOURCE.json (full)",
+        "CORRECTION-AUTHOR-REVIEW.json (full)",
+        "CORRECTION-AUTHOR-PROCESS.json (full)",
+        "OFFICIAL-STRUCTURED-OUTPUTS.md (PARTIAL: offsets 40-69 and 365-404 only, covering cited lines 57, 381, 388 and 390)",
+        "SINGLE-REVIEW-A.json (PARTIAL: lines 1-4 only, enough to confirm a single top-level dict and the distinct seat-A reviewToken)"
+      ],
+      "unreadPaths": [
+        "PROPOSED-READER.py and PROPOSED-UNIT.py (old proposal): not read. Prior findings were re-verified against the new assembled source and the audits' line citations instead.",
+        "OFFICIAL-STRUCTURED-OUTPUTS.md outside the two bounded ranges",
+        "SINGLE-REVIEW-A.json beyond line 4",
+        "All originalPublicSource provenance paths, including the raw author file 7e487049..., the correction-packet originals at the unit's hardcoded path, and the jobs directories",
+        "provider.private.jsonl, stderr.private and any private capture, log, auth, config, env, key, wallet, PK, SRS, cache, home or research-root path",
+        "The installed jsonschema stack, the python3.14 stdlib/unittest internals, bwrap and the kernel"
+      ],
+      "limitations": [
+        "Read tool only. Nothing was executed, imported, AST-parsed, compiled, hashed, linted or unit-run, and nothing was written. All RED/GREEN, time and memory statements are source-level predictions.",
+        "Byte identity between the assembled tail and CURRENT-READER, and between this packet's fixture copies and the correction-packet originals at the unit path, comes from visual comparison plus manifest and root pins. I recomputed no hashes.",
+        "The private provider-envelope contract (whether structured_output is unique per stream, and which event produced B's second object) remains a named gap that was not read.",
+        "Wrapper-only behaviour (PID probe, parse counting, exclusive writes, partial-write failure) is source-inspected only and is not observable by the unit.",
+        "One vote from actual claude-opus-5-5. Same-provider context is not provider diversity. Author metadata is not a vote.",
+        "Plan-mode plan file and ExitPlanMode were not used, because the only deliverable is this structured object and no write was requested or permitted."
+      ]
+    },
+    "recommendation": {
+      "sourceReady": true,
+      "ordinaryUnitReady": true,
+      "realExportReady": false,
+      "firstBlockedBoundary": "Execution of exactly one ordinary unit under the unchanged ROOT-UNIT-PROPOSAL argv. It stays blocked until a second fresh, full, substantive, agreeing non-author audit of the assembled 74048a17... source, the f5380f61... unit and the policy, plus a root decision that records errata SB-F1 (correct RED expectation) and SB-F3, and adopts SB-F2 (skip means STOP).\n\nRoot preconditions before launch:\n- all 3 real fixtures present at the hardcoded packet path;\n- jsonschema and its dependencies confirmed under /usr for python3.14 by read-only inspection (SB-F8);\n- pins, modes and listings for the 2 source files and the 17 packet files.\n\nAfter that come review of the actual unit result and a separate root adoption decision. Before any real own-reader export, root must also adopt the SB-F5 post-check and the SB-F4 count comparison. The 4.8 widening needs its own fresh review."
+    },
+    "predictedUnitResult": "All 29 methods PASS: 28 in TerminalReviewSelection and 1 in SeatAGrounding, including the five real-fixture methods, which run and are not skipped (tests 25-29). Zero failures, errors and skips. Exit 0, stdout empty. Stderr contains only the 29 verbose 'name (__main__.Class.name) ... ok' lines, with SeatAGrounding first because loader order is alphabetical, followed by unittest's standard blank line and separator, 'Ran 29 tests in <time>s', a blank line and 'OK'. All 2 source and 17 packet pins, modes and listings are unchanged, because the unit writes nothing.\n\nThe prediction depends on three things: the packet at /home/charl/moriarty-c2-opus55-restored-20261017/terminal-reader-correction-packet holds the same B/A/schema content I read in this review packet; jsonschema imports from /usr under -I for python3.14; and the installed stack emits no warnings. Any deviation is a STOP with no retry.\n\nFor contrast, the author's RED claim is wrong: with the selector absent, RED would be Ran 29 with 4 ok and errors=25, not all errors.",
+    "authority": {
+      "executed": false,
+      "nativeAuthority": 0,
+      "adopted": false,
+      "providerDispatched": false
+    }
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "text": "I'll load AGENTS, CLI status, and the adapter audit findings first, then repair only the diagnostic adapter against those exact failures.Audit is blocked on six findings. I\u2019ll read the probe scripts, inspection records, and the current adapter capture path next.I'll add failing capture, attribution, and retention tests first, then repair the adapter against those actual failures.Red failures match the audit. I\u2019ll implement streaming capture, PID-bound attribution, nested tool pins, and exclusive output-dir retention.The diagnostic adapter is repaired in this worktree only. Partial `formal/k` source is unchanged. There was no K, strace, compile, dispatch, or accounting write.\n\n## Source scope\n\nWorktree files:\n\n| File | SHA256 | Bytes |\n|---|---|---|\n| `.moriarty-dev/k-macro05-trace106-diagnostic.py` | `57e7f1f95e8988fde3179fa23d83d34bcef5cc2c2054049d7aabcf0d1b665a14` | 25456 |\n| `.moriarty-dev/test_k_macro05_trace106_diagnostic.py` | `b1fc1b04f201032fd0d2690e797b5da240f9cbcd80f36fed665c15d23f5979dd` | 22519 |\n| `.moriarty-dev/k-macro05-trace106-pins.json` | `d8a68b5008013140b39d7d5483f41144a06040d5e28c0ecdbbe3a815a02bf53a` | 8085 |\n\nPrior frozen candidate `de02a76e\u2026` is replaced here only. MAIN `k-admission/author-adapter-ready-01.json` is still `cb7443fa73403598aacc284b9371a373c5763654e08be84ffa4198cdc873192d`. New receipts: `author-adapter-ready-02.json`, `author-adapter-checks-02.txt`.\n\n## Audit repairs\n\n- **A01:** Exclusive checkout path `deliverables/language-to-ledger-2026-09-12/k-admission/observed-01` is claimed before spawn. Bounded `stdout.raw`, `stderr.raw`, and `manifest.json` are written. Adapter stderr is compact JSON. Native stack text stays in the raw file. Existing destination fails closed (`OUTPUT_DIR_EXISTS`). Truncation or retention failure does not assert 113.\n- **A02:** Capture uses the plugin runner selectors drain (16KiB chunks, running hashes, 1MiB retain cap). `communicate()` is gone. Overflow stops and reaps. 4MiB Python child peak was under 3.5MiB.\n- **A03:** Interpreter SIGSEGV is bound to the same PID with `execve(...) = 0`. Parser PID SIGSEGV leaves `interpreterExit` unknown.\n- **A04:** One monotonic child deadline, then group kill, pipe close, 0.2s reap. Detached 0.6s grandchild returned in under 0.35s. Timeout/overflow stay non-113.\n- **A05:** Pins now list nested kast, unwrapped kast/krun, `k-util.sh`, bash, jar, and domains.md. Preflight hashes those files and follows wrapper `exec`/shebang/`k-util` against the listed hashes, not the lock file alone.\n- **A06:** `attemptedSpawnCount` is the spawn. `krunCalls`/`observedKrunExecs` come from successful `krun` execve in the trace. Ptrace denial records 0 K calls.\n\nDefault CLI has no `--output-dir`. Tests pass `output_dir`. `--verify-only` still does not spawn and did not create `observed-01`.\n\n## Observed checks\n\n```text\nPYTHONDONTWRITEBYTECODE=1 /usr/bin/python3.14 .moriarty-dev/test_k_macro05_trace106_diagnostic.py -v\nexit 0  (21 tests)\n\nPYTHONDONTWRITEBYTECODE=1 /usr/bin/python3.14 .moriarty-dev/k-macro05-trace106-diagnostic.py --verify-only\nexit 0  status=pins-verified  verifiedFiles=535  artifacts=488  nestedToolsVerified=16  krunInvocationsPinned=106  spawnCount=0  krunCalls=0\n```\n\nPython-child tests are labeled offline. No strace/K.\n\n## Unresolved\n\n- Fresh Astra source audit of these exact bytes.\n- Root install at MAIN `.moriarty-dev`, pin/input binding, one admitted diagnostic.\n- Actual crash diagnosis after that run.\n- Lifecycle K source remains incomplete and was not continued this turn.\n\nRequested identity: `grok-4.6` high, session `27f1f3c5-957b-469a-b36b-8f5fe36dd1b2`. No credit-exhaustion event. CLI status is still the unrelated loan-dispatch block; this repair did not use `run`.",
+  "stopReason": "end_turn",
+  "sessionId": "27f1f3c5-957b-469a-b36b-8f5fe36dd1b2",
+  "requestId": "cb3276fd-d73f-4fc7-b119-488e0e5a4f39",
+  "usage": {
+    "input_tokens": 73788,
+    "cache_read_input_tokens": 6795776,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 36177,
+    "reasoning_tokens": 27246,
+    "total_tokens": 6905741
+  },
+  "num_turns": 22,
+  "total_cost_usd": 2.55851768,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 73788,
+      "outputTokens": 36177,
+      "cacheReadInputTokens": 6795776,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 22,
+      "costUSD": 2.55851768
+    }
+  }
+}

@@ -1,0 +1,558 @@
+{
+  "format": "proof-carrying-bundle-operating-model-source-facts/1",
+  "sourceOnly": true,
+  "userSteering": {
+    "exactQuote": "remember the operating model of moriarty on cardano would be transacting with a set of Groth16 proofs (PCD). This is a step change in Cardano because dapps can validate the groth16 proof instead of relying upon an oracle or trusted data source",
+    "provenance": "Latest user steering relayed by root in this assignment",
+    "classification": "User objective, not implementation evidence or an extrapolated guarantee",
+    "centralDeliverable": "Proof-carrying transaction bundle; single-proof adapter remains a component"
+  },
+  "legacyMcpN1": {
+    "profile": "Historical catalogue1.2-draft-20261015 / bundle1.1 host UNIT checker, distinct from current Rust Groth16",
+    "catalogueVersion": "1.2-draft-20261015",
+    "bundleSchema": {
+      "schema": "moriarty-cardano-proof-bundle/1.1",
+      "fields": [
+        "catalogue",
+        "entries",
+        "profile_id",
+        "program",
+        "schema"
+      ],
+      "catalogueRefFields": [
+        "catalogue_id",
+        "catalogue_manifest_digest",
+        "catalogue_version"
+      ],
+      "programFields": [
+        "language",
+        "program_hash",
+        "raw_source_sha256"
+      ],
+      "entryFields": [
+        "admission_digest",
+        "claim_kind",
+        "evidence_class",
+        "predicate_digest",
+        "predicate_ref",
+        "proof_hex",
+        "statement",
+        "vk_digest"
+      ],
+      "evidenceClasses": [
+        "none",
+        "vector-evidenced",
+        "vector-evidenced-unaudited"
+      ],
+      "unsupportedEvidenceClasses": [
+        "verified-at-issuance"
+      ],
+      "bestOutcome": "STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED"
+    },
+    "admissionSchema": {
+      "schema": "moriarty-cardano-admission-record/1.1",
+      "fields": [
+        "audit_refs",
+        "build_provenance",
+        "circuit_constants",
+        "constraint_coverage",
+        "key_role",
+        "lifecycle",
+        "phase1_transcript_digest",
+        "phase2_transcript_digest",
+        "predicate_digest",
+        "predicate_ref",
+        "provenance",
+        "relation_id",
+        "schema",
+        "scope",
+        "setup_class",
+        "trust_profile",
+        "verifier_profile",
+        "verifier_sharing",
+        "vk_digest"
+      ],
+      "buildProvenanceFields": [
+        "relation_source_sha256",
+        "toolchain_digest",
+        "verifier_cbor_sha256",
+        "vk_bytes_sha256",
+        "vk_digest_rule",
+        "vk_encoding_id"
+      ],
+      "auditRefFields": [
+        "auditor_id",
+        "covers_vk_digest",
+        "report_sha256",
+        "scopes",
+        "verdict"
+      ],
+      "keyRoles": [
+        "negative-control",
+        "production",
+        "test"
+      ],
+      "verifierKinds": [
+        "offline-host-none",
+        "plutus-v3-script"
+      ],
+      "verifierSharing": [
+        "dedicated",
+        "family"
+      ],
+      "vkEncodings": [
+        "arkworks-bls12-381-groth16-vk-compressed/v0"
+      ],
+      "vkDigestRules": [
+        "sha256-of-vk-bytes"
+      ],
+      "auditScopes": [
+        "build-provenance",
+        "relation-observation",
+        "setup-transcript",
+        "statement-binding",
+        "verifier-script"
+      ],
+      "auditVerdicts": [
+        "approve-scoped",
+        "dispute"
+      ],
+      "rules": [
+        "append-only ordered log outside the catalogue; each consumer pins its record_log_digest",
+        "predicate_ref is a current row with an admissible kind and statementSchema; predicate_digest reproduces its SemanticEntry digest",
+        "constraint_coverage names exactly the row's binding constraint ids (declared, not verified)",
+        "circuit_constants cover exactly the circuit-constant fields, equal any catalogue-pinned value, and the predicate_digest constant equals predicate_digest",
+        "key_role production only is admitted (MCP-REF-11)",
+        "a vk_digest belongs to one predicate; a revoked record for it refuses every record for it; two live records for it are ambiguous",
+        "plutus-v3-script needs script_hash and verifier_cbor_sha256; vk_digest equals vk_bytes_sha256 under sha256-of-vk-bytes",
+        "family-shared verifiers need validator-supplied vk_digest and setup-class statement fields (review B R8)",
+        "audit_refs are record-scoped declarations; they earn credit only through a matching consumer grant (policy /2): same auditor_id and report_sha256, verdict approve-scoped, covering the record's vk_digest and predicate_ref; effective scopes = record scopes intersected with grant scopes; consumer dispute grants refuse whether or not the record cites them; required scopes come from the profile and the policy (review fdecbe41 B1)",
+        "setup class, transcripts, build provenance, script binding and audits are declared, never verified here"
+      ]
+    },
+    "bundleSource": "/home/charl/Moriarty/.worktrees/utxo/evidence/utxo/n1-aiken-reviewed-results-v13-2026-10-15/captured/cardano-catalogue-v12-n1-run-20261015/src-patched/mcpcat/bundle.py",
+    "membershipCallsite": {
+      "function": "check_bundle",
+      "lines": [
+        167,
+        238
+      ],
+      "keys": [
+        "schema",
+        "catalogue",
+        "profile_id",
+        "program",
+        "entries"
+      ],
+      "countGuardLiteral": "if not isinstance(entries, list) or not 1 <= len(entries) <= 2:",
+      "meaning": "AND of1 or2 entries; duplicate predicate_ref/admission_digest refused at223-227"
+    },
+    "exactOutcome": "STRUCTURALLY_CONSISTENT_PROOF_UNVERIFIED",
+    "fixedLabels": {
+      "proofVerification": "NOT_PERFORMED",
+      "ledgerAcceptance": "NOT_ESTABLISHED",
+      "qualification": "UNIT"
+    },
+    "identityChecks": {
+      "sourceLines": [
+        59,
+        97
+      ],
+      "fields": [
+        "current versioned predicate_ref",
+        "predicate_digest",
+        "admission_digest",
+        "vk_digest",
+        "consumer accepted/denied VK sets"
+      ],
+      "programFields": [
+        "language",
+        "raw_source_sha256",
+        "program_hash"
+      ],
+      "programBindingLines": [
+        198,
+        235
+      ]
+    },
+    "anchorChecks": {
+      "lines": [
+        44,
+        46
+      ],
+      "refusedInjectedKeys": [
+        "anchor",
+        "anchors",
+        "root",
+        "merkle_root",
+        "state_root",
+        "anchor_value",
+        "certificate"
+      ],
+      "sourceRule": "Anchor values are resolved by the consumer from its pinned profile; bundle-supplied roots are refused."
+    },
+    "distinctClaimRules": [
+      {
+        "sourcePointer": "/bundleRules/1",
+        "exactValue": "Each entry is verified by its own verifier, either at consumption or at certificate issuance. In the latter case the consumer accepts only the issuance policy's token under a pinned vk_digest and the evidence class is verified-at-issuance(vk_digest); no issuance policy exists or is adopted in v1, so that class is UNSUPPORTED."
+      },
+      {
+        "sourcePointer": "/bundleRules/2",
+        "exactValue": "ledger-current-context facts are recomputed by the consumer validator from its ScriptContext and are never bundle entries."
+      },
+      {
+        "sourcePointer": "/bundleRules/4",
+        "exactValue": "universal-property entries are certificates bound to program identity (layer 2), property hash, semantics, bounds and checker id; by reference only."
+      },
+      {
+        "sourcePointer": "/bundleRules/5",
+        "exactValue": "Aggregation or recursion is a separate relation with its own covered list; it changes no entry's kind, anchor or freshness."
+      },
+      {
+        "sourcePointer": "/bundleRules/9",
+        "exactValue": "v1 bundles are AND of k in {1,2} entries; OR, k-of-n and DAG parents are specified elsewhere and not admitted here."
+      }
+    ],
+    "oldAndCurrentHashProfilesNotUnified": "Legacy admission schema names sha256-of-vk-bytes; current export/C2 source uses vkDigestBlake2b256 / blake2b_256(vk). No equivalence or adapter inferred.",
+    "noNewMaintainerProductPolicy": "Consumer-selected constraints in this legacy schema are attributed source facts, not newly imposed public developer permissions"
+  },
+  "currentRustProducer": {
+    "proveSource": "experiments/moriarty-cardano-rust/k2/src/prove.rs",
+    "proveLines": [
+      110,
+      152
+    ],
+    "function": "prove",
+    "sourceObservedInput": "one SelectedRelation, ParsedSetup, ProveRequest",
+    "output": "ProveOutput { export: ProofExport, export_bytes: Vec<u8> }",
+    "sourceCalls": [
+      "relation::require_same",
+      "claim::prepare_claim",
+      "check_claim",
+      "Groth16::create_proof_with_reduction_and_matrices",
+      "verify::pairing_verify",
+      "export::build_export",
+      "parse_proof_export",
+      "check_export"
+    ],
+    "callsExecutedByThisTask": false,
+    "exportSource": "experiments/moriarty-cardano-rust/k2/src/export.rs",
+    "exportLines": [
+      218,
+      271
+    ],
+    "singleProofField": "proof_hex: String",
+    "proofExportFields": [
+      "format",
+      "setup_record_sha256",
+      "program_hash",
+      "source_sha256",
+      "action",
+      "action_index",
+      "compiler_build_digest",
+      "r1cs_sha256",
+      "predicate_digest",
+      "abi2_shape_digest",
+      "vk_digest_blake2b256",
+      "context",
+      "statement_hex",
+      "statement_digest_blake2b256",
+      "public_inputs",
+      "proof_hex",
+      "cardano",
+      "premises"
+    ],
+    "cardanoExportLines": [
+      154,
+      214
+    ],
+    "envV2Fields": [
+      "version",
+      "claim_kind",
+      "family_id",
+      "predicate_digest",
+      "vk_digest",
+      "claimant_vkh",
+      "settle_outref",
+      "statement_digest"
+    ],
+    "catalogueActionFields": [
+      "name",
+      "index",
+      "predicate_digest",
+      "vk_digest",
+      "shape_digest"
+    ],
+    "expiry": "Source explicitly builder-chosen and not proof-bound; not part of exported EnvV2 fields",
+    "intentTarget": "predicate:vk:shape",
+    "intentAnchor": "cardano-plutus-v3:<caller declared settle hash>",
+    "driverPlutusDataOrCbor": "Source explicitly says driver produces none",
+    "contextAuthenticationExactSource": "Context bytes (vk digest, claimant, network, settle hash, thread, consumed outref, seq, catalogue digest, intents digest) are caller-declared premises: bound by the proof, not authenticated by it. S2 recomputes each from its authenticated ScriptContext and datum.",
+    "noGeneralBundleProducerInInspectedFunctions": true,
+    "noRecursiveParentVerifierOrUniversalCertificateProducerLocatedInTheseFunctions": true
+  },
+  "currentCardanoPath": {
+    "c2Issuance": {
+      "source": "experiments/cardano-four-piece-settlement/lib/pvc2/claim.ak",
+      "lines": [
+        49,
+        71
+      ],
+      "redeemer": "Issue { vk, proof }; types.ak240-243",
+      "call": "groth16.verify_digest(vk, proof, env.statement_digest)",
+      "sourceChecks": [
+        "name == envelope_name(raw)",
+        "well_formed(env)",
+        "env.vk_digest == builtin.blake2b_256(vk)"
+      ],
+      "qualification": "One VK/proof per Issue; source inspection only"
+    },
+    "actualS2pDelegation": [
+      {
+        "source": "validators/s2p.ak",
+        "lines": [
+          45,
+          59
+        ],
+        "call": "Settle -> shard4.delegated(c2_hash, vi_hash, [vs1_hash,vs2_hash,vs3_hash,vs4_hash], own_ref, self)"
+      },
+      {
+        "source": "lib/pvc2/shard4.ak",
+        "lines": [
+          268,
+          285
+        ],
+        "call": "identities_distinct and piece_lists for each piece"
+      },
+      {
+        "source": "lib/pvc2/shard4.ak",
+        "lines": [
+          164,
+          189
+        ],
+        "call": "vs3_identity matches VI/thread coverage then identity_thread for each pair"
+      },
+      {
+        "source": "lib/pvc2/shard4.ak",
+        "lines": [
+          133,
+          149
+        ],
+        "call": "identity_thread -> thread.settle_claim_input -> settle_claim -> settle_statement -> settle_statement_digest"
+      }
+    ],
+    "pathRoot": "experiments/cardano-four-piece-settlement",
+    "perThreadMembership": {
+      "source": "lib/pvc2/thread.ak",
+      "lines": [
+        612,
+        631
+      ],
+      "from": "b.tx.inputs",
+      "filter": "claim script credential and env.settle_outref == b.own_ref",
+      "exactSingletonLiteral": "expect [(raw, env, input)] = claims",
+      "qualification": "Exactly one matching claim per selected thread, not a global one-claim-per-transaction assertion"
+    },
+    "coveredThreadLists": {
+      "source": "lib/pvc2/shard4.ak",
+      "lines": [
+        41,
+        78
+      ],
+      "redeemerFields": [
+        "piece",
+        "thread_policy",
+        "threads: List<OutputReference>"
+      ],
+      "exactComparison": "list.map(cov, fn(c) { c.input.output_reference }) == r.threads",
+      "unreadDependency": "pvc2/shard.ak bodies of covered/shard_redeemer were not inspected in this packet",
+      "qualification": "Multiple covered thread references and per-thread checks do not establish arbitrary proof-array or full PCD bundle validation"
+    },
+    "identityShapes": {
+      "source": "lib/pvc2/types.ak",
+      "catalogueLines": [
+        84,
+        95
+      ],
+      "catalogueFields": [
+        "network_id",
+        "moriarty_network",
+        "program_hash",
+        "source_hash",
+        "assets",
+        "accounts",
+        "states",
+        "actions",
+        "reserve_owner",
+        "reserve_floor"
+      ],
+      "actionEntryLines": [
+        73,
+        82
+      ],
+      "actionFields": [
+        "name",
+        "index",
+        "predicate_digest",
+        "vk_digest",
+        "shape_digest",
+        "advancers"
+      ],
+      "envelopeLines": [
+        227,
+        243
+      ],
+      "envelopeFields": [
+        "version",
+        "claim_kind",
+        "family_id",
+        "predicate_digest",
+        "vk_digest",
+        "claimant_vkh",
+        "settle_outref",
+        "statement_digest",
+        "expiry"
+      ]
+    },
+    "recomputedBindings": {
+      "source": "lib/pvc2/thread.ak",
+      "lines": [
+        738,
+        778
+      ],
+      "catalogue": [
+        "entry predicate_digest",
+        "entry vk_digest",
+        "network_id",
+        "catalogue.digest(b.cat)"
+      ],
+      "currentThread": [
+        "own_hash",
+        "thread_id",
+        "own_ref transaction_id/output_index",
+        "seq",
+        "pre-state/body inputs"
+      ],
+      "claim": [
+        "claimant_vkh"
+      ],
+      "intentPath": [
+        "intents_digest"
+      ],
+      "digestEqualityLines": [
+        915,
+        916
+      ]
+    },
+    "sequentialContinuity": {
+      "source": "lib/pvc2/thread.ak",
+      "lines": [
+        783,
+        799
+      ],
+      "sourceBehavior": "..td retains other fields; state/balances/liabilities/reserve change, seq increments, event_chain hashes previous event_chain and statement digest",
+      "continuationLines": [
+        919,
+        938
+      ],
+      "catalogueImmutabilitySource": "catalogue.ak134-136 comment and continuation spread",
+      "qualification": "Source continuation discipline, not recursive proof checking or actual ledger acceptance"
+    },
+    "atomicReleaseSource": {
+      "source": "lib/pvc2/claim.ak",
+      "lines": [
+        119,
+        149
+      ],
+      "sourceChecks": [
+        "no output holds own C2 policy",
+        "claimant in tx.extra_signatories",
+        "settle outref spent in this transaction OR after expiry"
+      ],
+      "qualification": "Same-transaction predicates inspected; no atomic transaction assembled or run"
+    },
+    "noVersionedGeneralBundleOrUniversalCertificateConsumerLocatedInTheseFiles": true
+  },
+  "parentsAndRecursion": {
+    "searchedFullyReadCurrentSourceFiles": [
+      "experiments/moriarty-cardano-rust/k2/src/prove.rs",
+      "experiments/moriarty-cardano-rust/k2/src/export.rs",
+      "experiments/cardano-four-piece-settlement/lib/pvc2/types.ak",
+      "experiments/cardano-four-piece-settlement/lib/pvc2/claim.ak",
+      "experiments/cardano-four-piece-settlement/lib/pvc2/catalogue.ak",
+      "experiments/cardano-four-piece-settlement/lib/pvc2/core.ak",
+      "experiments/cardano-four-piece-settlement/lib/pvc2/thread.ak",
+      "experiments/cardano-four-piece-settlement/lib/pvc2/shard4.ak",
+      "experiments/cardano-four-piece-settlement/validators/s2p.ak",
+      "openspec/changes/pcd-ledger-anchored-acceptance/specs/pcd-composition/spec.md"
+    ],
+    "literalTokenMatches": {
+      "parent_count": [],
+      "recursion_mode": []
+    },
+    "parentCountZeroEnforcementClaimed": false,
+    "recursionModeZeroEnforcementClaimed": false,
+    "qualification": "Current retained CatalogueV2, EnvV2, StatementCtxV2 and ProofExport shapes omit parent/recursion fields. Omission establishes neither native recursion refusal nor recursion validation. Historical unlocated design wording was not promoted to current evidence."
+  },
+  "retainedRequirements": {
+    "cardanoLegacyPcdRows": [
+      {
+        "id": "MCP-PCD-01@0",
+        "property": "Message z = (vk_h, prog_h, gen, head, n, budget_h, duty_h) is reachable from a legitimate base through compliant moriarty-core/1 steps, each step verifying its predecessor proof.",
+        "firstBlocker": "Non-recursive step relation (EXE-01) and measured verifier gadget."
+      },
+      {
+        "id": "MCP-PCD-02@0",
+        "property": "A PCD node joins k parents with disjoint resources, complete duty union and conserved budgets.",
+        "firstBlocker": "/1 has no join semantics."
+      },
+      {
+        "id": "MCP-PCD-03@0",
+        "property": "Party 2 continues from a commitment and obligation statement without learning party 1's witness, with explicit disclosure and witness availability.",
+        "firstBlocker": "Recursion (PCD-01) and nullifier-set design under per-UTxO contention."
+      },
+      {
+        "id": "MCP-PCD-04@0",
+        "property": "A Groth16 (BSB22 commitment-Groth16 in the bridge design) proof that a recursive inner proof verifies, with the inner VK/accumulator identity public, verified by a Plutus V3 validator that tracks the checkpoint thread.",
+        "firstBlocker": "Wrapper circuit size/measurement."
+      },
+      {
+        "id": "MCP-PROP-01@1",
+        "property": "For each action a of P: for all inputs and states, I(pre) and the guards of a imply I(post_a); one quantifier-free bit-vector validity query per action because /1 actions are straight-line. The certificate reports, per action, whether the guard conjunction is satisfiable over the scenario domain; a vacuous certificate (unsatisfiable guards, or a program whose every action refuses through conflicting identities, M-DISPOSITIONS F11 as quoted) is labelled vacuous and never satisfies a policy requiring PROP-01. Domain: all scenarios in the adapter's common subset (M-DISPOSITIONS RP-7 as quoted).",
+        "firstBlocker": "Property specification form bound by hash."
+      }
+    ],
+    "compositionSpec": "openspec/changes/pcd-ledger-anchored-acceptance/specs/pcd-composition/spec.md",
+    "specifiedBehaviors": [
+      "ledger-atomic Split/Join, fan-in/out at most2 until bounds freeze",
+      "Release/JoinFrom/Reclaim via claimed calls",
+      "recipient-keyed encrypted opening; successor no predecessor proof/witness; isolated parties",
+      "sequential/disjoint parallel/atomic synchronization under head discipline"
+    ],
+    "profileQualification": "OpenSpec composition names Compact0.33/ledger9: existing Midnight requirements retained separately, not implemented Cardano Groth16 or a new architecture decision"
+  },
+  "firstUncoveredInterfacesInThisTrace": [
+    {
+      "boundary": "Current single ProofExport(s) -> versioned proof-carrying transaction bundle membership / required claim set",
+      "observed": "One proof producer and separate older structural entry-array checker",
+      "missing": "Current-profile connecting producer/callsite not found among retained sources"
+    },
+    {
+      "boundary": "Versioned claim bundle -> actual on-chain Cardano claim-set consumer",
+      "observed": "C2 one proof issuance plus S2p/shard4 per-thread singleton envelope path",
+      "missing": "Consumer of the general versioned bundle or proven equivalent current claim-set interface not found; multiple claim inputs alone are insufficient evidence"
+    },
+    {
+      "boundary": "Recursive parents / bounded multiparent / universal certificates / private successor handoff",
+      "observed": "Versioned legacy rows and composition requirements specify these separately",
+      "missing": "Current Rust/Cardano producer+consumer completion evidence absent from this bounded slice"
+    }
+  ],
+  "limits": [
+    "No array-of-proofs-is-PCD claim",
+    "No general oracle-elimination guarantee; ledger/anchor/trust premises remain source-qualified",
+    "No architecture/security/adoption decision or new product permission rule",
+    "No tests/source imports/SDK/native/curve/proof/key/network/model/private actions, nested agents or checkout/git mutation",
+    "Preview first/later Preprod and full20UTxO/ACTUS/DeFi/general-financial/PCD obligations remain open"
+  ]
+}

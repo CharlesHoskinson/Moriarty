@@ -1,0 +1,74 @@
+[
+  {
+    "clauseId": "CI01",
+    "clause": "Pure sibling module c2_issue_artifacts.py importing only hashlib and host_codec; sole public prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults; uses the seven host APIs as host_codec attributes of the unchanged 23252-byte host",
+    "position": "FOR",
+    "rationale": "Reuses the reviewed host exactly as required, keeps the consumer narrow and inspectable, and lets the test prove the host binding by identity; policy_id is keyword-only because build_value_data needs the compiled policy, which neither record carries"
+  },
+  {
+    "clauseId": "CI02",
+    "clause": "Refuse C2I-ARG before touching any record unless exact dict, exact dict, exact int expiry 0..2^64-1 and exact 28-byte bytes policy_id",
+    "position": "FOR",
+    "rationale": "Exact types exclude subclass hooks and bool-as-int; argument refusal first means malformed calls reveal nothing about record contents"
+  },
+  {
+    "clauseId": "CI03",
+    "clause": "Expiry only from the argument; an export carrying envV2.expiry is refused; labelled CALLER_SUPPLIED_NOT_PROOF_BOUND",
+    "position": "FOR",
+    "rationale": "EnvV2Export omits expiry and the builder comment calls it unbound; any record-provided or default expiry would falsely suggest proof binding"
+  },
+  {
+    "clauseId": "CI04",
+    "clause": "C2I-SETUP: closed SetupRecord schema, export.rs profile constants, consumed relation keys, ABI v2 tag/family/header literals, 976-hex VK and BLAKE2b-256(VK) == vkDigestBlake2b256",
+    "position": "FOR",
+    "rationale": "Mirrors parse_setup_record where supplied and the on-chain vk_digest == blake2b_256(vk) conjunct, so a mismatched VK fails host-side before artifacts exist"
+  },
+  {
+    "clauseId": "CI05",
+    "clause": "C2I-EXPORT: closed ProofExport schema at every level with exact types/widths, fixed format and exact six PREMISES",
+    "position": "FOR",
+    "rationale": "Rust uses deny_unknown_fields and fixed premises; closed schemas stop smuggled fields such as an injected expiry"
+  },
+  {
+    "clauseId": "CI06",
+    "clause": "C2I-RELATION: export identity fields equal setup relation fields and the recomputed VK digest",
+    "position": "FOR",
+    "rationale": "Reproduces the check_export identity comparisons so an export cannot be paired with a different relation or VK"
+  },
+  {
+    "clauseId": "CI07",
+    "clause": "C2I-STATEMENT: bounded lowercase hex, host parse_statement_header admission, header predicate/shape/vk/bodyLen equal relation and recomputed VK digest",
+    "position": "FOR",
+    "rationale": "Ties the proved statement header to the declared relation using the reviewed host parser instead of a new one"
+  },
+  {
+    "clauseId": "CI08",
+    "clause": "C2I-CONTEXT: export context equals the ten header values exactly, and networkId must be 0",
+    "position": "FOR",
+    "rationale": "Matches context_export equality; the networkId 0 policy keeps forgeable single-party-test artifacts off mainnet while saying nothing about Preview vs Preprod"
+  },
+  {
+    "clauseId": "CI09",
+    "clause": "C2I-DIGEST via statement_digest_hex and statement_public_inputs exact strings; then C2I-PROOF 384 lowercase hex; then C2I-CARDANO equals cardano_export derivation",
+    "position": "FOR",
+    "rationale": "Covers the remaining non-pairing check_export steps in Rust order, using host digest APIs instead of new hashing"
+  },
+  {
+    "clauseId": "CI10",
+    "clause": "Return closed 12-key result: envData via build_env_data from header plus caller expiry, token = BLAKE2b-256(encode_data(env)), issueData via build_c2_mint_data, mintValueData via build_value_data(None, [(policy, token, 1)])",
+    "position": "FOR",
+    "rationale": "Produces the reusable artifacts from verified record values, never fixtures; the F01 no-ada choice matches the historical V3 context; fixed bounds (212-222, 710 and 67 bytes) make outputs testable"
+  },
+  {
+    "clauseId": "CI11",
+    "clause": "Exact ValueError with stage-code prefix for the first failing stage in fixed order, host errors rewrapped, no partial result, no input mutation, purity",
+    "position": "FOR",
+    "rationale": "Deterministic first-failure codes make refusal order testable and auditable; purity keeps the consumer free of I/O and authority"
+  },
+  {
+    "clauseId": "CI12",
+    "clause": "No claim of pairing, curve validity, setup byte identity, ledger/provider authenticity, Preview/Preprod acceptance, legacy/UPLC compatibility or certification; K6 reproduction is historical only; all flags false",
+    "position": "FOR",
+    "rationale": "Keeps every mandatory limit explicit, so the consumer cannot be read as authentication, ledger acceptance or a bridge to the legacy builder"
+  }
+]

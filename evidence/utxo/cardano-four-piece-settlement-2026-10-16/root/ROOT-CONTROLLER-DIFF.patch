@@ -1,0 +1,22 @@
+--- /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-four-way-vs-local-operator-root-run-records-20261016/run-reviewed-ordinary.py
++++ /home/charl/moriarty-eutxo-validation-2026-10-12/current-cardano-four-way-vs-harness-repair-root-records-20261016/run-reviewed-ordinary.py
+@@ -1,7 +1,8 @@
+ from pathlib import Path
+-import json,hashlib,datetime,subprocess,time,os
++import json,hashlib,datetime,subprocess,time,os,sys
+ R=Path(__file__).resolve().parent;A=json.loads((R/'AUTHORIZATION.json').read_text());O=Path(A['operatorManifest']['path']).parent;T=Path(A['target']);H=lambda z:hashlib.sha256(z).hexdigest();now=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat()
+-assert H((R/'AUTHORIZATION.json').read_bytes())=='76ce6440f1c4ef6c9e128c9066db9645031706fb49b66846803e5a33e37cb0d0'
++assert len(sys.argv)==2 and H((R/'AUTHORIZATION.json').read_bytes())==sys.argv[1]
++assert H(Path(__file__).read_bytes())==A['rootRunner']['sha256']
+ assert H((R/'PRE-LAUNCH.json').read_bytes())==A['prelaunchSha256'] and not os.path.lexists(T)
+ assert A['attempts']==1 and A['retries']==0 and len(A['steps'])==15
+ rec={'format':'root-fourway-ordinary-operator-receipt/1','startedAt':now(),'authorizationSha256':H((R/'AUTHORIZATION.json').read_bytes()),'pid':os.getpid(),'status':'running','steps':[],'integrityChecks':[],'retries':0};begin=time.monotonic()
+@@ -15,7 +16,7 @@
+ save()
+ try:
+  for step in A['steps']:
+-  sid=step['id'];integrity('before-'+sid);p=Path(step['argv'][1]);z=p.read_bytes();assert len(z)==step['bytes'] and H(z)==step['sha256']
++  sid=step['id'];integrity('before-'+sid);p=Path(step['scriptPath']);z=p.read_bytes();assert len(z)==step['bytes'] and H(z)==step['sha256']
+   outpath=R/(sid+'-stdout.txt');row={'id':sid,'argv':step['argv'],'startedAt':now(),'stdoutPath':str(outpath),'status':'running'};rec['steps'].append(row);save();tick=time.monotonic();print(json.dumps({'step':sid,'status':'starting','at':row['startedAt']}),flush=True)
+   with outpath.open('xb') as out:
+    child=subprocess.Popen(step['argv'],stdin=subprocess.DEVNULL,stdout=out,stderr=subprocess.STDOUT,cwd=R);row['pid']=child.pid;save();ec=child.wait()

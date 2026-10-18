@@ -1,0 +1,28 @@
+language "moriarty/1";
+agreement PayrollLedger {
+  state period: UInt = 0;
+  state closed: Bool = false;
+  state rate: UInt = 3;
+  asset USD = { network: "fresh-unit", issuer: "payroll-issuer", reference: "usd", scale: 0 };
+  action pay(hours: UInt, bonus: Bool, ceiling: UInt) {
+    requires not closed and hours > 0;
+    let wage = hours * rate;
+    requires wage <= ceiling or bonus;
+    transfer(USD, "employer", "worker", wage);
+    fee(USD, "employer", "payroll", 1);
+    transfer(USD, "worker", "worker", wage);
+    liability("benefit", USD, "employer", "worker", hours);
+    next period = period + 1;
+    next period = period * 2;
+    emit "wage"(wage);
+    emit "flag"(bonus not = closed);
+    ensures liability_present("benefit") and period >= 2;
+  }
+  action settle(amount: UInt) {
+    requires liability_present("benefit");
+    discharge("benefit", amount);
+    transfer(USD, "employer", "worker", amount);
+    next closed = liability_amount("benefit") == 0;
+    emit "closed"(closed);
+  }
+}

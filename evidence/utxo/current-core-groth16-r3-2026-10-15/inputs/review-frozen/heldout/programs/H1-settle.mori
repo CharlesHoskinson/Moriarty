@@ -1,0 +1,28 @@
+language "moriarty/1";
+agreement HoldoutSettle {
+  state released: UInt = 0;
+  state open: Bool = true;
+  state rounds: UInt = 0;
+  asset USDX = { network: "holdout-net", issuer: "holdout-issuer", reference: "usdx", scale: 6 };
+  asset PTS = { network: "holdout-net", issuer: "holdout-issuer", reference: "pts", scale: 0 };
+  action settle(gross: UInt, cut: UInt, hold: UInt, last: Bool) {
+    requires open and gross > cut;
+    let net = gross - cut;
+    transfer(USDX, "buyer", "seller", net);
+    fee(USDX, "buyer", "operator", cut);
+    transfer(PTS, "seller", "seller", 5);
+    liability("warranty", USDX, "seller", "buyer", hold);
+    next released = released + net;
+    next rounds = rounds + 1;
+    ensures released <= 1000000 or not last;
+    next open = not last;
+  }
+  action close(pay: UInt, left: UInt) {
+    requires liability_present("warranty");
+    transfer(USDX, "seller", "buyer", pay);
+    discharge("warranty", pay);
+    requires liability_amount("warranty") == left;
+    requires liability_present("warranty");
+    next open = false;
+  }
+}

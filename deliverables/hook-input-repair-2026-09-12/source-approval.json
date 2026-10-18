@@ -1,0 +1,44 @@
+{
+  "candidate_sha256": "3287cbeeacf11b1a16c0dc70a14eac007714d842c4537202c56270cdf4ddc67c",
+  "audits": {
+    "astra": {
+      "verdict": "APPROVED",
+      "candidate_sha256": "3287cbeeacf11b1a16c0dc70a14eac007714d842c4537202c56270cdf4ddc67c",
+      "findings": [],
+      "summary": "Supplied-source review found no material regression from raising the finite input cap to 8 MiB. Invalid UTF-8, malformed JSON, and oversized input still receive diagnostics before repository access. No explicit allow is emitted; recognized dispatch denial remains intact. The 0.75-second adapter timer, one-second host timeout, and 2,048-byte output cap remain unchanged. Added regressions cover large PostToolUse acceptance and large PreToolUse registered-argv denial. Increased parsing and memory costs do not establish a material risk within this bounded scope. The reported 201 passing tests were not independently run. Approval covers only the hook input correction, not financial release or installed-host verification."
+    },
+    "opus": {
+      "verdict": "APPROVED",
+      "candidate_sha256": "3287cbeeacf11b1a16c0dc70a14eac007714d842c4537202c56270cdf4ddc67c",
+      "findings": [
+        {
+          "severity": "low",
+          "location": "plugins/moriarty-dev/scripts/moriarty_dev/hook.py:main (try/except/finally around handle_event)",
+          "issue": "Pre-existing deadline race, not introduced by this change but slightly more reachable with larger accepted inputs. SIGALRM can fire after the try body completes (or while the except branch builds the diagnostic) but before `signal.setitimer(signal.ITIMER_REAL, 0)` runs in `finally`. `HookDeadline` derives from `BaseException`, so a fire in that window is uncaught: the process emits a stderr traceback, no stdout JSON, and a nonzero exit. The wire contract is still fail-safe (no explicit allow is ever produced), but a recognized-dispatch denial would be silently lost in that window.",
+          "required_fix": "Not blocking for this bounded correction. Recommended follow-up: make the handler idempotent/inert once the work is done (e.g. a `finished` flag checked by `deadline`, or `signal.signal(SIGALRM, SIG_IG"
+        },
+        {
+          "severity": "info",
+          "location": "plugins/moriarty-dev/scripts/moriarty_dev/hook.py:handle_pre_tool_use (shlex.split) and hook_protocol.py:INPUT_LIMIT",
+          "issue": "Raising the cap makes multi-megabyte `tool_input.command` strings reachable by `shlex.split`, which is pure Python and comparatively slow. Work is bounded by the 0.75s `setitimer` deadline on POSIX hosts, which yields a diagnostic rather than a decision. On hosts lacking `setitimer` only the host's 1s command timeout bounds it, so a pathological command could be killed with no hook output. This is an availability/latency change, not a permission regression: no allow is ever emitted and the host retains permission ownership. COMPATIBILITY.md already documents the non-setitimer caveat, and all supported hosts (Linux/WSL, macOS) have setitimer.",
+          "required_fix": "None required. Optional hardening: skip shlex parsing for command strings above a modest size and fall through to the closed `_output(event)` envelope."
+        },
+        {
+          "severity": "info",
+          "location": "plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py:read_payload",
+          "issue": "Peak transient memory per hook invocation rises from a few KiB to roughly tens of MiB for a worst-case 8 MiB payload (raw bytes + decoded text + parsed object graph). Processes are short-lived and per-event, so this is not material on the supported deployment, but it is a real change in resource profile worth recording.",
+          "required_fix": "None."
+        },
+        {
+          "severity": "info",
+          "location": "plugins/moriarty-dev/COMPATIBILITY.md (adapter limits paragraph)",
+          "issue": "Wording nit: \"responses above 8 MiB still receive a diagnostic\" reads as if it constrains hook output, whereas 8 MiB is the input bound and the output bound is 2,048 bytes. The intended meaning (hook inputs carrying large tool responses) is inferable but imprecise.",
+          "required_fix": "Optional: reword to \"hook inputs above 8 MiB still receive a diagnostic\"."
+        }
+      ],
+      "summary": "Source-only review; I executed no tests and read no files beyond the six supplied, so the candidate SHA256 is echoed as given and not independently recomputed. The change is a single-constant widening of INPUT_LIMIT from 8 KiB to a finite 8 MiB in hook_protocol.py, with the limit imported by the test suite rather than duplicated. It is correctly scoped to hook input admission and touches nothing in the financial/dispatch release path. Wire invariants hold in the reviewed source: output() returns {} for Stop and for unsupported events, no code path ever emits an explicit allow or rewrites tool input, diagnostic() adds only a common systemMessage plus (for event-specific cases) a bare hookEventName envelope with no permissionDecision, and serialize() preserves deny semantics under the unchanged 2,048-byte output cap via its explicit deny fallback. Damaged input is still rejected before any repository access: non-object JSON, invalid JSON, invalid UTF-8, bad/empty/NUL-bearing cwd, and oversize all raise before handle_event, and test_malformed_input_never_calls_repository_handler asserts that ordering. Byte-accurate limiting is preserved: read(INPUT_LIMIT+1) on a BufferedReader means an input that is exactly at the limit is complete rather than split mid-codepoint, and anything larger is rejected, so the multibyte test is a genuine check rather than an accident. Regression direction is favorable for safety, not against it: under the old 8 KiB cap, a legitimate large PreToolUse envelope containing a registered raw argv received a diagnostic and therefore no denial, so the guard failed silent on normal large tool replies; the new cap restores the denial, which is exactly what test_valid_large_pre_tool_use_preserves_registered_argv_deny pins at 64 KiB. The 0.75s setitimer is armed before read_payload, so a slow or stalled stdin cannot block past the host's 1s timeout on POSIX hosts, and JSON parsing of a multi-megabyte payload sits well inside that budget. No material real-world risk and no behavioral regression identified. The findings above are low/informational: a narrow pre-existing SIGALRM cancellation race in hook.py:main, a latency note about shlex parsing very large command strings (fail-safe in all cases, since no allow can be emitted), the raised transient memory ceiling, and a documentation wording nit. None of these block this bounded correction."
+    }
+  },
+  "tests": "201 passed",
+  "scope": "bounded hook input correction only"
+}

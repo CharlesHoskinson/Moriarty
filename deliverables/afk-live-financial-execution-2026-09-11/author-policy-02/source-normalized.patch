@@ -1,0 +1,945 @@
+*** Begin Patch
+*** Update File: /home/charl/Moriarty/.worktrees/afk-live-financial-execution/plugins/moriarty-dev/scripts/moriarty_dev/policy.py
+@@
+ A focused repair after two same-defect failures requires both
+ ``reproducerVerified`` and ``approachChanged``. Repair occupies the primary
+ implementation slot. Report remains allowed when dispatch is denied.
+-Reproduce remains allowed for repeated-failure, history, admin and
++Non-live report remains allowed when dispatch is denied. Non-live
++reproduce remains allowed for repeated-failure, history, admin and
+ concurrency limits, but not for admission/command gaps.
++Actions with evidenceProfile ``finalized-financial-settlement`` obey
++history, retry and primary gates regardless of kind, including report.
+ """
+ from __future__ import annotations
+ 
+@@
+ ADMIN_SECONDS_LIMIT = 1800
+ ADMIN_CYCLE_LIMIT = 2
+ FAILURE_RETRY_LIMIT = 2
++LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
+ 
+ 
+ def assess(snapshot, action):
+@@
+ 
+     kind = action["kind"]
+     missing = list(snapshot["missingEvidence"])
+     next_id = snapshot["nextActionId"]
++    live = action["evidenceProfile"] == LIVE_EVIDENCE_PROFILE
+     if kind not in KNOWN_KINDS:
+         return _decision(False, "UNKNOWN_KIND", next_id, missing)
+-    if kind == "report":
++    if kind == "report" and not live:
+         return _decision(True, "ALLOWED", next_id, missing)
+     if snapshot["authorityCurrent"] is False:
+         return _decision(False, "AUTHORITY_UNAVAILABLE", next_id, missing)
+@@
+         return _decision(False, "ENTRY_INELIGIBLE", next_id, missing)
+     if snapshot["resourceAdmitted"] is False:
+         return _decision(False, "RESOURCE_EXHAUSTED", next_id, missing)
+     if _admission_gap(missing):
+         return _decision(False, "ADMISSION_UNRESOLVED", next_id, missing)
+-    if _history_gap(missing) and kind not in HISTORY_EXEMPT_KINDS:
++    history_exempt = frozenset() if live else HISTORY_EXEMPT_KINDS
++    if _history_gap(missing) and kind not in history_exempt:
+         return _decision(False, "HISTORY_UNRESOLVED", next_id, missing)
+-    if snapshot["primaryActive"] is True and kind in PRIMARY_BLOCKED_KINDS:
++    primary_blocked = KNOWN_KINDS if live else PRIMARY_BLOCKED_KINDS
++    if snapshot["primaryActive"] is True and kind in primary_blocked:
+         return _decision(False, "PRIMARY_ACTIVE", next_id, missing)
+     same_failures = snapshot.get("sameDefectFailures")
+     if same_failures is not None and same_failures >= FAILURE_RETRY_LIMIT:
+-        if kind in RETRY_BLOCKED_KINDS:
+-            return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
+-        if kind == "repair":
+-            ready = (
+-                snapshot["reproducerVerified"] is True
+-                and snapshot["approachChanged"] is True
+-            )
+-            if not ready:
+-                return _decision(False, "REPAIR_UNREADY", next_id, missing)
++        if live:
++            if kind == "repair":
++                ready = (
++                    snapshot["reproducerVerified"] is True
++                    and snapshot["approachChanged"] is True
++                )
++                if not ready:
++                    return _decision(False, "REPAIR_UNREADY", next_id, missing)
++            else:
++                return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
++        else:
++            if kind in RETRY_BLOCKED_KINDS:
++                return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
++            if kind == "repair":
++                ready = (
++                    snapshot["reproducerVerified"] is True
++                    and snapshot["approachChanged"] is True
++                )
++                if not ready:
++                    return _decision(False, "REPAIR_UNREADY", next_id, missing)
+     if kind == "admin" and _admin_limit(snapshot):
+         return _decision(False, "ADMIN_LIMIT", next_id, missing)
+     return _decision(True, "ALLOWED", next_id, missing)
+*** Update File: /home/charl/Moriarty/.worktrees/afk-live-financial-execution/plugins/moriarty-dev/scripts/moriarty_dev/store.py
+@@
+ class ReservationConflictError(StoreError):
+     pass
+ 
+ 
++LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
++LEGACY_PRIMARY_KINDS = frozenset(("implement", "repair"))
++
++
+ def get_db_path(repo_root: str | Path) -> Path:
+     repo_path = Path(repo_root).resolve()
+     git_entry = repo_path / ".git"
+@@
+     return history_reader
+ 
+ 
++def _action_start_profile(conn, repo, requirement, capability, candidate, action_id):
++    try:
++        cur = conn.execute(
++            """
++            SELECT payload_json FROM events
++            WHERE event_kind = 'action_start'
++              AND repository = ?
++              AND requirement = ?
++              AND capability = ?
++              AND candidate = ?
++              AND action_id = ?
++            ORDER BY id DESC
++            """,
++            (repo, requirement, capability, candidate, action_id),
++        )
++        rows = cur.fetchall()
++        if not rows:
++            return None
++        profiles = []
++        for (raw,) in rows:
++            try:
++                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
++            except Exception:
++                return None
++            action = payload.get("action") if isinstance(payload, dict) else None
++            if not isinstance(action, dict) or "evidenceProfile" not in action:
++                return None
++            profiles.append(action.get("evidenceProfile"))
++        if any(item == LIVE_EVIDENCE_PROFILE for item in profiles):
++            return LIVE_EVIDENCE_PROFILE
++        distinct = set(profiles)
++        if len(distinct) == 1:
++            return profiles[0]
++        return None
++    except Exception:
++        return None
++
++
++def _reservation_occupies_primary(conn, action_kind, repo, requirement, capability, candidate, action_id):
++    if action_kind in LEGACY_PRIMARY_KINDS:
++        return True
++    profile = _action_start_profile(
++        conn, repo, requirement, capability, candidate, action_id
++    )
++    if profile is None:
++        return True
++    return profile == LIVE_EVIDENCE_PROFILE
++
++
++def _any_other_primary(conn, exclude_id=None):
++    rows = conn.execute(
++        """
++        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
++        FROM reservations WHERE status = 'active'
++        """
++    ).fetchall()
++    for rid, repo, req, cap, cand, act_id, kind in rows:
++        if exclude_id is not None and rid == exclude_id:
++            continue
++        if _reservation_occupies_primary(conn, kind, repo, req, cap, cand, act_id):
++            return True
++    return False
++
++
+ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
+     if not db_path.is_file():
+         return None
+@@
+         if total_events == 0:
+             return None
+ 
+         # This database belongs to one Git common directory. All linked
+         # worktrees share its primary slot. A dead parent is ambiguous: its
+         # child and charge can survive, so only recorded completion releases it.
+-        primary_active = conn.execute(
+-            "SELECT 1 FROM reservations WHERE status = 'active' "
+-            "AND action_kind IN ('implement', 'repair') LIMIT 1"
+-        ).fetchone() is not None
++        primary_active = _any_other_primary(conn)
+ 
+         cur = conn.execute(
+             f"""
+@@
+             elif kind == "result_review":
+                 verdict = payload.get("verdict") or payload.get("scopedVerdict")
+                 if verdict == "APPROVED":
+                     resolved = payload.get("resolvedFindings") or payload.get("resolved")
+                     if resolved and isinstance(resolved, list):
+                         for rf in resolved:
+                             unresolved_findings.discard(str(rf))
+-                    else:
+-                        unresolved_findings.clear()
+             # Notice: kind == "defect_resolved" is ignored; author events cannot erase blockers
+ 
+         # Admin cycles
+@@
+             pass
+ 
+ 
++def read_store_identity(db_path: Path, *, timeout: float = 10.0) -> str | None:
++    """Read a persisted identity token if present. Never creates schema or rows."""
++    if not db_path.is_file():
++        return None
++    try:
++        uri = "file:" + str(Path(db_path).resolve()) + "?mode=ro"
++        conn = sqlite3.connect(uri, uri=True, timeout=timeout)
++    except Exception:
++        return None
++    try:
++        cur = conn.execute(
++            "SELECT name FROM sqlite_master WHERE type='table' AND name='store_identity'"
++        )
++        if not cur.fetchone():
++            return None
++        rows = conn.execute("SELECT token FROM store_identity LIMIT 2").fetchall()
++        if len(rows) != 1:
++            return None
++        token = rows[0][0]
++        if type(token) is not str or token.strip() == "":
++            return None
++        return token
++    except Exception:
++        return None
++    finally:
++        try:
++            conn.close()
++        except Exception:
++            pass
++
++
++def _exact_lineage_recorded(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> bool:
++    if not db_path.is_file():
++        return False
++    try:
++        conn = sqlite3.connect(str(db_path), timeout=timeout)
++    except Exception:
++        return False
++    try:
++        repo_ids = _canonical_repo_ids(repo)
++        placeholders = ",".join("?" for _ in repo_ids)
++        cur = conn.execute(
++            f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
++            repo_ids + [requirement, capability],
++        )
++        return cur.fetchone()[0] > 0
++    except Exception:
++        return False
++    finally:
++        try:
++            conn.close()
++        except Exception:
++            pass
++
++
++def get_live_history(db_path: Path, repo: str, requirement: str, capability: str, *, identity_anchor=None, timeout: float = 10.0) -> dict | None:
++    """Live-profile history: available only on a positive in-store identity match.
++
++    Production callers pass no anchor, so history stays unavailable until a
++    separately approved identity adoption. Tests may pass an in-process
++    ``identity_anchor`` that must equal the persisted token.
++    """
++    if type(identity_anchor) is not str or identity_anchor.strip() == "":
++        return None
++    token = read_store_identity(db_path, timeout=timeout)
++    if token is None or token != identity_anchor:
++        return None
++    if not _exact_lineage_recorded(db_path, repo, requirement, capability, timeout=timeout):
++        return None
++    return get_history(db_path, repo, requirement, capability, timeout=timeout)
++
++
++def make_guarded_history_reader(db_path: Path, *, live_lineage=None, identity_anchor=None, timeout: float = 10.0):
++    def history_reader(lineage: dict) -> dict | None:
++        repo = lineage.get("repository", "")
++        req = lineage.get("requirement", "")
++        cap = lineage.get("capability", "")
++        is_live = False
++        if live_lineage is not None:
++            try:
++                is_live = bool(live_lineage(lineage))
++            except Exception:
++                is_live = True
++        if is_live:
++            return get_live_history(
++                db_path, repo, req, cap, identity_anchor=identity_anchor, timeout=timeout
++            )
++        return get_history(db_path, repo, req, cap, timeout=timeout)
++    return history_reader
++
++
+ def _derive_authoritative_findings(repo_path: Path) -> list[dict]:
+     findings = []
+     postmortems = repo_path / "docs" / "postmortems"
+@@
+     conn = init_db(db_path)
+     try:
+         conn.execute("BEGIN IMMEDIATE")
+         action_kind = action.get("kind", "")
+-        if action_kind in ("implement", "repair"):
+-            active = conn.execute(
+-                "SELECT id FROM reservations WHERE status = 'active' "
+-                "AND action_kind IN ('implement', 'repair') LIMIT 1"
+-            ).fetchone()
+-            if active:
+-                raise ReservationConflictError(
+-                    f"Unresolved primary implementation reservation already exists: {active[0]}"
+-                )
++        incoming_occupies = (
++            action_kind in LEGACY_PRIMARY_KINDS
++            or action.get("evidenceProfile") == LIVE_EVIDENCE_PROFILE
++        )
++        if incoming_occupies and _any_other_primary(conn):
++            raise ReservationConflictError(
++                "Unresolved primary reservation already exists"
++            )
+ 
+         res_id = str(uuid.uuid4())
+         if charge_id is not None:
+             try:
+@@
+                 action.get("id", ""),
+                 now,
+-                json.dumps({"action": action, "snapshot": snapshot}),
++                json.dumps({"action": action, "snapshot": snapshot, "reservationId": res_id}),
+             ),
+         )
+         conn.commit()
+         return res_id
+@@
+ 
+ def has_other_primary(db_path: Path, reservation_id: str) -> bool:
+     with closing(sqlite3.connect(db_path)) as conn:
+-        return conn.execute(
+-            "SELECT 1 FROM reservations WHERE status='active' "
+-            "AND action_kind IN ('implement', 'repair') AND id != ? LIMIT 1",
+-            (reservation_id,),
+-        ).fetchone() is not None
++        return _any_other_primary(conn, exclude_id=reservation_id)
+ 
+ 
+ def finish(db_path: Path, reservation_id: str, receipt: dict | None = None, status: str = "finished"):
+     conn = init_db(db_path)
+*** Update File: /home/charl/Moriarty/.worktrees/afk-live-financial-execution/plugins/moriarty-dev/scripts/moriarty_dev/cli.py
+@@
+ from moriarty_dev.store import has_other_primary
+ from moriarty_dev.records import load_snapshot, read_actions
+ from moriarty_dev.store import (
+     get_db_path,
+     init_db,
+-    make_history_reader,
++    make_guarded_history_reader,
+     reserve,
+     finish,
+     record_review,
+@@
+         rows.append({
+             "sprint": sp_id,
+             "goal": title,
+             "status": "complete" if all_complete else "open",
+             "demonstrated": bool(all_complete),
+             "predicate": predicate,
+         })
+     return rows
+ 
+ 
++def catalog_live_lineage(repo: Path):
++    """True when the catalog registers a live-profile action for this lineage."""
++    def check(lineage: dict) -> bool:
++        try:
++            actions = read_actions(str(repo))
++        except Exception:
++            return True
++        req = lineage.get("requirement")
++        cap = lineage.get("capability")
++        for act in actions:
++            if (
++                act.get("requirement") == req
++                and act.get("capability") == cap
++                and act.get("evidenceProfile") == "finalized-financial-settlement"
++            ):
++                return True
++        return False
++    return check
++
++
+ def main():
+     json_parent = argparse.ArgumentParser(add_help=False)
+     json_parent.add_argument("--json", action="store_true", help="Output in JSON format")
+@@
+         sys.stderr.write(f"Error: Invalid repository path {repo}\n")
+         sys.exit(3)
+ 
+     db_path = get_db_path(repo)
+-    history_reader = make_history_reader(db_path)
++    history_reader = make_guarded_history_reader(
++        db_path, live_lineage=catalog_live_lineage(repo)
++    )
+ 
+     if args.command == "status":
+         cmd_status(repo, db_path, history_reader, args.json)
+@@
+         sys.stderr.write(f"Review rejected: scope '{receipt_scope}' does not match campaign scope '{expected_scope}'\n")
+         sys.exit(3)
+ 
+-    history_reader = make_history_reader(db_path)
++    history_reader = make_guarded_history_reader(
++        db_path, live_lineage=catalog_live_lineage(repo)
++    )
+     snap = load_snapshot(str(repo), target_action["id"], history_reader=history_reader)
+     if snap.get("authorityCurrent") is False:
+         sys.stderr.write(f"Review rejected: authority unavailable for action {target_action['id']}\n")
+         sys.exit(3)
+*** Update File: /home/charl/Moriarty/.worktrees/afk-live-financial-execution/plugins/moriarty-dev/tests/test_execution.py
+@@
+         res = self.run_cli("review", str(receipt_file))
+         self.assertEqual(res.returncode, 0, f"CLI review failed: {res.stderr}")
+         hist_after = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
+-        self.assertEqual(hist_after["sameDefectFailures"], 0)
++        self.assertEqual(hist_after["sameDefectFailures"], 1)
+ 
+     def test_corrupt_history_and_safe_writes(self):
+         self.db_path.write_bytes(b"corrupt sqlite header not valid database")
+@@
+         hist2 = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
+         self.assertEqual(hist2["sameDefectFailures"], 1)
+ 
+-    def test_authentic_review_clears_stable_finding(self):
++    def test_authentic_review_without_named_resolution_leaves_finding(self):
+         record_event(
+             self.db_path,
+             str(self.root),
+@@
+         }
+         record_review(self.db_path, str(self.root), receipt)
+ 
+         hist2 = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
+-        self.assertEqual(hist2["sameDefectFailures"], 0)
++        self.assertEqual(hist2["sameDefectFailures"], 1)
+ 
+     def test_lineage_and_finding_identity_survives_candidate_rename(self):
+         record_event(
+*** Update File: /home/charl/Moriarty/.worktrees/afk-live-financial-execution/plugins/moriarty-dev/tests/test_live_policy_history.py
+@@
+ """Isolated live-profile policy and review-history regression tests.
+ 
+-Exercises public ``assess`` / store APIs against tempdir SQLite only.
++Exercises public ``assess`` / store / CLI APIs against tempdir SQLite only.
+ Does not write a live git common store, budget.lock, manifests, wallets,
+ or grant live admission. ``assess`` never grants admission.
+ """
+ from __future__ import annotations
+ 
+-import sys
+-import tempfile
++import contextlib
++import io
++import json
++import sys
++import tempfile
++import threading
+ import unittest
++import uuid
+ from pathlib import Path
+ 
+ SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
+ if str(SCRIPTS_DIR) not in sys.path:
+     sys.path.insert(0, str(SCRIPTS_DIR))
+ 
++from moriarty_dev.cli import catalog_live_lineage, cmd_review, cmd_run, cmd_status
+ from moriarty_dev.policy import assess
++from moriarty_dev.records import load_snapshot
+ from moriarty_dev.store import (
+     ReservationConflictError,
+     get_db_path,
+     get_history,
++    get_live_history,
+     has_other_primary,
+     init_db,
++    make_guarded_history_reader,
+     record_event,
+     record_review,
++    read_store_identity,
+     reserve,
+     finish,
++    SCHEMA_SQL,
+ )
+@@
+-LIVE_HISTORY_KINDS = ("verify", "review", "reproduce", "implement", "repair", "admin")
+-LIVE_PRIMARY_KINDS = ("verify", "review", "reproduce", "implement", "repair", "admin")
+-LIVE_RETRY_DENIED_KINDS = ("verify", "review", "implement", "admin")
++LIVE_HISTORY_KINDS = (
++    "verify",
++    "review",
++    "reproduce",
++    "implement",
++    "repair",
++    "admin",
++    "report",
++)
++LIVE_PRIMARY_KINDS = LIVE_HISTORY_KINDS
++LIVE_RETRY_DENIED_KINDS = (
++    "verify",
++    "review",
++    "reproduce",
++    "implement",
++    "admin",
++    "report",
++)
+@@
+-    def test_report_stays_allowed_under_live_history_retry_and_primary(self):
++    def test_live_report_obeys_history_retry_and_primary(self):
+         s = reproducer_snapshot()
+         result = assess(s, live_action("report"))
+-        assert_allowed(self, result)
+-        self.assertEqual(result["missingEvidence"], ["operational-history"])
++        assert_denied(self, result, "HISTORY_UNRESOLVED")
++        assert_denied(
++            self, assess(snapshot(primaryActive=True), live_action("report")), "PRIMARY_ACTIVE"
++        )
++        assert_denied(
++            self,
++            assess(snapshot(sameDefectFailures=2), live_action("report")),
++            "REPRODUCE_BEFORE_RETRY",
++        )
+@@
+-    def test_retry_gate_denies_live_verify_and_review_like_implement(self):
++    def test_retry_gate_denies_live_nonrepair_kinds_like_implement(self):
+         s = snapshot(sameDefectFailures=2, nextActionId="live-loan-reproduce")
+         for kind in LIVE_RETRY_DENIED_KINDS:
+             result = assess(s, live_action(kind))
+             assert_denied(self, result, "REPRODUCE_BEFORE_RETRY", context=kind)
+             self.assertEqual(result["nextActionId"], "live-loan-reproduce")
+ 
+-    def test_live_reproduce_remains_the_retry_path(self):
+-        # Interface choice: live reproduce is still how a changed approach is
+-        # established. History and primary continue to deny live reproduce.
+-        s = snapshot(sameDefectFailures=2, nextActionId="live-loan-reproduce")
+-        assert_allowed(self, assess(s, live_action("reproduce")))
++    def test_live_reproduce_denied_at_two_failures_even_when_ready(self):
++        s = snapshot(
++            sameDefectFailures=2,
++            reproducerVerified=True,
++            approachChanged=True,
++        )
++        assert_denied(
++            self, assess(s, live_action("reproduce")), "REPRODUCE_BEFORE_RETRY"
++        )
++        assert_denied(self, assess(s, live_action("verify")), "REPRODUCE_BEFORE_RETRY")
++        assert_denied(self, assess(s, live_action("report")), "REPRODUCE_BEFORE_RETRY")
++        assert_allowed(self, assess(s, live_action("repair")))
+@@
+         assert_denied(
+             self, assess(s, live_action("implement")), "REPRODUCE_BEFORE_RETRY"
+         )
+         assert_denied(
+             self, assess(s, live_action("verify")), "REPRODUCE_BEFORE_RETRY"
+         )
++        assert_denied(
++            self, assess(s, live_action("reproduce")), "REPRODUCE_BEFORE_RETRY"
++        )
+@@
+         implement = assess(s, live_action("implement"))
+         assert_denied(self, implement, "HISTORY_UNRESOLVED")
+-        for kind in ("verify", "review", "reproduce"):
++        for kind in ("verify", "review", "reproduce", "report"):
+             result = assess(s, live_action(kind))
+             assert_denied(self, result, "HISTORY_UNRESOLVED", context=kind)
+@@
+     def test_nonfinancial_verify_review_reproduce_keep_historical_exemptions(self):
+         blocked = snapshot(
+             sameDefectFailures=2,
+             primaryActive=True,
+             missingEvidence=["operational-history"],
+         )
+         for kind in ("verify", "review", "reproduce"):
+             assert_allowed(
+                 self,
+                 assess(
+                     blocked, live_action(kind, profile=NONFINANCIAL_PROFILE)
+                 ),
+                 context=kind,
+             )
++        assert_allowed(
++            self,
++            assess(blocked, live_action("report", profile=NONFINANCIAL_PROFILE)),
++        )
++
++    def test_nonfinancial_reproduce_keeps_retry_exemption(self):
++        s = snapshot(sameDefectFailures=2)
++        assert_allowed(
++            self, assess(s, live_action("reproduce", profile=NONFINANCIAL_PROFILE))
++        )
+@@
+     def test_live_verify_conflicts_with_active_implement(self):
+         impl_id = self.reserve_kind("implement")
+-        with self.assertRaises(ReservationConflictError):
+-            self.reserve_kind("verify")
+-        finish(self.db_path, impl_id, {"exitCode": 0})
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("verify")
++        finally:
++            finish(self.db_path, impl_id, {"exitCode": 0})
+ 
+     def test_implement_conflicts_with_active_live_verify(self):
+         verify_id = self.reserve_kind("verify")
+-        with self.assertRaises(ReservationConflictError):
+-            self.reserve_kind("implement")
+-        finish(self.db_path, verify_id, {"exitCode": 0})
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("implement")
++        finally:
++            finish(self.db_path, verify_id, {"exitCode": 0})
+ 
+-    def test_live_review_and_reproduce_conflict_with_primary_like_verify(self):
+-        for kind in ("review", "reproduce"):
+-            with self.subTest(kind=kind):
+-                impl_id = self.reserve_kind(
+-                    "implement", action_id="live-loan-implement-" + kind
+-                )
+-                with self.assertRaises(ReservationConflictError):
+-                    self.reserve_kind(kind)
+-                finish(self.db_path, impl_id, {"exitCode": 0})
++    def test_live_review_conflicts_with_active_implement(self):
++        impl_id = self.reserve_kind("implement", action_id="live-loan-implement-review")
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("review")
++        finally:
++            finish(self.db_path, impl_id, {"exitCode": 0})
++
++    def test_live_reproduce_conflicts_with_active_implement(self):
++        impl_id = self.reserve_kind(
++            "implement", action_id="live-loan-implement-reproduce"
++        )
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("reproduce")
++        finally:
++            finish(self.db_path, impl_id, {"exitCode": 0})
++
++    def test_live_report_conflicts_with_active_implement(self):
++        impl_id = self.reserve_kind("implement", action_id="live-loan-implement-report")
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("report")
++        finally:
++            finish(self.db_path, impl_id, {"exitCode": 0})
++
++    def test_implement_conflicts_with_active_live_report(self):
++        report_id = self.reserve_kind("report")
++        try:
++            history = self.history()
++            self.assertTrue(history["primaryActive"])
++            self.assertTrue(has_other_primary(self.db_path, "not-" + report_id))
++            self.assertFalse(has_other_primary(self.db_path, report_id))
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("implement")
++        finally:
++            finish(self.db_path, report_id, {"exitCode": 0})
+ 
+     def test_second_live_verify_conflicts_like_primary(self):
+         first = self.reserve_kind("verify")
+-        with self.assertRaises(ReservationConflictError):
+-            self.reserve_kind("verify", action_id="live-loan-verify-other")
+-        finish(self.db_path, first, {"exitCode": 0})
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("verify", action_id="live-loan-verify-other")
++        finally:
++            finish(self.db_path, first, {"exitCode": 0})
+ 
+     def test_live_verify_conflicts_with_active_repair(self):
+         repair_id = self.reserve_kind("repair")
+-        with self.assertRaises(ReservationConflictError):
+-            self.reserve_kind("verify")
+-        finish(self.db_path, repair_id, {"exitCode": 0})
++        try:
++            with self.assertRaises(ReservationConflictError):
++                self.reserve_kind("verify")
++        finally:
++            finish(self.db_path, repair_id, {"exitCode": 0})
+@@
+         finish(self.db_path, impl_id, {"exitCode": 0})
+         finish(self.db_path, verify_id, {"exitCode": 0})
+ 
+-    def test_report_reservation_does_not_occupy_primary(self):
+-        report_id = self.reserve_kind("report")
++    def test_nonfinancial_report_reservation_does_not_occupy_primary(self):
++        report_id = self.reserve_kind("report", profile=NONFINANCIAL_PROFILE)
+         history = self.history()
+         self.assertIsNotNone(history)
+         self.assertFalse(history["primaryActive"])
+         impl_id = self.reserve_kind("implement")
+         finish(self.db_path, impl_id, {"exitCode": 0})
+         finish(self.db_path, report_id, {"exitCode": 0})
+@@
+         self.assertEqual(claims, 0)
+         finish(self.db_path, res_id, {"exitCode": 0})
++
++    def test_unknown_active_profile_occupies_primary(self):
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'verify', 1, 'active', ?)
++                    """,
++                    (
++                        "unknown-res",
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "unknown-verify",
++                        now,
++                    ),
++                )
++                conn.execute(
++                    """
++                    INSERT INTO events (
++                        repository, requirement, capability, candidate,
++                        action_id, event_kind, observed_at, payload_json
++                    ) VALUES (?, ?, ?, ?, ?, 'action_start', ?, ?)
++                    """,
++                    (
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        CANDIDATE_HASH,
++                        "unknown-verify",
++                        now,
++                        "{}",
++                    ),
++                )
++        finally:
++            conn.close()
++        history = self.history()
++        self.assertIsNotNone(history)
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "other"))
++
++    def test_concurrent_live_verify_only_one_primary(self):
++        winners = []
++        conflicts = []
++
++        def worker(action_id):
++            try:
++                winners.append(self.reserve_kind("verify", action_id=action_id))
++            except ReservationConflictError:
++                conflicts.append(action_id)
++
++        t1 = threading.Thread(target=worker, args=("live-loan-verify-a",))
++        t2 = threading.Thread(target=worker, args=("live-loan-verify-b",))
++        t1.start()
++        t2.start()
++        t1.join()
++        t2.join()
++        self.assertEqual(len(winners), 1)
++        self.assertEqual(len(conflicts), 1)
++        self.assertTrue(self.history()["primaryActive"])
++        self.assertFalse(has_other_primary(self.db_path, winners[0]))
++        finish(self.db_path, winners[0], {"exitCode": 0})
+@@
+             self.assertEqual(history["sameDefectFailures"], 2, scope)
+ 
++    def test_design_approval_without_named_ids_leaves_findings(self):
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        record_review(
++            self.db_path,
++            str(self.root),
++            self.approved("RP01-MC02 specified design consistency only"),
++        )
++        history = self.history()
++        self.assertEqual(history["sameDefectFailures"], 2)
++
++    def test_other_lineage_named_resolution_does_not_clear_this_lineage(self):
++        self.seed_findings("LIVE-FINDING-A")
++        receipt = self.approved("actual-result", resolved=["LIVE-FINDING-A"])
++        receipt["requirement"] = "SP01.6"
++        receipt["capability"] = "loan-swap-subset"
++        record_review(self.db_path, str(self.root), receipt)
++        history = self.history()
++        self.assertEqual(history["sameDefectFailures"], 1)
++
+     def test_actual_result_explicit_resolution_removes_only_named_findings(self):
+@@
+         self.assertEqual(
+             self.db_path.resolve().parent, (self.root / ".moriarty-dev").resolve()
+         )
++        self.assertNotIn("store_identity", SCHEMA_SQL)
++
++
++class CanonicalHistoryAndCli(IsolatedTempStore):
++    def write_live_action(self, **overrides):
++        action = live_action("verify", **overrides)
++        action["candidate"] = CANDIDATE_HASH
++        (self.root / ".moriarty-dev").mkdir(exist_ok=True)
++        (self.root / ".moriarty-dev" / "actions.json").write_text(
++            json.dumps({"schema": "moriarty-dev.actions/1", "actions": [action]})
++        )
++        return action
++
++    def guarded_reader(self, **kwargs):
++        return make_guarded_history_reader(
++            self.db_path,
++            live_lineage=catalog_live_lineage(self.root),
++            **kwargs,
++        )
++
++    def write_fixture_identity(self, token):
++        conn = init_db(self.db_path)
++        try:
++            with conn:
++                conn.execute("CREATE TABLE store_identity (token TEXT NOT NULL)")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?)", (token,)
++                )
++        finally:
++            conn.close()
++
++    def test_schema_sql_does_not_create_identity(self):
++        self.assertNotIn("store_identity", SCHEMA_SQL)
++        self.assertIsNone(read_store_identity(self.db_path))
++
++    def test_missing_identity_yields_unavailable_live_history(self):
++        self.seed_findings("LIVE-FINDING-A")
++        self.assertIsNone(
++            get_live_history(self.db_path, str(self.root), REQ, CAP)
++        )
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++        )
++
++    def test_unrelated_events_do_not_create_verified_zero_live_history(self):
++        record_event(
++            self.db_path, str(self.root), "", "", "", "seed", "admin_cycle", {}
++        )
++        self.write_fixture_identity("fixture-anchor-1")
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
++            )
++        )
++
++    def test_anchored_fixture_counts_exact_lineage_through_actual_reader(self):
++        self.write_live_action()
++        self.seed_findings("LIVE-FINDING-A", "LIVE-FINDING-B")
++        self.write_fixture_identity("fixture-anchor-1")
++        hist = get_live_history(
++            self.db_path,
++            str(self.root),
++            REQ,
++            CAP,
++            identity_anchor="fixture-anchor-1",
++        )
++        self.assertIsNotNone(hist)
++        self.assertEqual(hist["sameDefectFailures"], 2)
++        reader = self.guarded_reader(identity_anchor="fixture-anchor-1")
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertEqual(snap["sameDefectFailures"], 2)
++        self.assertNotIn("operational-history", snap["missingEvidence"])
++
++    def test_cli_seeded_unrelated_event_is_unavailable_not_zero(self):
++        self.write_live_action()
++        record_event(
++            self.db_path, str(self.root), "", "", "", "seed", "admin_cycle", {}
++        )
++        reader = self.guarded_reader()
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertIsNone(snap["sameDefectFailures"])
++        self.assertIn("operational-history", snap["missingEvidence"])
++        buf = io.StringIO()
++        with contextlib.redirect_stdout(buf):
++            cmd_status(self.root, self.db_path, reader, True)
++        data = json.loads(buf.getvalue())
++        self.assertIn("operational-history", data["missingEvidence"])
++
++    def test_cli_renamed_capability_is_unavailable_not_zero(self):
++        self.write_live_action()
++        self.seed_findings("LIVE-FINDING-A")
++        action = live_action("verify")
++        action["candidate"] = CANDIDATE_HASH
++        action["capability"] = "renamed-loan-executor"
++        (self.root / ".moriarty-dev" / "actions.json").write_text(
++            json.dumps({"schema": "moriarty-dev.actions/1", "actions": [action]})
++        )
++        reader = self.guarded_reader()
++        snap = load_snapshot(str(self.root), "live-loan-verify", history_reader=reader)
++        self.assertIsNone(snap["sameDefectFailures"])
++        self.assertIn("operational-history", snap["missingEvidence"])
++
++    def test_cli_run_does_not_launch_live_action(self):
++        self.write_live_action()
++        marker = self.root / "child-marker.txt"
++        reader = self.guarded_reader()
++        with self.assertRaises(SystemExit) as caught:
++            cmd_run(self.root, self.db_path, reader, "live-loan-verify", False)
++        self.assertIn(caught.exception.code, (2, 3))
++        self.assertFalse(marker.exists())
++        self.assertTrue(str(self.db_path).startswith(str(self.root)))
++
++    def test_cli_review_authority_rejection_is_preexisting(self):
++        self.write_live_action()
++        (self.root / "review.json").write_text(json.dumps(self.approved("source")))
++        err = io.StringIO()
++        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
++            with self.assertRaises(SystemExit) as caught:
++                cmd_review(
++                    self.root, self.db_path, "review.json", True, "live-loan-verify"
++                )
++        self.assertEqual(caught.exception.code, 3)
++        self.assertIn("authority unavailable", err.getvalue())
++
++    def test_status_does_not_create_identity_table(self):
++        self.write_live_action()
++        reader = self.guarded_reader()
++        buf = io.StringIO()
++        with contextlib.redirect_stdout(buf):
++            cmd_status(self.root, self.db_path, reader, True)
++        conn = init_db(self.db_path)
++        try:
++            names = [
++                row[0]
++                for row in conn.execute(
++                    "SELECT name FROM sqlite_master WHERE type='table'"
++                ).fetchall()
++            ]
++        finally:
++            conn.close()
++        self.assertNotIn("store_identity", names)
++        self.assertIsNone(read_store_identity(self.db_path))
+ 
+ 
+ if __name__ == "__main__":
+     unittest.main()
+*** End Patch

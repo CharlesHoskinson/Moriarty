@@ -1,0 +1,32 @@
+[
+  {
+    "blocking": false,
+    "description": "F-01 is genuinely resolved in the R2 graph payload. Node k5e_commit and edge k5e_edge_001 are now INFERRED at confidence_score 0.8, citing observations/first-setup-git-source-record.json at /published_git/head with evidence_sha256 b3b6b0830101ee5bc6db0cd4dc82c021ca4a59cadde3e6a1089b7ec4afd52fb4, and an explicit observation_note that PUBLICATION.json /branch contains only 'utxo' and does not state this commit. That retained record contains head 82c20ad4084b02745898cb3696689e876ff4fbec at /published_git/head, is byte-identical to the R1 SOURCE-MANIFEST (both pinned b3b6b083 in INPUT-INDEX.json), is not PUBLICATION.json/branch, is not a newer Git observation, and creates no hash self-reference (the new R2 SOURCE-MANIFEST pins it as an input at :94-98 and in citation_correction :117-127). Updated descriptive counts agree in SOURCE-MANIFEST new_layer (nodes 29 EXTRACTED/1 INFERRED, links 26/4), allowlist addedNodeClassifications/addedLinkClassifications, graph.json fragment_updates, and root EXACT-GRAPH-ADDITIONS-R2.json; full effective links 3427/220/3 on the evidence_type-else-type basis and totals 1386/3650 with 18 components are stated consistently in GRAPH_REPORT.md:14-17 and the allowlist.",
+    "evidence": [
+      "R2 graph.json:20727-20742 (k5e_commit INFERRED 0.8, source observations/first-setup-git-source-record.json /published_git/head, sha b3b6b083)",
+      "R2 graph.json:81161-81177 (k5e_edge_001 capsule -published_at-> commit, same INFERRED 0.8 citation)",
+      "R2 observations/first-setup-git-source-record.json:11-16 (published_git head 82c20ad4084b02745898cb3696689e876ff4fbec, branch utxo); its content matches R1 SOURCE-MANIFEST.json:1-110 and INPUT-INDEX.json pins both files to b3b6b083",
+      "Capsule PUBLICATION.json:4-5 (branch 'utxo', priorCommit dd449bc9); targeted search found no 82c20ad4 in that file, corroborating that /branch cannot support an EXTRACTED claim",
+      "R2 SOURCE-MANIFEST.json:100-113 and 117-127; R2 README.md:3-5; CHANGELOG.md:5-8; GRAPH_REPORT.md:8-10 and 17"
+    ],
+    "file": "graphify-out/graph.json, SOURCE-MANIFEST.json",
+    "id": "F-R2-01",
+    "line": 20727,
+    "recommendation": "No change to the two corrected items. Root verifies the exact committed R2 bytes (graph c808a2f6, allowlist f9d1e366) before push, as with R1.",
+    "severity": "info"
+  },
+  {
+    "blocking": false,
+    "description": "One descriptive mislabel remains in GRAPH_REPORT.md:15, which reads 'Added node classes: {EXTRACTED: 1385, INFERRED: 1, AMBIGUOUS: 0}'. 1385/1 is the full-graph node classification, not the added-layer classification (29/1). The added link classes on the same line (26/4) are correct, the immediately following bullet (line 16) correctly labels 1385/1 as 'Full node classes' with full effective links 3427/220/3, line 17 correctly states the remaining 29 nodes and 29 links retain R1 values, and SOURCE-MANIFEST.json:103-107, the allowlist addedNodeClassifications, graph.json fragment_updates, and the root extract all give the correct added counts of 29/1 and 26/4. This is a wording/label inconsistency in one report line, not a graph-payload, citation, or provenance defect, and it does not reopen F-01.",
+    "evidence": [
+      "R2 graphify-out/GRAPH_REPORT.md:15 (mislabelled 'Added node classes' 1385/1; added link classes 26/4 correct)",
+      "R2 graphify-out/GRAPH_REPORT.md:16-17 (correct full node classes 1385/1 and 29 remaining nodes/links)",
+      "R2 SOURCE-MANIFEST.json:103-112 and OWN-OUTPUT-ALLOWLIST:43-62 and graph.json:81709-81718 (added 29/1 nodes, 26/4 links)"
+    ],
+    "file": "graphify-out/GRAPH_REPORT.md",
+    "id": "F-R2-02",
+    "line": 15,
+    "recommendation": "Non-blocking: root may correct the single word/label on line 15 opportunistically; do not run a cosmetic correction loop that would churn graph/report/allowlist hashes. The correct added counts are unambiguously recorded in the manifest, allowlist, fragment_updates, and root extract.",
+    "severity": "minor"
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "number": 1,
+    "text": "01 / Setup\nWhich keys does the circuit use?\n\nGroth16 derives proving and verifying keys from secret randomness for one compiled circuit. Each distinct compiled relation needs its own phase-2 setup; the count follows circuits, not predicates or catalogue entries. Whoever keeps that randomness can forge proofs, so soundness assumes it is destroyed.\n\nResult\n\nProving key and verifying key\n\nRelated example\nGroth16 setup and circuit counts\n\u2197\nRelated concerns\n4 \u00b7 Arithmetization \u2197\n5 \u00b7 Proof System \u2197\n6 \u00b7 Cryptographic Bedrock \u2197"
+  },
+  {
+    "number": 2,
+    "text": "02 / Language\nWhat rules does the contract enforce?\n\nMoriarty programs state what an action may do: payment arithmetic, fees kept separate from repayment, caps an owner signs, and duties that continue. The compiler turns that source into constraints; a rule left unconstrained is a rule no proof enforces.\n\nResult\n\nMoriarty source program\n\nRelated example\nFinancial language and the developer handoff\n\u2197\nRelated concerns\n4 \u00b7 Arithmetization \u2197"
+  },
+  {
+    "number": 3,
+    "text": "03 / Witness\nWhich values satisfy those rules?\n\nThe prover runs the program over its inputs and records every intermediate value. Zero-knowledge keeps this assignment hidden, but only the assignment: amounts that appear in Cardano outputs or in the statement stay public. Witness generation must not leak values through its own behavior.\n\nResult\n\nFull witness assignment\n\nRelated example\nInvoice inputs and remaining duties\n\u2197\nRelated concerns\n2 \u00b7 Language \u2197\n4 \u00b7 Arithmetization \u2197"
+  },
+  {
+    "number": 4,
+    "text": "04 / Arithmetization\nHow are the rules expressed as constraints?\n\nThe compiler translates the program into equations. A prover must supply values that satisfy all of them. Arithmetization is the name for this way of expressing the computation.\n\nTechnical encoding\nResult\n\nR1CS matrices\n\nRelated example\nInvoice arithmetic and duty updates\n\u2197\nRelated concerns\n2 \u00b7 Language \u2197\n5 \u00b7 Proof System \u2197\n6 \u00b7 Cryptographic Bedrock \u2197"
+  },
+  {
+    "number": 5,
+    "text": "05 / Proof System\nHow does Groth16 prove the calculation?\n\nGroth16 turns the witness into a constant-size proof checked by one pairing equation. Under an honest setup, knowledge soundness means a verifying proof shows the prover knew a satisfying witness; zero-knowledge means the proof reveals nothing beyond its statement. It never shows the statement's values describe the real ledger.\n\nResult\n\nGroth16 proof\n\nRelated example\nGroth16 proofs and setup\n\u2197\nRelated concerns\n1 \u00b7 Setup \u2197\n4 \u00b7 Arithmetization \u2197\n6 \u00b7 Cryptographic Bedrock \u2197"
+  },
+  {
+    "number": 6,
+    "text": "06 / Cryptographic Bedrock\nWhich cryptographic assumptions does it rely on?\n\nA pairing-friendly elliptic curve supplies Groth16's groups and scalar field; Groth16's soundness argument holds in the generic bilinear group model. BLAKE2b collision resistance binds statement bytes to digests. Signatures authenticate owner intents and claimant releases. These primitives support the proof core and fix what it can express.\n\nResult\n\nCurve, hash and signature parameters\n\nRelated example\nGroth16 keys and setup trust\n\u2197"
+  },
+  {
+    "number": 7,
+    "text": "07 / Verification\nDoes this proof belong to this transaction?\n\nA claim policy checks each Groth16 proof and mints a proof-claim output. One settlement transaction consumes the proof-claim output of every Strand the Web requires; the validator rebuilds each statement from the transaction and spent state, requires claimant signatures and enforces signed caps. Outside facts need a named issuer, authentication path and freshness limit.\n\nResult\n\nIssue and settlement transactions\n\nRelated example\nThe proof-claim lifecycle\n\u2197\nRelated concerns\n1 \u00b7 Setup \u2197\n5 \u00b7 Proof System \u2197\n6 \u00b7 Cryptographic Bedrock \u2197"
+  }
+]

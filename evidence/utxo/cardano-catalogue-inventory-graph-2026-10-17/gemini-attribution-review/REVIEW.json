@@ -1,0 +1,71 @@
+{
+  "coverage": [
+    {
+      "checked": "Full read (lines 1-46, 2080/2080 bytes). Verified packet schema moriarty-bounded-source-packet/1, 6 listed packet files with byte counts and sha256 pins, bounded scope statement, nativeAuthority=0, and pointersInSourcesAreInert=true.",
+      "read": true,
+      "sourceId": "MANIFEST.json"
+    },
+    {
+      "checked": "Full read (lines 1-3216, 105701/105701 bytes). Verified all 143 projected versioned-row metadata objects (spanning 89 distinct MCP IDs), all 20 patternInventory entries, all 4 identityLayers objects, all 48 labelChanges objects, and globalClaims (590 nodes, 1494 edges, DOCUMENT_ASSERTION, DRAFT, proofOrLedgerQualification=false, nativeAuthority=0).",
+      "read": true,
+      "sourceId": "INVENTORY-AND-LABEL-PROJECTION.json"
+    },
+    {
+      "checked": "Full read (lines 1-6463, 333484/333484 bytes, including full byte offsets for lines 1601-2400 and 4001-4800 and direct line views 2280-2400 and 4645-4805). Independently compared all 143 versioned rows (lines 1734-6461), 4 identityLayers declarations (lines 629-658), 20 open patternFamilies (lines 1108-1361), bridgeCatalogueRelation (lines 117-126, recoveredBridgeRows=0), schemas (lines 740-941), and statementSchema fields/binding_constraints in MCP-PLN-01@1, MCP-PLN-02@1, MCP-PLN-01@2, and MCP-PLN-02@2.",
+      "read": true,
+      "sourceId": "CATALOGUE-v1.2.json"
+    },
+    {
+      "checked": "Full read (lines 1-123, 4701/4701 bytes). Independently compared all 20 pattern inventory entries (designer, id, name; case_file pointers not followed) against INVENTORY-AND-LABEL-PROJECTION.json patternInventory and CATALOGUE-v1.2.json patternFamilies.",
+      "read": true,
+      "sourceId": "PATTERN-INVENTORY.json"
+    },
+    {
+      "checked": "Full read (lines 1-12, 2234/2234 bytes). Checked attributed author report (gpt-6-luna, no provider receipt), attributed graphifyy 0.9.91 default dedup=True collision behavior (32 groups, 80 nodes, 32 lost IDs, 48 disambiguated display labels), DOCUMENT_ASSERTION/DRAFT status, and explicit non-claims.",
+      "read": true,
+      "sourceId": "GRAPH_REPORT.md"
+    },
+    {
+      "checked": "Full read (lines 1-1208, 45264/45264 bytes). Checked attributed graphify 0.9.91 / graphifyy 0.9.91 package/API findings, input sha256 pins, 32 collision groups (80 members, 32 lost IDs, 32 raw-only and 32 built-only edge identities), all 48 display-label correction entries, attributed defaultGraphifyRoundtrip counts, and limitations.",
+      "read": true,
+      "sourceId": "SOURCE-CHECKS.json"
+    },
+    {
+      "checked": "Full read (lines 1-29, 1495/1495 bytes). Checked root mechanical verification scope: 590 nodes, 1494 edges, 3736 citation pointer checks (3628 jsonValue, 20 oneMemberObjectFragment, 88 keyPrefix), 48 changedLabels, 143 versionedRows, all20PatternFamilyIdsPreserved=true, allSourceAssertionFieldsPreserved=true, graphifyRoundtripReexecutedByRoot=false, runtimeOrProofOrLedgerQualification=false, candidateAdopted=false, nativeAuthority=0, errors=[], and checkPreparationErratum.",
+      "read": true,
+      "sourceId": "ROOT-MECHANICAL-CHECK.json"
+    }
+  ],
+  "findings": [
+    {
+      "evidence": "INVENTORY-AND-LABEL-PROJECTION.json (lines 5-2236) and CATALOGUE-v1.2.json (lines 117-126, 629-658, 1108-1361, 1734-6461) + PATTERN-INVENTORY.json (lines 1-123): all 143 versioned-row metadata objects match supplied catalogue rows (89 distinct MCP base IDs across 80 v0 @0 rows, 57 v1 additions/supersessions, and 6 v1.1 additions/supersessions), all 20 pattern IDs and names are distinct and match PATTERN-INVENTORY.json, and all 4 identity-layer objects match source declarations. Missing 42 Cardano / 52 Midnight bridge catalogues remain absent (recoveredBridgeRows=0), all rows/nodes remain DOCUMENT_ASSERTION / DRAFT, and all 20 pattern families remain open.",
+      "id": "ATTR-INVENTORY-01",
+      "requiredFix": "None for bounded source attribution; keep 143 versioned rows distinct from 89 base IDs, do not reconstruct absent 42 Cardano / 52 Midnight material, and do not treat DRAFT inventory rows or open pattern families as approved predicates or supported-pattern claims.",
+      "severity": "info"
+    },
+    {
+      "evidence": "INVENTORY-AND-LABEL-PROJECTION.json (lines 2237-3206), SOURCE-CHECKS.json (lines 411-1183), and CATALOGUE-v1.2.json (lines 740-941, 4677-4786, 4824-4972, 6007-6119, 6161-6311): the 48 display-label changes append ' [node-id: <id>]' to the 48 non-canonical members of the 32 collision groups (80 collision members minus 32 lexicographically first canonical IDs), preserving existing node IDs and oldProperties while adding only properties.sourceLabel and properties.displayLabelRule.",
+      "id": "ATTR-LABELS-02",
+      "requiredFix": "None for bounded display-label repair attribution.",
+      "severity": "info"
+    },
+    {
+      "evidence": "ROOT-MECHANICAL-CHECK.json (lines 10-27), SOURCE-CHECKS.json (lines 1-26, 1184-1206), and GRAPH_REPORT.md (lines 1-12): root mechanically verified 3736 citations across 3 grammars (3628 jsonValue, 20 oneMemberObjectFragment, 88 keyPrefix where key-prefix existence does not certify entire values) and did not re-execute the Graphify roundtrip (graphifyRoundtripReexecutedByRoot=false). Graphify 0.9.91 / graphifyy 0.9.91 default roundtrip and API findings are attributed to author gpt-6-luna with no package/API source or full 2.5MB graph.json supplied in this packet.",
+      "id": "SCOPE-BOUNDARY-03",
+      "requiredFix": "Do not treat mechanical citation/key-prefix checks or this bounded projection review as full 590-node/1494-edge semantic review, full-value certification of the 88 key-prefix citations, independent Graphify 0.9.91 roundtrip verification, latest-version attestation, or security/crypto/circuit/runtime/ledger approval.",
+      "severity": "info"
+    }
+  ],
+  "recommendation": {
+    "firstBlockedBoundary": "Full 590-node/1494-edge graph semantic review, full-value certification of 88 key-prefix citations, independent Graphify roundtrip execution, and any catalogue, security, cryptographic, circuit, runtime, operator, or ledger qualification or adoption",
+    "ledgerReady": false,
+    "nativeAuthority": 0,
+    "operatorReady": false,
+    "runtimeReady": false,
+    "securityReady": false,
+    "sourceAttributionReady": true,
+    "verdict": "SOURCE_ATTRIBUTION_ONLY_READY"
+  },
+  "reviewToken": "catalogue-graph-v2-inventory-gemini4-argon-high-20261017",
+  "summary": "Independent read-only bounded source-attribution review completed over all 7 packet files (100% line and byte coverage; no pointers followed, no shell or external access used, no self-reported provider-identity attestation claimed). Falsifiable predicate holds: (1) all 143 projected versioned-row metadata objects in INVENTORY-AND-LABEL-PROJECTION.json (spanning 89 distinct MCP IDs) exactly match the 143 supplied rows in CATALOGUE-v1.2.json (with documentStatus DRAFT matching the draft catalogue edition, and missing 42 Cardano / 52 Midnight bridge catalogues remaining absent at recoveredBridgeRows=0); (2) all 20 pattern inventory IDs, names, and designers remain distinct and exactly match PATTERN-INVENTORY.json and CATALOGUE-v1.2.json patternFamilies (all 20 open/unproven); (3) all 4 identity-layer metadata objects (layers 1..4: raw_source_sha256, program_hash, circuit_program_digest, relation_id / template_digest) exactly match CATALOGUE-v1.2.json declarations; and (4) all 48 display-label changes append ' [node-id: <existing id>]' to the 48 non-canonical members across the 32 collision groups (80 members total), preserving existing node IDs and source-assertion properties while recording original labels in properties.sourceLabel. Scope distinctions preserved: ROOT-MECHANICAL-CHECK.json is mechanical evidence over 3736 citations (3628 JSON values, 20 one-member fragments, 88 key prefixes where key existence is not full-value certification); Graphify 0.9.91 roundtrip was performed by Luna (graphifyRoundtripReexecutedByRoot=false) and remains an attributed report without package/API source or latest-version attestation; and all document assertions/DRAFT rows and 20 family mappings remain unproven with zero runtime, security, operator, or ledger readiness and nativeAuthority=0."
+}

@@ -1,0 +1,51 @@
+[
+  {
+    "evidence": "test_like.rs:27-30: `just(Token::Once).ignored().or_not()` maps Some to SucceedImmediately and None to SucceedEventually; snapshot def_test_fail.snap:51 shows plain `fail` (no once) as on_test_failure: SucceedEventually. The test source has `test k8_short_vk_is_refused() fail {` with no `once` (k8_genuine_proof_test.ak:111). Actual JSON reports succeed_eventually (step2 stdout:109). Operator operator.py:368 demands succeed_immediately for any fail=true test. R1 (5c72) and R2 (a563) both endorsed that wrong mapping (R2 REPORT.md:7; DESIGN-POSITIONS NC-C9 rationale). This is a second parser-class defect after the R1 substring fix; the original reviews and this counterexample are retained, with no fabricated agreement.",
+    "id": "F1",
+    "requiredFix": "Ordinary (non-native) fix only: in any future operator/validator, derive on_failure from the actual annotation - `fail` -> succeed_eventually, `fail once` -> succeed_immediately - or validate status/summary only for the malformed unit. Do not rerun native execution, do not rewrite this run's expectations, and do not relabel wrapper FAILED as PASS.",
+    "severity": "critical-defect-in-operator-expectation-not-in-crypto-evidence",
+    "summary": "The operator's expected telemetry label for the plain-`fail` short-VK test is contradicted by the actual Aiken AST parser definition now in evidence."
+  },
+  {
+    "evidence": "run/receipts/RESULT.json:21 status FAILED, :5 error 'step2 JSON on_failure mismatch for k8_short_vk_is_refused: want succeed_immediately', :80 and :149 both Aiken exitCode 0, capture/RESULT.json:4 outer exitCode 1, wallSeconds 6.013. step1 stderr 'Summary 0 errors, 0 warnings'; step2 stderr 'Summary 10 checks, 0 errors, 0 warnings'. Raw step2 stdout: summary total 10 passed 10 failed 0, kind unit 10 property 0.",
+    "id": "F2",
+    "requiredFix": "None to the historical record. Preserve FAILED in every citation; adoption below is explicitly scoped and qualified.",
+    "severity": "preserved-terminal-status",
+    "summary": "Wrapper RESULT remains FAILED and must not be silently rewritten; the failure is at the last optional telemetry-label assertion only."
+  },
+  {
+    "evidence": "step2 stdout rows: k8_positive_verify_digest pass (:26-33), k8_n1_body_rederived_digest_rejected pass (:35-42), k8_n2_context_rederived_digest_rejected pass (:44-51), k8_n3_proof_ac_swapped_rejected pass (:53-60), all on_failure fail_immediately (no fail annotation in source :31-45, so no crypto False is inferred from an annotation). Source expectations were fixed before execution (test file header :6-22): positive Bool True, N1/N2/N3 !verify_digest == True. groth16.verify_digest (groth16.ak:52-91) uses actual builtin.bls12_381_g1_uncompress/g2_uncompress, miller_loop, mul_miller_loop_result, final_verify (:57-90), points_non_identity (:43-49,71); no implicit stubs. This is 1 genuine pass + 3 actual tamper rejections, not 10 independent security theorems.",
+    "id": "F3",
+    "requiredFix": "None. State the predicate exactly as in the recommendation; do not upgrade to C2/ledger/proof-acceptance claims.",
+    "severity": "scoped-cryptographic-evidence-sufficient",
+    "summary": "The 4 genuine pairing outcomes match the frozen, source-fixed cryptographic expectations through actual Aiken BLS12-381 builtins."
+  },
+  {
+    "evidence": "Scalars rows pass (step2 stdout :62-87) against groth16.scalars_of_digest BE128 halves (groth16.ak:29-35) and fixture x1/x2/n1/n2 values (k8_fixture.ak:12-22, statement_digest c9ef8ea0... :10, VK 488B :2, proof 192B :6, statement 721B :8). Byte-profile row passes (:89-96) against vk_len 488/proof_len 192/vk_ic_count at slice 336,8 (groth16.ak:15-20,55). Distinctness row passes (:98-105; test :100-109 checks digests distinct and blake2b_256(vk/statement) bindings). These 9 rows carry on_failure fail_immediately; the 10th raw unit (short-VK, :107-113) also passes as a unit but with succeed_eventually, and is a malformed-length length-expect refusal (test :111-113, groth16.ak:53), not a cryptographic False and not counted in the 4 pairing outcomes.",
+    "id": "F4",
+    "requiredFix": "None. Report 10 raw unit passes, of which the scoped predicate rests on the 9 normal rows plus the separately-classified malformed unit.",
+    "severity": "supporting-evidence-sufficient",
+    "summary": "Five support checks pass normally and the malformed short-VK unit passes with the actually-correct telemetry label."
+  },
+  {
+    "evidence": "RESULT.json:8,18-19 hostInputsUnchangedAfter/Before true, stagedInputsUnchangedAfter true; :2-4 aikenLaunchAttempts 2, attempts 1, retries 0; AUTH.json:64 maxAikenCalls 2, :140 AUTHORIZED_EXACT_ONE_RUN (consumed by this run); operator.py:424-431 hard-codes exactly the two check argv in bwrap offline (--unshare-all, ro-bind tool, bind work only :243-255), :436 validates then would complete. Capture RESULT wallSeconds 6.013, waitedChildrenCpuSecondsDelta 0.234848 (not transitive/native CPU). No PK setup, proof generation, RNG, key/wallet, signing, network, ledger or native-extra step appears in operator source or logs.",
+    "id": "F5",
+    "requiredFix": "Do not grant a new retry AUTH and do not spend the consumed AUTH again. A parser-label repair needs no native prefix repeat unless a fresh scope explicitly requires unobserved behaviour.",
+    "severity": "authority-and-containment-verified-as-run",
+    "summary": "Containment, pinning and one-attempt limits held as observed; the consumed AUTH cannot be reused."
+  },
+  {
+    "evidence": "step2 stdout execution_units: positive mem 22033 cpu 2142357433 (:29-32); negatives mem 22534 cpu 2142513482 (:38-41 etc.). These are Aiken interpreter spent_budget values serialised by telemetry/json.rs:102-105, not network-qualified ledger ExUnits or tx fit. Wall 6.013s vs typed caps (AUTH caps wholeOperatorWallSeconds 1400, per-step 600+10). Fixture header retains single-party forgeability and caller-declared context limits (k8_fixture.ak:1); operand pointer values (488/192, public BE128 statement halves) are source/fixture facts, not authenticated ledger context.",
+    "id": "F6",
+    "requiredFix": "Keep the qualifications in any adoption record; obtain separately qualified ledger evidence before any ExUnit claim.",
+    "severity": "qualification-not-a-blocker-for-scoped-predicate",
+    "summary": "Cost figures are pinned Aiken VM measurements only, and K6 context/forgeability limits are retained."
+  },
+  {
+    "evidence": "Intake manifest lists staged aiken.toml/lock and 5 AK files with hashes matching AUTH pins (ROOT-INTAKE-MANIFEST staged entries; groth16 sha 1cc3da60... unchanged production verifier). Scope is the local verify_digest function consumer only: no C2 claim.issue wrapper, compiled/applied B9 wrapper, genuine hash/FX1, ledger ExUnits or Preprod evidence exists in the intake. New K9/C2 source readiness is a separate task and has no implicit effect permission from this run.",
+    "id": "F7",
+    "requiredFix": "Proceed with C2 only as separate source preparation; any compiled wrapper or ledger step needs its own bounded authority and fresh audit.",
+    "severity": "scope-limit",
+    "summary": "Scoped closure does not qualify the whole 34-file package, any C2 wrapper, or any ledger/Preprod predicate."
+  }
+]

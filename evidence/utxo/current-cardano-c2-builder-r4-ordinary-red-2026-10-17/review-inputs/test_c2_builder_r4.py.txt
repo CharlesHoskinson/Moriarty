@@ -1,0 +1,1119 @@
+"""Ordinary tests for build_k10_inputs_r4.py (C2-BUILDER-R4-CONTRACT.md CB401-CB412).
+
+PREFIX FRAGMENT ONLY: imports, frozen literals, fixture loading, shared helpers and
+R00. AUTHOR-PROPOSED by claude-opus-5-5 HIGH; never run, imported, compiled or
+reviewed. R01-R17 and the unittest.main footer belong to later, separately reviewed
+parts. Stdlib only: no subprocess, network, curve, key, signing, proof, native or VM
+action. Writes go only under ../scratch (700, empty at start). Expected values are
+literals copied from the R4 API, the root records and the historical R3 test
+formatters, never output of build_k10_inputs_r4.py. r2 is the exact root-adopted
+consumer (CP08 scope: R4 test authoring only); v1 c2_issue_artifacts is never
+imported. Nothing here claims Groth16, curve, VK-profile, Rust-acceptance, ledger,
+fee, ExUnits, fit or network facts; the K2 setup is single-party TEST ONLY.
+"""
+import contextlib
+import copy
+import hashlib
+import importlib.util
+import io
+import json
+import os
+import stat
+import sys
+import types
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+SCRATCH = HERE.parent / "scratch"
+sys.path.insert(0, str(HERE))  # -I implies -P; siblings resolve only from HERE
+
+R2 = "c2_issue_artifacts_r2.py"
+B9 = "inputs/b9-applied.json"
+EXP = "inputs/K6-PUBLIC-PROOF.json"
+SET = "inputs/K2-PUBLIC-SETUP-RECORD.json"
+HIST = "inputs/HIST-09-positive-script-context.txt"
+# ROOT-CP08-SOURCE-ADOPTION.json candidate: the exact adopted r2 bytes.
+ADOPTED_R2_PIN = (21648, "67fb3b3e98a64bd857b068d53e98c44366220ff812f3a3be3e19bad75e35fb98")
+PINS = {  # ROOT-PUBLIC-FIXTURE-PINS.json and R4 API prerequisites; envelope files only
+    R2: ADOPTED_R2_PIN,
+    "host_codec.py": (23252, "3c18539ebb277595192769a0d0d245e34ef26601303df62366863b76c07b1459"),
+    "build_k10_inputs.py": (24480, "6c1cde7f971a4c3ade25a3089f22f557fe2290b3b1266c4c18b6b4b7ce918d00"),
+    EXP: (5800, "930198631617f1f931aa93e836b32ffa8acadedadafe3b3d90081ff629e9ba5b"),
+    SET: (3926, "86b588fe3d7de5b5291a88928f400b9b52199bba07f9926a1f498584fd7e378b"),
+    HIST: (2649, "bad16e8d89d5ad47bc94965874ef3b243bee7ccb983a68f34499598b0d577b1e"),
+    B9: (308672, "10baa1794e0ae286cd780978408552fc0e994426367c2b92117e2c4b46ad1d36"),
+}
+# Governance documents are outside the API envelope layout, so R00 cannot read them;
+# root checks these pins as assembly prerequisites (STOP on mismatch).
+GOVERNANCE_PINS = {
+    "R4-CONTRACT.md": (28131, "b0aa395e72ea82f9dd3ddf5aa9a1156eeca9f9b91a1df3a0431ef83b41660d0a"),
+    "R4-API.json": (13080, "2cfefb338a62b02d11552f51b9c87d96569390b434021db6b75303cdcef7171f"),
+    "C2-PROFILE-R2-CONTRACT.md": (30809, "6e2c3989ede633901d7d1a95ee3a081c8eb628fbea199c1aa2858a3eaa2cba34"),
+    "C2-PROFILE-R2-API.json": (8563, "0f592eea77df7531be1edf1685b2b7290add7f9873cda2e11f99c9aed436c3af"),
+    "DOWNSTREAM-R4-CONDITIONAL-ADOPTION.json": (17785, "cc729d8d12af694e4de4c9ccac32ed37de65e6210c352f660dcd632dbf5f3b83"),
+    "ROOT-CP08-SOURCE-ADOPTION.json": (6721, "c322b2c230caab4e7fb3fadc7baabe96e0c73a98b7213f24d6c1d5d86fea99b0"),
+}
+V1, V1_FILE = "c2_issue_artifacts", "c2_issue_artifacts.py"
+
+# R4 module surface (API module, CB401).
+R4_FILE, R4_MODULE = "build_k10_inputs_r4.py", "build_k10_inputs_r4"
+MISSING = "missing implementation: build_k10_inputs_r4.py"
+R4_SEAM = "# === C2B-R4-APPEND-SEAM: append tail below; prefix above is immutable ==="
+R4_IMPORTS = ("hashlib", "json", "os", "re", "stat", "sys", "build_k10_inputs as legacy",
+              "c2_issue_artifacts_r2", "host_codec")
+R4_PUBLIC = ("parse_expiry", "read_public_file", "parse_public_json", "check_setup_link",
+             "legacy_env_from_host", "plan_outputs", "main")
+B9_CAP, EXPORT_CAP, SETUP_CAP, READ_CHUNK = 16777216, 1048576, 65536, 65536
+JSON_DEPTH, JSON_INT_CHARS, CONSUMER_MESSAGE_CHARS, U64_MAX = 16, 20, 1024, 2 ** 64 - 1
+REFUSAL_STAGES = ("ARGV", "OUTDIR", "READ", "JSON", "LINK", "POLICY", "CONSUMER", "BRIDGE",
+                  "WRITE", "REREAD")
+NONCONFORMING = "C2B-CONSUMER: nonconforming consumer refusal"
+READ_REFUSAL_ERRNO = ("ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM", "EISDIR", "ENAMETOOLONG",
+                      "ENXIO", "ENODEV", "EOVERFLOW")
+OUTDIR_REFUSAL_ERRNO = ("ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM", "ENAMETOOLONG")
+OPEN_FLAGS = ("O_NOFOLLOW", "O_NONBLOCK", "O_CLOEXEC", "O_NOCTTY", "O_DIRECTORY")
+DIR_FD_FUNCS = ("open", "mkdir", "stat", "unlink", "rmdir", "rename")
+
+# r2 dependency literals (API dependency; ROOT-CP08 literalCompatibility, S34 order).
+R2_FORMAT = "moriarty-c2-issue-artifacts/2"
+RESULT_KEYS = ("format", "envData", "envCborHex", "envelopeTokenNameHex", "issueData",
+               "issueCborHex", "mintValueData", "mintValueCborHex", "policyIdHex", "expiry",
+               "setupRecordSha256Declared", "labels")
+C2I_STAGES = ("ARG", "SETUP", "PROFILE", "EXPORT", "RELATION", "STATEMENT", "CONTEXT", "DIGEST",
+              "PROOF", "CARDANO", "BUILD")
+CONSUMER_HOST_APIS = ("parse_statement_header", "statement_digest_hex", "statement_public_inputs",
+                      "build_env_data", "encode_data", "build_c2_mint_data", "build_value_data")
+BUILDER_HOST_APIS = ("build_env_data", "encode_data", "build_c2_mint_data", "build_value_data")
+R2_LABELS = {
+    "expiry": "CALLER_SUPPLIED_NOT_PROOF_BOUND", "context": "CALLER_DECLARED_UNAUTHENTICATED",
+    "policyId": "CALLER_SUPPLIED_UNAUTHENTICATED", "trustProfile": "single-party-test-setup/1",
+    "setupRecordLink": "DECLARED_NOT_BYTE_CHECKED", "groth16": "NOT_VERIFIED",
+    "vkCurveValidity": "NOT_CHECKED", "vkProfile": "NOT_CHECKED", "proofCurveValidity": "NOT_CHECKED",
+    "statementReencode": "NOT_CHECKED", "jsonParseLimits": "NOT_CHECKED",
+    "relationProfile": "DESCRIPTOR_PROFILE_CHECKED_NOT_RECOMPILED",
+    "driverId": "DECLARED_NAME_NOT_PROVENANCE", "rustAcceptance": "NOT_ESTABLISHED",
+    "circuitVkCorrespondence": "OPEN", "ledger": "NO_CLAIM"}
+LABELS_8_V1 = {  # historical R3 CONSUMER_LABELS: refused at BRIDGE (R11)
+    "expiry": "CALLER_SUPPLIED_NOT_PROOF_BOUND", "context": "CALLER_DECLARED_UNAUTHENTICATED",
+    "policyId": "CALLER_SUPPLIED_UNAUTHENTICATED", "trustProfile": "single-party-test-setup/1",
+    "setupRecordLink": "DECLARED_NOT_BYTE_CHECKED", "groth16": "NOT_VERIFIED",
+    "vkCurveValidity": "NOT_CHECKED", "ledger": "NO_CLAIM"}
+LABELS_14_SUPERSEDED = {  # contract section 1: attempt-2 map, refused at BRIDGE (R11)
+    k: ("DECLARED_SUBSET_NOT_EQUIVALENT" if k == "rustAcceptance" else v)
+    for k, v in R2_LABELS.items() if k not in ("vkProfile", "jsonParseLimits")}
+
+# Manifest literals (API manifest; MANIFEST_KEYS and CASE_KEYS from the R3 test).
+MANIFEST_FORMAT, BUILDER_REVISION = "cardano-k2-k10-public-inputs/3", "build_k10_inputs_r4"
+MANIFEST_KEYS = set((
+    "auditSourcePins builderLabels builderRevision cases claimantVkhHex "
+    "compiledValidatorTitle consumerFormat consumerLabels coverageGaps expiry flags "
+    "format inputs issueCborHex limitations mintValueCborHex policyIdHex "
+    "positiveEnvelopeCborHex positiveTokenNameHex proofBytes scriptCompiledBytes "
+    "scriptHashAlgorithm scriptHashClaimedHex scriptHashClassification "
+    "scriptHashIndependentlyRecomputedHex scriptHashPreimage scriptHexFile "
+    "scriptInnerFlatBytes settleOutref setupRecordSha256 statementDigestHex vkBytes "
+    "vkDigestHex").split())
+CASE_KEYS = {"contextFile", "envStatementDigestHex", "envVkDigestHex", "envelopeCborHex",
+             "id", "proofHexSha256", "quantity", "tokenNameHex"}
+BUILDER_LABELS = {
+    "contextProvenance": "FABRICATED_LOCAL_VM_TEST_NOT_A_CARDANO_TRANSACTION",
+    "setupRecordLink": "FILE_BYTES_SHA256_EQUALS_EXPORT_DECLARATION",
+    "policyId": "RECOMPUTED_FROM_PINNED_HISTORICAL_B9_WRAPPER",
+    "uplcBridge": "LEGACY_RENDERER_UNCHANGED_PER_CALL_CBOR_EQUALITY",
+    "issueEncoding": "HOST_ONLY_LEGACY_CANNOT_ENCODE_OVER_64_BYTES",
+    "negativeCases": "BYTE_MUTATIONS_OF_ONE_GENUINE_PAYLOAD_NO_NEW_PROOFS",
+    "consumerProfile": "CP_R2_REV4_CANDIDATE_SELECTED_CHECKS_NOT_ADOPTED",
+    "transaction": "NO_FEE_MINADA_COLLATERAL_EXUNITS_FIT_OR_AUTHENTICITY_CLAIM",
+    "operatorCompatibility": "NOT_CLAIMED"}
+LIMITATIONS = [
+    "Fabricated local VM test context (zero fee, empty inputs, zero txid, everything interval); not a Cardano transaction.",
+    "Expiry is caller supplied and not proof bound; context is caller declared and unauthenticated.",
+    "Single-party TEST ONLY setup; Groth16, curve validity, fees, min-ADA, ExUnits and ledger acceptance are not checked or claimed.",
+    "Consumer profile r2 is a reviewed revision 4 candidate adopted as policy for test authoring only and not adopted for builder reliance, performing selected descriptor checks only; Rust acceptance is not established; VK profile and Rust JSON parse limits are not checked; circuit/VK correspondence is OPEN.",
+]
+FLAGS = dict.fromkeys(("native", "operator", "wallet", "prover", "vm", "deploy", "previewTested",
+                       "preprodTested", "groth16Verified", "builderReliancePermitted"), False)
+# keptFromR2: copied verbatim from build_k10_inputs.py (AUDIT_SOURCE_PINS and main()).
+AUDIT_SOURCE_PINS = [
+    {"role": "pallas-traverse hashes.rs ComputeHash<28> PlutusScript",
+     "sha256": "eecfb1f4bf763673087e7a2764ab1aa25fafe918d5e0442ecd94933a6b26c6ab"},
+    {"role": "pallas-crypto hasher.rs Hasher<224> hash_tagged",
+     "sha256": "80fb90446b39458957aa47be290d674a8edcee86c9a5ab4b5efdbd916d30c37e"},
+    {"role": "pallas-primitives lib.rs PlutusScript transparent Bytes",
+     "sha256": "a7c70f2594c8b9335d48c4bb38a7683662ce1a844f486546afa272a9cc90b601"},
+    {"role": "pallas-primitives plutus_data.rs PlutusData encoding",
+     "sha256": "adfebe4d9b53be5656bed1fce51e627fac0e3e1f14ee990dfe0af66bd26c924b"},
+    {"role": "pallas-codec utils.rs Bytes transparent ByteVec",
+     "sha256": "7019c76d3ba34edf028e7276a251248bd3bde2b5e759bd4f7847c394c6df798f"},
+    {"role": "aiken uplc ast.rs compiled_code_and_hash/Serialize",
+     "sha256": "d3d9009b93d71514017385b7b37fd3592c2c1d49585cd64d36db27bd7456dd7c"},
+    {"role": "aiken uplc eval.rs uplc eval --cbor interface",
+     "sha256": "2d63c16dd509842660c01d2f8ed3a712220d2dcd74d79bee51534055f33e2725"},
+]
+SCRIPT_HASH_STRINGS = {
+    "scriptHashClassification": (
+        "independently recomputed by this adapter from the pinned "
+        "compiledCode via Pallas ComputeHash<28> for PlutusScript<3>; "
+        "the tool-declared hash was used only as a cross-check and "
+        "generation would have failed had it disagreed"),
+    "scriptHashPreimage": (
+        "0x03 || compiledCode CBOR bytes (2770 bytes); strict "
+        "single-CBOR-byte-string guard validated 2767 inner flat "
+        "bytes; inner flat is not hashed and no double-CBOR "
+        "re-wrap is hashed"),
+    "scriptHashAlgorithm": (
+        "blake2b digest_size=28 (Pallas Hasher<224>::hash_tagged, "
+        "pallas-traverse hashes.rs PlutusScript<VERSION>, "
+        "VERSION=3)"),
+}
+
+# K6 historical reproduction vectors (R3 test) and rows (API cases, outputs).
+K6_EXPIRY, K6_EXPIRY_TEXT = 1893456000000, "1893456000000"
+POLICY = "6a4b67e7d46dbada1b4f49dd324018324b60b13bebbeb6f33d9d59c1"
+K6_TOKEN = "9fd5c53f6a1a03d20b0409f2ca3ad28bd02d5401564603fab5f81b289cc6d54e"
+K6_PROOF_SHA = "ac7c60f332f77b8db6368ac27da91ed7385378add91c64f32529843a4a75a172"
+MINT_VALUE_CBOR_HEX = "a1581c" + POLICY + "a15820" + K6_TOKEN + "01"
+FAMILY = b"MRG16-PVC-FAM2-G16-BLS-ARK04-HL2"
+VK_BYTES, PROOF_BYTES = 488, 192
+CASES = ("K10-T1-positive-genuine-issue", "K10-T5-quantity-two-reject",
+         "K10-T6-token-name-bitflip-reject", "K10-T7-vk-digest-bitflip-reject")
+ROW_QUANTITIES = (1, 2, 1, 1)
+GAPS = ("K10-T2-n1-body-digest-pairing-reject", "K10-T3-n2-context-digest-pairing-reject",
+        "K10-T4-n3-proof-ac-swap-pairing-reject")
+GAP_STATUS = "NOT_GENERATED_HISTORICAL_FIXTURE_ONLY"
+T1 = "contexts/%s.uplc.txt" % CASES[0]
+ROSTER = ["script.hex"] + ["contexts/%s.uplc.txt" % c for c in CASES] + ["manifest.json"]
+INPUT_ROLES = (("b9-applied", B9), ("proof-export", EXP), ("setup-record", SET))
+
+RAW = EXPORT = SETUP = None       # set once by setUpModule; RAW is read-only
+legacy = host_codec = r2 = None   # pinned modules, bound by setUpModule
+_R4 = None
+_R4_LOAD_STARTED = False
+
+
+def read_bounded(path, cap):
+    """No-follow bounded read of one regular file; any irregularity is an ERROR (STOP)."""
+    fd = os.open(os.fsencode(str(path)),
+                 os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise RuntimeError("STOP: not a regular file: %s" % path)
+        chunks, total = [], 0
+        while total <= cap:
+            chunk = os.read(fd, min(READ_CHUNK, cap + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+    finally:
+        os.close(fd)
+    if total > cap:
+        raise RuntimeError("STOP: file exceeds read cap: %s" % path)
+    return b"".join(chunks)
+
+
+def setUpModule():
+    global RAW, EXPORT, SETUP, legacy, host_codec, r2
+    if os.path.lexists(HERE / V1_FILE) or V1 in sys.modules:
+        raise RuntimeError("STOP: v1 c2_issue_artifacts is present")
+    if os.path.lexists(HERE / "__pycache__"):
+        raise RuntimeError("STOP: __pycache__ beside the pinned sources")
+    raw = {}
+    for rel, (size, sha) in PINS.items():
+        if not os.path.lexists(HERE / rel):  # B9 included: root supplies it, never synthesized
+            raise RuntimeError("STOP: prerequisite unavailable: " + rel)
+        data = read_bounded(HERE / rel, size)
+        if len(data) != size or hashlib.sha256(data).hexdigest() != sha:
+            raise RuntimeError("STOP: prerequisite pin mismatch: " + rel)
+        raw[rel] = data
+    st = os.lstat(SCRATCH)
+    if not stat.S_ISDIR(st.st_mode) or stat.S_IMODE(st.st_mode) != 0o700 or os.listdir(SCRATCH):
+        raise RuntimeError("STOP: scratch must be an empty 700 directory")
+    RAW = types.MappingProxyType(raw)
+    EXPORT, SETUP = json.loads(RAW[EXP]), json.loads(RAW[SET])
+    if type(EXPORT) is not dict or type(SETUP) is not dict:
+        raise RuntimeError("STOP: malformed K6 or K2 fixture")
+    import build_k10_inputs as legacy
+    import host_codec
+    import c2_issue_artifacts_r2 as r2
+    if V1 in sys.modules:
+        raise RuntimeError("STOP: v1 c2_issue_artifacts was imported")
+
+
+def load_r4(case):
+    """Only absence is RED; a present file that fails to load is an ERROR (STOP)."""
+    global _R4, _R4_LOAD_STARTED
+    path = HERE / R4_FILE
+    if not os.path.lexists(path):
+        case.fail(MISSING)
+    if _R4 is None:
+        if _R4_LOAD_STARTED:
+            raise RuntimeError("STOP: build_k10_inputs_r4.py is present but failed to load")
+        _R4_LOAD_STARTED = True
+        spec = importlib.util.spec_from_file_location(R4_MODULE, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # ImportError, SyntaxError, anything: ERROR, never RED
+        _R4 = module
+    return _R4
+
+
+def fresh_export():
+    return json.loads(RAW[EXP])
+
+
+def fresh_setup():
+    return json.loads(RAW[SET])
+
+
+def b2(data):
+    return hashlib.blake2b(data, digest_size=32).digest()
+
+
+def flip1(data):
+    return bytes([data[0] ^ 1]) + data[1:]
+
+
+def swap1(hex_text):
+    return ("1" if hex_text[0] == "0" else "0") + hex_text[1:]
+
+
+def dumps(obj):
+    return json.dumps(obj).encode()
+
+
+def canonical_json(obj):
+    return (json.dumps(obj, indent=2, sort_keys=True) + "\n").encode()
+
+
+def uint(n):
+    if n < 24:
+        return bytes([n])
+    for ai, width in ((24, 1), (25, 2), (26, 4), (27, 8)):
+        if n < 1 << 8 * width:
+            return bytes([ai]) + n.to_bytes(width, "big")
+
+
+def env_cbor(pred, vkd, cl, tx, ix, sd, exp):
+    """EXPECTATIONS cborSegments: tag 121, indefinite list, definite fields of <=32 bytes."""
+    b32 = bytes.fromhex("5820")
+    return b"".join([bytes.fromhex("d8799f0200"), b32, FAMILY, b32, pred, b32, vkd,
+                     bytes.fromhex("581c"), cl, bytes.fromhex("d8799f"), b32, tx, uint(ix),
+                     bytes.fromhex("ff"), b32, sd, uint(exp), bytes.fromhex("ff")])
+
+
+def ctx_text(token, qty, fields, vk, proof):
+    """Historical 09 layout: fabricated local VM test context, not a transaction."""
+    pred, vkd, cl, tx, ix, sd, exp = fields
+    val = "Map [(B #%s, Map [(B #%s, I %d)])]" % (POLICY, token.hex(), qty)
+    env = ("Constr 0 [I 2, I 0, B #%s, B #%s, B #%s, B #%s, Constr 0 [B #%s, I %d], B #%s, I %d]"
+           % (FAMILY.hex(), pred.hex(), vkd.hex(), cl.hex(), tx.hex(), ix, sd.hex(), exp))
+    out = ("Constr 0 [Constr 0 [Constr 1 [B #%s], Constr 1 []], %s, Constr 2 [%s], Constr 1 []]"
+           % (POLICY, val, env))
+    info = ("Constr 0 [List [], List [], List [%s], I 0, %s, List [], Map [], Constr 0 [Constr 0 "
+            "[Constr 0 [], Constr 1 []], Constr 0 [Constr 2 [], Constr 1 []]], List [], Map [], "
+            "Map [], B #%s, Map [], List [], Constr 1 [], Constr 1 []]" % (out, val, "00" * 32))
+    return ("(con data (Constr 0 [%s, Constr 0 [B #%s, B #%s], Constr 0 [B #%s]]))\n"
+            % (info, vk, proof, POLICY)).encode()
+
+
+def k6_fields():
+    return (bytes.fromhex(EXPORT["predicateDigest"]), bytes.fromhex(EXPORT["vkDigestBlake2b256"]),
+            bytes.fromhex("55" * 28), bytes.fromhex("22" * 32), 0,
+            bytes.fromhex(EXPORT["statementDigestBlake2b256"]), K6_EXPIRY)
+
+
+def k6_rows():
+    """T1, T5, T6, T7 as (case id, token, quantity, env fields); R3 test_09 derivation."""
+    f, tok = k6_fields(), bytes.fromhex(K6_TOKEN)
+    bad = (f[0], flip1(f[1])) + f[2:]
+    return ((CASES[0], tok, 1, f), (CASES[1], tok, 2, f), (CASES[2], flip1(tok), 1, f),
+            (CASES[3], b2(env_cbor(*bad)), 1, bad))
+
+
+def expected_context(row):
+    return ctx_text(row[1], row[2], row[3], SETUP["verifyingKeyHex"], EXPORT["proofHex"])
+
+
+def expected_case(row):
+    case_id, token, qty, f = row
+    return {"id": case_id, "contextFile": "contexts/%s.uplc.txt" % case_id,
+            "envelopeCborHex": env_cbor(*f).hex(), "tokenNameHex": token.hex(), "quantity": qty,
+            "envVkDigestHex": f[1].hex(), "envStatementDigestHex": f[5].hex(),
+            "proofHexSha256": K6_PROOF_SHA}
+
+
+def expected_inputs():
+    return [{"role": r, "sha256": PINS[p][1], "bytes": PINS[p][0]} for r, p in INPUT_ROLES]
+
+
+def expected_gaps():
+    return [{"id": g, "status": GAP_STATUS} for g in GAPS]
+
+
+def walk_strings(obj):
+    if type(obj) is str:
+        yield obj
+    elif type(obj) is dict:
+        for key, value in obj.items():
+            yield key
+            yield from walk_strings(value)
+    elif type(obj) is list:
+        for item in obj:
+            yield from walk_strings(item)
+
+
+def tree(root):
+    """Sorted no-follow listing: directories end in '/', symlinks in '@'."""
+    found = []
+    for top, dirs, files in os.walk(root):
+        for name in dirs + files:
+            path = os.path.join(top, name)
+            mode = os.lstat(path).st_mode
+            mark = "/" if stat.S_ISDIR(mode) else "@" if stat.S_ISLNK(mode) else ""
+            found.append(os.path.relpath(path, root) + mark)
+    return sorted(found)
+
+
+def require_unprivileged():
+    if os.geteuid() == 0:
+        raise RuntimeError("STOP: uid 0")
+
+
+class R4TestBase(unittest.TestCase):
+    """Shared helpers only; no test methods. Wrappers touch only r2, host_codec, legacy."""
+
+    def r4(self):
+        return load_r4(self)
+
+    def plan(self, export=None, setup=None, expiry=K6_EXPIRY, b9=None):
+        return self.r4().plan_outputs(RAW[B9] if b9 is None else b9,
+                                      RAW[EXP] if export is None else export,
+                                      RAW[SET] if setup is None else setup, expiry)
+
+    def refused(self, code, fn, *args, **kwargs):
+        with self.assertRaises(ValueError) as caught:
+            fn(*args, **kwargs)
+        error = caught.exception
+        self.assertEqual(len(error.args), 1, repr(error.args)[:300])
+        message = error.args[0]
+        self.assertIs(type(message), str)
+        self.assertTrue(message.startswith(code + ": "), message[:300])
+        self.assertFalse("\n" in message or "\r" in message, message[:300])
+        return message
+
+    def run_argv(self, argv):
+        r4 = self.r4()
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = r4.main(argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def run_main(self, *args):
+        return self.run_argv([R4_FILE] + [str(a) for a in args])
+
+    def assert_cli_refusal(self, result, code):
+        exit_code, out, err = result
+        self.assertEqual((exit_code, out), (2, ""))
+        self.assertTrue(err.startswith(code + ": ") and err.endswith("\n")
+                        and err.count("\n") == 1, err[:300])
+
+    def assert_cli_success(self, result, output):
+        exit_code, out, err = result
+        self.assertEqual((exit_code, err, out.count("\n")), (0, "", 1))
+        self.assertTrue(out.endswith("\n"))
+        self.assertEqual(json.loads(out), {"output": str(output), "cases": 4})
+
+    @contextlib.contextmanager
+    def wrapped(self, module, name, replacement):
+        if not any(module is m for m in (r2, host_codec, legacy)):
+            raise RuntimeError("STOP: wrappers are limited to r2, host_codec and legacy")
+        original = getattr(module, name)
+        setattr(module, name, replacement)
+        try:
+            yield original
+        finally:
+            setattr(module, name, original)
+
+    @contextlib.contextmanager
+    def counted(self, module, name):
+        calls, original = [], getattr(module, name)
+
+        def counter(*args, **kwargs):
+            calls.append((args, kwargs))
+            return original(*args, **kwargs)
+        with self.wrapped(module, name, counter):
+            yield calls
+
+    @contextlib.contextmanager
+    def faulted(self, module, name, error):
+        calls = []
+
+        def fault(*args, **kwargs):
+            calls.append((args, kwargs))
+            raise error
+        with self.wrapped(module, name, fault):
+            yield calls
+
+    @contextlib.contextmanager
+    def consumer_wrapper(self, after):
+        """Delegate to r2.prepare_c2_issue, then call after(result) before returning it."""
+        original = r2.prepare_c2_issue
+
+        def wrapper(*args, **kwargs):
+            result = original(*args, **kwargs)
+            after(result)
+            return result
+        with self.wrapped(r2, "prepare_c2_issue", wrapper):
+            yield
+
+    def case_scratch(self):
+        path = SCRATCH / self.id().rsplit(".", 1)[-1]
+        os.mkdir(path, 0o700)
+        return path
+
+    def copy_inputs(self, dest):
+        paths = []
+        for role, rel in INPUT_ROLES:
+            path = Path(dest) / (role + ".json")
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                         0o644)
+            try:
+                view = memoryview(RAW[rel])
+                while view:
+                    view = view[os.write(fd, view):]
+            finally:
+                os.close(fd)
+            paths.append(path)
+        return tuple(paths)
+
+    def assert_inputs_unchanged(self):
+        for _role, rel in INPUT_ROLES:
+            self.assertEqual(read_bounded(HERE / rel, PINS[rel][0]), RAW[rel], rel)
+
+
+class TestR00Prerequisites(R4TestBase):
+    def test_r00_prerequisites(self):
+        self.assertEqual(PINS[R2], ADOPTED_R2_PIN)
+        self.assertEqual((len(RESULT_KEYS), len(R2_LABELS), len(C2I_STAGES), len(CONSUMER_HOST_APIS),
+                          len(LABELS_8_V1), len(LABELS_14_SUPERSEDED)), (12, 16, 11, 7, 8, 14))
+        self.assertEqual((len(MANIFEST_KEYS), len(BUILDER_LABELS), len(LIMITATIONS), len(FLAGS)),
+                         (33, 9, 4, 10))
+        for rel, (size, sha) in PINS.items():
+            self.assertEqual((len(RAW[rel]), hashlib.sha256(RAW[rel]).hexdigest()), (size, sha), rel)
+        for module, rel in ((r2, R2), (host_codec, "host_codec.py"), (legacy, "build_k10_inputs.py")):
+            self.assertTrue(os.path.samefile(module.__file__, HERE / rel), rel)
+        self.assertFalse(os.path.lexists(HERE / V1_FILE))
+        self.assertNotIn(V1, sys.modules)
+        self.assertIsNone(importlib.util.find_spec(V1))
+        st = os.lstat(SCRATCH)
+        self.assertEqual((stat.S_ISDIR(st.st_mode), stat.S_IMODE(st.st_mode)), (True, 0o700))
+        self.assertEqual(os.listdir(SCRATCH), [])
+        for flag in OPEN_FLAGS:
+            self.assertTrue(hasattr(os, flag), flag)
+        for name in DIR_FD_FUNCS:
+            self.assertIn(getattr(os, name), os.supports_dir_fd, name)
+        for name in CONSUMER_HOST_APIS:
+            self.assertTrue(callable(getattr(host_codec, name)), name)
+        self.assertTrue(callable(r2.prepare_c2_issue))
+        self.assertEqual((legacy.PIN_B9_APPLIED, legacy.FAMILY_V2, legacy.AUDIT_SOURCE_PINS),
+                         (PINS[B9][1], FAMILY, AUDIT_SOURCE_PINS))
+        # Historical vectors: HIST-09 equals the independent formatter and the legacy render.
+        f, vk, pr = k6_fields(), SETUP["verifyingKeyHex"], EXPORT["proofHex"]
+        self.assertEqual(EXPORT["setupRecordSha256"], PINS[SET][1])
+        self.assertEqual(legacy.frozen_positive_cbor(f[1], f[5]), env_cbor(*f))
+        self.assertEqual(b2(env_cbor(*f)).hex(), K6_TOKEN)
+        self.assertEqual(hashlib.sha256(bytes.fromhex(pr)).hexdigest(), K6_PROOF_SHA)
+        self.assertEqual((len(bytes.fromhex(vk)), len(bytes.fromhex(pr))), (VK_BYTES, PROOF_BYTES))
+        want = ctx_text(bytes.fromhex(K6_TOKEN), 1, f, vk, pr)
+        self.assertEqual(RAW[HIST], want)
+        old = legacy.script_context(bytes.fromhex(POLICY), legacy.env_data(f[1], f[5]),
+                                    bytes.fromhex(K6_TOKEN), 1, bytes.fromhex(vk), bytes.fromhex(pr))
+        self.assertEqual(("(con data (%s))\n" % legacy.uplc_term(old)).encode(), want)
+        # B9 shape via the pinned legacy extractor plus an independent policy recomputation.
+        code_hex, policy_hex = legacy.extract_compiled(RAW[B9])
+        self.assertEqual(policy_hex, POLICY)
+        self.assertEqual(hashlib.blake2b(bytes([3]) + bytes.fromhex(code_hex),
+                                         digest_size=28).hexdigest(), POLICY)
+        # Adopted r2 on K6: /2, the 12 keys and exactly the 16 labels, inputs unmutated.
+        export, setup = fresh_export(), fresh_setup()
+        result = r2.prepare_c2_issue(export, setup, K6_EXPIRY, policy_id=bytes.fromhex(POLICY))
+        self.assertEqual((export, setup), (fresh_export(), fresh_setup()))
+        self.assertIs(type(result), dict)
+        self.assertEqual(sorted(result), sorted(RESULT_KEYS))
+        self.assertEqual(result["format"], R2_FORMAT)
+        self.assertIs(type(result["labels"]), dict)
+        self.assertEqual(list(result["labels"].items()), list(R2_LABELS.items()))
+        self.assertEqual((result["envCborHex"], result["envelopeTokenNameHex"], result["policyIdHex"],
+                          result["expiry"], result["setupRecordSha256Declared"],
+                          result["mintValueCborHex"]),
+                         (env_cbor(*f).hex(), K6_TOKEN, POLICY, K6_EXPIRY, PINS[SET][1],
+                          MINT_VALUE_CBOR_HEX))
+
+
+class TestR01ToR08(R4TestBase):
+    """R01-R08: AST/imports/seam/v1; K6 golden; consumer-drawn fields; ARGV;
+    OUTDIR; READ; JSON; LINK.
+
+    PART A source fragment, AUTHOR-PROPOSED (Opus 4.8 HIGH); never run, imported,
+    compiled or reviewed. Appends byte-for-byte after R4-TEST-PREFIX.py.part; it
+    rebinds no prefix global and redefines no helper. Every method calls self.r4()
+    first, so at a future RED its only failure is the MISSING AssertionError and no
+    other assertion is reached. Expected values come from prefix literals and
+    formatters, the pinned host_codec/legacy/r2 (independent of R4) or new literals
+    copied from the frozen contract/API, never from build_k10_inputs_r4.py output.
+    """
+
+    def test_r01_module_surface_imports_seam_and_no_v1(self):
+        r4 = self.r4()
+        import ast  # local stdlib structure oracle for CB401 (disclosed; not under test)
+        source = read_bounded(HERE / R4_FILE, B9_CAP)
+        self.assertEqual(source.count(R4_SEAM.encode()), 1)
+        module = ast.parse(source.decode("utf-8"))
+        imports, from_imports, bound, names, stored = [], [], [], set(), set()
+        for node in ast.walk(module):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.append(alias.name + (" as " + alias.asname if alias.asname else ""))
+                    bound.append((alias.asname or alias.name).split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                from_imports.append(node.module)
+            elif isinstance(node, ast.Name):
+                names.add(node.id)
+                if isinstance(node.ctx, ast.Store):
+                    stored.add(node.id)
+            elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+                if node.value.id == "sys":
+                    self.assertNotIn(node.attr, ("modules", "path"))
+        self.assertEqual(from_imports, [])
+        self.assertEqual(sorted(imports), sorted(R4_IMPORTS))
+        for forbidden in (V1, "importlib"):
+            self.assertNotIn(forbidden, bound)
+            self.assertNotIn(forbidden, names)
+            self.assertNotIn(forbidden, stored)
+        public = [node.name for node in module.body
+                  if isinstance(node, ast.FunctionDef) and not node.name.startswith("_")]
+        self.assertEqual((sorted(public), len(public)), (sorted(R4_PUBLIC), 7))
+        for name in R4_PUBLIC:
+            self.assertTrue(callable(getattr(r4, name)), name)
+        self.assertNotIn(V1, sys.modules)
+
+    def test_r02_k6_golden_roster_and_manifest_literals(self):
+        r4 = self.r4()
+        outputs = self.plan()
+        self.assertEqual(sorted(outputs), sorted(ROSTER))
+        self.assertTrue(all(type(value) is bytes for value in outputs.values()))
+        self.assertEqual(outputs[T1], RAW[HIST])
+        self.assertEqual(outputs["script.hex"],
+                         (legacy.extract_compiled(RAW[B9])[0] + "\n").encode())
+        manifest = json.loads(outputs["manifest.json"])
+        self.assertEqual(outputs["manifest.json"], canonical_json(manifest))
+        self.assertEqual(manifest["positiveEnvelopeCborHex"], env_cbor(*k6_fields()).hex())
+        self.assertEqual((manifest["positiveTokenNameHex"], manifest["policyIdHex"],
+                          manifest["mintValueCborHex"]),
+                         (K6_TOKEN, POLICY, MINT_VALUE_CBOR_HEX))
+        self.assertEqual(self.plan(), outputs)  # deterministic: no I/O, clock or randomness
+
+    def test_r03_fields_are_drawn_from_the_consumer_not_constants(self):
+        r4 = self.r4()
+        # NEGATIVE FIXTURE, labelled: the genuine K6 proof is reused unchanged against an
+        # edited statement and is not valid for it. This exercises field drawing only, adds
+        # no new proof and makes no ledger claim. The statement digest and its public-input
+        # halves are made byte/profile consistent through the pinned host_codec helpers,
+        # which are independent of R4; the deep copy is a fresh parse of the pinned bytes.
+        claimant, txid, index, expiry = (bytes.fromhex("66" * 28), bytes.fromhex("33" * 32),
+                                         7, 1700000000000)
+        export = fresh_export()
+        statement = bytearray(bytes.fromhex(export["statementHex"]))
+        statement[144:172], statement[233:265], statement[265:267] = (
+            claimant, txid, index.to_bytes(2, "big"))
+        statement = bytes(statement)
+        digest = host_codec.statement_digest_hex(statement)
+        x1, x2 = host_codec.statement_public_inputs(statement)
+        export["statementHex"] = statement.hex()
+        export["statementDigestBlake2b256"] = digest
+        export["publicInputs"] = {"x1": x1, "x2": x2}
+        export["context"].update(claimantVkh=claimant.hex(), consumedTxid=txid.hex(),
+                                 consumedIx=index)
+        export["cardano"]["envV2"].update(
+            claimantVkh=claimant.hex(), statementDigest=digest,
+            settleOutref={"transactionId": txid.hex(), "outputIndex": index})
+        fields = (bytes.fromhex(export["predicateDigest"]),
+                  bytes.fromhex(export["vkDigestBlake2b256"]),
+                  claimant, txid, index, bytes.fromhex(digest), expiry)
+        token = b2(env_cbor(*fields))
+        outputs = self.plan(export=dumps(export), expiry=expiry)
+        self.assertEqual(outputs[T1],
+                         ctx_text(token, 1, fields, SETUP["verifyingKeyHex"], export["proofHex"]))
+        manifest = json.loads(outputs["manifest.json"])
+        self.assertEqual((manifest["claimantVkhHex"], manifest["settleOutref"], manifest["expiry"]),
+                         (claimant.hex(),
+                          {"transactionIdHex": txid.hex(), "outputIndex": index}, expiry))
+        self.assertEqual((manifest["positiveEnvelopeCborHex"], manifest["positiveTokenNameHex"]),
+                         (env_cbor(*fields).hex(), token.hex()))
+        blob = b"".join(value for key, value in outputs.items() if key != "script.hex")
+        for stale in (b"55" * 28, b"22" * 32, b"1893456000000", K6_TOKEN.encode()):
+            self.assertNotIn(stale, blob)
+
+    def test_r04_expiry_and_argv_gate_without_filesystem_effect(self):
+        r4 = self.r4()
+        for text, value in (("0", 0), (K6_EXPIRY_TEXT, K6_EXPIRY),
+                            ("18446744073709551615", U64_MAX)):
+            got = r4.parse_expiry(text)
+            self.assertIs(type(got), int)
+            self.assertEqual(got, value)
+        for text in ("", "01", "+1", "-1", " 1", "1 ", "1\n", "1e3", "1_0", "0x1",
+                     chr(0x661), "18446744073709551616", "9" * 21, b"1", 1, None):
+            with self.subTest(text=repr(text)):
+                self.refused("C2B-ARGV", r4.parse_expiry, text)
+        for value in (True, -1, 2 ** 64, "1", 1.0):
+            with self.subTest(value=repr(value)):
+                self.refused("C2B-ARGV", self.plan, expiry=value)
+        scratch = self.case_scratch()
+        base = [R4_FILE, str(HERE / B9), str(HERE / EXP), str(HERE / SET),
+                K6_EXPIRY_TEXT, str(scratch / "out")]
+        self.assert_cli_refusal(self.run_argv(tuple(base)), "C2B-ARGV")        # argv is not a list
+        self.assert_cli_refusal(self.run_argv(base[:5]), "C2B-ARGV")           # arity 5
+        self.assert_cli_refusal(self.run_argv(base + ["extra"]), "C2B-ARGV")   # arity 7
+        non_str = list(base)
+        non_str[4] = int(K6_EXPIRY)
+        self.assert_cli_refusal(self.run_argv(non_str), "C2B-ARGV")            # non-str element
+        embedded_nul = list(base)
+        embedded_nul[1] = base[1] + "\x00tail"
+        self.assert_cli_refusal(self.run_argv(embedded_nul), "C2B-ARGV")       # embedded NUL
+        unencodable = list(base)
+        unencodable[1] = "\ud800"  # a lone high surrogate; os.fsencode refuses, no echo
+        result = self.run_argv(unencodable)
+        self.assert_cli_refusal(result, "C2B-ARGV")
+        self.assertNotIn("\ud800", result[2])
+        self.assertEqual(os.listdir(scratch), [])
+        self.assertFalse(os.path.lexists(scratch / "out"))
+
+    def test_r05_outdir_refusals_create_nothing(self):
+        r4 = self.r4()
+        scratch = self.case_scratch()
+        existing, preexisting, target = (scratch / "existingout", scratch / "preexisting",
+                                         scratch / "linktarget")
+        for directory in (existing, preexisting, target):
+            os.mkdir(directory, 0o700)
+        symlink = scratch / "outlink"
+        os.symlink(target, symlink)
+        inputs = (str(HERE / B9), str(HERE / EXP), str(HERE / SET))
+        before = tree(scratch)
+        for outdir in (existing, preexisting, symlink, scratch / "Bad Name",
+                       scratch / "absentparent" / "child", str(scratch / "trailing") + "/", "."):
+            with self.subTest(outdir=str(outdir)):
+                self.assert_cli_refusal(self.run_main(*inputs, K6_EXPIRY_TEXT, outdir), "C2B-OUTDIR")
+        self.assertEqual(tree(scratch), before)
+        self.assertEqual((os.listdir(existing), os.listdir(preexisting)), ([], []))
+
+    def test_r06_read_bounds_irregular_files_caps_and_path_types(self):
+        r4 = self.r4()
+        scratch = self.case_scratch()
+
+        def write_file(name, size):
+            path = scratch / name
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+                         | os.O_CLOEXEC, 0o600)
+            try:
+                view = memoryview(b"a" * size)
+                while view:
+                    view = view[os.write(fd, view):]
+            finally:
+                os.close(fd)
+            return path
+
+        exact = write_file("exact", SETUP_CAP)
+        self.assertEqual(r4.read_public_file(str(exact), SETUP_CAP), b"a" * SETUP_CAP)
+        over = write_file("over", SETUP_CAP + 1)
+        self.refused("C2B-READ", r4.read_public_file, str(over), SETUP_CAP)
+        regular = write_file("regular", 3)
+        symlink = scratch / "slink"
+        os.symlink(regular, symlink)
+        fifo = scratch / "fifo"
+        os.mkfifo(fifo, 0o600)  # no-follow lstat refuses before any open, so nothing blocks
+        for path in (symlink, scratch / "absent", scratch, fifo):
+            message = self.refused("C2B-READ", r4.read_public_file, str(path), SETUP_CAP)
+            self.assertNotIn(str(path), message)
+        for cap in (0, 7, True, 2 ** 63):  # cap must be one of the three frozen constants
+            with self.subTest(cap=repr(cap)):
+                self.refused("C2B-READ", r4.read_public_file, str(regular), cap)
+
+        class _NoFspath(os.PathLike):
+            def __fspath__(self):
+                raise AssertionError("__fspath__ must not be called before refusal")
+
+        class _StrSub(str):
+            pass
+
+        self.refused("C2B-READ", r4.read_public_file, os.fsencode(str(regular)), SETUP_CAP)
+        self.refused("C2B-READ", r4.read_public_file, _NoFspath(), SETUP_CAP)
+        self.refused("C2B-READ", r4.read_public_file, _StrSub(str(regular)), SETUP_CAP)
+        message = self.refused("C2B-READ", r4.read_public_file, "\ud800", SETUP_CAP)
+        self.assertNotIn("\ud800", message)
+
+    def test_r07_strict_bounded_json_and_consumer_boundary(self):
+        r4 = self.r4()
+        # R3 test_05 export vectors, refused at the JSON stage of the export read.
+        text = RAW[EXP].decode()
+        action, index = '"action": "partial"', '"actionIndex": 1'
+        export_texts = [text.replace(action, action + ", " + action, 1), "[" + text + "]",
+                        text + "{}", text.replace(action, '"action": "' + chr(92) + 'ud800"', 1)]
+        export_texts += [text.replace(index, '"actionIndex": ' + literal, 1)
+                         for literal in ("NaN", "Infinity", "-Infinity", "1.0", "1e0", "1" * 21)]
+        export_raws = [item.encode() for item in export_texts] + [
+            bytes.fromhex("efbbbf") + RAW[EXP],
+            RAW[EXP].replace(b"partial", bytes.fromhex("ff") + b"partial", 1),
+            b"[" * 100000, b" " * (EXPORT_CAP + 1)]
+        for i, raw in enumerate(export_raws):
+            with self.subTest(export=i):
+                self.assertNotEqual(raw, RAW[EXP])
+                self.refused("C2B-JSON", self.plan, export=raw)
+        setup_raws = (RAW[SET].replace(b'"curve"', b'"curve": "x", "curve"', 1),
+                      b" " * (SETUP_CAP + 1), b"[]")
+        for raw in setup_raws:
+            with self.subTest(setup=raw[:8]):
+                self.assertNotEqual(raw, RAW[SET])
+                self.refused("C2B-JSON", self.plan, setup=raw)
+        # Leading and trailing ASCII whitespace (space, tab, CR, LF) is admitted.
+        padded = b" \t\r\n" + RAW[EXP] + b" \r\n"
+        self.assertEqual(r4.parse_public_json(padded, EXPORT_CAP), fresh_export())
+        # Raw control character, -0, -01 and a 21-character integer literal are refused.
+        for raw in (RAW[EXP].replace(b'"partial"', b'"par' + bytes([1]) + b'tial"', 1),
+                    RAW[EXP].replace(b'"actionIndex": 1', b'"actionIndex": -0', 1),
+                    RAW[EXP].replace(b'"actionIndex": 1', b'"actionIndex": -01', 1),
+                    RAW[EXP].replace(b'"actionIndex": 1', b'"actionIndex": ' + b"1" * 21, 1)):
+            self.refused("C2B-JSON", r4.parse_public_json, raw, EXPORT_CAP)
+        # A 20-character signed integer literal passes JSON and is refused at CONSUMER.
+        signed = fresh_export()
+        signed["actionIndex"] = -1234567890123456789
+        signed_raw = dumps(signed)
+        self.assertIs(type(r4.parse_public_json(signed_raw, EXPORT_CAP)), dict)
+        self.assertIn("C2I-EXPORT:", self.refused("C2B-CONSUMER", self.plan, export=signed_raw))
+        # Depth 16 is admitted and depth 17 is refused; the top-level object counts as level 1.
+        self.assertIs(type(r4.parse_public_json(b'{"a":' * 15 + b"{}" + b"}" * 15, EXPORT_CAP)), dict)
+        self.refused("C2B-JSON", r4.parse_public_json, b'{"a":' * 16 + b"{}" + b"}" * 16, EXPORT_CAP)
+
+    def test_r08_link_digest_vectors_and_hostile_keys(self):
+        r4 = self.r4()
+        self.assertEqual(r4.check_setup_link(fresh_export(), RAW[SET]), PINS[SET][1])
+        self.refused("C2B-LINK", self.plan, setup=RAW[SET] + b" ")  # setup bytes change the digest
+        for bad in ("0" * 64, PINS[SET][1].upper(), PINS[SET][1][:63], None, 7):
+            export = fresh_export()
+            export["setupRecordSha256"] = bad
+            with self.subTest(bad=repr(bad)):
+                self.refused("C2B-LINK", self.plan, export=dumps(export))
+        export = fresh_export()
+        del export["setupRecordSha256"]
+        self.refused("C2B-LINK", self.plan, export=dumps(export))
+        # A non-str export key is refused by check_setup_link before any digest lookup.
+        non_str_key = fresh_export()
+        non_str_key[7] = "x"
+        self.refused("C2B-LINK", r4.check_setup_link, non_str_key, RAW[SET])
+        # A hostile key counting __eq__/__hash__ sees zero calls during the key scan.
+        class _HostileKey:
+            def __init__(self):
+                self.eq = self.hash = 0
+
+            def __hash__(self):
+                self.hash += 1
+                return 0
+
+            def __eq__(self, other):
+                self.eq += 1
+                return NotImplemented
+
+        hostile = _HostileKey()
+        export = fresh_export()
+        export[hostile] = "x"
+        hostile.eq = hostile.hash = 0  # discount the one insertion hash above
+        self.refused("C2B-LINK", r4.check_setup_link, export, RAW[SET])
+        self.assertEqual((hostile.eq, hostile.hash), (0, 0))
+
+
+# === R4 TEST PART B: R09-R13 (POLICY, CONSUMER, BRIDGE, legacy_env_from_host, rows/manifest) ===
+# AUTHOR-PROPOSED source fragment by claude-opus-4-8 HIGH; never run, imported, compiled or
+# reviewed. Appended byte-for-byte after R4-TEST-PREFIX.py.part and the R01-R08 part. Defines
+# exactly one class with five methods; adds no imports, rebinds no prefix global, redefines no
+# helper. Expected values come only from prefix literals/formatters and the pinned r2/host_codec/
+# legacy modules (independent of R4), never from build_k10_inputs_r4.py output. Each method calls
+# self.r4() first so that at RED its sole failure is the MISSING AssertionError.
+
+
+class TestR09ToR13(R4TestBase):
+    """Contract section 7 R09-R13. Wrappers touch only r2, host_codec and legacy; the plan path
+    is pure (no filesystem, scratch, clock, randomness or environment access)."""
+
+    def test_r09_policy_pin_guards_extract_compiled(self):
+        # R09 POLICY: b9 + b" " (pin mismatch), a bytearray (not exact bytes) and over-cap bytes
+        # all refuse C2B-POLICY with the genuine export/setup/link; a counter proves the pin guards
+        # legacy.extract_compiled so a mismatched wrapper never reaches it, while a genuine plan
+        # calls it exactly once.
+        self.r4()
+        with self.counted(legacy, "extract_compiled") as refused_calls:
+            self.refused("C2B-POLICY", self.plan, b9=RAW[B9] + b" ")
+            self.refused("C2B-POLICY", self.plan, b9=bytearray(RAW[B9]))
+            self.refused("C2B-POLICY", self.plan, b9=bytes(B9_CAP + 1))
+        self.assertEqual(refused_calls, [])
+        with self.counted(legacy, "extract_compiled") as ok_calls:
+            self.plan()
+        self.assertEqual(len(ok_calls), 1)
+
+    def test_r10_consumer_messages_kept_verbatim_and_link_precedes(self):
+        # R10 CONSUMER: a conforming C2I-<STAGE> refusal is wrapped verbatim as
+        # "C2B-CONSUMER: " + message; nonconforming consumer refusals collapse to the fixed
+        # literal; LINK comes before CONSUMER so a bad link refuses before r2 is ever called.
+        self.r4()
+        for stage in ("EXPORT", "SETUP", "PROFILE"):
+            message = "C2I-%s: descriptor rejected by r2" % stage
+            with self.faulted(r2, "prepare_c2_issue", ValueError(message)) as calls:
+                got = self.refused("C2B-CONSUMER", self.plan)
+            self.assertEqual(got, "C2B-CONSUMER: " + message)
+            self.assertEqual(len(calls), 1)
+        nonconforming = (
+            ValueError("boom"),                                   # no C2I- prefix
+            ValueError("C2I-NOPE: unknown stage"),                # stage not in the 11
+            ValueError("C2I-EXPORT: two" + chr(10) + "lines"),    # contains LF
+            ValueError("C2I-EXPORT:" + chr(13) + " cr"),          # contains CR
+            ValueError("C2I-EXPORT: " + "x" * CONSUMER_MESSAGE_CHARS),  # over 1024 characters
+            ValueError("C2I-EXPORT: ok", "second"),               # not exactly one argument
+            ValueError(b"C2I-EXPORT: bytes"),                     # argument not an exact str
+        )
+        for error in nonconforming:
+            with self.subTest(error=repr(error.args)):
+                with self.faulted(r2, "prepare_c2_issue", error):
+                    self.assertEqual(self.refused("C2B-CONSUMER", self.plan), NONCONFORMING)
+        bad_link = fresh_export()
+        bad_link["setupRecordSha256"] = swap1(bad_link["setupRecordSha256"])
+        with self.faulted(r2, "prepare_c2_issue", ValueError("C2I-EXPORT: never reached")) as calls:
+            self.refused("C2B-LINK", self.plan, export=dumps(bad_link))
+        self.assertEqual(calls, [])
+
+    def test_r11_bridge_rejects_every_consumer_disagreement(self):
+        # R11 BRIDGE: the 13 R3 test_08 edits reapplied to the root-adopted r2 result, plus the
+        # R4-specific disagreements - format /1, the v1 8-entry and superseded 14-entry label maps,
+        # a stale DECLARED_SUBSET_NOT_EQUIVALENT rustAcceptance, vkProfile or jsonParseLimits
+        # removed, a 17th label, a changed setupRecordSha256Declared and an envData built for
+        # another expiry. Each disagreement must fail closed with C2B-BRIDGE.
+        self.r4()
+        good = r2.prepare_c2_issue(fresh_export(), fresh_setup(), K6_EXPIRY,
+                                   policy_id=bytes.fromhex(POLICY))
+        env, iss = good["envData"], good["issueData"]
+        edits = [
+            ("envCborHex", swap1(good["envCborHex"])),
+            ("envelopeTokenNameHex", swap1(good["envelopeTokenNameHex"])),
+            ("mintValueCborHex", swap1(good["mintValueCborHex"])),
+            ("issueCborHex", swap1(good["issueCborHex"])),
+            ("expiry", K6_EXPIRY + 1),
+            ("policyIdHex", "00" * 28),
+            ("format", "x"),
+            ("extra", 1),
+            ("envData", ("constr", 1, env[2])),
+            ("envData", ("constr", 0, env[2][:8])),
+            ("envData", ("constr", 0, [("int", True)] + env[2][1:])),
+            ("issueData", ("constr", 0, [("bytes", bytearray(iss[2][0][1])), iss[2][1]])),
+            ("issueData", ("constr", 0, [iss[2][0], ("bytes", iss[2][1][1][:191])])),
+            ("format", "moriarty-c2-issue-artifacts/1"),
+            ("labels", dict(LABELS_8_V1)),
+            ("labels", dict(LABELS_14_SUPERSEDED)),
+            ("labels", {**R2_LABELS, "rustAcceptance": "DECLARED_SUBSET_NOT_EQUIVALENT"}),
+            ("labels", {k: v for k, v in R2_LABELS.items() if k != "vkProfile"}),
+            ("labels", {k: v for k, v in R2_LABELS.items() if k != "jsonParseLimits"}),
+            ("labels", {**R2_LABELS, "extraLabel": "X"}),
+            ("setupRecordSha256Declared", swap1(good["setupRecordSha256Declared"])),
+            ("envData", ("constr", 0, env[2][:8] + [("int", K6_EXPIRY + 1)])),
+        ]
+        for i, (key, value) in enumerate(edits):
+            with self.subTest(i=i, key=key):
+                def after(result, _k=key, _v=value):
+                    result[_k] = _v
+                with self.consumer_wrapper(after):
+                    self.refused("C2B-BRIDGE", self.plan)
+
+    def test_r12_legacy_env_from_host_tree_types_and_nonmutation(self):
+        # R12 legacy_env_from_host: the admitted consumer envData translates to the independent
+        # legacy env tree without mutating its input, and every shape or type mutation refuses
+        # C2B-BRIDGE.
+        r4 = self.r4()
+        good = r2.prepare_c2_issue(fresh_export(), fresh_setup(), K6_EXPIRY,
+                                   policy_id=bytes.fromhex(POLICY))
+        fields, env = k6_fields(), good["envData"]
+        before = copy.deepcopy(env)
+        self.assertEqual(r4.legacy_env_from_host(env), legacy.env_data(fields[1], fields[5]))
+        self.assertEqual(env, before)
+        nodes = env[2]
+        mutations = [
+            ("constr", 1, nodes),                                 # wrong constructor tag
+            ("constr", 0, nodes[:8]),                             # too few nodes
+            ("constr", 0, nodes + [("int", 0)]),                  # too many nodes
+            ["constr", 0, nodes],                                 # list, not an exact tuple
+            ("constr", 0, [("int", True)] + nodes[1:]),           # bool is refused
+            ("constr", 0, [None] + nodes[1:]),                    # node not tuple/list/str/bytes/int
+            ("constr", 0, nodes[:8] + [("int", 1.0)]),            # float where an int is required
+        ]
+        for i, mutant in enumerate(mutations):
+            with self.subTest(i=i):
+                self.refused("C2B-BRIDGE", r4.legacy_env_from_host, mutant)
+
+    def test_r13_contexts_manifest_literals_and_no_subset(self):
+        # R13: the T5, T6 and T7 contexts equal the independent formatter; the manifest carries the
+        # 33 keys, the 16 consumerLabels, the 9 builderLabels, the 4 limitations and the 10 false
+        # flags as literals, plus the coverage gaps, inputs and cases; and no manifest string
+        # contains 'subset' in any letter case.
+        self.r4()
+        outputs = self.plan()
+        rows = k6_rows()
+        for row in rows[1:]:
+            self.assertEqual(outputs["contexts/%s.uplc.txt" % row[0]], expected_context(row))
+        manifest = json.loads(outputs["manifest.json"])
+        self.assertEqual(set(manifest), MANIFEST_KEYS)
+        self.assertEqual((manifest["format"], manifest["builderRevision"],
+                          manifest["consumerFormat"]),
+                         (MANIFEST_FORMAT, BUILDER_REVISION, R2_FORMAT))
+        self.assertEqual((manifest["consumerLabels"], manifest["builderLabels"],
+                          manifest["flags"], manifest["limitations"]),
+                         (R2_LABELS, BUILDER_LABELS, FLAGS, LIMITATIONS))
+        self.assertEqual((manifest["expiry"], manifest["policyIdHex"],
+                          manifest["setupRecordSha256"]),
+                         (K6_EXPIRY, POLICY, PINS[SET][1]))
+        self.assertEqual(manifest["coverageGaps"], expected_gaps())
+        self.assertEqual(manifest["inputs"], expected_inputs())
+        self.assertEqual(manifest["cases"], [expected_case(row) for row in rows])
+        for text in walk_strings(manifest):
+            self.assertNotIn("subset", text.lower())
+class TestR14ToR17(R4TestBase):
+    """R14-R17: CLI success effects, CLI refusals and precedence, the unprivileged WRITE and
+    REREAD-cleanup paths, and host call counters. Each method loads R4 first with self.r4(),
+    so at RED the one and only failure is the shared MISSING AssertionError and no later
+    assertion or filesystem effect runs. Every expected value is a frozen contract/API literal,
+    a prefix formatter or a pinned-fixture fact, never output of build_k10_inputs_r4.py. Each
+    method keeps its writes under one case_scratch() directory. No os/builtins/json/R4 patch;
+    wrappers touch only r2, host_codec and legacy through the prefix helpers."""
+
+    def test_r14_cli_success_tree_modes_stdout(self):
+        self.r4()
+        # Read the real process umask without a net change, then run with it in force. The
+        # transient set/restore is the only portable way to observe umask; disclosed in notes.
+        umask = os.umask(0o022)
+        os.umask(umask)
+        scratch = self.case_scratch()
+        out = scratch / "out"
+        result = self.run_main(HERE / B9, HERE / EXP, HERE / SET, K6_EXPIRY_TEXT, out)
+        # Exit 0, empty stderr, exactly one stdout JSON line {"output": argv[5], "cases": 4}.
+        self.assert_cli_success(result, out)
+        # Exact roster: script.hex, the four contexts, manifest.json and the contexts dir only.
+        self.assertEqual(tree(out), sorted(ROSTER + ["contexts/"]))
+        # No manifest.json.tmp survives the atomic rename.
+        self.assertNotIn("manifest.json.tmp", tree(out))
+        # File mode is 0o644 & ~umask; the output and contexts directories are 0o755 & ~umask.
+        file_mode, dir_mode = 0o644 & ~umask, 0o755 & ~umask
+        for rel in ROSTER:
+            info = os.lstat(out / rel)
+            self.assertTrue(stat.S_ISREG(info.st_mode), rel)
+            self.assertEqual(stat.S_IMODE(info.st_mode), file_mode, rel)
+        for path in (out, out / "contexts"):
+            info = os.lstat(path)
+            self.assertTrue(stat.S_ISDIR(info.st_mode), str(path))
+            self.assertEqual(stat.S_IMODE(info.st_mode), dir_mode, str(path))
+        # The envelope inputs are read only: the three pinned sources are byte unchanged.
+        self.assert_inputs_unchanged()
+
+    def test_r15_cli_refusals_and_precedence(self):
+        self.r4()
+        scratch = self.case_scratch()
+        exists = scratch / "exists"
+        os.mkdir(exists, 0o700)  # a pre-existing output path forces OUTDIR
+        baseline = tree(scratch)
+        b9, exp, setp = HERE / B9, HERE / EXP, HERE / SET
+        absent = scratch / "absent.json"  # never created: drives READ
+        cases = [
+            # One failing stage per argv.
+            ((b9, exp, setp, K6_EXPIRY_TEXT), "C2B-ARGV"),                          # arity 5
+            ((b9, exp, setp, "01", scratch / "n1"), "C2B-ARGV"),                    # non-canonical expiry
+            ((b9, exp, setp, K6_EXPIRY_TEXT, exists), "C2B-OUTDIR"),                # output already present
+            ((b9, exp, setp, K6_EXPIRY_TEXT, scratch / "Bad Name"), "C2B-OUTDIR"),  # basename off the regex
+            ((absent, exp, setp, K6_EXPIRY_TEXT, scratch / "n2"), "C2B-READ"),      # first input absent
+            # Precedence ARGV > OUTDIR > READ on a single argv each.
+            ((absent, exp, setp, "01", exists), "C2B-ARGV"),                        # ARGV beats OUTDIR and READ
+            ((absent, exp, setp, K6_EXPIRY_TEXT, exists), "C2B-OUTDIR"),            # OUTDIR beats READ
+        ]
+        for args, code in cases:
+            with self.subTest(code=code, last=str(args[-1])):
+                self.assert_cli_refusal(self.run_main(*args), code)
+        # Every refusal created nothing: the scratch tree is exactly the pre-existing dir.
+        self.assertEqual(tree(scratch), baseline)
+
+    def test_r16_unprivileged_write_and_reread_cleanup(self):
+        self.r4()
+        require_unprivileged()  # uid 0 is STOP here, never RED and never bypassed
+        scratch = self.case_scratch()
+        # Part 1: a 0o555 parent makes the first mkdir fail, so WRITE refuses and nothing is made.
+        read_only = scratch / "ro"
+        os.mkdir(read_only, 0o555)
+        try:
+            result = self.run_main(HERE / B9, HERE / EXP, HERE / SET, K6_EXPIRY_TEXT,
+                                   read_only / "out")
+            self.assert_cli_refusal(result, "C2B-WRITE")
+            self.assertEqual(tree(read_only), [])
+        finally:
+            os.chmod(read_only, 0o700)  # restore so the scratch tree stays cleanable
+        # Part 2: a consumer wrapper edits a scratch input copy between READ and REREAD; REREAD
+        # sees the byte difference and cleanup removes the output that WRITE created.
+        b9_copy, export_copy, setup_copy = self.copy_inputs(scratch)
+        out = scratch / "out"
+
+        def after(_result):
+            fd = os.open(setup_copy, os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW | os.O_CLOEXEC)
+            try:
+                view = memoryview(RAW[SET] + b" ")  # same genuine bytes plus one trailing space
+                while view:
+                    view = view[os.write(fd, view):]
+            finally:
+                os.close(fd)
+        with self.consumer_wrapper(after):
+            result = self.run_main(b9_copy, export_copy, setup_copy, K6_EXPIRY_TEXT, out)
+        self.assert_cli_refusal(result, "C2B-REREAD")
+        # The output and its contents are gone; only the input copies and the empty ro dir remain.
+        self.assertEqual(tree(scratch),
+                         sorted(["ro/", "b9-applied.json", "proof-export.json",
+                                 "setup-record.json"]))
+
+    def test_r17_host_call_counters_and_no_outside_effects(self):
+        self.r4()
+        # Baseline: the consumer alone, on deep copies, reaches its host APIs and mutates
+        # neither parsed record. policy_id is the historical 28-byte policy id, as R00 uses.
+        export, setup = fresh_export(), fresh_setup()
+        with contextlib.ExitStack() as stack:
+            calls = {name: stack.enter_context(self.counted(host_codec, name))
+                     for name in CONSUMER_HOST_APIS}
+            r2.prepare_c2_issue(export, setup, K6_EXPIRY, policy_id=bytes.fromhex(POLICY))
+            consumer_counts = {name: len(calls[name]) for name in CONSUMER_HOST_APIS}
+        self.assertEqual((export, setup), (fresh_export(), fresh_setup()))
+        # Full CLI run: consumer plus builder host calls, with the same inputs, output in scratch.
+        scratch = self.case_scratch()
+        out = scratch / "out"
+        with contextlib.ExitStack() as stack:
+            calls = {name: stack.enter_context(self.counted(host_codec, name))
+                     for name in CONSUMER_HOST_APIS}
+            result = self.run_main(HERE / B9, HERE / EXP, HERE / SET, K6_EXPIRY_TEXT, out)
+            run_counts = {name: len(calls[name]) for name in CONSUMER_HOST_APIS}
+        self.assert_cli_success(result, out)
+        # The consumer reaches all seven host APIs (API dependency.consumerHostApis).
+        for name in CONSUMER_HOST_APIS:
+            self.assertGreaterEqual(consumer_counts[name], 1, name)
+        # The builder's own host calls (the run over the identical consumer baseline) are exactly
+        # its four APIs; the three consumer-only APIs receive no additional builder call.
+        builder_used = {name for name in CONSUMER_HOST_APIS
+                        if run_counts[name] > consumer_counts[name]}
+        self.assertEqual(builder_used, set(BUILDER_HOST_APIS))
+        for name in CONSUMER_HOST_APIS:
+            if name not in BUILDER_HOST_APIS:
+                self.assertEqual(run_counts[name], consumer_counts[name], name)
+        # No file outside scratch touched: the three pinned inputs are unchanged and the only
+        # new artifacts are the exact roster under the case scratch output directory.
+        self.assert_inputs_unchanged()
+        self.assertEqual(tree(out), sorted(ROSTER + ["contexts/"]))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

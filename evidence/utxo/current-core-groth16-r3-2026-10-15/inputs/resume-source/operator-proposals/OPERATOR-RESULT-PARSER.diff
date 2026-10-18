@@ -1,0 +1,78 @@
+# PROPOSED, UNREVIEWED, NEVER APPLIED. Parser-only revision of the reviewed operator.
+# Step names (E5-r2 -> E5-r3), paths and the r3 step list belong to EXECUTION-PROPOSAL.json
+# and to a separately reviewed operator; this diff changes only how RESULT.json parses
+# libtest output. The operator itself is never edited in place.
+--- run_pathb.py (reviewed, c9cd7237)
++++ run_pathb.py (PROPOSED parser-only revision)
+@@ -17,6 +17,7 @@
+ import subprocess
+ import sys
+ import time
++import types
+ 
+ T = pathlib.Path(__file__).resolve().parent.parent
+ V = T.parent
+@@ -42,6 +43,12 @@
+           'r2_manifest': '5a256c766908ff521b6a6cf483d1b109d17aa2d931a63598ab39b183cc2b580b'}
+ UNION_PIN = '328d157e00db80259f986f978f8ee222daa762277fc5b4377a3d2c0f8cc1c5f9'
+ RV = V / 'current-core-groth16-compiler-repair-independent-review-20261015'
++# PROPOSED (resume P-4): one parser for RESULT.json and the analysis. A frozen copy of
++# operator-proposals/libtest_rows.py; its sha256 must be FREEZE.json
++# records['tools/libtest_rows.py']. The verified bytes themselves are executed (no
++# second read), so the hashed file is exactly the parser that runs.
++LIBTEST_ROWS = T / 'tools' / 'libtest_rows.py'
++LIBTEST = None
+ 
+ # Literal ENV-r2: env -i with only these variables (CARGO_* of the environment block, Option A).
+ ENV = ['PATH=/usr/bin:/bin', f'HOME={ROOT}/empty-home', f'TMPDIR={ROOT}/tmp',
+@@ -228,13 +235,14 @@
+     return stops, files
+ 
+ 
+-def tests_of(text):
+-    res = {}
+-    for line in text.splitlines():
+-        if line.startswith('test ') and ' ... ' in line:
+-            name, _, outcome = line[5:].partition(' ... ')
+-            res.setdefault(name.strip(), []).append(outcome.strip())
+-    return res
++def load_libtest_rows(want_sha256):
++    """Executes the FREEZE-pinned parser bytes as a module; None on any mismatch."""
++    b = LIBTEST_ROWS.read_bytes()
++    if sha_b(b) != want_sha256:
++        return None
++    mod = types.ModuleType('libtest_rows')
++    exec(compile(b, str(LIBTEST_ROWS), 'exec'), mod.__dict__)
++    return mod
+ 
+ 
+ def main():
+@@ -245,6 +253,10 @@
+     plan_b = (T / 'OPTION-A-PLAN.json').read_bytes()
+     if sha_b(plan_b) != freeze['records']['OPTION-A-PLAN.json'] or sha(__file__) != freeze['records']['tools/run_pathb.py']:
+         result['stops'].append('operator or Option A plan differs from FREEZE.json')
++    global LIBTEST
++    LIBTEST = load_libtest_rows(freeze['records'].get('tools/libtest_rows.py'))
++    if LIBTEST is None:
++        result['stops'].append('libtest_rows.py differs from FREEZE.json: no step runs')
+     if os.path.lexists(ROOT):
+         result['stops'].append('scratch exists before E0r2')
+     if result['stops']:
+@@ -336,12 +348,13 @@
+                                                    == result['snapshot_after']['rustup_settings_toml_sha256'])
+         for sid in ('E4', 'E5-r2'):
+             p = RUN / f'{sid}.stdout'
+-            if p.exists():
++            if p.exists() and LIBTEST is not None:
+                 text = p.read_text(errors='replace')
+-                result.setdefault('tests', {})[sid] = {'outcomes': tests_of(text),
+-                                                       'summaries': [l for l in text.splitlines() if l.startswith('test result:')]}
++                # Same parse_stream as the analysis: header split first, outcome is the
++                # terminal token, identity lines include the inline first line.
++                result.setdefault('tests', {})[sid] = LIBTEST.result_tests(text)
+                 if sid == 'E5-r2':
+-                    result['e5_identity_lines'] = [l for l in text.splitlines() if l.startswith('identity ')]
++                    result['e5_identity_lines'] = result['tests'][sid]['identity_lines']
+         locks = {}
+         for rel in (LOCK_C, LOCK_H):
+             p = ROOT / rel

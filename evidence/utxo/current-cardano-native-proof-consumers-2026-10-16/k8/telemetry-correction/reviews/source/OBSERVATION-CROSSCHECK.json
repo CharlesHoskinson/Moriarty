@@ -1,0 +1,58 @@
+[
+  {
+    "evidence": "test_like.rs:26-30 maps Some(once) to SucceedImmediately and absent once to SucceedEventually after Token::Fail, and :51 defaults a missing fail annotation to FailImmediately; def_test_fail.snap:51 records plain fail as SucceedEventually; ast.rs:261-265 defines the three variants; telemetry/json.rs:89-93 serialises them to fail_immediately/succeed_eventually/succeed_immediately. validate_capture.py:104-121 encodes exactly normal->fail_immediately, plain fail->succeed_eventually, fail once->succeed_immediately.",
+    "id": "CC1-parser-mode-mapping",
+    "requiredFix": "None. Retain the mapping verbatim; do not restore the original succeed_immediately expectation.",
+    "severity": "verified",
+    "summary": "The validator mode mapping is the Aiken parser's own mapping, independently grounded in four mirrored sources."
+  },
+  {
+    "evidence": "Pinned source k8_genuine_proof_test.ak declares 10 tests at lines 31,35,39,43,47,51,58,65,100,111; first nine have no fail annotation, line 111 is 'test k8_short_vk_is_refused() fail {' with no once. validate_capture.py:40 TEST_RE '^test ([a-z0-9_]+)\\(\\)(?: fail( once)?)? \\{$' with MULTILINE and :109-120 derives modes; the plain-fail presence probe 'test {name}() fail {' cannot match a 'fail once' line because ' once' intervenes, and on this whole-pinned fixture it yields 9 fail_immediately + 1 succeed_eventually. Telemetry rows step2 stdout:24-115 carry the same 10 titles in the same order, nine fail_immediately and succeed_eventually at line 109. Whole-byte pinning at validate_capture.py:22-26,48-62 runs before source_modes, so the probe only ever sees this known fixture; no general Aiken grammar claim is needed or made beyond VC-C3's fixed-fixture wording.",
+    "id": "CC2-fixed-source-order-modes-presence-probe",
+    "requiredFix": "None for the pinned fixture. No cosmetic rewrite is required because all 10 actual declarations are classified correctly.",
+    "severity": "verified",
+    "summary": "Fixed-fixture source check, regex once-group and presence probe classify all 10 actual declarations correctly."
+  },
+  {
+    "evidence": "validate_capture.py:48-62 reads at most 65537 bytes via fh.read(MAX_INPUT+1), rejects >65536, then exact size and SHA-256 before returning bytes; main :134-137 reads all three pinned inputs before source_modes/parse_json at :137-138. Pins are source 4782/d25c3811, telemetry 2914/9ac4871e, original_result 4875/5bc3033c at :22-26, identical to INPUT-INDEX, ROOT-INTAKE-MANIFEST:149-153,23-27 and EXECUTION-PROPOSAL inputPinsCheckedByRootBeforeAndAfter. Telemetry seed 248222808 (stdout:2) is an int in u32 range; summaries stdout:3-23 are 10/10/0 kind 10/0; module name stdout:14 is pvc2/k8_genuine_proof_test.",
+    "id": "CC3-pins-bounded-read-strict-typed-inputs",
+    "requiredFix": "None. Root must still check the three pins before and after the run as proposed.",
+    "severity": "verified",
+    "summary": "Bounded read then exact byte/SHA pin before parse, and strict typed telemetry guards, match the actual three inputs."
+  },
+  {
+    "evidence": "validate_capture.py imports only argparse, hashlib, json, re, sys, pathlib (:8-13); no subprocess, socket, operator/SDK/native import, curve, RNG, proof, PK/key/wallet, network or ledger call appears in the 210-line body. Guards: no_dupes duplicate-key rejection :65-79, exact_keys unknown-field rejection :85-87, type-is-int excluding bool :81-82, u32 seed :140-141, check_summary exact 10/10/0 and kind 10/0 :90-101, single module and exact name :143-149, exactly 10 rows with exact row keys, status pass, on_failure equals source-derived mode, non-negative int mem/cpu :150-169, ordered duplicate-free titles :168-169. An arbitrary-string title cannot pass because titles must equal EXPECTED_TITLES and each on_failure must equal modes[title] on the pinned telemetry; on pinned bytes the modes lookup is total over the 10 titles.",
+    "id": "CC4-effects-and-garbage-rejection",
+    "requiredFix": "None blocking for the pinned actual inputs. Any future unpinned reuse would need its own review; this readiness is fixture-scoped.",
+    "severity": "verified",
+    "summary": "Stdlib-only finite effects and strict schema/typed guards accept the exact actual inputs and reject wrong fields, modes, bool-as-int, duplicate/unknown keys and text-garbage names."
+  },
+  {
+    "evidence": "RESULT.json:21 status FAILED, :5 error 'step2 JSON on_failure mismatch for k8_short_vk_is_refused: want succeed_immediately', both Aiken exitCode 0 at :80,:149. validate_capture.py:18-21 ORIGINAL_ERROR, :170-176 checks whole pinned bytes plus status FAILED and exact error, :177-197 record flags ordinaryValidationOnly true, nativeReexecuted false, newNativeAuthority false, originalWrapperStatus FAILED, originalWrapperStatusChanged false, rawCapturedPassedUnits 10, normalRows 9, pairingOutcomesCount 4, pairingTitles first 4 titles, outputs [VALIDATION.json]. Output guard :131-133 refuses an existing output-dir before reading inputs and :199-204 creates the directory with mkdir(parents=False) and the sole file with open 'xb' only after all validation passes; on any fail() the script exits 1 to stderr before mkdir. The giant native-run guard schema in RESULT.json is not duplicated, as README:38-41 states; whole-byte pinning makes that unnecessary.",
+    "id": "CC5-failed-preserved-exclusive-sole-output",
+    "requiredFix": "None. Caller must use the fresh output directory only and must never point output at historical files.",
+    "severity": "verified",
+    "summary": "Historical FAILED and its exact error wording are preserved, and sole fresh exclusive VALIDATION.json is written only after all passes."
+  },
+  {
+    "evidence": "EXECUTION-PROPOSAL.json:8-22 argvTemplate is /usr/bin/timeout --signal=TERM --kill-after=5s 30s /usr/bin/prlimit --cpu=10:15 --as=268435456 --core=0 /usr/bin/python3 -I ABS/validate_capture.py with the three explicit PUBLICINTAKE args and fresh ABS/BASE/current-cardano-k2-k8-captured-telemetry-validation-20261016, attempts 1 retries 0, env exactly PATH=/usr/bin:/bin HOME=/nonexistent LC_ALL=C TZ=UTC, stdin /dev/null, closeFds true, cwd candidate root. No AUTH, native prefix repeat, import of operator/cargo/Aiken/SDK/curve/RNG/proof/PK/key/wallet/network/ledger/nested agents/subprocess/socket is proposed; prohibited list :28 restates those exclusions.",
+    "id": "CC6-one-bounded-ordinary-command",
+    "requiredFix": "None. Root substitutes the ABS paths literally, verifies pins before/after, runs once with zero retries, and then obtains a post-run fresh actual audit.",
+    "severity": "verified",
+    "summary": "The sole proposed authority is exactly the bounded ordinary 30s+5s-kill CPU 10:15 AS 256MiB core-0 python -I command and nothing more."
+  },
+  {
+    "evidence": "ROOT-SOURCE-MANIFEST.json:4-5 records provider files[] EMPTY but three complete fenced bodies in REPORT plus the positions array explicitly designated File 4 at REPORT.md:326-328, mechanically extracted by root with only a final newline added and no authored code or protocol variance in logic. Materialised validate_capture.py, README.md and EXECUTION-PROPOSAL.json read identically to REPORT.md File 1 lines 13-224, File 2 lines 230-290 and File 3 lines 294-324; DESIGN-POSITIONS.json VC-C1..VC-C8 matches MODEL-REVIEW.json positions verbatim. Candidate manifest pins script 8286/6efb4731, README 3184/1fa08acf, proposal 2214/438fb097, positions 6462/ffee03b0.",
+    "id": "CC7-materialisation-protocol-variance",
+    "requiredFix": "None. The variance is explicitly recorded and does not block readiness because the source is complete, unchanged and was fully inspected in materialised form.",
+    "severity": "verified",
+    "summary": "Four-file materialisation from fenced bodies plus designated positions array is complete and internally identical; files[] emptiness is not a source blocker."
+  },
+  {
+    "evidence": "K8-ACTUAL-ADOPTION.json:18-55 adopts the 4 pairing outcomes and :56-65 the 5 auxiliary plus 1 malformed row already under 99541 adopting 85e REPORT; validate_capture.py records those only as captured counts/titles (:186-187,39) and flags nativeReexecuted false/newNativeAuthority false. Raw captured units are 10 rows, not 10 security theorems; 9 normal plus 1 plain-fail malformed-length row. Limitations K8-ACTUAL-ADOPTION:100-106 and validator README:24-28 retain single-party forgeability, fabricated/context premises, unproved VK-to-matrix link, unmeasured transitive CPU, and all open families. The separately scoped K9 native 7-case matter and any C2 matter are not judged here; no global C2-unrun claim is made as a current fact.",
+    "id": "CC8-scope-no-refreshed-crypto",
+    "requiredFix": "None for K8 metadata readiness. Keep output flags and scope wording exactly as written; do not convert pairing labels into refreshed crypto acceptance.",
+    "severity": "boundary",
+    "summary": "Four pairing labels are old adopted captured identity only; no proof, native outcome or target predicate is re-executed or re-proved."
+  }
+]

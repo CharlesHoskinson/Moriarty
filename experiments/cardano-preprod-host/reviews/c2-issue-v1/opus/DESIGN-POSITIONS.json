@@ -1,0 +1,74 @@
+[
+  {
+    "clauseId": "CI01",
+    "clause": "Pure sibling module c2_issue_artifacts.py importing only hashlib and host_codec; sole public prepare_c2_issue(proof_export, setup_record, expiry, *, policy_id) with no defaults; uses the seven host APIs as host_codec attributes of the unchanged 23252-byte host",
+    "position": "AGREE",
+    "rationale": "Source has exactly the two imports and one public function with keyword-only policy_id and no defaults. All seven APIs are called as host_codec attributes. hashlib is used only for the VK digest and the token, which are not host APIs. The call usage is source-verified, not test-enforced (R05)."
+  },
+  {
+    "clauseId": "CI02",
+    "clause": "Refuse C2I-ARG before touching any record unless exact dict, exact dict, exact int expiry 0..2^64-1 and exact 28-byte bytes policy_id",
+    "position": "AGREE",
+    "rationale": "The type-is checks run before any subscript, bool is excluded and the ranges are exact. test_07 and test_10 (including _Hooked) cover this."
+  },
+  {
+    "clauseId": "CI03",
+    "clause": "Expiry only from the argument; an export carrying envV2.expiry is refused; labelled CALLER_SUPPLIED_NOT_PROOF_BOUND",
+    "position": "AGREE",
+    "rationale": "expiry flows only into build_env_data. Every export object level is closed, so an expiry key anywhere in it is refused with C2I-EXPORT, and the label is present. EnvV2Export omits expiry."
+  },
+  {
+    "clauseId": "CI04",
+    "clause": "C2I-SETUP: closed SetupRecord schema, export.rs profile constants, consumed relation keys, ABI v2 tag/family/header literals, 976-hex VK and BLAKE2b-256(VK) == vkDigestBlake2b256",
+    "position": "AGREE",
+    "rationale": "Implemented exactly, and the literals match export.rs. AGREE applies only to the narrow serializer scope: the open relation, any-str driver and unbounded provingKeyBytes are supersets of Rust (F01, F02, F04, R01), and the rationale 'Mirrors parse_setup_record' overstates parity (R02)."
+  },
+  {
+    "clauseId": "CI05",
+    "clause": "C2I-EXPORT: closed ProofExport schema at every level with exact types/widths, fixed format and exact six PREMISES",
+    "position": "AGREE",
+    "rationale": "Field names match the Rust structs at all seven levels, with exact int ranges, hex widths, hex-or-null, str leaves, fixed format and an exact premises list. Many leaf refusals are source-inspected only (R03)."
+  },
+  {
+    "clauseId": "CI06",
+    "clause": "C2I-RELATION: export identity fields equal setup relation fields and the recomputed VK digest",
+    "position": "AGREE",
+    "rationale": "A loop over the 8 identity keys plus the VK digest comparison reproduces the check_export identity checks. The setupRecordSha256 byte check is deliberately absent and labelled."
+  },
+  {
+    "clauseId": "CI07",
+    "clause": "C2I-STATEMENT: bounded lowercase hex, host parse_statement_header admission, header predicate/shape/vk/bodyLen equal relation and recomputed VK digest",
+    "position": "AGREE",
+    "rationale": "Length is bounded before the scan, and host admission plus the four header equalities follow. The compiler re-encode is not mirrored (F05), a non-claim."
+  },
+  {
+    "clauseId": "CI08",
+    "clause": "C2I-CONTEXT: export context equals the ten header values exactly, and networkId must be 0",
+    "position": "AGREE",
+    "rationale": "Dict equality is checked against the 10 header keys after the bool exclusion, then networkId 0. This is narrower than Rust and does not distinguish Preview from Preprod."
+  },
+  {
+    "clauseId": "CI09",
+    "clause": "C2I-DIGEST via statement_digest_hex and statement_public_inputs exact strings; then C2I-PROOF 384 lowercase hex; then C2I-CARDANO equals cardano_export derivation",
+    "position": "AGREE",
+    "rationale": "The order and the derivation match cardano_export field for field. The rationale's 'covers the remaining non-pairing check_export steps' is inaccurate: decode_proof, the u128 parse and the byte link are not mirrored (R02)."
+  },
+  {
+    "clauseId": "CI10",
+    "clause": "Return closed 12-key result: envData via build_env_data from header plus caller expiry, token = BLAKE2b-256(encode_data(env)), issueData via build_c2_mint_data, mintValueData via build_value_data(None, [(policy, token, 1)])",
+    "position": "AGREE",
+    "rationale": "There are exactly 12 keys and the host objects are fresh. The 212-222/710/67-byte bounds are consistent with the host rules, and the shapes match the types.ak and claim.ak EnvV2 and C2Mint definitions. No ledger Value claim."
+  },
+  {
+    "clauseId": "CI11",
+    "clause": "Exact ValueError with stage-code prefix for the first failing stage in fixed order, host errors rewrapped, no partial result, no input mutation, purity",
+    "position": "AGREE",
+    "rationale": "The module raises only ValueError with a stage prefix, and the fixed order is tested at 8 transitions. Nothing writes to the inputs and there are no effects. BUILD and the DIGEST rewraps are unreachable for admitted inputs (R04). No-mutation on refusal paths is source-inspected only."
+  },
+  {
+    "clauseId": "CI12",
+    "clause": "No claim of pairing, curve validity, setup byte identity, ledger/provider authenticity, Preview/Preprod acceptance, legacy/UPLC compatibility or certification; K6 reproduction is historical only; all flags false",
+    "position": "AGREE",
+    "rationale": "The labels and docstring carry these non-claims. A later revision should add explicit non-claims for Rust parser/check_export equivalence, relation profile, statement re-encode and proof-point validity (R01)."
+  }
+]
