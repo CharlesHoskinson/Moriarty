@@ -21,6 +21,7 @@ pub struct DraftCompileArtifact {
     pub qualification: &'static str,
     pub source: DraftSourceIdentity,
     pub execution_profile: &'static str,
+    pub supported_profile: super::draft_profile::SupportedProfileReport,
     pub input_policy: InputPolicy,
     pub config: DraftConfigIdentity,
     pub target: TargetDescriptor,
@@ -178,6 +179,7 @@ pub(crate) fn project_admitted_preparation(
             program: draft.name.clone(), selection: EntrySelection::Entry, source_digest,
         },
         execution_profile: EXECUTION_PROFILE,
+        supported_profile: super::draft_profile::report(&config.fields),
         input_policy: InputPolicy { kind: "closed-entry", declared: vec![], supplied: vec![] },
         config, target,
         preparation: PreparationReport {

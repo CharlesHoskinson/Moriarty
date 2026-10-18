@@ -22,6 +22,8 @@ pub(crate) mod recursive_source;
 pub mod draft_contract;
 #[path = "compile_artifact/draft_report.rs"]
 pub mod draft_report;
+#[path = "compile_artifact/draft_profile.rs"]
+pub mod draft_profile;
 #[path = "compile_artifact/draft_diagnostics.rs"]
 mod draft_diagnostics;
 use config::ExecutionConfig;
